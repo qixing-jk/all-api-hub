@@ -2,43 +2,65 @@
 
 This document explains how to install the All API Hub extension in browsers such as QQ Browser, 360 Secure Browser, 360 Speed Browser, Cheetah Browser, Brave, Vivaldi, and Opera.
 
-Most of these browsers are based on Chromium, but their available installation paths are not identical. When a browser store or Chrome Web Store installation works, use the store build first. Use the Chrome package from GitHub Releases only when the store path is unavailable, blocked by policy, or needed for temporary verification.
+Most of these browsers are based on Chromium, but their available installation paths are not identical. When a browser store or Chrome Web Store installation works, use the store build first. When a GitHub asset is needed, the self-updating [`.crx`](./chromium-crx-self-update.md) is recommended, and the unpacked `.zip` is only for when the `.crx` cannot be installed.
+
+::: tip Does my browser count as Chromium?
+By default, yes: except Firefox and Safari, every desktop browser that installs extensions is Chromium-based. Every browser in the table below is treated under that premise; the full explanation is in [Chromium self-updating install](./chromium-crx-self-update.md).
+:::
 
 ## Differences at a Glance
 
 - **Chrome / Edge / Firefox users:** Prioritize using the official store versions for easier updates.
 - **Brave / Vivaldi users:** Try Chrome Web Store first. These browsers officially support Chrome Web Store extensions.
-- **Opera users:** Opera has its own Opera Add-ons store, but All API Hub is not currently listed there. Try Chrome Web Store first; if your Opera version or policy does not allow it, use the GitHub manual package.
-- **QQ Browser, 360 Series Browsers, Cheetah Browser, and similar users:** If the browser's built-in extension center does not offer All API Hub, use the GitHub Chrome package and install it with "Load unpacked extension."
+- **Opera users:** Opera has its own Opera Add-ons store, but All API Hub is not currently listed there. Try Chrome Web Store first; if your Opera version or policy does not allow it, consider a GitHub package.
+- **QQ Browser, 360 Series Browsers, Cheetah Browser, and similar users:** If the browser's built-in extension center does not offer All API Hub, try the self-updating [`.crx`](./chromium-crx-self-update.md) first; if the `.crx` is blocked, use the GitHub Chrome package and install it with "Load unpacked extension."
 - **Safari users:** Installation is different and requires Xcode or a Safari-specific package. Please refer to the [Safari Extension Installation Guide](./safari-install.md).
 - **Mobile Browsers:** Support for extensions varies significantly across mobile browsers. For mobile usage instructions, please see [Mobile Browser Support in FAQ](./faq.md#mobile-browser-support).
 
 ::: warning Tip
-Extensions loaded manually are typically not updated automatically. For future updates, you will need to re-download the new Chrome package and click "Reload" or reinstall from the extension management page; Chromium users can also switch to the [self-updating `.crx` install](./chromium-crx-self-update.md).
+Among GitHub assets, the self-updating `.crx` is the recommended choice: the browser refreshes it from the release manifest, so you do not replace the package by hand. Stock Chrome / Edge must configure the extension allowlist policies first. The `.zip` does not auto-update — every upgrade requires re-downloading the package and clicking "Reload" or reinstalling from the extension management page — so use it only when the `.crx` cannot be installed.
+
+The store build remains the first choice and needs none of this configuration.
 :::
 
 ## Supported Browsers
 
 | Browser | Preferred installation | Fallback installation | Update method |
 |---|---|---|---|
-| Brave | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome package, loaded manually from `brave://extensions/` | Store builds update automatically; manual builds require re-download |
-| Vivaldi | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome package, loaded manually from `vivaldi://extensions/` | Store builds update automatically; manual builds require re-download |
-| Opera | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo); All API Hub is not currently listed in Opera Add-ons | GitHub Chrome package, loaded manually from `opera://extensions/` | Chrome Web Store builds are usually updated through browser / store mechanisms; manual builds require re-download |
-| QQ Browser | Use the built-in extension center first if it offers All API Hub | `qqbrowser://extensions`, or `chrome://extensions/` if unavailable, then enable Developer mode and load the unpacked directory | Depends on the installation source; manual builds require re-download |
-| 360 Secure Browser / 360 Speed Browser | Use the built-in extension / app center first if it offers All API Hub | `chrome://extensions/`, or Extensions / Plugin Management in the menu, then enable Developer mode and load the unpacked directory | Depends on the installation source; manual builds require re-download |
-| Cheetah Browser | Use the built-in extension center first if it offers All API Hub | `liebao://extensions/`, then enable Developer mode and load the unpacked directory | Depends on the installation source; manual builds require re-download |
-| Starry Wish / Percent / Cent Browser, etc. | If the browser supports Chrome Web Store, try the store first | Try `chrome://extensions/` and load the unpacked directory manually | Depends on the installation source; manual builds require re-download |
+| Brave | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | Self-updating `.crx`; otherwise the GitHub Chrome package loaded from `brave://extensions/` | Store builds and `.crx` update automatically; unpacked builds require re-download |
+| Vivaldi | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | Self-updating `.crx`; otherwise the GitHub Chrome package loaded from `vivaldi://extensions/` | Store builds and `.crx` update automatically; unpacked builds require re-download |
+| Opera | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo); All API Hub is not currently listed in Opera Add-ons | Self-updating `.crx`; otherwise the GitHub Chrome package loaded from `opera://extensions/` | Store builds and `.crx` update automatically; unpacked builds require re-download |
+| QQ Browser | Use the built-in extension center first if it offers All API Hub | Self-updating `.crx`; if blocked, use `qqbrowser://extensions` or `chrome://extensions/` to load the unpacked directory | Store builds and `.crx` update automatically; unpacked builds require re-download |
+| 360 Secure Browser / 360 Speed Browser | Use the built-in extension / app center first if it offers All API Hub | Self-updating `.crx`; if blocked, use `chrome://extensions/` or Extensions / Plugin Management in the menu to load the unpacked directory | Store builds and `.crx` update automatically; unpacked builds require re-download |
+| Cheetah Browser | Use the built-in extension center first if it offers All API Hub | Self-updating `.crx`; if blocked, use `liebao://extensions/` to load the unpacked directory | Store builds and `.crx` update automatically; unpacked builds require re-download |
+| Starry Wish / Percent / Cent Browser, etc. | If the browser supports Chrome Web Store, try the store first | Self-updating `.crx`; otherwise load the unpacked directory from `chrome://extensions/` | Store builds and `.crx` update automatically; unpacked builds require re-download |
 | Mobile Kiwi / Edge, etc. | Depends on the browser's actual extension entry point | See [Mobile Browser Support in FAQ](./faq.md#mobile-browser-support) | Depends on browser support |
 
 If a browser cannot use a store install and also lacks "Developer mode" or "Load unpacked extension," the current version may not support installing external extensions. In that case, switch to Chrome, Edge, Firefox, or try the full/desktop version of that browser.
 
 ::: tip Store availability is separate from All API Hub listing status
-A browser can have its own extension store without All API Hub being listed there. For example, Opera has Opera Add-ons, but currently you should use Chrome Web Store or the GitHub manual package.
+A browser can have its own extension store without All API Hub being listed there. For example, Opera has Opera Add-ons, but currently you should use Chrome Web Store or a GitHub package.
 :::
 
-## Preparing the GitHub Manual Package
+## Preparing the GitHub Package
 
-If you can install directly from Chrome Web Store, Edge Add-ons, or Firefox Add-ons, you do not need this section. These steps are only for browsers that need manual loading.
+If you can install directly from Chrome Web Store, Edge Add-ons, or Firefox Add-ons, you do not need this section. These steps are only for Chromium-based browsers that must install from GitHub.
+
+### Recommended: the self-updating `.crx`
+
+```text
+all-api-hub-chrome.crx
+```
+
+The file name carries no version because `releases/latest` always resolves to the newest stable release (Nightly: `all-api-hub-nightly-chrome.crx`). After installation the browser updates it from the published `updates.xml`, so you never replace the package by hand.
+
+Stock Chrome / Edge must configure the extension allowlist policies first, otherwise the install fails with `CRX_REQUIRED_PROOF_MISSING` or gets disabled; Windows Edge also requires an Active Directory domain-joined device. Linux needs no configuration; QQ / 360 and similar forks vary. See [Chromium self-updating install](./chromium-crx-self-update.md) for the full steps.
+
+The `.crx` and the unpacked build have different extension ids, so their data is not shared. If you already installed the unpacked build, export a backup, uninstall, install the `.crx`, then import the backup.
+
+### Fallback: the unpacked `.zip`
+
+Use the ZIP when the `.crx` cannot be installed (the browser does not allow external extensions, security policy blocks it, and so on). It does not auto-update:
 
 1. Open the [Latest Release](https://github.com/qixing-jk/all-api-hub/releases/latest).
 2. Download the Chrome version package from the attachments:
@@ -135,7 +157,7 @@ Choose one of the following methods:
 
 ### 4. Common Troubleshooting
 
-- **If browser security policies block external extensions:** Continue using the "Load unpacked" method and avoid directly dragging `.zip` or `.crx` files.
+- **If browser security policies block the `.crx`:** Switch to the "Load unpacked" method and avoid directly dragging `.zip` files.
 - **If the extension is disabled after restarting the browser:** Manually enable it from the extension management page. If it remains disabled, consider switching to Chrome/Edge or checking your browser's security policies.
 - **If the extension is ineffective on certain web pages:** Ensure the page is not in compatibility mode and refresh pages that were open before installation.
 
@@ -179,7 +201,7 @@ These browsers can usually use Chrome Web Store. First open the [All API Hub Chr
 - Vivaldi officially supports Chrome Web Store extensions. If the install button does not appear, check Vivaldi's Google Extensions / Web Store setting.
 - Opera has Opera Add-ons and also supports Chrome extensions. All API Hub is not currently listed in Opera Add-ons, so use Chrome Web Store first.
 
-If store installation fails, manually load the GitHub Chrome package from the extension management page:
+If store installation fails, try the self-updating `.crx` first, then the extension management page:
 
 | Browser | Extension Management Page |
 |---|---|
@@ -194,7 +216,9 @@ Once on the extension management page, follow the [manual loading procedure](#de
 
 ## Updating the Extension
 
-Manually loaded versions do not update automatically; to avoid replacing the package yourself, switch to the [self-updating `.crx` install](./chromium-crx-self-update.md). For the differences between store versions, GitHub Stable, and Nightly, read [Installation Channels and Updates](./extension-update-install.md) first. To update a manually loaded version, follow these steps:
+The `all-api-hub-chrome.crx` build is refreshed by the browser from the release manifest, so no manual step is needed; click "Update" on `chrome://extensions/` to check immediately. For the differences between store versions, GitHub Stable, and Nightly, read [Installation Channels and Updates](./extension-update-install.md) first.
+
+Unpacked `.zip` builds do not update automatically. To update one, follow these steps:
 
 1. Open the [Latest Release](https://github.com/qixing-jk/all-api-hub/releases/latest).
 2. Download the new `all-api-hub-<version>-chrome.zip`.
@@ -216,9 +240,15 @@ Do not place the extension directory in system temporary folders, download cache
 
 ## Frequently Asked Questions
 
-### Should I download the Chrome package or the Firefox/Safari package?
+### Should I download the `.crx`, the Chrome package, or the Firefox/Safari package?
 
-For Chromium browsers that need manual loading, download:
+For Chromium browsers that need a GitHub build, prefer the self-updating package:
+
+```text
+all-api-hub-chrome.crx
+```
+
+Download the ZIP only when the `.crx` cannot be installed:
 
 ```text
 all-api-hub-<version>-chrome.zip

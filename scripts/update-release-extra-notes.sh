@@ -50,8 +50,8 @@ const assetNames = Array.isArray(release.assets)
   : []
 
 const assetOrder = (name) => {
-  if (/chrome\.zip$/i.test(name)) return 10
-  if (/chrome\.crx$/i.test(name)) return 15
+  if (/chrome\.crx$/i.test(name)) return 10
+  if (/chrome\.zip$/i.test(name)) return 15
   if (/firefox\.zip$/i.test(name)) return 20
   if (/sources\.zip$/i.test(name)) return 30
   if (/safari-xcode-bundle\.zip$/i.test(name)) return 40
@@ -61,12 +61,12 @@ const assetOrder = (name) => {
 }
 
 const describeAsset = (name) => {
-  if (/chrome\.zip$/i.test(name)) {
-    return "Chromium 内核浏览器手动安装包。普通用户请优先安装 Chrome 商店或 Edge 商店版本；仅在无法使用商店版、需要临时验证修复或调试时下载此文件。"
+  if (/chrome\.crx$/i.test(name)) {
+    return "Chromium 自更新安装包，GitHub 附件中的推荐选项。安装后浏览器会按 `updates.xml` 自动获取新版本，无需每次重新下载；stock Chrome / Edge 安装前需要按文档配置一次扩展白名单策略（Linux 无需配置）。"
   }
 
-  if (/chrome\.crx$/i.test(name)) {
-    return "Chromium 自更新安装包。安装后浏览器会按 `updates.xml` 自动获取新版本；stock Chrome / Edge 需要先按文档配置扩展白名单策略，否则会被浏览器拦截。"
+  if (/chrome\.zip$/i.test(name)) {
+    return "Chromium 内核浏览器解压加载包。不会自动更新，每次升级都要重新下载并重新加载；仅在 `.crx` 装不上时使用。"
   }
 
   if (/^updates\.xml$/i.test(name)) {
@@ -98,7 +98,7 @@ const lines = [
   "",
   isNightly
     ? "> 当前为 Nightly 预发布，基于 `main` 最新提交自动生成。大多数用户仍建议优先使用商店版；Nightly 仅适合提前验证修复或协助测试。"
-    : "> 当前为正式版 Stable。大多数用户建议优先使用商店版，以获得更简单的安装流程和自动更新；GitHub 附件主要作为无法使用商店版时的备选。",
+    : "> 当前为正式版 Stable。大多数用户建议优先使用商店版，安装最简单且无需任何策略配置；GitHub 附件作为无法使用商店版时的备选。",
   "",
   "### 优先安装方式",
   `- Chrome：优先使用 Chrome 商店，${chromeStoreUrl}`,
@@ -107,16 +107,16 @@ const lines = [
   `- Safari：暂无通用商店版，请按 Safari 安装指南手动安装，${docsBaseUrl}/safari-install.html`,
   "",
   "### 使用说明",
-  "- 大多数用户：Chrome / Edge / Firefox 优先从上方商店链接安装；商店版安装更直接，并会跟随浏览器自动更新。",
-  "- GitHub 附件：适合无法使用商店版、需要临时验证已发布修复、调试问题，或使用商店暂未覆盖的浏览器环境。",
-  "- 手动安装版通常不会自动更新；如果你通过 GitHub 附件安装，建议 Star / Watch 仓库，以便及时看到新版本发布通知。",
-  "- Chrome / Edge / Kiwi 等 Chromium 浏览器：如确需手动安装，下载 `*-chrome.zip`，先解压，再在扩展管理页选择“加载已解压的扩展程序”。",
-  "- Firefox：优先使用 Firefox Add-ons 商店；`*-firefox.zip` 与 `*-sources.zip` 更适合高级用户、自行验证或发布流程使用。",
+  "- 大多数用户：Chrome / Edge / Firefox 优先从上方商店链接安装，商店版不需要任何额外配置。",
+  "- 必须用 GitHub 附件时，Chromium 浏览器推荐安装 `all-api-hub-chrome.crx`（Nightly 为 `all-api-hub-nightly-chrome.crx`）：它会按 `updates.xml` 自动更新，不用每次重新下载。具体是哪些浏览器、以及 stock Chrome / Edge 的一次性白名单配置，见下方「Chromium 自更新安装」。",
+  "- `*-chrome.zip` 解压加载包不会自动更新，每次升级都要重新下载并重新加载，仅在 `.crx` 装不上时使用。",
+  "- Firefox：请使用 Firefox Add-ons 商店；GitHub 附件里的 `*-firefox.zip` 不会自动更新，更适合高级用户自行验证或配合发布流程使用。",
   "- Safari：请下载 `*-safari-xcode-bundle.zip`，解压后直接打开其中的 Xcode 工程；不要只下载 `*-safari.zip`。",
   "",
   "### 文档链接",
   `- 快速上手：${docsBaseUrl}/get-started.html`,
   `- 安装与更新说明：${docsBaseUrl}/extension-update-install.html`,
+  `- Chromium 自更新安装（.crx）：${docsBaseUrl}/chromium-crx-self-update.html`,
   `- 常见问题：${docsBaseUrl}/faq.html`,
   `- 更新日志：${docsBaseUrl}/changelog.html`,
 ]

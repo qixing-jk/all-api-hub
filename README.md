@@ -118,7 +118,7 @@ But once you have multiple accounts, management quickly becomes painful:
 | GitHub Stable       | [Download Stable](https://github.com/qixing-jk/all-api-hub/releases/latest)       | When you cannot install the store build or need to temporarily install a published fix manually     |
 | Nightly pre-release | [Download Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | When you want early access and are willing to help test; it may be less stable than the store build |
 
-GitHub Stable and Nightly are manual installation channels and do not auto-update. Star / Watch the repository to receive new version notifications. See the [installation and update guide](https://all-api-hub.qixing1217.top/en/extension-update-install.html) for more details.
+GitHub Stable and Nightly are manual installation channels. When you must install from GitHub, Chromium users should install `all-api-hub-chrome.crx` (Nightly: `all-api-hub-nightly-chrome.crx`), which updates automatically like the store build. See the [installation and update guide](https://all-api-hub.qixing1217.top/en/extension-update-install.html) and [Chromium CRX self-update install](https://all-api-hub.qixing1217.top/en/chromium-crx-self-update.html).
 
 **Other environments:**
 
