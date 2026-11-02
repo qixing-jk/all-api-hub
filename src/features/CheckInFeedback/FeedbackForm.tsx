@@ -57,7 +57,7 @@ export function FeedbackForm({
       auth?.accessToken,
       auth?.cookie,
       auth?.refreshToken,
-    ]) {
+    ].sort((a, b) => (b?.length ?? 0) - (a?.length ?? 0))) {
       if (secret) text = text.replaceAll(secret, "[REDACTED]")
     }
     // Public reports do not carry URLs embedded in error messages.

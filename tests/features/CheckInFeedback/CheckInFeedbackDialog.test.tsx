@@ -480,7 +480,18 @@ describe("check-in feedback workflow", () => {
   it("carries the result row's upstream message into feedback with secrets redacted", async () => {
     const user = userEvent.setup()
     vi.mocked(accountQueries.getAccountById).mockResolvedValue(
-      buildSiteAccount({ id: "failed", checkIn }),
+      buildSiteAccount({
+        id: "failed",
+        checkIn,
+        account_info: {
+          ...buildSiteAccount().account_info,
+          access_token: "private-token",
+        },
+        cookieAuth: {
+          sessionCookie:
+            "session=private-token; private_field=execution-cookie-value",
+        },
+      }),
     )
     render(
       wrap(
@@ -490,7 +501,8 @@ describe("check-in feedback workflow", () => {
             accountName: "Private",
             status: "failed",
             timestamp: 1,
-            rawMessage: "Upstream denied: Authorization: Bearer private-token",
+            rawMessage:
+              "Upstream denied: session=private-token; private_field=execution-cookie-value",
           }}
         />,
       ),
@@ -502,7 +514,7 @@ describe("check-in feedback workflow", () => {
       }),
     )
     expect(
-      await screen.findByText("Upstream denied: Authorization: [REDACTED]", {
+      await screen.findByText("Upstream denied: [REDACTED]", {
         selector: "p",
       }),
     ).toBeVisible()
@@ -513,6 +525,7 @@ describe("check-in feedback workflow", () => {
       ) as HTMLTextAreaElement
     ).value
     expect(report).toContain("Upstream denied")
+    expect(report).not.toContain("execution-cookie-value")
     expect(report).not.toContain("private-token")
   })
 
