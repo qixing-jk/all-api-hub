@@ -44,6 +44,8 @@ export function setupStarPromotionContent(): () => void {
   let disposed = false
   let reportedState: GitHubRepoStarState | undefined
   let reportPending = false
+  let retryTimer: number | undefined
+  let retryDelay = 5_000
 
   const reportState = (state: GitHubRepoStarState) => {
     reportPending = true
@@ -80,6 +82,17 @@ export function setupStarPromotionContent(): () => void {
       })
       .finally(() => {
         reportPending = false
+        if (
+          !disposed &&
+          state === GITHUB_REPO_STAR_STATES.NotStarred &&
+          !verifiedRemoval
+        ) {
+          retryTimer = window.setTimeout(() => {
+            retryTimer = undefined
+            evaluate()
+          }, retryDelay)
+          retryDelay = Math.min(retryDelay * 2, 30_000)
+        }
         if (!disposed && resolveGitHubRepoStarState(document) !== state)
           evaluate()
       })
@@ -91,6 +104,11 @@ export function setupStarPromotionContent(): () => void {
     }
 
     const state = resolveGitHubRepoStarState(document)
+    if (state === GITHUB_REPO_STAR_STATES.Starred) {
+      window.clearTimeout(retryTimer)
+      retryTimer = undefined
+      retryDelay = 5_000
+    } else if (retryTimer !== undefined) return
     if (state === null || state === reportedState || reportPending) {
       return
     }
@@ -119,6 +137,7 @@ export function setupStarPromotionContent(): () => void {
     observer.disconnect()
     window.clearInterval(pollTimer)
     window.clearTimeout(timeoutTimer)
+    window.clearTimeout(retryTimer)
   }
 }
 

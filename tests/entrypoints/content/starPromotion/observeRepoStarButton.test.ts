@@ -170,11 +170,34 @@ describe("setupStarPromotionContent", () => {
         expect.objectContaining({ starRemoved: false }),
       ),
     )
-    await vi.advanceTimersByTimeAsync(1_000)
+    await vi.advanceTimersByTimeAsync(5_000)
     expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ starRemoved: true }),
     )
     cleanup()
+  })
+
+  it("backs off unverified reads despite unrelated DOM mutations", async () => {
+    renderStarButton(false)
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    for (let index = 0; index < 3; index++) {
+      document.body.append(document.createElement("span"))
+      await vi.advanceTimersByTimeAsync(1_000)
+    }
+    expect(fetch).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starred: true }),
+    )
+    cleanup()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 
   it("retries an unchanged state after a failed acknowledgement", async () => {
