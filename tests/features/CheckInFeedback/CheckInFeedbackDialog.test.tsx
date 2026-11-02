@@ -24,6 +24,7 @@ import commonLocale from "~/locales/en/common.json"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { CheckinAccountResult } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
 import { sendRuntimeActionMessage } from "~/utils/browser/runtimeMessages"
@@ -93,6 +94,198 @@ afterEach(() => {
 })
 
 describe("check-in feedback workflow", () => {
+  it("opens a snapshot with execution without waiting for execution storage", async () => {
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount(),
+    )
+    vi.mocked(autoCheckinStorage.getStatus).mockImplementation(
+      () => new Promise(() => {}),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{
+            accountId: "account",
+            snapshot: {
+              ...snapshot,
+              execution: {
+                timestamp: 1,
+                status: "failed",
+              },
+            },
+          }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    expect(
+      await screen.findByLabelText("What happened? (optional)"),
+    ).toBeVisible()
+  })
+
+  it("retains draft feedback when the saved account read fails", async () => {
+    vi.mocked(accountQueries.getAccountById).mockRejectedValueOnce(
+      new Error("unavailable"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account", snapshot }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    expect(
+      await screen.findByLabelText("What happened? (optional)"),
+    ).toBeVisible()
+  })
+
+  it.each(["rawMessage", "message"] as const)(
+    "omits saved %s when account credentials cannot be loaded",
+    async (field) => {
+      const user = userEvent.setup()
+      vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(null)
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{
+              accountId: "account",
+              snapshot: {
+                ...snapshot,
+                execution: {
+                  status: "failed",
+                  [field]: "unknown-saved-secret",
+                },
+              },
+            }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await screen.findByLabelText("What happened? (optional)")
+      await user.click(screen.getByText("Review and edit submission"))
+      expect(
+        (
+          screen.getByLabelText(
+            "Full submission (select to copy)",
+          ) as HTMLTextAreaElement
+        ).value,
+      ).not.toContain("unknown-saved-secret")
+    },
+  )
+  it("ignores a saved account lookup completed after closing", async () => {
+    let resolve!: (account: ReturnType<typeof buildSiteAccount>) => void
+    vi.mocked(accountQueries.getAccountById).mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const view = render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account", snapshot }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    view.unmount()
+    await act(async () => {
+      resolve(buildSiteAccount())
+    })
+    expect(
+      screen.queryByLabelText("What happened? (optional)"),
+    ).not.toBeInTheDocument()
+  })
+  it.each(
+    ["editor", "saved"].flatMap((kind) =>
+      ["rawMessage", "message"].map((field) => ({ kind, field })),
+    ),
+  )(
+    "includes saved refresh diagnostics in $kind feedback with $field while preserving drafts",
+    async ({ kind, field }) => {
+      const user = userEvent.setup()
+      vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+        buildSiteAccount({
+          health: {
+            status: SiteHealthStatus.Error,
+            reason:
+              "Failed saved-access-secret session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret kimi-secret aiml-secret",
+          },
+          account_info: {
+            ...buildSiteAccount().account_info,
+            access_token: "saved-access-secret",
+          },
+          cookieAuth: {
+            sessionCookie:
+              "session=saved-access-secret; private_field=hidden-cookie-value",
+          },
+          sub2apiAuth: { refreshToken: "saved-refresh-secret" },
+          kimiOpenPlatformAuth: {
+            refreshToken: "kimi-secret",
+            organizationId: "org",
+          },
+          aimlApiAuth: { apiKey: "aiml-secret" },
+          last_sync_time: 1000,
+        }),
+      )
+      vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue({
+        perAccount: {
+          account: {
+            accountId: "account",
+            accountName: "Account",
+            status: "failed",
+            timestamp: 1,
+            [field]:
+              "Failed session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret kimi-secret aiml-secret",
+          },
+        },
+      } as Awaited<ReturnType<typeof autoCheckinStorage.getStatus>>)
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={
+              kind === "editor"
+                ? {
+                    accountId: "account",
+                    snapshot,
+                    auth: {
+                      authType: AuthTypeEnum.AccessToken,
+                      accessToken: "private-access-token",
+                    },
+                  }
+                : { accountId: "account" }
+            }
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await screen.findByLabelText("What happened? (optional)")
+      await user.click(screen.getByText("Review and edit submission"))
+      await user.click(
+        screen.getByText(accountDialogLocale.checkInFeedback.editReport),
+      )
+      const details = screen.getByLabelText(
+        accountDialogLocale.checkInFeedback.details,
+      )
+      const diagnosticText = (details as HTMLTextAreaElement).value
+      expect(diagnosticText).toContain("accountRefreshHealth: error")
+      expect(diagnosticText).toContain(
+        "accountRefreshRecordedAt: 1970-01-01T00:00:01.000Z",
+      )
+      expect(diagnosticText).toContain("[REDACTED]")
+      expect(diagnosticText).not.toContain("saved-access-secret")
+      expect(diagnosticText).not.toContain("hidden-cookie-value")
+      expect(diagnosticText).not.toContain("saved-refresh-secret")
+      expect(diagnosticText).not.toContain("kimi-secret")
+      expect(diagnosticText).not.toContain("aiml-secret")
+      expect((details as HTMLTextAreaElement).value).not.toContain(
+        "private-access-token",
+      )
+      expect((details as HTMLTextAreaElement).value).not.toContain("/private")
+    },
+  )
+
   it("opens adaptation feedback as the primary action for an unsupported result", async () => {
     const user = userEvent.setup()
     vi.mocked(accountQueries.getAccountById).mockResolvedValue(
@@ -343,7 +536,18 @@ describe("check-in feedback workflow", () => {
   it("carries the result row's upstream message into feedback with secrets redacted", async () => {
     const user = userEvent.setup()
     vi.mocked(accountQueries.getAccountById).mockResolvedValue(
-      buildSiteAccount({ id: "failed", checkIn }),
+      buildSiteAccount({
+        id: "failed",
+        checkIn,
+        account_info: {
+          ...buildSiteAccount().account_info,
+          access_token: "private-token",
+        },
+        cookieAuth: {
+          sessionCookie:
+            "session=private-token; private_field=execution-cookie-value",
+        },
+      }),
     )
     render(
       wrap(
@@ -353,7 +557,8 @@ describe("check-in feedback workflow", () => {
             accountName: "Private",
             status: "failed",
             timestamp: 1,
-            rawMessage: "Upstream denied: Authorization: Bearer private-token",
+            rawMessage:
+              "Upstream denied: session=private-token; private_field=execution-cookie-value",
           }}
         />,
       ),
@@ -365,7 +570,7 @@ describe("check-in feedback workflow", () => {
       }),
     )
     expect(
-      await screen.findByText("Upstream denied: Authorization: [REDACTED]", {
+      await screen.findByText("Upstream denied: [REDACTED]", {
         selector: "p",
       }),
     ).toBeVisible()
@@ -376,6 +581,7 @@ describe("check-in feedback workflow", () => {
       ) as HTMLTextAreaElement
     ).value
     expect(report).toContain("Upstream denied")
+    expect(report).not.toContain("execution-cookie-value")
     expect(report).not.toContain("private-token")
   })
 
@@ -410,7 +616,7 @@ describe("check-in feedback workflow", () => {
     expect(report).toContain("execution</th><td>failed</td>")
     expect(report).toContain("execution reason</th><td>permission_denied</td>")
     expect(report).toContain("automatic execution enabled</th><td>false</td>")
-    expect(accountQueries.getAccountById).not.toHaveBeenCalled()
+    expect(accountQueries.getAccountById).toHaveBeenCalledWith("edited")
   })
   it("opens the result row's account and includes its controlled execution reason", async () => {
     const user = userEvent.setup()
