@@ -51,27 +51,33 @@ export function setupStarPromotionContent(): () => void {
   const reportState = (state: GitHubRepoStarState) => {
     reportPending = true
     let verifiedRemoval = false
+    let stateToReport = state
     let acknowledged = false
     const removalEvidence =
       state === GITHUB_REPO_STAR_STATES.NotStarred
-        ? verifyUnstarredState()
-        : Promise.resolve(false)
+        ? readFreshGitHubStarState()
+        : Promise.resolve(state)
     void removalEvidence
-      .then((starRemoved) => {
-        verifiedRemoval = starRemoved
+      .then((freshState) => {
+        stateToReport = freshState ?? state
+        verifiedRemoval = freshState === GITHUB_REPO_STAR_STATES.NotStarred
         if (disposed || resolveGitHubRepoStarState(document) !== state)
           return undefined
         return sendRuntimeActionMessage<{ success: boolean }>({
           action: RuntimeActionIds.ContentStarPromotionReport,
-          starred: state === GITHUB_REPO_STAR_STATES.Starred,
-          starRemoved,
+          starred: stateToReport === GITHUB_REPO_STAR_STATES.Starred,
+          starRemoved: verifiedRemoval,
         })
       })
       .then((response) => {
         if (response?.success === true) {
           acknowledged = true
-          if (state === GITHUB_REPO_STAR_STATES.Starred || verifiedRemoval)
-            reportedState = state
+          if (
+            stateToReport === GITHUB_REPO_STAR_STATES.Starred ||
+            verifiedRemoval
+          )
+            reportedState = stateToReport
+          else reportedState = undefined
           return
         }
         logger.debug("Star state report was not acknowledged")
@@ -145,8 +151,8 @@ export function setupStarPromotionContent(): () => void {
   }
 }
 
-/** Confirms cross-visit removal with a fresh, authenticated same-origin page. */
-async function verifyUnstarredState(): Promise<boolean> {
+/** Reads current star state from a fresh, authenticated same-origin page. */
+async function readFreshGitHubStarState(): Promise<GitHubRepoStarState | null> {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), 5_000)
   try {
@@ -155,16 +161,14 @@ async function verifyUnstarredState(): Promise<boolean> {
       credentials: "same-origin",
       signal: controller.signal,
     })
-    if (!response.ok || response.redirected) return false
+    if (!response.ok || response.redirected) return null
     const page = new DOMParser().parseFromString(
       await response.text(),
       "text/html",
     )
-    return (
-      resolveGitHubRepoStarState(page) === GITHUB_REPO_STAR_STATES.NotStarred
-    )
+    return resolveGitHubRepoStarState(page)
   } catch {
-    return false
+    return null
   } finally {
     window.clearTimeout(timeout)
   }

@@ -55,7 +55,7 @@ describe("setupStarPromotionContent", () => {
     cleanup()
   })
 
-  it("does not revoke a star when a fresh page still shows starred", async () => {
+  it("reports the starred state found by a fresh page despite the stale live page", async () => {
     renderStarButton(false)
     vi.mocked(fetch).mockResolvedValue(
       new Response('<form action="/qixing-jk/all-api-hub/unstar"></form>'),
@@ -63,7 +63,7 @@ describe("setupStarPromotionContent", () => {
     const cleanup = setupStarPromotionContent()
     await vi.waitFor(() =>
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({ starred: false, starRemoved: false }),
+        expect.objectContaining({ starred: true, starRemoved: false }),
       ),
     )
     cleanup()
@@ -236,7 +236,7 @@ describe("setupStarPromotionContent", () => {
     await vi.advanceTimersByTimeAsync(1)
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ starred: false, starRemoved: false }),
+      expect.objectContaining({ starred: true, starRemoved: false }),
     )
     cleanup()
   })
@@ -256,6 +256,21 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
     await vi.advanceTimersByTimeAsync(5_000)
     expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+    cleanup()
+  })
+
+  it("reports a new star after an acknowledged unverified unstarred report", async () => {
+    const cleanup = setupStarPromotionContent()
+    await vi.advanceTimersByTimeAsync(1)
+    document.querySelector("button")?.setAttribute("aria-pressed", "false")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(3)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starred: true }),
+    )
     cleanup()
   })
 
