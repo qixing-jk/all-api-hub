@@ -23,6 +23,8 @@ Among GitHub assets, the self-updating `.crx` is the recommended choice: the bro
 The store build remains the first choice and needs none of this configuration.
 :::
 
+<a id="supported-browsers"></a>
+
 ## Supported Browsers
 
 | Browser | Preferred installation | Fallback installation | Update method |
