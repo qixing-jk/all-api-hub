@@ -1,8 +1,10 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { runScenarioWithCleanup } from "../e2e/utils/scenarioErrors.ts"
 import { connectDevExtension, defaultCdpUrl } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
+import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { runGrsaiProbe } from "./suites/grsai/probe.mjs"
 import { runGrsaiUiTest } from "./suites/grsai/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -39,8 +41,7 @@ Grsai 现场端到端测试运行器 (CDP & Protocol Probe)
   --cdp=<url>        CDP 调试端口地址 (默认: 共享模式 9222，隔离模式按 worktree 偏移)
   --help, -h         显示帮助说明
 
-注意: UI 套件的真实密钥增删改需要 GRSAI_SESSION_TOKEN；无 token 时只跑沙盒
-渲染层。密钥创建/重命名/删除走控制台 xtx 签名写路径，套件结束后应无残留。
+注意: UI 套件需要 GRSAI_SESSION_TOKEN；缺失时记录受阻并以非零状态退出。密钥创建/重命名/删除走控制台 xtx 签名写路径，套件结束后应无残留。
 `)
       process.exit(0)
     }
@@ -61,49 +62,36 @@ Grsai 现场端到端测试运行器 (CDP & Protocol Probe)
 
 export async function main(args = process.argv.slice(2)) {
   const { siteUrl, token, suite, cdpUrl } = parseArgs(args)
-
-  console.log("========================================================")
-  console.log("  Grsai 分支功能真机测试 (模块化解耦套件)")
-  console.log("========================================================")
-  console.log(`执行模式: [${suite.toUpperCase()}]`)
-  console.log(`目标站点: ${siteUrl}`)
-  console.log(
-    `会话 token: ${token ? "已提供" : "未提供 (仅跑结构指纹/渲染层)"}`,
-  )
-
-  // 1. 协议探测阶段 (无需 CDP，纯 Node.js HTTP)
-  if (suite === "all" || suite === "probe") {
-    const probeResult = await runGrsaiProbe({ token, siteUrl })
-    console.log(
-      `\n✅ 协议层探测结果: ${probeResult.ok ? "控制台契约与适配器一致" : "存在不一致"}${probeResult.skipped ? " (跳过登录接口)" : ""}`,
-    )
-    if (!probeResult.ok) {
-      process.exitCode = 1
-    }
-  }
-
-  // 2. UI 自动化实测阶段 (需要 CDP)
-  if (suite === "all" || suite === "ui") {
-    console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
-    const dev = await connectDevExtension({ cdpUrl })
-    console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
-
-    try {
-      await runGrsaiUiTest({
-        context: dev.context,
-        extensionId: dev.extensionId,
-        serviceWorker: dev.serviceWorker,
-        siteUrl,
-        token,
-      })
-    } finally {
-      await dev.close()
-    }
-  }
-
-  console.log("\n========================================================")
-  console.log("  🎉 Grsai 测试套件执行完毕！")
-  console.log("========================================================")
+  const environment = { cdpUrl, targetUrl: siteUrl }
+  return runLiveSuites({
+    suite,
+    environment,
+    suites: [
+      {
+        id: "probe",
+        covers: ["protocol.contract"],
+        run: () => runGrsaiProbe({ token, siteUrl }),
+      },
+      {
+        id: "ui",
+        covers: ["extension.ui"],
+        prerequisite: () =>
+          !token
+            ? "Missing session token; authenticated live coverage is unavailable"
+            : undefined,
+        run: async () => {
+          const dev = await connectDevExtension({ cdpUrl })
+          environment.extensionId = dev.extensionId
+          return runScenarioWithCleanup({
+            run: () => runGrsaiUiTest({ ...dev, siteUrl, token }),
+            finalizers: [() => dev.close()],
+            cleanupMessage: "Live UI connection cleanup failed",
+            failureMessage: "Live UI execution and cleanup failed",
+          })
+        },
+      },
+    ],
+  })
 }
 
 if (

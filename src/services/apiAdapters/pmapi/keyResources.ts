@@ -202,8 +202,6 @@ const facts = (
     canUpdate: true,
     canDelete: true,
     canRotate: true,
-    canEnable: key.status === PMAPI_KEY_STATUSES.Disabled,
-    canDisable: key.status === PMAPI_KEY_STATUSES.Enabled,
   },
 })
 
@@ -222,6 +220,22 @@ const editableProjection = (key: PmApiKey) => ({
 
 export const pmApiKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.PMAPI,
+  statusActions: {
+    enable: {
+      available: (key) => key.status === PMAPI_KEY_STATUSES.Disabled,
+      buildCommand: () => ({
+        rotate: false,
+        payload: { status: PMAPI_KEY_STATUSES.Enabled },
+      }),
+    },
+    disable: {
+      available: (key) => key.status === PMAPI_KEY_STATUSES.Enabled,
+      buildCommand: () => ({
+        rotate: false,
+        payload: { status: PMAPI_KEY_STATUSES.Disabled },
+      }),
+    },
+  },
   // The update route merges partial payloads, so a fresh read is required
   // before every full-form write instead of trusting a UI snapshot.
   requiresFreshUpdateDetail: () => true,

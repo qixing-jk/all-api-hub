@@ -260,7 +260,7 @@ describe("ModelItemDetails", () => {
     expect(formatPriceMock).toHaveBeenCalledTimes(4)
   })
 
-  it("renders only the supplied cache meters in detailed pricing", () => {
+  it("renders supplied cache rates and marks missing rates as not provided", () => {
     renderDetails({
       model: { ...baseProps.model, quota_type: 0 },
       calculatedPrice: {
@@ -277,7 +277,8 @@ describe("ModelItemDetails", () => {
     })
 
     expect(screen.getByText("cacheRead1MTokens")).toBeInTheDocument()
-    expect(screen.queryByText("cacheWrite1MTokens")).toBeNull()
+    expect(screen.getByText("cacheWrite1MTokens")).toBeVisible()
+    expect(screen.getByText("ui:billing.notProvided")).toBeVisible()
     expect(formatPriceMock).toHaveBeenCalledWith(0.25, "USD")
     expect(formatPriceMock).toHaveBeenCalledWith(2, "CNY")
   })
@@ -297,7 +298,7 @@ describe("ModelItemDetails", () => {
       showPricingDetails: true,
     })
 
-    expect(screen.queryByText("cacheRead1MTokens")).toBeNull()
+    expect(screen.getByText("cacheRead1MTokens")).toBeVisible()
     expect(screen.getByText("cacheWrite1MTokens")).toBeInTheDocument()
     expect(formatPriceMock).toHaveBeenCalledWith(1.25, "USD")
   })

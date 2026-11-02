@@ -179,8 +179,6 @@ const facts = (
       canUpdate: true,
       canDelete: true,
       canRotate: false,
-      canEnable: false,
-      canDisable: false,
     },
   }
 }

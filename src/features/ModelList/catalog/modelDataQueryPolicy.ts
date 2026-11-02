@@ -6,6 +6,7 @@ import {
 } from "~/features/ModelList/catalog/modelDataStates"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   createProviderModelCatalogCacheKey,
   isUnsupportedModelPricingError,
@@ -23,6 +24,13 @@ export const shouldRetryModelPricingQuery = (
   failureCount: number,
   error: Error,
 ) => !isUnsupportedModelPricingError(error) && failureCount < 1
+
+/** Shares the adapter revision across account and all-account query scopes. */
+function accountPricingRevision(siteType: DisplaySiteData["siteType"]) {
+  const revision =
+    getSiteTypeCapabilities(siteType).account?.modelPricing?.cacheVersion
+  return revision ? [revision] : []
+}
 
 /** Builds an account- or provider-scoped pricing query key. */
 export function createModelPricingQueryKey(
@@ -59,6 +67,7 @@ export function createModelPricingQueryKey(
         account.userId,
         account.siteType,
         account.authType,
+        ...accountPricingRevision(account.siteType),
       ]
     : [MODEL_LIST_QUERY_KEYS.PRICING, MODEL_LIST_QUERY_SCOPE_VALUES.NONE]
 }
@@ -92,6 +101,7 @@ function createAllAccountsModelPricingQueryKey(
     account.userId,
     account.siteType,
     account.authType,
+    ...accountPricingRevision(account.siteType),
   ]
 }
 

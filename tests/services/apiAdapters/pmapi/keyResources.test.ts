@@ -274,11 +274,19 @@ describe("PM-API key resources", () => {
   ])(
     "toggles $action through the console's minimal status write",
     async ({ action, status, wireStatus, factStatus }) => {
-      mockTokens([{ status }])
+      mockTokens([
+        {
+          status:
+            action === editActions.Enable
+              ? PMAPI_KEY_STATUSES.Disabled
+              : PMAPI_KEY_STATUSES.Enabled,
+        },
+      ])
       const written: unknown[] = []
       server.use(
         http.put(`${origin}/api/tokens/6741`, async (info) => {
           written.push(await info.request.json())
+          mockTokens([{ status }])
           return HttpResponse.json(envelope(null))
         }),
       )

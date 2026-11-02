@@ -103,9 +103,13 @@ export interface CompactMultiSelectProps
 }
 
 const getOptionAccessibleLabel = (option: CompactMultiSelectOption) =>
-  typeof option.count === "number"
-    ? `${option.label} ${option.count}`
-    : option.label
+  [
+    option.label,
+    option.secondaryLabel,
+    typeof option.count === "number" ? option.count : undefined,
+  ]
+    .filter((value) => value !== undefined && value !== "")
+    .join(" ")
 
 const OptionCountBadge = ({ count }: { count?: number }) =>
   typeof count === "number" ? (
@@ -520,7 +524,26 @@ export function CompactMultiSelect({
                   disabled={disabled || Boolean(item.disabled)}
                   aria-label={getOptionAccessibleLabel(item)}
                 >
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{item.label}</span>
+                    {item.secondaryLabel && (
+                      <span
+                        className="text-muted-foreground block truncate text-xs"
+                        title={item.secondaryLabel}
+                      >
+                        {item.secondaryLabel}
+                      </span>
+                    )}
+                  </span>
+                  {item.badgeLabel && (
+                    <Badge
+                      variant="outline"
+                      className="max-w-28 shrink-0 truncate text-xs"
+                      title={item.badgeLabel}
+                    >
+                      {item.badgeLabel}
+                    </Badge>
+                  )}
                   <OptionCountBadge count={item.count} />
                 </ComboboxItem>
               )}

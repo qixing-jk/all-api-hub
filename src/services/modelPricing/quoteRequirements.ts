@@ -1,7 +1,11 @@
-import { matchesPricingCondition } from "./pricingConditions"
+import {
+  getPricingMeasurementValue,
+  matchesPricingCondition,
+} from "./pricingConditions"
 import {
   PRICING_CONDITION_KINDS,
   PRICING_ISSUE_CODES,
+  PRICING_MEASUREMENT_AXES,
   PRICING_METERS,
   PRICING_PURPOSES,
   PRICING_RANGE_AXES,
@@ -180,14 +184,16 @@ export function getQuoteRequirementDetails(
               scenario.outputTokens === undefined
               ? undefined
               : scenario.inputTokens + scenario.outputTokens
-            : scenario[axis]
+            : axis === PRICING_MEASUREMENT_AXES.VIDEO_SECONDS
+              ? getPricingMeasurementValue(axis, scenario)
+              : scenario[axis]
         const existing = details.get(axis)
         const ranges = existing?.ranges ?? []
         if (condition.kind === PRICING_CONDITION_KINDS.MEASUREMENT)
           ranges.push({
-            min: condition.gt,
-            minExclusive: true,
-            max: condition.lte,
+            min: condition.eq ?? condition.gt,
+            minExclusive: condition.eq === undefined,
+            max: condition.eq ?? condition.lte,
           })
         if (isRange)
           ranges.push({

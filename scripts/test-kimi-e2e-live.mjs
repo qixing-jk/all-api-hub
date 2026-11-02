@@ -1,8 +1,10 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { runScenarioWithCleanup } from "../e2e/utils/scenarioErrors.ts"
 import { connectDevExtension, defaultCdpUrl } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
+import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { runKimiProbe } from "./suites/kimi/probe.mjs"
 import { runKimiUiTest } from "./suites/kimi/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -149,52 +151,46 @@ export async function main(args = process.argv.slice(2)) {
     }
   }
 
-  // 2. 服务端协议与接口探针 (纯 Node.js HTTP)
-  if (suite === "all" || suite === "probe") {
-    if (token) {
-      const probeResult = await runKimiProbe({
-        token,
-        baseUrl: siteUrl,
-      })
-      console.log(
-        `\n✅ Kimi 协议层探针完成 (用户信息: ${probeResult.userInfoOk ? "正常" : "异常"}, 余额: ${probeResult.balanceOk ? "正常" : "异常"}, 密钥生命周期: ${probeResult.keyCrudOk ? "正常" : "异常"})`,
-      )
-      if (!probeResult.ok) {
-        process.exitCode = 1
-      }
-    } else {
-      console.log(
-        "\nℹ️ 未提供 Token，跳过服务端在线探针 (可通过 --token=... 提供)",
-      )
-    }
-  }
-
-  // 3. 扩展 UI 端到端实测 (需要 CDP 驱动扩展)
-  if (suite === "all" || suite === "ui") {
-    if (!token.trim()) throw new Error("kimi_live_ui_requires_access_token")
-    console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
-    const dev = await connectDevExtension({ cdpUrl })
-    console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
-
-    try {
-      await runKimiUiTest({
-        context: dev.context,
-        extensionId: dev.extensionId,
-        serviceWorker: dev.serviceWorker,
-        token,
-        refreshToken,
-        organizationId,
-        siteUrl,
-        siteType,
-      })
-    } finally {
-      await dev.close()
-    }
-  }
-
-  console.log("\n========================================================")
-  console.log("  🎉 Kimi 开放平台现场测试套件执行完毕！")
-  console.log("========================================================")
+  const environment = { cdpUrl, targetUrl: siteUrl }
+  return runLiveSuites({
+    suite,
+    environment,
+    suites: [
+      {
+        id: "probe",
+        covers: ["protocol.contract"],
+        prerequisite: () =>
+          !token
+            ? "Missing session token; authenticated protocol coverage is unavailable"
+            : undefined,
+        run: () => runKimiProbe({ token, baseUrl: siteUrl }),
+      },
+      {
+        id: "ui",
+        covers: ["extension.ui"],
+        run: async () => {
+          if (!token.trim())
+            throw new Error("kimi_live_ui_requires_access_token")
+          const dev = await connectDevExtension({ cdpUrl })
+          environment.extensionId = dev.extensionId
+          return runScenarioWithCleanup({
+            run: () =>
+              runKimiUiTest({
+                ...dev,
+                token,
+                refreshToken,
+                organizationId,
+                siteUrl,
+                siteType,
+              }),
+            finalizers: [() => dev.close()],
+            cleanupMessage: "Live UI connection cleanup failed",
+            failureMessage: "Live UI execution and cleanup failed",
+          })
+        },
+      },
+    ],
+  })
 }
 
 if (

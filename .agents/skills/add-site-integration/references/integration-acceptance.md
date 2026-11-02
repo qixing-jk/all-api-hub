@@ -8,6 +8,10 @@ For scoped onboarding changes, define the expected result per site, deployment/a
 
 Exercise the actual add-account entrypoint and detection action in the current-worktree extension. Assert the outcome appropriate to the scenario:
 
+Keep one uninterrupted normal-entrypoint run through detection, credential completion, verification, save, reopen and refresh for each promised onboarding variant. Account injection, credential prefill and switching to Manual Add are separate scenarios and cannot repair or satisfy a failed automatic run. Assert expected identity/type/scope and credential class at each applicable boundary, not merely nonempty inputs or a closed dialog. Derive expected identity independently from the authorized native session or verified credential contract.
+
+Check the runner itself before trusting its summary: an `all` selection must include every registered in-scope suite, report every skipped/blocked scenario, and exit unsuccessfully for incomplete required coverage. Test dispatch and incomplete-result aggregation without live resources; this validates the harness, not the provider. Missing prerequisites must remain visible even when other suites pass. A screenshot or a suite named automatic does not establish that these assertions ran.
+
 | Expected outcome | Required assertions |
 | --- | --- |
 | Ready to save | Correct machine site type, identity/scope and required credentials; usable save; persisted values and refresh/readback when complete onboarding is promised. |
@@ -31,6 +35,8 @@ The reviewer inspects the native experience or its retained evidence and the cur
 Default the reviewer to read-only source/evidence inspection and non-mutating UI navigation. Browser attachment follows the project live-extension skill. Share browser ownership deliberately; the implementer must pause competing interactions. The reviewer reuses valid mutation/readback evidence, and requests targeted verification from the implementer when needed. Review adds no authority to rotate credentials, issue keys, consume paid inference or repeat check-in grants.
 
 ## Challenge coverage and meaning
+
+Independently reconstruct the scoped scenario inventory from the native console, rendered extension and adapter contracts using [coverage before execution and closure](evidence-and-validation.md#coverage-before-execution). Compare it against the implementer's table and executed assertions; do not inherit the runner's chosen subset as the specification. Explicitly check every lifecycle direction, non-default/clear/edit/reopen branch and applicable failure/recovery state. A skipped, blocked or missing row prevents full acceptance even if the selected run is green. Review every row's evidence classification; independent source review alone cannot fill a missing live run. Reuse valid unchanged evidence, but require targeted execution for uncovered behavior before closing it.
 
 Start from what the scoped native tasks let the target user do, then compare the extension. Reuse the [native editor comparison and field inventory](native-editor-parity.md) for editors and the existing capability table for other tasks. The reviewer checks:
 

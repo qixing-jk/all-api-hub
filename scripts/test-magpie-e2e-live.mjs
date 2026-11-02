@@ -12,6 +12,7 @@ import {
 import { connectExtensionById, defaultCdpUrl } from "./cdp/client.mjs"
 import { applyIsolateFlag, isIsolatedDevProfile } from "./cdp/dev-profile.mjs"
 import { createMagpieNativeClient } from "./suites/magpie/native.mjs"
+import { runMagpieScenarios } from "./suites/magpie/scenarios.mjs"
 import { runMagpieUiScenario } from "./suites/magpie/ui.mjs"
 import { resolveMagpieUpstream } from "./suites/magpie/upstream.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -84,67 +85,67 @@ await runScenarioWithCleanup({
     if (options.evidenceDir)
       await mkdir(options.evidenceDir, { recursive: true })
     fixture = await resolveMagpieUpstream(config.baseUrl)
-    const scenarios =
-      options.suite === "key-pool"
-        ? ["key-pool"]
-        : ["management", "imports", "model-sync", "key-pool"]
-    for (const scenario of scenarios) {
-      if (scenario === "model-sync" && !fixture.config) {
-        console.log(
-          "SKIP model sync: configure AAH_E2E_UPSTREAM_BASE_URL and AAH_E2E_UPSTREAM_API_KEY reachable by the remote backend",
-        )
-        continue
-      }
-      await runMagpieUiScenario({
-        page,
+    await runMagpieScenarios({
+      suite: options.suite,
+      hasUpstream: !!fixture.config,
+      environment: {
         extensionId,
-        native,
-        config,
-        upstream: fixture.config,
-        scenario,
-        onCheck: (name) => console.log(`PASS ${name}`),
-        onCapture: options.evidenceDir
-          ? async (name, locator) => {
-              const filename = `${scenario}-${name}.png`
-              await locator.screenshot({
-                path: path.join(options.evidenceDir, filename),
-                animations: "disabled",
-              })
-              captures.push({
-                filename,
-                capturedAt: new Date().toISOString(),
-                scenario,
-                viewport: page.viewportSize(),
-                assertion: "passed",
-              })
-              await writeFile(
-                path.join(options.evidenceDir, "index.json"),
-                JSON.stringify(
-                  {
-                    commit: execFileSync("git", ["rev-parse", "HEAD"], {
-                      encoding: "utf8",
-                    }).trim(),
-                    workingTreeChanges: execFileSync(
-                      "git",
-                      ["status", "--short"],
-                      { encoding: "utf8" },
-                    ).trim(),
-                    extensionId,
-                    extensionDir: path.resolve(options.extensionDir),
-                    deployment: config.baseUrl,
-                    captures,
-                  },
-                  null,
-                  2,
-                ),
-              )
-            }
-          : undefined,
-      })
-      console.log(
-        `PASS ${scenario} cleanup (gateway, credentials, preferences, cookies, language)`,
-      )
-    }
+        extensionPath: path.resolve(options.extensionDir),
+        cdpUrl,
+        targetUrl: config.baseUrl,
+      },
+      run: async (scenario) => {
+        await runMagpieUiScenario({
+          page,
+          extensionId,
+          native,
+          config,
+          upstream: fixture.config,
+          scenario,
+          onCheck: (name) => console.log(`PASS ${name}`),
+          onCapture: options.evidenceDir
+            ? async (name, locator) => {
+                const filename = `${scenario}-${name}.png`
+                await locator.screenshot({
+                  path: path.join(options.evidenceDir, filename),
+                  animations: "disabled",
+                })
+                captures.push({
+                  filename,
+                  capturedAt: new Date().toISOString(),
+                  scenario,
+                  viewport: page.viewportSize(),
+                  assertion: "passed",
+                })
+                await writeFile(
+                  path.join(options.evidenceDir, "index.json"),
+                  JSON.stringify(
+                    {
+                      commit: execFileSync("git", ["rev-parse", "HEAD"], {
+                        encoding: "utf8",
+                      }).trim(),
+                      workingTreeChanges: execFileSync(
+                        "git",
+                        ["status", "--short"],
+                        { encoding: "utf8" },
+                      ).trim(),
+                      extensionId,
+                      extensionDir: path.resolve(options.extensionDir),
+                      deployment: config.baseUrl,
+                      captures,
+                    },
+                    null,
+                    2,
+                  ),
+                )
+              }
+            : undefined,
+        })
+        console.log(
+          `PASS ${scenario} cleanup (gateway, credentials, preferences, cookies, language)`,
+        )
+      },
+    })
   },
   finalizers: [
     async () => page?.close(),

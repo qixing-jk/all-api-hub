@@ -30,7 +30,7 @@ Use the native editor to understand tasks and constraints, then design for the e
 
 ## Compare the implementation before handoff
 
-Replay the same representative tasks on the actual current-worktree built UI. Cover common materially different type/mode branches and single/multiple-item states where applicable, using the scoped behavior tests and live workflow required by the integration skill.
+Replay all applicable scoped tasks and distinct type/mode branches on the actual current-worktree built UI, including single/multiple-item states. Follow [coverage before execution and closure](evidence-and-validation.md#coverage-before-execution); choose representative images for visual review after the behavioral inventory is covered. Reuse unchanged evidence for isolated follow-ups.
 
 - Compare task effort: unnecessary steps, repeated entry, unrelated required fields, and native-console fallback for an in-scope core action.
 - Inspect the next action, credential and primary-action placement, avoidable scrolling, grouping, defaults and misleading affordances. Check keyboard access and relevant compact widths. Follow [visual previews](visual-previews.md) and actually inspect representative images of comparable task states.

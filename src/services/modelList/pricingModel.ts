@@ -123,6 +123,7 @@ export const MODEL_UNAVAILABLE_PRICE_REASONS = {
   OFFICIAL_PRICE_MISSING: "official-price-missing",
   OFFICIAL_PRICE_INVALID: "official-price-invalid",
   PRICING_SOURCE_UNAVAILABLE: "pricing-source-unavailable",
+  PRICING_RULES_UNAVAILABLE: "pricing-rules-unavailable",
 } as const
 
 export type ModelUnavailablePriceReason =

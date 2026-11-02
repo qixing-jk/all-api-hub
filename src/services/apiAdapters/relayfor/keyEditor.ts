@@ -223,23 +223,13 @@ export function editRelayForKeyEditor(
   intent?: AccountKeyResourceEditIntent,
 ): AccountKeyResourceEditorDefinition<RelayForEditKeyCommand> {
   const action = intent?.action
-  if (
-    action === editActions.Rotate ||
-    action === editActions.Enable ||
-    action === editActions.Disable
-  ) {
+  if (action === editActions.Rotate) {
     return {
       action,
       fields: [],
       initialValues: {},
       validate: () => ({ valid: true }),
-      buildCommand: () => ({
-        rotate: action === editActions.Rotate,
-        payload:
-          action === editActions.Rotate
-            ? {}
-            : { status: action === editActions.Enable ? 1 : 2 },
-      }),
+      buildCommand: () => ({ rotate: true, payload: {} }),
     }
   }
   return {

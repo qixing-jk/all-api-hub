@@ -1,10 +1,23 @@
 # Desktop dev recovery
 
+## The browser starts but has no extension
+
+Chromium 137+ ignores `--load-extension` unless the `DisableLoadExtensionCommandLineSwitch`
+feature is turned off. A long-lived profile hides this: the extension stays installed from
+an earlier launch, so the shared `dev-browser` looks healthy while every fresh profile —
+notably a new `--isolate` profile — comes up with no extension at all. The launcher passes
+the kill switch; a hand-rolled launch must add it too, or `Extensions.loadUnpacked` /
+`Extensions.getExtensions` will report nothing installed. Symptom: the CDP port listens,
+`chrome://extensions` is empty, and the `chrome.developerPrivate` list is empty even with
+`includeDisabled`.
+
 ## Identify the current worktree's server
 
 Read `.scratch/wxt-dev.log`, the launch output, and `.output/chrome-mv3-dev/options.html` in the checkout being tested. Probe the generated server URL's `/@vite/client`; the root `/` can legitimately return 404. Diagnose proxy interception of loopback CDP separately from WXT readiness, using an invocation-scoped proxy bypass when indicated.
 
 The launcher can accept the first Vite response on ports 3000–3005 without establishing worktree ownership. If the generated URL is unreachable but another port responds, inspect the listener's PID, command line and working directory where available, together with this checkout's WXT log/PID. A Vite response or a visible Options shell alone does not resolve the mismatch.
+
+When output files disappear or a build reports `ENOTEMPTY`, check for multiple WXT processes writing the same output directory before starting another server. Compare the dev origins in `options.html`, `background.js`, and `manifest.json`'s content security policy; competing writers can leave these files pointing at different ports even though each server responds. Establish process ownership, retain one writer for that output directory, and regenerate the complete dev output before reloading the extension.
 
 For a mismatched server, select a verified free dev-server port and launch from the intended checkout:
 

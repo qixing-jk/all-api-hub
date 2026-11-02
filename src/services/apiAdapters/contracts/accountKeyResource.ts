@@ -269,7 +269,7 @@ export type AccountKeyDisplayFact =
   | {
       readonly fieldId: string
       readonly kind: "restriction"
-      readonly role: "models" | "ip" | "subnet"
+      readonly role: "models" | "tools" | "ip" | "subnet"
       readonly value: string | readonly string[]
     }
   | {

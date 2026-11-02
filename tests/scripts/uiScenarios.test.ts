@@ -2,6 +2,66 @@ import { expect, it, vi } from "vitest"
 
 import { runUiScenarios } from "~~/scripts/cdp/ui-scenarios.mjs"
 
+it("does not hide a real assertion failure behind other skipped checks", async () => {
+  const report = await runUiScenarios({
+    selected: ["probe"],
+    scenarios: [
+      {
+        id: "probe",
+        covers: ["protocol"],
+        run: async () => ({ ok: false, skipped: true }),
+      },
+    ],
+  })
+  expect(report.scenarios).toMatchObject([{ status: "failed" }])
+})
+
+it("does not accept fulfilled skipped scenarios as passes", async () => {
+  const report = await runUiScenarios({
+    selected: ["auth"],
+    scenarios: [
+      {
+        id: "auth",
+        covers: ["auth.read"],
+        run: async () => ({
+          ok: true,
+          skipped: true,
+          reason: "Missing credential",
+        }),
+      },
+    ],
+  })
+  expect(report).toMatchObject({
+    ok: false,
+    scenarios: [
+      { id: "auth", status: "blocked", reason: "Missing credential" },
+    ],
+  })
+})
+
+it("can continue independent suites without losing the initial failure", async () => {
+  const later = vi.fn(async () => {})
+  const report = await runUiScenarios({
+    continueOnFailure: true,
+    selected: ["probe", "ui"],
+    scenarios: [
+      {
+        id: "probe",
+        covers: ["protocol"],
+        run: async () => {
+          throw new Error("wire mismatch")
+        },
+      },
+      { id: "ui", covers: ["render"], run: later },
+    ],
+  })
+  expect(later).toHaveBeenCalledOnce()
+  expect(report).toMatchObject({
+    ok: false,
+    scenarios: [{ status: "failed" }, { status: "passed" }],
+  })
+})
+
 it("runs only the requested UI scenario and preserves the unselected coverage", async () => {
   const ran: string[] = []
   const report = await runUiScenarios({

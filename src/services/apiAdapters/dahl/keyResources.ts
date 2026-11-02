@@ -129,6 +129,12 @@ const facts = (
   if ("kind" in detail)
     return {
       ...detail.facts,
+      actions: {
+        canUpdate: detail.facts.actions.canUpdate,
+        canDelete: detail.facts.actions.canDelete,
+        canRevoke: detail.facts.actions.canRevoke,
+        canRotate: detail.facts.actions.canRotate,
+      },
       runtimeSecret: detail.facts.runtimeSecret,
       ref,
       displayName: keyDisplayName(detail.keyId, detail.name),

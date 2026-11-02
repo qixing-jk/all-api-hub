@@ -798,7 +798,12 @@ describe("Novita key resources", () => {
       ip_restricted: true,
       allowed_ips: "192.0.2.1",
     })
-    expect(result.facts?.actions).toEqual({ canUpdate: true, canDelete: false })
+    expect(result.facts?.actions).toMatchObject({
+      canUpdate: true,
+      canDelete: false,
+      canEnable: false,
+      canDisable: false,
+    })
     const reopened = await collection.openEditEditor(ref)
     expect(reopened.initialValues.allowed_models).toEqual(["example/model"])
     await expect(
@@ -829,9 +834,11 @@ describe("Novita key resources", () => {
     expect(facts.displayName).toBe("all-api-hub-probe-key")
     expect(facts.maskedLabel).toBe("sk_1Av3****VaCk")
     expect(facts.runtimeSecret).toBeUndefined()
-    expect(facts.actions).toEqual({
+    expect(facts.actions).toMatchObject({
       canUpdate: true,
       canDelete: false,
+      canEnable: false,
+      canDisable: false,
     })
     // Permanent keys (`""` live / `"never"` documented) render as never expiring.
     expect(facts.displayFacts).toContainEqual({

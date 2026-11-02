@@ -12,6 +12,7 @@ import {
   PRICING_VIDEO_INPUTS,
 } from "~/services/modelPricing/pricingConstants"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
+import { compileExclusiveSelectionRules } from "~/services/modelPricing/selectionPricingRules"
 import { normalizeVideoQuality } from "~/services/modelPricing/videoQuality"
 
 const price = z.number().finite().nonnegative()
@@ -131,6 +132,9 @@ export function buildAIHubMixLegacyVideoPlan(
         },
       })
     }
+    const compiled = compileExclusiveSelectionRules(plan.rules)
+    if (!compiled) return undefined
+    plan.rules = compiled
     plan.requiresRuleMatch = plan.rules.length > 0
     return table.standard === undefined || table.standard === amount
       ? plan
@@ -194,6 +198,9 @@ export function buildAIHubMixLegacyVideoPlan(
     groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
     issues: [],
   }
+  const compiled = compileExclusiveSelectionRules(plan.rules)
+  if (!compiled) return undefined
+  plan.rules = compiled
   const prices = new Set(entries.map(([, amount]) => amount))
   const conflict = Object.entries(table).some(([key, amount]) => {
     const quoted = entries.find(

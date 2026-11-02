@@ -250,6 +250,7 @@
     "neverExpires": "永不過期",
     "note": "備註：",
     "remainingQuota": "剩餘額度：",
+    "tools": "允許的工具",
     "totalQuota": "總額度：",
     "ungrouped": "未分組",
     "usedQuota": "已用額度："
@@ -481,7 +482,8 @@
         "permissionDenied": "請使用有權查看與管理金鑰的憑證，然後重試。",
         "title": "無法儲存金鑰",
         "unavailable": "服務暫時無法使用，請稍後重試。",
-        "uncertain": "服務可能已套用此變更。請先重新整理金鑰確認目前狀態，再決定是否重試。"
+        "uncertain": "服務可能已套用此變更。請先重新整理金鑰確認目前狀態，再決定是否重試。",
+        "unexpected": "擴充功能無法執行此操作，請更新擴充功能或回報此問題。"
       },
       "followAccountQuotaHelp": "-1 表示跟隨帳戶額度。",
       "followsAccount": "跟隨帳戶",

@@ -345,7 +345,7 @@ export function useAccountKeyResourceEditorWorkflow({
           (nativeEditor.action !== intent || nativeEditor.fields.length !== 0)
         ) {
           throw new AccountKeyResourceError({
-            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
           })
         }
         acceptOpening(attemptId, nativeEditor, boundary, editorMode)

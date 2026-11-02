@@ -32,6 +32,7 @@ import {
   isModelPriceUnavailable,
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
+import { resolveCanonicalPricingPlan } from "~/services/modelPricing/canonicalPricingPlan"
 import {
   CALCULATED_PRICE_KINDS,
   PRICING_PURPOSES,
@@ -43,6 +44,7 @@ import type {
   PricingScenario,
   QuoteResult,
 } from "~/services/modelPricing/pricingPlan"
+import { readPublishedPricing } from "~/services/modelPricing/publishedPricing"
 import {
   QUOTA_COMPARISON_SCOPES,
   QUOTA_QUOTE_STATUSES,
@@ -320,14 +322,26 @@ function resolveBestCalculatedItem(
         ),
         isComparisonActive: isPriceComparisonActive,
       }
+    const plan = resolveCanonicalPricingPlan(model, groupMultiplier)
+    const publishedPricing = readPublishedPricing(plan, groupMultiplier)
     if (
-      (price.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE &&
-        !model.pricingPlan) ||
-      (!isPriceComparisonActive &&
-        !model.pricingPlan &&
-        price.kind !== CALCULATED_PRICE_KINDS.TOKEN)
-    )
-      return price
+      !publishedPricing.source.url &&
+      publishedPricing.source.kind === PRICING_SOURCE_KINDS.ACCOUNT &&
+      rawItem.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+    ) {
+      publishedPricing.source = {
+        ...publishedPricing.source,
+        url: resolveAccountSitePricingUrl({
+          siteType: rawItem.source.account.siteType,
+          baseUrl: rawItem.source.account.baseUrl,
+          modelName: model.model_name,
+        }),
+      }
+    }
+    if (!isPriceComparisonActive)
+      return { ...price, publishedPricing, isComparisonActive: false }
+    if (price.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE && !model.pricingPlan)
+      return { ...price, publishedPricing, isComparisonActive: true }
     const scenario = pricingScenario ?? {
       purpose: PRICING_PURPOSES.TOKEN_INDEX,
       usage: priceComparisonWeights,
@@ -339,23 +353,11 @@ function resolveBestCalculatedItem(
         ? { cnyPerUsd: resolveKnownAccountExchangeRate(rawItem.source.account) }
         : {}),
     })
-    if (
-      !quote.source.url &&
-      quote.source.kind === PRICING_SOURCE_KINDS.ACCOUNT &&
-      rawItem.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-    ) {
-      quote.source = {
-        ...quote.source,
-        url: resolveAccountSitePricingUrl({
-          siteType: rawItem.source.account.siteType,
-          baseUrl: rawItem.source.account.baseUrl,
-          modelName: model.model_name,
-        }),
-      }
-    }
+    quote.source = publishedPricing.source
     return {
       ...price,
       quote,
+      publishedPricing,
       isComparisonActive: isPriceComparisonActive,
     }
   }

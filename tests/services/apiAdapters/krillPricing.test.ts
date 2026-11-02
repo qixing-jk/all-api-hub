@@ -96,8 +96,15 @@ it("shows the native default route and channel price, including both cache lifet
   expect(plan.rates.cacheWrite?.amount).toBeCloseTo(4.68675)
   expect(plan.rates.cacheWrite1h?.amount).toBeCloseTo(7.4988)
   expect(plan.groupMultiplier).toBe("included")
-  expect(plan.source.pricingDescription?.zh).toContain("1.8747")
-  expect(plan.source.pricingDescription?.zh).toContain("海外线路")
+  expect(plan.source.pricingDescription).toBeUndefined()
+  expect(plan.source.notes).toContainEqual(
+    expect.objectContaining({
+      kind: "routing-context",
+      routeName: "海外线路",
+      multiplier: 1.8747,
+      dedicated: false,
+    }),
+  )
   expect(plan.limits).toEqual({ totalTokens: 1000000, outputTokens: 128000 })
   expect(result.groupAccess).toEqual({ kind: "not-applicable" })
   expect(row.enable_groups).toEqual([])
@@ -129,7 +136,9 @@ it("uses route-specific dedicated prices directly instead of multiplying them ag
   expect(plan.rates.input?.amount).toBe(1.5)
   expect(plan.rates.output?.amount).toBe(7.5)
   expect(plan.rates.cacheWrite1h?.amount).toBe(3)
-  expect(plan.source.pricingDescription?.zh).toContain("专属")
+  expect(plan.source.notes).toContainEqual(
+    expect.objectContaining({ kind: "routing-context", dedicated: true }),
+  )
 })
 
 it("applies high-context prices only above the native input threshold", async () => {
@@ -192,7 +201,12 @@ it("does not silently present time-window rates with an unknown timezone as a co
     code: "unverified-axis",
     meters: ["input", "output", "cacheRead"],
   })
-  expect(plan.source.pricingDescription?.zh).toContain("18:00–09:00")
+  expect(plan.source.notes).toContainEqual(
+    expect.objectContaining({
+      kind: "routing-context",
+      timeWindows: [expect.objectContaining({ start: 1080, end: 540 })],
+    }),
+  )
   expect(
     quoteModelPrice(plan, { purpose: "request", usage: { input: 1 } }).status,
   ).not.toBe("complete")
@@ -340,8 +354,8 @@ it("retains base prices and an honest default route when catalogs have no routin
   ])
   const row = (await krillModelPricing.fetchPricing(request as never)).data[0]!
   expect(row.pricingPlan?.rates.input?.amount).toBe(2)
-  expect(row.pricingPlan?.source.pricingDescription?.en).toContain(
-    "Default route",
+  expect(row.pricingPlan?.source.notes).toContainEqual(
+    expect.objectContaining({ kind: "routing-context", routeName: undefined }),
   )
   expect(row.presentation?.summaryFacts).toEqual([])
   expect(row.vendorEvidence).toBeUndefined()

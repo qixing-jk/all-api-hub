@@ -916,6 +916,10 @@ async function main() {
     `--profile-directory=${preparation.profileDirectory}`,
     `--load-extension=${extDir}`,
     `--disable-extensions-except=${extDir}`,
+    // Chromium 137+ ignores `--load-extension` unless this kill switch is
+    // disabled. An older profile keeps an already-installed extension, which
+    // hides the regression on the shared profile but breaks every fresh one.
+    "--disable-features=DisableLoadExtensionCommandLineSwitch",
     // Enable the supported CDP unpacked installer; readiness is verified below.
     "--enable-unsafe-extension-debugging",
     "--enable-automation",

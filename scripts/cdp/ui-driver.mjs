@@ -73,7 +73,10 @@ export async function openExtensionPage({
   try {
     await configureExtensionPage(page, { language, viewport, dismissUpdateLog })
     const targetUrl = `chrome-extension://${extensionId}/${route}`
-    await page.goto(targetUrl)
+    await page.goto(targetUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    })
     await page.waitForLoadState("domcontentloaded")
     await page.waitForTimeout(600)
 
@@ -123,5 +126,19 @@ export function createUiCapture({
       })
     }
     screenshots?.push(written)
+  }
+}
+/** Reuse the mounted extension document when only its hash route changes. */
+export async function navigateExtensionPage(page, targetUrl) {
+  if (page.url().split("#")[0] === targetUrl.split("#")[0]) {
+    await page.evaluate((hash) => {
+      if (window.location.hash !== hash) window.location.hash = hash
+    }, new URL(targetUrl).hash)
+  } else {
+    await page.goto(targetUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    })
+    await page.waitForLoadState("domcontentloaded")
   }
 }

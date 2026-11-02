@@ -1,7 +1,9 @@
-#!/usr/bin/env node
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 
+import { runScenarioWithCleanup } from "../e2e/utils/scenarioErrors.ts"
 import { connectDevExtension, connectExtensionById } from "./cdp/client.mjs"
+import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { runGptLoadProbe } from "./suites/gpt-load/probe.mjs"
 import { runGptLoadUiTest } from "./suites/gpt-load/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -11,7 +13,7 @@ import { loadLocalEnv } from "./utils/local-env.mjs"
  * @param args Command-line options supplied by the operator.
  * @returns Connection settings for the gpt-load deployment.
  */
-function parseArgs(args) {
+export function parseArgs(args) {
   const options = {
     suite: "ui",
     cdpUrl: undefined,
@@ -64,6 +66,9 @@ dev profile 的扩展设置；协议探测默认完全只读。
     }
   }
 
+  if (!["all", "probe", "ui"].includes(options.suite))
+    throw new Error("Invalid suite; use all, probe, or ui")
+
   const { files } = loadLocalEnv({ envFile: options.envFile })
   options.envSources = files
   options.cdpUrl ??= process.env.CDP_URL || "http://127.0.0.1:9222"
@@ -104,8 +109,8 @@ async function connectLiveExtension(cdpUrl, extensionId) {
 }
 
 /** Validate configuration before executing the selected suites. */
-async function main() {
-  const options = parseArgs(process.argv.slice(2))
+export async function main(args = process.argv.slice(2)) {
+  const options = parseArgs(args)
   const { suite, cdpUrl, baseUrl, managementKey, allowWrite } = options
   console.log("========================================================")
   console.log("  gpt-load 真实部署端到端实测 (协议 + 扩展 UI)")
@@ -123,47 +128,41 @@ async function main() {
     process.exit(1)
   }
 
-  // 1. Protocol layer first: no browser needed, and it decides whether the
-  //    deployment still matches what the adapter was written against.
-  if (suite === "all" || suite === "probe") {
-    const probeResult = await runGptLoadProbe({
-      baseUrl,
-      managementKey,
-      allowWrite,
-    })
-    console.log(
-      `\n${probeResult.ok ? "✅" : "❌"} 协议层探测完成 (驱动: ${probeResult.channelCount}, 分组: ${probeResult.groupCount})`,
-    )
-    if (!probeResult.ok) {
-      process.exitCode = 1
-    }
-  }
-
-  // 2. Extension UI through the live dev browser.
-  if (suite === "all" || suite === "ui") {
-    console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
-    const dev = await connectLiveExtension(cdpUrl, options.extensionId)
-    console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
-
-    try {
-      await runGptLoadUiTest({
-        context: dev.context,
-        extensionId: dev.extensionId,
-        serviceWorker: dev.serviceWorker,
-        baseUrl,
-        managementKey,
-      })
-    } finally {
-      await dev.close()
-    }
-  }
-
-  console.log("\n========================================================")
-  console.log("  🎉 gpt-load 测试套件执行完毕！")
-  console.log("========================================================")
+  const environment = { cdpUrl, targetUrl: baseUrl }
+  return runLiveSuites({
+    suite,
+    environment,
+    suites: [
+      {
+        id: "probe",
+        covers: ["protocol.contract"],
+        run: () => runGptLoadProbe({ baseUrl, managementKey, allowWrite }),
+      },
+      {
+        id: "ui",
+        covers: ["extension.ui"],
+        run: async () => {
+          const dev = await connectLiveExtension(cdpUrl, options.extensionId)
+          environment.extensionId = dev.extensionId
+          return runScenarioWithCleanup({
+            run: () => runGptLoadUiTest({ ...dev, baseUrl, managementKey }),
+            finalizers: [() => dev.close()],
+            cleanupMessage: "Live UI connection cleanup failed",
+            failureMessage: "Live UI execution and cleanup failed",
+          })
+        },
+      },
+    ],
+  })
 }
 
-main().catch((error) => {
-  console.error("\n❌ 测试运行失败:", error.message)
-  process.exit(1)
-})
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  loadLocalEnv()
+  main().catch((error) => {
+    console.error("\n❌ 测试运行失败:", error.message)
+    process.exit(1)
+  })
+}

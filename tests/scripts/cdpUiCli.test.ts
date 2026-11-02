@@ -48,3 +48,20 @@ it("writes an incomplete report when browser connection fails", () => {
   })
   expect(report.setupError).toContain("CDP")
 })
+
+it("selects every registered read-only UI scenario with all and retains setup gaps", () => {
+  const result = run("--scenario=all")
+  expect(result.status).toBe(1)
+  expect(result.stdout).toContain("CDP UI report:")
+  const reportPath = result.stdout.match(/CDP UI report: (.+)/)![1]!.trim()
+  const report = JSON.parse(readFileSync(reportPath, "utf8"))
+  expect(report.selected).toEqual([
+    "options",
+    "account",
+    "models",
+    "key-editor",
+  ])
+  expect(
+    report.scenarios.map(({ status }: { status: string }) => status),
+  ).toEqual(["not_run", "not_run", "not_run", "not_run"])
+})

@@ -17,6 +17,8 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   resolveLabel: ResourceFieldTextResolver
   resolveHelp?: ResourceFieldTextResolver
   resolvePlaceholder?: ResourceFieldTextResolver
+  /** A read-only scalar may be displayed as a fact rather than an input. */
+  resolveReadOnlyValue?: (t: TFunction, value: string) => string
   /** Half-width controls share a row in a section with two columns. */
   width?: "half"
   /** Consecutive fields in the same group share a wrapping summary row. */

@@ -16,7 +16,13 @@ export interface ModelPricingScenarioSettings {
   imageSize?: PricingScenario["imageSize"]
   videoInput?: PricingScenario["videoInput"]
   imageQuality?: PricingScenario["imageQuality"]
+  documentAnnotation?: PricingScenario["documentAnnotation"]
+  generationMode?: PricingScenario["generationMode"]
+  videoDynamicRange?: PricingScenario["videoDynamicRange"]
+  searchContext?: PricingScenario["searchContext"]
   videoQuality?: PricingScenario["videoQuality"]
+  videoMode?: PricingScenario["videoMode"]
+  videoAudio?: PricingScenario["videoAudio"]
   imageMegapixels?: number
   taskUsage?: PricingScenario["taskUsage"]
 }

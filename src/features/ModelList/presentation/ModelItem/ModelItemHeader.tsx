@@ -5,9 +5,15 @@ import { useTranslation } from "react-i18next"
 import { Badge, BadgeAdornment, IconButton } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { ModelVendorMark } from "~/features/ModelList/presentation/ModelVendorMark"
+import {
+  pricingMeterLabels,
+  pricingRateUnitLabels,
+} from "~/features/ModelList/pricing/pricingScenarioOptions"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
+import { PRICING_USAGE_MODES } from "~/services/modelPricing/pricingConstants"
+import { getPriceMeterUnit } from "~/services/modelPricing/pricingPlan"
 import type { ResolvedModelVendor } from "~/services/models/modelMetadata/types"
 import { getBillingModeText } from "~/services/models/utils/modelPricing"
 import {
@@ -56,6 +62,27 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   const { t } = useTranslation(["modelList", "aiApiVerification"])
   const displayName = model.display_name?.trim() || model.model_name
   const showRequestModelId = displayName !== model.model_name
+  const plan = model.pricingPlan
+  let billingModeText = getBillingModeText(model.quota_type)
+  if (plan?.usageMode === PRICING_USAGE_MODES.TOKENS)
+    billingModeText = getBillingModeText(0)
+  else if (plan?.usageMode === PRICING_USAGE_MODES.REQUEST)
+    billingModeText = getBillingModeText(1)
+  else if (plan?.usageMode === PRICING_USAGE_MODES.VIDEO)
+    billingModeText = `${t("scenario.videoOutput")} · ${t("scenario.perMillionTokens")}`
+  else if (plan?.usageMode === PRICING_USAGE_MODES.IMAGE)
+    billingModeText = t("scenario.outputImages")
+  else if (plan?.usageMode === PRICING_USAGE_MODES.CUSTOM)
+    billingModeText = t("scenario.sitePricingDescription")
+  else if (plan?.usageMode === PRICING_USAGE_MODES.METERED) {
+    const meter = plan.comparison?.meter
+    const unitLabels: Partial<Record<string, string>> = pricingRateUnitLabels(t)
+    const unitLabel = meter ? unitLabels[getPriceMeterUnit(meter)] : undefined
+    billingModeText =
+      meter && unitLabel
+        ? `${pricingMeterLabels(t)[meter]} · ${unitLabel}`
+        : t("scenario.sitePricingDescription")
+  }
 
   const getBillingVariant = (quotaType: number) => {
     if (quotaType === 2) return "default"
@@ -164,7 +191,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                 size="sm"
                 className="text-3xs sm:text-xs"
               >
-                {getBillingModeText(model.quota_type)}
+                {billingModeText}
               </Badge>
             )}
 

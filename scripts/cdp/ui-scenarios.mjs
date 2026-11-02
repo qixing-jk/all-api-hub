@@ -1,3 +1,12 @@
+/** Stable report values shared by scenario execution and suite acceptance. */
+export const UI_SCENARIO_STATUSES = {
+  Passed: "passed",
+  Failed: "failed",
+  Blocked: "blocked",
+  NotSelected: "not_selected",
+  NotRun: "not_run",
+}
+
 /** Reject invalid selection before browser navigation or other setup. */
 export function validateUiScenarios(scenarios, selected) {
   const ids = new Set()
@@ -12,20 +21,28 @@ export function validateUiScenarios(scenarios, selected) {
 }
 
 /** Execute selected UI scenarios and retain failures and omitted coverage. */
-export async function runUiScenarios({ scenarios, selected }) {
+export async function runUiScenarios({
+  scenarios,
+  selected,
+  continueOnFailure = false,
+}) {
   validateUiScenarios(scenarios, selected)
   const results = []
   let failed = false
   for (const scenario of scenarios) {
     const result = { id: scenario.id, covers: scenario.covers }
     if (!selected.includes(scenario.id)) {
-      results.push({ ...result, status: "not_selected", durationMs: 0 })
-      continue
-    }
-    if (failed) {
       results.push({
         ...result,
-        status: "not_run",
+        status: UI_SCENARIO_STATUSES.NotSelected,
+        durationMs: 0,
+      })
+      continue
+    }
+    if (failed && !continueOnFailure) {
+      results.push({
+        ...result,
+        status: UI_SCENARIO_STATUSES.NotRun,
         durationMs: 0,
         reason: "An earlier scenario failed",
       })
@@ -35,7 +52,12 @@ export async function runUiScenarios({ scenarios, selected }) {
     try {
       const reason = scenario.prerequisite?.()
       if (reason) {
-        results.push({ ...result, status: "blocked", reason, durationMs: 0 })
+        results.push({
+          ...result,
+          status: UI_SCENARIO_STATUSES.Blocked,
+          reason,
+          durationMs: 0,
+        })
         continue
       }
       const outcome = await scenario.run()
@@ -44,16 +66,25 @@ export async function runUiScenarios({ scenarios, selected }) {
           `UI scenario reported an unsuccessful result: ${scenario.id}`,
         )
       }
+      if (outcome?.skipped) {
+        results.push({
+          ...result,
+          status: UI_SCENARIO_STATUSES.Blocked,
+          reason: outcome.reason || "Required checks were skipped",
+          durationMs: Math.round(performance.now() - started),
+        })
+        continue
+      }
       results.push({
         ...result,
-        status: "passed",
+        status: UI_SCENARIO_STATUSES.Passed,
         durationMs: Math.round(performance.now() - started),
       })
     } catch (error) {
       failed = true
       results.push({
         ...result,
-        status: "failed",
+        status: UI_SCENARIO_STATUSES.Failed,
         reason: error instanceof Error ? error.message : String(error),
         durationMs: Math.round(performance.now() - started),
       })
@@ -61,7 +92,9 @@ export async function runUiScenarios({ scenarios, selected }) {
   }
   return {
     ok: results.every(({ status }) =>
-      ["passed", "not_selected"].includes(status),
+      [UI_SCENARIO_STATUSES.Passed, UI_SCENARIO_STATUSES.NotSelected].includes(
+        status,
+      ),
     ),
     scenarios: results,
   }

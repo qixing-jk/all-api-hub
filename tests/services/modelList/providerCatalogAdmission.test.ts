@@ -56,6 +56,52 @@ function createProviderResponse(modelOverrides: Record<string, unknown> = {}) {
 }
 
 describe("provider model-catalog admission", () => {
+  it.each(["no-plan", "cache-only", "no-source"])(
+    "rejects estimated catalog entries with %s",
+    (kind) => {
+      const response = createProviderResponse({
+        price_metadata: {
+          source: "provider-catalog",
+          precision: "estimated",
+          ...(kind !== "no-source"
+            ? { source_url: "https://provider.example/prices" }
+            : {}),
+        },
+        ...(kind !== "no-plan"
+          ? {
+              pricingPlan: {
+                rates:
+                  kind === "cache-only"
+                    ? {
+                        cacheRead: {
+                          amount: 1,
+                          currency: "USD",
+                          unit: "token",
+                          per: 1000000,
+                        },
+                      }
+                    : {
+                        input: {
+                          amount: 1,
+                          currency: "USD",
+                          unit: "token",
+                          per: 1000000,
+                        },
+                      },
+                rules: [],
+                source: { kind: "catalog" },
+                groupMultiplier: "included",
+                issues: [],
+              },
+            }
+          : {}),
+      })
+      expect(
+        isValidProviderModelCatalogPricing(response, SITE_TYPES.OPENROUTER),
+      ).toBe(false)
+    },
+  )
+
   it("accepts the extended provider-neutral presentation fact vocabulary", () => {
     const label = { fallback: "Example fact" }
     const price = {

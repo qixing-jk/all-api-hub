@@ -23,6 +23,37 @@ const renderCompact = (ui: ReactElement) =>
   })
 
 describe("CompactMultiSelect", () => {
+  it("shows tool titles, IDs and sources while selecting by the stable ID", async () => {
+    const onChange = vi.fn()
+    renderCompact(
+      <CompactMultiSelect
+        displayMode="chips"
+        options={[
+          {
+            value: "search/web",
+            label: "Web search",
+            secondaryLabel: "search/web",
+            badgeLabel: "search",
+          },
+        ]}
+        selected={[]}
+        onChange={onChange}
+        aria-label="Tools"
+      />,
+    )
+    const user = userEvent.setup()
+    await user.type(
+      screen.getByRole("combobox", { name: "Tools" }),
+      "search/web",
+    )
+    const option = await screen.findByRole("option", {
+      name: "Web search search/web",
+    })
+    expect(within(option).getByText("search/web")).toBeVisible()
+    expect(within(option).getByText("search")).toBeVisible()
+    await user.click(option)
+    expect(onChange).toHaveBeenCalledWith(["search/web"])
+  })
   it.each([
     { isComposing: true, keyCode: 13 },
     { isComposing: false, keyCode: 229 },

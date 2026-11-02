@@ -20,6 +20,7 @@ import type {
   PriceMeter,
   QuoteResult,
 } from "~/services/modelPricing/pricingPlan"
+import type { PublishedPricing } from "~/services/modelPricing/publishedPricing"
 import type { QuotaQuote } from "~/services/modelPricing/quotaPricing"
 import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
@@ -29,11 +30,12 @@ export type CalculatedPrice = (
   | CalculatedPerCallPrice
   | UnavailableCalculatedPrice
 ) & {
+  publishedPricing?: PublishedPricing
   quote?: QuoteResult
   quotaQuote?: QuotaQuote
   isComparisonActive?: boolean
-  /** Published flat per-million rates when they are not in the USD field. */
-  perMillionTokens?: TokenPricesByCurrency
+  /** Independently published rates; absent meters stay absent, never zero. */
+  perMillionTokens?: Partial<TokenPricesByCurrency>
 }
 
 export interface TokenPricesUSD {
@@ -55,7 +57,7 @@ export interface CalculatedTokenPrice {
   kind: typeof CALCULATED_PRICE_KINDS.TOKEN
   usdPerMillionTokens: TokenPricesUSD
   /** Published per-million prices in the currency the plan carries them in. */
-  perMillionTokens?: TokenPricesByCurrency
+  perMillionTokens?: Partial<TokenPricesByCurrency>
 }
 
 export interface CalculatedPerCallPrice {
@@ -135,7 +137,7 @@ const calculateRatioTokenPriceUSD = (
  */
 const publishedTokenRates = (
   currentPlan: NonNullable<ModelPricing["pricingPlan"]>,
-): TokenPricesByCurrency | undefined => {
+): Partial<TokenPricesByCurrency> | undefined => {
   // The flat-rate view is only for an unadorned published price: conditional
   // plans carry context that flat rates would misrepresent, and grouped plans
   // are not the published schedule. This mirrors the component's old guard.
@@ -157,13 +159,24 @@ const publishedTokenRates = (
   }
   const input = rate(PRICING_METERS.INPUT),
     output = rate(PRICING_METERS.OUTPUT)
-  if (input === undefined || output === undefined) return undefined
-  // USD plans already fill the canonical field; only rates it cannot hold are
-  // kept here, so the flat-rate view stays scoped to non-USD deployments.
-  if (input.currency === "USD" && output.currency === "USD") return undefined
+  if (
+    (currentPlan.rates.input && input === undefined) ||
+    (currentPlan.rates.output && output === undefined)
+  )
+    return undefined
+  // Complete USD rates use the canonical field. Partial rates and other
+  // currencies stay here without inventing prices for absent meters.
+  if (input?.currency === "USD" && output?.currency === "USD") return undefined
+  if (
+    !input &&
+    !output &&
+    !rate(PRICING_METERS.CACHE_READ) &&
+    !rate(PRICING_METERS.CACHE_WRITE)
+  )
+    return undefined
   return {
-    input,
-    output,
+    ...(input ? { input } : {}),
+    ...(output ? { output } : {}),
     ...(rate(PRICING_METERS.CACHE_READ) === undefined
       ? {}
       : { cacheRead: rate(PRICING_METERS.CACHE_READ)! }),
@@ -312,16 +325,21 @@ export const resolvePriceAmount = (
  * amounts keep their published values so the view never re-derives them.
  */
 export const projectTokenPrices = (
-  rates: TokenPricesByCurrency,
-): { prices: TokenPricesUSD; currency: CurrencyType } => ({
-  currency: rates.input.currency,
-  prices: {
-    input: rates.input.amount,
-    output: rates.output.amount,
-    ...(rates.cacheRead ? { cacheRead: rates.cacheRead.amount } : {}),
-    ...(rates.cacheWrite ? { cacheWrite: rates.cacheWrite.amount } : {}),
-  },
-})
+  rates: Partial<TokenPricesByCurrency>,
+): { prices: Partial<TokenPricesUSD>; currency: CurrencyType } | undefined => {
+  const first =
+    rates.input ?? rates.output ?? rates.cacheRead ?? rates.cacheWrite
+  if (!first) return undefined
+  return {
+    currency: first.currency,
+    prices: {
+      ...(rates.input ? { input: rates.input.amount } : {}),
+      ...(rates.output ? { output: rates.output.amount } : {}),
+      ...(rates.cacheRead ? { cacheRead: rates.cacheRead.amount } : {}),
+      ...(rates.cacheWrite ? { cacheWrite: rates.cacheWrite.amount } : {}),
+    },
+  }
+}
 // todo: 考虑其他站点的计算方式
 // https://github.com/deanxv/done-hub/blob/6f332c162175de3333477c03faaa65d0d902f8ab/web/src/views/Pricing/component/util.js#L13
 const DONE_HUB_TOKEN_TO_CALL_RATIO = 0.002

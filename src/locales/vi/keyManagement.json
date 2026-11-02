@@ -250,6 +250,7 @@
     "neverExpires": "Không bao giờ hết hạn",
     "note": "Ghi chú:",
     "remainingQuota": "Hạn ngạch còn lại:",
+    "tools": "Công cụ được phép",
     "totalQuota": "Tổng hạn mức:",
     "ungrouped": "Chưa phân nhóm",
     "usedQuota": "Hạn ngạch đã dùng:"
@@ -481,7 +482,8 @@
         "permissionDenied": "Sử dụng thông tin xác thực có quyền xem và quản lý khóa, rồi thử lại.",
         "title": "Không thể lưu khóa",
         "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy thử lại sau.",
-        "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới khóa để xác nhận trạng thái hiện tại trước khi quyết định có thử lại hay không."
+        "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới khóa để xác nhận trạng thái hiện tại trước khi quyết định có thử lại hay không.",
+        "unexpected": "Tiện ích không thể thực hiện thao tác này. Hãy cập nhật tiện ích hoặc báo cáo sự cố."
       },
       "followAccountQuotaHelp": "-1 dùng hạn mức của tài khoản.",
       "followsAccount": "Theo tài khoản",

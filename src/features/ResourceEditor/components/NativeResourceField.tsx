@@ -176,6 +176,28 @@ export function NativeResourceField<TSection extends string>({
     descriptor.type === RESOURCE_FIELD_TYPES.Text ||
     descriptor.type === RESOURCE_FIELD_TYPES.DateTime
   ) {
+    if (descriptor.readOnly && presentation.resolveReadOnlyValue) {
+      return (
+        <div key={descriptor.fieldId}>
+          <span className="text-foreground mb-2 block text-sm font-medium">
+            {label}
+          </span>
+          <output
+            id={id}
+            aria-label={label}
+            aria-describedby={describedBy}
+            className="text-foreground block text-sm"
+          >
+            {presentation.resolveReadOnlyValue(
+              t,
+              readResourceString(values, descriptor.fieldId),
+            )}
+          </output>
+          {help}
+          {error}
+        </div>
+      )
+    }
     return (
       <div key={descriptor.fieldId}>
         <ResourceFieldLabel htmlFor={id} required={descriptor.required}>

@@ -68,11 +68,12 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     t,
     { hasAssociatedSecret, accountCredentialIdentity },
   ) {
-    const availability = hasAssociatedSecret
-      ? INVENTORY_SECRET_AVAILABILITIES.Recoverable
-      : getSiteTypeCapabilities(row.facts.ref.siteType).account
-          ?.keyResourceManagement?.inventorySecretAvailability ??
-        INVENTORY_SECRET_AVAILABILITIES.Unavailable
+    const availability =
+      hasAssociatedSecret || Boolean(row.facts.runtimeSecret)
+        ? INVENTORY_SECRET_AVAILABILITIES.Recoverable
+        : getSiteTypeCapabilities(row.facts.ref.siteType).account
+            ?.keyResourceManagement?.inventorySecretAvailability ??
+          INVENTORY_SECRET_AVAILABILITIES.Unavailable
     const status = row.facts.status
     const contextFact = {
       id: "scope",
@@ -302,9 +303,11 @@ const nativeDetailFacts = (
           label:
             fact.role === "models"
               ? t("keyManagement:keyDetails.models")
-              : fact.role === "subnet"
-                ? t("keyManagement:dialog.subnetLimits")
-                : t("keyManagement:keyDetails.ipLimits"),
+              : fact.role === "tools"
+                ? t("keyManagement:keyDetails.tools")
+                : fact.role === "subnet"
+                  ? t("keyManagement:dialog.subnetLimits")
+                  : t("keyManagement:keyDetails.ipLimits"),
           value,
         })
     }

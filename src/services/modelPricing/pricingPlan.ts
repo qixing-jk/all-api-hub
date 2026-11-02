@@ -8,18 +8,23 @@ import {
   PRICING_ISSUE_REASONS,
   PRICING_MEASUREMENT_AXES,
   PRICING_METERS,
-  type PRICING_PURPOSES,
   PRICING_RANGE_AXES,
-  type PRICING_RESPONSE_FORMATS,
   PRICING_SELECTION_AXES,
   PRICING_SERVICE_TIERS,
   PRICING_SOURCE_KINDS,
   PRICING_USAGE_MODES,
+  type PRICING_PURPOSES,
+  type PRICING_RESPONSE_FORMATS,
   type QUOTE_STATUSES,
   type QUOTE_UNITS,
 } from "~/services/modelPricing/pricingConstants"
 
-import { type PRICING_IMAGE_SIZES, type PRICING_VIDEO_INPUTS } from "./pricingConstants"
+import {
+  type PRICING_IMAGE_SIZES,
+  type PRICING_VIDEO_AUDIO_MODES,
+  type PRICING_VIDEO_INPUTS,
+} from "./pricingConstants"
+import { pricingSourceNoteSchema } from "./pricingSourceNotes"
 
 export const SERVICE_TIERS = [
   PRICING_SERVICE_TIERS.STANDARD,
@@ -32,6 +37,9 @@ export const SERVICE_TIERS = [
 const serviceTierSchema = z.enum(SERVICE_TIERS)
 
 export const PRICE_METERS = [
+  PRICING_METERS.CODE_EXECUTION,
+  PRICING_METERS.VIDEO_INPUT_TOKENS,
+  PRICING_METERS.IMAGE_CACHE,
   PRICING_METERS.VIDEO_OUTPUT,
   PRICING_METERS.INPUT,
   PRICING_METERS.OUTPUT,
@@ -56,6 +64,8 @@ export const PRICE_METERS = [
   PRICING_METERS.OUTPUT_MEGAPIXELS,
 ] as const
 export const TOKEN_METERS = [
+  PRICING_METERS.VIDEO_INPUT_TOKENS,
+  PRICING_METERS.IMAGE_CACHE,
   PRICING_METERS.VIDEO_OUTPUT,
   PRICING_METERS.INPUT,
   PRICING_METERS.OUTPUT,
@@ -78,6 +88,8 @@ export const CACHE_TOKEN_METERS = [
 ] as const
 
 export const INPUT_TOKEN_METERS = [
+  PRICING_METERS.VIDEO_INPUT_TOKENS,
+  PRICING_METERS.IMAGE_CACHE,
   PRICING_METERS.INPUT,
   PRICING_METERS.CACHE_READ,
   PRICING_METERS.CACHE_WRITE,
@@ -104,6 +116,7 @@ const rateSchema = z.strictObject({
 })
 /** Shared meter units keep adapters, validation and settlement consistent. */
 export function getPriceMeterUnit(meter: PriceMeter) {
+  if (meter === PRICING_METERS.CODE_EXECUTION) return PRICE_RATE_UNITS.REQUEST
   if (TOKEN_METERS.some((token) => token === meter))
     return PRICE_RATE_UNITS.TOKEN
   if (meter === PRICING_METERS.AUDIO || meter === PRICING_METERS.VIDEO_SECONDS)
@@ -145,6 +158,8 @@ const timeZoneSchema = z.string().refine((value) => {
 
 export const pricingPlanSchema = z.strictObject({
   rates: ratesSchema,
+  /** Conditional meters still need explicit quantities in a real request, including zero. */
+  requiredUsage: z.array(z.enum(PRICE_METERS)).optional(),
   /** A comparable output quantity; other task meters are never token weights. */
   comparison: z
     .strictObject({
@@ -180,7 +195,8 @@ export const pricingPlanSchema = z.strictObject({
           }),
           z.strictObject({
             kind: z.literal(PRICING_CONDITION_KINDS.MEASUREMENT),
-            axis: z.literal(PRICING_MEASUREMENT_AXES.IMAGE_MEGAPIXELS),
+            axis: z.enum(PRICING_MEASUREMENT_AXES),
+            eq: nonnegative.optional(),
             gt: nonnegative.optional(),
             lte: nonnegative.optional(),
           }),
@@ -246,6 +262,8 @@ export const pricingPlanSchema = z.strictObject({
     label: z.string().optional(),
     rulesUnavailable: z.boolean().optional(),
     hasUnpricedCharges: z.boolean().optional(),
+    notes: z.array(pricingSourceNoteSchema).optional(),
+    /** Unmodified upstream prose only; local explanations belong in notes. */
     pricingDescription: z
       .object({ zh: z.string().optional(), en: z.string().optional() })
       .optional(),
@@ -279,13 +297,19 @@ export const pricingPlanSchema = z.strictObject({
 export type PricingPlan = z.infer<typeof pricingPlanSchema>
 export type PriceRate = z.infer<typeof rateSchema>
 export interface PricingScenario {
+  searchContext?: string
   purpose: (typeof PRICING_PURPOSES)[keyof typeof PRICING_PURPOSES]
   serviceTier?: (typeof SERVICE_TIERS)[number]
   responseFormat?: (typeof PRICING_RESPONSE_FORMATS)[keyof typeof PRICING_RESPONSE_FORMATS]
   imageSize?: (typeof PRICING_IMAGE_SIZES)[keyof typeof PRICING_IMAGE_SIZES]
   videoInput?: (typeof PRICING_VIDEO_INPUTS)[keyof typeof PRICING_VIDEO_INPUTS]
   imageQuality?: string
+  documentAnnotation?: string
+  generationMode?: string
+  videoDynamicRange?: string
   videoQuality?: string
+  videoMode?: string
+  videoAudio?: (typeof PRICING_VIDEO_AUDIO_MODES)[keyof typeof PRICING_VIDEO_AUDIO_MODES]
   imageMegapixels?: number
   inputTokens?: number
   outputTokens?: number

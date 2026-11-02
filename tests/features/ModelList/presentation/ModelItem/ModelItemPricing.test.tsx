@@ -7,6 +7,7 @@ import { ModelItemDescription } from "~/features/ModelList/presentation/ModelIte
 import { ModelItemPerCallPricingView } from "~/features/ModelList/presentation/ModelItem/ModelItemPerCallPricingView"
 import { PriceView } from "~/features/ModelList/presentation/ModelItem/ModelItemPicingView"
 import { ModelItemPricing } from "~/features/ModelList/presentation/ModelItem/ModelItemPricing"
+import { ModelItemTokenPricingDetails } from "~/features/ModelList/presentation/ModelItem/ModelItemTokenPricingDetails"
 import { DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS } from "~/features/ModelList/pricing/priceComparison"
 import { createKimiOpenPlatformProviderModelCatalog } from "~/services/apiAdapters/kimiOpenPlatform/providerModelCatalog"
 import { normalizeOpenRouterPricingPlan } from "~/services/apiAdapters/openrouter/models/pricingPlan"
@@ -25,9 +26,11 @@ import {
   PRICING_ISSUE_CODES,
   PRICING_PURPOSES,
   PRICING_RANGE_AXES,
+  PRICING_SOURCE_NOTE_KINDS,
   PRICING_USAGE_MODES,
   QUOTE_STATUSES,
 } from "~/services/modelPricing/pricingConstants"
+import { readPublishedPricing } from "~/services/modelPricing/publishedPricing"
 import {
   QUOTA_COMPARISON_SCOPES,
   QUOTA_ROUNDING_MODES,
@@ -36,6 +39,357 @@ import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonical
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import { render as appRender } from "~~/tests/test-utils/render"
+
+it("renders local pricing explanations through translation keys without labeling them as upstream prose", () => {
+  render(
+    <ModelItemPricing
+      model={createModel({})}
+      calculatedPrice={{
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+        billingMode: "token",
+        isComparisonActive: false,
+        publishedPricing: {
+          schedule: [],
+          source: {
+            kind: "catalog",
+            notes: [{ kind: PRICING_SOURCE_NOTE_KINDS.AMBIGUOUS_CHARGES }],
+          },
+        },
+      }}
+      exchangeRate={7}
+      showRealPrice={false}
+      showPricing
+      isAvailableForUser
+      groupRatios={{}}
+    />,
+  )
+  expect(screen.getByText("pricingNotes.ambiguousCharges")).toBeVisible()
+  expect(
+    screen.queryByText(/scenario.sitePricingDescription/),
+  ).not.toBeInTheDocument()
+})
+
+it("shows the declared billing reason and source for an empty structured schedule without asking to load it", () => {
+  const source = {
+    kind: "catalog" as const,
+    rulesUnavailable: true,
+    url: "https://api.aimlapi.com/v1/models?include=pricing",
+    pricingDescription: { en: "Runtime billing has no upfront formula." },
+  }
+  render(
+    <ModelItemPricing
+      model={createModel({
+        pricingPlan: {
+          rates: {},
+          rules: [],
+          groupMultiplier: "included",
+          usageMode: "custom",
+          source,
+          issues: [],
+        },
+      })}
+      calculatedPrice={{
+        kind: "unavailable",
+        billingMode: "token",
+        isComparisonActive: false,
+        publishedPricing: { source, schedule: [] },
+      }}
+      exchangeRate={7}
+      showRealPrice={false}
+      showPricing
+      isAvailableForUser
+      groupRatios={{}}
+    />,
+  )
+  expect(
+    screen.getByText(/Runtime billing has no upfront formula/),
+  ).toBeVisible()
+  expect(screen.getByRole("link", { name: "scenario.source" })).toHaveAttribute(
+    "href",
+    source.url,
+  )
+  expect(
+    screen.queryByText("scenario.loadPricingDetails"),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+  ).not.toBeInTheDocument()
+})
+
+it.each([
+  "input",
+  "videoSeconds",
+  "audio",
+  "image",
+  "request",
+  "videoInputTokens",
+  "imageCache",
+  "codeExecution",
+] as const)(
+  "shows published %s rates without a quote or category-specific price shape",
+  (meter) => {
+    const model = createModel({})
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{
+          kind: "unavailable",
+          billingMode: "token",
+          isComparisonActive: false,
+          publishedPricing: {
+            source: { kind: "catalog" },
+            schedule: [
+              {
+                id: "base",
+                conditions: [],
+                rates: {
+                  [meter]: {
+                    amount: 0.157,
+                    currency: "USD",
+                    per:
+                      meter === "videoInputTokens" || meter === "imageCache"
+                        ? 1000000
+                        : 1,
+                    unit:
+                      meter === "videoInputTokens" || meter === "imageCache"
+                        ? "token"
+                        : meter === "codeExecution"
+                          ? "request"
+                          : "second",
+                  },
+                },
+              },
+            ],
+          },
+        }}
+        exchangeRate={7}
+        showRealPrice={false}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(screen.getByText(/0.157/)).toBeVisible()
+    if (["videoInputTokens", "imageCache", "codeExecution"].includes(meter))
+      expect(screen.getByText(`scenario.${meter}`)).toBeVisible()
+    expect(
+      screen.queryByText("scenario.noComparisonPrice"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /scenario.configure/ }),
+    ).not.toBeInTheDocument()
+  },
+)
+
+it.each([
+  { videoQuality: undefined, precision: "exact" as const },
+  { videoQuality: "720p", precision: "estimated" as const },
+])(
+  "browses all published video prices and preserves $precision evidence without comparison settings",
+  ({ videoQuality, precision }) => {
+    const rate = (amount: number) => ({
+      amount,
+      currency: "USD" as const,
+      unit: "second" as const,
+      per: 1,
+    })
+    const model = createModel({
+      price_metadata: { source: "provider-catalog", precision },
+      pricingPlan: {
+        rates: {},
+        requiresRuleMatch: true,
+        rules: [
+          {
+            id: "720p",
+            conditions: [
+              { kind: "selection", axis: "videoQuality", value: "720p" },
+            ],
+            rates: { videoSeconds: rate(0.157) },
+          },
+          {
+            id: "1080p",
+            conditions: [
+              { kind: "selection", axis: "videoQuality", value: "1080p" },
+            ],
+            rates: { videoSeconds: rate(0.235) },
+          },
+        ],
+        usageMode: "metered",
+        comparison: { meter: "videoSeconds" },
+        issues:
+          precision === "estimated"
+            ? [{ code: "unverified-axis", reason: "source-conflict" }]
+            : [],
+        groupMultiplier: "included",
+        source: { kind: "catalog" },
+      },
+    })
+    const quote = quoteCanonicalModelPrice(
+      model,
+      { purpose: "token-index", videoQuality, usage: {} },
+      { currency: "USD" },
+    )
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{
+          ...calculateModelPrice(model, 1),
+          quote,
+          publishedPricing: readPublishedPricing(model.pricingPlan!, 1),
+          isComparisonActive: false,
+        }}
+        exchangeRate={7}
+        showRealPrice={false}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(screen.getByText("scenario.videoQuality: 720p")).toBeVisible()
+    expect(screen.getByText("scenario.videoQuality: 1080p")).toBeVisible()
+    expect(screen.getByText(/0.157/)).toBeVisible()
+    expect(screen.getByText(/0.2350/)).toBeVisible()
+    if (precision === "estimated") {
+      expect(screen.getByText("estimatedPrice")).toBeVisible()
+      expect(screen.getByText("scenario.sourceConflict")).toBeVisible()
+    } else {
+      expect(screen.queryByText("estimatedPrice")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("scenario.sourceConflict"),
+      ).not.toBeInTheDocument()
+    }
+    expect(
+      screen.queryByText("scenario.calculationDetails"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("scenario.noComparisonPrice"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /scenario.configure/ }),
+    ).not.toBeInTheDocument()
+  },
+)
+
+it.each([false, true])(
+  "shows published variable video rates with rule guidance (comparison=%s)",
+  (isComparisonActive) => {
+    const model = createModel({
+      pricingPlan: {
+        rates: {
+          videoSeconds: {
+            amount: 0.157,
+            currency: "USD",
+            unit: "second",
+            per: 1,
+          },
+        },
+        usageMode: "metered",
+        comparison: { meter: "videoSeconds" },
+        rules: [],
+        issues: [],
+        groupMultiplier: "included",
+        source: { kind: "catalog", rulesUnavailable: true },
+      },
+      price_metadata: { source: "provider-catalog", precision: "unavailable" },
+    })
+    const quote = quoteCanonicalModelPrice(
+      model,
+      { purpose: "request", usage: { videoSeconds: 10 } },
+      { currency: "USD" },
+    )
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{
+          ...calculateModelPrice(model, 1),
+          quote,
+          publishedPricing: {
+            source: model.pricingPlan!.source,
+            schedule: [
+              { id: "base", conditions: [], rates: model.pricingPlan!.rates },
+              ...model.pricingPlan!.rules,
+            ],
+          },
+          isComparisonActive,
+        }}
+        exchangeRate={7}
+        showRealPrice={false}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(screen.getByText(/0.157/)).toBeVisible()
+    expect(screen.getByText("scenario.websiteRulesUnavailable")).toBeVisible()
+    expect(
+      screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+    ).not.toBeInTheDocument()
+  },
+)
+
+it.each(["card", "details"])(
+  "keeps partial token rates while hiding missing card rates and muting missing detail rates in %s",
+  (view) => {
+    const model = createModel({
+      pricingPlan: {
+        rates: {
+          input: { amount: 0.07, currency: "USD", unit: "token", per: 1000000 },
+          cacheRead: {
+            amount: 0,
+            currency: "USD",
+            unit: "token",
+            per: 1000000,
+          },
+        },
+        rules: [],
+        issues: [],
+        source: { kind: "catalog" },
+        groupMultiplier: "included",
+      },
+    })
+    const price = calculateModelPrice(model, 1)
+    render(
+      view === "card" ? (
+        <ModelItemPricing
+          model={model}
+          calculatedPrice={{ ...price, isComparisonActive: false }}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing
+          isAvailableForUser
+          groupRatios={{}}
+        />
+      ) : (
+        <ModelItemTokenPricingDetails
+          calculatedPrice={price}
+          exchangeRate={7}
+        />
+      ),
+    )
+    if (view === "card") {
+      expect(
+        screen.queryByText("ui:billing.notProvided"),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText("output")).not.toBeInTheDocument()
+      expect(screen.queryByText("cacheWrite")).not.toBeInTheDocument()
+    } else {
+      const missing = screen.getAllByText("ui:billing.notProvided")
+      expect(missing).toHaveLength(2)
+      missing.forEach((value) =>
+        expect(value).toHaveClass("text-muted-foreground"),
+      )
+    }
+    expect(
+      screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(view === "card" ? "USD:0.07/M" : "USD: $0.0700"),
+    ).toBeVisible()
+    expect(
+      screen.getByText(view === "card" ? "USD:0/M" : "USD: $0"),
+    ).toBeVisible()
+  },
+)
 
 it.each(["exact", "reference"])(
   "shows published prices without a confidence badge, including legacy cache (%s)",
@@ -512,7 +866,7 @@ describe("Model item pricing and description", () => {
       expect(screen.getByText("CNY:10/M")).toBeInTheDocument()
     })
 
-    it("omits cache labels when no cache meters are supplied", () => {
+    it("hides cache rates when no cache meters are supplied", () => {
       render(
         <PriceView
           prices={{ input: 1, output: 2 }}
@@ -524,8 +878,11 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.queryByText("cacheRead")).toBeNull()
-      expect(screen.queryByText("cacheWrite")).toBeNull()
+      expect(screen.queryByText("cacheRead")).not.toBeInTheDocument()
+      expect(screen.queryByText("cacheWrite")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("ui:billing.notProvided"),
+      ).not.toBeInTheDocument()
     })
   })
 

@@ -204,8 +204,8 @@ describe("useFilteredModels", () => {
     })
     await waitFor(() =>
       expect(
-        atIndex(result.current.filteredModels, 0).calculatedPrice.quote?.source
-          .url,
+        atIndex(result.current.filteredModels, 0).calculatedPrice
+          .publishedPricing?.source.url,
       ).toBe("https://site.example/gateway/pricing?search=vendor%2Fmodel"),
     )
   })
@@ -234,12 +234,12 @@ describe("useFilteredModels", () => {
     })
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
     expect(
-      atIndex(result.current.filteredModels, 0).calculatedPrice.quote?.source
-        .url,
+      atIndex(result.current.filteredModels, 0).calculatedPrice.publishedPricing
+        ?.source.url,
     ).toContain("https://first.example/pricing")
     expect(pricingPlan.source.url).toBeUndefined()
   })
-  it("quotes display rows once and previews filter counts without pricing again", async () => {
+  it("browses display rows and previews filter counts without generating quotes", async () => {
     const quote = vi.spyOn(pricingQuotes, "quoteCanonicalModelPrice")
     try {
       const { result } = renderUseFilteredModels({
@@ -248,7 +248,7 @@ describe("useFilteredModels", () => {
       })
       await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
       expect(result.current.modelCapabilityMetadataCoverage.total).toBe(2)
-      expect(quote).toHaveBeenCalledTimes(2)
+      expect(quote).not.toHaveBeenCalled()
       quote.mockClear()
       expect(
         result.current.getFilteredResultCount({ searchTerm: "mini" }),
@@ -296,7 +296,7 @@ describe("useFilteredModels", () => {
     }
   })
 
-  it("quotes length tiers under default sorting using the current reference conditions", async () => {
+  it("retains all published length tiers while browsing regardless of reference conditions", async () => {
     const pricingPlan: PricingPlan = {
       rates: {},
       groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
@@ -358,12 +358,16 @@ describe("useFilteredModels", () => {
     await waitFor(() =>
       expect(
         result.current.filteredModels[0]?.calculatedPrice.quote,
-      ).toMatchObject({ status: "complete", amount: 2 }),
+      ).toBeUndefined(),
     )
     expect(
       atIndex(result.current.filteredModels, 0).calculatedPrice
         .isComparisonActive,
     ).toBe(false)
+    expect(
+      result.current.filteredModels[0]?.calculatedPrice.publishedPricing
+        ?.schedule,
+    ).toHaveLength(3)
     rerender({
       ...props,
       pricingScenario: { ...props.pricingScenario, inputTokens: 300000 },
@@ -371,7 +375,7 @@ describe("useFilteredModels", () => {
     await waitFor(() =>
       expect(
         result.current.filteredModels[0]?.calculatedPrice.quote,
-      ).toMatchObject({ status: "complete", amount: 4 }),
+      ).toBeUndefined(),
     )
   })
   it("reorders token-priced models when the workload weights change", async () => {

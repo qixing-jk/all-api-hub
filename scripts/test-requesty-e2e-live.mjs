@@ -1,6 +1,7 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { runScenarioWithCleanup } from "../e2e/utils/scenarioErrors.ts"
 import { REQUESTY_WEB_ORIGIN } from "../src/services/accountSiteDefinitions/identifiers.ts"
 import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
 import {
@@ -10,6 +11,7 @@ import {
   defaultCdpUrl,
 } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
+import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { runRequestyProbe } from "./suites/requesty/probe.mjs"
 import { runRequestyUiTest } from "./suites/requesty/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -99,49 +101,32 @@ Requesty 现场端到端测试运行器 (CDP & Protocol Probe)
 
 export async function main(args = process.argv.slice(2)) {
   const { siteUrl, key, suite, cdpUrl, evidenceDir } = parseArgs(args)
-
-  console.log("========================================================")
-  console.log("  Requesty 分支功能真机测试 (模块化解耦套件)")
-  console.log("========================================================")
-  console.log(`执行模式: [${suite.toUpperCase()}]`)
-  console.log(`目标站点: ${siteUrl}`)
-  console.log(
-    `管理密钥: ${key ? "已提供" : "未提供 (仅跑识别/引导与信封指纹)"}`,
-  )
-
-  // 1. 协议探测阶段 (无需 CDP，纯 Node.js HTTP)
-  if (suite === "all" || suite === "probe") {
-    const probeResult = await runRequestyProbe({ key })
-    console.log(
-      `\n✅ 协议层探测结果: ${probeResult.ok ? "管理 API 契约与适配器一致" : "存在不一致"}${probeResult.skipped ? " (跳过已授权接口)" : ""}`,
-    )
-    if (!probeResult.ok) {
-      process.exitCode = 1
-    }
-  }
-
-  // 2. UI 自动化实测阶段 (需要 CDP)
-  if (suite === "all" || suite === "ui") {
-    console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
-    const dev = await connectRequestyExtension({ cdpUrl })
-    console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
-
-    try {
-      await runRequestyUiTest({
-        context: dev.context,
-        extensionId: dev.extensionId,
-        serviceWorker: dev.serviceWorker,
-        key,
-        evidenceDir,
-      })
-    } finally {
-      await dev.close()
-    }
-  }
-
-  console.log("\n========================================================")
-  console.log("  🎉 Requesty 测试套件执行完毕！")
-  console.log("========================================================")
+  const environment = { cdpUrl, targetUrl: siteUrl }
+  return runLiveSuites({
+    suite,
+    environment,
+    suites: [
+      {
+        id: "probe",
+        covers: ["protocol.contract"],
+        run: () => runRequestyProbe({ key }),
+      },
+      {
+        id: "ui",
+        covers: ["extension.ui"],
+        run: async () => {
+          const dev = await connectRequestyExtension({ cdpUrl })
+          environment.extensionId = dev.extensionId
+          return runScenarioWithCleanup({
+            run: () => runRequestyUiTest({ ...dev, key, evidenceDir }),
+            finalizers: [() => dev.close()],
+            cleanupMessage: "Live UI connection cleanup failed",
+            failureMessage: "Live UI execution and cleanup failed",
+          })
+        },
+      },
+    ],
+  })
 }
 
 if (

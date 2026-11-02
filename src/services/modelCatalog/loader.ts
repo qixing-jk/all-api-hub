@@ -6,6 +6,7 @@ import {
 import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
@@ -107,12 +108,15 @@ export function createModelPricingCacheKey(
     "id" | "baseUrl" | "userId" | "siteType" | "authType"
   >,
 ) {
+  const revision = getSiteTypeCapabilities(account.siteType).account
+    ?.modelPricing?.cacheVersion
   return [
     account.id,
     account.baseUrl,
     account.userId,
     account.siteType,
     account.authType,
+    ...(revision ? [revision] : []),
   ].join("|")
 }
 
@@ -177,7 +181,9 @@ async function loadProviderModelCatalogPricing(params: {
 
   let pricing: ModelCatalogSnapshot
   try {
-    pricing = await capability.fetchPricing({ abortSignal })
+    pricing = await capability.fetchPricing({
+      abortSignal,
+    })
   } catch (error) {
     throw normalizeProviderModelCatalogError(error)
   }

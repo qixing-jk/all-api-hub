@@ -275,7 +275,9 @@ export function ModelDisplay(props: ModelDisplayProps) {
         onVerifyCliSupport={onVerifyCliSupport}
         onOpenModelKeyDialog={onOpenModelKeyDialog}
         isExpanded={expandedModelKeySet.has(itemKey)}
-        onToggleExpand={() => toggleModelExpand(itemKey)}
+        onToggleExpand={() => {
+          toggleModelExpand(itemKey)
+        }}
       />
     )
   }

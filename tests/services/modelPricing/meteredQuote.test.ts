@@ -42,6 +42,70 @@ const plan: PricingPlan = {
 }
 
 describe("metered task pricing", () => {
+  it("selects discrete video duration prices without interpolating unsupported lengths", () => {
+    const durationPlan: PricingPlan = {
+      ...plan,
+      rates: {},
+      groupMultiplier: "included",
+      requiresRuleMatch: true,
+      rules: [6, 10].map((seconds, index) => ({
+        id: `${seconds}s`,
+        conditions: [
+          { kind: "measurement", axis: "videoSeconds", eq: seconds },
+        ],
+        rates: {
+          videoSeconds: {
+            amount: index === 0 ? 0.364 : 0.728,
+            currency: "USD",
+            unit: "second",
+            per: seconds,
+          },
+        },
+      })),
+    }
+    expect(pricingPlanSchema.safeParse(durationPlan).success).toBe(true)
+    expect(
+      quoteModelPrice(durationPlan, {
+        purpose: "request",
+        usage: { videoSeconds: 6 },
+      }),
+    ).toMatchObject({ status: "complete", amount: 0.364 })
+    expect(
+      quoteModelPrice(durationPlan, {
+        purpose: "request",
+        usage: { videoSeconds: 10 },
+      }),
+    ).toMatchObject({ status: "complete", amount: 0.728 })
+    const unsupported = quoteModelPrice(durationPlan, {
+      purpose: "request",
+      usage: { videoSeconds: 5 },
+    })
+    expect(unsupported).toMatchObject({
+      status: "unavailable",
+      amount: null,
+      requirementDetails: [
+        {
+          axis: "videoSeconds",
+          value: 5,
+          ranges: [
+            { min: 6, max: 6, minExclusive: false },
+            { min: 10, max: 10, minExclusive: false },
+          ],
+        },
+      ],
+    })
+    const comparison = quoteModelPrice(durationPlan, {
+      purpose: "token-index",
+      usage: { input: 1 },
+      taskUsage: { videoSeconds: 6 },
+    })
+    expect(comparison).toMatchObject({
+      status: "complete",
+      unit: "video-second",
+    })
+    expect(comparison.amount).toBeCloseTo(0.06066666667, 10)
+  })
+
   it("rejects an overflowing normalized price", () => {
     expect(
       quoteModelPrice(

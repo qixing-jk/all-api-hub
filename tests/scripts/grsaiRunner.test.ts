@@ -22,7 +22,9 @@ describe("Grsai runner arguments", () => {
   it("fails fast when the CDP extension is not reachable", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {})
     vi.mocked(connectDevExtension).mockRejectedValue(new Error("offline"))
-    await expect(main(["--suite=ui"])).rejects.toThrow("offline")
+    await expect(main(["--suite=ui", "--token=test-session"])).rejects.toThrow(
+      "offline",
+    )
     expect(runGrsaiUiTest).not.toHaveBeenCalled()
   })
 

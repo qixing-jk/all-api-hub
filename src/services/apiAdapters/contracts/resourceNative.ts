@@ -179,6 +179,7 @@ export type ResourceFieldOption = {
   value: string
   displayLabel?: string
   secondaryLabel?: string
+  badgeLabel?: string
   description?: string
 }
 

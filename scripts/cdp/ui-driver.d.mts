@@ -1,5 +1,11 @@
 import type { BrowserContext, Locator, Page } from "@playwright/test"
 
+/** Reuse the mounted extension document when only its hash route changes. */
+export function navigateExtensionPage(
+  page: Page,
+  targetUrl: string,
+): Promise<void>
+
 export interface ExtensionPageConfiguration {
   language?: string
   viewport?: { width: number; height: number }

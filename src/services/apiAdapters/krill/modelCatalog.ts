@@ -19,6 +19,7 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
+import { PRICING_SOURCE_NOTE_KINDS } from "~/services/modelPricing/pricingConstants"
 import type {
   PriceRate,
   PricingPlan,
@@ -93,14 +94,12 @@ function planFor(
       ? { cacheWrite1h: token(prices.cacheWrite1h) }
       : {}),
   })
-  const time = (minute: number) =>
-    `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`
-  const windows = effective.timeWindows
-    ?.map(
-      (window) =>
-        `${window.label} ${time(window.start)}–${time(window.end)}: $${window.input * multiplier} / $${window.output * multiplier} / $${window.cacheRead * multiplier} (input / output / cache read, /M)`,
-    )
-    .join("; ")
+  const windows = effective.timeWindows?.map((window) => ({
+    ...window,
+    input: window.input * multiplier,
+    output: window.output * multiplier,
+    cacheRead: window.cacheRead * multiplier,
+  }))
   return {
     rates:
       effective.billingMode === "token"
@@ -165,10 +164,16 @@ function planFor(
     source: {
       kind: "account",
       url,
-      pricingDescription: {
-        zh: `${context.route?.name ?? "默认线路"} · 全部渠道${channel ? `（${channel.name}）` : ""} · ${specific ? "专属价格，已含倍率" : `倍率 ${multiplier}`}。采用原站默认价格视图；实际费用取决于请求线路和渠道。${windows ? `\n${windows}。原站未提供时区，当前显示常规价格，未自动应用时段优惠。` : ""}`,
-        en: `${context.route?.name ?? "Default route"} · All channels${channel ? ` (${channel.name})` : ""} · ${specific ? "Dedicated prices, multipliers included" : `Multiplier ${multiplier}`}. Native default pricing view; charges depend on the request route and channel.${windows ? `\n${windows}. No timezone is published; regular rates shown, time-window discounts are not automatically applied.` : ""}`,
-      },
+      notes: [
+        {
+          kind: PRICING_SOURCE_NOTE_KINDS.ROUTING_CONTEXT,
+          routeName: context.route?.name,
+          channelName: channel?.name,
+          dedicated: !!specific,
+          multiplier,
+          ...(windows?.length ? { timeWindows: windows } : {}),
+        },
+      ],
     },
   }
 }
@@ -264,6 +269,7 @@ async function loadSnapshot(request: ApiServiceRequest) {
 }
 
 export const krillModelPricing: ModelPricingCapability = {
+  cacheVersion: "pricing-source-notes-v1",
   fetchPricing: loadSnapshot,
 }
 
