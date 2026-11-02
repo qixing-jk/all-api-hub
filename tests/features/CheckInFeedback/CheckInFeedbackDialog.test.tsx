@@ -109,8 +109,6 @@ describe("check-in feedback workflow", () => {
             snapshot: {
               ...snapshot,
               execution: {
-                accountId: "account",
-                accountName: "Account",
                 timestamp: 1,
                 status: "failed",
               },
@@ -177,7 +175,10 @@ describe("check-in feedback workflow", () => {
             reason:
               "Failed saved-access-secret saved-cookie-secret saved-refresh-secret",
           },
-          account_info: { access_token: "saved-access-secret" },
+          account_info: {
+            ...buildSiteAccount().account_info,
+            access_token: "saved-access-secret",
+          },
           cookieAuth: { sessionCookie: "saved-cookie-secret" },
           sub2apiAuth: { refreshToken: "saved-refresh-secret" },
           last_sync_time: 1000,
