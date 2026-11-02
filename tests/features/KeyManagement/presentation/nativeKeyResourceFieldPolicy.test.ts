@@ -52,8 +52,12 @@ it("provides localized AIMLAPI restrictions, caps, reset periods and validation 
   const i18n = createInstance()
   await i18n.init({
     lng: "zh-CN",
+    appendNamespaceToMissingKey: true,
     resources: { "zh-CN": { keyManagement: zhKeyManagement } },
   })
+  expect(i18n.t("keyManagement:__missing_translation_probe__")).toContain(
+    "keyManagement:",
+  )
   const editor = createAimlApiKeyEditor({ request })
   const presentation = getPresentation(SITE_TYPES.AIMLAPI, editorModes.Create, {
     fields: editor.fields,

@@ -2922,9 +2922,10 @@ describe("accountStorage core behaviors", () => {
     async (bulk) => {
       const account = createAccount({ id: "provider-cleanup" })
       seedStorage([account])
+      let accountsDuringCleanup: unknown
       const cleanupDeletedAccount = vi.fn(async () => {
-        expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS).accounts).toEqual(
-          [],
+        accountsDuringCleanup = structuredClone(
+          storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS).accounts,
         )
       })
       mockgetSiteTypeCapabilities.mockReturnValue({
@@ -2933,6 +2934,7 @@ describe("accountStorage core behaviors", () => {
       if (bulk) await accountStorage.deleteAccounts([account.id])
       else await accountStorage.deleteAccount(account.id)
       expect(cleanupDeletedAccount).toHaveBeenCalledWith(account)
+      expect(accountsDuringCleanup).toEqual([])
     },
   )
 

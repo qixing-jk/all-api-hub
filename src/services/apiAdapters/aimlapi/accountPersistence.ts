@@ -36,7 +36,10 @@ function getAimlApiSafeErrorMessage(
 
 export const aimlApiAccountPersistence: AccountPersistenceCapability = {
   cleanupDeletedAccount: (account) =>
-    forgetDeletedAimlApiAccountCredentials(String(account.account_info.id)),
+    forgetDeletedAimlApiAccountCredentials({
+      management: account.account_info.access_token?.trim(),
+      regular: account.aimlApiAuth?.apiKey?.trim(),
+    }),
   async prepareIdentity({ accessToken, userId, aimlApiKey, existingAccount }) {
     const credential = accessToken.trim()
     const regularKey = aimlApiKey?.trim() ?? ""

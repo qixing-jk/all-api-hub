@@ -37,9 +37,12 @@ export async function forgetInvalidAimlApiConnectionKey(
 
 /** Pending markers survive deletion so an uncertain remote write cannot be replayed. */
 export async function forgetDeletedAimlApiAccountCredentials(
-  userId: string,
+  credentials: Partial<Record<ConnectionKeyKind, string | undefined>>,
 ): Promise<void> {
-  await forgetReadyCredentials((entryUserId) => entryUserId === userId)
+  await forgetReadyCredentials(
+    (_userId, kind, key) =>
+      Boolean(credentials[kind]) && key === credentials[kind],
+  )
 }
 
 /** Remove matching confirmed secrets in one ledger transaction. */

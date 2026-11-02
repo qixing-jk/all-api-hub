@@ -63,7 +63,8 @@ it("forgets only the rejected credential when management verification returns 40
 
 it("removes deleted-account secrets while preserving uncertain issuance and other users", async () => {
   await aimlApiAccountPersistence.cleanupDeletedAccount!({
-    account_info: { id: "123" },
+    account_info: { id: "123", access_token: "management" },
+    aimlApiAuth: { apiKey: "regular" },
   } as never)
   expect(await read()).toEqual({
     other: {
@@ -72,7 +73,7 @@ it("removes deleted-account secrets while preserving uncertain issuance and othe
     },
   })
   await aimlApiAccountPersistence.cleanupDeletedAccount!({
-    account_info: { id: "other" },
+    account_info: { id: "other", access_token: "other-management" },
   } as never)
   expect(await read()).toEqual({ other: { regular: { state: "pending" } } })
   await expect(
@@ -80,6 +81,20 @@ it("removes deleted-account secrets while preserving uncertain issuance and othe
       throw new Error("must not issue")
     }),
   ).rejects.toThrow("issuance")
+})
+
+it("cleans an issued management-only key when the saved identity is its prefix", async () => {
+  await storage.set(AIMLAPI_ONBOARDING_STORAGE_KEY, {
+    "123": { management: ready("management"), regular: { state: "pending" } },
+    other: { management: ready("other-management") },
+  })
+  await aimlApiAccountPersistence.cleanupDeletedAccount!({
+    account_info: { id: "abcdefgh", access_token: "management" },
+  } as never)
+  expect(await read()).toEqual({
+    "123": { regular: { state: "pending" } },
+    other: { management: ready("other-management") },
+  })
 })
 
 it("forgets the regular key alone when its verification returns 401", async () => {
