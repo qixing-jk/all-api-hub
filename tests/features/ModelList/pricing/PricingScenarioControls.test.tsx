@@ -8,18 +8,21 @@ import { PriceComparisonControls } from "~/features/ModelList/pricing/PriceCompa
 import {
   createDefaultPricingScenario,
   resolvePricingScenario,
+  type ModelPricingScenarioSettings,
 } from "~/features/ModelList/pricing/pricingScenario"
 import { PricingScenarioControls } from "~/features/ModelList/pricing/PricingScenarioControls"
 import { PricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,
+  PRICING_DOCUMENT_ANNOTATIONS,
   PRICING_GROUP_MULTIPLIERS,
   PRICING_IMAGE_SIZES,
   PRICING_MEASUREMENT_AXES,
   PRICING_METERS,
   PRICING_PURPOSES,
   PRICING_RANGE_AXES,
+  PRICING_SEARCH_CONTEXTS,
   PRICING_SELECTION_AXES,
   PRICING_SERVICE_TIERS,
   PRICING_SOURCE_KINDS,
@@ -72,6 +75,340 @@ const plan: PricingPlan = {
   issues: [],
   serviceTiers: [PRICING_SERVICE_TIERS.STANDARD, PRICING_SERVICE_TIERS.BATCH],
 }
+
+it("edits separately generated image count when comparing video charges", async () => {
+  const user = userEvent.setup()
+  const video: PricingPlan = {
+    rates: {
+      videoSeconds: { amount: 0.13, per: 1, unit: "second", currency: "USD" },
+      outputImage: { amount: 0.04, per: 1, unit: "image", currency: "USD" },
+    },
+    rules: [],
+    usageMode: "metered",
+    comparison: { meter: "videoSeconds" },
+    source: { kind: "catalog" },
+    groupMultiplier: "included",
+    issues: [],
+  }
+  function VideoImages() {
+    const [settings, onChange] = useState<ModelPricingScenarioSettings>(
+      createDefaultPricingScenario(),
+    )
+    const quote = quoteModelPrice(
+      video,
+      {
+        purpose: "request",
+        usage: {
+          videoSeconds: 5,
+          outputImage: settings.taskUsage?.outputImage ?? 0,
+        },
+      },
+      { currency: "USD" },
+    )
+    return (
+      <>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[video]}
+        />
+        <output data-testid="video-image-quote">
+          {quote.amount?.toFixed(2)}
+        </output>
+      </>
+    )
+  }
+  render(<VideoImages />)
+  expect(await screen.findByTestId("video-image-quote")).toHaveTextContent(
+    "0.65",
+  )
+  await user.click(screen.getByText("modelList:scenario.groups.image"))
+  const count = screen.getByRole("spinbutton", {
+    name: "modelList:scenario.outputImage",
+  })
+  await user.clear(count)
+  await user.type(count, "2")
+  await user.tab()
+  expect(screen.getByTestId("video-image-quote")).toHaveTextContent("0.73")
+})
+
+it("selects a declared search context without changing token prices or charging every search tier", async () => {
+  const user = userEvent.setup()
+  const search: PricingPlan = {
+    rates: {
+      input: { amount: 1, per: 1000000, unit: "token", currency: "USD" },
+    },
+    rules: [PRICING_SEARCH_CONTEXTS.LOW, PRICING_SEARCH_CONTEXTS.HIGH].map(
+      (value, index) => ({
+        id: value,
+        conditions: [{ kind: "selection", axis: "searchContext", value }],
+        rates: {
+          search: {
+            amount: index ? 0.012 : 0.005,
+            per: 1,
+            unit: "search",
+            currency: "USD",
+          },
+        },
+      }),
+    ),
+    requiredUsage: ["search"],
+    source: { kind: "catalog" },
+    groupMultiplier: "included",
+    issues: [],
+  }
+  function SearchComparison() {
+    const [settings, onChange] = useState<ModelPricingScenarioSettings>(
+      createDefaultPricingScenario(),
+    )
+    const quote = quoteModelPrice(
+      search,
+      { ...settings, purpose: "request", usage: { input: 1000, search: 1 } },
+      { currency: "USD" },
+    )
+    return (
+      <>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[search]}
+        />
+        <output data-testid="context-quote">
+          {quote.status}:{quote.amount}
+        </output>
+      </>
+    )
+  }
+  render(<SearchComparison />)
+  expect(await screen.findByTestId("context-quote")).not.toHaveTextContent(
+    "complete",
+  )
+  await user.click(screen.getByText("modelList:scenario.groups.other"))
+  await user.click(
+    screen.getByRole("combobox", { name: "modelList:scenario.searchContext" }),
+  )
+  await user.click(
+    screen.getByRole("option", {
+      name: "modelList:scenario.searchContextHigh",
+    }),
+  )
+  expect(screen.getByTestId("context-quote")).toHaveTextContent(
+    "complete:0.013",
+  )
+})
+
+it("offers declared generation operations so an image-edit quotation can recover", async () => {
+  const user = userEvent.setup()
+  const image: PricingPlan = {
+    rates: {},
+    rules: [
+      {
+        id: "edit",
+        conditions: [
+          { kind: "selection", axis: "generationMode", value: "image_edit" },
+        ],
+        rates: {
+          image: { amount: 0.0434, unit: "image", per: 1, currency: "USD" },
+        },
+      },
+    ],
+    requiresRuleMatch: true,
+    usageMode: "metered",
+    comparison: { meter: "image" },
+    groupMultiplier: "included",
+    source: { kind: "catalog" },
+    issues: [],
+  }
+  function ImageComparison() {
+    const [settings, onChange] = useState<ModelPricingScenarioSettings>(
+      createDefaultPricingScenario(),
+    )
+    const quote = quoteModelPrice(
+      image,
+      resolvePricingScenario(settings, {
+        input: 1,
+        output: null,
+        cacheRead: null,
+        cacheWrite: null,
+      }),
+      { currency: "USD" },
+    )
+    return (
+      <>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[image]}
+        />
+        <output data-testid="operation-quote">
+          {quote.amount ?? "unknown"}
+        </output>
+      </>
+    )
+  }
+  render(<ImageComparison />)
+  expect(await screen.findByTestId("operation-quote")).toHaveTextContent(
+    "unknown",
+  )
+  await user.click(screen.getByText("modelList:scenario.groups.other"))
+  await user.click(
+    screen.getByRole("combobox", { name: "modelList:scenario.generationMode" }),
+  )
+  await user.click(screen.getByRole("option", { name: "image_edit" }))
+  expect(screen.getByTestId("operation-quote")).toHaveTextContent("0.0434")
+})
+
+it("lets document annotation selection recover a declared OCR page quotation", async () => {
+  const user = userEvent.setup()
+  const ocr: PricingPlan = {
+    rates: {},
+    rules: [
+      {
+        id: "plain",
+        conditions: [
+          {
+            kind: "selection",
+            axis: "documentAnnotation",
+            value: PRICING_DOCUMENT_ANNOTATIONS.PLAIN,
+          },
+        ],
+        rates: {
+          pages: { amount: 0.004, unit: "page", per: 1, currency: "USD" },
+        },
+      },
+      {
+        id: "annotated",
+        conditions: [
+          {
+            kind: "selection",
+            axis: "documentAnnotation",
+            value: PRICING_DOCUMENT_ANNOTATIONS.ANNOTATED,
+          },
+        ],
+        rates: {
+          pages: { amount: 0.005, unit: "page", per: 1, currency: "USD" },
+        },
+      },
+    ],
+    requiresRuleMatch: true,
+    usageMode: "metered",
+    comparison: { meter: "pages" },
+    groupMultiplier: "included",
+    source: { kind: "catalog" },
+    issues: [],
+  }
+  function OcrComparison() {
+    const [settings, onChange] = useState<ModelPricingScenarioSettings>({
+      ...createDefaultPricingScenario(),
+      taskUsage: { pages: 10 },
+    })
+    const quote = quoteModelPrice(
+      ocr,
+      resolvePricingScenario(settings, {
+        input: 1,
+        output: null,
+        cacheRead: null,
+        cacheWrite: null,
+      }),
+      { currency: "USD" },
+    )
+    return (
+      <>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[ocr]}
+        />
+        <output data-testid="ocr-quote">{quote.amount ?? "unknown"}</output>
+      </>
+    )
+  }
+  render(<OcrComparison />)
+  expect(await screen.findByTestId("ocr-quote")).toHaveTextContent("unknown")
+  await user.click(screen.getByText("modelList:scenario.groups.other"))
+  await user.click(
+    screen.getByRole("combobox", {
+      name: "modelList:scenario.documentAnnotation",
+    }),
+  )
+  await user.click(
+    screen.getByRole("option", {
+      name: "modelList:scenario.annotatedDocument",
+    }),
+  )
+  expect(screen.getByTestId("ocr-quote")).toHaveTextContent("0.005")
+})
+
+it("lets video mode and audio selection recover a duration-bound quote without image area controls", async () => {
+  const user = userEvent.setup()
+  const video: PricingPlan = {
+    rates: {},
+    rules: ["without-audio", "with-audio"].map((value, index) => ({
+      id: value,
+      conditions: [
+        { kind: "selection", axis: "videoAudio", value },
+        { kind: "selection", axis: "videoMode", value: "pro" },
+        { kind: "measurement", axis: "videoSeconds", eq: 5 },
+      ],
+      rates: {
+        videoSeconds: {
+          amount: index === 0 ? 0.091 : 0.182,
+          currency: "USD",
+          unit: "second",
+          per: 1,
+        },
+      },
+    })),
+    usageMode: "metered",
+    comparison: { meter: "videoSeconds" },
+    requiresRuleMatch: true,
+    source: { kind: "catalog" },
+    groupMultiplier: "included",
+    issues: [],
+  }
+  function VideoComparison() {
+    const [settings, onChange] = useState<ModelPricingScenarioSettings>({
+      ...createDefaultPricingScenario(),
+      taskUsage: { videoSeconds: 5 },
+    })
+    const quote = quoteModelPrice(
+      video,
+      resolvePricingScenario(settings, {
+        input: 1,
+        output: null,
+        cacheRead: null,
+        cacheWrite: null,
+      }),
+    )
+    return (
+      <>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[video]}
+        />
+        <output data-testid="audio-quote">{quote.amount ?? "unknown"}</output>
+      </>
+    )
+  }
+  render(<VideoComparison />)
+  expect(await screen.findByTestId("audio-quote")).toHaveTextContent("unknown")
+  expect(
+    screen.queryByText("modelList:scenario.groups.image"),
+  ).not.toBeInTheDocument()
+  await user.click(screen.getByText("modelList:scenario.groups.video"))
+  await user.click(
+    screen.getByRole("combobox", { name: "modelList:scenario.videoMode" }),
+  )
+  await user.click(screen.getByRole("option", { name: "pro" }))
+  await user.click(
+    screen.getByRole("combobox", { name: "modelList:scenario.videoAudio" }),
+  )
+  await user.click(
+    screen.getByRole("option", { name: "modelList:scenario.withAudio" }),
+  )
+  expect(screen.getByTestId("audio-quote")).toHaveTextContent("0.182")
+})
 it("clears a rejected quantity draft even when the committed value is already empty", async () => {
   const user = userEvent.setup()
   function EmptyQuantity() {

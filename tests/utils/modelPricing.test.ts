@@ -19,10 +19,19 @@ import {
   getBillingModeText,
   getEndpointTypesText,
   isTokenBillingType,
+  projectTokenPrices,
   resolvePriceAmount,
 } from "~/services/models/utils/modelPricing"
 
 describe("modelPricing utils", () => {
+  it("projects partial native-currency token facts without inventing missing prices", () => {
+    expect(projectTokenPrices({})).toBeUndefined()
+    for (const key of ["input", "output", "cacheRead", "cacheWrite"] as const) {
+      expect(
+        projectTokenPrices({ [key]: { amount: 7, currency: "CNY" } }),
+      ).toEqual({ currency: "CNY", prices: { [key]: 7 } })
+    }
+  })
   describe("isTokenBillingType", () => {
     it("should return true for quota_type 0 (token billing)", () => {
       expect(isTokenBillingType(0)).toBe(true)

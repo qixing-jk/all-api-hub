@@ -111,6 +111,71 @@ function renderModelItemHeader(quotaType: number) {
 }
 
 describe("ModelItemHeader", () => {
+  it.each([
+    {
+      usageMode: "metered",
+      comparison: { meter: "videoSeconds" },
+      label: "scenario.videoOutput · scenario.second",
+      quotaType: 0,
+    },
+    {
+      usageMode: "metered",
+      comparison: { meter: "pages" },
+      label: "scenario.pages · scenario.page",
+      quotaType: 0,
+    },
+    { usageMode: "request", label: "ui:billing.perCall", quotaType: 0 },
+    { usageMode: "tokens", label: "ui:billing.tokenBased", quotaType: 1 },
+    {
+      usageMode: "video",
+      label: "scenario.videoOutput · scenario.perMillionTokens",
+      quotaType: 0,
+    },
+    { usageMode: "image", label: "scenario.outputImages", quotaType: 0 },
+    {
+      usageMode: "custom",
+      label: "scenario.sitePricingDescription",
+      quotaType: 0,
+    },
+    {
+      usageMode: "metered",
+      label: "scenario.sitePricingDescription",
+      quotaType: 0,
+    },
+  ])(
+    "labels structured $usageMode billing from its plan instead of a legacy quota placeholder ($label)",
+    ({ usageMode, comparison, label, quotaType }) => {
+      render(
+        <ModelItemHeader
+          resolvedVendor={{ state: "unknown" }}
+          model={
+            {
+              model_name: "structured-model",
+              quota_type: quotaType,
+              pricingPlan: {
+                rates: {},
+                rules: [],
+                issues: [],
+                groupMultiplier: "included",
+                source: { kind: "catalog" },
+                usageMode,
+                comparison,
+              },
+            } as any
+          }
+          isAvailableForUser
+          handleCopyModelName={vi.fn()}
+          showPricingMetadata
+        />,
+      )
+      expect(screen.getByText(label)).toBeVisible()
+      if (usageMode !== "tokens")
+        expect(
+          screen.queryByText("ui:billing.tokenBased"),
+        ).not.toBeInTheDocument()
+    },
+  )
+
   it("omits a billing badge when the producer cannot establish its billing mode", () => {
     render(
       <ModelItemHeader

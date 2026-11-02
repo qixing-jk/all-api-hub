@@ -1,13 +1,15 @@
-#!/usr/bin/env node
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+import { runScenarioWithCleanup } from "../e2e/utils/scenarioErrors.ts"
 import { connectDevExtension, defaultCdpUrl } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
+import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { runAiRouterProbe } from "./suites/ai-router/probe.mjs"
 import { runAiRouterUiTest } from "./suites/ai-router/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
-loadLocalEnv()
-
-function parseArgs(args) {
+export function parseArgs(args) {
   let token = process.env.AI_ROUTER_ACCESS_TOKEN || ""
   let suite = "all" // all | probe | ui
   // Resolve the default port after the flag pass so `--isolate` is honored.
@@ -39,58 +41,56 @@ AI-Router 现场端到端测试运行器 (CDP & Protocol Probe)
     }
   }
 
+  if (!["all", "probe", "ui"].includes(suite))
+    throw new Error("Invalid suite; use all, probe, or ui")
   return { token, suite, cdpUrl }
 }
 
-async function main() {
-  const { token, suite, cdpUrl } = parseArgs(process.argv.slice(2))
-
-  console.log("========================================================")
-  console.log("  AI-Router 真实功能实测 (模块化解耦套件)")
-  console.log("========================================================")
-  console.log(`执行模式: [${suite.toUpperCase()}]`)
-
-  // 1. 服务端协议与接口探测 (无需 CDP，纯 Node.js HTTP)
-  if (suite === "all" || suite === "probe") {
-    if (token) {
-      const probeResult = await runAiRouterProbe({ token })
-      console.log(
-        `\n✅ AI-Router 协议层探测完成 (分组数: ${probeResult.groups?.length || 0}, 密钥生命周期: ${probeResult.keyCrudOk ? "正常" : "异常"})`,
-      )
-      if (!probeResult.ok) {
-        process.exitCode = 1
-      }
-    } else {
-      console.log(
-        "\nℹ️ 未提供 AI_ROUTER_ACCESS_TOKEN，跳过协议探测 (可通过 --token=... 提供)",
-      )
-    }
-  }
-
-  // 2. 扩展 UI 渲染实测 (需要 CDP)
-  if (suite === "all" || suite === "ui") {
-    console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
-    const dev = await connectDevExtension({ cdpUrl })
-    console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
-
-    try {
-      await runAiRouterUiTest({
-        context: dev.context,
-        extensionId: dev.extensionId,
-        serviceWorker: dev.serviceWorker,
-        token: token || "mock-temp-token",
-      })
-    } finally {
-      await dev.close()
-    }
-  }
-
-  console.log("\n========================================================")
-  console.log("  🎉 AI-Router 测试套件执行完毕！")
-  console.log("========================================================")
+export async function main(args = process.argv.slice(2)) {
+  const { token, suite, cdpUrl } = parseArgs(args)
+  const environment = { cdpUrl, targetUrl: "https://ai-router.dev" }
+  return runLiveSuites({
+    suite,
+    environment,
+    suites: [
+      {
+        id: "probe",
+        covers: ["protocol.contract"],
+        prerequisite: () =>
+          !token
+            ? "Missing session token; authenticated protocol coverage is unavailable"
+            : undefined,
+        run: () => runAiRouterProbe({ token }),
+      },
+      {
+        id: "ui",
+        covers: ["account.card.fixture", "models.source-page.smoke"],
+        prerequisite: () =>
+          !token
+            ? "Missing session token; authenticated live coverage is unavailable"
+            : undefined,
+        run: async () => {
+          const dev = await connectDevExtension({ cdpUrl })
+          environment.extensionId = dev.extensionId
+          return runScenarioWithCleanup({
+            run: () => runAiRouterUiTest({ ...dev, token }),
+            finalizers: [() => dev.close()],
+            cleanupMessage: "Live UI connection cleanup failed",
+            failureMessage: "Live UI execution and cleanup failed",
+          })
+        },
+      },
+    ],
+  })
 }
 
-main().catch((err) => {
-  console.error("\n❌ 测试运行失败:", err.message)
-  process.exit(1)
-})
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  loadLocalEnv()
+  main().catch((err) => {
+    console.error("\n❌ 测试运行失败:", err.message)
+    process.exit(1)
+  })
+}

@@ -1,6 +1,23 @@
 /** Runtime values owned by the shared pricing contract; wire values stay unchanged. */
+export const PRICING_SOURCE_NOTE_KINDS = {
+  RULES_UNAVAILABLE: "rules-unavailable",
+  AMBIGUOUS_VARIANT_CHARGES: "ambiguous-variant-charges",
+  EXCLUDED_CHARGES: "excluded-charges",
+  THRESHOLD_SOURCE_CONFLICT: "threshold-source-conflict",
+  THRESHOLD_BASIS_UNVERIFIED: "threshold-basis-unverified",
+  RUNTIME_DEPENDENT: "runtime-dependent",
+  AMBIGUOUS_CHARGES: "ambiguous-charges",
+  PROVIDER_REPORTED_ESTIMATE: "provider-reported-estimate",
+  ENDPOINT_SOURCE_CONFLICT: "endpoint-source-conflict",
+  WHOLE_REQUEST_TIER: "whole-request-tier",
+  ROUTING_CONTEXT: "routing-context",
+} as const
+
 export const PRICING_METERS = {
   VIDEO_OUTPUT: "videoOutput",
+  VIDEO_INPUT_TOKENS: "videoInputTokens",
+  IMAGE_CACHE: "imageCache",
+  CODE_EXECUTION: "codeExecution",
   INPUT: "input",
   OUTPUT: "output",
   CACHE_READ: "cacheRead",
@@ -96,6 +113,7 @@ export const PRICING_ISSUE_REASONS = {
   CONDITION_SYNTAX: "condition-syntax",
   PRICE_EXPRESSION: "price-expression",
   REQUEST_CONDITION: "request-condition",
+  THRESHOLD_BASIS_UNVERIFIED: "threshold-basis-unverified",
   EXPRESSION_VERSION: "expression-version",
   EXPRESSION_LIMIT: "expression-limit",
   TASK_USAGE: "task-usage",
@@ -143,7 +161,13 @@ export const PRICING_SELECTION_AXES = {
   IMAGE_SIZE: "imageSize",
   VIDEO_INPUT: "videoInput",
   VIDEO_QUALITY: "videoQuality",
+  VIDEO_AUDIO: "videoAudio",
+  VIDEO_MODE: "videoMode",
   IMAGE_QUALITY: "imageQuality",
+  DOCUMENT_ANNOTATION: "documentAnnotation",
+  GENERATION_MODE: "generationMode",
+  VIDEO_DYNAMIC_RANGE: "videoDynamicRange",
+  SEARCH_CONTEXT: "searchContext",
 } as const
 
 export const PRICING_RANGE_AXES = {
@@ -166,6 +190,7 @@ export const CALCULATED_PRICE_KINDS = {
 
 export const PRICING_IMAGE_SIZES = {
   K1: "1k",
+  K1_5: "1.5k",
   K2: "2k",
   K3: "3k",
   K4: "4k",
@@ -176,6 +201,23 @@ export const PRICING_VIDEO_INPUTS = {
   WITHOUT_VIDEO: "without-video",
 } as const
 
+export const PRICING_VIDEO_AUDIO_MODES = {
+  WITH_AUDIO: "with-audio",
+  WITHOUT_AUDIO: "without-audio",
+} as const
+
+export const PRICING_VIDEO_DYNAMIC_RANGES = { HDR: "hdr", SDR: "sdr" } as const
+export const PRICING_DOCUMENT_ANNOTATIONS = {
+  PLAIN: "plain",
+  ANNOTATED: "annotated",
+} as const
+export const PRICING_SEARCH_CONTEXTS = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+} as const
+
 export const PRICING_MEASUREMENT_AXES = {
   IMAGE_MEGAPIXELS: "imageMegapixels",
+  VIDEO_SECONDS: "videoSeconds",
 } as const

@@ -50,6 +50,69 @@ const t = ((key: string, options?: { field?: string; name?: string }) => {
 }) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it("renders resolved read-only scalar facts without an editable input", () => {
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[{ fieldId: "owner", type: "text", readOnly: true }]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "owner",
+              section: "basic",
+              order: 1,
+              renderer: "text",
+              resolveLabel: () => "Owner",
+              resolveReadOnlyValue: () => "Native owner",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ owner: "native-id" }}
+        onValueChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByText("Native owner")).toBeVisible()
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+  })
+  it("uses loaded display labels without invoking inherited option resolvers", async () => {
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "routes",
+            type: "multi-select",
+            options: [
+              { value: "__proto__", displayLabel: "Prototype route" },
+              { value: "own", displayLabel: "Loaded route" },
+            ],
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "routes",
+              section: "basic",
+              order: 1,
+              renderer: "multi-select",
+              resolveLabel: () => "Routes",
+              optionLabelResolvers: { own: () => "Translated route" },
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ routes: ["__proto__", "own"] }}
+        onValueChange={vi.fn()}
+      />,
+    )
+    expect(await screen.findByText("Prototype route")).toBeVisible()
+    expect(screen.getByText("Translated route")).toBeVisible()
+  })
   it("normalizes duplicate selections before reordering and card toggling", async () => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()

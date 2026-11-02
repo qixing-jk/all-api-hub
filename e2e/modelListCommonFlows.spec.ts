@@ -450,6 +450,55 @@ test("loads account-backed models from the options route", async ({
   )
 })
 
+test("explains unavailable legacy pricing in expanded comparison details", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await seedModelListAccount(context, [
+    {
+      ...PRICING_MODELS[0]!,
+      model_name: "invalid-price-model",
+      token_price_usd_per_million: {},
+      price_metadata: {
+        source: "none",
+        precision: "unavailable",
+        unavailable_reason: "official-price-missing",
+      },
+    },
+  ])
+  await verifyAccountModelCatalogUsage({
+    page,
+    extensionId,
+    account: { accountId: "model-list-account" },
+    expectations: {
+      sourceLabel: "Model Catalog Account",
+      modelNames: ["invalid-price-model"],
+      totalModels: 1,
+    },
+  })
+  await page
+    .getByTestId(MODEL_LIST_TEST_IDS.headerPriceComparisonButton)
+    .click()
+  await page.getByTestId(MODEL_LIST_TEST_IDS.modelExpandButton).click()
+  const display = page.getByTestId(MODEL_LIST_TEST_IDS.modelDisplay)
+  await expect(
+    display.getByText("Detailed Pricing", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    display
+      .getByText("No price found for this model.", {
+        exact: true,
+      })
+      .and(display.locator("div")),
+  ).toBeVisible()
+  await display.screenshot({
+    path: testInfo.outputPath("unavailable-comparison-details.png"),
+    animations: "disabled",
+  })
+})
+
 test("groups same-model offers when comparing prices at narrow options width", async ({
   context,
   extensionId,
@@ -658,9 +707,12 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
     page.getByText(OPENROUTER_PERSONALIZED_MODEL_A_ID, { exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByText("Example OpenRouter A · Personalized Model Catalog", {
-      exact: true,
-    }),
+    page
+      .getByTestId(MODEL_LIST_TEST_IDS.modelDisplay)
+      .locator("span")
+      .getByText("Example OpenRouter A · Personalized Model Catalog", {
+        exact: true,
+      }),
   ).toBeVisible()
   await expect(
     page.getByTestId(MODEL_LIST_TEST_IDS.modelKeyDialogButton),
@@ -748,7 +800,10 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
       element.scrollTop = element.scrollHeight
     })
     await expect(
-      page.getByText("OpenRouter · Provider Model Catalog", { exact: true }),
+      page
+        .getByTestId(MODEL_LIST_TEST_IDS.modelDisplay)
+        .locator("span")
+        .getByText("OpenRouter · Provider Model Catalog", { exact: true }),
     ).toBeVisible({ timeout: 1_000 })
   }).toPass({ timeout: 10_000 })
   await expect(page.getByText("Using the provider-wide catalog")).toBeVisible()

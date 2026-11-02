@@ -8,6 +8,8 @@ export const MODEL_PRICING_RUNTIME_KEY_FALLBACKS = {
 } as const
 
 export type ModelPricingCapability = {
+  /** Retires persisted and in-memory snapshots when the adapter's pricing contract changes. */
+  cacheVersion?: string
   fetchPricing(request: ModelPricingRequest): Promise<ModelCatalogSnapshot>
   /** Persists a provider routing preference; the host refresh owns catalog readback. */
   updateGroup?(

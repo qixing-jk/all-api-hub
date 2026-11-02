@@ -334,8 +334,8 @@ describe("Sub2API account key resources", () => {
     ])
     expect(page.total).toBe(2)
     expect(page.items.map(({ actions }) => actions)).toEqual([
-      { canUpdate: true, canDelete: true },
-      { canUpdate: true, canDelete: true },
+      { canUpdate: true, canDelete: true, canEnable: false, canDisable: false },
+      { canUpdate: true, canDelete: true, canEnable: false, canDisable: false },
     ])
     expect(mockFetchSub2ApiKeys).toHaveBeenCalledWith(request)
   })

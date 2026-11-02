@@ -279,6 +279,13 @@ function calculateQuote(
   }
   for (const [meter, issues] of unresolvedMeters)
     if ((scenario.usage[meter] ?? 0) > 0) result.issues.push(...issues)
+  if (scenario.purpose === PRICING_PURPOSES.REQUEST && !isUnitIndex) {
+    for (const meter of plan.requiredUsage ?? []) {
+      // Resolved rates already report missing quantities in the settlement loop.
+      if (scenario.usage[meter] == null && !rates[meter])
+        result.issues.push({ code: PRICING_ISSUE_CODES.USAGE_MISSING, meter })
+    }
+  }
   for (const issue of plan.issues) {
     if (
       plan.comparison &&
@@ -308,7 +315,12 @@ function calculateQuote(
       !issue.meters ||
       issue.meters.some((meter) => (scenario.usage[meter] ?? 0) > 0)
     )
-      result.issues.push({ code: issue.code })
+      result.issues.push({
+        code:
+          issue.reason === PRICING_ISSUE_REASONS.SOURCE_CONFLICT
+            ? PRICING_ISSUE_CODES.SOURCE_CONFLICT
+            : issue.code,
+      })
   }
   if (
     result.issues.some(

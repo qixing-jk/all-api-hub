@@ -257,6 +257,7 @@
     "neverExpires": "Läuft nie ab",
     "note": "Hinweis:",
     "remainingQuota": "Verbleibendes Kontingent:",
+    "tools": "Erlaubte Tools",
     "totalQuota": "Gesamtkontingent:",
     "ungrouped": "Nicht gruppiert",
     "usedQuota": "Verwendetes Kontingent:"
@@ -491,7 +492,8 @@
         "permissionDenied": "Verwenden Sie Zugangsdaten mit Berechtigung zum Anzeigen und Verwalten von Schlüsseln und versuchen Sie es erneut.",
         "title": "Schlüssel konnte nicht gespeichert werden",
         "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Versuchen Sie es in Kürze noch einmal.",
-        "uncertain": "Der Dienst hat diese Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüssel, um den aktuellen Status zu bestätigen, bevor Sie entscheiden, ob Sie es erneut versuchen."
+        "uncertain": "Der Dienst hat diese Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüssel, um den aktuellen Status zu bestätigen, bevor Sie entscheiden, ob Sie es erneut versuchen.",
+        "unexpected": "Die Erweiterung konnte diese Aktion nicht ausführen. Aktualisieren Sie die Erweiterung oder melden Sie dieses Problem."
       },
       "followAccountQuotaHelp": "-1 übernimmt das Kontingent des Kontos.",
       "followsAccount": "Wie Konto",

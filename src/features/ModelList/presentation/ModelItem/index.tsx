@@ -47,10 +47,7 @@ import type {
   ModelMetadata,
   ResolvedModelVendor,
 } from "~/services/models/modelMetadata/types"
-import {
-  isTokenBillingType,
-  type CalculatedPrice,
-} from "~/services/models/utils/modelPricing"
+import { type CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -284,7 +281,7 @@ export default function ModelItem(props: ModelItemProps) {
     (showEndpointTypes &&
       (effectiveCapabilities.supportsPricing ||
         effectiveCapabilities.supportsGroupFiltering)) ||
-    (showPricing && !model.quotaPricing && isTokenBillingType(model.quota_type))
+    (showPricing && !model.quotaPricing)
   const canExpand =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
     (hasLegacyDetails || hasPresentationDetails)

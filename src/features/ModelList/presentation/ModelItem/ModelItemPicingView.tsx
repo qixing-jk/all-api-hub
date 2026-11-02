@@ -7,7 +7,7 @@ import {
 import { type CurrencyType } from "~/types"
 
 interface PriceViewProps {
-  prices: TokenPricesUSD
+  prices: Partial<TokenPricesUSD>
   sourceCurrency?: CurrencyType
   exchangeRate: number
   showRealPrice: boolean
@@ -39,42 +39,49 @@ export const PriceView = ({
       amount: prices.output,
       className: "text-pricing-output",
     },
-    ...(prices.cacheRead !== undefined
-      ? [
-          {
-            key: "cache-read",
-            label: t("cacheRead"),
-            amount: prices.cacheRead,
-            className: "text-pricing-cache-read",
-          },
-        ]
-      : []),
-    ...(prices.cacheWrite !== undefined
-      ? [
-          {
-            key: "cache-write",
-            label: t("cacheWrite"),
-            amount: prices.cacheWrite,
-            className: "text-pricing-cache-write",
-          },
-        ]
-      : []),
+    {
+      key: "cache-read",
+      label: t("cacheRead"),
+      amount: prices.cacheRead,
+      className: "text-pricing-cache-read",
+    },
+    {
+      key: "cache-write",
+      label: t("cacheWrite"),
+      amount: prices.cacheWrite,
+      className: "text-pricing-cache-write",
+    },
   ]
 
   return (
     <PriceRateView
       isAvailableForUser={isAvailableForUser}
-      items={priceItems.map((item) => ({
-        ...item,
-        value: `${formatPriceCompact(
-          sourceCurrency === currency
-            ? item.amount
-            : sourceCurrency === "CNY"
-              ? item.amount / exchangeRate
-              : resolvePriceAmount(item.amount, currency, exchangeRate),
-          currency,
-        )}${tokenBillingType ? "/M" : ""}`,
-      }))}
+      items={priceItems
+        .filter(
+          (item) =>
+            tokenBillingType || item.key === "input" || item.key === "output",
+        )
+        .flatMap((item) =>
+          item.amount === undefined
+            ? []
+            : [
+                {
+                  ...item,
+                  value: `${formatPriceCompact(
+                    sourceCurrency === currency
+                      ? item.amount
+                      : sourceCurrency === "CNY"
+                        ? item.amount / exchangeRate
+                        : resolvePriceAmount(
+                            item.amount,
+                            currency,
+                            exchangeRate,
+                          ),
+                    currency,
+                  )}${tokenBillingType ? "/M" : ""}`,
+                },
+              ],
+        )}
     />
   )
 }

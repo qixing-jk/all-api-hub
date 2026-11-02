@@ -1,6 +1,9 @@
 import { expect, it } from "vitest"
 
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
+import { normalizePublishedSchedule } from "~/services/modelPricing/publishedPricing"
+import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 
 const plan: PricingPlan = {
@@ -13,6 +16,65 @@ const plan: PricingPlan = {
   source: { kind: "account" },
   groupMultiplier: "included",
 }
+
+it("does not claim a complete request quote from legacy token rates", () => {
+  const model = {
+    model_name: "legacy",
+    quota_type: 0,
+    model_ratio: 1,
+    completion_ratio: 1,
+    model_price: 0,
+    enable_groups: [],
+    supported_endpoint_types: [],
+  } satisfies ModelPricing
+  const quote = quoteCanonicalModelPrice(
+    model,
+    { purpose: "request", usage: { input: 10 } },
+    { groupMultiplier: 1 },
+  )
+  expect(quote.status).toBe("partial")
+  expect(quote.issues).toContainEqual({ code: "unknown-fees" })
+  const unavailable = quoteCanonicalModelPrice(
+    { ...model, price_metadata: { source: "none", precision: "unavailable" } },
+    { purpose: "token-index", usage: { input: 1 } },
+    {},
+  )
+  expect(unavailable.status).toBe("unavailable")
+})
+
+it("drops invalid published rates without losing valid zero prices", () => {
+  const normalized = normalizePublishedSchedule([
+    {
+      id: "base",
+      conditions: [],
+      rates: {
+        input: { ...plan.rates.input!, per: 0 },
+        output: plan.rates.output!,
+        cacheRead: { ...plan.rates.input!, amount: -1 },
+      },
+    },
+  ])
+  expect(normalized).toHaveLength(1)
+  expect(normalized[0]?.rates).toEqual({
+    output: { amount: 0, currency: "USD", unit: "token", per: 1000000 },
+  })
+})
+
+it("reports required quantities even when no rate was published for that meter", () => {
+  const result = quoteModelPrice(
+    { ...plan, requiredUsage: ["image"] },
+    {
+      purpose: "request",
+      usage: { input: 1 },
+    },
+  )
+  expect(result.status).toBe("partial")
+  expect(result.amount).toBe(0.000001)
+  expect(result.issues).toContainEqual({
+    code: "usage-missing",
+    meter: "image",
+  })
+})
 
 it.each([
   { input: -1 },

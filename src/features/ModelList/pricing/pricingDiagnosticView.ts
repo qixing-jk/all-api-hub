@@ -1,4 +1,28 @@
+import type { TFunction } from "i18next"
+
 import type { buildPricingDiagnostics } from "~/features/ModelList/pricing/pricingDiagnostics"
+import {
+  PRICING_ISSUE_CODES,
+  PRICING_ISSUE_REASONS,
+} from "~/services/modelPricing/pricingConstants"
+
+/** Explain known limitations while keeping stable codes in exports and search. */
+export function getPricingDiagnosticIssueLabel(
+  code: string,
+  t: TFunction<"modelList">,
+) {
+  switch (code) {
+    case `unsupported:${PRICING_ISSUE_REASONS.THRESHOLD_BASIS_UNVERIFIED}`:
+      return t("diagnostics.issueLabels.thresholdBasisUnverified")
+    case `unsupported:${PRICING_ISSUE_REASONS.REQUEST_CONDITION}`:
+      return t("diagnostics.issueLabels.requestCondition")
+    case `unsupported:${PRICING_ISSUE_REASONS.SOURCE_CONFLICT}`:
+    case PRICING_ISSUE_CODES.SOURCE_CONFLICT:
+      return t("diagnostics.issueLabels.sourceConflict")
+    default:
+      return code
+  }
+}
 
 export type PricingDiagnosticRow = ReturnType<
   typeof buildPricingDiagnostics
@@ -18,6 +42,7 @@ export function matchesPricingDiagnosticSearch(
 ): boolean {
   const text = [
     row.model,
+    row.displayName,
     row.source.name,
     row.source.origin,
     row.group,

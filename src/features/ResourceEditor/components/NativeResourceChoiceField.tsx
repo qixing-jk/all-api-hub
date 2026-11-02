@@ -380,7 +380,18 @@ export function NativeResourceChoiceField<TSection extends string>({
           loading={isAutomaticallyLoadingOptions || waitingForSelectedLabels}
           options={loadedOptions.map((option) => ({
             value: option.value,
-            label: option.displayLabel ?? option.value,
+            secondaryLabel: option.secondaryLabel,
+            badgeLabel: option.badgeLabel,
+            label:
+              (presentation.optionLabelResolvers &&
+              Object.prototype.hasOwnProperty.call(
+                presentation.optionLabelResolvers,
+                option.value,
+              )
+                ? presentation.optionLabelResolvers[option.value]?.(t)
+                : undefined) ??
+              option.displayLabel ??
+              getResourceFieldOptionLabel(presentation, option.value, t),
           }))}
           selected={waitingForSelectedLabels ? [] : selectedValues}
           onChange={(nextValue) =>

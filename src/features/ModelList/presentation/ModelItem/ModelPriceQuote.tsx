@@ -33,9 +33,10 @@ import type {
   PriceMeter,
   QuoteResult,
 } from "~/services/modelPricing/pricingPlan"
+import { normalizePublishedSchedule } from "~/services/modelPricing/publishedPricing"
 import { formatPrice } from "~/services/models/utils/modelPricing"
 
-/** Renders exactly the quote used for ranking, including its excluded scope. */
+/** Displays a scenario quote and its calculation details. */
 export function ModelPriceQuote({
   quote,
   details = false,
@@ -97,33 +98,9 @@ export function ModelPriceQuote({
       ),
     ),
   ]
-  const publishedSchedule = (quote.publishedSchedule ?? [])
-    .map((rule) => ({
-      ...rule,
-      rates: Object.fromEntries(
-        Object.entries(rule.rates).flatMap(([meter, rate]) => {
-          const amount =
-            (rate.amount / rate.per) *
-            (rate.unit === PRICE_RATE_UNITS.TOKEN ? TOKENS_PER_MILLION : 1)
-          return Number.isFinite(amount) && amount >= 0 && rate.per > 0
-            ? [
-                [
-                  meter,
-                  {
-                    ...rate,
-                    amount,
-                    per:
-                      rate.unit === PRICE_RATE_UNITS.TOKEN
-                        ? TOKENS_PER_MILLION
-                        : 1,
-                  },
-                ],
-              ]
-            : []
-        }),
-      ),
-    }))
-    .filter((rule) => Object.keys(rule.rates).length > 0)
+  const publishedSchedule = normalizePublishedSchedule(
+    quote.publishedSchedule ?? [],
+  )
   const publishedBase = publishedSchedule.find(
     (rule) => rule.conditions.length === 0,
   )
@@ -292,6 +269,7 @@ export function ModelPriceQuote({
         {conditionLabel && ` · ${conditionLabel}`}
       </button>
     ) : null
+
   return (
     <div className="mt-density-2 space-y-density-2 text-xs">
       {showSummary && (

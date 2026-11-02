@@ -22,6 +22,7 @@ import {
   PRICING_GROUP_MULTIPLIERS,
   PRICING_RANGE_AXES,
   PRICING_SOURCE_KINDS,
+  PRICING_SOURCE_NOTE_KINDS,
   PRICING_USAGE_MODES,
 } from "~/services/modelPricing/pricingConstants"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
@@ -165,8 +166,6 @@ function buildRelayForPricingResponse(
         let pricingPlan: PricingPlan | undefined
 
         if (hasLongContext) {
-          const thresholdStr = longThreshold.toLocaleString("en-US")
-          const pricingDescription = `长上下文 > ${thresholdStr} 输入 Token：整次请求 输入 $${longInput} · 输出 $${longOutput}${longCacheRead !== undefined ? ` · 缓存读 $${longCacheRead}` : ""}${longCacheWrite !== undefined ? ` · 缓存写 $${longCacheWrite}` : ""} / 1M`
           pricingPlan = {
             rates: tokenRates(input, output, cacheRead, cacheWrite),
             usageMode: PRICING_USAGE_MODES.TOKENS,
@@ -175,10 +174,7 @@ function buildRelayForPricingResponse(
             source: {
               kind: PRICING_SOURCE_KINDS.ACCOUNT,
               url: new URL("/console/#models", baseUrl).href,
-              pricingDescription: {
-                zh: pricingDescription,
-                en: `Long context > ${thresholdStr} input tokens: entire request input $${longInput} · output $${longOutput}${longCacheRead !== undefined ? ` · cache read $${longCacheRead}` : ""}${longCacheWrite !== undefined ? ` · cache write $${longCacheWrite}` : ""} / 1M`,
-              },
+              notes: [{ kind: PRICING_SOURCE_NOTE_KINDS.WHOLE_REQUEST_TIER }],
             },
             rules: [
               {
@@ -281,6 +277,7 @@ function buildRelayForPricingResponse(
 }
 
 export const relayForModelPricing: ModelPricingCapability = {
+  cacheVersion: "pricing-source-notes-v1",
   async updateGroup(request, model, group) {
     await updateRelayForModelGroup(request, model, group)
   },

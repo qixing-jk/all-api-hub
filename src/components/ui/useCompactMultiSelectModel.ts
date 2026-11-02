@@ -3,6 +3,8 @@ import * as React from "react"
 export interface CompactMultiSelectOption {
   value: string
   label: string
+  secondaryLabel?: string
+  badgeLabel?: string
   count?: number
   disabled?: boolean
 }

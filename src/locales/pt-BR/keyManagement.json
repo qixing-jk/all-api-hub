@@ -264,6 +264,7 @@
     "neverExpires": "Nunca expira",
     "note": "Observação:",
     "remainingQuota": "Cota restante:",
+    "tools": "Ferramentas permitidas",
     "totalQuota": "Cota total:",
     "ungrouped": "Sem grupo",
     "usedQuota": "Cota usada:"
@@ -501,7 +502,8 @@
         "permissionDenied": "Use credenciais com permissão para visualizar e gerenciar chaves e tente novamente.",
         "title": "Não foi possível salvar a chave",
         "unavailable": "O serviço está temporariamente indisponível. Tente novamente em instantes.",
-        "uncertain": "O serviço pode ter aplicado esta alteração. Atualize as chaves para confirmar o estado atual antes de decidir se deve tentar novamente."
+        "uncertain": "O serviço pode ter aplicado esta alteração. Atualize as chaves para confirmar o estado atual antes de decidir se deve tentar novamente.",
+        "unexpected": "A extensão não conseguiu executar esta ação. Atualize a extensão ou relate este problema."
       },
       "followAccountQuotaHelp": "-1 segue a cota da conta.",
       "followsAccount": "Conforme a conta",

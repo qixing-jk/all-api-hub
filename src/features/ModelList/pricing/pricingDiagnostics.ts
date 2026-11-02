@@ -1,8 +1,10 @@
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
+import { MODEL_UNAVAILABLE_PRICE_REASONS } from "~/services/modelList/pricingModel"
 import {
   CALCULATED_PRICE_KINDS,
   PRICE_RATE_UNITS,
+  PRICING_GROUP_MULTIPLIERS,
   QUOTE_STATUSES,
   QUOTE_UNITS,
 } from "~/services/modelPricing/pricingConstants"
@@ -11,6 +13,15 @@ import {
   type PricingPlan,
   type QuoteResult,
 } from "~/services/modelPricing/pricingPlan"
+import { normalizePublishedSchedule } from "~/services/modelPricing/publishedPricing"
+
+/** Exported diagnostic states extend quote states without implying a quotation. */
+export const PRICING_DIAGNOSTIC_STATUSES = {
+  ...QUOTE_STATUSES,
+  PUBLISHED: "published",
+  REFERENCE: "reference",
+  NOT_QUOTED: "not-quoted",
+} as const
 
 type DiagnosticInput = Pick<
   CalculatedModelItem,
@@ -27,7 +38,7 @@ function diagnosticOrigin(value: string) {
   }
 }
 
-/** Summarizes existing quotes without fetching data or running a second pricing engine. */
+/** Summarizes published rates and existing quotes without fetching data or requoting. */
 export function buildPricingDiagnostics(models: readonly DiagnosticInput[]) {
   const rows = models.map((item) => {
     const source =
@@ -62,6 +73,32 @@ export function buildPricingDiagnostics(models: readonly DiagnosticInput[]) {
         invalidPlan = true
       }
     }
+    const publishedInput = item.calculatedPrice.publishedPricing
+    let published: PricingPlan | undefined
+    if (publishedInput) {
+      try {
+        const parsed = pricingPlanSchema.safeParse({
+          rates: {},
+          rules: publishedInput.schedule,
+          source: publishedInput.source,
+          groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+          issues: [],
+        })
+        if (parsed.success) published = parsed.data
+        else invalidPlan = true
+      } catch {
+        invalidPlan = true
+      }
+    }
+    const publishedSchedule = normalizePublishedSchedule(published?.rules ?? [])
+    const hasPublishedRates = !quote && publishedSchedule.length > 0
+    const publishedUnits = [
+      ...new Set(
+        publishedSchedule.flatMap((rule) =>
+          Object.values(rule.rates).map((rate) => rate.unit),
+        ),
+      ),
+    ].sort()
     const issues = new Map<string, QuoteResult["issues"][number]>()
     const addIssue = (
       code: string,
@@ -88,11 +125,17 @@ export function buildPricingDiagnostics(models: readonly DiagnosticInput[]) {
       if (issue.reason && relevant) addIssue(`unsupported:${issue.reason}`)
     }
     const unavailable =
-      !quote && item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE
+      !quote &&
+      !hasPublishedRates &&
+      item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE
         ? item.calculatedPrice
         : undefined
-    if (unavailable) addIssue(`availability:${unavailable.reason}`)
-    else if (!quote && !legacyPrice) addIssue("diagnostic:not-quoted")
+    if (unavailable)
+      addIssue(
+        `availability:${unavailable.reason ?? MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE}`,
+      )
+    else if (!quote && !legacyPrice && !hasPublishedRates)
+      addIssue("diagnostic:not-quoted")
     if (invalidPlan) addIssue("diagnostic:invalid-plan")
     if (
       quote?.status === QUOTE_STATUSES.COMPLETE &&
@@ -104,29 +147,51 @@ export function buildPricingDiagnostics(models: readonly DiagnosticInput[]) {
       addIssue("diagnostic:inconsistent-quote")
     return {
       model: item.model.model_name,
+      ...(item.model.display_name?.trim()
+        ? { displayName: item.model.display_name.trim() }
+        : {}),
       source: { name: source.name, origin: diagnosticOrigin(source.baseUrl) },
       group: item.effectiveGroup,
       status:
         quote?.status ??
-        (legacyPrice
-          ? QUOTE_STATUSES.COMPLETE
-          : unavailable
-            ? QUOTE_STATUSES.UNAVAILABLE
-            : "not-quoted"),
+        (hasPublishedRates
+          ? published?.source.rulesUnavailable
+            ? PRICING_DIAGNOSTIC_STATUSES.REFERENCE
+            : PRICING_DIAGNOSTIC_STATUSES.PUBLISHED
+          : legacyPrice
+            ? QUOTE_STATUSES.COMPLETE
+            : unavailable
+              ? QUOTE_STATUSES.UNAVAILABLE
+              : PRICING_DIAGNOSTIC_STATUSES.NOT_QUOTED),
       unit:
         quote?.unit ??
+        (hasPublishedRates ? publishedUnits.join(" + ") : undefined) ??
         legacyPrice?.unit ??
         (unavailable
-          ? unavailable.billingMode === "per-call"
-            ? QUOTE_UNITS.REQUEST
-            : QUOTE_UNITS.MILLION_SELECTED_TOKENS
-          : "not-quoted"),
+          ? item.model.price_metadata?.billing_mode_known === false
+            ? QUOTE_UNITS.UNRESOLVED
+            : unavailable.billingMode === "per-call"
+              ? QUOTE_UNITS.REQUEST
+              : QUOTE_UNITS.MILLION_SELECTED_TOKENS
+          : PRICING_DIAGNOSTIC_STATUSES.NOT_QUOTED),
       issues: [...issues.values()],
       ...(quote?.conditionDetails
         ? { conditionDetails: quote.conditionDetails }
         : {}),
       ...(quote?.requirementDetails
         ? { requirementDetails: quote.requirementDetails }
+        : {}),
+      ...(hasPublishedRates
+        ? {
+            publishedPricing: {
+              schedule: publishedSchedule,
+              source: {
+                kind: published!.source.kind,
+                rulesUnavailable: published!.source.rulesUnavailable,
+                hasUnpricedCharges: published!.source.hasUnpricedCharges,
+              },
+            },
+          }
         : {}),
       legacyPrice,
       quote: quote
@@ -169,6 +234,7 @@ export function buildPricingDiagnostics(models: readonly DiagnosticInput[]) {
             issues: plan.issues,
             groupMultiplier: plan.groupMultiplier,
             requiresRuleMatch: plan.requiresRuleMatch,
+            requiredUsage: plan.requiredUsage,
           }
         : undefined,
     }
@@ -186,6 +252,7 @@ export function buildPricingDiagnostics(models: readonly DiagnosticInput[]) {
 export function summarizePricingDiagnostics(
   rows: readonly {
     status: string
+    quote?: unknown
     unit: string
     issues: readonly { code: string }[]
   }[],
@@ -200,6 +267,12 @@ export function summarizePricingDiagnostics(
   return {
     summary: {
       total: rows.length,
+      quoted: rows.filter((row) => row.quote !== undefined).length,
+      published: rows.filter(
+        (row) =>
+          row.status === PRICING_DIAGNOSTIC_STATUSES.PUBLISHED ||
+          row.status === PRICING_DIAGNOSTIC_STATUSES.REFERENCE,
+      ).length,
       complete: rows.filter((row) => row.status === QUOTE_STATUSES.COMPLETE)
         .length,
       partial: rows.filter((row) => row.status === QUOTE_STATUSES.PARTIAL)
@@ -207,7 +280,9 @@ export function summarizePricingDiagnostics(
       unavailable: rows.filter(
         (row) => row.status === QUOTE_STATUSES.UNAVAILABLE,
       ).length,
-      notQuoted: rows.filter((row) => row.status === "not-quoted").length,
+      notQuoted: rows.filter(
+        (row) => row.status === PRICING_DIAGNOSTIC_STATUSES.NOT_QUOTED,
+      ).length,
       attention: rows.filter((row) => row.issues.length > 0).length,
     },
     issueCounts: [...counts]

@@ -635,6 +635,12 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
           value: "192.0.2.1",
         },
         {
+          fieldId: "tools",
+          kind: "restriction",
+          role: "tools",
+          value: ["search/web"],
+        },
+        {
           fieldId: "subnet",
           kind: "restriction",
           role: "subnet",
@@ -693,6 +699,11 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
           id: "models",
           label: "keyManagement:keyDetails.models",
           value: "model-a, model-b",
+        },
+        {
+          id: "tools",
+          label: "keyManagement:keyDetails.tools",
+          value: "search/web",
         },
         {
           id: "ip_whitelist",

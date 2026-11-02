@@ -1,6 +1,7 @@
 import {
   PRICING_CONDITION_KINDS,
   PRICING_ISSUE_CODES,
+  PRICING_MEASUREMENT_AXES,
   PRICING_PURPOSES,
   PRICING_RANGE_AXES,
   PRICING_RESPONSE_FORMATS,
@@ -20,6 +21,20 @@ const CALENDAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 const calendarFormatters = new Map<string, Intl.DateTimeFormat>()
 const MAX_CALENDAR_FORMATTERS = 32
+
+/** Task measurements retain explicit missing/null values in unit comparisons. */
+export function getPricingMeasurementValue(
+  axis: (typeof PRICING_MEASUREMENT_AXES)[keyof typeof PRICING_MEASUREMENT_AXES],
+  scenario: PricingScenario,
+) {
+  if (axis === PRICING_MEASUREMENT_AXES.VIDEO_SECONDS)
+    return scenario.purpose === PRICING_PURPOSES.TOKEN_INDEX &&
+      scenario.taskUsage &&
+      Object.hasOwn(scenario.taskUsage, axis)
+      ? scenario.taskUsage[axis]
+      : scenario.usage[axis]
+  return scenario[axis]
+}
 
 /** Reuses bounded timezone formatters; the instant is always formatted afresh. */
 function getPricingCalendarParts(timeZone: string, date: Date) {
@@ -47,10 +62,10 @@ export function matchesPricingCondition(
   scenario: PricingScenario,
 ): boolean | typeof PRICING_ISSUE_CODES.CACHE_BASIS_UNKNOWN | undefined {
   if (condition.kind === PRICING_CONDITION_KINDS.MEASUREMENT) {
-    const value = scenario[condition.axis]
-    if (value === undefined || !Number.isFinite(value) || value < 0)
-      return undefined
+    const value = getPricingMeasurementValue(condition.axis, scenario)
+    if (value == null || !Number.isFinite(value) || value < 0) return undefined
     return (
+      (condition.eq === undefined || value === condition.eq) &&
       (condition.gt === undefined || value > condition.gt) &&
       (condition.lte === undefined || value <= condition.lte)
     )

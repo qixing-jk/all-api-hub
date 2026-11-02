@@ -264,6 +264,7 @@
     "neverExpires": "Nunca expira",
     "note": "Nota:",
     "remainingQuota": "Cuota restante:",
+    "tools": "Herramientas permitidas",
     "totalQuota": "Cuota total:",
     "ungrouped": "Sin grupo",
     "usedQuota": "Cuota usada:"
@@ -501,7 +502,8 @@
         "permissionDenied": "Usa credenciales con permiso para ver y administrar claves y vuelve a intentarlo.",
         "title": "No se pudo guardar la clave",
         "unavailable": "El servicio no está disponible temporalmente. Inténtalo pronto.",
-        "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza las claves para confirmar el estado actual antes de decidir si vuelves a intentarlo."
+        "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza las claves para confirmar el estado actual antes de decidir si vuelves a intentarlo.",
+        "unexpected": "La extensión no pudo ejecutar esta acción. Actualiza la extensión o informa de este problema."
       },
       "followAccountQuotaHelp": "-1 usa la cuota de la cuenta.",
       "followsAccount": "Según la cuenta",

@@ -34,6 +34,129 @@ function calculate(rawItems: ModelListItem[], groups?: string[]) {
 }
 
 describe("model list price evaluation", () => {
+  it("retains unavailable-price metadata when comparing a legacy model without a plan", () => {
+    const item = buildModelListItemFixture("no-price", { a: 1 })
+    item.model.price_metadata = {
+      source: "none",
+      precision: "unavailable",
+      unavailable_reason: "official-price-missing",
+    }
+    const result = calculateModelListPrices({
+      ...options,
+      rawItems: [item],
+      getGroupCandidates: () => ["a"],
+      isPriceComparisonActive: true,
+    })[0]!
+    expect(result.calculatedPrice).toMatchObject({
+      kind: "unavailable",
+      isComparisonActive: true,
+      reason: "official-price-missing",
+    })
+    expect(result.calculatedPrice.publishedPricing).toBeDefined()
+    expect(result.calculatedPrice.quote).toBeUndefined()
+  })
+  it.each(["tokens", "metered"] as const)(
+    "browses %s rates independently of scenario selection and quotation",
+    (usageMode) => {
+      const item = buildModelListItemFixture("published", {})
+      item.groupContext = {
+        ...item.groupContext,
+        accessState: "not-applicable",
+      }
+      item.model.pricingPlan = {
+        rates: {
+          input: { amount: 2, currency: "USD", unit: "token", per: 1000000 },
+        },
+        rules: [
+          {
+            id: "quality",
+            conditions: [
+              { kind: "selection", axis: "videoQuality", value: "720p" },
+            ],
+            rates: {
+              videoSeconds: {
+                amount: 0.157,
+                currency: "USD",
+                unit: "second",
+                per: 1,
+              },
+            },
+          },
+        ],
+        usageMode,
+        groupMultiplier: "included",
+        source: { kind: "catalog" },
+        issues: [],
+      }
+      const browse = calculateModelListPrices({
+        ...options,
+        rawItems: [item],
+        getGroupCandidates: () => undefined,
+        isPriceComparisonActive: false,
+        pricingScenario: {
+          purpose: "token-index",
+          videoQuality: "1080p",
+          usage: {},
+        },
+      })[0]!
+      expect(browse.calculatedPrice.quote).toBeUndefined()
+      expect(browse.calculatedPrice.publishedPricing?.schedule).toEqual([
+        { id: "base", conditions: [], rates: item.model.pricingPlan.rates },
+        ...item.model.pricingPlan.rules,
+      ])
+      expect(browse.calculatedPrice.publishedPricing?.source.kind).toBe(
+        "catalog",
+      )
+    },
+  )
+  it.each(["pending", "included"] as const)(
+    "applies %s group rates consistently while browsing",
+    (groupMultiplier) => {
+      const item = buildModelListItemFixture("group-price", { a: 2 })
+      item.model.pricingPlan = {
+        rates: {
+          videoSeconds: {
+            amount: 0.1,
+            currency: "USD",
+            per: 1,
+            unit: "second",
+          },
+        },
+        rules: [],
+        groupMultiplier,
+        source: { kind: "account" },
+        issues: [],
+      }
+      const result = calculateModelListPrices({
+        ...options,
+        rawItems: [item],
+        getGroupCandidates: () => ["a"],
+        isPriceComparisonActive: false,
+      })[0]!
+      expect(
+        result.calculatedPrice.publishedPricing?.schedule[0]?.rates.videoSeconds
+          ?.amount,
+      ).toBe(groupMultiplier === "pending" ? 0.2 : 0.1)
+    },
+  )
+  it("browses legacy per-call input and output rates through the common published schedule", () => {
+    const item = buildModelListItemFixture("split-call", { a: 2 })
+    item.model.quota_type = 1
+    item.model.model_price = { input: 3, output: 0 }
+    const result = calculateModelListPrices({
+      ...options,
+      rawItems: [item],
+      getGroupCandidates: () => ["a"],
+      isPriceComparisonActive: false,
+    })[0]!
+    expect(result.calculatedPrice.publishedPricing?.schedule[0]?.rates).toEqual(
+      {
+        input: { amount: 0.012, currency: "USD", per: 1, unit: "request" },
+        output: { amount: 0, currency: "USD", per: 1, unit: "request" },
+      },
+    )
+    expect(result.calculatedPrice.quote).toBeUndefined()
+  })
   it("keeps unquotable profile quota rows out of price minima", () => {
     const item = buildModelListItemFixture("quota-profile", {})
     item.source = createProfileSource({

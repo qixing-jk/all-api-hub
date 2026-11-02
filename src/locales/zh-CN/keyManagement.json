@@ -250,6 +250,7 @@
     "neverExpires": "永不过期",
     "note": "备注：",
     "remainingQuota": "剩余额度：",
+    "tools": "允许的工具",
     "totalQuota": "总额度：",
     "ungrouped": "未分组",
     "usedQuota": "已用额度："
@@ -481,7 +482,8 @@
         "permissionDenied": "请使用有权查看和管理密钥的凭据，然后重试。",
         "title": "无法保存密钥",
         "unavailable": "服务暂时不可用，请稍后重试。",
-        "uncertain": "服务可能已应用此更改。请先刷新密钥确认当前状态，再决定是否重试。"
+        "uncertain": "服务可能已应用此更改。请先刷新密钥确认当前状态，再决定是否重试。",
+        "unexpected": "扩展无法执行此操作，请更新扩展或反馈此问题。"
       },
       "followAccountQuotaHelp": "-1 表示跟随账户额度。",
       "followsAccount": "跟随账户",

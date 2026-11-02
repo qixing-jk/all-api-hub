@@ -18,6 +18,7 @@ import {
   ModelPriceEvidenceBadge,
 } from "~/features/ModelList/presentation/ModelItem/ModelPriceEvidenceBadge"
 import { ModelPriceQuote } from "~/features/ModelList/presentation/ModelItem/ModelPriceQuote"
+import { ModelPublishedPricing } from "~/features/ModelList/presentation/ModelItem/ModelPublishedPricing"
 import { ModelQuotaPricing } from "~/features/ModelList/presentation/ModelItem/ModelQuotaPricing"
 import {
   isModelPriceUnavailable,
@@ -31,6 +32,7 @@ import {
   CALCULATED_PRICE_KINDS,
   PRICING_CONDITION_KINDS,
 } from "~/services/modelPricing/pricingConstants"
+import { normalizePublishedSchedule } from "~/services/modelPricing/publishedPricing"
 import {
   formatPriceCompact,
   isTokenBillingType,
@@ -93,6 +95,8 @@ export function getUnavailablePriceReasonText(
       return t("unavailablePriceReasons.officialPriceMissing")
     case MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_INVALID:
       return t("unavailablePriceReasons.officialPriceInvalid")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_RULES_UNAVAILABLE:
+      return t("unavailablePriceReasons.pricingRulesUnavailable")
     case MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE:
     default:
       return t("unavailablePriceReasons.pricingSourceUnavailable")
@@ -128,6 +132,7 @@ export function resolveUnavailablePriceReason(
         !calculatedPrice.quote ||
         calculatedPrice.isComparisonActive === false))
   ) {
+    if (calculatedPrice.perMillionTokens) return undefined
     return (
       sourceUnavailableReason ??
       MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE
@@ -280,6 +285,27 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   )
   const hasPriceEvidence =
     model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+
+  if (
+    calculatedPrice.isComparisonActive === false &&
+    calculatedPrice.publishedPricing &&
+    (normalizePublishedSchedule(calculatedPrice.publishedPricing.schedule)
+      .length > 0 ||
+      calculatedPrice.publishedPricing.source.pricingDescription ||
+      calculatedPrice.publishedPricing.source.notes?.length)
+  )
+    return (
+      <ModelPublishedPricing
+        pricing={calculatedPrice.publishedPricing}
+        metadata={priceMeta}
+        exchangeRate={exchangeRate}
+        showRealPrice={showRealPrice}
+        isAvailableForUser={isAvailableForUser}
+        pricePrecision={model.price_metadata?.precision}
+        sourceLabel={sourceLabel}
+        effectiveGroup={effectiveGroup}
+      />
+    )
 
   if (
     calculatedPrice.quote &&

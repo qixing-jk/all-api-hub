@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { loadAccountModelCatalog } from "~/services/modelCatalog/loader"
+import { SITE_TYPES } from "~/constants/siteType"
+import { createModelPricingQueryKey } from "~/features/ModelList/catalog/modelDataQueryPolicy"
+import {
+  createModelPricingCacheKey,
+  loadAccountModelCatalog,
+} from "~/services/modelCatalog/loader"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { modelPricingCache } from "~/services/models/modelPricingCache"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
@@ -10,6 +15,22 @@ vi.mock("~/services/models/modelPricingCache", () => ({
 }))
 
 describe("account catalog loader", () => {
+  it("versions both persisted and in-memory pricing caches by adapter revision", () => {
+    const legacy = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
+    const versioned = buildDisplaySiteData({ siteType: SITE_TYPES.KRILL })
+    expect(createModelPricingCacheKey(legacy)).not.toContain(
+      "pricing-source-notes-v1",
+    )
+    expect(createModelPricingCacheKey(versioned)).toContain(
+      "pricing-source-notes-v1",
+    )
+    expect(createModelPricingQueryKey(versioned)).toContain(
+      "pricing-source-notes-v1",
+    )
+    expect(createModelPricingQueryKey(legacy)).not.toContain(
+      "pricing-source-notes-v1",
+    )
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(modelPricingCache.get).mockResolvedValue(null)

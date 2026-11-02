@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type {
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS,
   ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyCreationIntent,
   AccountKeyEditorSubmitResult,
@@ -29,7 +30,18 @@ export type AccountKeyResourcePage<TItem> = {
 }
 
 /** Provider projections pass native values; the factory validates plaintext before publishing facts. */
-export type AccountKeyResourceProviderFacts = AccountKeyResourceFacts & {
+export type AccountKeyResourceProviderFacts = Omit<
+  AccountKeyResourceFacts,
+  "actions"
+> & {
+  readonly actions: Omit<
+    AccountKeyResourceFacts["actions"],
+    "canEnable" | "canDisable"
+  > & {
+    /** Status buttons are derived from statusActions, never declared separately. */
+    canEnable?: never
+    canDisable?: never
+  }
   readonly runtimeSecret: string | undefined
 }
 
@@ -66,6 +78,21 @@ export type AccountKeyResourceDefinition<
   inventorySecretAvailability?: AccountKeyResourceCapability["inventorySecretAvailability"]
   defaultCreation?: AccountKeyResourceCapability["defaultCreation"]
   operations?: AccountKeyResourceCapability["operations"]
+  /** Register execution once; the factory derives availability and zero-field editors. */
+  statusActions?: Partial<
+    Record<
+      | typeof ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS.Enable
+      | typeof ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS.Disable,
+      {
+        available(item: TListItem | TDetail): boolean
+        buildCommand(
+          config: TConfig,
+          scope: AccountKeyScope,
+          detail: TDetail,
+        ): NoInfer<TUpdateCommand>
+      }
+    >
+  >
   openConfig(
     input: AccountKeyResourceOpenInput,
     options?: ResourceOperationOptions,

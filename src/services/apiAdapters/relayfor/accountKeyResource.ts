@@ -37,6 +37,8 @@ export type {
   RelayForEditKeyCommand,
 } from "./keyEditor"
 
+const KEY_STATUSES = { Enabled: 1, Disabled: 2 } as const
+
 /** One correlation and credential projection for create and rotation responses. */
 const createdSecret = (
   account: AccountKeyResourceOpenInput["account"],
@@ -65,7 +67,7 @@ const facts = (
   token: RelayForToken,
   ref: AccountKeyResourceRef,
 ): AccountKeyResourceProviderFacts => {
-  const isEnabled = token.status === 1
+  const isEnabled = token.status === KEY_STATUSES.Enabled
   return {
     ref,
     displayName: token.name,
@@ -170,14 +172,28 @@ const facts = (
       canUpdate: true,
       canDelete: true,
       canRotate: true,
-      canEnable: !isEnabled,
-      canDisable: isEnabled,
     },
   }
 }
 
 export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.RELAYFOR,
+  statusActions: {
+    enable: {
+      available: (key) => key.status !== KEY_STATUSES.Enabled,
+      buildCommand: () => ({
+        rotate: false,
+        payload: { status: KEY_STATUSES.Enabled },
+      }),
+    },
+    disable: {
+      available: (key) => key.status === KEY_STATUSES.Enabled,
+      buildCommand: () => ({
+        rotate: false,
+        payload: { status: KEY_STATUSES.Disabled },
+      }),
+    },
+  },
   requiresFreshUpdateDetail: () => false,
   inventorySecretAvailability:
     INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,

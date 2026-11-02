@@ -1,7 +1,18 @@
+import {
+  PRICE_RATE_UNITS,
+  PRICING_CONDITION_KINDS,
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_METERS,
+  PRICING_SELECTION_AXES,
+  PRICING_SOURCE_KINDS,
+  PRICING_USAGE_MODES,
+  PRICING_VIDEO_AUDIO_MODES,
+} from "~/services/modelPricing/pricingConstants"
 import type {
   PriceRate,
   PricingPlan,
 } from "~/services/modelPricing/pricingPlan"
+import { compileExclusiveSelectionRules } from "~/services/modelPricing/selectionPricingRules"
 import { isRecord } from "~/utils/core/object"
 
 import { readVercelPrice as amount } from "./parsing"
@@ -23,9 +34,9 @@ export function createVercelMeteredPricing(
     issues: [],
     rates: {},
     rules: [],
-    usageMode: "metered",
-    groupMultiplier: "included",
-    source: { kind: "catalog" },
+    usageMode: PRICING_USAGE_MODES.METERED,
+    groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+    source: { kind: PRICING_SOURCE_KINDS.CATALOG },
   }
   if (
     type === "speech" &&
@@ -33,9 +44,12 @@ export function createVercelMeteredPricing(
   )
     return {
       ...base,
-      comparison: { meter: "characters" },
+      comparison: { meter: PRICING_METERS.CHARACTERS },
       rates: {
-        characters: rate(amount(raw.speech_input_character_cost)!, "character"),
+        characters: rate(
+          amount(raw.speech_input_character_cost)!,
+          PRICE_RATE_UNITS.CHARACTER,
+        ),
       },
     }
   if (
@@ -44,11 +58,11 @@ export function createVercelMeteredPricing(
   )
     return {
       ...base,
-      comparison: { meter: "audio" },
+      comparison: { meter: PRICING_METERS.AUDIO },
       rates: {
         audio: rate(
           amount(raw.transcription_duration_cost_per_second)!,
-          "second",
+          PRICE_RATE_UNITS.SECOND,
         ),
       },
     }
@@ -70,7 +84,10 @@ export function createVercelMeteredPricing(
         )
           return {
             ...base,
-            source: { kind: "catalog", rulesUnavailable: true },
+            source: {
+              kind: PRICING_SOURCE_KINDS.CATALOG,
+              rulesUnavailable: true,
+            },
           }
         rules.push({
           id: `size-${index}`,
@@ -78,8 +95,8 @@ export function createVercelMeteredPricing(
             ...(typeof value.size === "string"
               ? [
                   {
-                    kind: "selection" as const,
-                    axis: "imageSize" as const,
+                    kind: PRICING_CONDITION_KINDS.SELECTION,
+                    axis: PRICING_SELECTION_AXES.IMAGE_SIZE,
                     value: value.size,
                   },
                 ]
@@ -87,24 +104,26 @@ export function createVercelMeteredPricing(
             ...(typeof value.quality === "string"
               ? [
                   {
-                    kind: "selection" as const,
-                    axis: "imageQuality" as const,
+                    kind: PRICING_CONDITION_KINDS.SELECTION,
+                    axis: PRICING_SELECTION_AXES.IMAGE_QUALITY,
                     value: value.quality,
                   },
                 ]
               : []),
           ],
-          rates: { outputImage: rate(amount(value.cost)!, "image") },
+          rates: {
+            outputImage: rate(amount(value.cost)!, PRICE_RATE_UNITS.IMAGE),
+          },
         })
       }
     return {
       ...base,
-      comparison: { meter: "image" },
-      usageMode: "image",
+      comparison: { meter: PRICING_METERS.IMAGE },
+      usageMode: PRICING_USAGE_MODES.IMAGE,
       rates: {
-        outputImage: rate(amount(raw.image)!, "image"),
+        outputImage: rate(amount(raw.image)!, PRICE_RATE_UNITS.IMAGE),
         ...(amount(raw.input) !== undefined
-          ? { input: rate(amount(raw.input)!, "token") }
+          ? { input: rate(amount(raw.input)!, PRICE_RATE_UNITS.TOKEN) }
           : {}),
       },
       rules,
@@ -119,30 +138,89 @@ export function createVercelMeteredPricing(
         !isRecord(value) ||
         amount(value.cost_per_second) === undefined ||
         Object.keys(value).some(
-          (key) => !["resolution", "cost_per_second"].includes(key),
-        )
+          (key) =>
+            !["resolution", "mode", "audio", "cost_per_second"].includes(key),
+        ) ||
+        (value.resolution !== undefined &&
+          (typeof value.resolution !== "string" || !value.resolution.trim())) ||
+        (value.mode !== undefined &&
+          (typeof value.mode !== "string" || !value.mode.trim())) ||
+        (value.audio !== undefined && typeof value.audio !== "boolean")
       )
-        return { ...base, source: { kind: "catalog", rulesUnavailable: true } }
-      const price = rate(amount(value.cost_per_second)!, "second")
-      if (typeof value.resolution === "string")
+        return {
+          ...base,
+          source: {
+            kind: PRICING_SOURCE_KINDS.CATALOG,
+            rulesUnavailable: true,
+          },
+        }
+      const price = rate(
+        amount(value.cost_per_second)!,
+        PRICE_RATE_UNITS.SECOND,
+      )
+      if (
+        typeof value.resolution === "string" ||
+        typeof value.audio === "boolean" ||
+        typeof value.mode === "string"
+      )
         rules.push({
           id: `resolution-${index}`,
           conditions: [
-            {
-              kind: "selection",
-              axis: "videoQuality",
-              value: value.resolution,
-            },
+            ...(typeof value.mode === "string"
+              ? [
+                  {
+                    kind: PRICING_CONDITION_KINDS.SELECTION,
+                    axis: PRICING_SELECTION_AXES.VIDEO_MODE,
+                    value: value.mode,
+                  } as const,
+                ]
+              : []),
+            ...(typeof value.resolution === "string"
+              ? [
+                  {
+                    kind: PRICING_CONDITION_KINDS.SELECTION,
+                    axis: PRICING_SELECTION_AXES.VIDEO_QUALITY,
+                    value: value.resolution,
+                  } as const,
+                ]
+              : []),
+            ...(typeof value.audio === "boolean"
+              ? [
+                  {
+                    kind: PRICING_CONDITION_KINDS.SELECTION,
+                    axis: PRICING_SELECTION_AXES.VIDEO_AUDIO,
+                    value: value.audio
+                      ? PRICING_VIDEO_AUDIO_MODES.WITH_AUDIO
+                      : PRICING_VIDEO_AUDIO_MODES.WITHOUT_AUDIO,
+                  } as const,
+                ]
+              : []),
           ],
           rates: { videoSeconds: price },
         })
-      else fallback = price
+      else {
+        if (fallback && fallback.amount !== price.amount)
+          return {
+            ...base,
+            source: {
+              kind: PRICING_SOURCE_KINDS.CATALOG,
+              rulesUnavailable: true,
+            },
+          }
+        fallback = price
+      }
     }
+    const compiled = compileExclusiveSelectionRules(rules)
+    if (!compiled)
+      return {
+        ...base,
+        source: { kind: PRICING_SOURCE_KINDS.CATALOG, rulesUnavailable: true },
+      }
     return {
       ...base,
-      comparison: { meter: "videoSeconds" },
+      comparison: { meter: PRICING_METERS.VIDEO_SECONDS },
       rates: fallback ? { videoSeconds: fallback } : {},
-      rules,
+      rules: compiled,
       requiresRuleMatch: !fallback,
     }
   }

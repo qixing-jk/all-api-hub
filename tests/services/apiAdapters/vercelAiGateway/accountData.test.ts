@@ -206,7 +206,7 @@ describe("Vercel AI Gateway account data", () => {
     expect(snapshot.data[0]?.pricingPlan?.source.rulesUnavailable).toBe(true)
   })
 
-  it("keeps image quality conditions and refuses to flatten video audio or mode conditions", async () => {
+  it("keeps image quality and exclusive video audio conditions", async () => {
     server.use(
       http.get("https://ai-gateway.vercel.sh/v1/models", () =>
         HttpResponse.json({
@@ -244,8 +244,19 @@ describe("Vercel AI Gateway account data", () => {
       axis: "imageQuality",
       value: "low",
     })
-    expect(snapshot.data[1]?.pricingPlan?.source.rulesUnavailable).toBe(true)
-    expect(snapshot.data[1]?.price_metadata?.precision).toBe("unavailable")
+    expect(
+      snapshot.data[1]?.pricingPlan?.rules.map((rule) => rule.conditions),
+    ).toEqual([
+      [
+        { kind: "selection", axis: "videoQuality", value: "720p" },
+        { kind: "selection", axis: "videoAudio", value: "without-audio" },
+      ],
+      [
+        { kind: "selection", axis: "videoQuality", value: "720p" },
+        { kind: "selection", axis: "videoAudio", value: "with-audio" },
+      ],
+    ])
+    expect(snapshot.data[1]?.price_metadata?.precision).toBe("exact")
   })
 
   it("opens the saved team's console routes rather than the current default team's", async () => {

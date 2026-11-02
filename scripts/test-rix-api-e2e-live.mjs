@@ -1,13 +1,15 @@
-#!/usr/bin/env node
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+import { runScenarioWithCleanup } from "../e2e/utils/scenarioErrors.ts"
 import { connectDevExtension, defaultCdpUrl } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
+import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { runRixProbe } from "./suites/rix/probe.mjs"
 import { runRixUiTest } from "./suites/rix/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
-loadLocalEnv()
-
-function parseArgs(args) {
+export function parseArgs(args) {
   let targetUrl = process.env.TARGET_RIX_URL || "https://platform.ephone.ai"
   let suite = "all" // all | probe | ui
   // Resolve the default port after the flag pass so `--isolate` is honored.
@@ -39,53 +41,48 @@ Rix API 现场端到端测试运行器 (CDP & Protocol Probe)
     }
   }
 
+  if (!["all", "probe", "ui"].includes(suite))
+    throw new Error("Invalid suite; use all, probe, or ui")
   return { targetUrl, suite, cdpUrl }
 }
 
-async function main() {
-  const { targetUrl, suite, cdpUrl } = parseArgs(process.argv.slice(2))
-
-  console.log("========================================================")
-  console.log("  Rix API 分支功能真机测试 (模块化解耦套件)")
-  console.log("========================================================")
-  console.log(`执行模式: [${suite.toUpperCase()}]`)
-  console.log(`目标站点: ${targetUrl}`)
-
-  // 1. 协议探测阶段 (无需 CDP，纯 Node.js HTTP)
-  if (suite === "all" || suite === "probe") {
-    const probeResult = await runRixProbe({ targetUrl })
-    console.log(
-      `\n✅ 协议层探测结果: ${probeResult.ok ? "命中 Rix API 结构签名" : "未完全命中"} (版本: ${probeResult.version}, 模型数: ${probeResult.modelCount})`,
-    )
-    if (!probeResult.ok) {
-      process.exitCode = 1
-    }
-  }
-
-  // 2. UI 自动化实测阶段 (需要 CDP)
-  if (suite === "all" || suite === "ui") {
-    console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
-    const dev = await connectDevExtension({ cdpUrl })
-    console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
-
-    try {
-      await runRixUiTest({
-        context: dev.context,
-        extensionId: dev.extensionId,
-        serviceWorker: dev.serviceWorker,
-        targetUrl,
-      })
-    } finally {
-      await dev.close()
-    }
-  }
-
-  console.log("\n========================================================")
-  console.log("  🎉 Rix API 测试套件执行完毕！")
-  console.log("========================================================")
+export async function main(args = process.argv.slice(2)) {
+  const { targetUrl, suite, cdpUrl } = parseArgs(args)
+  const environment = { cdpUrl, targetUrl: targetUrl }
+  return runLiveSuites({
+    suite,
+    environment,
+    suites: [
+      {
+        id: "probe",
+        covers: ["protocol.contract"],
+        run: () => runRixProbe({ targetUrl }),
+      },
+      {
+        id: "ui",
+        covers: ["extension.ui"],
+        run: async () => {
+          const dev = await connectDevExtension({ cdpUrl })
+          environment.extensionId = dev.extensionId
+          return runScenarioWithCleanup({
+            run: () => runRixUiTest({ ...dev, targetUrl }),
+            finalizers: [() => dev.close()],
+            cleanupMessage: "Live UI connection cleanup failed",
+            failureMessage: "Live UI execution and cleanup failed",
+          })
+        },
+      },
+    ],
+  })
 }
 
-main().catch((err) => {
-  console.error("\n❌ 测试运行失败:", err.message)
-  process.exit(1)
-})
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  loadLocalEnv()
+  main().catch((err) => {
+    console.error("\n❌ 测试运行失败:", err.message)
+    process.exit(1)
+  })
+}

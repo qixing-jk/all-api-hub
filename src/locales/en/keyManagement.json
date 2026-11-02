@@ -257,6 +257,7 @@
     "neverExpires": "Never Expires",
     "note": "Note:",
     "remainingQuota": "Remaining Quota:",
+    "tools": "Allowed tools",
     "totalQuota": "Total Quota:",
     "ungrouped": "Ungrouped",
     "usedQuota": "Used Quota:"
@@ -491,7 +492,8 @@
         "permissionDenied": "Use credentials that can view and manage keys, then retry.",
         "title": "Could not save key",
         "unavailable": "The service is temporarily unavailable. Try again shortly.",
-        "uncertain": "The service may have applied this change. Refresh keys to confirm the current state before deciding whether to retry."
+        "uncertain": "The service may have applied this change. Refresh keys to confirm the current state before deciding whether to retry.",
+        "unexpected": "The extension could not execute this action. Update the extension or report this issue."
       },
       "followAccountQuotaHelp": "Use -1 to follow the account quota.",
       "followsAccount": "Follows account",

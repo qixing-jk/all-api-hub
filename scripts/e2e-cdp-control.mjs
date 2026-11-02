@@ -27,7 +27,6 @@ async function main() {
       help: { type: "boolean" },
     },
   })
-  const selected = values.scenario ?? ["options"]
   const fields = values.field.map((field) => field.trim())
   if (fields.some((field) => !field))
     throw new Error("Expected field labels must not be empty")
@@ -43,9 +42,16 @@ async function main() {
       ],
     },
   ]
+  const selected = [
+    ...new Set(
+      (values.scenario ?? ["options"]).flatMap((id) =>
+        id === "all" ? definitions.map(({ id }) => id) : [id],
+      ),
+    ),
+  ]
   if (values.help) {
     console.log(`Usage: pnpm e2e:cdp -- [--prod] [--isolate] [--list]
-  --scenario=options|account|models|key-editor (repeatable; default: options)
+  --scenario=all|options|account|models|key-editor (repeatable; default: options)
   --account-id=<saved-account-id>   Required except for options
   --field="Monthly limit (USD)"   Required for key-editor; repeat for each expected field
 

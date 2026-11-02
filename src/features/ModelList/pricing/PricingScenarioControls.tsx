@@ -24,6 +24,7 @@ import { usePricingScenarioNavigation } from "~/features/ModelList/pricing/prici
 import { pricingScenarioOptions } from "~/features/ModelList/pricing/pricingScenarioOptions"
 import {
   PRICING_CONDITION_KINDS,
+  PRICING_MEASUREMENT_AXES,
   PRICING_METERS,
   PRICING_RANGE_AXES,
   PRICING_SELECTION_AXES,
@@ -193,7 +194,9 @@ export function PricingScenarioControls({
   )
   for (const axis of [
     PRICING_SELECTION_AXES.VIDEO_QUALITY,
+    PRICING_SELECTION_AXES.VIDEO_MODE,
     PRICING_SELECTION_AXES.IMAGE_QUALITY,
+    PRICING_SELECTION_AXES.GENERATION_MODE,
   ] as const) {
     const values = new Set(
       conditions?.flatMap((condition) =>
@@ -210,7 +213,9 @@ export function PricingScenarioControls({
     options[axis].push(...[...values].map((value) => ({ value, label: value })))
   }
   const hasAreaCondition = conditions?.some(
-    (condition) => condition.kind === PRICING_CONDITION_KINDS.MEASUREMENT,
+    (condition) =>
+      condition.kind === PRICING_CONDITION_KINDS.MEASUREMENT &&
+      condition.axis === PRICING_MEASUREMENT_AXES.IMAGE_MEGAPIXELS,
   )
   const taskFields = PRICING_TASK_FIELDS.filter(({ meter }) =>
     plans?.some(
@@ -278,6 +283,7 @@ export function PricingScenarioControls({
           settings.serviceTier !== PRICING_SERVICE_TIERS.STANDARD)
       : settings[axis])
   const imageMeters: PricingConditionTarget[] = [
+    PRICING_METERS.OUTPUT_IMAGE,
     PRICING_METERS.IMAGE,
     PRICING_METERS.OUTPUT_MEGAPIXELS,
     PRICING_METERS.REFERENCE_IMAGE,
@@ -287,12 +293,18 @@ export function PricingScenarioControls({
     PRICING_SELECTION_AXES.IMAGE_QUALITY,
   ] as const
   const videoAxes = [
+    PRICING_SELECTION_AXES.VIDEO_DYNAMIC_RANGE,
     PRICING_SELECTION_AXES.VIDEO_QUALITY,
+    PRICING_SELECTION_AXES.VIDEO_AUDIO,
+    PRICING_SELECTION_AXES.VIDEO_MODE,
     PRICING_SELECTION_AXES.VIDEO_INPUT,
   ] as const
   const otherAxes = [
+    PRICING_SELECTION_AXES.SEARCH_CONTEXT,
+    PRICING_SELECTION_AXES.GENERATION_MODE,
     PRICING_SELECTION_AXES.SERVICE_TIER,
     PRICING_SELECTION_AXES.RESPONSE_FORMAT,
+    PRICING_SELECTION_AXES.DOCUMENT_ANNOTATION,
   ] as const
   const hasImageFields =
     hasAreaCondition ||

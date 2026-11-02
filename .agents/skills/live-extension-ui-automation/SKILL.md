@@ -9,6 +9,10 @@ description: Control, debug, and test live All API Hub extension UI on desktop o
 
 Automate and test the development browser extension UI against real accounts and logged-in states without closing or disturbing the user's daily primary browser.
 
+For acceptance, default to exercising all applicable actions and state branches in the scoped workflow. Before browser execution, follow [coverage before execution and closure](../add-site-integration/references/evidence-and-validation.md#coverage-before-execution): derive the inventory independently of the existing script, execute available authorized cases, and account for every untested row. Generic smoke, representative screenshots and a green selected suite do not establish complete coverage. Read-only diagnosis stays read-only; coverage adds no mutation authority.
+
+Apply this to every UI acceptance task, including settings, permissions, popup/sidepanel, imports/exports, models, account/key workflows and Android CDP/RDP, not only new site integrations. Use the [shared execution and reporting contract](../../../CONTRIBUTING.md#reusable-cdp-ui-checks) for maintained runners: derive `all` from registered suites, reject unknown selections, retain skipped/blocked/unselected coverage and both execution/cleanup errors, and preserve each run's report. A successful focused run proves only its asserted scope; neither all registered suites nor a successful device connection establishes complete product acceptance. Do not expand read-only or explicit-write modes to satisfy coverage.
+
 ## Choose the runtime
 
 - **Android phone/tablet, including Firefox, Edge, or Lemur (狐猴):** read [mobile debugging and hot updates](references/mobile-debugging.md). Use the unified `scripts/mobile-browser.mjs` entrypoint for discovery, diagnostics, and development sessions. Diagnose the installed release when that is the user's goal; do not replace it with a dev build merely to obtain execution access.
@@ -108,6 +112,12 @@ pnpm e2e:cdp
 This smoke runner uses title-based discovery. Use the exact-path pattern below for mode-specific evidence, especially when dev and production extensions coexist; it replaces this optional smoke step rather than requiring both.
 
 ### 5. Authoring Custom Automated E2E/CDP Tests
+Two Playwright traps cost real time when driving these pages, so handle them deliberately:
+
+- `page.goto()` that differs only by hash is an intra-document navigation: it bypasses the app's router and leaves the Options content area blank. When the page is already on the target document, set `location.hash` instead (and wait for the rendered shell).
+- `locator.isVisible({ timeout })` ignores the timeout and returns a snapshot; a route that has not rendered yet reads as "absent". Use `waitFor({ state: "visible", timeout })` for any readiness assertion.
+- A dev-mode Options page compiles the whole module graph on first paint and keeps an HMR connection open, so the default 30s navigation budget and the `load` event are both unreliable. Navigate with `waitUntil: "domcontentloaded"` and a larger timeout.
+
 When implementing a new feature or reproducing UI bugs, author or extend a CDP automation script following this pattern:
 
 ```javascript

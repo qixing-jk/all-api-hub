@@ -16,6 +16,7 @@ import {
   TOKENS_PER_MILLION,
 } from "~/services/modelPricing/pricingConstants"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
+import { readPublishedPricing } from "~/services/modelPricing/publishedPricing"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -70,6 +71,145 @@ const row = (name: string, usage: { input: number; output?: number }) => ({
 })
 
 describe("pricing diagnostics", () => {
+  it.each(["invalid", "throwing"])(
+    "keeps %s published schedules inspectable",
+    (kind) => {
+      const item = row("broken-published", { input: 1 })
+      const source =
+        kind === "invalid"
+          ? { kind: "invalid" }
+          : Object.defineProperty({}, "kind", {
+              get() {
+                throw new Error("unreadable source")
+              },
+            })
+      const report = buildPricingDiagnostics([
+        {
+          ...item,
+          calculatedPrice: {
+            ...item.calculatedPrice,
+            publishedPricing: { source, schedule: [] } as any,
+          },
+        },
+      ])
+      expect(report.rows[0]?.issues).toContainEqual({
+        code: "diagnostic:invalid-plan",
+      })
+    },
+  )
+  it("counts unresolved pricing immediately without a deferred-loading exemption", () => {
+    const item = row("deferred", { input: 1 })
+    item.model.pricingPlan = {
+      ...plan,
+      rates: {},
+      source: {
+        kind: "catalog",
+        rulesUnavailable: true,
+      },
+    }
+    const report = buildPricingDiagnostics([
+      {
+        ...item,
+        calculatedPrice: {
+          kind: "unavailable",
+          billingMode: "token",
+          reason: "pricing-rules-unavailable",
+        },
+      },
+    ])
+    expect(report.summary.attention).toBe(1)
+    expect(report.rows[0]?.status).toBe("unavailable")
+  })
+  it("does not label unknown billing as a million-token price", () => {
+    const item = row("video-without-price", { input: 1 })
+    const report = buildPricingDiagnostics([
+      {
+        ...item,
+        model: {
+          ...item.model,
+          price_metadata: {
+            source: "provider-catalog",
+            precision: "unavailable",
+            billing_mode_known: false,
+          },
+        },
+        calculatedPrice: {
+          kind: "unavailable",
+          billingMode: "token",
+          isComparisonActive: false,
+        },
+      },
+    ])
+    expect(report.rows[0]?.unit).toBe("unresolved")
+  })
+
+  it.each([true, false])(
+    "recognizes published megapixel rates without fabricating a token quote (reference=%s)",
+    (reference) => {
+      const base = row("blackforestlabs/flux-2-flex", { input: 1 })
+      const pricingPlan: PricingPlan = {
+        ...plan,
+        rates: {
+          outputMegapixels: {
+            amount: 0.05,
+            currency: "USD",
+            unit: "megapixel",
+            per: 1,
+          },
+        },
+        source: { ...plan.source, rulesUnavailable: reference },
+        comparison: { meter: "outputMegapixels" },
+      }
+      const report = buildPricingDiagnostics([
+        {
+          ...base,
+          model: { ...base.model, pricingPlan },
+          calculatedPrice: {
+            kind: "unavailable",
+            billingMode: "token",
+            isComparisonActive: false,
+            publishedPricing: readPublishedPricing(pricingPlan, 1),
+          },
+        },
+      ])
+      expect(report.rows[0]).toMatchObject({
+        status: reference ? "reference" : "published",
+        unit: "megapixel",
+        issues: [],
+        publishedPricing: {
+          schedule: [{ rates: { outputMegapixels: { amount: 0.05 } } }],
+        },
+      })
+      expect(report.summary).toMatchObject({
+        published: 1,
+        unavailable: 0,
+        notQuoted: 0,
+        attention: 0,
+      })
+      expect(JSON.stringify(report)).not.toContain("PRIVATE")
+    },
+  )
+  it("does not count unpriced browse records as generated quotes or emit an undefined reason", () => {
+    const item = row("unpriced", { input: 1 })
+    const report = buildPricingDiagnostics([
+      {
+        ...item,
+        calculatedPrice: {
+          kind: "unavailable",
+          billingMode: "token",
+          isComparisonActive: false,
+        },
+      },
+    ])
+    expect(report.summary).toMatchObject({
+      total: 1,
+      unavailable: 1,
+      quoted: 0,
+    })
+    expect(report.rows[0]?.issues).toEqual([
+      { code: "availability:pricing-source-unavailable" },
+    ])
+  })
   it("exports actionable selections alongside the original issue codes", () => {
     const item = row("video", { input: 1 })
     item.calculatedPrice.quote.conditionDetails = [

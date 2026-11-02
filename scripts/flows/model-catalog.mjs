@@ -1,4 +1,4 @@
-import { dismissModals } from "../cdp/ui-driver.mjs"
+import { dismissModals, navigateExtensionPage } from "../cdp/ui-driver.mjs"
 
 /** Read an already-open account catalog without navigating or changing filters. */
 export async function readModelCatalog({
@@ -41,10 +41,8 @@ export async function testModelCatalogFlow({
   requirePrices = true,
 }) {
   if (!accountId) throw new Error("model_catalog_requires_account_id")
-  await page.goto(
-    `chrome-extension://${extensionId}/options.html#models?accountId=${encodeURIComponent(accountId)}`,
-  )
-  await page.waitForLoadState("domcontentloaded")
+  const targetUrl = `chrome-extension://${extensionId}/options.html#models?accountId=${encodeURIComponent(accountId)}`
+  await navigateExtensionPage(page, targetUrl)
   await dismissModals(page)
   const { names } = await readModelCatalog({
     page,

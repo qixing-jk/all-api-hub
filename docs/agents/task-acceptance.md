@@ -1,6 +1,6 @@
 # Automated task acceptance
 
-Use this workflow before handing off implemented changes. The agent owns execution and evidence collection within the task's existing authorization. Reuse the project's Vitest, Playwright and live-extension runners; keep checks proportional to the affected behavior. Documentation-only and instruction-only changes need a diff, reference and consistency review rather than application tests or screenshots.
+Use this workflow before handing off implemented changes. The agent owns execution and evidence collection within the task's existing authorization. Reuse the project's Vitest, Playwright and live-extension runners; keep setup and reruns proportional by reusing valid evidence, without omitting applicable behavioral branches. Documentation-only and instruction-only changes need a diff, reference and consistency review rather than application tests or screenshots.
 
 ## Account for the behavior changes
 
@@ -10,7 +10,7 @@ Build a task-local acceptance table from the requested outcomes and the final ta
 | --- | --- | --- | --- | --- |
 | Concrete user action and preconditions | Previous observable result | Intended observable result | Test name or reproducible runner command | Passed, failed, blocked, not run, or not applicable; artifact link and reason for any gap |
 
-Select applicable success, empty, failure, partial-success and retry/cancel scenarios from the changed flow. Test shared behavior at its public boundary and use representative callers for integration risk. Follow the existing TDD requirement for features and bug fixes. Screenshots alone do not verify persistence, request semantics, authentication, or resource cleanup; assert those outcomes through the appropriate public interface and readback.
+Enumerate the distinct success, empty, failure, partial-success, boundary, pending and retry/cancel branches of the scoped flow before selecting tests. Default to executing all applicable cases whose prerequisites and authorization are available; do not omit actions because the existing runner lacks them. For site/CDP acceptance, follow the [complete scenario inventory and closure rules](../../.agents/skills/add-site-integration/references/evidence-and-validation.md#coverage-before-execution). Test shared behavior at its public boundary and use representative callers for integration risk; caller and screenshot sampling does not remove required behavioral branches. An isolated follow-up may reuse valid unchanged evidence and rerun affected cases. Follow the existing TDD requirement for features and bug fixes. Screenshots alone do not verify persistence, request semantics, authentication, or resource cleanup; assert those outcomes through the appropriate public interface and readback.
 
 Choose samples that distinguish the intended contract from plausible incorrect implementations. For example, an upstream remaining-quota value that differs from total minus used detects an unauthorized derivation; an unlimited account cannot validate finite-quota behavior. Use verified contract fixtures for missing live variants and report that limit. Default-only or coincidentally equal values do not establish the unexercised branches.
 

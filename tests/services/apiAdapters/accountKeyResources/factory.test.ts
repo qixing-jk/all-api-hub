@@ -2,7 +2,10 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
-import type { AccountKeyResourceDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
+import type {
+  AccountKeyResourceDefinition,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
@@ -128,6 +131,86 @@ const createDefinition = (overrides: Partial<Definition> = {}): Definition => ({
       ? { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied }
       : { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
   ...overrides,
+})
+
+it("requires a command for every declared status action and forbids independent button claims", () => {
+  const invalid: AccountKeyResourceProviderFacts["actions"] = {
+    canUpdate: true,
+    canDelete: true,
+    // @ts-expect-error A visible action cannot be declared independently of its handler.
+    canDisable: true,
+  }
+  const missing: NonNullable<Definition["statusActions"]> = {
+    // @ts-expect-error Availability alone cannot register an executable action.
+    disable: { available: () => true },
+  }
+  expect(invalid).toBeDefined()
+  expect(missing).toBeDefined()
+})
+
+it("hides registered actions whose native eligibility fails and rejects stale calls before mutation", async () => {
+  const definition = createDefinition({
+    statusActions: {
+      disable: {
+        available: () => false,
+        buildCommand: () => ({ name: "unused" }),
+      },
+    },
+  })
+  const session =
+    await defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
+  const collection = await session.openCollection(SCOPE.scopeKey)
+  const row = (await collection.list()).items[0]!
+  expect(row.actions.canDisable).toBe(false)
+  await expect(
+    collection.openEditEditor(row.ref, undefined, { action: "disable" }),
+  ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+  expect(definition.update).not.toHaveBeenCalled()
+})
+
+it("derives status buttons and executable actions from the same registration", async () => {
+  const definition = createDefinition({
+    statusActions: {
+      disable: {
+        available: () => true,
+        buildCommand: () => ({ name: "disabled-command" }),
+      },
+    },
+  })
+  const session =
+    await defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
+  const collection = await session.openCollection(SCOPE.scopeKey)
+  const row = (await collection.list()).items[0]!
+  expect(row.actions.canDisable).toBe(true)
+  expect(row.actions.canEnable).toBe(false)
+  const editor = await collection.openEditEditor(row.ref, undefined, {
+    action: "disable",
+  })
+  expect(editor.action).toBe("disable")
+  expect(editor.fields).toHaveLength(0)
+  await editor.submit({})
+  expect(definition.update).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.anything(),
+    expect.anything(),
+    { name: "disabled-command" },
+    undefined,
+  )
+  expect(definition.editEditor).not.toHaveBeenCalled()
+})
+
+it("does not advertise or dispatch unregistered status actions", async () => {
+  const definition = createDefinition()
+  const session =
+    await defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
+  const collection = await session.openCollection(SCOPE.scopeKey)
+  const row = (await collection.list()).items[0]!
+  expect(row.actions.canDisable).toBe(false)
+  await expect(
+    collection.openEditEditor(row.ref, undefined, { action: "disable" }),
+  ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+  expect(definition.editEditor).not.toHaveBeenCalled()
+  expect(definition.update).not.toHaveBeenCalled()
 })
 
 it("rejects requirement-bound creation editors unless their adapter explicitly supports binding", async () => {

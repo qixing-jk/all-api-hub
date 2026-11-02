@@ -272,12 +272,10 @@ describe("relayForModelPricing", () => {
       expect(item.pricingPlan?.source.url).toBe(
         new URL("/console/#models", baseUrl).href,
       )
-      expect(item.pricingPlan?.source?.pricingDescription?.zh).toContain(
-        "长上下文 > 200,000 输入 Token",
-      )
-      expect(item.pricingPlan?.source?.pricingDescription?.en).toContain(
-        "Long context > 200,000",
-      )
+      expect(item.pricingPlan?.source.pricingDescription).toBeUndefined()
+      expect(item.pricingPlan?.source.notes).toEqual([
+        { kind: "whole-request-tier" },
+      ])
       expect(pricingPlanSchema.safeParse(item.pricingPlan).success).toBe(true)
       expect(item.pricingPlan?.rules).toHaveLength(1)
       const rule = item.pricingPlan?.rules[0]

@@ -14,6 +14,7 @@ import {
   type ModelPriceMetadata,
   type ProductCanonicalModel,
 } from "~/services/modelList/pricingModel"
+import { PRICING_METERS } from "~/services/modelPricing/pricingConstants"
 import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
 import { isIsoCalendarDate } from "~/services/models/isoCalendarDate"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
@@ -113,7 +114,7 @@ const modelDisplayFactSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal(MODEL_DISPLAY_FACT_TYPES.Text),
     label: modelDisplayLabelSchema,
-    value: trimmedNonBlankStringSchema,
+    value: z.union([trimmedNonBlankStringSchema, modelDisplayLabelSchema]),
   }),
   z.strictObject({
     type: z.literal(MODEL_DISPLAY_FACT_TYPES.TokenQuantity),
@@ -226,6 +227,7 @@ const priceMetadataSchema = z
     source: z.literal(MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG),
     precision: z.union([
       z.literal(MODEL_PRICE_PRECISION_KINDS.EXACT),
+      z.literal(MODEL_PRICE_PRECISION_KINDS.ESTIMATED),
       z.literal(MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE),
     ]),
     unavailable_reason: z
@@ -237,9 +239,12 @@ const priceMetadataSchema = z
         z.literal(MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING),
         z.literal(MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_INVALID),
         z.literal(MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE),
+        z.literal(MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_RULES_UNAVAILABLE),
       ])
       .optional(),
     source_date: trimmedNonBlankStringSchema.optional(),
+    source_url: safeExternalUrlSchema.optional(),
+    billing_mode_known: z.boolean().optional(),
     unmatched_model_count: z.number().int().nonnegative().optional(),
   })
   .superRefine((metadata, context) => {
@@ -253,12 +258,13 @@ const priceMetadataSchema = z
       })
     }
     if (
-      metadata.precision === MODEL_PRICE_PRECISION_KINDS.EXACT &&
+      metadata.precision !== MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE &&
       metadata.unavailable_reason !== undefined
     ) {
       context.addIssue({
         code: "custom",
-        message: "Exact provider prices cannot include an unavailable reason",
+        message:
+          "Available provider prices cannot include an unavailable reason",
       })
     }
   })
@@ -282,12 +288,42 @@ const productCanonicalModelSchema = z
     supported_endpoint_types: stringListSchema,
   })
   .superRefine((model, context) => {
+    const plan = model.pricingPlan
+    const hasPrimaryPlanRate =
+      plan &&
+      [plan.rates, ...plan.rules.map((rule) => rule.rates)].some((rates) =>
+        Object.entries(rates).some(
+          ([meter, rate]) =>
+            rate !== undefined &&
+            ![
+              PRICING_METERS.CACHE_READ,
+              PRICING_METERS.CACHE_WRITE,
+              PRICING_METERS.CACHE_WRITE1H,
+              PRICING_METERS.AUDIO_CACHE,
+            ].some((cacheMeter) => cacheMeter === meter),
+        ),
+      )
+    if (
+      model.price_metadata.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+    ) {
+      if (!hasPrimaryPlanRate || !model.price_metadata.source_url)
+        context.addIssue({
+          code: "custom",
+          path: ["pricingPlan"],
+          message:
+            "Estimated provider prices require a structured published rate and source URL",
+        })
+      return
+    }
     if (model.price_metadata.precision !== MODEL_PRICE_PRECISION_KINDS.EXACT) {
       return
     }
 
     const prices = model.token_price_usd_per_million
-    if (prices?.input === undefined || prices.output === undefined) {
+    if (
+      !hasPrimaryPlanRate &&
+      (prices?.input === undefined || prices.output === undefined)
+    ) {
       context.addIssue({
         code: "custom",
         path: ["token_price_usd_per_million"],

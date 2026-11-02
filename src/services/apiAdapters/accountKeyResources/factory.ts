@@ -3,6 +3,7 @@ import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type {
   AccountKeyProvisionedResource,
   AccountKeyResourceCapability,
+  AccountKeyResourceFacts,
   AccountKeyResourceRef,
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -49,10 +50,16 @@ export function defineAccountKeyResourceCapability<
 ): AccountKeyResourceCapability {
   const projectSecret = (
     facts: AccountKeyResourceProviderFacts,
-  ): AccountKeyResourceProviderFacts => {
+    item: TListItem | TDetail,
+  ): AccountKeyResourceFacts => {
     const secret = facts.runtimeSecret
     return {
       ...facts,
+      actions: {
+        ...facts.actions,
+        canEnable: source.statusActions?.enable?.available(item) ?? false,
+        canDisable: source.statusActions?.disable?.available(item) ?? false,
+      },
       runtimeSecret:
         secret && hasUsableApiTokenKey(secret) ? secret : undefined,
     }
@@ -60,9 +67,9 @@ export function defineAccountKeyResourceCapability<
   const definition = {
     ...source,
     toListFacts: (item: TListItem, ref: AccountKeyResourceRef) =>
-      projectSecret(source.toListFacts(item, ref)),
+      projectSecret(source.toListFacts(item, ref), item),
     toDetailFacts: (detail: TDetail, ref: AccountKeyResourceRef) =>
-      projectSecret(source.toDetailFacts(detail, ref)),
+      projectSecret(source.toDetailFacts(detail, ref), detail),
   }
   const mapFailure = (error: unknown) => definition.mapFailure(error)
   const siteType = definition.siteType

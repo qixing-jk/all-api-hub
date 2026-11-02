@@ -418,7 +418,12 @@ describe("Vercel AI Gateway key resources", () => {
     // The plaintext is not recoverable from the inventory.
     expect(facts!.runtimeSecret).toBeUndefined()
     expect(facts!.runtimeKey?.baseUrl).toBe("https://ai-gateway.vercel.sh/v1")
-    expect(facts!.actions).toEqual({ canUpdate: true, canDelete: true })
+    expect(facts!.actions).toEqual({
+      canUpdate: true,
+      canDelete: true,
+      canEnable: false,
+      canDisable: false,
+    })
   })
 
   it("reports an expired key as expired and a leaked key as disabled", async () => {

@@ -19,6 +19,7 @@ import {
 } from "~/features/ModelList/presentation/ModelItem/ModelItemPricing"
 import { ModelItemTokenPricingDetails } from "~/features/ModelList/presentation/ModelItem/ModelItemTokenPricingDetails"
 import { ModelPriceQuote } from "~/features/ModelList/presentation/ModelItem/ModelPriceQuote"
+import { ModelPublishedPricing } from "~/features/ModelList/presentation/ModelItem/ModelPublishedPricing"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import {
@@ -79,21 +80,38 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
     calculatedPrice,
     { effectiveGroup, groupRatios },
   )
+  const showsPublishedTokenRates =
+    calculatedPrice.isComparisonActive === false &&
+    !!calculatedPrice.perMillionTokens &&
+    !unavailableReason
 
   return (
     <>
-      {showPricingDetails && calculatedPrice.quote && (
-        <ModelPriceQuote
-          quote={calculatedPrice.quote}
-          details
-          sourceLabel={sourceLabel}
-          effectiveGroup={effectiveGroup}
-          pricePrecision={model.price_metadata?.precision}
-          showSummary={
-            calculatedPrice.isComparisonActive === false || !!unavailableReason
-          }
-        />
-      )}
+      {showPricingDetails &&
+        calculatedPrice.quote &&
+        calculatedPrice.isComparisonActive !== false && (
+          <ModelPriceQuote
+            quote={calculatedPrice.quote}
+            details
+            sourceLabel={sourceLabel}
+            effectiveGroup={effectiveGroup}
+            pricePrecision={model.price_metadata?.precision}
+            showSummary={!showsPublishedTokenRates && !!unavailableReason}
+          />
+        )}
+      {showPricingDetails &&
+        calculatedPrice.isComparisonActive === false &&
+        calculatedPrice.publishedPricing &&
+        !calculatedPrice.publishedPricing.schedule.some(
+          (rule) => rule.conditions.length > 0,
+        ) && (
+          <ModelPublishedPricing
+            pricing={calculatedPrice.publishedPricing}
+            details
+            sourceLabel={sourceLabel}
+            effectiveGroup={effectiveGroup}
+          />
+        )}
       <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 text-sm md:grid-cols-2">
         {/* 可用分组 */}
         {shouldShowGroupDetails && groupContext.usableGroups.length > 0 && (
@@ -204,7 +222,9 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
 
         {/* 详细定价信息（仅按量计费模型） */}
         {showPricingDetails &&
-          !calculatedPrice.quote &&
+          (!calculatedPrice.publishedPricing ||
+            calculatedPrice.isComparisonActive !== false) &&
+          (!calculatedPrice.quote || showsPublishedTokenRates) &&
           isTokenBillingType(model.quota_type) && (
             <div className="md:col-span-2">
               <div className="mb-density-2 flex items-center space-x-2">
@@ -217,7 +237,8 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                 <div className="dark:text-secondary-foreground text-muted-foreground text-xs leading-snug">
                   {getUnavailablePriceReasonText(t, unavailableReason)}
                 </div>
-              ) : calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ? (
+              ) : calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ||
+                calculatedPrice.perMillionTokens ? (
                 <ModelItemTokenPricingDetails
                   calculatedPrice={calculatedPrice}
                   exchangeRate={exchangeRate}

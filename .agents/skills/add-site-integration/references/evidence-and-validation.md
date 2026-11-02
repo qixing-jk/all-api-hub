@@ -42,6 +42,33 @@ Link capability dispositions and tests to these evidence IDs. A 404 or 401 from 
 
 ## Persist probes and CDP automation
 
+### Coverage before execution
+
+Default to a complete acceptance pass for the integration or workflow in scope, not a smoke subset. Build the scenario inventory from the native console, the extension's rendered actions and adapter contracts **before** inspecting what the runner happens to implement. Reconcile all three sources: a missing control is a possible adaptation defect; an advertised action without a handler is a contract defect. Neither disappears from acceptance because the script lacks a test. Reuse the existing task table rather than maintaining a parallel checklist.
+
+For each applicable task, include the following branches. Mark genuinely absent branches not applicable with contract evidence; do not silently omit them.
+
+| Surface | Required scenario inventory |
+| --- | --- |
+| Actions | Every reachable action, including row, overflow, bulk and post-save actions; both directions of reversible state changes such as disable/enable. Copy/reveal, export/verification, rotate/revoke/delete and navigation remain separate tasks when offered. |
+| Editors | Create and edit separately; defaults and distinguishing non-default values; each editable field, conditional mode and immutable fact; preserve untouched values, save/reopen/readback, clear restrictions, validation boundaries, cancel and draft recovery. Test combined settings where they interact. |
+| Account and collection states | Supported auth/role/scope variants; missing, invalid or expired credentials; empty/one/multiple results and pagination; eligible and restricted actions, disabled/expired resources, missing or one-time secrets and unavailable option catalogues. |
+| Failures and lifecycle | Authentication/permission rejection, transport or upstream failure, pending/double click, cancellation, retry, partial or uncertain mutation, stale/concurrent state and context reload where relevant. Check actionable feedback and absence of unintended writes or replay. |
+
+Execute every applicable, authorized and available row by default. Limited test frequency is not a reason to stop after the main success path. Group independent cases and reuse setup/evidence to reduce cost, rather than dropping cases. Extend the maintained runner when it lacks coverage. A later isolated change may rerun affected rows and shared regressions, retaining valid earlier results for unchanged rows; the original acceptance inventory still governs completion. Exhaustiveness means all distinct actions and behavioral branches in scope, not every unrelated site or an unbounded Cartesian product. State the reason when equivalent combinations share a case.
+
+Use disposable resources for writes and confirm cleanup. This coverage default does not authorize paid calls, destructive changes to existing resources, credential rotation or repeated grants. Where live execution is unavailable or unauthorized, exercise a verified fixture in the actual extension for the independently testable branch and retain the live gap; do not fabricate a production failure or mark mocked behavior as live-tested. Continue available cases without waiting for a blocker that affects only another row.
+
+### Coverage closure
+
+Before declaring acceptance, reconcile the inventory with **executed assertions**, not test names, the runner's exit code or the number of screenshots. Each row records target/build, starting state, action, expected result, actual result, evidence and one status: passed, failed, blocked, not run or not applicable. Distinguish live UI, mocked extension E2E, protocol-only and unit/contract evidence. Opening a modal, rendering a field or locating an enabled button proves only that checkpoint. A mutation requires its intended state plus authoritative readback; wait separately for the UI to accept the result before the next dependent action. A direct API call or seeded fixture does not prove the corresponding UI action or onboarding path.
+
+Maintained runners must report failed, skipped, blocked and unselected scenarios alongside passed ones. Missing prerequisites or selected suites must not produce an unqualified full-pass summary. New or extended runners retain a result even on failure, use separate run directories, distinguish cleanup success from scenario success, and fail the requested run when an executed assertion fails. An unresolved failure followed by a successful retry remains a recorded failure requiring explanation; never overwrite it to obtain green evidence.
+
+Acceptance is complete only when every applicable row has adequate passing evidence or the user has explicitly excluded it. Report remaining blocked/not-run rows as incomplete, with exact prerequisites; do not relabel them unsupported or narrow scope on the agent's own initiative. Final claims name what actually ran and material gaps. “CDP passed,” “fully adapted” or equivalent claims cannot stand in for this accounting. Representative images are a visual-review optimization, never permission to sample away behavior.
+
+### Reusable automation and evidence
+
 Before extending coverage, inspect the existing runner and its fixtures for paths that bypass the promised behavior: seeded accounts, prefilled credentials, forced capability props, generic page containers, swallowed errors and success messages without readback. Record what each path actually proves in the task's scenario map. Keep detection identity/credential continuity explicit when later stages use another fixture or saved account.
 
 For shared acceptance helpers, add a distinguishing failure case: correct site type with wrong identity, expected guide with the wrong credential state, an eligible action disabled, or a wrong-source/empty catalog. Verify that the assertion rejects that case, then exercise representative consumers in the actual extension. Derive expected values from the native contract or verified fixture, rather than copying the observed UI into the expectation. Use `assertAccountDetectionOutcome` in `scripts/flows/auto-detect.mjs` for declared field values, guidance and save eligibility; keep provider-specific continuation, issuance effects and persistence/readback assertions with the scenario. Its checks cover only the fields the caller declares, so reconcile those fields with the integration's intended outcome.

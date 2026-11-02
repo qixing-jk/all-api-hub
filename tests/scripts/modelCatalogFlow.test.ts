@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { testModelCatalogFlow } from "~~/scripts/flows/model-catalog.mjs"
 
-vi.mock("~~/scripts/cdp/ui-driver.mjs", () => ({ dismissModals: vi.fn() }))
+vi.mock("~~/scripts/cdp/ui-driver.mjs", () => ({
+  dismissModals: vi.fn(),
+  navigateExtensionPage: vi.fn(),
+}))
 afterEach(() => vi.restoreAllMocks())
 
 describe("live model catalog assertions", () => {

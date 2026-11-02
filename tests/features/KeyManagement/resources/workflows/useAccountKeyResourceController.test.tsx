@@ -170,6 +170,10 @@ describe("useAccountKeyResourceController", () => {
       await act(async () => result.current.openEdit(facts.ref, "disable"))
       expect(submit).not.toHaveBeenCalled()
       expect(toastErrorMock).toHaveBeenCalled()
+      if (scenario !== "throw")
+        expect(toastErrorMock.mock.calls.at(-1)?.[0]).toBe(
+          "keyManagement:native.editor.feedback.unexpected",
+        )
       expect(result.current.editor).toBeNull()
       expect(result.current.editorOpening.status).toBe("idle")
     },

@@ -1,12 +1,14 @@
-#!/usr/bin/env node
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 
+import { runScenarioWithCleanup } from "../e2e/utils/scenarioErrors.ts"
 import {
   connectDevExtension,
   connectExtensionById,
   defaultCdpUrl,
 } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
+import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { runOmniRouteProbe } from "./suites/omniroute/probe.mjs"
 import { runOmniRouteUiTest } from "./suites/omniroute/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -16,7 +18,7 @@ import { loadLocalEnv } from "./utils/local-env.mjs"
  * @param args Command-line options supplied by the operator.
  * @returns Connection settings and the files available for recovery guidance.
  */
-function parseArgs(args) {
+export function parseArgs(args) {
   // Resolve the default port after the flag pass so `--isolate` is honored.
   applyIsolateFlag(args)
   const options = {
@@ -68,6 +70,9 @@ dev profile 的扩展设置；协议探测默认完全只读。
     }
   }
 
+  if (!["all", "probe", "ui"].includes(options.suite))
+    throw new Error("Invalid suite; use all, probe, or ui")
+
   const { files } = loadLocalEnv({ envFile: options.envFile })
   options.envSources = files
   options.cdpUrl ??= process.env.CDP_URL || defaultCdpUrl()
@@ -110,8 +115,8 @@ async function connectLiveExtension(cdpUrl, extensionId) {
 }
 
 /** Validate configuration before executing the selected protocol and UI suites. */
-async function main() {
-  const options = parseArgs(process.argv.slice(2))
+export async function main(args = process.argv.slice(2)) {
+  const options = parseArgs(args)
   const { suite, cdpUrl, baseUrl, token, allowWrite } = options
   console.log("========================================================")
   console.log("  OmniRoute 真实部署端到端实测 (协议 + 扩展 UI)")
@@ -129,47 +134,41 @@ async function main() {
     process.exit(1)
   }
 
-  // 1. Protocol layer first: no browser needed, and it decides whether the
-  //    deployment still matches what the adapter was written against.
-  if (suite === "all" || suite === "probe") {
-    const probeResult = await runOmniRouteProbe({
-      baseUrl,
-      token,
-      allowWrite,
-    })
-    console.log(
-      `\n✅ 协议层探测完成 (渠道: ${probeResult.connectionCount}, 模型: ${probeResult.modelCount})`,
-    )
-    if (!probeResult.ok) {
-      process.exitCode = 1
-    }
-  }
-
-  // 2. Extension UI through the live dev browser.
-  if (suite === "all" || suite === "ui") {
-    console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
-    const dev = await connectLiveExtension(cdpUrl, options.extensionId)
-    console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
-
-    try {
-      await runOmniRouteUiTest({
-        context: dev.context,
-        extensionId: dev.extensionId,
-        serviceWorker: dev.serviceWorker,
-        baseUrl,
-        token,
-      })
-    } finally {
-      await dev.close()
-    }
-  }
-
-  console.log("\n========================================================")
-  console.log("  🎉 OmniRoute 测试套件执行完毕！")
-  console.log("========================================================")
+  const environment = { cdpUrl, targetUrl: baseUrl }
+  return runLiveSuites({
+    suite,
+    environment,
+    suites: [
+      {
+        id: "probe",
+        covers: ["protocol.contract"],
+        run: () => runOmniRouteProbe({ baseUrl, token, allowWrite }),
+      },
+      {
+        id: "ui",
+        covers: ["extension.ui"],
+        run: async () => {
+          const dev = await connectLiveExtension(cdpUrl, options.extensionId)
+          environment.extensionId = dev.extensionId
+          return runScenarioWithCleanup({
+            run: () => runOmniRouteUiTest({ ...dev, baseUrl, token }),
+            finalizers: [() => dev.close()],
+            cleanupMessage: "Live UI connection cleanup failed",
+            failureMessage: "Live UI execution and cleanup failed",
+          })
+        },
+      },
+    ],
+  })
 }
 
-main().catch((error) => {
-  console.error("\n❌ 测试运行失败:", error.message)
-  process.exit(1)
-})
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  loadLocalEnv()
+  main().catch((error) => {
+    console.error("\n❌ 测试运行失败:", error.message)
+    process.exit(1)
+  })
+}

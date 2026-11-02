@@ -262,6 +262,43 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("allows published per-request prices to expand without endpoint or group details", () => {
+    const props = createDefaultProps()
+    props.model.quota_type = 1
+    props.source.capabilities.supportsGroupFiltering = false
+    render(
+      <ModelItem
+        {...props}
+        groupContext={{
+          ...props.groupContext,
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+        }}
+        calculatedPrice={{
+          kind: "per-call",
+          usdPerCall: 1,
+          isComparisonActive: false,
+          publishedPricing: {
+            source: { kind: "catalog" },
+            schedule: [
+              {
+                id: "base",
+                conditions: [],
+                rates: {
+                  request: {
+                    amount: 1,
+                    currency: "USD",
+                    per: 1,
+                    unit: "request",
+                  },
+                },
+              },
+            ],
+          },
+        }}
+      />,
+    )
+    expect(screen.getByTestId("expand-button")).toBeVisible()
+  })
   it("saves official routing for the selected account and refreshes the catalog", async () => {
     const props = createDefaultProps()
     const updateGroup = vi.fn().mockResolvedValue({})

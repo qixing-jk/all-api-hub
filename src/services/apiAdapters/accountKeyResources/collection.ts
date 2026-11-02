@@ -4,6 +4,7 @@ import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyResourceError,
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceCollection,
@@ -63,15 +64,23 @@ export function createAccountKeyResourceCollection<
     | "locatorFromDetail"
     | "list"
     | "get"
-    | "toListFacts"
-    | "toDetailFacts"
     | "editEditor"
+    | "statusActions"
     | "getEditDetail"
     | "update"
     | "requiresFreshUpdateDetail"
     | "delete"
     | "revoke"
-  >
+  > & {
+    toListFacts(
+      item: TListItem,
+      ref: AccountKeyResourceRef,
+    ): AccountKeyResourceFacts
+    toDetailFacts(
+      detail: TDetail,
+      ref: AccountKeyResourceRef,
+    ): AccountKeyResourceFacts
+  }
   config: TConfig
   accountId: string
   siteType: AccountSiteType
@@ -248,12 +257,26 @@ export function createAccountKeyResourceCollection<
           )
         )
           throw unexpectedFailure()
-        const editorDefinition = definition.editEditor(
-          config,
-          providerScope,
-          current.detail,
-          intent,
-        )
+        const statusAction =
+          intent?.action === editActions.Enable ||
+          intent?.action === editActions.Disable
+            ? intent.action
+            : undefined
+        const handler = statusAction
+          ? definition.statusActions?.[statusAction]
+          : undefined
+        if (statusAction && (!handler || !handler.available(current.detail)))
+          throw validationFailure()
+        const editorDefinition = handler
+          ? {
+              action: statusAction,
+              fields: [],
+              initialValues: {},
+              validate: () => ({ valid: true as const }),
+              buildCommand: () =>
+                handler.buildCommand(config, providerScope, current.detail),
+            }
+          : definition.editEditor(config, providerScope, current.detail, intent)
         return createAccountKeyResourceEditor({
           mapFailure,
           editorDefinition,
