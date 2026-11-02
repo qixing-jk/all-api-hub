@@ -157,6 +157,26 @@ describe("setupStarPromotionContent", () => {
     },
   )
 
+  it("retries fresh verification after a failed read was acknowledged", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch)
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(
+        new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+      )
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starRemoved: false }),
+      ),
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starRemoved: true }),
+    )
+    cleanup()
+  })
+
   it("retries an unchanged state after a failed acknowledgement", async () => {
     sendRuntimeActionMessageMock
       .mockResolvedValueOnce({ success: false })
@@ -176,10 +196,13 @@ describe("setupStarPromotionContent", () => {
 
   it("keeps mutation detection active after hydration polling times out", async () => {
     renderStarButton(false)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+    )
     const cleanup = setupStarPromotionContent()
     await vi.waitFor(() =>
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({ starred: false, starRemoved: false }),
+        expect.objectContaining({ starred: false, starRemoved: true }),
       ),
     )
 

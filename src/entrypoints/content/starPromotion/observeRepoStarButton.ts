@@ -47,6 +47,7 @@ export function setupStarPromotionContent(): () => void {
 
   const reportState = (state: GitHubRepoStarState) => {
     reportPending = true
+    let verifiedRemoval = false
     const removalEvidence =
       state === GITHUB_REPO_STAR_STATES.NotStarred
         ? reportedState === GITHUB_REPO_STAR_STATES.Starred
@@ -55,6 +56,7 @@ export function setupStarPromotionContent(): () => void {
         : Promise.resolve(false)
     void removalEvidence
       .then((starRemoved) => {
+        verifiedRemoval = starRemoved
         if (disposed || resolveGitHubRepoStarState(document) !== state)
           return undefined
         return sendRuntimeActionMessage<{ success: boolean }>({
@@ -65,7 +67,8 @@ export function setupStarPromotionContent(): () => void {
       })
       .then((response) => {
         if (response?.success === true) {
-          reportedState = state
+          if (state === GITHUB_REPO_STAR_STATES.Starred || verifiedRemoval)
+            reportedState = state
           return
         }
         logger.debug("Star state report was not acknowledged")
