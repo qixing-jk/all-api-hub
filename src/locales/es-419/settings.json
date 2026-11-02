@@ -612,7 +612,7 @@
       "cta": "Visita GitHub para explorar el código y las novedades. También puedes reportar problemas o compartir ideas.",
       "getStartedCta": "Abrir guía de inicio",
       "label": "Código fuente",
-      "starCta": "¿Te resulta útil All API Hub? Dale una estrella en GitHub para apoyar el proyecto"
+      "starCta": "Apoya las mejoras continuas con una estrella en GitHub"
     },
     "reason": {
       "newPermissions": "Las nuevas funciones necesitan permisos opcionales adicionales. Revisa para qué sirve cada uno y concede solo los que necesites."

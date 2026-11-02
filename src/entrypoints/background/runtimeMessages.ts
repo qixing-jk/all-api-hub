@@ -178,22 +178,23 @@ export function setupRuntimeMessageListeners() {
       if (request.action === RuntimeActionIds.ContentStarPromotionReport) {
         // Only trust reports that originate from the All API Hub repository page.
         const fromRepoPage = classifyAllApiHubRepoPageUrl(sender.url) !== null
-        if (!fromRepoPage || request.starred !== true) {
+        if (!fromRepoPage || typeof request.starred !== "boolean") {
           sendResponse({ success: false })
           return true
         }
 
         void starPromotionState
-          .markCompleted()
+          .recordGitHubStarState(request.starred)
           .then(() => {
-            trackStarPromotionAction(
-              PRODUCT_ANALYTICS_ACTION_IDS.SuppressStarPromotionDetected,
-              {
-                surfaceId:
-                  PRODUCT_ANALYTICS_SURFACE_IDS.ContentRepositoryStarDetection,
-                entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
-              },
-            )
+            if (request.starred)
+              trackStarPromotionAction(
+                PRODUCT_ANALYTICS_ACTION_IDS.SuppressStarPromotionDetected,
+                {
+                  surfaceId:
+                    PRODUCT_ANALYTICS_SURFACE_IDS.ContentRepositoryStarDetection,
+                  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+                },
+              )
             sendResponse({ success: true })
           })
           .catch(() => sendResponse({ success: false }))

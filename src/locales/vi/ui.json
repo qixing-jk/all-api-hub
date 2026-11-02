@@ -474,13 +474,10 @@
       "titleWithCookieInterceptor": "Làm mới tự động cần xác minh trang web"
     },
     "updateLog": {
-      "autoOpenSetting": "Tự động mở nhật ký cập nhật",
-      "disableAutoOpen": "Không tự động mở nữa",
-      "enableAutoOpen": "Bật lại tự động mở",
       "loading": "Đang tải nhật ký cập nhật...",
-      "missingSection": "Tải bản xem trước nhật ký cập nhật thất bại (v{{version}}). Bạn có thể mở toàn bộ nhật ký cập nhật để xem.",
-      "openFullChangelog": "Mở toàn bộ nhật ký cập nhật",
-      "starPrompt": "All API Hub hữu ích với bạn? Hãy gắn sao trên GitHub để theo dõi các cập nhật",
+      "missingSection": "Nhật ký của v{{version}} đang tải chậm. Bạn có thể mở nhật ký đầy đủ.",
+      "openFullChangelog": "Xem nhật ký đầy đủ",
+      "starPrompt": "Tặng một Star trên GitHub để ủng hộ việc cải tiến liên tục",
       "title": "Nội dung cập nhật",
       "updatedTo": "Đã cập nhật lên v{{version}}"
     }
@@ -674,7 +671,7 @@
       "star": "Gắn sao"
     },
     "cardDescription": "All API Hub hoàn toàn mã nguồn mở, không ngừng hỗ trợ thêm nhiều trang và cải thiện trải nghiệm. Một sao giúp duy trì việc bảo trì và để nhiều người cần nó hơn tìm thấy nó.",
-    "cardTitle": "All API Hub có hữu ích không?"
+    "cardTitle": "Ủng hộ việc cải tiến liên tục"
   },
   "textEntries": {
     "add": "Thêm dòng",

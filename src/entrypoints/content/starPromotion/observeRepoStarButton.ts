@@ -1,5 +1,9 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { resolveGitHubRepoStarState } from "~/services/starPromotion/githubStarButton"
+import {
+  GITHUB_REPO_STAR_STATES,
+  resolveGitHubRepoStarState,
+  type GitHubRepoStarState,
+} from "~/services/starPromotion/githubStarButton"
 import {
   ALL_API_HUB_REPO_PAGE_KINDS,
   classifyAllApiHubRepoPageUrl,
@@ -29,9 +33,8 @@ function isAllApiHubRepoPage(): boolean {
 }
 
 /**
- * Watches the repository page for a starred state and reports it to the
- * background. Unknown and unstarred states stay unreported (fail-open); once
- * detection reports a star, the background suppresses every prompt permanently.
+ * Reports resolved repository star state changes to the background. Unknown
+ * controls leave stored facts untouched; invitation suppression is independent.
  */
 export function setupStarPromotionContent(): () => void {
   if (!isAllApiHubRepoPage()) {
@@ -39,16 +42,18 @@ export function setupStarPromotionContent(): () => void {
   }
 
   let disposed = false
-  let starredReported = false
+  let reportedState: GitHubRepoStarState | undefined
+  let reportPending = false
 
-  const reportStarred = () => {
+  const reportState = (state: GitHubRepoStarState) => {
+    reportPending = true
     void sendRuntimeActionMessage<{ success: boolean }>({
       action: RuntimeActionIds.ContentStarPromotionReport,
-      starred: true,
+      starred: state === GITHUB_REPO_STAR_STATES.Starred,
     })
       .then((response) => {
         if (response?.success === true) {
-          starredReported = true
+          reportedState = state
           return
         }
         logger.debug("Star state report was not acknowledged")
@@ -58,6 +63,11 @@ export function setupStarPromotionContent(): () => void {
           error: error instanceof Error ? error.message : String(error),
         })
       })
+      .finally(() => {
+        reportPending = false
+        if (!disposed && resolveGitHubRepoStarState(document) !== state)
+          evaluate()
+      })
   }
 
   const evaluate = () => {
@@ -66,11 +76,11 @@ export function setupStarPromotionContent(): () => void {
     }
 
     const state = resolveGitHubRepoStarState(document)
-    if (state !== "starred" || starredReported) {
+    if (state === null || state === reportedState || reportPending) {
       return
     }
 
-    reportStarred()
+    reportState(state)
   }
 
   const observer = new MutationObserver(evaluate)

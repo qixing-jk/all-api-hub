@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { STAR_PROMOTION_COMPLETION_SOURCES } from "~/services/starPromotion/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 
 const mocks = vi.hoisted(() => ({
@@ -38,6 +39,58 @@ describe("starPromotionState", () => {
     mocks.set.mockResolvedValue(undefined)
     mocks.getAllAccounts.mockResolvedValue(
       Array.from({ length: 7 }, (_, index) => ({ id: `account-${index}` })),
+    )
+  })
+
+  it("records automatic completion as detected", async () => {
+    mocks.get.mockResolvedValue({ status: "active", baselineAccountCount: 3 })
+    await starPromotionState.recordGitHubStarState(true)
+    expect(mocks.set).toHaveBeenCalledWith(
+      STORAGE_KEYS.STAR_PROMOTION_STATE,
+      expect.objectContaining({
+        status: "completed",
+        completionSource: "detected",
+        githubStarred: true,
+      }),
+    )
+  })
+
+  it("restores eligibility with a cooldown after a detected star is removed", async () => {
+    mocks.get.mockResolvedValue({
+      status: "completed",
+      completionSource: STAR_PROMOTION_COMPLETION_SOURCES.Detected,
+      githubStarred: true,
+      baselineAccountCount: 3,
+      nextThreshold: 30,
+    })
+    await starPromotionState.recordGitHubStarState(false)
+    expect(mocks.set).toHaveBeenCalledWith(
+      STORAGE_KEYS.STAR_PROMOTION_STATE,
+      expect.objectContaining({
+        status: "active",
+        githubStarred: false,
+        nextThreshold: 60,
+        deferredUntil: expect.any(Number),
+      }),
+    )
+  })
+
+  it("records an unstarred observation without undoing explicit confirmation or cooldown", async () => {
+    mocks.get.mockResolvedValue({
+      status: "completed",
+      completionSource: STAR_PROMOTION_COMPLETION_SOURCES.Confirmed,
+      baselineAccountCount: 3,
+      deferredUntil: 123456,
+      githubStarred: true,
+    })
+    await starPromotionState.recordGitHubStarState(false)
+    expect(mocks.set).toHaveBeenCalledWith(
+      STORAGE_KEYS.STAR_PROMOTION_STATE,
+      expect.objectContaining({
+        status: "completed",
+        githubStarred: false,
+        deferredUntil: 123456,
+      }),
     )
   })
 

@@ -481,13 +481,10 @@
       "titleWithCookieInterceptor": "Automatic refresh needs site verification"
     },
     "updateLog": {
-      "autoOpenSetting": "Update log auto-open",
-      "disableAutoOpen": "Don't show after updates",
-      "enableAutoOpen": "Re-enable after updates",
       "loading": "Loading changelog…",
-      "missingSection": "Couldn't load the changelog preview for v{{version}}. You can open the full changelog.",
-      "openFullChangelog": "Open full changelog",
-      "starPrompt": "Finding All API Hub useful? Star it on GitHub to follow along",
+      "missingSection": "The changelog for v{{version}} is taking longer to load. You can open the full changelog.",
+      "openFullChangelog": "View full changelog",
+      "starPrompt": "Star on GitHub to support continued improvements",
       "title": "What's New",
       "updatedTo": "Updated to v{{version}}"
     }
@@ -682,7 +679,7 @@
       "star": "Star on GitHub"
     },
     "cardDescription": "Fully open source, still adapting to more sites and polishing the experience. A star sustains its upkeep and helps more people who need it find it.",
-    "cardTitle": "Finding All API Hub useful?"
+    "cardTitle": "Support continued improvements"
   },
   "textEntries": {
     "add": "Add row",

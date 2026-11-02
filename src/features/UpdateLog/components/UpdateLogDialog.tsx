@@ -3,8 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Modal } from "~/components/ui"
-import { REPO_URL } from "~/constants/about"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   useStarPromotionActive,
   useStarPromotionPromptImpression,
@@ -16,17 +14,11 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { trackStarPromotionAction } from "~/services/productAnalytics/facts/starPromotion"
-import { starPromotionState } from "~/services/starPromotion/state"
+import { openStarPromotionRepository } from "~/services/starPromotion/openRepository"
 import { createTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
-
-/**
- * Unified logger scoped to the update log dialog.
- */
-const logger = createLogger("UpdateLogDialog")
 
 export interface UpdateLogDialogProps {
   isOpen: boolean
@@ -34,7 +26,14 @@ export interface UpdateLogDialogProps {
   version: string
 }
 
-type IframeStatus = "loading" | "loaded" | "failed"
+const IFRAME_STATUSES = {
+  Loading: "loading",
+  Loaded: "loaded",
+  Failed: "failed",
+} as const
+type IframeStatus = (typeof IFRAME_STATUSES)[keyof typeof IFRAME_STATUSES]
+const IFRAME_LOAD_TIMEOUT_MS = 4_000
+const logger = createLogger("UpdateLogDialog")
 
 /**
  * A modal dialog that displays the update log for a specific version of the extension.
@@ -45,14 +44,11 @@ export function UpdateLogDialog({
   version,
 }: UpdateLogDialogProps) {
   const { t, i18n } = useTranslation(["ui", "common"])
-  const [iframeStatus, setIframeStatus] = useState<IframeStatus>("loading")
-  const { openChangelogOnUpdate, updateOpenChangelogOnUpdate } =
-    useUserPreferencesContext()
-  const [autoOpenOverride, setAutoOpenOverride] = useState<boolean | null>(null)
-  const [isSavingAutoOpen, setIsSavingAutoOpen] = useState(false)
+  const [iframeStatus, setIframeStatus] = useState<IframeStatus>(
+    IFRAME_STATUSES.Loading,
+  )
   const [starPromptDismissed, setStarPromptDismissed] = useState(false)
 
-  const autoOpenEnabled = autoOpenOverride ?? openChangelogOnUpdate
   // The update flow doubles as a star moment: the user is staring at evidence
   // of active development. Only show the ask while promotion is still active.
   const showStarPrompt = useStarPromotionActive(isOpen) && !starPromptDismissed
@@ -62,20 +58,11 @@ export function UpdateLogDialog({
   })
 
   const handleStarFromUpdateLog = useCallback(async () => {
-    setStarPromptDismissed(true)
     trackStarPromotionAction(PRODUCT_ANALYTICS_ACTION_IDS.ClickStarPromotion, {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.UpdateLogDialogStarPrompt,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    void starPromotionState.markCompleted()
-    try {
-      await createTab(REPO_URL, true)
-    } catch (error) {
-      logger.error(
-        `Failed opening repository after star click: ${getErrorMessage(error)}`,
-        error,
-      )
-    }
+    if (await openStarPromotionRepository()) setStarPromptDismissed(true)
   }, [])
 
   const iframeUrl = useMemo(
@@ -86,11 +73,13 @@ export function UpdateLogDialog({
   useEffect(() => {
     if (!isOpen) return
 
-    setIframeStatus("loading")
+    setIframeStatus(IFRAME_STATUSES.Loading)
 
     const timeoutId = window.setTimeout(() => {
-      setIframeStatus((prev) => (prev === "loading" ? "failed" : prev))
-    }, 4_000)
+      setIframeStatus((prev) =>
+        prev === IFRAME_STATUSES.Loading ? IFRAME_STATUSES.Failed : prev,
+      )
+    }, IFRAME_LOAD_TIMEOUT_MS)
 
     return () => {
       window.clearTimeout(timeoutId)
@@ -101,7 +90,6 @@ export function UpdateLogDialog({
     try {
       await createTab(iframeUrl, true)
     } catch (error) {
-      const logger = createLogger("UpdateLogDialog")
       logger.error(
         `Failed opening full changelog: ${getErrorMessage(error)}`,
         error,
@@ -110,42 +98,16 @@ export function UpdateLogDialog({
     }
   }
 
-  const handleSetAutoOpenEnabled = async (enabled: boolean) => {
-    if (isSavingAutoOpen) return
-
-    setIsSavingAutoOpen(true)
-    try {
-      const result = await updateOpenChangelogOnUpdate(enabled)
-      if (result.ok) {
-        setAutoOpenOverride(enabled)
-      } else {
-        showUpdateToast(result, t("ui:dialog.updateLog.autoOpenSetting"))
-      }
-    } catch (error) {
-      const logger = createLogger("UpdateLogDialog")
-      logger.error(
-        `Failed saving auto-open setting for version ${version}: ${getErrorMessage(error)}`,
-        error,
-      )
-      throw error
-    } finally {
-      setIsSavingAutoOpen(false)
-    }
-  }
-
   const header = (
-    <div className="pr-8">
+    <div className="gap-density-3 flex w-full flex-wrap items-center justify-between pr-8">
       <h3 className="text-foreground text-lg font-semibold">
-        {t("ui:dialog.updateLog.title")}
-      </h3>
-      <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
         {t("ui:dialog.updateLog.updatedTo", { version })}
-      </p>
+      </h3>
     </div>
   )
 
   const footer = (
-    <div className="gap-y-density-2 flex w-full flex-col">
+    <div className="gap-density-3 flex w-full flex-col sm:flex-row sm:items-center sm:justify-between">
       {showStarPrompt ? (
         <Button
           variant="link"
@@ -153,47 +115,30 @@ export function UpdateLogDialog({
           type="button"
           onClick={() => void handleStarFromUpdateLog()}
           leftIcon={<Star className="text-link h-4 w-4" />}
-          className="h-auto justify-center py-0 text-left sm:justify-start"
+          className="h-auto w-fit justify-start p-0 text-left font-semibold whitespace-normal"
         >
           {t("ui:dialog.updateLog.starPrompt")}
         </Button>
       ) : null}
       <div
         data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footer}
-        className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between"
+        className="flex justify-end sm:ml-auto"
       >
-        <Button
-          data-testid={UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle}
-          variant="outline"
-          loading={isSavingAutoOpen}
-          onClick={() => void handleSetAutoOpenEnabled(!autoOpenEnabled)}
-          type="button"
-          className="py-density-2 h-auto min-h-(--density-control) w-full text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
-        >
-          {isSavingAutoOpen
-            ? autoOpenEnabled
-              ? t("common:status.disabling")
-              : t("common:status.enabling")
-            : autoOpenEnabled
-              ? t("ui:dialog.updateLog.disableAutoOpen")
-              : t("ui:dialog.updateLog.enableAutoOpen")}
-        </Button>
-
         <div
           data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footerActions}
-          className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:justify-end"
+          className="gap-x-density-3 flex items-center justify-end"
         >
           <Button
             data-testid={UPDATE_LOG_DIALOG_TEST_IDS.closeButton}
-            variant="outline"
             onClick={onClose}
             type="button"
-            className="hidden sm:inline-flex sm:w-auto"
+            className="shrink-0"
           >
             {t("common:actions.close")}
           </Button>
           <Button
             data-testid={UPDATE_LOG_DIALOG_TEST_IDS.openFullChangelogButton}
+            variant="outline"
             onClick={() => void handleOpenFullChangelog()}
             type="button"
             className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
@@ -220,7 +165,7 @@ export function UpdateLogDialog({
       >
         <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
           <div className="relative h-full">
-            {iframeStatus === "loading" && (
+            {iframeStatus === IFRAME_STATUSES.Loading && (
               <div className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center">
                 <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
                   {t("ui:dialog.updateLog.loading")}
@@ -232,13 +177,13 @@ export function UpdateLogDialog({
               title={t("ui:dialog.updateLog.title")}
               src={iframeUrl}
               className="bg-card block h-full w-full"
-              onLoad={() => setIframeStatus("loaded")}
+              onLoad={() => setIframeStatus(IFRAME_STATUSES.Loaded)}
               sandbox="allow-same-origin allow-scripts"
             />
           </div>
         </div>
 
-        {iframeStatus === "failed" && (
+        {iframeStatus === IFRAME_STATUSES.Failed && (
           <p className="dark:text-secondary-foreground text-muted-foreground shrink-0 text-sm">
             {t("ui:dialog.updateLog.missingSection", { version })}
           </p>

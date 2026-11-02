@@ -30,7 +30,7 @@ import {
   trackOptionalPermissionRequestResult,
 } from "~/services/productAnalytics/facts/permissions"
 import { trackStarPromotionAction } from "~/services/productAnalytics/facts/starPromotion"
-import { starPromotionState } from "~/services/starPromotion/state"
+import { openStarPromotionRepository } from "~/services/starPromotion/openRepository"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { getDocsGetStartedUrl } from "~/utils/navigation/docsLinks"
@@ -61,8 +61,7 @@ export function PermissionOnboardingDialog({
 }: PermissionOnboardingDialogProps) {
   const { t, i18n } = useTranslation(["settings", "common"])
   const [isRequesting, setIsRequesting] = useState(false)
-  // Suppressed once the promotion is completed (star click, self-report, or
-  // repository page detection) so onboarding stops re-asking.
+  // Suppressed after explicit confirmation or repository star detection.
   const starCtaVisible = useStarPromotionActive(open)
   useStarPromotionPromptImpression(starCtaVisible, {
     surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PermissionOnboardingStarCta,
@@ -129,13 +128,12 @@ export function PermissionOnboardingDialog({
     }
   }, [hasOptionalPermissions, loadStatuses, statuses, t])
 
-  const handleOpenGithub = useCallback(() => {
+  const handleOpenGithub = useCallback(async () => {
     trackStarPromotionAction(PRODUCT_ANALYTICS_ACTION_IDS.ClickStarPromotion, {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PermissionOnboardingStarCta,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    void starPromotionState.markCompleted()
-    window.open(REPO_URL, "_blank", "noopener,noreferrer")
+    await openStarPromotionRepository()
   }, [])
 
   const handleOpenLanguageRequest = useCallback(() => {

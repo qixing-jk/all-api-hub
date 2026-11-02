@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   createTab: vi.fn(),
   isPopup: false,
   markCompleted: vi.fn(),
+  deferThresholdPrompt: vi.fn(),
   trackImpression: vi.fn(),
 }))
 
@@ -18,7 +19,10 @@ vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
 }))
 
 vi.mock("~/services/starPromotion/state", () => ({
-  starPromotionState: { markCompleted: mocks.markCompleted },
+  starPromotionState: {
+    markCompleted: mocks.markCompleted,
+    deferThresholdPrompt: mocks.deferThresholdPrompt,
+  },
 }))
 
 vi.mock("~/utils/browser", () => ({
@@ -39,7 +43,7 @@ describe("FeedbackDropdownMenu star promotion", () => {
     mocks.createTab.mockResolvedValue(undefined)
   })
 
-  it("records the visible item and completes promotion when selected", async () => {
+  it("records the visible item and defers promotion after opening GitHub", async () => {
     const user = userEvent.setup()
     render(<FeedbackDropdownMenu language="en" />, {
       withUserPreferencesProvider: false,
@@ -57,7 +61,8 @@ describe("FeedbackDropdownMenu star promotion", () => {
     fireEvent.click(await screen.findByText("ui:feedback.starOnGithub"))
 
     await waitFor(() => {
-      expect(mocks.markCompleted).toHaveBeenCalledTimes(1)
+      expect(mocks.markCompleted).not.toHaveBeenCalled()
+      expect(mocks.deferThresholdPrompt).toHaveBeenCalledTimes(1)
       expect(mocks.createTab).toHaveBeenCalledTimes(1)
     })
   })

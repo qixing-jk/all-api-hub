@@ -52,18 +52,22 @@ describe("setupStarPromotionContent", () => {
   it("keeps mutation detection active after hydration polling times out", async () => {
     renderStarButton(false)
     const cleanup = setupStarPromotionContent()
-    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: false }),
+      ),
+    )
 
     await vi.advanceTimersByTimeAsync(30_000)
     document.querySelector("button")?.setAttribute("aria-pressed", "true")
 
     await vi.waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
     })
     cleanup()
   })
 
-  it("does not report unstarred changes or duplicate the starred state", async () => {
+  it("reports unstarred changes or duplicate the starred state", async () => {
     const cleanup = setupStarPromotionContent()
     await vi.waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
@@ -74,8 +78,11 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
 
     document.querySelector("button")?.setAttribute("aria-pressed", "false")
-    await Promise.resolve()
-    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ starred: false }),
+      ),
+    )
     cleanup()
   })
 
@@ -85,12 +92,15 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
 
     renderStarButton(false)
-    await Promise.resolve()
-    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: false }),
+      ),
+    )
 
     document.querySelector("button")?.setAttribute("aria-pressed", "true")
     await vi.waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
     })
     cleanup()
   })

@@ -13,6 +13,8 @@ import {
   normalizeStarPromotionState,
   resolveAccountBaseline,
   shouldShowThresholdPromptOnState,
+  STAR_PROMOTION_COMPLETION_SOURCES,
+  STAR_PROMOTION_STATUSES,
   type StarPromotionState,
 } from "./contracts"
 
@@ -23,7 +25,7 @@ const logger = createLogger("StarPromotionState")
 
 /**
  * Persists GitHub star promotion state and applies the star/cooldown
- * transitions. Star completion is terminal across every CTA surface.
+ * transitions. Explicit confirmation suppresses every CTA; detected stars can be revalidated.
  */
 class StarPromotionStateService {
   private storage: Storage
@@ -139,9 +141,45 @@ class StarPromotionStateService {
     )
   }
 
-  /** Terminal completion after a star click, self-report, or detection. */
+  /** Completion after explicit confirmation or verified detection. */
   async markCompleted(): Promise<void> {
-    await this.mutateState(completeStarPromotionOnState)
+    await this.mutateState((state) => ({
+      ...completeStarPromotionOnState(state),
+      completionSource: STAR_PROMOTION_COMPLETION_SOURCES.Confirmed,
+    }))
+  }
+
+  /** Sync observed state; revoking a detected star restores eligibility with backoff. */
+  async recordGitHubStarState(starred: boolean): Promise<void> {
+    const accountCount = starred ? undefined : await this.readAccountCount()
+    await this.mutateState((state) => {
+      if (
+        !starred &&
+        state.completionSource === STAR_PROMOTION_COMPLETION_SOURCES.Detected
+      ) {
+        return {
+          ...deferThresholdPromptOnState(
+            {
+              ...state,
+              status: STAR_PROMOTION_STATUSES.Active,
+              completionSource: undefined,
+            },
+            { now: Date.now(), accountCount },
+          ),
+          githubStarred: false,
+        }
+      }
+      return {
+        ...(starred ? completeStarPromotionOnState(state) : state),
+        ...(starred &&
+        state.completionSource !==
+          STAR_PROMOTION_COMPLETION_SOURCES.Confirmed &&
+        state.status !== STAR_PROMOTION_STATUSES.Completed
+          ? { completionSource: STAR_PROMOTION_COMPLETION_SOURCES.Detected }
+          : {}),
+        githubStarred: starred,
+      }
+    })
   }
 
   /** Subscribes to normalized promotion-state changes across extension contexts. */

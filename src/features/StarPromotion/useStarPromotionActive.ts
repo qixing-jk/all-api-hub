@@ -43,7 +43,9 @@ function useStarPromotionState(enabled = true): StarPromotionStateResult {
       if (!cancelled) {
         setResult({
           isActive: state.status === STAR_PROMOTION_STATUSES.Active,
-          isStarred: state.status === STAR_PROMOTION_STATUSES.Completed,
+          isStarred:
+            state.githubStarred ??
+            state.status === STAR_PROMOTION_STATUSES.Completed,
           isLoading: false,
         })
       }
@@ -80,7 +82,7 @@ export function useStarPromotionActive(enabled = true): boolean {
 }
 
 /**
- * Reports whether the repository is confirmed starred (status === "completed").
+ * Reports the observed repository state, falling back to legacy confirmation.
  * Stays `false` while loading so that "already starred" indicators do not flash
  * prematurely before stored state arrives.
  */

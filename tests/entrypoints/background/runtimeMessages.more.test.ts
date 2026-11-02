@@ -67,7 +67,7 @@ const mocks = vi.hoisted(() => ({
   executeProtectionBypassTask: vi.fn(),
   handleOwnedSessionRequest: vi.fn(),
   cancelTempCheckinFeedbackScan: vi.fn(),
-  markStarPromotionCompleted: vi.fn(),
+  recordGitHubStarState: vi.fn(),
   trackStarPromotionAction: vi.fn(),
 }))
 
@@ -227,7 +227,7 @@ vi.mock("~/services/productAnalytics/runtime/runtime", () => ({
 
 vi.mock("~/services/starPromotion/state", () => ({
   starPromotionState: {
-    markCompleted: mocks.markStarPromotionCompleted,
+    recordGitHubStarState: mocks.recordGitHubStarState,
   },
 }))
 
@@ -259,7 +259,7 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     mocks.setupContextMenus.mockResolvedValue(undefined)
     mocks.trackCookieInterceptorUrl.mockResolvedValue(undefined)
     mocks.containsPermissions.mockResolvedValue(true)
-    mocks.markStarPromotionCompleted.mockResolvedValue(undefined)
+    mocks.recordGitHubStarState.mockResolvedValue(undefined)
     ;(globalThis as any).browser = {}
   })
 
@@ -425,7 +425,7 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     ).toBe(true)
 
     await vi.waitFor(() => {
-      expect(mocks.markStarPromotionCompleted).toHaveBeenCalledTimes(1)
+      expect(mocks.recordGitHubStarState).toHaveBeenCalledTimes(1)
       expect(mocks.trackStarPromotionAction).toHaveBeenCalledWith(
         "suppress_star_promotion_detected",
         {
@@ -437,12 +437,25 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     })
   })
 
+  it("records a trusted unstarred observation without suppression telemetry", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+    listener(
+      { action: RuntimeActionIds.ContentStarPromotionReport, starred: false },
+      { url: "https://github.com/qixing-jk/all-api-hub" },
+      sendResponse,
+    )
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({ success: true }),
+    )
+    expect(mocks.recordGitHubStarState).toHaveBeenCalledWith(false)
+    expect(mocks.trackStarPromotionAction).not.toHaveBeenCalled()
+  })
+
   it("rejects repository-star detection when persistence fails", async () => {
     const listener = await loadListener()
     const sendResponse = vi.fn()
-    mocks.markStarPromotionCompleted.mockRejectedValue(
-      new Error("write failed"),
-    )
+    mocks.recordGitHubStarState.mockRejectedValue(new Error("write failed"))
 
     listener(
       {
@@ -473,7 +486,7 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     )
 
     expect(sendResponse).toHaveBeenCalledWith({ success: false })
-    expect(mocks.markStarPromotionCompleted).not.toHaveBeenCalled()
+    expect(mocks.recordGitHubStarState).not.toHaveBeenCalled()
   })
 
   it("tracks cookie interceptor URLs and surfaces tracker failures", async () => {
