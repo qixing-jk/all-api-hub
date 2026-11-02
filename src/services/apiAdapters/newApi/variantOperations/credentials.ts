@@ -3,7 +3,10 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
-import { type ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
+import {
+  type ContentSessionTransientAuth,
+  type NewApiDashboardTransientAuth,
+} from "~/services/accountSiteOnboarding/contracts"
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { ApiError } from "~/services/apiTransport/errors"
 import { type AuthTypeEnum } from "~/types"
@@ -28,7 +31,7 @@ export type CredentialImplementation = {
   readUsername(payload: CredentialPayload, trimString: TrimString): string
   selectDashboardAuth(
     value?: ContentSessionTransientAuth,
-  ): ContentSessionTransientAuth | undefined
+  ): NewApiDashboardTransientAuth | undefined
   classifyFailure(
     error: unknown,
     stage: CredentialFailureStage,

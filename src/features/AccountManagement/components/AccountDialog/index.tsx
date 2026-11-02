@@ -39,7 +39,10 @@ import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisionin
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
-import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
+import {
+  isCanonicalAimlApiUrl,
+  isCanonicalOpenRouterUrl,
+} from "~/services/accountSiteDefinitions/identifiers"
 import { isCanonicalRequestyUrl } from "~/services/apiAdapters/requesty/account/accountOnboarding"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup } from "~/utils/browser"
@@ -209,6 +212,8 @@ export default function AccountDialog({
   const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
   const credentialVerification =
     state.credentialVerification &&
+    (!isCanonicalAimlApiUrl(state.url) ||
+      state.credentialVerification.aimlApiKey === state.draft.aimlApiKey) &&
     state.credentialVerification.accessToken === state.accessToken &&
     state.credentialVerification.siteType === state.siteType &&
     state.credentialVerification.userId === state.userId
@@ -225,38 +230,46 @@ export default function AccountDialog({
   const isOpenRouterBootstrap = isCanonicalOpenRouterUrl(state.url)
   const isRequestyBootstrap =
     isCanonicalRequestyUrl(state.url) && !state.accessToken.trim()
+  const isAimlApiBootstrap =
+    isCanonicalAimlApiUrl(state.url) && !state.accessToken.trim()
   const autoDetectPresentation =
-    isOpenRouterBootstrap || isRequestyBootstrap
+    isOpenRouterBootstrap || isRequestyBootstrap || isAimlApiBootstrap
       ? {
           action: {
-            idleLabel: isRequestyBootstrap
-              ? tAccountDialog("mode.createManagementKey", {
-                  siteName: "Requesty",
-                })
-              : tAccountDialog("mode.createOpenRouterManagementKey"),
-            pendingLabel: isRequestyBootstrap
-              ? tAccountDialog("mode.creatingManagementKey", {
-                  siteName: "Requesty",
-                })
-              : tAccountDialog("mode.creatingOpenRouterManagementKey"),
-            reDetectLabel: isRequestyBootstrap
-              ? tAccountDialog("mode.createManagementKey", {
-                  siteName: "Requesty",
-                })
-              : tAccountDialog("mode.createOpenRouterManagementKey"),
+            idleLabel:
+              isRequestyBootstrap || isAimlApiBootstrap
+                ? tAccountDialog("mode.createManagementKey", {
+                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
+                  })
+                : tAccountDialog("mode.createOpenRouterManagementKey"),
+            pendingLabel:
+              isRequestyBootstrap || isAimlApiBootstrap
+                ? tAccountDialog("mode.creatingManagementKey", {
+                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
+                  })
+                : tAccountDialog("mode.creatingOpenRouterManagementKey"),
+            reDetectLabel:
+              isRequestyBootstrap || isAimlApiBootstrap
+                ? tAccountDialog("mode.createManagementKey", {
+                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
+                  })
+                : tAccountDialog("mode.createOpenRouterManagementKey"),
             multiline: true,
           },
           info: {
-            title: isRequestyBootstrap
-              ? tAccountDialog("infoPanel.managementKeyBootstrap", {
-                  siteName: "Requesty",
-                })
-              : tAccountDialog("infoPanel.openrouterBootstrap"),
-            description: isRequestyBootstrap
-              ? tAccountDialog("infoPanel.managementKeyBootstrapInfo", {
-                  siteName: "Requesty",
-                })
-              : tAccountDialog("infoPanel.openrouterBootstrapInfo"),
+            title:
+              isRequestyBootstrap || isAimlApiBootstrap
+                ? tAccountDialog("infoPanel.managementKeyBootstrap", {
+                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
+                  })
+                : tAccountDialog("infoPanel.openrouterBootstrap"),
+            description: isAimlApiBootstrap
+              ? tAccountDialog("infoPanel.aimlapiBootstrapInfo")
+              : isRequestyBootstrap
+                ? tAccountDialog("infoPanel.managementKeyBootstrapInfo", {
+                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
+                  })
+                : tAccountDialog("infoPanel.openrouterBootstrapInfo"),
           },
         }
       : undefined
@@ -338,9 +351,19 @@ export default function AccountDialog({
             formSource={state.formSource}
             isDetecting={state.isDetecting}
             onAutoDetect={handlers.handleAutoDetect}
+            detectFromCredential={
+              isCanonicalAimlApiUrl(state.url) &&
+              !!state.accessToken.trim() &&
+              credentialVerification?.status !== "success"
+            }
             onShowManualForm={handlers.handleShowManualForm}
             onClose={handlers.handleClose}
-            isFormValid={state.isFormValid}
+            isFormValid={
+              state.isFormValid &&
+              (mode !== DIALOG_MODES.ADD ||
+                !isCanonicalAimlApiUrl(state.url) ||
+                credentialVerification?.status === "success")
+            }
             isSaving={state.isSaving}
             onAutoConfig={handlers.handleAutoConfig}
             isAutoConfiguring={state.isAutoConfiguring}
@@ -550,6 +573,7 @@ export default function AccountDialog({
                       }
                     : undefined
                 }
+                onAimlApiKeyChange={setters.setAimlApiKey}
                 onSub2apiUseRefreshTokenChange={
                   handlers.handleSub2apiUseRefreshTokenChange
                 }

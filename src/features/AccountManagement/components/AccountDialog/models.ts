@@ -71,6 +71,8 @@ export interface AccountDialogDraft {
   sub2apiRefreshToken: string
   sub2apiTokenExpiresAt: number | null
   kimiOpenPlatformAuth: KimiOpenPlatformAuthConfig | null
+  /** Second static credential for sites whose console splits capabilities. */
+  aimlApiKey: string
 }
 
 /** Form state carried from a popup into manual New API token recovery. */
@@ -138,6 +140,7 @@ export function createEmptyAccountDialogDraft(
     sub2apiRefreshToken: "",
     sub2apiTokenExpiresAt: null,
     kimiOpenPlatformAuth: null,
+    aimlApiKey: "",
   }
 }
 

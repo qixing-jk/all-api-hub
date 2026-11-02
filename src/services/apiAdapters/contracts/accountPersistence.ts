@@ -3,7 +3,12 @@ import type { AccountIdentity, SiteAccount } from "~/types"
 export interface AccountPersistenceIdentityInput {
   accessToken: string
   userId: string
-  existingAccount?: Pick<SiteAccount, "site_type" | "account_info">
+  /** Second static credential for sites whose console splits capabilities. */
+  aimlApiKey?: string
+  existingAccount?: Pick<
+    SiteAccount,
+    "site_type" | "account_info" | "aimlApiAuth"
+  >
 }
 
 /** Provider-owned admission, identity and disclosure rules for account persistence. */

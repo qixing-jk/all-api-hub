@@ -13,6 +13,10 @@ import {
   DEFAULT_AUTO_PROVISION_KEY_NAME,
   getDefaultAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
+import {
+  AIMLAPI_KEY_LIMIT_MODES,
+  AIMLAPI_KEY_EDITOR_FIELDS as aimlApiFields,
+} from "~/services/apiAdapters/aimlapi/keyResourceFields"
 import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
@@ -31,10 +35,12 @@ import { PMAPI_KEY_EDITOR_FIELDS as pmFields } from "~/services/apiAdapters/pmap
 import { RELAYFOR_KEY_FIELDS as relayForFields } from "~/services/apiAdapters/relayfor/keyFields"
 import { REQUESTY_KEY_FIELDS as requestyFields } from "~/services/apiAdapters/requesty/keys/keyResourceFields"
 import { vercelKeyFields } from "~/services/apiAdapters/vercelAiGateway/keyEditor"
+import { AIMLAPI_KEY_EDITOR_LIMITS } from "~/services/apiService/aimlapi/constants"
 import {
   VERCEL_KEY_SPEND_ATTRIBUTIONS as attributions,
   VERCEL_BUDGET_REFRESH_PERIODS as budgetPeriods,
 } from "~/services/apiService/vercelAiGateway/keys"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
 import { getDahlKeyResourceEditorPresentation } from "./dahlKeyResourceEditorPresentation"
@@ -660,6 +666,147 @@ const buildVercelAiGatewayFields = (
     ),
   }
 }
+/** AI/ML API: name, model scopes, USD spend limit, allowed models, expiry. */
+const buildAimlApiFields = (
+  mode: AccountKeyResourceEditorMode,
+): {
+  fields: ResourceFieldPresentation[]
+  automaticName: EditorPresentation["automaticName"]
+} => ({
+  automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
+  fields: [
+    name,
+    {
+      fieldId: aimlApiFields.AllowedTools,
+      section: "basic",
+      order: 6,
+      renderer: "multi-select",
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.allowedTools"),
+      resolveHelp: (t: TFunction) =>
+        `${t("keyManagement:native.editor.aimlapi.allowedToolsHelp")} ${t("keyManagement:native.editor.aimlapi.maximum", { maximum: AIMLAPI_KEY_EDITOR_LIMITS.AllowedTools })}`,
+      issueLabelResolvers: {
+        ...issues,
+        out_of_range: (t) =>
+          t("keyManagement:native.editor.aimlapi.maximum", {
+            maximum: AIMLAPI_KEY_EDITOR_LIMITS.AllowedTools,
+          }),
+      },
+    },
+    {
+      fieldId: aimlApiFields.Scopes,
+      section: "advanced",
+      order: 10,
+      renderer: "multi-select",
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.scopes"),
+      resolvePlaceholder: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.scopesPlaceholder"),
+      issueLabelResolvers: issues,
+      optionLabelResolvers: {
+        "model:chat": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.chat"),
+        "model:responses": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.responses"),
+        "model:image": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.image"),
+        "model:audio": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.audio"),
+        "model:video": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.video"),
+        "model:embeddings": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.embeddings"),
+        "model:speech": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.speech"),
+        "model:ocr": (t) =>
+          t("keyManagement:native.editor.aimlapi.endpoint.ocr"),
+      },
+    },
+    {
+      fieldId: aimlApiFields.LimitMode,
+      section: "spending",
+      order: 0,
+      renderer: "select",
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.spendLimit"),
+      issueLabelResolvers: issues,
+      optionLabelResolvers: {
+        unlimited: (t) =>
+          t("keyManagement:native.editor.aimlapi.limit.unlimited"),
+        limited: (t) => t("keyManagement:native.editor.aimlapi.limit.limited"),
+      },
+    },
+    {
+      fieldId: aimlApiFields.LimitAmount,
+      section: "spending",
+      order: 10,
+      renderer: "number",
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.spendLimitAmount"),
+      resolvePlaceholder: (t: TFunction) =>
+        t("keyManagement:dialog.quotaPlaceholder"),
+      visibleWhen: (values: EditableResourceProjection) =>
+        values[aimlApiFields.LimitMode] !== AIMLAPI_KEY_LIMIT_MODES.Unlimited,
+      issueLabelResolvers: issues,
+    },
+    {
+      fieldId: aimlApiFields.LimitRetention,
+      section: "spending",
+      order: 20,
+      renderer: "select",
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.spendLimitReset"),
+      visibleWhen: (values: EditableResourceProjection) =>
+        values[aimlApiFields.LimitMode] !== AIMLAPI_KEY_LIMIT_MODES.Unlimited,
+      optionLabelResolvers: {
+        day: (t: TFunction) =>
+          t("keyManagement:native.editor.aimlapi.reset.day"),
+        week: (t: TFunction) =>
+          t("keyManagement:native.editor.aimlapi.reset.week"),
+        month: (t: TFunction) =>
+          t("keyManagement:native.editor.aimlapi.reset.month"),
+        never: (t: TFunction) =>
+          t("keyManagement:native.editor.aimlapi.reset.never"),
+      },
+      issueLabelResolvers: issues,
+    },
+    {
+      fieldId: aimlApiFields.AllowedModels,
+      section: "basic",
+      order: 5,
+      renderer: "multi-select",
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.allowedModels"),
+      resolveHelp: (t: TFunction) =>
+        `${t("keyManagement:native.editor.aimlapi.allowedModelsHelp")} ${t("keyManagement:native.editor.aimlapi.maximum", { maximum: AIMLAPI_KEY_EDITOR_LIMITS.AllowedModels })}`,
+      resolvePlaceholder: (t: TFunction) =>
+        t("keyManagement:native.editor.aimlapi.allowedModelsPlaceholder"),
+      issueLabelResolvers: {
+        ...issues,
+        out_of_range: (t: TFunction) =>
+          t("keyManagement:native.editor.aimlapi.maximum", {
+            maximum: AIMLAPI_KEY_EDITOR_LIMITS.AllowedModels,
+          }),
+      },
+    },
+    {
+      ...expiryField(aimlApiFields.ExpiresAt),
+      ...(mode === editorModes.Edit
+        ? {
+            resolveHelp: (t: TFunction) =>
+              t("keyManagement:native.editor.aimlapi.expiryImmutable"),
+            resolveReadOnlyValue: (t: TFunction, value: string) =>
+              value
+                ? formatLocaleDateTime(value)
+                : t("keyManagement:keyDetails.neverExpires"),
+          }
+        : {}),
+      // The update route ignores `expires_at`; the descriptor marks it read-only
+      // in edit mode so the dialog never promises an unsavable change.
+    },
+    ...(mode === editorModes.Edit ? [enabled(aimlApiFields.Enabled)] : []),
+  ],
+})
 
 const resolveSiteFields = (
   siteType: string | undefined,
@@ -771,6 +918,7 @@ const resolveSiteFields = (
         },
       ],
     }),
+    [editorKinds.AimlApi]: () => buildAimlApiFields(mode),
     [editorKinds.Sub2Api]: () => buildSub2ApiFields(mode),
     [editorKinds.RelayFor]: () => buildRelayForFields(),
     [editorKinds.Requesty]: () => buildRequestyFields(mode),
@@ -1126,36 +1274,47 @@ export function getNativeKeyResourceEditorPresentation(
               advanced: { columns: 2 as const, defaultOpen: true },
             },
           }
-        : getKeyResourcePresentationPolicy(siteType).editor === editorKinds.Daya
+        : getKeyResourcePresentationPolicy(siteType).editor ===
+            editorKinds.AimlApi
           ? {
               sections: {
                 basic: { defaultOpen: true },
                 spending: { defaultOpen: true },
                 lifecycle: { defaultOpen: true },
-                advanced: {
-                  defaultOpen: false,
-                  resolveSummary: (t, values) => {
-                    const customKey = values[dayaFields.CustomKey]
-                    return [
-                      typeof values[dayaFields.IpWhitelist] === "string" &&
-                        String(values[dayaFields.IpWhitelist]).trim() &&
-                        t("keyManagement:native.editor.daya.ipWhitelist"),
-                      typeof values[dayaFields.IpBlacklist] === "string" &&
-                        String(values[dayaFields.IpBlacklist]).trim() &&
-                        t("keyManagement:native.editor.daya.ipBlacklist"),
-                      customKey &&
-                        typeof customKey === "object" &&
-                        "kind" in customKey &&
-                        customKey.kind === "replace" &&
-                        t("keyManagement:native.editor.daya.customKey"),
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")
-                  },
-                },
+                advanced: { defaultOpen: false },
               },
             }
-          : {}),
+          : getKeyResourcePresentationPolicy(siteType).editor ===
+              editorKinds.Daya
+            ? {
+                sections: {
+                  basic: { defaultOpen: true },
+                  spending: { defaultOpen: true },
+                  lifecycle: { defaultOpen: true },
+                  advanced: {
+                    defaultOpen: false,
+                    resolveSummary: (t, values) => {
+                      const customKey = values[dayaFields.CustomKey]
+                      return [
+                        typeof values[dayaFields.IpWhitelist] === "string" &&
+                          String(values[dayaFields.IpWhitelist]).trim() &&
+                          t("keyManagement:native.editor.daya.ipWhitelist"),
+                        typeof values[dayaFields.IpBlacklist] === "string" &&
+                          String(values[dayaFields.IpBlacklist]).trim() &&
+                          t("keyManagement:native.editor.daya.ipBlacklist"),
+                        customKey &&
+                          typeof customKey === "object" &&
+                          "kind" in customKey &&
+                          customKey.kind === "replace" &&
+                          t("keyManagement:native.editor.daya.customKey"),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    },
+                  },
+                },
+              }
+            : {}),
     }),
     sectionOrder: {
       basic: 0,

@@ -401,6 +401,40 @@
         "cancel": "Hủy",
         "save": "Lưu khóa"
       },
+      "aimlapi": {
+        "allowedModels": "Mô hình được phép",
+        "allowedModelsHelp": "Tìm mô hình theo tên hoặc ID; để trống để cho phép tất cả.",
+        "allowedModelsPlaceholder": "Tìm mô hình",
+        "allowedTools": "Công cụ được phép",
+        "allowedToolsHelp": "Tìm công cụ; để trống để cho phép tất cả.",
+        "endpoint": {
+          "audio": "Âm thanh",
+          "chat": "Trò chuyện",
+          "embeddings": "Nhúng",
+          "image": "Hình ảnh",
+          "ocr": "Nhận dạng văn bản (OCR)",
+          "responses": "Responses",
+          "speech": "Giọng nói",
+          "video": "Video"
+        },
+        "expiryImmutable": "Chỉ có thể đặt thời hạn khi tạo khóa. Không thể thay đổi sau khi tạo.",
+        "limit": {
+          "limited": "Đặt giới hạn",
+          "unlimited": "Không giới hạn"
+        },
+        "maximum": "Tối đa: {{maximum}}",
+        "reset": {
+          "day": "Hằng ngày",
+          "month": "Hằng tháng",
+          "never": "Không đặt lại",
+          "week": "Hằng tuần"
+        },
+        "scopes": "Quyền truy cập điểm cuối",
+        "scopesPlaceholder": "Tất cả điểm cuối",
+        "spendLimit": "Hạn mức USD",
+        "spendLimitAmount": "Số tiền hạn mức",
+        "spendLimitReset": "Chu kỳ đặt lại"
+      },
       "allowlistHelp": "Phân cách bằng dấu phẩy hoặc dòng mới. Để trống nếu không giới hạn.",
       "allowWallet": "Cho phép dùng số dư",
       "allowWalletHelp": "Giữ cho khóa này tiếp tục hoạt động bằng số dư tài khoản sau khi hết hạn ngạch gói.",

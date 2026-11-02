@@ -2,6 +2,7 @@ import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import type { TagIdsInput } from "~/services/accounts/accountPersistence/shared"
 import {
   AuthTypeEnum,
+  type AimlApiAuthConfig,
   type CheckInConfig,
   type KimiOpenPlatformAuthConfig,
   type Sub2ApiAuthConfig,
@@ -30,6 +31,8 @@ export interface AccountSaveInput {
   excludeFromTotalBalance?: boolean
   excludeFromTodayIncome?: boolean
   sub2apiAuth?: Sub2ApiAuthConfig
+  /** Second static credential for sites whose console splits capabilities. */
+  aimlApiAuth?: AimlApiAuthConfig
 }
 
 interface AccountSaveOptions {

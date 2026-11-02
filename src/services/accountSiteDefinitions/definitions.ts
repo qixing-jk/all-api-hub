@@ -76,6 +76,15 @@ import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
+  AIMLAPI_API_BASE_URL,
+  AIMLAPI_BILLING_PATH,
+  AIMLAPI_DISPLAY_NAME,
+  AIMLAPI_HOSTNAMES,
+  AIMLAPI_KEYS_PATH,
+  AIMLAPI_LOGIN_PATH,
+  AIMLAPI_MODELS_PATH,
+  AIMLAPI_USAGE_PATH,
+  AIMLAPI_WEB_ORIGIN,
   APIYI_HOSTNAME,
   CUBENCE_API_ORIGIN,
   CUBENCE_HOSTNAMES,
@@ -247,6 +256,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.GRSAI,
   SITE_TYPES.VERCEL_AI_GATEWAY,
   SITE_TYPES.NOVITA,
+  SITE_TYPES.AIMLAPI,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -1555,6 +1565,124 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferFromHostname: true,
         inferenceApiBaseUrls: {
           openAiCompatible: GRSAI_API_BASE_URL,
+        },
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.AIMLAPI,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.AiMlApi,
+    onboarding: {
+      displayName: AIMLAPI_DISPLAY_NAME,
+      accessTokenVerificationGuide: {
+        copy: "aimlapi",
+        showRotationWarning: false,
+      },
+      accountForm: {
+        fixedSiteUrl: AIMLAPI_WEB_ORIGIN,
+        defaultSiteName: AIMLAPI_DISPLAY_NAME,
+        accessTokenLabelKey: "form.aimlApiManagementKey",
+        accessTokenGuidanceTitleKey: "form.aimlApiManagementKeyGuidanceTitle",
+        accessTokenGuidanceKey: "form.aimlApiManagementKeyGuidance",
+      },
+      detection: { hostnames: AIMLAPI_HOSTNAMES },
+      // Console routes verified 2026-10-24 against the Nuxt router table: the
+      // signed-out entry is /app/auth, keys live at /app/keys, usage at
+      // /app/usage and the promo-code form at /app/billing. Pricing is only
+      // published on the marketing catalogue, not in the console.
+      routes: {
+        loginPath: AIMLAPI_LOGIN_PATH,
+        usagePath: AIMLAPI_USAGE_PATH,
+        adminCredentialsPath: AIMLAPI_KEYS_PATH,
+        accessTokenPath: AIMLAPI_KEYS_PATH,
+        pricingPath: AIMLAPI_MODELS_PATH,
+        redeemPath: AIMLAPI_BILLING_PATH,
+        // No check-in programme and no site announcement feed were observed.
+        checkInPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      // Balance and usage come from the account's regular API key, so today's
+      // statistics are only available on the deferred path that has the account.
+      metrics: {
+        deferredTodayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+          },
+          requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+        },
+        legacyTodayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+          requests: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+          tokens: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+        },
+      },
+      authSession: {
+        // Key management and billing reject each other's credential class, so
+        // the account stores a regular API key beside its management key.
+        kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.SecondaryApiKey,
+        secondaryCredential: "api-key",
+      },
+      auth: {
+        // Only the management key is a console credential: the console has no
+        // personal-access-token route, and its session JWT lives ~10 hours and
+        // rotates single-use, so it is not saved as an account credential.
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        // The numeric user id comes from `/v2/billing/detail`, which needs the
+        // regular API key; accounts without one fall back to the key prefix.
+        usernameRequired: false,
+        userIdRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      createdToken: {
+        // `POST /v1/keys` returns the only copy of the plaintext secret.
+        secretHandling: ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.ResponseKey,
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      tokenForm: {
+        // Keys expose model scopes, an expiry and a spend limit, but no
+        // network restrictions.
+        networkLimitPolicy:
+          ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList,
+      },
+      urls: {
+        recognizedHostnames: AIMLAPI_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: AIMLAPI_WEB_ORIGIN,
+        duplicateOrigin: AIMLAPI_WEB_ORIGIN,
+        managedChannelOrigin: `${AIMLAPI_API_BASE_URL}/v1`,
+        inferenceApiBaseUrls: {
+          openAiCompatible: `${AIMLAPI_API_BASE_URL}/v1`,
+          anthropic: AIMLAPI_API_BASE_URL,
         },
       },
     },

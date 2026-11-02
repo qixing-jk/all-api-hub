@@ -38,6 +38,7 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
     "account-management-auto-create-access-token-button",
   autoCreateAccessTokenError:
     "account-management-auto-create-access-token-error",
+  aimlApiKeyInput: "account-management-aiml-api-key-input",
   accountFormSectionSiteInfo:
     "account-management-account-form-section-site-info",
   accountFormSectionLogin: "account-management-account-form-section-login",

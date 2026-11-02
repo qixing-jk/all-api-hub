@@ -30,6 +30,7 @@ export interface AccountValidationResponse
   extends ServiceResponse<{
     username: string
     accessToken: string
+    aimlApiAuth?: import("~/types").AimlApiAuthConfig
     userId: string
     exchangeRate: number | null
     login?: import("~/types/accountLogin").AccountLoginConfiguration

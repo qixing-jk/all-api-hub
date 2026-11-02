@@ -28,6 +28,7 @@ import {
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
 import {
+  isCanonicalAimlApiUrl,
   isCanonicalNovitaUrl,
   isCanonicalOpenRouterUrl,
 } from "~/services/accountSiteDefinitions/identifiers"
@@ -67,6 +68,7 @@ type DetectedAccount = NonNullable<
 
 /** Transient evidence for the exact credential and identity accepted by detection. */
 export type AccountCredentialVerification = {
+  aimlApiKey?: string
   status: "success" | "error"
   accessToken: string
   siteType: AccountSiteType
@@ -477,6 +479,8 @@ export function useAccountAutoDetection({
                       protectionBypassExecution,
                       cookieAuthSessionCookie.trim() || undefined,
                       ...((userId.trim() ||
+                        (isCanonicalAimlApiUrl(requestedUrl) &&
+                          accessToken.trim()) ||
                         (isCanonicalNovitaUrl(requestedUrl) &&
                           (accessToken.trim() ||
                             input.novitaAcquireConsole ||
@@ -489,11 +493,15 @@ export function useAccountAutoDetection({
                         draft.novitaCredentialMode === "api-key")
                         ? [
                             {
+                              allowCredentialCreation:
+                                isCanonicalAimlApiUrl(requestedUrl) &&
+                                !accessToken.trim(),
                               existingAccount: {
                                 url: credentialScope?.url || requestedUrl,
                                 siteType: credentialScope?.siteType ?? siteType,
                                 userId: userId.trim(),
                                 accessToken,
+                                aimlApiKey: draft.aimlApiKey,
                                 novitaCredentialMode: input.novitaAcquireConsole
                                   ? ("console" as const)
                                   : input.novitaVerifyCredential
@@ -502,7 +510,9 @@ export function useAccountAutoDetection({
                               },
                             },
                           ]
-                        : []),
+                        : isCanonicalAimlApiUrl(requestedUrl)
+                          ? [{ allowCredentialCreation: !accessToken.trim() }]
+                          : []),
                     ),
             )
             if (!isCurrentAutoDetectRun()) {
@@ -584,6 +594,7 @@ export function useAccountAutoDetection({
               )
               setCredentialVerification({
                 status: "success",
+                aimlApiKey: resultData.aimlApiAuth?.apiKey ?? draft.aimlApiKey,
                 accessToken: resultData.accessToken,
                 siteType: isAccountSiteType(resultData.siteType)
                   ? resultData.siteType

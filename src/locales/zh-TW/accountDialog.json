@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "aimlapi": {
+      "openPage": "開啟 AI/ML API 金鑰頁",
+      "openPageFailed": "無法開啟金鑰頁。請手動前往 https://aimlapi.com/app/keys，然後返回此處。",
+      "pasteStep": "返回此處，在下方貼上管理金鑰。如需讀取餘額，可同時填寫一般 API key，然後儲存帳號。"
+    },
     "apiyi": {
       "generateStep": "若已有有效且完整的 Access Token，可直接使用。否則請開啟 APIyi「個人資料」中的「System token」，在官網輸入密碼並產生權杖。",
       "openProfile": "開啟 APIyi 個人資料",
@@ -121,6 +126,12 @@
     "accessToken": "訪問令牌",
     "agentRouterLoginCheckInMethod": "重新登入並簽到",
     "agentRouterLoginCheckInMethodDesc": "登入 Agent Router 並確認本次簽到結果。",
+    "aimlApiKey": "一般 API Key（選填）",
+    "aimlApiKeyHelp": "AI/ML API 只向一般 API Key 顯示餘額、帳單與用量，而金鑰管理需要上方的管理金鑰。填入一般 API Key 可讀取帳戶餘額；未填時仍可管理金鑰，但餘額會顯示為不可用。",
+    "aimlApiKeyPlaceholder": "貼上一般 API Key",
+    "aimlApiManagementKey": "AI/ML API 管理金鑰",
+    "aimlApiManagementKeyGuidance": "開啟 AI/ML API 的「API keys」頁面，切換到「Management keys」分頁，建立管理金鑰後立即複製——它只會顯示一次。推理用的一般 API Key 無法管理金鑰，也不能填在這裡。",
+    "aimlApiManagementKeyGuidanceTitle": "請使用 AI/ML API 管理金鑰",
     "autoCheckInEnabled": "啟用每日自動簽到",
     "autoCheckInEnabledDesc": "在全域性自動簽到功能啟用時，此帳號是否參與每日簽到",
     "autoCheckInPausedBySiteDesc": "此設定會保留；站點啟用簽到後將自動恢復。",
@@ -249,6 +260,7 @@
     "vercelTeamPlaceholder": "選擇團隊"
   },
   "infoPanel": {
+    "aimlapiBootstrapInfo": "使用已登入的 AI/ML API 工作階段，重用或建立專用管理金鑰和一般 API key，驗證後自動填寫使用者名稱與 ID。無法完成自動連線時，再依指引手動填寫。",
     "autoDetect": "自動識別",
     "autoDetectInfo": "請先在目標站點登入，外掛會自動識別並補全新增帳號所需資訊",
     "confirmAddInfo": "請確認帳號資訊無誤後點擊\"確認新增\"按鈕",

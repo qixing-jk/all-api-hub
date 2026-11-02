@@ -16,6 +16,7 @@ import { agentRouterAccountLogin } from "~/services/apiAdapters/newApi/account/a
 import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/configuration/runtimeConfig"
 
 import { aihubmixCapabilities } from "./aihubmix"
+import { aimlApiCapabilities } from "./aimlapi"
 import type {
   AccountLoginCapability,
   AccountLoginTarget,
@@ -115,6 +116,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Emrank]: () => emRankCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.VercelAiGateway]: () =>
     vercelAiGatewayCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.AiMlApi]: () => aimlApiCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported]: (siteType) => ({ siteType }),
 } satisfies Record<
   AccountSiteBackendFamily,

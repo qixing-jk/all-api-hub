@@ -14,6 +14,18 @@ const workspace: AccountKeyScope = {
 }
 
 describe("AccountKeyScopeSelector", () => {
+  it("keeps the implicit AI/ML API scope free of redundant notices", () => {
+    const { container } = render(
+      <AccountKeyScopeSelector
+        siteType={SITE_TYPES.AIMLAPI}
+        scopes={[workspace]}
+        selectedScope={workspace}
+        onSelectScope={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
   it("announces loading without focusing the selector and clears the status when ready", () => {
     const props = {
       siteType: SITE_TYPES.OPENROUTER,

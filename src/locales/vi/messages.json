@@ -17,6 +17,13 @@
     "oneTimeKeyPromptCancelled": "Tài khoản đã được lưu. Bạn có thể tạo thủ công AIHubMix API Key trong phần quản lý khóa sau.",
     "oneTimeKeyUnavailableAfterCreate": "Tài khoản đã được lưu, nhưng không thể lấy toàn bộ AIHubMix API Key. Khóa AIHubMix chỉ hiển thị một lần khi tạo, vui lòng tạo lại trong phần quản lý khóa và lưu lại toàn bộ khóa ngay lập tức."
   },
+  "aimlapi": {
+    "credentialInvalid": "Khóa AI/ML API không hợp lệ hoặc đã hết hạn.",
+    "credentialScopeDenied": "Thông tin xác thực AI/ML API này không thể thực hiện thao tác đó. Quản lý khóa cần khóa quản trị; số dư và hóa đơn cần khóa API thường.",
+    "malformedResponse": "AI/ML API trả về phản hồi mà ứng dụng này không đọc được.",
+    "managementKeyRequired": "AI/ML API cần khóa quản trị. Hãy tạo trong \"Management keys\" và dán vào đây.",
+    "networkFallback": "Không kết nối được AI/ML API. Hãy kiểm tra mạng và thử lại."
+  },
   "aiToolbox": {
     "attemptingRedirect": "Đang thử chuyển hướng đến AI Toolbox",
     "invalidApp": "Ứng dụng mục tiêu AI Toolbox không được hỗ trợ",

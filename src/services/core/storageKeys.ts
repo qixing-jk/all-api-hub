@@ -10,6 +10,7 @@
  */
 export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 export const LINKED_CHANNEL_CLEANUP_STORAGE_KEY = "linkedChannelCleanupTasks"
+export const AIMLAPI_ONBOARDING_STORAGE_KEY = "aimlapiConnectionCredentials_v1"
 /**
  * Browser session that currently owns the extension's temporary pages.
  *
@@ -21,6 +22,7 @@ export const INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY =
   "internalBrowsingBrowserSession_v1"
 
 export const STORAGE_LOCKS = {
+  AIMLAPI_ONBOARDING: "all-api-hub:aimlapi-onboarding",
   /** Serializes sponsor creation handoffs between popup and side panels. */
   SPONSOR_WORKFLOW: "all-api-hub:sponsor-workflow",
   /** Serializes local Dahl key names and website-sync acknowledgements. */

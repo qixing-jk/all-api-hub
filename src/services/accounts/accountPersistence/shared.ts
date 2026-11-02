@@ -12,6 +12,7 @@ import type { AccountPersistenceIdentityInput } from "~/services/apiAdapters/con
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   AuthTypeEnum,
+  type AimlApiAuthConfig,
   type CheckInConfig,
   type KimiOpenPlatformAuthConfig,
   type SiteAccount,
@@ -44,6 +45,8 @@ interface AccountPersistenceInput {
   excludeFromTotalBalance: boolean
   excludeFromTodayIncome: boolean
   sub2apiAuth?: Sub2ApiAuthConfig
+  /** Second static credential for sites whose console splits capabilities. */
+  aimlApiAuth?: AimlApiAuthConfig
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
@@ -125,12 +128,24 @@ function normalizeTagIdsInput(tagIds: TagIdsInput): string[] {
 }
 
 /** Normalizes supplemental authentication data for the selected account site. */
-function normalizeSub2ApiAuthInput(
+function normalizeSupplementalAuthInput(
   siteType: AccountSiteType,
   sub2apiAuth: Sub2ApiAuthConfig | undefined,
-): Sub2ApiAuthConfig | undefined {
-  return normalizeAccountSiteSupplementalAuth({ siteType, sub2apiAuth })
-    .sub2apiAuth
+  aimlApiAuth: AimlApiAuthConfig | undefined,
+): {
+  sub2apiAuth?: Sub2ApiAuthConfig
+  aimlApiAuth?: AimlApiAuthConfig
+} {
+  const normalized = normalizeAccountSiteSupplementalAuth({
+    siteType,
+    sub2apiAuth,
+    aimlApiAuth,
+  })
+  return {
+    ...(normalized.sub2apiAuth ? { sub2apiAuth: normalized.sub2apiAuth } : {}),
+    // Full account edits must explicitly clear a removed supplemental key.
+    aimlApiAuth: normalized.aimlApiAuth,
+  }
 }
 
 /** Builds normalized account fields and request inputs shared by create and update. */
@@ -164,7 +179,11 @@ export function buildAccountPersistenceContext(
         input.authType === AuthTypeEnum.Cookie
           ? { sessionCookie: input.sessionCookieHeader.trim() }
           : undefined,
-      sub2apiAuth: normalizeSub2ApiAuthInput(input.siteType, input.sub2apiAuth),
+      ...normalizeSupplementalAuthInput(
+        input.siteType,
+        input.sub2apiAuth,
+        input.aimlApiAuth,
+      ),
       ...(input.kimiOpenPlatformAuth
         ? { kimiOpenPlatformAuth: input.kimiOpenPlatformAuth }
         : {}),

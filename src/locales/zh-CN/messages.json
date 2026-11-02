@@ -17,6 +17,13 @@
     "oneTimeKeyPromptCancelled": "账号已保存。你之后可以在密钥管理中手动创建 AIHubMix API 密钥。",
     "oneTimeKeyUnavailableAfterCreate": "账号已保存，但未能获取完整 AIHubMix API 密钥。AIHubMix 密钥只在创建时显示一次，请在密钥管理中重新创建并立即保存完整密钥。"
   },
+  "aimlapi": {
+    "credentialInvalid": "AI/ML API 密钥无效或已过期。",
+    "credentialScopeDenied": "该 AI/ML API 凭据无法执行此操作。密钥管理需要管理密钥，余额与账单需要普通 API Key。",
+    "malformedResponse": "AI/ML API 返回了无法识别的响应。",
+    "managementKeyRequired": "AI/ML API 需要管理密钥。请在「Management keys」中创建后粘贴到此处。",
+    "networkFallback": "无法连接 AI/ML API，请检查网络后重试。"
+  },
   "aiToolbox": {
     "attemptingRedirect": "正在尝试跳转到 AI Toolbox",
     "invalidApp": "不支持的 AI Toolbox 目标应用",

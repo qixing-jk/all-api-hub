@@ -34,6 +34,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   RelayFor: "relayfor",
   Requesty: "requesty",
   Novita: "novita",
+  AimlApi: "aimlapi",
   NameOnly: "name-only",
   Empty: "empty",
 } as const
@@ -110,6 +111,10 @@ const policies = {
   [families.VercelAiGateway]: {
     ...native,
     editor: KEY_RESOURCE_EDITOR_KINDS.VercelAiGateway,
+  },
+  [families.AiMlApi]: {
+    ...native,
+    editor: KEY_RESOURCE_EDITOR_KINDS.AimlApi,
   },
   [families.Xiaoen]: generic,
   [families.OpenRouter]: {

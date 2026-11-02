@@ -4,6 +4,7 @@ import {
   getAccountSiteTitleRuleMetadata,
 } from "~/services/accountSiteOnboarding/metadata"
 import { aihubmixBrowserIdentity } from "~/services/apiAdapters/aihubmix/account/browserIdentity"
+import { aimlApiAccountDetectionPrivacy } from "~/services/apiAdapters/aimlapi/accountDetection"
 import type {
   AccountBrowserIdentityCapability,
   AccountBrowserIdentityContext,
@@ -32,6 +33,7 @@ import {
 import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserIdentity"
 import { xiaoenBrowserIdentity } from "~/services/apiAdapters/xiaoen/browserIdentity"
 
+import { aimlApiContentSessionExtractor } from "./contentSession/aimlapi"
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { cubenceContentSessionExtractor } from "./contentSession/cubence"
@@ -145,6 +147,10 @@ const siteBrowserAdapters: readonly {
   {
     sessionExtractor: novitaContentSessionExtractor,
     detectionPrivacy: novitaAccountDetectionPrivacy,
+  },
+  {
+    sessionExtractor: aimlApiContentSessionExtractor,
+    detectionPrivacy: aimlApiAccountDetectionPrivacy,
   },
   {
     sessionExtractor: compatibleUserContentSessionExtractor,

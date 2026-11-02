@@ -178,6 +178,7 @@ describe("account site onboarding registry", () => {
       "apiyi",
       "new-api-auth-bundle",
       "novita",
+      "aimlapi",
       "compatible-user",
     ])
   })

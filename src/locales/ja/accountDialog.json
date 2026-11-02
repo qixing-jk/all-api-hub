@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "aimlapi": {
+      "openPage": "AI/ML API のキーページを開く",
+      "openPageFailed": "キーページを開けませんでした。https://aimlapi.com/app/keys を手動で開いてから、ここに戻ってください。",
+      "pasteStep": "ここに戻り、下の欄に管理キーを貼り付けてください。残高も取得する場合は通常の API キーを入力し、アカウントを保存します。"
+    },
     "apiyi": {
       "generateStep": "有効な Access Token の全文をお持ちの場合は、そのまま使用できます。ない場合は、APIyi のプロフィールで「System token」を開き、サイト上でパスワードを入力して生成してください。",
       "openProfile": "APIyi のプロフィールを開く",
@@ -121,6 +126,12 @@
     "accessToken": "Access Token",
     "agentRouterLoginCheckInMethod": "再ログインしてチェックイン",
     "agentRouterLoginCheckInMethodDesc": "Agent Router にログインしてチェックイン結果を確認します。",
+    "aimlApiKey": "通常の API キー（任意）",
+    "aimlApiKeyHelp": "AI/ML API は残高・請求・使用量を通常の API キーにのみ表示し、キー管理には上の管理キーが必要です。通常の API キーを追加すると残高を取得できます。未設定でもキー管理は可能ですが、残高は利用不可として表示されます。",
+    "aimlApiKeyPlaceholder": "通常の API キーを貼り付け",
+    "aimlApiManagementKey": "AI/ML API 管理キー",
+    "aimlApiManagementKeyGuidance": "AI/ML API の「API keys」を開き、「Management keys」タブに切り替えて管理キーを作成し、表示された直後にコピーしてください（表示は一度だけです）。推論用の API キーではキーを管理できないため、ここには使用できません。",
+    "aimlApiManagementKeyGuidanceTitle": "AI/ML API の管理キーを使用してください",
     "autoCheckInEnabled": "毎日の自動チェックインを有効化",
     "autoCheckInEnabledDesc": "グローバル自動チェックインが有効なとき、このアカウントを日次チェックイン対象にするかどうか",
     "autoCheckInPausedBySiteDesc": "この設定は保持され、サイト側でチェックインが有効になると自動チェックインを再開します。",
@@ -249,6 +260,7 @@
     "vercelTeamPlaceholder": "チームを選択"
   },
   "infoPanel": {
+    "aimlapiBootstrapInfo": "ログイン中の AI/ML API セッションを使い、専用の管理キーと通常の API キーを再利用または作成します。検証後、ユーザー名と ID を自動入力します。自動接続できない場合は、手動の案内に従ってください。",
     "autoDetect": "自動検出",
     "autoDetectInfo": "まず対象サイトにログインしてください。拡張機能がアカウント追加に必要な情報を自動で判定し、補完します",
     "confirmAddInfo": "「追加を確認」ボタンを押す前に、アカウント情報が正しいことを確認してください",

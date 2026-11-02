@@ -620,6 +620,7 @@ describe("AccountDialog AccountForm", () => {
     onUsernameChange: vi.fn(),
     onUserIdChange: vi.fn(),
     onAccessTokenChange: vi.fn(),
+    onAimlApiKeyChange: vi.fn(),
     onExchangeRateChange: vi.fn(),
     onManualBalanceUsdChange: vi.fn(),
     onShowAccessTokenChange: vi.fn(),

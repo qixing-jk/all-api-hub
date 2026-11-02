@@ -411,6 +411,40 @@
         "cancel": "Abbrechen",
         "save": "Schlüssel speichern"
       },
+      "aimlapi": {
+        "allowedModels": "Erlaubte Modelle",
+        "allowedModelsHelp": "Modelle nach Name oder ID suchen. Leer lassen, um alle zu erlauben.",
+        "allowedModelsPlaceholder": "Modelle suchen",
+        "allowedTools": "Erlaubte Tools",
+        "allowedToolsHelp": "Tools suchen. Leer lassen, um alle zu erlauben.",
+        "endpoint": {
+          "audio": "Audio",
+          "chat": "Chat",
+          "embeddings": "Einbettungen",
+          "image": "Bilder",
+          "ocr": "Texterkennung (OCR)",
+          "responses": "Responses",
+          "speech": "Sprache",
+          "video": "Video"
+        },
+        "expiryImmutable": "Das Ablaufdatum kann nur beim Erstellen des Schlüssels festgelegt und danach nicht mehr geändert werden.",
+        "limit": {
+          "limited": "Limit festlegen",
+          "unlimited": "Kein Limit"
+        },
+        "maximum": "Höchstens {{maximum}} Einträge",
+        "reset": {
+          "day": "Täglich",
+          "month": "Monatlich",
+          "never": "Nie",
+          "week": "Wöchentlich"
+        },
+        "scopes": "Endpunktberechtigungen",
+        "scopesPlaceholder": "Alle Endpunkte",
+        "spendLimit": "USD-Limit",
+        "spendLimitAmount": "Limitbetrag",
+        "spendLimitReset": "Zurücksetzen"
+      },
       "allowlistHelp": "Durch Kommas oder Zeilenumbrüche trennen. Leer bedeutet keine Einschränkung.",
       "allowWallet": "Guthaben zulassen",
       "allowWalletHelp": "Lässt diesen Schlüssel nach Ausschöpfen des Kontingents weiter über das Kontoguthaben laufen.",

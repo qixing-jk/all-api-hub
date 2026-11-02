@@ -106,6 +106,7 @@ type AccountFormPresentationSitePolicy = Pick<
   | "allowCookieAuthSession"
   | "usesBrowserCookieSession"
   | "allowSub2ApiRefreshTokenState"
+  | "allowAimlApiKey"
   | "requireUsername"
   | "requireUserId"
 >
@@ -160,6 +161,7 @@ interface AccountFormProps {
   cookieAuthPermissionsGranted?: CookieAuthPermissionRecommendationProps["cookieAuthPermissionsGranted"]
   isRequestingCookieAuthPermissions?: boolean
   onRequestCookieAuthPermissions?: () => void
+  onAimlApiKeyChange: (value: string) => void
   onSub2apiUseRefreshTokenChange: (value: boolean) => void
   onSub2apiRefreshTokenChange: (value: string) => void
   onImportSub2apiSession: () => void
@@ -215,6 +217,7 @@ export default function AccountForm({
   cookieAuthPermissionsGranted,
   isRequestingCookieAuthPermissions,
   onRequestCookieAuthPermissions,
+  onAimlApiKeyChange,
   onSub2apiUseRefreshTokenChange,
   onSub2apiRefreshTokenChange,
   onImportSub2apiSession,
@@ -253,12 +256,14 @@ export default function AccountForm({
     sub2apiUseRefreshToken,
     sub2apiRefreshToken,
     sub2apiTokenExpiresAt,
+    aimlApiKey,
     checkIn,
     siteType,
   } = draft
   const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
+  const canUseAimlApiKey = sitePolicy.allowAimlApiKey
   const credentialPresentation = sitePolicy.accessTokenPresentation
   const novitaCredentials = parseNovitaCredentials(accessToken)
   const accessTokenInputValue =
@@ -763,6 +768,29 @@ export default function AccountForm({
                 />
               )}
           </>
+        )}
+
+        {authType === AuthTypeEnum.AccessToken && canUseAimlApiKey && (
+          <FormField label={t("form.aimlApiKey")}>
+            <div className="space-y-density-2">
+              <Input
+                type="password"
+                revealable
+                revealLabels={{
+                  show: t("form.showAccessToken"),
+                  hide: t("form.hideAccessToken"),
+                }}
+                value={aimlApiKey}
+                onChange={(e) => onAimlApiKeyChange(e.target.value)}
+                placeholder={t("form.aimlApiKeyPlaceholder")}
+                leftIcon={<KeyRound className="h-5 w-5" />}
+                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.aimlApiKeyInput}
+              />
+              <p className="text-muted-foreground text-xs">
+                {t("form.aimlApiKeyHelp")}
+              </p>
+            </div>
+          </FormField>
         )}
 
         {canUseSub2ApiRefreshToken && (

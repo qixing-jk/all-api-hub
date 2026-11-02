@@ -63,6 +63,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Grsai: "grsai",
   VercelAiGateway: "vercelAiGateway",
   Novita: "novita",
+  AiMlApi: "aimlapi",
   Unsupported: "unsupported",
 } as const
 
@@ -133,7 +134,7 @@ export interface ManagedResourceProductPolicy {
 
 /** Presentation choices for completing site-owned account credential verification. */
 export interface AccountSiteAccessTokenVerificationGuide {
-  copy: "security" | "apiyi" | "laozhang" | "vercel" | "novita"
+  copy: "security" | "apiyi" | "laozhang" | "vercel" | "novita" | "aimlapi"
   showRotationWarning: boolean
 }
 
@@ -146,16 +147,19 @@ export interface AccountSiteDefinitionOnboardingMetadata {
     preserveUserExchangeRateOnDetection?: boolean
     accessTokenLabelKey?:
       | "form.openrouterManagementKey"
+      | "form.aimlApiManagementKey"
       | "form.requestyManageKey"
       | "form.vercelAccessToken"
       | "form.novitaApiKey"
     accessTokenGuidanceTitleKey?:
       | "form.openrouterManagementKeyGuidanceTitle"
+      | "form.aimlApiManagementKeyGuidanceTitle"
       | "form.requestyManageKeyGuidanceTitle"
       | "form.vercelAccessTokenGuidanceTitle"
       | "form.novitaApiKeyGuidanceTitle"
     accessTokenGuidanceKey?:
       | "form.openrouterManagementKeyGuidance"
+      | "form.aimlApiManagementKeyGuidance"
       | "form.requestyManageKeyGuidance"
       | "form.vercelAccessTokenGuidance"
       | "form.novitaApiKeyGuidance"

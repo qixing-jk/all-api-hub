@@ -178,6 +178,19 @@ export interface Sub2ApiAuthConfig {
   tokenExpiresAt?: number
 }
 
+/**
+ * A second static credential for sites whose console splits capabilities across
+ * credential classes.
+ *
+ * AI/ML API rejects regular API keys on key management and management keys on
+ * billing, so one saved account carries both. Like other supplemental secrets
+ * this value is exportable and belongs in WebDAV backups.
+ */
+export interface AimlApiAuthConfig {
+  /** Regular (inference) API key: reads balance, billing, usage and logs. */
+  apiKey: string
+}
+
 // 站点账号完整信息
 export interface SiteAccount {
   login?: import("~/types/accountLogin").AccountLoginConfiguration
@@ -269,6 +282,12 @@ export interface SiteAccount {
    * Absent for API-key-only accounts that never opened the console.
    */
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
+  /**
+   * AI/ML API's regular API key, stored beside the management key that is the
+   * account's primary credential. Absent accounts keep key management working
+   * but report balance and usage as unavailable.
+   */
+  aimlApiAuth?: AimlApiAuthConfig
   /**
    * 站点签到相关
    */

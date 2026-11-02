@@ -81,6 +81,9 @@ class AccountPresentation {
       checkIn: account.checkIn,
       authType: account.authType,
       cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+      ...(account.aimlApiAuth?.apiKey
+        ? { aimlApiKey: account.aimlApiAuth.apiKey }
+        : {}),
     })
 
     return Array.isArray(normalizedInput)

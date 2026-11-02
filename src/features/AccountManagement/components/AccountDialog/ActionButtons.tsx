@@ -33,6 +33,7 @@ interface ActionButtonsProps {
   isSaving: boolean
   isFormValid: boolean
   onAutoDetect: () => void
+  detectFromCredential?: boolean
   onShowManualForm: () => void
   onClose: () => void
   onAutoConfig: () => Promise<void>
@@ -55,6 +56,7 @@ export default function ActionButtons({
   isSaving,
   isFormValid,
   onAutoDetect,
+  detectFromCredential,
   onShowManualForm,
   onClose,
   onAutoConfig,
@@ -150,6 +152,17 @@ export default function ActionButtons({
 
   const actions = (
     <>
+      {detectFromCredential && (
+        <Button
+          type="button"
+          onClick={onAutoDetect}
+          loading={isDetecting}
+          variant="outline"
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
+        >
+          {autoDetectLabel}
+        </Button>
+      )}
       {mode === DIALOG_MODES.EDIT && !isDetected && (
         <Button
           type="button"

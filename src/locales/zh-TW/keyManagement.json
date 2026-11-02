@@ -401,6 +401,40 @@
         "cancel": "取消",
         "save": "儲存金鑰"
       },
+      "aimlapi": {
+        "allowedModels": "允許的模型",
+        "allowedModelsHelp": "搜尋模型名稱或 ID；留空表示允許全部模型。",
+        "allowedModelsPlaceholder": "搜尋模型",
+        "allowedTools": "允許的工具",
+        "allowedToolsHelp": "搜尋工具；留空表示允許全部工具。",
+        "endpoint": {
+          "audio": "音訊",
+          "chat": "對話",
+          "embeddings": "向量嵌入",
+          "image": "圖像",
+          "ocr": "文字辨識（OCR）",
+          "responses": "Responses",
+          "speech": "語音",
+          "video": "影片"
+        },
+        "expiryImmutable": "到期時間僅能於建立金鑰時設定，建立後無法修改。",
+        "limit": {
+          "limited": "設定限額",
+          "unlimited": "不限額"
+        },
+        "maximum": "最多選擇 {{maximum}} 項",
+        "reset": {
+          "day": "每日",
+          "month": "每月",
+          "never": "不重置",
+          "week": "每週"
+        },
+        "scopes": "端點權限",
+        "scopesPlaceholder": "全部端點",
+        "spendLimit": "美元限額",
+        "spendLimitAmount": "限額金額",
+        "spendLimitReset": "重置週期"
+      },
       "allowlistHelp": "以逗號或換行分隔，留空不限制。",
       "allowWallet": "允許使用餘額",
       "allowWalletHelp": "套餐額度用完後，此金鑰仍可從帳戶餘額扣費繼續使用。",

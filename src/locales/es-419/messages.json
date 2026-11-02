@@ -21,6 +21,13 @@
     "oneTimeKeyPromptCancelled": "Cuenta guardada. Puedes crear una clave de API de AIHubMix manualmente en Gestión de claves más tarde.",
     "oneTimeKeyUnavailableAfterCreate": "La cuenta se guardó, pero no se pudo recuperar la clave de API completa de AIHubMix. Las claves de AIHubMix solo se muestran una vez después de crearlas; crea una clave nueva en Gestión de claves y guarda la clave completa de inmediato."
   },
+  "aimlapi": {
+    "credentialInvalid": "La clave de AI/ML API no es válida o ha caducado.",
+    "credentialScopeDenied": "Esta credencial de AI/ML API no puede realizar esa acción. La gestión de claves requiere una clave de administración; el saldo y la facturación requieren una clave de API normal.",
+    "malformedResponse": "AI/ML API devolvió una respuesta que esta aplicación no puede leer.",
+    "managementKeyRequired": "AI/ML API requiere una clave de administración. Créala en \"Management keys\" y pégala aquí.",
+    "networkFallback": "No se pudo conectar con AI/ML API. Revisa la red e inténtalo de nuevo."
+  },
   "aiToolbox": {
     "attemptingRedirect": "Intentando redirigir a AI Toolbox",
     "invalidApp": "Aplicación de destino de AI Toolbox no compatible",

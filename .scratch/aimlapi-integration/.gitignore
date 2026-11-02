@@ -1,0 +1,20 @@
+# Raw screenshots and one-off interactive probes stay local; the spec and the
+# protocol transcript are the durable record. The reusable runner lives in
+# scripts/test-aimlapi-e2e-live.mjs with scripts/suites/aimlapi/.
+/evidence/*.png
+/buttons.json
+/capture-*.mjs
+/cleanup-accounts.mjs
+/close-pages.mjs
+/create-ui-temp-key.mjs
+/debug-*.mjs
+/enable-extension.mjs
+/inspect-*.mjs
+/install-extension.mjs
+/list-accounts.mjs
+/list-pages.mjs
+/load-unpacked.mjs
+/ps-probe.ps1
+/relaunch-isolated.ps1
+/smoke-options.mjs
+/artifacts/

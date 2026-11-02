@@ -1,7 +1,6 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import type { AccountAutoDetectExistingAccount } from "~/services/accounts/autoDetect/existingCredentials"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import {
   AutoDetectCompletionError,
@@ -15,7 +14,11 @@ import {
   NOVITA_DISPLAY_NAME,
   NOVITA_WEB_ORIGIN,
 } from "~/services/accountSiteDefinitions/identifiers"
-import type { AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
+import type {
+  AccountOnboardingCapability,
+  AccountOnboardingRequest,
+  AccountOnboardingSession,
+} from "~/services/apiAdapters/contracts/accountOnboarding"
 import { getNovitaSafeErrorMessage } from "~/services/apiAdapters/novita/accountPersistence"
 import {
   encodeNovitaCredentials,
@@ -25,18 +28,21 @@ import {
   isNovitaAuthFailureError,
   isNovitaConsoleCredential,
 } from "~/services/apiService/novita/transport"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
 import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
 import { t } from "~/utils/i18n/core"
 
-/** Known provider facts survive the handoff to console-owned key acquisition. */
-export async function onboardNovitaAccount(params: {
-  existingAccount?: AccountAutoDetectExistingAccount
-  protectionBypassExecution?: ProtectionBypassExecution
-  diagnostics?: AccountDetectionDiagnostics
-}): Promise<AccountAutoDetectResponse> {
+/** Console discovery supplies a credential; Novita requires no key-issuance stage. */
+export const novitaAccountOnboarding: AccountOnboardingCapability = {
+  matchesUrl: isCanonicalNovitaUrl,
+  createSession: createNovitaOnboardingSession,
+}
+
+/** Keep explicit credential mode and console recovery within one onboarding attempt. */
+function createNovitaOnboardingSession(
+  params: AccountOnboardingRequest,
+): AccountOnboardingSession {
   const existing = params.existingAccount
   const accessToken =
     existing &&
@@ -51,23 +57,136 @@ export async function onboardNovitaAccount(params: {
     exchangeRate: DEFAULT_USD_TO_CNY_RATE,
     authType: AuthTypeEnum.AccessToken,
   }
-  if (accessToken && existing?.novitaCredentialMode !== "console") {
-    try {
-      const verificationToken =
-        existing?.novitaCredentialMode === "api-key"
-          ? parseNovitaCredentials(accessToken).apiKey
-          : accessToken
+  let discovered: { userId: string; accessToken: string } | undefined
+
+  /** Retain known provider and identity facts when automatic completion is unavailable. */
+  function manualGuidance(): AccountAutoDetectResponse {
+    const message =
+      existing?.novitaCredentialMode === "console"
+        ? t("messages:novita.consoleAcquisitionFailed")
+        : t("messages:novita.apiKeyRequired")
+    return {
+      kind: "detected",
+      success: false,
+      message,
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+      detailedError: {
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+        message,
+        canUseApiCredentialFallback: false,
+      },
+      recoveryData,
+    }
+  }
+
+  return {
+    async verifyExistingCredentials() {
+      if (accessToken && existing?.novitaCredentialMode !== "console") {
+        try {
+          const verificationToken =
+            existing?.novitaCredentialMode === "api-key"
+              ? parseNovitaCredentials(accessToken).apiKey
+              : accessToken
+          const data = await completeAutoDetectedAccount({
+            url: NOVITA_WEB_ORIGIN,
+            requestedAuthType: AuthTypeEnum.AccessToken,
+            protectionBypassExecution: params.protectionBypassExecution,
+            detected: {
+              siteType: SITE_TYPES.NOVITA,
+              userId: "",
+              accessToken: verificationToken,
+            },
+          })
+          if (
+            existing?.userId.trim() &&
+            data.userId !== existing.userId.trim()
+          ) {
+            throw new AutoDetectCompletionError(
+              AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
+              new Error("Novita account identity mismatch"),
+            )
+          }
+          return {
+            kind: "detected",
+            success: true,
+            message: t("accountDialog:messages.autoDetectSuccess"),
+            data: { ...data, accessToken },
+          }
+        } catch (error) {
+          const cause =
+            error instanceof AutoDetectCompletionError ? error.cause : error
+          const reason = getAutoDetectCompletionFailureReason(error)
+          const message =
+            reason === AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch
+              ? t("accountDialog:messages.autoDetectIdentityMismatch")
+              : getNovitaSafeErrorMessage(
+                  cause,
+                  t("messages:novita.networkFallback"),
+                )
+          if (
+            existing?.novitaCredentialMode === "api-key" ||
+            !(
+              isNovitaConsoleCredential(accessToken) &&
+              isNovitaAuthFailureError(cause)
+            )
+          )
+            return {
+              kind: "detected",
+              success: false,
+              message,
+              autoDetectFailureReason: reason,
+              detailedError: {
+                type: AutoDetectErrorType.INVALID_RESPONSE,
+                message,
+                canUseApiCredentialFallback: false,
+              },
+              recoveryData,
+            }
+        }
+      }
+      return undefined
+    },
+    async discoverIdentity() {
+      if (existing?.novitaCredentialMode === "api-key") return
+      const detected = await autoDetectSmart(
+        NOVITA_WEB_ORIGIN,
+        params.protectionBypassExecution,
+        params.diagnostics,
+      )
+      if (!detected.success || detected.data.siteType !== SITE_TYPES.NOVITA)
+        return
+      const userId = normalizeAccountIdentity(detected.data.userId)
+      const username = detected.data.user.username?.trim()
+      if (!userId || !username) return
+      if (
+        existing &&
+        isCanonicalNovitaUrl(existing.url) &&
+        existing.siteType === SITE_TYPES.NOVITA &&
+        existing.userId.trim() &&
+        existing.userId.trim() !== userId
+      ) {
+        throw new AutoDetectCompletionError(
+          AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
+          new Error("Novita account identity mismatch"),
+        )
+      }
+      Object.assign(recoveryData, { userId, username })
+      if (
+        detected.data.accessToken &&
+        isNovitaConsoleCredential(detected.data.accessToken)
+      ) {
+        discovered = { userId, accessToken: detected.data.accessToken }
+      }
+    },
+    async verifyAccount() {
+      if (!discovered) return manualGuidance()
       const data = await completeAutoDetectedAccount({
         url: NOVITA_WEB_ORIGIN,
         requestedAuthType: AuthTypeEnum.AccessToken,
         protectionBypassExecution: params.protectionBypassExecution,
-        detected: {
-          siteType: SITE_TYPES.NOVITA,
-          userId: "",
-          accessToken: verificationToken,
-        },
+        detected: { siteType: SITE_TYPES.NOVITA, ...discovered },
       })
-      if (existing?.userId.trim() && data.userId !== existing.userId.trim()) {
+      if (data.userId !== discovered.userId) {
         throw new AutoDetectCompletionError(
           AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
           new Error("Novita account identity mismatch"),
@@ -77,128 +196,36 @@ export async function onboardNovitaAccount(params: {
         kind: "detected",
         success: true,
         message: t("accountDialog:messages.autoDetectSuccess"),
-        data: { ...data, accessToken },
+        data: {
+          ...data,
+          accessToken: encodeNovitaCredentials({
+            apiKey: parseNovitaCredentials(accessToken).apiKey,
+            consoleToken: parseNovitaCredentials(data.accessToken).consoleToken,
+          }),
+        },
       }
-    } catch (error) {
-      const cause =
-        error instanceof AutoDetectCompletionError ? error.cause : error
+    },
+    fail(error) {
       const reason = getAutoDetectCompletionFailureReason(error)
-      const message =
+      const mismatch =
         reason === AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch
+      if (
+        mismatch ||
+        (existing?.novitaCredentialMode === "console" && accessToken)
+      ) {
+        const cause =
+          error instanceof AutoDetectCompletionError ? error.cause : error
+        const message = mismatch
           ? t("accountDialog:messages.autoDetectIdentityMismatch")
           : getNovitaSafeErrorMessage(
               cause,
               t("messages:novita.networkFallback"),
             )
-      if (
-        existing?.novitaCredentialMode === "api-key" ||
-        !(
-          isNovitaConsoleCredential(accessToken) &&
-          isNovitaAuthFailureError(cause)
-        )
-      )
         return {
           kind: "detected",
           success: false,
           message,
-          autoDetectFailureReason: reason,
-          detailedError: {
-            type: AutoDetectErrorType.INVALID_RESPONSE,
-            message,
-            canUseApiCredentialFallback: false,
-          },
-          recoveryData,
-        }
-    }
-  }
-  // Fresh onboarding defaults to the verified console bearer, whose scope
-  // covers management. A pasted sk_ key remains an explicit alternative.
-  if (existing?.novitaCredentialMode !== "api-key")
-    try {
-      const detected = await autoDetectSmart(
-        NOVITA_WEB_ORIGIN,
-        params.protectionBypassExecution,
-        params.diagnostics,
-      )
-      if (detected.success && detected.data.siteType === SITE_TYPES.NOVITA) {
-        const userId = normalizeAccountIdentity(detected.data.userId)
-        const username = detected.data.user.username?.trim()
-        if (userId && username) {
-          if (
-            existing &&
-            isCanonicalNovitaUrl(existing.url) &&
-            existing.siteType === SITE_TYPES.NOVITA &&
-            existing.userId.trim() &&
-            existing.userId.trim() !== userId
-          ) {
-            const message = t(
-              "accountDialog:messages.autoDetectIdentityMismatch",
-            )
-            return {
-              kind: "detected",
-              success: false,
-              message,
-              autoDetectFailureReason:
-                AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
-              detailedError: {
-                type: AutoDetectErrorType.INVALID_RESPONSE,
-                message,
-                canUseApiCredentialFallback: false,
-              },
-              recoveryData,
-            }
-          }
-          recoveryData.userId = userId
-          recoveryData.username = username
-          if (isNovitaConsoleCredential(detected.data.accessToken)) {
-            const data = await completeAutoDetectedAccount({
-              url: NOVITA_WEB_ORIGIN,
-              requestedAuthType: AuthTypeEnum.AccessToken,
-              protectionBypassExecution: params.protectionBypassExecution,
-              detected: {
-                siteType: SITE_TYPES.NOVITA,
-                userId,
-                accessToken: detected.data.accessToken,
-              },
-            })
-            if (data.userId !== userId) {
-              return {
-                kind: "detected",
-                success: false,
-                message: t("accountDialog:messages.autoDetectIdentityMismatch"),
-                autoDetectFailureReason:
-                  AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
-                recoveryData,
-              }
-            }
-            return {
-              kind: "detected",
-              success: true,
-              message: t("accountDialog:messages.autoDetectSuccess"),
-              data: {
-                ...data,
-                accessToken: encodeNovitaCredentials({
-                  apiKey: parseNovitaCredentials(accessToken).apiKey,
-                  consoleToken: parseNovitaCredentials(data.accessToken)
-                    .consoleToken,
-                }),
-              },
-            }
-          }
-        }
-      }
-    } catch (error) {
-      if (existing?.novitaCredentialMode === "console" && accessToken) {
-        const cause =
-          error instanceof AutoDetectCompletionError ? error.cause : error
-        const message = getNovitaSafeErrorMessage(
-          cause,
-          t("messages:novita.networkFallback"),
-        )
-        return {
-          kind: "detected",
-          success: false,
-          message,
+          ...(mismatch ? { autoDetectFailureReason: reason } : {}),
           detailedError: {
             type: AutoDetectErrorType.INVALID_RESPONSE,
             message,
@@ -208,21 +235,7 @@ export async function onboardNovitaAccount(params: {
         }
       }
       // Signed-out, unavailable and challenged sessions retain the manual path.
-    }
-  const message =
-    existing?.novitaCredentialMode === "console"
-      ? t("messages:novita.consoleAcquisitionFailed")
-      : t("messages:novita.apiKeyRequired")
-  return {
-    kind: "detected",
-    success: false,
-    message,
-    autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
-    detailedError: {
-      type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
-      message,
-      canUseApiCredentialFallback: false,
+      return manualGuidance()
     },
-    recoveryData,
   }
 }

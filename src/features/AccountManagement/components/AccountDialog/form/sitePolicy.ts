@@ -34,6 +34,8 @@ export interface AccountDialogSitePolicy {
   allowCookieAutoImport: boolean
   allowKimiOpenPlatformAuthState: boolean
   allowSub2ApiRefreshTokenState: boolean
+  /** The site stores a second static API key beside its primary credential. */
+  allowAimlApiKey: boolean
   openSub2ApiTokenDialogPostSave: boolean
   deferSuccessForOneTimeKeyPostSaveFlow: boolean
   supportsKeyProvisioning: boolean
@@ -84,6 +86,9 @@ export function getAccountDialogSitePolicy(
       productProfile.authSession.kind ===
       ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.KimiRefreshToken,
     allowSub2ApiRefreshTokenState: usesSub2ApiRefreshSession,
+    allowAimlApiKey:
+      productProfile.authSession.kind ===
+      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.SecondaryApiKey,
     openSub2ApiTokenDialogPostSave: usesSub2ApiRefreshSession,
     deferSuccessForOneTimeKeyPostSaveFlow:
       productProfile.createdToken.secretHandling ===
@@ -122,6 +127,7 @@ export function normalizeAccountDialogDraftForSitePolicy(params: {
     kimiOpenPlatformAuth: policy.allowKimiOpenPlatformAuthState
       ? draft.kimiOpenPlatformAuth
       : null,
+    aimlApiKey: policy.allowAimlApiKey ? draft.aimlApiKey : "",
   }
 
   return arePolicyDraftFieldsEquivalent(draft, nextDraft) ? draft : nextDraft
@@ -215,6 +221,7 @@ function arePolicyDraftFieldsEquivalent(
     left.kimiOpenPlatformAuth?.organizationId ===
       right.kimiOpenPlatformAuth?.organizationId &&
     left.kimiOpenPlatformAuth?.tokenExpiresAt ===
-      right.kimiOpenPlatformAuth?.tokenExpiresAt
+      right.kimiOpenPlatformAuth?.tokenExpiresAt &&
+    left.aimlApiKey === right.aimlApiKey
   )
 }

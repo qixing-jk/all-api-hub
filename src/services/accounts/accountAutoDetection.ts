@@ -17,6 +17,8 @@ import {
   getAutoDetectCompletionFailureReason,
 } from "~/services/accounts/autoDetectCompletion/completion"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
+import { getAccountOnboardingCapability } from "~/services/accounts/onboarding/registry"
+import { runAccountOnboarding } from "~/services/accounts/onboarding/run"
 import {
   analyzeAutoDetectError,
   AUTO_DETECT_FAILURE_REASONS,
@@ -25,14 +27,13 @@ import {
   type AutoDetectAnalyticsContext,
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { isCanonicalNovitaUrl } from "~/services/accountSiteDefinitions/identifiers"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import type { AccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/contracts"
 import {
   createAccountDetectionDiagnostics,
   type AccountDetectionDiagnostics,
 } from "~/services/accountSiteOnboarding/diagnostics"
 import { getAccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/registry"
-import { onboardNovitaAccount } from "~/services/apiAdapters/novita/accountOnboarding"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
@@ -128,6 +129,11 @@ function getPrivateDetectionFailure(
     message,
     detailedError: {
       ...getAutoDetectCompletionDetailedError(message, reason, message),
+      ...(getAccountSiteDefinition(policy.siteType)?.onboarding
+        ?.accessTokenVerificationGuide &&
+      reason === AUTO_DETECT_FAILURE_REASONS.UserDataMissing
+        ? { type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED }
+        : {}),
       message,
     },
   }
@@ -139,7 +145,10 @@ async function runAutoDetectAccount(
   authType: AuthTypeEnum,
   protectionBypassExecution?: ProtectionBypassExecution,
   cookieAuthSessionCookie?: string,
-  options?: { existingAccount?: AccountAutoDetectExistingAccount },
+  options?: {
+    existingAccount?: AccountAutoDetectExistingAccount
+    allowCredentialCreation?: boolean
+  },
   diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AccountAutoDetectResponse> {
   if (!url.trim()) {
@@ -151,9 +160,11 @@ async function runAutoDetectAccount(
   }
 
   const normalizedUrl = url.trim()
-  if (isCanonicalNovitaUrl(normalizedUrl)) {
-    return onboardNovitaAccount({
+  const onboarding = getAccountOnboardingCapability(normalizedUrl)
+  if (onboarding) {
+    return runAccountOnboarding(onboarding, {
       existingAccount: options?.existingAccount,
+      allowCredentialCreation: options?.allowCredentialCreation,
       protectionBypassExecution,
       diagnostics,
     })
@@ -369,7 +380,10 @@ export async function autoDetectAccount(
   authType: AuthTypeEnum,
   protectionBypassExecution?: ProtectionBypassExecution,
   cookieAuthSessionCookie?: string,
-  options?: { existingAccount?: AccountAutoDetectExistingAccount },
+  options?: {
+    existingAccount?: AccountAutoDetectExistingAccount
+    allowCredentialCreation?: boolean
+  },
 ): Promise<AccountAutoDetectResponse> {
   const diagnostics = createAccountDetectionDiagnostics()
   diagnostics.record("account_detection_started", { authType })

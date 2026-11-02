@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "aimlapi": {
+      "openPage": "Abrir chaves da AI/ML API",
+      "openPageFailed": "Não foi possível abrir a página de chaves. Abra https://aimlapi.com/app/keys manualmente e volte aqui.",
+      "pasteStep": "Volte aqui e cole a chave de gerenciamento abaixo. Para consultar o saldo, adicione também uma chave de API comum e salve a conta."
+    },
     "apiyi": {
       "generateStep": "Se já tiver um Access Token válido e completo, você pode usá-lo. Caso contrário, abra “System token” no seu perfil da APIyi e digite sua senha no site para gerar um.",
       "openProfile": "Abrir perfil da APIyi",
@@ -121,6 +126,12 @@
     "accessToken": "Token de acesso",
     "agentRouterLoginCheckInMethod": "Entrar novamente e fazer check-in",
     "agentRouterLoginCheckInMethodDesc": "Entre no Agent Router e confirme o resultado do check-in.",
+    "aimlApiKey": "Chave de API comum (opcional)",
+    "aimlApiKeyHelp": "O AI/ML API só mostra saldo, cobrança e uso para uma chave de API comum, enquanto o gerenciamento de chaves exige a chave de gerenciamento acima. Adicione uma chave comum para ler o saldo; sem ela a conta ainda gerencia chaves, mas o saldo aparece como indisponível.",
+    "aimlApiKeyPlaceholder": "Cole uma chave de API comum",
+    "aimlApiManagementKey": "Chave de gerenciamento do AI/ML API",
+    "aimlApiManagementKeyGuidance": "Abra \"API keys\" no AI/ML API, mude para a aba \"Management keys\", crie uma chave de gerenciamento e copie-a imediatamente - ela é exibida apenas uma vez. Chaves de inferência não gerenciam chaves e não servem aqui.",
+    "aimlApiManagementKeyGuidanceTitle": "Use uma chave de gerenciamento do AI/ML API",
     "autoCheckInEnabled": "Habilitar check-in automático diário",
     "autoCheckInEnabledDesc": "Se esta conta participa do check-in diário quando o check-in automático global está ativado",
     "autoCheckInPausedBySiteDesc": "Esta configuração será mantida; o check-in automático será retomado quando o site habilitar o check-in.",
@@ -251,6 +262,7 @@
     "vercelTeamPlaceholder": "Selecione uma equipe"
   },
   "infoPanel": {
+    "aimlapiBootstrapInfo": "Use sua sessão conectada da AI/ML API para reutilizar ou criar chaves dedicadas de gerenciamento e API, verificá-las e preencher seu nome de usuário e ID. Se a conexão automática não for concluída, siga o guia manual.",
     "autoDetect": "Detecção automática",
     "autoDetectInfo": "Faça login no site de destino primeiro. A extensão detectará e preencherá automaticamente as informações necessárias para adicionar a conta.",
     "confirmAddInfo": "Confira se as informações da conta estão corretas antes de clicar em \"Confirmar adição\".",

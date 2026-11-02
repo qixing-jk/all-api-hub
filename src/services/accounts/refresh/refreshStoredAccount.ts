@@ -281,6 +281,11 @@ function createAccountRefreshRequest(
     exchangeRate: account.exchange_rate,
     auth,
     includeTodayCashflow,
+    // Background refresh carries the second static credential too, so billing
+    // reads do not depend on an open console tab.
+    ...(account.aimlApiAuth?.apiKey
+      ? { aimlApiKey: account.aimlApiAuth.apiKey }
+      : {}),
     ...(options?.tempWindowRequestSource
       ? { tempWindowRequestSource: options.tempWindowRequestSource }
       : {}),
