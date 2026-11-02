@@ -140,6 +140,39 @@ describe("check-in feedback workflow", () => {
     ).toBeVisible()
   })
 
+  it.each(["rawMessage", "message"] as const)(
+    "omits saved %s when account credentials cannot be loaded",
+    async (field) => {
+      const user = userEvent.setup()
+      vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(null)
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{
+              accountId: "account",
+              snapshot: {
+                ...snapshot,
+                execution: {
+                  status: "failed",
+                  [field]: "unknown-saved-secret",
+                },
+              },
+            }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await screen.findByLabelText("What happened? (optional)")
+      await user.click(screen.getByText("Review and edit submission"))
+      expect(
+        (
+          screen.getByLabelText(
+            "Full submission (select to copy)",
+          ) as HTMLTextAreaElement
+        ).value,
+      ).not.toContain("unknown-saved-secret")
+    },
+  )
   it("ignores a saved account lookup completed after closing", async () => {
     let resolve!: (account: ReturnType<typeof buildSiteAccount>) => void
     vi.mocked(accountQueries.getAccountById).mockImplementationOnce(
@@ -173,7 +206,7 @@ describe("check-in feedback workflow", () => {
           health: {
             status: SiteHealthStatus.Error,
             reason:
-              "Failed saved-access-secret session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret",
+              "Failed saved-access-secret session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret kimi-secret aiml-secret",
           },
           account_info: {
             ...buildSiteAccount().account_info,
@@ -184,6 +217,11 @@ describe("check-in feedback workflow", () => {
               "session=saved-access-secret; private_field=hidden-cookie-value",
           },
           sub2apiAuth: { refreshToken: "saved-refresh-secret" },
+          kimiOpenPlatformAuth: {
+            refreshToken: "kimi-secret",
+            organizationId: "org",
+          },
+          aimlApiAuth: { apiKey: "aiml-secret" },
           last_sync_time: 1000,
         }),
       )
@@ -195,7 +233,7 @@ describe("check-in feedback workflow", () => {
             status: "failed",
             timestamp: 1,
             rawMessage:
-              "Failed session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret",
+              "Failed session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret kimi-secret aiml-secret",
           },
         },
       } as Awaited<ReturnType<typeof autoCheckinStorage.getStatus>>)
@@ -235,6 +273,8 @@ describe("check-in feedback workflow", () => {
       expect(diagnosticText).not.toContain("saved-access-secret")
       expect(diagnosticText).not.toContain("hidden-cookie-value")
       expect(diagnosticText).not.toContain("saved-refresh-secret")
+      expect(diagnosticText).not.toContain("kimi-secret")
+      expect(diagnosticText).not.toContain("aiml-secret")
       expect((details as HTMLTextAreaElement).value).not.toContain(
         "private-access-token",
       )

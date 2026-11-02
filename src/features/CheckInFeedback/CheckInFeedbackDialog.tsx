@@ -20,6 +20,8 @@ function getAccountSecrets(account: SiteAccount): string[] {
     account.account_info.access_token,
     account.cookieAuth?.sessionCookie,
     account.sub2apiAuth?.refreshToken,
+    account.kimiOpenPlatformAuth?.refreshToken,
+    account.aimlApiAuth?.apiKey,
   ]
     .filter((secret): secret is string => Boolean(secret))
     .sort((a, b) => b.length - a.length)
@@ -30,10 +32,15 @@ function sanitizeExecution(
   execution: CheckInFeedbackSnapshot["execution"],
   account: SiteAccount | null,
 ) {
-  if (!execution || !account) return execution
+  if (!execution) return execution
+  if (!account)
+    return { ...execution, rawMessage: undefined, message: undefined }
   const secrets = getAccountSecrets(account)
   return {
     ...execution,
+    message: execution.message
+      ? toSanitizedErrorSummary(execution.message, secrets)
+      : execution.message,
     rawMessage: execution.rawMessage
       ? toSanitizedErrorSummary(execution.rawMessage, secrets)
       : execution.rawMessage,
@@ -119,7 +126,7 @@ export default function CheckInFeedbackDialog({
               siteType: account.site_type,
               checkIn: account.checkIn,
               refresh: getRefreshSnapshot(account),
-              execution,
+              execution: sanitizeExecution(execution, account),
             },
             auth: {
               authType: account.authType,
