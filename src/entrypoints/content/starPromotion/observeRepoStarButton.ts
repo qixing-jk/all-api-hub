@@ -50,6 +50,7 @@ export function setupStarPromotionContent(): () => void {
   const reportState = (state: GitHubRepoStarState) => {
     reportPending = true
     let verifiedRemoval = false
+    let acknowledged = false
     const removalEvidence =
       state === GITHUB_REPO_STAR_STATES.NotStarred
         ? reportedState === GITHUB_REPO_STAR_STATES.Starred
@@ -69,6 +70,7 @@ export function setupStarPromotionContent(): () => void {
       })
       .then((response) => {
         if (response?.success === true) {
+          acknowledged = true
           if (state === GITHUB_REPO_STAR_STATES.Starred || verifiedRemoval)
             reportedState = state
           return
@@ -84,8 +86,8 @@ export function setupStarPromotionContent(): () => void {
         reportPending = false
         if (
           !disposed &&
-          state === GITHUB_REPO_STAR_STATES.NotStarred &&
-          !verifiedRemoval
+          (!acknowledged ||
+            (state === GITHUB_REPO_STAR_STATES.NotStarred && !verifiedRemoval))
         ) {
           retryTimer = window.setTimeout(() => {
             retryTimer = undefined

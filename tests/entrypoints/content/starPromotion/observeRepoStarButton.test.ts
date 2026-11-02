@@ -200,6 +200,30 @@ describe("setupStarPromotionContent", () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
+  it.each([false, true])(
+    "retries unacknowledged state %s after hydration polling has stopped",
+    async (starred) => {
+      renderStarButton(!starred)
+      vi.mocked(fetch).mockResolvedValue(
+        new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+      )
+      const cleanup = setupStarPromotionContent()
+      await vi.advanceTimersByTimeAsync(30_000)
+      sendRuntimeActionMessageMock.mockResolvedValueOnce({ success: false })
+      document
+        .querySelector("button")
+        ?.setAttribute("aria-pressed", String(starred))
+      await vi.advanceTimersByTimeAsync(1)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(3)
+      expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ starred }),
+      )
+      cleanup()
+    },
+  )
+
   it("retries an unchanged state after a failed acknowledgement", async () => {
     sendRuntimeActionMessageMock
       .mockResolvedValueOnce({ success: false })
