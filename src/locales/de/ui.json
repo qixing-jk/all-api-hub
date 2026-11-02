@@ -481,13 +481,10 @@
       "titleWithCookieInterceptor": "Automatische Aktualisierung erfordert Website-Überprüfung"
     },
     "updateLog": {
-      "autoOpenSetting": "Automatisches Öffnen des Protokolls aktualisieren",
-      "disableAutoOpen": "Nach Updates nicht anzeigen",
-      "enableAutoOpen": "Nach Updates wieder aktivieren",
       "loading": "Änderungsprotokoll wird geladen…",
-      "missingSection": "Die Änderungsprotokollvorschau für v{{version}} konnte nicht geladen werden. Sie können das vollständige Änderungsprotokoll öffnen.",
-      "openFullChangelog": "Vollständiges Änderungsprotokoll öffnen",
-      "starPrompt": "Finden Sie All API Hub nützlich? Vergeben Sie einen Stern, um die täglichen Updates zu verfolgen",
+      "missingSection": "Das Änderungsprotokoll für v{{version}} lädt langsam. Du kannst es in einem neuen Tab öffnen.",
+      "openFullChangelog": "Änderungsprotokoll ansehen",
+      "starPrompt": "Unterstütze weitere Verbesserungen mit einem Stern auf GitHub",
       "title": "Was ist neu",
       "updatedTo": "Aktualisiert auf v{{version}}"
     }
@@ -682,7 +679,7 @@
       "star": "Stern vergeben"
     },
     "cardDescription": "All API Hub ist vollständig Open Source und unterstützt laufend mehr Seiten, während die Bedienung weiter verfeinert wird. Ein Stern trägt die laufende Pflege mit und hilft mehr Menschen, es zu finden.",
-    "cardTitle": "Hilft Ihnen All API Hub?"
+    "cardTitle": "Unterstütze weitere Verbesserungen"
   },
   "textEntries": {
     "add": "Zeile hinzufügen",

@@ -612,7 +612,7 @@
       "cta": "GitHub でソースコードや最新の進捗を確認できます。問題の報告やアイデアの共有も歓迎します。",
       "getStartedCta": "はじめにを開く",
       "label": "ソースコード",
-      "starCta": "All API Hub が役に立ったら、GitHub で Star を付けてプロジェクトを応援"
+      "starCta": "GitHub の Star で継続的な改善を応援"
     },
     "reason": {
       "newPermissions": "新しい機能には追加の任意権限が必要です。各権限の用途を確認し、必要なものだけを許可してください。"

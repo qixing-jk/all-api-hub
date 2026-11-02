@@ -6,7 +6,12 @@
  * so callers must tolerate a `null` (unknown) result and retry.
  */
 
-export type GitHubRepoStarState = "starred" | "not_starred"
+export const GITHUB_REPO_STAR_STATES = {
+  Starred: "starred",
+  NotStarred: "not_starred",
+} as const
+export type GitHubRepoStarState =
+  (typeof GITHUB_REPO_STAR_STATES)[keyof typeof GITHUB_REPO_STAR_STATES]
 
 /** Matches star/unstar form actions such as `/owner/repo/star` or `/unstar`. */
 const STAR_FORM_ACTION_PATTERN = /(?:^|\/)(unstar|star)\/?(?:$|\?|#)/
@@ -29,10 +34,10 @@ export function resolveGitHubRepoStarState(
 
     const pressed = toggle.getAttribute("aria-pressed")
     if (pressed === "true") {
-      return "starred"
+      return GITHUB_REPO_STAR_STATES.Starred
     }
     if (pressed === "false") {
-      return "not_starred"
+      return GITHUB_REPO_STAR_STATES.NotStarred
     }
   }
 
@@ -46,7 +51,9 @@ export function resolveGitHubRepoStarState(
       continue
     }
 
-    return match[1] === "unstar" ? "starred" : "not_starred"
+    return match[1] === "unstar"
+      ? GITHUB_REPO_STAR_STATES.Starred
+      : GITHUB_REPO_STAR_STATES.NotStarred
   }
 
   return null

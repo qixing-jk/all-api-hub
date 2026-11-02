@@ -19,6 +19,7 @@ function renderStarButton(pressed: boolean) {
 
 describe("setupStarPromotionContent", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
     vi.useFakeTimers()
     window.history.replaceState({}, "", "/qixing-jk/all-api-hub")
     sendRuntimeActionMessageMock
@@ -28,8 +29,249 @@ describe("setupStarPromotionContent", () => {
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     vi.useRealTimers()
     document.body.innerHTML = ""
+  })
+
+  it("verifies an initial unstarred page with a fresh authenticated read", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+    )
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: false, starRemoved: true }),
+      ),
+    )
+    expect(fetch).toHaveBeenCalledWith(
+      window.location.href,
+      expect.objectContaining({
+        cache: "no-store",
+        credentials: "same-origin",
+      }),
+    )
+    cleanup()
+  })
+
+  it("reports the starred state found by a fresh page despite the stale live page", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/unstar"></form>'),
+    )
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: true, starRemoved: false }),
+      ),
+    )
+    cleanup()
+  })
+
+  it.each(["unknown", "http-error", "redirect"])(
+    "does not confirm removal from a %s verification result",
+    async (result) => {
+      renderStarButton(false)
+      const response = new Response("<html></html>", {
+        status: result === "http-error" ? 500 : 200,
+      })
+      if (result === "redirect")
+        Object.defineProperty(response, "redirected", { value: true })
+      vi.mocked(fetch).mockResolvedValue(response)
+      const cleanup = setupStarPromotionContent()
+      await vi.waitFor(() =>
+        expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+          expect.objectContaining({ starred: false, starRemoved: false }),
+        ),
+      )
+      cleanup()
+    },
+  )
+
+  it("keeps detected completion when verification times out", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch).mockImplementation(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () =>
+            reject(new Error("aborted")),
+          )
+        }),
+    )
+    const cleanup = setupStarPromotionContent()
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ starred: false, starRemoved: false }),
+    )
+    cleanup()
+  })
+
+  it("does not publish verification after the observer is disposed", async () => {
+    renderStarButton(false)
+    let finish!: (response: Response) => void
+    vi.mocked(fetch).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const cleanup = setupStarPromotionContent()
+    cleanup()
+    finish(new Response('<form action="/qixing-jk/all-api-hub/star"></form>'))
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
+  })
+
+  it("discards removal evidence when the live page became starred during verification", async () => {
+    renderStarButton(false)
+    let finish!: (response: Response) => void
+    vi.mocked(fetch).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const cleanup = setupStarPromotionContent()
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
+    finish(new Response('<form action="/qixing-jk/all-api-hub/star"></form>'))
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: true }),
+      ),
+    )
+    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ starRemoved: true }),
+    )
+    cleanup()
+  })
+
+  it.each([new Error("worker failed"), "worker failed"])(
+    "retries after a rejected report",
+    async (error) => {
+      sendRuntimeActionMessageMock
+        .mockRejectedValueOnce(error)
+        .mockResolvedValue({ success: true })
+      const cleanup = setupStarPromotionContent()
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+      cleanup()
+    },
+  )
+
+  it("retries fresh verification after a failed read was acknowledged", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch)
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(
+        new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+      )
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starRemoved: false }),
+      ),
+    )
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starRemoved: true }),
+    )
+    cleanup()
+  })
+
+  it("backs off unverified reads despite unrelated DOM mutations", async () => {
+    renderStarButton(false)
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    for (let index = 0; index < 3; index++) {
+      document.body.append(document.createElement("span"))
+      await vi.advanceTimersByTimeAsync(1_000)
+    }
+    expect(fetch).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starred: true }),
+    )
+    cleanup()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([false, true])(
+    "retries unacknowledged state %s after hydration polling has stopped",
+    async (starred) => {
+      renderStarButton(!starred)
+      vi.mocked(fetch).mockResolvedValue(
+        new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+      )
+      const cleanup = setupStarPromotionContent()
+      await vi.advanceTimersByTimeAsync(30_000)
+      sendRuntimeActionMessageMock.mockResolvedValueOnce({ success: false })
+      document
+        .querySelector("button")
+        ?.setAttribute("aria-pressed", String(starred))
+      await vi.advanceTimersByTimeAsync(1)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(3)
+      expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ starred }),
+      )
+      cleanup()
+    },
+  )
+
+  it("revalidates a removal when another tab has starred the repository", async () => {
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1),
+    )
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/unstar"></form>'),
+    )
+    document.querySelector("button")?.setAttribute("aria-pressed", "false")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starred: true, starRemoved: false }),
+    )
+    cleanup()
+  })
+
+  it("preserves backoff for a failed starred report despite mutations", async () => {
+    sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1),
+    )
+    for (let index = 0; index < 3; index++) {
+      document.body.append(document.createElement("span"))
+      await vi.advanceTimersByTimeAsync(1_000)
+    }
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+    cleanup()
+  })
+
+  it("reports a new star after an acknowledged unverified unstarred report", async () => {
+    const cleanup = setupStarPromotionContent()
+    await vi.advanceTimersByTimeAsync(1)
+    document.querySelector("button")?.setAttribute("aria-pressed", "false")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(3)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starred: true }),
+    )
+    cleanup()
   })
 
   it("retries an unchanged state after a failed acknowledgement", async () => {
@@ -42,6 +284,7 @@ describe("setupStarPromotionContent", () => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
     })
     document.body.append(document.createElement("span"))
+    await vi.advanceTimersByTimeAsync(5_000)
 
     await vi.waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
@@ -51,19 +294,29 @@ describe("setupStarPromotionContent", () => {
 
   it("keeps mutation detection active after hydration polling times out", async () => {
     renderStarButton(false)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+    )
     const cleanup = setupStarPromotionContent()
-    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: false, starRemoved: true }),
+      ),
+    )
 
     await vi.advanceTimersByTimeAsync(30_000)
     document.querySelector("button")?.setAttribute("aria-pressed", "true")
 
     await vi.waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
     })
     cleanup()
   })
 
-  it("does not report unstarred changes or duplicate the starred state", async () => {
+  it("reports unstarred changes or duplicate the starred state", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+    )
     const cleanup = setupStarPromotionContent()
     await vi.waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
@@ -74,8 +327,11 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
 
     document.querySelector("button")?.setAttribute("aria-pressed", "false")
-    await Promise.resolve()
-    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ starred: false, starRemoved: true }),
+      ),
+    )
     cleanup()
   })
 
@@ -85,12 +341,15 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
 
     renderStarButton(false)
-    await Promise.resolve()
-    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: false }),
+      ),
+    )
 
     document.querySelector("button")?.setAttribute("aria-pressed", "true")
     await vi.waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
     })
     cleanup()
   })

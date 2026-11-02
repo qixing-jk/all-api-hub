@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { StarPromotionCard } from "~/features/StarPromotion/StarPromotionCard"
 import { STAR_PROMOTION_CARD_TEST_IDS } from "~/features/StarPromotion/StarPromotionCardView"
+import { STAR_PROMOTION_STATUSES } from "~/services/starPromotion/contracts"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render } from "~~/tests/test-utils/render"
 
@@ -104,7 +105,7 @@ describe("star promotion card", () => {
     ).toBeInTheDocument()
   })
 
-  it("completes the promotion and opens the repository when starring", async () => {
+  it("defers the invitation after opening the repository", async () => {
     render(<StarPromotionCard />, RENDER_OPTIONS)
 
     fireEvent.click(
@@ -112,10 +113,25 @@ describe("star promotion card", () => {
     )
 
     await waitFor(() => {
-      expect(markCompletedMock).toHaveBeenCalledTimes(1)
+      expect(markCompletedMock).not.toHaveBeenCalled()
+      expect(deferThresholdPromptMock).toHaveBeenCalledTimes(1)
       expect(createTabMock).toHaveBeenCalledTimes(1)
     })
     expect(screen.queryByTestId(STAR_PROMOTION_CARD_TEST_IDS.card)).toBeNull()
+  })
+
+  it("keeps the invitation retryable when opening GitHub fails", async () => {
+    createTabMock.mockRejectedValueOnce(new Error("tab failed"))
+    render(<StarPromotionCard />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByTestId(STAR_PROMOTION_CARD_TEST_IDS.star),
+    )
+    await waitFor(() => expect(createTabMock).toHaveBeenCalledTimes(1))
+    expect(markCompletedMock).not.toHaveBeenCalled()
+    expect(deferThresholdPromptMock).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId(STAR_PROMOTION_CARD_TEST_IDS.card),
+    ).toBeInTheDocument()
   })
 
   it("defers on the close control without leaving the card up", async () => {
@@ -151,7 +167,9 @@ describe("star promotion card", () => {
     ).toBeInTheDocument()
 
     act(() => {
-      atIndex(watchStateMock.mock.calls, 0)[0]({ status: "completed" })
+      atIndex(watchStateMock.mock.calls, 0)[0]({
+        status: STAR_PROMOTION_STATUSES.Completed,
+      })
     })
 
     await waitFor(() => {

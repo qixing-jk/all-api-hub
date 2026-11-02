@@ -8,7 +8,7 @@ import {
   Star,
   Users,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { ComponentType } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -21,7 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { REPO_URL } from "~/constants/about"
 import {
   useStarPromotionActive,
   useStarPromotionPromptImpression,
@@ -32,9 +31,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { trackStarPromotionAction } from "~/services/productAnalytics/facts/starPromotion"
-import { starPromotionState } from "~/services/starPromotion/state"
+import { openStarPromotionRepository } from "~/services/starPromotion/openRepository"
 import { isExtensionPopup, isExtensionSidePanel } from "~/utils/browser"
-import { createTab } from "~/utils/browser/tabs"
 import {
   openBugReportPage,
   openCommunityPage,
@@ -124,6 +122,9 @@ export function FeedbackDropdownMenu({
   const starPromotionActive = useStarPromotionActive()
   const [starItemDismissed, setStarItemDismissed] = useState(false)
   const starItemVisible = starPromotionActive && !starItemDismissed
+  useEffect(() => {
+    if (!starPromotionActive) setStarItemDismissed(false)
+  }, [starPromotionActive])
   const starPromotionEntrypoint = isExtensionSidePanel()
     ? PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel
     : isExtensionPopup()
@@ -134,14 +135,12 @@ export function FeedbackDropdownMenu({
     entrypoint: starPromotionEntrypoint,
   })
 
-  const handleStarClick = () => {
-    setStarItemDismissed(true)
+  const handleStarClick = async () => {
     trackStarPromotionAction(PRODUCT_ANALYTICS_ACTION_IDS.ClickStarPromotion, {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.FeedbackMenuStarItem,
       entrypoint: starPromotionEntrypoint,
     })
-    void starPromotionState.markCompleted()
-    void createTab(REPO_URL, true)
+    if (await openStarPromotionRepository()) setStarItemDismissed(true)
   }
 
   return (

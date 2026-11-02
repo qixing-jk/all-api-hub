@@ -6,6 +6,7 @@ import {
   useStarPromotionActive,
   useStarPromotionPromptImpression,
 } from "~/features/StarPromotion/useStarPromotionActive"
+import { STAR_PROMOTION_STATUSES } from "~/services/starPromotion/contracts"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { getStateMock, trackPromptShownMock, unwatchMock, watchStateMock } =
@@ -33,8 +34,26 @@ describe("useStarPromotionActive", () => {
     watchStateMock.mockReturnValue(unwatchMock)
   })
 
+  it("shows observed unstarred status while keeping invitations completed", async () => {
+    getStateMock.mockResolvedValue({
+      status: STAR_PROMOTION_STATUSES.Completed,
+    })
+    const { result } = renderHook(() => ({
+      starred: useIsStarred(),
+      active: useStarPromotionActive(),
+    }))
+    await waitFor(() => expect(result.current.starred).toBe(true))
+    act(() => {
+      atIndex(watchStateMock.mock.calls, 0)[0]({
+        status: STAR_PROMOTION_STATUSES.Completed,
+        githubStarred: false,
+      })
+    })
+    expect(result.current).toEqual({ starred: false, active: false })
+  })
+
   it("reports an active promotion once the stored state resolves", async () => {
-    getStateMock.mockResolvedValue({ status: "active" })
+    getStateMock.mockResolvedValue({ status: STAR_PROMOTION_STATUSES.Active })
 
     const { result } = renderHook(() => useStarPromotionActive())
 
@@ -43,7 +62,9 @@ describe("useStarPromotionActive", () => {
   })
 
   it("keeps the CTA hidden for a completed promotion", async () => {
-    getStateMock.mockResolvedValue({ status: "completed" })
+    getStateMock.mockResolvedValue({
+      status: STAR_PROMOTION_STATUSES.Completed,
+    })
 
     const { result } = renderHook(() => useStarPromotionActive())
 
@@ -52,7 +73,7 @@ describe("useStarPromotionActive", () => {
   })
 
   it("skips the storage read until the host surface is enabled", async () => {
-    getStateMock.mockResolvedValue({ status: "active" })
+    getStateMock.mockResolvedValue({ status: STAR_PROMOTION_STATUSES.Active })
 
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) => useStarPromotionActive(enabled),
@@ -69,20 +90,22 @@ describe("useStarPromotionActive", () => {
   })
 
   it("updates mounted consumers when promotion state changes", async () => {
-    getStateMock.mockResolvedValue({ status: "active" })
+    getStateMock.mockResolvedValue({ status: STAR_PROMOTION_STATUSES.Active })
 
     const { result } = renderHook(() => useStarPromotionActive())
     await waitFor(() => expect(result.current).toBe(true))
 
     act(() => {
-      atIndex(watchStateMock.mock.calls, 0)[0]({ status: "completed" })
+      atIndex(watchStateMock.mock.calls, 0)[0]({
+        status: STAR_PROMOTION_STATUSES.Completed,
+      })
     })
 
     expect(result.current).toBe(false)
   })
 
   it("clears stale activity and unsubscribes when disabled", async () => {
-    getStateMock.mockResolvedValue({ status: "active" })
+    getStateMock.mockResolvedValue({ status: STAR_PROMOTION_STATUSES.Active })
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) => useStarPromotionActive(enabled),
       { initialProps: { enabled: true } },
@@ -117,7 +140,9 @@ describe("useStarPromotionActive", () => {
   })
 
   it("reports isStarred only after resolving to completed status", async () => {
-    getStateMock.mockResolvedValue({ status: "completed" })
+    getStateMock.mockResolvedValue({
+      status: STAR_PROMOTION_STATUSES.Completed,
+    })
 
     const { result } = renderHook(() => useIsStarred())
     // Initially false while loading
@@ -127,7 +152,7 @@ describe("useStarPromotionActive", () => {
   })
 
   it("keeps isStarred false when status is active", async () => {
-    getStateMock.mockResolvedValue({ status: "active" })
+    getStateMock.mockResolvedValue({ status: STAR_PROMOTION_STATUSES.Active })
 
     const { result } = renderHook(() => useIsStarred())
     expect(result.current).toBe(false)

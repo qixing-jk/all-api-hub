@@ -612,7 +612,7 @@
       "cta": "Explore the source and latest progress on GitHub. You can also report problems or share ideas.",
       "getStartedCta": "Open getting started",
       "label": "Source code",
-      "starCta": "Finding All API Hub useful? Star it on GitHub to support the project"
+      "starCta": "Star on GitHub to support continued improvements"
     },
     "reason": {
       "newPermissions": "New features need additional optional permissions. Review what each one does and allow only what you need."

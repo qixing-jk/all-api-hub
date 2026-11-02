@@ -474,13 +474,10 @@
       "titleWithCookieInterceptor": "自動重新整理需要網站驗證"
     },
     "updateLog": {
-      "autoOpenSetting": "更新日誌自動開啟",
-      "disableAutoOpen": "不再自動開啟",
-      "enableAutoOpen": "重新啟用自動開啟",
       "loading": "正在載入更新日誌…",
-      "missingSection": "更新日誌預覽載入失敗（v{{version}}）。你可以開啟完整更新日誌檢視。",
-      "openFullChangelog": "開啟完整更新日誌",
-      "starPrompt": "覺得 All API Hub 有幫助？點個 Star 跟隨每日更新",
+      "missingSection": "更新日誌載入較慢（v{{version}}），可以開啟完整日誌查看。",
+      "openFullChangelog": "查看完整日誌",
+      "starPrompt": "點個 Star，支持持續改進",
       "title": "更新內容",
       "updatedTo": "已更新至 v{{version}}"
     }
@@ -674,7 +671,7 @@
       "star": "去 Star"
     },
     "cardDescription": "All API Hub 完全開源，不斷適配更多站點、優化使用體驗。點個 Star，支持它持續維護，也讓更多需要它的人發現這裡。",
-    "cardTitle": "用得順手嗎？"
+    "cardTitle": "支持持續改進"
   },
   "textEntries": {
     "add": "新增一列",
