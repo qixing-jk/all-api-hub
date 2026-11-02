@@ -5,7 +5,7 @@
 这些浏览器大多基于 Chromium 内核，但可用安装方式并不完全一样。能从浏览器商店或 Chrome Web Store 安装时，优先使用商店版本；需要 GitHub 附件时推荐 [自更新 `.crx`](./chromium-crx-self-update.md)，解压加载的 `.zip` 仅在 `.crx` 装不上时使用。
 
 ::: tip 我的浏览器算 Chromium 吗
-默认算：除 Firefox 和 Safari 以外，需要安装扩展的桌面浏览器基本都是 Chromium 系。下表中的浏览器都已按这个前提给出安装方式；完整的判断说明见 [Chromium 自更新安装](./chromium-crx-self-update.md)。
+本指南列出的 Chrome、Edge、Brave、Vivaldi、Opera 等浏览器属于 Chromium 系。其他浏览器请先确认内核和扩展支持；Firefox 及兼容浏览器请优先使用 Firefox Add-ons，Safari 请参阅 Safari 安装指南。浏览器列表见 [其他浏览器安装指南](./other-browser-install.md#supported-browsers)。
 :::
 
 ## 先看区别
@@ -218,7 +218,7 @@ liebao://extensions/
 
 ## 更新扩展
 
-`all-api-hub-chrome.crx` 自更新版由浏览器自动更新，无需按本节操作；在 `chrome://extensions/` 点「更新」可以立即检查一次。关于商店版、GitHub Stable 和 Nightly 的区别，请先查看 [安装渠道与更新说明](./extension-update-install.md)。
+`all-api-hub-chrome.crx` 自更新版由浏览器自动更新，无需按本节操作；在上方浏览器表格对应的扩展管理页点「更新」可以立即检查一次。关于商店版、GitHub Stable 和 Nightly 的区别，请先查看 [安装渠道与更新说明](./extension-update-install.md)。
 
 解压加载的 `.zip` 版本不会自动更新，更新时请按下面流程处理：
 

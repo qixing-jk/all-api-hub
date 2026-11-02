@@ -68,6 +68,7 @@ function generateAppendix(tag: string, assets: string[]): string {
         env: {
           ...process.env,
           GH_REPO: "fixture/repo",
+          DOCS_BASE_URL: "https://all-api-hub.qixing1217.top",
           TEST_RELEASE_JSON: releaseJson,
           TEST_TAG: tag,
         },
@@ -144,4 +145,10 @@ it("keeps the nightly notice for pre-releases", () => {
 
   expect(appendix).toContain("当前为 Nightly 预发布")
   expect(appendix).toContain("all-api-hub-nightly-chrome.crx")
+})
+
+it("recommends the available ZIP when a release has no CRX", () => {
+  const appendix = generateAppendix("v4.8.0", ["all-api-hub-4.8.0-chrome.zip"])
+  expect(appendix).not.toContain("推荐安装 `all-api-hub-chrome.crx`")
+  expect(appendix).toContain("当前发布未提供 `.crx`")
 })

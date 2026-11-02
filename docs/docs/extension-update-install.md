@@ -27,7 +27,7 @@ Chrome、Edge、Firefox 用户优先安装对应商店版。商店版安装最�
 如果你使用 QQ、360、猎豹、Brave、Vivaldi、Opera 等浏览器，请查看 [其他浏览器安装指南](./other-browser-install.md)。其中 Brave、Vivaldi、Opera 通常可以先尝试 Chrome Web Store；需要手动安装时优先选 `.crx`，详见 [Chromium 自更新安装](./chromium-crx-self-update.md)。
 
 ::: tip 我的浏览器算 Chromium 吗？
-默认算：除 Firefox 和 Safari 以外，需要安装扩展的桌面浏览器基本都是 Chromium 系，`.crx` 与 `.zip` 都可以用。不确定自己的浏览器属于哪一类时，对照 [其他浏览器安装指南的浏览器表格](./other-browser-install.md#supported-browsers) 即可。完整的判断说明见 [Chromium 自更新安装](./chromium-crx-self-update.md)。
+本指南列出的 Chrome、Edge、Brave、Vivaldi、Opera 等浏览器属于 Chromium 系。其他浏览器请先确认内核和扩展支持；Firefox 及兼容浏览器请优先使用 Firefox Add-ons，Safari 请参阅 Safari 安装指南。浏览器列表见 [其他浏览器安装指南](./other-browser-install.md#supported-browsers)。
 :::
 
 ## 为什么 GitHub 有新版，商店还没更新？
@@ -116,7 +116,7 @@ GitHub 附件有两种形式，更新方式完全不同：
 
 ### 插件内“检查更新”会自动下载 GitHub 安装包吗？
 
-不会。它只会显示版本状态，并让浏览器检查商店版是否能更新。GitHub 安装包需要你自己从 Releases 页面下载一次。
+不会。它按当前发行渠道检查版本状态，可打开 Releases 或商店页面，但不会自动下载 GitHub 安装包；解压加载包需要手动下载并更新。
 
 ### 点击“重新加载完成更新”会丢数据吗？
 

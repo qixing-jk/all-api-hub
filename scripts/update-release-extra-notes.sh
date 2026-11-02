@@ -108,7 +108,9 @@ const lines = [
   "",
   "### 使用说明",
   "- 大多数用户：Chrome / Edge / Firefox 优先从上方商店链接安装，商店版不需要任何额外配置。",
-  "- 必须用 GitHub 附件时，Chromium 浏览器推荐安装 `all-api-hub-chrome.crx`（Nightly 为 `all-api-hub-nightly-chrome.crx`）：它会按 `updates.xml` 自动更新，不用每次重新下载。具体是哪些浏览器、以及 stock Chrome / Edge 的一次性白名单配置，见下方「Chromium 自更新安装」。",
+  assetNames.some((name) => /chrome\.crx$/i.test(name))
+    ? "- 必须用 GitHub 附件时，Chromium 浏览器推荐安装 `all-api-hub-chrome.crx`（Nightly 为 `all-api-hub-nightly-chrome.crx`）：它会按 `updates.xml` 自动更新，不用每次重新下载。具体是哪些浏览器、以及 stock Chrome / Edge 的一次性白名单配置，见下方「Chromium 自更新安装」。"
+    : "- 当前发布未提供 `.crx`。需要 Chromium GitHub 版本时，请下载本次发布的 `*-chrome.zip` 解压加载，并在升级时手动重新下载和加载。",
   "- `*-chrome.zip` 解压加载包不会自动更新，每次升级都要重新下载并重新加载，仅在 `.crx` 装不上时使用。",
   "- Firefox：请使用 Firefox Add-ons 商店；GitHub 附件里的 `*-firefox.zip` 不会自动更新，更适合高级用户自行验证或配合发布流程使用。",
   "- Safari：请下载 `*-safari-xcode-bundle.zip`，解压后直接打开其中的 Xcode 工程；不要只下载 `*-safari.zip`。",

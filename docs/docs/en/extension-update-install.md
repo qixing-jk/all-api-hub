@@ -27,7 +27,7 @@ Only when the store is not an option (the store has not published the version ye
 If you use QQ Browser, 360 Browser, Cheetah Browser, Brave, Vivaldi, Opera, or a similar browser, see the [Other Browser Installation Guide](./other-browser-install.md). Brave, Vivaldi, and Opera can usually try Chrome Web Store first; when a GitHub install is needed, prefer the `.crx` — see [Chromium self-updating install](./chromium-crx-self-update.md).
 
 ::: tip Does my browser count as Chromium?
-By default, yes: except Firefox and Safari, every desktop browser that installs extensions is Chromium-based, so both the `.crx` and the `.zip` work. If you are unsure which category your browser falls into, check the [browser table in the Other Browser Installation Guide](./other-browser-install.md#supported-browsers). The full explanation is in [Chromium self-updating install](./chromium-crx-self-update.md).
+The listed browsers such as Chrome, Edge, Brave, Vivaldi, and Opera use Chromium. Confirm the engine and extension support for other browsers. Use Firefox Add-ons for Firefox and compatible browsers, and the Safari guide for Safari. See the [browser table](./other-browser-install.md#supported-browsers).
 :::
 
 ## Why Does GitHub Have a Newer Version Before the Store?
@@ -114,7 +114,7 @@ No. Store versions and the self-updating `.crx` are both updated automatically b
 
 ### Does "Check for updates" Automatically Download the GitHub Package?
 
-No. It only shows the version status and asks the browser to check whether the store version can be updated. You download the GitHub package from the Releases page once.
+No. It checks version status for the current channel and can open Releases or the store page, but does not automatically download GitHub packages. Unpacked builds require a manual download and update.
 
 ### Will "Reload to update" Delete My Data?
 

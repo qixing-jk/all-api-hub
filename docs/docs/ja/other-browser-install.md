@@ -5,7 +5,7 @@
 これらのブラウザの多くは Chromium ベースですが、利用できるインストール方法は同じではありません。ブラウザストアまたは Chrome ウェブストアからインストールできる場合は、まずストア版を使ってください。GitHub の添付ファイルが必要な場合は[自己更新 `.crx`](./chromium-crx-self-update.md) を推奨し、解凍読み込みの `.zip` は `.crx` をインストールできない場合にだけ使います。
 
 ::: tip 自分のブラウザは Chromium 系ですか
-既定では、はい。Firefox と Safari を除き、拡張機能をインストールできるデスクトップブラウザーは基本的に Chromium 系です。下の表のブラウザーはすべてこの前提でインストール方法を示しています。詳しい説明は [Chromium 自己更新インストール](./chromium-crx-self-update.md) にあります。
+Chrome、Edge、Brave、Vivaldi、Opera など、一覧のブラウザーは Chromium 系です。その他のブラウザーはエンジンと拡張機能への対応を確認してください。Firefox と互換ブラウザーは Firefox Add-ons、Safari は Safari ガイドを参照してください。[ブラウザー一覧](./other-browser-install.md#supported-browsers) も確認できます。
 :::
 
 ## まず違いを確認
@@ -218,7 +218,7 @@ liebao://extensions/
 
 ## 拡張機能の更新
 
-`all-api-hub-chrome.crx` はブラウザーがリリースのマニフェストから自動更新するため、手動操作は不要です。`chrome://extensions/` の「更新」で今すぐ確認できます。ストア版、GitHub Stable、Nightly の違いについては、先に [インストール方法と更新について](./extension-update-install.md) を確認してください。
+`all-api-hub-chrome.crx` はブラウザーがリリースのマニフェストから自動更新するため、手動操作は不要です。上の一覧にあるブラウザーごとの拡張機能管理ページの「更新」で今すぐ確認できます。ストア版、GitHub Stable、Nightly の違いについては、先に [インストール方法と更新について](./extension-update-install.md) を確認してください。
 
 解凍読み込みの `.zip` 版は自動更新されません。更新する場合は以下の手順に従ってください：
 

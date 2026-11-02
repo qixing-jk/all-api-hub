@@ -5,7 +5,7 @@ This document explains how to install the All API Hub extension in browsers such
 Most of these browsers are based on Chromium, but their available installation paths are not identical. When a browser store or Chrome Web Store installation works, use the store build first. When a GitHub asset is needed, the self-updating [`.crx`](./chromium-crx-self-update.md) is recommended, and the unpacked `.zip` is only for when the `.crx` cannot be installed.
 
 ::: tip Does my browser count as Chromium?
-By default, yes: except Firefox and Safari, every desktop browser that installs extensions is Chromium-based. Every browser in the table below is treated under that premise; the full explanation is in [Chromium self-updating install](./chromium-crx-self-update.md).
+The listed browsers such as Chrome, Edge, Brave, Vivaldi, and Opera use Chromium. Confirm the engine and extension support for other browsers. Use Firefox Add-ons for Firefox and compatible browsers, and the Safari guide for Safari. See the [browser table](./other-browser-install.md#supported-browsers).
 :::
 
 ## Differences at a Glance
@@ -218,7 +218,7 @@ Once on the extension management page, follow the [manual loading procedure](#de
 
 ## Updating the Extension
 
-The `all-api-hub-chrome.crx` build is refreshed by the browser from the release manifest, so no manual step is needed; click "Update" on `chrome://extensions/` to check immediately. For the differences between store versions, GitHub Stable, and Nightly, read [Installation Channels and Updates](./extension-update-install.md) first.
+The `all-api-hub-chrome.crx` build is refreshed by the browser from the release manifest, so no manual step is needed; click "Update" on the browser-specific extension page listed above to check immediately. For the differences between store versions, GitHub Stable, and Nightly, read [Installation Channels and Updates](./extension-update-install.md) first.
 
 Unpacked `.zip` builds do not update automatically. To update one, follow these steps:
 

@@ -27,7 +27,7 @@ Chrome、Edge、Firefox ユーザーは、対応するストア版を優先し�
 QQ、360、チーターブラウザ、Brave、Vivaldi、Opera などのブラウザを使う場合は、[その他のブラウザへのインストールガイド](./other-browser-install.md) を確認してください。Brave、Vivaldi、Opera は通常、まず Chrome ウェブストアを試せます。GitHub 版が必要なときは `.crx` を優先してください。詳しくは [Chromium 自己更新インストール](./chromium-crx-self-update.md) を参照してください。
 
 ::: tip 自分のブラウザは Chromium 系ですか？
-既定では、はい。Firefox と Safari を除き、拡張機能をインストールできるデスクトップブラウザーは基本的に Chromium 系で、`.crx` と `.zip` のどちらも使えます。どちらか分からない場合は [その他のブラウザへのインストールガイドのブラウザ一覧](./other-browser-install.md#supported-browsers) を確認してください。詳しい説明は [Chromium 自己更新インストール](./chromium-crx-self-update.md) にあります。
+Chrome、Edge、Brave、Vivaldi、Opera など、一覧のブラウザーは Chromium 系です。その他のブラウザーはエンジンと拡張機能への対応を確認してください。Firefox と互換ブラウザーは Firefox Add-ons、Safari は Safari ガイドを参照してください。[ブラウザー一覧](./other-browser-install.md#supported-browsers) も確認できます。
 :::
 
 ## GitHub には新しいバージョンがあるのに、ストアがまだ更新されていないのはなぜですか？
@@ -114,7 +114,7 @@ GitHub の添付ファイルには 2 種類あり、更新方法がまったく�
 
 ### 拡張機能内の「更新を確認」は GitHub のインストールパッケージを自動でダウンロードしますか？
 
-いいえ。バージョン状態を表示し、ブラウザにストア版の更新確認を依頼するだけです。GitHub のインストールパッケージは、Releases ページから一度だけダウンロードします。
+いいえ。現在の配布チャンネルのバージョン状態を確認し、Releases またはストアページを開けますが、GitHub パッケージを自動ダウンロードしません。解凍読み込み版は手動でダウンロードして更新します。
 
 ### 「再読み込みして更新」をクリックするとデータは消えますか？
 

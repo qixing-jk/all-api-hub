@@ -14,9 +14,9 @@ Stock Chrome / Edge must configure the extension allowlist policies on this page
 :::
 
 ::: tip Which browsers are Chromium
-By default, all of them: except Firefox and Safari, every desktop browser that installs extensions is Chromium-based — Google Chrome, Microsoft Edge, Brave, Vivaldi, Opera, Arc, QQ Browser, 360 browsers, Cheetah, Starry Wish, Percent, and similar. Both the `.crx` and the `.zip` install the same way as described here and in the [Other Browser Installation Guide](./other-browser-install.md).
+Chromium browsers such as Google Chrome, Microsoft Edge, Brave, Vivaldi, and Opera can use this guide. For other browsers, confirm the engine and extension support first.
 
-There are only two exceptions: use Firefox Add-ons for Firefox and the [Safari installation guide](./safari-install.md) for Safari.
+Use Firefox Add-ons for Firefox and compatible browsers; see the [Safari installation guide](./safari-install.md) for Safari.
 
 If you are unsure which category your browser falls into, check the [browser table in the Other Browser Installation Guide](./other-browser-install.md#supported-browsers).
 :::
