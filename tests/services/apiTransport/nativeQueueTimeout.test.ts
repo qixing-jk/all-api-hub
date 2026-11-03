@@ -1,22 +1,27 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
+import { withSiteApiRequestTask } from "~/services/apiTransport/siteRequestLimiter"
+
 const queueState = vi.hoisted(() => ({ visits: 0 }))
 beforeEach(() => {
   queueState.visits = 0
+  vi.mocked(withSiteApiRequestTask).mockClear()
 })
 
 vi.mock("~/services/apiTransport/siteRequestLimiter", () => ({
   reportSiteRateLimitResponse: vi.fn(),
-  withSiteApiRequestTask: async (
-    _url: string,
-    task: () => Promise<unknown>,
-    signal?: AbortSignal,
-  ) => {
-    if (queueState.visits++ === 0)
-      await new Promise((resolve) => setTimeout(resolve, 60_000))
-    signal?.throwIfAborted()
-    return task()
-  },
+  withSiteApiRequestTask: vi.fn(
+    async (
+      _url: string,
+      task: () => Promise<unknown>,
+      signal?: AbortSignal,
+    ) => {
+      if (queueState.visits++ === 0)
+        await new Promise((resolve) => setTimeout(resolve, 60_000))
+      signal?.throwIfAborted()
+      return task()
+    },
+  ),
 }))
 
 afterEach(() => {
@@ -25,9 +30,14 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-it.each(["catalog", "cliProxyApi", "magpie", "gptLoad"])(
-  "%s starts its request timeout after queue admission",
-  async (provider) => {
+it.each(
+  ["catalog", "cliProxyApi", "magpie", "gptLoad"].flatMap((provider) => [
+    { provider, stalled: false },
+    { provider, stalled: true },
+  ]),
+)(
+  "$provider preserves its post-admission timeout (stalled=$stalled)",
+  async ({ provider, stalled }) => {
     vi.useFakeTimers()
     vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
       const controller = new AbortController()
@@ -39,6 +49,14 @@ it.each(["catalog", "cliProxyApi", "magpie", "gptLoad"])(
     })
     const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
       init?.signal?.throwIfAborted()
+      if (stalled)
+        return await new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(init.signal?.reason),
+            { once: true },
+          )
+        })
       return Response.json({ status: "ok", data: [], success: true })
     })
     vi.stubGlobal("fetch", fetchMock)
@@ -77,13 +95,27 @@ it.each(["catalog", "cliProxyApi", "magpie", "gptLoad"])(
     }
     const outcome = pending.then(
       () => "completed",
-      () => "failed",
+      (error) => error,
     )
     await vi.advanceTimersByTimeAsync(59_999)
     expect(fetchMock).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(60_001)
-    expect(await outcome).toBe("completed")
+    if (stalled) {
+      expect(await outcome).toBeInstanceOf(Error)
+      expect((await outcome).name).toBe(
+        {
+          catalog: "TimeoutError",
+          cliProxyApi: "CliProxyApiError",
+          magpie: "MagpieApiError",
+          gptLoad: "GptLoadApiError",
+        }[provider],
+      )
+    } else expect(await outcome).toBe("completed")
     expect(fetchMock).toHaveBeenCalled()
+    expect(withSiteApiRequestTask).toHaveBeenCalled()
+    expect(
+      vi.mocked(withSiteApiRequestTask).mock.invocationCallOrder[0],
+    ).toBeLessThan(fetchMock.mock.invocationCallOrder[0])
   },
 )
 
