@@ -81,7 +81,10 @@ export async function runSafariSmoke({
         fs.readFileSync(path.join(match[1]!, "identity.json"), "utf8"),
       )
       const project = fs
-        .readdirSync(identity.projectRoot, { recursive: true })
+        .readdirSync(String(identity.projectRoot), {
+          recursive: true,
+          encoding: "utf8",
+        })
         .find((file) => file.endsWith(".xcodeproj"))
       assert(project, "Missing converter project")
       const projectPath = path.join(identity.projectRoot, project)
@@ -152,5 +155,9 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
+  assert(
+    process.env.GITHUB_ACTIONS === "true",
+    "Safari smoke operates only on disposable GitHub CI runners",
+  )
   await runSafariSmoke()
 }
