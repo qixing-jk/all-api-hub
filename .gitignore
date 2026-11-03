@@ -16,6 +16,9 @@
 # shard sequencer reads (CI restores both from the Actions cache).
 /.vitest-reports
 /.vitest-durations
+# E2E per-spec timings: JSON reports each shard emits, and the manifest the shard
+# planner reads (CI restores both from the Actions cache).
+/.e2e-durations
 
 # playwright-cli
 .playwright-cli/

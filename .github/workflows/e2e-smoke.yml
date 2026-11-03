@@ -135,9 +135,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The default suite is sharded across runners with Playwright's native
-        # --shard flag to cut wall-clock time; all shards reuse the
-        # default extension artifact from e2e-build.
+        # The default suite is sharded across runners to cut wall-clock time; all
+        # shards reuse the default extension artifact from e2e-build. Shards are
+        # packed by measured spec duration (scripts/e2e-shard-plan.mjs), falling
+        # back to Playwright's count-based --shard when no timings exist yet.
         include:
           - name: default-shard-1
             e2e_type: default
@@ -223,6 +224,17 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Restore E2E spec durations
+        # Published by the previous run's e2e-durations job. A miss only means this
+        # shard falls back to Playwright's count-based split.
+        if: ${{ matrix.e2e_type == 'default' }}
+        uses: actions/cache/restore@v5
+        with:
+          path: .e2e-durations
+          key: e2e-spec-durations-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            e2e-spec-durations-
+
       - name: Run E2E smoke
         timeout-minutes: ${{ matrix.e2e_type == 'default' && 8 || 5 }}
         env:
@@ -230,9 +242,38 @@ jobs:
           AAH_E2E_SMOKE_ONLY: ${{ matrix.e2e_type == 'default' && '1' || '' }}
           AAH_E2E_WORKERS: "4"
           AAH_SKIP_E2E_BUILD: "1"
-        run: >
-          pnpm run e2e:${{ matrix.e2e_type }} ${{ matrix.shard && format('--shard={0}/{1}', matrix.shard, env.AAH_E2E_SHARD_TOTAL) || '' }} ${{ matrix.e2e_type == 'default' && '--grep-invert="major pages with"' || '' }}
+          AAH_E2E_TYPE: ${{ matrix.e2e_type }}
+          AAH_E2E_SHARD_INDEX: ${{ matrix.shard }}
+          AAH_E2E_JSON_REPORT: ${{ matrix.e2e_type == 'default' && format('.e2e-durations/reports/shard-{0}.json', matrix.shard) || '' }}
+        run: |
+          set -euo pipefail
+          spec_args=()
+          # Count-based shards put 2.45x more work on the slowest shard; pack by
+          # measured duration whenever the timings manifest is available.
+          if [ -n "${AAH_E2E_SHARD_INDEX}" ]; then
+            mapfile -t planned < <(node scripts/e2e-shard-plan.mjs --index "${AAH_E2E_SHARD_INDEX}" --total "${AAH_E2E_SHARD_TOTAL}")
+            if [ "${#planned[@]}" -gt 0 ]; then
+              echo "Duration-balanced shard ${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}: ${#planned[@]} specs"
+              spec_args=("${planned[@]}")
+            else
+              echo "Falling back to --shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}"
+              spec_args=("--shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}")
+            fi
+          fi
+          if [ "${AAH_E2E_TYPE}" = "default" ]; then
+            spec_args+=(--grep-invert="major pages with")
+          fi
+          pnpm run "e2e:${AAH_E2E_TYPE}" "${spec_args[@]}"
 
+      - name: Upload E2E spec durations
+        # Only push runs publish timings; pull requests restore the base branch's copy.
+        if: ${{ !cancelled() && matrix.e2e_type == 'default' && github.event_name != 'pull_request' && hashFiles('.e2e-durations/reports/*.json') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-spec-durations-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: .e2e-durations/reports/
+          retention-days: 1
+          overwrite: true
 
       # Keep timing and virtualization assertions free of competing contexts,
       # as in the browser compatibility workflow. Run the complete file once.
@@ -265,3 +306,41 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  e2e-durations:
+    name: Publish E2E spec durations
+    runs-on: ubuntu-latest
+    needs: e2e-smoke
+    # Timings stay valid when tests fail, but nothing can be published when the shards
+    # were skipped or the run was cancelled. Pull requests restore main's copy instead
+    # of republishing their own.
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && (needs.e2e-smoke.result == 'success' || needs.e2e-smoke.result == 'failure') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Download spec duration reports
+        uses: actions/download-artifact@v7
+        with:
+          path: .e2e-durations/reports
+          pattern: e2e-spec-durations-*
+          merge-multiple: true
+
+      - name: Write spec durations manifest
+        # Cache only the manifest; the shard reports are inputs, not published state.
+        run: |
+          node scripts/write-e2e-spec-durations.mjs
+          rm -rf .e2e-durations/reports
+
+      - name: Save spec durations
+        uses: actions/cache/save@v5
+        with:
+          path: .e2e-durations
+          key: e2e-spec-durations-${{ github.run_id }}-${{ github.run_attempt }}

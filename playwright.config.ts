@@ -6,6 +6,8 @@ loadPlaywrightEnvFiles()
 
 const isCI = !!process.env.CI
 const isRealSiteE2E = !!process.env.AAH_E2E_REAL_SITE_CATEGORY
+// Written by the E2E workflow to publish per-spec timings for duration-balanced shards.
+const jsonReportFile = process.env.AAH_E2E_JSON_REPORT
 const configuredWorkerCount = Number(process.env.AAH_E2E_WORKERS)
 const workers =
   Number.isInteger(configuredWorkerCount) && configuredWorkerCount > 0
@@ -57,6 +59,11 @@ export default defineConfig({
       ? [
           ["github"],
           ["html", { open: "never", outputFolder: "playwright-report" }],
+          // The E2E workflow asks for per-spec timings so the next run can split the
+          // suite by measured duration instead of by test count.
+          ...(jsonReportFile
+            ? ([["json", { outputFile: jsonReportFile }]] as const)
+            : []),
         ]
       : [["list"]],
   use: {

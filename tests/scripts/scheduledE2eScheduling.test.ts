@@ -180,3 +180,46 @@ describe("scheduled E2E build reuse", () => {
     expect(build).toContain("continue-on-error: ${{ inputs.optional }}")
   })
 })
+
+describe("duration-balanced smoke shards", () => {
+  it("restores measured timings before planning and still falls back to --shard", () => {
+    const source = workflow("e2e-smoke")
+    const tests = job(source, "e2e-smoke")
+    expect(tests).toContain("uses: actions/cache/restore@v5")
+    expect(tests).toContain("restore-keys:")
+    expect(tests).toContain("node scripts/e2e-shard-plan.mjs")
+    expect(tests).toContain(
+      "--shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}",
+    )
+    expect(tests).toContain("AAH_E2E_SHARD_INDEX: ${{ matrix.shard }}")
+    expect(tests).toContain("AAH_E2E_JSON_REPORT:")
+    // The plan must cover exactly the shards the matrix runs.
+    expect(source).toMatch(/AAH_E2E_SHARD_TOTAL: "6"/)
+    const runStep = tests
+      .split("      - name: Run E2E smoke")[1]
+      ?.split("      - name:")[0]
+    expect(runStep).toContain("set -euo pipefail")
+    expect(runStep).toContain("mapfile -t planned")
+    expect(runStep).toContain('spec_args+=(--grep-invert="major pages with")')
+  })
+
+  it("publishes timings only from runs that produced reports", () => {
+    const source = workflow("e2e-smoke")
+    const upload = job(source, "e2e-smoke")
+      .split("      - name: Upload E2E spec durations")[1]
+      ?.split("      - name:")[0]
+    expect(upload).toBeDefined()
+    expect(upload).toContain("github.event_name != 'pull_request'")
+    expect(upload).toContain("hashFiles('.e2e-durations/reports/*.json')")
+
+    const publish = job(source, "e2e-durations")
+    expect(publish).toContain("needs: e2e-smoke")
+    expect(publish).toContain("uses: actions/download-artifact@v7")
+    expect(publish).toContain("pattern: e2e-spec-durations-*")
+    expect(publish).toContain("node scripts/write-e2e-spec-durations.mjs")
+    expect(publish).toContain("uses: actions/cache/save@v5")
+    expect(source).toContain(
+      "key: e2e-spec-durations-${{ github.run_id }}-${{ github.run_attempt }}",
+    )
+  })
+})
