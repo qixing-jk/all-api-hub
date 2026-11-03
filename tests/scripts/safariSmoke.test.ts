@@ -26,3 +26,17 @@ it("records unavailable Safari as a failed check without running platform comman
     checks: [{ name: "macOS runtime", status: "failed" }],
   })
 })
+
+it("rejects denied accessibility access instead of accepting a launched Safari", async () => {
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  await expect(
+    runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: () => "false, Safari",
+    }),
+  ).rejects.toThrow("Accessibility")
+  expect(
+    JSON.parse(readFileSync(path.join(output, "report.json"), "utf8")),
+  ).toMatchObject({ status: "failed" })
+})
