@@ -1,6 +1,7 @@
 import { render as rtlRender, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactElement, ReactNode, Ref } from "react"
+import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -172,19 +173,42 @@ vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
   ModelDisplay: ({
     models,
     onVerifyModel,
+    onModelGroupChange,
+    modelGroupOverrides,
   }: {
     models?: Array<{ model: { model_name: string } }>
     onVerifyModel?: (...args: any[]) => void
+    onModelGroupChange?: (key: string, group: string | undefined) => void
+    modelGroupOverrides?: Record<string, string>
   }) => (
-    <button
-      type="button"
-      onClick={() => onVerifyModel?.(ACCOUNT_SOURCE, "gpt-test", ["vip"])}
-    >
-      open-api-verification
-      {models?.map(({ model }) => (
-        <span key={model.model_name}>{model.model_name}</span>
-      ))}
-    </button>
+    <div>
+      <button
+        onClick={() =>
+          onModelGroupChange?.("account:account-1:gpt-test", "vip")
+        }
+      >
+        select-model-group
+      </button>
+      <button
+        onClick={() =>
+          onModelGroupChange?.("account:account-1:gpt-test", undefined)
+        }
+      >
+        clear-model-group
+      </button>
+      <output aria-label="model group">
+        {modelGroupOverrides?.["account:account-1:gpt-test"] ?? "automatic"}
+      </output>
+      <button
+        type="button"
+        onClick={() => onVerifyModel?.(ACCOUNT_SOURCE, "gpt-test", ["vip"])}
+      >
+        open-api-verification
+        {models?.map(({ model }) => (
+          <span key={model.model_name}>{model.model_name}</span>
+        ))}
+      </button>
+    </div>
   ),
 }))
 
@@ -388,6 +412,33 @@ function createModelListData() {
 }
 
 describe("ModelList", () => {
+  it("selects and clears a model group in the all-account scope", async () => {
+    mockUseModelListData.mockImplementation(() => {
+      const [modelGroupOverrides, setModelGroupOverrides] = useState({})
+      return {
+        ...createModelListData(),
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE_VALUE,
+        selectedSource: {
+          kind: MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+          value: ALL_ACCOUNTS_SOURCE_VALUE,
+          capabilities: CAPABILITIES,
+        },
+        currentAccount: null,
+        pricingContexts: [
+          { account: ACCOUNT, pricing: createModelListData().pricingData },
+        ],
+        modelGroupOverrides,
+        setModelGroupOverrides,
+      }
+    })
+    const user = userEvent.setup()
+    render(<ModelList />)
+    await user.click(screen.getByText("select-model-group"))
+    expect(screen.getByLabelText("model group")).toHaveTextContent("vip")
+    await user.click(screen.getByText("clear-model-group"))
+    expect(screen.getByLabelText("model group")).toHaveTextContent("automatic")
+  })
+
   it("reveals and opens the source selector when models have no selected source", async () => {
     const scrollIntoView = vi.spyOn(HTMLElement.prototype, "scrollIntoView")
     const user = userEvent.setup()

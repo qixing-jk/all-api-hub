@@ -1,8 +1,15 @@
 import { Cpu, Info } from "lucide-react"
 import type { HTMLAttributes } from "react"
-import { forwardRef, useCallback, useEffect, useMemo, useState } from "react"
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
-import { Virtuoso } from "react-virtuoso"
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 
 import { Badge, EmptyState } from "~/components/ui"
 import type {
@@ -19,23 +26,29 @@ import {
   getModelItemKey,
   type CalculatedModelItem,
 } from "~/features/ModelList/presentation/modelListItems"
+import {
+  createPriceComparisonDisplayGroups,
+  MODEL_DISPLAY_ENTRY_KINDS,
+  type ModelDisplayEntry,
+} from "~/features/ModelList/presentation/priceComparisonDisplayGroups"
+import { useModelListHeight } from "~/features/ModelList/presentation/useModelListHeight"
 import { resolveAccountExchangeRate } from "~/features/ModelList/pricing/accountExchangeRate"
-import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
 import { QUOTE_UNITS } from "~/services/modelPricing/pricingConstants"
-import {
-  getBillingModeText,
-  isTokenBillingType,
-} from "~/services/models/utils/modelPricing"
+import { getBillingModeText } from "~/services/models/utils/modelPricing"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
   createAccountModelVerificationHistoryTarget,
   createProfileModelVerificationHistoryTarget,
   serializeVerificationHistoryTarget,
 } from "~/services/verification/verificationResultHistory"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 
 interface ModelDisplayProps {
+  modelGroupOverrides?: Record<string, string>
+  onModelGroupChange?: (itemKey: string, group: string | undefined) => void
+  excludedGroupsByAccountId?: Record<string, string[]>
   onCatalogChanged?: () => Promise<void>
   models: CalculatedModelItem[]
   verificationSummariesByKey: Record<string, ApiVerificationHistorySummary>
@@ -69,59 +82,6 @@ interface ModelDisplayProps {
   onFilterAccount?: (accountId: string) => void
 }
 
-interface PriceComparisonDisplayGroup {
-  unit?: string
-  key: string
-  modelName: string
-  quotaType: number
-  comparableItems: CalculatedModelItem[]
-  notComparedItems: CalculatedModelItem[]
-}
-
-type ModelDisplayEntry =
-  | { kind: "model"; item: CalculatedModelItem }
-  | { kind: "price-comparison-group"; group: PriceComparisonDisplayGroup }
-
-/** Groups comparable model identities while keeping billing modes separate. */
-function createPriceComparisonDisplayGroups(
-  models: CalculatedModelItem[],
-): PriceComparisonDisplayGroup[] {
-  const groups = new Map<string, PriceComparisonDisplayGroup>()
-
-  models.forEach((item) => {
-    const billingMode = isTokenBillingType(item.model.quota_type)
-      ? MODEL_LIST_BILLING_MODES.TOKEN_BASED
-      : MODEL_LIST_BILLING_MODES.PER_CALL
-    const unit =
-      item.calculatedPrice.quote?.unit ??
-      (billingMode === MODEL_LIST_BILLING_MODES.TOKEN_BASED
-        ? QUOTE_UNITS.MILLION_SELECTED_TOKENS
-        : QUOTE_UNITS.REQUEST)
-    const key = JSON.stringify([
-      item.comparableModelIdentity.key,
-      billingMode,
-      unit,
-    ])
-    const group = groups.get(key) ?? {
-      key,
-      unit,
-      modelName: item.comparableModelIdentity.displayName,
-      quotaType: item.model.quota_type,
-      comparableItems: [],
-      notComparedItems: [],
-    }
-
-    if (item.isPriceComparable) {
-      group.comparableItems.push(item)
-    } else {
-      group.notComparedItems.push(item)
-    }
-    groups.set(key, group)
-  })
-
-  return Array.from(groups.values())
-}
-
 const ModelRowsList = forwardRef<
   HTMLDivElement,
   HTMLAttributes<HTMLDivElement>
@@ -148,6 +108,15 @@ const ModelRowsItem = forwardRef<
   )
 })
 
+const modelRowsComponents = { Item: ModelRowsItem, List: ModelRowsList }
+
+/** Keeps virtual row identity stable across pricing and measured-height updates. */
+function getDisplayEntryKey(_: number, entry: ModelDisplayEntry) {
+  return entry.kind === MODEL_DISPLAY_ENTRY_KINDS.MODEL
+    ? getModelItemKey(entry.item)
+    : entry.group.key
+}
+
 /**
  * Virtualized list displaying model cards with pricing and availability data.
  * @param props Component props describing the rendered model list.
@@ -156,6 +125,9 @@ const ModelRowsItem = forwardRef<
 export function ModelDisplay(props: ModelDisplayProps) {
   const {
     models,
+    modelGroupOverrides,
+    excludedGroupsByAccountId,
+    onModelGroupChange,
     onCatalogChanged,
     verificationSummariesByKey,
     onVerifyModel,
@@ -176,14 +148,44 @@ export function ModelDisplay(props: ModelDisplayProps) {
     () =>
       showPriceComparisonGroups
         ? createPriceComparisonDisplayGroups(models).map((group) => ({
-            kind: "price-comparison-group",
+            kind: MODEL_DISPLAY_ENTRY_KINDS.PRICE_COMPARISON_GROUP,
             group,
           }))
-        : models.map((item) => ({ kind: "model", item })),
+        : models.map((item) => ({
+            kind: MODEL_DISPLAY_ENTRY_KINDS.MODEL,
+            item,
+          })),
     [models, showPriceComparisonGroups],
   )
   const [expandedModelKeys, setExpandedModelKeys] = useState<string[]>([])
-  const [listHeight, setListHeight] = useState(0)
+  const { listHeight, handleListHeightChanged } = useModelListHeight()
+  const listRef = useRef<VirtuosoHandle>(null)
+  const pendingGroupChange = useRef<{
+    key: string
+    previousModels: CalculatedModelItem[]
+  } | null>(null)
+  const clearGroupHighlight = useRef<(() => void) | undefined>(undefined)
+
+  useEffect(() => () => clearGroupHighlight.current?.(), [])
+
+  useEffect(() => {
+    const pending = pendingGroupChange.current
+    if (!pending || pending.previousModels === models) return
+    const index = displayEntries.findIndex((entry) =>
+      entry.kind === MODEL_DISPLAY_ENTRY_KINDS.MODEL
+        ? getModelItemKey(entry.item) === pending.key
+        : [
+            ...entry.group.comparableItems,
+            ...entry.group.notComparedItems,
+          ].some((item) => getModelItemKey(item) === pending.key),
+    )
+    if (index < 0) {
+      pendingGroupChange.current = null
+      return
+    }
+    // An offscreen row must mount before its ref can reveal and highlight it.
+    listRef.current?.scrollIntoView({ index, behavior: "auto" })
+  }, [displayEntries, models])
 
   useEffect(() => {
     const activeModelKeys = new Set(modelKeys)
@@ -208,76 +210,269 @@ export function ModelDisplay(props: ModelDisplayProps) {
     )
   }, [])
 
+  const renderDisplayEntry = useMemo(() => {
+    const renderModelItem = (
+      item: CalculatedModelItem,
+      isComparisonOffer = false,
+      isCurrentEntry = true,
+    ) => {
+      const itemKey = getModelItemKey(item)
+      const sourceForModel = item.source
+      const accountForModel =
+        sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+          ? sourceForModel.account
+          : undefined
+      const exchangeRate = resolveAccountExchangeRate(accountForModel)
+      const modelId = item.model.model_name
+      const historyTarget =
+        sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+          ? createProfileModelVerificationHistoryTarget(
+              sourceForModel.profile.id,
+              modelId,
+            )
+          : createAccountModelVerificationHistoryTarget(
+              sourceForModel.account.id,
+              modelId,
+            )
+      // History is account/model scoped and cannot establish a group's result.
+      const verificationSummary =
+        historyTarget && item.comparisonGroup === undefined
+          ? verificationSummariesByKey[
+              serializeVerificationHistoryTarget(historyTarget)
+            ] ?? null
+          : null
+
+      return (
+        <div
+          data-model-row-key={itemKey}
+          className="data-[group-change-highlight]:bg-primary-soft data-[group-change-highlight]:ring-theme-500 rounded-lg transition-colors duration-700 data-[group-change-highlight]:ring-2 data-[group-change-highlight]:ring-inset motion-reduce:transition-none"
+          ref={(element) => {
+            const pending = pendingGroupChange.current
+            if (
+              !element ||
+              !isCurrentEntry ||
+              pending?.key !== itemKey ||
+              pending.previousModels === models
+            )
+              return
+            pendingGroupChange.current = null
+            clearGroupHighlight.current?.()
+            clearGroupHighlight.current = revealNavigationTarget(element, {
+              block: "nearest",
+              inline: "nearest",
+              behavior: "smooth",
+              highlight: {
+                onChange: (active) => {
+                  element.toggleAttribute("data-group-change-highlight", active)
+                },
+              },
+            })
+          }}
+        >
+          <ModelItem
+            selectedModelGroup={modelGroupOverrides?.[itemKey]}
+            comparisonGroup={item.comparisonGroup}
+            excludedAccountGroups={
+              accountForModel
+                ? excludedGroupsByAccountId?.[accountForModel.id]
+                : undefined
+            }
+            onModelGroupChange={
+              accountForModel && onModelGroupChange
+                ? (group) => {
+                    clearGroupHighlight.current?.()
+                    pendingGroupChange.current = {
+                      key: itemKey,
+                      previousModels: models,
+                    }
+                    onModelGroupChange?.(itemKey, group)
+                  }
+                : undefined
+            }
+            onCatalogChanged={onCatalogChanged}
+            model={item.model}
+            resolvedVendor={item.resolvedVendor}
+            modelMetadata={item.modelMetadata}
+            calculatedPrice={item.calculatedPrice}
+            exchangeRate={exchangeRate}
+            showRealPrice={showRealPrice}
+            showEndpointTypes={showEndpointTypes}
+            groupRatios={item.groupRatios}
+            groupContext={item.groupContext}
+            activeGroupContext={item.activeGroupContext}
+            effectiveGroup={item.effectiveGroup}
+            onGroupClick={handleGroupClick}
+            isLowestPrice={item.isLowestPrice}
+            isComparisonOffer={isComparisonOffer}
+            showsOptimalGroup={item.hasUniquelyOptimalGroup}
+            groupSelectionScope={groupSelectionScope}
+            isGroupSelectionInteractive={isGroupSelectionInteractive}
+            source={sourceForModel}
+            sourceIdentity={item.sourceIdentity}
+            isProviderCatalogFallback={item.isProviderCatalogFallback}
+            displayCapabilities={displayCapabilities}
+            verificationSummary={verificationSummary}
+            onFilterAccount={onFilterAccount}
+            onVerifyModel={onVerifyModel}
+            onVerifyCliSupport={onVerifyCliSupport}
+            onOpenModelKeyDialog={onOpenModelKeyDialog}
+            isExpanded={expandedModelKeySet.has(itemKey)}
+            onToggleExpand={() => {
+              toggleModelExpand(itemKey)
+            }}
+          />
+        </div>
+      )
+    }
+
+    return (index: number, entry: ModelDisplayEntry) => {
+      // Virtuoso can call the new renderer with its previous data before
+      // reconciling the reordered rows. Only the new position may reveal.
+      const isCurrentEntry = displayEntries[index] === entry
+      if (entry.kind === MODEL_DISPLAY_ENTRY_KINDS.MODEL) {
+        return renderModelItem(entry.item, false, isCurrentEntry)
+      }
+
+      const { group } = entry
+      const headingId = `model-price-comparison-group-${index}`
+      const billingModeId = `${headingId}-billing-mode`
+
+      return (
+        <section
+          aria-labelledby={`${headingId} ${billingModeId}`}
+          className="border-border bg-card overflow-hidden rounded-lg border shadow-sm"
+        >
+          <header className="dark:bg-background/45 border-border bg-surface-subtle/80 gap-y-density-2 py-density-2-5 flex min-w-0 flex-wrap items-center gap-x-3 border-b px-3 sm:px-4">
+            <div className="gap-y-density-2 flex w-full min-w-0 flex-wrap items-center gap-x-2 lg:w-auto lg:flex-1">
+              <h2
+                id={headingId}
+                className="text-foreground max-w-full min-w-0 font-mono text-sm font-semibold break-all"
+              >
+                {group.modelName}
+              </h2>
+              <Badge variant="secondary" size="sm" className="shrink-0">
+                <span id={billingModeId}>
+                  {group.unit === QUOTE_UNITS.PAGE
+                    ? t("scenario.page")
+                    : group.unit === QUOTE_UNITS.MEGAPIXEL
+                      ? t("scenario.megapixel")
+                      : group.unit === QUOTE_UNITS.VIDEO_SECOND ||
+                          group.unit === QUOTE_UNITS.AUDIO_SECOND
+                        ? t("scenario.second")
+                        : group.unit === QUOTE_UNITS.THOUSAND_CHARACTERS
+                          ? t("scenario.thousandCharacters")
+                          : group.unit === QUOTE_UNITS.SEARCH_UNIT
+                            ? t("scenario.searchUnit")
+                            : group.unit === QUOTE_UNITS.IMAGE
+                              ? t("scenario.image")
+                              : group.unit ===
+                                  QUOTE_UNITS.MILLION_VIDEO_OUTPUT_TOKENS
+                                ? t("scenario.perMillionVideoTokens")
+                                : group.unit === QUOTE_UNITS.UNRESOLVED
+                                  ? t("scenario.sitePricingDescription")
+                                  : getBillingModeText(group.quotaType)}
+                </span>
+              </Badge>
+            </div>
+            <div className="gap-y-density-1-5 flex w-full flex-wrap items-center gap-x-1.5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
+              <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
+                {t("priceComparison.results.comparable")}:{" "}
+                <strong className="text-success-text font-semibold">
+                  {group.comparableItems.length}
+                </strong>
+              </span>
+              {group.notComparedItems.length > 0 && (
+                <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
+                  {t("priceComparison.results.notCompared")}:{" "}
+                  <strong className="text-foreground font-semibold">
+                    {group.notComparedItems.length}
+                  </strong>
+                </span>
+              )}
+            </div>
+          </header>
+
+          {group.comparableItems.length > 0 && (
+            <ul
+              aria-label={t("priceComparison.results.comparable")}
+              className="dark:divide-border divide-border/80 divide-y"
+            >
+              {group.comparableItems.map((item) => (
+                <li key={getModelItemKey(item)}>
+                  {renderModelItem(item, true, isCurrentEntry)}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {group.notComparedItems.length > 0 && (
+            <div
+              className={cn(
+                "bg-surface-subtle/55 dark:bg-foreground/[0.018]",
+                group.comparableItems.length > 0 &&
+                  "dark:border-border border-border-strong border-t border-dashed",
+              )}
+            >
+              <div
+                role="note"
+                className="dark:border-border border-border/80 gap-y-density-2 py-density-2-5 flex min-w-0 gap-x-2 border-b px-3 sm:px-4"
+              >
+                <Info
+                  aria-hidden="true"
+                  className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-foreground text-xs font-medium">
+                    {t("priceComparison.results.notCompared")}
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+                    {t("priceComparison.results.notComparedHint")}
+                  </p>
+                </div>
+              </div>
+              <ul
+                aria-label={t("priceComparison.results.notCompared")}
+                className="dark:divide-border divide-border/80 divide-y"
+              >
+                {group.notComparedItems.map((item) => (
+                  <li key={getModelItemKey(item)}>
+                    {renderModelItem(item, true, isCurrentEntry)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )
+    }
+  }, [
+    models,
+    modelGroupOverrides,
+    excludedGroupsByAccountId,
+    onModelGroupChange,
+    onCatalogChanged,
+    verificationSummariesByKey,
+    onVerifyModel,
+    onVerifyCliSupport,
+    onOpenModelKeyDialog,
+    showRealPrice,
+    showEndpointTypes,
+    handleGroupClick,
+    groupSelectionScope,
+    isGroupSelectionInteractive,
+    displayCapabilities,
+    onFilterAccount,
+    expandedModelKeySet,
+    toggleModelExpand,
+    displayEntries,
+    t,
+  ])
+
   if (models.length === 0) {
     return (
       <EmptyState
         icon={<Cpu className="h-12 w-12" />}
         title={t("noMatchingModels")}
-      />
-    )
-  }
-
-  const renderModelItem = (
-    item: CalculatedModelItem,
-    isComparisonOffer = false,
-  ) => {
-    const itemKey = getModelItemKey(item)
-    const sourceForModel = item.source
-    const accountForModel =
-      sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-        ? sourceForModel.account
-        : undefined
-    const exchangeRate = resolveAccountExchangeRate(accountForModel)
-    const modelId = item.model.model_name
-    const historyTarget =
-      sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-        ? createProfileModelVerificationHistoryTarget(
-            sourceForModel.profile.id,
-            modelId,
-          )
-        : createAccountModelVerificationHistoryTarget(
-            sourceForModel.account.id,
-            modelId,
-          )
-    const verificationSummary = historyTarget
-      ? verificationSummariesByKey[
-          serializeVerificationHistoryTarget(historyTarget)
-        ] ?? null
-      : null
-
-    return (
-      <ModelItem
-        onCatalogChanged={onCatalogChanged}
-        model={item.model}
-        resolvedVendor={item.resolvedVendor}
-        modelMetadata={item.modelMetadata}
-        calculatedPrice={item.calculatedPrice}
-        exchangeRate={exchangeRate}
-        showRealPrice={showRealPrice}
-        showEndpointTypes={showEndpointTypes}
-        groupRatios={item.groupRatios}
-        groupContext={item.groupContext}
-        activeGroupContext={item.activeGroupContext}
-        effectiveGroup={item.effectiveGroup}
-        onGroupClick={handleGroupClick}
-        isLowestPrice={item.isLowestPrice}
-        isComparisonOffer={isComparisonOffer}
-        showsOptimalGroup={item.hasUniquelyOptimalGroup}
-        groupSelectionScope={groupSelectionScope}
-        isGroupSelectionInteractive={isGroupSelectionInteractive}
-        source={sourceForModel}
-        sourceIdentity={item.sourceIdentity}
-        isProviderCatalogFallback={item.isProviderCatalogFallback}
-        displayCapabilities={displayCapabilities}
-        verificationSummary={verificationSummary}
-        onFilterAccount={onFilterAccount}
-        onVerifyModel={onVerifyModel}
-        onVerifyCliSupport={onVerifyCliSupport}
-        onOpenModelKeyDialog={onOpenModelKeyDialog}
-        isExpanded={expandedModelKeySet.has(itemKey)}
-        onToggleExpand={() => {
-          toggleModelExpand(itemKey)
-        }}
       />
     )
   }
@@ -289,134 +484,14 @@ export function ModelDisplay(props: ModelDisplayProps) {
       style={{ height: listContainerHeight }}
     >
       <Virtuoso
+        ref={listRef}
         className="h-full"
         data={displayEntries}
-        computeItemKey={(_, entry) =>
-          entry.kind === "model" ? getModelItemKey(entry.item) : entry.group.key
-        }
-        components={{
-          Item: ModelRowsItem,
-          List: ModelRowsList,
-        }}
-        totalListHeightChanged={setListHeight}
+        computeItemKey={getDisplayEntryKey}
+        components={modelRowsComponents}
+        totalListHeightChanged={handleListHeightChanged}
         style={{ height: "100%" }}
-        itemContent={(index, entry) => {
-          if (entry.kind === "model") {
-            return renderModelItem(entry.item)
-          }
-
-          const { group } = entry
-          const headingId = `model-price-comparison-group-${index}`
-          const billingModeId = `${headingId}-billing-mode`
-
-          return (
-            <section
-              aria-labelledby={`${headingId} ${billingModeId}`}
-              className="border-border bg-card overflow-hidden rounded-lg border shadow-sm"
-            >
-              <header className="dark:bg-background/45 border-border bg-surface-subtle/80 gap-y-density-2 py-density-2-5 flex min-w-0 flex-wrap items-center gap-x-3 border-b px-3 sm:px-4">
-                <div className="gap-y-density-2 flex w-full min-w-0 flex-wrap items-center gap-x-2 lg:w-auto lg:flex-1">
-                  <h2
-                    id={headingId}
-                    className="text-foreground max-w-full min-w-0 font-mono text-sm font-semibold break-all"
-                  >
-                    {group.modelName}
-                  </h2>
-                  <Badge variant="secondary" size="sm" className="shrink-0">
-                    <span id={billingModeId}>
-                      {group.unit === QUOTE_UNITS.PAGE
-                        ? t("scenario.page")
-                        : group.unit === QUOTE_UNITS.MEGAPIXEL
-                          ? t("scenario.megapixel")
-                          : group.unit === QUOTE_UNITS.VIDEO_SECOND ||
-                              group.unit === QUOTE_UNITS.AUDIO_SECOND
-                            ? t("scenario.second")
-                            : group.unit === QUOTE_UNITS.THOUSAND_CHARACTERS
-                              ? t("scenario.thousandCharacters")
-                              : group.unit === QUOTE_UNITS.SEARCH_UNIT
-                                ? t("scenario.searchUnit")
-                                : group.unit === QUOTE_UNITS.IMAGE
-                                  ? t("scenario.image")
-                                  : group.unit ===
-                                      QUOTE_UNITS.MILLION_VIDEO_OUTPUT_TOKENS
-                                    ? t("scenario.perMillionVideoTokens")
-                                    : group.unit === QUOTE_UNITS.UNRESOLVED
-                                      ? t("scenario.sitePricingDescription")
-                                      : getBillingModeText(group.quotaType)}
-                    </span>
-                  </Badge>
-                </div>
-                <div className="gap-y-density-1-5 flex w-full flex-wrap items-center gap-x-1.5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
-                  <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
-                    {t("priceComparison.results.comparable")}:{" "}
-                    <strong className="text-success-text font-semibold">
-                      {group.comparableItems.length}
-                    </strong>
-                  </span>
-                  {group.notComparedItems.length > 0 && (
-                    <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
-                      {t("priceComparison.results.notCompared")}:{" "}
-                      <strong className="text-foreground font-semibold">
-                        {group.notComparedItems.length}
-                      </strong>
-                    </span>
-                  )}
-                </div>
-              </header>
-
-              {group.comparableItems.length > 0 && (
-                <ul
-                  aria-label={t("priceComparison.results.comparable")}
-                  className="dark:divide-border divide-border/80 divide-y"
-                >
-                  {group.comparableItems.map((item) => (
-                    <li key={getModelItemKey(item)}>
-                      {renderModelItem(item, true)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {group.notComparedItems.length > 0 && (
-                <div
-                  className={cn(
-                    "bg-surface-subtle/55 dark:bg-foreground/[0.018]",
-                    group.comparableItems.length > 0 &&
-                      "dark:border-border border-border-strong border-t border-dashed",
-                  )}
-                >
-                  <div
-                    role="note"
-                    className="dark:border-border border-border/80 gap-y-density-2 py-density-2-5 flex min-w-0 gap-x-2 border-b px-3 sm:px-4"
-                  >
-                    <Info
-                      aria-hidden="true"
-                      className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-foreground text-xs font-medium">
-                        {t("priceComparison.results.notCompared")}
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs leading-5">
-                        {t("priceComparison.results.notComparedHint")}
-                      </p>
-                    </div>
-                  </div>
-                  <ul
-                    aria-label={t("priceComparison.results.notCompared")}
-                    className="dark:divide-border divide-border/80 divide-y"
-                  >
-                    {group.notComparedItems.map((item) => (
-                      <li key={getModelItemKey(item)}>
-                        {renderModelItem(item, true)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-          )
-        }}
+        itemContent={renderDisplayEntry}
       />
     </div>
   )

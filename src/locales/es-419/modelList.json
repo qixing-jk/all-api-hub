@@ -41,6 +41,7 @@
     "verifyApi": "Verificar API",
     "verifyCliSupport": "Verificar compatibilidad con CLI"
   },
+  "allAccountGroups": "Todos los grupos",
   "allAccounts": "Todas las cuentas",
   "allBillingModes": "Todos los modos de facturación",
   "allGroups": "Todos los grupos",
@@ -333,8 +334,11 @@
   "displayOptions": "Visualización",
   "endpointType": "Tipo de endpoint",
   "endpointTypes": "Tipos de endpoint",
+  "endpointTypesHint": "Muestra los tipos de endpoints de API compatibles con cada modelo.",
   "estimatedPrice": "Estimado",
   "estimatedPriceTitle": "Calculado a partir de tarifas de referencia o supuestos de precios; los cargos reales pueden variar.",
+  "expandAccountGroups": "Expandir grupos de cuentas",
+  "expandAccountGroupsHint": "Muestra cada grupo disponible por separado. Una cuenta puede tener varias ofertas para el mismo modelo. Los filtros de grupos de cuenta determinan los grupos disponibles. La selección en una tarjeta solo afecta la oferta de ese modelo.",
   "expandDetails": "Expandir detalles",
   "fallbackSourceNotice": {
     "description": "Este catálogo se carga actualmente mediante una alternativa con clave de cuenta, por lo que solo admite descubrimiento y verificación de modelos. Actualizar datos reintentará la ruta directa de la cuenta.",
@@ -432,6 +436,7 @@
     },
     "selectionHint": "Cuando se seleccionan varias capacidades, los modelos deben coincidir con todas las capacidades seleccionadas."
   },
+  "modelGroupQuickSelect": "Grupo del modelo",
   "noMatchingModels": "No se encontraron modelos coincidentes",
   "noSourcesDescription": "Agrega una cuenta de sitio o una credencial de API antes de ver la lista de modelos.",
   "noSourcesTitle": "Aún no hay fuentes de modelos",
@@ -552,6 +557,7 @@
     "source": "Reglas de facturación"
   },
   "realAmount": "Monto real de recarga",
+  "realAmountHint": "Convierte los precios con la tasa de conversión configurada en cada cuenta.",
   "refreshData": "Actualizar datos",
   "runtimeKeyFallbackSourceNotice": {
     "description": "Este catálogo se carga mediante una clave existente para esta cuenta, por lo que solo admite descubrimiento y verificación de modelos. Esta cuenta no puede crear nuevas claves de API aquí; Actualizar datos reintentará la ruta directa de la cuenta.",
@@ -624,7 +630,8 @@
       "cacheRead": "Lectura de caché",
       "cacheWrite": "Escritura de caché",
       "input": "Entrada",
-      "output": "Salida"
+      "output": "Salida",
+      "request": "Precio por llamada"
     },
     "minute": "Minuto",
     "missingConversion": "La conversión a CNY no está disponible. Desactiva el precio real para ver los precios en USD.",
@@ -664,6 +671,7 @@
     "rateChange": "{{meter}}: {{from}} → {{to}} / millón de tokens",
     "referenceImages": "Imágenes de referencia por tarea",
     "referenceRate": "Referencia",
+    "requestUnit": "llamada",
     "responseFormat": "Formato de respuesta para facturación",
     "search": "Búsquedas",
     "searchContext": "Contexto de búsqueda",
@@ -717,6 +725,9 @@
   "showing_one": "Mostrando {{count}} modelo",
   "showing_many": "Mostrando {{count}} modelos",
   "showing_other": "Mostrando {{count}} modelos",
+  "showingGroupQuotes_one": "Mostrando {{count}} oferta",
+  "showingGroupQuotes_many": "Mostrando {{count}} ofertas",
+  "showingGroupQuotes_other": "Mostrando {{count}} ofertas",
   "showUnavailableModels": "Mostrar también modelos sin acceso para la cuenta",
   "siteDescription": "Descripción del sitio:",
   "siteSupportedGroups": "Grupos compatibles con el sitio",

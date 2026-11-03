@@ -111,6 +111,8 @@ export interface SearchableSelectProps
    * Optional class applied to the internal option list.
    */
   listClassName?: string
+  /** Optional dropdown sizing and appearance, independent of the trigger. */
+  contentClassName?: string
 
   /**
    * Optional stable test id resolver for option rows.
@@ -149,6 +151,7 @@ export const SearchableSelect = React.forwardRef<
     onOpenChange,
     portalContainer,
     listClassName,
+    contentClassName,
     getOptionTestId,
     searchInputTestId,
     className,
@@ -232,7 +235,10 @@ export const SearchableSelect = React.forwardRef<
       </PopoverTrigger>
       <PopoverContent
         container={portalContainer}
-        className="flex max-h-(--radix-popover-content-available-height) w-(--radix-popper-anchor-width) flex-col overflow-hidden p-0"
+        className={cn(
+          "flex max-h-(--radix-popover-content-available-height) w-(--radix-popper-anchor-width) flex-col overflow-hidden p-0",
+          contentClassName,
+        )}
         collisionPadding={8}
       >
         <Command className="min-h-0 flex-1 rounded-(--popover-inner-radius) [&>[data-slot=command-input-wrapper]]:shrink-0">

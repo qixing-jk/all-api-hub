@@ -38,6 +38,7 @@
     "verifyApi": "API überprüfen",
     "verifyCliSupport": "Überprüfen Sie die CLI-Unterstützung"
   },
+  "allAccountGroups": "Alle Gruppen",
   "allAccounts": "Alle Konten",
   "allBillingModes": "Alle Abrechnungsmodi",
   "allGroups": "Alle Gruppen",
@@ -324,8 +325,11 @@
   "displayOptions": "Anzeige",
   "endpointType": "Endpunkttyp",
   "endpointTypes": "Endpunkttypen",
+  "endpointTypesHint": "Die vom jeweiligen Modell unterstützten API-Endpunkttypen anzeigen.",
   "estimatedPrice": "Geschätzte",
   "estimatedPriceTitle": "Aus Referenztarifen oder Preisannahmen berechnet; tatsächliche Kosten können abweichen.",
+  "expandAccountGroups": "Kontogruppen einzeln anzeigen",
+  "expandAccountGroupsHint": "Jede verfügbare Gruppe wird einzeln aufgeführt. Ein Konto kann mehrere Angebote für dasselbe Modell haben. Die Kontogruppenfilter bestimmen die verfügbaren Gruppen. Die Gruppenwahl auf einer Karte gilt für das Angebot dieses Modells.",
   "expandDetails": "Details erweitern",
   "fallbackSourceNotice": {
     "description": "Dieser Katalog wird derzeit über einen Kontoschlüssel-Fallback geladen und unterstützt daher nur die Modellerkennung und -überprüfung. „Daten aktualisieren“ wird die direkte Kontoroute erneut versuchen.",
@@ -422,6 +426,7 @@
     },
     "selectionHint": "Wenn mehrere Funktionen ausgewählt werden, müssen die Modelle allen ausgewählten Funktionen entsprechen."
   },
+  "modelGroupQuickSelect": "Modellgruppe",
   "noMatchingModels": "Keine passenden Modelle gefunden",
   "noSourcesDescription": "Fügen Sie ein Website-Konto oder API-Anmeldeinformationen hinzu, bevor Sie die Modellliste anzeigen.",
   "noSourcesTitle": "Noch keine Modellquellen",
@@ -542,6 +547,7 @@
     "source": "Abrechnungsregeln"
   },
   "realAmount": "Echter Aufladebetrag",
+  "realAmountHint": "Preise mit dem für jedes Konto konfigurierten Umrechnungsfaktor umrechnen.",
   "refreshData": "Daten aktualisieren",
   "runtimeKeyFallbackSourceNotice": {
     "description": "Dieser Katalog wird über einen vorhandenen Schlüssel für dieses Konto geladen und unterstützt daher nur die Modellerkennung und -überprüfung. Dieses Konto kann hier keine neuen API-Schlüssel erstellen; mit „Daten aktualisieren“ wird der direkte Kontozugriff erneut versucht.",
@@ -614,7 +620,8 @@
       "cacheRead": "Cache-Lesen",
       "cacheWrite": "Cache-Schreiben",
       "input": "Eingabe",
-      "output": "Ausgabe"
+      "output": "Ausgabe",
+      "request": "Preis pro Aufruf"
     },
     "minute": "Minute",
     "missingConversion": "Die CNY-Umrechnung ist nicht verfügbar. Deaktivieren Sie die Echtpreisanzeige, um USD-Listenpreise zu sehen.",
@@ -654,6 +661,7 @@
     "rateChange": "{{meter}}: {{from}} → {{to}} / Million Tokens",
     "referenceImages": "Referenzbilder pro Aufgabe",
     "referenceRate": "Referenzpreis",
+    "requestUnit": "Aufruf",
     "responseFormat": "Antwortformat für die Abrechnung",
     "search": "Suchvorgänge",
     "searchContext": "Suchkontext",
@@ -706,6 +714,8 @@
   "selectSourceToContinue": "Wählen Sie oben eine Quelle aus, bevor Sie die Modellliste anzeigen.",
   "showing_one": "Zeigt {{count}} Modell",
   "showing_other": "Zeigt {{count}} Modelle",
+  "showingGroupQuotes_one": "{{count}} Angebot angezeigt",
+  "showingGroupQuotes_other": "{{count}} Angebote angezeigt",
   "showUnavailableModels": "Auch Modelle ohne Kontozugriff anzeigen",
   "siteDescription": "Website-Beschreibung:",
   "siteSupportedGroups": "Von der Website unterstützte Gruppen",

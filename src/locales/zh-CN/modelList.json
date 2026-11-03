@@ -35,6 +35,7 @@
     "verifyApi": "验证接口",
     "verifyCliSupport": "验证 CLI 兼容性"
   },
+  "allAccountGroups": "全部分组",
   "allAccounts": "所有账号",
   "allBillingModes": "所有计费方式",
   "allGroups": "所有分组",
@@ -314,8 +315,11 @@
   "displayOptions": "显示内容",
   "endpointType": "端点类型",
   "endpointTypes": "端点类型",
+  "endpointTypesHint": "显示模型支持的 API 端点类型。",
   "estimatedPrice": "估算价",
   "estimatedPriceTitle": "根据参考费率或计价假设推算；实际费用可能不同。",
+  "expandAccountGroups": "平铺账号分组",
+  "expandAccountGroupsHint": "同一模型的可用分组分别列出，同一账号可以显示多条报价。 候选分组由账号分组筛选决定，卡片内改选只调整当前模型的报价。",
   "expandDetails": "展开详细信息",
   "fallbackSourceNotice": {
     "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",
@@ -411,6 +415,7 @@
     },
     "selectionHint": "选择多个能力时，模型需要同时满足所有条件。"
   },
+  "modelGroupQuickSelect": "模型分组",
   "noMatchingModels": "没有找到匹配的模型",
   "noSourcesDescription": "请先添加站点账号或 API 凭据，然后查看模型列表。",
   "noSourcesTitle": "暂无可用数据源",
@@ -531,6 +536,7 @@
     "source": "计费规则"
   },
   "realAmount": "真实充值金额",
+  "realAmountHint": "按各账号配置的转换比率换算价格。",
   "refreshData": "刷新数据",
   "runtimeKeyFallbackSourceNotice": {
     "description": "当前模型目录通过该账号已有的密钥加载，仅支持模型发现与验证。该账号不支持在此创建新的 API 密钥；点击刷新数据会重新尝试账号接口。",
@@ -603,7 +609,8 @@
       "cacheRead": "缓存读取",
       "cacheWrite": "缓存写入",
       "input": "输入",
-      "output": "输出"
+      "output": "输出",
+      "request": "按次计费"
     },
     "minute": "分钟",
     "missingConversion": "缺少人民币换算依据，可关闭“真实价格”查看美元标价。",
@@ -643,6 +650,7 @@
     "rateChange": "{{meter}}：{{from}} → {{to}} / 百万 Token",
     "referenceImages": "每次参考图片数",
     "referenceRate": "参考单价",
+    "requestUnit": "次",
     "responseFormat": "计费响应格式",
     "search": "搜索次数",
     "searchContext": "搜索上下文",
@@ -694,6 +702,7 @@
   "selectSource": "选择数据源",
   "selectSourceToContinue": "请先在上方选择一个数据源，然后查看模型列表。",
   "showing": "显示 {{count}} 个模型",
+  "showingGroupQuotes": "显示 {{count}} 条报价",
   "showUnavailableModels": "同时显示无权使用的模型",
   "siteDescription": "站点说明：",
   "siteSupportedGroups": "站点支持的分组",

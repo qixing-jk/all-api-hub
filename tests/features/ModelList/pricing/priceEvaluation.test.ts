@@ -6,6 +6,7 @@ import type {
   CalculatedModelItem,
   ModelListItem,
 } from "~/features/ModelList/presentation/modelListItems"
+import { getModelItemKey } from "~/features/ModelList/presentation/modelListItems"
 import {
   calculateModelListPrices,
   rankModelListPrices,
@@ -34,6 +35,97 @@ function calculate(rawItems: ModelListItem[], groups?: string[]) {
 }
 
 describe("model list price evaluation", () => {
+  it("keeps raw model identifiers distinct from expanded group offers", () => {
+    const base = buildModelListItemFixture("one", { a: 1, b: 3 })
+    const raw = {
+      ...base,
+      model: { ...base.model, model_name: 'model:group:"b"' },
+    }
+    const expanded = calculateModelListPrices({
+      ...options,
+      rawItems: [base, raw],
+      getGroupCandidates: () => undefined,
+      expandGroups: true,
+    })
+    const normal = calculate([raw])[0]!
+    const groupOffer = expanded.find(
+      (item) =>
+        item.model.model_name === "model" && item.comparisonGroup === "b",
+    )!
+    expect(getModelItemKey(normal)).not.toBe(getModelItemKey(groupOffer))
+    expect(new Set(expanded.map(getModelItemKey)).size).toBe(4)
+  })
+
+  it("keeps unpriced groups and sources without groups visible during expansion", () => {
+    const unpriced = buildModelListItemFixture("unpriced", { a: 1 })
+    const noGroups = buildModelListItemFixture("no-groups", {})
+    noGroups.groupContext = {
+      ...noGroups.groupContext,
+      accessState: "not-applicable",
+    }
+    const expanded = calculateModelListPrices({
+      ...options,
+      rawItems: [unpriced, noGroups],
+      getGroupCandidates: () => undefined,
+      expandGroups: true,
+    })
+    expect(expanded.map((item) => item.comparisonGroup)).toEqual([
+      "a",
+      "b",
+      undefined,
+    ])
+    expect(expanded[1]?.calculatedPrice).toMatchObject({
+      kind: "unavailable",
+      reason: MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
+    })
+    expect(expanded[1]?.activeGroupContext.actionGroups).toEqual(["b"])
+    expect(
+      calculateModelListPrices({
+        ...options,
+        rawItems: [unpriced],
+        getGroupCandidates: () => [],
+        expandGroups: true,
+      }),
+    ).toHaveLength(1)
+    expect(calculate([unpriced])).toHaveLength(1)
+  })
+  it("compares every included account group independently when expanded", () => {
+    const items = calculateModelListPrices({
+      ...options,
+      rawItems: [
+        buildModelListItemFixture("one", { a: 1, b: 3 }),
+        buildModelListItemFixture("two", { a: 2, b: 4 }),
+      ],
+      getGroupCandidates: () => undefined,
+      expandGroups: true,
+    })
+    const ranked = rankModelListPrices({
+      ...options,
+      items,
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      compareAcrossSources: true,
+    })
+    expect(
+      ranked.map((item) => [
+        item.source.kind === "account" ? item.source.account.id : "profile",
+        item.effectiveGroup,
+        item.isLowestPrice,
+      ]),
+    ).toEqual([
+      ["one", "a", true],
+      ["two", "a", false],
+      ["one", "b", false],
+      ["two", "b", false],
+    ])
+    expect(
+      calculateModelListPrices({
+        ...options,
+        rawItems: [buildModelListItemFixture("one", { a: 1, b: 3 })],
+        getGroupCandidates: () => ["b"],
+        expandGroups: true,
+      }).map((item) => item.effectiveGroup),
+    ).toEqual(["b"])
+  })
   it("retains unavailable-price metadata when comparing a legacy model without a plan", () => {
     const item = buildModelListItemFixture("no-price", { a: 1 })
     item.model.price_metadata = {

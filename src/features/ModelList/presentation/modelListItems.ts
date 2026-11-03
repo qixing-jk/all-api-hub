@@ -33,6 +33,7 @@ export type CalculatedModelItem = {
   groupContext: ModelGroupContext
   activeGroupContext: ActiveModelGroupContext
   effectiveGroup?: string
+  comparisonGroup?: string
   modelMetadata?: ModelMetadata
   comparableModelIdentity: ComparableModelIdentity
   resolvedVendor: ResolvedModelVendor
@@ -56,14 +57,25 @@ export function getModelListSourceIdentityKey(params: {
 
 /** Creates a stable identifier for a calculated model item. */
 export function getModelItemKey(
-  item: Pick<CalculatedModelItem, "model" | "source" | "sourceIdentity">,
+  item: Pick<
+    CalculatedModelItem,
+    "model" | "source" | "sourceIdentity" | "comparisonGroup"
+  >,
 ) {
   const sourceId = getModelListSourceIdentityKey({
     source: item.source,
     sourceIdentity: item.sourceIdentity,
   })
 
-  return `${item.source.kind}:${sourceId}:${item.model.model_name}`
+  if (item.comparisonGroup === undefined) {
+    return `${item.source.kind}:${sourceId}:${item.model.model_name}`
+  }
+  return JSON.stringify([
+    item.source.kind,
+    sourceId,
+    item.model.model_name,
+    item.comparisonGroup,
+  ])
 }
 
 export interface ModelListItem extends PreparedModelListItem {
