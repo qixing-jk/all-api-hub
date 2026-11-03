@@ -1,0 +1,30 @@
+name: Safari Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safari-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  safari:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Check actual Safari automation access
+        run: node e2e/safari/smoke.mjs
+      - name: Retain Safari evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: safari-smoke-${{ github.run_attempt }}
+          path: test-results/safari/
+          retention-days: 7
