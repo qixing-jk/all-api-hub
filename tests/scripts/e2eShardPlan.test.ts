@@ -26,7 +26,8 @@ const smokeWorkflow = readFileSync(
 it("propagates planner failures and preserves successful empty-plan fallback", () => {
   const step = smokeWorkflow
     .split("      - name: Run E2E smoke")[1]
-    .split("      - name:")[0]
+    ?.split("      - name:")[0]
+  if (!step) throw new Error("Missing smoke step")
   const script = step
     .split("        run: |\n")[1]
     ?.split("\n")
@@ -64,7 +65,7 @@ it("restores timings before planning and skips publishing absent reports", () =>
   ).toBeLessThan(smokeWorkflow.indexOf("- name: Run E2E smoke"))
   const write = smokeWorkflow
     .split("- name: Write spec durations manifest")[1]
-    .split("- name:")[0]
+    ?.split("- name:")[0]
   const save = smokeWorkflow.split("- name: Save spec durations")[1]
   expect(write).toContain("hashFiles('.e2e-durations/reports/**/*.json') != ''")
   expect(save).toContain(
