@@ -3,6 +3,10 @@ import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2ap
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import {
   createUserCheckInStatusEndpoint,
   resolveUserCheckInTimezone,
   USER_CHECK_IN_STATUS_ENDPOINT,
@@ -129,8 +133,11 @@ export async function fetchClawhudDailyCheckInStatus(
  * so any other failure is left to outer status reconciliation without
  * repeating the write here.
  */
-export async function performClawhudDailyCheckIn(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function performClawhudDailyCheckIn(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     CLAWHUD_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -140,6 +147,7 @@ export async function performClawhudDailyCheckIn(request: ApiServiceRequest) {
       })
       return parseClawhudDailyCheckInMutationResponse(response)
     },
-    { recoverUnauthorized: false },
+    fetchClawhudDailyCheckInStatus,
+    options,
   )
 }

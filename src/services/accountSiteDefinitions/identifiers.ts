@@ -53,6 +53,7 @@ export const SITE_TYPES = {
   GRSAI: "grsai",
   VERCEL_AI_GATEWAY: "vercel-ai-gateway",
   NOVITA: "novita",
+  NANOGPT: "nanogpt",
   UNKNOWN: "unknown",
 } as const
 
@@ -365,3 +366,22 @@ export const AIMLAPI_BILLING_PATH = "/app/billing"
 export const AIMLAPI_LOGIN_PATH = "/app/auth"
 /** Public marketing catalogue carrying per-model pricing cards. */
 export const AIMLAPI_MODELS_PATH = "/models"
+
+/**
+ * NanoGPT serves one account store from one console origin. The console, the
+ * session routes (`/api/auth/*`), the inference-key account routes
+ * (`/api/check-balance`) and the management API (`/api/management/v1`) all live
+ * on `nano-gpt.com`; `api.nano-gpt.com` is the documented direct inference host
+ * for `/api/v1/*` where the public detailed model catalog is published.
+ * `docs.nano-gpt.com` is documentation only and `www.nano-gpt.com` is not
+ * referenced by the site (verified 2026-10-25; see
+ * .scratch/nanogpt-adaptation/evidence/probe-01/10/11).
+ */
+export const NANOGPT_HOSTNAMES = ["nano-gpt.com"] as const
+export const NANOGPT_DISPLAY_NAME = "NanoGPT"
+/** Console origin owning the NextAuth Cookie session and every console account route. */
+export const NANOGPT_WEB_ORIGIN = "https://nano-gpt.com"
+/** Direct inference host; the same `/api/v1` mount also answers on the console origin. */
+export const NANOGPT_API_ORIGIN = "https://api.nano-gpt.com"
+/** OpenAI-compatible export base URL recommended by the official API host guide. */
+export const NANOGPT_INFERENCE_BASE_URL = `${NANOGPT_API_ORIGIN}/api/v1`

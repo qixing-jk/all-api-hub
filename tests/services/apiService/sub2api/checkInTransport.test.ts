@@ -361,7 +361,10 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
 
     await expect(
       performSub2ApiProDailyCheckIn(createRequest(), {
-        beforeRecoveredMutation: async () => false,
+        beforeRecoveredMutation: vi
+          .fn()
+          .mockResolvedValueOnce(true)
+          .mockResolvedValue(false),
       }),
     ).resolves.toEqual({ kind: "recovery_precondition_failed" })
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)

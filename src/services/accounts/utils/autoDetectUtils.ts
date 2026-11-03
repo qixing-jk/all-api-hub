@@ -91,7 +91,6 @@ const ERROR_KEYWORDS: Record<string, string[]> = {
   CURRENT_TAB_RELOAD_REQUIRED: [
     "receiving end does not exist",
     "could not establish connection",
-    "content script",
     "刷新当前页面",
     "refresh the current page",
     "reload the current page",

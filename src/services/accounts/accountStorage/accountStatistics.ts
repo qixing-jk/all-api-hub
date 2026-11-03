@@ -26,7 +26,10 @@ export const calculateAccountStats = (
   const balanceAccounts = enabledAccounts.filter(
     (account) =>
       account.excludeFromTotalBalance !== true &&
-      supportsMonetaryBalance(account.account_info.nativeBalance),
+      supportsMonetaryBalance(
+        account.account_info.nativeBalance,
+        account.account_info.balanceUnavailable,
+      ),
   )
   const incomeAccounts = enabledAccounts.filter(
     (account) => account.excludeFromTodayIncome !== true,

@@ -59,6 +59,8 @@ export type ReadAccountBrowserSessionFromTabOptions = {
   fetchContext?: AccountBrowserSessionFetchContext
   /** Enables registered unknown-site session probes for explicit current-tab onboarding. */
   allowSessionProbe?: boolean
+  /** Bind a recovered tab read to the origin selected before script injection. */
+  expectedOrigin?: string
   /** Carries caller intent for downstream temp-context workflows; tab reads do not consume it. */
   protectionBypassExecution?: ProtectionBypassExecution
   onError?: AccountBrowserSessionErrorHandler

@@ -589,6 +589,12 @@ describe("account persistence and form validation", () => {
   })
 
   describe("parseManualQuotaFromUsd", () => {
+    it.each([null, 2, true, {}])(
+      "rejects imported non-string manual balance %j without throwing",
+      (value) => {
+        expect(parseManualQuotaFromUsd(value)).toBeUndefined()
+      },
+    )
     it("rounds valid manual balances into quota units", () => {
       expect(parseManualQuotaFromUsd("1.234")).toBe(
         Math.round(1.234 * QUOTA_PER_USD),

@@ -137,6 +137,7 @@ export const aiRouterProvider: AutoCheckinProvider = {
     try {
       const result = await performAiRouterDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       switch (result.kind) {
         case AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied:

@@ -29,6 +29,7 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
   accountId: string
   quota: number
   nativeBalance?: AccountNativeBalance
+  balanceUnavailable?: boolean
   today_income: number
   today_quota_consumption: number
   todayStatsAvailability: AccountTodayStatsAvailability
@@ -37,7 +38,10 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
   timeZone?: string
 }): Promise<boolean> {
   const config = params.config ?? DEFAULT_BALANCE_HISTORY_PREFERENCES
-  if (!config.enabled || !supportsMonetaryBalance(params.nativeBalance)) {
+  if (
+    !config.enabled ||
+    !supportsMonetaryBalance(params.nativeBalance, params.balanceUnavailable)
+  ) {
     return false
   }
 

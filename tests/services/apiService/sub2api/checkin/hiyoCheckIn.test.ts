@@ -176,7 +176,7 @@ describe("Hiyo daily check-in protocol", () => {
   )
 
   it.each([401, 403, 404, 405, 409, 429, 500])(
-    "preserves HTTP %s without recovering or replaying",
+    "preserves HTTP %s when no authentication recovery is available",
     async (status) => {
       vi.mocked(fetchApiResponse).mockResolvedValue({
         ok: false,
@@ -192,7 +192,11 @@ describe("Hiyo daily check-in protocol", () => {
       })
       expect(fetchApiResponse).toHaveBeenCalledTimes(2)
       expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
-      expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+      if (status === 401) {
+        expect(recoverSub2ApiBrowserAuth).toHaveBeenCalledOnce()
+      } else {
+        expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+      }
     },
   )
 

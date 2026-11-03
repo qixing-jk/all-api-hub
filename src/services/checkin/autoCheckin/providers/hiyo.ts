@@ -50,6 +50,7 @@ export const hiyoProvider: AutoCheckinProvider = {
     try {
       const data = await performHiyoDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,

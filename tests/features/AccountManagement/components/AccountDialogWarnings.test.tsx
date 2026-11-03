@@ -221,6 +221,33 @@ describe("AccountDialog warnings", () => {
     },
   )
 
+  it("opens NanoGPT's inference-key page without issuing or rotating credentials", async () => {
+    const user = userEvent.setup()
+    render(
+      <AccessTokenVerificationGuide
+        message="Paste the missing inference key"
+        siteUrl="https://nano-gpt.com"
+        siteType={SITE_TYPES.NANOGPT}
+      />,
+    )
+    expect(
+      screen.getByText("form.nanoGptApiKeyGuidanceTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("accessTokenVerification.rotationWarning"),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.nanogpt.openPage",
+      }),
+    )
+    await waitFor(() =>
+      expect(browser.tabs.create).toHaveBeenCalledWith(
+        expect.objectContaining({ url: "https://nano-gpt.com/api" }),
+      ),
+    )
+  })
+
   it("keeps an explicitly unsupported account-token destination hidden", () => {
     render(
       <AccessTokenVerificationGuide

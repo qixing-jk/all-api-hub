@@ -180,7 +180,7 @@ describe("Denxio daily check-in authenticated transport", () => {
     ).resolves.toEqual({ kind: "applied", rewardAmount: 0.5 })
 
     expect(wait).toHaveBeenCalledWith(3_000)
-    expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
+    expect(beforeRecoveredMutation).toHaveBeenCalledTimes(3)
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
     const [, beginOptions] = vi.mocked(fetchApiResponse).mock.calls[0]!
     const [, claimOptions] = vi.mocked(fetchApiResponse).mock.calls[1]!
@@ -390,7 +390,10 @@ describe("Denxio daily check-in authenticated transport", () => {
     await expect(
       performDenxioDailyCheckIn(createRequest(), {
         wait: async () => {},
-        beforeRecoveredMutation: async () => false,
+        beforeRecoveredMutation: vi
+          .fn()
+          .mockResolvedValueOnce(true)
+          .mockResolvedValue(false),
       }),
     ).resolves.toEqual({ kind: "recovery_precondition_failed" })
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
@@ -402,7 +405,10 @@ describe("Denxio daily check-in authenticated transport", () => {
     await expect(
       performDenxioDailyCheckIn(createRequest(), {
         wait: async () => {},
-        beforeRecoveredMutation: async () => false,
+        beforeRecoveredMutation: vi
+          .fn()
+          .mockResolvedValueOnce(true)
+          .mockResolvedValue(false),
       }),
     ).resolves.toEqual({ kind: "recovery_precondition_failed" })
 

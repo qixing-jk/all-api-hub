@@ -38,6 +38,7 @@ import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import {
   isCanonicalAimlApiUrl,
@@ -538,6 +539,13 @@ export default function AccountDialog({
                 sitePolicy={currentSitePolicy}
                 claimedLoginProviders={claimedLoginProviders}
                 isDetected={state.isDetected}
+                showAccessTokenGuidance={
+                  hasInlineCredentialError ||
+                  state.detectionError?.type !==
+                    AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED ||
+                  !getAccountSiteDefinition(state.siteType)?.onboarding
+                    ?.accessTokenVerificationGuide
+                }
                 isImportingSub2apiSession={state.isImportingSub2apiSession}
                 isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}
                 showAccessToken={state.showAccessToken}

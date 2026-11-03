@@ -37,7 +37,7 @@
     "unableToOpen": "Não foi possível abrir o AI Toolbox. Certifique-se de que ele esteja instalado"
   },
   "autodetect": {
-    "currentTabNeedsReload": "Esta página pode ter sido aberta antes da extensão ser instalada ou atualizada, por isso a extensão ainda não consegue ler dados desta aba. Recarregue a página atual e tente a detecção automática novamente.",
+    "currentTabNeedsReload": "A extensão não consegue se conectar ao script de detecção desta página. Recarregue a página e tente a detecção automática novamente. Se o problema persistir, verifique se a extensão tem acesso a este site.",
     "failed": "Detecção automática falhou: {{error}}",
     "forbidden": "Acesso negado. Confirme se o firewall do site está bloqueando a requisição",
     "loginThisSite": "Fazer login neste site",

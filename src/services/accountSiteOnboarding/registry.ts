@@ -17,6 +17,7 @@ import { foxCodeBrowserIdentity } from "~/services/apiAdapters/foxcode/browserId
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
 import { krillBrowserIdentity } from "~/services/apiAdapters/krill/browserIdentity"
+import { nanoGptBrowserIdentity } from "~/services/apiAdapters/nanogpt/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
 import { novitaAccountDetectionPrivacy } from "~/services/apiAdapters/novita/accountDetection"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/account/accountDetection"
@@ -45,6 +46,7 @@ import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
 import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
 import { krillContentSessionExtractor } from "./contentSession/krill"
+import { nanoGptContentSessionExtractor } from "./contentSession/nanogpt"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { novitaContentSessionExtractor } from "./contentSession/novita"
 import { pmApiContentSessionExtractor } from "./contentSession/pmapi"
@@ -135,6 +137,10 @@ const siteBrowserAdapters: readonly {
     sessionExtractor: vercelContentSessionExtractor,
     identity: vercelBrowserIdentity,
     detectionPrivacy: vercelAccountDetectionPrivacy,
+  },
+  {
+    sessionExtractor: nanoGptContentSessionExtractor,
+    identity: nanoGptBrowserIdentity,
   },
   { sessionExtractor: vApiContentSessionExtractor },
   { sessionExtractor: apiyiContentSessionExtractor },

@@ -3,6 +3,7 @@ import React from "react"
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import BalanceDisplay from "~/features/AccountManagement/components/AccountList/rows/BalanceDisplay"
+import { ACCOUNT_SUBSCRIPTION_STATUSES as subscriptionStatuses } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -74,6 +75,93 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
+  it("refreshes the USD component of a NanoGPT dual balance", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          nativeBalance: { unit: "USD_XNO", total: 2, nanoBalance: 1 },
+          balance: { USD: 3, CNY: 21 },
+        })}
+      />,
+    )
+    await user.click(screen.getByTitle("account:list.balance.refreshBalance"))
+    expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).toHaveTextContent("$3.00")
+    expect(screen.getByText("1 XNO")).toBeVisible()
+  })
+  it.each(Object.values(subscriptionStatuses))(
+    "labels subscription status %s independently of quota",
+    (status) => {
+      render(
+        <BalanceDisplay
+          site={buildDisplaySiteData({
+            subscription: { status, remainingTokens: 123 },
+          })}
+        />,
+      )
+      expect(
+        screen.getByTitle("account:stats.subscriptionStatus"),
+      ).toHaveTextContent(`account:stats.subscriptionState.${status}`)
+      if (
+        [
+          subscriptionStatuses.Inactive,
+          subscriptionStatuses.Expired,
+          subscriptionStatuses.Unavailable,
+        ].some((value) => value === status)
+      ) {
+        expect(
+          screen.queryByTitle("account:stats.subscriptionRemainingTokens"),
+        ).not.toBeInTheDocument()
+      } else {
+        expect(
+          screen.getByTitle("account:stats.subscriptionRemainingTokens"),
+        ).toBeVisible()
+      }
+    },
+  )
+  it("shows XNO independently when the dollar balance is zero", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          balance: { USD: 0, CNY: 0 },
+          nativeBalance: {
+            unit: "USD_XNO",
+            total: 0,
+            nanoBalance: 26.71801147,
+          },
+        })}
+      />,
+    )
+    expect(screen.getByText("26.71801147 XNO")).toBeVisible()
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).toHaveTextContent("$0.00")
+  })
+  it("does not animate or display a compatibility zero when the cash balance is unavailable", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          balanceUnavailable: true,
+          balance: { USD: 0, CNY: 0 },
+        })}
+      />,
+    )
+    expect(
+      screen.getByText("account:todayMetricAvailability.unavailable"),
+    ).toBeVisible()
+    expect(
+      screen.queryByTitle("account:list.balance.refreshBalance"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows atomic Token balances in the provider display unit without a credit breakdown", () => {
     render(
       <BalanceDisplay
@@ -1108,7 +1196,7 @@ describe("BalanceDisplay", () => {
 
     expect(
       screen.getByTitle("account:stats.subscriptionStatus"),
-    ).toHaveTextContent("account:stats.subscriptionInactive")
+    ).toHaveTextContent("account:stats.subscriptionState.inactive")
     expect(
       screen.queryByTitle("account:stats.subscriptionRemainingCount"),
     ).not.toBeInTheDocument()

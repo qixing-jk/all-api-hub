@@ -257,8 +257,14 @@ function compareByUserSortField(
     case DATA_TYPE_HEALTH_STATUS:
       return applySortDirection(compareHealthStatus(a, b), sortOrder)
     case DATA_TYPE_BALANCE: {
-      const aComparable = supportsMonetaryBalance(a.nativeBalance)
-      const bComparable = supportsMonetaryBalance(b.nativeBalance)
+      const aComparable = supportsMonetaryBalance(
+        a.nativeBalance,
+        a.balanceUnavailable,
+      )
+      const bComparable = supportsMonetaryBalance(
+        b.nativeBalance,
+        b.balanceUnavailable,
+      )
       if (aComparable !== bComparable) return aComparable ? -1 : 1
       if (!aComparable) return 0
       return applySortDirection(

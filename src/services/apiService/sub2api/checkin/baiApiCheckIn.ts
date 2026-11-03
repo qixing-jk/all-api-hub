@@ -6,6 +6,10 @@ import {
   resolveBaiApiCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
@@ -134,14 +138,14 @@ export async function fetchBaiApiCheckInStatus(
  * uncertain result is left to the scheduler's status reconciliation rather
  * than replayed here.
  *
- * Duplicate semantics are unverified: the front end assumes a success envelope
- * and only falls back to a status re-read on error, which proves the UI keeps
- * running but not that a second POST awards nothing. The endpoint therefore
- * keeps the family's default 401 recovery (a replay there is re-gated by the
- * caller's fresh status check) and never gets an automatic replay policy.
+ * Middleware-401 recovery uses the shared fresh-status and account-intent
+ * gate. Other failures remain with outer status reconciliation and never replay.
  */
-export async function performBaiApiCheckIn(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function performBaiApiCheckIn(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     BAI_API_CHECK_IN_ENDPOINT,
     async (authenticated) => {
@@ -151,5 +155,7 @@ export async function performBaiApiCheckIn(request: ApiServiceRequest) {
       })
       return parseBaiApiCheckInMutationResponse(response)
     },
+    fetchBaiApiCheckInStatus,
+    options,
   )
 }

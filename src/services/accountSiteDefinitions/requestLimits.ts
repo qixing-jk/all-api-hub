@@ -68,6 +68,7 @@ const budgets = {
   [SITE_TYPES.AIMLAPI]: fallback,
   [SITE_TYPES.GRSAI]: fallback,
   [SITE_TYPES.VERCEL_AI_GATEWAY]: fallback,
+  [SITE_TYPES.NANOGPT]: fallback,
   [SITE_TYPES.NOVITA]: fallback,
   [SITE_TYPES.UNKNOWN]: fallback,
 } satisfies Record<SiteType, SiteRequestBudget>

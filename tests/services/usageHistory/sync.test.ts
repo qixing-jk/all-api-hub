@@ -94,6 +94,21 @@ async function createTestAccount(
 }
 
 describe("usageHistory sync (MSW)", () => {
+  it("marks NanoGPT aggregate-only history unsupported without dispatching New API log requests", async () => {
+    const accountId = await createTestAccount("https://nano-gpt.com", "nanogpt")
+    const fetch = vi
+      .spyOn(newApiFamilyRequests, "data")
+      .mockResolvedValue({ items: [], total: 0 })
+    expect(
+      await syncUsageHistoryForAccount({
+        accountId,
+        trigger: "manual",
+        force: true,
+      }),
+    ).toMatchObject({ status: "unsupported", ingestedCount: 0 })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   afterEach(() => vi.restoreAllMocks())
 
   it("syncs RelayFor pagination into model, key and daily history without duplicate ingestion", async () => {

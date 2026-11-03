@@ -33,7 +33,7 @@
     "unableToOpen": "Không thể mở AI Toolbox, vui lòng đảm bảo đã cài đặt"
   },
   "autodetect": {
-    "currentTabNeedsReload": "Trang hiện tại có thể đã được mở trước khi cài đặt hoặc cập nhật tiện ích, plugin tạm thời không thể đọc thông tin của thẻ này. Vui lòng làm mới trang hiện tại rồi thử lại tính năng nhận dạng tự động.",
+    "currentTabNeedsReload": "Tiện ích không thể kết nối với tập lệnh nhận dạng của trang này. Hãy tải lại trang rồi thử nhận dạng tự động lần nữa. Nếu vẫn thất bại, hãy kiểm tra xem tiện ích có quyền truy cập trang web này hay không.",
     "failed": "Nhận dạng tự động thất bại: {{error}}",
     "forbidden": "Truy cập bị từ chối. Vui lòng kiểm tra xem tường lửa của trang web có chặn các yêu cầu liên quan hay không.",
     "loginThisSite": "Đăng nhập vào trang web này",

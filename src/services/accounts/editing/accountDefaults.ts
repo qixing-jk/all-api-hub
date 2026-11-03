@@ -6,6 +6,7 @@ import {
   resolveAccountLogin,
 } from "~/services/accountLogin/configCodec"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
+import { parseManualQuotaFromUsd } from "~/services/accounts/editing/accountFormValidation"
 import { coerceAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import {
@@ -15,6 +16,7 @@ import {
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import { quotaAssetSchema } from "~/services/quotaAssets/quotaAsset"
 import {
+  ACCOUNT_SUBSCRIPTION_STATUSES,
   ACCOUNT_USAGE_SUMMARY_SCOPES,
   AuthTypeEnum,
   DELETED_ENTRY_KINDS,
@@ -148,6 +150,11 @@ const normalizeAccountSubscriptionSummary = (
     expireTime: coerceOptionalString(raw.expireTime),
     isLongTerm: coerceOptionalBoolean(raw.isLongTerm),
     isActive: coerceOptionalBoolean(raw.isActive),
+    status: (
+      Object.values(ACCOUNT_SUBSCRIPTION_STATUSES) as readonly string[]
+    ).includes(raw.status ?? "")
+      ? raw.status
+      : undefined,
   }
 }
 
@@ -183,6 +190,14 @@ const normalizeBalanceComponents = (
 const normalizeNativeBalance = (
   raw: AccountNativeBalance | undefined,
 ): AccountNativeBalance | undefined => {
+  if (raw?.unit === "USD_XNO") {
+    return [raw.total, raw.nanoBalance].every(
+      (value) =>
+        typeof value === "number" && Number.isFinite(value) && value >= 0,
+    )
+      ? { unit: "USD_XNO", total: raw.total, nanoBalance: raw.nanoBalance }
+      : undefined
+  }
   if (raw?.unit === "quota") {
     const asset = quotaAssetSchema.safeParse(raw.asset)
     return asset.success && Number.isSafeInteger(raw.total)
@@ -383,6 +398,7 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
     access_token: coerceString(merged.access_token, ""),
     username: coerceString(merged.username, ""),
     quota: coerceNumber(merged.quota, 0),
+    ...(raw?.balanceUnavailable === true ? { balanceUnavailable: true } : {}),
     today_prompt_tokens: coerceNumber(merged.today_prompt_tokens, 0),
     today_completion_tokens: coerceNumber(merged.today_completion_tokens, 0),
     today_quota_consumption: coerceNumber(merged.today_quota_consumption, 0),
@@ -583,6 +599,18 @@ export function applySiteAccountUpdates(params: {
       ? {}
       : { user_updated_at: params.now }),
   } as DeepPartial<SiteAccount>)
+
+  // Removing an override cannot reveal the provider balance it replaced. Apply
+  // this inside the storage update so deferred and failed-refresh saves agree.
+  if (
+    Object.prototype.hasOwnProperty.call(params.updates, "manualBalanceUsd") &&
+    parseManualQuotaFromUsd(normalized.manualBalanceUsd) !== undefined &&
+    parseManualQuotaFromUsd(merged.manualBalanceUsd) === undefined &&
+    params.updates.account_info?.quota === undefined
+  ) {
+    merged.account_info.quota = 0
+    merged.account_info.balanceUnavailable = true
+  }
 
   if (
     params.updates.account_info &&

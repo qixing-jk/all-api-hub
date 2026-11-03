@@ -203,6 +203,7 @@
       "keyCopied": "キーをクリップボードにコピーしました",
       "loadFailed": "キー一覧の読み込みに失敗しました: {{error}}",
       "loading": "キー一覧を読み込み中...",
+      "managementConfigurationRequired": "サイトのキー一覧を読み込んで管理するには、管理トークンが必要です。保存済みの API キーは引き続き単独で使用できます。",
       "noKeyFoundAfterCreate": "作成後にキーが見つかりませんでした。再試行してください。",
       "noKeys": "まだキーデータがありません",
       "noKeysDescription": "既定キーをすばやく作成するか、詳細設定付きのカスタムキーを作成してください。",

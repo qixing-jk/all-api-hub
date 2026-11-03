@@ -205,6 +205,7 @@
       "keyCopied": "Schlüssel in Zwischenablage kopiert",
       "loadFailed": "Schlüsselliste konnte nicht geladen werden: {{error}}",
       "loading": "Schlüsselliste wird geladen...",
+      "managementConfigurationRequired": "Zum Laden und Verwalten der Schlüsselliste der Website ist ein Verwaltungstoken erforderlich. Gespeicherte API-Schlüssel können weiterhin unabhängig davon verwendet werden.",
       "noKeyFoundAfterCreate": "Nach der Erstellung wurde kein Schlüssel gefunden. Bitte versuchen Sie es erneut.",
       "noKeys": "Noch keine Schlüsseldaten",
       "noKeysDescription": "Erstellen Sie schnell einen Standardschlüssel oder einen benutzerdefinierten Schlüssel mit erweiterten Einstellungen.",

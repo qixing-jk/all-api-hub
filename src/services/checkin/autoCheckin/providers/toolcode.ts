@@ -58,6 +58,7 @@ export const toolcodeProvider: AutoCheckinProvider = {
     try {
       const result = await performToolcodeDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       switch (result.kind) {
         case TOOLCODE_DAILY_CHECK_IN_RESULT_KINDS.Applied:

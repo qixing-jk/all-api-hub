@@ -106,3 +106,10 @@ src/public/react-devtools*
 
 # Novita adaptation generated evidence
 .scratch/novita-adaptation/artifacts/
+# Authenticated RelayFor identity and screenshot evidence stays local.
+.scratch/relayfor-parity-audit/
+
+# NanoGPT probe captures contain the signed-in account identity and the
+# browser bridge connector token, so only the spec is tracked.
+.scratch/nanogpt-adaptation/evidence/
+.scratch/nanogpt-adaptation/scripts/

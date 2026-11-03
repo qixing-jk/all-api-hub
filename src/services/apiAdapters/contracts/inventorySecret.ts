@@ -1,7 +1,8 @@
-/** Whether an inventory resource can reveal plaintext after creation. */
+/** How plaintext can be recovered after creation; website verification is outside the management API. */
 export const INVENTORY_SECRET_AVAILABILITIES = {
   Recoverable: "recoverable",
   CreateResponseOnly: "create-response-only",
+  WebsiteVerification: "website-verification",
   Unavailable: "unavailable",
 } as const
 

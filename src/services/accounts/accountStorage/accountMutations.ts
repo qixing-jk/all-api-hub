@@ -1,4 +1,5 @@
 import { isAccountSiteType } from "~/constants/siteType"
+import type { AccountData } from "~/services/accounts/accountDataModel"
 import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
 import {
   AccountUpdateUserTimestampMode,
@@ -6,6 +7,7 @@ import {
   createPersistedSiteAccount,
   type AccountUpdateOptions,
 } from "~/services/accounts/editing/accountDefaults"
+import { parseManualQuotaFromUsd } from "~/services/accounts/editing/accountFormValidation"
 import {
   hasSameAccountRequestIdentity,
   hasSameCheckInRequestCredentials,
@@ -226,24 +228,41 @@ class AccountMutations {
     })
   }
 
-  /** Applies remote refresh data without replacing newer user-owned fields. */
+  /**
+   * Applies refresh data without replacing newer user-owned fields and returns
+   * the committed snapshot for follow-ups, or null when the update is rejected.
+   */
   async updateAccountFromRefresh(
     id: string,
     updates: DeepPartial<SiteAccount>,
     refreshedCheckIn?: SiteAccount["checkIn"],
     requestSnapshot?: SiteAccount,
-  ): Promise<boolean> {
+    providerBalance?: Pick<AccountData, "quota" | "balanceUnavailable">,
+  ): Promise<SiteAccount | null> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
         if (
           requestSnapshot &&
           !hasSameAccountRequestIdentity(account, requestSnapshot)
         ) {
-          return { nextAccount: account, result: false, changed: false }
+          return { nextAccount: account, result: null, changed: false }
         }
         const effectiveUpdates = {
           ...updates,
           account_info: { ...updates.account_info },
+        }
+        if (providerBalance) {
+          // The fetch snapshot may predate a manual balance edit. Resolve this
+          // under the storage lock, retaining the latest saved override or
+          // restoring the provider result when the override has been removed.
+          if (parseManualQuotaFromUsd(account.manualBalanceUsd) !== undefined) {
+            delete effectiveUpdates.account_info.quota
+            delete effectiveUpdates.account_info.balanceUnavailable
+          } else {
+            effectiveUpdates.account_info.quota = providerBalance.quota
+            effectiveUpdates.account_info.balanceUnavailable =
+              providerBalance.balanceUnavailable === true
+          }
         }
         if (
           requestSnapshot &&
@@ -295,20 +314,21 @@ class AccountMutations {
           }
         }
 
+        const nextAccount = applySiteAccountUpdates({
+          account,
+          updates: { ...effectiveUpdates, checkIn },
+          now: Date.now(),
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        })
         return {
-          nextAccount: applySiteAccountUpdates({
-            account,
-            updates: { ...effectiveUpdates, checkIn },
-            now: Date.now(),
-            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
-          }),
-          result: true,
+          nextAccount,
+          result: nextAccount,
           changed: true,
         }
       })
     } catch (error) {
       logger.error(t("messages:storage.updateFailed", { error: "" }), error)
-      return false
+      return null
     }
   }
 

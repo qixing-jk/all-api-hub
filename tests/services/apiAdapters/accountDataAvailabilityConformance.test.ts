@@ -34,6 +34,9 @@ const partial = (
   reason: (typeof ACCOUNT_TODAY_METRIC_REASONS)[keyof typeof ACCOUNT_TODAY_METRIC_REASONS],
 ) => ({ status: ACCOUNT_TODAY_METRIC_STATUSES.Partial, reason }) as const
 
+/** Neutral fixture identity: NanoGPT keys prove the account through this address. */
+const NANOGPT_CONFORMANCE_DEPOSIT_ADDRESS = "nano_conformance_deposit_address"
+
 const collectedRequests = {
   newApiStat: 0,
   newApiIncome: 0,
@@ -54,6 +57,7 @@ const collectedRequests = {
   vercelAiGatewayCredits: 0,
   novitaBalance: 0,
   aimlApiBilling: 0,
+  nanoGptBalance: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -946,6 +950,55 @@ const producerFixturesByFamily = {
       expect(collectedRequests.aimlApiBilling).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.NanoGPT]: {
+    // The saved inference key reads its account routes on the documented direct
+    // API host, not on the console origin the account is stored against.
+    baseUrl: "https://nano-gpt.example.invalid",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      // The only usage contract is a key-scoped UTC aggregate with no day
+      // boundary, so no per-day series is claimed.
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.post("https://api.nano-gpt.com/api/check-balance", () => {
+        collectedRequests.nanoGptBalance += 1
+        return HttpResponse.json({
+          usd_balance: "12.5",
+          nano_balance: "0",
+          nanoDepositAddress: NANOGPT_CONFORMANCE_DEPOSIT_ADDRESS,
+        })
+      }),
+      http.get("https://api.nano-gpt.com/api/v1/usage", () =>
+        HttpResponse.json({
+          object: "usage",
+          totals: {
+            requests: 3,
+            costUsd: 0.25,
+            netCostUsd: 0.2,
+            totalTokens: 4096,
+          },
+        }),
+      ),
+      http.get("https://api.nano-gpt.com/api/subscription/v1/usage", () =>
+        HttpResponse.json({
+          active: false,
+          state: "inactive",
+          limits: {
+            dailyInputTokens: null,
+            weeklyInputTokens: null,
+            dailyImages: null,
+          },
+        }),
+      ),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.nanoGptBalance).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -979,7 +1032,9 @@ const createRequest = (siteType: AccountSiteType) => {
                 ? "615"
                 : siteType === SITE_TYPES.PMAPI
                   ? "10171"
-                  : "user-1",
+                  : siteType === SITE_TYPES.NANOGPT
+                    ? NANOGPT_CONFORMANCE_DEPOSIT_ADDRESS
+                    : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -1081,6 +1136,7 @@ describe("AccountData availability producer conformance", () => {
       vercelAiGatewayCredits: 0,
       novitaBalance: 0,
       aimlApiBilling: 0,
+      nanoGptBalance: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

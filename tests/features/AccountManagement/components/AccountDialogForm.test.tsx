@@ -977,6 +977,91 @@ describe("AccountDialog AccountForm", () => {
     },
   )
 
+  it("edits NanoGPT management and inference credentials without replacing the other secret", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NANOGPT
+    props.draft.accessToken = "sk-nano-mgmt-fixture"
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const management = await screen.findByLabelText(
+      /accountDialog:nanoGptCredentials.managementToken/,
+    )
+    expect(management).toHaveValue("sk-nano-mgmt-fixture")
+    const inference = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
+    )
+    expect(inference).toHaveValue("")
+    expect(inference).not.toBeRequired()
+    fireEvent.change(inference, { target: { value: "sk-nano-runtime" } })
+    expect(props.onAccessTokenChange).toHaveBeenLastCalledWith(
+      'nanogpt-credentials:{"apiKey":"sk-nano-runtime","managementToken":"sk-nano-mgmt-fixture"}',
+    )
+  })
+
+  it.each(["sk-nano-mgmt-fixture", "sk-nano-runtime"])(
+    "does not ask to complete NanoGPT credentials when a credential is already present: %s",
+    async (credential) => {
+      const props = createProps()
+      props.draft.siteType = SITE_TYPES.NANOGPT
+      props.draft.accessToken = credential
+      render(<AccountForm {...withSitePolicy(props)} />)
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.nanoGptManagementTokenInput,
+      )
+      expect(
+        screen.queryByText("accountDialog:form.nanoGptApiKeyGuidanceTitle"),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByText("accountDialog:nanoGptCredentials.managementHelp"),
+      ).toBeInTheDocument()
+    },
+  )
+
+  it("presents NanoGPT's inference-key guidance without a required account id", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NANOGPT
+    props.draft.siteName = "NanoGPT"
+    props.draft.accessToken = ""
+    props.draft.username = ""
+    props.draft.userId = ""
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.nanoGptApiKey"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:form.nanoGptApiKeyGuidanceTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:form.nanoGptApiKeyGuidance"),
+    ).toBeInTheDocument()
+    // The key alone authenticates; neither identity field may be mandatory.
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput),
+    ).not.toBeRequired()
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
+    ).not.toBeRequired()
+  })
+
+  it("does not repeat inline key instructions when the recovery guide owns them", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NANOGPT
+    props.draft.accessToken = ""
+    render(
+      <AccountForm
+        {...withSitePolicy(props)}
+        showAccessTokenGuidance={false}
+      />,
+    )
+    expect(
+      await screen.findByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("accountDialog:form.nanoGptApiKeyGuidanceTitle"),
+    ).not.toBeInTheDocument()
+  })
+
   it("uses credential presentation from the supplied policy regardless of the draft site type", async () => {
     const props = createProps()
     const policy = getAccountDialogSitePolicy(SITE_TYPES.OPENROUTER)

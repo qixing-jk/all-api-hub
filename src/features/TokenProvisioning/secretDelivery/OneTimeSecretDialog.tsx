@@ -56,8 +56,11 @@ export function OneTimeSecretDialog({
   focusWorkflowId,
 }: OneTimeSecretDialogProps) {
   const { t } = useTranslation(["keyManagement", "common"])
-  const recoverable =
-    result?.secretAvailability === secretAvailability.Recoverable
+  const websiteVerification =
+    result?.secretAvailability === secretAvailability.WebsiteVerification
+  const canViewAgain =
+    result?.secretAvailability === secretAvailability.Recoverable ||
+    websiteVerification
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
   const [handled, setHandled] = useState(false)
@@ -172,7 +175,7 @@ export function OneTimeSecretDialog({
   }, [invalidateOperations, onClose, resetLocalState])
 
   const requestClose = () => {
-    if (handled || recoverable) {
+    if (handled || canViewAgain) {
       close()
       return
     }
@@ -233,7 +236,7 @@ export function OneTimeSecretDialog({
         isOpen={isOpen && !!result}
         onClose={requestClose}
         title={t(
-          recoverable
+          canViewAgain
             ? "keyManagement:createdKey.title"
             : "keyManagement:oneTimeKey.title",
         )}
@@ -244,14 +247,14 @@ export function OneTimeSecretDialog({
           <div className="min-w-0 pr-10">
             <h2 className="text-foreground truncate text-base font-semibold sm:text-lg">
               {t(
-                recoverable
+                canViewAgain
                   ? "keyManagement:createdKey.title"
                   : "keyManagement:oneTimeKey.title",
               )}
             </h2>
             <p className="text-muted-foreground mt-density-1 text-sm">
               {description ??
-                (recoverable
+                (canViewAgain
                   ? t("keyManagement:createdKey.subtitle", {
                       name: result?.displayName,
                     })
@@ -277,7 +280,7 @@ export function OneTimeSecretDialog({
             {saveAction ? (
               <Button
                 type="button"
-                variant={recoverable ? "secondary" : "default"}
+                variant={canViewAgain ? "secondary" : "default"}
                 onClick={() => void handleSave()}
                 loading={isSaving}
                 disabled={isCopying || hasSaved}
@@ -302,7 +305,15 @@ export function OneTimeSecretDialog({
         }
       >
         <div className="space-y-density-4">
-          {!recoverable ? (
+          {websiteVerification ? (
+            <Alert
+              variant="info"
+              description={t(
+                "keyManagement:keyDetails.websiteVerificationSecret",
+              )}
+            />
+          ) : null}
+          {!canViewAgain ? (
             <Alert
               variant="warning"
               title={t("keyManagement:oneTimeKey.warningTitle")}

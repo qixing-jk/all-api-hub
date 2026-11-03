@@ -40,6 +40,7 @@ import { cliProxyApiCapabilities } from "./managedSites/cliProxyApi"
 import { doneHubManagedSiteCapabilities } from "./managedSites/doneHub"
 import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
+import { nanoGptCapabilities } from "./nanogpt"
 import { createNewApiCapabilities } from "./newApi"
 import { novitaCapabilities } from "./novita"
 import { openRouterCapabilities } from "./openrouter"
@@ -117,6 +118,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.VercelAiGateway]: () =>
     vercelAiGatewayCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.AiMlApi]: () => aimlApiCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.NanoGPT]: () => nanoGptCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported]: (siteType) => ({ siteType }),
 } satisfies Record<
   AccountSiteBackendFamily,

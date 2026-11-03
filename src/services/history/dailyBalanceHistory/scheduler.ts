@@ -293,7 +293,10 @@ class DailyBalanceHistoryScheduler {
 
     for (const account of accounts) {
       if (
-        !supportsMonetaryBalance(account.account_info.nativeBalance) ||
+        !supportsMonetaryBalance(
+          account.account_info.nativeBalance,
+          account.account_info.balanceUnavailable,
+        ) ||
         account.excludeFromTodayIncome === true ||
         (typeof account.manualBalanceUsd === "string" &&
           account.manualBalanceUsd.trim() !== "")

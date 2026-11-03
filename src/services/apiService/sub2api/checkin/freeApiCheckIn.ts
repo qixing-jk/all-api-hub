@@ -11,6 +11,10 @@ import {
   classifySiblingStatusDto,
   SIBLING_DTO_VERDICTS,
 } from "~/services/apiService/sub2api/checkin/siblingStatusContracts"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
@@ -116,13 +120,15 @@ export async function fetchFreeApiDailyCheckInStatus(
 }
 
 /**
- * Submit once after the provider's authoritative status gate. The dashboard
- * never posts a second time while `checked_in_today` is set, and the duplicate
- * answer this deployment would give is unverified, so any failure is left to
- * outer status reconciliation without repeating the write here.
+ * Submit after the provider's status gate. Only middleware-401 recovery can
+ * retry, after fresh status and account intent allow it. Lost replies remain
+ * with outer status reconciliation.
  */
-export async function performFreeApiDailyCheckIn(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function performFreeApiDailyCheckIn(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     FREE_API_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -132,6 +138,7 @@ export async function performFreeApiDailyCheckIn(request: ApiServiceRequest) {
       })
       return parseFreeApiDailyCheckInMutationResponse(response)
     },
-    { recoverUnauthorized: false },
+    fetchFreeApiDailyCheckInStatus,
+    options,
   )
 }

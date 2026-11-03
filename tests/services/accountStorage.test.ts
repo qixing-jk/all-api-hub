@@ -206,6 +206,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
       todayStatsAvailability:
         overrides.account_info?.todayStatsAvailability ??
         buildCompleteTodayStatsAvailability(),
+      balanceUnavailable: overrides.account_info?.balanceUnavailable,
       usage: overrides.account_info?.usage,
       subscription: overrides.account_info?.subscription,
       recentUsageRecords: overrides.account_info?.recentUsageRecords,
@@ -1864,7 +1865,7 @@ describe("accountStorage core behaviors", () => {
           {},
           account.checkIn,
         ),
-      ).resolves.toBe(true)
+      ).resolves.toMatchObject({ id: account.id })
 
       const updated = await accountStorage.getAccountById(account.id)
       expect(updated?.checkIn.customCheckIn).toMatchObject({
@@ -2432,6 +2433,36 @@ describe("accountStorage core behaviors", () => {
         },
       },
     })
+  })
+
+  it("retains unavailable balance facts through storage and excludes their placeholder from monetary totals", async () => {
+    const missing = createAccount({
+      id: "missing-cash",
+      account_info: {
+        ...createAccount().account_info,
+        quota: 9_000_000,
+        balanceUnavailable: true,
+      },
+    })
+    seedStorage([missing])
+    const account = await accountStorage.getAccountById("missing-cash")
+    expect(account?.account_info.balanceUnavailable).toBe(true)
+    expect((await accountStorage.getAccountStats()).total_quota).toBe(0)
+    expect(
+      accountStorage.convertToDisplayData(missing).balanceUnavailable,
+    ).toBe(true)
+    await accountStorage.updateAccount(
+      "missing-cash",
+      {
+        account_info: {
+          ...missing.account_info,
+          quota: 1_000_000,
+          balanceUnavailable: false,
+        },
+      },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    expect((await accountStorage.getAccountStats()).total_quota).toBe(1_000_000)
   })
 
   it("getAccountStats should exclude opted-out balances without excluding today metrics", async () => {
@@ -5482,6 +5513,171 @@ describe("accountStorage core behaviors", () => {
     const clearedAccount = await accountStorage.getAccountById("temp-window")
     expect(clearedAccount?.health?.code).toBeUndefined()
   })
+
+  it.each([
+    { initial: undefined, latest: "0", providerQuota: 123, unavailable: true },
+    { initial: undefined, latest: "2", providerQuota: 123, unavailable: false },
+    { initial: "2", latest: "3", providerQuota: 123, unavailable: true },
+    { initial: "2", latest: "", providerQuota: 123, unavailable: false },
+    { initial: "0", latest: "", providerQuota: 0, unavailable: true },
+    { initial: undefined, latest: "0", providerQuota: 123, unavailable: false },
+    { initial: "2", latest: "3", providerQuota: 123, unavailable: false },
+    { initial: "0", latest: "", providerQuota: 123, unavailable: false },
+  ])(
+    "uses the manual balance saved during an in-flight refresh ($initial -> $latest, unavailable=$unavailable)",
+    async ({ initial, latest, providerQuota, unavailable }) => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date("2026-09-04T12:00:00Z"))
+      try {
+        const account = createAccount({ manualBalanceUsd: initial })
+        account.account_info.quota =
+          initial === undefined ? 400 : Number(initial) * QUOTA_PER_USD
+        seedStorage([account])
+        storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+          ...DEFAULT_PREFERENCES,
+          balanceHistory: {
+            ...DEFAULT_PREFERENCES.balanceHistory,
+            enabled: true,
+          },
+        })
+        const deferred = createDeferred<any>()
+        mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
+        const pending = accountStorage.refreshAccount(account.id, true)
+        await vi.waitFor(() =>
+          expect(mockRefreshAccountData).toHaveBeenCalled(),
+        )
+        expect(
+          await accountStorage.updateAccount(
+            account.id,
+            {
+              manualBalanceUsd: latest,
+              ...(latest
+                ? {
+                    account_info: {
+                      quota: Number(latest) * QUOTA_PER_USD,
+                      balanceUnavailable: false,
+                    },
+                  }
+                : {}),
+            },
+            { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+          ),
+        ).toBe(true)
+        deferred.resolve({
+          success: true,
+          data: {
+            quota: providerQuota,
+            balanceUnavailable: unavailable,
+            today_requests_count: 7,
+          },
+          healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+        })
+        expect((await pending)?.refreshed).toBe(true)
+        const updated = await accountStorage.getAccountById(account.id)
+        expect(updated?.manualBalanceUsd).toBe(latest)
+        expect(updated?.account_info.quota).toBe(
+          latest ? Number(latest) * QUOTA_PER_USD : providerQuota,
+        )
+        expect(updated?.account_info.balanceUnavailable === true).toBe(
+          latest ? false : unavailable,
+        )
+        expect(updated?.account_info.today_requests_count).toBe(7)
+        const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+        const history = storageData.get(
+          STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
+        )
+        const snapshot = history?.snapshotsByAccountId?.[account.id]?.[dayKey]
+        if (updated?.account_info.balanceUnavailable === true)
+          expect(snapshot).toBeUndefined()
+        else expect(snapshot?.quota).toBe(updated?.account_info.quota)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("captures the canonical monetary balance when a legacy native projection is removed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"))
+    try {
+      const account = createAccount({ site_type: SITE_TYPES.REQUESTY })
+      seedStorage([account])
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        balanceHistory: {
+          ...DEFAULT_PREFERENCES.balanceHistory,
+          enabled: true,
+        },
+      })
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 123,
+          nativeBalance: {
+            unit: "USD",
+            total: 2,
+            permanent: 2,
+            daily: 0,
+            components: [],
+          },
+        },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+      })
+      await accountStorage.refreshAccount(account.id, true)
+      const saved = await accountStorage.getAccountById(account.id)
+      expect(saved?.account_info.quota).toBe(123)
+      expect(saved?.account_info.nativeBalance).toBeUndefined()
+      const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+      const history = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
+      expect(history?.snapshotsByAccountId?.[account.id]?.[dayKey]?.quota).toBe(
+        123,
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each(["storage failure", "changed identity"])(
+    "does not capture a balance snapshot for an uncommitted refresh (%s)",
+    async (reason) => {
+      const account = createAccount()
+      seedStorage([account])
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        balanceHistory: {
+          ...DEFAULT_PREFERENCES.balanceHistory,
+          enabled: true,
+        },
+      })
+      const deferred = createDeferred<any>()
+      mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
+      const pending = accountStorage.refreshAccount(account.id, true)
+      await vi.waitFor(() => expect(mockRefreshAccountData).toHaveBeenCalled())
+      if (reason === "changed identity") {
+        await accountStorage.updateAccount(
+          account.id,
+          {
+            site_url: "https://replacement.example",
+          },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        )
+      } else {
+        storageHooks.beforeSet = async (key) => {
+          if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+            throw new Error("write failed")
+        }
+      }
+      deferred.resolve({
+        success: true,
+        data: { quota: 123 },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+      })
+      await pending
+      expect(
+        storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE),
+      ).toBeUndefined()
+    },
+  )
 
   it("refreshAccount should preserve manual balance quota when set", async () => {
     const manualBalanceUsd = "1.23"

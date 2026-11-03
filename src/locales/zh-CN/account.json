@@ -316,9 +316,15 @@
     "permanentAllowance": "永久额度",
     "prompt": "提示",
     "scopedAllowances": "分组和套餐额度可能有使用限制。原生额度不计入总余额、余额历史和收入估算。",
-    "subscriptionInactive": "权益未激活或已过期",
     "subscriptionRemainingCount": "订阅剩余次数",
     "subscriptionRemainingTokens": "剩余 Token 额度（账户池 + 密钥）；美元余额是按官方价格折算的等值，包含免费额度。",
+    "subscriptionState": {
+      "active": "订阅生效中",
+      "expired": "订阅已过期",
+      "grace": "订阅宽限期",
+      "inactive": "当前无生效订阅",
+      "unavailable": "订阅状态无法获取"
+    },
     "subscriptionStatus": "订阅状态",
     "subscriptionTitle": "订阅套餐",
     "timedAllowance": "限时额度",

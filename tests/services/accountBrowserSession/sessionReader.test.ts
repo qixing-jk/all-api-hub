@@ -181,6 +181,28 @@ describe("account browser-session reader", () => {
     )
   })
 
+  it("binds a recovered current-tab read to the originally selected origin", async () => {
+    mockSendTabMessage.mockResolvedValue({
+      success: false,
+      reason: "origin_mismatch",
+    })
+    await expect(
+      readAccountBrowserSessionFromTab({
+        tabId: 1,
+        baseUrl: "https://site.example.invalid",
+        expectedOrigin: "https://site.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      }),
+    ).resolves.toBeNull()
+    expect(mockSendTabMessage).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        expectedOrigin: "https://site.example.invalid",
+      }),
+    )
+  })
+
   it.each(["MV3 service worker", "Firefox MV2 background page"])(
     "routes a temp session read directly through the coordinator in a %s",
     async () => {
