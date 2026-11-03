@@ -28,12 +28,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-changes:
+    # Skipping costs nothing when the diff is not a release: the job exits before
+    # installing anything. Release-please bumps package.json, which is an input here,
+    # so without this gate a version-only PR paid for a full extension build (measured:
+    # 20 runs, 54 runner-minutes, all of them publishing nothing).
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
+    uses: ./.github/workflows/release-pr-check.yml
+
   build:
+    needs: release-changes
     # No skip-e2e label or optional-build escape: permission changes need a check.
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' }}
     uses: ./.github/workflows/e2e-build.yml
 
   warnings:
     name: Native permission warnings
+    # Skipped with the build when a release-only diff needs no manifest check.
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

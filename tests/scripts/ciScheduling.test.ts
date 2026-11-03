@@ -2,7 +2,14 @@ import { existsSync, readFileSync } from "node:fs"
 import { runInNewContext } from "node:vm"
 import { describe, expect, it } from "vitest"
 
-const workflows = ["test.yml", "quality.yml", "e2e-smoke.yml"]
+// Every workflow that spends a runner on a pull request must honour the release gate:
+// release-please touches package.json, which is an input to all of them.
+const workflows = [
+  "test.yml",
+  "quality.yml",
+  "e2e-smoke.yml",
+  "permission-warnings.yml",
+]
 
 it.each([
   {
@@ -243,6 +250,7 @@ describe.each(workflows)("CI scheduling: %s", (file) => {
     "test.yml": "unit-tests",
     "quality.yml": "quality",
     "e2e-smoke.yml": "e2e-build",
+    "permission-warnings.yml": "build",
   }[file] as string
 
   it.each(["push", "workflow_dispatch", "pull_request"])(
@@ -321,6 +329,24 @@ it("builds PR previews only when a maintainer asks for one", () => {
   expect(source).toContain("ref: refs/pull/${{ inputs.pr_number }}/merge")
   // Comment publishing cannot rely on the fork-unsafe workflow_run path anymore.
   expect(existsSync(".github/workflows/pr-build-comment.yml")).toBe(false)
+})
+
+it("still checks permission warnings on every ordinary pull request", () => {
+  const source = readFileSync(
+    ".github/workflows/permission-warnings.yml",
+    "utf8",
+  )
+  // The release gate must not become a general escape hatch: manifest changes always
+  // need the native warning comparison, so no label or optional-build bypass exists.
+  expect(source).not.toMatch(/labels\.\*\.name/u)
+  expect(source).not.toContain("e2e-optional")
+  // The warning job consumes the build's artifact, so a gated-off build must take it
+  // down too rather than letting it run against a missing artifact. That holds only
+  // while the job keeps GitHub's implicit success() condition over `needs`.
+  const warnings = source.split(/^ {2}warnings:/m)[1]?.split(/^ {2}[\w-]+:/m)[0]
+  expect(warnings).toBeDefined()
+  expect(warnings).toContain("needs: build")
+  expect(warnings).not.toMatch(/^ {4}if:/m)
 })
 
 it("merges reports from failed shards but never from skipped or cancelled shards", () => {
