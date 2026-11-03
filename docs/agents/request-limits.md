@@ -62,6 +62,7 @@ The One API/New API/Hub values refer to ordinary `/api` traffic, not the separat
 | `aimlapi` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 | `grsai` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 | `vercel-ai-gateway` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
+| `nanogpt` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 | `novita` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 | `unknown` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 

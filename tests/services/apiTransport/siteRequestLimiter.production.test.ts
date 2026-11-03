@@ -75,6 +75,7 @@ describe("production site request limiter wrappers", () => {
       undefined,
       SITE_TYPES.UNKNOWN,
       SITE_TYPES.OPENROUTER,
+      SITE_TYPES.NANOGPT,
       "unregistered-type",
     ]
     const work = Array.from({ length: 20 }, (_, index) => {
