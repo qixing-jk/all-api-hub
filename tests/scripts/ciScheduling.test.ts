@@ -336,9 +336,20 @@ it("builds PR previews only when a maintainer asks for one", () => {
 
 it("leaves setup and artifact headroom beyond both shard-two test deadlines", () => {
   const source = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
-  const job = source.split(/^ {2}e2e-smoke:\r?$/m)[1]?.split(/^ {2}[\w-]+:\r?$/m)[0]
+  const job = source
+    .split(/^ {2}e2e-smoke:\r?$/m)[1]
+    ?.split(/^ {2}[\w-]+:\r?$/m)[0]
   const timeout = Number(job?.match(/^ {4}timeout-minutes: (\d+)/m)?.[1])
   expect(timeout).toBeGreaterThanOrEqual(25)
+  const smoke = job?.split("- name: Run E2E smoke")[1]?.split("- name:")[0]
+  const performance = job
+    ?.split("- name: Run isolated performance E2E")[1]
+    ?.split("- name:")[0]
+  const smokeDeadline = Number(smoke?.match(/&& (\d+) \|\|/)?.[1])
+  const performanceDeadline = Number(
+    performance?.match(/timeout-minutes: (\d+)/)?.[1],
+  )
+  expect(timeout).toBeGreaterThan(smokeDeadline + performanceDeadline)
 })
 
 it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", async () => {
@@ -360,6 +371,7 @@ it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", 
     states: Array<{
       merge_commit_sha: string | null
       mergeable: boolean | null
+      errorStatus?: number
     }>,
   ) {
     const outputs: Record<string, unknown> = {}
@@ -368,13 +380,20 @@ it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", 
       github: {
         rest: {
           pulls: {
-            get: async () => ({
-              data: {
-                ...states[Math.min(calls++, states.length - 1)],
-                head: { ref: "feature" },
-                number: 1817,
-              },
-            }),
+            get: async () => {
+              const state = states[Math.min(calls++, states.length - 1)]
+              if (state?.errorStatus)
+                throw Object.assign(new Error("lookup failed"), {
+                  status: state.errorStatus,
+                })
+              return {
+                data: {
+                  ...state,
+                  head: { ref: "feature" },
+                  number: 1817,
+                },
+              }
+            },
           },
         },
       },
@@ -398,6 +417,28 @@ it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", 
     calls: 2,
     outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
   })
+  expect(
+    await lookup([
+      { merge_commit_sha: null, mergeable: null, errorStatus: 503 },
+      ...Array.from({ length: 4 }, () => ({
+        merge_commit_sha: null,
+        mergeable: null,
+      })),
+      { merge_commit_sha: "merged-sha", mergeable: true },
+    ]),
+  ).toEqual({
+    calls: 6,
+    outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+  })
+  await expect(
+    lookup([
+      { merge_commit_sha: null, mergeable: null, errorStatus: 403 },
+      { merge_commit_sha: "merged-sha", mergeable: true },
+    ]),
+  ).rejects.toThrow("lookup failed")
+  await expect(
+    lookup([{ merge_commit_sha: null, mergeable: null, errorStatus: 503 }]),
+  ).rejects.toThrow("lookup failed")
   await expect(
     lookup([{ merge_commit_sha: "stale-sha", mergeable: false }]),
   ).rejects.toThrow()

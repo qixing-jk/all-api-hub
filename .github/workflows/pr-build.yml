@@ -32,11 +32,18 @@ jobs:
           script: |
             let pr;
             for (let attempt = 0; attempt < 6; attempt++) {
-              const response = await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: ${{ inputs.pr_number }}
-              });
+              let response;
+              try {
+                response = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: ${{ inputs.pr_number }}
+                });
+              } catch (error) {
+                if (![429, 500, 502, 503, 504].includes(error.status) || attempt === 5) throw error;
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                continue;
+              }
               pr = response.data;
               if (pr.mergeable === false) throw new Error('PR has merge conflicts');
               if (pr.mergeable === true && pr.merge_commit_sha) break;
