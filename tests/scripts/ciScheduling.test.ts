@@ -1,8 +1,8 @@
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { runInNewContext } from "node:vm"
 import { describe, expect, it } from "vitest"
 
-const workflows = ["test.yml", "quality.yml", "e2e-smoke.yml", "pr-build.yml"]
+const workflows = ["test.yml", "quality.yml", "e2e-smoke.yml"]
 
 it.each([
   {
@@ -239,38 +239,28 @@ describe("smoke tests after an ordinary skipped release ancestor", () => {
 })
 
 describe.each(workflows)("CI scheduling: %s", (file) => {
+  const ordinaryJob = {
+    "test.yml": "unit-tests",
+    "quality.yml": "quality",
+    "e2e-smoke.yml": "e2e-build",
+  }[file] as string
+
   it.each(["push", "workflow_dispatch", "pull_request"])(
     "starts ordinary %s checks without a release runner",
     (eventName) => {
       const context = { github: github(eventName), needs: needs("skipped") }
       expect(shouldRun(file, "release-changes", context)).toBe(false)
-      const job =
-        file === "test.yml"
-          ? "unit-tests"
-          : file === "quality.yml"
-            ? "quality"
-            : file === "e2e-smoke.yml"
-              ? "e2e-build"
-              : "build-artifact"
-      expect(shouldRun(file, job, context, false)).toBe(true)
+      expect(shouldRun(file, ordinaryJob, context, false)).toBe(true)
       if (file === "test.yml")
         expect(shouldRun(file, "unit-tests-merge", context, false)).toBe(true)
     },
   )
 
   it("cancels ordinary checks even when release detection is skipped", () => {
-    const job =
-      file === "test.yml"
-        ? "unit-tests"
-        : file === "quality.yml"
-          ? "quality"
-          : file === "e2e-smoke.yml"
-            ? "e2e-build"
-            : "build-artifact"
     expect(
       shouldRun(
         file,
-        job,
+        ordinaryJob,
         {
           github: github("push"),
           needs: needs("skipped"),
@@ -311,21 +301,26 @@ describe.each(workflows)("CI scheduling: %s", (file) => {
         needs: needs(result, releaseOnly),
         cancelled: () => result === "cancelled",
       }
-      const job =
-        file === "test.yml"
-          ? "unit-tests"
-          : file === "quality.yml"
-            ? "quality"
-            : file === "e2e-smoke.yml"
-              ? "e2e-build"
-              : "build-artifact"
-      expect(shouldRun(file, job, context, result === "success")).toBe(expected)
+      expect(shouldRun(file, ordinaryJob, context, result === "success")).toBe(
+        expected,
+      )
       if (file === "test.yml")
         expect(
           shouldRun(file, "unit-tests-merge", context, result === "success"),
         ).toBe(expected)
     },
   )
+})
+
+it("builds PR previews only when a maintainer asks for one", () => {
+  const source = readFileSync(".github/workflows/pr-build.yml", "utf8")
+  // Per-push previews spent a runner slot that queued real checks, while merged
+  // code is already packaged by the nightly release.
+  expect(source).not.toMatch(/^ {2}pull_request:/m)
+  expect(source).toContain("workflow_dispatch:")
+  expect(source).toContain("ref: refs/pull/${{ inputs.pr_number }}/merge")
+  // Comment publishing cannot rely on the fork-unsafe workflow_run path anymore.
+  expect(existsSync(".github/workflows/pr-build-comment.yml")).toBe(false)
 })
 
 it("merges reports from failed shards but never from skipped or cancelled shards", () => {
