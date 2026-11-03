@@ -157,39 +157,49 @@ it("Magpie retains one 30-second budget across login and management dispatch", a
   expect(await outcome).toBe("failed")
 })
 
-it("joined Magpie callers retain the existing budget from shared login dispatch", async () => {
-  vi.useFakeTimers()
-  const { requestMagpie, withMagpieRequestSession } = await import(
-    "~/services/apiService/magpie/request"
-  )
-  const config = withMagpieRequestSession(
-    { baseUrl: "https://joined.example", webKey: "key" },
-    new Map(),
-  )
-  vi.stubGlobal("navigator", {})
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(
-      (_url: unknown, init?: RequestInit) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener(
-            "abort",
-            () => reject(init.signal?.reason),
-            { once: true },
-          )
-        }),
-    ),
-  )
-  const outcomes: string[] = []
-  const first = requestMagpie(config, "/api/providers").catch(() =>
-    outcomes.push("first"),
-  )
-  const joined = requestMagpie(config, "/api/providers").catch(() =>
-    outcomes.push("joined"),
-  )
-  await vi.advanceTimersByTimeAsync(89_999)
-  expect(outcomes).toEqual([])
-  await vi.advanceTimersByTimeAsync(1)
-  expect(outcomes).toEqual(["first", "joined"])
-  await Promise.all([first, joined])
-})
+it.each([0, 70_000])(
+  "joined Magpie callers retain the existing budget (join at %i ms)",
+  async (joinAt) => {
+    vi.useFakeTimers()
+    const { requestMagpie, withMagpieRequestSession } = await import(
+      "~/services/apiService/magpie/request"
+    )
+    const config = withMagpieRequestSession(
+      { baseUrl: "https://joined.example", webKey: "key" },
+      new Map(),
+    )
+    vi.stubGlobal("navigator", {})
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: unknown, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener(
+              "abort",
+              () => reject(init.signal?.reason),
+              { once: true },
+            )
+          }),
+      ),
+    )
+    const outcomes: string[] = []
+    const first = requestMagpie(config, "/api/providers").catch(() =>
+      outcomes.push("first"),
+    )
+    await vi.advanceTimersByTimeAsync(joinAt)
+    const joined = requestMagpie(config, "/api/providers").catch(() =>
+      outcomes.push("joined"),
+    )
+    await vi.advanceTimersByTimeAsync(89_999 - joinAt)
+    expect(outcomes).toEqual([])
+    await vi.advanceTimersByTimeAsync(1)
+    if (joinAt > 0) {
+      expect(outcomes).toEqual(["first"])
+      await vi.advanceTimersByTimeAsync(9_999)
+      expect(outcomes).toEqual(["first"])
+      await vi.advanceTimersByTimeAsync(1)
+    }
+    expect(outcomes).toEqual(["first", "joined"])
+    await Promise.all([first, joined])
+  },
+)
