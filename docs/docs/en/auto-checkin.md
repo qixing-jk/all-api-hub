@@ -112,6 +112,7 @@ Sub2API operators may add their own check-in features. Keep the account type as 
 | Ordinary and lucky check-in coexist (such as DaiGua) | The extension performs ordinary check-in only, avoiding lucky bets that can reduce your balance. It attempts to obtain Turnstile verification; if that fails, complete check-in manually on the site. |
 | Check-in is gated behind an image captcha (such as NexaVlinks) | The extension opens the site's check-in page and clicks its button, stopping at the captcha it cannot answer. Once you solve it in that page, the extension reads back the status to confirm; if you do not finish inside the wait, it points you at the site to check in manually. |
 | The site requires human verification | Complete check-in on the original site. |
+| Daily check-in pays a cash amount or a blind box (such as 柏API) | The site also distinguishes streak bonuses, attendance rewards, blind-box opening, leaderboard rewards and makeup cards. The extension performs only that day's check-in; claim and open blind boxes on the site, and collect other rewards there. |
 
 ### AgentRouter login check-in and account login
 

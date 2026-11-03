@@ -33,6 +33,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   RelayForDailyCheckIn: "relayfor:daily-checkin",
   DayaDailyCheckIn: "daya:daily-checkin",
   PmApiDailyCheckIn: "pmapi:daily-checkin",
+  BaiApiDailyCheckIn: "bai-api:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

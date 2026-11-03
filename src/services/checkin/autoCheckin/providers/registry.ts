@@ -6,6 +6,10 @@ import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
 import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
+  createBaiApiCheckInStatusEndpoint,
+  resolveBaiApiCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
+import {
   createDaiguaCheckInStatusEndpoint,
   resolveDaiguaCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
@@ -516,6 +520,24 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
         path: createNexaVlinksCheckInStatusEndpoint(
           resolveNexaVlinksCheckInTimezone(),
         ),
+      },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    // The daily rewards module is a deployment addition; upstream Sub2API has
+    // no such route and other installations answer the Go default 404.
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "柏API",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      {
+        path: createBaiApiCheckInStatusEndpoint(resolveBaiApiCheckInTimezone()),
       },
     ],
     legacy: false,
