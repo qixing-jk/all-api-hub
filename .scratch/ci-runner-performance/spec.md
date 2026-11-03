@@ -148,6 +148,44 @@ Windows 局部筛选没有观察到切换到 forks 的收益，保留现有 thre
 
 `pnpm compile`、`pnpm knip`、相关格式和差异检查均通过；提交及推送钩子正常执行。knip 仍提示既有冗余 `scripts/e2e-shard-plan.mjs` entry，本轮不涉及。CI 调整没有产品 UI 变化，无截图验收项。
 
+## 单个 PR 反复迭代的后续审计
+
+用户补充目标：单个 PR 内部的迭代速度同样重要，多 PR 同时运行并不频繁。本节为只读调查和下一轮实验候选，未改变 CI 的验证范围或运行策略。核对的当前 main 为 `b511ceee93e678cdcbadf9849d687438ab373815`；除本分支已实现的 Test 优化外，相关工作流与 main 一致。
+
+抓取最近 300 条运行记录，去重后选择最新 50 个已结束的 PR 工作流，逐一取得 jobs/steps 响应；其中普通 PR 42 个、release PR 8 个。抽样窗口为 2026-11-03 17:11:38 至 21:05:06 UTC。分位数使用最近秩，不是长期随机样本。
+
+| 普通 PR 工作流 | 样本运行数 | 非取消运行总时间 p50 / 秒 | 已启动 job 等待 p50 / 秒 | 已启动 job 等待 p90 / 秒 |
+| --- | --: | --: | --: | --: |
+| Test | 8 | 792 | 3 | 121 |
+| E2E | 8 | 637 | 3 | 101 |
+| Quality | 9 | 187 | 3 | 14 |
+| Commitlint | 8 | 163 | 3 | 54 |
+| Permission warnings | 9 | 119 | 43 | 195 |
+
+job 等待指 REST `created_at` 至 `started_at`，包含 runner 调度和 concurrency group 等待；不包括最终未启动的取消 job。该窗口还有本任务的手动实验运行，会影响忙时的共享队列，不能据此推断账号并发上限。普通 PR 的主要耗时仍是完整执行及重复验证，忙时启动等待需要作为尾部单独衡量。
+
+两个完整同-head 例子：[PR #1820 的 Test](https://github.com/qixing-jk/all-api-hub/actions/runs/41715899068)及同-head 其他工作流从 20:48:08 至 21:02:12，约 14 分 04 秒；PR #1819 最终 head 的同组约 14 分。普通源码 head 的五个抽样工作流共运行 20 个 runner job，未计标题检查。
+
+当前已有措施已实际核对：Test/E2E/Quality 按 PR 取消旧运行；预览构建是手动触发；E2E 构建有内容指纹缓存。通知工作流在 GitHub 为 `disabled_manually`，当前没有占槽轮询。重复做这些措施不是本轮的主要机会。
+
+按收益对象区分下一轮候选：
+
+1. **缩短早期报错反馈。** 新增或提前执行受影响测试的快速检查，再由全量测试完成最终验证。Vitest `related` 只跟踪可静态解析的导入，对运行时文件读取、非字面量动态导入等需要显式规则或保守回退；相关测试负责早报错，不能未经验证就用于缩减最终验证范围。[Vitest CLI 文档](https://github.com/vitest-dev/vitest/blob/v4.0.7/docs/guide/cli.md)
+2. **减轻每轮全量单测成本。** collect 已占历史累计文件成本约 42%，优先剖析最重 UI 文件的导入与共享 setup/MSW，然后逐项实验。当前 E2E 已使用 4 workers；Vitest 未固定 maxWorkers，安装的 4.0.3 默认运行模式为可用 CPU 数减一。标准公开仓库 Ubuntu runner 为 4 CPU/16 GB，但应先记录实际可用 CPU、worker 数和峰值内存，再比较显式 worker 设置，不能把此前本地 2-worker 实验误认为当前 CI 配置。[GitHub runner 规格](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+3. **避免未改变测试输入的重复验证。** PR `paths` 使用整个 PR 的 three-dot diff，不只看最后一次 push；已有源码改动的 PR 后续仅改文档、提交消息或整理提交历史，仍可能重跑全部源码检查。候选是按各层完整测试输入指纹复用同 PR 已成功的报告，在当前 head 重新验证完整性、发布当前 head 的检查和覆盖率，并记录来源。任一测试输入或命令、运行环境变化必须失效；不能直接把旧 SHA 的绿灯当作新 head 证据。该方案目前未实现，也未测量实际命中率。[GitHub diff 与路径过滤](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#git-diff-comparisons)
+4. **让提交消息检查只读取所需材料。** Commitlint checkout 中位数为 128 秒、p90 为 264 秒；依赖安装中位数只有 7 秒，lint 本身不是大头。应比较提交元数据及配置的获取方式，减少 `fetch-depth: 0` 加完整工作树的下载，同时验证完整 base/head 提交范围与配置依赖不遗漏。这能缩短提交消息错误的反馈，未必缩短由全量 Test 主导的全绿时间。
+5. **复用构建并减少调度轮次。** 权限检查仍有单独的构建调用，虽然通常命中缓存，仍会多一次等待和启动。共享同次 E2E 构建有减少 job 的空间；同时要保留 E2E 跳过场景所要求的权限验证。跨工作流缓存目前已经复用构建内容，不应把共享缓存误认为已经消除了独立 producer job。
+
+本轮没有普通 PR 的失败工作流样本，不能给出快速检查缩短首个报错时间的实测比例。快速反馈、结果复用和测试本体优化均需要下一轮独立实验；优先评估快速反馈与全量单测成本，队列总吞吐作为次要指标。收集已知测试、覆盖率和评审问题后集中一次推送，也能减少整轮 12–14 分钟的重复等待。
+
+### 权限校验的实际执行缺口
+
+九个抽样普通 PR 的独立 `Native permission warnings` job 均被跳过。例如 [PR #1820 的权限工作流](https://github.com/qixing-jk/all-api-hub/actions/runs/41715898991)：`build / build` 成功，`release-changes` 跳过，最终 `Native permission warnings` 跳过。工作流的该下游 job 没有显式覆盖祖先跳过状态的条件，需要在调度调整时修正并做完整场景回归。
+
+`e2e/extensionPermissionWarnings.spec.ts` 仍在默认 E2E 清单内，普通全量 E2E 提供了这部分验证；独立工作流的绿色结论不能证明其单独执行过浏览器校验，也不能把缺失检查当成调度优化的收益。本轮只记录该缺口，未修复生产工作流。
+
+原始 300 条记录、50 份 jobs 响应、一次性分析脚本和统计保留于 `artifacts/queue-audit-20261104/`。其中 `analyze.mjs` 要求所有抽样响应齐全，排除未分配 runner 和负时长的跳过 job；`summary.json` 保存逐工作流阶段、同 head 分组及最长启动等待。复现：`node .scratch/ci-runner-performance/artifacts/queue-audit-20261104/analyze.mjs`。这些本地输入保留用于方案审阅，本节结论保留在 Git。
+
 ## 复现与保留
 
 Git 保留本报告、[回放脚本](replay.mjs)、[报告对照脚本](benchmark-reports.mjs)及生产回归测试。生成输出由本目录 `.gitignore` 仅忽略 `artifacts/`，未隐藏调查源码。
