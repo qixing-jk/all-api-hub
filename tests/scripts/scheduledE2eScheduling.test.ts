@@ -172,32 +172,44 @@ describe("scheduled E2E build reuse", () => {
     expect(build).toContain("include-hidden-files: true")
     expect(build).toContain("if-no-files-found: error")
     const smoke = workflow("e2e-smoke")
-    const smokeBuild = job(smoke, "e2e-build-default")
-    const smokeVariants = job(smoke, "e2e-build-variants")
+    const smokeBuild = job(smoke, "e2e-build")
     expect(smoke.match(/- "\.nvmrc"/g)).toHaveLength(2)
     expect(smoke.match(/- "\.env\*"/g)).toHaveLength(2)
     expect(smokeBuild).toContain("uses: ./.github/workflows/e2e-build.yml")
     expect(smokeBuild).toContain("build_variant: default")
+    expect(smokeBuild).toContain("derive_variants: true")
     expect(smokeBuild).toContain("optional:")
-    expect(smokeVariants).toContain(
-      "build_variant: ${{ matrix.build_variant }}",
-    )
-    expect(smokeVariants).toContain("optional:")
     expect(build).toContain("continue-on-error: ${{ inputs.optional }}")
   })
 
-  it("starts the artifact every default shard needs before the variant builds", () => {
-    const smoke = workflow("e2e-smoke")
-    const defaultBuild = job(smoke, "e2e-build-default")
-    const variants = job(smoke, "e2e-build-variants")
-    // The default build gates every shard, so it must not wait behind the variants
-    // for a runner: measured runs put it last in 47 of 78 and cost 113s at p90.
-    expect(defaultBuild).not.toContain("matrix:")
-    expect(defaultBuild).not.toContain("needs: [release-changes, e2e-build")
-    expect(variants).toContain("needs: [release-changes, e2e-build-default]")
-    expect(job(smoke, "e2e-smoke")).toContain(
-      "needs: [e2e-build-default, e2e-build-variants]",
+  it("derives every variant from one build instead of building each", () => {
+    const build = job(workflow("e2e-build"), "build")
+    const derive = build
+      .split("      - name: Derive manifest variants")[1]
+      ?.split("      - name:")[0]
+    expect(derive).toBeDefined()
+    expect(derive).toContain("if: inputs.derive_variants")
+    expect(derive).toContain("node scripts/e2e-build-variants.mjs")
+    // Deriving needs the source manifest and the recorded Node version.
+    expect(build.indexOf("- name: Derive manifest variants")).toBeGreaterThan(
+      build.indexOf("- name: Record artifact Node version"),
     )
+
+    const variants = JSON.parse(
+      readFileSync("e2e/e2e-build-variants.json", "utf8"),
+    ).variants
+    for (const name of ["dnr-required", "bookmarks-required"]) {
+      const upload = build
+        .split(`      - name: Upload derived E2E extension (${name})`)[1]
+        ?.split("      - name:")[0]
+      expect(upload).toBeDefined()
+      expect(upload).toContain("if: inputs.derive_variants")
+      expect(upload).toContain(`name: e2e-extension-${name}`)
+      // Downstream jobs download by variant name, so the path must match its config.
+      expect(upload).toContain(
+        `path: .output/${variants[name].extensionDirName}`,
+      )
+    }
   })
 })
 

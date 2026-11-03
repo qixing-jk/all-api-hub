@@ -38,6 +38,9 @@ const config: KnipConfig = {
     // Manual signing tool for a packaged ZIP into a CRX; package-distribution
     // signs in-process, so no static import reaches this entry.
     "scripts/sign-crx.mjs",
+    // Invoked by the E2E workflow by path to plan duration-balanced shards; its
+    // logic lives in e2e/utils/e2eShardPlan.shared.js, which this only wraps.
+    "scripts/e2e-shard-plan.mjs",
   ],
   project: [
     "src/**/*.{ts,tsx}!",

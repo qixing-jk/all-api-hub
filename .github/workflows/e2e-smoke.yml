@@ -104,44 +104,27 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
 
-  e2e-build-default:
-    # Built first and alone, because its artifact gates every default shard: in 47 of
-    # 78 measured runs the default build was the last of the three to get a runner,
-    # waiting 113s at p90 while the variants — which gate nothing critical — went first.
+  e2e-build:
+    # One build produces every artifact: the variants only differ in the manifest's
+    # required permissions, so they are derived instead of built twice more. Building
+    # the default variant first also keeps the artifact every shard needs off the
+    # runner queue: in 47 of 78 measured runs it was the last of three to start,
+    # waiting 113s at p90 while the variants went first.
     needs: release-changes
-    name: E2E build (default)
+    name: E2E build
     if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
     uses: ./.github/workflows/e2e-build.yml
     with:
       build_variant: default
-      optional: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
-
-  e2e-build-variants:
-    # Each variant build is produced once and reused by its test job; running them
-    # after the default build keeps them off the critical path's runner queue.
-    needs: [release-changes, e2e-build-default]
-    name: E2E build (${{ matrix.name }})
-    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: dnr-required
-            build_variant: dnr-required
-          - name: bookmarks-required
-            build_variant: bookmarks-required
-
-    uses: ./.github/workflows/e2e-build.yml
-    with:
-      build_variant: ${{ matrix.build_variant }}
+      derive_variants: true
       optional: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
 
   e2e-smoke:
     name: E2E (${{ matrix.name }})
     runs-on: ubuntu-latest
-    needs: [e2e-build-default, e2e-build-variants]
+    needs: e2e-build
     timeout-minutes: 20
-    if: ${{ !cancelled() && needs.e2e-build-default.result == 'success' && needs.e2e-build-variants.result == 'success' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
+    if: ${{ !cancelled() && needs.e2e-build.result == 'success' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
     continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
     strategy:
       fail-fast: false

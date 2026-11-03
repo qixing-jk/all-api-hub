@@ -499,6 +499,8 @@ GitHub Actions selects checks according to each workflow's configured events and
 - [Test](.github/workflows/test.yml) runs the Vitest suite in parallel shards, merges coverage, and uploads artifacts.
 
 The default E2E suite in [the E2E workflow](.github/workflows/e2e-smoke.yml) is split across six runners by measured spec duration instead of Playwright's count-based `--shard`: equal test counts left the slowest shard with 2.45x the work of the fastest. Each shard records a JSON report, and a follow-up job writes `.e2e-durations/spec-durations.json` from them and caches it; pull requests restore the base branch's copy. Without a manifest, each job falls back to `--shard`. `node scripts/write-e2e-spec-durations.mjs` and `node scripts/e2e-shard-plan.mjs --index 1 --total 6` reproduce the pipeline locally.
+
+The DNR and bookmarks E2E variants are derived from the default build with `node scripts/e2e-build-variants.mjs` instead of being built separately: `wxt.config.ts` changes only `permissions` and `optional_permissions` between them. [A test](tests/scripts/e2eBuildVariantDerive.test.ts) compares the real manifest factory across variants and fails if any other field diverges, so a future variant-specific manifest change cannot silently ship the wrong build.
 - [Commit message checks](.github/workflows/commitlint.yml) and [PR title checks](.github/workflows/commitlint-title.yml) enforce Conventional Commits for delivery.
 
 Before submitting a pull request, run the focused tests and local validation relevant to your change. The pull request CI is the authoritative full-suite and coverage check.
