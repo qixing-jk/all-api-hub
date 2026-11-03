@@ -2,6 +2,8 @@ name: Safari Smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ci/safari-daily-smoke-trial]
 
 permissions:
   contents: read
@@ -20,7 +22,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Check actual Safari automation access
-        run: node e2e/safari/smoke.mjs
+        run: node e2e/safari/smoke.ts
       - name: Retain Safari evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

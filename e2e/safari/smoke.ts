@@ -5,21 +5,30 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 
 /** A failed prerequisite is evidence of failure, never a passing Safari smoke. */
+type Check = { name: string; status: string; error?: string }
+
 export async function runSafariSmoke({
   platform = process.platform,
   output = path.resolve("test-results/safari"),
   command = (file, args) =>
     execFileSync(file, args, { encoding: "utf8", timeout: 120000 }),
+}: {
+  platform?: string
+  output?: string
+  command?: (file: string, args: string[]) => string
 } = {}) {
   fs.mkdirSync(output, { recursive: true })
-  const report = { status: "running", checks: [] }
+  const report: { status: string; checks: Check[] } = {
+    status: "running",
+    checks: [],
+  }
   const save = () =>
     fs.writeFileSync(
       path.join(output, "report.json"),
       JSON.stringify(report, null, 2),
     )
-  const check = async (name, action) => {
-    const row = { name, status: "running" }
+  const check = async (name: string, action: () => unknown) => {
+    const row: Check = { name, status: "running" }
     report.checks.push(row)
     save()
     try {
@@ -29,7 +38,7 @@ export async function runSafariSmoke({
       return result
     } catch (error) {
       row.status = "failed"
-      row.error = String(error.message)
+      row.error = error instanceof Error ? error.message : String(error)
       throw error
     }
   }

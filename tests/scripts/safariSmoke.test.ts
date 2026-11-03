@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { expect, it } from "vitest"
 
-import { runSafariSmoke } from "~~/e2e/safari/smoke.mjs"
+import { runSafariSmoke } from "~~/e2e/safari/smoke"
 
 it("records unavailable Safari as a failed check without running platform commands", async () => {
   const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
