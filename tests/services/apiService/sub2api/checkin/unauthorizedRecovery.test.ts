@@ -14,6 +14,7 @@ import { performAiRouterDailyCheckIn } from "~/services/apiService/sub2api/check
 import { performBaiApiCheckIn } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { performClawhudDailyCheckIn } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { performDaiguaDailyCheckIn } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
+import { performDenxioDailyCheckIn } from "~/services/apiService/sub2api/checkin/denxioCheckIn"
 import { performFreeApiDailyCheckIn } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
 import { performGeniusProgrammerDailyCheckIn } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import { performHiyoDailyCheckIn } from "~/services/apiService/sub2api/checkin/hiyoCheckIn"
@@ -414,6 +415,42 @@ describe("pre-POST authentication admission", () => {
           { beforeRecoveredMutation: async () => permitted },
         ),
       ).rejects.toMatchObject({ reason: "precondition_failed" })
+      expect(fetchApiResponse).not.toHaveBeenCalled()
+    },
+  )
+})
+
+describe.each([
+  { name: "Pro", perform: performSub2ApiProDailyCheckIn },
+  { name: "Denxio", perform: performDenxioDailyCheckIn },
+])("$name pre-POST authentication admission", ({ perform }) => {
+  it.each(["missing", "expiring"])(
+    "blocks the first POST after %s token refresh changes intent",
+    async (kind) => {
+      let permitted = true
+      vi.mocked(fetchApiResponse).mockReset().mockResolvedValue(response({}))
+      vi.mocked(refreshSub2ApiTokens).mockImplementationOnce(async () => {
+        permitted = false
+        return {
+          accessToken: "fresh",
+          refreshToken: "rotated",
+          tokenExpiresAt: Date.now() + 3600000,
+        }
+      })
+      await expect(
+        perform(
+          {
+            ...request,
+            auth: {
+              ...request.auth,
+              accessToken: kind === "missing" ? "" : "expiring",
+              refreshToken: "refresh",
+              tokenExpiresAt: Date.now() + 1000,
+            },
+          },
+          { beforeRecoveredMutation: async () => permitted },
+        ),
+      ).resolves.toEqual({ kind: "recovery_precondition_failed" })
       expect(fetchApiResponse).not.toHaveBeenCalled()
     },
   )

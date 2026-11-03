@@ -24,13 +24,11 @@ export interface Sub2ApiCheckInRecoveryOptions {
 }
 
 /** Reuse native status/eligibility while guarding only authentication recovery. */
-export function createSub2ApiCheckInRecoveryGuard(
+function createSub2ApiCheckInRecoveryGuard(
   readStatus: (
     request: ApiServiceRequest,
   ) => Promise<{ enabled: boolean; checkedInToday: boolean }>,
-  options: Sub2ApiCheckInRecoveryOptions = {},
-  blocked: (reason: Sub2ApiCheckInRecoveryReason) => Error = (reason) =>
-    new Sub2ApiCheckInRecoveryBlockedError(reason),
+  blocked: (reason: Sub2ApiCheckInRecoveryReason) => Error,
 ) {
   return async (request: ApiServiceRequest) => {
     const status = await readStatus(request).catch(() => {
@@ -40,12 +38,6 @@ export function createSub2ApiCheckInRecoveryGuard(
       throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked)
     if (!status.enabled)
       throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled)
-    if (
-      options.beforeRecoveredMutation &&
-      !(await options.beforeRecoveredMutation())
-    ) {
-      throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed)
-    }
     // A read must not become evidence that the recovered mutation was dispatched.
     notifyApiTransportObserver(request.observer, "onPreHandlerUnauthorized")
   }
@@ -60,6 +52,8 @@ export function executeSub2ApiCheckInWithRecovery<T>(
     request: ApiServiceRequest,
   ) => Promise<{ enabled: boolean; checkedInToday: boolean }>,
   options: Sub2ApiCheckInRecoveryOptions = {},
+  blocked: (reason: Sub2ApiCheckInRecoveryReason) => Error = (reason) =>
+    new Sub2ApiCheckInRecoveryBlockedError(reason),
 ) {
   return executeAuthenticatedSub2ApiRequest(
     request,
@@ -70,12 +64,15 @@ export function executeSub2ApiCheckInWithRecovery<T>(
         options.beforeRecoveredMutation &&
         !(await options.beforeRecoveredMutation())
       ) {
-        throw new Sub2ApiCheckInRecoveryBlockedError(
-          SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed,
-        )
+        throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed)
       }
       return runner(authenticatedRequest)
     },
-    { beforeUnauthorizedRetry: createSub2ApiCheckInRecoveryGuard(readStatus) },
+    {
+      beforeUnauthorizedRetry: createSub2ApiCheckInRecoveryGuard(
+        readStatus,
+        blocked,
+      ),
+    },
   )
 }

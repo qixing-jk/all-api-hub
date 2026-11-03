@@ -1,8 +1,9 @@
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
-  createSub2ApiCheckInRecoveryGuard,
+  executeSub2ApiCheckInWithRecovery,
   SUB2API_CHECK_IN_RECOVERY_REASONS,
   type Sub2ApiCheckInRecoveryOptions,
+  type Sub2ApiCheckInRecoveryReason,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
@@ -251,26 +252,22 @@ export async function performDenxioDailyCheckIn(
   } = {},
 ): Promise<DenxioDailyCheckInOperationResult> {
   const timezone = resolveTimezone()
-  const beforeUnauthorizedRetry = createSub2ApiCheckInRecoveryGuard(
-    (recoveredRequest) => fetchStatusWithRequest(recoveredRequest, timezone),
-    options,
-    (reason) =>
-      new DenxioRecoveredMutationBlockedError({
-        kind: {
-          [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
-            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
-          [SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled]:
-            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Disabled,
-          [SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable]:
-            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
-          [SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed]:
-            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
-        }[reason],
-      }),
-  )
+  const blocked = (reason: Sub2ApiCheckInRecoveryReason) =>
+    new DenxioRecoveredMutationBlockedError({
+      kind: {
+        [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
+          DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
+        [SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled]:
+          DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Disabled,
+        [SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable]:
+          DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
+        [SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed]:
+          DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
+      }[reason],
+    })
 
   try {
-    const beginSession = await executeAuthenticatedSub2ApiRequest(
+    const beginSession = await executeSub2ApiCheckInWithRecovery(
       request,
       DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT,
       async (authenticatedRequest) => {
@@ -287,7 +284,9 @@ export async function performDenxioDailyCheckIn(
           request: authenticatedRequest,
         }
       },
-      { beforeUnauthorizedRetry },
+      (recoveredRequest) => fetchStatusWithRequest(recoveredRequest, timezone),
+      options,
+      blocked,
     )
 
     await (options.wait ?? defaultWait)(beginSession.challenge.waitMilliseconds)
@@ -306,7 +305,7 @@ export async function performDenxioDailyCheckIn(
       beginSession.request.observer,
       "onPreHandlerUnauthorized",
     )
-    const claim = await executeAuthenticatedSub2ApiRequest(
+    const claim = await executeSub2ApiCheckInWithRecovery(
       beginSession.request,
       DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
       async (authenticatedRequest) => {
@@ -323,7 +322,9 @@ export async function performDenxioDailyCheckIn(
         })
         return parseDenxioDailyCheckInClaimResponse(response)
       },
-      { beforeUnauthorizedRetry },
+      (recoveredRequest) => fetchStatusWithRequest(recoveredRequest, timezone),
+      options,
+      blocked,
     )
 
     return {

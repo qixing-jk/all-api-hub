@@ -8,7 +8,7 @@ import {
   type Sub2ApiProDailyCheckInOperationResult,
 } from "~/services/apiService/sub2api/checkin/checkIn"
 import {
-  createSub2ApiCheckInRecoveryGuard,
+  executeSub2ApiCheckInWithRecovery,
   SUB2API_CHECK_IN_RECOVERY_REASONS,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
@@ -58,7 +58,7 @@ export async function performSub2ApiProDailyCheckIn(
   options: Sub2ApiCheckInRecoveryOptions = {},
 ): Promise<Sub2ApiProDailyCheckInOperationResult> {
   try {
-    return await executeAuthenticatedSub2ApiRequest(
+    return await executeSub2ApiCheckInWithRecovery(
       request,
       SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
       async (authenticatedRequest) => {
@@ -68,25 +68,21 @@ export async function performSub2ApiProDailyCheckIn(
         })
         return parseSub2ApiProDailyCheckInMutationResponse(response)
       },
-      {
-        beforeUnauthorizedRetry: createSub2ApiCheckInRecoveryGuard(
-          fetchSub2ApiProDailyCheckInStatusWithRequest,
-          options,
-          (reason) =>
-            new Sub2ApiProRecoveredMutationBlockedError({
-              kind: {
-                [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
-                  SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
-                [SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled]:
-                  SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled,
-                [SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable]:
-                  SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
-                [SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed]:
-                  SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
-              }[reason],
-            }),
-        ),
-      },
+      fetchSub2ApiProDailyCheckInStatusWithRequest,
+      options,
+      (reason) =>
+        new Sub2ApiProRecoveredMutationBlockedError({
+          kind: {
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled,
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
+          }[reason],
+        }),
     )
   } catch (error) {
     if (error instanceof Sub2ApiProRecoveredMutationBlockedError) {
