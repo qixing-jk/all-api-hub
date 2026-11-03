@@ -1,5 +1,9 @@
-import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
+import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { ApiError } from "~/services/apiTransport/errors"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { t } from "~/utils/i18n/core"
 
@@ -175,19 +179,29 @@ export async function fetchAIHubMixWebsiteModels(): Promise<
  * Never share an authenticated response as provider-wide data.
  */
 async function fetchAIHubMixPublicData(endpoint: string): Promise<unknown> {
-  const response = await fetch(`${AIHUBMIX_API_ORIGIN}${endpoint}`, {
-    credentials: "omit",
-    redirect: "error",
-    cache: "no-cache",
-    signal: AbortSignal.timeout(12_000),
-  })
-  if (!response.ok)
-    throw new ApiError(
-      t("messages:errors.api.requestFailed", { status: response.status }),
-      response.status,
-      endpoint,
-    )
-  return extractAIHubMixData<unknown>(await response.json(), endpoint)
+  return await withSiteApiRequestTask(
+    AIHUBMIX_API_ORIGIN,
+    async () => {
+      const signal = AbortSignal.timeout(12_000)
+      const response = await fetch(`${AIHUBMIX_API_ORIGIN}${endpoint}`, {
+        credentials: "omit",
+        redirect: "error",
+        cache: "no-cache",
+        signal,
+      })
+      reportSiteRateLimitResponse(AIHUBMIX_API_ORIGIN, response)
+      if (!response.ok)
+        throw new ApiError(
+          t("messages:errors.api.requestFailed", { status: response.status }),
+          response.status,
+          endpoint,
+        )
+      return extractAIHubMixData<unknown>(await response.json(), endpoint)
+    },
+    undefined,
+    undefined,
+    SITE_TYPES.AIHUBMIX,
+  )
 }
 /** Parse each native user-model endpoint independently; adapters choose fallback order. */
 export async function fetchAIHubMixApiUserModelIds(

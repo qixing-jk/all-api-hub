@@ -202,6 +202,7 @@ describe("apiService AIHubMix", () => {
       expect.any(Function),
       abortController.signal,
       requestScheduling,
+      undefined,
     )
     expect(startDeadline).toHaveBeenCalledTimes(1)
   })
@@ -257,6 +258,7 @@ describe("apiService AIHubMix", () => {
         "https://aihubmix.com",
         expect.any(Function),
         abortDeadline.signal,
+        undefined,
         undefined,
       )
 

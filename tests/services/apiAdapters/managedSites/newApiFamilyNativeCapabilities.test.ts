@@ -196,7 +196,12 @@ describe("New API family native capability consumers", () => {
         total: 1,
       })
       expect(api.listAllChannels).toHaveBeenCalledWith(
-        { ...request, abortSignal: signal, bypassSiteRequestLimit: true },
+        {
+          ...request,
+          siteType: capabilities.siteType,
+          abortSignal: signal,
+          bypassSiteRequestLimit: true,
+        },
         options,
       )
       expect(channel.balance).toBe(123)
@@ -280,7 +285,7 @@ describe("New API family native capability consumers", () => {
         type_counts: { "1": 1 },
       })
       expect(api.searchChannel).toHaveBeenCalledWith(
-        request,
+        { ...request, siteType: capabilities.siteType },
         "https://upstream.example",
       )
     },
@@ -391,7 +396,10 @@ describe("New API family native capability consumers", () => {
           }),
         ),
       ).resolves.toBe("resolved-key")
-      expect(apis.doneHub.fetchChannelRaw).toHaveBeenCalledWith(request, 7)
+      expect(apis.doneHub.fetchChannelRaw).toHaveBeenCalledWith(
+        { ...request, siteType: SITE_TYPES.DONE_HUB },
+        7,
+      )
     },
   )
 })

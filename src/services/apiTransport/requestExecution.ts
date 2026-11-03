@@ -4,6 +4,7 @@ import {
 } from "~/services/apiTransport/abortableTask"
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
+  reportSiteRateLimit,
   resolveSiteRequestLimitKey,
   withSiteApiRequestLease,
 } from "~/services/apiTransport/siteRequestLimiter"
@@ -17,6 +18,7 @@ import { createLogger } from "~/utils/core/logger"
 /** Execution controls shared by protocol-specific request preparation. */
 type RequestExecutionControls = Pick<
   ApiTransportRequest,
+  | "siteType"
   | "baseUrl"
   | "abortSignal"
   | "abortDeadline"
@@ -38,6 +40,7 @@ interface PreparedRequestExecution {
   dispatch: () => Promise<Response>
   onDispatch: () => void
   onResponse: () => void
+  onRateLimit: (retryAfter?: string) => void
 }
 
 const logger = createLogger("ApiTransportRequest")
@@ -84,6 +87,15 @@ export async function executePreparedRequest<T>(
             responseObserved = true
             notifyApiTransportObserver(request.observer, "onResponse")
           }
+          let rateLimitObserved = false
+          const onRateLimit = (retryAfter?: string) => {
+            if (rateLimitObserved) return
+            rateLimitObserved = true
+            reportSiteRateLimit(
+              resolveSiteRequestLimitKey(prepared.url),
+              retryAfter,
+            )
+          }
           const options = { ...prepared.options, signal }
 
           return await run({
@@ -96,10 +108,13 @@ export async function executePreparedRequest<T>(
                 { cookieSession: request.cookieSession, onDispatch },
               )
               onResponse()
+              if (response.status === 429)
+                onRateLimit(response.headers.get("retry-after") ?? undefined)
               return response
             },
             onDispatch,
             onResponse,
+            onRateLimit,
           })
         } catch (error) {
           taskFailure = { error }
@@ -128,10 +143,11 @@ export async function executePreparedRequest<T>(
   const admissionAbort = composeAbortSignals(signals)
   try {
     return await withSiteApiRequestLease(
-      resolveSiteRequestLimitKey(request.baseUrl),
+      resolveSiteRequestLimitKey(prepared.url),
       startRequest,
       admissionAbort.signal,
       request.requestScheduling,
+      request.siteType,
     )
   } finally {
     admissionAbort.dispose()

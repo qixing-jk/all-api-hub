@@ -109,6 +109,7 @@ describe("redeemService.redeemCodeForAccount", () => {
         baseUrl: "https://example.com",
         managementApiBaseUrl: "https://example.com",
         accountId: "account-1",
+        siteType: "new-api",
         auth: {
           authType: "bearer",
           userId: "user-1",
@@ -197,6 +198,7 @@ describe("redeemService.redeemCodeForAccount", () => {
         baseUrl: "https://one-api.example.com",
         managementApiBaseUrl: "https://one-api.example.com",
         accountId: "account-2",
+        siteType: "one-api",
         auth: {
           authType: "token",
           userId: "user-2",

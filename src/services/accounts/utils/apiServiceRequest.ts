@@ -183,6 +183,7 @@ const createAccountApiContextFromSource = (
   const aimlApiKey =
     typeof source.aimlApiKey === "string" ? source.aimlApiKey.trim() : ""
   const request: ApiServiceRequest = {
+    siteType: source.siteType,
     baseUrl: source.siteUrl,
     ...(aimlApiKey ? { aimlApiKey } : {}),
     managementApiBaseUrl: resolveDeploymentApiOrigin(source.siteUrl),

@@ -1,3 +1,8 @@
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 /**
  * OmniRoute HTTP boundary: URL building, cancellation, and error evidence.
  *
@@ -239,47 +244,58 @@ export async function callOmniRoute<T>(
       fail(raw, { dispatch: "not-dispatched", confirmedNonApplication: true })
     }
 
-    fetchStarted = true
-    response = await fetch(
-      buildOmniRouteUrl(input.baseUrl, input.path, input.searchParams),
-      {
-        method: input.method,
-        signal: actionSignal.signal,
-        headers: {
-          ...(input.body === undefined
-            ? {}
-            : { "content-type": "application/json" }),
-          ...(input.token ? { authorization: `Bearer ${input.token}` } : {}),
-        },
-        ...(input.body === undefined
-          ? {}
-          : { body: JSON.stringify(input.body) }),
+    return await withSiteApiRequestTask(
+      input.baseUrl,
+      async () => {
+        fetchStarted = true
+        response = await fetch(
+          buildOmniRouteUrl(input.baseUrl, input.path, input.searchParams),
+          {
+            method: input.method,
+            signal: actionSignal.signal,
+            headers: {
+              ...(input.body === undefined
+                ? {}
+                : { "content-type": "application/json" }),
+              ...(input.token
+                ? { authorization: `Bearer ${input.token}` }
+                : {}),
+            },
+            ...(input.body === undefined
+              ? {}
+              : { body: JSON.stringify(input.body) }),
+          },
+        )
+
+        reportSiteRateLimitResponse(input.baseUrl, response)
+        const payload = await readOmniRouteJsonBody(response)
+        if (!response.ok) {
+          throw new OmniRouteApiError(
+            readOmniRouteErrorMessage(
+              payload,
+              `OmniRoute request failed (${response.status})`,
+            ),
+            response.status,
+            {
+              dispatch: "dispatched",
+              responseReceived: true,
+              // A 5xx can be emitted after the gateway applied the write.
+              confirmedNonApplication: response.status < 500,
+              raw: payload,
+              ...(readOmniRouteErrorCode(payload) === undefined
+                ? {}
+                : { code: readOmniRouteErrorCode(payload) }),
+            },
+          )
+        }
+
+        if (input.expectsJson === false) return undefined as T
+        return payload as T
       },
+      actionSignal.signal,
+      undefined,
+      SITE_TYPES.OMNIROUTE,
     )
-
-    const payload = await readOmniRouteJsonBody(response)
-    if (!response.ok) {
-      throw new OmniRouteApiError(
-        readOmniRouteErrorMessage(
-          payload,
-          `OmniRoute request failed (${response.status})`,
-        ),
-        response.status,
-        {
-          dispatch: "dispatched",
-          responseReceived: true,
-          // A 5xx can be emitted after the gateway applied the write.
-          confirmedNonApplication: response.status < 500,
-          raw: payload,
-          ...(readOmniRouteErrorCode(payload) === undefined
-            ? {}
-            : { code: readOmniRouteErrorCode(payload) }),
-        },
-      )
-    }
-
-    if (input.expectsJson === false) return undefined as T
-    return payload as T
   } catch (error) {
     if (error instanceof OmniRouteApiError) throw error
     fail(error, {

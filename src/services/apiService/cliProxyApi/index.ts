@@ -1,4 +1,9 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import type { ResourceOperationOptions } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type { CliProxyApiConfig } from "~/types/cliProxyApiConfig"
 
 export const CLI_PROXY_API_PROVIDER_KINDS = [
@@ -75,33 +80,45 @@ export async function requestCliProxyApi(
   const controller = new AbortController()
   const cancel = () => controller.abort(callerSignal?.reason)
   callerSignal?.addEventListener("abort", cancel, { once: true })
-  const timeout = setTimeout(() => controller.abort(), 30_000)
+  let timeout: ReturnType<typeof setTimeout> | undefined
   try {
-    const response = await fetch(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${config.adminToken.trim()}`,
-        Accept: "application/json",
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    return await withSiteApiRequestTask(
+      url.toString(),
+      async () => {
+        timeout = setTimeout(() => controller.abort(), 30_000)
+        const response = await fetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer ${config.adminToken.trim()}`,
+            Accept: "application/json",
+            ...(body === undefined
+              ? {}
+              : { "Content-Type": "application/json" }),
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+          signal: controller.signal,
+          redirect: "error",
+          credentials: "omit",
+          cache: "no-store",
+        })
+        reportSiteRateLimitResponse(url.toString(), response)
+        if (!response.ok) throw new CliProxyApiError(response.status)
+        const result: unknown = await response.json()
+        if (
+          method !== "GET" &&
+          (!result ||
+            typeof result !== "object" ||
+            !("status" in result) ||
+            result.status !== "ok")
+        ) {
+          throw new CliProxyApiError()
+        }
+        return result
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      signal: controller.signal,
-      redirect: "error",
-      credentials: "omit",
-      cache: "no-store",
-    })
-    if (!response.ok) throw new CliProxyApiError(response.status)
-    const result: unknown = await response.json()
-    if (
-      method !== "GET" &&
-      (!result ||
-        typeof result !== "object" ||
-        !("status" in result) ||
-        result.status !== "ok")
-    ) {
-      throw new CliProxyApiError()
-    }
-    return result
+      callerSignal,
+      undefined,
+      SITE_TYPES.CLI_PROXY_API,
+    )
   } catch (error) {
     if (callerSignal?.aborted || error instanceof CliProxyApiError) throw error
     throw new CliProxyApiError()

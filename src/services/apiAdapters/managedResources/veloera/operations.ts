@@ -14,8 +14,8 @@ import {
   requireNumericManagedResourceId,
 } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import {
+  createManagedSiteApiServiceRequest,
   runManagedSiteApiServiceMutationStep,
-  toManagedSiteApiServiceRequest,
 } from "~/services/apiAdapters/managedSites/request"
 import {
   createChannel,
@@ -48,6 +48,10 @@ import type {
 } from "~/types/veloera"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 import { getErrorMessage } from "~/utils/core/error"
+
+const createProviderRequest = createManagedSiteApiServiceRequest(
+  SITE_TYPES.VELOERA,
+)
 
 const toVeloeraMutationResponse = (response: ApiResponse<unknown>) =>
   response.success
@@ -90,6 +94,7 @@ const runVeloeraResponseStep = async (input: {
 }) =>
   await runManagedSiteApiServiceMutationStep({
     ...input,
+    siteType: SITE_TYPES.VELOERA,
     classifyResponse: toVeloeraMutationResponse,
     classifyResponseError: (error) => {
       throw error
@@ -105,6 +110,7 @@ const runVeloeraVoidStep = async (input: {
 }) =>
   await runManagedSiteApiServiceMutationStep({
     ...input,
+    siteType: SITE_TYPES.VELOERA,
     classifyResponse: () => ({ outcome: "applied", data: undefined }),
     classifyResponseError: toVeloeraResponseError,
   })
@@ -114,7 +120,7 @@ const fetchSecretKey = async (
   channelId: number,
   options?: ManagedSiteChannelRequestOptions,
 ) => {
-  const request = toManagedSiteApiServiceRequest(config, options)
+  const request = createProviderRequest(config, options)
   const channel = options
     ? await fetchChannel(request, channelId, options)
     : await fetchChannel(request, channelId)
@@ -149,18 +155,14 @@ export const veloeraChannelOperations = {
   list: async (
     config: VeloeraConfig,
     options?: ManagedSitePaginatedChannelRequestOptions,
-  ) =>
-    await listAllChannels(
-      toManagedSiteApiServiceRequest(config, options),
-      options,
-    ),
+  ) => await listAllChannels(createProviderRequest(config, options), options),
   get: async (
     config: VeloeraConfig,
     channelId: number,
     options?: ManagedSiteChannelRequestOptions,
   ) =>
     await fetchChannel(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       channelId,
       options,
     ),
@@ -237,10 +239,7 @@ export const veloeraManagedResourceModels = {
   }),
   list: async (config, options) =>
     toManagedModelChannelList(
-      await listAllChannels(
-        toManagedSiteApiServiceRequest(config, options),
-        options,
-      ),
+      await listAllChannels(createProviderRequest(config, options), options),
       [
         VeloeraChannelStatus.ManuallyDisabled,
         VeloeraChannelStatus.AutoDisabled,
@@ -258,7 +257,7 @@ export const veloeraManagedResourceModels = {
       ref,
     )
     return await fetchChannelModels(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       channelId,
       options,
     )
@@ -269,7 +268,7 @@ export const veloeraManagedResourceModels = {
     options?: ManagedSiteChannelRequestOptions,
   ) =>
     await fetchDraftChannelModels(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       {
         type: Number(probe.channelType),
         baseUrl: probe.baseUrl,
