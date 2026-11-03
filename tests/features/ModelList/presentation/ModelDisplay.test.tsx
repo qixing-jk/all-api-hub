@@ -532,7 +532,10 @@ describe("ModelDisplay", () => {
   })
 
   it("abandons a pending group reveal when its offer is removed", async () => {
-    const models = [createCalculatedModel({})]
+    const survivor = createCalculatedModel({
+      model: { model_name: "surviving-model" },
+    })
+    const models = [createCalculatedModel({}), survivor]
     const props = {
       verificationSummariesByKey: {},
       showRealPrice: false,
@@ -541,10 +544,18 @@ describe("ModelDisplay", () => {
       onModelGroupChange: vi.fn(),
     }
     const view = render(<ModelDisplay {...props} models={models} />)
-    await userEvent.setup().click(screen.getByText("change-group-account-1"))
-    view.rerender(<ModelDisplay {...props} models={[]} />)
+    await userEvent
+      .setup()
+      .click(screen.getAllByText("change-group-account-1")[0]!)
+    view.rerender(<ModelDisplay {...props} models={[survivor]} />)
     expect(scrollIntoViewSpy).not.toHaveBeenCalled()
-    expect(screen.getByTestId(TEST_IDS.emptyState)).toBeVisible()
+    expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
+      "data-model-id",
+      "surviving-model",
+    )
+    expect(
+      view.container.querySelector("[data-group-change-highlight]"),
+    ).toBeNull()
   })
 
   it("shows an empty state when no filtered models are available", () => {

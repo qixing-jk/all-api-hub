@@ -267,12 +267,24 @@ function createDefaultProps() {
 describe("ModelItem", () => {
   it("shows the model group control and labels only the expanded offer's group", () => {
     const props = createDefaultProps()
+    props.model.enable_groups = ["default", "vip"]
+    props.groupContext.supportedGroups = ["default", "vip"]
+    props.groupContext.usableGroups = ["default", "vip"]
+    props.activeGroupContext.activeUsableGroups = ["default", "vip"]
     const { rerender } = render(
       <ModelItem {...props} onModelGroupChange={vi.fn()} />,
     )
-    expect(screen.getAllByText(/vip/).length).toBeGreaterThan(0)
+    expect(
+      screen.getByRole("combobox", { name: "modelGroupQuickSelect" }),
+    ).toBeVisible()
+    expect(screen.getByText("default+1")).toBeVisible()
     rerender(<ModelItem {...props} comparisonGroup="vip" />)
-    expect(screen.getAllByText(/vip/).length).toBeGreaterThan(0)
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(screen.getByText("vip", { exact: true })).toHaveAttribute(
+      "title",
+      "currentUsableGroups: vip",
+    )
+    expect(screen.queryByText("default+1")).not.toBeInTheDocument()
   })
 
   it("allows published per-request prices to expand without endpoint or group details", () => {
