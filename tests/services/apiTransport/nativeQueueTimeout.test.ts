@@ -146,10 +146,50 @@ it("Magpie retains one 30-second budget across login and management dispatch", a
     { baseUrl: "https://shared-budget.example", webKey: "key" },
     "/api/providers",
   )
+  let settled: string | undefined
   const outcome = pending.then(
-    () => "completed",
-    () => "failed",
+    () => (settled = "completed"),
+    () => (settled = "failed"),
   )
-  await vi.advanceTimersByTimeAsync(120_000)
+  await vi.advanceTimersByTimeAsync(89_999)
+  expect(settled).toBeUndefined()
+  await vi.advanceTimersByTimeAsync(1)
   expect(await outcome).toBe("failed")
+})
+
+it("joined Magpie callers retain the existing budget from shared login dispatch", async () => {
+  vi.useFakeTimers()
+  const { requestMagpie, withMagpieRequestSession } = await import(
+    "~/services/apiService/magpie/request"
+  )
+  const config = withMagpieRequestSession(
+    { baseUrl: "https://joined.example", webKey: "key" },
+    new Map(),
+  )
+  vi.stubGlobal("navigator", {})
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      (_url: unknown, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(init.signal?.reason),
+            { once: true },
+          )
+        }),
+    ),
+  )
+  const outcomes: string[] = []
+  const first = requestMagpie(config, "/api/providers").catch(() =>
+    outcomes.push("first"),
+  )
+  const joined = requestMagpie(config, "/api/providers").catch(() =>
+    outcomes.push("joined"),
+  )
+  await vi.advanceTimersByTimeAsync(89_999)
+  expect(outcomes).toEqual([])
+  await vi.advanceTimersByTimeAsync(1)
+  expect(outcomes).toEqual(["first", "joined"])
+  await Promise.all([first, joined])
 })

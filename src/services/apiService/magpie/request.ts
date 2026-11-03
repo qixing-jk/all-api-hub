@@ -37,7 +37,11 @@ export interface MagpieRequestOptions {
 
 interface MagpieRequestSession {
   authenticated: boolean
-  pendingLogin?: SharedRead<void>
+  pendingLogin?: {
+    read: SharedRead<void>
+    dispatched: boolean
+    listeners: Set<() => void>
+  }
 }
 const requestSessions = new WeakMap<MagpieConfig, MagpieRequestSession>()
 const sessionBinding = (config: MagpieConfig) =>
@@ -96,11 +100,14 @@ export async function requestMagpie(
   const execute = async () => {
     signal.signal?.throwIfAborted()
     const session = requestSessions.get(config)
-    const loginWithSignal = async (loginSignal?: AbortSignal) => {
+    const loginWithSignal = async (
+      loginSignal?: AbortSignal,
+      onDispatch = deadline.start,
+    ) => {
       return await withSiteApiRequestTask(
         baseUrl,
         async () => {
-          deadline.start()
+          onDispatch()
           const login = await fetch(
             `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
             {
@@ -127,20 +134,34 @@ export async function requestMagpie(
     }
     const authenticate = async () => {
       if (!session) return loginWithSignal(signal.signal)
-      if (!session.pendingLogin || session.pendingLogin.signal.aborted) {
-        const pending = new SharedRead<void>(async (sharedOptions) => {
-          try {
-            await loginWithSignal(sharedOptions.signal)
-            sharedOptions.signal.throwIfAborted()
-            session.authenticated = true
-          } finally {
-            if (session.pendingLogin === pending)
-              session.pendingLogin = undefined
-          }
-        })
+      if (!session.pendingLogin || session.pendingLogin.read.signal.aborted) {
+        const pending = {
+          dispatched: false,
+          listeners: new Set<() => void>(),
+          read: new SharedRead<void>(async (sharedOptions) => {
+            try {
+              await loginWithSignal(sharedOptions.signal, () => {
+                pending.dispatched = true
+                for (const listener of pending.listeners) listener()
+              })
+              sharedOptions.signal.throwIfAborted()
+              session.authenticated = true
+            } finally {
+              if (session.pendingLogin === pending)
+                session.pendingLogin = undefined
+            }
+          }),
+        }
         session.pendingLogin = pending
       }
-      await session.pendingLogin.read({ signal: signal.signal })
+      const pending = session.pendingLogin
+      if (pending.dispatched) deadline.start()
+      pending.listeners.add(deadline.start)
+      try {
+        await pending.read.read({ signal: signal.signal })
+      } finally {
+        pending.listeners.delete(deadline.start)
+      }
     }
     if (!session?.authenticated) await authenticate()
     signal.signal?.throwIfAborted()
