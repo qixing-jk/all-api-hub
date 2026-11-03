@@ -283,43 +283,50 @@ describe("DialogStateContext sponsor prefill", () => {
     expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
   })
 
-  it("rejects and closes add-account dialogs after a save error", async () => {
-    const user = userEvent.setup()
-    let result: Promise<unknown> | undefined
+  it.each([DIALOG_MODES.ADD, DIALOG_MODES.EDIT])(
+    "keeps the %s draft and pending result after a save error so retry can succeed",
+    async (mode) => {
+      const user = userEvent.setup()
+      let result: Promise<unknown> | undefined
 
-    function ErrorHarness() {
-      const { openAccountDialog } = useDialogStateContext()
-      return (
-        <button
-          type="button"
-          onClick={() => {
-            result = openAccountDialog({ mode: DIALOG_MODES.ADD })
-          }}
-        >
-          open
-        </button>
+      function ErrorHarness() {
+        const { openAccountDialog } = useDialogStateContext()
+        return (
+          <button
+            type="button"
+            onClick={() => {
+              result = openAccountDialog({ mode })
+              void result.catch(() => {})
+            }}
+          >
+            open
+          </button>
+        )
+      }
+
+      render(
+        <DialogStateProvider>
+          <ErrorHarness />
+        </DialogStateProvider>,
+        {
+          withUserPreferencesProvider: false,
+          withThemeProvider: false,
+          withReleaseUpdateStatusProvider: false,
+        },
       )
-    }
 
-    render(
-      <DialogStateProvider>
-        <ErrorHarness />
-      </DialogStateProvider>,
-      {
-        withUserPreferencesProvider: false,
-        withThemeProvider: false,
-        withReleaseUpdateStatusProvider: false,
-      },
-    )
+      await user.click(screen.getByRole("button", { name: "open" }))
 
-    await user.click(screen.getByRole("button", { name: "open" }))
-
-    const rejection = expect(result).rejects.toThrow("boom")
-    await user.click(screen.getByRole("button", { name: "fail" }))
-    await rejection
-    expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
-    expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
-  })
+      await user.click(screen.getByRole("button", { name: "fail" }))
+      expect(screen.getByTestId("account-dialog")).toBeVisible()
+      expect(accountDialogProps.current.mode).toBe(mode)
+      expect(loadAccountDataMock).not.toHaveBeenCalled()
+      await user.click(screen.getByRole("button", { name: "save" }))
+      await expect(result).resolves.toEqual({ id: "saved" })
+      expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
+      expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("throws when useDialogStateContext is rendered outside its provider", () => {
     function InvalidHarness() {

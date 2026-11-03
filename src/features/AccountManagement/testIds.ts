@@ -2,6 +2,7 @@ import type { AccountSiteType } from "~/constants/siteType"
 import type { SortField } from "~/types"
 
 export const ACCOUNT_MANAGEMENT_TEST_IDS = {
+  nanoGptManagementTokenInput: "nanogpt-management-token-input",
   addAccountButton: "account-management-add-account-button",
   emptyStateAddAccountButton:
     "account-management-empty-state-add-account-button",
@@ -34,6 +35,7 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   usernameInput: "account-management-username-input",
   userIdInput: "account-management-user-id-input",
   accessTokenInput: "account-management-access-token-input",
+  exchangeRateInput: "account-management-exchange-rate-input",
   autoCreateAccessTokenButton:
     "account-management-auto-create-access-token-button",
   autoCreateAccessTokenError:

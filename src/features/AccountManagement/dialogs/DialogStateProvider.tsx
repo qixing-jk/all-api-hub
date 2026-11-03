@@ -102,9 +102,10 @@ export const DialogStateProvider = ({
     handleClose()
   }
 
-  const handleError = (error: Error) => {
-    promiseRef.current?.reject(error)
-    handleClose()
+  const handleError = () => {
+    // The save workflow already displays the failure. Keep the same editable
+    // draft and its pending result so correcting a credential can still succeed.
+    // Only explicit dismissal or a successful save closes this dialog.
   }
 
   // For backward compatibility

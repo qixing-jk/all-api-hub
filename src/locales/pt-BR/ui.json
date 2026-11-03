@@ -210,6 +210,7 @@
       "keyCopied": "Chave copiada para a área de transferência",
       "loadFailed": "Falha ao carregar lista de chaves: {{error}}",
       "loading": "Carregando lista de chaves...",
+      "managementConfigurationRequired": "É necessário um token de gerenciamento para carregar e gerenciar a lista de chaves do site. As chaves de API salvas ainda podem ser usadas de forma independente.",
       "noKeyFoundAfterCreate": "Nenhuma chave foi encontrada após a criação de uma. Por favor, tente novamente.",
       "noKeys": "Ainda não há chaves",
       "noKeysDescription": "Crie uma chave padrão rapidamente ou crie uma chave personalizada com configurações avançadas.",

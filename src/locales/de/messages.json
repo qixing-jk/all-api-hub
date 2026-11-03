@@ -35,7 +35,7 @@
     "unableToOpen": "AI Toolbox kann nicht geöffnet werden. Bitte stellen Sie sicher, dass es installiert ist"
   },
   "autodetect": {
-    "currentTabNeedsReload": "Diese Seite wurde möglicherweise geöffnet, bevor die Erweiterung installiert oder aktualisiert wurde, sodass die Erweiterung noch keine Daten von dieser Registerkarte lesen kann. Laden Sie die aktuelle Seite neu und versuchen Sie es dann erneut mit der automatischen Erkennung.",
+    "currentTabNeedsReload": "Die Erweiterung kann das Erkennungsskript dieser Seite nicht erreichen. Laden Sie die Seite neu und versuchen Sie die automatische Erkennung erneut. Prüfen Sie bei weiteren Fehlern, ob die Erweiterung auf diese Website zugreifen darf.",
     "failed": "Automatische Erkennung fehlgeschlagen: {{error}}",
     "forbidden": "Zugriff verweigert. Bitte bestätigen Sie, ob die Website-Firewall die Anfrage blockiert",
     "loginThisSite": "Melden Sie sich auf dieser Website an",

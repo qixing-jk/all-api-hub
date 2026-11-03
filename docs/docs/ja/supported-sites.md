@@ -54,6 +54,7 @@
 | Vercel AI Gateway | 複数のモデルプロバイダーを 1 つの API キーで呼び出せる Vercel 公式の AI モデルゲートウェイ。クレジット、リクエストログ、予算管理を提供します。 | [公式サイト](https://vercel.com/ai-gateway) / [ドキュメント](https://vercel.com/docs/ai-gateway) |
 | Novita AI | 開発者とエージェント向けの AI モデル API クラウド。OpenAI/Anthropic 互換エンドポイントとキー管理を提供します。 | [公式サイト](https://novita.ai/) / [ドキュメント](https://docs.novita.ai/) |
 | AI/ML API | 統合モデル API、アカウントコンソール、キー管理を提供する独立系 AI モデル集約ゲートウェイ。 | [サイト](https://aimlapi.com/) / [ドキュメント](https://docs.aimlapi.com/) |
+| NanoGPT | 複数のプロバイダーのモデルを集約する独立系 AI モデルプラットフォーム。統一 API とアカウントコンソールを提供します。 | — |
 
 ## ❤️ 推奨スポンサーサイト
 

@@ -296,6 +296,9 @@ export async function validateAndUpdateAccount(
         usage: freshAccountData.usage,
         subscription: freshAccountData.subscription,
         nativeBalance: freshAccountData.nativeBalance,
+        balanceUnavailable:
+          manualQuota === undefined &&
+          freshAccountData.balanceUnavailable === true,
         recentUsageRecords: freshAccountData.recentUsageRecords,
       },
       last_sync_time: Date.now(),

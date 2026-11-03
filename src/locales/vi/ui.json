@@ -203,6 +203,7 @@
       "keyCopied": "Đã sao chép API Key vào khay nhớ tạm",
       "loadFailed": "Tải danh sách API Key thất bại: {{error}}",
       "loading": "Đang lấy danh sách API Key...",
+      "managementConfigurationRequired": "Cần token quản lý để tải và quản lý danh sách khóa của trang web. Các khóa API đã lưu vẫn có thể được sử dụng độc lập.",
       "noKeyFoundAfterCreate": "Tạo thành công nhưng không lấy được API Key, vui lòng thử lại.",
       "noKeys": "Chưa có dữ liệu API Key",
       "noKeysDescription": "Tài khoản này hiện không có API Key khả dụng, bạn có thể tạo nhanh API Key mặc định hoặc tạo tùy chỉnh rồi sao chép.",

@@ -14,7 +14,8 @@ export function assertAccountDetectionOutcome(options: {
       | "userIdInput"
       | "usernameInput"
       | "accessTokenInput"
-      | "siteNameInput",
+      | "siteNameInput"
+      | "exchangeRateInput",
       string
     >
   >

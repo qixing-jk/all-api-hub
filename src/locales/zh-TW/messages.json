@@ -33,7 +33,7 @@
     "unableToOpen": "無法開啟 AI Toolbox，請確認已安裝"
   },
   "autodetect": {
-    "currentTabNeedsReload": "當前頁面可能是在安裝或更新擴充套件前開啟的，外掛暫時無法讀取這個標籤頁的資訊。請重新整理當前頁面後再試一次自動識別。",
+    "currentTabNeedsReload": "擴充套件暫時無法連接目前頁面的識別腳本。請重新整理頁面後重試自動識別；若仍失敗，請檢查擴充套件是否獲准存取此網站。",
     "failed": "自動識別失敗：{{error}}",
     "forbidden": "訪問被拒絕。請確認是否為網站防火牆攔截了相關請求。",
     "loginThisSite": "登入此站點",

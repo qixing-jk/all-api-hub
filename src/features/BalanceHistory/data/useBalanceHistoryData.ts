@@ -56,7 +56,10 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
       if (isCurrent()) {
         setAccounts(
           nextAccounts.filter((account) =>
-            supportsMonetaryBalance(account.account_info.nativeBalance),
+            supportsMonetaryBalance(
+              account.account_info.nativeBalance,
+              account.account_info.balanceUnavailable,
+            ),
           ),
         )
         setStore(nextStore)

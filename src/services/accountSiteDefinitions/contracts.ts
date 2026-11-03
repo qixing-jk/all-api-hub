@@ -64,6 +64,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   VercelAiGateway: "vercelAiGateway",
   Novita: "novita",
   AiMlApi: "aimlapi",
+  NanoGPT: "nanogpt",
   Unsupported: "unsupported",
 } as const
 
@@ -134,7 +135,14 @@ export interface ManagedResourceProductPolicy {
 
 /** Presentation choices for completing site-owned account credential verification. */
 export interface AccountSiteAccessTokenVerificationGuide {
-  copy: "security" | "apiyi" | "laozhang" | "vercel" | "novita" | "aimlapi"
+  copy:
+    | "security"
+    | "apiyi"
+    | "laozhang"
+    | "vercel"
+    | "novita"
+    | "aimlapi"
+    | "nanogpt"
   showRotationWarning: boolean
 }
 
@@ -151,18 +159,21 @@ export interface AccountSiteDefinitionOnboardingMetadata {
       | "form.requestyManageKey"
       | "form.vercelAccessToken"
       | "form.novitaApiKey"
+      | "form.nanoGptApiKey"
     accessTokenGuidanceTitleKey?:
       | "form.openrouterManagementKeyGuidanceTitle"
       | "form.aimlApiManagementKeyGuidanceTitle"
       | "form.requestyManageKeyGuidanceTitle"
       | "form.vercelAccessTokenGuidanceTitle"
       | "form.novitaApiKeyGuidanceTitle"
+      | "form.nanoGptApiKeyGuidanceTitle"
     accessTokenGuidanceKey?:
       | "form.openrouterManagementKeyGuidance"
       | "form.aimlApiManagementKeyGuidance"
       | "form.requestyManageKeyGuidance"
       | "form.vercelAccessTokenGuidance"
       | "form.novitaApiKeyGuidance"
+      | "form.nanoGptApiKeyGuidance"
     /**
      * Opt-in automatic credential creation from the site's own console
      * session. The action must degrade to the manual guidance path.

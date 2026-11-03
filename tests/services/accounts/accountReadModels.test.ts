@@ -24,6 +24,22 @@ const buildNamedAccount = (
 }
 
 describe("accountReadModels", () => {
+  it("preserves independent XNO while counting only USD in overview totals", async () => {
+    const account = buildNamedAccount("nano", "nano", 500000)
+    account.account_info.nativeBalance = {
+      unit: "USD_XNO",
+      total: 1,
+      nanoBalance: 26.71801147,
+    }
+    vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValue([account])
+    const snapshot = await accountReadModels.getAccountOverviewSnapshot()
+    expect(snapshot.stats.total_quota).toBe(500000)
+    expect(snapshot.displayAccounts[0]).toMatchObject({
+      nativeBalance: account.account_info.nativeBalance,
+      balance: { USD: 1 },
+      excludeFromTotalBalance: false,
+    })
+  })
   it.each<AccountNativeBalance>([
     { unit: "USD", total: 8, permanent: 2, daily: 3 },
     { unit: "credits", total: 10, permanent: 8, daily: 2 },

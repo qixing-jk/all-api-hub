@@ -169,6 +169,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.REQUESTY
   | typeof SITE_TYPES.VERCEL_AI_GATEWAY
   | typeof SITE_TYPES.NOVITA
+  | typeof SITE_TYPES.NANOGPT
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -549,6 +550,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.VERCEL_AI_GATEWAY,
       SITE_TYPES.NOVITA,
       SITE_TYPES.AIMLAPI,
+      SITE_TYPES.NANOGPT,
       SITE_TYPES.UNKNOWN,
     ])
   })

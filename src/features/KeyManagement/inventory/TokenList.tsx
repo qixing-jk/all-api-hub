@@ -204,7 +204,11 @@ export function TokenList(props: TokenListProps) {
         }
         selectionLabel={entry.runtimeKey.label}
         onCopy={onCopyServiceCredential}
-        onRotate={onRotateServiceCredential}
+        onRotate={
+          entry.runtimeKey.capabilities.rotate
+            ? onRotateServiceCredential
+            : undefined
+        }
         association={getAssociationPresentation(
           getAccountRuntimeKeyLocator(entry.runtimeKey),
           entry.runtimeKey.label,

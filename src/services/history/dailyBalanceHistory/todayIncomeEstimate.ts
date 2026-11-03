@@ -12,7 +12,10 @@ type TodayIncomeEstimateAccount = Pick<
   SiteAccount,
   "id" | "manualBalanceUsd"
 > & {
-  account_info?: Pick<SiteAccount["account_info"], "nativeBalance">
+  account_info?: Pick<
+    SiteAccount["account_info"],
+    "nativeBalance" | "balanceUnavailable"
+  >
 }
 
 type TodayIncomeMoneyTotalsAccount = TodayIncomeEstimateAccount &
@@ -62,7 +65,13 @@ export function estimateTodayIncomeForAccount(params: {
 }): TodayIncomeEstimateResult {
   const { enabled, store, account, currentDayKey } = params
 
-  if (!enabled || !supportsMonetaryBalance(account.account_info?.nativeBalance))
+  if (
+    !enabled ||
+    !supportsMonetaryBalance(
+      account.account_info?.nativeBalance,
+      account.account_info?.balanceUnavailable,
+    )
+  )
     return NULL_RESULT_BY_STATUS.disabled
   if (hasManualBalance(account)) return NULL_RESULT_BY_STATUS.manual_balance
 
@@ -154,7 +163,10 @@ export function buildEstimatedTodayIncomeMoneyTotals(params: {
   let availableAccounts = 0
 
   const eligibleAccounts = accounts.filter((account) =>
-    supportsMonetaryBalance(account.account_info?.nativeBalance),
+    supportsMonetaryBalance(
+      account.account_info?.nativeBalance,
+      account.account_info?.balanceUnavailable,
+    ),
   )
   for (const account of eligibleAccounts) {
     const result = estimateTodayIncomeForAccount({

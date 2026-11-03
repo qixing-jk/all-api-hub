@@ -232,6 +232,9 @@ describe("accountDefaults", () => {
 
   describe("normalizeSiteAccount", () => {
     it.each([
+      { unit: "USD_XNO", total: 0, nanoBalance: -1 },
+      { unit: "USD_XNO", total: 0, nanoBalance: Infinity },
+      { unit: "USD_XNO", total: 0 },
       { unit: "quota", total: 1, asset: {} },
       {
         unit: "quota",
@@ -243,7 +246,7 @@ describe("accountDefaults", () => {
           displayLabel: "M Token",
         },
       },
-    ])("drops malformed native quota balances %j", (nativeBalance) => {
+    ])("drops malformed native balances %j", (nativeBalance) => {
       const source = createSiteAccount()
       expect(
         normalizeSiteAccount({

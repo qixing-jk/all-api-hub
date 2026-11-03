@@ -14,7 +14,10 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  AccountKeyResourceError,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery"
@@ -1277,4 +1280,36 @@ describe("account credential secret resolution", () => {
     ).rejects.toThrow()
     expect(resolveAssociatedProfileSecret).toHaveBeenCalled()
   })
+})
+
+it("keeps an independent service key usable when native inventory needs an absent management credential", async () => {
+  vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+    siteType: SITE_TYPES.NANOGPT,
+    account: {
+      keyResourceManagement: {
+        open: vi
+          .fn()
+          .mockRejectedValue(
+            new AccountKeyResourceError({ code: "configuration_required" }),
+          ),
+      },
+      serviceCredential: {
+        fetch: vi.fn().mockResolvedValue({
+          kind: "singleton_service_key",
+          service: "nanogpt-inference",
+          label: "NanoGPT",
+          key: "sk-nano-runtime",
+          isAuthenticated: true,
+        }),
+      },
+    },
+  } as never)
+  const keys = await fetchDisplayAccountRuntimeKeys({
+    ...ACCOUNT,
+    tagIds: [],
+    siteType: SITE_TYPES.NANOGPT,
+  })
+  expect(keys).toHaveLength(1)
+  expect(keys[0]?.secret).toBe("sk-nano-runtime")
+  expect(keys[0]?.source).toBe("service_credential")
 })

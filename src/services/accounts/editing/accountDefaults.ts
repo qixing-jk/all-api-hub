@@ -15,6 +15,7 @@ import {
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import { quotaAssetSchema } from "~/services/quotaAssets/quotaAsset"
 import {
+  ACCOUNT_SUBSCRIPTION_STATUSES,
   ACCOUNT_USAGE_SUMMARY_SCOPES,
   AuthTypeEnum,
   DELETED_ENTRY_KINDS,
@@ -148,6 +149,11 @@ const normalizeAccountSubscriptionSummary = (
     expireTime: coerceOptionalString(raw.expireTime),
     isLongTerm: coerceOptionalBoolean(raw.isLongTerm),
     isActive: coerceOptionalBoolean(raw.isActive),
+    status: (
+      Object.values(ACCOUNT_SUBSCRIPTION_STATUSES) as readonly string[]
+    ).includes(raw.status ?? "")
+      ? raw.status
+      : undefined,
   }
 }
 
@@ -183,6 +189,14 @@ const normalizeBalanceComponents = (
 const normalizeNativeBalance = (
   raw: AccountNativeBalance | undefined,
 ): AccountNativeBalance | undefined => {
+  if (raw?.unit === "USD_XNO") {
+    return [raw.total, raw.nanoBalance].every(
+      (value) =>
+        typeof value === "number" && Number.isFinite(value) && value >= 0,
+    )
+      ? { unit: "USD_XNO", total: raw.total, nanoBalance: raw.nanoBalance }
+      : undefined
+  }
   if (raw?.unit === "quota") {
     const asset = quotaAssetSchema.safeParse(raw.asset)
     return asset.success && Number.isSafeInteger(raw.total)
@@ -383,6 +397,7 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
     access_token: coerceString(merged.access_token, ""),
     username: coerceString(merged.username, ""),
     quota: coerceNumber(merged.quota, 0),
+    ...(raw?.balanceUnavailable === true ? { balanceUnavailable: true } : {}),
     today_prompt_tokens: coerceNumber(merged.today_prompt_tokens, 0),
     today_completion_tokens: coerceNumber(merged.today_completion_tokens, 0),
     today_quota_consumption: coerceNumber(merged.today_quota_consumption, 0),

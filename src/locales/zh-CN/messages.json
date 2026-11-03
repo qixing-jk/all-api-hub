@@ -33,7 +33,7 @@
     "unableToOpen": "无法打开 AI Toolbox，请确认已安装"
   },
   "autodetect": {
-    "currentTabNeedsReload": "当前页面可能是在安装或更新扩展前打开的，插件暂时无法读取该标签页的信息。请刷新当前页面后再重试自动识别。",
+    "currentTabNeedsReload": "扩展暂时无法连接当前页面的识别脚本。请刷新页面后重试自动识别；若仍失败，请检查扩展是否获准访问此站点。",
     "failed": "自动识别失败：{{error}}",
     "forbidden": "访问被拒绝。请确认是否为网站防火墙拦截了相关请求。",
     "loginThisSite": "登录此站点",

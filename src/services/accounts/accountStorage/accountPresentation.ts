@@ -44,8 +44,10 @@ class AccountPresentation {
       username: account.account_info.username,
       disabled: account.disabled,
       excludeFromTotalBalance:
-        !supportsMonetaryBalance(account.account_info.nativeBalance) ||
-        account.excludeFromTotalBalance,
+        !supportsMonetaryBalance(
+          account.account_info.nativeBalance,
+          account.account_info.balanceUnavailable,
+        ) || account.excludeFromTotalBalance,
       excludeFromTodayIncome: account.excludeFromTodayIncome,
       balance: convertQuotaToCurrencyAmounts(
         account.account_info.quota,
@@ -67,6 +69,7 @@ class AccountPresentation {
       usage: account.account_info.usage,
       subscription: account.account_info.subscription,
       nativeBalance: account.account_info.nativeBalance,
+      balanceUnavailable: account.account_info.balanceUnavailable,
       recentUsageRecords: account.account_info.recentUsageRecords,
       health: account.health,
       last_sync_time: account.last_sync_time,

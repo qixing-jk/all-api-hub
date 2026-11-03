@@ -10,6 +10,7 @@ import { useAccountActionsContext } from "~/features/AccountManagement/actions/A
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
+import { ACCOUNT_SUBSCRIPTION_STATUSES as subscriptionStatuses } from "~/types"
 import type { DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
@@ -197,9 +198,29 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
 
   const isRefreshing = refreshingAccountId === site.id
   const isAccountDisabled = site.disabled === true
-  const isSubscriptionInactive = site.subscription?.isActive === false
+  const subscriptionStatus =
+    site.subscription?.status ??
+    (site.subscription?.isActive === false
+      ? subscriptionStatuses.Inactive
+      : undefined)
+  const isSubscriptionInactive =
+    subscriptionStatus === subscriptionStatuses.Inactive ||
+    subscriptionStatus === subscriptionStatuses.Expired ||
+    subscriptionStatus === subscriptionStatuses.Unavailable
+  const subscriptionStatusLabel =
+    subscriptionStatus === subscriptionStatuses.Active
+      ? t("stats.subscriptionState.active")
+      : subscriptionStatus === subscriptionStatuses.Grace
+        ? t("stats.subscriptionState.grace")
+        : subscriptionStatus === subscriptionStatuses.Expired
+          ? t("stats.subscriptionState.expired")
+          : subscriptionStatus === subscriptionStatuses.Unavailable
+            ? t("stats.subscriptionState.unavailable")
+            : subscriptionStatus === subscriptionStatuses.Inactive
+              ? t("stats.subscriptionState.inactive")
+              : undefined
   const estimatedTodayIncomeEnabled =
-    supportsMonetaryBalance(nativeBalance) &&
+    supportsMonetaryBalance(nativeBalance, site.balanceUnavailable) &&
     preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
   const estimatedTodayIncome = site.estimatedTodayIncome?.[currencyType]
   const consumptionPresentation = getTodayMetricPresentation(
@@ -255,7 +276,34 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   return (
     <div className="flex w-full flex-col items-end overflow-hidden text-right">
       {/* Balance */}
-      {nativeBalance ? (
+      {site.balanceUnavailable ? (
+        <span className={BALANCE_AMOUNT_CLASS_NAME}>
+          {t("todayMetricAvailability.unavailable")}
+        </span>
+      ) : nativeBalance?.unit === "USD_XNO" ? (
+        <div className="flex max-w-full flex-col items-end">
+          <AnimatedValue
+            value={site.balance[currencyType]}
+            startValue={0}
+            className={BALANCE_AMOUNT_CLASS_NAME}
+            title={refreshTitle}
+            onClick={
+              isAccountDisabled
+                ? undefined
+                : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
+            }
+            isRefreshing={isRefreshing}
+            loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE}
+            disabled={isRefreshLocked}
+          />
+          <span className="text-muted-foreground max-w-full text-xs break-all">
+            {new Intl.NumberFormat(undefined, {
+              maximumFractionDigits: 8,
+            }).format(nativeBalance.nanoBalance)}{" "}
+            XNO
+          </span>
+        </div>
+      ) : nativeBalance ? (
         <div
           className={
             nativeBalance.unit === "USD"
@@ -438,12 +486,12 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
               {site.subscription.name}
             </span>
           )}
-          {isSubscriptionInactive && (
+          {subscriptionStatusLabel && (
             <span
-              className="text-warning-text shrink-0"
+              className={`min-w-0 break-words whitespace-normal ${subscriptionStatus === subscriptionStatuses.Active ? "text-muted-foreground" : "text-warning-text"}`}
               title={t("stats.subscriptionStatus")}
             >
-              {t("stats.subscriptionInactive")}
+              {subscriptionStatusLabel}
             </span>
           )}
           {typeof site.usage?.totalRequests === "number" && (

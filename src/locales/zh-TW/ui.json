@@ -203,6 +203,7 @@
       "keyCopied": "金鑰已複製到剪貼簿",
       "loadFailed": "載入金鑰列表失敗: {{error}}",
       "loading": "正在獲取金鑰列表...",
+      "managementConfigurationRequired": "載入及管理站點金鑰清單需要管理權杖。已儲存的 API 金鑰仍可單獨使用。",
       "noKeyFoundAfterCreate": "建立成功但未獲取到金鑰，請重試。",
       "noKeys": "暫無金鑰資料",
       "noKeysDescription": "該帳號暫無可用金鑰，可快速建立預設金鑰或自定義建立後再複製。",

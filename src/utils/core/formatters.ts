@@ -218,7 +218,7 @@ export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
     (site) =>
       !site.disabled &&
       site.excludeFromTotalBalance !== true &&
-      supportsMonetaryBalance(site.nativeBalance),
+      supportsMonetaryBalance(site.nativeBalance, site.balanceUnavailable),
   )
   return {
     USD: enabledSites.reduce((sum, site) => sum + site.balance.USD, 0),

@@ -205,6 +205,7 @@
       "keyCopied": "Key copied to clipboard",
       "loadFailed": "Failed to load key list: {{error}}",
       "loading": "Loading key list...",
+      "managementConfigurationRequired": "Loading and managing the site’s key list requires a management token. Saved API keys can still be used independently.",
       "noKeyFoundAfterCreate": "No key was found after creating one. Please try again.",
       "noKeys": "No key data yet",
       "noKeysDescription": "Create a default key quickly, or create a custom key with advanced settings.",

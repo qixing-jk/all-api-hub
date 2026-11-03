@@ -267,7 +267,8 @@
     "tools": "Ferramentas permitidas",
     "totalQuota": "Cota total:",
     "ungrouped": "Sem grupo",
-    "usedQuota": "Cota usada:"
+    "usedQuota": "Cota usada:",
+    "websiteVerificationSecret": "A API de gerenciamento não fornece chaves completas. Acesse a página API do NanoGPT e conclua a verificação de login exigida para visualizar ou copiar uma chave existente novamente."
   },
   "knownTotalKeys_one": "{{count}} chave lida",
   "knownTotalKeys_many": "{{count}} chaves lidas",
@@ -591,6 +592,25 @@
         "validDuration": "Validade após ativação (dias)"
       },
       "modelAllowlist": "Lista de modelos permitidos",
+      "nanogpt": {
+        "anonymized": "Roteamento anonimizado",
+        "dailyRequests": "Limite diário de solicitações",
+        "dailySpend": "Limite de gasto diário (USD)",
+        "dailySubscriptionTokens": "Cota diária de tokens da assinatura",
+        "dailyTokens": "Limite diário de tokens de entrada",
+        "legacyPolicy": "Política de roteamento antiga",
+        "limitHelp": "Em branco significa ilimitado. Zero bloqueia essa cota; tokens da assinatura podem ser ponderados.",
+        "monthlyRequests": "Limite mensal de solicitações",
+        "monthlySpend": "Limite de gasto mensal (USD)",
+        "monthlySubscriptionTokens": "Cota mensal de tokens da assinatura",
+        "monthlyTokens": "Limite mensal de tokens de entrada",
+        "weeklyRequests": "Limite semanal de solicitações",
+        "weeklySpend": "Limite de gasto semanal (USD)",
+        "weeklySubscriptionTokens": "Cota semanal de tokens da assinatura",
+        "weeklyTokens": "Limite semanal de tokens de entrada",
+        "zdr": "Sem retenção de dados",
+        "zdrPolicy": "Roteamento de privacidade"
+      },
       "novita": {
         "allEnabled": "Todos os modelos habilitados",
         "allowedIps": "IPs permitidos",
@@ -700,6 +720,7 @@
       "heading": "Escopo",
       "label": "Selecionar um escopo",
       "loading": "Carregando escopos…",
+      "nanoGptManagementOptional": "O token de gerenciamento é opcional. Você pode copiar, exportar e verificar sua chave API de inferência salva. Para listar ou gerenciar chaves remotas, adicione um token de gerenciamento em Editar conta.",
       "partial": "Alguns escopos não puderam ser carregados. Os escopos disponíveis ainda podem ser usados.",
       "placeholder": "Escolha um escopo",
       "retry": "Recarregar escopos"

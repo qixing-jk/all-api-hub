@@ -253,7 +253,8 @@
     "tools": "許可するツール",
     "totalQuota": "合計クォータ：",
     "ungrouped": "グループなし",
-    "usedQuota": "使用済みクォータ:"
+    "usedQuota": "使用済みクォータ:",
+    "websiteVerificationSecret": "管理 API は完全なキーを返しません。NanoGPT の API ページで必要なログイン認証を完了すると、既存のキーを再表示またはコピーできます。"
   },
   "knownTotalKeys_other": "{{count}} 件のキーを読み込み済み",
   "linkedCleanup": {
@@ -571,6 +572,25 @@
         "validDuration": "有効化後の有効日数"
       },
       "modelAllowlist": "モデル許可リスト",
+      "nanogpt": {
+        "anonymized": "匿名化ルーティング",
+        "dailyRequests": "日次リクエスト上限",
+        "dailySpend": "日次支出上限（USD）",
+        "dailySubscriptionTokens": "日次購読入力トークン枠",
+        "dailyTokens": "日次入力トークン上限",
+        "legacyPolicy": "旧式ルーティング",
+        "limitHelp": "空欄は無制限です。0 は枠なしを意味します。購読トークンは加重単位で数えられる場合があります。",
+        "monthlyRequests": "月次リクエスト上限",
+        "monthlySpend": "月次支出上限（USD）",
+        "monthlySubscriptionTokens": "月次購読入力トークン枠",
+        "monthlyTokens": "月次入力トークン上限",
+        "weeklyRequests": "週次リクエスト上限",
+        "weeklySpend": "週次支出上限（USD）",
+        "weeklySubscriptionTokens": "週次購読入力トークン枠",
+        "weeklyTokens": "週次入力トークン上限",
+        "zdr": "ゼロデータ保持",
+        "zdrPolicy": "プライバシールーティング"
+      },
       "novita": {
         "allEnabled": "有効なすべてのモデル",
         "allowedIps": "許可する IP",
@@ -680,6 +700,7 @@
       "heading": "スコープ",
       "label": "スコープを選択",
       "loading": "スコープを読み込み中…",
+      "nanoGptManagementOptional": "管理トークンは任意です。保存済みの推論 API キーは引き続きコピー、エクスポート、検証できます。リモートキーの一覧表示や管理には、アカウント編集で管理トークンを追加してください。",
       "partial": "一部のスコープを読み込めませんでした。読み込み済みのスコープは引き続き利用できます。",
       "placeholder": "スコープを選んでください",
       "retry": "スコープを再読み込み"

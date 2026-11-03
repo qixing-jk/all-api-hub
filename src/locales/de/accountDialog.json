@@ -23,6 +23,12 @@
       "openProfile": "LaoZhang-Profil öffnen",
       "openProfileFailed": "Die Seite konnte nicht geöffnet werden. Öffne LaoZhang Profil → System token manuell, führe die Sicherheitsprüfung durch und kopiere den Token. Kehre dann hierher zurück und gib ihn ein."
     },
+    "nanogpt": {
+      "description": "Dein NanoGPT-Konto wurde erkannt. Die Daten bleiben erhalten; ergänze einen Inferenz-API-Schlüssel oder Management-Token.",
+      "openPage": "NanoGPT-API-Schlüssel öffnen",
+      "openPageFailed": "Die API-Seite konnte nicht geöffnet werden. Öffne https://nano-gpt.com/api manuell und kehre zurück, um den Inferenzschlüssel einzufügen.",
+      "pasteStep": "Kehren Sie hierher zurück, fügen Sie die Zugangsdaten in das entsprechende Feld unten ein und speichern Sie das Konto."
+    },
     "novita": {
       "generateStep": "Melde dich beim selben Novita-Konto an und klicke auf „Konsolenzugangsdaten abrufen“. Die Kontoidentität wird geprüft; der API-Schlüssel bleibt erhalten. Nach Ablauf erneut abrufen. Ein gespeicherter API-Schlüssel bleibt unabhängig nutzbar.",
       "openPage": "Schlüsselverwaltung öffnen",
@@ -202,6 +208,9 @@
     "manualVerificationRequiredDesc": "Diese Seite verlangt vor dem Check-in ein CAPTCHA. Schließe die Verifizierung selbst auf der Check-in-Seite ab und prüfe, ob der heutige Check-in erledigt ist.",
     "manualVerificationRequiredSwitchOffDesc": "Für dieses Konto ist der automatische Check-in standardmäßig aus. Aktiviere ihn, um zu wählen, ob die Check-in-Seite bei nötiger manueller Verifizierung automatisch geöffnet wird.",
     "manualVerificationRequiredTitle": "Check-in benötigt deine Verifizierung",
+    "nanoGptApiKey": "NanoGPT-API-Schlüssel",
+    "nanoGptApiKeyGuidance": "Nutze einen vorhandenen Inferenzschlüssel oder erstelle ihn auf der API-Seite. Für Aboüberwachung oder Schlüsselverwaltung erstelle unter Einstellungen → Sicherheit einen Management-Token mit passenden Rechten.",
+    "nanoGptApiKeyGuidanceTitle": "NanoGPT-Zugangsdaten ergänzen",
     "notes": "Notizen",
     "notesPlaceholder": "Optional, Notizen eingeben",
     "novitaApiKey": "Novita-Kontozugangsdaten",
@@ -358,6 +367,15 @@
     "detecting": "Wird erkannt...",
     "manualAdd": "Manuell hinzufügen",
     "reDetect": "Erneut erkennen"
+  },
+  "nanoGptCredentials": {
+    "eventHistoryUnsupported": "NanoGPT stellt nur aggregierte Nutzungsdaten bereit, keine einzelnen Nutzungsverlaufseinträge.",
+    "identityWarning": "Die Management-API kann nicht bestätigen, dass beide Zugangsdaten zum selben Konto gehören. Prüfe dies vor dem Speichern in NanoGPT.",
+    "inferenceHelp": "Mit einem Management-Token optional. Für Guthaben und schlüsselspezifische Nutzung ist ein Inferenz-API-Schlüssel nötig. Vorhandene und ältere UUID-Schlüssel werden akzeptiert.",
+    "managementHelp": "usage:read liest Abokontingente, api_keys:read listet Schlüssel, api_keys:write verwaltet Schlüssel. Tokens laufen standardmäßig nach 90 Tagen ab.",
+    "managementToken": "Management-API-Token",
+    "openManagement": "Management-Tokens öffnen",
+    "openManagementFailed": "Token-Einstellungen konnten nicht geöffnet werden. Öffne in NanoGPT Einstellungen → Sicherheit → Management API tokens."
   },
   "novitaCredentials": {
     "apiKey": "API Key",

@@ -110,6 +110,7 @@
     "e2e:cdp:daya:prices": "node scripts/test-daya-model-prices-e2e-live.mjs",
     "e2e:cdp:requesty": "node scripts/test-requesty-e2e-live.mjs",
     "e2e:cdp:vercel-ai-gateway": "node scripts/test-vercel-ai-gateway-e2e-live.mjs",
+    "e2e:cdp:nanogpt": "node scripts/test-nanogpt-e2e-live.mjs",
     "e2e:cdp:novita": "node scripts/test-novita-e2e-live.mjs",
     "prepare": "husky"
   },

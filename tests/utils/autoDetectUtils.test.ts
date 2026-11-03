@@ -103,6 +103,21 @@ describe("autoDetectUtils", () => {
     })
 
     describe("Current-tab reload hints", () => {
+      it.each([
+        [
+          "content script fetch failed: HTTP 403 Forbidden",
+          AutoDetectErrorType.FORBIDDEN,
+        ],
+        [
+          "content script fetch failed: network offline",
+          AutoDetectErrorType.NETWORK_ERROR,
+        ],
+      ])(
+        "does not prescribe a reload merely because an error mentions content script: %s",
+        (message, type) => {
+          expect(analyzeAutoDetectError(message).type).toBe(type)
+        },
+      )
       it("should detect content-script connection errors", () => {
         const error = new Error(
           "Could not establish connection. Receiving end does not exist.",

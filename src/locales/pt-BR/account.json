@@ -364,9 +364,15 @@
     "permanentAllowance": "Permanente",
     "prompt": "Prompt",
     "scopedAllowances": "Cotas de grupos e assinaturas podem ter restrições de uso. As cotas nativas são excluídas do saldo total, do histórico de saldo e das estimativas de receita.",
-    "subscriptionInactive": "Inativo ou expirado",
     "subscriptionRemainingCount": "Solicitações de assinatura restantes",
     "subscriptionRemainingTokens": "Tokens restantes (saldo da conta e chaves); o valor em dólares equivale ao preço publicado e inclui tokens gratuitos.",
+    "subscriptionState": {
+      "active": "Assinatura ativa",
+      "expired": "Assinatura expirada",
+      "grace": "Período de carência da assinatura",
+      "inactive": "Nenhuma assinatura ativa",
+      "unavailable": "Status da assinatura indisponível"
+    },
     "subscriptionStatus": "Status da assinatura",
     "subscriptionTitle": "Assinatura",
     "timedAllowance": "Cota temporária",

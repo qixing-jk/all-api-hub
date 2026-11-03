@@ -23,6 +23,12 @@
       "openProfile": "LaoZhang のプロフィールを開く",
       "openProfileFailed": "ページを開けませんでした。LaoZhang の「プロフィール → System token」を手動で開き、セキュリティ確認後にトークンをコピーして、ここに戻って入力してください。"
     },
+    "nanogpt": {
+      "description": "NanoGPT アカウントを識別しました。情報は保持されています。推論 API キーまたは管理トークンを入力して追加を続けてください。",
+      "openPage": "NanoGPT の API キーページを開く",
+      "openPageFailed": "API ページを開けませんでした。https://nano-gpt.com/api を手動で開き、ここに戻って推論キーを貼り付けてください。",
+      "pasteStep": "ここに戻り、下の対応する入力欄に認証情報を貼り付けて、アカウントを保存してください。"
+    },
     "novita": {
       "generateStep": "同じ Novita アカウントでログインし、「コンソール認証情報を取得」を押してください。アカウントの一致を確認し、入力済みの API Key を保持します。期限切れの場合は再取得が必要ですが、保存済みの API Key は引き続き単独で使用できます。",
       "openPage": "キー管理を開く",
@@ -202,6 +208,9 @@
     "manualVerificationRequiredDesc": "このサイトではチェックイン前に CAPTCHA 認証が必要です。チェックインページで自分で認証を行い、本日のチェックイン完了を確認してください。",
     "manualVerificationRequiredSwitchOffDesc": "このアカウントの自動チェックインは既定でオフです。オンにすると、手動認証が必要な場合にチェックインページを自動で開くか選べます。",
     "manualVerificationRequiredTitle": "チェックインには手動認証が必要です",
+    "nanoGptApiKey": "NanoGPT API キー",
+    "nanoGptApiKeyGuidance": "既存の推論 API キーを使用するか、API ページで作成してください。購読監視やキー管理には、設定 → セキュリティで必要な権限の管理トークンを作成します。",
+    "nanoGptApiKeyGuidanceTitle": "NanoGPT の認証情報を補完",
     "notes": "メモ",
     "notesPlaceholder": "任意、メモを入力",
     "novitaApiKey": "Novita アカウント認証情報",
@@ -357,6 +366,15 @@
     "detecting": "検出中...",
     "manualAdd": "手動追加",
     "reDetect": "再検出"
+  },
+  "nanoGptCredentials": {
+    "eventHistoryUnsupported": "NanoGPT は集計使用量のみを提供し、個別の使用履歴は提供しません。",
+    "identityWarning": "管理 API では両方の認証情報が同じアカウントか確認できません。保存前に同じ NanoGPT アカウントのものか確認してください。",
+    "inferenceHelp": "管理トークンがあれば省略できます。現金残高とキー別使用量には推論 API キーが必要です。既存キーや旧形式の UUID キーも使用できます。",
+    "managementHelp": "購読枠には usage:read、キー一覧には api_keys:read、キー管理には api_keys:write が必要です。既定の有効期間は90日です。",
+    "managementToken": "管理 API トークン",
+    "openManagement": "管理トークン設定を開く",
+    "openManagementFailed": "設定を開けませんでした。NanoGPT の設定 → セキュリティ → Management API tokens を手動で開いてください。"
   },
   "novitaCredentials": {
     "apiKey": "API Key",

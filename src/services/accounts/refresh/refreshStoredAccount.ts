@@ -193,6 +193,7 @@ async function runRefreshAttempt(
         accountId: account.id,
         quota: updateData.account_info?.quota ?? result.data.quota,
         nativeBalance: result.data.nativeBalance,
+        balanceUnavailable: result.data.balanceUnavailable,
         today_income: result.data.today_income,
         today_quota_consumption: result.data.today_quota_consumption,
         todayStatsAvailability: normalizeAccountTodayStatsAvailability(

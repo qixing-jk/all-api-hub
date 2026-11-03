@@ -49,6 +49,7 @@ import {
   getKeyResourcePresentationPolicy,
 } from "./keyResourcePresentationPolicy"
 import { laozhangDeploymentFields } from "./laozhangKeyResourceFieldPolicy"
+import { buildNanoGptKeyFields } from "./nanoGptKeyResourceFieldPolicy"
 import { getOpenRouterKeyResourceEditorPresentation } from "./openRouterKeyResourceFieldPolicy"
 import { rixApiDeploymentFields } from "./rixApiKeyResourceFieldPolicy"
 
@@ -918,6 +919,7 @@ const resolveSiteFields = (
         },
       ],
     }),
+    [editorKinds.NanoGpt]: () => buildNanoGptKeyFields(name, expiry),
     [editorKinds.AimlApi]: () => buildAimlApiFields(mode),
     [editorKinds.Sub2Api]: () => buildSub2ApiFields(mode),
     [editorKinds.RelayFor]: () => buildRelayForFields(),

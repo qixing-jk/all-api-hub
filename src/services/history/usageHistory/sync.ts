@@ -3,7 +3,7 @@ import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/ut
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type {
@@ -56,7 +56,12 @@ function getUsageHistoryPreferences(
 function isUnsupportedLogEndpointError(error: unknown): boolean {
   if (error instanceof ApiError) {
     const statusCode = error.statusCode
-    return statusCode === 404 || statusCode === 405 || statusCode === 500
+    return (
+      error.code === API_ERROR_CODES.FEATURE_UNSUPPORTED ||
+      statusCode === 404 ||
+      statusCode === 405 ||
+      statusCode === 500
+    )
   }
 
   return false

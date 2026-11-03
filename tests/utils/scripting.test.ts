@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { executeMainWorldFunction } from "~/utils/browser/scripting"
+import {
+  executeMainWorldFunction,
+  injectContentScript,
+} from "~/utils/browser/scripting"
 
 describe("executeMainWorldFunction", () => {
   const originalBrowser = (globalThis as any).browser
@@ -60,5 +63,34 @@ describe("executeMainWorldFunction", () => {
 
     const result = await executeMainWorldFunction(101, () => "ignored")
     expect(result).toBeNull()
+  })
+
+  it("restores the WXT development script when it is registered dynamically", async () => {
+    const executeScript = vi.fn().mockResolvedValue([{ frameId: 0 }])
+    ;(globalThis as any).browser = {
+      tabs: {
+        get: vi
+          .fn()
+          .mockResolvedValue({ url: "https://site.example.invalid/profile" }),
+      },
+      runtime: { getManifest: () => ({}) },
+      scripting: {
+        executeScript,
+        getRegisteredContentScripts: vi.fn().mockResolvedValue([
+          {
+            id: "wxt:content",
+            matches: ["<all_urls>"],
+            js: ["content-scripts/content.js"],
+          },
+        ]),
+      },
+    }
+    await expect(
+      injectContentScript(1, "https://site.example.invalid"),
+    ).resolves.toBe(true)
+    expect(executeScript).toHaveBeenCalledWith({
+      target: { tabId: 1 },
+      files: ["content-scripts/content.js"],
+    })
   })
 })

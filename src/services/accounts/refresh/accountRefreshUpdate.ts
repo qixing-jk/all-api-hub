@@ -31,6 +31,9 @@ export function buildAccountRefreshUpdate(
     usage: result.data.usage,
     subscription: result.data.subscription,
     nativeBalance: result.data.nativeBalance,
+    balanceUnavailable: account.manualBalanceUsd?.trim()
+      ? false
+      : result.data.balanceUnavailable === true,
     recentUsageRecords: result.data.recentUsageRecords,
   }
   if (reEnableOnSuccess) updateData.disabled = false

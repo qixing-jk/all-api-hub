@@ -95,15 +95,26 @@ vi.mock("~/services/apiAdapters/registry", () => ({
             },
           }
         : {
+            ...(siteType === SITE_TYPES.NANOGPT
+              ? {
+                  serviceCredential: {
+                    fetch: (...args: any[]) =>
+                      fetchServiceCredentialMock(...args),
+                  },
+                }
+              : {}),
             keyResourceManagement: {
               defaultCreation: creationPolicies.EditorDefaults,
-              inventorySecretAvailability: [
-                SITE_TYPES.AIHUBMIX,
-                SITE_TYPES.OPENROUTER,
-                SITE_TYPES.FREEMODEL,
-              ].includes(siteType as any)
-                ? "create-response-only"
-                : "recoverable",
+              inventorySecretAvailability:
+                siteType === SITE_TYPES.NANOGPT
+                  ? "website-verification"
+                  : [
+                        SITE_TYPES.AIHUBMIX,
+                        SITE_TYPES.OPENROUTER,
+                        SITE_TYPES.FREEMODEL,
+                      ].includes(siteType as any)
+                    ? "create-response-only"
+                    : "recoverable",
               open: (...args: any[]) => openAccountKeyResourcesMock(...args),
             },
           },
@@ -128,9 +139,11 @@ vi.mock(
         options: any,
       ) => {
         if (
-          [SITE_TYPES.OPENROUTER, SITE_TYPES.FREEMODEL].includes(
-            account.siteType,
-          )
+          [
+            SITE_TYPES.OPENROUTER,
+            SITE_TYPES.FREEMODEL,
+            SITE_TYPES.NANOGPT,
+          ].includes(account.siteType)
         )
           return actual.fetchDisplayAccountKeyResourceInventory(
             account,

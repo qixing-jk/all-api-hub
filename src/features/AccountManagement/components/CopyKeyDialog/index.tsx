@@ -21,6 +21,8 @@ import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery
 import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -47,6 +49,7 @@ export default function CopyKeyDialog({
   account,
 }: CopyKeyDialogProps) {
   const keyManagementT = useTranslation("keyManagement").t
+  const { t } = useTranslation("ui")
   const { profiles, isLoading: profilesLoading } = useApiCredentialProfiles()
   const {
     links,
@@ -64,6 +67,7 @@ export default function CopyKeyDialog({
     nativeKeyRows,
     isLoading,
     error,
+    managementConfigurationRequired,
     postCreateError,
     oneTimeSecret,
     copiedRuntimeKeyId,
@@ -110,6 +114,12 @@ export default function CopyKeyDialog({
   }
   const showCreateResponseOnlyWarning =
     account !== null &&
+    !isLoading &&
+    !error &&
+    !managementConfigurationRequired &&
+    getSiteTypeCapabilities(account.siteType).account?.keyResourceManagement
+      ?.inventorySecretAvailability ===
+      INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly &&
     !supportsRecoverableAccountRuntimeKeySecrets(account.siteType) &&
     (nativeKeyRows.length === 0 ||
       nativeKeyRows.some((row) => !getCredentialProfile(row)?.apiKey.trim()))
@@ -154,10 +164,17 @@ export default function CopyKeyDialog({
     if (isLoading) {
       return <LoadingIndicator />
     }
-    if (error) {
+    if (error && runtimeKeys.length === 0 && nativeKeyRows.length === 0) {
       return <ErrorDisplay error={error} onRetry={fetchKeyInventory} />
     }
     if (!account) {
+      return null
+    }
+    if (
+      managementConfigurationRequired &&
+      runtimeKeys.length === 0 &&
+      nativeKeyRows.length === 0
+    ) {
       return null
     }
     return (
@@ -205,6 +222,16 @@ export default function CopyKeyDialog({
         }
       >
         <div className="space-y-density-3">
+          {managementConfigurationRequired ? (
+            <Alert
+              compact
+              variant="info"
+              description={t("dialog.copyKey.managementConfigurationRequired")}
+            />
+          ) : null}
+          {error && (runtimeKeys.length > 0 || nativeKeyRows.length > 0) ? (
+            <ErrorDisplay error={error} onRetry={fetchKeyInventory} />
+          ) : null}
           {showCreateResponseOnlyWarning ? (
             <Alert
               compact

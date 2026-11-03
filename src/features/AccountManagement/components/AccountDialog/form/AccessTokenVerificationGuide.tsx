@@ -83,6 +83,14 @@ export function AccessTokenVerificationGuide({
       openPage: t("accessTokenVerification.aimlapi.openPage"),
       openPageFailed: t("accessTokenVerification.aimlapi.openPageFailed"),
     },
+    nanogpt: {
+      description: t("accessTokenVerification.nanogpt.description"),
+      title: t("form.nanoGptApiKeyGuidanceTitle"),
+      generateStep: t("form.nanoGptApiKeyGuidance"),
+      pasteStep: t("accessTokenVerification.nanogpt.pasteStep"),
+      openPage: t("accessTokenVerification.nanogpt.openPage"),
+      openPageFailed: t("accessTokenVerification.nanogpt.openPageFailed"),
+    },
     security: {
       generateStep: t("accessTokenVerification.generateStep"),
       openPage: t("accessTokenVerification.openSecurity"),
@@ -117,10 +125,12 @@ export function AccessTokenVerificationGuide({
       openPage: string
       openPageFailed: string
       title?: string
+      description?: string
       pasteStep?: string
     }
   >
   const copy = {
+    description: undefined as string | undefined,
     title: t("accessTokenVerification.title"),
     pasteStep: t("accessTokenVerification.pasteStep"),
     ...guideCopy[guide?.copy ?? "security"],
@@ -161,7 +171,7 @@ export function AccessTokenVerificationGuide({
     <Alert variant="warning" title={copy.title}>
       <div className="space-y-density-2 text-sm leading-relaxed">
         <p data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage}>
-          {message}
+          {copy.description ?? message}
         </p>
         {continuation ? (
           <>

@@ -206,6 +206,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
       todayStatsAvailability:
         overrides.account_info?.todayStatsAvailability ??
         buildCompleteTodayStatsAvailability(),
+      balanceUnavailable: overrides.account_info?.balanceUnavailable,
       usage: overrides.account_info?.usage,
       subscription: overrides.account_info?.subscription,
       recentUsageRecords: overrides.account_info?.recentUsageRecords,
@@ -2432,6 +2433,36 @@ describe("accountStorage core behaviors", () => {
         },
       },
     })
+  })
+
+  it("retains unavailable balance facts through storage and excludes their placeholder from monetary totals", async () => {
+    const missing = createAccount({
+      id: "missing-cash",
+      account_info: {
+        ...createAccount().account_info,
+        quota: 9_000_000,
+        balanceUnavailable: true,
+      },
+    })
+    seedStorage([missing])
+    const account = await accountStorage.getAccountById("missing-cash")
+    expect(account?.account_info.balanceUnavailable).toBe(true)
+    expect((await accountStorage.getAccountStats()).total_quota).toBe(0)
+    expect(
+      accountStorage.convertToDisplayData(missing).balanceUnavailable,
+    ).toBe(true)
+    await accountStorage.updateAccount(
+      "missing-cash",
+      {
+        account_info: {
+          ...missing.account_info,
+          quota: 1_000_000,
+          balanceUnavailable: false,
+        },
+      },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    expect((await accountStorage.getAccountStats()).total_quota).toBe(1_000_000)
   })
 
   it("getAccountStats should exclude opted-out balances without excluding today metrics", async () => {

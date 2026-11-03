@@ -27,6 +27,7 @@ function fixture(output = "chrome-mv3-dev") {
     url: () => url,
     isClosed: vi.fn(() => false),
     reload: vi.fn(async () => {}),
+    waitForLoadState: vi.fn(async () => {}),
     evaluate: vi.fn(async () => ({ success: true, tabIds: [] })),
   })
   const otherPage = page("chrome-extension://other/options.html")
@@ -91,6 +92,36 @@ function fixture(output = "chrome-mv3-dev") {
 }
 
 describe("reload the selected installed extension", () => {
+  it("rechecks read-only background readiness when the probe page navigates during reload", async () => {
+    const f = fixture()
+    f.selectedPage.evaluate.mockRejectedValueOnce(
+      new Error(
+        "Execution context was destroyed, most likely because of a navigation",
+      ),
+    )
+    await reloadRunningExtension(9444, f.extensionDir)
+    expect(f.selectedPage.waitForLoadState).toHaveBeenCalledWith(
+      "domcontentloaded",
+      { timeout: 10000 },
+    )
+    expect(f.selectedPage.evaluate).toHaveBeenCalledTimes(2)
+    expect(f.selectedWorker.evaluate).toHaveBeenCalledOnce()
+  })
+
+  it("bounds navigation recovery and never repeats the extension reload", async () => {
+    const f = fixture()
+    f.selectedPage.evaluate.mockRejectedValue(
+      new Error("Execution context was destroyed"),
+    )
+    await expect(reloadRunningExtension(9444, f.extensionDir)).rejects.toThrow(
+      "Execution context was destroyed",
+    )
+    expect(f.selectedPage.evaluate).toHaveBeenCalledTimes(2)
+    expect(f.selectedPage.waitForLoadState).toHaveBeenCalledOnce()
+    expect(f.selectedWorker.evaluate).toHaveBeenCalledOnce()
+    expect(f.browser.close).toHaveBeenCalledOnce()
+  })
+
   it.each(["chrome-mv3-dev", "chrome-mv3"])(
     "reloads only the selected %s build when another extension is first",
     async (output) => {

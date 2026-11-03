@@ -51,6 +51,8 @@ export interface AccountInfo {
   access_token: string
   username: string
   quota: number // 总余额点数
+  /** Zero quota is a placeholder when no authoritative monetary balance was obtainable. */
+  balanceUnavailable?: boolean
   today_prompt_tokens: number // 今日 prompt_tokens
   today_completion_tokens: number // 今日 completion_tokens
   today_quota_consumption: number // 今日消耗 quota
@@ -81,7 +83,17 @@ export interface AccountUsageSummary {
   lastRequestTime?: string
 }
 
+export const ACCOUNT_SUBSCRIPTION_STATUSES = {
+  Active: "active",
+  Grace: "grace",
+  Inactive: "inactive",
+  Expired: "expired",
+  Unavailable: "unavailable",
+} as const
+
 export interface AccountSubscriptionSummary {
+  /** Provider-proven lifecycle or failed observation; omitted for legacy adapters. */
+  status?: (typeof ACCOUNT_SUBSCRIPTION_STATUSES)[keyof typeof ACCOUNT_SUBSCRIPTION_STATUSES]
   name?: string
   billingType?: string
   limit?: number
@@ -101,6 +113,12 @@ export interface AccountSubscriptionSummary {
 
 /** Native assets and scoped allowances; excluded from fungible monetary balance features. */
 export type AccountNativeBalance =
+  | {
+      /** Independent cash assets; total is USD only, never an XNO conversion. */
+      unit: "USD_XNO"
+      total: number
+      nanoBalance: number
+    }
   | {
       unit: "credits" | "USD"
       total: number
@@ -462,6 +480,7 @@ export interface DisplaySiteData {
   baseName?: string
   username: string
   balance: CurrencyAmount
+  balanceUnavailable?: boolean
   nativeBalance?: AccountNativeBalance
   todayConsumption: CurrencyAmount
   todayIncome: CurrencyAmount

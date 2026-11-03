@@ -18,6 +18,39 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
 
+it("directs NanoGPT users to website verification for existing secrets", () => {
+  const row: NativeKeyManagementRow = {
+    kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
+    rowKey: "nano-key",
+    accountId: "nano",
+    accountName: "NanoGPT",
+    scopeName: "Account",
+    facts: {
+      ref: {
+        accountId: "nano",
+        siteType: SITE_TYPES.NANOGPT,
+        scopeKey: "account",
+        resourceId: "17",
+      },
+      displayName: "Existing key",
+      maskedLabel: "#17",
+      status: "enabled",
+      fields: [],
+      actions: { canUpdate: true, canDelete: true },
+    },
+  }
+  const adapter = getAccountKeyResourceCardAdapter(SITE_TYPES.NANOGPT)
+  const card = adapter.buildPresentation(row, t, { hasAssociatedSecret: false })
+  expect(card.secretAvailabilityMessage).toBe(
+    "keyManagement:keyDetails.websiteVerificationSecret",
+  )
+  expect(card.actions.copySecret).toBe(false)
+  expect(
+    adapter.buildPresentation(row, t, { hasAssociatedSecret: true })
+      .secretAvailabilityMessage,
+  ).toBeUndefined()
+})
+
 it("explains custom, inherited and unavailable Vercel spending budgets", () => {
   const facts: NativeKeyManagementRow["facts"] = {
     ref: {

@@ -316,9 +316,15 @@
     "permanentAllowance": "Vĩnh viễn",
     "prompt": "Nhắc nhở",
     "scopedAllowances": "Hạn mức nhóm và gói đăng ký có thể bị giới hạn sử dụng. Hạn mức gốc không được tính vào tổng số dư, lịch sử số dư và thu nhập ước tính.",
-    "subscriptionInactive": "Chưa kích hoạt hoặc đã hết hạn",
     "subscriptionRemainingCount": "Số lượt đăng ký còn lại",
     "subscriptionRemainingTokens": "Token còn lại (quỹ và khóa); số dư đô la là giá trị quy đổi theo giá công bố, bao gồm token miễn phí.",
+    "subscriptionState": {
+      "active": "Gói đăng ký đang hoạt động",
+      "expired": "Gói đăng ký đã hết hạn",
+      "grace": "Gói đăng ký trong thời gian gia hạn",
+      "inactive": "Không có gói đăng ký đang hoạt động",
+      "unavailable": "Không thể lấy trạng thái gói đăng ký"
+    },
     "subscriptionStatus": "Trạng thái gói đăng ký",
     "subscriptionTitle": "Gói đăng ký",
     "timedAllowance": "Hạn mức có thời hạn",
