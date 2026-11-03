@@ -9,6 +9,7 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
+import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { performAiRouterDailyCheckIn } from "~/services/apiService/sub2api/checkin/aiRouterCheckIn"
 import { performBaiApiCheckIn } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { performClawhudDailyCheckIn } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
@@ -16,9 +17,13 @@ import { performDaiguaDailyCheckIn } from "~/services/apiService/sub2api/checkin
 import { performFreeApiDailyCheckIn } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
 import { performGeniusProgrammerDailyCheckIn } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import { performHiyoDailyCheckIn } from "~/services/apiService/sub2api/checkin/hiyoCheckIn"
+import { performSub2ApiProDailyCheckIn } from "~/services/apiService/sub2api/checkin/proCheckInExecution"
 import { performSidruneDailyCheckIn } from "~/services/apiService/sub2api/checkin/sidruneCheckIn"
 import { performToolcodeDailyCheckIn } from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
-import { SUB2API_CHECK_IN_RECOVERY_REASONS } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import {
+  SUB2API_CHECK_IN_RECOVERY_REASONS,
+  Sub2ApiCheckInRecoveryBlockedError,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { performXiaobaiCodeDailyCheckIn } from "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
@@ -33,6 +38,7 @@ import { freeApiProvider } from "~/services/checkin/autoCheckin/providers/freeAp
 import { geniusProgrammerProvider } from "~/services/checkin/autoCheckin/providers/geniusProgrammer"
 import { hiyoProvider } from "~/services/checkin/autoCheckin/providers/hiyo"
 import { sidruneProvider } from "~/services/checkin/autoCheckin/providers/sidrune"
+import { mapSub2ApiCheckInMutationError } from "~/services/checkin/autoCheckin/providers/sub2apiShared"
 import { toolcodeProvider } from "~/services/checkin/autoCheckin/providers/toolcode"
 import { xiaobaiCodeProvider } from "~/services/checkin/autoCheckin/providers/xiaobaiCode"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -48,6 +54,15 @@ vi.mock(
       typeof import("~/services/apiService/sub2api/auth/browserAuth")
     >()),
     recoverSub2ApiBrowserAuth: vi.fn(),
+  }),
+)
+vi.mock(
+  "~/services/apiService/sub2api/auth/tokenRefresh",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/tokenRefresh")
+    >()),
+    refreshSub2ApiTokens: vi.fn(),
   }),
 )
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
@@ -283,7 +298,10 @@ describe.each(cases)(
     })
 
     it("rechecks current account intent before a recovered POST", async () => {
-      const beforeRecoveredMutation = vi.fn().mockResolvedValue(false)
+      const beforeRecoveredMutation = vi
+        .fn()
+        .mockResolvedValueOnce(true)
+        .mockResolvedValue(false)
       vi.mocked(fetchApiResponse)
         .mockResolvedValueOnce(reply(null, 401))
         .mockResolvedValueOnce(reply(status(false)))
@@ -292,7 +310,7 @@ describe.each(cases)(
       ).rejects.toMatchObject({
         reason: SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed,
       })
-      expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
+      expect(beforeRecoveredMutation).toHaveBeenCalledTimes(2)
       expect(fetchApiResponse).toHaveBeenCalledTimes(2)
     })
 
@@ -337,7 +355,10 @@ describe.each(cases)(
       expect(result.reward).toBeUndefined()
     })
     it("stops recovered submission when current account intent changed", async () => {
-      const beforeRecoveredMutation = vi.fn().mockResolvedValue(false)
+      const beforeRecoveredMutation = vi
+        .fn()
+        .mockResolvedValueOnce(true)
+        .mockResolvedValue(false)
       vi.mocked(fetchApiResponse)
         .mockResolvedValueOnce(reply(null, 401))
         .mockResolvedValueOnce(reply(status(false)))
@@ -347,7 +368,7 @@ describe.each(cases)(
         status: "failed",
         reasonCode: "account_unavailable",
       })
-      expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
+      expect(beforeRecoveredMutation).toHaveBeenCalledTimes(2)
       expect(fetchApiResponse).toHaveBeenCalledTimes(2)
     })
 
@@ -362,3 +383,78 @@ describe.each(cases)(
     })
   },
 )
+
+describe("pre-POST authentication admission", () => {
+  it.each(["missing", "expiring"])(
+    "blocks the first POST after %s token refresh changes intent",
+    async (kind) => {
+      let permitted = true
+      vi.mocked(fetchApiResponse)
+        .mockReset()
+        .mockResolvedValue(response({ cash_amount_usd: 0.1 }))
+      vi.mocked(refreshSub2ApiTokens).mockImplementationOnce(async () => {
+        permitted = false
+        return {
+          accessToken: "fresh",
+          refreshToken: "rotated",
+          tokenExpiresAt: Date.now() + 3600000,
+        }
+      })
+      await expect(
+        performBaiApiCheckIn(
+          {
+            ...request,
+            auth: {
+              ...request.auth,
+              accessToken: kind === "missing" ? "" : "expiring",
+              refreshToken: "refresh",
+              tokenExpiresAt: Date.now() + 1000,
+            },
+          },
+          { beforeRecoveredMutation: async () => permitted },
+        ),
+      ).rejects.toMatchObject({ reason: "precondition_failed" })
+      expect(fetchApiResponse).not.toHaveBeenCalled()
+    },
+  )
+})
+
+describe("recovery outcome mapping", () => {
+  it("maps a disabled recovered method to a definite failure", () => {
+    expect(
+      mapSub2ApiCheckInMutationError(
+        new Sub2ApiCheckInRecoveryBlockedError(
+          SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled,
+        ),
+        {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+        },
+      ),
+    ).toMatchObject({ status: "failed", reasonCode: "method_disabled" })
+  })
+  it("returns the native Pro already-checked result without a second POST", async () => {
+    vi.mocked(recoverSub2ApiBrowserAuth).mockResolvedValue({
+      accessToken: "recovered",
+      userId: "42",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+    vi.mocked(fetchApiResponse)
+      .mockReset()
+      .mockResolvedValueOnce(response(null, 401))
+      .mockResolvedValueOnce(
+        response({
+          enabled: true,
+          checked_in_today: true,
+          reward_min: 1,
+          reward_max: 3,
+        }),
+      )
+    await expect(performSub2ApiProDailyCheckIn(request)).resolves.toEqual({
+      kind: "already_checked",
+    })
+    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+  })
+})

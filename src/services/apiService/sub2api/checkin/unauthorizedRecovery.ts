@@ -61,10 +61,21 @@ export function executeSub2ApiCheckInWithRecovery<T>(
   ) => Promise<{ enabled: boolean; checkedInToday: boolean }>,
   options: Sub2ApiCheckInRecoveryOptions = {},
 ) {
-  return executeAuthenticatedSub2ApiRequest(request, endpoint, runner, {
-    beforeUnauthorizedRetry: createSub2ApiCheckInRecoveryGuard(
-      readStatus,
-      options,
-    ),
-  })
+  return executeAuthenticatedSub2ApiRequest(
+    request,
+    endpoint,
+    async (authenticatedRequest) => {
+      // Authentication may await refresh or browser recovery before either POST.
+      if (
+        options.beforeRecoveredMutation &&
+        !(await options.beforeRecoveredMutation())
+      ) {
+        throw new Sub2ApiCheckInRecoveryBlockedError(
+          SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed,
+        )
+      }
+      return runner(authenticatedRequest)
+    },
+    { beforeUnauthorizedRetry: createSub2ApiCheckInRecoveryGuard(readStatus) },
+  )
 }
