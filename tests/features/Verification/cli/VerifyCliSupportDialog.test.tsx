@@ -2005,8 +2005,13 @@ describe("VerifyCliSupportDialog", () => {
   })
 
   it("leaves account model discovery unrequested when profile models are reloaded", async () => {
+    const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
     const { result } = renderHook(() =>
-      useCliSupportVerification({ isOpen: true, onClose: vi.fn() }),
+      useCliSupportVerification({
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
     )
     await act(async () => {
       await result.current.loadProfileModels()
