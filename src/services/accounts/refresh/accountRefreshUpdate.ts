@@ -1,6 +1,6 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
+import { parseManualQuotaFromUsd } from "~/services/accounts/editing/accountFormValidation"
 import type { SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 
@@ -20,8 +20,9 @@ export function buildAccountRefreshUpdate(
   }
   if (!result.success) return updateData
 
+  const manualQuota = parseManualQuotaFromUsd(account.manualBalanceUsd)
   updateData.account_info = {
-    quota: resolveManualQuota(account.manualBalanceUsd) ?? result.data.quota,
+    quota: manualQuota ?? result.data.quota,
     today_prompt_tokens: result.data.today_prompt_tokens,
     today_completion_tokens: result.data.today_completion_tokens,
     today_quota_consumption: result.data.today_quota_consumption,
@@ -32,7 +33,7 @@ export function buildAccountRefreshUpdate(
     subscription: result.data.subscription,
     nativeBalance: result.data.nativeBalance,
     balanceUnavailable:
-      resolveManualQuota(account.manualBalanceUsd) === undefined
+      manualQuota === undefined
         ? result.data.balanceUnavailable === true
         : false,
     recentUsageRecords: result.data.recentUsageRecords,
@@ -67,13 +68,4 @@ export function buildAccountRefreshUpdate(
   }
 
   return updateData
-}
-
-/** Converts a valid manual USD balance into the account's quota units. */
-function resolveManualQuota(manualBalanceUsd?: string): number | undefined {
-  const value = manualBalanceUsd?.trim()
-  if (!value) return undefined
-  const amount = Number.parseFloat(value)
-  if (!Number.isFinite(amount) || amount < 0) return undefined
-  return Math.round(amount * QUOTA_PER_USD)
 }

@@ -5514,6 +5514,62 @@ describe("accountStorage core behaviors", () => {
     expect(clearedAccount?.health?.code).toBeUndefined()
   })
 
+  it.each([
+    { initial: undefined, latest: "0", providerQuota: 123, unavailable: true },
+    { initial: undefined, latest: "2", providerQuota: 123, unavailable: false },
+    { initial: "2", latest: "3", providerQuota: 123, unavailable: true },
+    { initial: "2", latest: "", providerQuota: 123, unavailable: false },
+    { initial: "0", latest: "", providerQuota: 0, unavailable: true },
+  ])(
+    "uses the manual balance saved during an in-flight refresh ($initial -> $latest, unavailable=$unavailable)",
+    async ({ initial, latest, providerQuota, unavailable }) => {
+      const account = createAccount({ manualBalanceUsd: initial })
+      account.account_info.quota =
+        initial === undefined ? 400 : Number(initial) * QUOTA_PER_USD
+      seedStorage([account])
+      const deferred = createDeferred<any>()
+      mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
+      const pending = accountStorage.refreshAccount(account.id, true)
+      await vi.waitFor(() => expect(mockRefreshAccountData).toHaveBeenCalled())
+      expect(
+        await accountStorage.updateAccount(
+          account.id,
+          {
+            manualBalanceUsd: latest,
+            ...(latest
+              ? {
+                  account_info: {
+                    quota: Number(latest) * QUOTA_PER_USD,
+                    balanceUnavailable: false,
+                  },
+                }
+              : {}),
+          },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        ),
+      ).toBe(true)
+      deferred.resolve({
+        success: true,
+        data: {
+          quota: providerQuota,
+          balanceUnavailable: unavailable,
+          today_requests_count: 7,
+        },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+      })
+      expect((await pending)?.refreshed).toBe(true)
+      const updated = await accountStorage.getAccountById(account.id)
+      expect(updated?.manualBalanceUsd).toBe(latest)
+      expect(updated?.account_info.quota).toBe(
+        latest ? Number(latest) * QUOTA_PER_USD : providerQuota,
+      )
+      expect(updated?.account_info.balanceUnavailable === true).toBe(
+        latest ? false : unavailable,
+      )
+      expect(updated?.account_info.today_requests_count).toBe(7)
+    },
+  )
+
   it("refreshAccount should preserve manual balance quota when set", async () => {
     const manualBalanceUsd = "1.23"
     const manualQuota = Math.round(

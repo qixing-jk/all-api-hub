@@ -6,7 +6,7 @@ import { SiteHealthStatus } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
-it.each(["invalid", "NaN", "-2"])(
+it.each(["invalid", "NaN", "-2", "2usd", null, 2, true, {}])(
   "retains unavailable balance when manual amount %s is invalid",
   (manualBalanceUsd) => {
     const result: RefreshAccountResult = {
@@ -24,11 +24,14 @@ it.each(["invalid", "NaN", "-2"])(
       },
     }
     const update = buildAccountRefreshUpdate(
-      buildSiteAccount({ manualBalanceUsd }),
+      Object.assign(buildSiteAccount(), { manualBalanceUsd }) as ReturnType<
+        typeof buildSiteAccount
+      >,
       result,
       false,
     )
     expect(update.account_info?.balanceUnavailable).toBe(true)
+    expect(update.account_info?.quota).toBe(0)
   },
 )
 

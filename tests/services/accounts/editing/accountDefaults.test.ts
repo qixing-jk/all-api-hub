@@ -698,6 +698,21 @@ describe("accountDefaults", () => {
   })
 
   describe("applySiteAccountUpdates", () => {
+    it.each([null, 2, true, {}])(
+      "allows clearing an imported non-string manual balance %j",
+      (manualBalanceUsd) => {
+        const account = Object.assign(createSiteAccount(), { manualBalanceUsd })
+        account.account_info.quota = 1500000
+        const updated = applySiteAccountUpdates({
+          account: account as SiteAccount,
+          updates: { manualBalanceUsd: "" },
+          now: 1000,
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        })
+        expect(updated.manualBalanceUsd).toBe("")
+        expect(updated.account_info.quota).toBe(1500000)
+      },
+    )
     it.each(["0", "2"])(
       "invalidates a removed manual balance %s when no refreshed quota is supplied",
       (manualBalanceUsd) => {

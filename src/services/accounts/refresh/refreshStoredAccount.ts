@@ -214,6 +214,7 @@ async function runRefreshAttempt(
     updateData,
     refreshedCheckIn,
     account,
+    result.success ? result.data : undefined,
   )
   const updatedAccount = didPersist
     ? await accountQueries.getAccountById(id)
