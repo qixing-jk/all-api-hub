@@ -118,7 +118,7 @@
 | GitHub Stable  | [下载 Stable](https://github.com/qixing-jk/all-api-hub/releases/latest)       | 无法安装商店版，或需要临时手动安装已发布修复       |
 | Nightly 预发布 | [下载 Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | 想抢先体验新功能并协助测试，可能不如商店稳定版稳定 |
 
-GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 Star / Watch 仓库接收新版本通知。更多说明见 [安装与更新说明](https://all-api-hub.qixing1217.top/extension-update-install.html)。
+GitHub Stable 和 Nightly 属于手动安装通道。必须从 GitHub 安装时，Chromium 用户推荐安装 `all-api-hub-chrome.crx`（Nightly 为 `all-api-hub-nightly-chrome.crx`），它会和商店版一样自动更新。更多说明见 [安装与更新说明](https://all-api-hub.qixing1217.top/extension-update-install.html) 与 [Chromium 自更新安装](https://all-api-hub.qixing1217.top/chromium-crx-self-update.html)。
 
 **其他环境支持：**
 

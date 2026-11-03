@@ -9,7 +9,7 @@ type RuntimeMode = string
  * Returns the current Vite/WXT mode name, which comes from `--mode`.
  */
 export function getRuntimeMode(): RuntimeMode {
-  return import.meta.env.MODE
+  return import.meta.env?.MODE ?? "production"
 }
 
 /**

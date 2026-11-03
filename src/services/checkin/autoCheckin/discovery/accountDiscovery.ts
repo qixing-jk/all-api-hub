@@ -49,6 +49,7 @@ function runCheckInDiscovery(
     deadlineMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
     perAdapterTimeoutMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
     request: {
+      siteType: account.site_type,
       accountId: account.id,
       baseUrl: account.site_url,
       auth: {

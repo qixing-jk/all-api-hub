@@ -4,8 +4,8 @@
  * Mirrors the orca star-nag contract: once the value threshold is crossed the
  * card stays visible until the user resolves it. Every non-star exit (the "not
  * now" button or the close control) is a deferral that cools down, doubles the
- * threshold, and re-baselines. Only starring or confirming an existing star is
- * terminal. All transitions are pure so they can be unit tested independently
+ * threshold, and re-baselines. Explicit confirmation is
+ * terminal; repository observations are revalidated separately. All transitions are pure so they can be unit tested independently
  * from storage.
  */
 
@@ -35,7 +35,16 @@ export const STAR_PROMOTION_INITIAL_ACCOUNT_THRESHOLD = 5
  */
 export const STAR_PROMOTION_DEFERRAL_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000
 
+export const STAR_PROMOTION_COMPLETION_SOURCES = {
+  Confirmed: "confirmed",
+  Detected: "detected",
+} as const
+
 export interface StarPromotionState {
+  /** Last resolved GitHub state, independent of invitation suppression. */
+  githubStarred?: boolean
+  /** Absent on legacy records whose completion origin cannot be recovered. */
+  completionSource?: (typeof STAR_PROMOTION_COMPLETION_SOURCES)[keyof typeof STAR_PROMOTION_COMPLETION_SOURCES]
   status: StarPromotionStatus
   /** Lifetime successful auto check-ins across all runs. */
   lifetimeCheckinSuccesses: number
@@ -99,6 +108,14 @@ export function normalizeStarPromotionState(raw: unknown): StarPromotionState {
       source.status === STAR_PROMOTION_STATUSES.Completed
         ? STAR_PROMOTION_STATUSES.Completed
         : STAR_PROMOTION_STATUSES.Active,
+    ...(typeof source.githubStarred === "boolean"
+      ? { githubStarred: source.githubStarred }
+      : {}),
+    ...(source.completionSource ===
+      STAR_PROMOTION_COMPLETION_SOURCES.Confirmed ||
+    source.completionSource === STAR_PROMOTION_COMPLETION_SOURCES.Detected
+      ? { completionSource: source.completionSource }
+      : {}),
     lifetimeCheckinSuccesses: toFiniteNumber(
       source.lifetimeCheckinSuccesses,
       defaults.lifetimeCheckinSuccesses,
@@ -214,7 +231,7 @@ export function deferThresholdPromptOnState(
   }
 }
 
-/** Terminal state: every star CTA surface stays suppressed afterwards. */
+/** Suppresses star CTAs; the state service owns source-aware revalidation. */
 export function completeStarPromotionOnState(
   state: StarPromotionState,
 ): StarPromotionState {

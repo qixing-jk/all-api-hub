@@ -2,9 +2,14 @@ import {
   DEPLOYMENT_API_ROLES,
   resolveDeploymentApiOrigin,
 } from "~/constants/deploymentApiOrigins"
+import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeSub2ApiAccessToken as normalizeAccessToken } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -135,34 +140,45 @@ export async function fetchSub2ApiRuntimeModels(
   const endpointUrl = createRuntimeModelsUrl(request.baseUrl)
 
   try {
-    const response = await fetch(endpointUrl, {
-      method: "GET",
-      cache: "no-store",
-      signal: request.abortSignal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+    return await withSiteApiRequestTask(
+      endpointUrl,
+      async () => {
+        const response = await fetch(endpointUrl, {
+          method: "GET",
+          cache: "no-store",
+          signal: request.abortSignal,
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        })
+
+        reportSiteRateLimitResponse(endpointUrl, response)
+        if (response.status === 401 || response.status === 403) {
+          const businessError = await readRuntimeModelsBusinessError(response)
+          if (businessError) {
+            throw businessError
+          }
+
+          throw createRuntimeApiKeyAuthError()
+        }
+
+        if (!response.ok) {
+          throw new ApiError(
+            response.statusText || "Sub2API runtime model request failed",
+            response.status,
+            SUB2API_RUNTIME_MODELS_ENDPOINT,
+            API_ERROR_CODES.HTTP_OTHER,
+          )
+        }
+
+        return parseSub2ApiRuntimeModelIds(
+          await readRuntimeModelsPayload(response),
+        )
       },
-    })
-
-    if (response.status === 401 || response.status === 403) {
-      const businessError = await readRuntimeModelsBusinessError(response)
-      if (businessError) {
-        throw businessError
-      }
-
-      throw createRuntimeApiKeyAuthError()
-    }
-
-    if (!response.ok) {
-      throw new ApiError(
-        response.statusText || "Sub2API runtime model request failed",
-        response.status,
-        SUB2API_RUNTIME_MODELS_ENDPOINT,
-        API_ERROR_CODES.HTTP_OTHER,
-      )
-    }
-
-    return parseSub2ApiRuntimeModelIds(await readRuntimeModelsPayload(response))
+      request.abortSignal,
+      request.requestScheduling,
+      SITE_TYPES.SUB2API,
+    )
   } catch (error) {
     if (error instanceof ApiError) {
       throw error

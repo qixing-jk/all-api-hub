@@ -118,8 +118,8 @@ Sub2APIサイトの一般的な特徴は以下の通りです。コンソール�
 1. **Issueの確認**：[GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues) にアクセスして、同じ問題がないか検索してください。
 2. **最新バージョンの使用**：
    - 多くのユーザーには、ストア版を使い、ブラウザの自動更新を待つことをお勧めします。
-   - 修正がまだストアに反映されていない場合、またはストア版をインストールできない場合は、GitHub Releases から一時的に手動インストールできます。
-   - GitHub Stable、Nightly、main ブランチの開発版は一時的な確認やテスト協力向けです。手動インストール版は自動更新されません。新しいバージョンの通知を受け取るには、リポジトリを Star / Watch してください。各インストール方法の違いは、[インストール方法と更新について](./extension-update-install.md) を確認してください。
+   - 修正がまだストアに反映されていない場合、またはストア版をインストールできない場合は、GitHub Releases から一時的にインストールできます。
+   - GitHub Stable、Nightly、main ブランチの開発版は一時的な確認やテスト協力向けです。Chromium ユーザーは自己更新 `.crx` をインストールすればストア版と同じように自動更新されます。解凍読み込みの `.zip` は自動更新されないため、リポジトリを Star / Watch するか Releases ページを確認してください。各インストール方法の違いは、[インストール方法と更新について](./extension-update-install.md) を確認してください。
 
 ### 最新バージョンを入手するにはどうすればよいですか？
 
@@ -130,11 +130,11 @@ Sub2APIサイトの一般的な特徴は以下の通りです。コンソール�
 | **Chrome Web Store** | 審査後に自動更新 | [インストールはこちら](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
 | **Edge Add-ons** | 審査後に自動更新 | [インストールはこちら](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
 | **Firefox Add-ons** | ⚡ 速い（数時間で審査） | [インストールはこちら](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
-| **GitHub Stable** | 公開済みバージョンを最速で入手、手動インストールが必要 | [ダウンロードはこちら](https://github.com/qixing-jk/all-api-hub/releases/latest) |
+| **GitHub Stable** | 公開済みバージョンを最速で入手。`.crx` は自動更新、`.zip` は手動インストールが必要 | [ダウンロードはこちら](https://github.com/qixing-jk/all-api-hub/releases/latest) |
 | **Nightly プレリリース** | 開発中の変更を最速で試せるが、不安定な場合あり | [ダウンロードはこちら](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) |
 
 ::: tip 推奨
-Chrome、Edge、Firefox ユーザーは対応するストア版を優先してください。Brave、Vivaldi、Opera ユーザーは通常、まず Chrome ウェブストアを試せます。新しいバージョンがあるか確認したい場合、ストア版が GitHub Releases より遅れる理由を知りたい場合、または GitHub パッケージを手動インストールしたい場合は、[インストール方法と更新について](./extension-update-install.md) を確認してください。GitHub Releases は、修正がまだストアに反映されていない場合、ストア版や Chrome ウェブストア互換版をインストールできない場合、または QQ ブラウザ、360 系ブラウザ、チーターブラウザなど手動読み込みが必要なブラウザを使う場合に限って利用するのがお勧めです。これらの手動インストール版は自動更新されません。新しいバージョンの通知を受け取るにはリポジトリを Star / Watch し、対象ブラウザについては [その他のブラウザへのインストールガイド](./other-browser-install.md) を参照してください。
+Chrome、Edge、Firefox ユーザーは対応するストア版を優先してください。Brave、Vivaldi、Opera ユーザーは通常、まず Chrome ウェブストアを試せます。新しいバージョンがあるか確認したい場合、ストア版が GitHub Releases より遅れる理由を知りたい場合、または GitHub パッケージを手動インストールしたい場合は、[インストール方法と更新について](./extension-update-install.md) を確認してください。GitHub Releases は、修正がまだストアに反映されていない場合、ストア版や Chrome ウェブストア互換版をインストールできない場合、または QQ ブラウザ、360 系ブラウザ、チーターブラウザなど手動読み込みが必要なブラウザを使う場合に限って利用するのがお勧めです。GitHub 版が必要な場合、Chromium ユーザーはストア版と同じように自動更新される自己更新 `.crx` をインストールしてください。`.crx` をインストールできない場合だけ解凍読み込みの `.zip` を使い、こちらは自動更新されない点に注意してください。対象ブラウザについては [その他のブラウザへのインストールガイド](./other-browser-install.md) を参照してください。
 :::
 
 ## ⚙️ 機能使用に関する問題

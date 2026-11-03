@@ -326,6 +326,7 @@ describe("DoneHub managed-site channel capability", () => {
 
       const expectedRequest = {
         baseUrl: config.baseUrl,
+        siteType: "done-hub",
         auth: {
           authType: AuthTypeEnum.AccessToken,
           accessToken: config.adminToken,
@@ -376,6 +377,7 @@ describe("DoneHub managed-site channel capability", () => {
     )
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "done-hub",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,
@@ -472,6 +474,7 @@ describe("DoneHub managed-site channel capability", () => {
     )
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "done-hub",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,
@@ -584,6 +587,7 @@ describe("DoneHub managed-site channel capability", () => {
     expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(
       {
         baseUrl: config.baseUrl,
+        siteType: "done-hub",
         auth: {
           authType: AuthTypeEnum.AccessToken,
           accessToken: config.adminToken,
@@ -601,6 +605,7 @@ describe("DoneHub managed-site channel capability", () => {
     )
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "done-hub",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,

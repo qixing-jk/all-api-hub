@@ -119,7 +119,7 @@ Common incompatibility scenarios:
 2. **Use the Latest Version**:
    - Most users should stay on the store build and let the browser update it automatically.
    - If a fix has not reached the store yet, or you cannot install the store build, you can temporarily install it from GitHub Releases.
-   - GitHub Stable, Nightly, and main-branch builds are for temporary verification and testing. Manual installations do not auto-update. You can Star / Watch the repository to receive new version notifications. For the differences between these channels, see [Installation Channels and Updates](./extension-update-install.md).
+   - GitHub Stable, Nightly, and main-branch builds are for temporary verification and testing. Chromium users who install the self-updating `.crx` get automatic updates just like the store build; the unpacked `.zip` does not auto-update, so Star / Watch the repository or check the Releases page. For the differences between these channels, see [Installation Channels and Updates](./extension-update-install.md).
 
 ### How to get the latest version?
 
@@ -130,11 +130,11 @@ The plugin is released on multiple platforms. Prefer the official store that mat
 | **Chrome Web Store** | Automatic updates after review             | [Install Here](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
 | **Edge Add-ons**     | Automatic updates after review             | [Install Here](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
 | **Firefox Add-ons**  | ⚡ Fast (a few hours review)                | [Install Here](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
-| **GitHub Stable**    | Fastest published build, manual install    | [Download Here](https://github.com/qixing-jk/all-api-hub/releases/latest) |
+| **GitHub Stable**    | Fastest published build; `.crx` self-updates, `.zip` needs manual install | [Download Here](https://github.com/qixing-jk/all-api-hub/releases/latest) |
 | **Nightly pre-release** | Fastest access to in-progress changes, may be unstable | [Download Here](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) |
 
 ::: tip Recommendation
-Chrome, Edge, and Firefox users should prioritize the matching store build. Brave, Vivaldi, and Opera users can usually try Chrome Web Store first. If you want to check whether a new version is available, understand why the store version may be behind GitHub Releases, or manually install a GitHub package, see [Installation Channels and Updates](./extension-update-install.md). Use GitHub Releases only when a fix has not reached the store yet, you cannot install the store build or Chrome Web Store compatible build, or you use a browser that needs manual loading, such as QQ Browser, 360 Series Browsers, or Cheetah Browser. These manual installations do not auto-update. You can Star / Watch the repository to receive new version notifications, and see the [Other Browser Installation Guide](./other-browser-install.md) for those browsers.
+Chrome, Edge, and Firefox users should prioritize the matching store build. Brave, Vivaldi, and Opera users can usually try Chrome Web Store first. If you want to check whether a new version is available, understand why the store version may be behind GitHub Releases, or manually install a GitHub package, see [Installation Channels and Updates](./extension-update-install.md). Use GitHub Releases only when a fix has not reached the store yet, you cannot install the store build or Chrome Web Store compatible build, or you use a browser that needs manual loading, such as QQ Browser, 360 Series Browsers, or Cheetah Browser. When you need a GitHub build, Chromium users should install the self-updating `.crx`, which updates just like the store build; only fall back to the unpacked `.zip` when the `.crx` cannot be installed, and note that it does not auto-update. See the [Other Browser Installation Guide](./other-browser-install.md) for those browsers.
 :::
 
 ## ⚙️ Feature Usage Issues

@@ -16,6 +16,34 @@ const effect = {
 } as const
 
 describe("managed-site API service mutation requests", () => {
+  it("binds provider identity while preserving caller controls and credentials", async () => {
+    const { createManagedSiteApiServiceRequest } = await import(
+      "~/services/apiAdapters/managedSites/request"
+    )
+    const { SITE_TYPES } = await import("~/constants/siteType")
+    const signal = new AbortController().signal
+    const observer = { onDispatch: () => {}, onResponse: () => {} }
+    const options = {
+      siteType: SITE_TYPES.NEW_API,
+      signal,
+      observer,
+      bypassSiteRequestLimit: true,
+    }
+    const request = createManagedSiteApiServiceRequest(SITE_TYPES.DONE_HUB)(
+      config,
+      options,
+    )
+    expect(request).toMatchObject({
+      siteType: SITE_TYPES.DONE_HUB,
+      baseUrl: config.baseUrl,
+      auth: { accessToken: config.adminToken, userId: config.userId },
+      abortSignal: signal,
+      observer,
+      bypassSiteRequestLimit: true,
+    })
+    expect(options.siteType).toBe(SITE_TYPES.NEW_API)
+  })
+
   it("creates provider-neutral channel effects", async () => {
     const { createManagedSiteChannelEffect } = await import(
       "~/services/managedSites/mutations/execution"

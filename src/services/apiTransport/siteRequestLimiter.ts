@@ -1,3 +1,7 @@
+import {
+  getSiteRequestBudget,
+  type SiteRequestBudget,
+} from "~/services/accountSiteDefinitions/requestLimits"
 import { REQUEST_SCHEDULING_PRIORITIES } from "~/services/apiTransport/requestScheduling"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import { isTestMode } from "~/utils/core/environment"
@@ -5,6 +9,7 @@ import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 type SiteRequestLimiterConfig = {
   enabled?: boolean
+  resolveBudget?: (siteType?: string) => SiteRequestBudget
   maxConcurrentPerSite: number
   requestsPerMinute: number
   burst: number
@@ -27,6 +32,10 @@ type SiteRequestLease<T> = {
 }
 
 type SiteLimiterState = {
+  hasExplicitBudget: boolean
+  pausedUntil: number
+  backoffAttempts: number
+  budget: SiteRequestBudget
   foregroundStreak: number
   activeCount: number
   activeBackgroundCount: number
@@ -37,12 +46,6 @@ type SiteLimiterState = {
   cleanupTimer: ReturnType<typeof setTimeout> | undefined
 }
 
-const SITE_API_REQUEST_LIMITS = {
-  maxConcurrentPerSite: 2,
-  requestsPerMinute: 18,
-  burst: 4,
-} as const satisfies SiteRequestLimiterConfig
-
 // Reserve one dispatch for waiting background work after five foreground requests.
 const MAX_FOREGROUND_STREAK = 5
 
@@ -52,6 +55,13 @@ const MAX_FOREGROUND_STREAK = 5
 const FOREGROUND_RESERVED_TOKENS = 1
 
 const IDLE_STATE_TTL_MS = 5 * 60 * 1000
+const RATE_LIMIT_BACKOFF = {
+  initialDelayMs: 1000,
+  maxDelayMs: 30_000,
+  maxExponent: 5,
+  jitterRatio: 0.25,
+} as const
+const MAX_TIMER_DELAY_MS = 2_147_483_647
 
 /** Resolves the canonical site origin used by process-local request limiting. */
 export function resolveSiteRequestLimitKey(baseUrl: string): string {
@@ -123,8 +133,8 @@ function resolveNonNegativeNumber(
  * Queued foreground work keeps one token and one concurrency slot out of reach of background work for
  * as long as it waits, so an automatic scan cannot make a user action wait for a later dispatch.
  *
- * Defaults are chosen to stay below New API's dashboard/web default of
- * 60 requests / 180 seconds while still allowing a small local burst.
+ * Optional site-type budgets share the same origin state, including when callers
+ * supply conflicting types. Conflicts tighten the budget without refilling tokens.
  */
 export function createSiteRequestLeaseLimiter(
   config: SiteRequestLimiterConfig,
@@ -139,9 +149,6 @@ export function createSiteRequestLeaseLimiter(
     config,
     "requestsPerMinute",
   )
-  const refillRatePerMs = requestsPerMinute / 60_000
-  // A bucket that holds a single token has no spare capacity to reserve.
-  const foregroundTokenReserve = capacity > 1 ? FOREGROUND_RESERVED_TOKENS : 0
   const states = new Map<string, SiteLimiterState>()
 
   const runWithoutLimit = async <T>(
@@ -153,7 +160,7 @@ export function createSiteRequestLeaseLimiter(
   }
 
   if (!enabled || requestsPerMinute <= 0) {
-    return async <T>(
+    const unlimited = async <T>(
       _key: string,
       task: () => SiteRequestLease<T>,
       signal?: AbortSignal,
@@ -162,6 +169,9 @@ export function createSiteRequestLeaseLimiter(
       if (signal?.aborted) throw getAbortReason(signal)
       return await runWithoutLimit(task)
     }
+    return Object.assign(unlimited, {
+      pause: (_key: string, _retryAfter?: string) => {},
+    })
   }
 
   const refillTokens = (state: SiteLimiterState) => {
@@ -170,20 +180,29 @@ export function createSiteRequestLeaseLimiter(
     if (elapsedMs <= 0) return
 
     state.tokens = Math.min(
-      capacity,
-      state.tokens + elapsedMs * refillRatePerMs,
+      state.budget.burst,
+      state.tokens + elapsedMs * (state.budget.requestsPerMinute / 60_000),
     )
     state.lastRefillAt = now
   }
 
-  const getState = (key: string) => {
+  const getState = (key: string, siteType?: string) => {
+    const budget = config.resolveBudget?.(siteType) ?? {
+      maxConcurrentPerSite,
+      requestsPerMinute,
+      burst: capacity,
+    }
     let state = states.get(key)
     if (!state) {
       state = {
+        hasExplicitBudget: siteType !== undefined,
+        pausedUntil: 0,
+        backoffAttempts: 0,
+        budget,
         foregroundStreak: 0,
         activeCount: 0,
         activeBackgroundCount: 0,
-        tokens: capacity,
+        tokens: budget.burst,
         lastRefillAt: Date.now(),
         queue: [],
         timer: undefined,
@@ -191,6 +210,29 @@ export function createSiteRequestLeaseLimiter(
       }
       states.set(key, state)
       return state
+    }
+
+    if (siteType !== undefined && config.resolveBudget) {
+      refillTokens(state)
+      const previousCapacity = state.budget.burst
+      state.budget = state.hasExplicitBudget
+        ? {
+            maxConcurrentPerSite: Math.min(
+              state.budget.maxConcurrentPerSite,
+              budget.maxConcurrentPerSite,
+            ),
+            requestsPerMinute: Math.min(
+              state.budget.requestsPerMinute,
+              budget.requestsPerMinute,
+            ),
+            burst: Math.min(state.budget.burst, budget.burst),
+          }
+        : budget
+      state.hasExplicitBudget = true
+      state.tokens = Math.min(
+        state.tokens,
+        state.tokens + state.budget.burst - previousCapacity,
+      )
     }
 
     if (state.cleanupTimer) {
@@ -205,16 +247,33 @@ export function createSiteRequestLeaseLimiter(
     if (state.activeCount > 0 || state.queue.length > 0 || state.timer) return
     if (state.cleanupTimer) return
 
-    state.cleanupTimer = setTimeout(() => {
+    const cleanup = () => {
+      state.cleanupTimer = undefined
       if (
-        state.activeCount === 0 &&
-        state.queue.length === 0 &&
-        !state.timer &&
-        states.get(key) === state
+        state.activeCount > 0 ||
+        state.queue.length > 0 ||
+        state.timer ||
+        states.get(key) !== state
       ) {
-        states.delete(key)
+        return
       }
-    }, IDLE_STATE_TTL_MS)
+      const remainingPause = state.pausedUntil - Date.now()
+      if (remainingPause > 0) {
+        state.cleanupTimer = setTimeout(
+          cleanup,
+          Math.min(remainingPause, MAX_TIMER_DELAY_MS),
+        )
+        return
+      }
+      states.delete(key)
+    }
+    state.cleanupTimer = setTimeout(
+      cleanup,
+      Math.min(
+        MAX_TIMER_DELAY_MS,
+        Math.max(IDLE_STATE_TTL_MS, state.pausedUntil - Date.now()),
+      ),
+    )
   }
 
   const schedule = (key: string, state: SiteLimiterState): void => {
@@ -222,6 +281,23 @@ export function createSiteRequestLeaseLimiter(
       clearTimeout(state.timer)
       state.timer = undefined
     }
+
+    const pauseMs = state.pausedUntil - Date.now()
+    if (pauseMs > 0 && state.queue.length > 0) {
+      state.timer = setTimeout(
+        () => {
+          state.timer = undefined
+          schedule(key, state)
+        },
+        Math.min(pauseMs, MAX_TIMER_DELAY_MS),
+      )
+      return
+    }
+
+    const maxConcurrentPerSite = state.budget.maxConcurrentPerSite
+    const refillRatePerMs = state.budget.requestsPerMinute / 60_000
+    const foregroundTokenReserve =
+      state.budget.burst > 1 ? FOREGROUND_RESERVED_TOKENS : 0
 
     while (state.activeCount < maxConcurrentPerSite && state.queue.length > 0) {
       refillTokens(state)
@@ -310,16 +386,17 @@ export function createSiteRequestLeaseLimiter(
     scheduleCleanup(key, state)
   }
 
-  return async <T>(
+  const admit = async <T>(
     key: string,
     task: () => SiteRequestLease<T>,
     signal?: AbortSignal,
     scheduling?: RequestScheduling,
+    siteType?: string,
   ): Promise<T> => {
     if (signal?.aborted) throw getAbortReason(signal)
     if (!key) return await runWithoutLimit(task)
 
-    const state = getState(key)
+    const state = getState(key, siteType)
 
     return await new Promise<T>((resolve, reject) => {
       const item: QueueItem = {
@@ -347,11 +424,43 @@ export function createSiteRequestLeaseLimiter(
       schedule(key, state)
     })
   }
+  return Object.assign(admit, {
+    /** Pauses future dispatches; the failed request is never replayed here. */
+    pause(key: string, retryAfter?: string) {
+      if (!key) return
+      const state = getState(key)
+      const seconds =
+        retryAfter?.trim() && /^\d+(?:\.\d+)?$/.test(retryAfter.trim())
+          ? Number(retryAfter)
+          : NaN
+      const date =
+        retryAfter &&
+        /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(retryAfter.trim())
+          ? Date.parse(retryAfter)
+          : NaN
+      const serverDelay = Number.isFinite(seconds)
+        ? seconds * 1000
+        : date - Date.now()
+      const backoff = Math.min(
+        RATE_LIMIT_BACKOFF.maxDelayMs,
+        RATE_LIMIT_BACKOFF.initialDelayMs *
+          2 ** Math.min(state.backoffAttempts, RATE_LIMIT_BACKOFF.maxExponent),
+      )
+      const delay =
+        Number.isFinite(serverDelay) && serverDelay >= 0
+          ? serverDelay
+          : backoff * (1 + Math.random() * RATE_LIMIT_BACKOFF.jitterRatio)
+      state.backoffAttempts += 1
+      state.pausedUntil = Math.max(state.pausedUntil, Date.now() + delay)
+      schedule(key, state)
+    },
+  })
 }
 
 const productionSiteRequestLeaseLimiter = createSiteRequestLeaseLimiter({
-  ...SITE_API_REQUEST_LIMITS,
+  ...getSiteRequestBudget(),
   enabled: !isTestMode(),
+  resolveBudget: getSiteRequestBudget,
 })
 
 /**
@@ -363,6 +472,57 @@ export async function withSiteApiRequestLease<T>(
   task: () => SiteRequestLease<T>,
   signal?: AbortSignal,
   scheduling?: RequestScheduling,
+  siteType?: string,
 ): Promise<T> {
-  return await productionSiteRequestLeaseLimiter(key, task, signal, scheduling)
+  return await productionSiteRequestLeaseLimiter(
+    key,
+    task,
+    signal,
+    scheduling,
+    siteType,
+  )
+}
+
+/** Shares server throttling feedback across callers of the actual API origin. */
+export function reportSiteRateLimit(key: string, retryAfter?: string): void {
+  productionSiteRequestLeaseLimiter.pause(key, retryAfter)
+}
+
+/** Reports native HTTP throttling without reading or transforming the body. */
+export function reportSiteRateLimitResponse(
+  url: string,
+  response: Pick<Response, "status" | "headers">,
+): void {
+  if (response.status === 429)
+    reportSiteRateLimit(
+      resolveSiteRequestLimitKey(url),
+      response.headers.get("retry-after") ?? undefined,
+    )
+}
+
+/** Runs a native provider's complete HTTP operation through the shared origin queue. */
+export async function withSiteApiRequestTask<T>(
+  url: string,
+  task: () => Promise<T>,
+  signal?: AbortSignal,
+  scheduling?: RequestScheduling,
+  siteType?: string,
+): Promise<T> {
+  return await withSiteApiRequestLease(
+    resolveSiteRequestLimitKey(url),
+    () => {
+      signal?.throwIfAborted()
+      const result = Promise.resolve(task())
+      return {
+        result,
+        completion: result.then(
+          () => undefined,
+          () => undefined,
+        ),
+      }
+    },
+    signal,
+    scheduling,
+    siteType,
+  )
 }

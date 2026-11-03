@@ -41,7 +41,7 @@ For automatic updates and the most stable experience, install from the official 
 - **QQ / 360 / Brave / Vivaldi / Opera, etc.**: Brave, Vivaldi, and Opera can usually try Chrome Web Store first; QQ Browser, 360 Browser, Cheetah Browser, and similar browsers can use manual Chromium loading when no usable store path is available. See the [Other Browser Installation Guide](../other-browser-install.md).
 - **Safari on Mac**: see the [Safari installation guide](../safari-install.md).
 - **Mobile browsers**: see the [mobile browser FAQ](../faq.md#mobile-browser-support).
-- **Fallback option**: if your browser cannot use a store build or Chrome Web Store compatible build, and the guide above does not work, download the Stable package from [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases/latest). Manually installed builds do not update automatically.
+- **Fallback option**: if your browser cannot use a store build or Chrome Web Store compatible build, and the guide above does not work, download from [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases/latest). Chromium users should install the self-updating `.crx`: once installed it updates like the store build; stock Chrome / Edge must configure the extension allowlist policy first (not needed on Linux). See [Chromium CRX self-update install](https://all-api-hub.qixing1217.top/en/chromium-crx-self-update.html).
 
 ---
 

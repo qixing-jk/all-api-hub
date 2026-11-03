@@ -28,6 +28,8 @@
 
 利用中のブラウザに対応した公式ストアからインストールしてください：[Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)、[Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa)、[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24})。その他のブラウザ、Safari、モバイルブラウザ、手動インストールは [インストールガイド](../get-started.md) と [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases/latest) を参照してください。
 
+- **代替手段**：ブラウザがストア版または Chrome ウェブストア互換版を利用できず、上記ガイドでも解決しない場合は、[GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases/latest) からダウンロードできます。Chromium ユーザーには自己更新 `.crx` を推奨します。一度インストールすればストア版と同じように自動更新され、stock Chrome / Edge はインストール前に拡張機能の許可リストポリシーを設定する必要があります（Linux は不要）。詳しくは [Chromium 自己更新インストール](https://all-api-hub.qixing1217.top/ja/chromium-crx-self-update.html) を参照してください。
+
 ---
 
 ## 3. 随想AI中转站 アカウントを追加する

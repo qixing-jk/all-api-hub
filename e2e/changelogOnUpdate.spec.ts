@@ -153,47 +153,14 @@ test("shows update log inline once on first UI open after update", async ({
     )
     .toBe(0)
 
-  await dialogPage
-    .getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle)
-    .click()
-  await expect
-    .poll(async () => {
-      const raw = await getPlasmoStorageRawValue<unknown>(
-        serviceWorker,
-        STORAGE_KEYS.USER_PREFERENCES,
-      )
-
-      if (typeof raw !== "string") return undefined
-
-      try {
-        const prefs = JSON.parse(raw)
-        return prefs?.openChangelogOnUpdate
-      } catch {
-        return undefined
-      }
-    })
-    .toBe(false)
-
-  await dialogPage
-    .getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle)
-    .click()
-  await expect
-    .poll(async () => {
-      const raw = await getPlasmoStorageRawValue<unknown>(
-        serviceWorker,
-        STORAGE_KEYS.USER_PREFERENCES,
-      )
-
-      if (typeof raw !== "string") return undefined
-
-      try {
-        const prefs = JSON.parse(raw)
-        return prefs?.openChangelogOnUpdate
-      } catch {
-        return undefined
-      }
-    })
-    .toBe(true)
+  await expect(
+    dialogPage.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle),
+  ).toHaveCount(0)
+  const storedPreferences = await getPlasmoStorageRawValue<string>(
+    serviceWorker,
+    STORAGE_KEYS.USER_PREFERENCES,
+  )
+  expect(JSON.parse(storedPreferences!).openChangelogOnUpdate).toBe(true)
 
   await dialogPage.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.closeButton).click()
   await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toHaveCount(0)
@@ -283,11 +250,10 @@ for (const viewport of [
     await expect(dialog.getByText(/loading/i)).toHaveCount(0)
     await page.screenshot({ path: testInfo.outputPath("update-log.png") })
     const footerClose = page.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.closeButton)
-    if (viewport.width < 640) {
-      await expect(footerClose).toBeHidden()
-    } else {
-      await expect(footerClose).toBeVisible()
-    }
+    await expect(footerClose).toBeVisible()
+    await expect(
+      page.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle),
+    ).toHaveCount(0)
     // The shared modal supplies a persistent, labelled icon-only close control.
     await dialog
       .getByRole("button", { name: "Close", exact: true })

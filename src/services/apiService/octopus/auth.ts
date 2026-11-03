@@ -3,6 +3,11 @@
  * 处理旧版 JWT 与新版 Cookie 会话的获取、缓存和刷新
  */
 import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -107,71 +112,80 @@ class OctopusAuthManager {
   ): Promise<OctopusAuthSession> {
     const url = `${baseUrl.replace(/\/$/, "")}${OCTOPUS_LOGIN_PATH}`
 
-    const response = await fetch(url, {
-      method: "POST",
-      signal: options?.signal,
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(credentials),
-    })
+    return await withSiteApiRequestTask(
+      url,
+      async () => {
+        const response = await fetch(url, {
+          method: "POST",
+          signal: options?.signal,
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+        })
 
-    if (!response.ok) {
-      // Read body once as text, then try to parse as JSON
-      const bodyText = await response.text()
-      let serverMessage: string | undefined
-      try {
-        const errorJson = JSON.parse(bodyText)
-        serverMessage = errorJson.message || undefined
-      } catch {
-        // not JSON, ignore
-      }
+        reportSiteRateLimitResponse(url, response)
+        if (!response.ok) {
+          // Read body once as text, then try to parse as JSON
+          const bodyText = await response.text()
+          let serverMessage: string | undefined
+          try {
+            const errorJson = JSON.parse(bodyText)
+            serverMessage = errorJson.message || undefined
+          } catch {
+            // not JSON, ignore
+          }
 
-      // 针对 403 错误添加 CORS 配置提示
-      if (response.status === 403) {
-        const corsHint = t("messages:octopus.corsError")
-        const detail = serverMessage || "Forbidden"
-        throw new Error(`${detail}\n${corsHint}`)
-      }
+          // 针对 403 错误添加 CORS 配置提示
+          if (response.status === 403) {
+            const corsHint = t("messages:octopus.corsError")
+            const detail = serverMessage || "Forbidden"
+            throw new Error(`${detail}\n${corsHint}`)
+          }
 
-      throw new Error(
-        serverMessage ||
-          `HTTP ${response.status} - ${bodyText || "Unknown error"}`,
-      )
-    }
+          throw new Error(
+            serverMessage ||
+              `HTTP ${response.status} - ${bodyText || "Unknown error"}`,
+          )
+        }
 
-    const data: unknown = await response.json()
+        const data: unknown = await response.json()
 
-    if (typeof data !== "object" || data === null || Array.isArray(data)) {
-      throw new Error("Login failed")
-    }
+        if (typeof data !== "object" || data === null || Array.isArray(data)) {
+          throw new Error("Login failed")
+        }
 
-    const envelope = data as OctopusLoginEnvelope
+        const envelope = data as OctopusLoginEnvelope
 
-    if (envelope.code !== 200) {
-      throw new Error(envelope.message || "Login failed")
-    }
+        if (envelope.code !== 200) {
+          throw new Error(envelope.message || "Login failed")
+        }
 
-    if (isLegacyLoginResponse(envelope.data)) {
-      return {
-        mode: OCTOPUS_AUTH_MODES.Bearer,
-        token: envelope.data.token,
-        expireAt: resolveExpireAt(envelope.data.expire_at),
-      }
-    }
+        if (isLegacyLoginResponse(envelope.data)) {
+          return {
+            mode: OCTOPUS_AUTH_MODES.Bearer,
+            token: envelope.data.token,
+            expireAt: resolveExpireAt(envelope.data.expire_at),
+          }
+        }
 
-    if (hasLegacyTokenField(envelope.data)) {
-      throw new Error("Invalid legacy token response")
-    }
+        if (hasLegacyTokenField(envelope.data)) {
+          throw new Error("Invalid legacy token response")
+        }
 
-    // Octopus switched administrator login from a returned JWT to an `auth`
-    // cookie in https://github.com/bestruirui/octopus/commit/7b1de824cd272d87dce6f3659634048e6a1e3441.
-    // The protocol discriminator is the absence of the legacy token, not the
-    // human-readable success payload, which may change between releases.
-    return {
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: resolveExpireAt(undefined),
-      confirmed: false,
-    }
+        // Octopus switched administrator login from a returned JWT to an `auth`
+        // cookie in https://github.com/bestruirui/octopus/commit/7b1de824cd272d87dce6f3659634048e6a1e3441.
+        // The protocol discriminator is the absence of the legacy token, not the
+        // human-readable success payload, which may change between releases.
+        return {
+          mode: OCTOPUS_AUTH_MODES.Cookie,
+          expireAt: resolveExpireAt(undefined),
+          confirmed: false,
+        }
+      },
+      options?.signal ?? undefined,
+      undefined,
+      SITE_TYPES.OCTOPUS,
+    )
   }
 
   /**

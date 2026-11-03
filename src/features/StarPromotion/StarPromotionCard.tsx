@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { REPO_URL } from "~/constants/about"
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import {
@@ -13,8 +12,8 @@ import {
   trackStarPromotionPromptShown,
 } from "~/services/productAnalytics/facts/starPromotion"
 import { STAR_PROMOTION_STATUSES } from "~/services/starPromotion/contracts"
+import { openStarPromotionRepository } from "~/services/starPromotion/openRepository"
 import { starPromotionState } from "~/services/starPromotion/state"
-import { createTab } from "~/utils/browser/tabs"
 
 import {
   StarPromotionCardView,
@@ -24,9 +23,9 @@ import {
 /**
  * Persistent "enjoying All API Hub?" star card, mirroring the orca star-nag
  * contract: once the value threshold is crossed the card stays visible until
- * the user resolves it. Starring or confirming an existing star is terminal;
- * "not now" and the close control both defer with a cooldown and doubled
- * thresholds, so the promotion can never become a recurring nag.
+ * the user resolves it. Opening GitHub, "not now", and the close control
+ * defer with a cooldown and doubled thresholds. Explicit confirmation
+ * suppresses invitations; detected stars can be revalidated.
  */
 export function StarPromotionCard() {
   const labels = useStarPromotionCardLabels()
@@ -70,15 +69,15 @@ export function StarPromotionCard() {
     }
   }, [])
 
-  const handleStar = useCallback(() => {
+  const handleStar = useCallback(async () => {
     trackStarPromotionAction(PRODUCT_ANALYTICS_ACTION_IDS.ClickStarPromotion, {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsStarPromotionCard,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    void starPromotionState.markCompleted()
-    promptVisibleRef.current = false
-    setPromptVisible(false)
-    void createTab(REPO_URL, true)
+    if (await openStarPromotionRepository()) {
+      promptVisibleRef.current = false
+      setPromptVisible(false)
+    }
   }, [])
 
   const handleAlreadyStarred = useCallback(() => {

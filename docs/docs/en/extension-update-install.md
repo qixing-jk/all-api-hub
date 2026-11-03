@@ -1,9 +1,14 @@
 # Installation Channels and Updates
 
-All API Hub has two common installation channels: the **browser store version** and the **GitHub manual installation version**. If you are not sure which one to choose, use the browser store version first.
+All API Hub has three common installation channels: the **browser store version**, the **self-updating GitHub build (Chromium `.crx`)**, and the **unpacked GitHub build**. If you are not sure which one to choose, use the browser store version first.
 
 ::: tip Simple answer
-Chrome, Edge, and Firefox users should install the matching store version first. Store versions are updated automatically by the browser and are the easiest to maintain. Only consider manual installation from GitHub when the store has not received an update yet, your browser cannot install a store or Chrome Web Store compatible version, or you need to temporarily verify a fix.
+Chrome, Edge, and Firefox users should install the matching store version first. The store build is the simplest install and needs no policy configuration.
+
+Only when the store is not an option (the store has not published the version yet, or your browser cannot install the store or Chrome Web Store compatible build) and you must use a GitHub asset does the form matter for Chromium browsers:
+
+- **Recommended: the `.crx` self-updating build** — it updates from the release manifest just like the store build, so you install it once and stop swapping packages. Stock Chrome / Edge need the extension allowlist policies configured once (no configuration needed on Linux).
+- **`.zip` unpacked build** — does not auto-update, so every upgrade needs a fresh download and reload; use it only when the `.crx` cannot be installed.
 :::
 
 ## Which Version Should I Install?
@@ -13,12 +18,17 @@ Chrome, Edge, and Firefox users should install the matching store version first.
 | You use Chrome | Chrome Web Store version | Updated automatically by the browser, and you can also check manually inside the extension |
 | You use Edge | Edge Add-ons version | Updated automatically by the browser, and you can also check manually inside the extension |
 | You use Firefox | Firefox Add-ons version | Updated automatically by Firefox; the extension can also check AMO's published version |
-| You use Brave / Vivaldi / Opera | Try Chrome Web Store first; use the GitHub Chrome package only if it is unavailable | Store builds update automatically; manual builds require re-download |
-| You use QQ Browser / 360 Browser / Cheetah Browser or a similar browser | Use the built-in extension center first if available; otherwise use the GitHub Chrome package | Depends on the installation source; manual builds require re-download |
-| The store version has not received an urgent fix yet | Temporarily use GitHub Stable | You need to download new versions manually later |
-| You want to try features that are still in development | Nightly / development build | It may be unstable and is only recommended for testing |
+| You use Brave / Vivaldi / Opera and Chrome Web Store works | Chrome Web Store version | Updated automatically through the browser / store |
+| You use Brave / Vivaldi / Opera and the store does not work | Try the `.crx` self-updating build first; fall back to the unpacked `.zip` if the `.crx` cannot be installed | `.crx` updates automatically; unpacked builds require re-download |
+| You use QQ Browser / 360 Browser / Cheetah Browser or a similar browser | Use the built-in extension center first if available; otherwise try the `.crx`, then the unpacked `.zip` | `.crx` updates automatically; unpacked builds require re-download |
+| The store version has not received an urgent fix yet | Temporarily use GitHub Stable | A `.crx` install auto-updates; unpacked builds require a manual download |
+| You want to try features that are still in development | Nightly / development build | It may be unstable and is only recommended for testing; the Chromium `.crx` still auto-updates |
 
-If you use QQ Browser, 360 Browser, Cheetah Browser, Brave, Vivaldi, Opera, or a similar browser, see the [Other Browser Installation Guide](./other-browser-install.md). Brave, Vivaldi, and Opera can usually try Chrome Web Store first; download the GitHub Chrome package only when manual loading is needed.
+If you use QQ Browser, 360 Browser, Cheetah Browser, Brave, Vivaldi, Opera, or a similar browser, see the [Other Browser Installation Guide](./other-browser-install.md). Brave, Vivaldi, and Opera can usually try Chrome Web Store first; when a GitHub install is needed, prefer the `.crx` — see [Chromium self-updating install](./chromium-crx-self-update.md).
+
+::: tip Does my browser count as Chromium?
+Use Chromium as the default: apart from Firefox and Safari, common desktop browsers with extension support are generally Chromium-based. If unsure, check the [browser table](./other-browser-install.md#supported-browsers).
+:::
 
 ## Why Does GitHub Have a Newer Version Before the Store?
 
@@ -75,32 +85,36 @@ This method can only update to a version that the store already provides. If the
 
 Firefox usually updates extensions automatically. You can also open `about:addons`, go to the extensions management page, and check whether updates are available. The button position may vary slightly between Firefox versions.
 
-## When Should I Install Manually from GitHub?
+## When Should I Install from GitHub?
 
-Manual installation from GitHub is best used temporarily:
+GitHub assets fit these cases:
 
 - The store version has not received a fix that you urgently need.
 - Your current browser does not have an available store version and cannot use a compatible store path such as Chrome Web Store.
 - You need to help confirm whether a new version fixes an issue.
 
-Before installing manually, note that:
+GitHub assets come in two forms with very different update behavior:
 
-- ZIP-based manual installs do not update automatically; Chromium users can switch to the [self-updating `.crx` install](./chromium-crx-self-update.md).
-- Future upgrades require downloading the new package again. You can Star / Watch the GitHub repository so it is easier to notice new releases.
-- Before switching from the store version to a manually installed version, it is recommended to export a backup of your data.
+- **Self-updating `.crx` (recommended GitHub asset)**: the browser fetches new versions from the release `updates.xml` automatically, so you never replace the package by hand. Stock Chrome / Edge need the extension allowlist policy configured first (none needed on Linux; Windows Edge also requires a domain-joined device). See [Chromium self-updating install](./chromium-crx-self-update.md).
+- **Unpacked `.zip`**: does not auto-update. Every upgrade requires a new download and reload, so use it only when the `.crx` cannot be installed.
+
+Before installing, note that:
+
+- Before switching from the store version to a GitHub build, export a backup. The `.crx`, the `.zip`, and the store build use different extension ids, so data does not migrate automatically.
 - It is not recommended to keep multiple All API Hub installations from different sources for long-term use, unless you are intentionally testing.
+- Firefox has no self-updating GitHub channel; `*-firefox.zip` does not auto-update either, so use the Firefox Add-ons store build.
 
-For manual installation and update steps, see the [Other Browser Installation Guide](./other-browser-install.md).
+For installation and update steps, see the [Other Browser Installation Guide](./other-browser-install.md).
 
 ## Frequently Asked Questions
 
 ### Do I Need to Keep Clicking "Check for updates"?
 
-No. Store versions are updated automatically by the browser. Only check manually when you see that GitHub has published a newer version, or when you want to confirm whether the store version can already be updated.
+No. Store versions and the self-updating `.crx` are both updated automatically by the browser. Only check manually when you see that GitHub has published a newer version, want to confirm whether the store version can already be updated, or want to apply a `.crx` update right away.
 
 ### Does "Check for updates" Automatically Download the GitHub Package?
 
-No. It only shows the version status and asks the browser to check whether the store version can be updated. GitHub packages still need to be downloaded manually from the Releases page.
+No. It checks version status for the current channel and can open Releases or the store page, but does not automatically download GitHub packages. Unpacked builds require a manual download and update.
 
 ### Will "Reload to update" Delete My Data?
 
@@ -108,11 +122,12 @@ No. It only applies a store update that has already been downloaded. Accounts, k
 
 ### GitHub Has a New Version, but the Extension Still Says the Store Has No Update. What Should I Do?
 
-If you use the store version, wait for store review and rollout first. If you urgently need the fix, you can temporarily install GitHub Stable manually. It is recommended to export a backup before doing so.
+If you use the store version, wait for store review and rollout first. If you urgently need the fix, you can temporarily install the self-updating `.crx` from GitHub Stable. It is recommended to export a backup before doing so.
 
-### How Do I Update a Manually Installed Version?
+### How Do I Update a GitHub Install?
 
-Download the new package and load the new extension directory again. For details, see the [Other Browser Installation Guide](./other-browser-install.md#update-extension).
+- **Self-updating `.crx`**: the browser updates it automatically; you can also click "Update" on `chrome://extensions/` to check immediately.
+- **Unpacked `.zip`**: download the new package and load the new extension directory again. For details, see the [Other Browser Installation Guide](./other-browser-install.md#update-extension).
 
 ## Related Documentation
 

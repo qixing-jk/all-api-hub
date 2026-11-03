@@ -21,6 +21,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import * as browserTabs from "~/utils/browser/tabs"
 import { getDocsGetStartedUrl } from "~/utils/navigation/docsLinks"
 import {
   act,
@@ -879,7 +880,9 @@ describe("PermissionOnboardingDialog language selection", () => {
   it("shows the new-permissions warning and opens the project page from the CTA", async () => {
     const user = userEvent.setup()
     const i18n = await createSettingsI18n("en")
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+    const openSpy = vi
+      .spyOn(browserTabs, "createTab")
+      .mockResolvedValue(undefined)
 
     renderWithI18n(
       <PermissionOnboardingDialog
@@ -904,8 +907,7 @@ describe("PermissionOnboardingDialog language selection", () => {
 
     expect(openSpy).toHaveBeenCalledWith(
       expect.stringContaining("github.com"),
-      "_blank",
-      "noopener,noreferrer",
+      true,
     )
 
     openSpy.mockRestore()

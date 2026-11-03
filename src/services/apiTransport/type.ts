@@ -1,3 +1,4 @@
+import type { AccountSiteType } from "~/constants/siteType"
 import type { DeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import type { CookieRequestSession } from "~/services/apiTransport/headerOverrides"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
@@ -131,6 +132,8 @@ export interface ApiTransportRequestObserver {
 }
 
 export interface ApiTransportRequest {
+  /** Known account/managed site type used to select a client request budget. */
+  siteType?: AccountSiteType
   /**
    * Second static credential for providers whose console splits capabilities
    * across credential classes (for example key management vs. billing).

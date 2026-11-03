@@ -2,43 +2,67 @@
 
 この記事では、QQブラウザ、360セーフブラウザ、360エクストリームブラウザ、チーターブラウザ、Brave、Vivaldi、OperaなどのブラウザにAll API Hub拡張機能をインストールする方法を説明します。
 
-これらのブラウザの多くは Chromium ベースですが、利用できるインストール方法は同じではありません。ブラウザストアまたは Chrome ウェブストアからインストールできる場合は、まずストア版を使ってください。ストア経路が使えない場合、組織ポリシーで制限されている場合、または一時的に GitHub 版を確認したい場合だけ、GitHub Releases の Chrome パッケージを手動読み込みします。
+これらのブラウザの多くは Chromium ベースですが、利用できるインストール方法は同じではありません。ブラウザストアまたは Chrome ウェブストアからインストールできる場合は、まずストア版を使ってください。GitHub の添付ファイルが必要な場合は[自己更新 `.crx`](./chromium-crx-self-update.md) を推奨し、解凍読み込みの `.zip` は `.crx` をインストールできない場合にだけ使います。
+
+::: tip 自分のブラウザは Chromium 系ですか
+通常は Chromium と考えてください。Firefox と Safari を除き、一般的な拡張機能対応デスクトップブラウザーは基本的に Chromium 系です。不明な場合は [ブラウザー一覧](./other-browser-install.md#supported-browsers) を確認してください。
+:::
 
 ## まず違いを確認
 
 - Chrome / Edge / Firefoxユーザー：各ストア版を優先して使用してください。更新がより簡単です。
 - Brave / Vivaldi ユーザー：まず Chrome ウェブストアからのインストールを試してください。これらのブラウザは公式に Chrome ウェブストア拡張機能をサポートしています。
-- Opera ユーザー：Opera には Opera Add-ons がありますが、All API Hub は現在 Opera Add-ons には単独掲載されていません。まず Chrome ウェブストアを試し、Opera のバージョンやポリシーで利用できない場合に GitHub 手動パッケージを使ってください。
-- QQブラウザ、360系ブラウザ、チーターブラウザなどのユーザー：ブラウザ内蔵の拡張機能センターで All API Hub が見つからない場合は、GitHub の Chrome パッケージを使い、「展開された拡張機能を読み込む」でインストールします。
+- Opera ユーザー：Opera には Opera Add-ons がありますが、All API Hub は現在 Opera Add-ons には単独掲載されていません。まず Chrome ウェブストアを試し、Opera のバージョンやポリシーで利用できない場合は GitHub パッケージを検討してください。
+- QQブラウザ、360系ブラウザ、チーターブラウザなどのユーザー：ブラウザ内蔵の拡張機能センターで All API Hub が見つからない場合は、まず[自己更新 `.crx`](./chromium-crx-self-update.md) を試し、`.crx` がブロックされる場合に GitHub の Chrome パッケージを「展開された拡張機能を読み込む」でインストールします。
 - Safariユーザー：インストール方法が異なります。XcodeまたはSafari専用パッケージで処理する必要があります。[Safari拡張機能インストールガイド](./safari-install.md)を確認してください。
 - モバイルブラウザ：ブラウザによって拡張機能のサポート状況が大きく異なります。モバイル版については、[FAQのモバイルブラウザサポート](./faq.md#mobile-browser-support)を確認してください。
 
 ::: warning ヒント
-手動で読み込んだ拡張機能は通常自動更新されません。後続のアップグレードには、新しいバージョンのChrome圧縮ファイルを再度ダウンロードし、拡張機能管理ページで「再読み込み」または再インストールをクリックする必要があります。Chromium ユーザーは[自己更新 `.crx` インストール](./chromium-crx-self-update.md)に切り替えることもできます。
+GitHub の添付ファイルでは自己更新 `.crx` を推奨します。ブラウザーがリリースのマニフェストから自動更新するため、パッケージを差し替える必要はありません。stock Chrome / Edge はインストール前に拡張機能の許可リストポリシーを一度設定する必要があります（Linux は不要）。`.zip` は自動更新されず、更新のたびに再ダウンロードして「再読み込み」または再インストールする必要があるため、`.crx` をインストールできない場合にだけ使います。
+
+ストア版は引き続き第一候補で、これらの設定は不要です。
 :::
+
+<a id="supported-browsers"></a>
 
 ## 対象ブラウザ
 
 | ブラウザ | 優先インストール方法 | 代替インストール方法 | 更新方法 |
 |---|---|---|---|
-| Brave | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome パッケージを `brave://extensions/` から手動読み込み | ストア版は自動更新。手動版は再ダウンロードが必要 |
-| Vivaldi | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome パッケージを `vivaldi://extensions/` から手動読み込み | ストア版は自動更新。手動版は再ダウンロードが必要 |
-| Opera | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)。All API Hub は現在 Opera Add-ons には掲載されていません | GitHub Chrome パッケージを `opera://extensions/` から手動読み込み | Chrome ウェブストア版は通常、ブラウザ / ストアの仕組みで更新されます。手動版は再ダウンロードが必要 |
-| QQブラウザ | 内蔵拡張機能センターで All API Hub が見つかる場合はそちらを優先 | `qqbrowser://extensions`、利用できない場合は `chrome://extensions/` で開発者モードを有効にして解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
-| 360セーフブラウザ / 360エクストリームブラウザ | 内蔵拡張機能 / アプリセンターで All API Hub が見つかる場合はそちらを優先 | `chrome://extensions/`、またはメニュー内の拡張機能 / プラグイン管理で開発者モードを有効にして解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
-| チーターブラウザ | 内蔵拡張機能センターで All API Hub が見つかる場合はそちらを優先 | `liebao://extensions/` で開発者モードを有効にして解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
-| 星愿 / 百分 / Cent Browser など | Chrome ウェブストアに対応している場合は、まずストアを試す | `chrome://extensions/` から手動で解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
+| Brave | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | 自己更新 `.crx`。無理な場合は GitHub Chrome パッケージを `brave://extensions/` から手動読み込み | ストア版と `.crx` は自動更新。解凍読み込み版は再ダウンロードが必要 |
+| Vivaldi | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | 自己更新 `.crx`。無理な場合は GitHub Chrome パッケージを `vivaldi://extensions/` から手動読み込み | ストア版と `.crx` は自動更新。解凍読み込み版は再ダウンロードが必要 |
+| Opera | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)。All API Hub は現在 Opera Add-ons には掲載されていません | 自己更新 `.crx`。無理な場合は GitHub Chrome パッケージを `opera://extensions/` から手動読み込み | ストア版と `.crx` は自動更新。解凍読み込み版は再ダウンロードが必要 |
+| QQブラウザ | 内蔵拡張機能センターで All API Hub が見つかる場合はそちらを優先 | 自己更新 `.crx`。ブロックされる場合は `qqbrowser://extensions` または `chrome://extensions/` で解凍ディレクトリを読み込み | ストア版と `.crx` は自動更新。解凍読み込み版は再ダウンロードが必要 |
+| 360セーフブラウザ / 360エクストリームブラウザ | 内蔵拡張機能 / アプリセンターで All API Hub が見つかる場合はそちらを優先 | 自己更新 `.crx`。ブロックされる場合は `chrome://extensions/` またはメニュー内の拡張機能 / プラグイン管理で解凍ディレクトリを読み込み | ストア版と `.crx` は自動更新。解凍読み込み版は再ダウンロードが必要 |
+| チーターブラウザ | 内蔵拡張機能センターで All API Hub が見つかる場合はそちらを優先 | 自己更新 `.crx`。ブロックされる場合は `liebao://extensions/` で解凍ディレクトリを読み込み | ストア版と `.crx` は自動更新。解凍読み込み版は再ダウンロードが必要 |
+| 星愿 / 百分 / Cent Browser など | Chrome ウェブストアに対応している場合は、まずストアを試す | 自己更新 `.crx`。無理な場合は `chrome://extensions/` から解凍ディレクトリを読み込み | ストア版と `.crx` は自動更新。解凍読み込み版は再ダウンロードが必要 |
 | モバイル版 Kiwi / Edge など | ブラウザの実際の拡張機能入口による | [FAQ のモバイルブラウザサポート](./faq.md#mobile-browser-support)を参照 | ブラウザの対応状況による |
 
 ブラウザがストアインストールに対応しておらず、「開発者モード」または「展開された拡張機能を読み込む」もない場合、現在のバージョンでは外部拡張機能のインストールがサポートされていない可能性があります。この場合は Chrome、Edge、Firefox に切り替えるか、対応するブラウザのフルバージョン / デスクトップ版を試してください。
 
 ::: tip ストアの有無と All API Hub の掲載状況は別です
-ブラウザに独自の拡張機能ストアがあっても、All API Hub がそのストアに掲載されているとは限りません。たとえば Opera には Opera Add-ons がありますが、現在は Chrome ウェブストアまたは GitHub 手動パッケージを使ってください。
+ブラウザに独自の拡張機能ストアがあっても、All API Hub がそのストアに掲載されているとは限りません。たとえば Opera には Opera Add-ons がありますが、現在は Chrome ウェブストアまたは GitHub パッケージを使ってください。
 :::
 
-## GitHub 手動インストールパッケージの準備
+## GitHub インストールパッケージの準備
 
-Chrome ウェブストア、Edge Add-ons、Firefox Add-ons から直接インストールできる場合、この手順は不要です。以下は手動読み込みが必要なブラウザ向けです。
+Chrome ウェブストア、Edge Add-ons、Firefox Add-ons から直接インストールできる場合、この手順は不要です。以下は GitHub からインストールする必要がある Chromium 系ブラウザ向けです。
+
+### 推奨：自己更新 `.crx`
+
+```text
+all-api-hub-chrome.crx
+```
+
+ファイル名にバージョンがないのは、`releases/latest` が常に最新の安定版を指すためです（Nightly は `all-api-hub-nightly-chrome.crx`）。インストール後はブラウザーが公開された `updates.xml` から自動で更新するため、パッケージを手動で差し替える必要はありません。
+
+stock Chrome / Edge はインストール前に拡張機能の許可リストポリシーを設定しないと `CRX_REQUIRED_PROOF_MISSING` で失敗するか無効化され、Windows Edge はさらに Active Directory ドメイン参加が必要です。Linux は設定不要で、QQ / 360 などの派生ブラウザは対応状況が異なります。詳しい手順は[Chromium 自己更新インストール](./chromium-crx-self-update.md)を参照してください。
+
+`.crx` と解凍読み込み版は拡張機能 ID が異なるため、データは共有されません。解凍読み込み版を導入済みの場合は、バックアップをエクスポートし、アンインストールしてから `.crx` をインストールし、最後にバックアップを復元してください。
+
+### 代替：解凍読み込み `.zip`
+
+`.crx` をインストールできない場合（ブラウザが外部拡張機能を許可しない、セキュリティポリシーでブロックされるなど）に ZIP を使用します。自動更新はされません：
 
 1. [最新リリースバージョン](https://github.com/qixing-jk/all-api-hub/releases/latest)を開きます。
 2. 添付ファイルからChrome版の圧縮ファイルをダウンロードします：
@@ -135,7 +159,7 @@ QQブラウザのデスクトップ版では、通常Chrome版の圧縮パッケ
 
 ### 4. よくある問題への対応
 
-- ブラウザのセキュリティポリシーが外部拡張機能をブロックする場合：展開して読み込む方法を維持してください。`.zip` または `.crx` ファイルを直接ドラッグアンドドロップしないでください。
+- ブラウザのセキュリティポリシーが `.crx` をブロックする場合：展開して読み込む方法に切り替えてください。`.zip` ファイルを直接ドラッグアンドドロップしないでください。
 - ブラウザを再起動すると拡張機能が無効になる場合：拡張機能管理ページで手動で有効にしてください。それでも無効になる場合は、Chrome / Edgeへの切り替え、またはブラウザのセキュリティポリシーを確認することをお勧めします。
 - 一部のウェブページで拡張機能が機能しない場合：そのページが互換モードに切り替わっていないことを確認し、インストール前に開いていたページをリロードしてください。
 
@@ -179,7 +203,7 @@ liebao://extensions/
 - Vivaldi は公式に Chrome ウェブストア拡張機能をサポートしています。インストールボタンが表示されない場合は、Vivaldi の Google Extensions / Web Store 関連設定を確認してください。
 - Opera には Opera Add-ons があり、Chrome 拡張機能にも対応しています。All API Hub は現在 Opera Add-ons には単独掲載されていないため、まず Chrome ウェブストアを使ってください。
 
-ストアインストールに失敗した場合は、以下の拡張機能管理ページから GitHub Chrome パッケージを手動読み込みします：
+ストアインストールに失敗した場合は、まず自己更新 `.crx` を試し、それでも無理なら以下の拡張機能管理ページから解凍ディレクトリを読み込みます：
 
 | ブラウザ | 拡張機能管理ページ |
 |---|---|
@@ -194,14 +218,16 @@ liebao://extensions/
 
 ## 拡張機能の更新
 
-手動で読み込んだバージョンは自動更新されません。パッケージの差し替えを避けたい場合は[自己更新 `.crx` インストール](./chromium-crx-self-update.md)に切り替えられます。ストア版、GitHub Stable、Nightly の違いについては、先に [インストール方法と更新について](./extension-update-install.md) を確認してください。手動で読み込んだバージョンを更新する場合は、以下の手順に従ってください：
+`all-api-hub-chrome.crx` はブラウザーがリリースのマニフェストから自動更新するため、手動操作は不要です。上の一覧にあるブラウザーごとの拡張機能管理ページの「更新」で今すぐ確認できます。ストア版、GitHub Stable、Nightly の違いについては、先に [インストール方法と更新について](./extension-update-install.md) を確認してください。
+
+解凍読み込みの `.zip` 版は自動更新されません。更新する場合は以下の手順に従ってください：
 
 1. [最新リリースバージョン](https://github.com/qixing-jk/all-api-hub/releases/latest)を開きます。
 2. 新しい `all-api-hub-<version>-chrome.zip` をダウンロードします。
 3. 元の固定ディレクトリに解凍するか、新しいバージョンディレクトリに解凍します。
 4. 拡張機能管理ページを開きます。
 5. 元のディレクトリを引き続き使用する場合は、All API Hubのカードにある「再読み込み」をクリックします。
-6. 新しいディレクトリに変更した場合は、まず古いバージョンを削除し、次に新しいディレクトリを読み込みます。
+6. 新しいディレクトリに変更する場合は、まず All API Hub からバックアップをエクスポートし、古いバージョンを削除して新しいディレクトリを読み込んだ後、バックアップをインポートしてください。
 
 ::: warning 注意
 拡張機能ディレクトリをシステムのテンポラリディレクトリ、ダウンローダーのキャッシュディレクトリ、または削除される可能性のあるソフトウェアのディレクトリに置かないでください。ディレクトリが削除または移動されると、ブラウザはその拡張機能を読み込めなくなります。
@@ -216,9 +242,15 @@ liebao://extensions/
 
 ## よくある質問
 
-### ChromeパッケージとFirefox / Safariパッケージのどちらをダウンロードすべきですか？
+### `.crx`、Chromeパッケージ、Firefox / Safariパッケージのどれをダウンロードすべきですか？
 
-手動読み込みが必要な Chromium ブラウザでは、以下をダウンロードしてください：
+GitHub 版が必要な Chromium ブラウザでは、まず自己更新パッケージをダウンロードしてください：
+
+```text
+all-api-hub-chrome.crx
+```
+
+`.crx` をインストールできない場合だけ、以下をダウンロードします：
 
 ```text
 all-api-hub-<version>-chrome.zip

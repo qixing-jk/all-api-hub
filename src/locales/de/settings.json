@@ -612,7 +612,7 @@
       "cta": "Entdecken Sie die Quelle und den neuesten Fortschritt auf GitHub. Sie können auch Probleme melden oder Ideen austauschen.",
       "getStartedCta": "Erste Schritte öffnen",
       "label": "Quellcode",
-      "starCta": "Finden Sie All API Hub nützlich? Markieren Sie es auf GitHub, um das Projekt zu unterstützen"
+      "starCta": "Unterstütze weitere Verbesserungen mit einem Stern auf GitHub"
     },
     "reason": {
       "newPermissions": "Neue Funktionen erfordern zusätzliche optionale Berechtigungen. Überprüfen Sie, was jede einzelne bewirkt, und lassen Sie nur das zu, was Sie benötigen."

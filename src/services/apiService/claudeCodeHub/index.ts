@@ -1,3 +1,8 @@
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ClaudeCodeHubProviderCreatePayload,
   ClaudeCodeHubProviderDisplay,
@@ -301,21 +306,30 @@ const callV1ProviderRoute = async <T>(input: {
       )
     }
 
-    fetchStarted = true
-    response = await fetch(`${baseUrl}/api/v1/providers${input.path}`, {
-      method: input.method,
-      signal: actionSignal.signal,
-      headers: {
-        ...(input.body ? { "Content-Type": "application/json" } : {}),
-        Authorization: `Bearer ${input.config.adminToken}`,
-      },
-      ...(input.body ? { body: JSON.stringify(input.body) } : {}),
-    })
+    return await withSiteApiRequestTask(
+      baseUrl,
+      async () => {
+        fetchStarted = true
+        response = await fetch(`${baseUrl}/api/v1/providers${input.path}`, {
+          method: input.method,
+          signal: actionSignal.signal,
+          headers: {
+            ...(input.body ? { "Content-Type": "application/json" } : {}),
+            Authorization: `Bearer ${input.config.adminToken}`,
+          },
+          ...(input.body ? { body: JSON.stringify(input.body) } : {}),
+        })
 
-    if (input.expectsJson === false && response.ok) {
-      return undefined as T
-    }
-    return await parseV1JsonResponse<T>(response)
+        reportSiteRateLimitResponse(baseUrl, response)
+        if (input.expectsJson === false && response.ok) {
+          return undefined as T
+        }
+        return await parseV1JsonResponse<T>(response)
+      },
+      actionSignal.signal,
+      undefined,
+      SITE_TYPES.CLAUDE_CODE_HUB,
+    )
   } catch (error) {
     if (error instanceof ClaudeCodeHubApiError && error.evidence) {
       throw error
@@ -455,18 +469,27 @@ async function fetchV1ProviderList(
   let response: Response | undefined
 
   try {
-    response = await fetch(
-      `${baseUrl}/api/v1/providers${query ? `?${query}` : ""}`,
-      {
-        method: "GET",
-        signal: actionSignal.signal,
-        headers: {
-          Authorization: `Bearer ${config.adminToken}`,
-        },
+    return await withSiteApiRequestTask(
+      baseUrl,
+      async () => {
+        response = await fetch(
+          `${baseUrl}/api/v1/providers${query ? `?${query}` : ""}`,
+          {
+            method: "GET",
+            signal: actionSignal.signal,
+            headers: {
+              Authorization: `Bearer ${config.adminToken}`,
+            },
+          },
+        )
+        reportSiteRateLimitResponse(baseUrl, response)
+        const data = await parseV1JsonResponse<unknown>(response)
+        return extractProviderList(data)
       },
+      actionSignal.signal,
+      undefined,
+      SITE_TYPES.CLAUDE_CODE_HUB,
     )
-    const data = await parseV1JsonResponse<unknown>(response)
-    return extractProviderList(data)
   } catch (error) {
     if (error instanceof ClaudeCodeHubApiError) {
       throw error
@@ -521,30 +544,39 @@ export async function getUnmaskedProviderKey(
   const actionSignal = buildActionSignal(options)
 
   try {
-    response = await fetch(
-      `${baseUrl}/api/v1/providers/${providerId}/key:reveal`,
-      {
-        method: "GET",
-        signal: actionSignal.signal,
-        headers: {
-          Authorization: `Bearer ${config.adminToken}`,
-        },
+    return await withSiteApiRequestTask(
+      baseUrl,
+      async () => {
+        response = await fetch(
+          `${baseUrl}/api/v1/providers/${providerId}/key:reveal`,
+          {
+            method: "GET",
+            signal: actionSignal.signal,
+            headers: {
+              Authorization: `Bearer ${config.adminToken}`,
+            },
+          },
+        )
+        reportSiteRateLimitResponse(baseUrl, response)
+        const data = await parseV1JsonResponse<unknown>(response)
+
+        const key =
+          data && typeof data === "object"
+            ? (data as { key?: unknown }).key
+            : undefined
+        if (typeof key !== "string" || !key.trim()) {
+          throw new ClaudeCodeHubApiError(
+            "Claude Code Hub returned an invalid provider key response",
+            response.status,
+          )
+        }
+
+        return key
       },
+      actionSignal.signal,
+      undefined,
+      SITE_TYPES.CLAUDE_CODE_HUB,
     )
-    const data = await parseV1JsonResponse<unknown>(response)
-
-    const key =
-      data && typeof data === "object"
-        ? (data as { key?: unknown }).key
-        : undefined
-    if (typeof key !== "string" || !key.trim()) {
-      throw new ClaudeCodeHubApiError(
-        "Claude Code Hub returned an invalid provider key response",
-        response.status,
-      )
-    }
-
-    return key
   } catch (error) {
     if (error instanceof ClaudeCodeHubApiError) {
       throw error

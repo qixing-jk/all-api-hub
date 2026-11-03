@@ -449,6 +449,7 @@ describe("Veloera managed-site channel capability", () => {
     )
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "Veloera",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,
@@ -584,6 +585,7 @@ describe("Veloera managed-site channel capability", () => {
     )
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "Veloera",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,

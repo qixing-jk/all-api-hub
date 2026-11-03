@@ -7,6 +7,7 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
+import { fetchBaiApiCheckInStatus } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { fetchClawhudDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { fetchDaiguaDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
 import {
@@ -57,6 +58,16 @@ vi.mock(
     probeXiaobaiCodeCheckInStatus: vi.fn(),
   }),
 )
+vi.mock(
+  "~/services/apiService/sub2api/checkin/baiApiCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/baiApiCheckIn")
+    >()),
+    fetchBaiApiCheckInStatus: vi.fn(),
+  }),
+)
+
 vi.mock(
   "~/services/apiService/sub2api/checkin/proCheckInExecution",
   async (importOriginal) => ({
@@ -189,6 +200,10 @@ const notCheckedStatus = {
 describe("Denxio daily check-in method Adapter", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // This fixture's host does not serve the daily rewards module.
+    vi.mocked(fetchBaiApiCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
     vi.mocked(fetchToolcodeDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )

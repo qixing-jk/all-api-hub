@@ -612,7 +612,7 @@
       "cta": "來 GitHub 看看原始碼和最新進展，也歡迎回報問題或分享想法。",
       "getStartedCta": "查看新手指引",
       "label": "原始碼",
-      "starCta": "覺得 All API Hub 有幫助？點亮 Star 支持專案"
+      "starCta": "點個 Star，支持持續改進"
     },
     "reason": {
       "newPermissions": "新增功能需要新的可選權限。請查看具體用途，並按需授權。"

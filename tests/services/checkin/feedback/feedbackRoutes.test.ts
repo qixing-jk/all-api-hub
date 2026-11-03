@@ -119,12 +119,12 @@ describe("registered check-in feedback status routes", () => {
     })
   })
 
-  it("retains all eleven candidate protocols on AI Router without truncation", () => {
+  it("retains every candidate protocol on AI Router without truncation", () => {
     const routes = getCheckInFeedbackStatusRoutes(
       SITE_TYPES.SUB2API,
       "https://ai-router.dev",
     )
-    expect(routes).toHaveLength(11)
+    expect(routes).toHaveLength(12)
     expect(routes).toContainEqual({ path: "/api/v1/welfare/profile" })
     expect(
       routes.some((route) =>
@@ -140,6 +140,11 @@ describe("registered check-in feedback status routes", () => {
       ),
     ).toBe(true)
     expect(routes).toContainEqual({ path: "/checkin/api/status" })
+    expect(
+      routes.some((route) =>
+        route.path.startsWith("/api/v1/daily-rewards/checkin/status?timezone="),
+      ),
+    ).toBe(true)
   })
 
   it("reads the account's own route before the declared defaults", () => {

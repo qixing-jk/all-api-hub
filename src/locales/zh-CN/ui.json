@@ -470,13 +470,10 @@
       "titleWithCookieInterceptor": "自动刷新需要网站验证"
     },
     "updateLog": {
-      "autoOpenSetting": "更新日志自动打开",
-      "disableAutoOpen": "不再自动打开",
-      "enableAutoOpen": "重新启用自动打开",
       "loading": "正在加载更新日志…",
-      "missingSection": "更新日志预览加载失败（v{{version}}）。你可以打开完整更新日志查看。",
-      "openFullChangelog": "打开完整更新日志",
-      "starPrompt": "觉得 All API Hub 有帮助？点个 Star 跟随每日更新",
+      "missingSection": "更新日志加载较慢（v{{version}}），可以打开完整日志查看。",
+      "openFullChangelog": "查看完整日志",
+      "starPrompt": "点个 Star，支持持续改进",
       "title": "更新内容",
       "updatedTo": "已更新至 v{{version}}"
     }
@@ -668,7 +665,7 @@
       "star": "去 Star"
     },
     "cardDescription": "All API Hub 完全开源，不断适配更多站点、优化使用体验。点个 Star，支持它持续维护，也让更多需要它的人发现这里。",
-    "cardTitle": "用得顺手吗？"
+    "cardTitle": "支持持续改进"
   },
   "textEntries": {
     "add": "添加一行",

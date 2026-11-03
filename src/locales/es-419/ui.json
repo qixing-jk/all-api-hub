@@ -492,13 +492,10 @@
       "titleWithCookieInterceptor": "La actualización automática necesita verificar el sitio"
     },
     "updateLog": {
-      "autoOpenSetting": "Apertura automática del registro de cambios",
-      "disableAutoOpen": "No mostrar después de actualizaciones",
-      "enableAutoOpen": "Volver a habilitar después de actualizaciones",
       "loading": "Cargando changelog…",
-      "missingSection": "No se pudo cargar la vista previa del changelog de v{{version}}. Puedes abrir el changelog completo.",
-      "openFullChangelog": "Abrir changelog completo",
-      "starPrompt": "¿Te resulta útil All API Hub? Dale una estrella en GitHub para seguir las novedades",
+      "missingSection": "El historial de v{{version}} está tardando en cargar. Puedes abrir el historial completo.",
+      "openFullChangelog": "Ver historial completo",
+      "starPrompt": "Apoya las mejoras continuas con una estrella en GitHub",
       "title": "Novedades",
       "updatedTo": "Actualizado a v{{version}}"
     }
@@ -696,7 +693,7 @@
       "star": "Dar estrella"
     },
     "cardDescription": "All API Hub es totalmente de código abierto, y sigue adaptándose a más sitios mientras mejora la experiencia. Una estrella sostiene su mantenimiento y ayuda a que más gente que lo necesita lo encuentre.",
-    "cardTitle": "¿Te sirve All API Hub?"
+    "cardTitle": "Apoya las mejoras continuas"
   },
   "textEntries": {
     "add": "Agregar fila",

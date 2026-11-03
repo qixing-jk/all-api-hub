@@ -1,15 +1,28 @@
 # Chromium self-updating install (.crx)
 
-This page is for Chromium users who want to keep using the GitHub build without replacing the package by hand every time. After you install the `.crx`, the browser fetches new versions from the update manifest on the release page.
+This page is for Chromium users who must use a GitHub build. After you install the `.crx`, the browser fetches new versions from the update manifest on the release page, which makes it the recommended GitHub asset over the unpacked `.zip`.
 
 ::: tip Check whether you need this
-If you can install from the Chrome Web Store, Edge Add-ons, or Firefox Add-ons, use the store build instead. The browser updates it automatically and no configuration is required.
+If you can install from the Chrome Web Store, Edge Add-ons, or Firefox Add-ons, use the store build instead: it is the simplest install and needs no policy configuration.
 
-A self-updating install only makes sense when at least one of these is true:
+Only when a GitHub asset is unavoidable (the store has not published the version yet, your browser cannot install the store or Chrome Web Store compatible build, or you want Nightly early) do you choose between the two asset forms:
 
-- You use Chromium or Chrome on Linux.
-- You use a Chromium fork such as QQ Browser, a 360 browser, Brave, or Vivaldi that allows external extensions.
-- You are willing to configure an extension allowlist once on stock Chrome or Edge.
+- **Recommended: the self-updating `.crx`** — updates automatically just like the store build, so you install it once and never swap packages by hand.
+- Unpacked `.zip` — does not auto-update, so every upgrade needs a fresh download; use it only when the `.crx` cannot be installed.
+
+Stock Chrome / Edge must configure the extension allowlist policies on this page once before installing the `.crx` (none needed on Linux; Windows Edge also requires a domain-joined device).
+:::
+
+::: tip Which browsers are Chromium
+Use Chromium as the default: apart from Firefox and Safari, common desktop browsers with extension support are generally Chromium-based. If unsure, check the [browser table](./other-browser-install.md#supported-browsers).
+
+Use Firefox Add-ons for Firefox; see the [Safari installation guide](./safari-install.md) for Safari.
+
+If you are unsure which category your browser falls into, check the [browser table in the Other Browser Installation Guide](./other-browser-install.md#supported-browsers).
+:::
+
+::: warning The unpacked `.zip` does not auto-update
+The `all-api-hub-<version>-chrome.zip` from GitHub Releases does not update itself once loaded unpacked — every upgrade needs a fresh download and reload. It also uses a different extension id from the `.crx`, so their data is not shared.
 :::
 
 ## Why stock Chrome and Edge need extra configuration

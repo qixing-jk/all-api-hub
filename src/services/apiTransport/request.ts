@@ -428,10 +428,16 @@ const _fetchApiWithMapper = async <T, TResult>(
       dispatch,
       onDispatch,
       onResponse,
+      onRateLimit,
     }) => {
       const dispatchedContext = {
         ...context,
         fetchOptions: dispatchedFetchOptions,
+      }
+      const mapObservedResponse: typeof mapResponse = (response) => {
+        if (response.status === 429)
+          onRateLimit(response.headers["retry-after"])
+        return mapResponse(response)
       }
       const primaryRequest = async () => {
         const response = await readApiResponse<T>(
@@ -439,7 +445,7 @@ const _fetchApiWithMapper = async <T, TResult>(
           options.endpoint,
           responseType,
         )
-        return await mapResponse(response)
+        return await mapObservedResponse(response)
       }
       // Private credentials must never degrade to ambient cookies or a page.
       if (request.cookieSession) return await primaryRequest()
@@ -464,7 +470,15 @@ const _fetchApiWithMapper = async <T, TResult>(
             transportLifecycleObserver: { onDispatch, onResponse },
           },
           primaryRequest,
-          mapTempWindowResponse,
+          (response) => {
+            const normalized = normalizeMessageFetchResponse<T>(
+              response,
+              options.endpoint,
+            )
+            if (normalized.status === 429)
+              onRateLimit(normalized.headers["retry-after"])
+            return mapTempWindowResponse(response)
+          },
         )
       }
 
@@ -497,7 +511,7 @@ const _fetchApiWithMapper = async <T, TResult>(
           onDispatch,
           onResponse,
         },
-        mapResponse,
+        mapObservedResponse,
         fallback,
       )
     },

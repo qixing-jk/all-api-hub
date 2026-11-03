@@ -118,7 +118,7 @@
 | GitHub Stable       | [Stable をダウンロード](https://github.com/qixing-jk/all-api-hub/releases/latest)       | ストア版をインストールできない場合、または公開済み修正を一時的に手動導入したい場合   |
 | Nightly pre-release | [Nightly をダウンロード](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | 新機能を早めに試し、テストに協力したい場合。ストア安定版より不安定な可能性があります |
 
-GitHub Stable と Nightly は手動インストール用チャネルで、自動更新されません。新しいバージョン通知を受け取りたい場合は、リポジトリを Star / Watch してください。詳しくは [インストールと更新ガイド](https://all-api-hub.qixing1217.top/ja/extension-update-install.html) を参照してください。
+GitHub Stable と Nightly は手動インストール用チャネルです。GitHub からインストールする必要がある場合、Chromium ユーザーには `all-api-hub-chrome.crx`（Nightly は `all-api-hub-nightly-chrome.crx`）を推奨します。ストア版と同じように自動更新されます。詳しくは [インストールと更新ガイド](https://all-api-hub.qixing1217.top/ja/extension-update-install.html) と [Chromium CRX 自己更新インストール](https://all-api-hub.qixing1217.top/ja/chromium-crx-self-update.html) を参照してください。
 
 **その他の環境：**
 

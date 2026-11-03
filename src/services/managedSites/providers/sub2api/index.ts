@@ -1,8 +1,14 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
   SUB2API_DEFAULT_ACCOUNT_PLATFORM,
 } from "~/constants/sub2api"
-import { runAbortableTask } from "~/services/apiTransport/abortableTask"
+import { startAbortableTask } from "~/services/apiTransport/abortableTask"
+import {
+  reportSiteRateLimitResponse,
+  resolveSiteRequestLimitKey,
+  withSiteApiRequestLease,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type { ApiTransportRequestObserver } from "~/services/apiTransport/type"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type {
@@ -170,114 +176,130 @@ async function sub2ApiAdminRequest<T>(
   }
   if (hasBody) headers["Content-Type"] = "application/json"
 
-  return await runAbortableTask(
-    async (signal) => {
-      const request: RequestInit = {
-        method,
-        headers,
-        // Keep admin and account keys on the configured API endpoint.
-        redirect: "error",
-        ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
-        ...(signal ? { signal } : {}),
-      }
+  return await withSiteApiRequestLease(
+    resolveSiteRequestLimitKey(config.baseUrl),
+    () =>
+      startAbortableTask(
+        async (signal) => {
+          const request: RequestInit = {
+            method,
+            headers,
+            // Keep admin and account keys on the configured API endpoint.
+            redirect: "error",
+            ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
+            ...(signal ? { signal } : {}),
+          }
 
-      options.observer?.onDispatch?.()
-      let response: Response
-      try {
-        response = await fetch(
-          buildAdminUrl(config, endpoint, options.query),
-          request,
-        )
-      } catch (error) {
-        if (signal?.aborted) throw signal.reason ?? error
-        if (isAbortOrTimeoutError(error)) throw error
-        throw new Sub2ApiAdminApiError(
-          "Sub2API admin request failed",
-          undefined,
-          undefined,
-          {
-            dispatch: "dispatched",
-            responseReceived: false,
-            confirmedNonApplication: false,
-            raw: error,
-          },
-        )
-      }
-      options.observer?.onResponse?.()
+          options.observer?.onDispatch?.()
+          let response: Response
+          try {
+            response = await fetch(
+              buildAdminUrl(config, endpoint, options.query),
+              request,
+            )
+          } catch (error) {
+            if (signal?.aborted) throw signal.reason ?? error
+            if (isAbortOrTimeoutError(error)) throw error
+            throw new Sub2ApiAdminApiError(
+              "Sub2API admin request failed",
+              undefined,
+              undefined,
+              {
+                dispatch: "dispatched",
+                responseReceived: false,
+                confirmedNonApplication: false,
+                raw: error,
+              },
+            )
+          }
+          options.observer?.onResponse?.()
+          reportSiteRateLimitResponse(config.baseUrl, response)
 
-      let responseText: string
-      try {
-        responseText = await response.text()
-      } catch (error) {
-        if (signal?.aborted) throw signal.reason ?? error
-        if (isAbortOrTimeoutError(error)) throw error
-        throw new Sub2ApiAdminApiError(
-          "Sub2API returned an invalid admin response",
-          response.status,
-          undefined,
-          {
-            dispatch: "dispatched",
-            responseReceived: true,
-            confirmedNonApplication: response.status >= 400,
-            raw: error,
-          },
-        )
-      }
+          let responseText: string
+          try {
+            responseText = await response.text()
+          } catch (error) {
+            if (signal?.aborted) throw signal.reason ?? error
+            if (isAbortOrTimeoutError(error)) throw error
+            throw new Sub2ApiAdminApiError(
+              "Sub2API returned an invalid admin response",
+              response.status,
+              undefined,
+              {
+                dispatch: "dispatched",
+                responseReceived: true,
+                confirmedNonApplication: response.status >= 400,
+                raw: error,
+              },
+            )
+          }
 
-      let envelope: Sub2ApiAdminEnvelope<T> = {}
-      if (responseText.trim()) {
-        try {
-          envelope = JSON.parse(responseText) as Sub2ApiAdminEnvelope<T>
-        } catch (error) {
-          throw new Sub2ApiAdminApiError(
-            "Sub2API returned an invalid admin response",
-            response.status,
-            undefined,
-            {
-              dispatch: "dispatched",
-              responseReceived: true,
-              confirmedNonApplication: response.status >= 400,
-              raw: error,
-            },
-          )
-        }
-      }
+          let envelope: Sub2ApiAdminEnvelope<T> = {}
+          if (responseText.trim()) {
+            try {
+              envelope = JSON.parse(responseText) as Sub2ApiAdminEnvelope<T>
+            } catch (error) {
+              throw new Sub2ApiAdminApiError(
+                "Sub2API returned an invalid admin response",
+                response.status,
+                undefined,
+                {
+                  dispatch: "dispatched",
+                  responseReceived: true,
+                  confirmedNonApplication: response.status >= 400,
+                  raw: error,
+                },
+              )
+            }
+          }
 
-      const code = getEnvelopeCode(envelope)
-      const businessFailed =
-        code !== undefined && code !== 0 && code !== "0" && code !== "success"
-      const missingRequiredData =
-        (options.requireData ?? true) &&
-        (!isRecord(envelope) || !("data" in envelope) || envelope.data == null)
-      if (
-        !response.ok ||
-        businessFailed ||
-        !isRecord(envelope) ||
-        missingRequiredData
-      ) {
-        throw new Sub2ApiAdminApiError(
-          code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE
-            ? SUB2API_STEP_UP_UNSUPPORTED_MESSAGE
-            : missingRequiredData
-              ? "Sub2API returned an admin response without required data"
-              : getEnvelopeMessage(envelope, "Sub2API admin request failed"),
-          response.status,
-          code,
-          {
-            dispatch: "dispatched",
-            responseReceived: true,
-            confirmedNonApplication: !response.ok || businessFailed,
-            raw: envelope,
-          },
-        )
-      }
+          const code = getEnvelopeCode(envelope)
+          const businessFailed =
+            code !== undefined &&
+            code !== 0 &&
+            code !== "0" &&
+            code !== "success"
+          const missingRequiredData =
+            (options.requireData ?? true) &&
+            (!isRecord(envelope) ||
+              !("data" in envelope) ||
+              envelope.data == null)
+          if (
+            !response.ok ||
+            businessFailed ||
+            !isRecord(envelope) ||
+            missingRequiredData
+          ) {
+            throw new Sub2ApiAdminApiError(
+              code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE
+                ? SUB2API_STEP_UP_UNSUPPORTED_MESSAGE
+                : missingRequiredData
+                  ? "Sub2API returned an admin response without required data"
+                  : getEnvelopeMessage(
+                      envelope,
+                      "Sub2API admin request failed",
+                    ),
+              response.status,
+              code,
+              {
+                dispatch: "dispatched",
+                responseReceived: true,
+                confirmedNonApplication: !response.ok || businessFailed,
+                raw: envelope,
+              },
+            )
+          }
 
-      return envelope.data as T
-    },
-    {
-      signals: [options.signal],
-      timeoutMs: SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
-    },
+          return envelope.data as T
+        },
+        {
+          signals: [options.signal],
+          timeoutMs: SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
+        },
+      ),
+    options.signal,
+    undefined,
+    SITE_TYPES.SUB2API,
   )
 }
 

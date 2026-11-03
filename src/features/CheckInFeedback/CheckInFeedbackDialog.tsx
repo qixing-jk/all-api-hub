@@ -7,10 +7,61 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import type { AuthConfig } from "~/services/apiTransport/type"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { CheckInFeedbackSnapshot } from "~/services/checkin/feedback/report"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import type { SiteAccount } from "~/types"
 import { openAccountManagerWithSearch } from "~/utils/navigation"
 
 import { FeedbackForm } from "./FeedbackForm"
 import type { CheckInFeedbackSource } from "./useCheckInFeedback"
+
+/** Orders saved credentials so complete cookies are redacted before contained tokens. */
+function getAccountSecrets(account: SiteAccount): string[] {
+  return [
+    account.account_info.access_token,
+    account.cookieAuth?.sessionCookie,
+    account.sub2apiAuth?.refreshToken,
+    account.kimiOpenPlatformAuth?.refreshToken,
+    account.aimlApiAuth?.apiKey,
+  ]
+    .filter((secret): secret is string => Boolean(secret))
+    .sort((a, b) => b.length - a.length)
+}
+
+/** Redacts saved execution messages without replacing editor authentication. */
+function sanitizeExecution(
+  execution: CheckInFeedbackSnapshot["execution"],
+  account: SiteAccount | null,
+) {
+  if (!execution) return execution
+  if (!account)
+    return { ...execution, rawMessage: undefined, message: undefined }
+  const secrets = getAccountSecrets(account)
+  return {
+    ...execution,
+    message: execution.message
+      ? toSanitizedErrorSummary(execution.message, secrets)
+      : execution.message,
+    rawMessage: execution.rawMessage
+      ? toSanitizedErrorSummary(execution.rawMessage, secrets)
+      : execution.rawMessage,
+  }
+}
+
+/** Projects only saved refresh facts needed by the public report. */
+function getRefreshSnapshot(
+  account: SiteAccount,
+): NonNullable<CheckInFeedbackSnapshot["refresh"]> {
+  const secrets = getAccountSecrets(account)
+  return {
+    health: {
+      ...account.health,
+      reason: account.health.reason
+        ? toSanitizedErrorSummary(account.health.reason, secrets)
+        : account.health.reason,
+    },
+    last_sync_time: account.last_sync_time,
+  }
+}
 
 /** Preserves editor drafts while enriching identified accounts with saved execution facts. */
 export default function CheckInFeedbackDialog({
@@ -29,20 +80,29 @@ export default function CheckInFeedbackDialog({
   useEffect(() => {
     let active = true
     if ("snapshot" in source) {
-      if (source.accountId && !source.snapshot.execution) {
-        void autoCheckinStorage
-          .getStatus()
-          .catch(() => null)
-          .then((status) => {
-            if (active)
-              setData({
-                ...source,
-                snapshot: {
-                  ...source.snapshot,
-                  execution: status?.perAccount?.[source.accountId!],
-                },
-              })
-          })
+      const accountId = source.accountId
+      if (accountId) {
+        void Promise.all([
+          accountQueries.getAccountById(accountId).catch(() => null),
+          source.snapshot.execution
+            ? Promise.resolve(null)
+            : autoCheckinStorage.getStatus().catch(() => null),
+        ]).then(([account, status]) => {
+          if (active)
+            setData({
+              ...source,
+              snapshot: {
+                ...source.snapshot,
+                refresh: account
+                  ? getRefreshSnapshot(account)
+                  : source.snapshot.refresh,
+                execution: sanitizeExecution(
+                  source.snapshot.execution ?? status?.perAccount?.[accountId],
+                  account,
+                ),
+              },
+            })
+        })
       } else {
         setData(source)
       }
@@ -65,7 +125,8 @@ export default function CheckInFeedbackDialog({
               baseUrl: account.site_url,
               siteType: account.site_type,
               checkIn: account.checkIn,
-              execution,
+              refresh: getRefreshSnapshot(account),
+              execution: sanitizeExecution(execution, account),
             },
             auth: {
               authType: account.authType,

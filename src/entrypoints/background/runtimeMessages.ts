@@ -50,6 +50,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { setupRedemptionAssistMessagingListeners } from "~/services/redemption/redemptionAssist"
 import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnouncements/runtimeMessages"
+import { openStarPromotionRepository } from "~/services/starPromotion/openRepository"
 import { classifyAllApiHubRepoPageUrl } from "~/services/starPromotion/repoPage"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
@@ -175,25 +176,35 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
+      if (request.action === RuntimeActionIds.StarPromotionOpenRepository) {
+        void openStarPromotionRepository().then((success) =>
+          sendResponse({ success }),
+        )
+        return true
+      }
+
       if (request.action === RuntimeActionIds.ContentStarPromotionReport) {
         // Only trust reports that originate from the All API Hub repository page.
         const fromRepoPage = classifyAllApiHubRepoPageUrl(sender.url) !== null
-        if (!fromRepoPage || request.starred !== true) {
+        if (!fromRepoPage || typeof request.starred !== "boolean") {
           sendResponse({ success: false })
           return true
         }
 
         void starPromotionState
-          .markCompleted()
+          .recordGitHubStarState(request.starred, {
+            starRemoved: request.starRemoved === true,
+          })
           .then(() => {
-            trackStarPromotionAction(
-              PRODUCT_ANALYTICS_ACTION_IDS.SuppressStarPromotionDetected,
-              {
-                surfaceId:
-                  PRODUCT_ANALYTICS_SURFACE_IDS.ContentRepositoryStarDetection,
-                entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
-              },
-            )
+            if (request.starred)
+              trackStarPromotionAction(
+                PRODUCT_ANALYTICS_ACTION_IDS.SuppressStarPromotionDetected,
+                {
+                  surfaceId:
+                    PRODUCT_ANALYTICS_SURFACE_IDS.ContentRepositoryStarDetection,
+                  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+                },
+              )
             sendResponse({ success: true })
           })
           .catch(() => sendResponse({ success: false }))

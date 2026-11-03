@@ -1,9 +1,14 @@
 # 安装渠道与更新说明
 
-All API Hub 有两类常见安装方式：**浏览器商店版** 和 **GitHub 手动安装版**。如果你不确定该选哪个，优先使用浏览器商店版。
+All API Hub 有三类常见安装方式：**浏览器商店版**、**GitHub 自更新版（Chromium `.crx`）** 和 **GitHub 手动安装版（解压加载）**。如果你不确定该选哪个，优先使用浏览器商店版。
 
 ::: tip 简单结论
-Chrome、Edge、Firefox 用户优先安装对应商店版。商店版会由浏览器自动更新，最省心。只有商店还没更新、你的浏览器装不了商店版，或需要临时验证问题时，再考虑从 GitHub 手动安装。
+Chrome、Edge、Firefox 用户优先安装对应商店版。商店版安装最简单，也不需要任何策略配置。
+
+只有在用不了商店版（商店还没上架、浏览器装不了商店版或 Chrome Web Store 兼容版本）而必须走 GitHub 附件时，Chromium 浏览器才需要区分附件形式：
+
+- **推荐 `.crx` 自更新版**：它和商店版一样由浏览器按发布页的更新清单自动更新，装一次之后不用再手动换包。stock Chrome / Edge 需要按文档配置一次扩展白名单策略（Linux 无需配置）。
+- **`.zip` 解压加载版**：不会自动更新，每次升级都要重新下载并重新加载，仅在 `.crx` 装不上时使用。
 :::
 
 ## 我该安装哪个版本？
@@ -13,12 +18,17 @@ Chrome、Edge、Firefox 用户优先安装对应商店版。商店版会由浏�
 | 使用 Chrome | Chrome Web Store 版本 | 浏览器自动更新，也可以在插件内手动检查 |
 | 使用 Edge | Edge Add-ons 版本 | 浏览器自动更新，也可以在插件内手动检查 |
 | 使用 Firefox | Firefox Add-ons 版本 | Firefox 自动更新，也可以在插件内检查 AMO 已发布版本 |
-| 使用 Brave / Vivaldi / Opera | 优先尝试 Chrome Web Store；不可用时再用 GitHub Chrome 安装包 | 商店版自动更新；手动版需重新下载 |
-| 使用 QQ / 360 / 猎豹等浏览器 | 浏览器内置扩展中心若可用则优先使用；否则用 GitHub Chrome 安装包 | 取决于安装来源；手动版需重新下载 |
-| 商店版还没收到某个紧急修复 | 临时使用 GitHub Stable | 需要以后手动下载新版 |
-| 想提前体验开发中的功能 | Nightly / 开发版 | 可能不稳定，只建议测试使用 |
+| 使用 Brave / Vivaldi / Opera，且能用 Chrome Web Store | Chrome Web Store 版本 | 浏览器 / 商店机制自动更新 |
+| 使用 Brave / Vivaldi / Opera，商店装不了 | 先试 GitHub Release 中的 `.crx` 自更新版，装不上再用解压加载 `.zip` | `.crx` 自动更新；解压加载版需重新下载 |
+| 使用 QQ / 360 / 猎豹等浏览器 | 浏览器内置扩展中心若可用则优先使用；否则先试 `.crx` 自更新版，再否则解压加载 `.zip` | `.crx` 自动更新；解压加载版需重新下载 |
+| 商店版还没收到某个紧急修复 | 临时使用 GitHub Stable | 安装 `.crx` 可自动更新；解压加载版需手动下载 |
+| 想提前体验开发中的功能 | Nightly / 开发版 | 可能不稳定，只建议测试使用；Chromium `.crx` 同样自带自动更新 |
 
-如果你使用 QQ、360、猎豹、Brave、Vivaldi、Opera 等浏览器，请查看 [其他浏览器安装指南](./other-browser-install.md)。其中 Brave、Vivaldi、Opera 通常可以先尝试 Chrome Web Store；需要手动加载时再下载 GitHub Chrome 安装包。
+如果你使用 QQ、360、猎豹、Brave、Vivaldi、Opera 等浏览器，请查看 [其他浏览器安装指南](./other-browser-install.md)。其中 Brave、Vivaldi、Opera 通常可以先尝试 Chrome Web Store；需要手动安装时优先选 `.crx`，详见 [Chromium 自更新安装](./chromium-crx-self-update.md)。
+
+::: tip 我的浏览器算 Chromium 吗？
+默认按 Chromium 处理：除 Firefox 和 Safari 外，常见的桌面扩展浏览器基本都是 Chromium 系。不确定时对照 [浏览器表格](./other-browser-install.md#supported-browsers)。
+:::
 
 ## 为什么 GitHub 有新版，商店还没更新？
 
@@ -75,32 +85,38 @@ Chrome、Edge、Firefox 用户优先安装对应商店版。商店版会由浏�
 
 Firefox 通常会自动更新扩展。你也可以打开 `about:addons`，进入扩展管理页面，检查是否有可用更新。不同 Firefox 版本的按钮位置可能略有差异。
 
-## 什么时候适合从 GitHub 手动安装？
+## 什么时候适合从 GitHub 安装？
 
-GitHub 手动安装适合临时使用：
+GitHub 附件适合这些情况：
 
 - 商店版还没收到你急需的修复。
 - 当前浏览器没有可用的商店版，也无法使用 Chrome Web Store 等兼容商店入口。
 - 你需要帮忙确认某个新版本是否解决问题。
 
-手动安装前请注意：
+GitHub 附件有两种形式，更新方式完全不同：
 
-- ZIP 解压加载的手动安装版不会自动更新；Chromium 用户可以改用 [自更新 `.crx` 安装](./chromium-crx-self-update.md)。
-- 后续升级需要重新下载新版安装包；你可以在 GitHub 仓库点 Star / Watch，这样更容易看到新版本发布通知。
-- 从商店版切到手动安装版前，建议先导出备份数据。
+- **`.crx` 自更新版（GitHub 附件推荐）**：浏览器按发布页的 `updates.xml` 自动获取新版本，和商店版一样不需要你手动换包。stock Chrome / Edge 需要先配置扩展白名单策略（Linux 无需配置；Windows 版 Edge 还要求设备入域），详见 [Chromium 自更新安装](./chromium-crx-self-update.md)。
+- **`.zip` 解压加载版**：不会自动更新，每次升级都要重新下载并重新加载，仅在 `.crx` 装不上时使用。
+
+也就是说，GitHub 附件里优先选 `.crx`；商店版仍是第一选择，不需要这些配置。
+
+安装前请注意：
+
+- 从商店版切换到 GitHub 版本前，建议先导出备份数据。`.crx`、`.zip` 与商店版的扩展 ID 不同，数据不会自动迁移。
 - 不建议长期同时安装多个来源的 All API Hub，除非你明确是在测试。
+- Firefox 没有对应的 GitHub 自更新通道，`*-firefox.zip` 同样不会自动更新，请使用 Firefox Add-ons 商店版。
 
-手动安装和更新步骤请查看 [其他浏览器安装指南](./other-browser-install.md)。
+安装和更新步骤请查看 [其他浏览器安装指南](./other-browser-install.md)。
 
 ## 常见问题
 
 ### 我需要一直点“检查更新”吗？
 
-不需要。商店版会由浏览器自动更新。只有你看到 GitHub 已经发布新版，或者想确认商店版是否已经可更新时，再手动检查即可。
+不需要。商店版和 `.crx` 自更新版都由浏览器自动更新。只有你看到 GitHub 已经发布新版，想确认商店版是否已经可更新，或者想立刻应用 `.crx` 更新时，再手动检查即可。
 
 ### 插件内“检查更新”会自动下载 GitHub 安装包吗？
 
-不会。它只会显示版本状态，并让浏览器检查商店版是否能更新。GitHub 安装包需要你自己从 Releases 页面下载。
+不会。它按当前发行渠道检查版本状态，可打开 Releases 或商店页面，但不会自动下载 GitHub 安装包；解压加载包需要手动下载并更新。
 
 ### 点击“重新加载完成更新”会丢数据吗？
 
@@ -108,11 +124,12 @@ GitHub 手动安装适合临时使用：
 
 ### GitHub 已发布新版，但插件仍然提示商店没有更新，怎么办？
 
-如果你使用商店版，先等待商店审核和推送。急需修复时，可以临时从 GitHub Stable 手动安装；使用前建议先导出备份数据。
+如果你使用商店版，先等待商店审核和推送。急需修复时，可以临时从 GitHub Stable 安装 `.crx` 自更新版；使用前建议先导出备份数据。
 
 ### 手动安装版怎么更新？
 
-重新下载新版安装包并加载新版扩展目录。具体步骤请看 [其他浏览器安装指南](./other-browser-install.md#update-extension)。
+- **`.crx` 自更新版**：浏览器会自动更新，也可以在 `chrome://extensions/` 点「更新」立即检查。
+- **`.zip` 解压加载版**：重新下载新版安装包并加载新版扩展目录，具体步骤请看 [其他浏览器安装指南](./other-browser-install.md#update-extension)。
 
 ## 相关文档
 

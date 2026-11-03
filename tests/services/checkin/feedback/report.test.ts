@@ -7,7 +7,7 @@ import {
   composeCheckInFeedback,
   getFeedbackOrigin,
 } from "~/services/checkin/feedback/report"
-import { AuthTypeEnum } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { CheckInConfig } from "~/types/checkIn"
 
 describe("check-in feedback report", () => {
@@ -22,6 +22,52 @@ describe("check-in feedback report", () => {
     selection: { mode: "automatic" },
     methodKnowledge: { methods: {} },
   }
+
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN])(
+    "groups diagnosis before execution, refresh and environment for %s",
+    (siteType) => {
+      const report = buildCheckInFeedbackDetails(
+        {
+          siteType,
+          baseUrl: "https://example.com",
+          checkIn,
+        },
+        { version: "1", platform: "chromium" },
+      )
+      const groups = [
+        "checkInAssessment:",
+        "recentExecution:",
+        "accountRefresh:",
+        "environment:",
+      ]
+      const positions = groups.map((group) => report.indexOf(group))
+      expect(positions.every((position) => position >= 0)).toBe(true)
+      expect(positions).toEqual([...positions].sort((a, b) => a - b))
+    },
+  )
+
+  it("reports saved refresh health with its attempt time and age, without claiming other APIs work", () => {
+    const report = buildCheckInFeedbackDetails(
+      {
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://example.com",
+        checkIn,
+        refresh: {
+          health: { status: SiteHealthStatus.Error },
+          last_sync_time: 1000,
+        },
+      },
+      { version: "1", platform: "chromium", now: 61000 },
+    )
+    expect(report).toContain("accountRefreshSource: saved_account")
+    expect(report).toContain("accountRefreshHealth: error")
+    expect(report).toContain(
+      "accountRefreshRecordedAt: 1970-01-01T00:00:01.000Z",
+    )
+    expect(report).toContain("accountRefreshAgeSeconds: 60")
+    expect(report).toContain("otherApiCapabilities: not_inspected")
+    expect(report).not.toContain("lastSuccessful")
+  })
 
   it("reports the selected Agent Router login method using the account origin", () => {
     const report = buildCheckInFeedbackDetails(

@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process"
+import { resolve } from "node:path"
+import { pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -9,6 +12,23 @@ import {
 } from "~/utils/core/environment"
 
 describe("environment helpers", () => {
+  it("defaults to production when imported by Node without Vite environment", () => {
+    const moduleUrl = pathToFileURL(
+      resolve("src/utils/core/environment.ts"),
+    ).href
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        `import { getRuntimeMode } from ${JSON.stringify(moduleUrl)}; console.log(getRuntimeMode())`,
+      ],
+      { encoding: "utf8" },
+    )
+    expect(result.stderr).toBe("")
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe("production")
+  })
   afterEach(() => {
     vi.unstubAllEnvs()
   })

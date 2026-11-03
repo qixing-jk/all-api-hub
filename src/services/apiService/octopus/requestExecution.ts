@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   OCTOPUS_AUTH_MODES,
   OCTOPUS_COOKIE_API_VERSIONS,
@@ -27,6 +28,10 @@ import {
   parseOctopusEnvelope,
 } from "~/services/apiService/octopus/responseProtocol"
 import { octopusV013Contract } from "~/services/apiService/octopus/v013"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import { type OctopusApiResponse } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/core/error"
@@ -234,20 +239,83 @@ export async function fetchOctopusApi<T>(
       }
       session.confirmed = true
     } else {
-      fetchStarted = true
-      const response = await fetch(`${baseUrl}${endpoint}`, {
-        ...nativeRequest.init,
-        signal,
-        headers: createOctopusRequestHeaders(
-          session,
-          nativeRequest.init.headers,
-        ),
-      })
-      responseReceived = true
-      responseStatus = response.status
+      const retryAuth = await withSiteApiRequestTask(
+        baseUrl,
+        async () => {
+          fetchStarted = true
+          const response = await fetch(`${baseUrl}${endpoint}`, {
+            ...nativeRequest.init,
+            signal,
+            headers: createOctopusRequestHeaders(
+              session,
+              nativeRequest.init.headers,
+            ),
+          })
+          reportSiteRateLimitResponse(baseUrl, response)
+          responseReceived = true
+          responseStatus = response.status
 
-      if (response.status === 401 && retryAfterUnauthorized) {
-        octopusAuthManager.clearCache(config.baseUrl, config.username)
+          if (response.status === 401 && retryAfterUnauthorized) {
+            octopusAuthManager.clearCache(config.baseUrl, config.username)
+            return true
+          }
+
+          // 检查 HTTP 状态码，处理非成功响应
+          if (!response.ok) {
+            const contentType = response.headers.get("Content-Type") || ""
+            let errorMessage: string
+
+            // Read body once as text, then try to parse as JSON
+            const rawBody = await response.text()
+
+            if (contentType.includes("application/json")) {
+              // 尝试解析 JSON 错误响应
+              try {
+                const errorData = JSON.parse(rawBody) as unknown
+                const errorRecord =
+                  typeof errorData === "object" &&
+                  errorData !== null &&
+                  !Array.isArray(errorData)
+                    ? (errorData as Record<string, unknown>)
+                    : undefined
+                errorMessage = getErrorMessage(
+                  errorRecord?.message,
+                  getErrorMessage(errorRecord?.error, "Octopus request failed"),
+                )
+              } catch {
+                errorMessage = rawBody
+              }
+            } else {
+              // 非 JSON 响应，使用已读取的文本
+              errorMessage = rawBody
+            }
+
+            throw new Error(
+              `HTTP ${response.status} ${response.statusText}: ${errorMessage}`,
+            )
+          }
+
+          // 检查 Content-Type 是否为 JSON
+          const contentType = response.headers.get("Content-Type") || ""
+          if (!contentType.includes("application/json")) {
+            const text = await response.text()
+            throw new Error(
+              `Expected JSON response but got ${contentType || "unknown content type"}: ${text.slice(0, 200)}`,
+            )
+          }
+
+          try {
+            data = await response.json()
+          } catch {
+            throw new Error(`Failed to parse JSON response from ${endpoint}`)
+          }
+          return false
+        },
+        signal,
+        undefined,
+        SITE_TYPES.OCTOPUS,
+      )
+      if (retryAuth)
         return await fetchOctopusApi(
           config,
           operation,
@@ -255,57 +323,6 @@ export async function fetchOctopusApi<T>(
           requestKind,
           false,
         )
-      }
-
-      // 检查 HTTP 状态码，处理非成功响应
-      if (!response.ok) {
-        const contentType = response.headers.get("Content-Type") || ""
-        let errorMessage: string
-
-        // Read body once as text, then try to parse as JSON
-        const rawBody = await response.text()
-
-        if (contentType.includes("application/json")) {
-          // 尝试解析 JSON 错误响应
-          try {
-            const errorData = JSON.parse(rawBody) as unknown
-            const errorRecord =
-              typeof errorData === "object" &&
-              errorData !== null &&
-              !Array.isArray(errorData)
-                ? (errorData as Record<string, unknown>)
-                : undefined
-            errorMessage = getErrorMessage(
-              errorRecord?.message,
-              getErrorMessage(errorRecord?.error, "Octopus request failed"),
-            )
-          } catch {
-            errorMessage = rawBody
-          }
-        } else {
-          // 非 JSON 响应，使用已读取的文本
-          errorMessage = rawBody
-        }
-
-        throw new Error(
-          `HTTP ${response.status} ${response.statusText}: ${errorMessage}`,
-        )
-      }
-
-      // 检查 Content-Type 是否为 JSON
-      const contentType = response.headers.get("Content-Type") || ""
-      if (!contentType.includes("application/json")) {
-        const text = await response.text()
-        throw new Error(
-          `Expected JSON response but got ${contentType || "unknown content type"}: ${text.slice(0, 200)}`,
-        )
-      }
-
-      try {
-        data = await response.json()
-      } catch {
-        throw new Error(`Failed to parse JSON response from ${endpoint}`)
-      }
     }
 
     // Octopus 返回格式: { success: boolean, data?: T, message?: string }

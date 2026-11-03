@@ -30,6 +30,8 @@ Suixiang provides the model API, while All API Hub organizes accounts, keys, pri
 
 Install from the official store for your browser when possible: [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo), [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa), or [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}). For other browsers, Safari, mobile browsers, or a manual installation, use the [installation guides](../get-started.md) and [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases/latest).
 
+- **Fallback option**: if your browser cannot use a store build or Chrome Web Store compatible build, and the guide above does not work, download from [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases/latest). Chromium users should install the self-updating `.crx`: once installed it updates like the store build; stock Chrome / Edge must configure the extension allowlist policy first (not needed on Linux). See [Chromium CRX self-update install](https://all-api-hub.qixing1217.top/en/chromium-crx-self-update.html).
+
 ---
 
 ## 3. Add a Suixiang Account

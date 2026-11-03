@@ -1,5 +1,9 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { resolveGitHubRepoStarState } from "~/services/starPromotion/githubStarButton"
+import {
+  GITHUB_REPO_STAR_STATES,
+  resolveGitHubRepoStarState,
+  type GitHubRepoStarState,
+} from "~/services/starPromotion/githubStarButton"
 import {
   ALL_API_HUB_REPO_PAGE_KINDS,
   classifyAllApiHubRepoPageUrl,
@@ -29,9 +33,8 @@ function isAllApiHubRepoPage(): boolean {
 }
 
 /**
- * Watches the repository page for a starred state and reports it to the
- * background. Unknown and unstarred states stay unreported (fail-open); once
- * detection reports a star, the background suppresses every prompt permanently.
+ * Reports resolved repository star state changes to the background. Unknown
+ * controls leave stored facts untouched; invitation suppression is independent.
  */
 export function setupStarPromotionContent(): () => void {
   if (!isAllApiHubRepoPage()) {
@@ -39,16 +42,42 @@ export function setupStarPromotionContent(): () => void {
   }
 
   let disposed = false
-  let starredReported = false
+  let reportedState: GitHubRepoStarState | undefined
+  let reportPending = false
+  let retryTimer: number | undefined
+  let retryDelay = 5_000
+  let observedState: GitHubRepoStarState | null | undefined
 
-  const reportStarred = () => {
-    void sendRuntimeActionMessage<{ success: boolean }>({
-      action: RuntimeActionIds.ContentStarPromotionReport,
-      starred: true,
-    })
+  const reportState = (state: GitHubRepoStarState) => {
+    reportPending = true
+    let verifiedRemoval = false
+    let stateToReport = state
+    let acknowledged = false
+    const removalEvidence =
+      state === GITHUB_REPO_STAR_STATES.NotStarred
+        ? readFreshGitHubStarState()
+        : Promise.resolve(state)
+    void removalEvidence
+      .then((freshState) => {
+        stateToReport = freshState ?? state
+        verifiedRemoval = freshState === GITHUB_REPO_STAR_STATES.NotStarred
+        if (disposed || resolveGitHubRepoStarState(document) !== state)
+          return undefined
+        return sendRuntimeActionMessage<{ success: boolean }>({
+          action: RuntimeActionIds.ContentStarPromotionReport,
+          starred: stateToReport === GITHUB_REPO_STAR_STATES.Starred,
+          starRemoved: verifiedRemoval,
+        })
+      })
       .then((response) => {
         if (response?.success === true) {
-          starredReported = true
+          acknowledged = true
+          if (
+            stateToReport === GITHUB_REPO_STAR_STATES.Starred ||
+            verifiedRemoval
+          )
+            reportedState = stateToReport
+          else reportedState = undefined
           return
         }
         logger.debug("Star state report was not acknowledged")
@@ -58,6 +87,23 @@ export function setupStarPromotionContent(): () => void {
           error: error instanceof Error ? error.message : String(error),
         })
       })
+      .finally(() => {
+        reportPending = false
+        if (
+          !disposed &&
+          resolveGitHubRepoStarState(document) === state &&
+          (!acknowledged ||
+            (state === GITHUB_REPO_STAR_STATES.NotStarred && !verifiedRemoval))
+        ) {
+          retryTimer = window.setTimeout(() => {
+            retryTimer = undefined
+            evaluate()
+          }, retryDelay)
+          retryDelay = Math.min(retryDelay * 2, 30_000)
+        }
+        if (!disposed && resolveGitHubRepoStarState(document) !== state)
+          evaluate()
+      })
   }
 
   const evaluate = () => {
@@ -66,11 +112,18 @@ export function setupStarPromotionContent(): () => void {
     }
 
     const state = resolveGitHubRepoStarState(document)
-    if (state !== "starred" || starredReported) {
+    if (state !== observedState) {
+      window.clearTimeout(retryTimer)
+      retryTimer = undefined
+      retryDelay = 5_000
+      observedState = state
+    }
+    if (retryTimer !== undefined) return
+    if (state === null || state === reportedState || reportPending) {
       return
     }
 
-    reportStarred()
+    reportState(state)
   }
 
   const observer = new MutationObserver(evaluate)
@@ -94,5 +147,29 @@ export function setupStarPromotionContent(): () => void {
     observer.disconnect()
     window.clearInterval(pollTimer)
     window.clearTimeout(timeoutTimer)
+    window.clearTimeout(retryTimer)
+  }
+}
+
+/** Reads current star state from a fresh, authenticated same-origin page. */
+async function readFreshGitHubStarState(): Promise<GitHubRepoStarState | null> {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 5_000)
+  try {
+    const response = await fetch(window.location.href, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+    if (!response.ok || response.redirected) return null
+    const page = new DOMParser().parseFromString(
+      await response.text(),
+      "text/html",
+    )
+    return resolveGitHubRepoStarState(page)
+  } catch {
+    return null
+  } finally {
+    window.clearTimeout(timeout)
   }
 }
