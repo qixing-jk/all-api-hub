@@ -19,6 +19,10 @@ on:
       - ".github/workflows/translate-docs.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
+      - "scripts/write-unit-test-durations.mjs"
+      - "scripts/utils/unitTestDurations.mjs"
+      - "scripts/utils/vitestBlob.mjs"
+      - "vitest.shardSequencer.ts"
       - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -47,6 +51,10 @@ on:
       - ".github/workflows/translate-docs.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
+      - "scripts/write-unit-test-durations.mjs"
+      - "scripts/utils/unitTestDurations.mjs"
+      - "scripts/utils/vitestBlob.mjs"
+      - "vitest.shardSequencer.ts"
       - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -101,7 +109,7 @@ jobs:
         # Keep guard regressions covered on ordinary changes without four
         # preflight runners; only one shard needs these tooling tests.
         if: matrix.shard == 1
-        run: node --test tests/scripts/release-pr-check.test.mjs tests/scripts/check-unit-test-reports.test.mjs
+        run: node --test tests/scripts/release-pr-check.test.mjs tests/scripts/check-unit-test-reports.test.mjs tests/scripts/unit-test-browser-install.test.mjs tests/scripts/vitest-blob.test.mjs
 
       - name: Restore unit test durations
         uses: actions/cache/restore@v5
@@ -130,7 +138,25 @@ jobs:
 
       # Script acceptance tests exercise real DOM behavior in headless Chromium.
       - name: Install Chromium for browser-backed unit tests
-        run: pnpm exec playwright install --with-deps chromium
+        # These tests use the default headless shell. Probe the runner's existing
+        # libraries first; a slow apt mirror need not delay an already usable browser.
+        # Keep both Chromium binaries because E2E restores the same browser cache.
+        run: |
+          pnpm exec playwright install chromium
+          probe_browser() {
+            pnpm exec node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true, timeout: 15000 }); await browser.close();'
+          }
+          probe_log="${RUNNER_TEMP}/unit-chromium-probe.log"
+          if probe_browser > "$probe_log" 2>&1; then
+            echo "Chromium headless shell starts with existing host libraries."
+            exit 0
+          fi
+          cat "$probe_log"
+          if ! grep -Eq 'Host system is missing dependencies|error while loading shared libraries:' "$probe_log"; then
+            exit 1
+          fi
+          pnpm exec playwright install-deps chromium
+          probe_browser
 
       - name: Run test shard with coverage
         env:
@@ -181,7 +207,12 @@ jobs:
 
       - name: Check shard report completeness
         id: reports
-        run: node scripts/check-unit-test-reports.mjs
+        run: |
+          duration_args=()
+          if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            duration_args=(--durations-output .vitest-durations/shard-durations.json)
+          fi
+          node scripts/check-unit-test-reports.mjs "${duration_args[@]}"
 
       - name: Merge test and coverage reports
         # Keep partial reports available as artifacts when the completeness gate fails.
@@ -201,13 +232,6 @@ jobs:
           files: coverage/lcov.info
           disable_search: true
           fail_ci_if_error: true
-
-      - name: Generate unit test durations
-        # Per-file timings for the next run's shard sequencer, derived from the blob
-        # reports every shard already uploads. PRs only consume the base cache;
-        # avoid decoding all blob reports for timings that would never be saved.
-        if: github.event_name != 'pull_request'
-        run: node scripts/write-unit-test-durations.mjs
 
       - name: Save unit test durations
         # Only runs that may publish to the base repository's cache scope write timings;

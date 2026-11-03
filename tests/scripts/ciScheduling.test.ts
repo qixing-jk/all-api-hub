@@ -118,12 +118,15 @@ it("runs release-diff regression checks once when ordinary preflight jobs are sk
   }
 })
 
-it("only generates shard timings on runs that publish the cache", () => {
+it("only publishes shard timing caches outside pull requests", () => {
   const workflow = readFileSync(".github/workflows/test.yml", "utf8")
   const step = workflow
-    .split("      - name: Generate unit test durations")[1]
+    .split("      - name: Save unit test durations")[1]
     ?.split("      - name:")[0]
-  const guard = step?.match(/^ {8}if: (.+)$/m)?.[1]?.trim()
+  const guard = step
+    ?.match(/^ {8}if: (.+)$/m)?.[1]
+    ?.trim()
+    .replace(/^\$\{\{\s*|\s*\}\}$/g, "")
   expect(guard).toBeDefined()
   for (const eventName of ["pull_request", "push", "workflow_dispatch"]) {
     expect(
@@ -131,6 +134,30 @@ it("only generates shard timings on runs that publish the cache", () => {
     ).toBe(eventName !== "pull_request")
   }
 })
+
+it.each(["push", "pull_request"])(
+  "%s tests include shard timing inputs in their path triggers",
+  (event) => {
+    const source = readFileSync(
+      ".github/workflows/test.yml",
+      "utf8",
+    ).replaceAll("\r\n", "\n")
+    const section =
+      source.split(new RegExp(`^  ${event}:$`, "m"))[1]?.split(/^ {2}\w/m)[0] ??
+      ""
+    const paths = [...section.matchAll(/^ {6}- "([^"]+)"$/gm)].map(
+      (match) => match[1],
+    )
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "scripts/write-unit-test-durations.mjs",
+        "scripts/utils/unitTestDurations.mjs",
+        "scripts/utils/vitestBlob.mjs",
+        "vitest.shardSequencer.ts",
+      ]),
+    )
+  },
+)
 
 /** Evaluate the workflow's actual job guard, including Actions' implicit success check. */
 function shouldRun(
