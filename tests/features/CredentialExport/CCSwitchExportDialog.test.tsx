@@ -91,9 +91,9 @@ describe("CCSwitchExportDialog", () => {
   })
 
   it("clears the previous catalog status before endpoint debounce completes", async () => {
-    mockDiscoverOpenAICompatibleModels.mockResolvedValue(
-      createModelDiscovery([{ id: "known" }]),
-    )
+    mockDiscoverOpenAICompatibleModels
+      .mockResolvedValueOnce(createModelDiscovery([{ id: "known" }]))
+      .mockResolvedValueOnce(createModelDiscovery([{ id: "updated" }]))
     render(
       <CCSwitchExportDialog
         isOpen
@@ -122,6 +122,11 @@ describe("CCSwitchExportDialog", () => {
     expect(
       await screen.findByLabelText("ui:searchableSelect.fetchSuccess"),
     ).toBeVisible()
+    await userEvent.click(
+      screen.getByLabelText("ui:dialog.ccswitch.fields.model"),
+    )
+    expect(await screen.findByRole("option", { name: "updated" })).toBeVisible()
+    expect(screen.queryByRole("option", { name: "known" })).toBeNull()
   })
 
   it("indicates model discovery on the control without replacing its label", async () => {
