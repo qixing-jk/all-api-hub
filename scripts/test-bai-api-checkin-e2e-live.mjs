@@ -219,8 +219,8 @@ async function main() {
           } else if (!initial.checked_today) {
             assert.equal(result.status, "success", "fresh grant must succeed")
             if (result.reward !== undefined) {
-              // The dashboard quotes cash in USD; a reported reward must agree
-              // with the endpoint's own amount, converted by the family helper.
+              // A reported reward must be a numeric, positive quota. The provider
+              // unit test covers conversion from the endpoint's reward amount.
               assert.equal(typeof result.reward.quota, "number")
               assert.ok(result.reward.quota > 0)
             }
