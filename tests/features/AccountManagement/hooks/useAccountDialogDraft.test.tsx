@@ -22,6 +22,21 @@ it("clears NanoGPT paired credentials when switching to a different provider", (
   expect(result.current.draft.accessToken).toBe("")
 })
 
+it("clears another provider's access token when switching into NanoGPT", () => {
+  const { result } = renderHook(() =>
+    useAccountDialogDraft({ mode: DIALOG_MODES.ADD, url: "" }),
+  )
+  act(() => result.current.changeSiteTypeDraft(SITE_TYPES.NEW_API))
+  act(() =>
+    result.current.updateDraft((prev) => ({
+      ...prev,
+      accessToken: "other-provider-secret",
+    })),
+  )
+  act(() => result.current.changeSiteTypeDraft(SITE_TYPES.NANOGPT))
+  expect(result.current.draft.accessToken).toBe("")
+})
+
 it("replaces automatic platform defaults when switching site types", () => {
   const { result } = renderHook(() =>
     useAccountDialogDraft({ mode: DIALOG_MODES.ADD, url: "" }),

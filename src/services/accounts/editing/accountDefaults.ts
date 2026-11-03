@@ -6,6 +6,7 @@ import {
   resolveAccountLogin,
 } from "~/services/accountLogin/configCodec"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
+import { parseManualQuotaFromUsd } from "~/services/accounts/editing/accountFormValidation"
 import { coerceAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import {
@@ -598,6 +599,18 @@ export function applySiteAccountUpdates(params: {
       ? {}
       : { user_updated_at: params.now }),
   } as DeepPartial<SiteAccount>)
+
+  // Removing an override cannot reveal the provider balance it replaced. Apply
+  // this inside the storage update so deferred and failed-refresh saves agree.
+  if (
+    Object.prototype.hasOwnProperty.call(params.updates, "manualBalanceUsd") &&
+    parseManualQuotaFromUsd(normalized.manualBalanceUsd) !== undefined &&
+    parseManualQuotaFromUsd(merged.manualBalanceUsd) === undefined &&
+    params.updates.account_info?.quota === undefined
+  ) {
+    merged.account_info.quota = 0
+    merged.account_info.balanceUnavailable = true
+  }
 
   if (
     params.updates.account_info &&

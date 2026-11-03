@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { main, parseArgs } from "~~/scripts/test-nanogpt-e2e-live.mjs"
@@ -98,4 +99,20 @@ it("redacts normalized CDP credential components in connection failures", async 
   )
   expect(error.message).not.toContain("p%40ss")
   expect(error.message).not.toContain("user:")
+})
+
+it("redacts the derived CDP query from errors, console output and reports", async () => {
+  const endpoint = "http://localhost:9332?token=cdp-query-secret"
+  mocks.connect.mockRejectedValue(
+    new Error(
+      "Unexpected status 401 retrieving websocket url from http://localhost:9332/json/version/?token=cdp-query-secret",
+    ),
+  )
+  const error = await main(["--suite=catalog", `--cdp=${endpoint}`]).catch(
+    (error) => error,
+  )
+  const output = String(vi.mocked(console.log).mock.calls[0]![0])
+  const report = await readFile(JSON.parse(output).reportFile, "utf8")
+  for (const text of [error.message, output, report])
+    expect(text).not.toContain("cdp-query-secret")
 })

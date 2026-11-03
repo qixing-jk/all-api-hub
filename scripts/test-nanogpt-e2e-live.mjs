@@ -72,7 +72,12 @@ export async function main(args = process.argv.slice(2)) {
     const secrets = [options.cdpUrl, options.apiKey]
     try {
       const endpoint = new URL(options.cdpUrl)
-      secrets.push(endpoint.href, endpoint.username, endpoint.password)
+      secrets.push(
+        endpoint.href,
+        endpoint.search,
+        endpoint.username,
+        endpoint.password,
+      )
       for (const component of [endpoint.username, endpoint.password]) {
         try {
           secrets.push(decodeURIComponent(component))

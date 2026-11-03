@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
-import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
 import {
@@ -698,6 +698,43 @@ describe("accountDefaults", () => {
   })
 
   describe("applySiteAccountUpdates", () => {
+    it.each(["0", "2"])(
+      "invalidates a removed manual balance %s when no refreshed quota is supplied",
+      (manualBalanceUsd) => {
+        const account = createSiteAccount()
+        account.manualBalanceUsd = manualBalanceUsd
+        account.account_info.quota = Number(manualBalanceUsd) * QUOTA_PER_USD
+        const updated = applySiteAccountUpdates({
+          account,
+          updates: { manualBalanceUsd: "" },
+          now: 1000,
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        })
+        expect(updated.account_info.quota).toBe(0)
+        expect(updated.account_info.balanceUnavailable).toBe(true)
+      },
+    )
+    it.each([false, true])(
+      "preserves authoritative quota when no manual balance is removed or refreshed quota is provided (%s)",
+      (hasRefreshedQuota) => {
+        const account = createSiteAccount()
+        if (hasRefreshedQuota) account.manualBalanceUsd = "2"
+        account.account_info.quota = 1500000
+        const updated = applySiteAccountUpdates({
+          account,
+          updates: {
+            manualBalanceUsd: "",
+            ...(hasRefreshedQuota
+              ? { account_info: { quota: 1500000, balanceUnavailable: false } }
+              : {}),
+          },
+          now: 1000,
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        })
+        expect(updated.account_info.quota).toBe(1500000)
+        expect(updated.account_info.balanceUnavailable).not.toBe(true)
+      },
+    )
     it.each([true, false])(
       "clears native credits only when an update explicitly removes them (%s)",
       (explicitRemoval) => {

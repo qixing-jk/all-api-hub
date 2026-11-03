@@ -191,7 +191,8 @@ export function useAccountDialogDraft({
             ...prev,
             siteType: nextSiteType,
             checkIn,
-            ...(previousPolicy.clearAccessTokenOnSiteChange &&
+            ...((previousPolicy.clearAccessTokenOnSiteChange ||
+              nextPolicy.clearAccessTokenOnSiteChange) &&
             prev.siteType !== nextSiteType
               ? { accessToken: "" }
               : {}),

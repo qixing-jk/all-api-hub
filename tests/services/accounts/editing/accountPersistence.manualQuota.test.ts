@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
+import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
 import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreation"
 import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
 import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
@@ -69,6 +70,20 @@ describe("accountPersistence manual quota", () => {
           current?.account_info.balanceUnavailable,
         ),
       ).toBe(true)
+      const removed = await validateAndUpdateAccount({
+        ...input,
+        accountId: created.accountId!,
+        manualBalanceUsd: "",
+        options: { deferDataRefresh },
+      })
+      expect(removed.success).toBe(true)
+      const withoutManualBalance = (await accountStorage.getAccountById(
+        created.accountId!,
+      ))!
+      expect(withoutManualBalance.manualBalanceUsd).toBe("")
+      expect(withoutManualBalance.account_info.quota).toBe(0)
+      expect(withoutManualBalance.account_info.balanceUnavailable).toBe(true)
+      expect(calculateAccountStats([withoutManualBalance]).total_quota).toBe(0)
     },
   )
 
