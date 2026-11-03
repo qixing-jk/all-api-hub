@@ -5580,10 +5580,43 @@ describe("accountStorage core behaviors", () => {
       const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
       const history = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
       const snapshot = history?.snapshotsByAccountId?.[account.id]?.[dayKey]
-      if (unavailable) expect(snapshot).toBeUndefined()
+      if (updated?.account_info.balanceUnavailable === true)
+        expect(snapshot).toBeUndefined()
       else expect(snapshot?.quota).toBe(updated?.account_info.quota)
     },
   )
+
+  it("captures the canonical monetary balance when a legacy native projection is removed", async () => {
+    const account = createAccount({ site_type: SITE_TYPES.REQUESTY })
+    seedStorage([account])
+    storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      balanceHistory: { ...DEFAULT_PREFERENCES.balanceHistory, enabled: true },
+    })
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 123,
+        nativeBalance: {
+          unit: "USD",
+          total: 2,
+          permanent: 2,
+          daily: 0,
+          components: [],
+        },
+      },
+      healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+    })
+    await accountStorage.refreshAccount(account.id, true)
+    const saved = await accountStorage.getAccountById(account.id)
+    expect(saved?.account_info.quota).toBe(123)
+    expect(saved?.account_info.nativeBalance).toBeUndefined()
+    const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+    const history = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
+    expect(history?.snapshotsByAccountId?.[account.id]?.[dayKey]?.quota).toBe(
+      123,
+    )
+  })
 
   it.each(["storage failure", "changed identity"])(
     "does not capture a balance snapshot for an uncommitted refresh (%s)",

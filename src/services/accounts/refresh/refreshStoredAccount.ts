@@ -201,8 +201,8 @@ async function runRefreshAttempt(
         config: prefs.balanceHistory,
         accountId: account.id,
         quota: persistedAccount.account_info.quota,
-        nativeBalance: result.data.nativeBalance,
-        balanceUnavailable: result.data.balanceUnavailable,
+        nativeBalance: persistedAccount.account_info.nativeBalance,
+        balanceUnavailable: persistedAccount.account_info.balanceUnavailable,
         today_income: result.data.today_income,
         today_quota_consumption: result.data.today_quota_consumption,
         todayStatsAvailability: normalizeAccountTodayStatsAvailability(
