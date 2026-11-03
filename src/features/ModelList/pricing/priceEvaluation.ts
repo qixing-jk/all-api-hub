@@ -498,6 +498,7 @@ function resolveBestCalculatedItem(
 
 /** Prices already-filtered rows without changing their visibility. */
 export function calculateModelListPrices(params: {
+  expandGroups?: boolean
   rawItems: ModelListItem[]
   getGroupCandidates: (item: ModelListItem) => string[] | undefined
   showRealPrice: boolean
@@ -514,16 +515,36 @@ export function calculateModelListPrices(params: {
     isPriceComparisonActive,
   } = params
 
-  return rawItems.map((item) =>
-    resolveBestCalculatedItem(
-      item,
-      getGroupCandidates(item),
-      showRealPrice,
-      priceComparisonWeights,
-      pricingScenario,
-      isPriceComparisonActive,
-    ),
-  )
+  return rawItems.flatMap((item) => {
+    const candidates = getGroupCandidates(item)
+    const calculate = (groups: string[] | undefined) =>
+      resolveBestCalculatedItem(
+        item,
+        groups,
+        showRealPrice,
+        priceComparisonWeights,
+        pricingScenario,
+        isPriceComparisonActive,
+      )
+    if (
+      params.expandGroups &&
+      item.source.capabilities.supportsGroupFiltering &&
+      item.groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
+    ) {
+      const context = resolveActiveModelGroupContext({
+        context: item.groupContext,
+        candidateGroups: candidates,
+      })
+      if (context.activeUsableGroups.length > 0) {
+        return context.activeUsableGroups.map((group) => ({
+          ...calculate([group]),
+          comparisonGroup: group,
+          hasUniquelyOptimalGroup: false,
+        }))
+      }
+    }
+    return [calculate(candidates)]
+  })
 }
 
 /** Orders evaluated rows and marks comparable minima within matching model and billing units. */

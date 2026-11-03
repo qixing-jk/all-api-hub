@@ -35,6 +35,7 @@
     "verifyApi": "驗證介面",
     "verifyCliSupport": "驗證 CLI 相容性"
   },
+  "allAccountGroups": "全部群組",
   "allAccounts": "所有帳號",
   "allBillingModes": "所有計費方式",
   "allGroups": "所有分組",
@@ -315,8 +316,11 @@
   "displayOptions": "顯示內容",
   "endpointType": "端點型別",
   "endpointTypes": "端點型別",
+  "endpointTypesHint": "顯示模型支援的 API 端點類型。",
   "estimatedPrice": "估算價",
   "estimatedPriceTitle": "根據參考費率或計價假設推算；實際費用可能不同。",
+  "expandAccountGroups": "平鋪帳號群組",
+  "expandAccountGroupsHint": "同一模型的可用分組分別列出，同一帳號可以顯示多筆報價。 候選分組由帳號分組篩選決定，卡片內改選只調整目前模型的報價。",
   "expandDetails": "展開詳細資訊",
   "fallbackSourceNotice": {
     "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
@@ -413,6 +417,7 @@
     },
     "selectionHint": "選擇多個能力時，模型需要同時符合所有條件。"
   },
+  "modelGroupQuickSelect": "模型群組",
   "noMatchingModels": "沒有找到匹配的模型",
   "noSourcesDescription": "請先新增站點帳號或 API 憑據，然後查看模型列表。",
   "noSourcesTitle": "暫無可用資料來源",
@@ -533,6 +538,7 @@
     "source": "計費規則"
   },
   "realAmount": "真實充值金額",
+  "realAmountHint": "依各帳號設定的轉換比率換算價格。",
   "refreshData": "重新整理資料",
   "runtimeKeyFallbackSourceNotice": {
     "description": "目前模型目錄是透過此帳號既有的金鑰載入，僅支援模型發現與驗證。此帳號不支援在此建立新的 API 金鑰；點擊重新整理資料會重新嘗試帳號介面。",
@@ -605,7 +611,8 @@
       "cacheRead": "快取讀取",
       "cacheWrite": "快取寫入",
       "input": "輸入",
-      "output": "輸出"
+      "output": "輸出",
+      "request": "按次計費"
     },
     "minute": "分鐘",
     "missingConversion": "缺少人民幣換算依據，可關閉「真實價格」查看美元標價。",
@@ -645,6 +652,7 @@
     "rateChange": "{{meter}}：{{from}} → {{to}} / 百萬 Token",
     "referenceImages": "每次參考圖片數",
     "referenceRate": "參考單價",
+    "requestUnit": "次",
     "responseFormat": "計費回應格式",
     "search": "搜尋次數",
     "searchContext": "搜尋上下文",
@@ -696,6 +704,7 @@
   "selectSource": "選擇資料來源",
   "selectSourceToContinue": "請先在上方選擇一個資料來源，然後查看模型列表。",
   "showing_other": "顯示 {{count}} 個模型",
+  "showingGroupQuotes_other": "顯示 {{count}} 筆分組報價",
   "showUnavailableModels": "同時顯示無權使用的模型",
   "siteDescription": "站點說明：",
   "siteSupportedGroups": "站點支援的分組",

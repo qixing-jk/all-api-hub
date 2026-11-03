@@ -18,6 +18,7 @@ import {
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   MODEL_LIST_GROUP_SEMANTICS,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
   supportsModelCurrencyPricing,
 } from "~/features/ModelList/catalog/modelManagementSources"
 import type { ControlPanelProps } from "~/features/ModelList/filtering/ControlPanel.types"
@@ -81,6 +82,8 @@ import {
  * @returns Card with filters, toggles, and actions.
  */
 export function ControlPanel({
+  expandGroups = false,
+  setExpandGroups,
   showUnavailableModels = false,
   setShowUnavailableModels,
   pricingScenarioSettings,
@@ -219,7 +222,12 @@ export function ControlPanel({
                 </span>
                 <span className="dark:bg-secondary bg-surface-strong h-3 w-px" />
                 <span className="text-theme-600 dark:text-theme-400 font-medium">
-                  {t("showing", { count: filteredModels.length })}
+                  {t(
+                    expandGroups && isAllAccountsSource
+                      ? "showingGroupQuotes"
+                      : "showing",
+                    { count: filteredModels.length },
+                  )}
                 </span>
               </div>
             </div>
@@ -359,6 +367,24 @@ export function ControlPanel({
             <fieldset className="max-w-full shrink-0">
               <legend className="sr-only">{t("displayOptions")}</legend>
               <div className="gap-y-density-2 flex flex-wrap items-center gap-x-4 text-sm">
+                {selectedSource?.kind ===
+                  MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
+                  sourceCapabilities.supportsGroupFiltering &&
+                  setExpandGroups && (
+                    <Tooltip content={t("expandAccountGroupsHint")}>
+                      <label className="flex cursor-pointer items-center space-x-2">
+                        <Switch
+                          checked={expandGroups}
+                          onChange={setExpandGroups}
+                          size="sm"
+                          aria-label={t("expandAccountGroups")}
+                        />
+                        <Label className="cursor-pointer">
+                          {t("expandAccountGroups")}
+                        </Label>
+                      </label>
+                    </Tooltip>
+                  )}
                 {setShowUnavailableModels &&
                   selectedSource?.groupSemantics ===
                     MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY && (
@@ -377,24 +403,32 @@ export function ControlPanel({
                     </Tooltip>
                   )}
                 {supportsModelCurrencyPricing(sourceCapabilities) && (
-                  <label className="flex cursor-pointer items-center space-x-2">
-                    <Switch
-                      checked={showRealPrice}
-                      onChange={setShowRealPrice}
-                      size="sm"
-                    />
-                    <Label className="cursor-pointer">{t("realAmount")}</Label>
-                  </label>
+                  <Tooltip content={t("realAmountHint")}>
+                    <label className="flex cursor-pointer items-center space-x-2">
+                      <Switch
+                        checked={showRealPrice}
+                        onChange={setShowRealPrice}
+                        size="sm"
+                      />
+                      <Label className="cursor-pointer">
+                        {t("realAmount")}
+                      </Label>
+                    </label>
+                  </Tooltip>
                 )}
 
-                <label className="flex cursor-pointer items-center space-x-2">
-                  <Switch
-                    checked={showEndpointTypes}
-                    onChange={setShowEndpointTypes}
-                    size="sm"
-                  />
-                  <Label className="cursor-pointer">{t("endpointTypes")}</Label>
-                </label>
+                <Tooltip content={t("endpointTypesHint")}>
+                  <label className="flex cursor-pointer items-center space-x-2">
+                    <Switch
+                      checked={showEndpointTypes}
+                      onChange={setShowEndpointTypes}
+                      size="sm"
+                    />
+                    <Label className="cursor-pointer">
+                      {t("endpointTypes")}
+                    </Label>
+                  </label>
+                </Tooltip>
               </div>
             </fieldset>
 

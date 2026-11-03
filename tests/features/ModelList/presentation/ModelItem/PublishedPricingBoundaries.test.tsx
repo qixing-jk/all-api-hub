@@ -3,20 +3,71 @@ import { afterEach, expect, it, vi } from "vitest"
 
 import { ModelPricingSchedule } from "~/features/ModelList/presentation/ModelItem/ModelPricingSchedule"
 import { ModelPublishedPricing } from "~/features/ModelList/presentation/ModelItem/ModelPublishedPricing"
+import zhModelList from "~/locales/zh-CN/modelList.json"
 
 const locale = vi.hoisted(() => ({ language: "en" }))
 vi.mock("react-i18next", async (original) => ({
   ...(await original<typeof import("react-i18next")>()),
   useTranslation: () => ({
     i18n: locale,
-    t: (key: string, values?: object) =>
-      values ? `${key} ${JSON.stringify(values)}` : key,
+    t: (key: string, values?: object) => {
+      if (locale.language === "zh-CN") {
+        const translated = key
+          .split(".")
+          .reduce<unknown>(
+            (value, part) =>
+              value && typeof value === "object"
+                ? (value as Record<string, unknown>)[part]
+                : undefined,
+            zhModelList,
+          )
+        if (typeof translated === "string") return translated
+      }
+      return values ? `${key} ${JSON.stringify(values)}` : key
+    },
   }),
 }))
 afterEach(() => {
   cleanup()
   locale.language = "en"
 })
+
+it.each([false, true])(
+  "uses a distinct Chinese call unit without repeating the caption (details=%s)",
+  (details) => {
+    locale.language = "zh-CN"
+    const { container } = render(
+      <ModelPublishedPricing
+        details={details}
+        pricing={{
+          source: { kind: "catalog" },
+          schedule: [
+            {
+              id: "base",
+              conditions: [],
+              rates: {
+                request: {
+                  amount: 2,
+                  currency: "USD",
+                  unit: "request",
+                  per: 1,
+                },
+              },
+            },
+          ],
+        }}
+      />,
+    )
+    expect(container).toHaveTextContent("按次计费")
+    if (details) {
+      expect(container).toHaveTextContent("按次计费 · 次")
+      expect(container).toHaveTextContent("$2.0000")
+    } else {
+      expect(container).toHaveTextContent(/\$2(?:\.00)?\s*\/\s*次/)
+    }
+    expect(container).not.toHaveTextContent("每次调用:")
+  },
+)
 
 it.each([
   ["USD", true, 7, "¥7"],

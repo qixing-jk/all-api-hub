@@ -35,6 +35,7 @@
     "verifyApi": "Xác minh API",
     "verifyCliSupport": "Xác minh khả năng tương thích CLI"
   },
+  "allAccountGroups": "Tất cả nhóm",
   "allAccounts": "Tất cả tài khoản",
   "allBillingModes": "Tất cả phương thức tính phí",
   "allGroups": "Tất cả các nhóm",
@@ -315,8 +316,11 @@
   "displayOptions": "Hiển thị",
   "endpointType": "Loại endpoint",
   "endpointTypes": "Loại endpoint",
+  "endpointTypesHint": "Hiển thị các loại điểm cuối API mà mỗi mô hình hỗ trợ.",
   "estimatedPrice": "Ước tính",
   "estimatedPriceTitle": "Tính từ mức giá tham khảo hoặc giả định về giá; phí thực tế có thể khác.",
+  "expandAccountGroups": "Mở rộng nhóm tài khoản",
+  "expandAccountGroupsHint": "Liệt kê riêng từng nhóm khả dụng. Một tài khoản có thể có nhiều báo giá cho cùng mô hình. Bộ lọc nhóm tài khoản xác định các nhóm khả dụng. Lựa chọn nhóm trên thẻ chỉ áp dụng cho báo giá của mô hình đó.",
   "expandDetails": "Mở rộng chi tiết",
   "fallbackSourceNotice": {
     "description": "Thư mục mô hình hiện tại được tải dự phòng thông qua khóa tài khoản, chỉ hỗ trợ phát hiện và xác minh mô hình. Nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
@@ -413,6 +417,7 @@
     },
     "selectionHint": "Khi chọn nhiều năng lực, mô hình phải khớp với tất cả năng lực đã chọn."
   },
+  "modelGroupQuickSelect": "Nhóm mô hình",
   "noMatchingModels": "Không tìm thấy mô hình nào phù hợp",
   "noSourcesDescription": "Vui lòng thêm tài khoản trang web hoặc thông tin xác thực API trước, sau đó xem danh sách mô hình.",
   "noSourcesTitle": "Hiện chưa có nguồn dữ liệu khả dụng",
@@ -533,6 +538,7 @@
     "source": "Quy tắc tính phí"
   },
   "realAmount": "Số tiền nạp thực tế",
+  "realAmountHint": "Quy đổi giá theo tỷ lệ quy đổi đã cấu hình cho từng tài khoản.",
   "refreshData": "Làm mới dữ liệu",
   "runtimeKeyFallbackSourceNotice": {
     "description": "Danh mục mô hình hiện tại được tải bằng khóa hiện có của tài khoản này, chỉ hỗ trợ phát hiện và xác minh mô hình. Tài khoản này không thể tạo khóa API mới tại đây; nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
@@ -605,7 +611,8 @@
       "cacheRead": "Đọc bộ nhớ đệm",
       "cacheWrite": "Ghi bộ nhớ đệm",
       "input": "Đầu vào",
-      "output": "Đầu ra"
+      "output": "Đầu ra",
+      "request": "Giá mỗi lượt gọi"
     },
     "minute": "Phút",
     "missingConversion": "Chưa có cơ sở quy đổi sang CNY. Tắt hiển thị giá thực để xem giá niêm yết USD.",
@@ -645,6 +652,7 @@
     "rateChange": "{{meter}}: {{from}} → {{to}} / triệu token",
     "referenceImages": "Số ảnh tham chiếu mỗi tác vụ",
     "referenceRate": "Giá tham khảo",
+    "requestUnit": "lượt gọi",
     "responseFormat": "Định dạng phản hồi tính phí",
     "search": "Lượt tìm kiếm",
     "searchContext": "Ngữ cảnh tìm kiếm",
@@ -696,6 +704,7 @@
   "selectSource": "Chọn nguồn dữ liệu",
   "selectSourceToContinue": "Vui lòng chọn một nguồn dữ liệu ở trên trước, sau đó xem danh sách mô hình.",
   "showing_other": "Đang hiển thị {{count}} mô hình",
+  "showingGroupQuotes_other": "Đang hiển thị {{count}} báo giá theo nhóm",
   "showUnavailableModels": "Hiển thị cả mô hình tài khoản không có quyền sử dụng",
   "siteDescription": "Mô tả từ trang web:",
   "siteSupportedGroups": "Nhóm được trang hỗ trợ",

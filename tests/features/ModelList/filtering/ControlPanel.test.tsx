@@ -273,6 +273,37 @@ function renderControlPanel(
 }
 
 describe("ControlPanel", () => {
+  it("keeps the four options together as compact independent switches", async () => {
+    const user = userEvent.setup()
+    const props = renderControlPanel({
+      selectedSource: {
+        ...ACCOUNT_SOURCE,
+        kind: MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+        groupSemantics: "account-or-runtime-key",
+      },
+      expandGroups: false,
+      setExpandGroups: vi.fn(),
+      showUnavailableModels: false,
+      setShowUnavailableModels: vi.fn(),
+    })
+    const options = within(
+      screen.getByRole("group", { name: "displayOptions" }),
+    )
+    expect(options.getAllByRole("checkbox")).toHaveLength(4)
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+    for (const name of [
+      "expandAccountGroups",
+      "showUnavailableModels",
+      "realAmount",
+      "endpointTypes",
+    ]) {
+      await user.click(options.getByRole("checkbox", { name }))
+    }
+    expect(props.setExpandGroups).toHaveBeenCalledWith(true)
+    expect(props.setShowUnavailableModels).toHaveBeenCalledWith(true)
+    expect(props.setShowRealPrice).toHaveBeenCalledWith(true)
+    expect(props.setShowEndpointTypes).toHaveBeenCalledWith(true)
+  })
   it("keeps quota controls separate from currency conversion and one-click monetary comparison", () => {
     renderControlPanel({
       sourceCapabilities: { ...CAPABILITIES, supportsCurrencyPricing: false },
