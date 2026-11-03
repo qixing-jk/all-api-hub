@@ -67,6 +67,43 @@ it("instruments a run copy without contaminating the release build", () => {
   )
 })
 
+it("grants synthetic fixture permissions only in the disposable CI copy", () => {
+  const root = temporaryRoot()
+  const source = path.join(root, "release")
+  fs.mkdirSync(source)
+  const manifest = {
+    name: "All API Hub",
+    permissions: ["nativeMessaging"],
+    optional_permissions: ["cookies", "bookmarks"],
+    background: { scripts: ["background.js"] },
+  }
+  fs.writeFileSync(path.join(source, "manifest.json"), JSON.stringify(manifest))
+  fs.writeFileSync(path.join(source, "options.html"), "<body></body>")
+  const probe = path.join(root, "probe.js")
+  fs.writeFileSync(probe, "probe")
+  const output = path.join(root, "trial")
+  prepareInstrumentedExtension({
+    source,
+    output,
+    probe,
+    appName: "CI trial",
+    fixturePermissions: true,
+  })
+  const copied = JSON.parse(
+    fs.readFileSync(path.join(output, "manifest.json"), "utf8"),
+  )
+  expect(copied.permissions).toEqual([
+    "nativeMessaging",
+    "cookies",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+  ])
+  expect(copied.optional_permissions).toEqual(["bookmarks"])
+  expect(
+    JSON.parse(fs.readFileSync(path.join(source, "manifest.json"), "utf8")),
+  ).toEqual(manifest)
+})
+
 describe("owned fixture lifecycle", () => {
   it("leaves existing CLI evidence untouched when its port cannot be acquired", async () => {
     const occupied = http.createServer()

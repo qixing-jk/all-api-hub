@@ -106,7 +106,9 @@ export async function runSafariSmoke({
         "platform=macOS",
         "-derivedDataPath",
         derived,
-        "CODE_SIGNING_ALLOWED=NO",
+        "CODE_SIGN_IDENTITY=-",
+        "CODE_SIGN_STYLE=Manual",
+        "DEVELOPMENT_TEAM=",
         "build",
       ])
       fs.writeFileSync(path.join(output, "xcodebuild.log"), build)

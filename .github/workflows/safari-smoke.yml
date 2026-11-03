@@ -14,10 +14,11 @@ concurrency:
 
 jobs:
   safari:
-    runs-on: macos-15
+    runs-on: macos-latest
     timeout-minutes: 20
     env:
       NODE_OPTIONS: --max-old-space-size=6144
+      AAH_SAFARI_CI_SMOKE: "1"
     steps:
       - uses: actions/checkout@v5
         with:
@@ -30,5 +31,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: safari-smoke-${{ github.run_attempt }}
-          path: test-results/safari/
+          path: |
+            test-results/safari/*.json
+            test-results/safari/*.txt
+            test-results/safari/*.log
+            test-results/safari/*.png
+            .scratch/safari-native-cookie/runs/**/project/**/*.pbxproj
+            .scratch/safari-native-cookie/runs/**/project/**/*.entitlements
+          include-hidden-files: true
           retention-days: 7
