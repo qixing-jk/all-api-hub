@@ -90,6 +90,7 @@ export const clawhudProvider: AutoCheckinProvider = {
     try {
       const result = await performClawhudDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,

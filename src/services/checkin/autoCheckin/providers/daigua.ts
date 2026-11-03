@@ -145,6 +145,7 @@ export const daiguaProvider: AutoCheckinProvider = {
     try {
       const data = await performDaiguaDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       return success(data)
     } catch (error) {

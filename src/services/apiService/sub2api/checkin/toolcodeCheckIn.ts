@@ -5,6 +5,10 @@ import {
   resolveToolcodeCheckInTimezone,
   TOOLCODE_CHECK_IN_STATUS_ENDPOINT as STATUS_ENDPOINT,
 } from "~/services/apiService/sub2api/checkin/toolcodeCheckInProtocol"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -105,8 +109,11 @@ export async function fetchToolcodeDailyCheckInStatus(
 }
 
 /** Submit once; the outer execution flow reconciles lost responses by GET. */
-export async function performToolcodeDailyCheckIn(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function performToolcodeDailyCheckIn(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -142,6 +149,7 @@ export async function performToolcodeDailyCheckIn(request: ApiServiceRequest) {
         },
       }
     },
-    { recoverUnauthorized: false },
+    fetchToolcodeDailyCheckInStatus,
+    options,
   )
 }

@@ -10,6 +10,10 @@ import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
 } from "~/services/apiService/sub2api/auth/authSession"
+import {
+  SUB2API_CHECK_IN_RECOVERY_REASONS,
+  Sub2ApiCheckInRecoveryBlockedError,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { convertUsdBalanceToQuota } from "~/services/apiService/sub2api/parsing"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -114,6 +118,24 @@ export const mapSub2ApiCheckInMutationError = (
   error: unknown,
   context: AutoCheckinProviderContext,
 ): AutoCheckinProviderOutcome => {
+  if (error instanceof Sub2ApiCheckInRecoveryBlockedError) {
+    switch (error.reason) {
+      case SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked:
+        return {
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+        }
+      case SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled:
+        return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED)
+      case SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable:
+        return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
+      case SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed:
+        return failedSub2ApiCheckIn(
+          AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
+        )
+    }
+  }
   const persistenceStatus = getSub2ApiAuthPersistenceStatus(error)
   if (
     persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH

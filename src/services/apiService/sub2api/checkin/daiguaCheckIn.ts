@@ -5,6 +5,10 @@ import {
   DAIGUA_CHECK_IN_STATUS_ENDPOINT,
   resolveDaiguaCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
@@ -106,8 +110,11 @@ export async function fetchDaiguaDailyCheckInStatus(
 }
 
 /** Native ordinary POST sends {}; failures are reconciled without replay. */
-export async function performDaiguaDailyCheckIn(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function performDaiguaDailyCheckIn(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     DAIGUA_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -117,7 +124,8 @@ export async function performDaiguaDailyCheckIn(request: ApiServiceRequest) {
       })
       return parseDaiguaDailyCheckInMutationResponse(response)
     },
-    { recoverUnauthorized: false },
+    fetchDaiguaDailyCheckInStatus,
+    options,
   )
 }
 

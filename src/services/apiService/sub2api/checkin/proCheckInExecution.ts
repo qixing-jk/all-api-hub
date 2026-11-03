@@ -8,9 +8,11 @@ import {
   type Sub2ApiProDailyCheckInOperationResult,
 } from "~/services/apiService/sub2api/checkin/checkIn"
 import {
-  fetchApiResponse,
-  notifyApiTransportObserver,
-} from "~/services/apiTransport/request"
+  executeSub2ApiCheckInWithRecovery,
+  SUB2API_CHECK_IN_RECOVERY_REASONS,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 const fetchSub2ApiProDailyCheckInStatusWithRequest = async (
@@ -53,10 +55,10 @@ class Sub2ApiProRecoveredMutationBlockedError extends Error {
  */
 export async function performSub2ApiProDailyCheckIn(
   request: ApiServiceRequest,
-  options: { beforeRecoveredMutation?: () => Promise<boolean> } = {},
+  options: Sub2ApiCheckInRecoveryOptions = {},
 ): Promise<Sub2ApiProDailyCheckInOperationResult> {
   try {
-    return await executeAuthenticatedSub2ApiRequest(
+    return await executeSub2ApiCheckInWithRecovery(
       request,
       SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
       async (authenticatedRequest) => {
@@ -66,40 +68,21 @@ export async function performSub2ApiProDailyCheckIn(
         })
         return parseSub2ApiProDailyCheckInMutationResponse(response)
       },
-      {
-        beforeUnauthorizedRetry: async (recoveredRequest) => {
-          const status = await fetchSub2ApiProDailyCheckInStatusWithRequest(
-            recoveredRequest,
-          ).catch(() => {
-            throw new Sub2ApiProRecoveredMutationBlockedError({
-              kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
-            })
-          })
-          if (status.enabled && !status.checkedInToday) {
-            if (
-              options.beforeRecoveredMutation &&
-              !(await options.beforeRecoveredMutation())
-            ) {
-              throw new Sub2ApiProRecoveredMutationBlockedError({
-                kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
-              })
-            }
-            // The status read shares the mutation observer; reset its lifecycle before retrying the POST.
-            notifyApiTransportObserver(
-              recoveredRequest.observer,
-              "onPreHandlerUnauthorized",
-            )
-            return
-          }
-          throw new Sub2ApiProRecoveredMutationBlockedError(
-            status.checkedInToday
-              ? {
-                  kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
-                }
-              : { kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled },
-          )
-        },
-      },
+      fetchSub2ApiProDailyCheckInStatusWithRequest,
+      options,
+      (reason) =>
+        new Sub2ApiProRecoveredMutationBlockedError({
+          kind: {
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled,
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
+            [SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed]:
+              SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
+          }[reason],
+        }),
     )
   } catch (error) {
     if (error instanceof Sub2ApiProRecoveredMutationBlockedError) {

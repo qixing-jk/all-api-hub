@@ -1,8 +1,13 @@
+import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
   createAiRouterCheckInStatusEndpoint,
 } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
@@ -269,13 +274,14 @@ const parseClaimResponse = (
  * optional `X-AI-Router-Client-Fingerprint` header whenever its fingerprint
  * lookup misses, and a claim without it still reaches the day gate.
  *
- * Unverified backend replay guarantees: a dispatched failure is left to the
- * caller's status reconciliation instead of replaying the write here.
+ * Only middleware-401 recovery may retry after fresh status and account intent
+ * allow it. Other dispatched failures stay with outer status reconciliation.
  */
 export async function performAiRouterDailyCheckIn(
   request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
 ): Promise<AiRouterDailyCheckInResult> {
-  return executeAuthenticatedSub2ApiRequest(
+  return executeSub2ApiCheckInWithRecovery(
     request,
     AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -286,6 +292,12 @@ export async function performAiRouterDailyCheckIn(
       })
       return parseClaimResponse(response)
     },
-    { recoverUnauthorized: false },
+    async (recoveredRequest) => {
+      const probe = await probeAiRouterDailyCheckInStatus(recoveredRequest)
+      if (probe.outcome !== CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched)
+        throw new Error("Check-in status unavailable")
+      return probe.status
+    },
+    options,
   )
 }
