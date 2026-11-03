@@ -29,8 +29,7 @@
       "description": "透過深連結一鍵匯入當前站點配置到 AI Toolbox",
       "descriptions": {
         "apiFormat": "AI Toolbox 會依目標應用重建供應商配置，因此僅當此供應商不使用應用預設協定時才需要指定。",
-        "model": "若可用，會自動從 /v1/models 獲取模型列表供選擇；也可以直接輸入自定義模型名稱。",
-        "modelDiscoveryFailed": "無法取得上游模型列表，可手動輸入模型名稱或重試。"
+        "model": "若可用，會自動從 /v1/models 獲取模型列表供選擇；也可以直接輸入自定義模型名稱。"
       },
       "fields": {
         "apiFormat": "介面協定",
@@ -630,6 +629,12 @@
   },
   "searchableSelect": {
     "empty": "未找到匹配項",
+    "fetchDetails": "錯誤詳情",
+    "fetchEmpty": "請求成功，但介面回傳的模型清單為空。",
+    "fetchEmptyLabel": "清單為空",
+    "fetchFailed": "取得清單失敗。",
+    "fetchSuccess_other": "已取得 {{count}} 個模型。",
+    "manualInputHint": "可直接輸入模型 ID。",
     "noOptions": "暫無可選項",
     "noOptionsAllowCustom": "暫無可選項，可輸入建立",
     "searchPlaceholder": "搜尋...",

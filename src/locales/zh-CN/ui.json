@@ -29,8 +29,7 @@
       "description": "通过深链接一键导入当前站点配置到 AI Toolbox",
       "descriptions": {
         "apiFormat": "AI Toolbox 会按目标应用重建供应商配置，因此仅当此供应商不使用应用默认协议时才需要指定。",
-        "model": "若可用，会自动从 /v1/models 获取模型列表供选择；也可以直接输入自定义模型名称。",
-        "modelDiscoveryFailed": "无法获取上游模型列表，可手动输入模型名称或重试。"
+        "model": "若可用，会自动从 /v1/models 获取模型列表供选择；也可以直接输入自定义模型名称。"
       },
       "fields": {
         "apiFormat": "接口协议",
@@ -624,6 +623,12 @@
   },
   "searchableSelect": {
     "empty": "未找到匹配项",
+    "fetchDetails": "错误详情",
+    "fetchEmpty": "请求成功，但接口返回的模型列表为空。",
+    "fetchEmptyLabel": "列表为空",
+    "fetchFailed": "获取列表失败。",
+    "fetchSuccess": "已获取 {{count}} 个模型。",
+    "manualInputHint": "可直接输入模型 ID。",
     "noOptions": "暂无可选项",
     "noOptionsAllowCustom": "暂无可选项，可输入创建",
     "searchPlaceholder": "搜索...",

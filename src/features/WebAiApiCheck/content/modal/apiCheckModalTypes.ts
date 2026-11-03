@@ -47,6 +47,7 @@ export interface ApiCheckModalViewModel {
   hasProfileMetadataInput: boolean
   isFetchingModels: boolean
   fetchModelsError: string | null
+  fetchedModelCount: number | null
   popoverPortalContainer: HTMLElement | null
   probes: ProbeItemState[]
   isRunningAll: boolean

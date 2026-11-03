@@ -182,17 +182,25 @@ vi.mock("~/components/ui", async (importOriginal) => {
       options,
       placeholder,
       value,
-    }: {
-      "aria-label"?: string
+      ...rest
+    }: import("~/components/ui/SearchableSelect").SearchableSelectProps & {
       "data-testid"?: string
-      disabled?: boolean
-      onChange: (value: string) => void
-      options: Array<{ value: string; label: string }>
-      placeholder?: string
-      value: string
     }) => {
       const [isOpen, setIsOpen] = useState(false)
       const selectedOption = options.find((option) => option.value === value)
+      if (testId === API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId)
+        return (
+          <original.SearchableSelect
+            {...rest}
+            aria-label={ariaLabel}
+            data-testid={testId}
+            disabled={disabled}
+            onChange={onChange}
+            options={options}
+            placeholder={placeholder}
+            value={value}
+          />
+        )
       if (ariaLabel === "aiApiVerification:verifyDialog.meta.apiType") {
         return (
           <select
@@ -1413,6 +1421,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
         />
       </I18nextProvider>,
     )
+    fireEvent.click(
+      await screen.findByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
+    )
     expect(
       await screen.findByText(
         i18n.t("apiCredentialProfiles:verify.modelsFetchFailed"),
@@ -1454,6 +1465,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
       />,
     )
 
+    fireEvent.click(
+      await screen.findByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
+    )
     await waitFor(() => {
       expect(
         screen.getByText("401 [REDACTED] [REDACTED] invalid"),

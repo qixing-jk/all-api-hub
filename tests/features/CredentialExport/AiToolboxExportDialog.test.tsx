@@ -512,6 +512,7 @@ describe("AiToolboxExportDialog", () => {
       "ui:dialog.aiToolbox.modelOptions.none",
     )
 
+    await userEvent.click(modelCombo)
     // The retry affordance re-runs discovery for the same endpoint.
     const attempts = mockFetchModelIds.mock.calls.length
     await userEvent.click(

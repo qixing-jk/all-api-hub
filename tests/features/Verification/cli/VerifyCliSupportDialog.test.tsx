@@ -1034,6 +1034,7 @@ describe("VerifyCliSupportDialog", () => {
         />
       </I18nextProvider>,
     )
+    fireEvent.click(await screen.findByTestId("verify-cli-model-id"))
     expect(
       await screen.findByText(
         i18n.t("cliSupportVerification:verifyDialog.modelsFetchFailed"),
@@ -2027,6 +2028,7 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
+    fireEvent.click(await screen.findByTestId("verify-cli-model-id"))
     expect(
       await screen.findByText("model catalog unavailable"),
     ).toBeInTheDocument()
@@ -2055,6 +2057,7 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
+    fireEvent.click(await screen.findByTestId("verify-cli-model-id"))
     expect(
       await screen.findByText(
         "cliSupportVerification:verifyDialog.modelsFetchFailed",

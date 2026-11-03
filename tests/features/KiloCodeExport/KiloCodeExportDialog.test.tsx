@@ -809,19 +809,23 @@ describe("KiloCodeExportDialog", () => {
       />,
     )
 
-    const errorText = await screen.findByText(
-      "ui:dialog.kiloCode.messages.loadModelsFailed",
-    )
-    expect(errorText).toBeInTheDocument()
-
-    const tokenSection = screen.getByRole("group", {
+    const tokenSection = await screen.findByRole("group", {
       name: "Site B - Default",
     })
-
+    await within(tokenSection).findByLabelText(
+      "ui:searchableSelect.fetchFailed",
+    )
     await user.click(
-      within(tokenSection).getByRole("button", {
-        name: "ui:dialog.kiloCode.actions.retryModels",
+      within(tokenSection).getByRole("combobox", {
+        name: /ui:dialog.kiloCode.labels.modelId/,
       }),
+    )
+    const pickerAlert = screen
+      .getAllByRole("alert")
+      .find((element) => element.closest("[data-slot=popover-content]"))
+    expect(pickerAlert).toHaveTextContent("ui:searchableSelect.fetchFailed")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
     )
 
     await waitFor(() => {

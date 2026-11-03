@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
 import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import { type KiloCodeAccountExportSelection } from "~/features/KiloCodeExport/kiloCodeAccountExport"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
@@ -465,19 +466,28 @@ export function KiloCodeAccountExportCard({
                                     isModelInventoryLoading ||
                                     isModelInventoryIdle
                                   }
+                                  fetchResult={
+                                    isModelInventoryError
+                                      ? { status: SELECT_FETCH_STATUSES.Error }
+                                      : isModelInventoryLoaded
+                                        ? {
+                                            status:
+                                              SELECT_FETCH_STATUSES.Success,
+                                            count:
+                                              modelInventory.modelIds.length,
+                                          }
+                                        : null
+                                  }
                                   options={modelOptions}
+                                  onRetryFetch={() =>
+                                    handleRetryModels(selectionId)
+                                  }
                                   allowCustomValue
                                 />
                               </FormField>
                             )}
                           </div>
                         </div>
-
-                        {isModelInventoryError && (
-                          <div className="text-destructive-text text-sm">
-                            {t("ui:dialog.kiloCode.messages.loadModelsFailed")}
-                          </div>
-                        )}
 
                         {showV7ManualRecovery && isKiloV7Export && (
                           <div className="dark:text-secondary-foreground text-muted-foreground text-sm">

@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
 import { AI_TOOLBOX_EXPORT_TEST_IDS } from "~/features/CredentialExport/AiToolboxExportDialog.testIds"
 import { UPSTREAM_MODEL_FETCH_DEBOUNCE_MS } from "~/features/CredentialExport/ClaudeCodeRouterImportDialog"
 import { useCredentialExportDisplayName } from "~/features/CredentialExport/useCredentialExportDisplayName"
@@ -529,6 +530,17 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
             onChange={setModel}
             placeholder={t("ui:dialog.aiToolbox.placeholders.model")}
             loading={isLoadingModels}
+            onRetryFetch={() => void loadModels(source.id)}
+            fetchResult={
+              isModelDiscoveryFailed
+                ? { status: SELECT_FETCH_STATUSES.Error }
+                : inventory.status === PROVIDER_MODEL_DISCOVERY_STATUSES.Loaded
+                  ? {
+                      status: SELECT_FETCH_STATUSES.Success,
+                      count: inventory.modelIds.length,
+                    }
+                  : null
+            }
             options={[
               {
                 value: "",
@@ -542,21 +554,8 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
             searchInputTestId={AI_TOOLBOX_EXPORT_TEST_IDS.modelSearchInput}
           />
           <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
-            {isModelDiscoveryFailed
-              ? t("ui:dialog.aiToolbox.descriptions.modelDiscoveryFailed")
-              : t("ui:dialog.aiToolbox.descriptions.model")}
+            {t("ui:dialog.aiToolbox.descriptions.model")}
           </p>
-          {isModelDiscoveryFailed ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="mt-density-2"
-              onClick={() => void loadModels(source.id)}
-            >
-              {t("common:actions.retry")}
-            </Button>
-          ) : null}
         </div>
 
         <div>

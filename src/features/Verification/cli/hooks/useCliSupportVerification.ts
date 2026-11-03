@@ -127,6 +127,9 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
   >([])
   const [selectedRuntimeKeyId, setSelectedRuntimeKeyId] = useState<string>("")
   const [profileModelOptions, setProfileModelOptions] = useState<string[]>([])
+  const [fetchedModelCount, setFetchedModelCount] = useState<number | null>(
+    null,
+  )
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
     string | null
@@ -304,6 +307,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     if (!profile) {
       setProfileModelOptions([])
       setFetchModelsDiagnostic(null)
+      setFetchedModelCount(null)
       setIsLoadingModels(false)
       return
     }
@@ -313,6 +317,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     const abortController = new AbortController()
     fetchModelsAbortControllerRef.current = abortController
     setFetchModelsDiagnostic(null)
+    setFetchedModelCount(null)
     setIsLoadingModels(true)
 
     try {
@@ -328,6 +333,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
 
       if (fetchModelsRequestIdRef.current !== requestId) return
       setProfileModelOptions(normalized)
+      setFetchedModelCount(normalized.length)
     } catch (error) {
       if (
         abortController.signal.aborted ||
@@ -345,7 +351,6 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
       logger.error("Failed to fetch profile models", { message })
 
       if (fetchModelsRequestIdRef.current !== requestId) return
-      setProfileModelOptions([])
       setFetchModelsDiagnostic(message)
     } finally {
       if (fetchModelsAbortControllerRef.current === abortController) {
@@ -700,6 +705,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     setTools(buildInitialToolState())
     setProfileModelOptions([])
     setFetchModelsDiagnostic(null)
+    setFetchedModelCount(null)
     if (isProfileSource) {
       setAccountRuntimeKeys([])
       setSelectedRuntimeKeyId("")
@@ -751,6 +757,8 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     setSelectedRuntimeKeyId,
     isLoadingModels,
     fetchModelsError,
+    fetchedModelCount,
+    loadProfileModels,
     tools,
     hasRunnableSource,
     modelOptions,
