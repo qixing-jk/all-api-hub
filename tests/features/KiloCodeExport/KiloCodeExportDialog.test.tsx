@@ -901,6 +901,27 @@ describe("KiloCodeExportDialog", () => {
           }),
         ).toHaveAttribute("aria-busy", "true")
       await act(async () => pending.resolve(["gpt-4o-mini"]))
+      if (selector === "default") {
+        const defaultSelector = screen.getByRole("combobox", {
+          name: "ui:dialog.kiloCode.labels.defaultModel",
+        })
+        await waitFor(() =>
+          expect(defaultSelector).not.toHaveAttribute("aria-busy", "true"),
+        )
+        expect(defaultSelector).toHaveTextContent("manual/model")
+        if (defaultSelector.getAttribute("aria-expanded") !== "true")
+          await user.click(defaultSelector)
+        await user.click(
+          await screen.findByRole("option", {
+            name: "gpt-4o-mini",
+            exact: true,
+          }),
+        )
+        expect(defaultSelector).toHaveTextContent("gpt-4o-mini")
+        expect(
+          screen.queryByRole("button", { name: "common:actions.retry" }),
+        ).not.toBeInTheDocument()
+      }
 
       await waitFor(() => {
         expect(
