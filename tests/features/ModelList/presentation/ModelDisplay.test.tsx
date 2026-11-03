@@ -544,9 +544,15 @@ describe("ModelDisplay", () => {
       onModelGroupChange: vi.fn(),
     }
     const view = render(<ModelDisplay {...props} models={models} />)
+    const targetKey = getRenderedModelItem("gpt-4o-mini")
+      .closest("[data-model-row-key]")
+      ?.getAttribute("data-model-row-key")
+    expect(targetKey).toBeTruthy()
     await userEvent
       .setup()
       .click(screen.getAllByText("change-group-account-1")[0]!)
+    expect(props.onModelGroupChange).toHaveBeenCalledTimes(1)
+    expect(props.onModelGroupChange).toHaveBeenCalledWith(targetKey, "vip")
     view.rerender(<ModelDisplay {...props} models={[survivor]} />)
     expect(scrollIntoViewSpy).not.toHaveBeenCalled()
     expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(

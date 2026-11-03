@@ -271,15 +271,24 @@ describe("ModelItem", () => {
     props.groupContext.supportedGroups = ["default", "vip"]
     props.groupContext.usableGroups = ["default", "vip"]
     props.activeGroupContext.activeUsableGroups = ["default", "vip"]
+    const onModelGroupChange = vi.fn()
     const { rerender } = render(
-      <ModelItem {...props} onModelGroupChange={vi.fn()} />,
+      <ModelItem {...props} onModelGroupChange={onModelGroupChange} />,
     )
     expect(
       screen.getByRole("combobox", { name: "modelGroupQuickSelect" }),
     ).toBeVisible()
     expect(screen.getByText("default+1")).toBeVisible()
-    rerender(<ModelItem {...props} comparisonGroup="vip" />)
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    rerender(
+      <ModelItem
+        {...props}
+        onModelGroupChange={onModelGroupChange}
+        comparisonGroup="vip"
+      />,
+    )
+    expect(
+      screen.getByRole("combobox", { name: "modelGroupQuickSelect" }),
+    ).toBeVisible()
     expect(screen.getByText("vip", { exact: true })).toHaveAttribute(
       "title",
       "currentUsableGroups: vip",
