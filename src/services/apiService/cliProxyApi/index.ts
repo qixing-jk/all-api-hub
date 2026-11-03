@@ -80,11 +80,12 @@ export async function requestCliProxyApi(
   const controller = new AbortController()
   const cancel = () => controller.abort(callerSignal?.reason)
   callerSignal?.addEventListener("abort", cancel, { once: true })
-  const timeout = setTimeout(() => controller.abort(), 30_000)
+  let timeout: ReturnType<typeof setTimeout> | undefined
   try {
     return await withSiteApiRequestTask(
       url.toString(),
       async () => {
+        timeout = setTimeout(() => controller.abort(), 30_000)
         const response = await fetch(url, {
           method,
           headers: {
@@ -114,7 +115,7 @@ export async function requestCliProxyApi(
         }
         return result
       },
-      controller.signal,
+      callerSignal,
       undefined,
       SITE_TYPES.CLI_PROXY_API,
     )

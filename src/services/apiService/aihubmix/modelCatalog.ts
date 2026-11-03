@@ -179,10 +179,10 @@ export async function fetchAIHubMixWebsiteModels(): Promise<
  * Never share an authenticated response as provider-wide data.
  */
 async function fetchAIHubMixPublicData(endpoint: string): Promise<unknown> {
-  const signal = AbortSignal.timeout(12_000)
   return await withSiteApiRequestTask(
     AIHUBMIX_API_ORIGIN,
     async () => {
+      const signal = AbortSignal.timeout(12_000)
       const response = await fetch(`${AIHUBMIX_API_ORIGIN}${endpoint}`, {
         credentials: "omit",
         redirect: "error",
@@ -198,7 +198,7 @@ async function fetchAIHubMixPublicData(endpoint: string): Promise<unknown> {
         )
       return extractAIHubMixData<unknown>(await response.json(), endpoint)
     },
-    signal,
+    undefined,
     undefined,
     SITE_TYPES.AIHUBMIX,
   )
