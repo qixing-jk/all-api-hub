@@ -192,7 +192,10 @@ describe("smoke tests after an ordinary skipped release ancestor", () => {
           "e2e-smoke",
           {
             github: github(eventName),
-            needs: { "e2e-build": { result: "success" } },
+            needs: {
+              "e2e-build-default": { result: "success" },
+              "e2e-build-variants": { result: "success" },
+            },
           },
           false,
         ),
@@ -209,7 +212,10 @@ describe("smoke tests after an ordinary skipped release ancestor", () => {
           "e2e-smoke",
           {
             github: github("pull_request"),
-            needs: { "e2e-build": { result } },
+            needs: {
+              "e2e-build-default": { result },
+              "e2e-build-variants": { result },
+            },
           },
           false,
         ),
@@ -228,7 +234,10 @@ describe("smoke tests after an ordinary skipped release ancestor", () => {
           "e2e-smoke",
           {
             github: github("pull_request"),
-            needs: { "e2e-build": { result: "success" } },
+            needs: {
+              "e2e-build-default": { result: "success" },
+              "e2e-build-variants": { result: "success" },
+            },
             ...overrides,
           },
           false,
@@ -242,7 +251,7 @@ describe.each(workflows)("CI scheduling: %s", (file) => {
   const ordinaryJob = {
     "test.yml": "unit-tests",
     "quality.yml": "quality",
-    "e2e-smoke.yml": "e2e-build",
+    "e2e-smoke.yml": "e2e-build-default",
   }[file] as string
 
   it.each(["push", "workflow_dispatch", "pull_request"])(
@@ -343,7 +352,7 @@ it("preserves the skip-e2e label", () => {
   expect(
     shouldRun(
       "e2e-smoke.yml",
-      "e2e-build",
+      "e2e-build-default",
       {
         github: github("pull_request"),
         needs: needs("skipped"),

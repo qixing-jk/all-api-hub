@@ -171,13 +171,33 @@ describe("scheduled E2E build reuse", () => {
     }
     expect(build).toContain("include-hidden-files: true")
     expect(build).toContain("if-no-files-found: error")
-    const smokeBuild = job(workflow("e2e-smoke"), "e2e-build")
-    expect(workflow("e2e-smoke").match(/- "\.nvmrc"/g)).toHaveLength(2)
-    expect(workflow("e2e-smoke").match(/- "\.env\*"/g)).toHaveLength(2)
+    const smoke = workflow("e2e-smoke")
+    const smokeBuild = job(smoke, "e2e-build-default")
+    const smokeVariants = job(smoke, "e2e-build-variants")
+    expect(smoke.match(/- "\.nvmrc"/g)).toHaveLength(2)
+    expect(smoke.match(/- "\.env\*"/g)).toHaveLength(2)
     expect(smokeBuild).toContain("uses: ./.github/workflows/e2e-build.yml")
-    expect(smokeBuild).toContain("build_variant: ${{ matrix.build_variant }}")
+    expect(smokeBuild).toContain("build_variant: default")
     expect(smokeBuild).toContain("optional:")
+    expect(smokeVariants).toContain(
+      "build_variant: ${{ matrix.build_variant }}",
+    )
+    expect(smokeVariants).toContain("optional:")
     expect(build).toContain("continue-on-error: ${{ inputs.optional }}")
+  })
+
+  it("starts the artifact every default shard needs before the variant builds", () => {
+    const smoke = workflow("e2e-smoke")
+    const defaultBuild = job(smoke, "e2e-build-default")
+    const variants = job(smoke, "e2e-build-variants")
+    // The default build gates every shard, so it must not wait behind the variants
+    // for a runner: measured runs put it last in 47 of 78 and cost 113s at p90.
+    expect(defaultBuild).not.toContain("matrix:")
+    expect(defaultBuild).not.toContain("needs: [release-changes, e2e-build")
+    expect(variants).toContain("needs: [release-changes, e2e-build-default]")
+    expect(job(smoke, "e2e-smoke")).toContain(
+      "needs: [e2e-build-default, e2e-build-variants]",
+    )
   })
 })
 
