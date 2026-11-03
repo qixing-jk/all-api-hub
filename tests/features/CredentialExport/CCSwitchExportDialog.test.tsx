@@ -91,7 +91,7 @@ describe("CCSwitchExportDialog", () => {
   })
 
   it("clears the previous catalog status before endpoint debounce completes", async () => {
-    mockDiscoverOpenAICompatibleModels.mockResolvedValueOnce(
+    mockDiscoverOpenAICompatibleModels.mockResolvedValue(
       createModelDiscovery([{ id: "known" }]),
     )
     render(
@@ -113,6 +113,15 @@ describe("CCSwitchExportDialog", () => {
       screen.queryByLabelText("ui:searchableSelect.fetchSuccess"),
     ).not.toBeInTheDocument()
     expect(mockDiscoverOpenAICompatibleModels).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
+      expect(mockDiscoverOpenAICompatibleModels).toHaveBeenCalledTimes(2),
+    )
+    expect(mockDiscoverOpenAICompatibleModels).toHaveBeenLastCalledWith(
+      expect.objectContaining({ baseUrl: "https://new.test" }),
+    )
+    expect(
+      await screen.findByLabelText("ui:searchableSelect.fetchSuccess"),
+    ).toBeVisible()
   })
 
   it("indicates model discovery on the control without replacing its label", async () => {
@@ -809,6 +818,9 @@ describe("CCSwitchExportDialog", () => {
       await screen.findByRole("button", { name: "common:actions.retry" }),
     )
     expect(await screen.findByRole("option", { name: "gpt-4" })).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
     expect(mockDiscoverOpenAICompatibleModels).toHaveBeenCalledTimes(2)
     warnSpy.mockRestore()
   })
