@@ -1,8 +1,15 @@
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { runInNewContext } from "node:vm"
 import { describe, expect, it } from "vitest"
 
-const workflows = ["test.yml", "quality.yml", "e2e-smoke.yml", "pr-build.yml"]
+// Every workflow that spends a runner on a pull request must honour the release gate:
+// release-please touches package.json, which is an input to all of them.
+const workflows = [
+  "test.yml",
+  "quality.yml",
+  "e2e-smoke.yml",
+  "permission-warnings.yml",
+]
 
 it.each([
   {
@@ -239,38 +246,29 @@ describe("smoke tests after an ordinary skipped release ancestor", () => {
 })
 
 describe.each(workflows)("CI scheduling: %s", (file) => {
+  const ordinaryJob = {
+    "test.yml": "unit-tests",
+    "quality.yml": "quality",
+    "e2e-smoke.yml": "e2e-build",
+    "permission-warnings.yml": "build",
+  }[file] as string
+
   it.each(["push", "workflow_dispatch", "pull_request"])(
     "starts ordinary %s checks without a release runner",
     (eventName) => {
       const context = { github: github(eventName), needs: needs("skipped") }
       expect(shouldRun(file, "release-changes", context)).toBe(false)
-      const job =
-        file === "test.yml"
-          ? "unit-tests"
-          : file === "quality.yml"
-            ? "quality"
-            : file === "e2e-smoke.yml"
-              ? "e2e-build"
-              : "build-artifact"
-      expect(shouldRun(file, job, context, false)).toBe(true)
+      expect(shouldRun(file, ordinaryJob, context, false)).toBe(true)
       if (file === "test.yml")
         expect(shouldRun(file, "unit-tests-merge", context, false)).toBe(true)
     },
   )
 
   it("cancels ordinary checks even when release detection is skipped", () => {
-    const job =
-      file === "test.yml"
-        ? "unit-tests"
-        : file === "quality.yml"
-          ? "quality"
-          : file === "e2e-smoke.yml"
-            ? "e2e-build"
-            : "build-artifact"
     expect(
       shouldRun(
         file,
-        job,
+        ordinaryJob,
         {
           github: github("push"),
           needs: needs("skipped"),
@@ -311,21 +309,271 @@ describe.each(workflows)("CI scheduling: %s", (file) => {
         needs: needs(result, releaseOnly),
         cancelled: () => result === "cancelled",
       }
-      const job =
-        file === "test.yml"
-          ? "unit-tests"
-          : file === "quality.yml"
-            ? "quality"
-            : file === "e2e-smoke.yml"
-              ? "e2e-build"
-              : "build-artifact"
-      expect(shouldRun(file, job, context, result === "success")).toBe(expected)
+      expect(shouldRun(file, ordinaryJob, context, result === "success")).toBe(
+        expected,
+      )
       if (file === "test.yml")
         expect(
           shouldRun(file, "unit-tests-merge", context, result === "success"),
         ).toBe(expected)
     },
   )
+})
+
+it("builds PR previews only when a maintainer asks for one", () => {
+  const source = readFileSync(".github/workflows/pr-build.yml", "utf8")
+  // Per-push previews spent a runner slot that queued real checks, while merged
+  // code is already packaged by the nightly release.
+  expect(source).not.toMatch(/^ {2}pull_request(?:_target)?:/m)
+  expect(source).not.toMatch(/^ {2}push:/m)
+  expect(source).toContain("workflow_dispatch:")
+  expect(source).toContain("ref: ${{ steps.pr_details.outputs.sha }}")
+  expect(source).toContain("core.setOutput('sha', pr.merge_commit_sha)")
+  expect(source).toContain("persist-credentials: false")
+  // Comment publishing cannot rely on the fork-unsafe workflow_run path anymore.
+  expect(existsSync(".github/workflows/pr-build-comment.yml")).toBe(false)
+})
+
+it("leaves setup and artifact headroom beyond both shard-two test deadlines", () => {
+  const source = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
+  const job = source
+    .split(/^ {2}e2e-smoke:\r?$/m)[1]
+    ?.split(/^ {2}[\w-]+:\r?$/m)[0]
+  const timeout = Number(job?.match(/^ {4}timeout-minutes: (\d+)/m)?.[1])
+  expect(timeout).toBeGreaterThanOrEqual(25)
+  const smoke = job?.split("- name: Run E2E smoke")[1]?.split("- name:")[0]
+  const performance = job
+    ?.split("- name: Run isolated performance E2E")[1]
+    ?.split("- name:")[0]
+  const smokeDeadline = Number(smoke?.match(/&& (\d+) \|\|/)?.[1])
+  const performanceDeadline = Number(
+    performance?.match(/timeout-minutes: (\d+)/)?.[1],
+  )
+  expect(timeout).toBeGreaterThan(smokeDeadline + performanceDeadline)
+})
+
+it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", async () => {
+  const source = readFileSync(".github/workflows/pr-build.yml", "utf8").replace(
+    /\r/g,
+    "",
+  )
+  const step = source
+    .split("      - name: Get PR details")[1]
+    ?.split("      - name:")[0]
+  const script = step
+    ?.split("          script: |\n")[1]
+    ?.split("\n")
+    .map((line) => line.slice(12))
+    .join("\n")
+    .replace("${{ inputs.pr_number }}", "1817")
+  if (!script) throw new Error("Missing PR lookup script")
+  const delays: number[] = []
+  async function lookup(
+    states: Array<{
+      merge_commit_sha: string | null
+      mergeable: boolean | null
+      errorStatus?: number
+      errorHeaders?: Record<string, string>
+    }>,
+  ) {
+    const outputs: Record<string, unknown> = {}
+    delays.length = 0
+    let calls = 0
+    const result = runInNewContext(`(async () => { ${script} })()`, {
+      github: {
+        rest: {
+          pulls: {
+            get: async (parameters: unknown) => {
+              expect(parameters).toEqual({
+                owner: "example",
+                repo: "project",
+                pull_number: 1817,
+              })
+              const state = states[Math.min(calls++, states.length - 1)]
+              if (state?.errorStatus)
+                throw Object.assign(new Error("lookup failed"), {
+                  status: state.errorStatus,
+                  response: { headers: state.errorHeaders ?? {} },
+                })
+              return {
+                data: {
+                  ...state,
+                  head: { ref: "feature" },
+                  number: 1817,
+                },
+              }
+            },
+          },
+        },
+      },
+      context: { repo: { owner: "example", repo: "project" } },
+      core: {
+        setOutput: (key: string, value: unknown) => {
+          outputs[key] = value
+        },
+      },
+      setTimeout: (callback: () => void, delay: number) => {
+        delays.push(delay)
+        callback()
+      },
+      Date: { now: () => 1_000_000 },
+    })
+    await result
+    return { calls, outputs }
+  }
+  expect(
+    await lookup([
+      { merge_commit_sha: null, mergeable: null },
+      { merge_commit_sha: "merged-sha", mergeable: true },
+    ]),
+  ).toEqual({
+    calls: 2,
+    outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+  })
+  expect(
+    await lookup([
+      { merge_commit_sha: null, mergeable: null, errorStatus: 503 },
+      ...Array.from({ length: 4 }, () => ({
+        merge_commit_sha: null,
+        mergeable: null,
+      })),
+      { merge_commit_sha: "merged-sha", mergeable: true },
+    ]),
+  ).toEqual({
+    calls: 6,
+    outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+  })
+  await expect(
+    lookup([
+      { merge_commit_sha: null, mergeable: null, errorStatus: 403 },
+      { merge_commit_sha: "merged-sha", mergeable: true },
+    ]),
+  ).rejects.toThrow("lookup failed")
+  await expect(
+    lookup([{ merge_commit_sha: null, mergeable: null, errorStatus: 503 }]),
+  ).rejects.toThrow("lookup failed")
+  await expect(
+    lookup([{ merge_commit_sha: "stale-sha", mergeable: false }]),
+  ).rejects.toThrow()
+  for (const status of [403, 429]) {
+    expect(
+      await lookup([
+        {
+          merge_commit_sha: null,
+          mergeable: null,
+          errorStatus: status,
+          errorHeaders: { "retry-after": "10" },
+        },
+        { merge_commit_sha: "merged-sha", mergeable: true },
+      ]),
+    ).toEqual({
+      calls: 2,
+      outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+    })
+    expect(delays).toEqual([10000])
+  }
+  expect(
+    await lookup([
+      {
+        merge_commit_sha: null,
+        mergeable: null,
+        errorStatus: 403,
+        errorHeaders: {
+          "x-ratelimit-remaining": "0",
+          "x-ratelimit-reset": "1012",
+        },
+      },
+      { merge_commit_sha: "merged-sha", mergeable: true },
+    ]),
+  ).toEqual({
+    calls: 2,
+    outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+  })
+  expect(delays).toEqual([12000])
+  for (const [retryAfter, expectedDelay] of [
+    ["5", 12000],
+    ["15", 15000],
+  ] as const) {
+    expect(
+      await lookup([
+        {
+          merge_commit_sha: null,
+          mergeable: null,
+          errorStatus: 403,
+          errorHeaders: {
+            "retry-after": retryAfter,
+            "x-ratelimit-remaining": "0",
+            "x-ratelimit-reset": "1012",
+          },
+        },
+        { merge_commit_sha: "merged-sha", mergeable: true },
+      ]),
+    ).toEqual({
+      calls: 2,
+      outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+    })
+    expect(delays).toEqual([expectedDelay])
+  }
+  for (const status of [500, 502, 503, 504]) {
+    expect(
+      await lookup([
+        { merge_commit_sha: null, mergeable: null, errorStatus: status },
+        { merge_commit_sha: "merged-sha", mergeable: true },
+      ]),
+    ).toEqual({
+      calls: 2,
+      outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+    })
+    expect(delays).toEqual([5000])
+  }
+  await expect(
+    lookup([{ merge_commit_sha: null, mergeable: null, errorStatus: 429 }]),
+  ).rejects.toThrow("retry wait exceeds")
+  expect(delays).toEqual([])
+  await expect(
+    lookup([
+      { merge_commit_sha: null, mergeable: null },
+      {
+        merge_commit_sha: null,
+        mergeable: null,
+        errorStatus: 429,
+        errorHeaders: { "retry-after": "25" },
+      },
+    ]),
+  ).rejects.toThrow("retry wait exceeds")
+  expect(delays).toEqual([5000])
+  await expect(
+    lookup([
+      {
+        merge_commit_sha: null,
+        mergeable: null,
+        errorStatus: 429,
+        errorHeaders: { "retry-after": "30" },
+      },
+    ]),
+  ).rejects.toThrow("retry wait exceeds")
+  expect(delays).toEqual([])
+  await expect(
+    lookup([{ merge_commit_sha: null, mergeable: null }]),
+  ).rejects.toThrow()
+})
+
+it("still checks permission warnings on every ordinary pull request", () => {
+  const source = readFileSync(
+    ".github/workflows/permission-warnings.yml",
+    "utf8",
+  )
+  // The release gate must not become a general escape hatch: manifest changes always
+  // need the native warning comparison, so no label or optional-build bypass exists.
+  expect(source).not.toMatch(/labels\.\*\.name/u)
+  expect(source).not.toContain("e2e-optional")
+  // The warning job consumes the build's artifact, so a gated-off build must take it
+  // down too rather than letting it run against a missing artifact. That holds only
+  // while the job keeps GitHub's implicit success() condition over `needs`.
+  const warnings = source.split(/^ {2}warnings:/m)[1]?.split(/^ {2}[\w-]+:/m)[0]
+  expect(warnings).toBeDefined()
+  expect(warnings).toContain("needs: build")
+  expect(warnings).not.toMatch(/^ {4}if:/m)
 })
 
 it("merges reports from failed shards but never from skipped or cancelled shards", () => {

@@ -444,7 +444,7 @@ pnpm compile
 
 ### Permission warning validation
 
-Run `pnpm e2e:permissions` when changing required/optional permissions, host access, or other manifest inputs. The pre-commit hook selects this check for manifest configuration, entrypoints, plugins, dependencies, and its own tooling. The independent `Permission warnings` PR workflow uses the existing cached build producer and does not honor `skip-e2e` or `e2e-optional`; the test also runs in the default E2E suite and existing browser compatibility matrix. The command checks build freshness and uses the default manifest, without extra permissions from test-only build variants.
+Run `pnpm e2e:permissions` when changing required/optional permissions, host access, or other manifest inputs. The pre-commit hook selects this check for manifest configuration, entrypoints, plugins, dependencies, and its own tooling. The independent `Permission warnings` PR workflow uses the existing cached build producer and does not honor `skip-e2e` or `e2e-optional`; only a verified release-only diff skips it, like every other pull-request workflow. The test also runs in the default E2E suite and existing browser compatibility matrix. The command checks build freshness and uses the default manifest, without extra permissions from test-only build variants.
 
 `e2e/extensionPermissionWarnings.spec.ts` asks the actual browser's `management.getPermissionWarningsByManifest` API for warnings from the built candidate and `e2e/fixtures/permission-warnings-baseline.json`. The baseline records the approved version 4.3.0 permission surface before DNR became required, including content-script match patterns. Compare both manifests in the same browser so changes to localized warning text do not require maintaining a warning-text snapshot. A control that promotes optional notifications to required must add a warning; new candidate warnings fail the check. JSON test attachments retain the browser version, manifests, warnings, and differences.
 
@@ -497,6 +497,10 @@ GitHub Actions selects checks according to each workflow's configured events and
 
 - [Quality](.github/workflows/quality.yml) runs type checking, linting, unused-code checks, and translation extraction/completeness validation.
 - [Test](.github/workflows/test.yml) runs the Vitest suite in parallel shards, merges coverage, and uploads artifacts.
+
+The default E2E suite in [the E2E workflow](.github/workflows/e2e-smoke.yml) is split across six runners by measured spec duration instead of Playwright's count-based `--shard`: equal test counts left the slowest shard with 2.45x the work of the fastest. Each shard records a JSON report, and a follow-up job writes `.e2e-durations/spec-durations.json` from them and caches it; pull requests restore the base branch's copy. Without a manifest, each job falls back to `--shard`. `node scripts/write-e2e-spec-durations.mjs` and `node scripts/e2e-shard-plan.mjs --index 1 --total 6` reproduce the pipeline locally.
+
+The DNR and bookmarks E2E variants are derived from the default build with `node scripts/e2e-build-variants.mjs` instead of being built separately: `wxt.config.ts` changes only `permissions` and `optional_permissions` between them. [A test](tests/scripts/e2eBuildVariantDerive.test.ts) compares the real manifest factory across variants and fails if any other field diverges, so a future variant-specific manifest change cannot silently ship the wrong build.
 - [Commit message checks](.github/workflows/commitlint.yml) and [PR title checks](.github/workflows/commitlint-title.yml) enforce Conventional Commits for delivery.
 
 Before submitting a pull request, run the focused tests and local validation relevant to your change. The pull request CI is the authoritative full-suite and coverage check.

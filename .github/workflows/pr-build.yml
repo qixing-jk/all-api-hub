@@ -1,24 +1,9 @@
 name: pr-build-preview
 
+# On-demand only: previews are not rebuilt for every push. Ordinary PR checks already
+# cover the build path, and merged code is packaged by the nightly release, so a
+# per-push preview spent a runner slot that the queue needed for real checks.
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review]
-    paths:
-      - "src/**"
-      - "src/public/**"
-      - "plugins/**"
-      - ".github/workflows/release-pr-check.yml"
-      - "scripts/release-pr-check.mjs"
-      - "tests/scripts/release-pr-check.test.mjs"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "tsconfig.json"
-      - "postcss.config.js"
-      - "tailwind.config.js"
-      - "wxt.config.ts"
-      - ".github/actions/package-extension/**"
-      - ".github/workflows/pr-build.yml"
   workflow_dispatch:
     inputs:
       pr_number:
@@ -27,7 +12,7 @@ on:
         type: number
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.pr_number }}
   cancel-in-progress: true
 
 permissions:
@@ -36,40 +21,62 @@ permissions:
   issues: write
 
 jobs:
-  release-changes:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
-    uses: ./.github/workflows/release-pr-check.yml
-
   build-artifact:
-    needs: release-changes
-    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get PR details (manual trigger)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Get PR details
         id: pr_details
         uses: actions/github-script@v9
         with:
           script: |
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: ${{ inputs.pr_number }}
-            });
+            let pr;
+            let waitedMs = 0;
+            const wait = async (delay) => {
+              if (!Number.isFinite(delay) || delay < 0 || waitedMs + delay > 25000) {
+                throw new Error('PR lookup retry wait exceeds the 25-second budget; retry the preview later');
+              }
+              waitedMs += delay;
+              await new Promise(resolve => setTimeout(resolve, delay));
+            };
+            for (let attempt = 0; attempt < 6; attempt++) {
+              let response;
+              try {
+                response = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: ${{ inputs.pr_number }}
+                });
+              } catch (error) {
+                const headers = error.response?.headers ?? {};
+                const rateLimited = error.status === 429 || (error.status === 403 &&
+                  (headers['retry-after'] !== undefined || headers['x-ratelimit-remaining'] === '0'));
+                if ((!rateLimited && ![500, 502, 503, 504].includes(error.status)) || attempt === 5) throw error;
+                const delays = [];
+                const retryAfter = Number(headers['retry-after'] ?? NaN);
+                if (Number.isFinite(retryAfter) && retryAfter >= 0) delays.push(retryAfter * 1000);
+                const reset = Number(headers['x-ratelimit-reset'] ?? NaN);
+                if (headers['x-ratelimit-remaining'] === '0' && Number.isFinite(reset)) {
+                  delays.push(Math.max(0, reset * 1000 - Date.now()));
+                }
+                await wait(delays.length ? Math.max(...delays) : rateLimited ? 60000 : 5000);
+                continue;
+              }
+              pr = response.data;
+              if (pr.mergeable === false) throw new Error('PR has merge conflicts');
+              if (pr.mergeable === true && pr.merge_commit_sha) break;
+              if (attempt < 5) await wait(5000);
+            }
+            if (pr.mergeable !== true || !pr.merge_commit_sha) throw new Error('PR merge commit is still unavailable after six lookups');
             core.setOutput('ref', pr.head.ref);
-            core.setOutput('sha', pr.head.sha);
+            core.setOutput('sha', pr.merge_commit_sha);
             core.setOutput('number', pr.number);
 
-      - name: Checkout code (manual trigger)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: refs/pull/${{ inputs.pr_number }}/merge
-
-      - name: Checkout code (pull_request)
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v5
+          ref: ${{ steps.pr_details.outputs.sha }}
+          persist-credentials: false
 
       - name: Build extension bundles
         id: package
@@ -78,54 +85,19 @@ jobs:
           VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN || vars.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST || vars.VITE_PUBLIC_POSTHOG_HOST }}
 
-      - name: Write PR build metadata (for workflow_run commenter)
-        # pull_request runs from forks use a read-only GITHUB_TOKEN, so comment publishing must be done
-        # in a separate workflow triggered by workflow_run (runs in the base repo context).
-        env:
-          ARTIFACT_LIST: ${{ steps.package.outputs.artifact-files }}
-          PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
-          COMMIT_SHA: ${{ github.event_name == 'workflow_dispatch' && steps.pr_details.outputs.sha || github.event.pull_request.head.sha }}
-        run: |
-          node -e "
-            const fs = require('fs');
-
-            const artifactFiles = (process.env.ARTIFACT_LIST || '')
-              .split('\\n')
-              .map((line) => line.trim())
-              .filter(Boolean);
-
-            const payload = {
-              prNumber: Number(process.env.PR_NUMBER),
-              commitSha: process.env.COMMIT_SHA || '',
-              artifactFiles,
-              generatedAt: new Date().toISOString(),
-            };
-
-            fs.writeFileSync('pr-build-metadata.json', JSON.stringify(payload, null, 2) + '\\n', 'utf8');
-          "
-
-      - name: Upload PR build metadata
-        uses: actions/upload-artifact@v7
-        with:
-          name: pr-build-metadata
-          path: pr-build-metadata.json
-
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: pr-build-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}-${{ github.run_attempt }}
+          name: pr-build-${{ inputs.pr_number }}-${{ github.run_attempt }}
           path: .output/*.zip
           include-hidden-files: true
 
       - name: Comment build info on PR
-        # Use workflow_dispatch for maintainers; for pull_request, comments are published by workflow_run
-        # to support fork PRs safely (avoids running untrusted code with a write token).
-        if: github.event_name == 'workflow_dispatch'
         uses: actions/github-script@v9
         env:
           ARTIFACT_LIST: ${{ steps.package.outputs.artifact-files }}
-          PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
-          COMMIT_SHA: ${{ github.event_name == 'workflow_dispatch' && steps.pr_details.outputs.sha || github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          COMMIT_SHA: ${{ steps.pr_details.outputs.sha }}
         with:
           script: |
             const marker = "<!-- pr-build-artifact -->";

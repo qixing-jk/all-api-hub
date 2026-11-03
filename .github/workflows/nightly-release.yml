@@ -29,7 +29,15 @@ on:
         description: "Examples: v3.30.0 (tag), main or feat/safari-support (branch), a1b2c3d or full commit SHA. Leave empty to use the latest main commit."
         required: false
         default: ""
+      force:
+        description: "Rebuild even when the nightly tag already points at the target commit"
+        required: false
+        type: boolean
+        default: false
 
+# One rolling release means one producer: splitting this group per event would let a
+# scheduled build and a pushed build upload different commits to the same fixed asset
+# names. Cancelling the older of two overlapping builds is intended.
 concurrency:
   group: nightly-release
   cancel-in-progress: true
@@ -38,7 +46,99 @@ permissions:
   contents: write
 
 jobs:
+  precheck:
+    # The daily schedule exists so a failed nightly gets retried, but most scheduled
+    # runs found main unchanged since a push had already published it: 5 of 27 measured
+    # runs rebuilt the exact commit the tag already pointed at.
+    runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.target.outputs.commit_sha }}
+      branch: ${{ steps.target.outputs.branch }}
+      current: ${{ steps.current.outputs.current }}
+
+    steps:
+      - name: Resolve target ref
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          MANUAL_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_SHA: ${{ github.sha }}
+        run: |
+          BRANCH="${DEFAULT_BRANCH:-main}"
+
+          # Resolve through the API so branch names with slashes, tags and SHAs all
+          # work without fetching them into a checkout first.
+          if [ -n "$MANUAL_REF" ]; then
+            REF="$MANUAL_REF"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            REF="$PUSH_SHA"
+          else
+            REF="$BRANCH"
+          fi
+          COMMIT_SHA="$(gh api "repos/$GH_REPO/commits/$REF" --jq '.sha')"
+
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Compare with the published nightly
+        id: current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TARGET_SHA: ${{ steps.target.outputs.commit_sha }}
+          FORCE: ${{ inputs.force || 'false' }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "Rebuilding on request (force=true)."
+            exit 0
+          fi
+
+          # The tag moves only after the assets are uploaded, so it marks a complete
+          # publication of that commit. Anything else means the target still needs a
+          # build — including a run whose upload failed, which the schedule retries.
+          read_optional() {
+            local value
+            if value="$(gh api "$@" 2>&1)"; then
+              printf '%s\n' "$value"
+            elif [[ "$value" == *"(HTTP 404)"* ]]; then
+              printf ''
+            else
+              printf '%s\n' "$value" >&2
+              return 1
+            fi
+          }
+          published="$(read_optional "repos/$GH_REPO/git/ref/tags/nightly" --jq '.object.sha')"
+          tag_type="$(read_optional "repos/$GH_REPO/git/ref/tags/nightly" --jq '.object.type')"
+          if [ "$tag_type" = "tag" ]; then
+            published="$(read_optional "repos/$GH_REPO/git/tags/$published" --jq '.object.sha')"
+          fi
+          assets="$(read_optional "repos/$GH_REPO/releases/tags/nightly" --jq '.assets[].name')"
+          body="$(read_optional "repos/$GH_REPO/releases/tags/nightly" --jq '.body')"
+          missing=""
+          for asset in all-api-hub-nightly-chrome.zip all-api-hub-nightly-firefox.zip all-api-hub-nightly-safari.zip all-api-hub-nightly-sources.zip; do
+            if ! grep -qxF "$asset" <<< "$assets"; then missing="$missing $asset"; fi
+          done
+
+          if ! grep -qF 'all-api-hub-release-extra:start' <<< "$body" || ! grep -qF 'all-api-hub-release-extra:end' <<< "$body"; then missing="$missing usage-notes"; fi
+
+          if [ -n "$published" ] && [ "$published" = "$TARGET_SHA" ] && [ -z "$missing" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+            echo "The nightly tag already points at $TARGET_SHA; skipping the rebuild."
+          elif [ -n "$missing" ]; then
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "The nightly release is missing:$missing"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "Target $TARGET_SHA differs from the published nightly ${published:-<none>}."
+          fi
+
   nightly:
+    needs: precheck
+    if: ${{ needs.precheck.outputs.current != 'true' }}
     runs-on: ubuntu-latest
     outputs:
       commit_ref: ${{ steps.commit.outputs.ref }}
@@ -58,30 +158,12 @@ jobs:
           BRANCH="${DEFAULT_BRANCH:-main}"
           git fetch origin "$BRANCH" --tags --force
 
-      - name: Determine target ref
-        id: target
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          MANUAL_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || '' }}
-        run: |
-          BRANCH="${DEFAULT_BRANCH:-main}"
-          CHECKOUT_REF="$MANUAL_REF"
-
-          if [ -z "$CHECKOUT_REF" ]; then
-            if [ "${{ github.event_name }}" = "push" ]; then
-              CHECKOUT_REF="${GITHUB_SHA}"
-            else
-              CHECKOUT_REF="$(git rev-parse "origin/$BRANCH")"
-            fi
-          fi
-
-          echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-
       - name: Checkout target ref
         uses: actions/checkout@v5
         with:
-          ref: ${{ steps.target.outputs.checkout_ref }}
+          # Pin the commit precheck compared against the published tag, so a push that
+          # lands in between cannot make the guard describe a different tree.
+          ref: ${{ needs.precheck.outputs.commit_sha }}
           path: source
           fetch-depth: 0
 
@@ -247,7 +329,7 @@ jobs:
           - Package version: \`${{ steps.package.outputs.package-version }}\`
           - Commit: https://github.com/${{ github.repository }}/commit/${{ steps.commit.outputs.ref }}
           - Built at: \`${{ steps.metadata.outputs.built_at }}\`
-          - Source branch: \`${{ steps.target.outputs.branch }}\`
+          - Source branch: \`${{ needs.precheck.outputs.branch }}\`
           - Trigger: \`${{ github.event_name }}\`
           EOF
 
@@ -266,14 +348,6 @@ jobs:
             echo
             echo "</details>"
           } >> "$RUNNER_TEMP/nightly-notes.md"
-
-      - name: Move nightly tag
-        working-directory: source
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f nightly "${{ steps.commit.outputs.ref }}"
-          git push --force origin refs/tags/nightly
 
       - name: Create or update nightly release
         env:
@@ -357,3 +431,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: bash scripts/update-release-extra-notes.sh nightly
+
+      - name: Move nightly tag
+        working-directory: source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Last, so the tag only ever advertises a commit whose assets are published:
+          # installed nightly builds compare against this tag, and the precheck in this
+          # workflow treats it as the record of a complete build.
+          git tag -f nightly "${{ needs.nightly.outputs.commit_ref }}"
+          git push --force origin refs/tags/nightly

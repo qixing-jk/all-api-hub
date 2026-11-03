@@ -11,6 +11,10 @@ on:
         description: Allow build failure for e2e-optional pull requests
         type: boolean
         default: false
+      derive_variants:
+        description: Produce the manifest variants from this build instead of building each one
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -94,6 +98,13 @@ jobs:
           E2E_EXTENSION_DIR: .output/${{ steps.variant.outputs.extension_dir }}
         run: node -p "process.versions.node" > "$E2E_EXTENSION_DIR/.node-version"
 
+      # Variants differ only in the manifest's required permissions, so one build plus
+      # a manifest rewrite replaces two full WXT builds. The assumption is enforced
+      # against the real manifest factory by tests/scripts/e2eBuildVariantDerive.test.ts.
+      - name: Derive manifest variants
+        if: inputs.derive_variants
+        run: node scripts/e2e-build-variants.mjs
+
       # Test jobs consume their own run's artifact without cross-run lookup or
       # extra token permissions. Only the producer accesses the shared cache.
       - name: Upload E2E extension
@@ -101,6 +112,26 @@ jobs:
         with:
           name: e2e-extension-${{ inputs.build_variant }}
           path: .output/${{ steps.variant.outputs.extension_dir }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload derived E2E extension (dnr-required)
+        if: inputs.derive_variants
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-extension-dnr-required
+          path: .output/chrome-mv3-test-dnr-required
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload derived E2E extension (bookmarks-required)
+        if: inputs.derive_variants
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-extension-bookmarks-required
+          path: .output/chrome-mv3-test-bookmarks-required
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1

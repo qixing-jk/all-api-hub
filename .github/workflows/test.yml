@@ -113,6 +113,21 @@ jobs:
           restore-keys: |
             unit-test-durations-
 
+      - name: Get Playwright version
+        id: playwright_version
+        run: |
+          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log('version=' + (pkg.devDependencies?.['@playwright/test'] ?? 'unknown'))" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        # Six shards would otherwise download the same browser on every run. The
+        # key matches the E2E workflows, so one download serves both.
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright_version.outputs.version }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       # Script acceptance tests exercise real DOM behavior in headless Chromium.
       - name: Install Chromium for browser-backed unit tests
         run: pnpm exec playwright install --with-deps chromium

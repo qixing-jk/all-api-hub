@@ -171,12 +171,87 @@ describe("scheduled E2E build reuse", () => {
     }
     expect(build).toContain("include-hidden-files: true")
     expect(build).toContain("if-no-files-found: error")
-    const smokeBuild = job(workflow("e2e-smoke"), "e2e-build")
-    expect(workflow("e2e-smoke").match(/- "\.nvmrc"/g)).toHaveLength(2)
-    expect(workflow("e2e-smoke").match(/- "\.env\*"/g)).toHaveLength(2)
+    const smoke = workflow("e2e-smoke")
+    const smokeBuild = job(smoke, "e2e-build")
+    expect(smoke.match(/- "\.nvmrc"/g)).toHaveLength(2)
+    expect(smoke.match(/- "\.env\*"/g)).toHaveLength(2)
     expect(smokeBuild).toContain("uses: ./.github/workflows/e2e-build.yml")
-    expect(smokeBuild).toContain("build_variant: ${{ matrix.build_variant }}")
+    expect(smokeBuild).toContain("build_variant: default")
+    expect(smokeBuild).toContain("derive_variants: true")
     expect(smokeBuild).toContain("optional:")
     expect(build).toContain("continue-on-error: ${{ inputs.optional }}")
+  })
+
+  it("derives every variant from one build instead of building each", () => {
+    const build = job(workflow("e2e-build"), "build")
+    const derive = build
+      .split("      - name: Derive manifest variants")[1]
+      ?.split("      - name:")[0]
+    expect(derive).toBeDefined()
+    expect(derive).toContain("if: inputs.derive_variants")
+    expect(derive).toContain("node scripts/e2e-build-variants.mjs")
+    // Deriving needs the source manifest and the recorded Node version.
+    expect(build.indexOf("- name: Derive manifest variants")).toBeGreaterThan(
+      build.indexOf("- name: Record artifact Node version"),
+    )
+
+    const variants = JSON.parse(
+      readFileSync("e2e/e2e-build-variants.json", "utf8"),
+    ).variants
+    for (const name of ["dnr-required", "bookmarks-required"]) {
+      const upload = build
+        .split(`      - name: Upload derived E2E extension (${name})`)[1]
+        ?.split("      - name:")[0]
+      expect(upload).toBeDefined()
+      expect(upload).toContain("if: inputs.derive_variants")
+      expect(upload).toContain(`name: e2e-extension-${name}`)
+      // Downstream jobs download by variant name, so the path must match its config.
+      expect(upload).toContain(
+        `path: .output/${variants[name].extensionDirName}`,
+      )
+    }
+  })
+})
+
+describe("duration-balanced smoke shards", () => {
+  it("restores measured timings before planning and still falls back to --shard", () => {
+    const source = workflow("e2e-smoke")
+    const tests = job(source, "e2e-smoke")
+    expect(tests).toContain("uses: actions/cache/restore@v5")
+    expect(tests).toContain("restore-keys:")
+    expect(tests).toContain("node scripts/e2e-shard-plan.mjs")
+    expect(tests).toContain(
+      "--shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}",
+    )
+    expect(tests).toContain("AAH_E2E_SHARD_INDEX: ${{ matrix.shard }}")
+    expect(tests).toContain("AAH_E2E_JSON_REPORT:")
+    // The plan must cover exactly the shards the matrix runs.
+    expect(source).toMatch(/AAH_E2E_SHARD_TOTAL: "6"/)
+    const runStep = tests
+      .split("      - name: Run E2E smoke")[1]
+      ?.split("      - name:")[0]
+    expect(runStep).toContain("set -euo pipefail")
+    expect(runStep).toContain("mapfile -t planned")
+    expect(runStep).toContain('spec_args+=(--grep-invert="major pages with")')
+  })
+
+  it("publishes timings only from runs that produced reports", () => {
+    const source = workflow("e2e-smoke")
+    const upload = job(source, "e2e-smoke")
+      .split("      - name: Upload E2E spec durations")[1]
+      ?.split("      - name:")[0]
+    expect(upload).toBeDefined()
+    expect(upload).toContain("github.event_name != 'pull_request'")
+    expect(upload).toContain("hashFiles('.e2e-durations/reports/*.json')")
+
+    const publish = job(source, "e2e-durations")
+    expect(publish).toContain("needs: e2e-smoke")
+    expect(publish).toContain("uses: actions/download-artifact@v7")
+    expect(publish).toContain("pattern: e2e-spec-durations-*")
+    expect(publish).toContain("node scripts/write-e2e-spec-durations.mjs")
+    expect(publish).toContain("uses: actions/cache/save@v5")
+    expect(source).toContain(
+      "key: e2e-spec-durations-${{ github.run_id }}-${{ github.run_attempt }}",
+    )
   })
 })

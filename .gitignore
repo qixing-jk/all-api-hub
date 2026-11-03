@@ -16,6 +16,9 @@
 # shard sequencer reads (CI restores both from the Actions cache).
 /.vitest-reports
 /.vitest-durations
+# E2E per-spec timings: JSON reports each shard emits, and the manifest the shard
+# planner reads (CI restores both from the Actions cache).
+/.e2e-durations
 
 # playwright-cli
 .playwright-cli/
@@ -42,6 +45,10 @@ dist/
 
 # typescript
 .tsbuildinfo
+/tsconfig.tsbuildinfo
+
+# eslint incremental lint results (CI restores them from the Actions cache)
+/.eslintcache
 
 # 文档项目的依赖和构建产物
 /docs/node_modules/

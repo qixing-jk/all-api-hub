@@ -79,6 +79,19 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
 
+      - name: Restore incremental type-check and lint results
+        # Tools validate file contents on restore. A unique run key saves refreshed
+        # results after source edits; restore keys reuse the latest snapshot.
+        uses: actions/cache@v5
+        with:
+          path: |
+            tsconfig.tsbuildinfo
+            .eslintcache
+          key: quality-cache-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'scripts/eslint/**', 'tsconfig.json', 'tsconfig.eslint.json', 'package.json', 'pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            quality-cache-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'scripts/eslint/**', 'tsconfig.json', 'tsconfig.eslint.json', 'package.json', 'pnpm-lock.yaml') }}-
+            quality-cache-${{ runner.os }}-
+
       - name: Run type check
         run: pnpm compile
 
