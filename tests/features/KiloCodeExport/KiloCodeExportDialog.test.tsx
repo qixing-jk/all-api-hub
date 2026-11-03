@@ -914,7 +914,6 @@ describe("KiloCodeExportDialog", () => {
         await user.click(
           await screen.findByRole("option", {
             name: "gpt-4o-mini",
-            exact: true,
           }),
         )
         expect(defaultSelector).toHaveTextContent("gpt-4o-mini")
