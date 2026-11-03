@@ -196,33 +196,46 @@ function unitSummary(files) {
 }
 
 const e2eReportsDir = path.join(inputRoot, "e2e-main")
-const reportPaths = fs
-  .readdirSync(e2eReportsDir, { recursive: true })
-  .filter((file) => /shard-\d+\.json$/u.test(file))
-  .map((file) => path.join(e2eReportsDir, file))
-const reports = reportPaths.map((file) => ({
-  shard: Number(path.basename(file).match(/shard-(\d+)/u)[1]),
-  report: JSON.parse(fs.readFileSync(file, "utf8")),
-}))
-assert.deepEqual(
-  reports.map(({ shard }) => shard).sort(),
-  [1, 2, 3, 4, 5, 6],
-  "Expected six unique E2E reports",
-)
+function readE2eReports(directory) {
+  const reportPaths = fs
+    .readdirSync(directory, { recursive: true })
+    .filter((file) => /shard-\d+\.json$/u.test(file))
+    .map((file) => path.join(directory, file))
+  const reports = reportPaths.map((file) => ({
+    shard: Number(path.basename(file).match(/shard-(\d+)/u)[1]),
+    report: JSON.parse(fs.readFileSync(file, "utf8")),
+  }))
+  assert.deepEqual(
+    reports.map(({ shard }) => shard).sort(),
+    [1, 2, 3, 4, 5, 6],
+    "Expected six unique E2E reports",
+  )
+  return reports
+}
+const reports = readE2eReports(e2eReportsDir)
 
-function e2eCaseWork(report) {
-  let milliseconds = 0
+function e2eCases(report) {
+  const cases = []
   const walk = (suite) => {
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
-        milliseconds += test.results?.at(-1)?.duration ?? 0
+        cases.push({
+          key: `${spec.id}:${test.projectName}:${test.repeatEachIndex ?? 0}`,
+          file: spec.file.startsWith("e2e/")
+            ? spec.file
+            : path.posix.join("e2e", spec.file),
+          project: test.projectName,
+          duration: test.results?.at(-1)?.duration ?? 0,
+        })
       }
     }
     for (const child of suite.suites ?? []) walk(child)
   }
   for (const suite of report.suites ?? []) walk(suite)
-  return milliseconds
+  return cases
 }
+const e2eCaseWork = (report) =>
+  e2eCases(report).reduce((total, test) => total + test.duration, 0)
 
 const manifestPath = path.join(path.dirname(outputPath), "e2e-manifest.json")
 execFileSync(
@@ -266,6 +279,55 @@ assert.deepEqual(
   "Plan and smoke inventory differ",
 )
 
+let warmReplay
+const warmReportsDirectory = path.join(inputRoot, "e2e-warm-reports")
+if (fs.existsSync(warmReportsDirectory)) {
+  const warmReports = readE2eReports(warmReportsDirectory)
+  const inventory = (reports) =>
+    reports
+      .flatMap(({ report }) => e2eCases(report))
+      .filter((test) => test.project === "chromium")
+  const baselineCases = inventory(reports)
+  const warmCases = inventory(warmReports)
+  for (const cases of [baselineCases, warmCases])
+    assert.equal(
+      new Set(cases.map((test) => test.key)).size,
+      cases.length,
+      "An E2E case ran on multiple shards",
+    )
+  assert.deepEqual(
+    warmCases.map((test) => test.key).sort(),
+    baselineCases.map((test) => test.key).sort(),
+    "Warm cache changed the collected E2E cases",
+  )
+  for (const { shard, report } of warmReports) {
+    const files = [
+      ...new Set(
+        e2eCases(report)
+          .filter((test) => test.project === "chromium")
+          .map((test) => test.file),
+      ),
+    ].sort()
+    assert.deepEqual(
+      files,
+      [...planned[shard - 1]].sort(),
+      `Warm shard ${shard} did not execute the cached plan`,
+    )
+  }
+  warmReplay = {
+    chromiumCases: warmCases.length,
+    sameCases: true,
+    cachedPlanMatchesActualFiles: true,
+    shards: warmReports
+      .sort((a, b) => a.shard - b.shard)
+      .map(({ shard, report }) => ({
+        shard,
+        ...report.stats,
+        lastAttemptCaseSeconds: seconds(e2eCaseWork(report)),
+      })),
+  }
+}
+
 const summary = {
   unit: {
     fileCounts: Object.fromEntries(
@@ -296,6 +358,7 @@ const summary = {
         files.reduce((sum, file) => sum + (manifest.durations[file] ?? 0), 0),
       ),
     })),
+    warmReplay,
   },
 }
 fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2) + "\n")
@@ -308,6 +371,8 @@ console.log(
       e2eFiles: specs.length,
       e2eManifestFiles: summary.e2e.manifestFiles,
       e2eUnknown: summary.e2e.unknown.length,
+      warmChromiumCases: warmReplay?.chromiumCases,
+      warmCachePlanVerified: warmReplay?.cachedPlanMatchesActualFiles,
       e2ePlannedCaseSeconds: summary.e2e.plannedShards.map(
         (shard) => shard.measuredCaseSeconds,
       ),

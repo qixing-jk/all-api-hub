@@ -1,136 +1,178 @@
-# CI 后续优化调查
+# CI 后续优化调查与实验
 
-调查日期：2026-11-04（UTC+08）。本轮完成测量、报告回放和方案评估。
+日期：2026-11-04（UTC+08）。状态：三处优化已实现并验证，额外候选已测量；整轮单测提速尚未得到证实。
 
-建议优先隔离真实浏览器单测，然后复用报告解析结果。E2E 时长缓存已经发布，先观察后续自然运行的命中和耗时；单测权重公式需要更多受控数据后再决定是否调整。
+代码提交为 `a0ae15626d19431363a6f4a16a7bacf398aad283`，已发布到 `perf/ci-follow-up-20261104`。本报告的后续提交只更新调查材料，不改变已验证的 CI 输入。
 
-## 样本和比较边界
+## 已实现的改进
 
-| 样本 | 源码版本 | 单测运行 | E2E 运行 |
+1. 完整性检查在同一次 blob 解析中提取精简文件耗时，再调用现有权重函数写出 manifest。保留独立生成 CLI；PR 继续跳过时长发布。
+2. 对规范 flatted 表使用 `JSON.parse` 后解析引用，避免逐个字符串装箱和 reviver 遍历。完整图内容、循环和共享引用均保留；非规范输入退回官方解析器。只供两个仓库 CI 脚本使用，不修改 Vitest 或第三方库。
+3. 单测先安装完整 Chromium 二进制，再实际启动 headless shell。可启动时跳过系统依赖安装；只有缺少运行库时才执行 `install-deps` 并再次验证。其他启动错误直接失败。
+
+单测与 E2E 共用不可覆盖的浏览器缓存 key，因此二进制安装保留完整 Chromium。仅安装 `--only-shell` 会使新版本缓存缺少 E2E 所需的有头浏览器，迫使 E2E 反复下载；该方案已用失败回归测试发现并撤回。E2E 保留原有系统依赖安装。
+
+补齐了时长生成器、权重工具、blob 解析器和 sequencer 的 Test 工作流路径触发，并把新 CI 脚本回归测试纳入分片 1。
+
+## 实验样本和比较边界
+
+| 样本 | 源码版本 | Test | E2E |
 | --- | --- | --- | --- |
-| 同日合并前 main | c8adaecf7f16b8d6ba45031e42769c67bf6a7adc | [41656791026](https://github.com/qixing-jk/all-api-hub/actions/runs/41656791026) | [41656790941](https://github.com/qixing-jk/all-api-hub/actions/runs/41656790941) |
-| PR #1817 最终提交 | ef3f01ee2aea15b1a2289225ca5302ac5fd58354 | [41685357437](https://github.com/qixing-jk/all-api-hub/actions/runs/41685357437) | [41685357408](https://github.com/qixing-jk/all-api-hub/actions/runs/41685357408) |
-| 合并后 main | 6f6f6116691c4619e812de9c003281dbaadf87eb | [41690970748](https://github.com/qixing-jk/all-api-hub/actions/runs/41690970748) | [41690970780](https://github.com/qixing-jk/all-api-hub/actions/runs/41690970780) |
+| 同日合并前 main | `c8adaecf7f16b8d6ba45031e42769c67bf6a7adc` | [41656791026](https://github.com/qixing-jk/all-api-hub/actions/runs/41656791026) | [41656790941](https://github.com/qixing-jk/all-api-hub/actions/runs/41656790941) |
+| PR #1817 最终提交 | `ef3f01ee2aea15b1a2289225ca5302ac5fd58354` | [41685357437](https://github.com/qixing-jk/all-api-hub/actions/runs/41685357437) | [41685357408](https://github.com/qixing-jk/all-api-hub/actions/runs/41685357408) |
+| 合并后 main 首轮 | `6f6f6116691c4619e812de9c003281dbaadf87eb` | [41690970748](https://github.com/qixing-jk/all-api-hub/actions/runs/41690970748) | [41690970780](https://github.com/qixing-jk/all-api-hub/actions/runs/41690970780) |
+| 同源码 main 对照，手动触发 | `6f6f6116691c4619e812de9c003281dbaadf87eb` | [41707334131](https://github.com/qixing-jk/all-api-hub/actions/runs/41707334131) | [41702374063](https://github.com/qixing-jk/all-api-hub/actions/runs/41702374063) |
+| 本轮优化代码，手动触发 | `a0ae15626d19431363a6f4a16a7bacf398aad283` | [41710341091](https://github.com/qixing-jk/all-api-hub/actions/runs/41710341091) | 不另跑；E2E 工作流及测试源码未改 |
 
-PR 最终提交与合并提交的 Git tree 均为 194927895f98aa8a5de2949dd64a267aa145aa18，源码一致。PR 和合并后 main 的六个单测分片均恢复 unit-test-durations-41656791026-1，1907 个文件的分片归属也逐一核对一致。
+本轮手动触发的 main Test 对照、暖缓存 E2E 和优化代码 Test 均成功，均为 attempt 1。PR 最终提交与合并提交的 Git tree 均为 `194927895f98aa8a5de2949dd64a267aa145aa18`。初始三组单测下载并解码共 18 份 Vitest blob；PR/main 的 1907 个文件归属逐一一致，均使用 `unit-test-durations-41656791026-1`。
 
-合并后两个工作流均成功。单测工作流从创建至最终更新约 14 分 34 秒，E2E 约 13 分 07 秒。这些时间包含排队、准备和报告发布，不能单独归因于测试算法。单测分片 1 的 checkout 就耗时 76 秒；该轮还有完整性检查、覆盖率合并和时长发布的串行尾部。
+时间比较采用 GitHub 步骤起止时间。工作流总时间为创建至最后更新，包含排队、准备和发布。本地重复实验交替执行对照/候选，保留原始输入及代码 SHA-256；不同实验组的基线不能交叉拼接。
 
-下载并解码了三组共 18 份 Vitest blob，以及合并后六份 Playwright JSON 报告。本地回放使用 Node 24.14.1；blob 声明的 Vitest 版本为 4.0.3。
+## 报告处理：本地对照及 Ubuntu 验证
 
-## 1. 浏览器安装拖尾可以与主单测分片隔离
+本地输入为 main 首轮的六份 blob，共 375,643,959 字节，1907 个文件；blob 版本为 Vitest 4.0.3。环境为 Windows、Node 24.14.1、Intel Core Ultra 9 275HX。
 
-PR 分片 5 的浏览器二进制缓存 Linux-playwright-1.64.1 命中，但 playwright install --with-deps chromium 仍耗时 160 秒；其他分片该步骤为 9–12 秒。[分片 5 日志](https://github.com/qixing-jk/all-api-hub/actions/runs/41685357437/job/126090218004)
+先只复用解析结果，保留 `flatted.parse`，三轮交替实验的中位数从 47.306 秒降到 16.265 秒。该组记录在 `artifacts/report-benchmark-0c7MbX/result.json`。
 
-其中 apt 下载 21.9 MB 用了 2 分 32 秒，吞吐约 144 kB/s。下载内容都是字体和 X 字体工具，包括 fonts-ipafont-gothic、fonts-freefont-ttf、fonts-unifont 和 fonts-wqy-zenhei；多数浏览器运行库已安装。相同包量在分片 2 的下载记录为不到一秒。
+加入完整图兼容解码后的最终实验如下。最终四个 CLI/工具文件的哈希与提交后工作区一致。
 
-因此，这次 2.5 分钟拖尾来自系统包下载。Playwright 官方也说明，浏览器二进制缓存不会覆盖 Linux 系统依赖安装。[Playwright CI 文档](https://playwright.dev/docs/ci#caching-browsers)
+| 轮次   | 原完整性检查 + 独立时长生成 / 秒 | 最终合并命令 / 秒 |
+| ------ | -------------------------------: | ----------------: |
+| 1      |                           29.899 |             3.167 |
+| 2      |                           29.627 |             3.053 |
+| 3      |                           32.654 |             3.241 |
+| 中位数 |                           29.899 |             3.167 |
 
-当前直接启动真实 Chromium 的单测文件为：
+最终同组节省 26.732 秒，报告阶段减少 89.4%。每轮都验证 `complete=true`，除 `generatedAt` 外 manifest 的 schema、版本、排序和全部 1907 个权重与旧生成器完全相同。计时前还将六份 blob 的完整解码图逐份与官方解析器深比较，全部字段与循环/共享引用均一致。记录在 `artifacts/report-benchmark-JH31GD/result.json`；89.4% 仅指这两个脚本的处理阶段。
 
-- tests/scripts/accountOnboardingFlow.test.ts
-- tests/scripts/aiRouterUi.test.ts
-- tests/scripts/modelCatalogBrowser.test.ts
-- tests/scripts/nativeKeyEditorFlow.test.ts
-- tests/scripts/providerDetectionContinuity.test.ts
+| Ubuntu 报告阶段                  | main 对照 / 秒 | 优化代码 / 秒 |
+| -------------------------------- | -------------: | ------------: |
+| 完整性检查及下一轮时长生成       |   16 + 16 = 32 |             6 |
+| Vitest 内部合并、LCOV/JUnit 输出 |             23 |            36 |
+| 整个报告 job                     |            141 |           132 |
 
-其他 Playwright 引用检索结果为类型引用或 mock。PR/main 的上述文件分布在分片 2、5、6，而六个分片都进行了浏览器恢复及系统依赖安装。
+[原报告 job](https://github.com/qixing-jk/all-api-hub/actions/runs/41707334131/job/126171512683)、[最终报告 job](https://github.com/qixing-jk/all-api-hub/actions/runs/41710341091/job/126182169102)。优化代码成功写出 1907 个权重并保存 `unit-test-durations-41710341091-1`，LCOV 和 JUnit 的 Codecov 上传均成功；[该代码提交的 Codecov 状态](https://app.codecov.io/gh/qixing-jk/all-api-hub/commit/a0ae15626d19431363a6f4a16a7bacf398aad283)为成功。
 
-建议把这些测试声明到专门的 Node 测试项目，由独立浏览器测试 job 运行，使主 jsdom/Node 分片不依赖 apt。专门项目的文件选择应成为共同来源，避免配置和工作流各维护一份名单。仅按分片名单条件安装也能减少三个分片的重复安装，但仍不能隔离本次发生在必需浏览器的分片 5 上的拖尾。
+脚本部分实测节省 26 秒，但报告 job 只短了 9 秒：Vitest 内部合并增加 13 秒，checkout 从 18 秒增加到 37 秒，Node/pnpm 准备从 36 秒降到 25 秒。没有把脚本收益等同于整段发布收益。
 
-这项改动的验证要求：
+## 浏览器准备：避免无必要的 apt
 
-- 原有所有文件和用例仍运行，五个真实浏览器文件实际启动 Chromium 并通过。
-- 完整性检查、blob 下载和覆盖率合并纳入浏览器项目的报告；所有实际分片/项目均计入预期输入。
-- 故意缺失浏览器报告时，覆盖率发布必须失败；断言失败但报告有效的既有规则仍成立。
-- 比较准备时间、最慢测试 job 和总 runner 分钟。额外 job 的准备及覆盖率成本需要计入，不能预先声称平均每轮节省 2.5 分钟。
+最初问题来自 [PR 分片 5](https://github.com/qixing-jk/all-api-hub/actions/runs/41685357437/job/126090218004)：浏览器缓存 `Linux-playwright-1.64.1` 命中，但 `install --with-deps chromium` 花了 160 秒，其中 21.9 MB 的 apt 字体包下载耗时 152 秒。二进制缓存不会覆盖系统依赖安装，符合 [Playwright CI 文档](https://playwright.dev/docs/ci#caching-browsers)。这是单次拖尾，不能当作每轮固定可节省时间。
 
-## 2. main 可以少解析一次完整 blob
+| 分片 | main 浏览器准备 / 秒 | 优化后 / 秒 | main 测试执行 / 秒 | 优化后 / 秒 |
+| ---- | -------------------: | ----------: | -----------------: | ----------: |
+| 1    |                    9 |           5 |                386 |         509 |
+| 2    |                   28 |           3 |                538 |         399 |
+| 3    |                   10 |           2 |                527 |         534 |
+| 4    |                   13 |           2 |                531 |         527 |
+| 5    |                   12 |           1 |                382 |         508 |
+| 6    |                   11 |           2 |                520 |         538 |
+| 合计 |                   83 |          15 |               2884 |        3015 |
 
-合并后单测报告 job 的阶段耗时：
+六个最终分片均实际打印 `Chromium headless shell starts with existing host libraries.`，无 apt 回退。五个真实浏览器文件共 37 个用例在 Ubuntu 全部通过，已从合并 JUnit 再核对零失败、零错误、零跳过：
 
-| 阶段 | 秒 |
-| --- | ---: |
-| 检查六份报告完整性 | 25 |
-| Vitest 合并测试及覆盖率报告 | 37 |
-| 生成下一轮单测时长 | 26 |
+- `accountOnboardingFlow.test.ts`：7 个。
+- `aiRouterUi.test.ts`：3 个。
+- `modelCatalogBrowser.test.ts`：4 个。
+- `nativeKeyEditorFlow.test.ts`：12 个。
+- `providerDetectionContinuity.test.ts`：11 个。
 
-[报告 job](https://github.com/qixing-jk/all-api-hub/actions/runs/41690970748/job/126115559159)
+没有新增浏览器专用 job：这五个文件的历史累计成本约 26–27 秒，额外 runner 的 checkout、安装及报告成本尚无净收益证据。当前启动验证能直接避免已观察到的无必要字体下载，且保留缺库恢复和完整 Chromium 缓存。
 
-check-unit-test-reports.mjs 和 write-unit-test-durations.mjs 都分别调用 flatted.parse 读取同样的六份完整报告；当前原始数据合计约 377 MB。PR 已经跳过不会发布的时长生成，重复解析主要发生在 main/push。
+## 整轮单测：尚不能宣称加速
 
-建议完整性检查在同一次解析中提取精简的文件耗时字段，再调用已有 unitTestDurations.mjs 生成 manifest。保留独立生成 CLI 供离线回放。这样可减少一次大报告解析，现有样本给出的可避免预算约 25–26 秒；实际收益需要新 CI 确认。
+main 对照为 12 分 42 秒，最终代码为 12 分 56 秒，增加 14 秒；最慢测试执行步骤均为 538 秒。因此已确认的是准备和脚本阶段提速，整轮效果仍受测试执行、缓存分配和 runner 波动影响。
 
-验证要求是完整数据下生成的权重与现有生成器一致，缺失/空报告、混合 Vitest 版本、worker 错误、缺失覆盖率等输入继续被拒绝。无需为此改动权重公式或 Vitest 的内部合并接口。
+本次 main 恢复 `unit-test-durations-41690970748-1`；优化代码恢复刚发布的 `unit-test-durations-41707334131-1`。两轮使用不同测量生成的分配，不能将总时间差纯归因于三项代码改动。最终工作流仍执行全部 1907 个 Vitest 文件，29151 个用例通过、1 个既有用例跳过；比 main 多出的 2 个用例是新增工作流路径回归。Node CI 工具测试另有 50 个，全部通过。
 
-## 3. E2E 缓存已经发布，速度收益仍待消费验证
+## E2E 时长缓存：已实际消费并核对完整性
 
-合并后默认六个分片都是首轮缓存缺失，使用 Playwright --shard。六份报告均完整，发布 job 成功写出 146 个 spec 时长，并保存：
+main 首轮六个分片缓存缺失，发布了 `e2e-spec-durations-41690970780-1`。随后在完全相同 main SHA 上手动触发 E2E，六个分片均命中该 key 并打印 `Duration-balanced shard`。
 
-e2e-spec-durations-41690970780-1，scope 为 refs/heads/main。
+| 同源码 E2E 指标 | 首轮冷时长缓存 | 后续暖时长缓存 |
+| --- | --: | --: |
+| smoke 步骤耗时，分片 1–6 / 秒 | 438, 213, 426, 483, 282, 235 | 272, 393, 365, 417, 352, 361 |
+| 最慢 smoke 步骤 / 秒 | 483 | 417 |
+| 工作流创建至完成 | 13 分 07 秒 | 10 分 05 秒 |
+| 重试后通过用例 | 2 | 0 |
 
-[发布 job](https://github.com/qixing-jk/all-api-hub/actions/runs/41690970780/job/126116296179)
+最终核对六份暖缓存报告：146 个文件均按生成计划执行；622 个 Chromium 用例的 ID、project 和 repeat 键与冷缓存完全一致，跨分片没有重复或遗漏。依赖项目重复出现的 build 用例不计入该 Chromium 清单。Firefox、bookmarks、DNR 和独立 performance 步骤也全部成功。
 
-实际 smoke 阶段的步骤时间为 438、213、426、483、282、235 秒。分片 4、5 各有一个重试后通过的用例；工作流最终通过，性能比较应计入重试波动。
+最慢 smoke 观察下降 13.7%，整轮少了 3 分 02 秒；构建缓存、runner 差异和重试减少均可能参与，不能把全部差值归因于分配算法。固定旧数据回放的最重累计用例工作量下降 29.4%，也不能代替实际步骤时间。
 
-使用现有生成器和现有 planner 回放：
+[冷缓存运行](https://github.com/qixing-jk/all-api-hub/actions/runs/41690970780)、[暖缓存运行](https://github.com/qixing-jk/all-api-hub/actions/runs/41702374063)。新增回放断言及统计保存在 [replay.mjs](replay.mjs)，结果为 `artifacts/replay-with-warm-e2e.json`。
 
-- 清单覆盖全部 146 个当前可分片文件，未知权重为零。
-- 六个计划合计仍为 146 个唯一文件，没有遗漏或重复。
-- 此批报告不存在一个 spec 横跨不同分片的情况，当前 max 聚合与各文件完整用例时间相符。
-- 原 count 分片累计最后一次尝试的用例时间为 1521、722、1467、1697、992、786 秒。
-- 新计划的同一指标为 1197.09、1197.07、1198.15、1197.27、1198.06、1197.34 秒，最重累计工作量下降约 29.4%。
+## 其他候选的实验结果
 
-累计用例时间会在多个 worker 上重叠，并且不包含先前失败尝试的所有成本。以上 29.4% 是固定测量数据的分配回放，不能当作实际工作流加速比例。首份缓存截至本轮检查没有后续消费记录。
+### 测试进程池：不采用
 
-下一次自然触发的源码 CI 应核对恢复 key、Duration-balanced shard 日志、完整测试数量和总耗时，再判断是否需要继续改 E2E 分配。单独的绿色 release-only 工作流不能替代这项验证。
+从真实 main 文件成本中选择最重的两个 DOM 文件和 `tests/services/` 中最重的两个 Node 文件，共 191 个用例。实际 Vitest CLI 比较 `threads` 与 `forks`，保持两个 worker 和测试隔离，关闭 coverage；两轮交替顺序，报告确认每个文件的 pool 与指定值一致、文件和用例结果完全相同。
 
-## 4. 单测差距不能直接归因于缺少初始化权重
+| 轮次 | threads / 秒 | forks / 秒 | threads collect / 秒 | forks collect / 秒 |
+| ---- | -----------: | ---------: | -------------------: | -----------------: |
+| 1    |       71.702 |     72.631 |               19.166 |             45.937 |
+| 2    |       58.847 |     74.490 |               16.137 |             36.427 |
 
-measureFileCost 已包含测试体、setup、prepare、collect 和 environmentLoad。合并后 collect 占累计文件成本约 42%，初始化成本已经参与分配。现有算法从 baseline manifest 预测六个 PR 分片都约 1276 秒的单 worker 工作量，逐文件回放与 CI 实际归属完全一致。
+Windows 局部筛选没有观察到切换到 forks 的收益，保留现有 threads。该实验不是 Ubuntu 全套带覆盖率的结论。选中文件、命令、完整用例报告和日志保留在 `artifacts/benchmark-pools.mjs` 与 `artifacts/pools-pFwXpd/`；该驱动标记为一次性本地实验。[Vitest 官方性能文档](https://github.com/vitest-dev/vitest/blob/v4.0.7/docs/guide/improving-performance.md)也说明进程与线程存在兼容性和速度取舍。
 
-| 分片 | PR 测试步骤 / 秒 | main 测试步骤 / 秒 | PR Chromium 安装 / 秒 | main Chromium 安装 / 秒 |
-| --- | ---: | ---: | ---: | ---: |
-| 1 | 535 | 550 | 10 | 15 |
-| 2 | 387 | 510 | 9 | 31 |
-| 3 | 546 | 532 | 10 | 10 |
-| 4 | 534 | 494 | 10 | 20 |
-| 5 | 531 | 309 | 160 | 9 |
-| 6 | 384 | 509 | 12 | 11 |
+### 分配权重及其他准备成本：证据不足，不修改
 
-同样的 1907 文件、相同源码和相同权重下，最快分片从 2/6 变为 5。分片 5 的 Vitest 内部时长也从 524.59 秒变成 305.05 秒；collect 从 608.63 秒降到 360.46 秒。运行环境波动明显，不只是安装阶段影响总耗时。
+`measureFileCost` 已包含 tests、setup、prepare、collect、environmentLoad。初始 main 的 collect 占累计文件成本约 42%；最终 main 对照及优化代码的 collect 累计分别为 3229 秒和 3433 秒，仍是大头。缺少初始化权重不是已证实的问题。
 
-日志记录了不同 Azure 区域。多数 job 使用相同 Ubuntu 镜像 20261025.179.1，PR 分片 5 是 20261101.186.1；同一镜像版本内也出现明显差异，现有数据无法把 CPU 型号、宿主负载和镜像影响分别归因。
+初始相同源码、相同权重、相同文件分配的 PR/main 中，分片 5 的 Vitest 时长从 524.59 秒变为 305.05 秒，collect 从 608.63 秒变为 360.46 秒。不同 Azure 区域和同镜像内均出现明显波动，现有数据无法分别确定 CPU、宿主负载和镜像影响。
 
-将 baseline 原始权重与当前按来源分片总成本归一化的权重做静态回放，原始权重在两个后续样本中的最大负载相对均值偏差约为 5%/3%，归一化权重约为 12%/14%。这是值得检验的信号，但文件移位也会改变模块缓存与并发竞争，不能据此直接宣布移除归一化会加速 CI。
+旧数据静态回放中，原始权重相对均值的最大负载偏差约 5%/3%，来源分片归一化权重约 12%/14%。这是进一步受控实验的候选，但更换文件分配会改变导入缓存和并发竞争；本轮未根据该回放改权重，也未降低隔离或减少 coverage。
 
-建议后续记录 CPU/可用并行度、实际 worker 数、镜像和区域，积累多轮可比较样本后再验证权重稳定性。若进一步优化测试本体，应先调查 collect 和最重 UI 测试的导入/渲染成本，按受影响行为做回归验证。
+暖缓存 E2E 的 performance 步骤仅比最慢功能分片晚约 20 秒完成。新增独立 runner 会引入准备成本，没有足够净收益支持继续拆 job。Vitest 内部报告合并仍耗时 23–36 秒；本轮没有替换其覆盖率合并语义。
+
+更大的下一步收益候选是最重 UI 文件的模块收集和测试体成本，需要逐个定位后用行为回归和相同条件的 Ubuntu 对照验证。
+
+## 行为验收与限制
+
+| 行为 | 自动断言及结果 | 证据 |
+| --- | --- | --- |
+| 一次解析生成时长；独立 CLI 兼容；权重公式不变 | 1907 个权重逐轮一致，Node CLI 测试通过 | [报告守卫测试](../../tests/scripts/check-unit-test-reports.test.mjs)、[最终对照驱动](benchmark-reports.mjs) |
+| 报告缺失、空覆盖率、版本混合、worker 错误、损坏引用 | 拒绝输入，`complete=false`，不发布 manifest | [报告守卫测试](../../tests/scripts/check-unit-test-reports.test.mjs) |
+| 断言失败但数据完整 | 保留失败状态，仍生成可用 LCOV/JUnit | 报告守卫测试运行真实失败 Vitest 分片并合并 |
+| manifest 写入失败 | 步骤失败但报告 `complete=true`，保留覆盖率发布资格 | 报告守卫测试的不可写目标场景 |
+| flatted 全图兼容、循环/共享引用、数字字符串、特殊键 | 官方解码对照、64 组图及非规范回退均通过 | [blob 解码测试](../../tests/scripts/vitest-blob.test.mjs)、六份真实图对照 |
+| 浏览器可启动、缺库、其他错误、安装及二次启动失败 | 8 个公共工作流命令场景通过；Ubuntu 六个真实探针成功 | [浏览器安装测试](../../tests/scripts/unit-test-browser-install.test.mjs) |
+| 共用浏览器缓存保留有头二进制 | `--only-shell` 回归先失败，保留完整安装后通过 | 浏览器安装测试；E2E 工作流未改 |
+| push/dispatch 发布时长，PR 跳过；路径改动触发 Test | 执行实际 YAML 命令的断言通过，Vitest 调度测试 58 个通过 | 报告守卫测试、[调度测试](../../tests/scripts/ciScheduling.test.ts) |
+| 实际浏览器单测保持完整 | 五个文件的 37 个用例在最终 Ubuntu CI 全部通过 | 最终分片日志和下载的合并 JUnit |
+| E2E 暖缓存实际消费且清单完整 | 146 个文件、622 个 Chromium 用例及六个分片归属逐项一致 | [暖缓存回放](replay.mjs)、暖缓存运行 |
+
+已按 TDD 验证新增 CLI/工作流行为的失败回归，再实现为通过；解码重构先锁定官方解析行为。最后一次生产代码改动后，完整 Ubuntu Test 工作流及 Codecov 均成功。
+
+本地受影响 Vitest 检查共 9 个文件、124 个不同用例。首轮两 worker 并行时，`nativeKeyEditorFlow` 的 Chromium 启动及 `aiRouterUi` 的 shell 场景遇到既有 15 秒超时；保留日志，这两个文件用一个 worker 重跑的 15 个用例通过。没有扩大超时、更新预期或修改 UI 来掩盖失败。最终 Ubuntu 全套的五个浏览器文件全部通过，关闭本次安装策略的实际环境验证。
+
+`pnpm compile`、`pnpm knip`、相关格式和差异检查均通过；提交及推送钩子正常执行。knip 仍提示既有冗余 `scripts/e2e-shard-plan.mjs` entry，本轮不涉及。CI 调整没有产品 UI 变化，无截图验收项。
 
 ## 复现与保留
 
-[回放脚本](replay.mjs)复用当前仓库的真实分配和时长函数；不包含另一份分片算法。它检查样本中的六个单测/E2E 分片是否齐全、缓存到实际单测分配的一致性、PR/main 文件归属一致性，以及 E2E 清单的完整分配。
+Git 保留本报告、[回放脚本](replay.mjs)、[报告对照脚本](benchmark-reports.mjs)及生产回归测试。生成输出由本目录 `.gitignore` 仅忽略 `artifacts/`，未隐藏调查源码。
 
-原始报告、日志和精简字段快照保留在：
+原始单测/E2E 报告、精简快照、最终 CI 日志/JUnit 保留在 `C:\Users\THINK\AppData\Local\Temp\ci-1817-analysis`；原 PR 分片 5 日志为 `C:\Users\THINK\AppData\Local\Temp\ci-1817-unit5.log`。本地 `artifacts/` 保留各阶段 benchmark、pool 筛选、完整性回放和旧 CLI 副本，供对照审阅；未清理原始失败或前后样本。
 
-C:\Users\THINK\AppData\Local\Temp\ci-1817-analysis
+复现需要仓库依赖已安装、Node 24、Git 和 PowerShell，以及保留的六份报告。原始 blob 在 `flat-main/blob-1-6.json` 至 `blob-6-6.json`；基线三个脚本副本位于 `artifacts/baseline/scripts/`，来自 `6f6f6116691c4619e812de9c003281dbaadf87eb`。在新 checkout 可按下列方式重建副本，工具从当前仓库解析相同已锁定依赖。
 
-PR 分片 5 的原始日志另在 C:\Users\THINK\AppData\Local\Temp\ci-1817-unit5.log。这些本地样本用于后续方案对照；报告和脚本保留在 Git，生成的 manifest/回放输出在本目录 artifacts/ 下并由局部规则忽略。
-
-在对应源码版本和已安装依赖的 Node 24 环境中运行：
-
-~~~powershell
+```powershell
+node -e 'const fs=require("fs"),path=require("path"),cp=require("child_process");const base=".scratch/ci-runner-performance/artifacts/baseline";for(const file of ["scripts/check-unit-test-reports.mjs","scripts/write-unit-test-durations.mjs","scripts/utils/unitTestDurations.mjs"]){const target=path.join(base,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,cp.execFileSync("git",["show","6f6f6116691c4619e812de9c003281dbaadf87eb:"+file]));}'
 $ciDataRoot = Join-Path $env:TEMP "ci-1817-analysis"
-node .scratch/ci-runner-performance/replay.mjs --input-root "$ciDataRoot"
-~~~
+node .scratch/ci-runner-performance/benchmark-reports.mjs --reports-dir "$ciDataRoot/flat-main" --rounds 3 --label reproduced
+node .scratch/ci-runner-performance/replay.mjs --input-root "$ciDataRoot" --output .scratch/ci-runner-performance/artifacts/replay-with-warm-e2e.json
+```
 
-优先读取 unit-all-lean-records.json 精简快照；没有快照时读取三个目录中的原始 blob。若在另一台机器复现，且远程 artifact 尚未到期，下载布局如下；一日保留期的 E2E 输入到期后需使用保留的本地样本。
+对照驱动先验证完整图一致，再执行旧两命令/新一命令并检查输出；计时包含子进程启动、文件读写与完整处理。回放优先读取 `unit-all-lean-records.json`；没有快照时读取三个原始单测目录。若 `e2e-warm-reports/` 存在，会强制核对六份暖缓存报告和完整用例清单。缺失分片或精简快照中的 main 文件已验证会非零退出，拒绝不完整比较。
 
-~~~powershell
+需要重新下载时，各 run 的 artifact 保留期有限；到期后应使用已保留本地数据，或在相同源码重新触发并注明新的测量条件。
+
+```powershell
 gh run download 41656791026 --repo qixing-jk/all-api-hub --pattern "vitest-blob-report-*" --dir "$ciDataRoot/baseline"
 gh run download 41685357437 --repo qixing-jk/all-api-hub --pattern "vitest-blob-report-*" --dir "$ciDataRoot/final-pr"
 gh run download 41690970748 --repo qixing-jk/all-api-hub --pattern "vitest-blob-report-*" --dir "$ciDataRoot/merged-main"
 gh run download 41690970780 --repo qixing-jk/all-api-hub --pattern "e2e-spec-durations-*" --dir "$ciDataRoot/e2e-main"
-node .scratch/ci-runner-performance/replay.mjs --input-root "$ciDataRoot"
-~~~
+gh run download 41702374063 --repo qixing-jk/all-api-hub --pattern "e2e-spec-durations-*" --dir "$ciDataRoot/e2e-warm-reports"
+```
 
-验收：真实数据回放通过，回放脚本的语法和格式检查通过；删除精简快照中的一个 main 文件后，回放非零退出并拒绝这组不完整比较。调查中的方案尚未实施，E2E 后续缓存消费和实际速度收益属于待关闭的测量条件。
+本轮没有证明整轮单测的稳定提速，也没有在 Ubuntu 全套中试验 forks、原始未归一化权重或新的浏览器专用 job；相应数据边界保留在上文，避免将局部结果当作整体结论。
