@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { expect, it } from "vitest"
@@ -25,6 +25,32 @@ it("records unavailable Safari as a failed check without running platform comman
     status: "failed",
     checks: [{ name: "macOS runtime", status: "failed" }],
   })
+})
+
+it("reaches native compilation when the converter nests its project inside the app folder", async () => {
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  const projectRoot = path.join(output, "project")
+  mkdirSync(path.join(projectRoot, "Trial App", "Trial App.xcodeproj"), {
+    recursive: true,
+  })
+  writeFileSync(
+    path.join(output, "identity.json"),
+    JSON.stringify({ projectRoot, appName: "Trial App" }),
+  )
+  await expect(
+    runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: (file, args) => {
+        if (file === process.execPath)
+          return `Prepared independent trial: ${output}`
+        if (file === "xcodebuild" && args.includes("-list"))
+          return JSON.stringify({ project: { schemes: ["Trial App"] } })
+        if (file === "xcodebuild") throw new Error("compile fixture failed")
+        return "true"
+      },
+    }),
+  ).rejects.toThrow("compile fixture failed")
 })
 
 it("rejects denied accessibility access instead of accepting a launched Safari", async () => {

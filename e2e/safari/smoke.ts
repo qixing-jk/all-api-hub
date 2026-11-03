@@ -81,7 +81,7 @@ export async function runSafariSmoke({
         fs.readFileSync(path.join(match[1]!, "identity.json"), "utf8"),
       )
       const project = fs
-        .readdirSync(identity.projectRoot)
+        .readdirSync(identity.projectRoot, { recursive: true })
         .find((file) => file.endsWith(".xcodeproj"))
       assert(project, "Missing converter project")
       const projectPath = path.join(identity.projectRoot, project)
@@ -133,7 +133,7 @@ export async function runSafariSmoke({
       ])
       const tree = command("osascript", [
         "-e",
-        'tell application "System Events" to tell process "Safari" to get entire contents of window 1',
+        'tell application "System Events" to tell process "Safari"\n delay 1\n try\n click button "Advanced" of toolbar 1 of window 1\n end try\n delay 1\n repeat with control in (entire contents of window 1)\n try\n if role of control is "AXCheckBox" and name of control contains "Show features for web developers" then\n if value of control is 0 then click control\n end if\n end try\n end repeat\n delay 1\n try\n click button "Developer" of toolbar 1 of window 1\n end try\n delay 1\n return entire contents of window 1\n end tell',
       ])
       fs.writeFileSync(path.join(output, "safari-settings.txt"), tree)
       command("screencapture", ["-x", path.join(output, "safari-settings.png")])
