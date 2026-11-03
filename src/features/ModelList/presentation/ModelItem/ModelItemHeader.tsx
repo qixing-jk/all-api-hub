@@ -35,6 +35,7 @@ interface ModelItemHeaderProps {
     overflowCount?: number
     title: string
   }
+  groupControl?: React.ReactNode
   verificationSummary?: ApiVerificationHistorySummary | null
   onOpenKeyDialog?: () => void
   onVerifyApi?: () => void
@@ -53,6 +54,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   handleCopyModelName,
   showPricingMetadata,
   groupSummary,
+  groupControl,
   verificationSummary,
   onOpenKeyDialog,
   onVerifyApi,
@@ -195,22 +197,23 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               </Badge>
             )}
 
-          {groupSummary && (
-            <Badge
-              variant="secondary"
-              size="sm"
-              className="text-3xs max-w-[9rem] min-w-0 sm:text-xs"
-              title={groupSummary.title}
-              aria-label={groupSummary.title}
-            >
-              <span className="min-w-0 truncate">{groupSummary.label}</span>
-              {typeof groupSummary.overflowCount === "number" && (
-                <BadgeAdornment aria-hidden="true">
-                  +{groupSummary.overflowCount}
-                </BadgeAdornment>
-              )}
-            </Badge>
-          )}
+          {groupControl ??
+            (groupSummary && (
+              <Badge
+                variant="secondary"
+                size="sm"
+                className="text-3xs max-w-[9rem] min-w-0 sm:text-xs"
+                title={groupSummary.title}
+                aria-label={groupSummary.title}
+              >
+                <span className="min-w-0 truncate">{groupSummary.label}</span>
+                {typeof groupSummary.overflowCount === "number" && (
+                  <BadgeAdornment aria-hidden="true">
+                    +{groupSummary.overflowCount}
+                  </BadgeAdornment>
+                )}
+              </Badge>
+            ))}
         </div>
 
         {trailingContent ? (

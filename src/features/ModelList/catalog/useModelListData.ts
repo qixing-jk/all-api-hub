@@ -333,6 +333,8 @@ export function useModelListData(routeParams?: Record<string, string>) {
     [state.pricingScenarioSettings, priceComparisonWeights],
   )
   const filteredData = useFilteredModels({
+    modelGroupOverrides: state.modelGroupOverrides,
+    expandGroups: state.expandGroups,
     showUnavailableModels,
     pricingScenario,
     isPriceComparisonActive: isModelListPriceSortMode(sortMode),

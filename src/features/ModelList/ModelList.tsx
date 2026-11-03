@@ -101,6 +101,11 @@ export default function ModelList(props: {
     allAccountsExcludedGroupsByAccountId,
     setAllAccountsExcludedGroupsByAccountId,
 
+    modelGroupOverrides,
+    setModelGroupOverrides,
+    expandGroups,
+    setExpandGroups,
+
     // Display options
     showUnavailableModels,
     setShowUnavailableModels,
@@ -227,6 +232,20 @@ export default function ModelList(props: {
 
   const renderModelDisplay = () => (
     <ModelDisplay
+      modelGroupOverrides={modelGroupOverrides}
+      onModelGroupChange={
+        isAllAccountsScope && !expandGroups
+          ? (itemKey, group) => {
+              setModelGroupOverrides((previous) => {
+                const next = { ...previous }
+                if (group === undefined) delete next[itemKey]
+                else next[itemKey] = group
+                return next
+              })
+            }
+          : undefined
+      }
+      excludedGroupsByAccountId={allAccountsExcludedGroupsByAccountId}
       onCatalogChanged={loadPricingData}
       models={displayedModels}
       verificationSummariesByKey={verificationSummariesByKey}
@@ -580,6 +599,8 @@ export default function ModelList(props: {
             singleSourceGroupDisplayNames={singleSourceGroupDisplayNames}
             showRealPrice={showRealPrice}
             setShowRealPrice={setShowRealPrice}
+            expandGroups={expandGroups}
+            setExpandGroups={setExpandGroups}
             showEndpointTypes={showEndpointTypes}
             setShowEndpointTypes={setShowEndpointTypes}
             totalModels={totalModels}

@@ -10,6 +10,7 @@ import type {
 } from "~/features/ModelList/catalog/modelManagementSources"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/catalog/sourceLabels"
+import { AccountModelGroupSelect } from "~/features/ModelList/groups/AccountModelGroupSelect"
 import {
   MODEL_GROUP_ACCESS_STATES,
   type ActiveModelGroupContext,
@@ -64,6 +65,10 @@ import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 const logger = createLogger("ModelItem")
 
 interface ModelItemProps {
+  selectedModelGroup?: string
+  comparisonGroup?: string
+  excludedAccountGroups?: string[]
+  onModelGroupChange?: (group: string | undefined) => void
   model: ModelPricing
   onCatalogChanged?: () => Promise<void>
   resolvedVendor: ResolvedModelVendor
@@ -301,7 +306,11 @@ export default function ModelItem(props: ModelItemProps) {
         : showGroupDetails
           ? activeGroupContext.activeUsableGroups.length > 0
           : true
-  const usableGroupLabels = groupContext.usableGroups.map((group) =>
+  const usableGroupLabels = (
+    props.comparisonGroup === undefined
+      ? groupContext.usableGroups
+      : [props.comparisonGroup]
+  ).map((group) =>
     formatGroupLabelFromRatios(group, groupRatios, model.groupDisplayNames),
   )
   const [primaryUsableGroupLabel] = usableGroupLabels
@@ -407,6 +416,20 @@ export default function ModelItem(props: ModelItemProps) {
             handleCopyModelName={handleCopyModelName}
             showPricingMetadata={showPricing}
             groupSummary={groupSummary}
+            groupControl={
+              props.onModelGroupChange &&
+              showGroupDetails &&
+              groupContext.usableGroups.length > 0 && (
+                <AccountModelGroupSelect
+                  selectedGroup={props.selectedModelGroup}
+                  groups={groupContext.usableGroups}
+                  excludedGroups={props.excludedAccountGroups ?? []}
+                  groupRatios={groupRatios}
+                  displayNames={model.groupDisplayNames}
+                  onChange={props.onModelGroupChange}
+                />
+              )
+            }
             verificationSummary={verificationSummary}
             onOpenKeyDialog={
               source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&

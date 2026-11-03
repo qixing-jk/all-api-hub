@@ -99,10 +99,12 @@ vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemHeader", () => ({
     onVerifyApi,
     onVerifyCliSupport,
     groupSummary,
+    groupControl,
   }: {
     model: { model_name: string }
     resolvedVendor: { state: string; label?: string }
     trailingContent?: React.ReactNode
+    groupControl?: React.ReactNode
     handleCopyModelName: () => void
     onOpenKeyDialog?: () => void
     onVerifyApi?: () => void
@@ -114,6 +116,7 @@ vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemHeader", () => ({
     }
   }) => (
     <div>
+      {groupControl}
       {model.model_name}
       <button type="button" onClick={handleCopyModelName}>
         copy-model-name
@@ -262,6 +265,37 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("shows the model group control and labels only the expanded offer's group", () => {
+    const props = createDefaultProps()
+    props.model.enable_groups = ["default", "vip"]
+    props.groupContext.supportedGroups = ["default", "vip"]
+    props.groupContext.usableGroups = ["default", "vip"]
+    props.activeGroupContext.activeUsableGroups = ["default", "vip"]
+    const onModelGroupChange = vi.fn()
+    const { rerender } = render(
+      <ModelItem {...props} onModelGroupChange={onModelGroupChange} />,
+    )
+    expect(
+      screen.getByRole("combobox", { name: "modelGroupQuickSelect" }),
+    ).toBeVisible()
+    expect(screen.getByText("default+1")).toBeVisible()
+    rerender(
+      <ModelItem
+        {...props}
+        onModelGroupChange={onModelGroupChange}
+        comparisonGroup="vip"
+      />,
+    )
+    expect(
+      screen.getByRole("combobox", { name: "modelGroupQuickSelect" }),
+    ).toBeVisible()
+    expect(screen.getByText("vip", { exact: true })).toHaveAttribute(
+      "title",
+      "currentUsableGroups: vip",
+    )
+    expect(screen.queryByText("default+1")).not.toBeInTheDocument()
+  })
+
   it("allows published per-request prices to expand without endpoint or group details", () => {
     const props = createDefaultProps()
     props.model.quota_type = 1

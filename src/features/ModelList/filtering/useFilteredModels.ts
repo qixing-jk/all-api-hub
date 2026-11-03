@@ -19,6 +19,7 @@ import { type ModelListSortMode } from "~/features/ModelList/filtering/sortModes
 import { summarizeModelListGroupAccess } from "~/features/ModelList/groups/groupAccessSummary"
 import { deriveGroupAvailability } from "~/features/ModelList/groups/groupAvailability"
 import {
+  getModelItemKey,
   getModelListSourceIdentityKey,
   type ModelListItem,
 } from "~/features/ModelList/presentation/modelListItems"
@@ -39,6 +40,8 @@ const EMPTY_EXCLUDED_GROUPS: Record<string, string[]> = {}
 const EMPTY_ACCOUNT_IDS: string[] = []
 
 interface UseFilteredModelsProps {
+  modelGroupOverrides?: Record<string, string>
+  expandGroups?: boolean
   showUnavailableModels?: boolean
   pricingData: ModelCatalogSnapshot | null
   pricingContexts: AccountPricingContext[]
@@ -74,6 +77,8 @@ interface UseFilteredModelsProps {
  */
 export function useFilteredModels(params: UseFilteredModelsProps) {
   const {
+    modelGroupOverrides,
+    expandGroups = false,
     showUnavailableModels = false,
     pricingData,
     pricingContexts,
@@ -304,19 +309,43 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     [filterPipeline, selectedProvider],
   )
 
+  const getPricingGroupCandidates = useCallback(
+    (item: ModelListItem) => {
+      const candidates = getGroupCandidatesForRawItem(item)
+      const override =
+        isAllAccounts && !expandGroups
+          ? modelGroupOverrides?.[getModelItemKey(item)]
+          : undefined
+      return override !== undefined &&
+        item.groupContext.usableGroups.includes(override) &&
+        (candidates === undefined || candidates.includes(override))
+        ? [override]
+        : candidates
+    },
+    [
+      getGroupCandidatesForRawItem,
+      isAllAccounts,
+      expandGroups,
+      modelGroupOverrides,
+    ],
+  )
+
   const baseFilteredModels = useMemo(
     () =>
       calculateModelListPrices({
+        expandGroups: expandGroups && isAllAccounts,
         rawItems: accountFilteredBaseRawModels,
-        getGroupCandidates: getGroupCandidatesForRawItem,
+        getGroupCandidates: getPricingGroupCandidates,
         showRealPrice,
         priceComparisonWeights,
         pricingScenario,
         isPriceComparisonActive,
       }),
     [
+      expandGroups,
+      isAllAccounts,
       accountFilteredBaseRawModels,
-      getGroupCandidatesForRawItem,
+      getPricingGroupCandidates,
       priceComparisonWeights,
       pricingScenario,
       isPriceComparisonActive,

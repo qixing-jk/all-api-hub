@@ -35,6 +35,7 @@
     "verifyApi": "API を検証",
     "verifyCliSupport": "CLI 対応を検証"
   },
+  "allAccountGroups": "すべてのグループ",
   "allAccounts": "すべてのアカウント",
   "allBillingModes": "すべての課金方式",
   "allGroups": "すべてのグループ",
@@ -315,8 +316,11 @@
   "displayOptions": "表示内容",
   "endpointType": "エンドポイント種別",
   "endpointTypes": "エンドポイント種別",
+  "endpointTypesHint": "各モデルが対応する API エンドポイントの種類を表示します。",
   "estimatedPrice": "推定",
   "estimatedPriceTitle": "参考レートや料金の前提に基づく推算です。実際の料金は異なる場合があります。",
+  "expandAccountGroups": "アカウントのグループを展開",
+  "expandAccountGroupsHint": "利用可能なグループを個別に表示します。同じモデルでも、1つのアカウントに複数の見積もりが表示されます。 候補グループはアカウントのグループ絞り込みで決まります。カードでのグループ選択は、そのモデルの見積もりだけに適用されます。",
   "expandDetails": "詳細を展開",
   "fallbackSourceNotice": {
     "description": "このカタログは現在アカウントキーのフォールバック経由で読み込まれているため、モデル検出と検証のみ利用できます。[データを更新] を押すと直接のアカウント経路を再試行します。",
@@ -413,6 +417,7 @@
     },
     "selectionHint": "複数の能力を選択すると、モデルは選択したすべての能力を満たす必要があります。"
   },
+  "modelGroupQuickSelect": "モデルのグループ",
   "noMatchingModels": "一致するモデルが見つかりません",
   "noSourcesDescription": "モデル一覧を表示するには、先にサイトアカウントまたは API 認証情報を追加してください。",
   "noSourcesTitle": "利用できるデータソースがありません",
@@ -533,6 +538,7 @@
     "source": "課金ルール"
   },
   "realAmount": "実際のチャージ額",
+  "realAmountHint": "各アカウントに設定した換算率で価格を換算します。",
   "refreshData": "データを更新",
   "runtimeKeyFallbackSourceNotice": {
     "description": "このカタログは、このアカウントの既存キー経由で読み込まれているため、モデル検出と検証のみ利用できます。このアカウントではここから新しい API キーを作成できません。[データを更新] を押すと直接のアカウント経路を再試行します。",
@@ -605,7 +611,8 @@
       "cacheRead": "キャッシュ読み取り",
       "cacheWrite": "キャッシュ書き込み",
       "input": "入力",
-      "output": "出力"
+      "output": "出力",
+      "request": "呼び出し単価"
     },
     "minute": "分",
     "missingConversion": "人民元への換算情報がありません。実際の価格表示をオフにすると米ドルの表示価格を確認できます。",
@@ -645,6 +652,7 @@
     "rateChange": "{{meter}}：{{from}} → {{to}} / 100万トークン",
     "referenceImages": "タスクごとの参照画像数",
     "referenceRate": "参考単価",
+    "requestUnit": "回",
     "responseFormat": "課金レスポンス形式",
     "search": "検索回数",
     "searchContext": "検索コンテキスト",
@@ -696,6 +704,7 @@
   "selectSource": "ソースを選択",
   "selectSourceToContinue": "上のデータソースを選択してから、モデル一覧を表示してください。",
   "showing_other": "{{count}} モデルを表示中",
+  "showingGroupQuotes_other": "見積もりを{{count}}件表示",
   "showUnavailableModels": "アカウントに利用権限がないモデルも表示",
   "siteDescription": "サイトの説明：",
   "siteSupportedGroups": "サイトが対応するグループ",

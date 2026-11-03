@@ -38,6 +38,7 @@
     "verifyApi": "Verify API",
     "verifyCliSupport": "Verify CLI Support"
   },
+  "allAccountGroups": "All groups",
   "allAccounts": "All accounts",
   "allBillingModes": "All Billing Modes",
   "allGroups": "All Groups",
@@ -324,8 +325,11 @@
   "displayOptions": "Display",
   "endpointType": "Endpoint Type",
   "endpointTypes": "Endpoint Types",
+  "endpointTypesHint": "Show the API endpoint types supported by each model.",
   "estimatedPrice": "Estimated",
   "estimatedPriceTitle": "Calculated from reference rates or pricing assumptions; actual charges may vary.",
+  "expandAccountGroups": "Expand account groups",
+  "expandAccountGroupsHint": "List each eligible group separately. An account can have multiple offers for the same model. Account group filters determine eligible groups. A card’s group choice applies to that model’s quote.",
   "expandDetails": "Expand details",
   "fallbackSourceNotice": {
     "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",
@@ -422,6 +426,7 @@
     },
     "selectionHint": "When multiple capabilities are selected, models must match all selected capabilities."
   },
+  "modelGroupQuickSelect": "Model group",
   "noMatchingModels": "No matching models found",
   "noSourcesDescription": "Add a site account or API credential before viewing the model list.",
   "noSourcesTitle": "No model sources yet",
@@ -542,6 +547,7 @@
     "source": "Billing rules"
   },
   "realAmount": "Real Recharge Amount",
+  "realAmountHint": "Convert prices using each account’s configured conversion rate.",
   "refreshData": "Refresh Data",
   "runtimeKeyFallbackSourceNotice": {
     "description": "This catalog is loaded through an existing key for this account, so it only supports model discovery and verification. This account cannot create new API keys here; Refresh Data will retry the direct account route.",
@@ -614,7 +620,8 @@
       "cacheRead": "Cache read",
       "cacheWrite": "Cache write",
       "input": "Input",
-      "output": "Output"
+      "output": "Output",
+      "request": "Per-call price"
     },
     "minute": "Minute",
     "missingConversion": "CNY conversion is unavailable. Turn off real-price display to view USD list prices.",
@@ -654,6 +661,7 @@
     "rateChange": "{{meter}}: {{from}} → {{to}} / million tokens",
     "referenceImages": "Reference images per task",
     "referenceRate": "Reference",
+    "requestUnit": "call",
     "responseFormat": "Billing response format",
     "search": "Searches",
     "searchContext": "Search context",
@@ -706,6 +714,8 @@
   "selectSourceToContinue": "Select a source above before viewing the model list.",
   "showing_one": "Showing {{count}} model",
   "showing_other": "Showing {{count}} models",
+  "showingGroupQuotes_one": "Showing {{count}} offer",
+  "showingGroupQuotes_other": "Showing {{count}} offers",
   "showUnavailableModels": "Also show models without account access",
   "siteDescription": "Site description:",
   "siteSupportedGroups": "Site-supported groups",

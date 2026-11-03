@@ -16,6 +16,8 @@ import type { ModelPricingScenarioSettings } from "~/features/ModelList/pricing/
 import { type ModelListVerificationResultFilter } from "~/features/ModelList/verification/verificationResultFilters"
 
 export interface ControlPanelProps {
+  expandGroups?: boolean
+  setExpandGroups?: (show: boolean) => void
   showUnavailableModels?: boolean
   setShowUnavailableModels?: (show: boolean) => void
   pricingScenarioSettings?: ModelPricingScenarioSettings

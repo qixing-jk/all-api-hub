@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -40,11 +40,18 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
-const { mockTotalListHeightChanged, modelItemSpy } = vi.hoisted(() => ({
+const {
+  mockTotalListHeightChanged,
+  modelItemSpy,
+  virtualWindow,
+  scrollIntoViewSpy,
+} = vi.hoisted(() => ({
   mockTotalListHeightChanged: {
     current: undefined as undefined | ((height: number) => void),
   },
   modelItemSpy: vi.fn(),
+  virtualWindow: { enabled: false },
+  scrollIntoViewSpy: vi.fn(),
 }))
 
 const TEST_IDS = vi.hoisted(() => ({
@@ -76,26 +83,48 @@ vi.mock("~/components/ui", () => ({
 }))
 
 vi.mock("react-virtuoso", () => ({
-  Virtuoso: ({
-    className,
-    data,
-    itemContent,
-    computeItemKey,
-    components,
-    style,
-    totalListHeightChanged,
-  }: {
-    className?: string
-    data: any[]
-    itemContent: (index: number, item: any) => React.ReactNode
-    computeItemKey?: (index: number, item: any) => React.Key
-    components?: {
-      Item?: React.ComponentType<any>
-      List?: React.ComponentType<any>
-    }
-    style?: React.CSSProperties
-    totalListHeightChanged?: (height: number) => void
-  }) => {
+  Virtuoso: React.forwardRef(function MockVirtuoso(
+    {
+      className,
+      data,
+      itemContent,
+      computeItemKey,
+      components,
+      style,
+      totalListHeightChanged,
+    }: {
+      className?: string
+      data: any[]
+      itemContent: (index: number, item: any) => React.ReactNode
+      computeItemKey?: (index: number, item: any) => React.Key
+      components?: {
+        Item?: React.ComponentType<any>
+        List?: React.ComponentType<any>
+      }
+      style?: React.CSSProperties
+      totalListHeightChanged?: (height: number) => void
+    },
+    ref: React.ForwardedRef<unknown>,
+  ) {
+    const [renderedData, setRenderedData] = React.useState(data)
+    const [startIndex, setStartIndex] = React.useState(0)
+    React.useLayoutEffect(() => {
+      if (virtualWindow.enabled) setRenderedData(data)
+    }, [data])
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        scrollIntoView: (location: { index: number }) => {
+          scrollIntoViewSpy(location)
+          setStartIndex(location.index)
+        },
+      }),
+      [],
+    )
+    // Virtuoso receives fresh callbacks before reconciling its internal data.
+    const visibleData = virtualWindow.enabled
+      ? renderedData.slice(startIndex, startIndex + 1)
+      : data
     const Item = components?.Item ?? ((props: any) => <div {...props} />)
     const List = components?.List ?? ((props: any) => <div {...props} />)
     mockTotalListHeightChanged.current = totalListHeightChanged
@@ -103,21 +132,26 @@ vi.mock("react-virtuoso", () => ({
     return (
       <div data-testid={TEST_IDS.virtuoso} className={className} style={style}>
         <List data-testid={TEST_IDS.virtuosoList}>
-          {data.map((item, index) => (
-            <Item
-              data-testid={TEST_IDS.virtuosoItem}
-              key={
-                computeItemKey?.(index, item) ??
-                `${item.model.model_name}-${index}`
-              }
-            >
-              {itemContent(index, item)}
-            </Item>
-          ))}
+          {visibleData.map((item, visibleIndex) => {
+            const index = virtualWindow.enabled
+              ? startIndex + visibleIndex
+              : visibleIndex
+            return (
+              <Item
+                data-testid={TEST_IDS.virtuosoItem}
+                key={
+                  computeItemKey?.(index, item) ??
+                  `${item.model.model_name}-${index}`
+                }
+              >
+                {itemContent(index, item)}
+              </Item>
+            )
+          })}
         </List>
       </div>
     )
-  },
+  }),
 }))
 
 vi.mock("~/features/ModelList/presentation/ModelItem", () => ({
@@ -136,6 +170,12 @@ vi.mock("~/features/ModelList/presentation/ModelItem", () => ({
       >
         <button type="button" onClick={props.onToggleExpand}>
           toggle-{props.model.model_name}
+        </button>
+        <button type="button" onClick={() => props.onModelGroupChange?.("vip")}>
+          change-group-
+          {props.source.kind === "account"
+            ? props.source.account.id
+            : "profile"}
         </button>
         <button
           type="button"
@@ -310,9 +350,102 @@ function getRenderedModelItem(modelId: string) {
 }
 
 describe("ModelDisplay", () => {
+  it.each([false, true])(
+    "reveals a reordered offer after its old virtual row is unmounted (grouped: %s)",
+    async (showPriceComparisonGroups) => {
+      virtualWindow.enabled = true
+      const user = userEvent.setup()
+      const first = createCalculatedModel({
+        source: createAccountSource({ ...ACCOUNT_FIXTURE, id: "first" }),
+      })
+      const second = createCalculatedModel({
+        model: { model_name: "second-model" },
+        source: createAccountSource({ ...ACCOUNT_FIXTURE, id: "second" }),
+      })
+      const props = {
+        verificationSummariesByKey: {},
+        showRealPrice: true,
+        showEndpointTypes: true,
+        handleGroupClick: vi.fn(),
+        onModelGroupChange: vi.fn(),
+        showPriceComparisonGroups,
+      }
+      const view = render(<ModelDisplay {...props} models={[first, second]} />)
+      expect(
+        screen.queryByRole("button", { name: "change-group-second" }),
+      ).not.toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", { name: "change-group-first" }),
+      )
+      view.rerender(
+        <ModelDisplay
+          {...props}
+          models={[second, { ...first, effectiveGroup: "vip" }]}
+        />,
+      )
+      await waitFor(() =>
+        expect(scrollIntoViewSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ index: 1 }),
+        ),
+      )
+      expect(
+        screen
+          .getByRole("button", { name: "change-group-first" })
+          .closest("[data-model-row-key]"),
+      ).toHaveAttribute("data-group-change-highlight")
+      view.unmount()
+    },
+  )
+  it.each([false, true])(
+    "identifies the operated card after group selection reorders matching models (grouped: %s)",
+    async (showPriceComparisonGroups) => {
+      const user = userEvent.setup()
+      const onModelGroupChange = vi.fn()
+      const first = createCalculatedModel({
+        source: createAccountSource({ ...ACCOUNT_FIXTURE, id: "first" }),
+      })
+      const second = createCalculatedModel({
+        source: createAccountSource({ ...ACCOUNT_FIXTURE, id: "second" }),
+      })
+      const props = {
+        verificationSummariesByKey: {},
+        showRealPrice: true,
+        showEndpointTypes: true,
+        handleGroupClick: vi.fn(),
+        onModelGroupChange,
+        showPriceComparisonGroups,
+      }
+      const view = render(<ModelDisplay {...props} models={[first, second]} />)
+      await user.click(
+        screen.getByRole("button", { name: "change-group-first" }),
+      )
+      expect(onModelGroupChange).toHaveBeenCalledWith(
+        "account:first:gpt-4o-mini",
+        "vip",
+      )
+      view.rerender(
+        <ModelDisplay
+          {...props}
+          models={[second, { ...first, effectiveGroup: "vip" }]}
+        />,
+      )
+      const changedRow = screen
+        .getByRole("button", { name: "change-group-first" })
+        .closest("[data-model-row-key]")
+      expect(changedRow).toHaveAttribute("data-group-change-highlight")
+      expect(
+        screen
+          .getByRole("button", { name: "change-group-second" })
+          .closest("[data-model-row-key]"),
+      ).not.toHaveAttribute("data-group-change-highlight")
+      view.unmount()
+      expect(changedRow).not.toHaveAttribute("data-group-change-highlight")
+    },
+  )
   beforeEach(() => {
     vi.clearAllMocks()
     mockTotalListHeightChanged.current = undefined
+    virtualWindow.enabled = false
   })
 
   it("passes each calculated row's resolved vendor to ModelItem unchanged", () => {
@@ -373,6 +506,64 @@ describe("ModelDisplay", () => {
     )
   })
 
+  it("does not attribute account-wide verification history to expanded group offers", () => {
+    const summaryKey = serializeVerificationHistoryTarget(
+      requireHistoryTarget(
+        createAccountModelVerificationHistoryTarget("account-1", "gpt-4o-mini"),
+      ),
+    )
+    render(
+      <ModelDisplay
+        models={["default", "vip"].map((group) => ({
+          ...createCalculatedModel({ effectiveGroup: group }),
+          comparisonGroup: group,
+        }))}
+        verificationSummariesByKey={{
+          [summaryKey]: { status: "success" } as any,
+        }}
+        showRealPrice={false}
+        showEndpointTypes={false}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+    for (const item of screen.getAllByTestId(TEST_IDS.modelItem)) {
+      expect(item).toHaveAttribute("data-summary-status", "none")
+    }
+  })
+
+  it("abandons a pending group reveal when its offer is removed", async () => {
+    const survivor = createCalculatedModel({
+      model: { model_name: "surviving-model" },
+    })
+    const models = [createCalculatedModel({}), survivor]
+    const props = {
+      verificationSummariesByKey: {},
+      showRealPrice: false,
+      showEndpointTypes: false,
+      handleGroupClick: vi.fn(),
+      onModelGroupChange: vi.fn(),
+    }
+    const view = render(<ModelDisplay {...props} models={models} />)
+    const targetKey = getRenderedModelItem("gpt-4o-mini")
+      .closest("[data-model-row-key]")
+      ?.getAttribute("data-model-row-key")
+    expect(targetKey).toBeTruthy()
+    await userEvent
+      .setup()
+      .click(screen.getAllByText("change-group-account-1")[0]!)
+    expect(props.onModelGroupChange).toHaveBeenCalledTimes(1)
+    expect(props.onModelGroupChange).toHaveBeenCalledWith(targetKey, "vip")
+    view.rerender(<ModelDisplay {...props} models={[survivor]} />)
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled()
+    expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
+      "data-model-id",
+      "surviving-model",
+    )
+    expect(
+      view.container.querySelector("[data-group-change-highlight]"),
+    ).toBeNull()
+  })
+
   it("shows an empty state when no filtered models are available", () => {
     render(
       <ModelDisplay
@@ -390,7 +581,7 @@ describe("ModelDisplay", () => {
     expect(screen.queryByTestId(TEST_IDS.virtuoso)).not.toBeInTheDocument()
   })
 
-  it("shrinks the virtual model list container to measured content height", () => {
+  it("shrinks the virtual model list container to measured content height", async () => {
     render(
       <ModelDisplay
         models={[
@@ -412,10 +603,10 @@ describe("ModelDisplay", () => {
       mockTotalListHeightChanged.current?.(144)
     })
 
-    expect(listContainer).toHaveStyle({ height: "144px" })
+    await waitFor(() => expect(listContainer).toHaveStyle({ height: "144px" }))
   })
 
-  it("caps the virtual model list container with responsive CSS max-height", () => {
+  it("caps the virtual model list container with responsive CSS max-height", async () => {
     render(
       <ModelDisplay
         models={[
@@ -440,9 +631,9 @@ describe("ModelDisplay", () => {
       mockTotalListHeightChanged.current?.(10_000)
     })
 
-    expect(listContainer).toHaveStyle({
-      height: "10000px",
-    })
+    await waitFor(() =>
+      expect(listContainer).toHaveStyle({ height: "10000px" }),
+    )
     expect(listContainer).toHaveClass("max-h-[70vh]")
   })
 

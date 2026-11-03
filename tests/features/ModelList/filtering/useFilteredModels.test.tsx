@@ -15,6 +15,7 @@ import {
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
 import { useFilteredModels } from "~/features/ModelList/filtering/useFilteredModels"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupContext"
+import { getModelItemKey } from "~/features/ModelList/presentation/modelListItems"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import type { ModelPriceComparisonWeights } from "~/features/ModelList/pricing/priceComparison"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
@@ -144,6 +145,91 @@ function renderUseFilteredModels(
 }
 
 describe("useFilteredModels", () => {
+  it("changes one model's quote without excluding other models or another account", async () => {
+    const accountA = createDisplayAccount({
+      id: "a",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const accountB = createDisplayAccount({
+      id: "b",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const pricing = createPricingResponse(
+      [
+        {
+          model_name: "shared",
+          model_ratio: 1,
+          enable_groups: ["default", "vip"],
+        },
+        {
+          model_name: "default-only",
+          model_ratio: 1,
+          enable_groups: ["default"],
+        },
+      ],
+      {
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: ["default", "vip"],
+        },
+        groupRatios: { default: 1, vip: 3 },
+      },
+    )
+    const inputs = {
+      selectedSource: createAllAccountsSource(),
+      pricingContexts: [
+        { account: accountA, pricing },
+        { account: accountB, pricing },
+      ],
+    }
+    const { result, rerender } = renderUseFilteredModels(inputs)
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(4))
+    const target = result.current.filteredModels.find(
+      (item) =>
+        item.source.kind === "account" &&
+        item.source.account.id === "a" &&
+        item.model.model_name === "shared",
+    )!
+    rerender({
+      ...inputs,
+      modelGroupOverrides: { [getModelItemKey(target)]: "vip" },
+    })
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.find(
+          (item) => getModelItemKey(item) === getModelItemKey(target),
+        )?.effectiveGroup,
+      ).toBe("vip"),
+    )
+    expect(result.current.filteredModels).toHaveLength(4)
+    expect(
+      result.current.filteredModels
+        .filter((item) => getModelItemKey(item) !== getModelItemKey(target))
+        .map((item) => item.effectiveGroup),
+    ).toEqual(["default", "default", "default"])
+    expect(result.current.availableAccountGroupsByAccountId.a).toEqual([
+      "default",
+      "vip",
+    ])
+    rerender({
+      ...inputs,
+      modelGroupOverrides: { [getModelItemKey(target)]: "vip" },
+      allAccountsExcludedGroupsByAccountId: { a: ["vip"] },
+    })
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.find(
+          (item) => getModelItemKey(item) === getModelItemKey(target),
+        )?.effectiveGroup,
+      ).toBe("default"),
+    )
+    rerender({
+      ...inputs,
+      modelGroupOverrides: { [getModelItemKey(target)]: "vip" },
+      expandGroups: true,
+    })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(6))
+  })
   it.each(["priced", "unavailable", "catalog"] as const)(
     "keeps vendor previews and displayed rows in the same scope for %s models with stale groups",
     async (kind) => {
