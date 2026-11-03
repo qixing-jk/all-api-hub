@@ -228,21 +228,24 @@ class AccountMutations {
     })
   }
 
-  /** Applies remote refresh data without replacing newer user-owned fields. */
+  /**
+   * Applies refresh data without replacing newer user-owned fields and returns
+   * the committed snapshot for follow-ups, or null when the update is rejected.
+   */
   async updateAccountFromRefresh(
     id: string,
     updates: DeepPartial<SiteAccount>,
     refreshedCheckIn?: SiteAccount["checkIn"],
     requestSnapshot?: SiteAccount,
     providerBalance?: Pick<AccountData, "quota" | "balanceUnavailable">,
-  ): Promise<boolean> {
+  ): Promise<SiteAccount | null> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
         if (
           requestSnapshot &&
           !hasSameAccountRequestIdentity(account, requestSnapshot)
         ) {
-          return { nextAccount: account, result: false, changed: false }
+          return { nextAccount: account, result: null, changed: false }
         }
         const effectiveUpdates = {
           ...updates,
@@ -311,20 +314,21 @@ class AccountMutations {
           }
         }
 
+        const nextAccount = applySiteAccountUpdates({
+          account,
+          updates: { ...effectiveUpdates, checkIn },
+          now: Date.now(),
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        })
         return {
-          nextAccount: applySiteAccountUpdates({
-            account,
-            updates: { ...effectiveUpdates, checkIn },
-            now: Date.now(),
-            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
-          }),
-          result: true,
+          nextAccount,
+          result: nextAccount,
           changed: true,
         }
       })
     } catch (error) {
       logger.error(t("messages:storage.updateFailed", { error: "" }), error)
-      return false
+      return null
     }
   }
 

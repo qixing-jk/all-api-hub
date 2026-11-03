@@ -1865,7 +1865,7 @@ describe("accountStorage core behaviors", () => {
           {},
           account.checkIn,
         ),
-      ).resolves.toBe(true)
+      ).resolves.toMatchObject({ id: account.id })
 
       const updated = await accountStorage.getAccountById(account.id)
       expect(updated?.checkIn.customCheckIn).toMatchObject({
@@ -5520,6 +5520,9 @@ describe("accountStorage core behaviors", () => {
     { initial: "2", latest: "3", providerQuota: 123, unavailable: true },
     { initial: "2", latest: "", providerQuota: 123, unavailable: false },
     { initial: "0", latest: "", providerQuota: 0, unavailable: true },
+    { initial: undefined, latest: "0", providerQuota: 123, unavailable: false },
+    { initial: "2", latest: "3", providerQuota: 123, unavailable: false },
+    { initial: "0", latest: "", providerQuota: 123, unavailable: false },
   ])(
     "uses the manual balance saved during an in-flight refresh ($initial -> $latest, unavailable=$unavailable)",
     async ({ initial, latest, providerQuota, unavailable }) => {
@@ -5527,6 +5530,13 @@ describe("accountStorage core behaviors", () => {
       account.account_info.quota =
         initial === undefined ? 400 : Number(initial) * QUOTA_PER_USD
       seedStorage([account])
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        balanceHistory: {
+          ...DEFAULT_PREFERENCES.balanceHistory,
+          enabled: true,
+        },
+      })
       const deferred = createDeferred<any>()
       mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
       const pending = accountStorage.refreshAccount(account.id, true)
@@ -5567,6 +5577,53 @@ describe("accountStorage core behaviors", () => {
         latest ? false : unavailable,
       )
       expect(updated?.account_info.today_requests_count).toBe(7)
+      const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+      const history = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
+      const snapshot = history?.snapshotsByAccountId?.[account.id]?.[dayKey]
+      if (unavailable) expect(snapshot).toBeUndefined()
+      else expect(snapshot?.quota).toBe(updated?.account_info.quota)
+    },
+  )
+
+  it.each(["storage failure", "changed identity"])(
+    "does not capture a balance snapshot for an uncommitted refresh (%s)",
+    async (reason) => {
+      const account = createAccount()
+      seedStorage([account])
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        balanceHistory: {
+          ...DEFAULT_PREFERENCES.balanceHistory,
+          enabled: true,
+        },
+      })
+      const deferred = createDeferred<any>()
+      mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
+      const pending = accountStorage.refreshAccount(account.id, true)
+      await vi.waitFor(() => expect(mockRefreshAccountData).toHaveBeenCalled())
+      if (reason === "changed identity") {
+        await accountStorage.updateAccount(
+          account.id,
+          {
+            site_url: "https://replacement.example",
+          },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        )
+      } else {
+        storageHooks.beforeSet = async (key) => {
+          if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+            throw new Error("write failed")
+        }
+      }
+      deferred.resolve({
+        success: true,
+        data: { quota: 123 },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+      })
+      await pending
+      expect(
+        storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE),
+      ).toBeUndefined()
     },
   )
 
