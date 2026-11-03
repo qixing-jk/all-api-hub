@@ -114,8 +114,8 @@ it.each(
     expect(fetchMock).toHaveBeenCalled()
     expect(withSiteApiRequestTask).toHaveBeenCalled()
     expect(
-      vi.mocked(withSiteApiRequestTask).mock.invocationCallOrder[0],
-    ).toBeLessThan(fetchMock.mock.invocationCallOrder[0])
+      vi.mocked(withSiteApiRequestTask).mock.invocationCallOrder[0]!,
+    ).toBeLessThan(fetchMock.mock.invocationCallOrder[0]!)
   },
 )
 
