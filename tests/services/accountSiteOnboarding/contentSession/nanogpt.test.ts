@@ -38,6 +38,36 @@ const stubConsoleSession = (
 afterEach(() => vi.unstubAllGlobals())
 
 describe("NanoGPT content session extraction", () => {
+  it("keeps email-only signed-in sessions and rejects malformed local bodies", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubConsoleSession({
+        user: { id: "id", email: "fixture@example.invalid" },
+      }),
+    )
+    expect(await nanoGptContentSessionExtractor.extract(context)).toMatchObject(
+      { userId: DEPOSIT_ADDRESS },
+    )
+    vi.stubGlobal("fetch", stubConsoleSession(sessionBody, null))
+    await expect(
+      nanoGptContentSessionExtractor.extract(context),
+    ).resolves.toBeNull()
+  })
+  it.each([null, { user: null }, { user: { id: 3 } }])(
+    "does not trust malformed session identities: %j",
+    async (session) => {
+      vi.stubGlobal("fetch", stubConsoleSession(session))
+      await expect(
+        nanoGptContentSessionExtractor.extract(context),
+      ).resolves.toBeNull()
+    },
+  )
+  it("rejects unsuccessful HTTP session responses", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }))
+    await expect(
+      nanoGptContentSessionExtractor.extract(context),
+    ).resolves.toBeNull()
+  })
   it("only claims the console origin for this site type", () => {
     for (const url of [
       "https://api.nano-gpt.com/",
@@ -138,6 +168,20 @@ describe("NanoGPT content session extraction", () => {
 })
 
 describe("NanoGPT browser identity", () => {
+  it.each([null, { data: null }, { data: { nanoDepositAddress: " " } }])(
+    "keeps malformed local identity unconfirmed: %j",
+    async (body) => {
+      vi.stubGlobal("document", { cookie: "" })
+      const observation = nanoGptBrowserIdentity.observe({
+        origin: "https://nano-gpt.com",
+        siteType: "nanogpt",
+        candidateUserIds: [],
+      })!
+      await expect(
+        observation.verify(vi.fn().mockResolvedValue(body)),
+      ).resolves.toBeNull()
+    },
+  )
   it("only observes the console origin", () => {
     const observationContext = {
       origin: "https://nano-gpt.com",

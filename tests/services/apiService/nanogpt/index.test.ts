@@ -36,7 +36,134 @@ const balanceBody = {
   nanoDepositAddress: DEPOSIT_ADDRESS,
 }
 
+it.each([
+  { totals: { totalTokens: 1, costUsd: 1 } },
+  { totals: { requests: 1, costUsd: 1 } },
+  { totals: { requests: 1, totalTokens: 1 } },
+])("rejects incomplete usage totals %j", (body) => {
+  expect(() => parseNanoGptUsageAggregate(body, "/usage")).toThrow()
+})
+
+it.each([0, 1e20, -1, null])(
+  "drops unusable subscription reset timestamp %s",
+  (resetAt) => {
+    expect(
+      parseNanoGptSubscription(
+        { active: true, dailyInputTokens: { used: 0, remaining: 1, resetAt } },
+        "/subscription",
+      ).dailyInputTokens,
+    ).toEqual({ used: 0, remaining: 1 })
+  },
+)
+
+it("falls back to inference subscription after management scope refusal", async () => {
+  server.use(
+    http.post(`${API_ORIGIN}/api/check-balance`, () =>
+      HttpResponse.json(balanceBody),
+    ),
+    http.get(`${API_ORIGIN}/api/v1/usage`, () =>
+      HttpResponse.json({
+        totals: { requests: 1, totalTokens: 1, costUsd: 1 },
+      }),
+    ),
+    http.get(`${CONSOLE_ORIGIN}/api/management/v1/subscription/usage`, () =>
+      HttpResponse.json({ error: "denied" }, { status: 403 }),
+    ),
+    http.get(`${API_ORIGIN}/api/subscription/v1/usage`, () =>
+      HttpResponse.json({
+        active: true,
+        state: "grace",
+        dailyInputTokens: { remaining: 4, resetAt: 1700000000000 },
+      }),
+    ),
+  )
+  const data = await fetchAccountData({
+    ...tokenRequest,
+    auth: {
+      ...tokenRequest.auth,
+      accessToken:
+        'nanogpt-credentials:{"apiKey":"sk-nano-fixture","managementToken":"sk-nano-mgmt-fixture"}',
+    },
+    checkIn: buildCheckInConfig(),
+  })
+  expect(data.subscription).toMatchObject({
+    status: "grace",
+    remainingTokens: 4,
+    period: "day",
+    periodResetTime: "2023-11-14T22:13:20.000Z",
+  })
+})
+
 beforeEach(() => server.resetHandlers())
+it.each([null, {}, { active: "true" }])(
+  "rejects malformed subscription activity %j",
+  (body) => {
+    expect(() => parseNanoGptSubscription(body, "/subscription")).toThrow()
+  },
+)
+it("retains independently reported image allowance without requiring token windows", () => {
+  expect(
+    parseNanoGptSubscription(
+      { active: false, dailyImages: { remaining: 2 } },
+      "/subscription",
+    ),
+  ).toEqual({ active: false, dailyImages: { remaining: 2 } })
+})
+it("omits unreported optional Nano amounts", () => {
+  expect(
+    parseNanoGptBalance(
+      { usd_balance: 2, nanoDepositAddress: DEPOSIT_ADDRESS },
+      "/balance",
+    ),
+  ).toEqual({ usdBalance: 2, depositAddress: DEPOSIT_ADDRESS })
+})
+
+it("preserves management-only accounts without inventing a cash balance when only key-read is permitted", async () => {
+  server.use(
+    http.get(`${CONSOLE_ORIGIN}/api/management/v1/subscription/usage`, () =>
+      HttpResponse.json({}, { status: 403 }),
+    ),
+    http.get(`${CONSOLE_ORIGIN}/api/management/v1/api-keys`, () =>
+      HttpResponse.json({ data: [] }),
+    ),
+  )
+  const result = await fetchAccountData({
+    ...tokenRequest,
+    auth: { ...tokenRequest.auth, accessToken: "sk-nano-mgmt-fixture" },
+    checkIn: buildCheckInConfig(),
+  })
+  expect(result.balanceUnavailable).toBe(true)
+  expect(result.subscription).toEqual({ status: "unavailable" })
+})
+
+it.each([{}, { weeklyInputTokens: { remaining: 3 } }])(
+  "summarizes active grace subscription without fabricating a reset: %j",
+  async (windows) => {
+    server.use(
+      http.post(`${API_ORIGIN}/api/check-balance`, () =>
+        HttpResponse.json({
+          usd_balance: 2,
+          nanoDepositAddress: DEPOSIT_ADDRESS,
+        }),
+      ),
+      http.get(`${API_ORIGIN}/api/v1/usage`, () =>
+        HttpResponse.json({
+          totals: { requests: 1, totalTokens: 1, costUsd: 1 },
+        }),
+      ),
+      http.get(`${API_ORIGIN}/api/subscription/v1/usage`, () =>
+        HttpResponse.json({ active: true, state: "grace", ...windows }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...tokenRequest,
+      checkIn: buildCheckInConfig(),
+    })
+    expect(result.subscription?.status).toBe("grace")
+    expect(result.subscription).not.toHaveProperty("periodResetTime")
+    expect(result.nativeBalance).toBeUndefined()
+  },
+)
 
 it.each([
   [true, "active"],

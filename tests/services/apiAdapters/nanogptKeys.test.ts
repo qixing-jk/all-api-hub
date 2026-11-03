@@ -23,7 +23,32 @@ const open = () =>
   })
 
 describe("NanoGPT native key workflow", () => {
-  it("allows inference-only accounts to load an empty native inventory without management requests", async () => {
+  it("keeps expired native keys disabled and preserves a finite expiry", async () => {
+    server.use(
+      http.get(`${origin}/api-keys`, () =>
+        HttpResponse.json({
+          data: [
+            {
+              ...nativeKey,
+              status: "expired",
+              expires_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+        }),
+      ),
+    )
+    const collection = await (await open()).openCollection("account")
+    const result = await collection.list()
+    expect(result.items[0]!.status).toBe("expired")
+    expect(result.items[0]!.displayFacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          timestampMs: Date.parse("2026-01-01T00:00:00Z"),
+        }),
+      ]),
+    )
+  })
+  it("reports missing management configuration without management requests", async () => {
     let reads = 0
     server.use(
       http.get(`${origin}/api-keys`, () => {
@@ -38,7 +63,9 @@ describe("NanoGPT native key workflow", () => {
     })
     const scope = await session.resolveDefaultScope()
     const collection = await session.openCollection(scope.scopeKey)
-    expect((await collection.list()).items).toEqual([])
+    await expect(collection.list()).rejects.toMatchObject({
+      failure: { code: "configuration_required" },
+    })
     expect(nanoGptKeyResources.operations?.(auth)).toEqual({
       create: false,
       update: false,
@@ -231,4 +258,57 @@ it("keeps a denied write retryable without claiming the token is invalid", async
     })
   }
   expect(writes).toBe(2)
+})
+
+it("delivers a created secret and confirms timestamp-equivalent expiry updates", async () => {
+  let state: Omit<typeof nativeKey, "expires_at"> & {
+    expires_at: string | null
+  } = { ...nativeKey }
+  server.use(
+    http.post(`${origin}/api-keys`, () =>
+      HttpResponse.json({ ...nativeKey, key: "created-secret" }),
+    ),
+    http.get(`${origin}/api-keys/17`, () => HttpResponse.json(state)),
+    http.patch(`${origin}/api-keys/17`, async ({ request }) => {
+      const patch = (await request.json()) as { expires_at: string }
+      state = { ...state, expires_at: new Date(patch.expires_at).toISOString() }
+      return HttpResponse.json(state)
+    }),
+  )
+  const session = await open()
+  const create = await session.openCreateEditor("account")
+  const result = await create.submit(create.initialValues)
+  expect(result.createdSecret).toMatchObject({ secret: "created-secret" })
+  const collection = await session.openCollection("account")
+  const edit = await collection.openEditEditor({
+    accountId: "nano",
+    siteType: SITE_TYPES.NANOGPT,
+    scopeKey: "account",
+    resourceId: "17",
+  })
+  expect(
+    edit.validate({ ...edit.initialValues, zdr_policy: "invalid" }).valid,
+  ).toBe(false)
+  const updated = await edit.submit({
+    ...edit.initialValues,
+    expires_at: "2027-01-01T01:00:00+01:00",
+  })
+  expect(updated.facts).toBeDefined()
+})
+
+it("keeps a successful write uncertain when authoritative values differ", async () => {
+  server.use(
+    http.get(`${origin}/api-keys/17`, () => HttpResponse.json(nativeKey)),
+    http.patch(`${origin}/api-keys/17`, () => HttpResponse.json(nativeKey)),
+  )
+  const collection = await (await open()).openCollection("account")
+  const edit = await collection.openEditEditor({
+    accountId: "nano",
+    siteType: SITE_TYPES.NANOGPT,
+    scopeKey: "account",
+    resourceId: "17",
+  })
+  await expect(
+    edit.submit({ ...edit.initialValues, name: "different" }),
+  ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
 })

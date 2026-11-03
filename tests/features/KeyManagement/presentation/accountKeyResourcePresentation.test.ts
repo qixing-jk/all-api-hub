@@ -7,6 +7,7 @@ import {
   getAccountKeyScopeMessages,
   shouldShowAccountKeyScopeSelector,
 } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
+import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
@@ -17,6 +18,51 @@ import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
+
+it("labels NanoGPT provider limits in key details and explains missing management configuration", () => {
+  const details = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.NANOGPT,
+  ).buildDetailFacts(
+    {
+      ref: {
+        accountId: "nano",
+        siteType: SITE_TYPES.NANOGPT,
+        scopeKey: "account",
+        resourceId: "17",
+      },
+      displayName: "fixture",
+      maskedLabel: "#17",
+      status: "enabled",
+      actions: { canUpdate: true, canDelete: true },
+      fields: [
+        { fieldId: "daily_usd_limit", kind: "number", value: 4 },
+        { fieldId: "zdr_policy", kind: "text", value: "off" },
+        { fieldId: "unknown", kind: "text", value: "hidden" },
+      ],
+    },
+    t,
+  )
+  expect(details).toEqual(
+    expect.arrayContaining([
+      {
+        id: "daily_usd_limit",
+        label: "keyManagement:native.editor.nanogpt.dailySpend",
+        value: "4",
+      },
+      {
+        id: "zdr_policy",
+        label: "keyManagement:native.editor.nanogpt.zdrPolicy",
+        value: "off",
+      },
+    ]),
+  )
+  expect(details.some((detail) => detail.id === "unknown")).toBe(false)
+  expect(
+    getKeyResourcePresentationPolicy(
+      SITE_TYPES.NANOGPT,
+    ).createUnavailableReason?.(t),
+  ).toBe("keyManagement:native.scope.nanoGptManagementOptional")
+})
 
 it("directs NanoGPT users to website verification for existing secrets", () => {
   const row: NativeKeyManagementRow = {

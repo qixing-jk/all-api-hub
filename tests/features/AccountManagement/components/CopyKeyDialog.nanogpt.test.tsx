@@ -78,3 +78,20 @@ it("does not claim an empty site inventory when management configuration is miss
   ).toBeVisible()
   expect(screen.queryByText("ui:dialog.copyKey.noKeys")).not.toBeInTheDocument()
 })
+
+it("shows a failed inference read when management configuration is also missing", async () => {
+  openAccountKeyResourcesMock.mockRejectedValue(
+    new AccountKeyResourceError({ code: "configuration_required" }),
+  )
+  fetchServiceCredentialMock.mockRejectedValue(
+    new Error("inference unavailable"),
+  )
+  render(
+    <CopyKeyDialog
+      isOpen
+      onClose={() => {}}
+      account={{ ...ACCOUNT, siteType: SITE_TYPES.NANOGPT }}
+    />,
+  )
+  expect(await screen.findByText("ui:dialog.copyKey.loadFailed")).toBeVisible()
+})

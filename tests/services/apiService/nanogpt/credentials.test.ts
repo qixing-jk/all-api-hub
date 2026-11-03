@@ -6,6 +6,32 @@ import {
 } from "~/services/apiService/nanogpt/credentials"
 
 describe("NanoGPT saved credentials", () => {
+  it.each([
+    undefined,
+    "",
+    "nanogpt-credentials:bad",
+    "nanogpt-credentials:null",
+    'nanogpt-credentials:{"apiKey":"a","managementToken":3}',
+  ])(
+    "never treats malformed paired credentials as an authorization secret: %s",
+    (credential) => {
+      expect(parseNanoGptCredentials(credential)).toEqual({
+        apiKey: "",
+        managementToken: "",
+      })
+    },
+  )
+  it("round-trips an empty draft and a complete management-only draft", () => {
+    expect(encodeNanoGptCredentials({ apiKey: "", managementToken: "" })).toBe(
+      "",
+    )
+    expect(
+      encodeNanoGptCredentials({
+        apiKey: "",
+        managementToken: "sk-nano-mgmt-fixture",
+      }),
+    ).toBe("sk-nano-mgmt-fixture")
+  })
   it("keeps legacy inference keys readable and round-trips two independent credentials", () => {
     const inferenceKey = "f12c54ab-8268-4dea-a4b7-87160e51a19e"
     expect(parseNanoGptCredentials(inferenceKey)).toEqual({

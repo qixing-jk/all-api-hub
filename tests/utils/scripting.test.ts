@@ -20,6 +20,32 @@ describe("executeMainWorldFunction", () => {
     ;(globalThis as any).browser = originalBrowser
   })
 
+  it("leaves invalid origins and unavailable scripting untouched", async () => {
+    await expect(injectContentScript(1, "invalid")).resolves.toBe(false)
+    await expect(
+      injectContentScript(1, "https://example.invalid"),
+    ).resolves.toBe(false)
+  })
+
+  it("ignores dynamically registered scripts outside the global content-script match", async () => {
+    const executeScript = vi.fn()
+    ;(globalThis as any).browser = {
+      tabs: { get: async () => ({ url: "https://example.invalid" }) },
+      runtime: { getManifest: () => ({}) },
+      scripting: {
+        executeScript,
+        getRegisteredContentScripts: async () => [
+          { matches: ["https://other.invalid/*"], js: ["other.js"] },
+          { matches: ["<all_urls>"] },
+        ],
+      },
+    }
+    await expect(
+      injectContentScript(1, "https://example.invalid"),
+    ).resolves.toBe(false)
+    expect(executeScript).not.toHaveBeenCalled()
+  })
+
   it("returns null when browser.scripting.executeScript is unavailable", async () => {
     ;(globalThis as any).browser = {}
     const result = await executeMainWorldFunction(1, () => "test")

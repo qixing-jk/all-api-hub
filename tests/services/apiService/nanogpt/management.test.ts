@@ -11,6 +11,10 @@ import {
   updateNanoGptKey,
 } from "~/services/apiService/nanogpt/management"
 import { verifyNanoGptManagementCredential } from "~/services/apiService/nanogpt/managementIdentity"
+import {
+  fetchNanoGptData,
+  fetchNanoGptManagementData,
+} from "~/services/apiService/nanogpt/transport"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { nativeKey } from "~~/tests/test-utils/nanogpt"
@@ -25,6 +29,88 @@ const request = {
     }),
   },
 }
+
+it("classifies inference rate limiting independently of authentication", async () => {
+  server.use(
+    http.post("https://api.nano-gpt.com/api/check-balance", () =>
+      HttpResponse.json({ error: "limited" }, { status: 429 }),
+    ),
+  )
+  await expect(fetchNanoGptBalance(request)).rejects.toMatchObject({
+    code: "HTTP_429",
+  })
+})
+
+it("rejects missing and role-mismatched credentials before dispatch", async () => {
+  await expect(
+    fetchNanoGptData(
+      { ...request, auth: { ...request.auth, accessToken: "" } },
+      "/fixture",
+    ),
+  ).rejects.toMatchObject({ code: "HTTP_401" })
+  await expect(
+    fetchNanoGptManagementData(
+      {
+        ...request,
+        auth: {
+          ...request.auth,
+          accessToken: encodeNanoGptCredentials({
+            apiKey: "inference",
+            managementToken: "wrong-role",
+          }),
+        },
+      },
+      "/fixture",
+    ),
+  ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+})
+
+it.each([
+  null,
+  { ...nativeKey, name: 3 },
+  { ...nativeKey, daily_usd_limit: -1 },
+  { ...nativeKey, weekly_usd_limit: "1" },
+])("rejects malformed inventory metadata %j", async (key) => {
+  server.use(
+    http.get("https://nano-gpt.com/api/management/v1/api-keys", () =>
+      HttpResponse.json({ data: [key] }),
+    ),
+  )
+  await expect(fetchNanoGptKeys(request)).rejects.toMatchObject({
+    code: "JSON_PARSE_ERROR",
+  })
+})
+
+it("rejects an invalid resource id and a non-204 revoke response", async () => {
+  await expect(fetchNanoGptKey(request, "../1")).rejects.toMatchObject({
+    code: "JSON_PARSE_ERROR",
+  })
+  server.use(
+    http.delete("https://nano-gpt.com/api/management/v1/api-keys/17", () =>
+      HttpResponse.json({ success: true }),
+    ),
+  )
+  await expect(deleteNanoGptKey(request, "17")).rejects.toMatchObject({
+    code: "JSON_PARSE_ERROR",
+  })
+})
+
+it("rejects management read and update responses with a different resource identity", async () => {
+  server.use(
+    http.get("https://nano-gpt.com/api/management/v1/api-keys/17", () =>
+      HttpResponse.json({ ...nativeKey, id: "18" }),
+    ),
+    http.patch("https://nano-gpt.com/api/management/v1/api-keys/17", () =>
+      HttpResponse.json({ ...nativeKey, id: "18" }),
+    ),
+  )
+  await expect(fetchNanoGptKey(request, "17")).rejects.toMatchObject({
+    code: "JSON_PARSE_ERROR",
+  })
+  await expect(
+    updateNanoGptKey(request, "17", { name: "changed" }),
+  ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+})
 
 describe("NanoGPT management contract", () => {
   it("reads masked inventory using only the management token on the console host", async () => {

@@ -104,11 +104,13 @@ export const nanoGptKeyResources = defineAccountKeyResourceCapability({
   locatorFromListItem: (key: NanoGptKey) => key.id,
   locatorFromDetail: (key: NanoGptKey) => key.id,
   list: async (config, _scope, _query, options) => {
-    // Inference-only accounts remain usable; remote inventory is optional.
+    // Keep missing configuration distinct from an empty remote inventory.
     if (
       !parseNanoGptCredentials(config.request.auth.accessToken).managementToken
     )
-      return { items: [], total: 0 }
+      throw new AccountKeyResourceError({
+        code: failures.ConfigurationRequired,
+      })
     const items = await fetchNanoGptKeys(withSignal(config.request, options))
     return { items, total: items.length }
   },

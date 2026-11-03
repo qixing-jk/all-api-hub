@@ -1313,3 +1313,29 @@ it("keeps an independent service key usable when native inventory needs an absen
   expect(keys[0]?.secret).toBe("sk-nano-runtime")
   expect(keys[0]?.source).toBe("service_credential")
 })
+
+it("loads native resources when the independent inference key fails", async () => {
+  const list = vi.fn().mockResolvedValue({ items: [], total: 0 })
+  vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+    siteType: SITE_TYPES.NANOGPT,
+    account: {
+      keyResourceManagement: {
+        open: vi.fn().mockResolvedValue({
+          resolveDefaultScope: async () => ({ scopeKey: "account" }),
+          openCollection: async () => ({ list }),
+        }),
+      },
+      serviceCredential: {
+        fetch: vi.fn().mockRejectedValue(new Error("inference unavailable")),
+      },
+    },
+  } as never)
+  await expect(
+    fetchDisplayAccountRuntimeKeys({
+      ...ACCOUNT,
+      tagIds: [],
+      siteType: SITE_TYPES.NANOGPT,
+    }),
+  ).resolves.toEqual([])
+  expect(list).toHaveBeenCalledTimes(1)
+})

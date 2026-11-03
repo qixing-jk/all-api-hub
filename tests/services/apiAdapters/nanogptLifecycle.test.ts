@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
@@ -8,6 +8,7 @@ import {
   type AccountBootstrapRouteTarget,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -49,6 +50,75 @@ const completionRequest = (
 })
 
 beforeEach(() => server.resetHandlers())
+it("uses the identity mismatch message for admission and health failures", () => {
+  const persistence = getSiteTypeCapabilities(SITE_TYPES.NANOGPT).account!
+    .persistence!
+  const error = new ApiError(
+    "mismatch",
+    undefined,
+    undefined,
+    API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH,
+  )
+  expect(persistence.getValidationFailureMessage(error)).toBe(
+    "accountDialog:messages.autoDetectIdentityMismatch",
+  )
+  expect(persistence.getHealthFailureReason(error)).toBe(
+    "accountDialog:messages.autoDetectIdentityMismatch",
+  )
+})
+
+it("retains the draft on bootstrap failure and malformed paired credentials", async () => {
+  const account = getSiteTypeCapabilities(SITE_TYPES.NANOGPT).account!
+  const { helpers } = createAccountCompletionHelpersMock(SITE_TYPES.NANOGPT, {
+    automaticExecutionEnabled: false,
+  })
+  const spy = vi
+    .spyOn(account.bootstrap!, "loadBootstrapFacts")
+    .mockRejectedValueOnce(new Error("unavailable"))
+  await expect(
+    account.completion!.complete(completionRequest(), helpers),
+  ).rejects.toMatchObject({ reason: "site_status_fetch_failed" })
+  spy.mockRestore()
+  await expect(
+    account.completion!.complete(
+      completionRequest({ accessToken: "nanogpt-credentials:bad" }),
+      helpers,
+    ),
+  ).rejects.toMatchObject({ reason: "access_token_missing" })
+})
+
+it("reports management credential rejection as a token failure", async () => {
+  server.use(
+    http.get(`${CONSOLE_ORIGIN}/api/management/v1/subscription/usage`, () =>
+      HttpResponse.json({ error: "denied" }, { status: 401 }),
+    ),
+  )
+  const { helpers } = createAccountCompletionHelpersMock(SITE_TYPES.NANOGPT, {
+    automaticExecutionEnabled: false,
+  })
+  await expect(
+    getSiteTypeCapabilities(SITE_TYPES.NANOGPT).account!.completion!.complete(
+      completionRequest({ accessToken: "sk-nano-mgmt-fixture" }),
+      helpers,
+    ),
+  ).rejects.toMatchObject({ reason: "token_fetch_failed" })
+})
+
+it("rejects empty persistence credentials and has no check-in refresh", async () => {
+  const account = getSiteTypeCapabilities(SITE_TYPES.NANOGPT).account!
+  await expect(
+    account.persistence!.prepareIdentity({ accessToken: "", userId: "" }),
+  ).rejects.toThrow("credential required")
+  expect(
+    account.persistence!.getKeyAuthenticationSecret!("sk-nano-mgmt-fixture"),
+  ).toBeUndefined()
+  await expect(
+    account.refresh!.fetchCheckInSupport!({
+      baseUrl: CONSOLE_ORIGIN,
+      auth: { authType: AuthTypeEnum.AccessToken },
+    }),
+  ).resolves.toBe(false)
+})
 
 describe("NanoGPT registration", () => {
   it("registers one account type with its own adapter family", () => {
@@ -432,4 +502,42 @@ it("exposes only the saved inference secret as a runtime credential from a dual 
   })
   expect(credential.key).toBe("sk-nano-fixture")
   expect(credential.baseUrl).toBe("https://api.nano-gpt.com/api/v1")
+})
+
+it("does not export management-only credentials as inference keys", async () => {
+  const credential = await getSiteTypeCapabilities(
+    SITE_TYPES.NANOGPT,
+  ).account!.serviceCredential!.fetch({
+    baseUrl: CONSOLE_ORIGIN,
+    auth: {
+      authType: AuthTypeEnum.AccessToken,
+      accessToken: "sk-nano-mgmt-fixture",
+    },
+  })
+  expect(credential.key).toBe("")
+  expect(credential.isAuthenticated).toBe(false)
+})
+
+it("uses email when the detected name and username are absent", async () => {
+  server.use(
+    http.post(`${API_ORIGIN}/api/check-balance`, () =>
+      HttpResponse.json(balanceBody),
+    ),
+  )
+  const { helpers } = createAccountCompletionHelpersMock(SITE_TYPES.NANOGPT, {
+    automaticExecutionEnabled: false,
+  })
+  const result = await getSiteTypeCapabilities(
+    SITE_TYPES.NANOGPT,
+  ).account!.completion!.complete(
+    completionRequest({
+      detectedUser: {
+        username: "",
+        name: "",
+        email: "fixture@example.invalid",
+      },
+    }),
+    helpers,
+  )
+  expect(result.username).toBe("fixture@example.invalid")
 })

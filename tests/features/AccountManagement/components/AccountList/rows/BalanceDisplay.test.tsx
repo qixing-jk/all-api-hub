@@ -75,6 +75,24 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
+  it("refreshes the USD component of a NanoGPT dual balance", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          nativeBalance: { unit: "USD_XNO", total: 2, nanoBalance: 1 },
+        })}
+      />,
+    )
+    await user.click(screen.getByTitle("account:list.balance.refreshBalance"))
+    expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
+    expect(screen.getByText("1 XNO")).toBeVisible()
+  })
   it.each(Object.values(subscriptionStatuses))(
     "labels subscription status %s independently of quota",
     (status) => {

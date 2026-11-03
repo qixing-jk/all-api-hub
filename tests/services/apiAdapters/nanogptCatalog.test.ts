@@ -1,10 +1,11 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNanoGptCatalogModel } from "~/services/apiAdapters/nanogpt/modelPresentation"
 import { nanoGptProviderModelCatalog } from "~/services/apiAdapters/nanogpt/providerModelCatalog"
 import { fetchNanoGptDetailedModelCatalog } from "~/services/apiService/nanogpt/catalog"
+import * as catalogService from "~/services/apiService/nanogpt/catalog"
 import {
   PRICING_METERS,
   PRICING_SELECTION_AXES,
@@ -38,6 +39,142 @@ const pricedModel = {
 }
 
 beforeEach(() => server.resetHandlers())
+
+it("renders token-only specifications and optional cached video pricing", () => {
+  const model = createNanoGptCatalogModel({
+    id: "fixture",
+    contextLength: 100,
+    pricing: {
+      input: 1,
+      output: 2,
+      cacheWrite: 3,
+      videoRequest: { input: 4, output: 5, cacheRead: 6 },
+    },
+  })
+  expect(model.presentation?.summaryFacts).toHaveLength(1)
+  expect(model.presentation).not.toHaveProperty("sections")
+  expect(model.pricingPlan!.rates[PRICING_METERS.CACHE_WRITE]).toBeDefined()
+  expect(
+    model.pricingPlan!.rules[0]!.rates[PRICING_METERS.CACHE_READ],
+  ).toBeDefined()
+})
+
+it.each([
+  new TypeError("network unavailable"),
+  new Error("unavailable"),
+  new DOMException("cancelled", "AbortError"),
+])("preserves catalog failure semantics: %s", async (error) => {
+  const spy = vi
+    .spyOn(catalogService, "fetchNanoGptDetailedModelCatalog")
+    .mockRejectedValueOnce(error)
+  try {
+    const result = await nanoGptProviderModelCatalog
+      .fetchPricing({})
+      .catch((error) => error)
+    expect(result).toBeInstanceOf(error.constructor)
+    expect(result.message).toBe(error.message)
+  } finally {
+    spy.mockRestore()
+  }
+})
+
+it("reports cancellation when the request aborts during a catalog failure", async () => {
+  const controller = new AbortController()
+  controller.abort()
+  const spy = vi
+    .spyOn(catalogService, "fetchNanoGptDetailedModelCatalog")
+    .mockRejectedValueOnce(new Error("unavailable"))
+  try {
+    await expect(
+      nanoGptProviderModelCatalog.fetchPricing({
+        abortSignal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  } finally {
+    spy.mockRestore()
+  }
+})
+
+it("keeps optional cache-write and uncached video rates separate", () => {
+  const model = createNanoGptCatalogModel({
+    id: "fixture",
+    displayName: "fixture",
+    contextLength: 0,
+    inputModalities: [],
+    outputModalities: ["audio"],
+    pricing: {
+      input: 1,
+      output: 2,
+      cacheWrite: 3,
+      videoRequest: { input: 4, output: 5 },
+    },
+  })
+  expect(model.token_price_usd_per_million).toMatchObject({ cache_write: 3 })
+  expect(model.pricingPlan!.rules[0]!.rates).not.toHaveProperty(
+    PRICING_METERS.CACHE_READ,
+  )
+  expect(model).not.toHaveProperty("display_name")
+  expect(model.presentation).not.toHaveProperty("summaryFacts")
+})
+
+it.each([400, 429])(
+  "discloses public catalog HTTP %s without an invented provider message",
+  async (status) => {
+    server.use(http.get(CATALOG_URL, () => HttpResponse.json({}, { status })))
+    await expect(
+      nanoGptProviderModelCatalog.fetchPricing({}),
+    ).rejects.toMatchObject({ statusCode: status })
+  },
+)
+
+it("omits malformed optional prices and modalities while retaining usable model ids", async () => {
+  server.use(
+    http.get(CATALOG_URL, () =>
+      HttpResponse.json({
+        object: "list",
+        data: [
+          null,
+          { id: " " },
+          {
+            id: "bare",
+            name: " ",
+            pricing: null,
+            architecture: {
+              input_modalities: [],
+              output_modalities: [null, " "],
+            },
+          },
+          { id: "partial", pricing: { prompt: 1 }, architecture: null },
+          {
+            id: "video",
+            pricing: {
+              prompt: 1,
+              completion: 2,
+              video_request: { prompt: 3, completion: 4 },
+            },
+            architecture: {
+              input_modalities: [" text ", 4],
+              output_modalities: ["text"],
+            },
+          },
+          {
+            id: "bad-video",
+            pricing: { prompt: 1, completion: 2, video_request: { prompt: 3 } },
+          },
+        ],
+      }),
+    ),
+  )
+  const models = await fetchNanoGptDetailedModelCatalog()
+  expect(models[0]).toEqual({ id: "bare" })
+  expect(models[1]).toEqual({ id: "partial" })
+  expect(models[2]).toMatchObject({
+    inputModalities: ["text"],
+    pricing: { videoRequest: { input: 3, output: 4 } },
+  })
+  expect(models[2]!.pricing!.videoRequest).not.toHaveProperty("cacheRead")
+  expect(models[3]!.pricing).toEqual({ input: 1, output: 2 })
+})
 
 describe("NanoGPT catalog transport", () => {
   it("reads the detailed provider catalog without credentials", async () => {

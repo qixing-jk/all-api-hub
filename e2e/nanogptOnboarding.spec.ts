@@ -198,6 +198,7 @@ for (const mismatchedRefresh of [false, true]) {
     await expect(row).toBeVisible()
     // Saving is deliberately configuration-first. Verify data through the
     // product's explicit refresh, not by treating the optimistic zero as balance.
+    await row.hover()
     await row.getByTestId(accounts.rowMoreActionsButton).click()
     await page.getByTestId(accounts.rowRefreshMenuItem).click()
     await expect
@@ -211,11 +212,13 @@ for (const mismatchedRefresh of [false, true]) {
       },
     })
     await expect(row).toContainText("70")
+    await row.hover()
     await row.getByTestId(accounts.rowEditButton).click()
     await expect(dialog.getByTestId(accounts.accessTokenInput)).toHaveValue(KEY)
     await expect(dialog.getByTestId(accounts.userIdInput)).toHaveValue(ADDRESS)
     await closeAccountDraft(page)
     refreshing = true
+    await row.hover()
     await row.getByTestId(accounts.rowMoreActionsButton).click()
     await page.getByTestId(accounts.rowRefreshMenuItem).click()
     if (mismatchedRefresh) {
