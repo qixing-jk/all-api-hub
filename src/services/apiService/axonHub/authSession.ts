@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   invalidateDetailSchemaCapabilityCache,
   resetChannelDetailSchemaCacheForTesting,
@@ -11,6 +12,10 @@ import {
   throwIfAborted,
   toAxonHubRequestError,
 } from "~/services/apiService/axonHub/graphqlProtocol"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 
 const tokenCache = new Map<string, string>()
@@ -33,52 +38,61 @@ export async function signIn(
   const baseUrl = normalizeBaseUrl(config.baseUrl)
   throwIfAborted(options?.signal)
 
-  let response: Response
-  try {
-    response = await fetch(`${baseUrl}/admin/auth/signin`, {
-      method: "POST",
-      signal: options?.signal,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: config.email,
-        password: config.password,
-      }),
-    })
-  } catch (error) {
-    throw toAxonHubRequestError(error, "not-dispatched", "unavailable")
-  }
+  return await withSiteApiRequestTask(
+    baseUrl,
+    async () => {
+      let response: Response
+      try {
+        response = await fetch(`${baseUrl}/admin/auth/signin`, {
+          method: "POST",
+          signal: options?.signal,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: config.email,
+            password: config.password,
+          }),
+        })
+      } catch (error) {
+        throw toAxonHubRequestError(error, "not-dispatched", "unavailable")
+      }
 
-  if (!response.ok) {
-    throw new AxonHubRequestError(
-      response.status >= 500 ? "unavailable" : "authentication",
-      "not-dispatched",
-    )
-  }
+      reportSiteRateLimitResponse(baseUrl, response)
+      if (!response.ok) {
+        throw new AxonHubRequestError(
+          response.status >= 500 ? "unavailable" : "authentication",
+          "not-dispatched",
+        )
+      }
 
-  let data: unknown
-  try {
-    data = await response.json()
-  } catch (error) {
-    throw toAxonHubRequestError(error, "not-dispatched", "protocol")
-  }
+      let data: unknown
+      try {
+        data = await response.json()
+      } catch (error) {
+        throw toAxonHubRequestError(error, "not-dispatched", "protocol")
+      }
 
-  if (
-    typeof data !== "object" ||
-    data === null ||
-    !("token" in data) ||
-    typeof data.token !== "string" ||
-    !data.token
-  ) {
-    throw new AxonHubRequestError("protocol", "not-dispatched")
-  }
+      if (
+        typeof data !== "object" ||
+        data === null ||
+        !("token" in data) ||
+        typeof data.token !== "string" ||
+        !data.token
+      ) {
+        throw new AxonHubRequestError("protocol", "not-dispatched")
+      }
 
-  tokenCache.set(cacheKeyForConfig(config), data.token)
-  // A successful authentication is a bounded capability-renewal boundary: a
-  // deployment may have upgraded since an optional detail shape was rejected.
-  invalidateDetailSchemaCapabilityCache(config)
-  return data.token
+      tokenCache.set(cacheKeyForConfig(config), data.token)
+      // A successful authentication is a bounded capability-renewal boundary: a
+      // deployment may have upgraded since an optional detail shape was rejected.
+      invalidateDetailSchemaCapabilityCache(config)
+      return data.token
+    },
+    options?.signal ?? undefined,
+    undefined,
+    SITE_TYPES.AXON_HUB,
+  )
 }
 
 export const getSessionToken = async (

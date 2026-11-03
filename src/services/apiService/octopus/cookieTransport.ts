@@ -1,4 +1,5 @@
 import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
+import { SITE_TYPES } from "~/constants/siteType"
 import { type OctopusAuthSession } from "~/services/apiService/octopus/auth"
 import {
   createOctopusRequestHeaders,
@@ -6,6 +7,11 @@ import {
   throwIfOctopusRequestAborted,
 } from "~/services/apiService/octopus/requestContext"
 import { tempWindowOctopusApiFetch } from "~/services/apiService/octopus/tempContextClient"
+import {
+  reportSiteRateLimit,
+  resolveSiteRequestLimitKey,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import {
@@ -29,19 +35,33 @@ export const fetchOctopusCookieApi = async (params: {
   )
   const perform = async (endpoint: string, init: RequestInit) => {
     throwIfOctopusRequestAborted(params.fetchOptions.signal ?? undefined)
-    return await tempWindowOctopusApiFetch({
-      originUrl: params.baseUrl,
-      resourceUsername: params.config.username,
-      fetchUrl: `${params.baseUrl}${endpoint}`,
-      fetchOptions: {
-        ...init,
-        credentials: "include",
-        headers: createOctopusRequestHeaders(params.session, init.headers),
+    return await withSiteApiRequestTask(
+      params.baseUrl,
+      async () => {
+        const response = await tempWindowOctopusApiFetch({
+          originUrl: params.baseUrl,
+          resourceUsername: params.config.username,
+          fetchUrl: `${params.baseUrl}${endpoint}`,
+          fetchOptions: {
+            ...init,
+            credentials: "include",
+            headers: createOctopusRequestHeaders(params.session, init.headers),
+          },
+          requestId: safeRandomUUID(`octopus-${endpoint}`),
+          resourceBinding: params.resourceBinding,
+          protectionBypassExecution: execution,
+        })
+        if (response.status === 429)
+          reportSiteRateLimit(
+            resolveSiteRequestLimitKey(params.baseUrl),
+            response.headers?.["retry-after"],
+          )
+        return response
       },
-      requestId: safeRandomUUID(`octopus-${endpoint}`),
-      resourceBinding: params.resourceBinding,
-      protectionBypassExecution: execution,
-    })
+      params.fetchOptions.signal ?? undefined,
+      undefined,
+      SITE_TYPES.OCTOPUS,
+    )
   }
 
   let response = await perform(params.endpoint, params.fetchOptions)

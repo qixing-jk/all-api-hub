@@ -14,8 +14,8 @@ import {
   requireNumericManagedResourceId,
 } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import {
+  createManagedSiteApiServiceRequest,
   runManagedSiteApiServiceMutationStep,
-  toManagedSiteApiServiceRequest,
 } from "~/services/apiAdapters/managedSites/request"
 import {
   createChannel,
@@ -48,6 +48,10 @@ import type {
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import { getErrorMessage } from "~/utils/core/error"
 
+const createProviderRequest = createManagedSiteApiServiceRequest(
+  SITE_TYPES.DONE_HUB,
+)
+
 const toDoneHubMutationResponse = (response: ApiResponse<unknown>) =>
   response.success
     ? { outcome: "applied" as const, data: response.data }
@@ -73,6 +77,7 @@ const runDoneHubResponseStep = async (input: {
 }) =>
   await runManagedSiteApiServiceMutationStep({
     ...input,
+    siteType: SITE_TYPES.DONE_HUB,
     classifyResponse: toDoneHubMutationResponse,
     classifyResponseError: (error) => {
       throw error
@@ -95,7 +100,7 @@ const fetchDoneHubMutationPayload = async (
     return {
       outcome: "applied" as const,
       data: await fetchChannelRaw(
-        toManagedSiteApiServiceRequest(config, options),
+        createProviderRequest(config, options),
         channelId,
         options,
       ),
@@ -120,7 +125,7 @@ const fetchSecretKey = async (
 ) => {
   options?.signal?.throwIfAborted()
   const channel = await fetchChannelRaw(
-    toManagedSiteApiServiceRequest(config, options),
+    createProviderRequest(config, options),
     channelId,
   )
   options?.signal?.throwIfAborted()
@@ -156,11 +161,7 @@ export const doneHubChannelOperations = {
   list: async (
     config: DoneHubConfig,
     options?: ManagedSitePaginatedChannelRequestOptions,
-  ) =>
-    await listAllChannels(
-      toManagedSiteApiServiceRequest(config, options),
-      options,
-    ),
+  ) => await listAllChannels(createProviderRequest(config, options), options),
   create: async (
     config: DoneHubConfig,
     channelData: DoneHubCreateChannelPayload,
@@ -238,10 +239,7 @@ export const doneHubManagedResourceModels = {
   },
   list: async (config, options) =>
     toManagedModelChannelList(
-      await listAllChannels(
-        toManagedSiteApiServiceRequest(config, options),
-        options,
-      ),
+      await listAllChannels(createProviderRequest(config, options), options),
       [
         DoneHubChannelStatus.ManuallyDisabled,
         DoneHubChannelStatus.AutoDisabled,
@@ -259,7 +257,7 @@ export const doneHubManagedResourceModels = {
       ref,
     )
     return await fetchChannelModels(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       channelId,
       options,
     )
@@ -270,7 +268,7 @@ export const doneHubManagedResourceModels = {
     options?: ManagedSiteChannelRequestOptions,
   ) =>
     await fetchDraftChannelModels(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       {
         type: Number(probe.channelType),
         baseUrl: probe.baseUrl,

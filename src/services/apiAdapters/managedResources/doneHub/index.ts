@@ -34,7 +34,7 @@ import { rethrowNewApiFamilyChannelReadError } from "~/services/apiAdapters/mana
 import { createNewApiFamilyResourceFacts } from "~/services/apiAdapters/managedResources/newApiFamily/resourceFacts"
 import { attributeCreatedNativeResource } from "~/services/apiAdapters/managedResources/shared/createAttribution"
 import { doneHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/doneHub"
-import { toManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSites/request"
+import { createManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSites/request"
 import {
   fetchChannelRaw,
   fetchDoneHubProviderModels,
@@ -59,6 +59,10 @@ import { type DoneHubChannelRaw } from "~/types/doneHub"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import { normalizeList } from "~/utils/core/string"
+
+const createProviderRequest = createManagedSiteApiServiceRequest(
+  SITE_TYPES.DONE_HUB,
+)
 
 type DoneHubNativeConfig = {
   config: DoneHubConfig
@@ -232,7 +236,7 @@ const getChannel = async (
 ): Promise<DoneHubNativeDetail> => {
   throwIfNewApiResourceOperationAborted(options)
   const raw = await fetchChannelRaw(
-    toManagedSiteApiServiceRequest(nativeConfig.config, options),
+    createProviderRequest(nativeConfig.config, options),
     locator,
     options,
   ).catch(rethrowNewApiFamilyChannelReadError)
@@ -467,7 +471,7 @@ export async function openDoneHubNativeResourceOperations(): Promise<DoneHubNati
           ],
         })
       return await fetchDoneHubProviderModels(
-        toManagedSiteApiServiceRequest(nativeConfig.config, options),
+        createProviderRequest(nativeConfig.config, options),
         {
           ...detail,
           ...buildDoneHubAdvancedPayload(draft, detail),

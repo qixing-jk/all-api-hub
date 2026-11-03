@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import { getSessionToken } from "~/services/apiService/axonHub/authSession"
 import { normalizeBaseUrl } from "~/services/apiService/axonHub/configIdentity"
 import {
@@ -11,6 +12,10 @@ import {
   toAxonHubRequestError,
   toGraphqlResponseError,
 } from "~/services/apiService/axonHub/graphqlProtocol"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 
 /**
@@ -37,121 +42,133 @@ export async function graphqlRequest<T>(
   ): Promise<GraphqlAttempt> => {
     throwIfAborted(options?.signal)
 
-    let response: Response
-    try {
-      if (isMutation) {
-        mutationDispatched = true
-      }
-      response = await fetch(`${baseUrl}/admin/graphql`, {
-        method: "POST",
-        signal: options?.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ query, variables }),
-      })
-    } catch (error) {
-      throw toAxonHubRequestError(
-        error,
-        isMutation ? "dispatched" : "not-dispatched",
-        "unavailable",
-      )
-    }
+    return await withSiteApiRequestTask(
+      baseUrl,
+      async () => {
+        let response: Response
+        try {
+          if (isMutation) {
+            mutationDispatched = true
+          }
+          response = await fetch(`${baseUrl}/admin/graphql`, {
+            method: "POST",
+            signal: options?.signal,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({ query, variables }),
+          })
+        } catch (error) {
+          throw toAxonHubRequestError(
+            error,
+            isMutation ? "dispatched" : "not-dispatched",
+            "unavailable",
+          )
+        }
 
-    const dispatch = isMutation ? "dispatched" : "not-dispatched"
-    let payload: unknown
-    try {
-      payload = await response.json()
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw toAxonHubRequestError(error, dispatch, "protocol")
-      }
-      if (allowAuthRetry && shouldRefreshAuthentication(response, undefined)) {
-        return retryAuthentication()
-      }
-      if (!response.ok) {
-        throw toGraphqlResponseError(
-          classifyGraphqlFailure(response, undefined),
+        reportSiteRateLimitResponse(baseUrl, response)
+        const dispatch = isMutation ? "dispatched" : "not-dispatched"
+        let payload: unknown
+        try {
+          payload = await response.json()
+        } catch (error) {
+          if (isAbortError(error)) {
+            throw toAxonHubRequestError(error, dispatch, "protocol")
+          }
+          if (
+            allowAuthRetry &&
+            shouldRefreshAuthentication(response, undefined)
+          ) {
+            return retryAuthentication()
+          }
+          if (!response.ok) {
+            throw toGraphqlResponseError(
+              classifyGraphqlFailure(response, undefined),
+              dispatch,
+              response,
+              undefined,
+              error,
+            )
+          }
+          throw toGraphqlResponseError(
+            "protocol",
+            dispatch,
+            response,
+            undefined,
+            error,
+          )
+        }
+
+        const graphqlPayload = parseGraphqlEnvelope(payload, {
           dispatch,
-          response,
-          undefined,
-          error,
-        )
-      }
-      throw toGraphqlResponseError(
-        "protocol",
-        dispatch,
-        response,
-        undefined,
-        error,
-      )
-    }
+          responseReceived: true,
+          statusCode: response.status,
+          raw: payload,
+        })
 
-    const graphqlPayload = parseGraphqlEnvelope(payload, {
-      dispatch,
-      responseReceived: true,
-      statusCode: response.status,
-      raw: payload,
-    })
+        if (response.status >= 500) {
+          throw toGraphqlResponseError(
+            "unavailable",
+            dispatch,
+            response,
+            graphqlPayload.errors,
+            payload,
+          )
+        }
+        if (response.status === 401) {
+          if (allowAuthRetry) return retryAuthentication()
+          throw toGraphqlResponseError(
+            "authentication",
+            dispatch,
+            response,
+            graphqlPayload.errors,
+            payload,
+          )
+        }
+        if (response.status === 403) {
+          throw toGraphqlResponseError(
+            "permission",
+            dispatch,
+            response,
+            graphqlPayload.errors,
+            payload,
+          )
+        }
 
-    if (response.status >= 500) {
-      throw toGraphqlResponseError(
-        "unavailable",
-        dispatch,
-        response,
-        graphqlPayload.errors,
-        payload,
-      )
-    }
-    if (response.status === 401) {
-      if (allowAuthRetry) return retryAuthentication()
-      throw toGraphqlResponseError(
-        "authentication",
-        dispatch,
-        response,
-        graphqlPayload.errors,
-        payload,
-      )
-    }
-    if (response.status === 403) {
-      throw toGraphqlResponseError(
-        "permission",
-        dispatch,
-        response,
-        graphqlPayload.errors,
-        payload,
-      )
-    }
+        if (!response.ok || graphqlPayload.errors?.length) {
+          if (
+            allowAuthRetry &&
+            shouldRefreshAuthentication(response, graphqlPayload.errors)
+          ) {
+            return retryAuthentication()
+          }
 
-    if (!response.ok || graphqlPayload.errors?.length) {
-      if (
-        allowAuthRetry &&
-        shouldRefreshAuthentication(response, graphqlPayload.errors)
-      ) {
-        return retryAuthentication()
-      }
+          throw toGraphqlResponseError(
+            classifyGraphqlFailure(response, graphqlPayload.errors),
+            dispatch,
+            response,
+            graphqlPayload.errors,
+            payload,
+          )
+        }
 
-      throw toGraphqlResponseError(
-        classifyGraphqlFailure(response, graphqlPayload.errors),
-        dispatch,
-        response,
-        graphqlPayload.errors,
-        payload,
-      )
-    }
+        if (graphqlPayload.data === undefined || graphqlPayload.data === null) {
+          throw toGraphqlResponseError(
+            "protocol",
+            dispatch,
+            response,
+            undefined,
+            payload,
+          )
+        }
 
-    if (graphqlPayload.data === undefined || graphqlPayload.data === null) {
-      throw toGraphqlResponseError(
-        "protocol",
-        dispatch,
-        response,
-        undefined,
-        payload,
-      )
-    }
-
-    return { kind: "data", data: graphqlPayload.data as T }
+        return { kind: "data", data: graphqlPayload.data as T }
+      },
+      options?.signal ?? undefined,
+      undefined,
+      SITE_TYPES.AXON_HUB,
+    )
   }
 
   try {

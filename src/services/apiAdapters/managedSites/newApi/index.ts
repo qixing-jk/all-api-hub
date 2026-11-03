@@ -19,7 +19,7 @@ import {
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import { createManagedSiteConfigCapability } from "~/services/apiAdapters/managedSites/config"
 import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApi/newApiSecretVerification"
-import { toManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSites/request"
+import { createManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSites/request"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -30,6 +30,10 @@ import {
 } from "~/services/managedSites/providers/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
 
+const createProviderRequest = createManagedSiteApiServiceRequest(
+  SITE_TYPES.NEW_API,
+)
+
 const newApiManagedSiteConfig: ManagedSiteConfigCapability<NewApiConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.NEW_API, checkValidNewApiConfig)
 
@@ -38,14 +42,11 @@ const newApiManagedSiteQueries: ManagedSiteQueriesCapability<NewApiConfig> = {
     fetch: async (
       config: NewApiConfig,
       options?: Pick<ManagedSiteChannelRequestOptions, "signal">,
-    ) =>
-      await fetchSiteUserGroups(
-        toManagedSiteApiServiceRequest(config, options),
-      ),
+    ) => await fetchSiteUserGroups(createProviderRequest(config, options)),
   },
   accountAvailableModels: {
     fetch: async (config) =>
-      await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+      await fetchAccountAvailableModels(createProviderRequest(config)),
   },
 }
 

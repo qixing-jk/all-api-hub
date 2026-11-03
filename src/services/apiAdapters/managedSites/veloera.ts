@@ -30,7 +30,11 @@ import {
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 import { createManagedSiteConfigCapability } from "./config"
-import { toManagedSiteApiServiceRequest } from "./request"
+import { createManagedSiteApiServiceRequest } from "./request"
+
+const createProviderRequest = createManagedSiteApiServiceRequest(
+  SITE_TYPES.VELOERA,
+)
 
 const veloeraManagedSiteConfig: ManagedSiteConfigCapability<VeloeraConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.VELOERA, checkValidVeloeraConfig)
@@ -38,13 +42,11 @@ const veloeraManagedSiteConfig: ManagedSiteConfigCapability<VeloeraConfig> =
 const veloeraManagedSiteQueries: ManagedSiteQueriesCapability<VeloeraConfig> = {
   siteUserGroups: {
     fetch: async (config, options) =>
-      await fetchSiteUserGroups(
-        toManagedSiteApiServiceRequest(config, options),
-      ),
+      await fetchSiteUserGroups(createProviderRequest(config, options)),
   },
   accountAvailableModels: {
     fetch: async (config) =>
-      await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+      await fetchAccountAvailableModels(createProviderRequest(config)),
   },
 }
 
@@ -55,7 +57,7 @@ const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 const readMatchingInventory = shareInventoryRead(
   async (config: VeloeraConfig, options) =>
     toManagedResourceMatchList(
-      await listAllChannels(toManagedSiteApiServiceRequest(config, options), {
+      await listAllChannels(createProviderRequest(config, options), {
         signal: options.signal,
         requireCompleteInventory: true,
       }),

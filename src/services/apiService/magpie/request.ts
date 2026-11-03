@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   composeAbortSignals,
   createDeferredAbortDeadline,
@@ -7,6 +8,10 @@ import {
   type ApiOperationContext,
 } from "~/services/apiTransport/operationContext"
 import { SharedRead } from "~/services/apiTransport/requestScheduling"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 import { normalizeMagpieBaseUrl, type MagpieConfig } from "~/types/magpieConfig"
 
 const MAGPIE_REQUEST_TIMEOUT_MS = 30_000
@@ -93,23 +98,32 @@ export async function requestMagpie(
     deadline.start()
     const session = requestSessions.get(config)
     const loginWithSignal = async (loginSignal?: AbortSignal) => {
-      const login = await fetch(
-        `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
-        {
-          method: "GET",
-          credentials: "include",
-          redirect: "follow",
-          signal: loginSignal,
+      return await withSiteApiRequestTask(
+        baseUrl,
+        async () => {
+          const login = await fetch(
+            `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
+            {
+              method: "GET",
+              credentials: "include",
+              redirect: "follow",
+              signal: loginSignal,
+            },
+          )
+          reportSiteRateLimitResponse(baseUrl, login)
+          if (!login.ok)
+            throw new MagpieApiError(
+              "Magpie web authentication failed",
+              login.status,
+              false,
+              true,
+            )
+          discardResponseBody(login)
         },
+        loginSignal,
+        undefined,
+        SITE_TYPES.MAGPIE,
       )
-      if (!login.ok)
-        throw new MagpieApiError(
-          "Magpie web authentication failed",
-          login.status,
-          false,
-          true,
-        )
-      discardResponseBody(login)
     }
     const authenticate = async () => {
       if (!session) return loginWithSignal(signal.signal)
@@ -130,53 +144,74 @@ export async function requestMagpie(
     }
     if (!session?.authenticated) await authenticate()
     signal.signal?.throwIfAborted()
-    dispatched = true
     const send = () =>
-      fetch(`${baseUrl}${path}`, {
-        method: body === undefined ? "GET" : "POST",
-        credentials: "include",
-        redirect: "error",
-        signal: signal.signal,
-        ...(body === undefined
-          ? {}
-          : {
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(body),
-            }),
-      })
-    let response = await send()
-    if (response.status === MAGPIE_REQUEST_STATUSES.Unauthorized && session) {
-      session.authenticated = false
-      // Only GET reads may be replayed. Even rejected writes remain visible to callers.
-      if (body === undefined) {
-        discardResponseBody(response)
-        await authenticate()
-        signal.signal?.throwIfAborted()
-        response = await send()
-        if (response.status === MAGPIE_REQUEST_STATUSES.Unauthorized)
-          session.authenticated = false
-      }
+      withSiteApiRequestTask(
+        baseUrl,
+        async () => {
+          dispatched = true
+          const response = await fetch(`${baseUrl}${path}`, {
+            method: body === undefined ? "GET" : "POST",
+            credentials: "include",
+            redirect: "error",
+            signal: signal.signal,
+            ...(body === undefined
+              ? {}
+              : {
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(body),
+                }),
+          })
+          status = response.status
+          reportSiteRateLimitResponse(baseUrl, response)
+          if (
+            response.status === MAGPIE_REQUEST_STATUSES.Unauthorized &&
+            session
+          ) {
+            session.authenticated = false
+            if (body === undefined) {
+              discardResponseBody(response)
+              return { needsAuthentication: true as const }
+            }
+          }
+          if (!response.ok)
+            throw new MagpieApiError(
+              "Magpie management request failed",
+              status,
+              true,
+              NON_APPLICATION_STATUSES.includes(status),
+            )
+          try {
+            return {
+              needsAuthentication: false as const,
+              data: (await response.json()) as unknown,
+            }
+          } catch {
+            throw new MagpieApiError(
+              "Invalid Magpie management response",
+              status,
+              true,
+              false,
+            )
+          }
+        },
+        signal.signal,
+        undefined,
+        SITE_TYPES.MAGPIE,
+      )
+    let result = await send()
+    if (result.needsAuthentication) {
+      await authenticate()
+      signal.signal?.throwIfAborted()
+      result = await send()
     }
-    status = response.status
-    // A save may fail after storing the provider (model preferences, etc.).
-    // Only authentication/routing rejections prove that a write did not apply.
-    if (!response.ok)
+    if (result.needsAuthentication)
       throw new MagpieApiError(
         "Magpie management request failed",
         status,
         true,
-        NON_APPLICATION_STATUSES.includes(status),
-      )
-    try {
-      return (await response.json()) as unknown
-    } catch {
-      throw new MagpieApiError(
-        "Invalid Magpie management response",
-        status,
         true,
-        false,
       )
-    }
+    return result.data
   }
   try {
     // Web Locks coordinate Options, Popup and background callers using the

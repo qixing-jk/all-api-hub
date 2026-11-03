@@ -1,3 +1,8 @@
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  reportSiteRateLimitResponse,
+  withSiteApiRequestTask,
+} from "~/services/apiTransport/siteRequestLimiter"
 /**
  * gpt-load HTTP boundary: URL building, envelope unwrapping, cancellation, and
  * error evidence.
@@ -272,52 +277,61 @@ export async function callGptLoad<T>(input: GptLoadRequestInput): Promise<T> {
       fail(raw, { dispatch: "not-dispatched", confirmedNonApplication: true })
     }
 
-    fetchStarted = true
-    response = await fetch(
-      buildGptLoadUrl(input.baseUrl, input.path, input.searchParams),
-      {
-        method: input.method,
-        signal: actionSignal.signal,
-        headers: {
-          ...(input.body === undefined
-            ? {}
-            : { "content-type": "application/json" }),
-          ...(input.managementKey
-            ? { authorization: `Bearer ${input.managementKey}` }
-            : {}),
-          ...(input.idempotencyKey
-            ? { "idempotency-key": input.idempotencyKey }
-            : {}),
-        },
-        ...(input.body === undefined
-          ? {}
-          : { body: JSON.stringify(input.body) }),
+    return await withSiteApiRequestTask(
+      input.baseUrl,
+      async () => {
+        fetchStarted = true
+        response = await fetch(
+          buildGptLoadUrl(input.baseUrl, input.path, input.searchParams),
+          {
+            method: input.method,
+            signal: actionSignal.signal,
+            headers: {
+              ...(input.body === undefined
+                ? {}
+                : { "content-type": "application/json" }),
+              ...(input.managementKey
+                ? { authorization: `Bearer ${input.managementKey}` }
+                : {}),
+              ...(input.idempotencyKey
+                ? { "idempotency-key": input.idempotencyKey }
+                : {}),
+            },
+            ...(input.body === undefined
+              ? {}
+              : { body: JSON.stringify(input.body) }),
+          },
+        )
+
+        reportSiteRateLimitResponse(input.baseUrl, response)
+        const payload = await readGptLoadJsonBody(response)
+        if (!response.ok) {
+          throw new GptLoadApiError(
+            readGptLoadErrorMessage(
+              payload,
+              `gpt-load request failed (${response.status})`,
+            ),
+            response.status,
+            {
+              dispatch: "dispatched",
+              responseReceived: true,
+              // A 5xx can be emitted after the gateway applied the write.
+              confirmedNonApplication: response.status < 500,
+              raw: payload,
+              ...(readGptLoadErrorCode(payload) === undefined
+                ? {}
+                : { code: readGptLoadErrorCode(payload) }),
+            },
+          )
+        }
+
+        if (input.expectsJson === false) return undefined as T
+        return unwrapGptLoadSuccess<T>(payload)
       },
+      actionSignal.signal,
+      undefined,
+      SITE_TYPES.GPT_LOAD,
     )
-
-    const payload = await readGptLoadJsonBody(response)
-    if (!response.ok) {
-      throw new GptLoadApiError(
-        readGptLoadErrorMessage(
-          payload,
-          `gpt-load request failed (${response.status})`,
-        ),
-        response.status,
-        {
-          dispatch: "dispatched",
-          responseReceived: true,
-          // A 5xx can be emitted after the gateway applied the write.
-          confirmedNonApplication: response.status < 500,
-          raw: payload,
-          ...(readGptLoadErrorCode(payload) === undefined
-            ? {}
-            : { code: readGptLoadErrorCode(payload) }),
-        },
-      )
-    }
-
-    if (input.expectsJson === false) return undefined as T
-    return unwrapGptLoadSuccess<T>(payload)
   } catch (error) {
     if (error instanceof GptLoadApiError) throw error
     fail(error, {
