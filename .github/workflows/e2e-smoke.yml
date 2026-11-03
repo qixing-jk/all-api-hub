@@ -229,8 +229,10 @@ jobs:
           restore-keys: |
             e2e-spec-durations-
 
+      # Cold-cache count shards completed 105 tests in 8.2m; allow reporting and
+      # additional specs while retaining a bounded 12m deadline.
       - name: Run E2E smoke
-        timeout-minutes: ${{ matrix.e2e_type == 'default' && 8 || 5 }}
+        timeout-minutes: ${{ matrix.e2e_type == 'default' && 12 || 5 }}
         env:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
           AAH_E2E_SMOKE_ONLY: ${{ matrix.e2e_type == 'default' && '1' || '' }}
@@ -245,8 +247,9 @@ jobs:
           # Count-based shards put 2.45x more work on the slowest shard; pack by
           # measured duration whenever the timings manifest is available.
           if [ -n "${AAH_E2E_SHARD_INDEX}" ]; then
-            mapfile -t planned < <(node scripts/e2e-shard-plan.mjs --index "${AAH_E2E_SHARD_INDEX}" --total "${AAH_E2E_SHARD_TOTAL}")
-            if [ "${#planned[@]}" -gt 0 ]; then
+            planned_list="$(node scripts/e2e-shard-plan.mjs --index "${AAH_E2E_SHARD_INDEX}" --total "${AAH_E2E_SHARD_TOTAL}")"
+            mapfile -t planned <<< "${planned_list}"
+            if [ -n "${planned_list}" ]; then
               echo "Duration-balanced shard ${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}: ${#planned[@]} specs"
               spec_args=("${planned[@]}")
             else
@@ -328,12 +331,14 @@ jobs:
           merge-multiple: true
 
       - name: Write spec durations manifest
+        if: ${{ hashFiles('.e2e-durations/reports/**/*.json') != '' }}
         # Cache only the manifest; the shard reports are inputs, not published state.
         run: |
           node scripts/write-e2e-spec-durations.mjs
           rm -rf .e2e-durations/reports
 
       - name: Save spec durations
+        if: ${{ hashFiles('.e2e-durations/spec-durations.json') != '' }}
         uses: actions/cache/save@v5
         with:
           path: .e2e-durations

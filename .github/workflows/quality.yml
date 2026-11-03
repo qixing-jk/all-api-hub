@@ -80,15 +80,14 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Restore incremental type-check and lint results
-        # Both caches key on file contents, so they stay correct across commits and the
-        # key only needs to change when the tool configuration or versions do: measured
-        # locally, a warm run took lint from 129s to 10s and type check from 52s to 12s.
+        # Tools validate file contents on restore. A unique run key saves refreshed
+        # results after source edits; restore keys reuse the latest snapshot.
         uses: actions/cache@v5
         with:
           path: |
             tsconfig.tsbuildinfo
             .eslintcache
-          key: quality-cache-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'scripts/eslint/**', 'tsconfig.json', 'tsconfig.eslint.json', 'package.json', 'pnpm-lock.yaml') }}
+          key: quality-cache-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'scripts/eslint/**', 'tsconfig.json', 'tsconfig.eslint.json', 'package.json', 'pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             quality-cache-${{ runner.os }}-
 

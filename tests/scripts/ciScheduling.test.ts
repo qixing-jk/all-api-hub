@@ -324,9 +324,11 @@ it("builds PR previews only when a maintainer asks for one", () => {
   const source = readFileSync(".github/workflows/pr-build.yml", "utf8")
   // Per-push previews spent a runner slot that queued real checks, while merged
   // code is already packaged by the nightly release.
-  expect(source).not.toMatch(/^ {2}pull_request:/m)
+  expect(source).not.toMatch(/^ {2}pull_request(?:_target)?:/m)
   expect(source).toContain("workflow_dispatch:")
-  expect(source).toContain("ref: refs/pull/${{ inputs.pr_number }}/merge")
+  expect(source).toContain("ref: ${{ steps.pr_details.outputs.sha }}")
+  expect(source).toContain("core.setOutput('sha', pr.merge_commit_sha)")
+  expect(source).toContain("persist-credentials: false")
   // Comment publishing cannot rely on the fork-unsafe workflow_run path anymore.
   expect(existsSync(".github/workflows/pr-build-comment.yml")).toBe(false)
 })

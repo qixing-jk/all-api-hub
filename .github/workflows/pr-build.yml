@@ -36,13 +36,15 @@ jobs:
               pull_number: ${{ inputs.pr_number }}
             });
             core.setOutput('ref', pr.head.ref);
-            core.setOutput('sha', pr.head.sha);
+            if (!pr.merge_commit_sha) throw new Error('PR has no merge commit to build');
+            core.setOutput('sha', pr.merge_commit_sha);
             core.setOutput('number', pr.number);
 
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: refs/pull/${{ inputs.pr_number }}/merge
+          ref: ${{ steps.pr_details.outputs.sha }}
+          persist-credentials: false
 
       - name: Build extension bundles
         id: package

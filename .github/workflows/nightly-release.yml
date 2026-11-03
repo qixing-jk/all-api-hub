@@ -100,19 +100,30 @@ jobs:
           # The tag moves only after the assets are uploaded, so it marks a complete
           # publication of that commit. Anything else means the target still needs a
           # build — including a run whose upload failed, which the schedule retries.
-          published="$(gh api "repos/$GH_REPO/git/ref/tags/nightly" --jq '.object.sha' 2>/dev/null || true)"
-          if [ "$(gh api "repos/$GH_REPO/git/ref/tags/nightly" --jq '.object.type' 2>/dev/null || true)" = "tag" ]; then
-            published="$(gh api "repos/$GH_REPO/git/tags/$published" --jq '.object.sha' 2>/dev/null || true)"
+          read_optional() {
+            local value
+            if value="$(gh api "$@" 2>&1)"; then
+              printf '%s\n' "$value"
+            elif [[ "$value" == *"(HTTP 404)"* ]]; then
+              printf ''
+            else
+              printf '%s\n' "$value" >&2
+              return 1
+            fi
+          }
+          published="$(read_optional "repos/$GH_REPO/git/ref/tags/nightly" --jq '.object.sha')"
+          tag_type="$(read_optional "repos/$GH_REPO/git/ref/tags/nightly" --jq '.object.type')"
+          if [ "$tag_type" = "tag" ]; then
+            published="$(read_optional "repos/$GH_REPO/git/tags/$published" --jq '.object.sha')"
           fi
-
-          # The Safari assets come from a separate job that can fail after the tag has
-          # moved. Requiring them keeps that failure retryable instead of making the
-          # half-published build look current.
-          assets="$(gh api "repos/$GH_REPO/releases/tags/nightly" --jq '.assets[].name' 2>/dev/null || true)"
+          assets="$(read_optional "repos/$GH_REPO/releases/tags/nightly" --jq '.assets[].name')"
+          body="$(read_optional "repos/$GH_REPO/releases/tags/nightly" --jq '.body')"
           missing=""
           for asset in all-api-hub-nightly-chrome.zip all-api-hub-nightly-firefox.zip all-api-hub-nightly-safari.zip all-api-hub-nightly-sources.zip; do
             if ! grep -qxF "$asset" <<< "$assets"; then missing="$missing $asset"; fi
           done
+
+          if ! grep -qF 'all-api-hub-release-extra:start' <<< "$body"; then missing="$missing usage-notes"; fi
 
           if [ -n "$published" ] && [ "$published" = "$TARGET_SHA" ] && [ -z "$missing" ]; then
             echo "current=true" >> "$GITHUB_OUTPUT"
@@ -368,17 +379,6 @@ jobs:
           if [ -f source/.output/nightly/updates.xml ]; then assets+=(source/.output/nightly/updates.xml); fi
           gh release upload nightly "${assets[@]}" --clobber
 
-      - name: Move nightly tag
-        working-directory: source
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Last, so the tag only ever advertises a commit whose assets are published:
-          # installed nightly builds compare against this tag, and the precheck in this
-          # workflow treats it as the record of a complete build.
-          git tag -f nightly "${{ steps.commit.outputs.ref }}"
-          git push --force origin refs/tags/nightly
-
       - name: Append nightly release usage notes
         working-directory: source
         env:
@@ -431,3 +431,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: bash scripts/update-release-extra-notes.sh nightly
+
+      - name: Move nightly tag
+        working-directory: source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Last, so the tag only ever advertises a commit whose assets are published:
+          # installed nightly builds compare against this tag, and the precheck in this
+          # workflow treats it as the record of a complete build.
+          git tag -f nightly "${{ needs.nightly.outputs.commit_ref }}"
+          git push --force origin refs/tags/nightly

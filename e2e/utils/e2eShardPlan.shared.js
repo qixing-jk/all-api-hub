@@ -47,7 +47,10 @@ async function collectSpecs(directory, cwd, specs) {
       if (SMOKE_IGNORED_SPEC_DIRECTORIES.some((dir) => relative === dir))
         continue
       await collectSpecs(absolute, cwd, specs)
-    } else if (entry.isFile() && entry.name.endsWith(".spec.ts")) {
+    } else if (
+      entry.isFile() &&
+      /\.(spec|test)\.[cm]?[jt]sx?$/u.test(entry.name)
+    ) {
       specs.push(relative)
     }
   }

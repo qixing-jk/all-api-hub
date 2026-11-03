@@ -19,6 +19,58 @@ import {
 } from "~~/e2e/utils/e2eShardPlan.shared.js"
 
 const directories: string[] = []
+const smokeWorkflow = readFileSync(
+  ".github/workflows/e2e-smoke.yml",
+  "utf8",
+).replace(/\r/g, "")
+it("propagates planner failures and preserves successful empty-plan fallback", () => {
+  const step = smokeWorkflow
+    .split("      - name: Run E2E smoke")[1]
+    .split("      - name:")[0]
+  const script = step
+    .split("        run: |\n")[1]
+    ?.split("\n")
+    .map((line) => line.slice(10))
+    .join("\n")
+  expect(script).toBeDefined()
+  function run(mode: string) {
+    return execFileSync(
+      process.platform === "win32"
+        ? "C:/Program Files/Git/bin/bash.exe"
+        : "bash",
+      [
+        "-c",
+        `node() { if [ "$PLAN_MODE" = fail ]; then return 9; fi; if [ "$PLAN_MODE" = specs ]; then printf 'e2e/a.spec.ts\\ne2e/b.spec.ts\\n'; fi; }; pnpm() { printf '%s\\n' "$@"; };\n${script}`,
+      ],
+      {
+        env: {
+          ...process.env,
+          PLAN_MODE: mode,
+          AAH_E2E_SHARD_INDEX: "2",
+          AAH_E2E_SHARD_TOTAL: "6",
+          AAH_E2E_TYPE: "default",
+        },
+        encoding: "utf8",
+      },
+    )
+  }
+  expect(() => run("fail")).toThrow()
+  expect(run("empty")).toContain("--shard=2/6")
+  expect(run("specs")).toContain("e2e/b.spec.ts")
+})
+it("restores timings before planning and skips publishing absent reports", () => {
+  expect(
+    smokeWorkflow.indexOf("- name: Restore E2E spec durations"),
+  ).toBeLessThan(smokeWorkflow.indexOf("- name: Run E2E smoke"))
+  const write = smokeWorkflow
+    .split("- name: Write spec durations manifest")[1]
+    .split("- name:")[0]
+  const save = smokeWorkflow.split("- name: Save spec durations")[1]
+  expect(write).toContain("hashFiles('.e2e-durations/reports/**/*.json') != ''")
+  expect(save).toContain(
+    "hashFiles('.e2e-durations/spec-durations.json') != ''",
+  )
+})
 afterEach(() => {
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true })
@@ -35,6 +87,26 @@ function specEntry(key: string, weight: number) {
 }
 
 describe("duration-balanced spec packing", () => {
+  it("collects all Playwright default test filename variants", async () => {
+    const cwd = temporaryDirectory()
+    mkdirSync(path.join(cwd, "e2e"))
+    const names = [
+      "a.spec.ts",
+      "b.test.ts",
+      "c.spec.js",
+      "d.test.mjs",
+      "e.spec.cts",
+      "f.test.tsx",
+      "g.spec.jsx",
+      "h.test.cjs",
+      "i.spec.mts",
+    ]
+    for (const name of [...names, "helper.ts"])
+      writeFileSync(path.join(cwd, "e2e", name), "")
+    expect(await listShardableSpecs(cwd)).toEqual(
+      names.map((name) => `e2e/${name}`).sort(),
+    )
+  })
   it("assigns every spec to exactly one shard", () => {
     const specs = Array.from({ length: 37 }, (_, index) =>
       specEntry(`e2e/spec-${index}.spec.ts`, (index % 7) * 10 + 1),

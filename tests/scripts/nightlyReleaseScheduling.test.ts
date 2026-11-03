@@ -68,12 +68,16 @@ function runGuard({
   target = "abc123",
   published = target,
   force = "false",
+  body = "<!-- all-api-hub-release-extra:start -->",
+  apiError = "",
 }: {
   tagMode?: "commit" | "annotated" | "missing"
   assets?: string
   target?: string
   published?: string
   force?: string
+  body?: string
+  apiError?: string
 } = {}) {
   const cwd = temporaryDirectory()
   const bin = path.join(cwd, "bin")
@@ -83,8 +87,14 @@ function runGuard({
     gh,
     `#!/usr/bin/env bash
 args="$*"
+if [ -n "\${API_ERROR}" ]; then echo "\${API_ERROR}" >&2; exit 1; fi
 case "$args" in
-  *"releases/tags/nightly"*) printf '%s\\n' "\${ASSETS}"; exit 0 ;;
+  *"releases/tags/nightly"*)
+    case "$args" in
+      *".body"*) printf '%s\\n' "\${BODY}" ;;
+      *) printf '%s\\n' "\${ASSETS}" ;;
+    esac
+    exit 0 ;;
 esac
 case "$args" in
   *"git/ref/tags/nightly"*)
@@ -111,25 +121,42 @@ exit 1
   chmodSync(gh, 0o755)
   const output = path.join(cwd, "github-output")
   writeFileSync(output, "")
-  execFileSync("bash", ["-e", "-c", guardScript()], {
-    env: {
-      ...process.env,
-      PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`,
-      GH_TOKEN: "test-token",
-      GH_REPO: "example/project",
-      TAG_MODE: tagMode,
-      ASSETS: assets,
-      TARGET_SHA: target,
-      PUBLISHED_SHA: published,
-      FORCE: force,
-      GITHUB_OUTPUT: output,
+  execFileSync(
+    process.platform === "win32" ? "C:/Program Files/Git/bin/bash.exe" : "bash",
+    ["-e", "-c", guardScript()],
+    {
+      env: {
+        ...process.env,
+        PATH: `${process.platform === "win32" ? bin.replace(/\\/g, "/").replace(/^([A-Za-z]):/, (_, drive: string) => `/${drive.toLowerCase()}`) : bin}:${process.env.PATH ?? ""}`,
+        GH_TOKEN: "test-token",
+        GH_REPO: "example/project",
+        TAG_MODE: tagMode,
+        ASSETS: assets,
+        TARGET_SHA: target,
+        PUBLISHED_SHA: published,
+        FORCE: force,
+        BODY: body,
+        API_ERROR: apiError,
+        GITHUB_OUTPUT: output,
+      },
+      stdio: "ignore",
     },
-    stdio: "ignore",
-  })
+  )
   return readFileSync(output, "utf8")
 }
 
 describe("nightly rebuild guard", () => {
+  it("fails closed on inconclusive API reads but rebuilds for HTTP 404", () => {
+    expect(() =>
+      runGuard({ apiError: "gh: server error (HTTP 503)" }),
+    ).toThrow()
+    expect(runGuard({ apiError: "gh: Not Found (HTTP 404)" })).toContain(
+      "current=false",
+    )
+  })
+  it("retries when usage notes are missing", () => {
+    expect(runGuard({ body: "Rolling prerelease" })).toContain("current=false")
+  })
   it("skips only when the published tag already names the target commit", () => {
     expect(runGuard({ tagMode: "commit" })).toContain("current=true")
     expect(runGuard({ tagMode: "annotated" })).toContain("current=true")
@@ -187,6 +214,12 @@ describe("nightly release scheduling", () => {
     const moveTag = workflow.indexOf("- name: Move nightly tag")
     expect(upload).toBeGreaterThan(-1)
     expect(moveTag).toBeGreaterThan(upload)
+    expect(moveTag).toBeGreaterThan(
+      workflow.indexOf("- name: Upload Safari nightly assets"),
+    )
+    expect(moveTag).toBeGreaterThan(
+      workflow.indexOf("- name: Refresh nightly release usage notes"),
+    )
   })
 
   it("exposes a deliberate rebuild switch", () => {
