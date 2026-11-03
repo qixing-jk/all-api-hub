@@ -704,7 +704,7 @@
   "selectSource": "選擇資料來源",
   "selectSourceToContinue": "請先在上方選擇一個資料來源，然後查看模型列表。",
   "showing_other": "顯示 {{count}} 個模型",
-  "showingGroupQuotes_other": "顯示 {{count}} 筆分組報價",
+  "showingGroupQuotes_other": "顯示 {{count}} 筆報價",
   "showUnavailableModels": "同時顯示無權使用的模型",
   "siteDescription": "站點說明：",
   "siteSupportedGroups": "站點支援的分組",

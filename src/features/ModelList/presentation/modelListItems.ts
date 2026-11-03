@@ -67,10 +67,15 @@ export function getModelItemKey(
     sourceIdentity: item.sourceIdentity,
   })
 
-  const base = `${item.source.kind}:${sourceId}:${item.model.model_name}`
-  return item.comparisonGroup === undefined
-    ? base
-    : `${base}:group:${JSON.stringify(item.comparisonGroup)}`
+  if (item.comparisonGroup === undefined) {
+    return `${item.source.kind}:${sourceId}:${item.model.model_name}`
+  }
+  return JSON.stringify([
+    item.source.kind,
+    sourceId,
+    item.model.model_name,
+    item.comparisonGroup,
+  ])
 }
 
 export interface ModelListItem extends PreparedModelListItem {

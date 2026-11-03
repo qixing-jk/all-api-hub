@@ -506,6 +506,47 @@ describe("ModelDisplay", () => {
     )
   })
 
+  it("does not attribute account-wide verification history to expanded group offers", () => {
+    const summaryKey = serializeVerificationHistoryTarget(
+      requireHistoryTarget(
+        createAccountModelVerificationHistoryTarget("account-1", "gpt-4o-mini"),
+      ),
+    )
+    render(
+      <ModelDisplay
+        models={["default", "vip"].map((group) => ({
+          ...createCalculatedModel({ effectiveGroup: group }),
+          comparisonGroup: group,
+        }))}
+        verificationSummariesByKey={{
+          [summaryKey]: { status: "success" } as any,
+        }}
+        showRealPrice={false}
+        showEndpointTypes={false}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+    for (const item of screen.getAllByTestId(TEST_IDS.modelItem)) {
+      expect(item).toHaveAttribute("data-summary-status", "none")
+    }
+  })
+
+  it("abandons a pending group reveal when its offer is removed", async () => {
+    const models = [createCalculatedModel({})]
+    const props = {
+      verificationSummariesByKey: {},
+      showRealPrice: false,
+      showEndpointTypes: false,
+      handleGroupClick: vi.fn(),
+      onModelGroupChange: vi.fn(),
+    }
+    const view = render(<ModelDisplay {...props} models={models} />)
+    await userEvent.setup().click(screen.getByText("change-group-account-1"))
+    view.rerender(<ModelDisplay {...props} models={[]} />)
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled()
+    expect(screen.getByTestId(TEST_IDS.emptyState)).toBeVisible()
+  })
+
   it("shows an empty state when no filtered models are available", () => {
     render(
       <ModelDisplay

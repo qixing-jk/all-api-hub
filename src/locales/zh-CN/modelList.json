@@ -702,7 +702,7 @@
   "selectSource": "选择数据源",
   "selectSourceToContinue": "请先在上方选择一个数据源，然后查看模型列表。",
   "showing": "显示 {{count}} 个模型",
-  "showingGroupQuotes": "显示 {{count}} 条分组报价",
+  "showingGroupQuotes": "显示 {{count}} 条报价",
   "showUnavailableModels": "同时显示无权使用的模型",
   "siteDescription": "站点说明：",
   "siteSupportedGroups": "站点支持的分组",

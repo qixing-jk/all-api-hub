@@ -99,10 +99,12 @@ vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemHeader", () => ({
     onVerifyApi,
     onVerifyCliSupport,
     groupSummary,
+    groupControl,
   }: {
     model: { model_name: string }
     resolvedVendor: { state: string; label?: string }
     trailingContent?: React.ReactNode
+    groupControl?: React.ReactNode
     handleCopyModelName: () => void
     onOpenKeyDialog?: () => void
     onVerifyApi?: () => void
@@ -114,6 +116,7 @@ vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemHeader", () => ({
     }
   }) => (
     <div>
+      {groupControl}
       {model.model_name}
       <button type="button" onClick={handleCopyModelName}>
         copy-model-name
@@ -262,6 +265,16 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("shows the model group control and labels only the expanded offer's group", () => {
+    const props = createDefaultProps()
+    const { rerender } = render(
+      <ModelItem {...props} onModelGroupChange={vi.fn()} />,
+    )
+    expect(screen.getAllByText(/vip/).length).toBeGreaterThan(0)
+    rerender(<ModelItem {...props} comparisonGroup="vip" />)
+    expect(screen.getAllByText(/vip/).length).toBeGreaterThan(0)
+  })
+
   it("allows published per-request prices to expand without endpoint or group details", () => {
     const props = createDefaultProps()
     props.model.quota_type = 1

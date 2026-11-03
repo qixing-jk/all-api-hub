@@ -6,6 +6,7 @@ import type {
   CalculatedModelItem,
   ModelListItem,
 } from "~/features/ModelList/presentation/modelListItems"
+import { getModelItemKey } from "~/features/ModelList/presentation/modelListItems"
 import {
   calculateModelListPrices,
   rankModelListPrices,
@@ -34,6 +35,27 @@ function calculate(rawItems: ModelListItem[], groups?: string[]) {
 }
 
 describe("model list price evaluation", () => {
+  it("keeps raw model identifiers distinct from expanded group offers", () => {
+    const base = buildModelListItemFixture("one", { a: 1, b: 3 })
+    const raw = {
+      ...base,
+      model: { ...base.model, model_name: 'model:group:"b"' },
+    }
+    const expanded = calculateModelListPrices({
+      ...options,
+      rawItems: [base, raw],
+      getGroupCandidates: () => undefined,
+      expandGroups: true,
+    })
+    const normal = calculate([raw])[0]!
+    const groupOffer = expanded.find(
+      (item) =>
+        item.model.model_name === "model" && item.comparisonGroup === "b",
+    )!
+    expect(getModelItemKey(normal)).not.toBe(getModelItemKey(groupOffer))
+    expect(new Set(expanded.map(getModelItemKey)).size).toBe(4)
+  })
+
   it("keeps unpriced groups and sources without groups visible during expansion", () => {
     const unpriced = buildModelListItemFixture("unpriced", { a: 1 })
     const noGroups = buildModelListItemFixture("no-groups", {})

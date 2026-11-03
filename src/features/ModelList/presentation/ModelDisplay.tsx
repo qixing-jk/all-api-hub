@@ -234,11 +234,13 @@ export function ModelDisplay(props: ModelDisplayProps) {
               sourceForModel.account.id,
               modelId,
             )
-      const verificationSummary = historyTarget
-        ? verificationSummariesByKey[
-            serializeVerificationHistoryTarget(historyTarget)
-          ] ?? null
-        : null
+      // History is account/model scoped and cannot establish a group's result.
+      const verificationSummary =
+        historyTarget && item.comparisonGroup === undefined
+          ? verificationSummariesByKey[
+              serializeVerificationHistoryTarget(historyTarget)
+            ] ?? null
+          : null
 
       return (
         <div

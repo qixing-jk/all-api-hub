@@ -704,7 +704,7 @@
   "selectSource": "ソースを選択",
   "selectSourceToContinue": "上のデータソースを選択してから、モデル一覧を表示してください。",
   "showing_other": "{{count}} モデルを表示中",
-  "showingGroupQuotes_other": "グループ別の見積もりを{{count}}件表示",
+  "showingGroupQuotes_other": "見積もりを{{count}}件表示",
   "showUnavailableModels": "アカウントに利用権限がないモデルも表示",
   "siteDescription": "サイトの説明：",
   "siteSupportedGroups": "サイトが対応するグループ",

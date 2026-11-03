@@ -704,7 +704,7 @@
   "selectSource": "Chọn nguồn dữ liệu",
   "selectSourceToContinue": "Vui lòng chọn một nguồn dữ liệu ở trên trước, sau đó xem danh sách mô hình.",
   "showing_other": "Đang hiển thị {{count}} mô hình",
-  "showingGroupQuotes_other": "Đang hiển thị {{count}} báo giá theo nhóm",
+  "showingGroupQuotes_other": "Đang hiển thị {{count}} báo giá",
   "showUnavailableModels": "Hiển thị cả mô hình tài khoản không có quyền sử dụng",
   "siteDescription": "Mô tả từ trang web:",
   "siteSupportedGroups": "Nhóm được trang hỗ trợ",
