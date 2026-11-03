@@ -1478,6 +1478,17 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(loggerErrorMock).toHaveBeenCalledWith("Failed to fetch models", {
       message: "401 [REDACTED] [REDACTED] invalid",
     })
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["recovered-model"])
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "recovered-model" }),
+    ).toBeVisible()
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)
+    expect(
+      screen.queryByText("401 [REDACTED] [REDACTED] invalid"),
+    ).not.toBeInTheDocument()
   })
 
   it("runs a single probe and shows collapsible input/output", async () => {

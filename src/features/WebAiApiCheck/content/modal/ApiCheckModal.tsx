@@ -314,7 +314,10 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                         )}
                         emptyMessage={
                           view.modelListSupported &&
-                          view.modelIdsOptions.length === 0
+                          view.modelIdsOptions.length === 0 &&
+                          (view.isFetchingModels ||
+                            view.fetchedModelCount !== null ||
+                            Boolean(view.fetchModelsError))
                             ? null
                             : undefined
                         }

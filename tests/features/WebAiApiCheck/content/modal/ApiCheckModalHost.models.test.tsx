@@ -48,6 +48,16 @@ import {
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
 
+  it("guides manual model input before credentials start discovery", async () => {
+    await openModal()
+    fireEvent.click(
+      await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    )
+    expect(
+      await screen.findByText("ui:searchableSelect.noOptionsAllowCustom"),
+    ).toBeVisible()
+  })
+
   it.each<{ response: ApiCheckFetchModelsResponse; message: string }>([
     {
       response: { success: true, modelIds: [] },

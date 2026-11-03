@@ -2004,6 +2004,18 @@ describe("VerifyCliSupportDialog", () => {
     ).toBeVisible()
   })
 
+  it("leaves account model discovery unrequested when profile models are reloaded", async () => {
+    const { result } = renderHook(() =>
+      useCliSupportVerification({ isOpen: true, onClose: vi.fn() }),
+    )
+    await act(async () => {
+      await result.current.loadProfileModels()
+    })
+    expect(result.current.fetchedModelCount).toBeNull()
+    expect(result.current.isLoadingModels).toBe(false)
+    expect(mockFetchApiCredentialModelIds).not.toHaveBeenCalled()
+  })
+
   it("shows the profile model fetch error when loading stored profile models fails", async () => {
     mockFetchApiCredentialModelIds.mockRejectedValueOnce(
       new Error("model catalog unavailable"),
@@ -2032,6 +2044,17 @@ describe("VerifyCliSupportDialog", () => {
     expect(
       await screen.findByText("model catalog unavailable"),
     ).toBeInTheDocument()
+    mockFetchApiCredentialModelIds.mockResolvedValueOnce(["recovered-model"])
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "recovered-model" }),
+    ).toBeVisible()
+    expect(mockFetchApiCredentialModelIds).toHaveBeenCalledTimes(2)
+    expect(
+      screen.queryByText("model catalog unavailable"),
+    ).not.toBeInTheDocument()
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
   })
 

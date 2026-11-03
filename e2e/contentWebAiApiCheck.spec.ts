@@ -1312,6 +1312,10 @@ for (const state of [
     }
     if (state === "no-match" || state === "custom-value")
       await dropdown.getByPlaceholder("Search...").fill("manual-unlisted-model")
+    if (state === "no-match")
+      await expect(
+        dropdown.getByText("No results found", { exact: true }).first(),
+      ).toBeVisible()
     if (state === "custom-value") {
       await dropdown
         .getByRole("option", {
@@ -1332,13 +1336,12 @@ for (const state of [
     })
     if (state === "long-failure") {
       const details = dropdown.locator("details")
-      if (await details.count()) {
-        await details.locator("summary").click()
-        await dropdown.screenshot({
-          path: test.info().outputPath(`${state}__details.png`),
-          animations: "disabled",
-        })
-      }
+      await expect(details).toHaveCount(1)
+      await details.locator("summary").click()
+      await dropdown.screenshot({
+        path: test.info().outputPath(`${state}__details.png`),
+        animations: "disabled",
+      })
     }
     await dropdown.getByPlaceholder("Search...").press("Escape")
     await expect(dropdown).not.toBeVisible()

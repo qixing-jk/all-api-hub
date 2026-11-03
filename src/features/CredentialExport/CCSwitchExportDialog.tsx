@@ -217,6 +217,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     }
 
     let isMounted = true
+    setModelFetchResult(null)
     const handle = setTimeout(() => {
       void (async () => {
         try {

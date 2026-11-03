@@ -11,6 +11,71 @@ import {
 } from "~~/tests/test-utils/render"
 
 describe("SearchableSelect", () => {
+  it("keeps a recovery footer visible with known options and no default empty message", async () => {
+    render(
+      <SearchableSelect
+        open
+        options={[{ value: "saved", label: "Saved model" }]}
+        value="saved"
+        onChange={vi.fn()}
+        emptyMessage={null}
+        footer={<button>Manage models</button>}
+        fetchResult={{ status: SELECT_FETCH_STATUSES.Error }}
+      />,
+    )
+    expect(
+      await screen.findByRole("option", { name: "Saved model" }),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Manage models" })).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "ui:searchableSelect.fetchFailed",
+    )
+  })
+
+  it("shows a failed request without offering unavailable recovery actions", async () => {
+    render(
+      <SearchableSelect
+        open
+        allowCustomValue={false}
+        options={[]}
+        value=""
+        onChange={vi.fn()}
+        fetchResult={{ status: SELECT_FETCH_STATUSES.Error }}
+      />,
+    )
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "ui:searchableSelect.fetchFailed",
+    )
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("ui:searchableSelect.manualInputHint"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("offers retry without manual input when custom models are unsupported", async () => {
+    const retry = vi.fn()
+    render(
+      <SearchableSelect
+        open
+        allowCustomValue={false}
+        options={[]}
+        value=""
+        onChange={vi.fn()}
+        onRetryFetch={retry}
+        fetchResult={{ status: SELECT_FETCH_STATUSES.Error }}
+      />,
+    )
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(retry).toHaveBeenCalledOnce()
+    expect(
+      screen.queryByText("ui:searchableSelect.manualInputHint"),
+    ).not.toBeInTheDocument()
+  })
+
   it("offers one recovery action and accepts manual input directly", async () => {
     const retry = vi.fn()
     const onChange = vi.fn()

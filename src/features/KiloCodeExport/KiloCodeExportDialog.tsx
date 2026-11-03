@@ -509,6 +509,10 @@ export function KiloCodeExportDialog({
                 aria-label={t("ui:dialog.kiloCode.labels.defaultModel")}
                 value={v7DefaultModel?.modelId ?? ""}
                 modelIds={selectedDefaultProvider?.modelIds ?? []}
+                loading={
+                  selectedDefaultInventory?.status ===
+                  KILO_CODE_ACCOUNT_MODEL_STATUSES.Loading
+                }
                 onRetryFetch={
                   selectedDefaultProvider
                     ? () =>
