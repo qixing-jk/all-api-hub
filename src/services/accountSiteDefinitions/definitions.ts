@@ -2275,6 +2275,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         fixedSiteUrl: NANOGPT_WEB_ORIGIN,
         defaultSiteName: NANOGPT_DISPLAY_NAME,
         accessTokenLabelKey: "form.nanoGptApiKey",
+        clearAccessTokenOnSiteChange: true,
         accessTokenGuidanceTitleKey: "form.nanoGptApiKeyGuidanceTitle",
         accessTokenGuidanceKey: "form.nanoGptApiKeyGuidance",
       },

@@ -50,6 +50,24 @@ const completionRequest = (
 })
 
 beforeEach(() => server.resetHandlers())
+it("returns the saved inference credential while the balance endpoint is offline", async () => {
+  server.use(
+    http.post(`${API_ORIGIN}/api/check-balance`, () =>
+      HttpResponse.json({}, { status: 503 }),
+    ),
+  )
+  await expect(
+    getSiteTypeCapabilities(
+      SITE_TYPES.NANOGPT,
+    ).account!.serviceCredential!.fetch({
+      baseUrl: CONSOLE_ORIGIN,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "saved-inference",
+      },
+    }),
+  ).resolves.toMatchObject({ key: "saved-inference" })
+})
 it("uses the identity mismatch message for admission and health failures", () => {
   const persistence = getSiteTypeCapabilities(SITE_TYPES.NANOGPT).account!
     .persistence!

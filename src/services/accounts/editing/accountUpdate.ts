@@ -197,7 +197,9 @@ export async function validateAndUpdateAccount(
       ...fields,
       account_info: {
         ...fields.account_info,
-        ...(manualQuota === undefined ? {} : { quota: manualQuota }),
+        ...(manualQuota === undefined
+          ? {}
+          : { quota: manualQuota, balanceUnavailable: false }),
       },
     }
 
@@ -361,7 +363,9 @@ export async function validateAndUpdateAccount(
       },
       account_info: {
         ...fields.account_info,
-        ...(manualQuota === undefined ? {} : { quota: manualQuota }),
+        ...(manualQuota === undefined
+          ? {}
+          : { quota: manualQuota, balanceUnavailable: false }),
       },
       last_sync_time: Date.now(),
     }

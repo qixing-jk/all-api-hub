@@ -27,6 +27,7 @@ export interface AccountDialogSitePolicy {
   canonicalSiteUrl?: string
   defaultSiteName?: string
   preserveUserExchangeRateOnDetection?: boolean
+  clearAccessTokenOnSiteChange: boolean
   lockSiteUrl: boolean
   forceAccessTokenAuth: boolean
   allowCookieAuthSession: boolean
@@ -73,6 +74,9 @@ export function getAccountDialogSitePolicy(
     defaultSiteName: onboarding?.accountForm?.defaultSiteName,
     preserveUserExchangeRateOnDetection:
       onboarding?.accountForm?.preserveUserExchangeRateOnDetection,
+    clearAccessTokenOnSiteChange: Boolean(
+      onboarding?.accountForm?.clearAccessTokenOnSiteChange,
+    ),
     lockSiteUrl: Boolean(onboarding?.accountForm?.fixedSiteUrl),
     requireUserId: productProfile.identity.userIdRequired,
     forceAccessTokenAuth:

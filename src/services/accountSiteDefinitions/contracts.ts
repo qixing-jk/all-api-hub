@@ -153,6 +153,8 @@ export interface AccountSiteDefinitionOnboardingMetadata {
     defaultSiteName?: string
     /** Detection supplies a provider rate default rather than remote settings. */
     preserveUserExchangeRateOnDetection?: boolean
+    /** Provider-specific credential bundles must not become another site's token. */
+    clearAccessTokenOnSiteChange?: boolean
     accessTokenLabelKey?:
       | "form.openrouterManagementKey"
       | "form.aimlApiManagementKey"

@@ -191,6 +191,10 @@ export function useAccountDialogDraft({
             ...prev,
             siteType: nextSiteType,
             checkIn,
+            ...(previousPolicy.clearAccessTokenOnSiteChange &&
+            prev.siteType !== nextSiteType
+              ? { accessToken: "" }
+              : {}),
             ...(shouldClearCredentialIdentity ? { userId: "" } : {}),
             ...(shouldApplyDefaultName
               ? { siteName: nextPolicy.defaultSiteName ?? "" }

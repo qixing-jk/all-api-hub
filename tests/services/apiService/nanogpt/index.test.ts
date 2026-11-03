@@ -95,6 +95,14 @@ it("falls back to inference subscription after management scope refusal", async 
 })
 
 beforeEach(() => server.resetHandlers())
+it.each(["0x10", "0b10", "0o10"])(
+  "rejects non-decimal balance %s",
+  (amount) => {
+    expect(() =>
+      parseNanoGptBalance({ ...balanceBody, usd_balance: amount }, "/balance"),
+    ).toThrow()
+  },
+)
 it.each([null, {}, { active: "true" }])(
   "rejects malformed subscription activity %j",
   (body) => {

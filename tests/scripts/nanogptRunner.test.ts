@@ -85,3 +85,17 @@ it("redacts credential-bearing CDP endpoints even in detach failures", async () 
     "failed to detach from [REDACTED]",
   )
 })
+
+it("redacts normalized CDP credential components in connection failures", async () => {
+  const endpoint = "http://user:p@ss@LOCALHOST:9332"
+  mocks.connect.mockRejectedValue(
+    new Error(
+      "connect http://user:p%40ss@localhost:9332/json/version failed p%40ss",
+    ),
+  )
+  const error = await main(["--suite=catalog", `--cdp=${endpoint}`]).catch(
+    (error) => error,
+  )
+  expect(error.message).not.toContain("p%40ss")
+  expect(error.message).not.toContain("user:")
+})

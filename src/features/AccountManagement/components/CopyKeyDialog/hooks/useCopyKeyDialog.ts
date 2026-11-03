@@ -196,6 +196,9 @@ export function useCopyKeyDialog(
           serviceResult.status === "fulfilled" ? serviceResult.value : []
         setRuntimeKeys(serviceKeys)
         setNativeKeyRows([])
+        if (serviceResult.status === "rejected") {
+          setError(getErrorMessage(serviceResult.reason))
+        }
         if (inventoryResult.status === "rejected") {
           if (
             inventoryResult.reason instanceof AccountKeyResourceError &&

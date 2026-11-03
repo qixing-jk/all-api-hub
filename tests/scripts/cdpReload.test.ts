@@ -2,6 +2,7 @@ import path from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { reloadRunningExtension } from "~~/scripts/cdp/reload.mjs"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const { connectOverCDP } = vi.hoisted(() => ({ connectOverCDP: vi.fn() }))
 vi.mock("@playwright/test", () => ({ chromium: { connectOverCDP } }))
@@ -92,6 +93,24 @@ function fixture(output = "chrome-mv3-dev") {
 }
 
 describe("reload the selected installed extension", () => {
+  it("waits for the replacement document before retrying background readiness", async () => {
+    const f = fixture()
+    const ready = createDeferred<void>()
+    const entered = createDeferred<void>()
+    f.selectedPage.evaluate.mockRejectedValueOnce(
+      new Error("Execution context was destroyed"),
+    )
+    f.selectedPage.waitForLoadState.mockImplementationOnce(async () => {
+      entered.resolve()
+      await ready.promise
+    })
+    const running = reloadRunningExtension(9444, f.extensionDir)
+    await entered.promise
+    expect(f.selectedPage.evaluate).toHaveBeenCalledTimes(1)
+    ready.resolve()
+    await running
+    expect(f.selectedPage.evaluate).toHaveBeenCalledTimes(2)
+  })
   it("rechecks read-only background readiness when the probe page navigates during reload", async () => {
     const f = fixture()
     f.selectedPage.evaluate.mockRejectedValueOnce(

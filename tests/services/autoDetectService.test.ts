@@ -2033,6 +2033,10 @@ describe("autoDetectSmart", () => {
       target: { tabId: 7 },
       files: ["content-scripts/content.js"],
     })
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ expectedOrigin: new URL(url).origin }),
+    )
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })
 

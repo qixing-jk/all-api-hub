@@ -497,6 +497,10 @@ describe("NanoGPT provider catalog capability", () => {
     })
     expect(response.groupAccess).toEqual({ kind: "not-applicable" })
     expect(response.data).toHaveLength(1)
+    expect(response.data[0]).toMatchObject({
+      token_price_usd_per_million: { input: 0.1, output: 0.4 },
+      price_metadata: { source: "provider-catalog", precision: "exact" },
+    })
   })
 
   it("surfaces a sanitized error when the catalog is unavailable", async () => {

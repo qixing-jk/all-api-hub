@@ -69,7 +69,23 @@ export async function main(args = process.argv.slice(2)) {
   await fs.mkdir(options.evidenceDir, { recursive: true })
   const sanitizeError = (error) => {
     let message = error instanceof Error ? error.message : String(error)
-    for (const secret of [options.cdpUrl, options.apiKey].filter(Boolean))
+    const secrets = [options.cdpUrl, options.apiKey]
+    try {
+      const endpoint = new URL(options.cdpUrl)
+      secrets.push(endpoint.href, endpoint.username, endpoint.password)
+      for (const component of [endpoint.username, endpoint.password]) {
+        try {
+          secrets.push(decodeURIComponent(component))
+        } catch {
+          /* Keep encoded values. */
+        }
+      }
+    } catch {
+      /* Exact input redaction still works for invalid URLs. */
+    }
+    for (const secret of secrets
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length))
       message = message.replaceAll(secret, "[REDACTED]")
     return new Error(message)
   }

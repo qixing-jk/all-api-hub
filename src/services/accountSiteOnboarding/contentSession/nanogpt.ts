@@ -48,6 +48,12 @@ export const nanoGptContentSessionExtractor: ContentSessionExtractor = {
       const user = isRecord(session) ? session.user : undefined
       const local = isRecord(localSession) ? localSession.data : undefined
       if (!isRecord(user) || !isRecord(local)) return null
+      if (
+        user.clientSession !== undefined &&
+        local.id !== undefined &&
+        String(user.clientSession) !== String(local.id)
+      )
+        return null
 
       const consoleUserId =
         typeof user.id === "string" && user.id.trim() ? user.id.trim() : ""

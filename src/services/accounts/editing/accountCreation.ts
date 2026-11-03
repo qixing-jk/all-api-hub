@@ -168,6 +168,7 @@ export async function validateAndSaveAccount(
       account_info: {
         ...fields.account_info,
         quota: manualQuota ?? 0,
+        balanceUnavailable: manualQuota === undefined,
         ...EMPTY_ACCOUNT_INFO_METRICS,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,
@@ -363,6 +364,7 @@ export async function validateAndSaveAccount(
       account_info: {
         ...fields.account_info,
         quota: manualQuota ?? 0,
+        balanceUnavailable: manualQuota === undefined,
         ...EMPTY_ACCOUNT_INFO_METRICS,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,

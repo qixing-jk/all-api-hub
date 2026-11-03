@@ -6,7 +6,7 @@ function readNanoGptAmount(value: unknown): number | undefined {
   const amount =
     typeof value === "number"
       ? value
-      : typeof value === "string" && value.trim()
+      : typeof value === "string" && /^(?:\d+\.?\d*|\.\d+)$/.test(value.trim())
         ? Number(value)
         : NaN
   if (!Number.isFinite(amount) || amount < 0) return undefined

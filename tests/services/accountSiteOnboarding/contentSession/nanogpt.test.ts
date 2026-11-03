@@ -38,6 +38,17 @@ const stubConsoleSession = (
 afterEach(() => vi.unstubAllGlobals())
 
 describe("NanoGPT content session extraction", () => {
+  it("rejects mismatched console and local client session identities", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubConsoleSession(sessionBody, {
+        data: { ...localSessionBody.data, id: "different" },
+      }),
+    )
+    await expect(
+      nanoGptContentSessionExtractor.extract(context),
+    ).resolves.toBeNull()
+  })
   it("keeps email-only signed-in sessions and rejects malformed local bodies", async () => {
     vi.stubGlobal(
       "fetch",

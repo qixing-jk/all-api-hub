@@ -6,6 +6,22 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogDraft"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
+it("clears NanoGPT paired credentials when switching to a different provider", () => {
+  const { result } = renderHook(() =>
+    useAccountDialogDraft({ mode: DIALOG_MODES.ADD, url: "" }),
+  )
+  act(() => result.current.changeSiteTypeDraft(SITE_TYPES.NANOGPT))
+  act(() =>
+    result.current.updateDraft((prev) => ({
+      ...prev,
+      accessToken:
+        'nanogpt-credentials:{"apiKey":"inference","managementToken":"management"}',
+    })),
+  )
+  act(() => result.current.changeSiteTypeDraft(SITE_TYPES.NEW_API))
+  expect(result.current.draft.accessToken).toBe("")
+})
+
 it("replaces automatic platform defaults when switching site types", () => {
   const { result } = renderHook(() =>
     useAccountDialogDraft({ mode: DIALOG_MODES.ADD, url: "" }),

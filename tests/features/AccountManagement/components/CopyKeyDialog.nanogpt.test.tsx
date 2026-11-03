@@ -10,14 +10,35 @@ import { render, screen } from "~~/tests/test-utils/render"
 
 import {
   fetchServiceCredentialMock,
+  listAccountKeyResourcesMock,
   openAccountKeyResourcesMock,
 } from "./copyKeyDialogMocks"
 import {
   ACCOUNT,
+  OPENROUTER_KEY_FACTS,
   setupCopyKeyDialogTestDefaults,
 } from "./copyKeyDialogTestSupport"
 
 beforeEach(setupCopyKeyDialogTestDefaults)
+
+it("discloses a service read failure alongside available native keys", async () => {
+  fetchServiceCredentialMock.mockRejectedValue(new Error("service unavailable"))
+  listAccountKeyResourcesMock.mockResolvedValue({
+    items: [OPENROUTER_KEY_FACTS],
+    total: 1,
+  })
+  render(
+    <CopyKeyDialog
+      isOpen
+      onClose={() => {}}
+      account={{ ...ACCOUNT, siteType: SITE_TYPES.NANOGPT }}
+    />,
+  )
+  expect(
+    await screen.findByText(OPENROUTER_KEY_FACTS.displayName),
+  ).toBeVisible()
+  expect(screen.getByText("ui:dialog.copyKey.loadFailed")).toBeVisible()
+})
 
 it("keeps the saved NanoGPT inference key usable without a management token", async () => {
   openAccountKeyResourcesMock.mockRejectedValue(
