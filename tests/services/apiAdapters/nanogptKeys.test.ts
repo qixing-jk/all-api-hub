@@ -261,6 +261,7 @@ it("keeps a denied write retryable without claiming the token is invalid", async
 })
 
 it("delivers a created secret and confirms timestamp-equivalent expiry updates", async () => {
+  let patchedExpiry: string | undefined
   let state: Omit<typeof nativeKey, "expires_at"> & {
     expires_at: string | null
   } = { ...nativeKey }
@@ -271,6 +272,7 @@ it("delivers a created secret and confirms timestamp-equivalent expiry updates",
     http.get(`${origin}/api-keys/17`, () => HttpResponse.json(state)),
     http.patch(`${origin}/api-keys/17`, async ({ request }) => {
       const patch = (await request.json()) as { expires_at: string }
+      patchedExpiry = patch.expires_at
       state = { ...state, expires_at: new Date(patch.expires_at).toISOString() }
       return HttpResponse.json(state)
     }),
@@ -294,6 +296,7 @@ it("delivers a created secret and confirms timestamp-equivalent expiry updates",
     expires_at: "2027-01-01T01:00:00+01:00",
   })
   expect(updated.facts).toBeDefined()
+  expect(patchedExpiry).toBe("2027-01-01T00:00:00.000Z")
 })
 
 it("keeps a successful write uncertain when authoritative values differ", async () => {

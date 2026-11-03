@@ -396,11 +396,13 @@ export async function fetchDisplayAccountRuntimeKeys(
   const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
 
   const resources = capabilities.account?.keyResourceManagement
+  let serviceFailure: { error: unknown } | undefined
   const serviceKeys = await fetchDisplayAccountServiceRuntimeKeys(
     account,
     options,
   ).catch((error: unknown) => {
     if (!resources || options.signal?.aborted) throw error
+    serviceFailure = { error }
     return []
   })
   if (resources) {
@@ -415,7 +417,7 @@ export async function fetchDisplayAccountRuntimeKeys(
         collection,
         options,
       )
-      return [
+      const runtimeKeys = [
         ...serviceKeys,
         ...facts
           .filter((item) => item.runtimeKey)
@@ -423,6 +425,8 @@ export async function fetchDisplayAccountRuntimeKeys(
             buildAccountKeyResourceRuntimeKeyFromFacts(account, item),
           ),
       ]
+      if (!runtimeKeys.length && serviceFailure) throw serviceFailure.error
+      return runtimeKeys
     } catch (error) {
       // Independent runtime credentials stay usable when their management inventory is inaccessible.
       // The native Key Management workspace still reports its own management failure.

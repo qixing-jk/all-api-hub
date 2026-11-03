@@ -27,10 +27,33 @@ it.each([modes.Create, modes.Edit])(
       (field) => field.section === "limits",
     )
     expect(limits).toHaveLength(12)
+    expect(
+      Object.fromEntries(
+        limits.map((field) => [field.fieldId, field.resolveLabel(t)]),
+      ),
+    ).toEqual({
+      daily_rpd_limit: "keyManagement:native.editor.nanogpt.dailyRequests",
+      daily_input_token_limit:
+        "keyManagement:native.editor.nanogpt.dailyTokens",
+      daily_usd_limit: "keyManagement:native.editor.nanogpt.dailySpend",
+      weekly_usd_limit: "keyManagement:native.editor.nanogpt.weeklySpend",
+      monthly_usd_limit: "keyManagement:native.editor.nanogpt.monthlySpend",
+      weekly_request_limit:
+        "keyManagement:native.editor.nanogpt.weeklyRequests",
+      monthly_request_limit:
+        "keyManagement:native.editor.nanogpt.monthlyRequests",
+      weekly_input_token_limit:
+        "keyManagement:native.editor.nanogpt.weeklyTokens",
+      monthly_input_token_limit:
+        "keyManagement:native.editor.nanogpt.monthlyTokens",
+      daily_subscription_input_token_limit:
+        "keyManagement:native.editor.nanogpt.dailySubscriptionTokens",
+      weekly_subscription_input_token_limit:
+        "keyManagement:native.editor.nanogpt.weeklySubscriptionTokens",
+      monthly_subscription_input_token_limit:
+        "keyManagement:native.editor.nanogpt.monthlySubscriptionTokens",
+    })
     for (const field of limits) {
-      expect(field.resolveLabel(t)).toMatch(
-        /^keyManagement:native.editor.nanogpt./,
-      )
       expect(field.resolveHelp?.(t)).toBe(
         "keyManagement:native.editor.nanogpt.limitHelp",
       )

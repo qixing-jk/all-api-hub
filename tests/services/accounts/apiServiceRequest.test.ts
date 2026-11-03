@@ -1314,28 +1314,58 @@ it("keeps an independent service key usable when native inventory needs an absen
   expect(keys[0]?.source).toBe("service_credential")
 })
 
-it("loads native resources when the independent inference key fails", async () => {
-  const list = vi.fn().mockResolvedValue({ items: [], total: 0 })
-  vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-    siteType: SITE_TYPES.NANOGPT,
-    account: {
-      keyResourceManagement: {
-        open: vi.fn().mockResolvedValue({
-          resolveDefaultScope: async () => ({ scopeKey: "account" }),
-          openCollection: async () => ({ list }),
-        }),
+it.each([false, true])(
+  "preserves the saved-key error unless native inventory provides runtime keys (%s)",
+  async (hasNativeKey) => {
+    const ref = {
+      accountId: ACCOUNT.id,
+      siteType: SITE_TYPES.NANOGPT,
+      scopeKey: "account",
+      resourceId: "native-key",
+    }
+    const list = vi
+      .fn()
+      .mockResolvedValue({
+        items: hasNativeKey
+          ? [
+              {
+                ref,
+                displayName: "Native key",
+                status: "enabled",
+                fields: [],
+                actions: { canUpdate: true, canDelete: true },
+                runtimeKey: { modelAccess: { allowedModelIds: ["model-a"] } },
+              },
+            ]
+          : [],
+        total: hasNativeKey ? 1 : 0,
+      })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.NANOGPT,
+      account: {
+        keyResourceManagement: {
+          open: vi.fn().mockResolvedValue({
+            resolveDefaultScope: async () => ({ scopeKey: "account" }),
+            openCollection: async () => ({ list }),
+          }),
+        },
+        serviceCredential: {
+          fetch: vi.fn().mockRejectedValue(new Error("inference unavailable")),
+        },
       },
-      serviceCredential: {
-        fetch: vi.fn().mockRejectedValue(new Error("inference unavailable")),
-      },
-    },
-  } as never)
-  await expect(
-    fetchDisplayAccountRuntimeKeys({
+    } as never)
+    const keys = fetchDisplayAccountRuntimeKeys({
       ...ACCOUNT,
       tagIds: [],
       siteType: SITE_TYPES.NANOGPT,
-    }),
-  ).resolves.toEqual([])
-  expect(list).toHaveBeenCalledTimes(1)
-})
+    })
+    if (hasNativeKey) {
+      await expect(keys).resolves.toMatchObject([
+        { source: "account_key_resource", resourceRef: ref },
+      ])
+    } else {
+      await expect(keys).rejects.toThrow("inference unavailable")
+    }
+    expect(list).toHaveBeenCalledTimes(1)
+  },
+)

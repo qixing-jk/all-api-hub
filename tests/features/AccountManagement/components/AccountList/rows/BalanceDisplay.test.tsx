@@ -86,11 +86,15 @@ describe("BalanceDisplay", () => {
       <BalanceDisplay
         site={buildDisplaySiteData({
           nativeBalance: { unit: "USD_XNO", total: 2, nanoBalance: 1 },
+          balance: { USD: 3, CNY: 21 },
         })}
       />,
     )
     await user.click(screen.getByTitle("account:list.balance.refreshBalance"))
     expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).toHaveTextContent("$3.00")
     expect(screen.getByText("1 XNO")).toBeVisible()
   })
   it.each(Object.values(subscriptionStatuses))(
