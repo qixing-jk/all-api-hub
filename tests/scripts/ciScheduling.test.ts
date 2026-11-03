@@ -490,25 +490,30 @@ it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", 
     outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
   })
   expect(delays).toEqual([12000])
-  expect(
-    await lookup([
-      {
-        merge_commit_sha: null,
-        mergeable: null,
-        errorStatus: 403,
-        errorHeaders: {
-          "retry-after": "5",
-          "x-ratelimit-remaining": "0",
-          "x-ratelimit-reset": "1012",
+  for (const [retryAfter, expectedDelay] of [
+    ["5", 12000],
+    ["15", 15000],
+  ] as const) {
+    expect(
+      await lookup([
+        {
+          merge_commit_sha: null,
+          mergeable: null,
+          errorStatus: 403,
+          errorHeaders: {
+            "retry-after": retryAfter,
+            "x-ratelimit-remaining": "0",
+            "x-ratelimit-reset": "1012",
+          },
         },
-      },
-      { merge_commit_sha: "merged-sha", mergeable: true },
-    ]),
-  ).toEqual({
-    calls: 2,
-    outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
-  })
-  expect(delays).toEqual([12000])
+        { merge_commit_sha: "merged-sha", mergeable: true },
+      ]),
+    ).toEqual({
+      calls: 2,
+      outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+    })
+    expect(delays).toEqual([expectedDelay])
+  }
   for (const status of [500, 502, 503, 504]) {
     expect(
       await lookup([
