@@ -12,8 +12,8 @@ import {
 } from "~/services/apiAdapters/managedResources/shared/modelInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import {
+  createManagedSiteApiServiceRequest,
   runManagedSiteApiServiceMutationStep,
-  toManagedSiteApiServiceRequest,
 } from "~/services/apiAdapters/managedSites/request"
 import {
   createChannel,
@@ -58,6 +58,10 @@ import {
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { getErrorMessage } from "~/utils/core/error"
 
+const createProviderRequest = createManagedSiteApiServiceRequest(
+  SITE_TYPES.NEW_API,
+)
+
 const NEW_API_MUTATION_STEP_OUTCOMES = {
   Applied: "applied",
   Rejected: "rejected",
@@ -93,6 +97,7 @@ const runNewApiMutationStep = async <TData>(input: {
     TData
   >({
     ...input,
+    siteType: SITE_TYPES.NEW_API,
     classifyResponse: (response) => toNewApiMutationResponse(response),
     classifyResponseError: (error) => {
       throw error
@@ -161,7 +166,7 @@ const runNewApiChannelUpdateMutation = async (
     if (!keyStates) return true
     try {
       const saved = await fetchChannel(
-        toManagedSiteApiServiceRequest(config, options),
+        createProviderRequest(config, options),
         channelData.id,
         options,
       )
@@ -281,26 +286,18 @@ export const newApiChannelOperations = {
     config: NewApiConfig,
     keyword: string,
     options?: ManagedSiteChannelRequestOptions,
-  ) =>
-    await searchChannel(
-      toManagedSiteApiServiceRequest(config, options),
-      keyword,
-    ),
+  ) => await searchChannel(createProviderRequest(config, options), keyword),
   list: async (
     config: NewApiConfig,
     options?: ManagedSitePaginatedChannelRequestOptions,
-  ) =>
-    await listAllChannels(
-      toManagedSiteApiServiceRequest(config, options),
-      options,
-    ),
+  ) => await listAllChannels(createProviderRequest(config, options), options),
   get: async (
     config: NewApiConfig,
     channelId: number,
     options?: ManagedSiteChannelRequestOptions,
   ) =>
     await fetchChannel(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       channelId,
       options,
     ),
@@ -355,10 +352,7 @@ export const newApiManagedResourceModels = {
   modelMappingPolicy: { supportsChaining: true },
   list: async (config, options) =>
     toManagedModelChannelList(
-      await listAllChannels(
-        toManagedSiteApiServiceRequest(config, options),
-        options,
-      ),
+      await listAllChannels(createProviderRequest(config, options), options),
       [CHANNEL_STATUS.ManuallyDisabled, CHANNEL_STATUS.AutoDisabled],
       { siteType: SITE_TYPES.NEW_API, config },
     ),
@@ -373,7 +367,7 @@ export const newApiManagedResourceModels = {
       ref,
     )
     return await fetchChannelModels(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       channelId,
       options,
     )
@@ -384,7 +378,7 @@ export const newApiManagedResourceModels = {
     options?: ManagedSiteChannelRequestOptions,
   ) =>
     await fetchDraftChannelModels(
-      toManagedSiteApiServiceRequest(config, options),
+      createProviderRequest(config, options),
       {
         type: Number(probe.channelType),
         baseUrl: probe.baseUrl,

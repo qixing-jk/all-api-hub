@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_TYPES } from "~/constants/siteType"
 import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
 import { decodeVoApiV2ResponseError } from "~/services/apiService/voapiV2/responseError"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
@@ -47,11 +48,13 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   },
 )
 
-const { mockWithSiteApiRequestLease } = vi.hoisted(() => {
-  const mockWithSiteApiRequestLease = vi.fn()
+const { mockWithSiteApiRequestLease, mockReportSiteRateLimit } = vi.hoisted(
+  () => {
+    const mockWithSiteApiRequestLease = vi.fn()
 
-  return { mockWithSiteApiRequestLease }
-})
+    return { mockWithSiteApiRequestLease, mockReportSiteRateLimit: vi.fn() }
+  },
+)
 
 const { mockHasCookieInterceptorPermissions, mockGetPreferences } = vi.hoisted(
   () => ({
@@ -153,6 +156,7 @@ vi.mock(
     return {
       ...actual,
       withSiteApiRequestLease: mockWithSiteApiRequestLease,
+      reportSiteRateLimit: mockReportSiteRateLimit,
     }
   },
 )
@@ -554,6 +558,71 @@ describe("apiTransport request helpers", () => {
     )
   })
 
+  it("reports 429 once for the actual management origin without replaying a write", async () => {
+    let writes = 0
+    server.use(
+      http.post("https://api.example.com/api/keys", () => {
+        writes += 1
+        return HttpResponse.json(
+          { success: false, message: "rate limited" },
+          { status: 429, headers: { "Retry-After": "3" } },
+        )
+      }),
+    )
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: "https://console.example.com",
+          managementApiBaseUrl: "https://api.example.com",
+          siteType: SITE_TYPES.SUB2API,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: "/api/keys", options: { method: "POST" } },
+      ),
+    ).rejects.toMatchObject({ statusCode: 429 })
+    expect(writes).toBe(1)
+    expect(mockReportSiteRateLimit).toHaveBeenCalledExactlyOnceWith(
+      "https://api.example.com",
+      "3",
+    )
+    expect(mockWithSiteApiRequestLease.mock.calls[0]?.[0]).toBe(
+      "https://api.example.com",
+    )
+    expect(mockWithSiteApiRequestLease.mock.calls[0]?.[4]).toBe("sub2api")
+  })
+
+  it("shares a current-tab 429 with the origin queue", async () => {
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: false,
+      status: 429,
+      headers: { "retry-after": "4" },
+      data: { success: false, message: "rate limited" },
+    })
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: "123",
+          },
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        { endpoint: ENDPOINT, options: { method: "GET" } },
+      ),
+    ).rejects.toMatchObject({ statusCode: 429 })
+    expect(mockReportSiteRateLimit).toHaveBeenCalledExactlyOnceWith(
+      "https://example.com",
+      "4",
+    )
+    expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
+  })
+
   it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
     server.use(
       http.get(/^https:\/\/example\.com\/base\//, () => {
@@ -579,6 +648,7 @@ describe("apiTransport request helpers", () => {
     expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
       "https://example.com",
       expect.any(Function),
+      undefined,
       undefined,
       undefined,
     )
@@ -638,6 +708,7 @@ describe("apiTransport request helpers", () => {
         "https://example.invalid",
         expect.any(Function),
         expectedSignal,
+        undefined,
         undefined,
       )
     },
@@ -864,6 +935,7 @@ describe("apiTransport request helpers", () => {
         "https://example.invalid",
         expect.any(Function),
         abortDeadline.signal,
+        undefined,
         undefined,
       )
 
@@ -2548,6 +2620,33 @@ describe("apiTransport request helpers", () => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
     },
   )
+
+  it("shares a temp-window 429 without replaying the dispatched write", async () => {
+    forceTempWindowRoute()
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: false,
+      status: 429,
+      headers: { "retry-after": "3" },
+      data: { success: false, message: "rate limited" },
+    })
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+          forceTempWindow: true,
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
+      ),
+    ).rejects.toMatchObject({ statusCode: 429 })
+    expect(mockReportSiteRateLimit).toHaveBeenCalledExactlyOnceWith(
+      "https://example.com",
+      "3",
+    )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+  })
 
   it("applies the provider decoder to a forced temp-window error response", async () => {
     forceTempWindowRoute()
@@ -4357,6 +4456,7 @@ describe("apiTransport request helpers", () => {
       expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://example.com",
         expect.any(Function),
+        undefined,
         undefined,
         undefined,
       )

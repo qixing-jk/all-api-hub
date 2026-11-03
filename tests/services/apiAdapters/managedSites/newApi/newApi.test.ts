@@ -635,6 +635,7 @@ describe("newApi managed-site channel capability", () => {
     )
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "new-api",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,
@@ -742,6 +743,7 @@ describe("newApi managed-site channel capability", () => {
     )
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "new-api",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,
@@ -770,6 +772,7 @@ describe("newApi managed-site channel capability", () => {
     const signal = new AbortController().signal
     const request = {
       baseUrl: config.baseUrl,
+      siteType: "new-api",
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: config.adminToken,

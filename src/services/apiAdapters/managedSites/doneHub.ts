@@ -28,7 +28,11 @@ import {
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 
 import { createManagedSiteConfigCapability } from "./config"
-import { toManagedSiteApiServiceRequest } from "./request"
+import { createManagedSiteApiServiceRequest } from "./request"
+
+const createProviderRequest = createManagedSiteApiServiceRequest(
+  SITE_TYPES.DONE_HUB,
+)
 
 const doneHubManagedSiteConfig: ManagedSiteConfigCapability<DoneHubConfig> =
   createManagedSiteConfigCapability(
@@ -43,14 +47,12 @@ const doneHubTokenTransport = resolveNewApiKeyVariant(
 const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
   siteUserGroups: {
     fetch: async (config, options) =>
-      await fetchSiteUserGroups(
-        toManagedSiteApiServiceRequest(config, options),
-      ),
+      await fetchSiteUserGroups(createProviderRequest(config, options)),
   },
   accountAvailableModels: {
     fetch: async (config) =>
       await doneHubTokenTransport.fetchAccountAvailableModels(
-        toManagedSiteApiServiceRequest(config),
+        createProviderRequest(config),
       ),
   },
 }
@@ -79,10 +81,7 @@ const matching: ManagedResourceMatchingCapability<DoneHubConfig> = {
   },
   search: async (config, keyword, options) =>
     toManagedResourceMatchList(
-      await searchChannel(
-        toManagedSiteApiServiceRequest(config, options),
-        keyword,
-      ),
+      await searchChannel(createProviderRequest(config, options), keyword),
       { siteType: SITE_TYPES.DONE_HUB, config },
     ),
 }

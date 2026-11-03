@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
+import { getSiteRequestBudget } from "~/services/accountSiteDefinitions/requestLimits"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import {
   createSiteRequestLeaseLimiter,
@@ -23,6 +25,240 @@ describe("createTaskLimiter", () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it("uses site-specific budgets without giving sibling accounts separate buckets", async () => {
+    const limit = createSiteRequestLeaseLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 18,
+      burst: 4,
+      resolveBudget: getSiteRequestBudget,
+    })
+    const events: string[] = []
+    const submit = (key: string, siteType?: string) =>
+      limit(
+        key,
+        () =>
+          createTaskLease(async () => {
+            events.push(key)
+          }),
+        undefined,
+        undefined,
+        siteType,
+      )
+    const first = Array.from({ length: 8 }, () =>
+      submit("sub-site", SITE_TYPES.SUB2API),
+    )
+    for (let i = 0; i < 20; i++) await flushMicrotasks()
+    expect(events).toHaveLength(8)
+    await Promise.all(first)
+    const ninth = submit("sub-site", SITE_TYPES.SUB2API)
+    await flushMicrotasks()
+    expect(events).toHaveLength(8)
+    await vi.advanceTimersByTimeAsync(1250)
+    await ninth
+    expect(events).toHaveLength(9)
+  })
+
+  it("pauses only the affected origin after 429 and lets queued work be cancelled", async () => {
+    const limit = createSiteRequestLeaseLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 600,
+      burst: 10,
+    })
+    limit.pause("site-a", "2")
+    const events: string[] = []
+    const controller = new AbortController()
+    const cancelled = limit(
+      "site-a",
+      () => createTaskLease(async () => events.push("cancelled")),
+      controller.signal,
+    )
+    const rejected = expect(cancelled).rejects.toMatchObject({
+      name: "AbortError",
+    })
+    const pending = limit("site-a", () =>
+      createTaskLease(async () => events.push("a")),
+    )
+    await limit("site-b", () => createTaskLease(async () => events.push("b")))
+    controller.abort()
+    await rejected
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(events).toEqual(["b"])
+    await vi.advanceTimersByTimeAsync(1)
+    await pending
+    expect(events).toEqual(["b", "a"])
+  })
+
+  it("adopts the first known type without granting another burst to earlier untyped requests", async () => {
+    const limit = createSiteRequestLeaseLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 18,
+      burst: 4,
+      resolveBudget: getSiteRequestBudget,
+    })
+    const events: number[] = []
+    const submit = (siteType?: string) =>
+      limit(
+        "same-origin",
+        () => createTaskLease(async () => events.push(Date.now())),
+        undefined,
+        undefined,
+        siteType,
+      )
+    await Promise.all(Array.from({ length: 4 }, () => submit()))
+    const typed = submit(SITE_TYPES.NEW_API)
+    await vi.advanceTimersByTimeAsync(555)
+    expect(events).toHaveLength(4)
+    await vi.advanceTimersByTimeAsync(1)
+    await typed
+    expect(events).toHaveLength(5)
+  })
+
+  it.each([
+    { header: "Thu, 01 Jan 1970 00:00:02 GMT", delay: 2000 },
+    { header: undefined, delay: 1000 },
+    { header: "invalid", delay: 1000 },
+    { header: "-1", delay: 1000 },
+  ])(
+    "uses a bounded cooldown for Retry-After $header",
+    async ({ header, delay }) => {
+      const random = vi.spyOn(Math, "random").mockReturnValue(0)
+      try {
+        const limit = createSiteRequestLeaseLimiter({
+          maxConcurrentPerSite: 2,
+          requestsPerMinute: 600,
+          burst: 10,
+        })
+        limit.pause("origin", header)
+        const task = vi.fn(async () => "done")
+        const pending = limit("origin", () => createTaskLease(task))
+        await vi.advanceTimersByTimeAsync(delay - 1)
+        expect(task).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(1)
+        await expect(pending).resolves.toBe("done")
+      } finally {
+        random.mockRestore()
+      }
+    },
+  )
+
+  it("keeps the stricter shared budget when callers disagree about the type", async () => {
+    const limit = createSiteRequestLeaseLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 18,
+      burst: 4,
+      resolveBudget: getSiteRequestBudget,
+    })
+    const task = vi.fn(async () => "done")
+    await Promise.all(
+      Array.from({ length: 4 }, () =>
+        limit(
+          "origin",
+          () => createTaskLease(task),
+          undefined,
+          undefined,
+          SITE_TYPES.SUB2API,
+        ),
+      ),
+    )
+    const pending = limit(
+      "origin",
+      () => createTaskLease(task),
+      undefined,
+      undefined,
+      SITE_TYPES.UNKNOWN,
+    )
+    // Switching to a smaller burst must preserve the four spent tokens.
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(task).toHaveBeenCalledTimes(4)
+    await vi.advanceTimersByTimeAsync(1)
+    await pending
+    expect(task).toHaveBeenCalledTimes(5)
+  })
+
+  it.each([
+    { siteType: SITE_TYPES.ONE_API, delay: 417 },
+    { siteType: SITE_TYPES.NEW_API, delay: 556 },
+    { siteType: SITE_TYPES.ONE_HUB, delay: 667 },
+    { siteType: SITE_TYPES.DONE_HUB, delay: 667 },
+  ])(
+    "admits $siteType requests at its verified client budget",
+    async ({ siteType, delay }) => {
+      const limit = createSiteRequestLeaseLimiter({
+        maxConcurrentPerSite: 2,
+        requestsPerMinute: 18,
+        burst: 4,
+        resolveBudget: getSiteRequestBudget,
+      })
+      const task = vi.fn(async () => "done")
+      const submit = () =>
+        limit(
+          "origin",
+          () => createTaskLease(task),
+          undefined,
+          undefined,
+          siteType,
+        )
+      await Promise.all(Array.from({ length: 8 }, submit))
+      const ninth = submit()
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      expect(task).toHaveBeenCalledTimes(8)
+      await vi.advanceTimersByTimeAsync(1)
+      await ninth
+      expect(task).toHaveBeenCalledTimes(9)
+    },
+  )
+
+  it("does not shorten a server pause after a later 429", async () => {
+    const limit = createSiteRequestLeaseLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 600,
+      burst: 10,
+    })
+    limit.pause("origin", "3")
+    limit.pause("origin", "1")
+    const task = vi.fn(async () => "done")
+    const pending = limit("origin", () => createTaskLease(task))
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(task).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    await pending
+  })
+
+  it("expires idle budget state after a server pause longer than one timer can represent", async () => {
+    const limit = createSiteRequestLeaseLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 18,
+      burst: 4,
+      resolveBudget: getSiteRequestBudget,
+    })
+    await limit(
+      "origin",
+      () => createTaskLease(async () => undefined),
+      undefined,
+      undefined,
+      SITE_TYPES.UNKNOWN,
+    )
+    const delay = 2_147_483_648
+    limit.pause("origin", String(delay / 1000))
+    await vi.advanceTimersByTimeAsync(delay)
+
+    const task = vi.fn(async () => "done")
+    const pending = Promise.all(
+      Array.from({ length: 8 }, () =>
+        limit(
+          "origin",
+          () => createTaskLease(task),
+          undefined,
+          undefined,
+          SITE_TYPES.NEW_API,
+        ),
+      ),
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    expect(task).toHaveBeenCalledTimes(8)
+    await pending
   })
 
   it("limits concurrent work for the same site key", async () => {
