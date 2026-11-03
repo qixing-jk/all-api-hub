@@ -11,7 +11,7 @@ it.each(["invalid", "NaN", "-2"])(
   (manualBalanceUsd) => {
     const result: RefreshAccountResult = {
       success: true,
-      healthStatus: { status: SiteHealthStatus.Healthy },
+      healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
       data: {
         quota: 0,
         balanceUnavailable: true,
@@ -37,7 +37,7 @@ it.each(["0", "2"])(
   (manualBalanceUsd) => {
     const result: RefreshAccountResult = {
       success: true,
-      healthStatus: { status: SiteHealthStatus.Healthy },
+      healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
       data: {
         quota: 0,
         balanceUnavailable: true,
