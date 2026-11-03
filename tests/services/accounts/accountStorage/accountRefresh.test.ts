@@ -67,7 +67,9 @@ describe("accountRefresh usage-history coordination", () => {
     vi.mocked(userPreferences.getPreferences).mockResolvedValue(
       DEFAULT_PREFERENCES,
     )
-    vi.mocked(accountMutations.updateAccountFromRefresh).mockResolvedValue(true)
+    vi.mocked(accountMutations.updateAccountFromRefresh).mockImplementation(
+      async (id) => createAccount(id),
+    )
     vi.mocked(usageHistoryScheduler.runAfterRefreshSync).mockResolvedValue(null)
     refreshFromSite.mockResolvedValue({
       success: true,
@@ -104,7 +106,7 @@ describe("accountRefresh usage-history coordination", () => {
   })
 
   it("syncs only the refreshed account after its data is persisted", async () => {
-    const persistence = createDeferred<boolean>()
+    const persistence = createDeferred<SiteAccount | null>()
     vi.mocked(accountMutations.updateAccountFromRefresh).mockReturnValueOnce(
       persistence.promise,
     )
@@ -114,7 +116,7 @@ describe("accountRefresh usage-history coordination", () => {
     )
     expect(usageHistoryScheduler.runAfterRefreshSync).not.toHaveBeenCalled()
 
-    persistence.resolve(true)
+    persistence.resolve(createAccount("acc-1"))
     const result = await refresh
     expect(result?.refreshed).toBe(true)
     expect(
@@ -159,7 +161,7 @@ describe("accountRefresh usage-history coordination", () => {
 
   it("does not sync if the refreshed data was not persisted", async () => {
     vi.mocked(accountMutations.updateAccountFromRefresh).mockResolvedValueOnce(
-      false,
+      null,
     )
 
     await accountRefresh.refreshAccount("acc-1", true)
@@ -172,7 +174,10 @@ describe("accountRefresh usage-history coordination", () => {
     vi.mocked(accountQueries.getAccountById)
       .mockResolvedValueOnce(disabled)
       .mockResolvedValueOnce(disabled)
-      .mockResolvedValueOnce({ ...disabled, disabled: false })
+    vi.mocked(accountMutations.updateAccountFromRefresh).mockResolvedValueOnce({
+      ...disabled,
+      disabled: false,
+    })
 
     const result = await accountRefresh.refreshDisabledAccounts(true)
     expect(result.reEnabledCount).toBe(1)

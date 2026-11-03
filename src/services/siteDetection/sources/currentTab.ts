@@ -11,7 +11,12 @@ import {
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
 import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"
+import {
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { isMessageReceiverUnavailableError } from "~/utils/browser/runtimeMessages"
+import { injectContentScript } from "~/utils/browser/scripting"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -73,31 +78,48 @@ async function getUserDataFromCurrentTab({
   })
 
   try {
-    const session = await readAccountBrowserSessionFromTab({
-      diagnostics,
-      tabId,
-      baseUrl: url,
-      siteType,
-      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-      fetchContext,
-      ...(siteType === SITE_TYPES.UNKNOWN ? { allowSessionProbe: true } : {}),
-      protectionBypassExecution,
-      onError(error) {
-        contentScriptUnavailable = isMessageReceiverUnavailableError(error)
+    const readSession = (recovering = false) =>
+      readAccountBrowserSessionFromTab({
+        diagnostics,
+        tabId,
+        baseUrl: url,
+        siteType,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+        fetchContext,
+        ...(siteType === SITE_TYPES.UNKNOWN ? { allowSessionProbe: true } : {}),
+        protectionBypassExecution,
+        ...(recovering ? { expectedOrigin: new URL(url).origin } : {}),
+        onError(error) {
+          contentScriptUnavailable = isMessageReceiverUnavailableError(error)
 
-        logger.warn(
-          contentScriptUnavailable
-            ? "当前标签页 content script 不可用，尝试 API 降级"
-            : "从当前标签页获取用户数据失败",
-          {
-            url,
-            tabId,
-            fetchContext: summarizeApiServiceFetchContext(fetchContext),
-            error: getErrorMessage(error),
-          },
-        )
-      },
-    })
+          logger.warn(
+            contentScriptUnavailable
+              ? "当前标签页 content script 不可用，尝试 API 降级"
+              : "从当前标签页获取用户数据失败",
+            {
+              url,
+              tabId,
+              fetchContext: summarizeApiServiceFetchContext(fetchContext),
+              error: getErrorMessage(error),
+            },
+          )
+        },
+      })
+    let session = await readSession()
+    if (
+      !session &&
+      contentScriptUnavailable &&
+      protectionBypassExecution?.kind ===
+        PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
+      protectionBypassExecution.command ===
+        PROTECTION_BYPASS_USER_COMMANDS.DetectAccount &&
+      (await injectContentScript(tabId, url))
+    ) {
+      // Retry only the read, once. A responsive script with no session needs
+      // authentication guidance, not another stale-page warning.
+      contentScriptUnavailable = false
+      session = await readSession(true)
+    }
 
     if (session) {
       return {

@@ -23,6 +23,12 @@
       "openProfile": "Mở hồ sơ LaoZhang",
       "openProfileFailed": "Không thể mở trang. Hãy mở Hồ sơ LaoZhang → System token theo cách thủ công, hoàn tất xác minh bảo mật, sao chép token rồi quay lại đây để nhập."
     },
+    "nanogpt": {
+      "description": "Đã nhận diện tài khoản NanoGPT và giữ lại thông tin. Thêm khóa API suy luận hoặc token quản lý để tiếp tục.",
+      "openPage": "Mở trang khóa API NanoGPT",
+      "openPageFailed": "Không thể mở trang API. Hãy tự mở https://nano-gpt.com/api, rồi quay lại đây để dán khóa suy luận.",
+      "pasteStep": "Quay lại đây, dán thông tin xác thực vào ô tương ứng bên dưới, rồi lưu tài khoản."
+    },
     "novita": {
       "generateStep": "Đăng nhập cùng tài khoản Novita rồi chọn “Lấy thông tin xác thực bảng điều khiển”. Danh tính được kiểm tra và API Key được giữ lại. Cần lấy lại khi hết hạn; API Key đã lưu vẫn dùng độc lập.",
       "openPage": "Mở quản lý khóa",
@@ -202,6 +208,9 @@
     "manualVerificationRequiredDesc": "Trang này yêu cầu CAPTCHA trước khi điểm danh. Hãy tự hoàn tất xác minh trên trang điểm danh và kiểm tra rằng bạn đã điểm danh hôm nay.",
     "manualVerificationRequiredSwitchOffDesc": "Điểm danh tự động mặc định tắt cho tài khoản này. Bật để chọn có tự mở trang điểm danh khi cần bạn xác minh hay không.",
     "manualVerificationRequiredTitle": "Điểm danh cần bạn tự xác minh",
+    "nanoGptApiKey": "Khóa API NanoGPT",
+    "nanoGptApiKeyGuidance": "Dùng khóa suy luận hiện có hoặc tạo trên trang API. Để theo dõi hạn mức hoặc quản lý khóa, tạo token có quyền phù hợp trong Cài đặt → Bảo mật.",
+    "nanoGptApiKeyGuidanceTitle": "Bổ sung thông tin xác thực NanoGPT",
     "notes": "Ghi chú",
     "notesPlaceholder": "Tùy chọn, nhập thông tin ghi chú",
     "novitaApiKey": "Thông tin xác thực tài khoản Novita",
@@ -357,6 +366,15 @@
     "detecting": "Đang nhận dạng...",
     "manualAdd": "Thêm thủ công",
     "reDetect": "Nhận dạng lại"
+  },
+  "nanoGptCredentials": {
+    "eventHistoryUnsupported": "NanoGPT chỉ cung cấp số liệu sử dụng tổng hợp, không cung cấp từng bản ghi lịch sử sử dụng.",
+    "identityWarning": "API quản lý không thể xác nhận hai thông tin xác thực thuộc cùng tài khoản. Hãy kiểm tra trong NanoGPT trước khi lưu.",
+    "inferenceHelp": "Không bắt buộc khi có token quản lý. Số dư và mức dùng theo khóa cần khóa API suy luận. Chấp nhận khóa hiện có và khóa UUID cũ.",
+    "managementHelp": "usage:read đọc hạn mức, api_keys:read liệt kê khóa, api_keys:write quản lý khóa. Token mặc định hết hạn sau 90 ngày.",
+    "managementToken": "Token API quản lý",
+    "openManagement": "Mở cài đặt token quản lý",
+    "openManagementFailed": "Không thể mở cài đặt. Hãy mở NanoGPT Cài đặt → Bảo mật → Management API tokens."
   },
   "novitaCredentials": {
     "apiKey": "API Key",

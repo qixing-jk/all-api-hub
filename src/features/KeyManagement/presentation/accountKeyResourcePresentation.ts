@@ -106,7 +106,13 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
               "keyManagement:keyDetails.createResponseOnlySecret",
             ),
           }
-        : {}),
+        : availability === INVENTORY_SECRET_AVAILABILITIES.WebsiteVerification
+          ? {
+              secretAvailabilityMessage: t(
+                "keyManagement:keyDetails.websiteVerificationSecret",
+              ),
+            }
+          : {}),
       contextFact,
       summaryFacts: [contextFact],
       detailFacts: [],
@@ -327,6 +333,20 @@ const nativeDetailFacts = (
       label: t("keyManagement:keyDetails.note"),
       value: facts.runtimeKey.notes,
     })
+  const labels = getKeyResourcePresentationPolicy(facts.ref.siteType).factLabels
+  for (const field of facts.fields) {
+    const label = labels?.[field.fieldId]
+    if (
+      label &&
+      !details.some((detail) => detail.id === field.fieldId) &&
+      (field.kind === "text" || field.kind === "number")
+    )
+      details.push({
+        id: field.fieldId,
+        label: label(t),
+        value: String(field.value),
+      })
+  }
   return details
 }
 

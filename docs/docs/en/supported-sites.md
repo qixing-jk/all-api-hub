@@ -54,6 +54,7 @@ AI model platforms and relay services with independent account systems, dedicate
 | Vercel AI Gateway | Vercel's official AI model gateway, calling many model providers with one API key, with credits, request logs and budgets. | [Website](https://vercel.com/ai-gateway) / [Docs](https://vercel.com/docs/ai-gateway) |
 | Novita AI | AI model API cloud for developers and agents, with OpenAI/Anthropic-compatible endpoints and key management. | [Website](https://novita.ai/) / [Docs](https://docs.novita.ai/) |
 | AI/ML API | An independent AI model aggregation gateway with unified model APIs, an account console and key management. | [Site](https://aimlapi.com/) / [Docs](https://docs.aimlapi.com/) |
+| NanoGPT | Independent AI model aggregation platform offering a unified API across multiple provider models and its own account console. | — |
 
 ## ❤️ Recommended Sponsored Sites
 

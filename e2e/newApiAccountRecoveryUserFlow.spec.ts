@@ -77,17 +77,25 @@ for (const scenario of scenarios) {
     `New API real-site account flow ${scenario.name}`,
     async ({ context, page, extensionId, securitySite }) => {
       const { baseUrl } = securitySite
-      // Keep this controlled site's asynchronous copy contract independent of
-      // the host OS clipboard, which can block reads across browser contexts.
+      // The controlled page must provide its own asynchronous clipboard even
+      // when the host clipboard is unavailable.
       await context.addInitScript((origin) => {
         if (location.origin !== origin) return
-        let clipboardText = ""
+        // Attaching after the document loads must not replace its own mock.
+        if (Object.prototype.hasOwnProperty.call(navigator, "clipboard")) return
         Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
           value: {
-            writeText: async (text: string) => {
-              clipboardText = text
+            writeText: async () => {
+              throw new Error(
+                "Host clipboard unavailable in controlled fixture",
+              )
             },
-            readText: async () => clipboardText,
+            readText: async () => {
+              throw new Error(
+                "Host clipboard unavailable in controlled fixture",
+              )
+            },
           },
         })
       }, baseUrl)
@@ -233,6 +241,17 @@ function securityPageHtml(scenario: (typeof scenarios)[number]) {
     <button data-slot="dialog-close" aria-label="Close" id="close-icon">×</button>
   </div>
   <script>
+    // tabs.create can load this document before Playwright attaches init scripts.
+    // Install the clipboard with the page so the controlled flow never reaches
+    // the host OS clipboard, including during a delayed write.
+    let clipboardText = "";
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text) => { clipboardText = text; },
+        readText: async () => clipboardText,
+      },
+    });
     const byId = (id) => document.getElementById(id);
     byId("generate").onclick = () => {
       byId("${scenario.existingToken ? "confirmation" : "verification"}").hidden = false;

@@ -15,6 +15,8 @@ import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/api
 import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { REQUESTY_KEY_FIELDS } from "~/services/apiAdapters/requesty/keys/keyResourceFields"
 
+import { nanoGptKeyFieldLabels } from "./nanoGptKeyResourceFieldPolicy"
+
 export const KEY_RESOURCE_EDITOR_KINDS = {
   NewApi: "new-api",
   Sub2Api: "sub2api",
@@ -34,6 +36,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   RelayFor: "relayfor",
   Requesty: "requesty",
   Novita: "novita",
+  NanoGpt: "nanogpt",
   AimlApi: "aimlapi",
   NameOnly: "name-only",
   Empty: "empty",
@@ -117,6 +120,13 @@ const policies = {
     editor: KEY_RESOURCE_EDITOR_KINDS.AimlApi,
   },
   [families.Xiaoen]: generic,
+  [families.NanoGPT]: {
+    ...native,
+    createUnavailableReason: (t) =>
+      t("keyManagement:native.scope.nanoGptManagementOptional"),
+    editor: KEY_RESOURCE_EDITOR_KINDS.NanoGpt,
+    factLabels: nanoGptKeyFieldLabels,
+  },
   [families.OpenRouter]: {
     ...generic,
     editor: KEY_RESOURCE_EDITOR_KINDS.OpenRouter,

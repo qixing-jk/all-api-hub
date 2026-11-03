@@ -44,6 +44,7 @@ export type CreatedRuntimeSecret = {
   readonly secretAvailability:
     | typeof secretAvailability.CreateResponseOnly
     | typeof secretAvailability.Recoverable
+    | typeof secretAvailability.WebsiteVerification
   readonly credential: CreatedRuntimeSecretCredential
 }
 

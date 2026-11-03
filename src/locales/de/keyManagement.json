@@ -260,7 +260,8 @@
     "tools": "Erlaubte Tools",
     "totalQuota": "Gesamtkontingent:",
     "ungrouped": "Nicht gruppiert",
-    "usedQuota": "Verwendetes Kontingent:"
+    "usedQuota": "Verwendetes Kontingent:",
+    "websiteVerificationSecret": "Die Verwaltungs-API liefert keine vollständigen Schlüssel. Öffnen Sie die API-Seite von NanoGPT und schließen Sie die erforderliche Anmeldeprüfung ab, um einen vorhandenen Schlüssel erneut anzuzeigen oder zu kopieren."
   },
   "knownTotalKeys_one": "{{count}} Schlüssel gelesen",
   "knownTotalKeys_other": "{{count}} Schlüssel gelesen",
@@ -581,6 +582,25 @@
         "validDuration": "Gültigkeit nach Aktivierung (Tage)"
       },
       "modelAllowlist": "Modell-Freigabeliste",
+      "nanogpt": {
+        "anonymized": "Anonymisiertes Routing",
+        "dailyRequests": "Tägliches Anfragelimit",
+        "dailySpend": "Tägliches Ausgabenlimit (USD)",
+        "dailySubscriptionTokens": "Tägliches Abo-Eingabetokenkontingent",
+        "dailyTokens": "Tägliches Eingabetokenlimit",
+        "legacyPolicy": "Ältere Routing-Richtlinie",
+        "limitHelp": "Leer bedeutet unbegrenzt. Null sperrt dieses Kontingent; Abo-Tokens können gewichtet sein.",
+        "monthlyRequests": "Monatliches Anfragelimit",
+        "monthlySpend": "Monatliches Ausgabenlimit (USD)",
+        "monthlySubscriptionTokens": "Monatliches Abo-Eingabetokenkontingent",
+        "monthlyTokens": "Monatliches Eingabetokenlimit",
+        "weeklyRequests": "Wöchentliches Anfragelimit",
+        "weeklySpend": "Wöchentliches Ausgabenlimit (USD)",
+        "weeklySubscriptionTokens": "Wöchentliches Abo-Eingabetokenkontingent",
+        "weeklyTokens": "Wöchentliches Eingabetokenlimit",
+        "zdr": "Keine Datenspeicherung",
+        "zdrPolicy": "Datenschutz-Routing"
+      },
       "novita": {
         "allEnabled": "Alle aktivierten Modelle",
         "allowedIps": "Erlaubte IPs",
@@ -690,6 +710,7 @@
       "heading": "Bereich",
       "label": "Bereich auswählen",
       "loading": "Bereiche werden geladen…",
+      "nanoGptManagementOptional": "Das Verwaltungstoken ist optional. Der gespeicherte Inferenz-API-Schlüssel kann weiterhin kopiert, exportiert und geprüft werden. Für die Liste und Verwaltung entfernter Schlüssel ergänzen Sie ein Verwaltungstoken unter Konto bearbeiten.",
       "partial": "Einige Bereiche konnten nicht geladen werden. Verfügbare Bereiche können weiterhin verwendet werden.",
       "placeholder": "Bereich wählen",
       "retry": "Bereiche erneut laden"

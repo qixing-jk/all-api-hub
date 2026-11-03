@@ -59,6 +59,48 @@ describe("TokenList secondary reloading state", () => {
     expect(screen.getByText("common:status.refreshing")).toBeVisible()
   })
 
+  it.each([false, true])(
+    "shows reset only when the service credential supports rotation (%s)",
+    async (canRotate) => {
+      const entry = buildServiceCredentialKeyManagementEntry({
+        account,
+        serviceCredential: {
+          status: "loaded",
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex API Key",
+            key: "sk-test",
+            isAuthenticated: true,
+            baseUrl: "https://example.invalid/v1",
+          },
+        },
+        canRotate,
+      })!
+      render(
+        <TokenList
+          isLoading={false}
+          nativeLoading={false}
+          entries={[entry]}
+          filteredEntries={[entry]}
+          handleAddToken={vi.fn()}
+          onAddAccount={vi.fn()}
+          onRequestAccountSelection={vi.fn()}
+          selectedAccount={account.id}
+          displayData={[account]}
+          onCopyServiceCredential={vi.fn()}
+          onRotateServiceCredential={vi.fn()}
+        />,
+      )
+      expect(await screen.findByText("Codex API Key")).toBeVisible()
+      const button = screen.queryByRole("button", {
+        name: "keyManagement:serviceCredential.rotate",
+      })
+      if (canRotate) expect(button).toBeVisible()
+      else expect(button).not.toBeInTheDocument()
+    },
+  )
+
   it("renders a secondary reloading indicator and dimmed container when rows exist and nativeLoading is true", async () => {
     const row = createRow("Key 1")
     const { container } = render(

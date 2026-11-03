@@ -30,6 +30,32 @@ const createDeferred = <T,>() => {
 }
 
 describe("OneTimeSecretDialog", () => {
+  it("explains website verification instead of claiming a NanoGPT created key is permanently lost", async () => {
+    const onClose = vi.fn()
+    render(
+      <OneTimeSecretDialog
+        isOpen
+        autoCopy={false}
+        result={{
+          ...RESULT,
+          secretAvailability: secretAvailability.WebsiteVerification,
+        }}
+        onClose={onClose}
+      />,
+    )
+    expect(
+      screen.getByText("keyManagement:keyDetails.websiteVerificationSecret"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.warningTitle"),
+    ).not.toBeInTheDocument()
+    await userEvent
+      .setup()
+      .click(
+        screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton),
+      )
+    expect(onClose).toHaveBeenCalledOnce()
+  })
   it("keeps credential-library saving optional when a recoverable key has a next action", async () => {
     const next = vi.fn()
     render(

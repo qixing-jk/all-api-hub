@@ -174,6 +174,7 @@ describe("account site onboarding registry", () => {
       "relayfor",
       "grsai",
       "vercel",
+      "nanogpt",
       "v-api",
       "apiyi",
       "new-api-auth-bundle",

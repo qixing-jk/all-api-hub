@@ -19,6 +19,7 @@ import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES as keyFailures,
   type AccountKeyResourceCapability,
   type AccountRuntimeKeyResolution,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -396,36 +397,80 @@ export async function fetchDisplayAccountRuntimeKeys(
   const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
 
   const resources = capabilities.account?.keyResourceManagement
+  let serviceFailure: { error: unknown } | undefined
+  const serviceKeys = await fetchDisplayAccountServiceRuntimeKeys(
+    account,
+    options,
+  ).catch((error: unknown) => {
+    if (!resources || options.signal?.aborted) throw error
+    serviceFailure = { error }
+    return []
+  })
   if (resources) {
-    const session = await resources.open(
-      {
-        account: runtimeKeyAccount,
-        request,
-      },
-      options,
-    )
-    const scope = await session.resolveDefaultScope(options)
-    const collection = await session.openCollection(scope.scopeKey, options)
-    const facts = await collectAccountKeyResourceInventory(collection, options)
-    return facts
-      .filter((item) => item.runtimeKey)
-      .map((item) => buildAccountKeyResourceRuntimeKeyFromFacts(account, item))
+    try {
+      const session = await resources.open(
+        { account: runtimeKeyAccount, request },
+        options,
+      )
+      const scope = await session.resolveDefaultScope(options)
+      const collection = await session.openCollection(scope.scopeKey, options)
+      const facts = await collectAccountKeyResourceInventory(
+        collection,
+        options,
+      )
+      const runtimeKeys = [
+        ...serviceKeys,
+        ...facts
+          .filter((item) => item.runtimeKey)
+          .map((item) =>
+            buildAccountKeyResourceRuntimeKeyFromFacts(account, item),
+          ),
+      ]
+      if (!runtimeKeys.length && serviceFailure) throw serviceFailure.error
+      return runtimeKeys
+    } catch (error) {
+      // Independent runtime credentials stay usable when their management inventory is inaccessible.
+      // The native Key Management workspace still reports its own management failure.
+      if (
+        serviceKeys.length &&
+        error instanceof AccountKeyResourceError &&
+        [
+          keyFailures.ConfigurationRequired,
+          keyFailures.PermissionDenied,
+          keyFailures.AuthenticationFailed,
+        ].some((code) => code === error.failure.code)
+      )
+        return serviceKeys
+      throw error
+    }
   }
-
   if (!serviceCredential)
-    throw new AccountKeyResourceError({ code: "unavailable" })
+    throw new AccountKeyResourceError({ code: keyFailures.Unavailable })
+  return serviceKeys
+}
 
+/** Reads the independent saved service credential without opening management inventory. */
+export async function fetchDisplayAccountServiceRuntimeKeys(
+  account: DisplayAccountApiSnapshot,
+  options: { signal?: AbortSignal } = {},
+): Promise<AccountRuntimeKey[]> {
+  const { serviceCredential, request } = createDisplayAccountApiContext(account)
+  if (!serviceCredential) return []
   const credential = await serviceCredential.fetch({
     ...request,
     ...(options.signal ? { abortSignal: options.signal } : {}),
   })
-  if (!credential.key.trim()) return []
-
-  return [
-    buildServiceCredentialRuntimeKey(runtimeKeyAccount, credential, {
-      canRotate: typeof serviceCredential.rotate === "function",
-    }),
-  ]
+  return credential.key.trim()
+    ? [
+        buildServiceCredentialRuntimeKey(
+          buildAccountRuntimeKeyAccount(account),
+          credential,
+          {
+            canRotate: typeof serviceCredential.rotate === "function",
+          },
+        ),
+      ]
+    : []
 }
 
 const resolveProviderAccountKeyResourceSecret = async (

@@ -253,7 +253,8 @@
     "tools": "Công cụ được phép",
     "totalQuota": "Tổng hạn mức:",
     "ungrouped": "Chưa phân nhóm",
-    "usedQuota": "Hạn ngạch đã dùng:"
+    "usedQuota": "Hạn ngạch đã dùng:",
+    "websiteVerificationSecret": "API quản lý không cung cấp khóa đầy đủ. Truy cập trang API của NanoGPT và hoàn tất xác minh đăng nhập theo yêu cầu để xem hoặc sao chép lại khóa hiện có."
   },
   "knownTotalKeys_other": "Đã đọc {{count}} khóa",
   "linkedCleanup": {
@@ -571,6 +572,25 @@
         "validDuration": "Thời hạn sau khi kích hoạt (ngày)"
       },
       "modelAllowlist": "Danh sách mô hình được phép",
+      "nanogpt": {
+        "anonymized": "Định tuyến ẩn danh",
+        "dailyRequests": "Giới hạn yêu cầu mỗi ngày",
+        "dailySpend": "Giới hạn chi tiêu mỗi ngày (USD)",
+        "dailySubscriptionTokens": "Hạn mức token gói mỗi ngày",
+        "dailyTokens": "Giới hạn token đầu vào mỗi ngày",
+        "legacyPolicy": "Chính sách định tuyến cũ",
+        "limitHelp": "Để trống là không giới hạn. Số 0 chặn hạn mức này; token gói có thể tính theo trọng số.",
+        "monthlyRequests": "Giới hạn yêu cầu mỗi tháng",
+        "monthlySpend": "Giới hạn chi tiêu mỗi tháng (USD)",
+        "monthlySubscriptionTokens": "Hạn mức token gói mỗi tháng",
+        "monthlyTokens": "Giới hạn token đầu vào mỗi tháng",
+        "weeklyRequests": "Giới hạn yêu cầu mỗi tuần",
+        "weeklySpend": "Giới hạn chi tiêu mỗi tuần (USD)",
+        "weeklySubscriptionTokens": "Hạn mức token gói mỗi tuần",
+        "weeklyTokens": "Giới hạn token đầu vào mỗi tuần",
+        "zdr": "Không lưu giữ dữ liệu",
+        "zdrPolicy": "Định tuyến quyền riêng tư"
+      },
       "novita": {
         "allEnabled": "Tất cả mô hình đã bật",
         "allowedIps": "IP được phép",
@@ -680,6 +700,7 @@
       "heading": "Phạm vi",
       "label": "Chọn phạm vi",
       "loading": "Đang tải phạm vi…",
+      "nanoGptManagementOptional": "Token quản lý là tùy chọn. Bạn vẫn có thể sao chép, xuất và xác minh khóa API suy luận đã lưu. Để liệt kê hoặc quản lý khóa từ xa, hãy thêm token quản lý trong phần chỉnh sửa tài khoản.",
       "partial": "Không thể tải một số phạm vi. Bạn vẫn có thể dùng các phạm vi đã tải.",
       "placeholder": "Chọn một phạm vi",
       "retry": "Tải lại phạm vi"

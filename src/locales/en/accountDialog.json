@@ -23,6 +23,12 @@
       "openProfile": "Open LaoZhang profile",
       "openProfileFailed": "Could not open the page. Open LaoZhang Profile → System token manually, complete security verification, then copy the token and return here to enter it."
     },
+    "nanogpt": {
+      "description": "Your NanoGPT account has been identified. The detected fields are retained; add an inference API key or a management token to finish.",
+      "openPage": "Open NanoGPT API keys",
+      "openPageFailed": "Could not open the API page. Open https://nano-gpt.com/api manually, then return here to paste your inference key.",
+      "pasteStep": "Return here, paste either credential in its corresponding field below, then save the account."
+    },
     "novita": {
       "generateStep": "Sign in to the same Novita account, then select “Get console credential”. The account identity is checked and your API key is preserved. Acquire the credential again after it expires; a saved API key remains independently usable.",
       "openPage": "Open Key Management",
@@ -202,6 +208,9 @@
     "manualVerificationRequiredDesc": "This site requires a CAPTCHA before check-in. Complete verification on the check-in page yourself, then make sure today’s check-in is complete.",
     "manualVerificationRequiredSwitchOffDesc": "Automatic check-in is off by default for this account. Enable it to choose whether to open the check-in page automatically when verification needs your help.",
     "manualVerificationRequiredTitle": "Check-in needs your verification",
+    "nanoGptApiKey": "NanoGPT API Key",
+    "nanoGptApiKeyGuidance": "Use an existing inference API key or create one on the API page. For subscription monitoring or key management, create a scoped management token in Settings → Security.",
+    "nanoGptApiKeyGuidanceTitle": "Complete NanoGPT credentials",
     "notes": "Notes",
     "notesPlaceholder": "Optional, enter notes",
     "novitaApiKey": "Novita account credential",
@@ -358,6 +367,15 @@
     "detecting": "Detecting...",
     "manualAdd": "Manual Add",
     "reDetect": "Re-detect"
+  },
+  "nanoGptCredentials": {
+    "eventHistoryUnsupported": "NanoGPT provides aggregate usage only, not individual usage-history records.",
+    "identityWarning": "The management API cannot prove that these credentials belong to the same account. Check both in the same NanoGPT account before saving.",
+    "inferenceHelp": "Optional if a management token is provided. An inference API key is needed for cash balance and key-specific usage. Existing keys, including legacy UUID keys, are accepted.",
+    "managementHelp": "Use usage:read for subscription quotas, api_keys:read for key lists, or api_keys:write for key management. Tokens expire after 90 days by default.",
+    "managementToken": "Management API token",
+    "openManagement": "Open management tokens",
+    "openManagementFailed": "Could not open token settings. Open NanoGPT Settings → Security → Management API tokens manually."
   },
   "novitaCredentials": {
     "apiKey": "API Key",

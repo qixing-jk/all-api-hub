@@ -23,6 +23,12 @@
       "openProfile": "開啟 LaoZhang 個人資料",
       "openProfileFailed": "無法開啟頁面。請手動進入 LaoZhang「個人資料 → System token」，完成安全驗證後複製權杖，回到這裡填寫。"
     },
+    "nanogpt": {
+      "description": "已識別 NanoGPT 帳號，識別到的資訊已保留。填寫推理 API 金鑰或管理權杖後即可繼續新增。",
+      "openPage": "開啟 NanoGPT API 金鑰頁",
+      "openPageFailed": "無法開啟 API 頁面。請手動前往 https://nano-gpt.com/api，然後返回此處貼上推理金鑰。",
+      "pasteStep": "返回這裡，將憑據貼到下方對應的輸入框，然後儲存帳號。"
+    },
     "novita": {
       "generateStep": "登入同一 Novita 帳號後，點選「取得控制台憑證」。取得時會核對帳號身分，並保留已填寫的 API Key。憑證過期後需重新取得；已儲存的 API Key 仍可獨立使用。",
       "openPage": "開啟金鑰管理",
@@ -202,6 +208,9 @@
     "manualVerificationRequiredDesc": "該站點要求完成驗證碼後才能簽到。擴充功能無法代替你完成驗證；請在簽到頁完成驗證，並確認今日已簽到。",
     "manualVerificationRequiredSwitchOffDesc": "此帳號預設關閉自動簽到。開啟後，可選擇遇到驗證碼時是否自動開啟簽到頁，方便你手動處理。",
     "manualVerificationRequiredTitle": "簽到需要你手動完成驗證",
+    "nanoGptApiKey": "NanoGPT API 金鑰",
+    "nanoGptApiKeyGuidance": "可使用現有推理 API 金鑰，或在 API 頁面建立。訂閱監控和金鑰管理則使用「設定 → 安全」中的管理權杖，依所需功能選擇權限。",
+    "nanoGptApiKeyGuidanceTitle": "補充 NanoGPT 憑證",
     "notes": "備註",
     "notesPlaceholder": "選填，輸入備註資訊",
     "novitaApiKey": "Novita 帳戶憑證",
@@ -357,6 +366,15 @@
     "detecting": "識別中...",
     "manualAdd": "手動新增",
     "reDetect": "重新識別"
+  },
+  "nanoGptCredentials": {
+    "eventHistoryUnsupported": "NanoGPT 僅提供彙總用量，不提供逐筆用量歷史。",
+    "identityWarning": "管理介面無法證明兩項憑證屬於同一帳號。儲存前，請確認它們來自同一個 NanoGPT 帳號。",
+    "inferenceHelp": "填寫管理權杖後此項為選填。現金餘額和金鑰用量需要推理 API 金鑰；可使用現有金鑰，包括舊版 UUID 金鑰。",
+    "managementHelp": "訂閱配額需要 usage:read；金鑰清單需要 api_keys:read；金鑰管理需要 api_keys:write。權杖預設 90 天後到期。",
+    "managementToken": "管理 API 權杖",
+    "openManagement": "開啟管理權杖設定",
+    "openManagementFailed": "無法開啟權杖設定。請手動進入 NanoGPT「設定 → 安全 → Management API tokens」。"
   },
   "novitaCredentials": {
     "apiKey": "API Key",

@@ -316,9 +316,15 @@
     "permanentAllowance": "永久枠",
     "prompt": "プロンプト",
     "scopedAllowances": "グループやプランの利用枠には利用制限がある場合があります。ネイティブ利用枠は残高合計・残高履歴・収入推計に含まれません。",
-    "subscriptionInactive": "未有効または期限切れ",
     "subscriptionRemainingCount": "サブスクリプション残り回数",
     "subscriptionRemainingTokens": "残りのトークン（プールとキーの合計）。ドル残高は無料分を含む公式価格での換算額です。",
+    "subscriptionState": {
+      "active": "サブスクリプション有効",
+      "expired": "サブスクリプション期限切れ",
+      "grace": "サブスクリプション猶予期間",
+      "inactive": "有効なサブスクリプションなし",
+      "unavailable": "サブスクリプション状態を取得できません"
+    },
     "subscriptionStatus": "サブスクリプション状態",
     "subscriptionTitle": "サブスクリプション",
     "timedAllowance": "期限付き枠",

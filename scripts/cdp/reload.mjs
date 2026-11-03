@@ -91,24 +91,45 @@ export async function reloadRunningExtension(cdpPort, extensionDir) {
       }
       // This existing read-only action verifies the background root listener,
       // which can be absent even while a failed worker still exposes runtime.id.
-      const response = await probePage.evaluate(
-        () =>
-          new Promise((resolve, reject) => {
-            const timer = setTimeout(
-              () => reject(new Error("Background readiness probe timed out")),
-              10000,
-            )
-            chrome.runtime.sendMessage(
-              { action: "getInternalTabIds", tabIds: [] },
-              (result) => {
-                clearTimeout(timer)
-                const error = chrome.runtime.lastError
-                if (error) reject(new Error(error.message))
-                else resolve(result)
-              },
-            )
-          }),
-      )
+      let response
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          response = await probePage.evaluate(
+            () =>
+              new Promise((resolve, reject) => {
+                const timer = setTimeout(
+                  () =>
+                    reject(new Error("Background readiness probe timed out")),
+                  10000,
+                )
+                chrome.runtime.sendMessage(
+                  { action: "getInternalTabIds", tabIds: [] },
+                  (result) => {
+                    clearTimeout(timer)
+                    const error = chrome.runtime.lastError
+                    if (error) reject(new Error(error.message))
+                    else resolve(result)
+                  },
+                )
+              }),
+          )
+          break
+        } catch (error) {
+          // Dev/HMR can navigate the probe document after reload. Reacquire its
+          // ready execution context once; only the read-only readiness query is
+          // repeated, never the extension reload or any business action.
+          if (
+            attempt !== 0 ||
+            probePage.isClosed() ||
+            !/Execution context was destroyed/i.test(error.message)
+          )
+            throw error
+          await probePage.waitForLoadState("domcontentloaded", {
+            timeout: 10000,
+          })
+        }
+      }
+
       if (
         response?.success !== true ||
         !Array.isArray(response.tabIds) ||

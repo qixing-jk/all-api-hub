@@ -56,6 +56,34 @@ const empty: DailyBalanceHistoryStore = {
   schemaVersion: 1,
   snapshotsByAccountId: {},
 }
+
+it("retains accounts and history during a current-balance outage", async () => {
+  const account = buildSiteAccount({ id: "outage" })
+  account.account_info.balanceUnavailable = true
+  mocks.accounts.mockResolvedValue([account])
+  const history: DailyBalanceHistoryStore = {
+    schemaVersion: 1,
+    snapshotsByAccountId: {
+      outage: {
+        "2026-01-01": {
+          quota: 500000,
+          today_income: null,
+          today_quota_consumption: null,
+          capturedAt: 1,
+          source: "refresh",
+        },
+      },
+    },
+  }
+  mocks.store.mockResolvedValue(history)
+  mocks.tags.mockResolvedValue({ version: 1, tagsById: {} })
+  const { result } = renderHook(() => useBalanceHistoryData([]))
+  await act(async () => {})
+  expect(result.current.accounts.map((account) => account.id)).toContain(
+    "outage",
+  )
+  expect(result.current.store).toEqual(history)
+})
 const beforePrune: DailyBalanceHistoryStore = {
   schemaVersion: 1,
   snapshotsByAccountId: {

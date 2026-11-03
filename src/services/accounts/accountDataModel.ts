@@ -40,6 +40,7 @@ export type TodayIncomeDataWithAvailability = TodayIncomeData & {
 
 export interface AccountData extends TodayStatsData {
   quota: number
+  balanceUnavailable?: boolean
   nativeBalance?: AccountNativeBalance
   todayStatsAvailability?: AccountTodayStatsAvailability
   usage?: AccountUsageSummary

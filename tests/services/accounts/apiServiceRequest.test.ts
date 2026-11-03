@@ -14,7 +14,10 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  AccountKeyResourceError,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery"
@@ -1278,3 +1281,91 @@ describe("account credential secret resolution", () => {
     expect(resolveAssociatedProfileSecret).toHaveBeenCalled()
   })
 })
+
+it("keeps an independent service key usable when native inventory needs an absent management credential", async () => {
+  vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+    siteType: SITE_TYPES.NANOGPT,
+    account: {
+      keyResourceManagement: {
+        open: vi
+          .fn()
+          .mockRejectedValue(
+            new AccountKeyResourceError({ code: "configuration_required" }),
+          ),
+      },
+      serviceCredential: {
+        fetch: vi.fn().mockResolvedValue({
+          kind: "singleton_service_key",
+          service: "nanogpt-inference",
+          label: "NanoGPT",
+          key: "sk-nano-runtime",
+          isAuthenticated: true,
+        }),
+      },
+    },
+  } as never)
+  const keys = await fetchDisplayAccountRuntimeKeys({
+    ...ACCOUNT,
+    tagIds: [],
+    siteType: SITE_TYPES.NANOGPT,
+  })
+  expect(keys).toHaveLength(1)
+  expect(keys[0]?.secret).toBe("sk-nano-runtime")
+  expect(keys[0]?.source).toBe("service_credential")
+})
+
+it.each([false, true])(
+  "preserves the saved-key error unless native inventory provides runtime keys (%s)",
+  async (hasNativeKey) => {
+    const ref = {
+      accountId: ACCOUNT.id,
+      siteType: SITE_TYPES.NANOGPT,
+      scopeKey: "account",
+      resourceId: "native-key",
+    }
+    const list = vi
+      .fn()
+      .mockResolvedValue({
+        items: hasNativeKey
+          ? [
+              {
+                ref,
+                displayName: "Native key",
+                status: "enabled",
+                fields: [],
+                actions: { canUpdate: true, canDelete: true },
+                runtimeKey: { modelAccess: { allowedModelIds: ["model-a"] } },
+              },
+            ]
+          : [],
+        total: hasNativeKey ? 1 : 0,
+      })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.NANOGPT,
+      account: {
+        keyResourceManagement: {
+          open: vi.fn().mockResolvedValue({
+            resolveDefaultScope: async () => ({ scopeKey: "account" }),
+            openCollection: async () => ({ list }),
+          }),
+        },
+        serviceCredential: {
+          fetch: vi.fn().mockRejectedValue(new Error("inference unavailable")),
+        },
+      },
+    } as never)
+    const keys = fetchDisplayAccountRuntimeKeys({
+      ...ACCOUNT,
+      tagIds: [],
+      siteType: SITE_TYPES.NANOGPT,
+    })
+    if (hasNativeKey) {
+      await expect(keys).resolves.toMatchObject([
+        { source: "account_key_resource", resourceRef: ref },
+      ])
+    } else {
+      await expect(keys).rejects.toThrow("inference unavailable")
+    }
+    expect(list).toHaveBeenCalledTimes(1)
+  },
+)

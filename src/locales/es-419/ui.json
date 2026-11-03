@@ -210,6 +210,7 @@
       "keyCopied": "Clave copiada al portapapeles",
       "loadFailed": "No se pudo cargar la lista de claves: {{error}}",
       "loading": "Cargando lista de claves...",
+      "managementConfigurationRequired": "Se requiere un token de administración para cargar y administrar la lista de claves del sitio. Las claves API guardadas se pueden seguir usando de forma independiente.",
       "noKeyFoundAfterCreate": "No se encontró ninguna clave después de crear una. Inténtalo de nuevo.",
       "noKeys": "Aún no hay datos de claves",
       "noKeysDescription": "Crea rápidamente una clave predeterminada o crea una clave personalizada con ajustes avanzados.",

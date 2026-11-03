@@ -23,6 +23,12 @@
       "openProfile": "Abrir perfil de LaoZhang",
       "openProfileFailed": "No se pudo abrir la página. Abre manualmente Perfil de LaoZhang → System token, completa la verificación de seguridad, copia el token y vuelve aquí para ingresarlo."
     },
+    "nanogpt": {
+      "description": "Se identificó tu cuenta de NanoGPT. Los datos se conservaron; agrega una clave de inferencia o token de administración para continuar.",
+      "openPage": "Abrir claves API de NanoGPT",
+      "openPageFailed": "No se pudo abrir la página de API. Abre https://nano-gpt.com/api manualmente y vuelve aquí para pegar tu clave de inferencia.",
+      "pasteStep": "Vuelve aquí, pega la credencial en el campo correspondiente de abajo y guarda la cuenta."
+    },
     "novita": {
       "generateStep": "Inicia sesión en la misma cuenta de Novita y selecciona «Obtener credencial de consola». Se comprueba la identidad y se conserva tu API Key. Vuelve a obtener la credencial cuando venza; la API Key guardada sigue funcionando de forma independiente.",
       "openPage": "Abrir gestión de claves",
@@ -202,6 +208,9 @@
     "manualVerificationRequiredDesc": "Este sitio exige un CAPTCHA antes del check-in. Completa tú la verificación en la página de check-in y confirma que el de hoy esté completado.",
     "manualVerificationRequiredSwitchOffDesc": "El check-in automático está desactivado por defecto para esta cuenta. Actívalo para elegir si se abre la página automáticamente cuando se necesite tu verificación.",
     "manualVerificationRequiredTitle": "El check-in necesita tu verificación",
+    "nanoGptApiKey": "Clave de API de NanoGPT",
+    "nanoGptApiKeyGuidance": "Usa una clave de inferencia existente o créala en la página API. Para monitorear cuotas o administrar claves, crea un token con los permisos necesarios en Configuración → Seguridad.",
+    "nanoGptApiKeyGuidanceTitle": "Completar credenciales de NanoGPT",
     "notes": "Notas",
     "notesPlaceholder": "Opcional, ingresa notas",
     "novitaApiKey": "Credencial de cuenta Novita",
@@ -359,6 +368,15 @@
     "detecting": "Detectando...",
     "manualAdd": "Agregado manual",
     "reDetect": "Volver a detectar"
+  },
+  "nanoGptCredentials": {
+    "eventHistoryUnsupported": "NanoGPT solo proporciona uso agregado, no registros individuales del historial de uso.",
+    "identityWarning": "La API de administración no puede confirmar que ambas credenciales pertenecen a la misma cuenta. Verifícalo en NanoGPT antes de guardar.",
+    "inferenceHelp": "Opcional si proporcionas un token de administración. El saldo y uso por clave requieren una clave de inferencia. Se aceptan claves existentes y claves UUID antiguas.",
+    "managementHelp": "usage:read consulta cuotas, api_keys:read lista claves y api_keys:write administra claves. Los tokens vencen a los 90 días por defecto.",
+    "managementToken": "Token de API de administración",
+    "openManagement": "Abrir tokens de administración",
+    "openManagementFailed": "No se pudo abrir la configuración. Abre NanoGPT Configuración → Seguridad → Management API tokens."
   },
   "novitaCredentials": {
     "apiKey": "API Key",

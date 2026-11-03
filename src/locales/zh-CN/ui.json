@@ -200,6 +200,7 @@
       "keyCopied": "密钥已复制到剪贴板",
       "loadFailed": "加载密钥列表失败: {{error}}",
       "loading": "正在获取密钥列表...",
+      "managementConfigurationRequired": "加载和管理站点密钥列表需要管理令牌。已保存的 API 密钥仍可单独使用。",
       "noKeyFoundAfterCreate": "创建成功但未获取到密钥，请重试。",
       "noKeys": "暂无密钥数据",
       "noKeysDescription": "该账号暂无可用密钥，可快速创建默认密钥或自定义创建后再复制。",

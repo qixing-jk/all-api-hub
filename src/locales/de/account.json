@@ -340,9 +340,15 @@
     "permanentAllowance": "Dauerhaft",
     "prompt": "Eingabe",
     "scopedAllowances": "Gruppen- und Abonnementkontingente können Nutzungsbeschränkungen haben. Native Kontingente werden nicht in Gesamtsaldo, Saldoverlauf und Einkommensschätzungen einbezogen.",
-    "subscriptionInactive": "Inaktiv oder abgelaufen",
     "subscriptionRemainingCount": "Verbleibende Abonnementanfragen",
     "subscriptionRemainingTokens": "Verbleibende Tokens (Pool und Schlüssel); der Dollarbetrag entspricht dem veröffentlichten Preis, einschließlich kostenloser Tokens.",
+    "subscriptionState": {
+      "active": "Abonnement aktiv",
+      "expired": "Abonnement abgelaufen",
+      "grace": "Abonnement in der Kulanzfrist",
+      "inactive": "Kein aktives Abonnement",
+      "unavailable": "Abonnementstatus nicht verfügbar"
+    },
     "subscriptionStatus": "Abonnementstatus",
     "subscriptionTitle": "Abonnement",
     "timedAllowance": "Befristet",

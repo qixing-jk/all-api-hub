@@ -152,6 +152,7 @@ describe("AI/ML API account data", () => {
 
     // The management key is rejected by the billing route, so no balance is known.
     expect(data.quota).toBe(0)
+    expect(data.balanceUnavailable).toBe(true)
     expect(data.nativeBalance).toBeUndefined()
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: { status: "unavailable", reason: "unsupported" },

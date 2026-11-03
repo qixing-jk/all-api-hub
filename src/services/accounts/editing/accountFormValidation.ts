@@ -14,10 +14,8 @@ import { AuthTypeEnum } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 
 /** Converts a non-negative manual USD balance to quota units. */
-export function parseManualQuotaFromUsd(
-  value: string | undefined,
-): number | undefined {
-  if (value === undefined) return undefined
+export function parseManualQuotaFromUsd(value: unknown): number | undefined {
+  if (typeof value !== "string") return undefined
   const trimmed = value.trim()
   if (!trimmed) return undefined
 

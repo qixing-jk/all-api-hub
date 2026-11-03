@@ -267,7 +267,8 @@
     "tools": "Herramientas permitidas",
     "totalQuota": "Cuota total:",
     "ungrouped": "Sin grupo",
-    "usedQuota": "Cuota usada:"
+    "usedQuota": "Cuota usada:",
+    "websiteVerificationSecret": "La API de administración no proporciona claves completas. Visita la página API de NanoGPT y completa la verificación de inicio de sesión requerida para volver a ver o copiar una clave existente."
   },
   "knownTotalKeys_one": "{{count}} clave leída",
   "knownTotalKeys_many": "{{count}} claves leídas",
@@ -591,6 +592,25 @@
         "validDuration": "Validez tras la activación (días)"
       },
       "modelAllowlist": "Lista de modelos permitidos",
+      "nanogpt": {
+        "anonymized": "Enrutamiento anonimizado",
+        "dailyRequests": "Límite diario de solicitudes",
+        "dailySpend": "Límite de gasto diario (USD)",
+        "dailySubscriptionTokens": "Cuota diaria de tokens de suscripción",
+        "dailyTokens": "Límite diario de tokens de entrada",
+        "legacyPolicy": "Política de enrutamiento anterior",
+        "limitHelp": "Vacío significa sin límite. Cero bloquea esta cuota; los tokens de suscripción pueden ser ponderados.",
+        "monthlyRequests": "Límite mensual de solicitudes",
+        "monthlySpend": "Límite de gasto mensual (USD)",
+        "monthlySubscriptionTokens": "Cuota mensual de tokens de suscripción",
+        "monthlyTokens": "Límite mensual de tokens de entrada",
+        "weeklyRequests": "Límite semanal de solicitudes",
+        "weeklySpend": "Límite de gasto semanal (USD)",
+        "weeklySubscriptionTokens": "Cuota semanal de tokens de suscripción",
+        "weeklyTokens": "Límite semanal de tokens de entrada",
+        "zdr": "Sin retención de datos",
+        "zdrPolicy": "Enrutamiento de privacidad"
+      },
       "novita": {
         "allEnabled": "Todos los modelos habilitados",
         "allowedIps": "IP permitidas",
@@ -700,6 +720,7 @@
       "heading": "Ámbito",
       "label": "Seleccionar un ámbito",
       "loading": "Cargando ámbitos…",
+      "nanoGptManagementOptional": "El token de administración es opcional. Puedes copiar, exportar y verificar tu clave API de inferencia guardada. Para listar o administrar claves remotas, agrega un token de administración en Editar cuenta.",
       "partial": "No se pudieron cargar algunos ámbitos. Los ámbitos disponibles se pueden seguir usando.",
       "placeholder": "Elige un ámbito",
       "retry": "Volver a cargar los ámbitos"

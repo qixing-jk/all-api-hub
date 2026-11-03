@@ -147,6 +147,7 @@ describe("autoDetectSmart", () => {
   const browserAny = globalThis.browser as any
   const originalRuntime = browserAny.runtime
   const originalTabs = browserAny.tabs
+  const originalScripting = browserAny.scripting
   const originalWindow = (globalThis as any).window
 
   beforeEach(() => {
@@ -159,6 +160,7 @@ describe("autoDetectSmart", () => {
     }
 
     browserAny.runtime = originalRuntime ?? {}
+    browserAny.scripting = originalScripting
     browserAny.tabs = {
       ...(typeof originalTabs === "object" && originalTabs ? originalTabs : {}),
       query: vi.fn().mockResolvedValue([]),
@@ -553,6 +555,7 @@ describe("autoDetectSmart", () => {
     }
     browserAny.runtime = originalRuntime
     browserAny.tabs = originalTabs
+    browserAny.scripting = originalScripting
   })
 
   it("uses the active tab content-script flow when the current tab matches the target origin", async () => {
@@ -1988,6 +1991,113 @@ describe("autoDetectSmart", () => {
       errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
     })
   })
+
+  it("recovers an old current tab on explicit detection without refreshing the page", async () => {
+    const url = "https://site.example.invalid"
+    mockGetActiveOrAllTabs.mockResolvedValue([{ id: 7, active: true, url }])
+    browserAny.tabs.get = vi.fn().mockResolvedValue({ id: 7, url })
+    browserAny.runtime = {
+      ...originalRuntime,
+      getManifest: () => ({
+        content_scripts: [
+          { matches: ["<all_urls>"], js: ["content-scripts/content.js"] },
+        ],
+      }),
+    }
+    browserAny.scripting = {
+      executeScript: vi.fn().mockResolvedValue([{ frameId: 0 }]),
+    }
+    mockFetchUserInfo.mockResolvedValue(null)
+    mockIsMessageReceiverUnavailableError.mockReturnValue(true)
+    mockReadAccountBrowserSessionFromTab
+      .mockImplementationOnce(async (options) => {
+        options.onError?.(
+          new Error(
+            "Could not establish connection. Receiving end does not exist.",
+          ),
+        )
+        return null
+      })
+      .mockResolvedValueOnce({
+        userId: "42",
+        user: { username: "Recovered User" },
+        siteTypeHint: SITE_TYPES.NEW_API,
+      })
+
+    await expect(autoDetectSmart(url, testExecution)).resolves.toMatchObject({
+      success: true,
+      data: { userId: "42", user: { username: "Recovered User" } },
+      autoDetectContext: { strategy: AUTO_DETECT_STRATEGIES.CurrentTab },
+    })
+    expect(browserAny.scripting.executeScript).toHaveBeenCalledExactlyOnceWith({
+      target: { tabId: 7 },
+      files: ["content-scripts/content.js"],
+    })
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ expectedOrigin: new URL(url).origin }),
+    )
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    "navigated",
+    "permission-denied",
+    "receiver-still-missing",
+    "signed-out",
+    "passive",
+  ])(
+    "keeps current-tab recovery bounded and preserves the actual failure: %s",
+    async (scenario) => {
+      const url = "https://site.example.invalid"
+      mockGetActiveOrAllTabs.mockResolvedValue([{ id: 7, active: true, url }])
+      browserAny.tabs.get = vi.fn().mockResolvedValue({
+        id: 7,
+        url: scenario === "navigated" ? "https://other.example.invalid" : url,
+      })
+      browserAny.runtime = {
+        ...originalRuntime,
+        getManifest: () => ({
+          content_scripts: [
+            { matches: ["<all_urls>"], js: ["content-scripts/content.js"] },
+          ],
+        }),
+      }
+      const executeScript = vi.fn().mockResolvedValue([{ frameId: 0 }])
+      if (scenario === "permission-denied")
+        executeScript.mockRejectedValue(new Error("Cannot access this page"))
+      browserAny.scripting = { executeScript }
+      mockFetchUserInfo.mockResolvedValue(null)
+      mockIsMessageReceiverUnavailableError.mockReturnValue(true)
+      mockReadAccountBrowserSessionFromTab.mockImplementation(
+        async (options) => {
+          if (
+            scenario !== "signed-out" ||
+            mockReadAccountBrowserSessionFromTab.mock.calls.length === 1
+          )
+            options.onError?.(new Error("Receiving end does not exist"))
+          return null
+        },
+      )
+
+      const result = await autoDetectSmart(
+        url,
+        scenario === "passive" ? undefined : testExecution,
+      )
+      expect(result.success).toBe(false)
+      expect(result.errorCode).toBe(
+        scenario === "signed-out"
+          ? undefined
+          : AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+      )
+      expect(executeScript).toHaveBeenCalledTimes(
+        ["navigated", "passive"].includes(scenario) ? 0 : 1,
+      )
+      expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledTimes(
+        ["receiver-still-missing", "signed-out"].includes(scenario) ? 2 : 1,
+      )
+    },
+  )
 
   it("preserves the Kimi session read through background messaging", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([])

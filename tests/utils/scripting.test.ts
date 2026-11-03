@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { executeMainWorldFunction } from "~/utils/browser/scripting"
+import {
+  executeMainWorldFunction,
+  injectContentScript,
+} from "~/utils/browser/scripting"
 
 describe("executeMainWorldFunction", () => {
   const originalBrowser = (globalThis as any).browser
@@ -15,6 +18,32 @@ describe("executeMainWorldFunction", () => {
 
   afterEach(() => {
     ;(globalThis as any).browser = originalBrowser
+  })
+
+  it("leaves invalid origins and unavailable scripting untouched", async () => {
+    await expect(injectContentScript(1, "invalid")).resolves.toBe(false)
+    await expect(
+      injectContentScript(1, "https://example.invalid"),
+    ).resolves.toBe(false)
+  })
+
+  it("ignores dynamically registered scripts outside the global content-script match", async () => {
+    const executeScript = vi.fn()
+    ;(globalThis as any).browser = {
+      tabs: { get: async () => ({ url: "https://example.invalid" }) },
+      runtime: { getManifest: () => ({}) },
+      scripting: {
+        executeScript,
+        getRegisteredContentScripts: async () => [
+          { matches: ["https://other.invalid/*"], js: ["other.js"] },
+          { matches: ["<all_urls>"] },
+        ],
+      },
+    }
+    await expect(
+      injectContentScript(1, "https://example.invalid"),
+    ).resolves.toBe(false)
+    expect(executeScript).not.toHaveBeenCalled()
   })
 
   it("returns null when browser.scripting.executeScript is unavailable", async () => {
@@ -60,5 +89,34 @@ describe("executeMainWorldFunction", () => {
 
     const result = await executeMainWorldFunction(101, () => "ignored")
     expect(result).toBeNull()
+  })
+
+  it("restores the WXT development script when it is registered dynamically", async () => {
+    const executeScript = vi.fn().mockResolvedValue([{ frameId: 0 }])
+    ;(globalThis as any).browser = {
+      tabs: {
+        get: vi
+          .fn()
+          .mockResolvedValue({ url: "https://site.example.invalid/profile" }),
+      },
+      runtime: { getManifest: () => ({}) },
+      scripting: {
+        executeScript,
+        getRegisteredContentScripts: vi.fn().mockResolvedValue([
+          {
+            id: "wxt:content",
+            matches: ["<all_urls>"],
+            js: ["content-scripts/content.js"],
+          },
+        ]),
+      },
+    }
+    await expect(
+      injectContentScript(1, "https://site.example.invalid"),
+    ).resolves.toBe(true)
+    expect(executeScript).toHaveBeenCalledWith({
+      target: { tabId: 1 },
+      files: ["content-scripts/content.js"],
+    })
   })
 })

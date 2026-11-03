@@ -980,6 +980,29 @@ describe("AccountDialog", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("retains provider credential instructions when only the generic recovery guide is available", () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.siteType = SITE_TYPES.REQUESTY
+    mockState.draft.siteType = SITE_TYPES.REQUESTY
+    mockState.draft.accessToken = ""
+    mockState.detectionError = {
+      type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+      message: "Enter the missing credential",
+    }
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByText("accountDialog:form.requestyManageKeyGuidance"),
+    ).toBeInTheDocument()
+  })
+
   it.each([false, true])(
     "prepares the visible access-token input when opening site security settings (narrow: %s)",
     async (narrow) => {

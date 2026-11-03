@@ -14,16 +14,14 @@ export function ErrorDisplay({ error, onRetry }: ErrorDisplayProps) {
   const { t } = useTranslation("ui")
 
   return (
-    <Alert variant="destructive">
-      <div>
-        <h3 className="mb-density-1 font-medium">
-          {t("dialog.copyKey.getFailed")}
-        </h3>
-        <p className="mb-density-3 text-sm">{error}</p>
-        <Button onClick={onRetry} variant="outline" size="sm">
-          {t("dialog.copyKey.retry")}
-        </Button>
-      </div>
+    <Alert
+      variant="destructive"
+      title={t("dialog.copyKey.getFailed")}
+      description={error}
+    >
+      <Button onClick={onRetry} variant="outline" size="sm">
+        {t("dialog.copyKey.retry")}
+      </Button>
     </Alert>
   )
 }

@@ -168,6 +168,7 @@ export async function validateAndSaveAccount(
       account_info: {
         ...fields.account_info,
         quota: manualQuota ?? 0,
+        balanceUnavailable: manualQuota === undefined,
         ...EMPTY_ACCOUNT_INFO_METRICS,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,
@@ -294,6 +295,9 @@ export async function validateAndSaveAccount(
         usage: freshAccountData.usage,
         subscription: freshAccountData.subscription,
         nativeBalance: freshAccountData.nativeBalance,
+        balanceUnavailable:
+          manualQuota === undefined &&
+          freshAccountData.balanceUnavailable === true,
         recentUsageRecords: freshAccountData.recentUsageRecords,
       },
       last_sync_time: Date.now(),
@@ -360,6 +364,7 @@ export async function validateAndSaveAccount(
       account_info: {
         ...fields.account_info,
         quota: manualQuota ?? 0,
+        balanceUnavailable: manualQuota === undefined,
         ...EMPTY_ACCOUNT_INFO_METRICS,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,

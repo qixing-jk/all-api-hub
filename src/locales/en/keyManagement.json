@@ -260,7 +260,8 @@
     "tools": "Allowed tools",
     "totalQuota": "Total Quota:",
     "ungrouped": "Ungrouped",
-    "usedQuota": "Used Quota:"
+    "usedQuota": "Used Quota:",
+    "websiteVerificationSecret": "The management API does not provide full keys. Visit the NanoGPT API page and complete the required sign-in verification to view or copy an existing key again."
   },
   "knownTotalKeys_one": "{{count}} key read",
   "knownTotalKeys_other": "{{count}} keys read",
@@ -581,6 +582,25 @@
         "validDuration": "Validity after activation (days)"
       },
       "modelAllowlist": "Model allowlist",
+      "nanogpt": {
+        "anonymized": "Anonymized routing",
+        "dailyRequests": "Daily request limit",
+        "dailySpend": "Daily spend limit (USD)",
+        "dailySubscriptionTokens": "Daily subscription input-token allowance",
+        "dailyTokens": "Daily input-token limit",
+        "legacyPolicy": "Legacy routing policy",
+        "limitHelp": "Leave blank for unlimited. Zero blocks this allowance; subscription token units may be weighted.",
+        "monthlyRequests": "Monthly request limit",
+        "monthlySpend": "Monthly spend limit (USD)",
+        "monthlySubscriptionTokens": "Monthly subscription input-token allowance",
+        "monthlyTokens": "Monthly input-token limit",
+        "weeklyRequests": "Weekly request limit",
+        "weeklySpend": "Weekly spend limit (USD)",
+        "weeklySubscriptionTokens": "Weekly subscription input-token allowance",
+        "weeklyTokens": "Weekly input-token limit",
+        "zdr": "Zero Data Retention",
+        "zdrPolicy": "Privacy routing"
+      },
       "novita": {
         "allEnabled": "All enabled models",
         "allowedIps": "Allowed IPs",
@@ -690,6 +710,7 @@
       "heading": "Scope",
       "label": "Select a scope",
       "loading": "Loading scopes…",
+      "nanoGptManagementOptional": "The management token is optional. You can still copy, export and verify your saved inference API key. To list or manage remote keys, add a management token in Edit account.",
       "partial": "Some scopes could not be loaded. Available scopes can still be used.",
       "placeholder": "Choose a scope",
       "retry": "Retry loading scopes"

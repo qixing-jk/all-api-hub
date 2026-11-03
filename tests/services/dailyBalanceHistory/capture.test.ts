@@ -172,3 +172,19 @@ describe("maybeCaptureDailyBalanceSnapshot", () => {
     )
   })
 })
+
+it("does not record an unavailable cash balance as a real zero", async () => {
+  expect(
+    await maybeCaptureDailyBalanceSnapshot({
+      config: { ...DEFAULT_BALANCE_HISTORY_PREFERENCES, enabled: true },
+      accountId: "missing-balance",
+      quota: 0,
+      balanceUnavailable: true,
+      today_income: 0,
+      today_quota_consumption: 0,
+      todayStatsAvailability: complete,
+      source: "refresh",
+    }),
+  ).toBe(false)
+  expect(upsertSnapshotMock).not.toHaveBeenCalled()
+})

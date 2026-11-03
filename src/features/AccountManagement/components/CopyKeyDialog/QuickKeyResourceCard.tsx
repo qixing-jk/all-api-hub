@@ -9,6 +9,7 @@ import {
   KeyResourceSecretDisplay,
 } from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 
 type QuickKeyResourceCardProps = {
   presentation: KeyResourceCardPresentation
@@ -110,6 +111,13 @@ export function QuickKeyResourceCard({
             label={t("keyDetails.key")}
             secret={secret}
             controls={secretControls}
+            // Creation-only guidance is shown once in the dialog overview.
+            message={
+              presentation.secretAvailability ===
+              INVENTORY_SECRET_AVAILABILITIES.WebsiteVerification
+                ? presentation.secretAvailabilityMessage
+                : undefined
+            }
             layout={KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive}
           />
           {expandedSummaryFacts.length > 0 ? (

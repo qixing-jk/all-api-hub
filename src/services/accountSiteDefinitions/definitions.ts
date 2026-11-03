@@ -122,6 +122,10 @@ import {
   LAOZHANG_HOSTNAMES,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
+  NANOGPT_DISPLAY_NAME,
+  NANOGPT_HOSTNAMES,
+  NANOGPT_INFERENCE_BASE_URL,
+  NANOGPT_WEB_ORIGIN,
   NOVITA_DISPLAY_NAME,
   NOVITA_HOSTNAMES,
   NOVITA_WEB_ORIGIN,
@@ -257,6 +261,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.VERCEL_AI_GATEWAY,
   SITE_TYPES.NOVITA,
   SITE_TYPES.AIMLAPI,
+  SITE_TYPES.NANOGPT,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -2260,6 +2265,84 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
       },
     },
   },
+  {
+    siteType: SITE_TYPES.NANOGPT,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NanoGPT,
+    onboarding: {
+      displayName: NANOGPT_DISPLAY_NAME,
+      accountForm: {
+        fixedSiteUrl: NANOGPT_WEB_ORIGIN,
+        defaultSiteName: NANOGPT_DISPLAY_NAME,
+        accessTokenLabelKey: "form.nanoGptApiKey",
+        clearAccessTokenOnSiteChange: true,
+        accessTokenGuidanceTitleKey: "form.nanoGptApiKeyGuidanceTitle",
+        accessTokenGuidanceKey: "form.nanoGptApiKeyGuidance",
+      },
+      accessTokenVerificationGuide: {
+        copy: "nanogpt",
+        showRotationWarning: false,
+      },
+      detection: { hostnames: NANOGPT_HOSTNAMES },
+      // Verified 2026-10-25 on the deployment: /join owns the signed-out state
+      // (/usage and /invitations 307 there), /api is the API-key page, and
+      // /pricing is the public list-price table. NanoGPT has no check-in,
+      // redemption or account-wide announcement surface.
+      routes: {
+        loginPath: "/join",
+        usagePath: "/usage",
+        adminCredentialsPath: "/api",
+        pricingPath: "/pricing",
+        checkInPath: null,
+        accessTokenPath: "/api",
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        // The only usage contract is a key-scoped, UTC-day aggregate with no
+        // "today" series, so per-day statistics stay explicitly unsupported.
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        // Inference API keys are the only durable credential: console sessions
+        // are HttpOnly cookies and management tokens cannot read cash balance.
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        // A key cannot reveal the console display name, so manual adds may leave
+        // it empty. The account id saved for this credential is the Nano deposit
+        // address that `check-balance` returns; detection fills it in, and a
+        // manual add without it still stores a usable key-only account.
+        usernameRequired: false,
+        userIdRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+        // The provider-wide catalog has no selectable billing groups.
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: NANOGPT_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: NANOGPT_WEB_ORIGIN,
+        duplicateOrigin: NANOGPT_WEB_ORIGIN,
+        managedChannelOrigin: NANOGPT_INFERENCE_BASE_URL,
+        inferenceApiBaseUrls: {
+          openAiCompatible: NANOGPT_INFERENCE_BASE_URL,
+        },
+      },
+    },
+  },
+
   {
     siteType: SITE_TYPES.UNKNOWN,
     scopes: ACCOUNT_SCOPE,

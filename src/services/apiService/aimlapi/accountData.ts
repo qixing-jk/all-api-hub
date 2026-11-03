@@ -175,6 +175,7 @@ export async function fetchAimlApiAccountData(
   if (!apiKey) {
     return {
       quota: 0,
+      balanceUnavailable: true,
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,

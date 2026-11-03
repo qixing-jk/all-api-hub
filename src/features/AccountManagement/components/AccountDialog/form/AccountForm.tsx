@@ -61,6 +61,7 @@ import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthPermissionRecommendation"
+import { NanoGptCredentialGuide } from "~/features/AccountManagement/components/AccountDialog/form/NanoGptCredentialGuide"
 import {
   NovitaCredentialGuide,
   type NovitaCredentialActions,
@@ -85,6 +86,10 @@ import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCr
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
 import { isValidExchangeRate } from "~/services/accounts/editing/accountFormValidation"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import {
+  encodeNanoGptCredentials,
+  parseNanoGptCredentials,
+} from "~/services/apiService/nanogpt/credentials"
 import {
   encodeNovitaCredentials,
   parseNovitaCredentials,
@@ -131,6 +136,8 @@ interface AccountFormProps {
   /** Login providers already claimed by another enabled AgentRouter account. */
   claimedLoginProviders?: readonly LoginProviderClaimConflict[]
   isDetected: boolean
+  /** A recovery guide already owns the full credential instructions. */
+  showAccessTokenGuidance?: boolean
   isManualBalanceUsdInvalid: boolean
   showAccessToken: boolean
   isImportingCookies: boolean
@@ -193,6 +200,7 @@ export default function AccountForm({
   sitePolicy,
   claimedLoginProviders,
   isDetected,
+  showAccessTokenGuidance = true,
   isManualBalanceUsdInvalid,
   showAccessToken,
   isImportingCookies,
@@ -265,9 +273,18 @@ export default function AccountForm({
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
   const canUseAimlApiKey = sitePolicy.allowAimlApiKey
   const credentialPresentation = sitePolicy.accessTokenPresentation
+  const nanoGptCredentials = parseNanoGptCredentials(accessToken)
   const novitaCredentials = parseNovitaCredentials(accessToken)
+  const accessTokenRequired =
+    siteType === SITE_TYPES.NANOGPT
+      ? !nanoGptCredentials.managementToken
+      : siteType !== SITE_TYPES.NOVITA || !novitaCredentials.consoleToken
   const accessTokenInputValue =
-    siteType === SITE_TYPES.NOVITA ? novitaCredentials.apiKey : accessToken
+    siteType === SITE_TYPES.NOVITA
+      ? novitaCredentials.apiKey
+      : siteType === SITE_TYPES.NANOGPT
+        ? nanoGptCredentials.apiKey
+        : accessToken
   const accessTokenLabel =
     siteType === SITE_TYPES.NOVITA
       ? t("novitaCredentials.apiKey")
@@ -453,9 +470,7 @@ export default function AccountForm({
     <FormField
       label={accessTokenLabel}
       labelAction={labelAction}
-      required={
-        siteType !== SITE_TYPES.NOVITA || !novitaCredentials.consoleToken
-      }
+      required={accessTokenRequired}
     >
       <Input
         ref={accessTokenInputRef}
@@ -509,15 +524,18 @@ export default function AccountForm({
                   ...novitaCredentials,
                   apiKey: e.target.value,
                 })
-              : e.target.value,
+              : siteType === SITE_TYPES.NANOGPT
+                ? encodeNanoGptCredentials({
+                    ...nanoGptCredentials,
+                    apiKey: e.target.value,
+                  })
+                : e.target.value,
           )
         }
         placeholder={accessTokenLabel}
         leftIcon={<KeyRound className="h-5 w-5" />}
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
-        required={
-          siteType !== SITE_TYPES.NOVITA || !novitaCredentials.consoleToken
-        }
+        required={accessTokenRequired}
       />
       {credentialFeedback && (
         <p
@@ -714,6 +732,13 @@ export default function AccountForm({
               >
                 {accessTokenField}
               </NovitaCredentialGuide>
+            ) : siteType === SITE_TYPES.NANOGPT ? (
+              <NanoGptCredentialGuide
+                credential={accessToken}
+                onCredentialChange={onAccessTokenChange}
+              >
+                {accessTokenField()}
+              </NanoGptCredentialGuide>
             ) : (
               accessTokenField()
             )}
@@ -753,7 +778,9 @@ export default function AccountForm({
                     )}
                 </div>
               )}
-            {!(siteType === SITE_TYPES.NOVITA && novitaCredentialActions) &&
+            {showAccessTokenGuidance &&
+              !(siteType === SITE_TYPES.NANOGPT && accessToken.trim()) &&
+              !(siteType === SITE_TYPES.NOVITA && novitaCredentialActions) &&
               credentialPresentation.accessTokenGuidanceKey &&
               (!isDetected || accessToken.trim().length === 0) && (
                 <Alert
@@ -1036,6 +1063,7 @@ export default function AccountForm({
             step="any"
             min="0"
             value={exchangeRate}
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.exchangeRateInput}
             onChange={(e) => onExchangeRateChange(e.target.value)}
             placeholder={t("form.exchangeRatePlaceholder")}
             leftIcon={<ArrowLeftRight className="h-5 w-5" aria-hidden="true" />}

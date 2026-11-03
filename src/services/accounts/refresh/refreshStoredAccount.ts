@@ -186,13 +186,23 @@ async function runRefreshAttempt(
     })
   }
   const refreshedCheckIn = result.success ? result.data.checkIn : undefined
-  if (result.success) {
+  const persistedAccount = await accountMutations.updateAccountFromRefresh(
+    id,
+    updateData,
+    refreshedCheckIn,
+    account,
+    result.success ? result.data : undefined,
+  )
+  const didPersist = persistedAccount !== null
+  const updatedAccount = persistedAccount ?? account
+  if (result.success && persistedAccount) {
     try {
       await maybeCaptureDailyBalanceSnapshot({
         config: prefs.balanceHistory,
         accountId: account.id,
-        quota: updateData.account_info?.quota ?? result.data.quota,
-        nativeBalance: result.data.nativeBalance,
+        quota: persistedAccount.account_info.quota,
+        nativeBalance: persistedAccount.account_info.nativeBalance,
+        balanceUnavailable: persistedAccount.account_info.balanceUnavailable,
         today_income: result.data.today_income,
         today_quota_consumption: result.data.today_quota_consumption,
         todayStatsAvailability: normalizeAccountTodayStatsAvailability(
@@ -208,15 +218,6 @@ async function runRefreshAttempt(
     }
   }
 
-  const didPersist = await accountMutations.updateAccountFromRefresh(
-    id,
-    updateData,
-    refreshedCheckIn,
-    account,
-  )
-  const updatedAccount = didPersist
-    ? await accountQueries.getAccountById(id)
-    : account
   const followUpAccount = didPersist && result.success ? updatedAccount : null
   const reEnabled =
     didPersist && shouldReEnable && updatedAccount?.disabled === false
