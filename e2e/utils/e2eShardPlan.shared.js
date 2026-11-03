@@ -51,7 +51,9 @@ async function collectSpecs(directory, cwd, specs) {
       entry.isFile() &&
       /\.(spec|test)\.[cm]?[jt]sx?$/u.test(entry.name)
     ) {
-      specs.push(relative)
+      // Both tests run in the isolated performance step, outside default shards.
+      if (relative !== "e2e/multiAccountPerformance.spec.ts")
+        specs.push(relative)
     }
   }
 }

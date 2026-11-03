@@ -89,6 +89,7 @@ jobs:
             .eslintcache
           key: quality-cache-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'scripts/eslint/**', 'tsconfig.json', 'tsconfig.eslint.json', 'package.json', 'pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
+            quality-cache-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'scripts/eslint/**', 'tsconfig.json', 'tsconfig.eslint.json', 'package.json', 'pnpm-lock.yaml') }}-
             quality-cache-${{ runner.os }}-
 
       - name: Run type check

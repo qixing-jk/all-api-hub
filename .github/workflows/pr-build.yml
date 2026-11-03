@@ -30,13 +30,20 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: ${{ inputs.pr_number }}
-            });
+            let pr;
+            for (let attempt = 0; attempt < 6; attempt++) {
+              const response = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: ${{ inputs.pr_number }}
+              });
+              pr = response.data;
+              if (pr.mergeable === false) throw new Error('PR has merge conflicts');
+              if (pr.mergeable === true && pr.merge_commit_sha) break;
+              if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            if (pr.mergeable !== true || !pr.merge_commit_sha) throw new Error('PR merge commit is still unavailable after six lookups');
             core.setOutput('ref', pr.head.ref);
-            if (!pr.merge_commit_sha) throw new Error('PR has no merge commit to build');
             core.setOutput('sha', pr.merge_commit_sha);
             core.setOutput('number', pr.number);
 

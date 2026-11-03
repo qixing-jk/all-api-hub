@@ -123,7 +123,7 @@ jobs:
             if ! grep -qxF "$asset" <<< "$assets"; then missing="$missing $asset"; fi
           done
 
-          if ! grep -qF 'all-api-hub-release-extra:start' <<< "$body"; then missing="$missing usage-notes"; fi
+          if ! grep -qF 'all-api-hub-release-extra:start' <<< "$body" || ! grep -qF 'all-api-hub-release-extra:end' <<< "$body"; then missing="$missing usage-notes"; fi
 
           if [ -n "$published" ] && [ "$published" = "$TARGET_SHA" ] && [ -z "$missing" ]; then
             echo "current=true" >> "$GITHUB_OUTPUT"

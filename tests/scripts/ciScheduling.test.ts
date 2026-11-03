@@ -325,12 +325,85 @@ it("builds PR previews only when a maintainer asks for one", () => {
   // Per-push previews spent a runner slot that queued real checks, while merged
   // code is already packaged by the nightly release.
   expect(source).not.toMatch(/^ {2}pull_request(?:_target)?:/m)
+  expect(source).not.toMatch(/^ {2}push:/m)
   expect(source).toContain("workflow_dispatch:")
   expect(source).toContain("ref: ${{ steps.pr_details.outputs.sha }}")
   expect(source).toContain("core.setOutput('sha', pr.merge_commit_sha)")
   expect(source).toContain("persist-credentials: false")
   // Comment publishing cannot rely on the fork-unsafe workflow_run path anymore.
   expect(existsSync(".github/workflows/pr-build-comment.yml")).toBe(false)
+})
+
+it("leaves setup and artifact headroom beyond both shard-two test deadlines", () => {
+  const source = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
+  const job = source.split(/^ {2}e2e-smoke:\r?$/m)[1]?.split(/^ {2}[\w-]+:\r?$/m)[0]
+  const timeout = Number(job?.match(/^ {4}timeout-minutes: (\d+)/m)?.[1])
+  expect(timeout).toBeGreaterThanOrEqual(25)
+})
+
+it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", async () => {
+  const source = readFileSync(".github/workflows/pr-build.yml", "utf8").replace(
+    /\r/g,
+    "",
+  )
+  const step = source
+    .split("      - name: Get PR details")[1]
+    ?.split("      - name:")[0]
+  const script = step
+    ?.split("          script: |\n")[1]
+    ?.split("\n")
+    .map((line) => line.slice(12))
+    .join("\n")
+    .replace("${{ inputs.pr_number }}", "1817")
+  if (!script) throw new Error("Missing PR lookup script")
+  async function lookup(
+    states: Array<{
+      merge_commit_sha: string | null
+      mergeable: boolean | null
+    }>,
+  ) {
+    const outputs: Record<string, unknown> = {}
+    let calls = 0
+    const result = runInNewContext(`(async () => { ${script} })()`, {
+      github: {
+        rest: {
+          pulls: {
+            get: async () => ({
+              data: {
+                ...states[Math.min(calls++, states.length - 1)],
+                head: { ref: "feature" },
+                number: 1817,
+              },
+            }),
+          },
+        },
+      },
+      context: { repo: { owner: "example", repo: "project" } },
+      core: {
+        setOutput: (key: string, value: unknown) => {
+          outputs[key] = value
+        },
+      },
+      setTimeout: (callback: () => void) => callback(),
+    })
+    await result
+    return { calls, outputs }
+  }
+  expect(
+    await lookup([
+      { merge_commit_sha: null, mergeable: null },
+      { merge_commit_sha: "merged-sha", mergeable: true },
+    ]),
+  ).toEqual({
+    calls: 2,
+    outputs: { ref: "feature", sha: "merged-sha", number: 1817 },
+  })
+  await expect(
+    lookup([{ merge_commit_sha: "stale-sha", mergeable: false }]),
+  ).rejects.toThrow()
+  await expect(
+    lookup([{ merge_commit_sha: null, mergeable: null }]),
+  ).rejects.toThrow()
 })
 
 it("still checks permission warnings on every ordinary pull request", () => {

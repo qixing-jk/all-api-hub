@@ -57,9 +57,13 @@ it("propagates planner failures and preserves successful empty-plan fallback", (
   }
   expect(() => run("fail")).toThrow()
   expect(run("empty")).toContain("--shard=2/6")
+  expect(run("specs")).toContain("e2e/a.spec.ts")
   expect(run("specs")).toContain("e2e/b.spec.ts")
 })
 it("restores timings before planning and skips publishing absent reports", () => {
+  expect(
+    smokeWorkflow.indexOf("- name: Restore E2E spec durations"),
+  ).toBeGreaterThan(-1)
   expect(
     smokeWorkflow.indexOf("- name: Restore E2E spec durations"),
   ).toBeLessThan(smokeWorkflow.indexOf("- name: Run E2E smoke"))
@@ -101,6 +105,10 @@ describe("duration-balanced spec packing", () => {
       "g.spec.jsx",
       "h.test.cjs",
       "i.spec.mts",
+      "j.test.ctsx",
+      "k.spec.mtsx",
+      "l.spec.cjsx",
+      "m.test.mjsx",
     ]
     for (const name of [...names, "helper.ts"])
       writeFileSync(path.join(cwd, "e2e", name), "")
@@ -250,6 +258,7 @@ describe("repository spec inventory", () => {
     expect(specs.length).toBeGreaterThan(100)
     expect(specs).toEqual([...specs].sort())
     expect(specs).toContain("e2e/accountActionMenu.spec.ts")
+    expect(specs).not.toContain("e2e/multiAccountPerformance.spec.ts")
     for (const spec of specs) {
       expect(spec.startsWith("e2e/")).toBe(true)
       expect(spec.endsWith(".spec.ts")).toBe(true)

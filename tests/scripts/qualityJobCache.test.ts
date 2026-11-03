@@ -28,8 +28,10 @@ describe("quality job caching", () => {
     expect(step).toContain("hashFiles('eslint.config.js'")
     expect(step).toContain("'pnpm-lock.yaml'")
     expect(step).toContain("restore-keys:")
-    expect(step).toContain("github.run_id")
-    expect(step).toContain("github.run_attempt")
+    const key = step.match(/^ {10}key: (.+)$/m)?.[1]
+    expect(key).toContain("github.run_id")
+    expect(key).toContain("github.run_attempt")
+    expect(step).toMatch(/restore-keys: \|\r?\n {12}quality-cache-.*hashFiles/u)
   })
 
   it("enables the caches in the scripts the job runs", () => {

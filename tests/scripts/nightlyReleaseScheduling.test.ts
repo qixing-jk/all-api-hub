@@ -68,8 +68,9 @@ function runGuard({
   target = "abc123",
   published = target,
   force = "false",
-  body = "<!-- all-api-hub-release-extra:start -->",
+  body = "<!-- all-api-hub-release-extra:start -->\nnotes\n<!-- all-api-hub-release-extra:end -->",
   apiError = "",
+  errorRead = "",
 }: {
   tagMode?: "commit" | "annotated" | "missing"
   assets?: string
@@ -78,6 +79,7 @@ function runGuard({
   force?: string
   body?: string
   apiError?: string
+  errorRead?: string
 } = {}) {
   const cwd = temporaryDirectory()
   const bin = path.join(cwd, "bin")
@@ -87,7 +89,7 @@ function runGuard({
     gh,
     `#!/usr/bin/env bash
 args="$*"
-if [ -n "\${API_ERROR}" ]; then echo "\${API_ERROR}" >&2; exit 1; fi
+if [ -n "\${API_ERROR}" ] && [[ "$args" == *"\${ERROR_READ}"* ]]; then echo "\${API_ERROR}" >&2; exit 1; fi
 case "$args" in
   *"releases/tags/nightly"*)
     case "$args" in
@@ -137,6 +139,7 @@ exit 1
         FORCE: force,
         BODY: body,
         API_ERROR: apiError,
+        ERROR_READ: errorRead,
         GITHUB_OUTPUT: output,
       },
       stdio: "ignore",
@@ -154,8 +157,23 @@ describe("nightly rebuild guard", () => {
       "current=false",
     )
   })
+  it.each([".assets[].name", ".body", "git/tags/TAG_OBJECT_SHA"])(
+    "fails closed when %s alone cannot be read",
+    (errorRead) => {
+      expect(() =>
+        runGuard({
+          tagMode: "annotated",
+          apiError: "gh: server error (HTTP 503)",
+          errorRead,
+        }),
+      ).toThrow()
+    },
+  )
   it("retries when usage notes are missing", () => {
     expect(runGuard({ body: "Rolling prerelease" })).toContain("current=false")
+    expect(
+      runGuard({ body: "<!-- all-api-hub-release-extra:start -->" }),
+    ).toContain("current=false")
   })
   it("skips only when the published tag already names the target commit", () => {
     expect(runGuard({ tagMode: "commit" })).toContain("current=true")
