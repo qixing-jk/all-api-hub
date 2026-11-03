@@ -1,7 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   composeAbortSignals,
-  runAbortableTask,
+  createDeferredAbortDeadline,
 } from "~/services/apiTransport/abortableTask"
 import {
   createOperationScopedValue,
@@ -89,7 +89,8 @@ export async function requestMagpie(
       false,
       true,
     )
-  const signal = composeAbortSignals([options?.signal])
+  const deadline = createDeferredAbortDeadline(MAGPIE_REQUEST_TIMEOUT_MS)
+  const signal = composeAbortSignals([options?.signal, deadline.signal])
   let dispatched = false
   let status: number | undefined
   const execute = async () => {
@@ -98,30 +99,27 @@ export async function requestMagpie(
     const loginWithSignal = async (loginSignal?: AbortSignal) => {
       return await withSiteApiRequestTask(
         baseUrl,
-        () =>
-          runAbortableTask(
-            async (dispatchSignal) => {
-              const login = await fetch(
-                `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
-                {
-                  method: "GET",
-                  credentials: "include",
-                  redirect: "follow",
-                  signal: dispatchSignal,
-                },
-              )
-              reportSiteRateLimitResponse(baseUrl, login)
-              if (!login.ok)
-                throw new MagpieApiError(
-                  "Magpie web authentication failed",
-                  login.status,
-                  false,
-                  true,
-                )
-              discardResponseBody(login)
+        async () => {
+          deadline.start()
+          const login = await fetch(
+            `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
+            {
+              method: "GET",
+              credentials: "include",
+              redirect: "follow",
+              signal: loginSignal,
             },
-            { signals: [loginSignal], timeoutMs: MAGPIE_REQUEST_TIMEOUT_MS },
-          ),
+          )
+          reportSiteRateLimitResponse(baseUrl, login)
+          if (!login.ok)
+            throw new MagpieApiError(
+              "Magpie web authentication failed",
+              login.status,
+              false,
+              true,
+            )
+          discardResponseBody(login)
+        },
         loginSignal,
         undefined,
         SITE_TYPES.MAGPIE,
@@ -149,57 +147,54 @@ export async function requestMagpie(
     const send = () =>
       withSiteApiRequestTask(
         baseUrl,
-        () =>
-          runAbortableTask(
-            async (dispatchSignal) => {
-              dispatched = true
-              const response = await fetch(`${baseUrl}${path}`, {
-                method: body === undefined ? "GET" : "POST",
-                credentials: "include",
-                redirect: "error",
-                signal: dispatchSignal,
-                ...(body === undefined
-                  ? {}
-                  : {
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(body),
-                    }),
-              })
-              status = response.status
-              reportSiteRateLimitResponse(baseUrl, response)
-              if (
-                response.status === MAGPIE_REQUEST_STATUSES.Unauthorized &&
-                session
-              ) {
-                session.authenticated = false
-                if (body === undefined) {
-                  discardResponseBody(response)
-                  return { needsAuthentication: true as const }
-                }
-              }
-              if (!response.ok)
-                throw new MagpieApiError(
-                  "Magpie management request failed",
-                  status,
-                  true,
-                  NON_APPLICATION_STATUSES.includes(status),
-                )
-              try {
-                return {
-                  needsAuthentication: false as const,
-                  data: (await response.json()) as unknown,
-                }
-              } catch {
-                throw new MagpieApiError(
-                  "Invalid Magpie management response",
-                  status,
-                  true,
-                  false,
-                )
-              }
-            },
-            { signals: [signal.signal], timeoutMs: MAGPIE_REQUEST_TIMEOUT_MS },
-          ),
+        async () => {
+          deadline.start()
+          dispatched = true
+          const response = await fetch(`${baseUrl}${path}`, {
+            method: body === undefined ? "GET" : "POST",
+            credentials: "include",
+            redirect: "error",
+            signal: signal.signal,
+            ...(body === undefined
+              ? {}
+              : {
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(body),
+                }),
+          })
+          status = response.status
+          reportSiteRateLimitResponse(baseUrl, response)
+          if (
+            response.status === MAGPIE_REQUEST_STATUSES.Unauthorized &&
+            session
+          ) {
+            session.authenticated = false
+            if (body === undefined) {
+              discardResponseBody(response)
+              return { needsAuthentication: true as const }
+            }
+          }
+          if (!response.ok)
+            throw new MagpieApiError(
+              "Magpie management request failed",
+              status,
+              true,
+              NON_APPLICATION_STATUSES.includes(status),
+            )
+          try {
+            return {
+              needsAuthentication: false as const,
+              data: (await response.json()) as unknown,
+            }
+          } catch {
+            throw new MagpieApiError(
+              "Invalid Magpie management response",
+              status,
+              true,
+              false,
+            )
+          }
+        },
         signal.signal,
         undefined,
         SITE_TYPES.MAGPIE,
@@ -241,5 +236,6 @@ export async function requestMagpie(
     )
   } finally {
     signal.dispose()
+    deadline.dispose()
   }
 }
