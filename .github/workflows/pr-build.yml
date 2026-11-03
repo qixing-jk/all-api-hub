@@ -31,6 +31,14 @@ jobs:
         with:
           script: |
             let pr;
+            let waitedMs = 0;
+            const wait = async (delay) => {
+              if (!Number.isFinite(delay) || delay < 0 || waitedMs + delay > 25000) {
+                throw new Error('PR lookup retry wait exceeds the 25-second budget; retry the preview later');
+              }
+              waitedMs += delay;
+              await new Promise(resolve => setTimeout(resolve, delay));
+            };
             for (let attempt = 0; attempt < 6; attempt++) {
               let response;
               try {
@@ -40,14 +48,24 @@ jobs:
                   pull_number: ${{ inputs.pr_number }}
                 });
               } catch (error) {
-                if (![429, 500, 502, 503, 504].includes(error.status) || attempt === 5) throw error;
-                await new Promise(resolve => setTimeout(resolve, 5000));
+                const headers = error.response?.headers ?? {};
+                const rateLimited = error.status === 429 || (error.status === 403 &&
+                  (headers['retry-after'] !== undefined || headers['x-ratelimit-remaining'] === '0'));
+                if ((!rateLimited && ![500, 502, 503, 504].includes(error.status)) || attempt === 5) throw error;
+                const delays = [];
+                const retryAfter = Number(headers['retry-after'] ?? NaN);
+                if (Number.isFinite(retryAfter) && retryAfter >= 0) delays.push(retryAfter * 1000);
+                const reset = Number(headers['x-ratelimit-reset'] ?? NaN);
+                if (headers['x-ratelimit-remaining'] === '0' && Number.isFinite(reset)) {
+                  delays.push(Math.max(0, reset * 1000 - Date.now()));
+                }
+                await wait(delays.length ? Math.max(...delays) : rateLimited ? 60000 : 5000);
                 continue;
               }
               pr = response.data;
               if (pr.mergeable === false) throw new Error('PR has merge conflicts');
               if (pr.mergeable === true && pr.merge_commit_sha) break;
-              if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 5000));
+              if (attempt < 5) await wait(5000);
             }
             if (pr.mergeable !== true || !pr.merge_commit_sha) throw new Error('PR merge commit is still unavailable after six lookups');
             core.setOutput('ref', pr.head.ref);
