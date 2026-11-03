@@ -9,6 +9,7 @@ import {
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
+import { fetchBaiApiCheckInStatus } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { fetchClawhudDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { fetchDaiguaDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
 import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/denxioCheckIn"
@@ -39,6 +40,16 @@ import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+
+vi.mock(
+  "~/services/apiService/sub2api/checkin/baiApiCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/baiApiCheckIn")
+    >()),
+    fetchBaiApiCheckInStatus: vi.fn(),
+  }),
+)
 
 vi.mock(
   "~/services/apiService/sub2api/checkin/proCheckInExecution",
@@ -216,6 +227,10 @@ const notCheckedStatus = {
 describe("Sub2API Pro daily check-in method Adapter", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // This fixture's host does not serve the daily rewards module.
+    vi.mocked(fetchBaiApiCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
     vi.mocked(fetchToolcodeDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )
