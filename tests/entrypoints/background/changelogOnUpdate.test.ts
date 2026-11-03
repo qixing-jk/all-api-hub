@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest"
 
 type InstalledListener = (details: {
   reason: string
@@ -26,22 +34,22 @@ describe("background onInstalled changelog opening", () => {
   let onStartupListener: (() => void | Promise<void>) | undefined
   let onSuspendListener: (() => void | Promise<void>) | undefined
 
-  let createTabMock: ReturnType<typeof vi.fn>
-  let getDocsChangelogUrlMock: ReturnType<typeof vi.fn>
-  let getManifestMock: ReturnType<typeof vi.fn>
-  let getPreferencesMock: ReturnType<typeof vi.fn>
-  let getPreferencesStrictMock: ReturnType<typeof vi.fn>
-  let hasPermissionsMock: ReturnType<typeof vi.fn>
-  let hasNewOptionalPermissionsMock: ReturnType<typeof vi.fn>
-  let openOrFocusOptionsMenuItemMock: ReturnType<typeof vi.fn>
+  let createTabMock: Mock
+  let getDocsChangelogUrlMock: Mock
+  let getManifestMock: Mock
+  let getPreferencesMock: Mock
+  let getPreferencesStrictMock: Mock
+  let hasPermissionsMock: Mock
+  let hasNewOptionalPermissionsMock: Mock
+  let openOrFocusOptionsMenuItemMock: Mock
   let optionalPermissions: string[]
-  let setPendingVersionMock: ReturnType<typeof vi.fn>
-  let setLastSeenOptionalPermissionsMock: ReturnType<typeof vi.fn>
-  let shouldAutoOpenChangelogForUpdateMock: ReturnType<typeof vi.fn>
+  let setPendingVersionMock: Mock
+  let setLastSeenOptionalPermissionsMock: Mock
+  let shouldAutoOpenChangelogForUpdateMock: Mock
   let triggerStartupSponsorRecommendationsDailySummaryMock: ReturnType<
     typeof vi.fn
   >
-  let isTestModeMock: ReturnType<typeof vi.fn>
+  let isTestModeMock: Mock
 
   beforeEach(() => {
     onInstalledListener = undefined

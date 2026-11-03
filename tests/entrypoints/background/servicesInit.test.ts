@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest"
 
-type InitMock = ReturnType<typeof vi.fn>
+type InitMock = Mock
 
 const {
   usageInitMock,

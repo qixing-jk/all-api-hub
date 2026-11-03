@@ -79,7 +79,7 @@ function install(context, scenario) {
     setup +
     'export PATH="$BROWSER_TEST_BIN:$PATH"\n' +
     workflowCommand(
-      "test.yml",
+      "actions/setup-unit-test-browser/action.yml",
       "Install Chromium for browser-backed unit tests",
     )
   const result = spawnSync(

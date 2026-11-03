@@ -150,7 +150,7 @@ Windows 局部筛选没有观察到切换到 forks 的收益，保留现有 thre
 
 ## 单个 PR 反复迭代的后续审计
 
-用户补充目标：单个 PR 内部的迭代速度同样重要，多 PR 同时运行并不频繁。本节为只读调查和下一轮实验候选，未改变 CI 的验证范围或运行策略。核对的当前 main 为 `b511ceee93e678cdcbadf9849d687438ab373815`；除本分支已实现的 Test 优化外，相关工作流与 main 一致。
+用户补充目标：单个 PR 内部的迭代速度同样重要，多 PR 同时运行并不频繁。本节记录实施前的只读调查和实验候选；后续实施与验证见下一节。核对的当时 main 为 `b511ceee93e678cdcbadf9849d687438ab373815`；除本分支已实现的 Test 优化外，相关工作流与 main 一致。
 
 抓取最近 300 条运行记录，去重后选择最新 50 个已结束的 PR 工作流，逐一取得 jobs/steps 响应；其中普通 PR 42 个、release PR 8 个。抽样窗口为 2026-11-03 17:11:38 至 21:05:06 UTC。分位数使用最近秩，不是长期随机样本。
 
@@ -182,9 +182,53 @@ job 等待指 REST `created_at` 至 `started_at`，包含 runner 调度和 concu
 
 九个抽样普通 PR 的独立 `Native permission warnings` job 均被跳过。例如 [PR #1820 的权限工作流](https://github.com/qixing-jk/all-api-hub/actions/runs/41715898991)：`build / build` 成功，`release-changes` 跳过，最终 `Native permission warnings` 跳过。工作流的该下游 job 没有显式覆盖祖先跳过状态的条件，需要在调度调整时修正并做完整场景回归。
 
-`e2e/extensionPermissionWarnings.spec.ts` 仍在默认 E2E 清单内，普通全量 E2E 提供了这部分验证；独立工作流的绿色结论不能证明其单独执行过浏览器校验，也不能把缺失检查当成调度优化的收益。本轮只记录该缺口，未修复生产工作流。
+`e2e/extensionPermissionWarnings.spec.ts` 仍在默认 E2E 清单内，普通全量 E2E 提供了这部分验证；独立工作流的绿色结论不能证明其单独执行过浏览器校验，也不能把缺失检查当成调度优化的收益。审计时尚未修复该缺口，下节记录修复与验证。
 
 原始 300 条记录、50 份 jobs 响应、一次性分析脚本和统计保留于 `artifacts/queue-audit-20261104/`。其中 `analyze.mjs` 要求所有抽样响应齐全，排除未分配 runner 和负时长的跳过 job；`summary.json` 保存逐工作流阶段、同 head 分组及最长启动等待。复现：`node .scratch/ci-runner-performance/artifacts/queue-audit-20261104/analyze.mjs`。这些本地输入保留用于方案审阅，本节结论保留在 Git。
+
+## 单个 PR 反馈与完整运行的第二轮实验
+
+先正常合并已核对的 main，保留恢复引用。源码一致的 Ubuntu 基线为 `fd7cc1bd115065c38083ebcb3a74b1213462bd7e`，它包含上述 main 和第一轮 CI 优化。此次调整没有修改 `src/`、`public/` 或 `plugins/` 的产品行为。
+
+### 实施范围与本地验收
+
+| 改动 | 可观察行为 | 验证 |
+| --- | --- | --- |
+| Related unit tests | 与六个完整分片并行，按基准 SHA 和实际测试项目选取有限相关测试，尽早提供失败反馈 | 新 CLI 的 14 项真实 Git/Vitest 回归；调度条件回归 |
+| 浅克隆选取 | 仅在需要时取得准确 base commit；计划绑定当前 HEAD，拒绝跨 HEAD 执行 | 浅克隆、改名、删除源码和目录入口、别名、动态导入、循环、glob、超限、全局配置及失败退出回归 |
+| Chromium 准备共享 | 快速预检和完整分片消费同一安装、缓存及实际启动探测 | 8 个安装场景及既有浏览器缓存断言 |
+| 编译模块缓存 | 按 Node/OS/架构、锁文件/配置、分片和源码输入恢复变换结果，完整测试及覆盖率重新执行 | 三轮同输入对照；同内容重写、源码修改、测试修改后的实际失效验证 |
+| 分片报告输出 | 分片输出 JSON 和原始 blob，最终合并阶段生成 HTML/LCOV 等完整报告 | 对照要求相同用例结果及被覆盖源文件清单；完整合并留待 Ubuntu 验证 |
+| 四 worker | 为完整分片设置明确的四 worker 预算，记录 CPU、内存和峰值 RSS | 完整 Ubuntu 运行用于判断收益及稳定性 |
+| 独立权限检查 | build 成功且 workflow 未取消时实际执行 Native permission warnings | 五种调度结果回归；真实浏览器运行留待 Ubuntu 验证 |
+
+完整六分片不依赖预检结果，覆盖率阈值继续由最终合并检查。预检计划会列出所选文件；全局测试输入变化或相关文件超过 60 个时，仅预检直接修改的测试和必要 CI 断言。静态依赖选择不会替代全量验证。
+
+模块缓存使用 Vitest 与覆盖率插件的同一锁定版本 `4.0.17`。升级后先观察到现有 mock 类型的编译失败，再将受影响的函数 mock 和私有方法 spy 改为明确类型；测试断言与产品源码保持原有语义。最后的受影响 Vitest 检查为 14 个文件、550 个通过用例，CLI 回归 64 项全部通过；私有 spy 类型修正后另跑其原有碰撞用例通过。编译通过。Knip 通过，并沿用既有冗余 `e2e-shard-plan.mjs` 提示。
+
+### 本地对照结果
+
+环境为 Windows、Node `24.14.1`、Vitest `4.0.17`、两个 threads worker。比较固定四个文件的 191 个相同用例，保留覆盖率、隔离与断言，交错运行三轮；所有有效运行的 1,451 个被覆盖源文件清单一致。每个变体使用独立 Vite 缓存，记录输入内容哈希，输入变化立即终止对照。
+
+| 候选 | 同轮对照结果 | 决策 |
+| --- | --- | --- |
+| 只生成分片 JSON 报告 | 三轮均缩短进程耗时，中位减少 4.18 秒（约 4.9%） | 进入 Ubuntu 全套验证，完整 HTML/LCOV 在合并阶段生成 |
+| 编译模块缓存冷启动 | 93.59 秒，对应基线 91.24 秒 | 冷启动没有提速，需计入写缓存成本 |
+| 编译模块缓存两次热运行 | 83.10 / 81.93 秒，对应基线 88.23 / 85.96 秒；收集时间 9.99 / 10.04 秒，对应 16.77 / 16.67 秒 | 热运行总耗时约快 5.3%，收集约快 40%；进入 Ubuntu 实测缓存传输后的净收益 |
+| lucide-react 预打包 | 旧版出现 V8 session 错误；升级后四文件虽全部通过，被覆盖源文件清单变化 | 排除，未作为有效提速计入结果 |
+
+以上是局部对照，不代表整轮 Test 或全部 PR 检查的提速。尚未把四 worker 的效果纳入本地对照百分比。原始记录见 `artifacts/imports-20261104-cache-report/result.json`；失败的预打包比较保留于 `artifacts/imports-20261104-final/`，未删除或算入收益。
+
+实际缓存失效探测保留于 `artifacts/cache-freshness-20261104/`：相同内容重写后的热运行读取原缓存；源码从返回 1 改为返回 2 时，生成不同缓存条目并使原断言失败；更新测试断言恢复通过；再更新为错误断言时仍正确失败。五次都保留了实际函数覆盖率和 blob。未复用测试结论或覆盖率报告。
+
+复现局部对照：
+
+```powershell
+node .scratch/ci-runner-performance/benchmark-test-imports.mjs --rounds 3 --variants baseline,json-report,module-cache --label reproduced-imports
+pnpm run test:ci:scripts
+```
+
+缓存机制与版本依据为 [Vitest 4.0.17 缓存说明](https://github.com/vitest-dev/vitest/blob/v4.0.17/docs/config/experimental.md)和[该版本修复记录](https://github.com/vitest-dev/vitest/releases/tag/v4.0.17)。Ubuntu 的完整用例、合并覆盖率、冷热运行及实际权限检查结果将在完成后补入本节；当前本地结果不能代替这些证据。
 
 ## 复现与保留
 
@@ -213,4 +257,4 @@ gh run download 41690970780 --repo qixing-jk/all-api-hub --pattern "e2e-spec-dur
 gh run download 41702374063 --repo qixing-jk/all-api-hub --pattern "e2e-spec-durations-*" --dir "$ciDataRoot/e2e-warm-reports"
 ```
 
-本轮没有证明整轮单测的稳定提速，也没有在 Ubuntu 全套中试验 forks、原始未归一化权重或新的浏览器专用 job；相应数据边界保留在上文，避免将局部结果当作整体结论。
+第一轮报告处理与浏览器安装优化没有证明整轮单测的稳定提速，也没有在 Ubuntu 全套中试验 forks、原始未归一化权重或新的浏览器专用 job；对应数据边界保留在上文。第二轮的反馈与完整运行实验单独记录，避免将局部结果当作整体结论。

@@ -5,16 +5,32 @@ import { resolve } from "node:path"
 
 /** Extract a real workflow command for execution against external tool fixtures. */
 export function workflowCommand(workflow, name) {
+  const file = workflow.includes("/") ? workflow : `workflows/${workflow}`
   const source = readFileSync(
-    new URL(`../../.github/workflows/${workflow}`, import.meta.url),
+    new URL(`../../.github/${file}`, import.meta.url),
     "utf8",
   ).replaceAll("\r\n", "\n")
-  const step = source.split(`      - name: ${name}\n`)[1]?.split(/\n {6}- /)[0]
+  const header = source
+    .split("\n")
+    .find((line) => line.trim() === `- name: ${name}`)
+  const indentation = header?.indexOf("-")
+  const step =
+    header &&
+    source
+      .split(`${header}\n`)[1]
+      ?.split(new RegExp(`\n {${indentation}}- `))[0]
   assert.ok(step, `Missing workflow step: ${name}`)
-  const block = step.match(/^ {8}run: \|\n((?: {10}[^\n]*(?:\n|$)|\n)+)/m)
+  const runIndent = indentation + 2
+  const bodyIndent = indentation + 4
+  const block = step.match(
+    new RegExp(
+      `^ {${runIndent}}run: \\|\\n((?: {${bodyIndent}}[^\\n]*(?:\\n|$)|\\n)+)`,
+      "m",
+    ),
+  )
   const command = block
-    ? block[1].replace(/^ {10}/gm, "")
-    : step.match(/^ {8}run: (.+)$/m)?.[1]
+    ? block[1].replace(new RegExp(`^ {${bodyIndent}}`, "gm"), "")
+    : step.match(new RegExp(`^ {${runIndent}}run: (.+)$`, "m"))?.[1]
   assert.ok(command && command !== "|", `Missing workflow command: ${name}`)
   return command
 }

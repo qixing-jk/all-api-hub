@@ -17,8 +17,10 @@ on:
       - ".github/workflows/commitlint.yml"
       - ".github/workflows/commitlint-title.yml"
       - ".github/workflows/translate-docs.yml"
+      - ".github/workflows/permission-warnings.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
+      - "scripts/pr-related-tests.mjs"
       - "scripts/write-unit-test-durations.mjs"
       - "scripts/utils/unitTestDurations.mjs"
       - "scripts/utils/vitestBlob.mjs"
@@ -36,6 +38,7 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/test.yml"
       - ".github/actions/setup/**"
+      - ".github/actions/setup-unit-test-browser/**"
   pull_request:
     paths:
       - "src/**"
@@ -49,8 +52,10 @@ on:
       - ".github/workflows/commitlint.yml"
       - ".github/workflows/commitlint-title.yml"
       - ".github/workflows/translate-docs.yml"
+      - ".github/workflows/permission-warnings.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
+      - "scripts/pr-related-tests.mjs"
       - "scripts/write-unit-test-durations.mjs"
       - "scripts/utils/unitTestDurations.mjs"
       - "scripts/utils/vitestBlob.mjs"
@@ -68,7 +73,14 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/test.yml"
       - ".github/actions/setup/**"
-  workflow_dispatch: {}
+      - ".github/actions/setup-unit-test-browser/**"
+  workflow_dispatch:
+    inputs:
+      related_base:
+        description: "Base commit SHA for measuring early related-test feedback"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -82,6 +94,48 @@ jobs:
     # Ordinary changes need no diff exemption, so avoid a serial runner allocation.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
+
+  related-tests:
+    name: Related unit tests
+    needs: release-changes
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.related_base != '')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
+
+      - name: Select related tests
+        id: plan
+        env:
+          RELATED_BASE: ${{ github.event.pull_request.base.sha || inputs.related_base }}
+        run: node scripts/pr-related-tests.mjs plan --base "$RELATED_BASE" --fetch-base --output .vitest-related-tests/plan.json
+
+      - name: Test CI tooling
+        if: steps.plan.outputs.ci-scripts == 'true'
+        run: pnpm run test:ci:scripts
+
+      - name: Setup Chromium for unit tests
+        if: steps.plan.outputs.has-tests == 'true'
+        uses: ./.github/actions/setup-unit-test-browser
+
+      - name: Run related tests
+        if: steps.plan.outputs.has-tests == 'true'
+        run: node scripts/pr-related-tests.mjs run --plan .vitest-related-tests/plan.json
+
+      - name: Upload related-test plan
+        if: ${{ !cancelled() && hashFiles('.vitest-related-tests/plan.json') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: related-test-plan
+          path: .vitest-related-tests/plan.json
+          include-hidden-files: true
+          retention-days: 7
 
   unit-tests:
     needs: release-changes
@@ -106,10 +160,13 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Test CI report and release guards
-        # Keep guard regressions covered on ordinary changes without four
-        # preflight runners; only one shard needs these tooling tests.
+        # Only one full-suite shard needs to repeat the CI CLI guards.
         if: matrix.shard == 1
-        run: node --test tests/scripts/release-pr-check.test.mjs tests/scripts/check-unit-test-reports.test.mjs tests/scripts/unit-test-browser-install.test.mjs tests/scripts/vitest-blob.test.mjs
+        run: pnpm run test:ci:scripts
+
+      - name: Record runner capacity
+        id: runtime
+        run: node -e 'const fs = require("node:fs"); const os = require("node:os"); console.log(JSON.stringify({node:process.version,cpus:os.availableParallelism(),memoryBytes:os.totalmem(),cpuModel:os.cpus()[0]?.model})); fs.appendFileSync(process.env.GITHUB_OUTPUT, "node=" + process.version + "\n")'
 
       - name: Restore unit test durations
         uses: actions/cache/restore@v5
@@ -121,48 +178,28 @@ jobs:
           restore-keys: |
             unit-test-durations-
 
-      - name: Get Playwright version
-        id: playwright_version
-        run: |
-          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log('version=' + (pkg.devDependencies?.['@playwright/test'] ?? 'unknown'))" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        # Six shards would otherwise download the same browser on every run. The
-        # key matches the E2E workflows, so one download serves both.
-        uses: actions/cache@v5
+      - name: Restore compiled test modules
+        id: modules
+        continue-on-error: true
+        uses: actions/cache/restore@v5
         with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright_version.outputs.version }}
+          path: node_modules/.experimental-vitest-cache
+          key: unit-test-modules-${{ runner.os }}-${{ runner.arch }}-${{ steps.runtime.outputs.node }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'vitest*.ts', 'tsconfig*.json') }}-${{ matrix.shard }}-${{ hashFiles('src/**', 'tests/**', 'scripts/**', 'plugins/**') }}
           restore-keys: |
-            ${{ runner.os }}-playwright-
+            unit-test-modules-${{ runner.os }}-${{ runner.arch }}-${{ steps.runtime.outputs.node }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'vitest*.ts', 'tsconfig*.json') }}-${{ matrix.shard }}-
 
-      # Script acceptance tests exercise real DOM behavior in headless Chromium.
-      - name: Install Chromium for browser-backed unit tests
-        # These tests use the default headless shell. Probe the runner's existing
-        # libraries first; a slow apt mirror need not delay an already usable browser.
-        # Keep both Chromium binaries because E2E restores the same browser cache.
-        run: |
-          pnpm exec playwright install chromium
-          probe_browser() {
-            pnpm exec node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true, timeout: 15000 }); await browser.close();'
-          }
-          probe_log="${RUNNER_TEMP}/unit-chromium-probe.log"
-          if probe_browser > "$probe_log" 2>&1; then
-            echo "Chromium headless shell starts with existing host libraries."
-            exit 0
-          fi
-          cat "$probe_log"
-          if ! grep -Eq 'Host system is missing dependencies|error while loading shared libraries:' "$probe_log"; then
-            exit 1
-          fi
-          pnpm exec playwright install-deps chromium
-          probe_browser
+      - name: Setup Chromium for unit tests
+        uses: ./.github/actions/setup-unit-test-browser
 
       - name: Run test shard with coverage
+        # The merge job renders final HTML/LCOV; blobs retain each shard's coverage.
         env:
           UNIT_TEST_SHARD_DURATIONS: .vitest-durations/shard-durations.json
+          VITEST_FS_MODULE_CACHE: "1"
         run: |
-          pnpm exec vitest --run --coverage \
+          /usr/bin/time -v pnpm exec vitest --run --coverage \
+            --maxWorkers=4 \
+            --coverage.reporter=json \
             --coverage.thresholds.statements=0 \
             --coverage.thresholds.branches=0 \
             --coverage.thresholds.functions=0 \
@@ -183,6 +220,15 @@ jobs:
           # The merge job downloads this by name. A rerun must replace the
           # previous attempt's blob instead of adding a second artifact.
           overwrite: true
+
+      - name: Save compiled test modules
+        # Assertion failures still leave reusable transforms; tests execute again.
+        if: ${{ !cancelled() && steps.modules.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: node_modules/.experimental-vitest-cache
+          key: ${{ steps.modules.outputs.cache-primary-key }}
 
   unit-tests-merge:
     runs-on: ubuntu-latest

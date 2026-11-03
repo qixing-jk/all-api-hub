@@ -10,10 +10,16 @@ const workflows = readdirSync(".github/workflows").filter((file) =>
   file.endsWith(".yml"),
 )
 
+function workflowSource(file: string) {
+  return readFileSync(`.github/workflows/${file}`, "utf8").replace(
+    /uses: \.\/(\.github\/actions\/[^\s]+)/g,
+    (_match, directory: string) =>
+      readFileSync(`${directory}/action.yml`, "utf8"),
+  )
+}
+
 const installing = workflows.filter((file) =>
-  readFileSync(`.github/workflows/${file}`, "utf8").includes(
-    "playwright install",
-  ),
+  workflowSource(file).includes("playwright install"),
 )
 
 describe("CI Playwright browser reuse", () => {
@@ -30,7 +36,7 @@ describe("CI Playwright browser reuse", () => {
   it.each(installing)(
     "%s restores the browser cache before installing",
     (file) => {
-      const source = readFileSync(`.github/workflows/${file}`, "utf8")
+      const source = workflowSource(file)
       const cacheIndex = source.indexOf("~/.cache/ms-playwright")
       expect(cacheIndex).toBeGreaterThan(-1)
       // A per-version key lets every workflow and shard share one download.
@@ -43,7 +49,7 @@ describe("CI Playwright browser reuse", () => {
   it.each(installing)(
     "%s resolves the Playwright version it keys on",
     (file) => {
-      const source = readFileSync(`.github/workflows/${file}`, "utf8")
+      const source = workflowSource(file)
       const start = source.indexOf("- name: Get Playwright version")
       expect(start).toBeGreaterThan(-1)
       const step = source.slice(start, source.indexOf("- name:", start + 10))

@@ -109,8 +109,14 @@ it("runs release-diff regression checks once when ordinary preflight jobs are sk
     ?.split("      - name:")[0]
   const guard = step?.match(/^ {8}if: (.+)$/m)?.[1]?.trim()
   expect(guard).toBeDefined()
-  expect(step).toContain("node --test tests/scripts/release-pr-check.test.mjs")
-  expect(step).toContain("tests/scripts/check-unit-test-reports.test.mjs")
+  expect(step).toContain("pnpm run test:ci:scripts")
+  const tooling = JSON.parse(readFileSync("package.json", "utf8")).scripts[
+    "test:ci:scripts"
+  ]
+  expect(tooling).toContain(
+    "node --test tests/scripts/release-pr-check.test.mjs",
+  )
+  expect(tooling).toContain("tests/scripts/check-unit-test-reports.test.mjs")
   for (let shard = 1; shard <= 6; shard++) {
     expect(runInNewContext(guard ?? "true", { matrix: { shard } })).toBe(
       shard === 1,
@@ -215,6 +221,62 @@ function needs(result: string, releaseOnly = "") {
     "unit-tests": { result: "success" },
   }
 }
+
+describe("early related-test feedback", () => {
+  it("starts alongside full shards after an ordinary skipped release gate", () => {
+    const context = {
+      github: github("pull_request"),
+      needs: needs("skipped"),
+      inputs: {},
+    }
+    expect(shouldRun("test.yml", "related-tests", context, false)).toBe(true)
+    expect(shouldRun("test.yml", "unit-tests", context, false)).toBe(true)
+  })
+
+  it.each([
+    { event: "push", base: "", run: false },
+    { event: "workflow_dispatch", base: "", run: false },
+    { event: "workflow_dispatch", base: "base-sha", run: true },
+  ])(
+    "previews $event only with a requested comparison base",
+    ({ event, base, run }) => {
+      expect(
+        shouldRun(
+          "test.yml",
+          "related-tests",
+          {
+            github: github(event),
+            needs: needs("skipped"),
+            inputs: { related_base: base },
+          },
+          false,
+        ),
+      ).toBe(run)
+    },
+  )
+
+  it("honors cancellation, release-only exemptions and failed release detection", () => {
+    for (const overrides of [
+      { cancelled: () => true },
+      { needs: needs("success", "true") },
+      { needs: needs("failure") },
+    ]) {
+      expect(
+        shouldRun(
+          "test.yml",
+          "related-tests",
+          {
+            github: github("pull_request"),
+            needs: needs("skipped"),
+            inputs: {},
+            ...overrides,
+          },
+          false,
+        ),
+      ).toBe(false)
+    }
+  })
+})
 
 describe("smoke tests after an ordinary skipped release ancestor", () => {
   it.each(["push", "workflow_dispatch", "pull_request"])(
@@ -585,6 +647,52 @@ it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", 
   ).rejects.toThrow()
 })
 
+it("runs native warnings after an ordinary skipped release ancestor", () => {
+  expect(
+    shouldRun(
+      "permission-warnings.yml",
+      "warnings",
+      {
+        github: github("pull_request"),
+        needs: { build: { result: "success" } },
+      },
+      false,
+    ),
+  ).toBe(true)
+})
+
+it.each(["failure", "skipped", "cancelled"])(
+  "does not run native warnings after a %s build",
+  (result) => {
+    expect(
+      shouldRun(
+        "permission-warnings.yml",
+        "warnings",
+        { needs: { build: { result } } },
+        false,
+      ),
+    ).toBe(false)
+  },
+)
+
+it("cancels native warnings while retaining checks for skip-e2e PRs", () => {
+  const context = {
+    needs: { build: { result: "success" } },
+    labels: ["skip-e2e"],
+  }
+  expect(shouldRun("permission-warnings.yml", "warnings", context, false)).toBe(
+    true,
+  )
+  expect(
+    shouldRun(
+      "permission-warnings.yml",
+      "warnings",
+      { ...context, cancelled: () => true },
+      false,
+    ),
+  ).toBe(false)
+})
+
 it("still checks permission warnings on every ordinary pull request", () => {
   const source = readFileSync(
     ".github/workflows/permission-warnings.yml",
@@ -600,7 +708,6 @@ it("still checks permission warnings on every ordinary pull request", () => {
   const warnings = source.split(/^ {2}warnings:/m)[1]?.split(/^ {2}[\w-]+:/m)[0]
   expect(warnings).toBeDefined()
   expect(warnings).toContain("needs: build")
-  expect(warnings).not.toMatch(/^ {4}if:/m)
 })
 
 it("merges reports from failed shards but never from skipped or cancelled shards", () => {
