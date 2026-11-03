@@ -7,6 +7,7 @@ import type { CheckInMethodId } from "~/types/checkIn"
 
 import { aiRouterProvider } from "./aiRouter"
 import { anyrouterProvider } from "./anyrouter"
+import { baiApiProvider } from "./baiApi"
 import { clawhudProvider } from "./clawhud"
 import type { AutoCheckinProvider } from "./contracts"
 import { daiguaProvider } from "./daigua"
@@ -55,6 +56,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.RelayForDailyCheckIn]: relayForProvider,
   [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]: dayaProvider,
   [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]: pmApiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: baiApiProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
