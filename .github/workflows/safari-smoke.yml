@@ -16,6 +16,8 @@ jobs:
   safari:
     runs-on: macos-15
     timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v5
         with:

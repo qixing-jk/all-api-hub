@@ -11,7 +11,11 @@ export async function runSafariSmoke({
   platform = process.platform,
   output = path.resolve("test-results/safari"),
   command = (file, args) =>
-    execFileSync(file, args, { encoding: "utf8", timeout: 600000 }),
+    execFileSync(file, args, {
+      encoding: "utf8",
+      timeout: file === "osascript" ? 30000 : 600000,
+      maxBuffer: 16 * 1024 * 1024,
+    }),
 }: {
   platform?: string
   output?: string
@@ -29,6 +33,7 @@ export async function runSafariSmoke({
     )
   const check = async (name: string, action: () => unknown) => {
     const row: Check = { name, status: "running" }
+    console.log(`[Safari] ${name}`)
     report.checks.push(row)
     save()
     try {
