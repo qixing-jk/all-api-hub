@@ -6,6 +6,10 @@ import {
   SIBLING_DTO_VERDICTS,
 } from "~/services/apiService/sub2api/checkin/siblingStatusContracts"
 import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import {
   createUserCheckInStatusEndpoint,
   resolveUserCheckInTimezone,
   USER_CHECK_IN_STATUS_ENDPOINT,
@@ -171,8 +175,9 @@ export async function fetchGeniusProgrammerDailyCheckInStatus(
  */
 export async function performGeniusProgrammerDailyCheckIn(
   request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
 ) {
-  return executeAuthenticatedSub2ApiRequest(
+  return executeSub2ApiCheckInWithRecovery(
     request,
     GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -182,6 +187,7 @@ export async function performGeniusProgrammerDailyCheckIn(
       })
       return parseGeniusProgrammerDailyCheckInMutationResponse(response)
     },
-    { recoverUnauthorized: false },
+    fetchGeniusProgrammerDailyCheckInStatus,
+    options,
   )
 }

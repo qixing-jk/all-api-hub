@@ -132,6 +132,7 @@ export const xiaobaiCodeProvider: AutoCheckinProvider = {
     try {
       const result = await performXiaobaiCodeDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       switch (result.kind) {
         case XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied:

@@ -85,6 +85,7 @@ export const baiApiProvider: AutoCheckinProvider = {
     try {
       const result = await performBaiApiCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       const reward = readUsdReward(result.rewardAmount)
       return {

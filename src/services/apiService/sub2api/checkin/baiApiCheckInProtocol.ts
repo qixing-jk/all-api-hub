@@ -15,11 +15,5 @@ export function createBaiApiCheckInStatusEndpoint(timezone: string): string {
   return `${BAI_API_CHECK_IN_STATUS_ENDPOINT}?timezone=${encodeURIComponent(timezone)}`
 }
 
-/** Resolves the reader's IANA timezone independently of path construction. */
-export function resolveBaiApiCheckInTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  } catch {
-    return "UTC"
-  }
-}
+/** Uses the same browser timezone fallback as sibling Sub2API methods. */
+export { resolveUserCheckInTimezone as resolveBaiApiCheckInTimezone } from "./userCheckInProtocol"

@@ -4,6 +4,10 @@ import {
   HIYO_CHECK_IN_ENDPOINT,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
@@ -105,12 +109,15 @@ export async function fetchHiyoDailyCheckInStatus(request: ApiServiceRequest) {
 
 /**
  * Native user-B-g3wqMl.js posts {} without Turnstile. A claim can consume a
- * bonus after the daily grant, so never replay POST, including after a 401.
- * The provider requires fresh daily eligibility; outer execution reconciles
+ * bonus after the daily grant, so a recovered 401 must recheck daily eligibility.
+ * The shared recovery guard blocks retries once daily_claimed is true. Outer execution reconciles
  * uncertain replies with GET. Only an explicit daily award is a daily reward.
  */
-export async function performHiyoDailyCheckIn(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function performHiyoDailyCheckIn(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     HIYO_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -131,6 +138,7 @@ export async function performHiyoDailyCheckIn(request: ApiServiceRequest) {
         throw invalidResponse()
       return { rewardAmount: data.amount }
     },
-    { recoverUnauthorized: false },
+    fetchHiyoDailyCheckInStatus,
+    options,
   )
 }

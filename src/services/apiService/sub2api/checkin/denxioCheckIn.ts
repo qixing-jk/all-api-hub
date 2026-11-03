@@ -1,4 +1,9 @@
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import {
+  createSub2ApiCheckInRecoveryGuard,
+  SUB2API_CHECK_IN_RECOVERY_REASONS,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   fetchApiResponse,
@@ -241,46 +246,28 @@ const defaultWait = (milliseconds: number): Promise<void> =>
  */
 export async function performDenxioDailyCheckIn(
   request: ApiServiceRequest,
-  options: {
-    beforeRecoveredMutation?: () => Promise<boolean>
+  options: Sub2ApiCheckInRecoveryOptions & {
     wait?: (milliseconds: number) => Promise<void>
   } = {},
 ): Promise<DenxioDailyCheckInOperationResult> {
   const timezone = resolveTimezone()
-  const beforeUnauthorizedRetry = async (
-    recoveredRequest: ApiServiceRequest,
-  ) => {
-    const status = await fetchStatusWithRequest(
-      recoveredRequest,
-      timezone,
-    ).catch(() => {
-      throw new DenxioRecoveredMutationBlockedError({
-        kind: DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
-      })
-    })
-    if (status.checkedInToday) {
-      throw new DenxioRecoveredMutationBlockedError({
-        kind: DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
-      })
-    }
-    if (!status.enabled) {
-      throw new DenxioRecoveredMutationBlockedError({
-        kind: DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Disabled,
-      })
-    }
-    if (
-      options.beforeRecoveredMutation &&
-      !(await options.beforeRecoveredMutation())
-    ) {
-      throw new DenxioRecoveredMutationBlockedError({
-        kind: DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
-      })
-    }
-    notifyApiTransportObserver(
-      recoveredRequest.observer,
-      "onPreHandlerUnauthorized",
-    )
-  }
+  const beforeUnauthorizedRetry = createSub2ApiCheckInRecoveryGuard(
+    (recoveredRequest) => fetchStatusWithRequest(recoveredRequest, timezone),
+    options,
+    (reason) =>
+      new DenxioRecoveredMutationBlockedError({
+        kind: {
+          [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
+            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
+          [SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled]:
+            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Disabled,
+          [SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable]:
+            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable,
+          [SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed]:
+            DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
+        }[reason],
+      }),
+  )
 
   try {
     const beginSession = await executeAuthenticatedSub2ApiRequest(

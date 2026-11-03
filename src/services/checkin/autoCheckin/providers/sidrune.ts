@@ -51,6 +51,7 @@ export const sidruneProvider: AutoCheckinProvider = {
     try {
       const data = await performSidruneDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,

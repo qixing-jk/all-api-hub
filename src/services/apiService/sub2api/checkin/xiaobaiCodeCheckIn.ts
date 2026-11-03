@@ -1,4 +1,8 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -130,8 +134,9 @@ const invalidCheckInResponse = (): ApiError =>
  */
 export async function performXiaobaiCodeDailyCheckIn(
   request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
 ) {
-  return executeAuthenticatedSub2ApiRequest(
+  return executeSub2ApiCheckInWithRecovery(
     request,
     CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -178,7 +183,13 @@ export async function performXiaobaiCodeDailyCheckIn(
         data: { rewardAmount },
       }
     },
-    { recoverUnauthorized: false },
+    async (recoveredRequest) => {
+      const probe = await probeXiaobaiCodeCheckInStatus(recoveredRequest)
+      if (probe.outcome !== CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched)
+        throw new Error("Check-in status unavailable")
+      return probe.status
+    },
+    options,
   )
 }
 

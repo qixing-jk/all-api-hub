@@ -1,4 +1,8 @@
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
@@ -92,8 +96,11 @@ export async function fetchSidruneDailyCheckInStatus(
 }
 
 /** Native welfare module posts without a body; response fields come from WelfareView. */
-export async function performSidruneDailyCheckIn(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function performSidruneDailyCheckIn(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     SIDRUNE_CHECK_IN_ENDPOINT,
     async (authenticated) => {
@@ -121,6 +128,7 @@ export async function performSidruneDailyCheckIn(request: ApiServiceRequest) {
       }
       return { rewardAmount: amount, milestoneBonus: bonus, streakDay: day }
     },
-    { proactiveRefresh: false, recoverUnauthorized: false },
+    fetchSidruneDailyCheckInStatus,
+    options,
   )
 }
