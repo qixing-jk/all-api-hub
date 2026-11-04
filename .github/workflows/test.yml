@@ -76,6 +76,11 @@ on:
       - ".github/actions/setup-unit-test-browser/**"
   workflow_dispatch:
     inputs:
+      node_version:
+        description: "Explicit Node.js version for controlled CI measurements"
+        required: false
+        default: ""
+        type: string
       related_base:
         description: "Base commit SHA for measuring early related-test feedback"
         required: false
@@ -109,6 +114,8 @@ jobs:
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node_version }}
 
       - name: Select related tests
         id: plan
@@ -158,6 +165,8 @@ jobs:
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node_version }}
 
       - name: Test CI report and release guards
         # Only one full-suite shard needs to repeat the CI CLI guards.
@@ -243,6 +252,8 @@ jobs:
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node_version }}
 
       - name: Download Vitest blob reports
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
