@@ -38,6 +38,8 @@ const config: KnipConfig = {
     // Manual signing tool for a packaged ZIP into a CRX; package-distribution
     // signs in-process, so no static import reaches this entry.
     "scripts/sign-crx.mjs",
+    // Invoked by the documentation updater as a subprocess.
+    "scripts/generate-doc-screenshots.mjs",
   ],
   project: [
     "src/**/*.{ts,tsx}!",

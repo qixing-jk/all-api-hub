@@ -2,7 +2,7 @@
 
 > 自社運用の管理パネル（New API, AxonHub, Octopus など）管理者向けの自動化ツールです。上流プロバイダーから最新のモデルリストを自動的に取得し、チャネル設定を更新することで、同期の手間を省きます。
 
-![モデルリスト同期インターフェース](../static/image/new-api-channel-sync.png)
+![モデルリスト同期インターフェース](../static/image/ja/new-api-channel-sync.png)
 
 ## 機能の概要
 

@@ -25,7 +25,7 @@ The complete API key is stored in the extension's local storage. Masking in the 
 - **Model Integration**: Directly open the current credentials in the model list to view the model catalog and verification results.
 - **Quick Export**: Prioritizes a direct action for the currently configured self-hosted site. Other targets are grouped as chat clients, coding agents, and gateways and routing tools: Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, Cursor++, and Claude Code Router.
 
-![API Credential Library list](../static/image/api-credential-profile-list.png)
+![API Credential Library list](../static/image/en/api-credential-profile-list.png)
 
 ## Access Method
 

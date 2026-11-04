@@ -16,6 +16,8 @@ The **Web AI API Sniffing** feature simplifies this process into:
 Select text containing a `Base URL` or `API Key` on any webpage, right-click, and select **"Check AI API"**.
 The extension will attempt to extract valid interface information from the selected text (or clipboard) and pop up a test overlay within the current page.
 
+![Test dialog opened over the page](../static/image/en/web-ai-api-check-page.png)
+
 ### 2. Automatic Sniffing (Auto Detect)
 By default, selection and copy actions on all HTTP/HTTPS pages can trigger detection of the selected or copied content. Opening a post alone does not scan the entire page.
 - If a likely valid `Base URL + Key` combination is extracted, a lightweight prompt will pop up in the upper right corner of the page.
@@ -29,6 +31,16 @@ Perform the following operations without leaving the current webpage:
 - **Test mode**: Choose **`Streaming`** (the default) or **`Non-streaming`**. Generation tests use that mode without switching automatically on failure. Results and verification history saved to the API Credential Library show the mode used. Fetching the model list is unaffected.
 - **Get Model List**: Fetch the full list of model IDs supported by the upstream site with one click.
 - **Save to API Credential Library**: Once verified, save it with one click to the extension's [API Credential Library](./api-credential-profiles.md) for later copying, verification, or export to tools like CherryStudio.
+
+![Test dialog with credentials filled in](../static/image/en/web-ai-api-check-dialog.png)
+
+The dialog splits the credentials into `Base URL`, `API key`, `API type`, `Model ID`, `Test mode`, and `Client simulation`. Each probe on the right runs independently and shows its latency once it passes; when one fails, expand **"Execution result"** to read the raw request and response.
+
+### 4. Pelican drawing test
+
+Run the drawing test in the same in-page panel to generate and preview an SVG of a pelican riding a bicycle with the selected model. Agent mode also tests artifact creation through tools. The screenshot uses a demo response and does not represent a model benchmark result.
+
+![Available tests and execution status in the source page](../static/image/en/web-ai-api-check-results.png)
 
 ## Configuration and Customization
 

@@ -105,6 +105,54 @@ The loader uses Node's `util.parseEnv` syntax (comments, quoted values, multilin
 
 WXT dev/build commands retain native mode/browser-specific env loading. Shared defaults with `WXT_` or `VITE_` prefixes are excluded by the Node loader because those prefixes expose variables to extension code. Keep test credentials in Node-only variables and env files out of Git; see [WXT environment variables](https://wxt.dev/guide/essentials/config/environment-variables).
 
+### Updating documentation screenshots
+
+Use the maintained command after a UI or feature change. Select pages explicitly;
+ordinary prose edits do not require new screenshots.
+
+```bash
+pnpm docs:screenshots --list
+pnpm docs:screenshots "--pages=keys,channels,sync"
+pnpm docs:screenshots "--pages=web-ai-api-check,usage,balance"
+```
+
+The command builds the required extension variants from the current working tree,
+captures the selected pages in Chinese, English and Japanese, validates every
+requested PNG, and updates their existing paths under `docs/docs/static/image/`.
+README and guide references continue to use those paths. Use `--lang=zh`, `en` or
+`ja` for a single language; omit `--pages` for a full refresh. Playwright Chromium
+must already be installed (`pnpm e2e:install`). Shared local tooling configuration
+uses the same environment loader described above.
+
+Each run prints a report path under the ignored `.scratch/docs-screenshot-updates/`.
+It retains original images, newly captured images, command logs, a consolidated
+Markdown comparison gallery and JSON metadata. Pixel differences are included for
+matching image dimensions. Missing prior images and dimension changes are labelled
+explicitly. Existing documentation images have unknown original build provenance;
+they are asset comparisons, not controlled visual regression baselines.
+
+Captures use deterministic demo data in the actual extension UI. A successful run
+does not replace visual review or prove live provider behavior. Check the final
+images and comparison report before committing. Capture/build failures or missing
+images retain failure evidence and leave existing documentation images unchanged.
+Captures require ready page content and requested framing anchors; readiness failures
+stop the run. If publishing an image fails, the command restores attempted existing
+assets and removes attempted new assets. It continues restoring other assets when a
+rollback fails and reports failed targets and retained backup paths in `failure.json`.
+This recovery handles reported I/O errors; it is not an atomic transaction across
+process crashes or power loss.
+A per-checkout lock prevents concurrent runs of this command; other build commands
+do not participate in that lock. A later run recovers `update.lock` only when its
+recorded PID is confirmed to have exited. Live, malformed or unreadable ownership
+is preserved. Recovery uses an exclusive `update.lock.recovery` marker; if a
+process is forcibly stopped during recovery, inspect that marker's PID and the
+main lock before manually removing either file. Preserve them when ownership
+cannot be verified. Update fixture data and capture checkpoints when
+feature behavior changes. There is no automatic CI trigger or page inference.
+
+The lower-level `scripts/generate-doc-screenshots.mjs` remains available for an
+already prepared build, including `--output=<directory>` for isolated capture.
+
 ### Local screenshot comparison
 
 Use `pnpm visual:capture --help` for the generic entrypoint. Existing asserted Playwright workflows do not need a scenario registry entry. Add an opt-in checkpoint after the UI is ready:
