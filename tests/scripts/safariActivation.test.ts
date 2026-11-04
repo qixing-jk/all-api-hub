@@ -4,7 +4,17 @@ import { expect, it } from "vitest"
 const identifier =
   "io.github.qixingjk.allapihub.nativeCookieTrial.run20261104000000000.Extension"
 const key = `${identifier} (TESTTEAM)`
-const run = (state: object, bundle = identifier) =>
+const run = (
+  state: object,
+  bundle = identifier,
+  permissions = [
+    "cookies",
+    "nativeMessaging",
+    "storage",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+  ],
+) =>
   spawnSync(
     process.env.AAH_SAFARI_TEST_PYTHON ?? "python3",
     [
@@ -15,13 +25,7 @@ const run = (state: object, bundle = identifier) =>
       input: JSON.stringify({
         state,
         identifier: bundle,
-        permissions: [
-          "cookies",
-          "nativeMessaging",
-          "storage",
-          "http://127.0.0.1/*",
-          "http://localhost/*",
-        ],
+        permissions,
       }),
       encoding: "utf8",
       timeout: 5000,
@@ -67,6 +71,13 @@ it("prepares only the registered CI trial and grants its loopback fixture access
     "http://127.0.0.1/*",
     "http://localhost/*",
   ])
+  expect(prepared[key].Permissions).toEqual([
+    "cookies",
+    "nativeMessaging",
+    "storage",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+  ])
   expect(prepared[key].RevokedPermissionOrigins).not.toHaveProperty(
     "http://127.0.0.1/*",
   )
@@ -90,10 +101,20 @@ it("prepares only the registered CI trial and grants its loopback fixture access
   )
 })
 
-it.each([
+const invalidRegistrationCases: {
+  state: object
+  bundle: string
+  permissions?: string[]
+  error: string
+}[] = [
   { state: {}, bundle: identifier, error: "registered trial" },
   {
     state: { [key]: {}, [`${identifier} (OTHERTEAM)`]: {} },
+    bundle: identifier,
+    error: "registered trial",
+  },
+  {
+    state: { [key]: { RemovedDate: "2026-11-04T00:00:00" } },
     bundle: identifier,
     error: "registered trial",
   },
@@ -102,10 +123,20 @@ it.each([
     bundle: "io.github.qixingjk.allapihub.Extension",
     error: "generated CI trial",
   },
-])(
-  "rejects missing, ambiguous or unrelated extension state (%j)",
-  ({ state, bundle, error }) => {
-    const result = run(state, bundle)
+  ...["cookies", "nativeMessaging"].map((missingPermission) => ({
+    state: { [key]: {} },
+    bundle: identifier,
+    permissions: ["cookies", "nativeMessaging"].filter(
+      (permission) => permission !== missingPermission,
+    ),
+    error: "Missing CI fixture permissions",
+  })),
+]
+
+it.each(invalidRegistrationCases)(
+  "rejects invalid trial registration or fixture permissions (%j)",
+  ({ state, bundle, permissions, error }) => {
+    const result = run(state, bundle, permissions)
     expect(result.status).toBe(1)
     expect(result.stderr).toContain(error)
   },

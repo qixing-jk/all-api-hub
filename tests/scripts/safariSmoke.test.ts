@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -6,7 +7,16 @@ import { afterEach, expect, it, vi } from "vitest"
 
 import { runSafariSmoke } from "~~/e2e/safari/smoke"
 
-afterEach(() => vi.useRealTimers())
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>()
+  return { ...actual, execFileSync: vi.fn(actual.execFileSync) }
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllEnvs()
+  vi.mocked(execFileSync).mockReset()
+})
 
 const withUsableDriver =
   (command: (file: string, args: string[]) => string) =>
@@ -453,8 +463,12 @@ it("requires registration of the built native extension before activation", asyn
           return `Prepared independent trial: ${output}`
         if (file === "xcodebuild" && args.includes("-list"))
           return JSON.stringify({ project: { schemes: ["Trial"] } })
-        if (file === "pluginkit" && args.includes("-a"))
+        if (file === "pluginkit" && args.includes("-a")) {
+          expect(args.at(-1)).toMatch(
+            /Contents[\\/]PlugIns[\\/]Trial Extension\.appex$/u,
+          )
           throw new Error("Native registration failed")
+        }
         return "true"
       }),
     }),
@@ -527,6 +541,73 @@ it("fails when Safari developer settings cannot be enabled instead of passing a 
       }),
     }),
   ).rejects.toThrow("Developer control unavailable")
+})
+
+it("authenticates the unsigned-extension prompt before retrying its enable control", async () => {
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  const projectRoot = path.join(output, "project")
+  mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
+  mkdirSync(path.join(output, "DerivedData/Build/Products/Release/Trial.app"), {
+    recursive: true,
+  })
+  writeFileSync(
+    path.join(output, "identity.json"),
+    JSON.stringify({ projectRoot, appName: "Trial" }),
+  )
+  vi.stubEnv("AAH_SAFARI_CI_PASSWORD", "synthetic-ci-password")
+  const events: string[] = []
+  let unsignedAttempts = 0
+  vi.mocked(execFileSync).mockImplementationOnce(() => {
+    events.push("authenticate")
+    return Buffer.alloc(0)
+  })
+  await expect(
+    runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: withUsableDriver((file, args) => {
+        if (file === process.execPath)
+          return `Prepared independent trial: ${output}`
+        if (file === "xcodebuild" && args.includes("-list"))
+          return JSON.stringify({ project: { schemes: ["Trial"] } })
+        if (
+          args[0] === "enable" &&
+          args[2] === "Show features for web developers"
+        )
+          events.push("web-developer")
+        if (args[0] === "enable" && args[2] === "Allow unsigned extensions") {
+          events.push(`unsigned:${++unsignedAttempts}`)
+          if (unsignedAttempts === 1)
+            throw new Error("Safari password required")
+        }
+        if (args[0] === "dialogs")
+          return JSON.stringify([
+            {
+              app: "Safari",
+              text: 'Safari is trying to allow unsigned extensions. Enter the password for the user "runner" to allow this.',
+              buttons: ["Cancel", "OK"],
+            },
+          ])
+        if (file === "pluginkit" && args.includes("-a")) {
+          events.push("registration")
+          throw new Error("Reached registration after unsigned authorization")
+        }
+        return "true"
+      }),
+    }),
+  ).rejects.toThrow("Reached registration after unsigned authorization")
+  expect(events).toEqual([
+    "web-developer",
+    "unsigned:1",
+    "authenticate",
+    "unsigned:2",
+    "registration",
+  ])
+  expect(execFileSync).toHaveBeenCalledExactlyOnceWith(
+    path.join(output, "accessibility"),
+    ["authenticate", "Safari"],
+    { input: "synthetic-ci-password\n", timeout: 10000 },
+  )
 })
 
 it("requires activation of the compiled trial extension", async () => {
