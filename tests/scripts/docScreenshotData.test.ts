@@ -131,6 +131,7 @@ it("keeps token latency samples and all additive latency facts consistent with d
         expect(
           shares.reduce((sum, value) => sum + value[metric], 0),
         ).toBeCloseTo(totals[metric], 8)
+      expect(totals.buckets.length).toBeGreaterThan(0)
       for (let bucket = 0; bucket < totals.buckets.length; bucket++)
         expect(
           shares.reduce((sum, value) => sum + value.buckets[bucket]!, 0),
