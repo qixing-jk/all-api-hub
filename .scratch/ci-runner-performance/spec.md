@@ -348,3 +348,28 @@ npm registry 的 `latest` 同时为 Vitest 和 coverage-v8 的 `5.1.0`，`V4` �
 决策：本次不保留生产升级。已恢复原 package、锁文件、Vitest 配置、workflow 和临时报告测试改动，并重新按 frozen lock 安装4.0.17。仅保留支持两种缓存配置 API 的对照驱动和本节调查结论。5.x 仍有可测试的热缓存、覆盖率缓存及 vm pool 方向，但尚未证明本仓库收益；没有运行新版 Ubuntu 全量或关闭隔离。
 
 两版完整日志/blob/coverage 与 `result.json` 分别保留在 `artifacts/imports-vitest4-before-major/` 和 `artifacts/imports-vitest5-major/`。临时生产迁移补丁保存在后者 `migration-probe.patch`，便于下一次实验；这些是本地审阅证据，不进入 Git。后续升级需先建立5.x blob读取兼容和覆盖率差异解释，再对同源码做热缓存及完整CI对照。
+
+
+## 2026-11-04 最新 v4（4.1.12）筛选
+
+重新查询 npm 的 `V4` 标签，Vitest 与 coverage-v8 均为4.1.12。官方[4.1.12发布记录](https://github.com/vitest-dev/vitest/releases/tag/v4.1.12)为2026-10-15的mock处理修复回移；[4.1.0发布记录](https://github.com/vitest-dev/vitest/releases/tag/v4.1.0)包含静态测试清单收集、服务端module runner等变化。静态 `list` 和 `coverage.changed` 不替代完整测试/覆盖率验证；既有fsModuleCache仍为experimental配置。
+
+在同一产品源码、本地Node24.14.1、两个threads worker、隔离、覆盖率和四文件191用例条件下，实际安装4.1.12并执行交错冷/热缓存对照：
+
+| 场景 | 4.0.17 已保留基线 | 4.1.12 |
+| --- | --- | --- |
+| 无模块缓存第一轮 | 94.92秒 | 104.72秒 |
+| 无模块缓存第二轮 | 94.23秒 | 108.88秒 |
+| 模块缓存首次写入 | 本次未重测 | 105.40秒 |
+| 模块缓存热运行 | 本次未重测 | 89.01秒 |
+| collect累计（无缓存两轮） | 17.82 / 24.81秒 | 25.01 / 37.23秒 |
+
+4.1.12第一轮无缓存与编译检查重叠，不用于严格速度归因；后续无缓存、首次缓存及热运行没有本任务的编译检查重叠。这些是本地顺序版本筛选，非Ubuntu完整CI，不能给出稳定退化比例。4.1.12热缓存比本版本首次运行快，但4.0.17已使用同一缓存能力；缺少当前源码旧版热缓存对照，不把该差值算成升级收益。
+
+四次均为191通过；新旧版本测试路径/project/完整名称/mode/结果逐项相等，无缺失或新增，`case-comparison.json`保留核对结果。覆盖率每次均含3,056源码文件、1,452有语句命中文件，缓存开关未改变覆盖文件集合。本次没有像5.1.0那样少两个覆盖文件，但未宣称每条语句的计数完全一致。
+
+4.1.12编译通过。CI工具50项中49项通过，真实失败分片合并回归因blob读取布局不兼容而失败。这次确认布局改动已经发生于4.1.x，不能仅归为5.x大版本变化：4.1.12输出 `[version, files, errors, coverage, executionTime, environmentModules]`，而当前guard读取4.0.x布局。默认目录仍是`.vitest-reports`；5.x另有目录变化。该失败保留作为升级前所需报告读取迁移证据，没有修改guard或放宽报告完整性规则。
+
+结论：未观察到仅升级最新v4带来的时间收益，本次不保留生产升级。恢复4.0.17 package和锁文件，frozen-lock安装恢复依赖；原有CI工具回归再次通过。新版全量CI和同源码跨版本热缓存复测没有运行。后续若以修复或新能力为理由升级，须先适配报告读取公共边界，再完成相关验证；纯性能目的需要新增收益证据。
+
+完整日志、blob、coverage、`result.json`、用例核对和临时依赖补丁保留在`artifacts/imports-vitest4-latest/`，旧版基线继续保留在`artifacts/imports-vitest4-before-major/`。这些是本地证据，Git仅保留本节决策和可复用的现有对照驱动。
