@@ -145,14 +145,14 @@ export async function runSafariSmoke({
     await check("Safari settings accessibility", () => {
       command("osascript", [
         "-e",
-        'tell application "Safari" to make new document',
-        "-e",
         'tell application "Safari" to activate',
         "-e",
-        'tell application "System Events" to tell process "Safari"\nrepeat 40 times\nif exists window 1 then exit repeat\ndelay 0.25\nend repeat\nend tell',
-        "-e",
-        'tell application "System Events" to tell process "Safari" to keystroke "," using command down',
+        'tell application "System Events" to tell process "Safari"\nset frontmost to true\nclick menu item "Settings…" of menu "Safari" of menu bar 1\nrepeat 40 times\nif exists window "General" then return "General"\ndelay 0.25\nend repeat\nerror "Safari settings window unavailable"\nend tell',
       ])
+      fs.writeFileSync(
+        path.join(output, "settings-before.json"),
+        command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
+      )
       command(path.join(output, "accessibility"), [
         "press",
         "Safari",
@@ -232,6 +232,10 @@ export async function runSafariSmoke({
     report.status = "failed"
     if (platform === "darwin") {
       try {
+        fs.writeFileSync(
+          path.join(output, "failure-ui.json"),
+          command(path.join(output, "accessibility"), ["dialogs"]),
+        )
         command("screencapture", ["-x", path.join(output, "failure.png")])
       } catch {
         // Preserve the original failed check when screenshot capture also fails.
