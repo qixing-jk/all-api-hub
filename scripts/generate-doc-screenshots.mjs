@@ -59,6 +59,7 @@ const root = fileURLToPath(new URL("../", import.meta.url))
 const extensionDir = path.resolve(root, ".output/chrome-mv3")
 let screenshotOutputRoot = path.resolve(root, "docs/docs/static/image")
 
+/** Store serialized fixture data in the extension's actual local-storage context. */
 async function setServiceWorkerStorage(serviceWorker, key, value) {
   const serialized = JSON.stringify(value)
   await serviceWorker.evaluate(
@@ -77,6 +78,7 @@ async function setServiceWorkerStorage(serviceWorker, key, value) {
   )
 }
 
+/** Render selected localized pages from seeded extension data and required anchors. */
 async function renderBatch(localeKey = "zh", requestedPages = null) {
   const locale = LOCALES[localeKey]
   if (!locale) {
@@ -760,6 +762,7 @@ function runCommand(command, args, { env } = {}) {
   })
 }
 
+/** Validate capture selections before launching the requested locale batches. */
 async function main() {
   const args = process.argv.slice(2)
   let langArg = "all"

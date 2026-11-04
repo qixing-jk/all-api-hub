@@ -240,6 +240,7 @@ function createTranslator(localeKey) {
   }
 }
 
+/** Format a local calendar day for the history store's day-key contract. */
 function getDayKey(date = new Date()) {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, "0")
@@ -247,6 +248,7 @@ function getDayKey(date = new Date()) {
   return `${y}-${m}-${d}`
 }
 
+/** Shift a history day key using calendar arithmetic rather than UTC offsets. */
 function subtractDays(dayKey, days) {
   const [y, m, d] = dayKey.split("-").map(Number)
   const date = new Date(y, m - 1, d)
@@ -255,6 +257,7 @@ function subtractDays(dayKey, days) {
 }
 
 /** A discovered, enabled method with a confirmed successful result today. */
+/** Seed an enabled check-in method with completed status for the capture day. */
 function getMockCheckInConfig(methodId, now) {
   return {
     automaticExecutionEnabled: true,
@@ -279,6 +282,7 @@ function getMockCheckInConfig(methodId, now) {
   }
 }
 
+/** Build supported demo accounts with healthy balances and credential capabilities. */
 function getMockAccounts() {
   const now = Date.now()
   // Official platforms first, then supported deployments and one custom gateway.
@@ -352,6 +356,7 @@ function getMockAccounts() {
 }
 
 /** Seed product-owned catalog snapshots so comparison never uses live prices. */
+/** Seed admitted provider catalogs with distinct prices for cross-site comparisons. */
 function getMockModelPricingCache() {
   const providerSources = {
     openrouter: "openrouter-public",
@@ -443,6 +448,7 @@ function getMockModelPricingCache() {
   return cache
 }
 
+/** Supply localized tag labels shared by accounts, credentials and bookmarks. */
 function getMockTags(t) {
   return {
     version: 1,
@@ -487,6 +493,7 @@ function getMockTags(t) {
   }
 }
 
+/** Build a coding-plan credential with healthy telemetry and finite usage windows. */
 function getMockCodingPlan(id, name, baseUrl, mode, apiType, now) {
   return {
     id,
@@ -534,6 +541,7 @@ function getMockCodingPlan(id, name, baseUrl, mode, apiType, now) {
   }
 }
 
+/** Provide standalone credentials and localized coding plans for library captures. */
 function getMockApiCredentialProfiles(t) {
   const now = Date.now()
   return [
@@ -600,6 +608,7 @@ function getMockApiCredentialProfiles(t) {
   ]
 }
 
+/** Provide localized documentation bookmarks using the shared demo tag IDs. */
 function getMockBookmarks(t) {
   const now = Date.now()
   return [
@@ -651,6 +660,7 @@ function getMockBookmarks(t) {
   ]
 }
 
+/** Generate seven days of snapshots whose cashflow reconciles with account balances. */
 function getMockBalanceHistory() {
   const demoAccounts = getMockAccounts()
   const snapshotsByAccountId = {}
@@ -700,6 +710,7 @@ function getMockBalanceHistory() {
   }
 }
 
+/** Seed completed check-ins with a stable displayed run time and current-day status. */
 function getMockAutoCheckinStatus(t) {
   // Keep displayed run timestamps stable; daily eligibility still uses capture day.
   const now = Date.parse("2026-11-04T02:22:31.000Z")
@@ -753,6 +764,7 @@ function getMockAutoCheckinStatus(t) {
   }
 }
 
+/** Build localized usage history with reconciled daily, hourly and token aggregates. */
 function getMockUsageHistory(t = createTranslator("en")) {
   const todayKey = getDayKey()
   const days = []
@@ -947,6 +959,7 @@ function getMockUsageHistory(t = createTranslator("en")) {
 
       const tokenKeys = ["101", "102", "103"]
       const tokenBoundaries = [0, 0.5, 0.8, 1]
+      /** Allocate an integer metric between cumulative token-share boundaries. */
       const share = (total, index) =>
         Math.round(total * tokenBoundaries[index + 1]) -
         Math.round(total * tokenBoundaries[index])
@@ -1003,6 +1016,7 @@ function getMockUsageHistory(t = createTranslator("en")) {
   }
 }
 
+/** Seed a successful model-sync execution with localized channel/result details. */
 function getMockModelSyncLastExecution(t) {
   const now = Date.now()
   return {

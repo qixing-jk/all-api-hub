@@ -9,6 +9,7 @@ import {
 
 const root = fileURLToPath(new URL("../", import.meta.url))
 
+/** Serve demo site APIs and auxiliary catalogs without contacting real providers. */
 export async function setupRoutes(context, t) {
   const deepseekPricing = [
     {
