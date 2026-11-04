@@ -4,6 +4,8 @@
 
 ## Features at a Glance
 
+![Auto Check-in Dashboard & Results](../static/image/en/auto-check-in.png)
+
 - **Check-in status detection**: Adding or refreshing an account automatically detects whether its site has a check-in entry point. There is no manual "check-in detection" switch.
 - **Custom check-in entry point**: If the page is not at the standard path, enter an External Check-in Site URL under the account's Check-in Settings.
 - **Automatic scheduling**: Uses browser background scheduling for a regular **once-per-day** automatic check-in and optional same-day retries for eligible failed or unconfirmed results.

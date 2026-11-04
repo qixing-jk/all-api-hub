@@ -103,6 +103,7 @@ src/public/react-devtools*
 # Local screenshot comparison runs
 .scratch/visual-comparisons/
 .scratch/visual-captures/
+.scratch/docs-screenshot-updates/
 
 # Novita adaptation generated evidence
 .scratch/novita-adaptation/artifacts/

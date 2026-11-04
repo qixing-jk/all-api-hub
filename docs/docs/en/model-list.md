@@ -4,6 +4,8 @@
 
 ## Features at a Glance
 
+![Model List and Price Comparison](../static/image/en/model-list.png)
+
 - 🔍 **Three data sources**: All Accounts, a specific account, or an API Credential Profile.
 - 💰 **Cross-account price comparison**: Compare currently available quotes for the same model across accounts using a consistent basis.
 - 🎯 **Usage-based estimates**: Select a scenario such as regular chat, code completion, or coding agent, or adjust input, output, and cache proportions yourself.

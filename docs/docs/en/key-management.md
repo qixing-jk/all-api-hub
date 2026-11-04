@@ -11,6 +11,8 @@
 
 ## Features at a Glance
 
+![API Key List & Management](../static/image/en/api-key-list.png)
+
 - **Centralized list**: Group keys by account or view keys from all accounts. Keys are masked by default.
 - **Name search**: Search matches key names only, never the key value itself.
 - **Create, edit, and delete**: Ordinary Tokens can configure a name, quota, expiration, group, model restrictions, and IP/subnet restrictions. Available fields depend on site capabilities.

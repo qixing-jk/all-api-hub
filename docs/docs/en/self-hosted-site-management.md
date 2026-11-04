@@ -48,6 +48,8 @@ Click **"Verify Configuration"**. After successful verification, the management 
 
 ## Channel Management Operating Guide
 
+![Self-Hosted Site Channel Management](../static/image/en/new-api-channel-manage.png)
+
 ### 1. List Operations
 
 Select **"Self-Hosted Site Management"** at the top of the settings page (or click the **"Manage Channels"** button in basic settings):

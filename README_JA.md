@@ -260,48 +260,89 @@ GitHub Stable と Nightly は手動インストール用チャネルです。Git
 
 ## 🖼️ UI プレビュー
 
+<div align="center">
+  <img src="docs/docs/static/image/ja/options-overview.png" alt="options-overview" style="width:100%; height:auto;"/>
+  <p><em>オールインワン設定ダッシュボード：全体資産、要対応事項、統合 API 設定、ヘルス状態を一元把握</em></p>
+</div>
+
+### アカウントと API キー
+
 <table>
   <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/en/account-manage.png" alt="account-manage" style="width:100%; height:auto;"/>
-      <div>アカウント管理の概要</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/model-list.png" alt="model-list" style="width:100%; height:auto;"/>
-      <div>モデル一覧と価格</div>
+    <td align="center" colspan="2" width="100%">
+      <img src="docs/docs/static/image/ja/account-manage.png" alt="account-manage" style="width:100%; height:auto;"/>
+      <div><b>複数アカウント・資産管理</b><br/>各中継サイトの残高追跡、為替換算、タグ絞り込み</div>
     </td>
   </tr>
   <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/en/api-key-list.png" alt="api-key-list" style="width:100%; height:auto;"/>
-      <div>キー一覧とエクスポート</div>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/api-key-list.png" alt="api-key-list" style="width:100%; height:auto;"/>
+      <div><b>API キー統合管理とエクスポート</b><br/>クォータ照会、ワンクリックコピー、クライアント設定出力</div>
     </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/auto-check-in.png" alt="auto-check-in" style="width:100%; height:auto;"/>
-      <div>自動チェックイン</div>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/en/account-model-usage-overview.png" alt="account-model-usage-overview" style="width:100%; height:auto;"/>
-      <div>アカウント別モデル使用量の概要</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/account-model-latency-overview.png" alt="account-model-latency-overview" style="width:100%; height:auto;"/>
-      <div>アカウント別モデル遅延の概要</div>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/en/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
-      <div>New API モデル同期</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/new-api-channel-manage.png" alt="new-api-channel-manage" style="width:100%; height:auto;"/>
-      <div>New API チャネル管理</div>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/api-credential-profile-list.png" alt="api-credential-profile-list" style="width:100%; height:auto;"/>
+      <div><b>API 認証情報プロファイル</b><br/>アカウント不要の Key 管理、CLI 互換性検証、クイック利用</div>
     </td>
   </tr>
 </table>
+
+### モデル選択と API 検証
+
+<table>
+  <tr>
+    <td align="center" colspan="2" width="100%">
+      <img src="docs/docs/static/image/ja/model-list.png" alt="model-list" style="width:100%; height:auto;"/>
+      <div><b>モデル一覧と価格比較</b><br/>同じモデルのサイト別料金を使用シーンに応じて換算し、最安値を表示</div>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/web-ai-api-check-trigger.png" alt="web-ai-api-check-trigger" style="width:100%; height:auto;"/>
+      <div><b>Webページ内のクイック API テスト</b><br/>ページ上の API URL とキーをコピーし、検出後に「開く」を押してテスト</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/web-ai-api-check-results.png" alt="web-ai-api-check-results" style="width:100%; height:auto;"/>
+      <div><b>Web ページ内で API をテスト</b><br/>モデル一覧、テキスト生成、ツール呼び出し、構造化出力、描画などを確認</div>
+    </td>
+  </tr>
+</table>
+
+### チェックイン・残高・使用量
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/auto-check-in.png" alt="auto-check-in" style="width:100%; height:auto;"/>
+      <div><b>自動デイリーチェックイン</b><br/>複数アカウントの定期実行、自動リトライ、獲得履歴確認</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/balance-history.png" alt="balance-history" style="width:100%; height:auto;"/>
+      <div><b>残高推移と収支トレンド</b><br/>アカウント別の残高推移、消費分布、収支サマリー</div>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/account-model-usage-overview.png" alt="account-model-usage-overview" style="width:100%; height:auto;"/>
+      <div><b>多次元使用量分析</b><br/>Token 消費内訳、アカウント別シェア、コスト推計</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/ja/account-model-latency-overview.png" alt="account-model-latency-overview" style="width:100%; height:auto;"/>
+      <div><b>応答遅延とスロークエリ分析</b><br/>モデル別レイテンシ比較、高遅延リクエスト診断、警告表示</div>
+    </td>
+  </tr>
+</table>
+
+### セルフホストゲートウェイとモデル同期
+
+<div align="center">
+      <img src="docs/docs/static/image/ja/new-api-channel-manage.png" alt="new-api-channel-manage" style="width:100%; height:auto;"/>
+      <div><b>自建ゲートウェイチャネル管理</b><br/>対応ゲートウェイ、チャネル状態、疎通確認とサイト間移行</div>
+    </div>
+
+<div align="center">
+      <img src="docs/docs/static/image/ja/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
+      <div><b>上流モデル自動同期</b><br/>チャネルモデル自動取得、差分比較、ワンクリック反映</div>
+    </div>
 
 <a id="development-guide"></a>
 

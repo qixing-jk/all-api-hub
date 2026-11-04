@@ -264,48 +264,89 @@ No matter which architecture you use, there is a good chance we support it:
 
 ## 🖼️ UI Preview
 
+<div align="center">
+  <img src="docs/docs/static/image/en/options-overview.png" alt="options-overview" style="width:100%; height:auto;"/>
+  <p><em>All-in-One Options Dashboard: Global asset overview, pending actions, unified API setup, and health status</em></p>
+</div>
+
+### Accounts and API keys
+
 <table>
   <tr>
-    <td align="center">
+    <td align="center" colspan="2" width="100%">
       <img src="docs/docs/static/image/en/account-manage.png" alt="account-manage" style="width:100%; height:auto;"/>
-      <div>Account Management Overview</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/model-list.png" alt="model-list" style="width:100%; height:auto;"/>
-      <div>Model List & Pricing</div>
+      <div><b>Multi-Account Asset Management</b><br/>Centralized balance tracking, currency conversion, and tag filtering</div>
     </td>
   </tr>
   <tr>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/api-key-list.png" alt="api-key-list" style="width:100%; height:auto;"/>
-      <div>Key List & Export</div>
+      <div><b>Unified Key Management & Export</b><br/>Quota inspection across sites, one-click copying, and client config exports</div>
     </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/auto-check-in.png" alt="auto-check-in" style="width:100%; height:auto;"/>
-      <div>Auto Check-in</div>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/en/account-model-usage-overview.png" alt="account-model-usage-overview" style="width:100%; height:auto;"/>
-      <div>Account Model Usage Overview</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/account-model-latency-overview.png" alt="account-model-latency-overview" style="width:100%; height:auto;"/>
-      <div>Account Model Latency Overview</div>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/en/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
-      <div>New API Model Sync</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/en/new-api-channel-manage.png" alt="new-api-channel-manage" style="width:100%; height:auto;"/>
-      <div>New API Channel Management</div>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/api-credential-profile-list.png" alt="api-credential-profile-list" style="width:100%; height:auto;"/>
+      <div><b>API Credential Profiles</b><br/>Account-free key repository, CLI compatibility checks, and instant export</div>
     </td>
   </tr>
 </table>
+
+### Model selection and API verification
+
+<table>
+  <tr>
+    <td align="center" colspan="2" width="100%">
+      <img src="docs/docs/static/image/en/model-list.png" alt="model-list" style="width:100%; height:auto;"/>
+      <div><b>Cross-Platform Model Catalog & Pricing</b><br/>Compare the same model across sites by workload and see the lowest price</div>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/web-ai-api-check-trigger.png" alt="web-ai-api-check-trigger" style="width:100%; height:auto;"/>
+      <div><b>Quick API Testing on Webpages</b><br/>Copy an API URL and key, then click Open to test them on the current page</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/web-ai-api-check-results.png" alt="web-ai-api-check-results" style="width:100%; height:auto;"/>
+      <div><b>Test APIs Directly on Any Webpage</b><br/>Model discovery, text generation, tool calls, structured output, and drawing tests</div>
+    </td>
+  </tr>
+</table>
+
+### Check-in, balance and usage
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/auto-check-in.png" alt="auto-check-in" style="width:100%; height:auto;"/>
+      <div><b>Automated Daily Check-in</b><br/>Multi-account scheduled polling, smart retry, and reward tracking</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/balance-history.png" alt="balance-history" style="width:100%; height:auto;"/>
+      <div><b>Balance History & Spending Trends</b><br/>Account balance trends, spending distribution, and income/expense summaries</div>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/account-model-usage-overview.png" alt="account-model-usage-overview" style="width:100%; height:auto;"/>
+      <div><b>Multi-Dimensional Usage Analytics</b><br/>Token consumption insights, account share breakdown, and cost estimates</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/account-model-latency-overview.png" alt="account-model-latency-overview" style="width:100%; height:auto;"/>
+      <div><b>Response Latency & Slow Query Analysis</b><br/>Model latency benchmarks, long-request diagnostics, and timeout alerts</div>
+    </td>
+  </tr>
+</table>
+
+### Self-hosted gateways and model sync
+
+<div align="center">
+      <img src="docs/docs/static/image/en/new-api-channel-manage.png" alt="new-api-channel-manage" style="width:100%; height:auto;"/>
+      <div><b>Self-Hosted Gateway Channel Management</b><br/>Supported gateways, channel status, testing, and cross-site migration</div>
+    </div>
+
+<div align="center">
+      <img src="docs/docs/static/image/en/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
+      <div><b>Upstream Model Auto-Sync</b><br/>Channel model retrieval, diff comparison, and one-click synchronization</div>
+    </div>
 
 <a id="development-guide"></a>
 

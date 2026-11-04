@@ -4,6 +4,8 @@
 
 ## Feature Overview
 
+![Balance History & Trend Analysis](../static/image/en/balance-history.png)
+
 - **Daily Snapshot Recording**: Each account records at most one snapshot per day.
 - **Records Balance and Transactions**: Can save balance, today's income, today's expenses, recording time, and source.
 - **Multi-Account Summary**: Supports viewing summaries by tag, account, and time range.

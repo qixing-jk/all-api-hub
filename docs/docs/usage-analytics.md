@@ -14,6 +14,8 @@
 
 ## 功能概览
 
+![用量分析与模型分布](./static/image/account-model-usage-overview.png)
+
 - **多维筛选**：按站点、账号、Token、日期范围过滤。
 - **总览指标**：查看请求数、输入 / 输出 Token、总 Token、花费。
 - **模型分析**：查看模型分布、模型花费分布、模型热力图。
@@ -121,6 +123,8 @@
 点击模型后，其他图表会尽量围绕该模型聚焦。
 
 ### 时段与延迟分析
+
+![模型延迟与慢查询分析](./static/image/account-model-latency-overview.png)
 
 #### 使用时间热点
 

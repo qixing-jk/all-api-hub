@@ -2,6 +2,8 @@
 
 > This guide covers organization, maintenance, and bulk operations after accounts have been added. To add a new account or find manual entry instructions, see [Add Accounts](./add-account.md).
 
+![Account Management](../static/image/en/account-manage.png)
+
 ## Add an Account
 
 Try auto-detection first. If it fails, you can manually enter the information required by New API, Sub2API, OpenRouter, and other site types.

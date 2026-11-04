@@ -265,45 +265,60 @@ No matter which architecture you use, there is a good chance we support it:
 
 ## 🖼️ UI Preview
 
+<div align="center">
+  <img src="docs/docs/static/image/en/options-overview.png" alt="options-overview" style="width:100%; height:auto;"/>
+  <p><em>All-in-One Options Dashboard: Global asset overview, pending actions, unified API setup, and health status</em></p>
+</div>
+
 <table>
   <tr>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/account-manage.png" alt="account-manage" style="width:100%; height:auto;"/>
-      <div>Account Management Overview</div>
+      <div><b>Multi-Account Asset Management</b><br/>Centralized balance tracking, currency conversion, and tag filtering</div>
     </td>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/model-list.png" alt="model-list" style="width:100%; height:auto;"/>
-      <div>Model List & Pricing</div>
+      <div><b>Cross-Platform Model Catalog & Pricing</b><br/>Transparent ratio calculation, usable groups, and multi-filter search</div>
     </td>
   </tr>
   <tr>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/api-key-list.png" alt="api-key-list" style="width:100%; height:auto;"/>
-      <div>Key List & Export</div>
+      <div><b>Unified Key Management & Export</b><br/>Quota inspection across sites, one-click copying, and client config exports</div>
     </td>
-    <td align="center">
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/api-credential-profile-list.png" alt="api-credential-profile-list" style="width:100%; height:auto;"/>
+      <div><b>API Credential Profiles</b><br/>Account-free key repository, CLI compatibility checks, and instant export</div>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/auto-check-in.png" alt="auto-check-in" style="width:100%; height:auto;"/>
-      <div>Auto Check-in</div>
+      <div><b>Automated Daily Check-in</b><br/>Multi-account scheduled polling, smart retry, and reward tracking</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/balance-history.png" alt="balance-history" style="width:100%; height:auto;"/>
+      <div><b>Balance History & Spending Trends</b><br/>Daily balance snapshots, expenditure tracking, and interactive charts</div>
     </td>
   </tr>
   <tr>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/account-model-usage-overview.png" alt="account-model-usage-overview" style="width:100%; height:auto;"/>
-      <div>Account Model Usage Overview</div>
+      <div><b>Multi-Dimensional Usage Analytics</b><br/>Token consumption insights, account share breakdown, and cost estimates</div>
     </td>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/account-model-latency-overview.png" alt="account-model-latency-overview" style="width:100%; height:auto;"/>
-      <div>Account Model Latency Overview</div>
+      <div><b>Response Latency & Slow Query Analysis</b><br/>Model latency benchmarks, long-request diagnostics, and timeout alerts</div>
     </td>
   </tr>
   <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/en/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
-      <div>New API Model Sync</div>
-    </td>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/en/new-api-channel-manage.png" alt="new-api-channel-manage" style="width:100%; height:auto;"/>
-      <div>New API Channel Management</div>
+      <div><b>Self-Hosted Gateway Channel Management</b><br/>New API / One API channel status, weight scheduling, and health testing</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/en/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
+      <div><b>Upstream Model Auto-Sync</b><br/>Channel model retrieval, diff comparison, and one-click synchronization</div>
     </td>
   </tr>
 </table>

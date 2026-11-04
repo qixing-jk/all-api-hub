@@ -14,6 +14,8 @@ Enable usage history synchronization and perform an initial data synchronization
 
 ## Feature Overview
 
+![Usage Analysis & Model Distribution](../static/image/en/account-model-usage-overview.png)
+
 - **Multi-dimensional Filtering**: Filter by site, account, Token, date range.
 - **Overview Metrics**: View request count, input/output Tokens, total Tokens, and costs.
 - **Model Analysis**: View model distribution, model cost distribution, and model heatmap.
@@ -121,6 +123,8 @@ Displays model usage intensity over time, suitable for observing:
 Clicking on a model will focus other charts on that model as much as possible.
 
 ### Time Period and Latency Analysis
+
+![Model Latency & Slow Queries](../static/image/en/account-model-latency-overview.png)
 
 #### Usage Time Hotspots
 
