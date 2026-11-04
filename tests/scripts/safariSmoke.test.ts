@@ -265,12 +265,36 @@ it.each(
       reportBeingWritten: false,
       systemEventsUiDenied: true,
     },
+    {
+      popupAvailable: true,
+      navigationAvailable: true,
+      optionsRendered: true,
+      shutdownAvailable: true,
+      activationPendingChecks: 0,
+      uiSetupPending: false,
+      fixtureReady: true,
+      reportBeingWritten: false,
+      staleNativeEvidence: true,
+    },
+    {
+      popupAvailable: true,
+      navigationAvailable: true,
+      optionsRendered: true,
+      shutdownAvailable: true,
+      activationPendingChecks: 0,
+      uiSetupPending: false,
+      fixtureReady: true,
+      reportBeingWritten: false,
+      invalidNativeEvidence: true,
+    },
   ].map((scenario) => ({
     emptyFrontWindow: false,
     stalledStatus: false,
     stalledControl: false,
     fixtureReplyMissing: false,
     systemEventsUiDenied: false,
+    staleNativeEvidence: false,
+    invalidNativeEvidence: false,
     ...scenario,
   })),
 )(
@@ -289,6 +313,8 @@ it.each(
     stalledControl,
     fixtureReplyMissing,
     systemEventsUiDenied,
+    staleNativeEvidence,
+    invalidNativeEvidence,
   }) => {
     if (
       !optionsRendered ||
@@ -297,7 +323,8 @@ it.each(
       !fixtureReady ||
       stalledStatus ||
       stalledControl ||
-      fixtureReplyMissing
+      fixtureReplyMissing ||
+      staleNativeEvidence
     )
       vi.useFakeTimers()
     let activationChecks = 0
@@ -326,6 +353,12 @@ it.each(
         ),
       ).toString("utf8"),
     )
+    if (invalidNativeEvidence)
+      nativeEvidence.events.findLast(
+        (event: { stage: string }) => event.stage === "trial-concurrency",
+      ).accountCorrect = false
+    const beforeRunStartedAt = Date.now()
+    let nativeEvidenceDated = false
     writeFileSync(
       path.join(output, "observations.json"),
       reportBeingWritten ? "" : JSON.stringify(nativeEvidence),
@@ -344,6 +377,14 @@ it.each(
         if (file.endsWith("accessibility") && args[0] === "open-settings")
           settingsOpen = true
         if (file === "curl" && args.at(-1)?.endsWith("/status")) {
+          if (!nativeEvidenceDated) {
+            const recordedAt = staleNativeEvidence
+              ? beforeRunStartedAt - 1
+              : Date.now()
+            for (const event of nativeEvidence.events)
+              event.recordedAt = recordedAt
+            nativeEvidenceDated = true
+          }
           if (stalledStatus) {
             const timeoutIndex = args.indexOf("--max-time")
             const seconds =
@@ -376,6 +417,7 @@ it.each(
               nativeContext: true,
               cacheFresh: fixtureReady,
               items: 0,
+              recordedAt: Date.now(),
             })
           return "ok"
         }
@@ -462,6 +504,15 @@ it.each(
       await expect(result).rejects.toThrow("Fixture status request timed out")
     else if (stalledControl)
       await expect(result).rejects.toThrow("Fixture control request timed out")
+    else if (staleNativeEvidence)
+      await Promise.all([
+        expect(result).rejects.toThrow("Native Cookie trial incomplete"),
+        vi.runAllTimersAsync(),
+      ])
+    else if (invalidNativeEvidence)
+      await expect(result).rejects.toThrow(
+        "Failed native observation: trial-concurrency.accountCorrect",
+      )
     else if (!fixtureReady || fixtureReplyMissing)
       await Promise.all([
         expect(result).rejects.toThrow("CI UI fixture"),
@@ -484,7 +535,12 @@ it.each(
         vi.runAllTimersAsync(),
       ])
     else expect((await result).status).toBe("passed")
-    if (shutdownAvailable && !stalledStatus)
+    if (
+      shutdownAvailable &&
+      !stalledStatus &&
+      !staleNativeEvidence &&
+      !invalidNativeEvidence
+    )
       expect(controlRequests).toEqual([
         { method: "POST", body: { command: "ci-ui-fixture" } },
       ])

@@ -32,6 +32,9 @@ export async function runSafariSmoke({
   output?: string
   command?: (file: string, args: string[]) => string
 } = {}) {
+  const runStartedAt = Date.now()
+  const isCurrentRunEvent = (event: { recordedAt?: number }) =>
+    typeof event.recordedAt === "number" && event.recordedAt >= runStartedAt
   fs.mkdirSync(output, { recursive: true })
   const report: { status: string; checks: Check[] } = {
     status: "running",
@@ -311,12 +314,22 @@ export async function runSafariSmoke({
       while (Date.now() < deadline) {
         const data = readFixtureObservations()
         const start = data.events.findLastIndex(
-          (event: { stage: string }) => event.stage === "trial-start",
+          (event: { stage: string; recordedAt?: number }) =>
+            event.stage === "trial-start" && isCurrentRunEvent(event),
         )
-        const current = data.events.slice(Math.max(0, start))
+        const current =
+          start < 0
+            ? []
+            : data.events
+                .slice(start)
+                .filter(
+                  (event: { recordedAt?: number }) =>
+                    event.recordedAt === undefined || isCurrentRunEvent(event),
+                )
         if (
           current.some(
-            (event: { stage: string }) => event.stage === "trial-error",
+            (event: { stage: string; recordedAt?: number }) =>
+              event.stage === "trial-error" && isCurrentRunEvent(event),
           )
         )
           throw new Error(
@@ -324,10 +337,11 @@ export async function runSafariSmoke({
           )
         if (
           current.some(
-            (event: { stage: string }) => event.stage === "trial-complete",
+            (event: { stage: string; recordedAt?: number }) =>
+              event.stage === "trial-complete" && isCurrentRunEvent(event),
           )
         ) {
-          verifyNativeCookieObservations(data)
+          verifyNativeCookieObservations({ ...data, events: current })
           return
         }
         await new Promise((resolve) => setTimeout(resolve, 250))
@@ -350,13 +364,15 @@ export async function runSafariSmoke({
       while (Date.now() < deadline) {
         const data = readFixtureObservations()
         const start = data.events.findLastIndex(
-          (event: { stage: string }) => event.stage === "trial-start",
+          (event: { stage: string; recordedAt?: number }) =>
+            event.stage === "trial-start" && isCurrentRunEvent(event),
         )
         assert(start >= 0, "Missing native run before CI UI fixture")
         const fixture = data.events
           .slice(start)
           .findLast(
-            (event: { stage: string }) => event.stage === "ci-ui-fixture",
+            (event: { stage: string; recordedAt?: number }) =>
+              event.stage === "ci-ui-fixture" && isCurrentRunEvent(event),
           )
         if (fixture) {
           assert.equal(
