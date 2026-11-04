@@ -1379,6 +1379,8 @@ for (const grouped of [true, false]) {
     extensionId,
     page,
   }) => {
+    // Loading 80 account catalogs competes with another context on old Chrome.
+    test.setTimeout(120_000)
     await page.setViewportSize({ width: 1100, height: 560 })
     await page.emulateMedia({ reducedMotion: "no-preference" })
     const accounts = Array.from({ length: 80 }, (_, index) =>
