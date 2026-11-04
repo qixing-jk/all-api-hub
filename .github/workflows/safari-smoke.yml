@@ -2,6 +2,8 @@ name: Safari Smoke
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "23 19 * * *"
   push:
     branches: [ci/safari-daily-smoke-trial]
 
@@ -24,8 +26,28 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+      - name: Safari contract regressions
+        run: >-
+          pnpm exec vitest run
+          tests/config/wxtPermissions.test.ts
+          tests/config/wxtSelfUpdate.test.ts
+          tests/config/distributionChannel.test.ts
+          tests/services/apiTransport/safariNativeCookie.test.ts
+          tests/scripts/safariNativeCookieTooling.test.ts
+          tests/scripts/safariSmoke.test.ts
+          tests/scripts/safariAuthorization.test.ts
+          tests/scripts/safariWorkflow.test.ts
       - name: Check actual Safari automation access
-        run: node e2e/safari/smoke.ts
+        env:
+          SAFARI_NATIVE_OBSERVATIONS: test-results/safari/observations.json
+          AAH_SAFARI_REAL_TOKEN: ""
+        run: |
+          mkdir -p test-results/safari
+          node e2e/safariNativeCookie/server.mjs > test-results/safari/fixture.log 2>&1 &
+          fixture_pid=$!
+          trap 'kill -TERM "$fixture_pid"; wait "$fixture_pid" || true' EXIT
+          node e2e/safari/smoke.ts
+          node e2e/safariNativeCookie/verify.ts test-results/safari/observations.json
       - name: Retain Safari evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

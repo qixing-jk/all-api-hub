@@ -24,11 +24,22 @@ for app in NSWorkspace.shared.runningApplications {
         let elements = descendants(window)
         let buttons = elements.filter { attribute($0, "AXRole") as? String == "AXButton" }
         dialogs.append(["app": name, "text": elements.map { text($0) }.joined(separator: "\n"), "buttons": buttons.map { (attribute($0, "AXTitle") as? String) ?? (attribute($0, "AXDescription") as? String) ?? "" }])
-        if args.count > 3 && args[1] == "press", let button = buttons.first(where: { (attribute($0, "AXTitle") as? String) == args[3] || (attribute($0, "AXDescription") as? String) == args[3] }) {
-            pressed = AXUIElementPerformAction(button, "AXPress" as CFString) == .success
+        if args.count > 3 && ["press", "enable"].contains(args[1]), let target = elements.first(where: { (attribute($0, "AXTitle") as? String) == args[3] || (attribute($0, "AXDescription") as? String) == args[3] }) {
+            if args[1] == "enable" && (attribute(target, "AXValue") as? NSNumber)?.intValue == 1 {
+                pressed = true
+            } else {
+                pressed = AXUIElementPerformAction(target, "AXPress" as CFString) == .success
+                if args[1] == "enable" {
+                    for _ in 0..<20 {
+                        if (attribute(target, "AXValue") as? NSNumber)?.intValue == 1 { break }
+                        Thread.sleep(forTimeInterval: 0.05)
+                    }
+                    pressed = pressed && (attribute(target, "AXValue") as? NSNumber)?.intValue == 1
+                }
+            }
         }
     }
 }
-if args[1] == "press" { exit(pressed ? 0 : 1) }
+if ["press", "enable"].contains(args[1]) { exit(pressed ? 0 : 1) }
 let data = try JSONSerialization.data(withJSONObject: dialogs, options: [.sortedKeys])
 print(String(data: data, encoding: .utf8)!)

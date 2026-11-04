@@ -66,3 +66,31 @@ it("rejects denied accessibility access instead of accepting a launched Safari",
     JSON.parse(readFileSync(path.join(output, "report.json"), "utf8")),
   ).toMatchObject({ status: "failed" })
 })
+
+it("fails when Safari developer settings cannot be enabled instead of passing a General page", async () => {
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  const projectRoot = path.join(output, "project")
+  mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
+  mkdirSync(path.join(output, "DerivedData/Build/Products/Release/Trial.app"), {
+    recursive: true,
+  })
+  writeFileSync(
+    path.join(output, "identity.json"),
+    JSON.stringify({ projectRoot, appName: "Trial" }),
+  )
+  await expect(
+    runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: (file, args) => {
+        if (file === process.execPath)
+          return `Prepared independent trial: ${output}`
+        if (file === "xcodebuild" && args.includes("-list"))
+          return JSON.stringify({ project: { schemes: ["Trial"] } })
+        if (args.includes("enable"))
+          throw new Error("Developer control unavailable")
+        return "true"
+      },
+    }),
+  ).rejects.toThrow("Developer control unavailable")
+})
