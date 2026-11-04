@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 import { PNG } from "pngjs"
 
@@ -13,28 +14,32 @@ Sources are caller declarations, not verified build provenance.
 Output defaults to a unique run under the invocation directory's .scratch/visual-comparisons.
 `
 
-try {
-  const { values } = parseArgs({
-    options: {
-      before: { type: "string" },
-      after: { type: "string" },
-      "before-source": { type: "string" },
-      "after-source": { type: "string" },
-      output: { type: "string" },
-      context: { type: "string" },
-      diff: { type: "boolean", default: false },
-      help: { type: "boolean" },
-    },
-  })
-  if (values.help) console.log(help)
-  else console.log(JSON.stringify(await compare(values)))
-} catch (error) {
-  console.error(`visual:compare: ${error.message}`)
-  process.exitCode = 1
-}
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  try {
+    const { values } = parseArgs({
+      options: {
+        before: { type: "string" },
+        after: { type: "string" },
+        "before-source": { type: "string" },
+        "after-source": { type: "string" },
+        output: { type: "string" },
+        context: { type: "string" },
+        diff: { type: "boolean", default: false },
+        help: { type: "boolean" },
+      },
+    })
+    if (values.help) console.log(help)
+    else console.log(JSON.stringify(await compare(values)))
+  } catch (error) {
+    console.error(`visual:compare: ${error.message}`)
+    process.exitCode = 1
+  }
 
 /** Compare caller-supplied evidence without treating pixel differences as a verdict. */
-async function compare(options) {
+export async function compare(options) {
   if (!options.before && options["before-source"])
     throw new Error("--before-source requires --before")
   const before = options.before

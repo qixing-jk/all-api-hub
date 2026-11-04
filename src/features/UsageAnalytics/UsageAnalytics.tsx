@@ -240,7 +240,10 @@ export default function UsageAnalytics() {
       ) : (
         <>
           {/*Daily Overview*/}
-          <Card padding="md">
+          <Card
+            padding="md"
+            data-testid={USAGE_ANALYTICS_TEST_IDS.chartsSection}
+          >
             <div className="mb-density-4 space-y-density-1">
               <div className="text-sm font-medium">
                 {t("charts.dailyOverview.title")}
@@ -377,7 +380,10 @@ export default function UsageAnalytics() {
             </div>
           </Card>
 
-          <div className="gap-y-density-6 grid grid-cols-1 gap-x-6 lg:grid-cols-2">
+          <div
+            className="gap-y-density-6 grid grid-cols-1 gap-x-6 lg:grid-cols-2"
+            data-testid={USAGE_ANALYTICS_TEST_IDS.latencySection}
+          >
             <Card padding="md">
               <div className="mb-density-4 space-y-density-1">
                 <div className="text-sm font-medium">
