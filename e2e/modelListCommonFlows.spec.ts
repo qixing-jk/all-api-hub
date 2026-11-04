@@ -1380,7 +1380,8 @@ for (const grouped of [true, false]) {
     page,
   }) => {
     // On Chrome 114 CI, catalog setup alone can exceed two minutes.
-    test.setTimeout(180_000)
+    // Preserve the fixture's extension-startup compensation.
+    test.setTimeout(test.info().timeout + 120_000)
     await page.setViewportSize({ width: 1100, height: 560 })
     await page.emulateMedia({ reducedMotion: "no-preference" })
     const accounts = Array.from({ length: 80 }, (_, index) =>
