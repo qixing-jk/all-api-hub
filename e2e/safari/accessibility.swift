@@ -20,19 +20,9 @@ func snapshot(_ element: AXUIElement, _ depth: Int = 0) -> [String: Any] {
     if depth < 10 { result["children"] = ((attribute(element, "AXChildren") as? [AXUIElement]) ?? []).map { snapshot($0, depth + 1) } }
     return result
 }
-func pressSpace(_ target: AXUIElement) -> Bool {
-    guard AXUIElementSetAttributeValue(target, "AXFocused" as CFString, kCFBooleanTrue) == .success else { return false }
-    let source = CGEventSource(stateID: .hidSystemState)
-    guard let down = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: true),
-          let up = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: false) else { return false }
-    down.post(tap: .cghidEventTap)
-    Thread.sleep(forTimeInterval: 0.08)
-    up.post(tap: .cghidEventTap)
-    return true
-}
-func enableCheckbox(_ target: AXUIElement, keyboard: Bool = false) -> Bool {
+func enableCheckbox(_ target: AXUIElement) -> Bool {
     if (attribute(target, "AXValue") as? NSNumber)?.intValue == 1 { return true }
-    guard keyboard ? pressSpace(target) : AXUIElementPerformAction(target, "AXPress" as CFString) == .success else { return false }
+    guard AXUIElementPerformAction(target, "AXPress" as CFString) == .success else { return false }
     for _ in 0..<40 {
         if (attribute(target, "AXValue") as? NSNumber)?.intValue == 1 { return true }
         Thread.sleep(forTimeInterval: 0.05)
@@ -67,8 +57,8 @@ for app in NSWorkspace.shared.runningApplications {
         dialogs.append(["app": name, "text": elements.map { text($0) }.joined(separator: "\n"), "roles": Array(Set(elements.compactMap { attribute($0, "AXRole") as? String })).sorted(), "tree": snapshot(window), "buttons": buttons.map { (attribute($0, "AXTitle") as? String) ?? (attribute($0, "AXDescription") as? String) ?? "" }])
         let scopeRole = args.count > 4 ? (args[4] == "toolbar" ? "AXToolbar" : args[4] == "popover" ? "AXPopover" : "") : ""
         let targets = scopeRole.isEmpty ? elements : allElements.filter { attribute($0, "AXRole") as? String == scopeRole }.flatMap { descendants($0) }
-        if args.count > 3 && args[1] == "enable-extension", let checkbox = installedExtensionCheckbox(elements, args[3]) {
-            pressed = enableCheckbox(checkbox, keyboard: true)
+        if args.count > 3 && args[1] == "extension-enabled", let checkbox = installedExtensionCheckbox(elements, args[3]) {
+            pressed = (attribute(checkbox, "AXValue") as? NSNumber)?.intValue == 1
         }
         if args[1] == "authenticate" && name == "Safari" && elements.map({ text($0) }).joined(separator: "\n").contains("Safari is trying to allow unsigned extensions."),
            let field = elements.first(where: { (attribute($0, "AXSubrole") as? String) == "AXSecureTextField" }),
@@ -86,6 +76,6 @@ for app in NSWorkspace.shared.runningApplications {
         }
     }
 }
-if ["press", "enable", "enable-extension", "authenticate"].contains(args[1]) { exit(pressed ? 0 : 1) }
+if ["press", "enable", "extension-enabled", "authenticate"].contains(args[1]) { exit(pressed ? 0 : 1) }
 let data = try JSONSerialization.data(withJSONObject: dialogs, options: [.sortedKeys])
 print(String(data: data, encoding: .utf8)!)

@@ -28,18 +28,9 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Safari contract regressions
         run: >-
-          pnpm exec vitest run
-          --reporter=default --reporter=junit
-          --outputFile.junit=test-results/safari/unit-tests.xml
-          tests/config/wxtPermissions.test.ts
-          tests/config/wxtSelfUpdate.test.ts
-          tests/config/distributionChannel.test.ts
-          tests/services/apiTransport/safariNativeCookie.test.ts
-          tests/scripts/safariNativeCookieTooling.test.ts
-          tests/scripts/safariSmoke.test.ts
-          tests/scripts/safariAuthorization.test.ts
-          tests/scripts/safariWorkflow.test.ts
-      - name: Check actual Safari automation access
+          pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/safari/unit-tests.xml tests/config/wxtPermissions.test.ts tests/config/wxtSelfUpdate.test.ts tests/config/distributionChannel.test.ts tests/services/apiTransport/safariNativeCookie.test.ts tests/scripts/safariNativeCookieTooling.test.ts tests/scripts/safariSmoke.test.ts tests/scripts/safariAuthorization.test.ts tests/scripts/safariActivation.test.ts tests/scripts/safariWorkflow.test.ts
+
+      - name: Run native Safari E2E
         env:
           SAFARI_NATIVE_OBSERVATIONS: test-results/safari/observations.json
           AAH_SAFARI_REAL_TOKEN: ""

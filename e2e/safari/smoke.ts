@@ -60,6 +60,31 @@ export async function runSafariSmoke({
   }
   let appName = ""
   let appPath = ""
+  const driver = path.join(output, "accessibility")
+  const openSettings = () =>
+    command("osascript", [
+      "-e",
+      'tell application "Safari" to activate',
+      "-e",
+      'tell application "System Events" to tell process "Safari"\nset frontmost to true\nclick menu item "Settings…" of menu "Safari" of menu bar 1\nrepeat 40 times\nif exists window "General" or exists window "Extensions" or exists window "Developer" then return true\ndelay 0.25\nend repeat\nerror "Safari settings window unavailable"\nend tell',
+    ])
+  const allowUnsigned = () => {
+    try {
+      command(driver, ["enable", "Safari", "Allow unsigned extensions"])
+    } catch (error) {
+      const dialogs = JSON.parse(command(driver, ["dialogs", "Safari"]))
+      if (!unsignedExtensionPasswordDialog(dialogs)) throw error
+      assert(
+        process.env.AAH_SAFARI_CI_PASSWORD,
+        "Missing disposable Safari runner password",
+      )
+      execFileSync(driver, ["authenticate", "Safari"], {
+        input: process.env.AAH_SAFARI_CI_PASSWORD + "\n",
+        timeout: 10000,
+      })
+      command(driver, ["enable", "Safari", "Allow unsigned extensions"])
+    }
+  }
   try {
     await check("macOS runtime", () =>
       assert.equal(platform, "darwin", "Safari E2E requires macOS"),
@@ -150,12 +175,7 @@ export async function runSafariSmoke({
       )
     })
     await check("Safari settings accessibility", () => {
-      command("osascript", [
-        "-e",
-        'tell application "Safari" to activate',
-        "-e",
-        'tell application "System Events" to tell process "Safari"\nset frontmost to true\nclick menu item "Settings…" of menu "Safari" of menu bar 1\nrepeat 40 times\nif exists window "General" then return "General"\ndelay 0.25\nend repeat\nerror "Safari settings window unavailable"\nend tell',
-      ])
+      openSettings()
       fs.writeFileSync(
         path.join(output, "settings-before.json"),
         command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
@@ -183,22 +203,7 @@ export async function runSafariSmoke({
       command("screencapture", ["-x", path.join(output, "safari-settings.png")])
     })
     await check("Trial extension activation", () => {
-      const driver = path.join(output, "accessibility")
-      try {
-        command(driver, ["enable", "Safari", "Allow unsigned extensions"])
-      } catch (error) {
-        const dialogs = JSON.parse(command(driver, ["dialogs", "Safari"]))
-        if (!unsignedExtensionPasswordDialog(dialogs)) throw error
-        assert(
-          process.env.AAH_SAFARI_CI_PASSWORD,
-          "Missing disposable Safari runner password",
-        )
-        execFileSync(driver, ["authenticate", "Safari"], {
-          input: process.env.AAH_SAFARI_CI_PASSWORD + "\n",
-          timeout: 10000,
-        })
-        command(driver, ["enable", "Safari", "Allow unsigned extensions"])
-      }
+      allowUnsigned()
       const extension = path.join(
         appPath,
         "Contents/PlugIns",
@@ -229,30 +234,34 @@ export async function runSafariSmoke({
         "Extensions",
       ])
       assert(appName, "Missing trial extension name")
-      try {
-        command(driver, ["enable-extension", "Safari", appName])
-      } finally {
-        try {
-          fs.writeFileSync(
-            path.join(output, "extension-state.json"),
-            command("plutil", [
-              "-convert",
-              "json",
-              "-o",
-              "-",
-              path.join(
-                os.homedir(),
-                "Library/Containers/com.apple.Safari/Data/Library/Safari/WebExtensions/Extensions.plist",
-              ),
-            ]),
-          )
-        } catch (error) {
-          fs.writeFileSync(
-            path.join(output, "extension-state-error.txt"),
-            error instanceof Error ? error.message : String(error),
-          )
-        }
-      }
+      const statePath = path.join(
+        os.homedir(),
+        "Library/Containers/com.apple.Safari/Data/Library/Safari/WebExtensions/Extensions.plist",
+      )
+      fs.writeFileSync(
+        path.join(output, "extension-state-before.xml"),
+        command("plutil", ["-convert", "xml1", "-o", "-", statePath]),
+      )
+      command("osascript", [
+        "-e",
+        'tell application "Safari" to quit',
+        "-e",
+        'tell application "System Events"\nrepeat 40 times\nif not (exists process "Safari") then return true\ndelay 0.25\nend repeat\nerror "Safari did not quit"\nend tell',
+      ])
+      fs.writeFileSync(
+        path.join(output, "activation-state.json"),
+        command("python3", ["e2e/safari/activation.py", extension]),
+      )
+      command("open", ["-a", "Safari"])
+      openSettings()
+      command(driver, ["press", "Safari", "Developer"])
+      allowUnsigned()
+      command(driver, ["press", "Safari", "Extensions"])
+      command(driver, ["extension-enabled", "Safari", appName])
+      fs.writeFileSync(
+        path.join(output, "extension-state-after.xml"),
+        command("plutil", ["-convert", "xml1", "-o", "-", statePath]),
+      )
       fs.writeFileSync(
         path.join(output, "extension-settings.json"),
         command(path.join(output, "accessibility"), ["dialogs", "Safari"]),

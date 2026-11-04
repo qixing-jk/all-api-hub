@@ -31,13 +31,44 @@ it("records unavailable Safari as a failed check without running platform comman
 })
 
 it.each([
-  { popupAvailable: true, navigationAvailable: true, optionsRendered: true },
-  { popupAvailable: false, navigationAvailable: true, optionsRendered: true },
-  { popupAvailable: true, navigationAvailable: false, optionsRendered: true },
-  { popupAvailable: true, navigationAvailable: true, optionsRendered: false },
+  {
+    popupAvailable: true,
+    navigationAvailable: true,
+    optionsRendered: true,
+    shutdownAvailable: true,
+  },
+  {
+    popupAvailable: false,
+    navigationAvailable: true,
+    optionsRendered: true,
+    shutdownAvailable: true,
+  },
+  {
+    popupAvailable: true,
+    navigationAvailable: false,
+    optionsRendered: true,
+    shutdownAvailable: true,
+  },
+  {
+    popupAvailable: true,
+    navigationAvailable: true,
+    optionsRendered: false,
+    shutdownAvailable: true,
+  },
+  {
+    popupAvailable: true,
+    navigationAvailable: true,
+    optionsRendered: true,
+    shutdownAvailable: false,
+  },
 ])(
   "accepts latest native evidence and requires the Popup flow (%j)",
-  async ({ popupAvailable, navigationAvailable, optionsRendered }) => {
+  async ({
+    popupAvailable,
+    navigationAvailable,
+    optionsRendered,
+    shutdownAvailable,
+  }) => {
     if (!optionsRendered) vi.useFakeTimers()
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
     const projectRoot = path.join(output, "project")
@@ -68,6 +99,12 @@ it.each([
           return `Prepared independent trial: ${output}`
         if (file === "xcodebuild" && args.includes("-list"))
           return JSON.stringify({ project: { schemes: ["Trial"] } })
+        if (
+          file === "osascript" &&
+          args.join(" ").includes("to quit") &&
+          !shutdownAvailable
+        )
+          throw new Error("Safari did not quit")
         if (args[0] === "enable" && args[2] === "Trial")
           throw new Error("Installed extension checkbox has no accessible name")
         if (args.includes("press") && args.includes("Trial") && !popupAvailable)
@@ -95,7 +132,9 @@ it.each([
         return "true"
       },
     })
-    if (!popupAvailable)
+    if (!shutdownAvailable)
+      await expect(result).rejects.toThrow("Safari did not quit")
+    else if (!popupAvailable)
       await expect(result).rejects.toThrow("Popup unavailable")
     else if (!navigationAvailable)
       await expect(result).rejects.toThrow("Options navigation unavailable")
@@ -238,7 +277,7 @@ it("requires activation of the compiled trial extension", async () => {
           return `Prepared independent trial: ${output}`
         if (file === "xcodebuild" && args.includes("-list"))
           return JSON.stringify({ project: { schemes: ["Trial"] } })
-        if (args.includes("enable-extension") && args.includes("Trial"))
+        if (args.includes("extension-enabled") && args.includes("Trial"))
           throw new Error("Trial extension unavailable")
         return "true"
       },

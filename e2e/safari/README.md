@@ -8,7 +8,7 @@ The loopback fixture uses synthetic accounts. The native verifier requires fresh
 
 The basic UI check opens the real toolbar Popup, requires its management controls, clicks Account Management and reads back the Options account-manager URL. It also requires the rendered account manager's Add Account control. Screenshots and accessibility snapshots accompany these checks.
 
-The runner uses macOS accessibility APIs and Apple Events. It handles the runner's specific system request to control Safari through the actual authorization dialog. Developer controls and extension activation are read back. Safari's [unsigned-extension settings](https://developer.apple.com/documentation/safariservices/running-your-safari-web-extension) reset when Safari quits, so each run performs its own setup.
+The runner uses macOS accessibility APIs and Apple Events. It handles the runner's specific system request to control Safari through the actual authorization dialog. Extension setup follows the state bootstrap used by [btecu/safari-ad](https://github.com/btecu/safari-ad/blob/main/scripts/enable_in_safari.py): stop Safari before preparing its registered extension state, then restart Safari and verify activation. This runner changes only the uniquely generated trial entry and grants loopback fixture access. Developer controls and the installed extension checkbox are read back. Safari's [unsigned-extension settings](https://developer.apple.com/documentation/safariservices/running-your-safari-web-extension) reset when Safari quits, so each restart restores that setting through its authorization dialog.
 
 The CLI requires a GitHub-hosted macOS runner. It uses the image's local automatic-login credential to authenticate Safari's unsigned-extension dialog, changes Safari development settings and enables its generated trial. The credential format is defined by the [official runner image bootstrap](https://github.com/actions/runner-images/blob/main/images/macos/assets/bootstrap-provisioner/kcpassword.py). Passwords are masked in CI and omitted from accessibility snapshots. Use the separate [native validation guide](../safariNativeCookie/README.md) for deliberate local experiments.
 
@@ -19,8 +19,10 @@ The `safari-smoke-<attempt>` artifact retains `test-results/safari` reports, obs
 For local driver regressions:
 
 ```sh
-pnpm exec vitest run tests/scripts/safariSmoke.test.ts tests/scripts/safariAuthorization.test.ts tests/scripts/safariWorkflow.test.ts
+pnpm exec vitest run tests/scripts/safariSmoke.test.ts tests/scripts/safariAuthorization.test.ts tests/scripts/safariActivation.test.ts tests/scripts/safariWorkflow.test.ts
 ```
+
+The activation regressions require Python 3. Set `AAH_SAFARI_TEST_PYTHON` to an interpreter path when `python3` is unavailable or resolves to a Windows application alias.
 
 The real native observations use the maintained verifier:
 
