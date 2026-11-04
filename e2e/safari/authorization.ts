@@ -8,6 +8,21 @@ interface Dialog {
   buttons: string[]
 }
 
+/** Format used by actions/runner-images' macOS bootstrap kcpassword.py. */
+export function decodeHostedRunnerPassword(encoded: Uint8Array) {
+  assert(
+    encoded.length > 0,
+    "Hosted runner auto-login credential is unavailable",
+  )
+  const key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
+  const decoded = Buffer.from(
+    Array.from(encoded, (byte, index) => byte ^ key[index % key.length]!),
+  )
+  const password = decoded.toString("utf8").split("\0")[0]!
+  assert(password.length > 0, "Hosted runner auto-login credential is empty")
+  return password
+}
+
 export function safariAuthorizationDialog(dialogs: Dialog[]) {
   return dialogs.find(
     (dialog) =>

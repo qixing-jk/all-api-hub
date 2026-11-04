@@ -1,6 +1,7 @@
 import { expect, it } from "vitest"
 
 import {
+  decodeHostedRunnerPassword,
   safariAuthorizationDialog,
   unsignedExtensionPasswordDialog,
 } from "~~/e2e/safari/authorization"
@@ -15,6 +16,15 @@ it("recognizes the runner's Safari control request and requires an Allow button"
       },
     ]),
   ).toBe("SecurityAgent")
+})
+
+it("decodes the hosted image's local auto-login format without its zero padding", () => {
+  expect(
+    decodeHostedRunnerPassword(
+      Uint8Array.from([9, 236, 33, 87, 210, 188, 221, 234, 163, 185, 31]),
+    ),
+  ).toBe("test")
+  expect(() => decodeHostedRunnerPassword(new Uint8Array())).toThrow()
 })
 
 it("only authenticates Safari's unsigned-extension dialog", () => {
