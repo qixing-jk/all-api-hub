@@ -323,3 +323,28 @@ gh run download 41702374063 --repo qixing-jk/all-api-hub --pattern "e2e-spec-dur
 预检与完整分片并行，失败后没有自动取消完整测试，因此增加一个 runner 和重复执行。39 秒受控失败只证明通道能够提前报错；缺少普通 PR 的失败命中率和收益样本，不足以支持默认支付这项成本。本节以前的实验数据保留为历史证据，包含预检的 12–15% 提速不能作为移除后版本的重新测量结果。
 
 移除后的工作流调度测试先确认多余预检 job 导致失败，再验证仅调度发布检测、完整分片和报告合并。保留普通 push/PR/手动运行、取消、发布豁免及失败分片报告合并的现有场景。本次不再启动远端实验，新的完整工作流耗时尚未测量。已有实验与失败原始数据继续保留在本目录 `artifacts/`，供后续对照使用。
+
+
+## 2026-11-04 Vitest 5.1.0 大版本升级筛选
+
+npm registry 的 `latest` 同时为 Vitest 和 coverage-v8 的 `5.1.0`，`V4` 为 `4.1.12`。来源：[5.0 官方说明](https://vitest.dev/blog/vitest-5.html)、[5.0 迁移指南](https://vitest.dev/guide/migration.html)、[5.1.0 发布记录](https://github.com/vitest-dev/vitest/releases/tag/v5.1.0)。当前 Node 24.14.1、Vite 7.3.2 满足版本要求。
+
+相关性能机制包括 inline projects 共享 Vite server、暖模块一次通信送达 worker、正式且默认启用的文件系统模块缓存、V8 报告合并和通信优化；5.1 进一步允许覆盖率 provider 在模块缓存存放数据。`--last-failed` / `--since-last-run` 是缩减执行范围，不作为完整 CI 的提速。vm pools 的新预热/编译缓存仍是后续独立候选，没有在本次启用或声称收益。
+
+在 HEAD `02cd472d290275f736368e033f3d51352c3545ca` 上实际安装 Vitest/coverage-v8 5.1.0，保留 threads、两个 worker、测试隔离、四个文件/191 条用例、覆盖率及完整报告。升级版显式设置 `clearMocks: false` 保持 4.x 语义，迁移 fsModuleCache 配置，并显式指定 blob 路径。对照关闭模块缓存，两版使用各自独立 Vite 缓存；这是本地冷模块缓存筛选，不是热缓存或 Ubuntu 全量对照。
+
+| 本地指标 | 4.0.17 两轮 | 5.1.0 两轮 |
+| --- | --- | --- |
+| 整批进程耗时 | 94.92 / 94.23 秒 | 100.63 / 95.80 秒 |
+| collect 累计 | 17.82 / 24.81 秒 | 22.33 / 25.41 秒 |
+| 用例通过 | 191 / 191 | 191 / 191 |
+| 覆盖率源码清单 | 3,056 / 3,056 | 3,056 / 3,056 |
+| 有语句覆盖源码数 | 1,452 / 1,452 | 1,450 / 1,450 |
+
+这两轮未观察到提速。5.x 的 `combobox.tsx` 与 `krill/keyEditor.ts` 不再有语句命中，需要进一步核对覆盖率/模块执行语义，不能把测试通过等同完整验证。测试名称的参数格式也在大版本中变化，跨版本不能只依赖 title 字符串比较身份。
+
+兼容性筛选：76 项调度/浏览器缓存 Vitest 检查通过。CI 工具 50 项中49项通过，真实失败分片报告合并回归失败：默认报告目录从 `.vitest-reports` 改为 `.vitest/blob`；显式固定路径后仍失败，因为 blob 从 `[version, files, errors, moduleGraph, coverage, executionTime]` 改为 `[version, files, errors, coverage, executionTime, environmentModules]`。需要适配统一读取边界并保留缺报告、混版本、worker 错误等拒绝规则，不能放宽 guard。编译筛选还输出旧实验缓存选项类型错误和 `useAccountKeyResourceInventoryWorkflow.ts:48` 的可选参数解构错误；前者属于明确迁移，后者未验证因果，不标为 Vitest 导致。
+
+决策：本次不保留生产升级。已恢复原 package、锁文件、Vitest 配置、workflow 和临时报告测试改动，并重新按 frozen lock 安装4.0.17。仅保留支持两种缓存配置 API 的对照驱动和本节调查结论。5.x 仍有可测试的热缓存、覆盖率缓存及 vm pool 方向，但尚未证明本仓库收益；没有运行新版 Ubuntu 全量或关闭隔离。
+
+两版完整日志/blob/coverage 与 `result.json` 分别保留在 `artifacts/imports-vitest4-before-major/` 和 `artifacts/imports-vitest5-major/`。临时生产迁移补丁保存在后者 `migration-probe.patch`，便于下一次实验；这些是本地审阅证据，不进入 Git。后续升级需先建立5.x blob读取兼容和覆盖率差异解释，再对同源码做热缓存及完整CI对照。

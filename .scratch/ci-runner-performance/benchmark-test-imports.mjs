@@ -120,7 +120,17 @@ const configs = {}
 for (const variant of variants) {
   const viteCache = JSON.stringify(path.join(output, "vite-" + variant))
   const moduleCache = JSON.stringify(path.join(output, "module-cache"))
-  const config = `import { mergeConfig } from "vitest/config"\nimport base from "../../../../vitest.config"\nexport default mergeConfig(base, { cacheDir: ${viteCache}, test: { experimental: { fsModuleCache: ${variant === "module-cache"}, fsModuleCachePath: ${moduleCache} }, deps: { optimizer: { client: { enabled: ${variant === "optimizer"}, include: ["lucide-react"] } } } } })\n`
+  const major = Number(
+    JSON.parse(
+      readFileSync(path.join(root, "node_modules/vitest/package.json"), "utf8"),
+    ).version.split(".")[0],
+  )
+  const cacheOptions =
+    major >= 5
+      ? `fsModuleCache: ${variant === "module-cache"}, fsModuleCachePath: ${moduleCache}`
+      : `experimental: { fsModuleCache: ${variant === "module-cache"}, fsModuleCachePath: ${moduleCache} }`
+  const config = `import { mergeConfig } from "vitest/config"\nimport base from "../../../../vitest.config"\nexport default mergeConfig(base, { cacheDir: ${viteCache}, test: { ${cacheOptions}, deps: { optimizer: { client: { enabled: ${variant === "optimizer"}, include: ["lucide-react"] } } } } })\n`
+
   configs[variant] = path.join(output, variant + ".config.ts")
   writeFileSync(configs[variant], config)
 }
