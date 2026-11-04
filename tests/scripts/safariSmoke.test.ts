@@ -464,8 +464,11 @@ it("requires registration of the built native extension before activation", asyn
         if (file === "xcodebuild" && args.includes("-list"))
           return JSON.stringify({ project: { schemes: ["Trial"] } })
         if (file === "pluginkit" && args.includes("-a")) {
-          expect(args.at(-1)).toMatch(
-            /Contents[\\/]PlugIns[\\/]Trial Extension\.appex$/u,
+          expect(args.at(-1)).toBe(
+            path.join(
+              output,
+              "DerivedData/Build/Products/Release/Trial.app/Contents/PlugIns/Trial Extension.appex",
+            ),
           )
           throw new Error("Native registration failed")
         }
@@ -556,6 +559,7 @@ it("authenticates the unsigned-extension prompt before retrying its enable contr
   )
   vi.stubEnv("AAH_SAFARI_CI_PASSWORD", "synthetic-ci-password")
   const events: string[] = []
+  const authenticationDialogs: { file: string; args: string[] }[] = []
   let unsignedAttempts = 0
   vi.mocked(execFileSync).mockImplementationOnce(() => {
     events.push("authenticate")
@@ -580,7 +584,8 @@ it("authenticates the unsigned-extension prompt before retrying its enable contr
           if (unsignedAttempts === 1)
             throw new Error("Safari password required")
         }
-        if (args[0] === "dialogs")
+        if (args[0] === "dialogs") {
+          if (unsignedAttempts === 1) authenticationDialogs.push({ file, args })
           return JSON.stringify([
             {
               app: "Safari",
@@ -588,6 +593,7 @@ it("authenticates the unsigned-extension prompt before retrying its enable contr
               buttons: ["Cancel", "OK"],
             },
           ])
+        }
         if (file === "pluginkit" && args.includes("-a")) {
           events.push("registration")
           throw new Error("Reached registration after unsigned authorization")
@@ -608,6 +614,9 @@ it("authenticates the unsigned-extension prompt before retrying its enable contr
     ["authenticate", "Safari"],
     { input: "synthetic-ci-password\n", timeout: 10000 },
   )
+  expect(authenticationDialogs).toEqual([
+    { file: path.join(output, "accessibility"), args: ["dialogs", "Safari"] },
+  ])
 })
 
 it("requires activation of the compiled trial extension", async () => {

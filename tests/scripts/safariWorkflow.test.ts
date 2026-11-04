@@ -23,6 +23,7 @@ it("retains native evidence even if smoke fails and runs Safari contract regress
   expect(retainStep).toBeDefined()
   expect(retainStep).toMatch(/^ {8}if:\s*\$\{\{\s*!cancelled\(\)\s*\}\}\s*$/m)
   expect(retainStep).toContain("test-results/safari/*.json")
+  expect(retainStep).toMatch(/^ {8}uses: actions\/upload-artifact@/m)
   const nativeStep = workflow
     .split("      - name: Run native Safari E2E\n")[1]
     ?.split(/^ {6}- /m)[0]

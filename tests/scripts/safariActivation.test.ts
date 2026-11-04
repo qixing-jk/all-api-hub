@@ -32,74 +32,83 @@ const run = (
     },
   )
 
-it("prepares only the registered CI trial and grants its loopback fixture access", () => {
-  const state = {
-    [key]: {
-      Enabled: false,
+it.each([
+  identifier,
+  "io.github.qixingjk.allapihub.nativeCookieTrial.run20261105123456789.Extension",
+])(
+  "prepares only the registered CI trial and grants its loopback fixture access (%s)",
+  (bundle) => {
+    const key = `${bundle} (TESTTEAM)`
+    const state = {
+      [key]: {
+        Enabled: false,
+        AddedDate: "2026-11-04T00:00:00",
+        Permissions: [],
+        RevokedPermissions: {
+          cookies: "2026-11-04T00:00:00",
+          nativeMessaging: "2026-11-04T00:00:00",
+          bookmarks: "2026-11-04T00:00:00",
+        },
+        RevokedPermissionOrigins: {
+          "http://127.0.0.1/*": "2026-11-04T00:00:00",
+          "http://localhost/*": "2026-11-04T00:00:00",
+          "https://example.test/*": "2026-11-04T00:00:00",
+        },
+      },
+      "example.other.Extension (OTHER)": { Enabled: false, Permissions: [] },
+    }
+    const result = run(state, bundle)
+    expect(result.status, result.stderr).toBe(0)
+    const { prepared, original } = JSON.parse(result.stdout)
+    expect(original).toEqual(state)
+    expect(prepared["example.other.Extension (OTHER)"]).toEqual(
+      state["example.other.Extension (OTHER)"],
+    )
+    expect(prepared[key]).toMatchObject({
+      Enabled: true,
+      EnabledByUserGesture: true,
       AddedDate: "2026-11-04T00:00:00",
-      Permissions: [],
-      RevokedPermissions: {
-        cookies: "2026-11-04T00:00:00",
-        nativeMessaging: "2026-11-04T00:00:00",
-        bookmarks: "2026-11-04T00:00:00",
+      GrantedPermissionOrigins: {
+        "http://127.0.0.1/*": "4001-01-01T00:00:00",
+        "http://localhost/*": "4001-01-01T00:00:00",
       },
-      RevokedPermissionOrigins: {
-        "http://127.0.0.1/*": "2026-11-04T00:00:00",
-        "http://localhost/*": "2026-11-04T00:00:00",
-        "https://example.test/*": "2026-11-04T00:00:00",
-      },
-    },
-    "example.other.Extension (OTHER)": { Enabled: false, Permissions: [] },
-  }
-  const result = run(state)
-  expect(result.status, result.stderr).toBe(0)
-  const { prepared, original } = JSON.parse(result.stdout)
-  expect(original).toEqual(state)
-  expect(prepared["example.other.Extension (OTHER)"]).toEqual(
-    state["example.other.Extension (OTHER)"],
-  )
-  expect(prepared[key]).toMatchObject({
-    Enabled: true,
-    EnabledByUserGesture: true,
-    AddedDate: "2026-11-04T00:00:00",
-    GrantedPermissionOrigins: {
-      "http://127.0.0.1/*": "4001-01-01T00:00:00",
-      "http://localhost/*": "4001-01-01T00:00:00",
-    },
-  })
-  expect(prepared[key].AccessibleOrigins).toEqual([
-    "http://127.0.0.1/*",
-    "http://localhost/*",
-  ])
-  expect(prepared[key].Permissions).toEqual([
-    "cookies",
-    "nativeMessaging",
-    "storage",
-    "http://127.0.0.1/*",
-    "http://localhost/*",
-  ])
-  expect(prepared[key].RevokedPermissionOrigins).not.toHaveProperty(
-    "http://127.0.0.1/*",
-  )
-  expect(prepared[key].RevokedPermissionOrigins).not.toHaveProperty(
-    "http://localhost/*",
-  )
-  expect(prepared[key].RevokedPermissionOrigins).toHaveProperty(
-    "https://example.test/*",
-    "2026-11-04T00:00:00",
-  )
-  expect(prepared[key].GrantedPermissionOrigins).not.toHaveProperty("*://*/*")
-  expect(prepared[key].GrantedPermissions).toMatchObject({
-    cookies: "4001-01-01T00:00:00",
-    nativeMessaging: "4001-01-01T00:00:00",
-  })
-  expect(prepared[key].RevokedPermissions).not.toHaveProperty("cookies")
-  expect(prepared[key].RevokedPermissions).not.toHaveProperty("nativeMessaging")
-  expect(prepared[key].RevokedPermissions).toHaveProperty(
-    "bookmarks",
-    "2026-11-04T00:00:00",
-  )
-})
+    })
+    expect(prepared[key].AccessibleOrigins).toEqual([
+      "http://127.0.0.1/*",
+      "http://localhost/*",
+    ])
+    expect(prepared[key].Permissions).toEqual([
+      "cookies",
+      "nativeMessaging",
+      "storage",
+      "http://127.0.0.1/*",
+      "http://localhost/*",
+    ])
+    expect(prepared[key].RevokedPermissionOrigins).not.toHaveProperty(
+      "http://127.0.0.1/*",
+    )
+    expect(prepared[key].RevokedPermissionOrigins).not.toHaveProperty(
+      "http://localhost/*",
+    )
+    expect(prepared[key].RevokedPermissionOrigins).toHaveProperty(
+      "https://example.test/*",
+      "2026-11-04T00:00:00",
+    )
+    expect(prepared[key].GrantedPermissionOrigins).not.toHaveProperty("*://*/*")
+    expect(prepared[key].GrantedPermissions).toMatchObject({
+      cookies: "4001-01-01T00:00:00",
+      nativeMessaging: "4001-01-01T00:00:00",
+    })
+    expect(prepared[key].RevokedPermissions).not.toHaveProperty("cookies")
+    expect(prepared[key].RevokedPermissions).not.toHaveProperty(
+      "nativeMessaging",
+    )
+    expect(prepared[key].RevokedPermissions).toHaveProperty(
+      "bookmarks",
+      "2026-11-04T00:00:00",
+    )
+  },
+)
 
 const invalidRegistrationCases: {
   state: object
