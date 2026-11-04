@@ -136,7 +136,7 @@ export async function runSafariSmoke({
       ])
       const tree = command("osascript", [
         "-e",
-        'tell application "System Events" to tell process "Safari"\n delay 1\n try\n click button "Advanced" of toolbar 1 of window 1\n end try\n delay 1\n repeat with control in (entire contents of window 1)\n try\n if role of control is "AXCheckBox" and name of control contains "Show features for web developers" then\n if value of control is 0 then click control\n end if\n end try\n end repeat\n delay 1\n try\n click button "Developer" of toolbar 1 of window 1\n end try\n delay 1\n return entire contents of window 1\n end tell',
+        'tell application "System Events" to tell process "Safari"\n delay 1\n try\n click button "Advanced" of toolbar 1 of window 1\n end try\n delay 1\n repeat with safariControl in (entire contents of window 1)\n try\n if role of safariControl is "AXCheckBox" and name of safariControl contains "Show features for web developers" then\n if value of safariControl is 0 then click safariControl\n end if\n end try\n end repeat\n delay 1\n try\n click button "Developer" of toolbar 1 of window 1\n end try\n delay 1\n return entire contents of window 1\n end tell',
       ])
       fs.writeFileSync(path.join(output, "safari-settings.txt"), tree)
       command("screencapture", ["-x", path.join(output, "safari-settings.png")])
