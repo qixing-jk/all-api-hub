@@ -262,48 +262,89 @@ GitHub Stable 和 Nightly 属于手动安装通道。必须从 GitHub 安装时�
 
 ## 🖼️ 界面预览
 
+<div align="center">
+  <img src="docs/docs/static/image/options-overview.png" alt="options-overview" style="width:100%; height:auto;"/>
+  <p><em>全功能主控制台与仪表盘：全局资产、待办事项、统一 API 配置与健康状态一览</em></p>
+</div>
+
+### 账号与 API 密钥
+
 <table>
   <tr>
-    <td align="center">
+    <td align="center" colspan="2" width="100%">
       <img src="docs/docs/static/image/account-manage.png" alt="account-manage" style="width:100%; height:auto;"/>
-      <div>账户管理总览</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/model-list.png" alt="model-list" style="width:100%; height:auto;"/>
-      <div>模型列表与价格</div>
+      <div><b>多中转站账户资产</b><br/>集中管理各平台余额、货币汇率与标签筛选</div>
     </td>
   </tr>
   <tr>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/docs/static/image/api-key-list.png" alt="api-key-list" style="width:100%; height:auto;"/>
-      <div>密钥列表与导出</div>
+      <div><b>统一密钥管理与导出</b><br/>跨站点额度查询、一键复制与客户端配置导出</div>
     </td>
-    <td align="center">
-      <img src="docs/docs/static/image/auto-check-in.png" alt="auto-check-in" style="width:100%; height:auto;"/>
-      <div>账号自动签到</div>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/account-model-usage-overview.png" alt="account-model-usage-overview" style="width:100%; height:auto;"/>
-      <div>账号模型使用情况</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/account-model-latency-overview.png" alt="account-model-latency-overview" style="width:100%; height:auto;"/>
-      <div>模型慢查询分析</div>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/docs/static/image/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
-      <div>New API 模型同步</div>
-    </td>
-    <td align="center">
-      <img src="docs/docs/static/image/new-api-channel-manage.png" alt="new-api-channel-manage" style="width:100%; height:auto;"/>
-      <div>New API 渠道管理</div>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/api-credential-profile-list.png" alt="api-credential-profile-list" style="width:100%; height:auto;"/>
+      <div><b>API 凭据配置集</b><br/>免登录纯 Key 托管、CLI 兼容性验证与快速调用</div>
     </td>
   </tr>
 </table>
+
+### 模型选择与调用验证
+
+<table>
+  <tr>
+    <td align="center" colspan="2" width="100%">
+      <img src="docs/docs/static/image/model-list.png" alt="model-list" style="width:100%; height:auto;"/>
+      <div><b>跨平台模型与价格对比</b><br/>按使用场景折算同一模型的跨站报价，显示最低价格</div>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/web-ai-api-check-trigger.png" alt="web-ai-api-check-trigger" style="width:100%; height:auto;"/>
+      <div><b>网页内快捷 API 测试</b><br/>复制网页中的 API 地址与密钥，识别后点击打开测试面板</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/web-ai-api-check-results.png" alt="web-ai-api-check-results" style="width:100%; height:auto;"/>
+      <div><b>直接在网页中测试 API</b><br/>模型列表、文本生成、工具调用、结构化输出与绘画等测试</div>
+    </td>
+  </tr>
+</table>
+
+### 签到、余额与用量
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/auto-check-in.png" alt="auto-check-in" style="width:100%; height:auto;"/>
+      <div><b>自动化每日签到</b><br/>多账号定时轮询、智能重试与领取收益明细</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/balance-history.png" alt="balance-history" style="width:100%; height:auto;"/>
+      <div><b>余额走势与收支趋势</b><br/>账户余额走势、消费分布与完整收支汇总</div>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/account-model-usage-overview.png" alt="account-model-usage-overview" style="width:100%; height:auto;"/>
+      <div><b>多维用量与消费占比</b><br/>Tokens 消耗透视、账号调用分布与费用统计</div>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/docs/static/image/account-model-latency-overview.png" alt="account-model-latency-overview" style="width:100%; height:auto;"/>
+      <div><b>响应时间与慢查询分析</b><br/>各模型延迟对比、长请求诊断与高耗时预警</div>
+    </td>
+  </tr>
+</table>
+
+### 自建网关与模型同步
+
+<div align="center">
+      <img src="docs/docs/static/image/new-api-channel-manage.png" alt="new-api-channel-manage" style="width:100%; height:auto;"/>
+      <div><b>自建网关渠道管理</b><br/>展示支持的网关平台，管理渠道状态、测试与跨站迁移</div>
+    </div>
+
+<div align="center">
+      <img src="docs/docs/static/image/new-api-channel-sync.png" alt="new-api-channel-sync" style="width:100%; height:auto;"/>
+      <div><b>上游模型自动同步</b><br/>按渠道模型自动抓取、差异对比与一键同步更新</div>
+    </div>
 
 <a id="development-guide"></a>
 

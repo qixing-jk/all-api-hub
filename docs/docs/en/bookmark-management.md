@@ -11,6 +11,8 @@
 
 ## Feature Overview
 
+![Bookmark Management](../static/image/en/bookmark-manage.png)
+
 - **Add / Edit / Delete Bookmarks**: Save name, link, tag, and notes.
 - **Quick Open and Copy Links**: Suitable for quickly jumping to external backends or sharing with others.
 - **Pin to Top**: Important entry points can be fixed at the top.

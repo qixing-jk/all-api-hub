@@ -2,6 +2,8 @@
 
 > 本文介绍账号添加完成后的整理、维护和批量操作。要添加新账号或查找手动填写方法，请查看 [添加账号](./add-account.md)。
 
+![账号管理](./static/image/account-manage.png)
+
 ## 添加账号
 
 建议先使用自动识别；如果识别失败，也可以手动填写 New API、Sub2API 或 OpenRouter 等站点所需的信息。

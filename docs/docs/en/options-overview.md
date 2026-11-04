@@ -4,6 +4,8 @@
 >
 > **Page subtitle**: View the current status of your accounts, keys, usage, and automated tasks.
 
+![Overview (Main Dashboard)](../static/image/en/options-overview.png)
+
 ## 30-Second Quick Tour
 
 If this is your first time opening the Overview, follow this order for the smoothest experience:
