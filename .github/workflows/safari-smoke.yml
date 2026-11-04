@@ -29,6 +29,8 @@ jobs:
       - name: Safari contract regressions
         run: >-
           pnpm exec vitest run
+          --reporter=default --reporter=junit
+          --outputFile.junit=test-results/safari/unit-tests.xml
           tests/config/wxtPermissions.test.ts
           tests/config/wxtSelfUpdate.test.ts
           tests/config/distributionChannel.test.ts
@@ -57,6 +59,7 @@ jobs:
             test-results/safari/*.json
             test-results/safari/*.txt
             test-results/safari/*.log
+            test-results/safari/*.xml
             test-results/safari/*.png
             .scratch/safari-native-cookie/runs/**/project/**/*.pbxproj
             .scratch/safari-native-cookie/runs/**/project/**/*.entitlements

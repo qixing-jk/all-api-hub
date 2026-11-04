@@ -58,6 +58,7 @@ export async function runSafariSmoke({
     }
   }
   let appName = ""
+  let appPath = ""
   try {
     await check("macOS runtime", () =>
       assert.equal(platform, "darwin", "Safari E2E requires macOS"),
@@ -139,6 +140,7 @@ export async function runSafariSmoke({
         "Build/Products/Release",
         `${identity.appName}.app`,
       )
+      appPath = app
       assert(fs.existsSync(app), "Missing compiled Safari containing app")
       command("open", [app])
       fs.writeFileSync(
@@ -196,6 +198,30 @@ export async function runSafariSmoke({
         })
         command(driver, ["enable", "Safari", "Allow unsigned extensions"])
       }
+      const extension = path.join(
+        appPath,
+        "Contents/PlugIns",
+        `${appName} Extension.appex`,
+      )
+      fs.writeFileSync(
+        path.join(output, "native-bundle.json"),
+        command("plutil", [
+          "-convert",
+          "json",
+          "-o",
+          "-",
+          path.join(extension, "Contents/Info.plist"),
+        ]),
+      )
+      command("pluginkit", ["-a", extension])
+      fs.writeFileSync(
+        path.join(output, "native-registration.txt"),
+        command("pluginkit", [
+          "-mAvvv",
+          "-p",
+          "com.apple.Safari.web-extension",
+        ]),
+      )
       command(path.join(output, "accessibility"), [
         "press",
         "Safari",
@@ -218,8 +244,12 @@ export async function runSafariSmoke({
         const evidence = path.join(output, "observations.json")
         if (fs.existsSync(evidence)) {
           const data = JSON.parse(fs.readFileSync(evidence, "utf8"))
+          const start = data.events.findLastIndex(
+            (event: { stage: string }) => event.stage === "trial-start",
+          )
+          const current = data.events.slice(Math.max(0, start))
           if (
-            data.events.some(
+            current.some(
               (event: { stage: string }) => event.stage === "trial-error",
             )
           )
@@ -227,7 +257,7 @@ export async function runSafariSmoke({
               "Native Cookie trial failed; inspect observations.json",
             )
           if (
-            data.events.some(
+            current.some(
               (event: { stage: string }) => event.stage === "trial-complete",
             )
           ) {
