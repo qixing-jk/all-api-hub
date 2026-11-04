@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
 import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import { useAccountData } from "~/features/AccountManagement/data/useAccountData"
 import { KiloCodeAccountExportCard } from "~/features/KiloCodeExport/components/KiloCodeAccountExportCard"
@@ -301,6 +302,9 @@ export function KiloCodeExportDialog({
   const selectedDefaultProvider = preparedCatalog?.providers.find(
     (provider) => provider.selectionId === v7DefaultModel?.selectionId,
   )
+  const selectedDefaultInventory = selectedDefaultProvider
+    ? getModelInventory(selectedDefaultProvider.selectionId)
+    : null
   const copyActionLabel = isKiloV7Export
     ? t("ui:dialog.kiloCode.actions.copyKiloV7Provider")
     : t("ui:dialog.kiloCode.actions.copyLegacyApiConfigs")
@@ -505,6 +509,28 @@ export function KiloCodeExportDialog({
                 aria-label={t("ui:dialog.kiloCode.labels.defaultModel")}
                 value={v7DefaultModel?.modelId ?? ""}
                 modelIds={selectedDefaultProvider?.modelIds ?? []}
+                loading={
+                  selectedDefaultInventory?.status ===
+                  KILO_CODE_ACCOUNT_MODEL_STATUSES.Loading
+                }
+                onRetryFetch={
+                  selectedDefaultProvider
+                    ? () =>
+                        handleRetryModels(selectedDefaultProvider.selectionId)
+                    : undefined
+                }
+                fetchResult={
+                  selectedDefaultInventory?.status ===
+                  KILO_CODE_ACCOUNT_MODEL_STATUSES.Error
+                    ? { status: SELECT_FETCH_STATUSES.Error }
+                    : selectedDefaultInventory?.status ===
+                        KILO_CODE_ACCOUNT_MODEL_STATUSES.Loaded
+                      ? {
+                          status: SELECT_FETCH_STATUSES.Success,
+                          count: selectedDefaultInventory.modelIds.length,
+                        }
+                      : null
+                }
                 onChange={(modelId) => {
                   selectV7DefaultModel(modelId)
                 }}

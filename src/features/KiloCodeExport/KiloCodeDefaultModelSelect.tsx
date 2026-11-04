@@ -16,6 +16,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
+import {
+  SelectFetchFeedback,
+  SelectFetchIndicator,
+  type SelectFetchResult,
+} from "~/components/ui/SelectFetchFeedback"
 import { Spinner } from "~/components/ui/spinner"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
 import { cn } from "~/lib/utils"
@@ -30,6 +35,9 @@ export interface KiloCodeDefaultModelSelectProps
   allowCustomValue?: boolean
   placeholder?: string
   loading?: boolean
+  fetchResult?: SelectFetchResult | null
+  onRetryFetch?: () => void
+  retryFetchDisabled?: boolean
   searchPlaceholder?: string
   portalContainer?: HTMLElement
 }
@@ -113,6 +121,9 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
     allowCustomValue = false,
     placeholder,
     loading = false,
+    fetchResult,
+    onRetryFetch,
+    retryFetchDisabled,
     searchPlaceholder,
     portalContainer,
     className,
@@ -187,7 +198,10 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
             loading ? (
               <Spinner size="sm" variant="current" aria-hidden="true" />
             ) : (
-              <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+              <span className="flex items-center gap-2">
+                <SelectFetchIndicator result={fetchResult} />
+                <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+              </span>
             )
           }
         >
@@ -225,7 +239,13 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
             </div>
           ) : null}
           <CommandList className="min-h-0 flex-1">
-            {!renderedModelIds.length && !customValue ? (
+            {!renderedModelIds.length &&
+            !customValue &&
+            !(
+              modelIds.length === 0 &&
+              fetchResult !== undefined &&
+              (loading || fetchResult)
+            ) ? (
               <CommandEmpty>
                 {loading ? (
                   <Spinner size="sm" className="mx-auto" />
@@ -233,6 +253,14 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
                   emptyMessage
                 )}
               </CommandEmpty>
+            ) : null}
+            {customValue &&
+            modelIds.length > 0 &&
+            matchingCount === 0 &&
+            !loading ? (
+              <div className="text-muted-foreground px-3 py-2 text-xs">
+                {t("searchableSelect.empty")}
+              </div>
             ) : null}
             <CommandGroup>
               {customValue ? (
@@ -271,6 +299,15 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
             </CommandGroup>
           </CommandList>
         </Command>
+        {fetchResult !== undefined ? (
+          <SelectFetchFeedback
+            loading={loading}
+            result={fetchResult}
+            onRetry={onRetryFetch}
+            retryDisabled={retryFetchDisabled}
+            allowCustomValue={allowCustomValue}
+          />
+        ) : null}
       </PopoverContent>
     </Popover>
   )

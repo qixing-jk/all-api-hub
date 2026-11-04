@@ -395,11 +395,15 @@ test("keeps empty model recovery compact and allows a manual model", async ({
 }) => {
   await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
   let fetched = false
+  let failFetch = false
   await context.route(`${API_BASE_URL}/v1/models`, async (route) => {
     fetched = true
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({ data: [] }),
+      status: failFetch ? 401 : 200,
+      body: JSON.stringify(
+        failFetch ? { error: { message: "Access denied" } } : { data: [] },
+      ),
     })
   })
   await page.emulateMedia({ reducedMotion: "reduce" })
@@ -413,6 +417,9 @@ test("keeps empty model recovery compact and allows a manual model", async ({
   await expect(selector).not.toHaveAttribute("aria-busy", "true")
   await selector.click()
   const dropdown = contentHost.locator('[data-slot="popover-content"]')
+  await expect(dropdown.getByRole("status")).toContainText(
+    "The request succeeded but returned no models.",
+  )
   const refresh = dropdown.getByRole("button", {
     name: "Fetch models",
     exact: true,
@@ -442,6 +449,19 @@ test("keeps empty model recovery compact and allows a manual model", async ({
   expect((await dropdown.boundingBox())!.height).toBeLessThanOrEqual(120)
   await expect(dropdown).not.toContainText("Type to create one")
   const search = dropdown.getByPlaceholder("Search...")
+  await expect(
+    dropdown.getByRole("button", { name: "Enter manually", exact: true }),
+  ).toHaveCount(0)
+  await search.click()
+  await expect(search).toBeFocused()
+  failFetch = true
+  await refresh.click()
+  await expect(dropdown.getByRole("alert")).toContainText("Access denied")
+  await expect(selector.getByLabel("Failed to fetch the list.")).toBeVisible()
+  await dropdown.screenshot({
+    path: test.info().outputPath("failed-model-picker.png"),
+    animations: "disabled",
+  })
   await search.fill("custom-empty-model")
   await dropdown
     .getByRole("option", { name: 'Use "custom-empty-model"', exact: true })
@@ -508,6 +528,9 @@ test("refreshes models inside the dropdown without changing the selection", asyn
   await expect(
     contentHost.getByRole("option", { name: "new-model", exact: true }),
   ).toBeVisible()
+  await expect(
+    contentHost.locator('[data-slot="popover-content"]').getByRole("status"),
+  ).toContainText("Fetched 2 models.")
   await expect(selector).toContainText("gpt-4o-mini")
   await page.screenshot({
     path: test.info().outputPath("model-select-actions.png"),
@@ -1179,3 +1202,153 @@ test("opens API credential profiles from the content save success toast", async 
     profilesPage.getByRole("heading", { name: "api-console.example.test" }),
   ).toBeVisible()
 })
+
+for (const state of [
+  "unrequested",
+  "loading",
+  "refresh-loading",
+  "refresh-failure",
+  "retry-success",
+  "success",
+  "empty",
+  "failure",
+  "generic-failure",
+  "long-failure",
+  "no-match",
+  "custom-value",
+] as const) {
+  test(`model selector comparison: ${state}`, async ({ context, page }) => {
+    await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    let requests = 0
+    let hold = state === "loading" || state === "unrequested"
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await context.route(`${API_BASE_URL}/v1/models`, async (route) => {
+      requests += 1
+      if (hold) await gate
+      const failed =
+        ["failure", "generic-failure", "long-failure"].includes(state) ||
+        (state === "refresh-failure" && requests > 1) ||
+        (state === "retry-success" && requests === 1)
+      const message =
+        state === "long-failure"
+          ? "The model catalog cannot be retrieved. Check the server configuration and retry. ".repeat(
+              5,
+            )
+          : "Access denied"
+      await route.fulfill({
+        status: failed ? 401 : 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          failed
+            ? state === "generic-failure"
+              ? {}
+              : { error: { message } }
+            : {
+                data:
+                  state === "empty"
+                    ? []
+                    : [{ id: "gpt-4o-mini" }, { id: "other-model" }],
+              },
+        ),
+      })
+    })
+    const { contentHost, modal } =
+      await openApiCheckModalFromCopiedCredentials(page)
+    const selector = modal.getByRole("combobox", {
+      name: "Model ID",
+      exact: true,
+    })
+    await expect.poll(() => requests).toBeGreaterThan(0)
+    if (state === "unrequested") await modal.getByPlaceholder("sk-...").fill("")
+    else if (state === "loading")
+      await expect(selector).toHaveAttribute("aria-busy", "true")
+    else await expect(selector).not.toHaveAttribute("aria-busy", "true")
+    await selector.click()
+    const dropdown = contentHost.locator('[data-slot="popover-content"]')
+    const refresh = dropdown.getByRole("button", {
+      name: state === "loading" ? "Fetching…" : "Fetch models",
+      exact: true,
+    })
+    if (state === "refresh-loading") {
+      hold = true
+      await refresh.click()
+      await expect.poll(() => requests).toBe(2)
+      await expect(selector).toHaveAttribute("aria-busy", "true")
+      await expect(selector).toContainText("gpt-4o-mini")
+    }
+    if (state === "refresh-failure" || state === "retry-success") {
+      await expect(refresh).toBeEnabled()
+      await refresh.click()
+      await expect.poll(() => requests).toBe(2)
+      await expect(refresh).toBeEnabled()
+      await expect(selector).toContainText("gpt-4o-mini")
+      await expect(
+        dropdown.getByRole("option", { name: "other-model", exact: true }),
+      ).toBeVisible()
+      if (state === "retry-success") {
+        await expect(
+          dropdown.getByText("Access denied", { exact: true }),
+        ).toHaveCount(0)
+        await refresh.click()
+        await expect.poll(() => requests).toBe(3)
+        await expect(refresh).toBeEnabled()
+        await expect(selector).toContainText("gpt-4o-mini")
+      } else {
+        await expect(
+          dropdown.getByText("Access denied", { exact: true }),
+        ).toBeVisible()
+      }
+    }
+    if (["failure", "generic-failure", "long-failure"].includes(state)) {
+      // Assert the original search-row control remains available after failure.
+      await expect(refresh).toBeEnabled()
+      await refresh.click()
+      await expect.poll(() => requests).toBe(2)
+      await expect(refresh).toBeEnabled()
+    }
+    if (state === "no-match" || state === "custom-value")
+      await dropdown.getByPlaceholder("Search...").fill("manual-unlisted-model")
+    if (state === "no-match")
+      await expect(
+        dropdown.getByText("No results found", { exact: true }).first(),
+      ).toBeVisible()
+    if (state === "custom-value") {
+      await dropdown
+        .getByRole("option", {
+          name: 'Use "manual-unlisted-model"',
+          exact: true,
+        })
+        .click()
+      await expect(selector).toContainText("manual-unlisted-model")
+      await selector.click()
+    }
+    await modal.screenshot({
+      path: test.info().outputPath(`${state}__expanded.png`),
+      animations: "disabled",
+    })
+    await dropdown.screenshot({
+      path: test.info().outputPath(`${state}__dropdown.png`),
+      animations: "disabled",
+    })
+    if (state === "long-failure") {
+      const details = dropdown.locator("details")
+      await expect(details).toHaveCount(1)
+      await details.locator("summary").click()
+      await dropdown.screenshot({
+        path: test.info().outputPath(`${state}__details.png`),
+        animations: "disabled",
+      })
+    }
+    await dropdown.getByPlaceholder("Search...").press("Escape")
+    await expect(dropdown).not.toBeVisible()
+    await modal.screenshot({
+      path: test.info().outputPath(`${state}__closed.png`),
+      animations: "disabled",
+    })
+    release()
+  })
+}

@@ -29,8 +29,7 @@
       "description": "Envie esta configuração de provedor diretamente para o AI Toolbox via deep link",
       "descriptions": {
         "apiFormat": "O AI Toolbox reconstrói o provedor para o aplicativo de destino. Escolha um protocolo apenas quando este provedor não usar o padrão do aplicativo.",
-        "model": "Quando disponíveis, os modelos são carregados em /v1/models para seleção. Você também pode digitar um ID de modelo personalizado.",
-        "modelDiscoveryFailed": "Não foi possível carregar a lista de modelos de origem. Digite um ID de modelo manualmente ou tente novamente."
+        "model": "Quando disponíveis, os modelos são carregados em /v1/models para seleção. Você também pode digitar um ID de modelo personalizado."
       },
       "fields": {
         "apiFormat": "Protocolo da API",
@@ -652,6 +651,14 @@
   },
   "searchableSelect": {
     "empty": "Nenhum resultado encontrado",
+    "fetchDetails": "Detalhes do erro",
+    "fetchEmpty": "A solicitação foi concluída, mas não retornou modelos.",
+    "fetchEmptyLabel": "Lista vazia",
+    "fetchFailed": "Não foi possível obter a lista.",
+    "fetchSuccess_one": "{{count}} modelo obtido.",
+    "fetchSuccess_many": "{{count}} modelos obtidos.",
+    "fetchSuccess_other": "{{count}} modelos obtidos.",
+    "manualInputHint": "Você pode inserir um ID de modelo diretamente.",
     "noOptions": "Nenhuma opção disponível",
     "noOptionsAllowCustom": "Nenhuma opção disponível. Digite para criar uma opção",
     "searchPlaceholder": "Pesquisar...",

@@ -1,3 +1,5 @@
+import type { ApiCheckFetchModelsResponse } from "~/services/verification/webAiApiCheck/types"
+
 import "./apiCheckModalHostMocks"
 
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
@@ -46,16 +48,70 @@ import {
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
 
+  it("guides manual model input before credentials start discovery", async () => {
+    await openModal()
+    fireEvent.click(
+      await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    )
+    expect(
+      await screen.findByText("ui:searchableSelect.noOptionsAllowCustom"),
+    ).toBeVisible()
+  })
+
+  it.each<{ response: ApiCheckFetchModelsResponse; message: string }>([
+    {
+      response: { success: true, modelIds: [] },
+      message: "ui:searchableSelect.fetchEmpty",
+    },
+    {
+      response: { success: true, modelIds: ["m1"] },
+      message: "ui:searchableSelect.fetchSuccess",
+    },
+    {
+      response: { success: false, error: "Access denied" },
+      message: "Access denied",
+    },
+    {
+      response: { success: false },
+      message: "webAiApiCheck:modal.errors.fetchModelsFailed",
+    },
+  ])(
+    "shows the model fetch outcome inside the open picker: $message",
+    async ({ response, message }) => {
+      const user = userEvent.setup()
+      const request = createDeferred<ApiCheckFetchModelsResponse>()
+      vi.mocked(sendWebAiApiCheckMessage).mockImplementation(async (type) =>
+        type === WebAiApiCheckMessageTypes.FetchModels
+          ? request.promise
+          : { success: false },
+      )
+      await openModal()
+      await user.click(
+        await screen.findByPlaceholderText("https://example.com/api"),
+      )
+      await user.paste("https://proxy.example.com/api")
+      await user.click(screen.getByPlaceholderText("sk-..."))
+      await user.paste("sk-test-model-feedback")
+      await user.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
+      expect(await screen.findByText("common:status.loading")).toBeVisible()
+      await act(async () => request.resolve(response))
+      const picker = screen
+        .getByPlaceholderText("ui:searchableSelect.searchPlaceholder")
+        .closest("[data-slot='popover-content']")!
+      expect(
+        await within(picker as HTMLElement).findByText(message),
+      ).toBeVisible()
+    },
+  )
+
   it("auto-fetches models and preselects the first model id", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
-      async (type: any) => {
-        if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: ["m1", "m2"] }
-        }
-        return { success: false }
-      },
-    )
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(async (type) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
+        return { success: true, modelIds: ["m1", "m2"] }
+      }
+      return { success: false }
+    })
 
     await openModal()
 
@@ -99,14 +155,12 @@ describe("ApiCheckModalHost", () => {
     const pageUrl = "https://console.example.com/settings?token=secret"
     const modelId = "gpt-4o-sensitive"
 
-    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
-      async (type: any) => {
-        if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [modelId, "gpt-4o-mini"] }
-        }
-        return { success: false }
-      },
-    )
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(async (type) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
+        return { success: true, modelIds: [modelId, "gpt-4o-mini"] }
+      }
+      return { success: false }
+    })
 
     await openModal({
       sourceText,
@@ -146,17 +200,15 @@ describe("ApiCheckModalHost", () => {
   })
 
   it("records Base URL history after a successful automatic model fetch", async () => {
-    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
-      async (type: any) => {
-        if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: ["m1"] }
-        }
-        if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
-          return { success: true }
-        }
-        return { success: false }
-      },
-    )
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(async (type) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
+        return { success: true, modelIds: ["m1"] }
+      }
+      if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
+        return { success: true }
+      }
+      return { success: false }
+    })
 
     await openModal({
       sourceText:
@@ -177,17 +229,15 @@ describe("ApiCheckModalHost", () => {
   })
 
   it("does not record Base URL history after a failed automatic model fetch", async () => {
-    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
-      async (type: any) => {
-        if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: false, error: "Unauthorized" }
-        }
-        if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
-          return { success: true }
-        }
-        return { success: false }
-      },
-    )
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(async (type) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
+        return { success: false, error: "Unauthorized" }
+      }
+      if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
+        return { success: true }
+      }
+      return { success: false }
+    })
 
     await openModal({
       sourceText:
@@ -196,6 +246,9 @@ describe("ApiCheckModalHost", () => {
       trigger: "autoDetect",
     })
 
+    fireEvent.click(
+      await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    )
     await screen.findByText("Unauthorized")
     expect(
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RecordBaseUrlHistory),
@@ -249,14 +302,12 @@ describe("ApiCheckModalHost", () => {
 
   it("tracks manual model fetch completion with model-count insights", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
-      async (type: any) => {
-        if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: ["m1", "m2"] }
-        }
-        return { success: false }
-      },
-    )
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(async (type) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
+        return { success: true, modelIds: ["m1", "m2"] }
+      }
+      return { success: false }
+    })
 
     await openModal()
 

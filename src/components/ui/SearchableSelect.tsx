@@ -1,3 +1,4 @@
+import { defaultFilter } from "cmdk"
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
@@ -14,6 +15,11 @@ import {
   CommandList,
 } from "./command"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"
+import {
+  SelectFetchFeedback,
+  SelectFetchIndicator,
+  type SelectFetchResult,
+} from "./SelectFetchFeedback"
 import { Spinner } from "./spinner"
 
 /**
@@ -72,6 +78,10 @@ export interface SearchableSelectProps
   emptyMessage?: string | null
   /** Indicates pending options without preventing custom input or selection. */
   loading?: boolean
+  /** null means no completed request; undefined leaves fetch feedback to the caller. */
+  fetchResult?: SelectFetchResult | null
+  onRetryFetch?: () => void
+  retryFetchDisabled?: boolean
   /** Persistent dropdown content for actions or status, outside the filtered options. */
   footer?: React.ReactNode
   /** Compact actions displayed beside the dropdown search input. */
@@ -144,6 +154,9 @@ export const SearchableSelect = React.forwardRef<
     searchPlaceholder,
     emptyMessage,
     loading = false,
+    fetchResult,
+    onRetryFetch,
+    retryFetchDisabled,
     footer,
     searchActions,
     allowCustomValue = false,
@@ -191,6 +204,8 @@ export const SearchableSelect = React.forwardRef<
     emptyMessage === undefined ? defaultEmptyMessage : emptyMessage
 
   const isDisabled = disabled ?? false
+  const showFetchFeedback =
+    fetchResult !== undefined && (loading || fetchResult !== null)
 
   React.useEffect(() => {
     if (!resolvedOpen) setSearchTerm("")
@@ -223,7 +238,10 @@ export const SearchableSelect = React.forwardRef<
             loading ? (
               <Spinner size="sm" variant="current" aria-hidden="true" />
             ) : (
-              <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+              <span className="flex items-center gap-2">
+                <SelectFetchIndicator result={fetchResult} />
+                <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+              </span>
             )
           }
         >
@@ -253,6 +271,7 @@ export const SearchableSelect = React.forwardRef<
             className={cn("max-h-none min-h-0 flex-1", listClassName)}
           >
             {options.length === 0 &&
+            !showFetchFeedback &&
             !canUseCustomValue &&
             emptyMessage !== null ? (
               <div
@@ -267,14 +286,30 @@ export const SearchableSelect = React.forwardRef<
               </div>
             ) : null}
 
-            {options.length > 0 && emptyMessage !== null ? (
+            {options.length > 0 &&
+            (emptyMessage !== null || normalizedSearchTerm) ? (
               <CommandEmpty>
                 {loading ? (
                   <Spinner size="sm" className="mx-auto" />
+                ) : normalizedSearchTerm ? (
+                  t("searchableSelect.empty")
                 ) : (
                   resolvedEmptyMessage
                 )}
               </CommandEmpty>
+            ) : null}
+            {canUseCustomValue &&
+            options.length > 0 &&
+            !loading &&
+            !options.some(
+              (option) =>
+                defaultFilter(option.value, normalizedSearchTerm, [
+                  option.label,
+                ]) > 0,
+            ) ? (
+              <div className="text-muted-foreground px-3 py-2 text-xs">
+                {t("searchableSelect.empty")}
+              </div>
             ) : null}
             {options.length > 0 || canUseCustomValue ? (
               <CommandGroup>
@@ -322,10 +357,20 @@ export const SearchableSelect = React.forwardRef<
             ) : null}
           </CommandList>
         </Command>
+        {fetchResult !== undefined ? (
+          <SelectFetchFeedback
+            loading={loading}
+            result={fetchResult}
+            onRetry={onRetryFetch}
+            retryDisabled={retryFetchDisabled}
+            allowCustomValue={allowCustomValue}
+          />
+        ) : null}
         {footer ? (
           <div
             className={cn(
               "shrink-0 p-2",
+              showFetchFeedback && "pt-0",
               (options.length > 0 ||
                 canUseCustomValue ||
                 emptyMessage !== null) &&

@@ -780,9 +780,9 @@ describe("KiloCodeExportDialog", () => {
     })
   })
 
-  it("shows model-load failure feedback and retries loading models for the selected token", async () => {
+  it("keeps legacy manual input available while model discovery is pending", async () => {
     const user = userEvent.setup()
-
+    const pending = createDeferred<string[]>()
     mockUseAccountData.mockReturnValue({
       enabledAccounts: [],
       enabledDisplayData: [
@@ -793,49 +793,144 @@ describe("KiloCodeExportDialog", () => {
         }),
       ],
     })
-
     mockFetchAccountTokens.mockResolvedValueOnce([
       { id: 1, name: "Default", key: "sk-test" },
     ])
-    mockFetchOpenAICompatibleModelIds
-      .mockRejectedValueOnce(new Error("model load failed"))
-      .mockResolvedValueOnce(["gpt-4o-mini"])
-
+    mockFetchOpenAICompatibleModelIds.mockReturnValueOnce(pending.promise)
     render(
       <KiloCodeExportDialog
-        isOpen={true}
-        onClose={() => {}}
+        isOpen
+        onClose={vi.fn()}
         initialSelectedSiteIds={["b"]}
       />,
     )
-
-    const errorText = await screen.findByText(
-      "ui:dialog.kiloCode.messages.loadModelsFailed",
-    )
-    expect(errorText).toBeInTheDocument()
-
-    const tokenSection = screen.getByRole("group", {
+    const provider = await screen.findByRole("group", {
       name: "Site B - Default",
     })
-
     await user.click(
-      within(tokenSection).getByRole("button", {
-        name: "ui:dialog.kiloCode.actions.retryModels",
+      screen.getByRole("combobox", {
+        name: "ui:dialog.kiloCode.labels.exportTarget",
       }),
     )
-
-    await waitFor(() => {
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)
-    })
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
-        }),
-      ).not.toBeDisabled()
-    })
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.kiloCode.targets.legacy",
+      }),
+    )
+    expect(
+      within(provider).getByRole("combobox", { name: /legacyModelId/ }),
+    ).toBeEnabled()
+    await act(async () => pending.resolve(["recovered-model"]))
+    await user.click(
+      within(provider).getByRole("combobox", { name: /legacyModelId/ }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "recovered-model" }),
+    ).toBeVisible()
   })
+
+  it.each(["provider", "default"])(
+    "retries failed model discovery from the %s selector",
+    async (selector) => {
+      const user = userEvent.setup()
+      const pending = createDeferred<string[]>()
+
+      mockUseAccountData.mockReturnValue({
+        enabledAccounts: [],
+        enabledDisplayData: [
+          createDisplayAccount({
+            id: "b",
+            name: "Site B",
+            baseUrl: "https://b.test",
+          }),
+        ],
+      })
+
+      mockFetchAccountTokens.mockResolvedValueOnce([
+        { id: 1, name: "Default", key: "sk-test" },
+      ])
+      mockFetchOpenAICompatibleModelIds
+        .mockRejectedValueOnce(new Error("model load failed"))
+        .mockReturnValueOnce(pending.promise)
+
+      render(
+        <KiloCodeExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          initialSelectedSiteIds={["b"]}
+        />,
+      )
+
+      const tokenSection = await screen.findByRole("group", {
+        name: "Site B - Default",
+      })
+      await within(tokenSection).findByLabelText(
+        "ui:searchableSelect.fetchFailed",
+      )
+      if (selector === "default")
+        await chooseProviderModel(
+          user,
+          "Site B - Default",
+          "modelId",
+          "manual/model",
+        )
+      await user.click(
+        selector === "default"
+          ? screen.getByRole("combobox", {
+              name: "ui:dialog.kiloCode.labels.defaultModel",
+            })
+          : within(tokenSection).getByRole("combobox", {
+              name: /ui:dialog.kiloCode.labels.modelId/,
+            }),
+      )
+      const pickerAlert = screen
+        .getAllByRole("alert")
+        .find((element) => element.closest("[data-slot=popover-content]"))
+      expect(pickerAlert).toHaveTextContent("ui:searchableSelect.fetchFailed")
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.retry" }),
+      )
+
+      await waitFor(() => {
+        expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)
+      })
+      if (selector === "default")
+        expect(
+          screen.getByRole("combobox", {
+            name: "ui:dialog.kiloCode.labels.defaultModel",
+          }),
+        ).toHaveAttribute("aria-busy", "true")
+      await act(async () => pending.resolve(["gpt-4o-mini"]))
+      if (selector === "default") {
+        const defaultSelector = screen.getByRole("combobox", {
+          name: "ui:dialog.kiloCode.labels.defaultModel",
+        })
+        await waitFor(() =>
+          expect(defaultSelector).not.toHaveAttribute("aria-busy", "true"),
+        )
+        expect(defaultSelector).toHaveTextContent("manual/model")
+        if (defaultSelector.getAttribute("aria-expanded") !== "true")
+          await user.click(defaultSelector)
+        await user.click(
+          await screen.findByRole("option", {
+            name: "gpt-4o-mini",
+          }),
+        )
+        expect(defaultSelector).toHaveTextContent("gpt-4o-mini")
+        expect(
+          screen.queryByRole("button", { name: "common:actions.retry" }),
+        ).not.toBeInTheDocument()
+      }
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", {
+            name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+          }),
+        ).not.toBeDisabled()
+      })
+    },
+  )
 
   it("stacks model recovery controls without a mobile minimum-width overflow", async () => {
     mockUseAccountData.mockReturnValue({

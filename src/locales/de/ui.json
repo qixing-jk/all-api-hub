@@ -29,8 +29,7 @@
       "description": "Senden Sie diese Anbieterkonfiguration per Deep Link direkt an AI Toolbox",
       "descriptions": {
         "apiFormat": "AI Toolbox baut den Anbieter für die Ziel-App neu auf. Wählen Sie ein Protokoll nur, wenn dieser Anbieter nicht den Standard der App verwendet.",
-        "model": "Wenn verfügbar, werden Modelle zur Auswahl aus /v1/models geladen. Sie können auch eine benutzerdefinierte Modell-ID eingeben.",
-        "modelDiscoveryFailed": "Die Modellliste der Gegenstelle konnte nicht geladen werden. Geben Sie eine Modell-ID manuell ein oder versuchen Sie es erneut."
+        "model": "Wenn verfügbar, werden Modelle zur Auswahl aus /v1/models geladen. Sie können auch eine benutzerdefinierte Modell-ID eingeben."
       },
       "fields": {
         "apiFormat": "API-Protokoll",
@@ -638,6 +637,13 @@
   },
   "searchableSelect": {
     "empty": "Keine Ergebnisse gefunden",
+    "fetchDetails": "Fehlerdetails",
+    "fetchEmpty": "Die Anfrage war erfolgreich, hat aber keine Modelle geliefert.",
+    "fetchEmptyLabel": "Liste leer",
+    "fetchFailed": "Liste konnte nicht abgerufen werden.",
+    "fetchSuccess_one": "{{count}} Modell abgerufen.",
+    "fetchSuccess_other": "{{count}} Modelle abgerufen.",
+    "manualInputHint": "Sie können eine Modell-ID direkt eingeben.",
     "noOptions": "Keine Optionen verfügbar",
     "noOptionsAllowCustom": "Keine Optionen verfügbar. Geben Sie einen Wert ein, um einen zu erstellen.",
     "searchPlaceholder": "Suchen...",

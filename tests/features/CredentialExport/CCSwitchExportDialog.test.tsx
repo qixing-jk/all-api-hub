@@ -20,7 +20,13 @@ import {
 } from "~~/tests/test-utils/credentialExportSources"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const mockDiscoverOpenAICompatibleModels = vi.fn()
 const mockOpenInCCSwitch = vi.fn()
@@ -82,6 +88,45 @@ describe("CCSwitchExportDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it("clears the previous catalog status before endpoint debounce completes", async () => {
+    mockDiscoverOpenAICompatibleModels
+      .mockResolvedValueOnce(createModelDiscovery([{ id: "known" }]))
+      .mockResolvedValueOnce(createModelDiscovery([{ id: "updated" }]))
+    render(
+      <CCSwitchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+    await screen.findByLabelText("ui:searchableSelect.fetchSuccess")
+    fireEvent.change(
+      screen.getByLabelText("ui:dialog.ccswitch.fields.endpoint"),
+      { target: { value: "https://new.test/v1" } },
+    )
+    expect(
+      screen.queryByLabelText("ui:searchableSelect.fetchSuccess"),
+    ).not.toBeInTheDocument()
+    expect(mockDiscoverOpenAICompatibleModels).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
+      expect(mockDiscoverOpenAICompatibleModels).toHaveBeenCalledTimes(2),
+    )
+    expect(mockDiscoverOpenAICompatibleModels).toHaveBeenLastCalledWith(
+      expect.objectContaining({ baseUrl: "https://new.test" }),
+    )
+    expect(
+      await screen.findByLabelText("ui:searchableSelect.fetchSuccess"),
+    ).toBeVisible()
+    await userEvent.click(
+      screen.getByLabelText("ui:dialog.ccswitch.fields.model"),
+    )
+    expect(await screen.findByRole("option", { name: "updated" })).toBeVisible()
+    expect(screen.queryByRole("option", { name: "known" })).toBeNull()
   })
 
   it("indicates model discovery on the control without replacing its label", async () => {
@@ -769,6 +814,19 @@ describe("CCSwitchExportDialog", () => {
     expect(modelCombo).toBeEnabled()
     expect(modelCombo).toHaveTextContent("ui:dialog.ccswitch.modelOptions.none")
     expect(screen.queryByText("gpt-4")).toBeNull()
+    mockDiscoverOpenAICompatibleModels.mockResolvedValueOnce(
+      createModelDiscovery([{ id: "gpt-4" }]),
+    )
+    const user = userEvent.setup()
+    await user.click(modelCombo)
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(await screen.findByRole("option", { name: "gpt-4" })).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(mockDiscoverOpenAICompatibleModels).toHaveBeenCalledTimes(2)
     warnSpy.mockRestore()
   })
 

@@ -9,6 +9,7 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { getSelectFetchResult } from "~/components/ui/SelectFetchFeedback"
 import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
   getApiCredentialProfileVerifyProbeTestId,
@@ -66,6 +67,7 @@ export function VerifyApiCredentialProfileDialog(
     isFetchingModels,
     setFetchModelsDiagnostic,
     fetchModelsError,
+    fetchedModelCount,
     isPersisting,
     activeProbeId,
     historyTarget,
@@ -236,15 +238,15 @@ export function VerifyApiCredentialProfileDialog(
                       "apiCredentialProfiles:verify.modelPickerPlaceholder",
                     )}
                     loading={isFetchingModels}
+                    onRetryFetch={() => void fetchModels(apiType)}
+                    retryFetchDisabled={!canClose}
+                    fetchResult={getSelectFetchResult(
+                      fetchModelsError,
+                      fetchedModelCount,
+                    )}
                     allowCustomValue
                     disabled={!canClose}
                   />
-
-                  {fetchModelsError ? (
-                    <div className="text-destructive-text text-xs">
-                      {fetchModelsError}
-                    </div>
-                  ) : null}
                 </div>
 
                 {modelModality === MODEL_TEST_MODALITIES.Text ? (

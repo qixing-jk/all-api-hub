@@ -30,6 +30,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
+import { getSelectFetchResult } from "~/components/ui/SelectFetchFeedback"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
   VerificationConfigSection,
@@ -307,9 +308,16 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                         }
                         placeholder="gpt-4o-mini"
                         loading={view.isFetchingModels}
+                        fetchResult={getSelectFetchResult(
+                          view.fetchModelsError,
+                          view.fetchedModelCount,
+                        )}
                         emptyMessage={
                           view.modelListSupported &&
-                          view.modelIdsOptions.length === 0
+                          view.modelIdsOptions.length === 0 &&
+                          (view.isFetchingModels ||
+                            view.fetchedModelCount !== null ||
+                            Boolean(view.fetchModelsError))
                             ? null
                             : undefined
                         }
@@ -333,14 +341,6 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                             >
                               <RefreshActionIcon className="size-4" />
                             </IconButton>
-                          ) : null
-                        }
-                        footer={
-                          view.modelListSupported &&
-                          view.modelIdsOptions.length === 0 ? (
-                            <p className="text-muted-foreground px-1 text-xs leading-relaxed">
-                              {t("webAiApiCheck:modal.modelPicker.emptyHint")}
-                            </p>
                           ) : null
                         }
                         allowCustomValue
@@ -562,12 +562,6 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 {!view.hasAnyResult ? (
                   <div className="text-muted-foreground text-xs">
                     {t("webAiApiCheck:modal.hints.saveWithoutTest")}
-                  </div>
-                ) : null}
-
-                {view.fetchModelsError ? (
-                  <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
-                    {view.fetchModelsError}
                   </div>
                 ) : null}
 

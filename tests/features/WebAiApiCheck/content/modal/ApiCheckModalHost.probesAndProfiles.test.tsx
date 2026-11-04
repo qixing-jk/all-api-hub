@@ -2653,6 +2653,9 @@ describe("ApiCheckModalHost", () => {
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
 
+    fireEvent.click(
+      await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    )
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.fetchModelsFailed"),
     ).toBeInTheDocument()
@@ -2709,6 +2712,9 @@ describe("ApiCheckModalHost", () => {
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
 
+    fireEvent.click(
+      await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    )
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.fetchModelsFailed"),
     ).toBeInTheDocument()

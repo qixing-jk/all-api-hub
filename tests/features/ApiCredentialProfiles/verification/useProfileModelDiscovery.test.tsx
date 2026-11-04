@@ -61,6 +61,7 @@ describe("useProfileModelDiscovery", () => {
 
     expect(result.current.modelId).toBe("gpt-test")
     expect(result.current.modelOptions).toEqual(["gpt-test"])
+    expect(result.current.fetchedModelCount).toBe(1)
     expect(preserveCurrentProbeStateForModel).toHaveBeenCalledWith(
       "gpt-test",
       API_TYPES.OPENAI_COMPATIBLE,

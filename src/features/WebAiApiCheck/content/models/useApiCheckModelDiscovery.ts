@@ -62,6 +62,9 @@ export function useApiCheckModelDiscovery({
 }: UseApiCheckModelDiscoveryOptions) {
   const [modelId, setModelId] = useState("")
   const [modelIds, setModelIds] = useState<string[]>([])
+  const [fetchedModelCount, setFetchedModelCount] = useState<number | null>(
+    null,
+  )
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
     string | null
@@ -106,6 +109,7 @@ export function useApiCheckModelDiscovery({
       setIsFetchingModels(false)
       setModelIds([])
       setFetchModelsDiagnostic(null)
+      setFetchedModelCount(null)
       if (options?.clearSelection) setModelId("")
     },
     [],
@@ -126,6 +130,7 @@ export function useApiCheckModelDiscovery({
   const fetchModels = useCallback(
     async (origin: ModelFetchOrigin) => {
       setFetchModelsDiagnostic(null)
+      setFetchedModelCount(null)
       if (origin === MODEL_FETCH_ORIGINS.Manual) setValidationError(null)
 
       if (!modelListSupported) return
@@ -196,6 +201,7 @@ export function useApiCheckModelDiscovery({
         if (response?.success) {
           const ids = Array.isArray(response.modelIds) ? response.modelIds : []
           setModelIds(ids)
+          setFetchedModelCount(ids.length)
           if (!modelId.trim() && ids.length > 0) {
             // Provide a helpful default to reduce friction.
             setModelId(ids[0] ?? "")
@@ -292,6 +298,7 @@ export function useApiCheckModelDiscovery({
     setIsFetchingModels(false)
     setModelIds([])
     setFetchModelsDiagnostic(null)
+    setFetchedModelCount(null)
   }, [apiType, baseUrl, apiKey, isOpen])
 
   // Auto-fetch model list for supported APIs once we have credentials.
@@ -338,6 +345,7 @@ export function useApiCheckModelDiscovery({
     modelIdsOptions,
     isFetchingModels,
     fetchModelsError,
+    fetchedModelCount,
     hasFetchedModels,
     modelListSupported,
     canFetchModels,
