@@ -20,6 +20,32 @@ const fixtures = {
   )),
 }
 
+it("provides a complete hourly breakdown that preserves each demo day's totals", () => {
+  const history = fixtures.getMockUsageHistory()
+  for (const account of Object.values(history.accounts) as Array<{
+    daily: Record<string, Record<string, number>>
+    hourly: Record<string, Record<string, Record<string, number>>>
+  }>) {
+    for (const [day, totals] of Object.entries(account.daily)) {
+      expect(day).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      const hours = account.hourly[day] ?? {}
+      expect(Object.keys(hours).sort()).toEqual(
+        Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")),
+      )
+      for (const metric of Object.keys(totals)) {
+        expect(
+          Object.values(hours).reduce((sum, value) => sum + value[metric]!, 0),
+        ).toBe(totals[metric])
+      }
+      for (const hour of Object.values(hours)) {
+        expect(hour.totalTokens).toBe(
+          hour.promptTokens! + hour.completionTokens!,
+        )
+      }
+    }
+  }
+})
+
 describe("documentation screenshot data", () => {
   for (const locale of ["zh", "en", "ja"]) {
     it(`shows supported platforms before the custom gateway (${locale})`, () => {

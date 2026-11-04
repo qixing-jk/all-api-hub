@@ -142,7 +142,12 @@ rollback fails and reports failed targets and retained backup paths in `failure.
 This recovery handles reported I/O errors; it is not an atomic transaction across
 process crashes or power loss.
 A per-checkout lock prevents concurrent runs of this command; other build commands
-do not participate in that lock. Update fixture data and capture checkpoints when
+do not participate in that lock. A later run recovers `update.lock` only when its
+recorded PID is confirmed to have exited. Live, malformed or unreadable ownership
+is preserved. Recovery uses an exclusive `update.lock.recovery` marker; if a
+process is forcibly stopped during recovery, inspect that marker's PID and the
+main lock before manually removing either file. Preserve them when ownership
+cannot be verified. Update fixture data and capture checkpoints when
 feature behavior changes. There is no automatic CI trigger or page inference.
 
 The lower-level `scripts/generate-doc-screenshots.mjs` remains available for an

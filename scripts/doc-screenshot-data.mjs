@@ -901,6 +901,28 @@ function getMockUsageHistory() {
         quotaConsumed: dayQuota,
       }
 
+      // Allocate integer totals without rounding drift; daytime is busier.
+      hourly[day] = {}
+      let allocatedWeight = 0
+      for (let hour = 0; hour < 24; hour++) {
+        const nextWeight = allocatedWeight + (hour >= 8 && hour < 20 ? 3 : 1)
+        const aggregate = {}
+        for (const metric of [
+          "requests",
+          "promptTokens",
+          "completionTokens",
+          "quotaConsumed",
+        ]) {
+          aggregate[metric] =
+            Math.round((daily[day][metric] * nextWeight) / 48) -
+            Math.round((daily[day][metric] * allocatedWeight) / 48)
+        }
+        aggregate.totalTokens =
+          aggregate.promptTokens + aggregate.completionTokens
+        hourly[day][String(hour).padStart(2, "0")] = aggregate
+        allocatedWeight = nextWeight
+      }
+
       latencyDaily[day] = {
         count: dayRequests,
         sum: +(dayRequests * 1.2).toFixed(2),

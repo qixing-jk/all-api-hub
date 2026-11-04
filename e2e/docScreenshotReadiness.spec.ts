@@ -7,6 +7,29 @@ const { waitForDocPageReady, waitForDocVisuals, scrollDocPageToAnchor } =
     pathToFileURL(path.resolve("scripts/doc-screenshot-readiness.mjs")).href
   )
 
+test("serves LiteLLM prices independently of the general GitHub catalog mock", async ({
+  context,
+  page,
+}) => {
+  const { setupRoutes } = await import(
+    pathToFileURL(path.resolve("scripts/doc-screenshot-routes.mjs")).href
+  )
+  await setupRoutes(context, (text: string) => text)
+  await page.goto(
+    "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+  )
+  const catalog = JSON.parse(await page.locator("body").innerText())
+  expect(catalog["deepseek-chat"]).toEqual({
+    input_cost_per_token: 0.0000003,
+    output_cost_per_token: 0.0000012,
+  })
+  await page.goto("https://raw.githubusercontent.com/example/catalog.json")
+  expect(JSON.parse(await page.locator("body").innerText())).toMatchObject({
+    schemaVersion: 1,
+    sponsors: [],
+  })
+})
+
 for (const state of ["pending", "missing", "transparent", "hidden"]) {
   test(`rejects an options page that remains ${state}`, async ({ page }) => {
     await page.setContent(

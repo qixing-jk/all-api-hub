@@ -38,13 +38,7 @@ export async function updateDocScreenshots(options = {}, dependencies = {}) {
   const parent = path.join(root, ".scratch/docs-screenshot-updates")
   await fs.mkdir(parent, { recursive: true })
   const lockPath = path.join(parent, "update.lock")
-  const lock = await fs.open(lockPath, "wx").catch((error) => {
-    if (error.code === "EEXIST")
-      throw new Error(
-        "A documentation screenshot update is already running. See .scratch/docs-screenshot-updates/update.lock.",
-      )
-    throw error
-  })
+  const lock = await acquireLock(lockPath)
   let directory
   try {
     await lock.writeFile(`${process.pid}\n`)
@@ -180,6 +174,53 @@ export async function updateDocScreenshots(options = {}, dependencies = {}) {
   } finally {
     await lock.close()
     await fs.unlink(lockPath)
+  }
+}
+
+/** Reclaim a confirmed dead owner while serializing competing recovery attempts. */
+async function acquireLock(lockPath) {
+  const busy = () =>
+    new Error(
+      "A documentation screenshot update is already running or its owner cannot be verified. See .scratch/docs-screenshot-updates/update.lock.",
+    )
+  try {
+    return await fs.open(lockPath, "wx")
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error
+  }
+  const recoveryPath = `${lockPath}.recovery`
+  let recovery
+  try {
+    recovery = await fs.open(recoveryPath, "wx")
+  } catch (error) {
+    if (error.code === "EEXIST") throw busy()
+    throw error
+  }
+  try {
+    await recovery.writeFile(`${process.pid}\n`)
+    let owner
+    try {
+      owner = (await fs.readFile(lockPath, "utf8")).trim()
+    } catch (error) {
+      if (error.code === "ENOENT") return await fs.open(lockPath, "wx")
+      throw busy()
+    }
+    const pid = Number(owner)
+    if (!/^\d+$/.test(owner) || !Number.isSafeInteger(pid) || pid <= 0)
+      throw busy()
+    try {
+      process.kill(pid, 0)
+      throw busy()
+    } catch (error) {
+      if (error.code !== "ESRCH") throw busy()
+    }
+    // The recovery guard excludes another stale-owner decision; reread before deletion.
+    if ((await fs.readFile(lockPath, "utf8")).trim() !== owner) throw busy()
+    await fs.unlink(lockPath)
+    return await fs.open(lockPath, "wx")
+  } finally {
+    await recovery.close()
+    await fs.unlink(recoveryPath)
   }
 }
 

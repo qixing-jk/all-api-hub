@@ -377,6 +377,20 @@ export async function setupRoutes(context, t) {
   await context.route("https://platform.kimi.com/**", handleKimiRoute)
   await context.route("https://platform.kimi.ai/**", handleKimiRoute)
 
+  // Playwright applies matching routes in reverse registration order.
+  await context.route("https://raw.githubusercontent.com/**", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        schemaVersion: 1,
+        catalogVersion: "1.0.0",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+        sponsors: [],
+      }),
+    })
+  })
+
   await context.route(
     "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
     async (route) => {
@@ -546,18 +560,5 @@ export async function setupRoutes(context, t) {
       return
     }
     await route.fulfill({ status: 200, json: { success: true, data: [] } })
-  })
-
-  await context.route("https://raw.githubusercontent.com/**", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        schemaVersion: 1,
-        catalogVersion: "1.0.0",
-        updatedAt: "2026-03-01T00:00:00.000Z",
-        sponsors: [],
-      }),
-    })
   })
 }

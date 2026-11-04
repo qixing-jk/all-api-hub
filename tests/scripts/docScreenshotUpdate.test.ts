@@ -29,6 +29,85 @@ async function fixture() {
   return { root, imageDir, before }
 }
 
+it("recovers a lock owned by a terminated process", async () => {
+  const { spawn } = await import("node:child_process")
+  const child = spawn(process.execPath, ["-e", "process.exit(0)"])
+  const pid = child.pid!
+  await new Promise<void>((resolve, reject) => {
+    child.once("close", () => resolve())
+    child.once("error", reject)
+  })
+  const { updateDocScreenshots } = await import(pathToFileURL(cli).href)
+  const { root, before } = await fixture()
+  const lock = path.join(root, ".scratch/docs-screenshot-updates/update.lock")
+  await fs.mkdir(path.dirname(lock), { recursive: true })
+  await fs.writeFile(lock, `${pid}\n`)
+  const result = await updateDocScreenshots(
+    { root, pages: "keys", lang: "zh" },
+    {
+      run: async (_command: string, args: string[]) => {
+        if (!args[0]?.endsWith("generate-doc-screenshots.mjs")) return
+        const output = args.find((arg) => arg.startsWith("--output="))!.slice(9)
+        await fs.mkdir(output, { recursive: true })
+        await fs.writeFile(path.join(output, "api-key-list.png"), before)
+      },
+    },
+  )
+  expect(result.images).toHaveLength(1)
+  await expect(fs.stat(lock)).rejects.toThrow()
+})
+
+it.each([
+  "live",
+  "empty",
+  "malformed",
+  "zero",
+  "unreadable",
+  "permission",
+  "recovery",
+])(
+  "preserves a lock when ownership cannot safely be reclaimed (%s)",
+  async (state) => {
+    const { updateDocScreenshots } = await import(pathToFileURL(cli).href)
+    const { root } = await fixture()
+    const lock = path.join(root, ".scratch/docs-screenshot-updates/update.lock")
+    await fs.mkdir(path.dirname(lock), { recursive: true })
+    const contents =
+      state === "empty"
+        ? ""
+        : state === "malformed"
+          ? "unknown"
+          : state === "zero"
+            ? "0"
+            : `${process.pid}\n`
+    await fs.writeFile(lock, contents)
+    if (state === "unreadable") {
+      const read = fs.readFile.bind(fs)
+      vi.spyOn(fs, "readFile").mockImplementation(
+        async (...args: Parameters<typeof fs.readFile>) => {
+          if (args[0] === lock)
+            throw Object.assign(new Error("unreadable"), { code: "EACCES" })
+          return read(...args)
+        },
+      )
+    }
+    if (state === "permission")
+      vi.spyOn(process, "kill").mockImplementation(() => {
+        throw Object.assign(new Error("denied"), { code: "EPERM" })
+      })
+    if (state === "recovery") await fs.writeFile(`${lock}.recovery`, contents)
+    const run = vi.fn()
+    await expect(
+      updateDocScreenshots({ root, pages: "keys" }, { run }),
+    ).rejects.toThrow("already running")
+    expect(run).not.toHaveBeenCalled()
+    vi.restoreAllMocks()
+    expect(await fs.readFile(lock, "utf8")).toBe(contents)
+    if (state === "recovery")
+      expect(await fs.readFile(`${lock}.recovery`, "utf8")).toBe(contents)
+  },
+)
+
 it("preserves the existing zh-CN language alias", async () => {
   const { updateDocScreenshots } = await import(pathToFileURL(cli).href)
   const { root, before } = await fixture()

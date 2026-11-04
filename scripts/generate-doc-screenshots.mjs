@@ -780,6 +780,16 @@ async function main() {
     }
   }
 
+  if (
+    pagesArg &&
+    [...pagesArg].some((page) => !Object.hasOwn(DOC_SCREENSHOT_PAGES, page))
+  ) {
+    throw new Error(
+      "Unknown page; expected one of " +
+        Object.keys(DOC_SCREENSHOT_PAGES).join(", "),
+    )
+  }
+
   const selected =
     langArg === "all"
       ? Object.keys(LOCALES)
