@@ -106,6 +106,8 @@ function inputHash() {
     hash.update(file)
     hash.update(readFileSync(path.join(root, file)))
   }
+  hash.update(".wxt/tsconfig.json")
+  hash.update(readFileSync(path.join(root, ".wxt/tsconfig.json")))
   return hash.digest("hex")
 }
 

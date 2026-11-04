@@ -202,7 +202,7 @@ it.each([
     const shardDurations = workflow
       .match(/^ {10}UNIT_TEST_SHARD_DURATIONS: (.+)$/m)?.[1]
       ?.trim()
-    expect(shardDurations?.startsWith(`${cachePath}/`)).toBe(true)
+    expect(shardDurations).toBe(`${cachePath}/shard-durations.json`)
     const save =
       workflow
         .split("      - name: Save unit test durations")[1]

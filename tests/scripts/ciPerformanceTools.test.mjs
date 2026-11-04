@@ -30,13 +30,23 @@ function temporaryDirectory(context) {
   return directory
 }
 
-test("benchmark fingerprints change when TypeScript transform settings change", (context) => {
+function fingerprintFixture(context) {
   const directory = temporaryDirectory(context)
   execFileSync("git", ["init", "--quiet", directory])
+  writeFileSync(path.join(directory, ".gitignore"), ".wxt/\n")
   const config = path.join(directory, "tsconfig.json")
   writeFileSync(
     config,
-    JSON.stringify({ compilerOptions: { target: "ES2022" } }),
+    JSON.stringify({
+      extends: "./.wxt/tsconfig.json",
+      compilerOptions: { target: "ES2022" },
+    }),
+  )
+  const generatedConfig = path.join(directory, ".wxt/tsconfig.json")
+  mkdirSync(path.dirname(generatedConfig))
+  writeFileSync(
+    generatedConfig,
+    JSON.stringify({ compilerOptions: { experimentalDecorators: false } }),
   )
   const source = readFileSync(
     path.join(
@@ -53,13 +63,37 @@ test("benchmark fingerprints change when TypeScript transform settings change", 
     ) + "\ninputHash",
     { root: directory, execFileSync, createHash, readFileSync, path },
   )
+  return { config, generatedConfig, fingerprint }
+}
+
+test("benchmark fingerprints change when TypeScript transform settings change", (context) => {
+  const { config, fingerprint } = fingerprintFixture(context)
   const before = fingerprint()
   assert.equal(fingerprint(), before)
   writeFileSync(
     config,
-    JSON.stringify({ compilerOptions: { target: "ES2020" } }),
+    JSON.stringify({
+      extends: "./.wxt/tsconfig.json",
+      compilerOptions: { target: "ES2020" },
+    }),
   )
   assert.notEqual(fingerprint(), before)
+})
+
+test("benchmark fingerprints include the ignored extended TypeScript config", (context) => {
+  const { generatedConfig, fingerprint } = fingerprintFixture(context)
+  const before = fingerprint()
+  writeFileSync(
+    generatedConfig,
+    JSON.stringify({ compilerOptions: { experimentalDecorators: true } }),
+  )
+  assert.notEqual(fingerprint(), before)
+})
+
+test("benchmark fingerprints reject a missing extended TypeScript config", (context) => {
+  const { generatedConfig, fingerprint } = fingerprintFixture(context)
+  rmSync(generatedConfig)
+  assert.throws(fingerprint, /ENOENT.*tsconfig\.json/)
 })
 
 function capture(directory, duration, workerErrors = []) {
