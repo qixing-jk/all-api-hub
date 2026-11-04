@@ -1,12 +1,12 @@
 import "./copyKeyDialogMocks"
 
 import userEvent from "@testing-library/user-event"
-import { beforeEach, expect, it } from "vitest"
+import { beforeEach, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { render, screen } from "~~/tests/test-utils/render"
+import { act, fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 import {
   fetchServiceCredentialMock,
@@ -68,16 +68,26 @@ it("keeps the saved NanoGPT inference key usable without a management token", as
     screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
   ).not.toBeInTheDocument()
   await user.click(screen.getByText("NanoGPT saved key"))
-  await user.click(
-    screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
-  )
-  expect(
-    await screen.findByRole("button", { name: "ui:dialog.copyKey.copied" }),
-  ).toBeVisible()
+  // Keep the short-lived copied state observable even on a busy CI runner.
+  vi.useFakeTimers()
+  try {
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
+      )
+    })
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.copied" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "common:actions.export" }),
+    ).toBeEnabled()
+  } finally {
+    await act(async () => vi.runOnlyPendingTimersAsync())
+    vi.useRealTimers()
+  }
+  // The clipboard stub reads its Blob through FileReader, which needs real timers.
   expect(await navigator.clipboard.readText()).toBe("sk-nano-saved-fixture")
-  expect(
-    screen.getByRole("button", { name: "common:actions.export" }),
-  ).toBeEnabled()
 })
 
 it("does not claim an empty site inventory when management configuration is missing", async () => {

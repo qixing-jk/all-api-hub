@@ -76,6 +76,11 @@ on:
       - ".github/actions/setup-unit-test-browser/**"
   workflow_dispatch:
     inputs:
+      durations_cache_key:
+        description: "Exact timing cache key for comparisons with fixed shard assignments"
+        required: false
+        default: ""
+        type: string
       node_version:
         description: "Explicit Node.js version for controlled CI measurements"
         required: false
@@ -183,9 +188,9 @@ jobs:
           # Timings published by the previous run's merge job. A miss (first run, or an
           # evicted cache) only means this shard falls back to file-count sharding.
           path: .vitest-durations
-          key: unit-test-durations-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            unit-test-durations-
+          # An explicit key freezes the same main profile that PR iterations use.
+          key: ${{ inputs.durations_cache_key || format('unit-test-durations-{0}-{1}', github.run_id, github.run_attempt) }}
+          restore-keys: ${{ !inputs.durations_cache_key && 'unit-test-durations-' || '' }}
 
       - name: Restore compiled test modules
         id: modules
@@ -293,7 +298,7 @@ jobs:
       - name: Save unit test durations
         # Only runs that may publish to the base repository's cache scope write timings;
         # pull requests restore main's copy instead of republishing their own.
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && !inputs.durations_cache_key }}
         uses: actions/cache/save@v5
         with:
           path: .vitest-durations

@@ -136,10 +136,79 @@ it("only publishes shard timing caches outside pull requests", () => {
   expect(guard).toBeDefined()
   for (const eventName of ["pull_request", "push", "workflow_dispatch"]) {
     expect(
-      runInNewContext(guard ?? "true", { github: github(eventName) }),
+      runInNewContext(guard ?? "true", {
+        github: github(eventName),
+        inputs: {},
+      }),
     ).toBe(eventName !== "pull_request")
   }
 })
+
+it.each([
+  {
+    label: "pinned",
+    pin: "unit-test-durations-fixed",
+    key: "unit-test-durations-fixed",
+    restore: "",
+    publish: false,
+  },
+  {
+    label: "empty",
+    pin: "",
+    key: "unit-test-durations-42-1",
+    restore: "unit-test-durations-",
+    publish: true,
+  },
+  {
+    label: "default",
+    pin: undefined,
+    key: "unit-test-durations-42-1",
+    restore: "unit-test-durations-",
+    publish: true,
+  },
+])(
+  "preserves the $label timing profile during manual measurements",
+  ({ pin, key, restore, publish }) => {
+    const workflow = readFileSync(".github/workflows/test.yml", "utf8")
+    const restoreStep =
+      workflow
+        .split("      - name: Restore unit test durations")[1]
+        ?.split("      - name:")[0] ?? ""
+    const context = {
+      github: { event_name: "workflow_dispatch", run_id: 42, run_attempt: 1 },
+      inputs: { durations_cache_key: pin },
+      format: (template: string, ...args: unknown[]) =>
+        template.replace(/\{(\d+)\}/g, (_, index) =>
+          String(args[Number(index)]),
+        ),
+    }
+    const input = (name: string) => {
+      let value =
+        restoreStep
+          .match(new RegExp(`^ {10}${name}: (.+)$`, "m"))?.[1]
+          ?.trim() ?? ""
+      if (value === "|")
+        value =
+          restoreStep.match(/^ {12}(unit-test-durations-.*)$/m)?.[1]?.trim() ??
+          ""
+      return value.replace(/\$\{\{([\s\S]*?)\}\}/g, (_, expression) =>
+        String(runInNewContext(expression, context)),
+      )
+    }
+    expect(input("key")).toBe(key)
+    expect(input("restore-keys")).toBe(restore)
+    const save =
+      workflow
+        .split("      - name: Save unit test durations")[1]
+        ?.split("      - name:")[0] ?? ""
+    const guard = save
+      .match(/^ {8}if: (.+)$/m)?.[1]
+      ?.trim()
+      .replace(/^\$\{\{\s*|\s*\}\}$/g, "")
+    expect(guard).toBeDefined()
+    expect(runInNewContext(guard ?? "false", context)).toBe(publish)
+  },
+)
 
 it.each(["push", "pull_request"])(
   "%s tests include shard timing inputs in their path triggers",
