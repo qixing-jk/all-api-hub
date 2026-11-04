@@ -20,7 +20,6 @@ on:
       - ".github/workflows/permission-warnings.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
-      - "scripts/pr-related-tests.mjs"
       - "scripts/write-unit-test-durations.mjs"
       - "scripts/utils/unitTestDurations.mjs"
       - "scripts/utils/vitestBlob.mjs"
@@ -55,7 +54,6 @@ on:
       - ".github/workflows/permission-warnings.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
-      - "scripts/pr-related-tests.mjs"
       - "scripts/write-unit-test-durations.mjs"
       - "scripts/utils/unitTestDurations.mjs"
       - "scripts/utils/vitestBlob.mjs"
@@ -86,11 +84,6 @@ on:
         required: false
         default: ""
         type: string
-      related_base:
-        description: "Base commit SHA for measuring early related-test feedback"
-        required: false
-        default: ""
-        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -104,50 +97,6 @@ jobs:
     # Ordinary changes need no diff exemption, so avoid a serial runner allocation.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
-
-  related-tests:
-    name: Related unit tests
-    needs: release-changes
-    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.related_base != '')) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-        with:
-          persist-credentials: false
-
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup
-        with:
-          node-version: ${{ inputs.node_version }}
-
-      - name: Select related tests
-        id: plan
-        env:
-          RELATED_BASE: ${{ github.event.pull_request.base.sha || inputs.related_base }}
-        run: node scripts/pr-related-tests.mjs plan --base "$RELATED_BASE" --fetch-base --output .vitest-related-tests/plan.json
-
-      - name: Test CI tooling
-        if: steps.plan.outputs.ci-scripts == 'true'
-        run: pnpm run test:ci:scripts
-
-      - name: Setup Chromium for unit tests
-        if: steps.plan.outputs.has-tests == 'true'
-        uses: ./.github/actions/setup-unit-test-browser
-
-      - name: Run related tests
-        if: steps.plan.outputs.has-tests == 'true'
-        run: node scripts/pr-related-tests.mjs run --plan .vitest-related-tests/plan.json
-
-      - name: Upload related-test plan
-        if: ${{ !cancelled() && hashFiles('.vitest-related-tests/plan.json') != '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: related-test-plan
-          path: .vitest-related-tests/plan.json
-          include-hidden-files: true
-          retention-days: 7
 
   unit-tests:
     needs: release-changes

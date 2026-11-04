@@ -291,59 +291,27 @@ function needs(result: string, releaseOnly = "") {
   }
 }
 
-describe("early related-test feedback", () => {
-  it("starts alongside full shards after an ordinary skipped release gate", () => {
-    const context = {
-      github: github("pull_request"),
-      needs: needs("skipped"),
-      inputs: {},
-    }
-    expect(shouldRun("test.yml", "related-tests", context, false)).toBe(true)
-    expect(shouldRun("test.yml", "unit-tests", context, false)).toBe(true)
-  })
-
-  it.each([
-    { event: "push", base: "", run: false },
-    { event: "workflow_dispatch", base: "", run: false },
-    { event: "workflow_dispatch", base: "base-sha", run: true },
-  ])(
-    "previews $event only with a requested comparison base",
-    ({ event, base, run }) => {
-      expect(
-        shouldRun(
-          "test.yml",
-          "related-tests",
-          {
-            github: github(event),
-            needs: needs("skipped"),
-            inputs: { related_base: base },
-          },
-          false,
-        ),
-      ).toBe(run)
-    },
-  )
-
-  it("honors cancellation, release-only exemptions and failed release detection", () => {
-    for (const overrides of [
-      { cancelled: () => true },
-      { needs: needs("success", "true") },
-      { needs: needs("failure") },
-    ]) {
-      expect(
-        shouldRun(
-          "test.yml",
-          "related-tests",
-          {
-            github: github("pull_request"),
-            needs: needs("skipped"),
-            inputs: {},
-            ...overrides,
-          },
-          false,
-        ),
-      ).toBe(false)
-    }
+describe("full unit tests without duplicate previews", () => {
+  it("schedules only the release gate, full shards and report merge", () => {
+    const workflow = readFileSync(".github/workflows/test.yml", "utf8")
+    const jobs = [
+      ...(workflow.split(/\r?\njobs:\r?\n/)[1] ?? "").matchAll(
+        /^ {2}([\w-]+):\r?$/gm,
+      ),
+    ].map((match) => match[1])
+    expect(jobs).toEqual(["release-changes", "unit-tests", "unit-tests-merge"])
+    expect(
+      shouldRun(
+        "test.yml",
+        "unit-tests",
+        {
+          github: github("pull_request"),
+          needs: needs("skipped"),
+          inputs: {},
+        },
+        false,
+      ),
+    ).toBe(true)
   })
 })
 

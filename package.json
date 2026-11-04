@@ -53,7 +53,7 @@
     "test": "vitest --run",
     "test:watch": "vitest --watch",
     "test:ci": "vitest --run --coverage",
-    "test:ci:scripts": "node --test tests/scripts/release-pr-check.test.mjs tests/scripts/check-unit-test-reports.test.mjs tests/scripts/unit-test-browser-install.test.mjs tests/scripts/vitest-blob.test.mjs tests/scripts/pr-related-tests.test.mjs",
+    "test:ci:scripts": "node --test tests/scripts/release-pr-check.test.mjs tests/scripts/check-unit-test-reports.test.mjs tests/scripts/unit-test-browser-install.test.mjs tests/scripts/vitest-blob.test.mjs",
     "test:durations": "node scripts/write-unit-test-durations.mjs",
     "e2e:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
