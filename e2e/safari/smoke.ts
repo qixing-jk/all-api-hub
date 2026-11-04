@@ -130,7 +130,11 @@ export async function runSafariSmoke({
     await check("Safari settings accessibility", () => {
       command("osascript", [
         "-e",
+        'tell application "Safari" to make new document',
+        "-e",
         'tell application "Safari" to activate',
+        "-e",
+        'tell application "System Events" to tell process "Safari"\nrepeat 40 times\nif exists window 1 then exit repeat\ndelay 0.25\nend repeat\nend tell',
         "-e",
         'tell application "System Events" to tell process "Safari" to keystroke "," using command down',
       ])
@@ -145,6 +149,13 @@ export async function runSafariSmoke({
     return report
   } catch (error) {
     report.status = "failed"
+    if (platform === "darwin") {
+      try {
+        command("screencapture", ["-x", path.join(output, "failure.png")])
+      } catch {
+        // Preserve the original failed check when screenshot capture also fails.
+      }
+    }
     throw error
   } finally {
     save()
