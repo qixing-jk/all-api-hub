@@ -4,7 +4,7 @@
 
 The workflow runs Safari manifest, permission, distribution, native Cookie transport and tooling regressions. It builds the Safari release resources, copies them into a uniquely named instrumented trial, generates and compiles its native Xcode host and extension, and operates Safari's actual settings to enable that trial.
 
-The loopback fixture uses synthetic accounts. Status reads and control commands have a ten-second request limit; timeout failures stop the current stage. Trial start/completion and UI fixture events must be recorded during the current smoke run, so a reused fixture's earlier results cannot satisfy these checks. The native verifier requires fresh server observations of concurrent account isolation, Cookie and Origin handling, response Cookie suppression, redirect rejection, cancellation recovery, scope limits and ordinary fetch isolation. A missing or incomplete native run fails the workflow. The fixture server is stopped by the workflow's exit trap.
+The loopback fixture uses synthetic accounts. Status reads and control commands have a ten-second request limit; timeout failures stop the current stage. Trial start/completion and UI fixture events must be recorded during the current smoke run, so a reused fixture's earlier results cannot satisfy these checks. The smoke runner passes the current attempt's events to the native verifier, which checks concurrent account isolation, Cookie and Origin handling, response Cookie suppression, redirect rejection, cancellation recovery, scope limits and ordinary fetch isolation. A missing or incomplete native run fails the workflow. The fixture server is stopped by the workflow's exit trap.
 
 Before the UI checks, the existing native trial controller writes a fresh, empty public-directory cache through the application's cache service and reads it back. The smoke requires fresh extension-side evidence of that round trip. This fixture keeps the basic UI checks independent of external directory requests and their website permission prompts.
 
@@ -33,3 +33,5 @@ The real native observations use the maintained verifier:
 ```sh
 node e2e/safariNativeCookie/verify.ts test-results/safari/observations.json
 ```
+
+The standalone verifier validates the latest complete trial in the supplied file; it does not establish the capture's age.

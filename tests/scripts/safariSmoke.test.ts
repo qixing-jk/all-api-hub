@@ -287,6 +287,28 @@ it.each(
       reportBeingWritten: false,
       invalidNativeEvidence: true,
     },
+    {
+      popupAvailable: true,
+      navigationAvailable: true,
+      optionsRendered: true,
+      shutdownAvailable: true,
+      activationPendingChecks: 0,
+      uiSetupPending: false,
+      fixtureReady: true,
+      reportBeingWritten: false,
+      staleNativePayload: true,
+    },
+    {
+      popupAvailable: true,
+      navigationAvailable: true,
+      optionsRendered: true,
+      shutdownAvailable: true,
+      activationPendingChecks: 0,
+      uiSetupPending: false,
+      fixtureReady: true,
+      reportBeingWritten: false,
+      staleNativeCompletion: true,
+    },
   ].map((scenario) => ({
     emptyFrontWindow: false,
     stalledStatus: false,
@@ -295,6 +317,8 @@ it.each(
     systemEventsUiDenied: false,
     staleNativeEvidence: false,
     invalidNativeEvidence: false,
+    staleNativePayload: false,
+    staleNativeCompletion: false,
     ...scenario,
   })),
 )(
@@ -315,6 +339,8 @@ it.each(
     systemEventsUiDenied,
     staleNativeEvidence,
     invalidNativeEvidence,
+    staleNativePayload,
+    staleNativeCompletion,
   }) => {
     if (
       !optionsRendered ||
@@ -324,7 +350,8 @@ it.each(
       stalledStatus ||
       stalledControl ||
       fixtureReplyMissing ||
-      staleNativeEvidence
+      staleNativeEvidence ||
+      staleNativeCompletion
     )
       vi.useFakeTimers()
     let activationChecks = 0
@@ -378,11 +405,21 @@ it.each(
           settingsOpen = true
         if (file === "curl" && args.at(-1)?.endsWith("/status")) {
           if (!nativeEvidenceDated) {
-            const recordedAt = staleNativeEvidence
-              ? beforeRunStartedAt - 1
-              : Date.now()
+            const currentTime = Date.now()
+            const recordedAt =
+              staleNativeEvidence || staleNativePayload || staleNativeCompletion
+                ? beforeRunStartedAt - 1
+                : currentTime
             for (const event of nativeEvidence.events)
               event.recordedAt = recordedAt
+            if (staleNativePayload || staleNativeCompletion)
+              nativeEvidence.events.findLast(
+                (event: { stage: string }) => event.stage === "trial-start",
+              ).recordedAt = currentTime
+            if (staleNativePayload)
+              nativeEvidence.events.findLast(
+                (event: { stage: string }) => event.stage === "trial-complete",
+              ).recordedAt = currentTime
             nativeEvidenceDated = true
           }
           if (stalledStatus) {
@@ -504,7 +541,7 @@ it.each(
       await expect(result).rejects.toThrow("Fixture status request timed out")
     else if (stalledControl)
       await expect(result).rejects.toThrow("Fixture control request timed out")
-    else if (staleNativeEvidence)
+    else if (staleNativeEvidence || staleNativeCompletion)
       await Promise.all([
         expect(result).rejects.toThrow("Native Cookie trial incomplete"),
         vi.runAllTimersAsync(),
@@ -512,6 +549,10 @@ it.each(
     else if (invalidNativeEvidence)
       await expect(result).rejects.toThrow(
         "Failed native observation: trial-concurrency.accountCorrect",
+      )
+    else if (staleNativePayload)
+      await expect(result).rejects.toThrow(
+        "Missing or duplicate stage: trial-capabilities",
       )
     else if (!fixtureReady || fixtureReplyMissing)
       await Promise.all([
@@ -539,11 +580,20 @@ it.each(
       shutdownAvailable &&
       !stalledStatus &&
       !staleNativeEvidence &&
-      !invalidNativeEvidence
+      !invalidNativeEvidence &&
+      !staleNativePayload &&
+      !staleNativeCompletion
     )
       expect(controlRequests).toEqual([
         { method: "POST", body: { command: "ci-ui-fixture" } },
       ])
+    if (
+      staleNativeEvidence ||
+      invalidNativeEvidence ||
+      staleNativePayload ||
+      staleNativeCompletion
+    )
+      expect(controlRequests).toEqual([])
     if (emptyFrontWindow)
       expect(
         readFileSync(path.join(output, "safari-version.txt"), "utf8"),
