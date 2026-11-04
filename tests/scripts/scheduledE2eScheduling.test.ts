@@ -156,7 +156,12 @@ describe("scheduled E2E build reuse", () => {
     expect(build.indexOf("- name: Setup Node.js")).toBeLessThan(
       build.indexOf("- name: Resolve extension directory"),
     )
-    expect(build).not.toContain("restore-keys:")
+    const restoreBuild = build
+      .split("      - name: Restore E2E build")[1]
+      ?.split("      - name:")[0]
+    expect(restoreBuild).toBeDefined()
+    // Build fingerprints must stay exact; the separate timing profile may be older.
+    expect(restoreBuild).not.toContain("restore-keys:")
     expect(build).toContain("node scripts/e2e-ci-build-cache.mjs")
     for (const name of [
       "Setup pnpm",
@@ -214,11 +219,23 @@ describe("scheduled E2E build reuse", () => {
 })
 
 describe("duration-balanced smoke shards", () => {
-  it("restores measured timings before planning and still falls back to --shard", () => {
+  it("downloads this run's timings before planning and still falls back to --shard", () => {
     const source = workflow("e2e-smoke")
     const tests = job(source, "e2e-smoke")
-    expect(tests).toContain("uses: actions/cache/restore@v5")
-    expect(tests).toContain("restore-keys:")
+    const restoreProfile = tests
+      .split("      - name: Restore E2E spec durations")[1]
+      ?.split("      - name:")[0]
+    expect(restoreProfile).toBeDefined()
+    expect(restoreProfile).toContain("uses: actions/download-artifact@v7")
+    expect(restoreProfile).toContain("name: e2e-shard-duration-profile")
+    expect(restoreProfile).toContain("path: .e2e-durations")
+    expect(restoreProfile).toContain("if: ${{ matrix.e2e_type == 'default' }}")
+    expect(restoreProfile).not.toContain("run-id:")
+    // Reruns must not read a newer shared cache and change shard membership.
+    expect(tests).not.toContain("uses: actions/cache/restore@v5")
+    expect(tests.indexOf("- name: Restore E2E spec durations")).toBeLessThan(
+      tests.indexOf("- name: Run E2E smoke"),
+    )
     expect(tests).toContain("node scripts/e2e-shard-plan.mjs")
     expect(tests).toContain(
       "--shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}",
