@@ -36,30 +36,42 @@ it.each([
     navigationAvailable: true,
     optionsRendered: true,
     shutdownAvailable: true,
+    activationPendingChecks: 0,
   },
   {
     popupAvailable: false,
     navigationAvailable: true,
     optionsRendered: true,
     shutdownAvailable: true,
+    activationPendingChecks: 0,
   },
   {
     popupAvailable: true,
     navigationAvailable: false,
     optionsRendered: true,
     shutdownAvailable: true,
+    activationPendingChecks: 0,
   },
   {
     popupAvailable: true,
     navigationAvailable: true,
     optionsRendered: false,
     shutdownAvailable: true,
+    activationPendingChecks: 0,
   },
   {
     popupAvailable: true,
     navigationAvailable: true,
     optionsRendered: true,
     shutdownAvailable: false,
+    activationPendingChecks: 0,
+  },
+  {
+    popupAvailable: true,
+    navigationAvailable: true,
+    optionsRendered: true,
+    shutdownAvailable: true,
+    activationPendingChecks: 2,
   },
 ])(
   "accepts latest native evidence and requires the Popup flow (%j)",
@@ -68,8 +80,10 @@ it.each([
     navigationAvailable,
     optionsRendered,
     shutdownAvailable,
+    activationPendingChecks,
   }) => {
-    if (!optionsRendered) vi.useFakeTimers()
+    if (!optionsRendered || activationPendingChecks) vi.useFakeTimers()
+    let activationChecks = 0
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
     const projectRoot = path.join(output, "project")
     mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
@@ -107,6 +121,11 @@ it.each([
           throw new Error("Safari did not quit")
         if (args[0] === "enable" && args[2] === "Trial")
           throw new Error("Installed extension checkbox has no accessible name")
+        if (
+          args[0] === "extension-enabled" &&
+          activationChecks++ < activationPendingChecks
+        )
+          throw new Error("Registered trial has not loaded yet")
         if (args.includes("press") && args.includes("Trial") && !popupAvailable)
           throw new Error("Popup unavailable")
         if (
@@ -143,6 +162,11 @@ it.each([
         expect(result).rejects.toThrow(
           "Options account manager did not render",
         ),
+        vi.runAllTimersAsync(),
+      ])
+    else if (activationPendingChecks)
+      await Promise.all([
+        result.then((report) => expect(report.status).toBe("passed")),
         vi.runAllTimersAsync(),
       ])
     else expect((await result).status).toBe("passed")
@@ -258,6 +282,7 @@ it("fails when Safari developer settings cannot be enabled instead of passing a 
 })
 
 it("requires activation of the compiled trial extension", async () => {
+  vi.useFakeTimers()
   const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
   const projectRoot = path.join(output, "project")
   mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
@@ -268,19 +293,21 @@ it("requires activation of the compiled trial extension", async () => {
     path.join(output, "identity.json"),
     JSON.stringify({ projectRoot, appName: "Trial" }),
   )
-  await expect(
-    runSafariSmoke({
-      platform: "darwin",
-      output,
-      command: (file, args) => {
-        if (file === process.execPath)
-          return `Prepared independent trial: ${output}`
-        if (file === "xcodebuild" && args.includes("-list"))
-          return JSON.stringify({ project: { schemes: ["Trial"] } })
-        if (args.includes("extension-enabled") && args.includes("Trial"))
-          throw new Error("Trial extension unavailable")
-        return "true"
-      },
-    }),
-  ).rejects.toThrow("Trial extension unavailable")
+  const result = runSafariSmoke({
+    platform: "darwin",
+    output,
+    command: (file, args) => {
+      if (file === process.execPath)
+        return `Prepared independent trial: ${output}`
+      if (file === "xcodebuild" && args.includes("-list"))
+        return JSON.stringify({ project: { schemes: ["Trial"] } })
+      if (args.includes("extension-enabled") && args.includes("Trial"))
+        throw new Error("Trial extension unavailable")
+      return "true"
+    },
+  })
+  await Promise.all([
+    expect(result).rejects.toThrow("Trial extension unavailable"),
+    vi.runAllTimersAsync(),
+  ])
 })

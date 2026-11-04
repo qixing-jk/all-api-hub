@@ -202,7 +202,7 @@ export async function runSafariSmoke({
       fs.writeFileSync(path.join(output, "safari-settings.txt"), tree)
       command("screencapture", ["-x", path.join(output, "safari-settings.png")])
     })
-    await check("Trial extension activation", () => {
+    await check("Trial extension activation", async () => {
       allowUnsigned()
       const extension = path.join(
         appPath,
@@ -256,12 +256,30 @@ export async function runSafariSmoke({
       openSettings()
       command(driver, ["press", "Safari", "Developer"])
       allowUnsigned()
+      command("pluginkit", ["-a", extension])
+      fs.writeFileSync(
+        path.join(output, "native-registration-after.txt"),
+        command("pluginkit", [
+          "-mAvvv",
+          "-p",
+          "com.apple.Safari.web-extension",
+        ]),
+      )
       command(driver, ["press", "Safari", "Extensions"])
-      command(driver, ["extension-enabled", "Safari", appName])
       fs.writeFileSync(
         path.join(output, "extension-state-after.xml"),
         command("plutil", ["-convert", "xml1", "-o", "-", statePath]),
       )
+      const deadline = Date.now() + 15000
+      for (;;) {
+        try {
+          command(driver, ["extension-enabled", "Safari", appName])
+          break
+        } catch (error) {
+          if (Date.now() >= deadline) throw error
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
       fs.writeFileSync(
         path.join(output, "extension-settings.json"),
         command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
