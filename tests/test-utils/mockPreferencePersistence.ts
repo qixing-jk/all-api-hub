@@ -1,4 +1,4 @@
-import { type vi } from "vitest"
+import { type Mock } from "vitest"
 
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -8,7 +8,7 @@ import { patchTouchesSharedPreferences } from "~/services/preferences/webdavShar
 import type { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 
-type PersistenceMock = ReturnType<typeof vi.fn>
+type PersistenceMock = Mock
 
 type PreferencePersistenceMocks = {
   getPreferences: PersistenceMock

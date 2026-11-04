@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest"
 
 import { TabsContent } from "~/components/ui"
 import {
@@ -123,7 +123,7 @@ const renderProviderTabs = ({
   effectiveSelectedVendor?: ModelVendorFilterValue
   allVendorsFilteredCount?: number
   unclassifiedVendorCount?: number
-  setSelectedProvider?: ReturnType<typeof vi.fn>
+  setSelectedProvider?: Mock
 } = {}) => {
   const createElement = (catalog: CountedVendor[]) => (
     <ProviderTabs

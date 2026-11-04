@@ -1,25 +1,42 @@
 #!/usr/bin/env node
 import { appendFileSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
-import { parse } from "flatted"
+import { parseArgs } from "node:util"
+
+import { parseVitestBlob } from "./utils/vitestBlob.mjs"
+import {
+  extractFileTimings,
+  writeUnitTestDurationsFromReports,
+} from "./write-unit-test-durations.mjs"
 
 // Test failures are valid input. Missing or unusable shard coverage is not.
-const [
-  directory = ".vitest-reports",
-  totalValue = process.env.UNIT_TEST_SHARD_TOTAL,
-] = process.argv.slice(2)
-const total = Number(totalValue)
+let total
 let complete = false
 try {
+  const { positionals, values } = parseArgs({
+    allowPositionals: true,
+    options: {
+      "durations-output": { type: "string" },
+    },
+  })
+  const [
+    directory = ".vitest-reports",
+    totalValue = process.env.UNIT_TEST_SHARD_TOTAL,
+  ] = positionals
+  total = Number(totalValue)
+  const durationsOutput = values["durations-output"]
   if (!Number.isInteger(total) || total < 1) {
     throw new Error("Expected a positive integer shard total")
   }
   const names = readdirSync(directory).filter((name) => name.endsWith(".json"))
   const versions = new Set()
+  const reports = []
   for (let shard = 1; shard <= total; shard++) {
     const name = `blob-${shard}-${total}.json`
     if (!names.includes(name)) throw new Error(`Missing shard report: ${name}`)
-    const blob = parse(readFileSync(path.join(directory, name), "utf8"))
+    const blob = parseVitestBlob(
+      readFileSync(path.join(directory, name), "utf8"),
+    )
     if (
       !Array.isArray(blob) ||
       typeof blob[0] !== "string" ||
@@ -35,14 +52,22 @@ try {
       throw new Error(`Unusable test or coverage data: ${name}`)
     }
     versions.add(blob[0])
+    if (durationsOutput !== undefined) {
+      reports.push({ shard, files: extractFileTimings(blob) })
+    }
   }
   if (names.length !== total || versions.size !== 1) {
     throw new Error("Unexpected shard reports or mixed Vitest versions")
   }
   complete = true
   console.log(`All ${total} shard reports contain test and coverage data.`)
+  if (durationsOutput !== undefined) {
+    writeUnitTestDurationsFromReports(reports, path.resolve(durationsOutput))
+  }
 } catch (error) {
-  console.error(`Incomplete coverage: ${error.message}`)
+  console.error(
+    `${complete ? "Could not publish unit test durations" : "Incomplete coverage"}: ${error.message}`,
+  )
   process.exitCode = 1
 } finally {
   if (process.env.GITHUB_OUTPUT) {

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process"
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -90,6 +91,175 @@ function temporaryDirectory() {
 function specEntry(key: string, weight: number) {
   return { key, weight }
 }
+
+it.each([
+  [600, 200],
+  [200, 600],
+])(
+  "retains same-named retry reports in either download order (%j, %j)",
+  (first, second) => {
+    const directory = temporaryDirectory()
+    const reports = path.join(directory, "reports")
+    const download = smokeWorkflow
+      .split("- name: Download spec duration reports")[1]
+      ?.split("- name:")[0]
+    expect(download).toBeDefined()
+    // Model download-artifact's documented extraction boundary using the workflow's
+    // actual setting. Both attempts contain shard-6.json; shard 5 was not rerun.
+    const merged = /merge-multiple: true/.test(download ?? "")
+    for (const [index, duration] of [first, second].entries()) {
+      const target = merged
+        ? reports
+        : path.join(reports, `e2e-spec-durations-6-${index + 1}`)
+      mkdirSync(target, { recursive: true })
+      writeFileSync(
+        path.join(target, "shard-6.json"),
+        JSON.stringify({
+          suites: [
+            {
+              specs: [
+                {
+                  file: "modelListCommonFlows.spec.ts",
+                  tests: [{ results: [{ duration }] }],
+                },
+              ],
+            },
+          ],
+        }),
+      )
+    }
+    const retained = merged
+      ? reports
+      : path.join(reports, "e2e-spec-durations-5-1")
+    mkdirSync(retained, { recursive: true })
+    writeFileSync(
+      path.join(retained, "shard-5.json"),
+      JSON.stringify({
+        suites: [
+          {
+            specs: [
+              {
+                file: "other.spec.ts",
+                tests: [{ results: [{ duration: 300 }] }],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+    const output = path.join(directory, "durations.json")
+    execFileSync(process.execPath, [
+      path.resolve("scripts/write-e2e-spec-durations.mjs"),
+      reports,
+      output,
+    ])
+    expect(JSON.parse(readFileSync(output, "utf8")).durations).toEqual({
+      "e2e/modelListCommonFlows.spec.ts": 600,
+      "e2e/other.spec.ts": 300,
+    })
+    expect(
+      readdirSync(reports, { recursive: true, encoding: "utf8" }).filter(
+        (name) => name.endsWith(".json"),
+      ),
+    ).toHaveLength(3)
+  },
+)
+
+it("keeps the run's shard assignments when newly published timings change", async () => {
+  const directory = temporaryDirectory()
+  mkdirSync(path.join(directory, "e2e"))
+  const durations = Object.fromEntries(
+    Array.from({ length: 18 }, (_, index) => {
+      const file = `e2e/spec-${index}.spec.ts`
+      writeFileSync(path.join(directory, file), "")
+      return [file, (index + 1) * 100]
+    }),
+  )
+  const original = JSON.stringify({ version: 1, durations })
+  const snapshot = path.join(directory, "snapshot.json")
+  const cache = path.join(directory, "latest.json")
+  writeFileSync(snapshot, original)
+  writeFileSync(cache, original)
+  const restore = smokeWorkflow
+    .split("- name: Restore E2E spec durations")[1]
+    ?.split("- name:")[0]
+  expect(restore).toBeDefined()
+  // Artifacts belong to this workflow run; a cache prefix reads newly published
+  // timings instead. Exercise the planner with that external input boundary.
+  const input = restore?.includes("actions/download-artifact")
+    ? snapshot
+    : cache
+  const options = { cwd: directory, index: 6, total: 6, durationsPath: input }
+  const first = await planSpecShard(options)
+  writeFileSync(
+    cache,
+    JSON.stringify({
+      version: 1,
+      durations: { ...durations, "e2e/spec-0.spec.ts": 50_000 },
+    }),
+  )
+  expect(await planSpecShard(options)).toEqual(first)
+
+  const build = readFileSync(".github/workflows/e2e-build.yml", "utf8")
+  const publish = build
+    .split("- name: Upload E2E shard duration profile")[1]
+    ?.split("- name:")[0]
+  const restoreProfile = build
+    .split("- name: Restore E2E shard duration profile")[1]
+    ?.split("- name:")[0]
+  expect(restoreProfile).toBeDefined()
+  const cachePath = restoreProfile?.match(/\n\s+path: (\S+)/)?.[1]
+  expect(cachePath).toBe(".e2e-durations")
+  expect(publish).toContain(`path: ${cachePath}/spec-durations.json`)
+  expect(restore).toContain(`path: ${cachePath}`)
+  const restoreKey = restoreProfile?.match(/\n\s+key: ([^\r\n]+)/)?.[1]
+  const save = smokeWorkflow.split("- name: Save spec durations")[1]
+  expect(restoreKey).toBe(save?.match(/\n\s+key: ([^\r\n]+)/)?.[1])
+  const prefix = restoreProfile?.match(/restore-keys:\s*\|\s*(\S+)/)?.[1]
+  expect(prefix).toBeDefined()
+  expect(restoreKey?.startsWith(prefix ?? "")).toBe(true)
+  const artifactName = publish?.match(/\n\s+name: (\S+)/)?.[1]
+  expect(artifactName).toBeDefined()
+  expect(restore).toContain(`name: ${artifactName}`)
+})
+
+it("snapshots an empty cache without replacing an existing duration profile", () => {
+  const directory = temporaryDirectory()
+  const build = readFileSync(".github/workflows/e2e-build.yml", "utf8").replace(
+    /\r/g,
+    "",
+  )
+  const step = build
+    .split("- name: Preserve an empty profile on a cache miss")[1]
+    ?.split("- name:")[0]
+  const script = step
+    ?.split("        run: |\n")[1]
+    ?.split("\n")
+    .map((line) => line.slice(10))
+    .join("\n")
+  if (!script) throw new Error("Missing profile snapshot initializer")
+  const run = () =>
+    execFileSync(
+      process.platform === "win32"
+        ? "C:/Program Files/Git/bin/bash.exe"
+        : "bash",
+      ["-e", "-c", script],
+      { cwd: directory },
+    )
+  run()
+  const profile = path.join(directory, ".e2e-durations/spec-durations.json")
+  expect(JSON.parse(readFileSync(profile, "utf8"))).toEqual({
+    version: 1,
+    durations: {},
+  })
+  const existing = JSON.stringify({
+    version: 1,
+    durations: { "e2e/a.spec.ts": 123 },
+  })
+  writeFileSync(profile, existing)
+  run()
+  expect(readFileSync(profile, "utf8")).toBe(existing)
+})
 
 describe("duration-balanced spec packing", () => {
   it("collects all Playwright default test filename variants", async () => {

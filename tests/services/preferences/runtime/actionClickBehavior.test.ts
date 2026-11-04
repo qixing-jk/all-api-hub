@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest"
 
 import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import {
@@ -13,17 +21,17 @@ import { NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS } from "~/utils/browser/sidePane
 import { SIDE_PANEL_NAVIGATION_DESTINATIONS } from "~/utils/navigation/destinations"
 
 describe("background applyActionClickBehavior", () => {
-  let addActionClickListener: ReturnType<typeof vi.fn>
-  let setActionPopup: ReturnType<typeof vi.fn>
-  let setNativeSidePanelActionClick: ReturnType<typeof vi.fn>
-  let getSidePanelSupport: ReturnType<typeof vi.fn>
-  let getPreferences: ReturnType<typeof vi.fn>
-  let getPreferencesStrict: ReturnType<typeof vi.fn>
-  let loggerWarn: ReturnType<typeof vi.fn>
-  let openSidePanelWithFallback: ReturnType<typeof vi.fn>
-  let openOptionsPage: ReturnType<typeof vi.fn>
-  let startProductAnalyticsAction: ReturnType<typeof vi.fn>
-  let trackerComplete: ReturnType<typeof vi.fn>
+  let addActionClickListener: Mock
+  let setActionPopup: Mock
+  let setNativeSidePanelActionClick: Mock
+  let getSidePanelSupport: Mock
+  let getPreferences: Mock
+  let getPreferencesStrict: Mock
+  let loggerWarn: Mock
+  let openSidePanelWithFallback: Mock
+  let openOptionsPage: Mock
+  let startProductAnalyticsAction: Mock
+  let trackerComplete: Mock
 
   beforeEach(() => {
     addActionClickListener = vi.fn()

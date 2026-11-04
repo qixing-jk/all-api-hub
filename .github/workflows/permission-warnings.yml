@@ -18,6 +18,7 @@ on:
       - ".env*"
       - ".github/workflows/permission-warnings.yml"
       - ".github/workflows/e2e-build.yml"
+      - ".github/actions/setup-unit-test-browser/**"
   workflow_dispatch: {}
 
 permissions:
@@ -46,6 +47,7 @@ jobs:
     name: Native permission warnings
     # Skipped with the build when a release-only diff needs no manifest check.
     needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -62,20 +64,10 @@ jobs:
           node-version-file: .output/chrome-mv3-test/.node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Get Playwright version
-        id: playwright_version
-        run: |
-          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log('version=' + (pkg.devDependencies?.['@playwright/test'] ?? 'unknown'))" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        # Shares the key with the E2E workflows; the same browser serves both.
-        uses: actions/cache@v5
+      - name: Prepare E2E Chromium
+        uses: ./.github/actions/setup-unit-test-browser
         with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright_version.outputs.version }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+          channel: chromium
       - name: Compare warnings in the real browser
         # The current run's producer validated the default build fingerprint.
         env:

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,29 +14,76 @@ import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 import { stringify } from "flatted"
 
+import { bashPath, workflowCommand } from "./workflowCommand.mjs"
+
 const script = fileURLToPath(
   new URL("../../scripts/check-unit-test-reports.mjs", import.meta.url),
 )
 
-function check(context, reports, total = "2") {
+function reportGuardCommand() {
+  const command = workflowCommand("test.yml", "Check shard report completeness")
+  const quotedScript =
+    "'" + script.replaceAll("\\", "/").replaceAll("'", "'\"'\"'") + "'"
+  return command.replaceAll("scripts/check-unit-test-reports.mjs", quotedScript)
+}
+
+function check(context, reports, total = "2", options = {}) {
   const directory = mkdtempSync(join(tmpdir(), "unit-test-reports-"))
   context.after(() => {
     assert.ok(directory.startsWith(join(tmpdir(), "unit-test-reports-")))
     rmSync(directory, { recursive: true, force: true })
   })
+  const reportsDirectory = options.workflowEvent
+    ? join(directory, ".vitest-reports")
+    : directory
+  mkdirSync(reportsDirectory, { recursive: true })
   for (const [name, blob] of Object.entries(reports)) {
-    writeFileSync(join(directory, name), stringify(blob))
+    writeFileSync(
+      join(reportsDirectory, name),
+      options.rawReports ? blob : stringify(blob),
+    )
   }
   const output = join(directory, "output")
-  const result = spawnSync(process.execPath, [script, directory, total], {
+  const durationsPath = options.outputIsDirectory
+    ? directory
+    : join(
+        directory,
+        options.workflowEvent ? ".vitest-durations" : "durations",
+        "shard-durations.json",
+      )
+  const args = [script, directory, total]
+  if (options.publishDurations) args.push("--durations-output", durationsPath)
+  const command = options.workflowEvent ? bashPath() : process.execPath
+  const commandArgs = options.workflowEvent
+    ? [
+        "--noprofile",
+        "--norc",
+        "-e",
+        "-o",
+        "pipefail",
+        "-c",
+        reportGuardCommand(),
+      ]
+    : args
+  const result = spawnSync(command, commandArgs, {
+    cwd: directory,
     encoding: "utf8",
     env: {
       ...process.env,
+      ...(options.workflowEvent
+        ? { GITHUB_EVENT_NAME: options.workflowEvent }
+        : {}),
+      UNIT_TEST_SHARD_TOTAL: total,
       GITHUB_OUTPUT: output,
       GITHUB_STEP_SUMMARY: join(directory, "summary"),
     },
   })
-  return { ...result, output: () => readFileSync(output, "utf8") }
+  return {
+    ...result,
+    output: () => readFileSync(output, "utf8"),
+    durations: () => JSON.parse(readFileSync(durationsPath, "utf8")),
+    hasDurations: () => existsSync(durationsPath),
+  }
 }
 
 const blob = (state = "pass") => [
@@ -54,6 +102,93 @@ test("complete reports remain usable when an assertion failed", (context) => {
   })
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.output(), "complete=true\n")
+})
+
+test("complete reports can also publish balanced file durations", (context) => {
+  const first = blob()
+  first[1] = [
+    {
+      name: "tests/a.test.ts",
+      result: { duration: 6 },
+      setupDuration: 2,
+      prepareDuration: 1,
+      collectDuration: 2,
+      environmentLoad: 1,
+    },
+    { name: "tests/b.test.ts", result: { duration: 8 } },
+  ]
+  const second = blob("fail")
+  second[1] = [
+    {
+      name: "tests/c.test.ts",
+      result: { state: "fail", duration: 5 },
+      collectDuration: 5,
+    },
+  ]
+  const result = check(
+    context,
+    { "blob-1-2.json": first, "blob-2-2.json": second },
+    "2",
+    { publishDurations: true },
+  )
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.output(), "complete=true\n")
+  const manifest = result.durations()
+  assert.equal(manifest.version, 1)
+  assert.deepEqual(manifest.durations, {
+    "tests/a.test.ts": 9,
+    "tests/b.test.ts": 6,
+    "tests/c.test.ts": 15,
+  })
+  assert.match(manifest.generatedAt, /^\d{4}-\d{2}-\d{2}T/)
+})
+
+test("timing write failures retain complete coverage but fail the command", (context) => {
+  const first = blob()
+  first[1][0].result.duration = 100
+  const second = blob("fail")
+  second[1][0].result.duration = 100
+  const result = check(
+    context,
+    { "blob-1-2.json": first, "blob-2-2.json": second },
+    "2",
+    { publishDurations: true, outputIsDirectory: true },
+  )
+  assert.equal(result.status, 1)
+  assert.equal(result.output(), "complete=true\n")
+  assert.match(result.stderr, /Could not publish unit test durations/)
+  assert.doesNotMatch(result.stderr, /Incomplete coverage/)
+})
+
+for (const event of ["push", "workflow_dispatch"]) {
+  test(`${event} report workflow publishes timings from the completeness command`, (context) => {
+    const first = blob()
+    first[1][0].result.duration = 100
+    const second = blob("fail")
+    second[1][0].result.duration = 100
+    const result = check(
+      context,
+      { "blob-1-2.json": first, "blob-2-2.json": second },
+      "2",
+      { workflowEvent: event },
+    )
+    assert.equal(result.status, 0, result.stdout + result.stderr)
+    assert.equal(result.output(), "complete=true\n")
+    assert.equal(result.hasDurations(), true)
+    assert.deepEqual(result.durations().durations, { "example.test.ts": 200 })
+  })
+}
+
+test("pull request report workflow checks coverage without publishing timings", (context) => {
+  const result = check(
+    context,
+    { "blob-1-2.json": blob("fail"), "blob-2-2.json": blob() },
+    "2",
+    { workflowEvent: "pull_request" },
+  )
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.equal(result.output(), "complete=true\n")
+  assert.equal(result.hasDurations(), false)
 })
 
 for (const [name, reports] of Object.entries({
@@ -90,10 +225,33 @@ for (const [name, reports] of Object.entries({
   },
 })) {
   test(`${name} blocks publication as complete coverage`, (context) => {
-    const result = check(context, reports)
+    const result = check(context, reports, "2", { publishDurations: true })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Incomplete coverage/)
     assert.equal(result.output(), "complete=false\n")
+    assert.equal(result.hasDurations(), false)
+  })
+}
+
+for (const corrupt of ["null reference", "dangling reference"]) {
+  test(`${corrupt} in coverage blocks publication and timing output`, (context) => {
+    const encoded = JSON.parse(stringify(blob()))
+    encoded[0][4] = String(
+      encoded.length + (corrupt === "dangling reference" ? 1 : 0),
+    )
+    if (corrupt === "null reference") encoded.push(null)
+    const result = check(
+      context,
+      {
+        "blob-1-2.json": stringify(blob()),
+        "blob-2-2.json": JSON.stringify(encoded),
+      },
+      "2",
+      { publishDurations: true, rawReports: true },
+    )
+    assert.equal(result.status, 1)
+    assert.equal(result.output(), "complete=false\n")
+    assert.equal(result.hasDurations(), false)
   })
 }
 
@@ -165,6 +323,7 @@ test("real failed Vitest shards merge into coverage and JUnit while retaining fa
       timeout: 60_000,
     })
   const statuses = []
+  const diagnostics = []
   for (let shard = 1; shard <= 2; shard++) {
     const result = run([
       "run",
@@ -174,8 +333,9 @@ test("real failed Vitest shards merge into coverage and JUnit while retaining fa
     ])
     assert.ok(result.status === 0 || result.status === 1, result.stderr)
     statuses.push(result.status)
+    diagnostics.push(result.stdout + result.stderr)
   }
-  assert.deepEqual(statuses.sort(), [0, 1])
+  assert.deepEqual(statuses.sort(), [0, 1], diagnostics.join("\n"))
   const gate = spawnSync(
     process.execPath,
     [script, join(directory, ".vitest-reports"), "2"],

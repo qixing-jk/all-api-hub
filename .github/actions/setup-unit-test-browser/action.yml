@@ -1,0 +1,50 @@
+name: Set up Chromium
+description: Restore Chromium and verify the host libraries used by the selected browser.
+
+inputs:
+  channel:
+    description: Use chromium for extension E2E; empty selects the unit tests' headless shell.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Get Playwright version
+      id: playwright_version
+      shell: bash
+      run: |
+        node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log('version=' + (pkg.devDependencies?.['@playwright/test'] ?? 'unknown'))" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      # Share the complete browser cache with the E2E workflows and all unit shards.
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.playwright_version.outputs.version }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: Install Chromium for browser-backed unit tests
+      # Keep headed Chromium for E2E consumers of the same cache. Install host
+      # libraries only when the selected browser reports missing dependencies.
+      shell: bash
+      env:
+        PLAYWRIGHT_CHROMIUM_CHANNEL: ${{ inputs.channel }}
+      run: |
+        pnpm exec playwright install chromium
+        probe_browser() {
+          # Match the normal Playwright launch budget used by extension fixtures.
+          pnpm exec node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHROMIUM_CHANNEL } : {}) }); await browser.close();'
+        }
+        probe_log="${RUNNER_TEMP}/unit-chromium-probe.log"
+        if probe_browser > "$probe_log" 2>&1; then
+          echo "Chromium (${PLAYWRIGHT_CHROMIUM_CHANNEL:-headless shell}) starts with existing host libraries."
+          exit 0
+        fi
+        cat "$probe_log"
+        if ! grep -Eq 'Host system is missing dependencies|error while loading shared libraries:' "$probe_log"; then
+          exit 1
+        fi
+        pnpm exec playwright install-deps chromium
+        probe_browser
