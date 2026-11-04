@@ -48,8 +48,10 @@ var pressed = false
 for app in NSWorkspace.shared.runningApplications {
     let name = app.localizedName ?? ""
     if args.count > 2 && name != args[2] { continue }
+    if args[1] == "authorization" && !["UserNotificationCenter", "SecurityAgent", "CoreServicesUIAgent"].contains(name) { continue }
     let root = AXUIElementCreateApplication(app.processIdentifier)
     for window in (attribute(root, "AXWindows") as? [AXUIElement]) ?? [] {
+        if args[1] == "alerts" && !text(window).contains("alert") { continue }
         let allElements = descendants(window)
         let elements = args[1] == "popover" ? allElements.filter { attribute($0, "AXRole") as? String == "AXPopover" }.flatMap { descendants($0) } : allElements
         if args[1] == "popover" && elements.isEmpty { continue }
@@ -78,7 +80,9 @@ for app in NSWorkspace.shared.runningApplications {
         }) {
             pressed = args[1] == "enable" ? enableCheckbox(target) : AXUIElementPerformAction(target, "AXPress" as CFString) == .success
         }
+        if pressed { break }
     }
+    if pressed { break }
 }
 if ["press", "enable", "extension-enabled", "close-window", "authenticate"].contains(args[1]) { exit(pressed ? 0 : 1) }
 let data = try JSONSerialization.data(withJSONObject: dialogs, options: [.sortedKeys])

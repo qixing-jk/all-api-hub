@@ -114,6 +114,13 @@ export async function runSafariSmoke({
         'tell application "System Events" to tell process "Safari" to get name of every window',
       ])
       fs.writeFileSync(path.join(output, "safari-windows.txt"), windows)
+      fs.writeFileSync(
+        path.join(output, "safari-initial-url.txt"),
+        command("osascript", [
+          "-e",
+          'tell application "Safari" to get URL of current tab of front window',
+        ]),
+      )
     })
     await check("Native extension build", () => {
       const prepared = command(process.execPath, [
@@ -126,6 +133,7 @@ export async function runSafariSmoke({
         fs.readFileSync(path.join(match[1]!, "identity.json"), "utf8"),
       )
       appName = identity.appName
+      process.env.AAH_SAFARI_CI_APP_NAME = appName
       const project = fs
         .readdirSync(String(identity.projectRoot), {
           recursive: true,
@@ -361,7 +369,7 @@ export async function runSafariSmoke({
       while (Date.now() < deadline) {
         const url = command("osascript", [
           "-e",
-          'tell application "Safari" to get URL of current tab of front window',
+          'tell application "Safari"\nrepeat with browserWindow in windows\nrepeat with browserTab in tabs of browserWindow\nset candidateUrl to get URL of browserTab\nif (candidateUrl starts with "safari-web-extension://") and (candidateUrl contains "/options.html") and (candidateUrl ends with "#account") then\nset current tab of browserWindow to browserTab\nset index of browserWindow to 1\nactivate\nreturn candidateUrl\nend if\nend repeat\nend repeat\nreturn ""\nend tell',
         ]).trim()
         if (
           url.startsWith("safari-web-extension://") &&

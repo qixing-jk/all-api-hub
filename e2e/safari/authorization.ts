@@ -42,6 +42,22 @@ export function unsignedExtensionPasswordDialog(dialogs: Dialog[]) {
   )
 }
 
+/** Keep the loopback smoke independent of the optional public site directory. */
+export function unneededWebsitePermissionDialog(
+  dialogs: Dialog[],
+  trial: string,
+) {
+  if (!/^All API Hub Native Cookie Trial \d{17}$/u.test(trial)) return false
+  return dialogs.some(
+    (dialog) =>
+      dialog.app === "Safari" &&
+      dialog.text.includes(
+        `The extension “${trial}” would like to access ldoh.105117.xyz.`,
+      ) &&
+      dialog.buttons.includes("Deny"),
+  )
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
@@ -61,10 +77,11 @@ if (
     })
   })
   const deadline = Date.now() + 25000
+  let lastAuthorizationError: string | undefined
   while (!finished && Date.now() < deadline) {
     try {
       const dialogs = JSON.parse(
-        execFileSync("test-results/safari/accessibility", ["dialogs"], {
+        execFileSync("test-results/safari/accessibility", ["authorization"], {
           encoding: "utf8",
           timeout: 3000,
         }),
@@ -76,11 +93,39 @@ if (
           ["press", app, "Allow"],
           { timeout: 3000 },
         )
-    } catch {
+      const websiteDialogs = JSON.parse(
+        execFileSync(
+          "test-results/safari/accessibility",
+          ["alerts", "Safari"],
+          {
+            encoding: "utf8",
+            timeout: 3000,
+          },
+        ),
+      )
+      if (
+        unneededWebsitePermissionDialog(
+          websiteDialogs,
+          process.env.AAH_SAFARI_CI_APP_NAME ?? "",
+        )
+      )
+        execFileSync(
+          "test-results/safari/accessibility",
+          ["press", "Safari", "Deny"],
+          {
+            timeout: 3000,
+          },
+        )
+    } catch (error) {
+      lastAuthorizationError =
+        error instanceof Error ? error.message : String(error)
       /* The UI may change while it is being read. Keep the command's failure. */
     }
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
-  if (!finished) child.kill()
+  if (!finished) {
+    console.error("Safari Apple Event timed out", lastAuthorizationError ?? "")
+    child.kill()
+  }
   process.exitCode = await completion
 }

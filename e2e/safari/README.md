@@ -12,6 +12,8 @@ The runner uses macOS accessibility APIs and Apple Events. It handles the runner
 
 The CLI requires a GitHub-hosted macOS runner. It uses the image's local automatic-login credential to authenticate Safari's unsigned-extension dialog, changes Safari development settings and enables its generated trial. The credential format is defined by the [official runner image bootstrap](https://github.com/actions/runner-images/blob/main/images/macos/assets/bootstrap-provisioner/kcpassword.py). Passwords are masked in CI and omitted from accessibility snapshots. Use the separate [native validation guide](../safariNativeCookie/README.md) for deliberate local experiments.
 
+System authorization reads only the macOS permission agents, so rendering a large Options page does not block it. The smoke denies the generated trial's optional request to access the public LDOH directory; it grants only the loopback fixture origins. Navigation locates and activates the extension's account-manager tab even if a background lookup opens another tab.
+
 ## Evidence
 
 The `safari-smoke-<attempt>` artifact retains `test-results/safari` reports, observations, UI snapshots, screenshots and build logs, plus generated project and entitlement metadata. Derived build caches are excluded. Failed attempts retain their own evidence.
