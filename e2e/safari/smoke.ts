@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import fs from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
@@ -228,11 +229,30 @@ export async function runSafariSmoke({
         "Extensions",
       ])
       assert(appName, "Missing trial extension name")
-      command(path.join(output, "accessibility"), [
-        "enable-extension",
-        "Safari",
-        appName,
-      ])
+      try {
+        command(driver, ["enable-extension", "Safari", appName])
+      } finally {
+        try {
+          fs.writeFileSync(
+            path.join(output, "extension-state.json"),
+            command("plutil", [
+              "-convert",
+              "json",
+              "-o",
+              "-",
+              path.join(
+                os.homedir(),
+                "Library/Containers/com.apple.Safari/Data/Library/Safari/WebExtensions/Extensions.plist",
+              ),
+            ]),
+          )
+        } catch (error) {
+          fs.writeFileSync(
+            path.join(output, "extension-state-error.txt"),
+            error instanceof Error ? error.message : String(error),
+          )
+        }
+      }
       fs.writeFileSync(
         path.join(output, "extension-settings.json"),
         command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
