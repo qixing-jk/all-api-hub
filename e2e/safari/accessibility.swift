@@ -60,6 +60,10 @@ for app in NSWorkspace.shared.runningApplications {
         if args.count > 3 && args[1] == "extension-enabled", let checkbox = installedExtensionCheckbox(elements, args[3]) {
             pressed = (attribute(checkbox, "AXValue") as? NSNumber)?.intValue == 1
         }
+        if args.count > 3 && args[1] == "close-window", (attribute(window, "AXTitle") as? String) == args[3],
+           let button = elements.first(where: { (attribute($0, "AXSubrole") as? String) == "AXCloseButton" }) {
+            pressed = AXUIElementPerformAction(button, "AXPress" as CFString) == .success
+        }
         if args[1] == "authenticate" && name == "Safari" && elements.map({ text($0) }).joined(separator: "\n").contains("Safari is trying to allow unsigned extensions."),
            let field = elements.first(where: { (attribute($0, "AXSubrole") as? String) == "AXSecureTextField" }),
            let button = buttons.first(where: { (attribute($0, "AXTitle") as? String) == "OK" || (attribute($0, "AXDescription") as? String) == "OK" }),
@@ -76,6 +80,6 @@ for app in NSWorkspace.shared.runningApplications {
         }
     }
 }
-if ["press", "enable", "extension-enabled", "authenticate"].contains(args[1]) { exit(pressed ? 0 : 1) }
+if ["press", "enable", "extension-enabled", "close-window", "authenticate"].contains(args[1]) { exit(pressed ? 0 : 1) }
 let data = try JSONSerialization.data(withJSONObject: dialogs, options: [.sortedKeys])
 print(String(data: data, encoding: .utf8)!)

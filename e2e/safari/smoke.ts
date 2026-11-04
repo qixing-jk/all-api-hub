@@ -323,14 +323,14 @@ export async function runSafariSmoke({
       )
     })
     await check("Toolbar Popup UI", async () => {
+      command(driver, ["close-window", "Safari", "Extensions"])
       command("osascript", [
         "-e",
         'tell application "Safari" to activate',
         "-e",
         'tell application "System Events" to tell process "Safari" to set frontmost to true',
       ])
-      const driver = path.join(output, "accessibility")
-      command(driver, ["press", "Safari", appName, "toolbar"])
+      command(driver, ["press", "Safari", "All API Hub", "toolbar"])
       const deadline = Date.now() + 10000
       while (Date.now() < deadline) {
         const snapshot = command(driver, ["popover", "Safari"])

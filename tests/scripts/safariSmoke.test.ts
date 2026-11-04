@@ -84,6 +84,7 @@ it.each([
   }) => {
     if (!optionsRendered || activationPendingChecks) vi.useFakeTimers()
     let activationChecks = 0
+    let settingsOpen = false
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
     const projectRoot = path.join(output, "project")
     mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
@@ -109,6 +110,10 @@ it.each([
       platform: "darwin",
       output,
       command: (file, args) => {
+        if (file === "osascript" && args.join(" ").includes("Settings…"))
+          settingsOpen = true
+        if (args[0] === "close-window" && args[2] === "Extensions")
+          settingsOpen = false
         if (file === process.execPath)
           return `Prepared independent trial: ${output}`
         if (file === "xcodebuild" && args.includes("-list"))
@@ -126,8 +131,12 @@ it.each([
           activationChecks++ < activationPendingChecks
         )
           throw new Error("Registered trial has not loaded yet")
-        if (args.includes("press") && args.includes("Trial") && !popupAvailable)
-          throw new Error("Popup unavailable")
+        if (args[0] === "press" && args[3] === "toolbar") {
+          if (settingsOpen) throw new Error("Safari settings hides the toolbar")
+          if (args[2] !== "All API Hub")
+            throw new Error("Toolbar uses the action title, not the trial name")
+          if (!popupAvailable) throw new Error("Popup unavailable")
+        }
         if (
           args.includes("press") &&
           args.includes("Account Management") &&
