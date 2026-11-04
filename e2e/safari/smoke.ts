@@ -11,11 +11,15 @@ export async function runSafariSmoke({
   platform = process.platform,
   output = path.resolve("test-results/safari"),
   command = (file, args) =>
-    execFileSync(file, args, {
-      encoding: "utf8",
-      timeout: file === "osascript" ? 30000 : 600000,
-      maxBuffer: 16 * 1024 * 1024,
-    }),
+    execFileSync(
+      file === "osascript" ? process.execPath : file,
+      file === "osascript" ? ["e2e/safari/authorization.ts", ...args] : args,
+      {
+        encoding: "utf8",
+        timeout: file === "osascript" ? 30000 : 600000,
+        maxBuffer: 16 * 1024 * 1024,
+      },
+    ),
 }: {
   platform?: string
   output?: string
@@ -50,6 +54,13 @@ export async function runSafariSmoke({
   try {
     await check("macOS runtime", () =>
       assert.equal(platform, "darwin", "Safari E2E requires macOS"),
+    )
+    await check("Accessibility driver build", () =>
+      command("swiftc", [
+        "e2e/safari/accessibility.swift",
+        "-o",
+        path.join(output, "accessibility"),
+      ]),
     )
     await check("Safari UI automation access", () => {
       command("open", ["-a", "Safari"])
