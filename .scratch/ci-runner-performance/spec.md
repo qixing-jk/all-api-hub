@@ -1,8 +1,10 @@
 # CI 后续优化调查与实验
 
-日期：2026-11-04（UTC+08）。状态：两轮最终完整 Test 均成功，较同源码基线缩短 12.4% / 15.3%；快速预检和累计 runner 成本已实测，排队提速尚未得到证实。详见[固定分片输入的最终对照](#固定分片输入的最终对照)。
+日期：2026-11-04（UTC+08）。当前保留：Vitest/coverage-v8 4.0.17、模块编译缓存、四 worker、报告解析及输出优化、浏览器启动预检，以及 E2E 重跑时固定分片依据和分目录报告。相关测试预检已移除；Vitest 5.1.0、4.1.12 和纯逻辑轻量 setup 经筛选未采用。
 
-最终已验证代码提交为 `12a01faf4935c71c46e2a84e5440d5d3d5d92800`，已发布到 `perf/ci-follow-up-20261104`，固定候选引用为 `perf/ci-iteration-candidate-20261104`。本次报告提交只更新调查材料，不改变已验证的 CI 输入。下文保留首轮 `a0ae15626d19431363a6f4a16a7bacf398aad283` 的实验、后续审计和第二轮结果，各轮采用各自基线。
+最终 E2E 实现 `222f56c195` 的完整套件、权限检查与实际单分片重跑均通过；后续工作流测试适配 `8d08d0f599` 的完整六分片、覆盖率合并与 Codecov 上传也通过，详见[PR 准备验收](#pr-准备验收)。当前候选引用为 `perf/ci-browser-candidate-20261104`。浏览器准备同范围实测中位数由 17 秒降至 5 秒；它不是整体 CI 提速比例。
+
+下文按各轮基线保留历史证据、失败和撤回方案。[固定分片输入的最终对照](#固定分片输入的最终对照)中的 12.4% / 15.3% 包含后来移除的相关测试预检，不能作为当前最终版本的重新测量结果；排队提速尚未得到证实。
 
 ## 首轮已实现的改进
 
@@ -460,3 +462,22 @@ node .scratch/ci-runner-performance/benchmark-test-imports.mjs --suite pure --ci
 ```
 
 `fileCostSeconds` 是各文件内部成本之和，多个 worker 会重叠，不等于端到端 elapsed。该 driver 自动拒绝运行中输入变更、用例/结果差异、覆盖文件集合变化及被测模块覆盖率差异；不能用这组小样本直接推算全量 CI 收益。
+
+## PR 准备验收
+
+审阅完整分支相对 `origin/main` 的最终改动，没有产品源码变化。依赖仅保留已验证的 Vitest/coverage-v8 4.0.17；原有业务断言的适配覆盖 mock 类型、短暂 UI 状态和场景隔离。全部实验提交已发布，因此保留现有历史，不改写共享提交或删除对照引用。
+
+补跑 `c888605052` 的[完整单测](https://github.com/qixing-jk/all-api-hub/actions/runs/41800117595)发现两条旧工作流断言没有随固定 profile 设计更新：构建任务全局禁止 `restore-keys`，以及要求每个 smoke 分片直接读取共享 cache。实际构建缓存仍按内容精确匹配；前缀恢复现在只服务 producer 的历史耗时 profile。此轮只有这两条失败，JUnit 共 29,217 个用例、零 worker errors；报告完整性检查、覆盖率与 JUnit 的 Codecov 上传均成功，工作流仍保留失败状态。
+
+本地先复现两条失败，再将断言限定到精确构建缓存，并验证 default 分片在运行前读取自身 run 的 profile、禁止重新读取共享 cache，保留 count-based fallback 的检查。相关四文件 117 项通过，提交 hook 的 staged 检查通过，pre-push compile/knip 通过。修正提交 `8d08d0f599` 的[完整单测](https://github.com/qixing-jk/all-api-hub/actions/runs/41802233134)成功：六分片均通过，JUnit 为 29,216 通过、1 既有跳过、零 failures/errors；完整性检查、覆盖率合并和两项 Codecov 上传均成功，[codecov/patch](https://app.codecov.io/gh/qixing-jk/all-api-hub/commit/8d08d0f599d28f4ee1ae693531abbcd665f4ac36)状态成功。最终报告更新不改变该验证对应的运行输入。
+
+| 最终行为 / 场景 | 验证与证据 | 状态 |
+| --- | --- | --- |
+| 普通 PR 直接启动完整六分片；发布豁免、取消和失败分片仍按原规则处理；独立权限检查实际执行 | `ciScheduling.test.ts` 与既有调度测试；完整单测及[权限运行](https://github.com/qixing-jk/all-api-hub/actions/runs/41796228598) | 通过；创建 PR 后仍需该事件的实际 CI 检查 |
+| 所有单测与覆盖率重新执行，模块缓存只复用编译输出；统一报告解析仍阻断缺失、空覆盖率、worker error 和混合版本 | CLI 52 项既有回归；本轮成功和失败运行的完整性检查、合并与 Codecov 上传 | 通过 |
+| 正确浏览器 channel；可启动时免 apt；缺库时补装；其他失败仍阻断 | CLI 探针、`ciPlaywrightBrowserCache.test.ts`、真实 Ubuntu E2E 和权限检查 | 通过；本轮 Ubuntu 没有实际触发冷缓存/缺库 apt 分支 |
+| 单分片重跑复用原 profile，冷缓存保持 fallback；重名报告分目录保留并由既有 writer 合并 | `e2eShardPlan.test.ts`、更新后的调度断言、真实[完整 E2E 与单分片重跑](https://github.com/qixing-jk/all-api-hub/actions/runs/41796219112) | 通过；647 个用例身份相同，缺失和额外重复均为零 |
+
+E2E 与权限证据可复用于本次 PR 准备：`222f56c195` 之后仅改实验材料、可复用 benchmark 及 CI 测试断言，浏览器 action、工作流和产品运行输入没有变化。既有 80 账号 E2E 数据就绪等待仍有不稳定性，成功完整运行使用了一次内置重试；失败现场继续保留供审阅。
+
+Git 保留本 spec 与三个可复用实验驱动。`artifacts/` 内各轮对照、失败、重跑证据和本地 PR 草稿继续保留至审阅结束；本轮补充证据位于 `artifacts/pr-readiness-20261104/`。仅准备本地标题与正文，不创建 PR。创建 PR 后需等待该 PR 当前 head 的实际检查，不能用准备阶段的运行代替 merge gate。
