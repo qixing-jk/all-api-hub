@@ -39,6 +39,11 @@ it("prepares only the registered CI trial and grants its loopback fixture access
         nativeMessaging: "2026-11-04T00:00:00",
         bookmarks: "2026-11-04T00:00:00",
       },
+      RevokedPermissionOrigins: {
+        "http://127.0.0.1/*": "2026-11-04T00:00:00",
+        "http://localhost/*": "2026-11-04T00:00:00",
+        "https://example.test/*": "2026-11-04T00:00:00",
+      },
     },
     "example.other.Extension (OTHER)": { Enabled: false, Permissions: [] },
   }
@@ -58,6 +63,20 @@ it("prepares only the registered CI trial and grants its loopback fixture access
       "http://localhost/*": "4001-01-01T00:00:00",
     },
   })
+  expect(prepared[key].AccessibleOrigins).toEqual([
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+  ])
+  expect(prepared[key].RevokedPermissionOrigins).not.toHaveProperty(
+    "http://127.0.0.1/*",
+  )
+  expect(prepared[key].RevokedPermissionOrigins).not.toHaveProperty(
+    "http://localhost/*",
+  )
+  expect(prepared[key].RevokedPermissionOrigins).toHaveProperty(
+    "https://example.test/*",
+    "2026-11-04T00:00:00",
+  )
   expect(prepared[key].GrantedPermissionOrigins).not.toHaveProperty("*://*/*")
   expect(prepared[key].GrantedPermissions).toMatchObject({
     cookies: "4001-01-01T00:00:00",

@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { createTempContextTurnstileAssist } from "~/services/browsingContext/tempPage/turnstileAssist"
@@ -131,19 +139,19 @@ async function settleTempContextRelease() {
 }
 
 describe("tempWindowPool Turnstile assist turns", () => {
-  let createTabMock: ReturnType<typeof vi.fn>
-  let createWindowMock: ReturnType<typeof vi.fn>
-  let hasWindowsApiMock: ReturnType<typeof vi.fn>
-  let onTabRemovedMock: ReturnType<typeof vi.fn>
-  let onWindowRemovedMock: ReturnType<typeof vi.fn>
-  let hasPermissionMock: ReturnType<typeof vi.fn>
-  let sendMessageMock: ReturnType<typeof vi.fn>
-  let tabsGetMock: ReturnType<typeof vi.fn>
-  let tabsQueryMock: ReturnType<typeof vi.fn>
-  let tabsUpdateMock: ReturnType<typeof vi.fn>
-  let windowsUpdateMock: ReturnType<typeof vi.fn>
-  let notificationCreateMock: ReturnType<typeof vi.fn>
-  let notificationClearMock: ReturnType<typeof vi.fn>
+  let createTabMock: Mock
+  let createWindowMock: Mock
+  let hasWindowsApiMock: Mock
+  let onTabRemovedMock: Mock
+  let onWindowRemovedMock: Mock
+  let hasPermissionMock: Mock
+  let sendMessageMock: Mock
+  let tabsGetMock: Mock
+  let tabsQueryMock: Mock
+  let tabsUpdateMock: Mock
+  let windowsUpdateMock: Mock
+  let notificationCreateMock: Mock
+  let notificationClearMock: Mock
   let notificationClickListeners: Array<(notificationId: string) => void>
   let runtimeMessageListeners: Array<
     (
@@ -152,7 +160,7 @@ describe("tempWindowPool Turnstile assist turns", () => {
       sendResponse: (res?: any) => void,
     ) => void | boolean
   >
-  let getPreferencesMock: ReturnType<typeof vi.fn>
+  let getPreferencesMock: Mock
   let turnstileAssistPresentation: string
   let createdContexts: Array<{ windowId: number; tabId: number }>
   let contentWaits: Map<number, ContentWaitDeferred>

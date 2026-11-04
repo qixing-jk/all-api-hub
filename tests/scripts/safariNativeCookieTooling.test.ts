@@ -243,6 +243,7 @@ describe("owned fixture lifecycle", () => {
 })
 
 describe("converter project configuration", () => {
+  const python = process.env.AAH_SAFARI_TEST_PYTHON ?? "python3"
   const script = fileURLToPath(
     new URL(
       "../../scripts/configure-safari-native-cookie-project.py",
@@ -263,7 +264,7 @@ describe("converter project configuration", () => {
       '// 独立 Cookie 扩展 — 测试\nPRODUCT_BUNDLE_IDENTIFIER = old.app;\nPRODUCT_BUNDLE_IDENTIFIER = "old.app.Extension";\nENABLE_APP_SANDBOX = YES;\n',
     )
     const result = spawnSync(
-      "python3",
+      python,
       [script, fixture.root, "test.independent.safari"],
       {
         encoding: "utf8",
@@ -299,7 +300,7 @@ describe("converter project configuration", () => {
       ].join("\n"),
     )
     const result = spawnSync(
-      "python3",
+      python,
       [script, fixture.root, "test.independent.safari"],
       { encoding: "utf8" },
     )
@@ -320,7 +321,7 @@ describe("converter project configuration", () => {
     (contents) => {
       const fixture = projectFixture(contents)
       const result = spawnSync(
-        "python3",
+        python,
         [script, fixture.root, "test.independent.safari"],
         { encoding: "utf8" },
       )

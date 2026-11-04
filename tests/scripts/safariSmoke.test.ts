@@ -308,7 +308,7 @@ it.each(
         if (
           emptyFrontWindow &&
           file === "osascript" &&
-          args.join(" ").includes("current tab of front window")
+          args.join(" ").includes("front window")
         )
           throw new Error("Safari has no front window")
         if (file === "osascript" && args.join(" ").includes("to get version"))
@@ -348,6 +348,14 @@ it.each(
         )
           throw new Error("Options navigation unavailable")
         if (file === "osascript" && args.join(" ").includes("get URL")) {
+          const script = args.join(" ")
+          if (
+            !script.includes(
+              "set current tab of browserWindow to browserTab",
+            ) ||
+            !script.includes("set index of browserWindow to 1")
+          )
+            throw new Error("Options URL lookup does not foreground its tab")
           if (args.join(" ").includes("/options.html")) optionsVisited = true
           return "safari-web-extension://test/options.html#account"
         }

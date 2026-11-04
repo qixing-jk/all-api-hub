@@ -105,6 +105,31 @@ jobs:
         if: inputs.derive_variants
         run: node scripts/e2e-build-variants.mjs
 
+      # One snapshot serves every default shard, including reruns. Reading the
+      # latest cache separately in rerun shards can change their test membership.
+      - name: Restore E2E shard duration profile
+        if: inputs.derive_variants
+        uses: actions/cache/restore@v5
+        with:
+          path: .e2e-durations
+          key: e2e-spec-durations-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            e2e-spec-durations-
+
+      - name: Preserve an empty profile on a cache miss
+        if: inputs.derive_variants
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; fs.mkdirSync(".e2e-durations", { recursive: true }); if (!fs.existsSync(".e2e-durations/spec-durations.json")) fs.writeFileSync(".e2e-durations/spec-durations.json", JSON.stringify({ version: 1, durations: {} }));'
+
+      - name: Upload E2E shard duration profile
+        if: inputs.derive_variants
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-shard-duration-profile
+          path: .e2e-durations/spec-durations.json
+          retention-days: 1
+          overwrite: true
+
       # Test jobs consume their own run's artifact without cross-run lookup or
       # extra token permissions. Only the producer accesses the shared cache.
       - name: Upload E2E extension

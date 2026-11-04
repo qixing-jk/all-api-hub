@@ -110,9 +110,17 @@ describe("packageMeta", () => {
       expect(version).not.toMatch(/^[~^><= ]/)
     })
 
-    it("returns version for existing dev dependency", () => {
-      const version = getPkgVersion("vitest")
-      expect(version).toBe("4.0.3")
+    it("returns version for existing dev dependency", async () => {
+      vi.resetModules()
+      vi.doMock("~~/package.json", () => ({
+        default: {
+          devDependencies: { "fixture-dev-tool": "^1.2.3" },
+        },
+      }))
+      const { getPkgVersion: getFreshPkgVersion } = await import(
+        "~/utils/navigation/packageMeta"
+      )
+      expect(getFreshPkgVersion("fixture-dev-tool")).toBe("1.2.3")
     })
   })
 

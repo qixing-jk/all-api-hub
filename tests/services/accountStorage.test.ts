@@ -6066,9 +6066,12 @@ describe("accountStorage bookmarks", () => {
     } satisfies AccountStorageConfig)
 
     const generateBookmarkIdSpy = vi
-      .spyOn(accountStorage as never, "generateBookmarkId" as never)
-      .mockReturnValueOnce("bookmark-existing" as never)
-      .mockReturnValueOnce("bookmark-new" as never)
+      .spyOn(
+        accountStorage as unknown as { generateBookmarkId: () => string },
+        "generateBookmarkId",
+      )
+      .mockReturnValueOnce("bookmark-existing")
+      .mockReturnValueOnce("bookmark-new")
 
     try {
       const id = await accountStorage.addBookmark({

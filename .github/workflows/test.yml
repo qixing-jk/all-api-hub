@@ -17,8 +17,13 @@ on:
       - ".github/workflows/commitlint.yml"
       - ".github/workflows/commitlint-title.yml"
       - ".github/workflows/translate-docs.yml"
+      - ".github/workflows/permission-warnings.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
+      - "scripts/write-unit-test-durations.mjs"
+      - "scripts/utils/unitTestDurations.mjs"
+      - "scripts/utils/vitestBlob.mjs"
+      - "vitest.shardSequencer.ts"
       - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -32,6 +37,7 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/test.yml"
       - ".github/actions/setup/**"
+      - ".github/actions/setup-unit-test-browser/**"
   pull_request:
     paths:
       - "src/**"
@@ -45,8 +51,13 @@ on:
       - ".github/workflows/commitlint.yml"
       - ".github/workflows/commitlint-title.yml"
       - ".github/workflows/translate-docs.yml"
+      - ".github/workflows/permission-warnings.yml"
       - "scripts/release-pr-check.mjs"
       - "scripts/check-unit-test-reports.mjs"
+      - "scripts/write-unit-test-durations.mjs"
+      - "scripts/utils/unitTestDurations.mjs"
+      - "scripts/utils/vitestBlob.mjs"
+      - "vitest.shardSequencer.ts"
       - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -60,7 +71,19 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/test.yml"
       - ".github/actions/setup/**"
-  workflow_dispatch: {}
+      - ".github/actions/setup-unit-test-browser/**"
+  workflow_dispatch:
+    inputs:
+      durations_cache_key:
+        description: "Exact timing cache key for comparisons with fixed shard assignments"
+        required: false
+        default: ""
+        type: string
+      node_version:
+        description: "Explicit Node.js version for controlled CI measurements"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -96,12 +119,17 @@ jobs:
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node_version }}
 
       - name: Test CI report and release guards
-        # Keep guard regressions covered on ordinary changes without four
-        # preflight runners; only one shard needs these tooling tests.
+        # Only one full-suite shard needs to repeat the CI CLI guards.
         if: matrix.shard == 1
-        run: node --test tests/scripts/release-pr-check.test.mjs tests/scripts/check-unit-test-reports.test.mjs
+        run: pnpm run test:ci:scripts
+
+      - name: Record runner capacity
+        id: runtime
+        run: node -e 'const fs = require("node:fs"); const os = require("node:os"); console.log(JSON.stringify({node:process.version,cpus:os.availableParallelism(),memoryBytes:os.totalmem(),cpuModel:os.cpus()[0]?.model})); fs.appendFileSync(process.env.GITHUB_OUTPUT, "node=" + process.version + "\n")'
 
       - name: Restore unit test durations
         uses: actions/cache/restore@v5
@@ -109,34 +137,32 @@ jobs:
           # Timings published by the previous run's merge job. A miss (first run, or an
           # evicted cache) only means this shard falls back to file-count sharding.
           path: .vitest-durations
-          key: unit-test-durations-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            unit-test-durations-
+          # An explicit key freezes the same main profile that PR iterations use.
+          key: ${{ inputs.durations_cache_key || format('unit-test-durations-{0}-{1}', github.run_id, github.run_attempt) }}
+          restore-keys: ${{ !inputs.durations_cache_key && 'unit-test-durations-' || '' }}
 
-      - name: Get Playwright version
-        id: playwright_version
-        run: |
-          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log('version=' + (pkg.devDependencies?.['@playwright/test'] ?? 'unknown'))" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        # Six shards would otherwise download the same browser on every run. The
-        # key matches the E2E workflows, so one download serves both.
-        uses: actions/cache@v5
+      - name: Restore compiled test modules
+        id: modules
+        continue-on-error: true
+        uses: actions/cache/restore@v5
         with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright_version.outputs.version }}
+          path: node_modules/.experimental-vitest-cache
+          key: unit-test-modules-${{ runner.os }}-${{ runner.arch }}-${{ steps.runtime.outputs.node }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'vitest*.ts', 'tsconfig*.json') }}-${{ matrix.shard }}-${{ hashFiles('src/**', 'tests/**', 'scripts/**', 'plugins/**') }}
           restore-keys: |
-            ${{ runner.os }}-playwright-
+            unit-test-modules-${{ runner.os }}-${{ runner.arch }}-${{ steps.runtime.outputs.node }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'vitest*.ts', 'tsconfig*.json') }}-${{ matrix.shard }}-
 
-      # Script acceptance tests exercise real DOM behavior in headless Chromium.
-      - name: Install Chromium for browser-backed unit tests
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Setup Chromium for unit tests
+        uses: ./.github/actions/setup-unit-test-browser
 
       - name: Run test shard with coverage
+        # The merge job renders final HTML/LCOV; blobs retain each shard's coverage.
         env:
           UNIT_TEST_SHARD_DURATIONS: .vitest-durations/shard-durations.json
+          VITEST_FS_MODULE_CACHE: "1"
         run: |
-          pnpm exec vitest --run --coverage \
+          /usr/bin/time -v pnpm exec vitest --run --coverage \
+            --maxWorkers=4 \
+            --coverage.reporter=json \
             --coverage.thresholds.statements=0 \
             --coverage.thresholds.branches=0 \
             --coverage.thresholds.functions=0 \
@@ -158,6 +184,15 @@ jobs:
           # previous attempt's blob instead of adding a second artifact.
           overwrite: true
 
+      - name: Save compiled test modules
+        # Assertion failures still leave reusable transforms; tests execute again.
+        if: ${{ !cancelled() && steps.modules.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: node_modules/.experimental-vitest-cache
+          key: ${{ steps.modules.outputs.cache-primary-key }}
+
   unit-tests-merge:
     runs-on: ubuntu-latest
     needs: [release-changes, unit-tests]
@@ -171,6 +206,8 @@ jobs:
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node_version }}
 
       - name: Download Vitest blob reports
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
@@ -181,7 +218,12 @@ jobs:
 
       - name: Check shard report completeness
         id: reports
-        run: node scripts/check-unit-test-reports.mjs
+        run: |
+          duration_args=()
+          if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            duration_args=(--durations-output .vitest-durations/shard-durations.json)
+          fi
+          node scripts/check-unit-test-reports.mjs "${duration_args[@]}"
 
       - name: Merge test and coverage reports
         # Keep partial reports available as artifacts when the completeness gate fails.
@@ -202,17 +244,10 @@ jobs:
           disable_search: true
           fail_ci_if_error: true
 
-      - name: Generate unit test durations
-        # Per-file timings for the next run's shard sequencer, derived from the blob
-        # reports every shard already uploads. PRs only consume the base cache;
-        # avoid decoding all blob reports for timings that would never be saved.
-        if: github.event_name != 'pull_request'
-        run: node scripts/write-unit-test-durations.mjs
-
       - name: Save unit test durations
         # Only runs that may publish to the base repository's cache scope write timings;
         # pull requests restore main's copy instead of republishing their own.
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && !inputs.durations_cache_key }}
         uses: actions/cache/save@v5
         with:
           path: .vitest-durations
