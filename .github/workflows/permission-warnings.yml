@@ -46,6 +46,8 @@ jobs:
     name: Native permission warnings
     # Skipped with the build when a release-only diff needs no manifest check.
     needs: build
+    # A skipped release ancestor must not suppress a successful build's check.
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
