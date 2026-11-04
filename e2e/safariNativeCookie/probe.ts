@@ -6,6 +6,10 @@ import { createPersistedSiteAccount } from "~/services/accounts/editing/accountD
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import {
+  readFreshLdohSiteListCache,
+  writeLdohSiteListCache,
+} from "~/services/integrations/ldohSiteLookup/cache"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 
 import {
@@ -660,6 +664,16 @@ async function controlLoop() {
         })
       }
       if (command === "product-cleanup") await cleanupProductAccounts()
+      if (command === "ci-ui-fixture") {
+        await writeLdohSiteListCache([])
+        const cache = await readFreshLdohSiteListCache()
+        await event({
+          stage: "ci-ui-fixture",
+          nativeContext: location.protocol === "safari-web-extension:",
+          cacheFresh: cache !== null,
+          items: cache?.items.length ?? -1,
+        })
+      }
       if (command === "native-admission") await nativeAdmission()
       if (command === "real-site") await realSiteAccounts()
       if (command === "saved-accounts") await savedAccounts()

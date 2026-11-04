@@ -8,7 +8,6 @@ import { pathToFileURL } from "node:url"
 import { verifyNativeCookieObservations } from "../safariNativeCookie/verify.ts"
 import {
   decodeHostedRunnerPassword,
-  unneededWebsitePermissionDialog,
   unsignedExtensionPasswordDialog,
 } from "./authorization.ts"
 
@@ -139,7 +138,6 @@ export async function runSafariSmoke({
         fs.readFileSync(path.join(match[1]!, "identity.json"), "utf8"),
       )
       appName = identity.appName
-      process.env.AAH_SAFARI_CI_APP_NAME = appName
       const project = fs
         .readdirSync(String(identity.projectRoot), {
           recursive: true,
@@ -336,6 +334,50 @@ export async function runSafariSmoke({
         "Native Cookie trial incomplete; inspect observations.json",
       )
     })
+    await check("CI UI fixture", async () => {
+      const fixtureRoot = "http://localhost:41672/safari1669native"
+      command("curl", [
+        "-fsS",
+        "-X",
+        "POST",
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        JSON.stringify({ command: "ci-ui-fixture" }),
+        fixtureRoot + "/control",
+      ])
+      const deadline = Date.now() + 20000
+      while (Date.now() < deadline) {
+        const data = JSON.parse(
+          command("curl", ["-fsS", fixtureRoot + "/status"]),
+        )
+        const start = data.events.findLastIndex(
+          (event: { stage: string }) => event.stage === "trial-start",
+        )
+        assert(start >= 0, "Missing native run before CI UI fixture")
+        const fixture = data.events
+          .slice(start)
+          .findLast(
+            (event: { stage: string }) => event.stage === "ci-ui-fixture",
+          )
+        if (fixture) {
+          assert.equal(
+            fixture.nativeContext,
+            true,
+            "CI UI fixture requires the actual extension",
+          )
+          assert.equal(
+            fixture.cacheFresh,
+            true,
+            "CI UI fixture did not persist",
+          )
+          assert.equal(fixture.items, 0, "CI UI fixture directory is not empty")
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("CI UI fixture incomplete")
+    })
     await check("Toolbar Popup UI", async () => {
       command(driver, ["close-window", "Safari", "Extensions"])
       command("osascript", [
@@ -395,9 +437,6 @@ export async function runSafariSmoke({
       const deadline = Date.now() + 20000
       let welcomeDismissed = false
       while (Date.now() < deadline) {
-        const alerts = JSON.parse(command(driver, ["alerts", "Safari"]))
-        if (unneededWebsitePermissionDialog(alerts, appName))
-          command(driver, ["press", "Safari", "Deny"])
         activateAccountManager()
         const snapshot = command(driver, ["dialogs", "Safari"])
         const panels = JSON.parse(snapshot) as {

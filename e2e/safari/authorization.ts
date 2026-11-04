@@ -42,22 +42,6 @@ export function unsignedExtensionPasswordDialog(dialogs: Dialog[]) {
   )
 }
 
-/** Keep the loopback smoke independent of the optional public site directory. */
-export function unneededWebsitePermissionDialog(
-  dialogs: Dialog[],
-  trial: string,
-) {
-  if (!/^All API Hub Native Cookie Trial \d{17}$/u.test(trial)) return false
-  return dialogs.some(
-    (dialog) =>
-      dialog.app === "Safari" &&
-      dialog.text.includes(
-        `The extension “${trial}” would like to access ldoh.105117.xyz.`,
-      ) &&
-      dialog.buttons.includes("Deny"),
-  )
-}
-
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
@@ -92,29 +76,6 @@ if (
           "test-results/safari/accessibility",
           ["press", app, "Allow"],
           { timeout: 3000 },
-        )
-      const websiteDialogs = JSON.parse(
-        execFileSync(
-          "test-results/safari/accessibility",
-          ["alerts", "Safari"],
-          {
-            encoding: "utf8",
-            timeout: 3000,
-          },
-        ),
-      )
-      if (
-        unneededWebsitePermissionDialog(
-          websiteDialogs,
-          process.env.AAH_SAFARI_CI_APP_NAME ?? "",
-        )
-      )
-        execFileSync(
-          "test-results/safari/accessibility",
-          ["press", "Safari", "Deny"],
-          {
-            timeout: 3000,
-          },
         )
     } catch (error) {
       lastAuthorizationError =

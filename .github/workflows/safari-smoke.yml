@@ -28,7 +28,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Safari contract regressions
         run: >-
-          pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/safari/unit-tests.xml tests/config/wxtPermissions.test.ts tests/config/wxtSelfUpdate.test.ts tests/config/distributionChannel.test.ts tests/services/apiTransport/safariNativeCookie.test.ts tests/scripts/safariNativeCookieTooling.test.ts tests/scripts/safariSmoke.test.ts tests/scripts/safariAuthorization.test.ts tests/scripts/safariActivation.test.ts tests/scripts/safariWorkflow.test.ts
+          pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/safari/unit-tests.xml tests/config/wxtPermissions.test.ts tests/config/wxtSelfUpdate.test.ts tests/config/distributionChannel.test.ts tests/services/apiTransport/safariNativeCookie.test.ts tests/services/ldohSiteLookup.cache.test.ts tests/scripts/safariNativeCookieTooling.test.ts tests/scripts/safariSmoke.test.ts tests/scripts/safariAuthorization.test.ts tests/scripts/safariActivation.test.ts tests/scripts/safariWorkflow.test.ts
 
       - name: Run native Safari E2E
         env:

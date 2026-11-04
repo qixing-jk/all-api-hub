@@ -268,6 +268,7 @@ const server = http.createServer((req, res) => {
             "product-background",
             "product-cleanup",
             "native-admission",
+            "ci-ui-fixture",
           ].includes(value)
         )
           throw new Error()

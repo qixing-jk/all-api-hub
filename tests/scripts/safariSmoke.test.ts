@@ -38,6 +38,7 @@ it.each([
     shutdownAvailable: true,
     activationPendingChecks: 0,
     uiSetupPending: false,
+    fixtureReady: true,
   },
   {
     popupAvailable: false,
@@ -46,6 +47,7 @@ it.each([
     shutdownAvailable: true,
     activationPendingChecks: 0,
     uiSetupPending: false,
+    fixtureReady: true,
   },
   {
     popupAvailable: true,
@@ -54,6 +56,7 @@ it.each([
     shutdownAvailable: true,
     activationPendingChecks: 0,
     uiSetupPending: false,
+    fixtureReady: true,
   },
   {
     popupAvailable: true,
@@ -62,6 +65,7 @@ it.each([
     shutdownAvailable: true,
     activationPendingChecks: 0,
     uiSetupPending: false,
+    fixtureReady: true,
   },
   {
     popupAvailable: true,
@@ -70,6 +74,7 @@ it.each([
     shutdownAvailable: false,
     activationPendingChecks: 0,
     uiSetupPending: false,
+    fixtureReady: true,
   },
   {
     popupAvailable: true,
@@ -78,6 +83,7 @@ it.each([
     shutdownAvailable: true,
     activationPendingChecks: 2,
     uiSetupPending: false,
+    fixtureReady: true,
   },
   {
     popupAvailable: true,
@@ -86,6 +92,16 @@ it.each([
     shutdownAvailable: true,
     activationPendingChecks: 0,
     uiSetupPending: true,
+    fixtureReady: true,
+  },
+  {
+    popupAvailable: true,
+    navigationAvailable: true,
+    optionsRendered: true,
+    shutdownAvailable: true,
+    activationPendingChecks: 0,
+    uiSetupPending: false,
+    fixtureReady: false,
   },
 ])(
   "accepts latest native evidence and requires the Popup flow (%j)",
@@ -96,17 +112,20 @@ it.each([
     shutdownAvailable,
     activationPendingChecks,
     uiSetupPending,
+    fixtureReady,
   }) => {
-    if (!optionsRendered || activationPendingChecks || uiSetupPending)
+    if (
+      !optionsRendered ||
+      activationPendingChecks ||
+      uiSetupPending ||
+      !fixtureReady
+    )
       vi.useFakeTimers()
     let activationChecks = 0
     let settingsOpen = false
     let optionsVisited = false
-    let websitePrompt = uiSetupPending
     let welcomePrompt = uiSetupPending
-    const appName = uiSetupPending
-      ? "All API Hub Native Cookie Trial 20261104090849451"
-      : "Trial"
+    const appName = "Trial"
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
     const projectRoot = path.join(output, "project")
     mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
@@ -120,23 +139,33 @@ it.each([
       path.join(output, "identity.json"),
       JSON.stringify({ projectRoot, appName }),
     )
-    writeFileSync(
-      path.join(output, "observations.json"),
+    const nativeEvidence = JSON.parse(
       gunzipSync(
         readFileSync(
           "tests/fixtures/safariNativeCookie/observations-2026-10-10.json.gz",
         ),
-      ),
+      ).toString("utf8"),
+    )
+    nativeEvidence.events.push({
+      stage: "ci-ui-fixture",
+      nativeContext: true,
+      cacheFresh: fixtureReady,
+      items: 0,
+    })
+    writeFileSync(
+      path.join(output, "observations.json"),
+      JSON.stringify(nativeEvidence),
     )
     const result = runSafariSmoke({
       platform: "darwin",
       output,
       command: (file, args) => {
+        if (file === "curl" && args.at(-1)?.endsWith("/status"))
+          return JSON.stringify(nativeEvidence)
         if (file === "osascript" && args.join(" ").includes("Settings…"))
           settingsOpen = true
         if (args[0] === "close-window" && args[2] === "Extensions")
           settingsOpen = false
-        if (args[0] === "press" && args[2] === "Deny") websitePrompt = false
         if (args[0] === "press" && args[2] === "Not now") welcomePrompt = false
         if (file === process.execPath)
           return `Prepared independent trial: ${output}`
@@ -171,22 +200,6 @@ it.each([
           if (args.join(" ").includes("/options.html")) optionsVisited = true
           return "safari-web-extension://test/options.html#account"
         }
-        if (args[0] === "alerts")
-          return JSON.stringify(
-            optionsVisited && websitePrompt
-              ? [
-                  {
-                    app: "Safari",
-                    text: `The extension “${appName}” would like to access ldoh.105117.xyz.`,
-                    buttons: ["Deny"],
-                  },
-                ]
-              : [],
-          )
-        if (args[0] === "dialogs" && optionsVisited && websitePrompt)
-          return JSON.stringify([
-            { app: "Safari", text: "Website permission", buttons: ["Deny"] },
-          ])
         if (args[0] === "dialogs" && optionsVisited && welcomePrompt)
           return JSON.stringify([
             {
@@ -212,6 +225,11 @@ it.each([
     })
     if (!shutdownAvailable)
       await expect(result).rejects.toThrow("Safari did not quit")
+    else if (!fixtureReady)
+      await Promise.all([
+        expect(result).rejects.toThrow("CI UI fixture"),
+        vi.runAllTimersAsync(),
+      ])
     else if (!popupAvailable)
       await expect(result).rejects.toThrow("Popup unavailable")
     else if (!navigationAvailable)

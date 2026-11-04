@@ -51,7 +51,6 @@ for app in NSWorkspace.shared.runningApplications {
     if args[1] == "authorization" && !["UserNotificationCenter", "SecurityAgent", "CoreServicesUIAgent"].contains(name) { continue }
     let root = AXUIElementCreateApplication(app.processIdentifier)
     for window in (attribute(root, "AXWindows") as? [AXUIElement]) ?? [] {
-        if args[1] == "alerts" && !text(window).contains("alert") { continue }
         let allElements = descendants(window)
         let elements = args[1] == "popover" ? allElements.filter { attribute($0, "AXRole") as? String == "AXPopover" }.flatMap { descendants($0) } : allElements
         if args[1] == "popover" && elements.isEmpty { continue }
