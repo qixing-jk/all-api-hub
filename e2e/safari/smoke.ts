@@ -1,10 +1,13 @@
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
+import { randomBytes } from "node:crypto"
 import fs from "node:fs"
+import { userInfo } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
 import { verifyNativeCookieObservations } from "../safariNativeCookie/verify.ts"
+import { unsignedExtensionPasswordDialog } from "./authorization.ts"
 
 /** A failed prerequisite is evidence of failure, never a passing Safari smoke. */
 type Check = { name: string; status: string; error?: string }
@@ -176,11 +179,22 @@ export async function runSafariSmoke({
       command("screencapture", ["-x", path.join(output, "safari-settings.png")])
     })
     await check("Trial extension activation", () => {
-      command(path.join(output, "accessibility"), [
-        "enable",
-        "Safari",
-        "Allow unsigned extensions",
-      ])
+      const driver = path.join(output, "accessibility")
+      try {
+        command(driver, ["enable", "Safari", "Allow unsigned extensions"])
+      } catch (error) {
+        const dialogs = JSON.parse(command(driver, ["dialogs", "Safari"]))
+        if (!unsignedExtensionPasswordDialog(dialogs)) throw error
+        assert(
+          process.env.AAH_SAFARI_CI_PASSWORD,
+          "Missing disposable Safari runner password",
+        )
+        execFileSync(driver, ["authenticate", "Safari"], {
+          input: process.env.AAH_SAFARI_CI_PASSWORD + "\n",
+          timeout: 10000,
+        })
+        command(driver, ["enable", "Safari", "Allow unsigned extensions"])
+      }
       command(path.join(output, "accessibility"), [
         "press",
         "Safari",
@@ -255,5 +269,24 @@ if (
     process.env.GITHUB_ACTIONS === "true",
     "Safari smoke operates only on disposable GitHub CI runners",
   )
+  assert(
+    process.platform === "darwin" &&
+      process.env.RUNNER_ENVIRONMENT === "github-hosted",
+    "Safari smoke requires a disposable GitHub-hosted Mac",
+  )
+  const password = randomBytes(24).toString("hex")
+  console.log(`::add-mask::${password}`)
+  try {
+    execFileSync(
+      "sudo",
+      ["dscl", ".", "-passwd", `/Users/${userInfo().username}`, password],
+      { stdio: "ignore" },
+    )
+  } catch {
+    throw new Error(
+      "Could not configure the disposable runner's Safari authentication",
+    )
+  }
+  process.env.AAH_SAFARI_CI_PASSWORD = password
   await runSafariSmoke()
 }

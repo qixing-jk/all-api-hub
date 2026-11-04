@@ -1,6 +1,9 @@
 import { expect, it } from "vitest"
 
-import { safariAuthorizationDialog } from "~~/e2e/safari/authorization"
+import {
+  safariAuthorizationDialog,
+  unsignedExtensionPasswordDialog,
+} from "~~/e2e/safari/authorization"
 
 it("recognizes the runner's Safari control request and requires an Allow button", () => {
   expect(
@@ -12,6 +15,27 @@ it("recognizes the runner's Safari control request and requires an Allow button"
       },
     ]),
   ).toBe("SecurityAgent")
+})
+
+it("only authenticates Safari's unsigned-extension dialog", () => {
+  expect(
+    unsignedExtensionPasswordDialog([
+      {
+        app: "Safari",
+        text: "Safari is trying to allow unsigned extensions. Enter the password for the user “Anka” to allow this.",
+        buttons: ["Cancel", "OK"],
+      },
+    ]),
+  ).toBe(true)
+  expect(
+    unsignedExtensionPasswordDialog([
+      {
+        app: "Safari",
+        text: "Enter the password to view saved passwords",
+        buttons: ["OK"],
+      },
+    ]),
+  ).toBe(false)
 })
 
 it("does not authorize requests for other applications or incomplete dialogs", () => {

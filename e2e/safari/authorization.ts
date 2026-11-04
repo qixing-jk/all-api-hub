@@ -17,6 +17,16 @@ export function safariAuthorizationDialog(dialogs: Dialog[]) {
   )?.app
 }
 
+export function unsignedExtensionPasswordDialog(dialogs: Dialog[]) {
+  return dialogs.some(
+    (dialog) =>
+      dialog.app === "Safari" &&
+      dialog.text.includes("Safari is trying to allow unsigned extensions.") &&
+      dialog.text.includes("Enter the password for the user") &&
+      dialog.buttons.includes("OK"),
+  )
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
