@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import BookmarksList from "~/features/SiteBookmarks/list/BookmarksList"
 import { useBookmarksListViewModel } from "~/features/SiteBookmarks/list/useBookmarksListViewModel"
-import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -721,34 +720,29 @@ describe("BookmarksList", () => {
         updated_at: 0,
       },
     ]
-    render(<BookmarksList />)
-    const selectDelete = async (index: number) => {
-      // Exercise the callback race directly; menu hit testing is covered above.
-      fireEvent.pointerDown(
-        atIndex(await screen.findAllByLabelText("common:actions.more"), index),
-        { button: 0, ctrlKey: false },
-      )
-      fireEvent.click(
-        await screen.findByTestId(SITE_BOOKMARKS_TEST_IDS.rowDeleteMenuItem),
-      )
-    }
-    await selectDelete(0)
-    fireEvent.click(
-      await screen.findByTestId(SITE_BOOKMARKS_TEST_IDS.deleteConfirmButton),
+    // Menu hit testing and the working dialog are covered by the UI cases above.
+    const { result } = renderHook(() => useBookmarksListViewModel())
+    act(() => result.current.requestDelete(atIndex(bookmarksMock, 0)))
+    let deletion!: Promise<void>
+    await act(async () => {
+      deletion = result.current.handleConfirmDelete()
+    })
+    expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
+    expect(result.current.isDeleting).toBe(true)
+    expect(result.current.deleteTarget).toBeNull()
+    act(() => result.current.requestDelete(atIndex(bookmarksMock, 1)))
+    expect(result.current.deleteTarget).toBeNull()
+    await act(async () => {
+      finishReload()
+      await deletion
+    })
+    expect(result.current.isDeleting).toBe(false)
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
     )
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog", { hidden: true })).toBeNull(),
-    )
-    await selectDelete(1)
-    expect(screen.queryByRole("dialog", { hidden: true })).toBeNull()
-    finishReload()
-    await waitFor(() =>
-      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Success,
-      ),
-    )
-    await selectDelete(1)
-    expect(await screen.findByRole("dialog", { hidden: true })).toBeVisible()
+    act(() => result.current.requestDelete(atIndex(bookmarksMock, 1)))
+    expect(result.current.deleteTarget?.id).toBe("b2")
+    expect(mockDeleteBookmark).toHaveBeenCalledWith("b1")
     expect(mockDeleteBookmark).toHaveBeenCalledTimes(1)
   })
 
