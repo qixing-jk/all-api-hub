@@ -17,8 +17,11 @@ const output =
   process.env.SAFARI_NATIVE_OBSERVATIONS ??
   ".scratch/safari-native-cookie/observations.json"
 fs.mkdirSync(path.dirname(output), { recursive: true })
-const save = () =>
-  fs.writeFileSync(output, JSON.stringify(observations, null, 2))
+const save = () => {
+  const temporary = `${output}.tmp-${process.pid}`
+  fs.writeFileSync(temporary, JSON.stringify(observations, null, 2))
+  fs.renameSync(temporary, output)
+}
 const classify = (raw) => {
   const match = (raw ?? "")
     .split(";")

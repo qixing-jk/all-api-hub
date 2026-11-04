@@ -18,7 +18,7 @@ System authorization reads only the macOS permission agents, so rendering a larg
 
 ## Evidence
 
-The `safari-smoke-<attempt>` artifact retains `test-results/safari` reports, observations, UI snapshots, screenshots and build logs, plus generated project and entitlement metadata. Derived build caches are excluded. Failed attempts retain their own evidence.
+The `safari-smoke-<attempt>` artifact retains `test-results/safari` reports, observations, UI snapshots, screenshots and build logs, plus generated project and entitlement metadata. The fixture publishes observations by atomic replacement, and active waits read its complete HTTP status snapshots. Derived build caches are excluded. Failed attempts retain their own evidence.
 
 For local driver regressions:
 

@@ -61,6 +61,9 @@ export async function runSafariSmoke({
   let appName = ""
   let appPath = ""
   const driver = path.join(output, "accessibility")
+  const fixtureRoot = "http://localhost:41672/safari1669native"
+  const readFixtureObservations = () =>
+    JSON.parse(command("curl", ["-fsS", fixtureRoot + "/status"]))
   const openSettings = () =>
     command("osascript", [
       "-e",
@@ -304,29 +307,26 @@ export async function runSafariSmoke({
     await check("Native Cookie evidence", async () => {
       const deadline = Date.now() + 90000
       while (Date.now() < deadline) {
-        const evidence = path.join(output, "observations.json")
-        if (fs.existsSync(evidence)) {
-          const data = JSON.parse(fs.readFileSync(evidence, "utf8"))
-          const start = data.events.findLastIndex(
-            (event: { stage: string }) => event.stage === "trial-start",
+        const data = readFixtureObservations()
+        const start = data.events.findLastIndex(
+          (event: { stage: string }) => event.stage === "trial-start",
+        )
+        const current = data.events.slice(Math.max(0, start))
+        if (
+          current.some(
+            (event: { stage: string }) => event.stage === "trial-error",
           )
-          const current = data.events.slice(Math.max(0, start))
-          if (
-            current.some(
-              (event: { stage: string }) => event.stage === "trial-error",
-            )
+        )
+          throw new Error(
+            "Native Cookie trial failed; inspect observations.json",
           )
-            throw new Error(
-              "Native Cookie trial failed; inspect observations.json",
-            )
-          if (
-            current.some(
-              (event: { stage: string }) => event.stage === "trial-complete",
-            )
-          ) {
-            verifyNativeCookieObservations(data)
-            return
-          }
+        if (
+          current.some(
+            (event: { stage: string }) => event.stage === "trial-complete",
+          )
+        ) {
+          verifyNativeCookieObservations(data)
+          return
         }
         await new Promise((resolve) => setTimeout(resolve, 250))
       }
@@ -335,7 +335,6 @@ export async function runSafariSmoke({
       )
     })
     await check("CI UI fixture", async () => {
-      const fixtureRoot = "http://localhost:41672/safari1669native"
       command("curl", [
         "-fsS",
         "-X",
@@ -348,9 +347,7 @@ export async function runSafariSmoke({
       ])
       const deadline = Date.now() + 20000
       while (Date.now() < deadline) {
-        const data = JSON.parse(
-          command("curl", ["-fsS", fixtureRoot + "/status"]),
-        )
+        const data = readFixtureObservations()
         const start = data.events.findLastIndex(
           (event: { stage: string }) => event.stage === "trial-start",
         )

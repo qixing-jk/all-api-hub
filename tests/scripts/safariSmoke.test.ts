@@ -39,6 +39,7 @@ it.each([
     activationPendingChecks: 0,
     uiSetupPending: false,
     fixtureReady: true,
+    reportBeingWritten: false,
   },
   {
     popupAvailable: false,
@@ -48,6 +49,7 @@ it.each([
     activationPendingChecks: 0,
     uiSetupPending: false,
     fixtureReady: true,
+    reportBeingWritten: false,
   },
   {
     popupAvailable: true,
@@ -57,6 +59,7 @@ it.each([
     activationPendingChecks: 0,
     uiSetupPending: false,
     fixtureReady: true,
+    reportBeingWritten: false,
   },
   {
     popupAvailable: true,
@@ -66,6 +69,7 @@ it.each([
     activationPendingChecks: 0,
     uiSetupPending: false,
     fixtureReady: true,
+    reportBeingWritten: false,
   },
   {
     popupAvailable: true,
@@ -75,6 +79,7 @@ it.each([
     activationPendingChecks: 0,
     uiSetupPending: false,
     fixtureReady: true,
+    reportBeingWritten: false,
   },
   {
     popupAvailable: true,
@@ -84,6 +89,7 @@ it.each([
     activationPendingChecks: 2,
     uiSetupPending: false,
     fixtureReady: true,
+    reportBeingWritten: false,
   },
   {
     popupAvailable: true,
@@ -93,6 +99,7 @@ it.each([
     activationPendingChecks: 0,
     uiSetupPending: true,
     fixtureReady: true,
+    reportBeingWritten: false,
   },
   {
     popupAvailable: true,
@@ -102,6 +109,17 @@ it.each([
     activationPendingChecks: 0,
     uiSetupPending: false,
     fixtureReady: false,
+    reportBeingWritten: false,
+  },
+  {
+    popupAvailable: true,
+    navigationAvailable: true,
+    optionsRendered: true,
+    shutdownAvailable: true,
+    activationPendingChecks: 0,
+    uiSetupPending: false,
+    fixtureReady: true,
+    reportBeingWritten: true,
   },
 ])(
   "accepts latest native evidence and requires the Popup flow (%j)",
@@ -113,6 +131,7 @@ it.each([
     activationPendingChecks,
     uiSetupPending,
     fixtureReady,
+    reportBeingWritten,
   }) => {
     if (
       !optionsRendered ||
@@ -154,7 +173,7 @@ it.each([
     })
     writeFileSync(
       path.join(output, "observations.json"),
-      JSON.stringify(nativeEvidence),
+      reportBeingWritten ? "" : JSON.stringify(nativeEvidence),
     )
     const result = runSafariSmoke({
       platform: "darwin",
