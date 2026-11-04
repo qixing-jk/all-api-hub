@@ -373,3 +373,90 @@ npm registry 的 `latest` 同时为 Vitest 和 coverage-v8 的 `5.1.0`，`V4` �
 结论：未观察到仅升级最新v4带来的时间收益，本次不保留生产升级。恢复4.0.17 package和锁文件，frozen-lock安装恢复依赖；原有CI工具回归再次通过。新版全量CI和同源码跨版本热缓存复测没有运行。后续若以修复或新能力为理由升级，须先适配报告读取公共边界，再完成相关验证；纯性能目的需要新增收益证据。
 
 完整日志、blob、coverage、`result.json`、用例核对和临时依赖补丁保留在`artifacts/imports-vitest4-latest/`，旧版基线继续保留在`artifacts/imports-vitest4-before-major/`。这些是本地证据，Git仅保留本节决策和可复用的现有对照驱动。
+
+## 2026-11-04 浏览器准备与纯逻辑初始化实验
+
+本轮按用户要求实际验证两个候选方向。产品源码、Playwright/Vitest 版本、E2E 测试范围与生产覆盖率阈值保持不变。
+
+### 浏览器准备
+
+复用已有浏览器 composite action，增加 `channel` 输入：单测仍检查默认 headless shell；E2E 和原生权限检查传入 `chromium`，与 `buildExtensionLaunchOptions` 的实际选择一致。恢复完整浏览器缓存后安装 Chromium，并尝试真实启动；仅当错误确认缺少主机动态库时运行 `playwright install-deps chromium` 后重试。下载失败、其他启动错误、安装失败和重试失败仍阻断任务。
+
+| 行为 | 实际验证 |
+| --- | --- |
+| 正常 headless shell 不运行 apt，缓存保留完整 Chromium | CLI 回归 |
+| E2E 检查完整 Chromium，而非另一套 shell | 新增回归先失败，再通过；执行生产 Node 探针代码并记录 launch 输入 |
+| shell 正常但完整 Chromium 缺库时补装并重试 | 新增回归先失败，再通过 |
+| 缺库与动态加载器错误恢复 | CLI 回归 |
+| 下载失败、无关错误、apt 失败、补装后仍失败不被隐藏 | CLI 回归 |
+| E2E/权限工作流的 channel 与真实 fixture 一致，action 改动触发消费者 | Vitest 工作流回归 |
+| 原生浏览器权限没有增加 | 提交 hook 真实 Chromium 检查通过，含 build 共 2 项 |
+| Ubuntu 完整 E2E 与权限检查 | 以下独立分支对照，不在主分支触发并发取消 |
+
+已执行 `pnpm run test:ci:scripts`：52/52；`vitest run tests/scripts/ciPlaywrightBrowserCache.test.ts tests/scripts/ciScheduling.test.ts --maxWorkers=2`：78/78。提交 hook 的 staged gates 与真实 Chromium 权限检查通过；一次双 ref push 的 pre-push compile/knip 通过。
+
+Ubuntu 对照只相差 action、消费者工作流和回归测试五个文件：
+
+- 基线 `5044ccca7d12ebb90a28fd0ae5ab2e8bbfc217ee` / `perf/ci-browser-baseline-20261104`： [E2E](https://github.com/qixing-jk/all-api-hub/actions/runs/41791002472)、[权限检查](https://github.com/qixing-jk/all-api-hub/actions/runs/41791002176)。
+- 候选 `8c9220758` / `perf/ci-browser-candidate-20261104`： [E2E](https://github.com/qixing-jk/all-api-hub/actions/runs/41791002153)、[权限检查](https://github.com/qixing-jk/all-api-hub/actions/runs/41791003040)。
+
+原始 run/jobs JSON 与去 ANSI 的日志保留在 `artifacts/browser-setup-20261104/`。耗时按同一准备范围计算：基线从版本解析开始，包含缓存恢复及旧安装步骤；候选使用 composite action 的完整范围。不把 runner 等待、构建缓存差异或测试本身波动算作浏览器准备收益。
+
+首轮九个消费者同范围耗时如下，全部命中相同 `Linux-playwright-1.64.1` 浏览器缓存，使用 Ubuntu 26.04 runner 镜像；候选真实完整 Chromium 探针成功，无需 apt。秒数来自 Actions step 时间戳，精度为整秒。
+
+| 消费者 | 基线 | 候选 |
+| --- | --- | --- |
+| default shard 1 | 27 | 5 |
+| default shard 2 | 14 | 6 |
+| default shard 3 | 12 | 9 |
+| default shard 4 | 19 | 4 |
+| default shard 5 | 32 | 5 |
+| default shard 6 | 13 | 7 |
+| DNR | 18 | 9 |
+| bookmarks | 17 | 5 |
+| 原生权限 | 12 | 5 |
+| 中位数 / 累计 | 17 / 164 | 5 / 55 |
+
+九个任务累计少用 109 秒 runner 时间，中位数少 12 秒。该结果是浏览器准备步骤的收益，不是全量 CI 提速比例。冷浏览器缓存、主机确实缺库时的真实 Ubuntu apt 路径没有在本轮触发；下载失败及缺库恢复等分支用 CLI 契约回归验证。
+
+首次 default 六分片逐项核对 647 个用例身份及 expected status 完全相等。基线有一项 `grouped: false` 的 80 账号比较用例首试数据就绪超时、内置重试通过；候选同一组的 `grouped: true` 两次超时。错误都出现在等待 `Comparable offers: 80`，而非后续滚动断言。候选 retry trace 中 80 个 `/api/pricing` 请求最终都为 200，超时快照只显示 26 个结果。保留这些失败，不能据此声称稳定性问题已修复。候选同 SHA 的 failed-job 重跑本身通过，但暴露了以下两个已有 CI 问题，因此不把那次整体结果当成完整套件通过。
+
+### 实测发现的 E2E 重跑问题
+
+- 同名报告覆盖：首轮和重跑都上传 `shard-6.json`，`merge-multiple: true` 并发下载到同一个目录。现场出现 JSON 尾部 NUL 和解析失败。[官方迁移说明](https://github.com/actions/download-artifact/blob/main/docs/MIGRATION.md)也明确同名文件共享目录会由最后一次写入覆盖。改为独立 artifact 目录，既有 writer 已递归读取并保留重复 spec 的较慢测量，不需放宽格式验证。
+- 分片依据漂移：重跑失败分片从最新 cache 前缀读到首轮新生成的耗时，重新分配测试。实测原来 647 个 case slot 的组合变成 653，按逐项计数缺失 71 个、额外重复 77 个。改为 E2E producer 只读取一次历史耗时，将它作为当前 run 的独立 artifact 交给所有 default 分片；缓存未命中时保存空 profile，维持 count-based fallback。failed-job 重跑继续读取原来的 artifact，全量重跑则重新生成一个供所有分片共同使用的 profile。
+
+新回归分别先出现 2 项报告保留失败、1 项分片漂移失败，修复后通过。缓存缺失初始化及已有 profile 不被覆盖也通过执行生产 Bash/Node 命令验证。实际 7 份报告分目录重放，成功生成 146 个 spec 的耗时；`shard-drift-after-retry.json` 保留身份差异，`retry-replay-reports/` 和 `retry-replay-durations.json` 保留重放数据。
+
+修复头 `222f56c195` 已推到独立候选分支：[完整 E2E](https://github.com/qixing-jk/all-api-hub/actions/runs/41796219112)、[权限检查](https://github.com/qixing-jk/all-api-hub/actions/runs/41796228598) 均通过。default 六分片重新逐项比较，仍为与基线相同的 647 个用例身份及 expected status，636 个最终通过（其中一项内置重试）和 11 个既有 skip。Firefox、DNR、bookmarks 和隔离性能套件也全部通过；不把既有 80 账号数据就绪等待的不稳定性描述为已修复。
+
+随后主动重跑已通过的 default shard 2，验证 first-run 已发布新耗时后的真实路径。重跑继续下载 artifact `13305717171`，digest 与首轮相同；组合其余五分片后仍为相同的 647 个用例，缺失 0、额外重复 0。真实 download-artifact 下载首轮六份与重跑一份，共 7 个独立目录；writer 成功生成 146 个 spec 的耗时，整个工作流 attempt 2 通过。`final-e2e/` 下保留两个 attempt 的元数据、报告、用例核对、profile 身份核对及关键日志。
+
+最终本地受影响检查：五个 CI/Vitest 文件 122/122 通过，CLI 契约与报告检查 52/52 通过；提交 hook 的原生 Chromium 权限检查通过，修复后的 pre-push compile/knip 通过。纯逻辑 benchmark 还通过 `node --check`；它受仓库 ESLint 的 scratch 忽略规则影响，未把 ignored 提示计作 lint 验证。
+
+保留浏览器准备优化和两项重跑修复，未减少生产测试范围，也未降低生产覆盖率阈值。只在独立 perf refs 推送实验与实现，没有更新主分支。原始失败、旧方案和新方案数据均保留在现有忽略目录供复核；Git 保留本节决策与既有 benchmark 的可复用扩展。
+
+### 纯逻辑测试初始化
+
+仅在忽略的实验配置中省去 Node setup，未修改生产 Vitest 项目划分。选取 string/object/number/money/urlParsing/sanitizeUrlForLog/modelName 共 7 个已检查的纯逻辑文件、75 用例；本地 Node 24.14.1、Vitest 4.0.17、两个隔离 threads worker，顺序交错执行对照，没有同时运行本任务的编译、构建或其他测试。子集实验两边覆盖率阈值同为 0，生产阈值保持原值；每次核对完整用例身份/结果、3,056 源码文件集合、8 个有命中文件集合及 7 个被测模块的完整 statement/branch/function 覆盖率对象。
+
+| 同条件场景 | 原 setup | 无 setup | 判断 |
+| --- | --- | --- | --- |
+| 完整报告，第 1/2/3 轮 | 21.33 / 28.53 / 25.16 秒 | 36.34 / 34.18 / 24.62 秒 | 总耗时没有稳定改善 |
+| CI JSON 报告，第 1/2/3 轮 | 14.83 / 16.76 / 17.54 秒 | 14.61 / 15.41 / 16.19 秒 | 每轮快 0.22 / 1.35 / 1.35 秒，范围较小 |
+| JSON + 模块缓存首次写入 | 18.42 秒 | 17.96 秒 | 快 0.47 秒 |
+| JSON + 模块缓存热运行第 2/3 轮 | 17.57 / 18.62 秒 | 18.27 / 16.29 秒 | 一次变慢 0.70 秒，一次快 2.34 秒 |
+
+21 次均为同一 75 用例通过，覆盖率上述比较全部相等；所有实验退出成功。模块缓存对照使用分开的缓存目录，热运行不借用另一方案生成的缓存。原始数据、blob、覆盖率与临时配置分别保留在 `artifacts/imports-pure-setup-20261104/`、`artifacts/imports-pure-setup-json-20261104/`、`artifacts/imports-pure-setup-cache-20261104/`。
+
+文件内部累计初始化/执行成本下降，但端到端收益小，现有模块缓存条件下也未稳定复现。本轮不为这 7 个文件增加新测试项目，也不据此外推全量 CI 提速。保留既有 benchmark 的 `--suite pure`、`--ci-reports` 和 `light-module-cache` 对照能力，方便以后在更大的已验证纯逻辑范围上重测。
+
+复现需要当前 Node 24、冻结锁文件安装的 Vitest 4.0.17 和仓库依赖。在没有其他编译、构建或测试并行的条件下执行；每次 label 必须使用未存在的目录名，原始结果保留在对应 `artifacts/imports-<label>/`。
+
+```powershell
+node .scratch/ci-runner-performance/benchmark-test-imports.mjs --suite pure --variants baseline,light-setup --rounds 3 --label pure-full-new
+node .scratch/ci-runner-performance/benchmark-test-imports.mjs --suite pure --ci-reports --variants baseline,light-setup --rounds 3 --label pure-json-new
+node .scratch/ci-runner-performance/benchmark-test-imports.mjs --suite pure --ci-reports --variants baseline,module-cache,light-module-cache --rounds 3 --label pure-cache-new
+```
+
+`fileCostSeconds` 是各文件内部成本之和，多个 worker 会重叠，不等于端到端 elapsed。该 driver 自动拒绝运行中输入变更、用例/结果差异、覆盖文件集合变化及被测模块覆盖率差异；不能用这组小样本直接推算全量 CI 收益。

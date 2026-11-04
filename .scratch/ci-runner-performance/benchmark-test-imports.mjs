@@ -20,6 +20,8 @@ import { parseVitestBlob } from "../../scripts/utils/vitestBlob.mjs"
 const root = fileURLToPath(new URL("../../", import.meta.url))
 const { values } = parseArgs({
   options: {
+    suite: { type: "string", default: "heavy" },
+    "ci-reports": { type: "boolean", default: false },
     rounds: { type: "string", default: "3" },
     variants: { type: "string", default: "baseline,json-report" },
     label: {
@@ -29,14 +31,26 @@ const { values } = parseArgs({
   },
 })
 assert.match(values.label, /^[a-zA-Z0-9_-]+$/)
+assert.ok(["heavy", "pure"].includes(values.suite))
 const rounds = Number(values.rounds)
 assert.ok(Number.isInteger(rounds) && rounds > 0)
 const variants = values.variants.split(",")
+assert.ok(
+  values.suite === "pure" ||
+    !variants.some((variant) => variant.startsWith("light-")),
+)
 assert.equal(variants[0], "baseline", "The first variant must be the baseline")
 assert.equal(new Set(variants).size, variants.length)
 assert.ok(
   variants.every((variant) =>
-    ["baseline", "optimizer", "module-cache", "json-report"].includes(variant),
+    [
+      "baseline",
+      "optimizer",
+      "module-cache",
+      "json-report",
+      "light-setup",
+      "light-module-cache",
+    ].includes(variant),
   ),
 )
 const output = path.join(
@@ -50,6 +64,20 @@ const files = [
   "tests/services/apiService/passwordUi.test.ts",
   "tests/services/runtimeTypedMessagingSetup.test.ts",
 ]
+const pureTargets = [
+  ["tests/utils/string.test.ts", "src/utils/core/string.ts"],
+  ["tests/utils/object.test.ts", "src/utils/core/object.ts"],
+  ["tests/utils/number.test.ts", "src/utils/core/number.ts"],
+  ["tests/utils/money.test.ts", "src/utils/core/money.ts"],
+  ["tests/utils/urlParsing.test.ts", "src/utils/core/urlParsing.ts"],
+  [
+    "tests/utils/sanitizeUrlForLog.test.ts",
+    "src/utils/core/sanitizeUrlForLog.ts",
+  ],
+  ["tests/utils/modelName.test.ts", "src/services/models/utils/modelName.ts"],
+]
+if (values.suite === "pure")
+  files.splice(0, files.length, ...pureTargets.map(([test]) => test))
 
 function git(...args) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" })
@@ -119,7 +147,9 @@ const sourceHash = inputHash()
 const configs = {}
 for (const variant of variants) {
   const viteCache = JSON.stringify(path.join(output, "vite-" + variant))
-  const moduleCache = JSON.stringify(path.join(output, "module-cache"))
+  const moduleCache = JSON.stringify(path.join(output, "module-" + variant))
+  const useModuleCache =
+    variant === "module-cache" || variant === "light-module-cache"
   const major = Number(
     JSON.parse(
       readFileSync(path.join(root, "node_modules/vitest/package.json"), "utf8"),
@@ -127,9 +157,9 @@ for (const variant of variants) {
   )
   const cacheOptions =
     major >= 5
-      ? `fsModuleCache: ${variant === "module-cache"}, fsModuleCachePath: ${moduleCache}`
-      : `experimental: { fsModuleCache: ${variant === "module-cache"}, fsModuleCachePath: ${moduleCache} }`
-  const config = `import { mergeConfig } from "vitest/config"\nimport base from "../../../../vitest.config"\nexport default mergeConfig(base, { cacheDir: ${viteCache}, test: { ${cacheOptions}, deps: { optimizer: { client: { enabled: ${variant === "optimizer"}, include: ["lucide-react"] } } } } })\n`
+      ? `fsModuleCache: ${useModuleCache}, fsModuleCachePath: ${moduleCache}`
+      : `experimental: { fsModuleCache: ${useModuleCache}, fsModuleCachePath: ${moduleCache} }`
+  const config = `import { mergeConfig } from "vitest/config"\nimport base from "../../../../vitest.config"\nconst config = mergeConfig(base, { cacheDir: ${viteCache}, test: { ${cacheOptions}, deps: { optimizer: { client: { enabled: ${variant === "optimizer"}, include: ["lucide-react"] } } } } })\n${variant.startsWith("light-") ? 'for (const project of config.test.projects) if (project.test.name === "node") project.test.setupFiles = []\n' : ""}export default config\n`
 
   configs[variant] = path.join(output, variant + ".config.ts")
   writeFileSync(configs[variant], config)
@@ -145,6 +175,8 @@ const result = {
   head: git("rev-parse", "HEAD").trim(),
   sourceHash,
   version,
+  suite: values.suite,
+  coverageReporters: values["ci-reports"] ? ["json"] : "project defaults",
   files,
   variants,
   records: [],
@@ -153,6 +185,8 @@ const result = {
 writeFileSync(path.join(output, "result.json"), JSON.stringify(result, null, 2))
 let expectedCases
 let expectedCoveredFiles
+let expectedCoverageTargets
+let expectedSourceFiles
 const rejected = new Set()
 for (let round = 1; round <= rounds; round++) {
   const order = round % 2 ? variants : variants.toReversed()
@@ -173,7 +207,9 @@ for (let round = 1; round <= rounds; round++) {
         configs[variant],
         "--maxWorkers=2",
         "--coverage",
-        ...(variant === "json-report" ? ["--coverage.reporter=json"] : []),
+        ...(variant === "json-report" || values["ci-reports"]
+          ? ["--coverage.reporter=json"]
+          : []),
         "--coverage.thresholds.statements=0",
         "--coverage.thresholds.branches=0",
         "--coverage.thresholds.functions=0",
@@ -188,7 +224,7 @@ for (let round = 1; round <= rounds; round++) {
         stdio: ["ignore", log, log],
         env: {
           ...process.env,
-          DEBUG: variant === "module-cache" ? "vitest:cache:fs" : "",
+          DEBUG: variant.endsWith("module-cache") ? "vitest:cache:fs" : "",
         },
       },
     )
@@ -213,18 +249,41 @@ for (let round = 1; round <= rounds; round++) {
         .map(([name]) => name)
         .sort()
       assert.ok(coveredFiles.length > 0, "Coverage must be usable")
+      const sourceFiles = Object.keys(coverage).sort()
+      expectedSourceFiles ||= sourceFiles
+      assert.deepEqual(
+        sourceFiles,
+        expectedSourceFiles,
+        "Same source inventory required",
+      )
       expectedCoveredFiles ||= coveredFiles
       assert.deepEqual(
         coveredFiles,
         expectedCoveredFiles,
         "Same covered source files required",
       )
+      if (values.suite === "pure") {
+        // Removing setup stops incidental module execution. Require identical
+        // statement, branch and function hits in every tested production module.
+        const targets = pureTargets.map(([, source]) => {
+          const target = coverage[path.join(root, source)]
+          assert.ok(target, "Missing target coverage: " + source)
+          return target
+        })
+        expectedCoverageTargets ||= targets
+        assert.deepEqual(
+          targets,
+          expectedCoverageTargets,
+          "Same tested module coverage required",
+        )
+      }
       const record = {
         round,
         variant,
         elapsed,
         cases: cases.length,
         coveredFiles: coveredFiles.length,
+        sourceFiles: sourceFiles.length,
         collectSeconds:
           report[1].reduce(
             (sum, file) => sum + (file.collectDuration || 0),
