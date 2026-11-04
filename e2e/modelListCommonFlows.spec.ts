@@ -1431,6 +1431,11 @@ for (const grouped of [true, false]) {
     await page
       .getByTestId(MODEL_LIST_TEST_IDS.headerPriceComparisonButton)
       .click()
+    // All-account loading outlives the first rendered offer on slower runners.
+    // A trial action waits for the loading button to become usable without refreshing.
+    await page
+      .getByRole("button", { name: "Refresh Data", exact: true })
+      .click({ trial: true })
     await expect(
       page.getByRole("region", {
         name: `${PRICE_COMPARISON_MODEL_ID} Token-based billing`,
@@ -1483,6 +1488,7 @@ for (const grouped of [true, false]) {
         ),
       )
       .toBeGreaterThan(10000)
+    await expectTargetSettledInView()
     const previousTarget = await target.elementHandle()
     await targetSelect.click()
     await page.getByRole("option", { name: "vip (100x)", exact: true }).click()
