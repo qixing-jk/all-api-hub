@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url"
 import { verifyNativeCookieObservations } from "../safariNativeCookie/verify.ts"
 import {
   decodeHostedRunnerPassword,
+  unneededWebsitePermissionDialog,
   unsignedExtensionPasswordDialog,
 } from "./authorization.ts"
 
@@ -85,6 +86,11 @@ export async function runSafariSmoke({
       command(driver, ["enable", "Safari", "Allow unsigned extensions"])
     }
   }
+  const activateAccountManager = () =>
+    command("osascript", [
+      "-e",
+      'tell application "Safari"\nrepeat with browserWindow in windows\nrepeat with browserTab in tabs of browserWindow\nset candidateUrl to get URL of browserTab\nif (candidateUrl starts with "safari-web-extension://") and (candidateUrl contains "/options.html") and (candidateUrl ends with "#account") then\nset current tab of browserWindow to browserTab\nset index of browserWindow to 1\nactivate\nreturn candidateUrl\nend if\nend repeat\nend repeat\nreturn ""\nend tell',
+    ]).trim()
   try {
     await check("macOS runtime", () =>
       assert.equal(platform, "darwin", "Safari E2E requires macOS"),
@@ -367,10 +373,7 @@ export async function runSafariSmoke({
       command(driver, ["press", "Safari", "Account Management", "popover"])
       const deadline = Date.now() + 20000
       while (Date.now() < deadline) {
-        const url = command("osascript", [
-          "-e",
-          'tell application "Safari"\nrepeat with browserWindow in windows\nrepeat with browserTab in tabs of browserWindow\nset candidateUrl to get URL of browserTab\nif (candidateUrl starts with "safari-web-extension://") and (candidateUrl contains "/options.html") and (candidateUrl ends with "#account") then\nset current tab of browserWindow to browserTab\nset index of browserWindow to 1\nactivate\nreturn candidateUrl\nend if\nend repeat\nend repeat\nreturn ""\nend tell',
-        ]).trim()
+        const url = activateAccountManager()
         if (
           url.startsWith("safari-web-extension://") &&
           /\/options\.html(?:\?[^#]*)?#account$/u.test(url)
@@ -390,12 +393,31 @@ export async function runSafariSmoke({
     await check("Options account manager UI", async () => {
       const driver = path.join(output, "accessibility")
       const deadline = Date.now() + 20000
+      let welcomeDismissed = false
       while (Date.now() < deadline) {
+        const alerts = JSON.parse(command(driver, ["alerts", "Safari"]))
+        if (unneededWebsitePermissionDialog(alerts, appName))
+          command(driver, ["press", "Safari", "Deny"])
+        activateAccountManager()
         const snapshot = command(driver, ["dialogs", "Safari"])
         const panels = JSON.parse(snapshot) as {
           text: string
           buttons: string[]
         }[]
+        if (
+          panels.some(
+            (panel) =>
+              panel.text.includes("Welcome to All API Hub") &&
+              panel.buttons.includes("Not now"),
+          )
+        ) {
+          if (!welcomeDismissed) {
+            command(driver, ["press", "Safari", "Not now"])
+            welcomeDismissed = true
+          }
+          await new Promise((resolve) => setTimeout(resolve, 250))
+          continue
+        }
         if (
           panels.some(
             (panel) =>

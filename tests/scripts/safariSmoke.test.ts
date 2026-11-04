@@ -37,6 +37,7 @@ it.each([
     optionsRendered: true,
     shutdownAvailable: true,
     activationPendingChecks: 0,
+    uiSetupPending: false,
   },
   {
     popupAvailable: false,
@@ -44,6 +45,7 @@ it.each([
     optionsRendered: true,
     shutdownAvailable: true,
     activationPendingChecks: 0,
+    uiSetupPending: false,
   },
   {
     popupAvailable: true,
@@ -51,6 +53,7 @@ it.each([
     optionsRendered: true,
     shutdownAvailable: true,
     activationPendingChecks: 0,
+    uiSetupPending: false,
   },
   {
     popupAvailable: true,
@@ -58,6 +61,7 @@ it.each([
     optionsRendered: false,
     shutdownAvailable: true,
     activationPendingChecks: 0,
+    uiSetupPending: false,
   },
   {
     popupAvailable: true,
@@ -65,6 +69,7 @@ it.each([
     optionsRendered: true,
     shutdownAvailable: false,
     activationPendingChecks: 0,
+    uiSetupPending: false,
   },
   {
     popupAvailable: true,
@@ -72,6 +77,15 @@ it.each([
     optionsRendered: true,
     shutdownAvailable: true,
     activationPendingChecks: 2,
+    uiSetupPending: false,
+  },
+  {
+    popupAvailable: true,
+    navigationAvailable: true,
+    optionsRendered: true,
+    shutdownAvailable: true,
+    activationPendingChecks: 0,
+    uiSetupPending: true,
   },
 ])(
   "accepts latest native evidence and requires the Popup flow (%j)",
@@ -81,22 +95,30 @@ it.each([
     optionsRendered,
     shutdownAvailable,
     activationPendingChecks,
+    uiSetupPending,
   }) => {
-    if (!optionsRendered || activationPendingChecks) vi.useFakeTimers()
+    if (!optionsRendered || activationPendingChecks || uiSetupPending)
+      vi.useFakeTimers()
     let activationChecks = 0
     let settingsOpen = false
+    let optionsVisited = false
+    let websitePrompt = uiSetupPending
+    let welcomePrompt = uiSetupPending
+    const appName = uiSetupPending
+      ? "All API Hub Native Cookie Trial 20261104090849451"
+      : "Trial"
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
     const projectRoot = path.join(output, "project")
     mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
     mkdirSync(
-      path.join(output, "DerivedData/Build/Products/Release/Trial.app"),
+      path.join(output, "DerivedData/Build/Products/Release", `${appName}.app`),
       {
         recursive: true,
       },
     )
     writeFileSync(
       path.join(output, "identity.json"),
-      JSON.stringify({ projectRoot, appName: "Trial" }),
+      JSON.stringify({ projectRoot, appName }),
     )
     writeFileSync(
       path.join(output, "observations.json"),
@@ -114,6 +136,8 @@ it.each([
           settingsOpen = true
         if (args[0] === "close-window" && args[2] === "Extensions")
           settingsOpen = false
+        if (args[0] === "press" && args[2] === "Deny") websitePrompt = false
+        if (args[0] === "press" && args[2] === "Not now") welcomePrompt = false
         if (file === process.execPath)
           return `Prepared independent trial: ${output}`
         if (file === "xcodebuild" && args.includes("-list"))
@@ -143,8 +167,34 @@ it.each([
           !navigationAvailable
         )
           throw new Error("Options navigation unavailable")
-        if (file === "osascript" && args.join(" ").includes("get URL"))
+        if (file === "osascript" && args.join(" ").includes("get URL")) {
+          if (args.join(" ").includes("/options.html")) optionsVisited = true
           return "safari-web-extension://test/options.html#account"
+        }
+        if (args[0] === "alerts")
+          return JSON.stringify(
+            optionsVisited && websitePrompt
+              ? [
+                  {
+                    app: "Safari",
+                    text: `The extension “${appName}” would like to access ldoh.105117.xyz.`,
+                    buttons: ["Deny"],
+                  },
+                ]
+              : [],
+          )
+        if (args[0] === "dialogs" && optionsVisited && websitePrompt)
+          return JSON.stringify([
+            { app: "Safari", text: "Website permission", buttons: ["Deny"] },
+          ])
+        if (args[0] === "dialogs" && optionsVisited && welcomePrompt)
+          return JSON.stringify([
+            {
+              app: "Safari",
+              text: "Welcome to All API Hub",
+              buttons: ["Not now"],
+            },
+          ])
         if (args.includes("dialogs") || args.includes("popover"))
           return JSON.stringify([
             {
@@ -173,7 +223,7 @@ it.each([
         ),
         vi.runAllTimersAsync(),
       ])
-    else if (activationPendingChecks)
+    else if (activationPendingChecks || uiSetupPending)
       await Promise.all([
         result.then((report) => expect(report.status).toBe("passed")),
         vi.runAllTimersAsync(),
