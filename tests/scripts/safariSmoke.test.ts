@@ -94,3 +94,31 @@ it("fails when Safari developer settings cannot be enabled instead of passing a 
     }),
   ).rejects.toThrow("Developer control unavailable")
 })
+
+it("requires activation of the compiled trial extension", async () => {
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  const projectRoot = path.join(output, "project")
+  mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
+  mkdirSync(path.join(output, "DerivedData/Build/Products/Release/Trial.app"), {
+    recursive: true,
+  })
+  writeFileSync(
+    path.join(output, "identity.json"),
+    JSON.stringify({ projectRoot, appName: "Trial" }),
+  )
+  await expect(
+    runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: (file, args) => {
+        if (file === process.execPath)
+          return `Prepared independent trial: ${output}`
+        if (file === "xcodebuild" && args.includes("-list"))
+          return JSON.stringify({ project: { schemes: ["Trial"] } })
+        if (args.includes("enable") && args.includes("Trial"))
+          throw new Error("Trial extension unavailable")
+        return "true"
+      },
+    }),
+  ).rejects.toThrow("Trial extension unavailable")
+})

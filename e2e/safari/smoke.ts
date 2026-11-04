@@ -4,6 +4,8 @@ import fs from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
+import { verifyNativeCookieObservations } from "../safariNativeCookie/verify.ts"
+
 /** A failed prerequisite is evidence of failure, never a passing Safari smoke. */
 type Check = { name: string; status: string; error?: string }
 
@@ -51,6 +53,7 @@ export async function runSafariSmoke({
       throw error
     }
   }
+  let appName = ""
   try {
     await check("macOS runtime", () =>
       assert.equal(platform, "darwin", "Safari E2E requires macOS"),
@@ -91,6 +94,7 @@ export async function runSafariSmoke({
       const identity = JSON.parse(
         fs.readFileSync(path.join(match[1]!, "identity.json"), "utf8"),
       )
+      appName = identity.appName
       const project = fs
         .readdirSync(String(identity.projectRoot), {
           recursive: true,
@@ -170,6 +174,57 @@ export async function runSafariSmoke({
       ])
       fs.writeFileSync(path.join(output, "safari-settings.txt"), tree)
       command("screencapture", ["-x", path.join(output, "safari-settings.png")])
+    })
+    await check("Trial extension activation", () => {
+      command(path.join(output, "accessibility"), [
+        "enable",
+        "Safari",
+        "Allow unsigned extensions",
+      ])
+      command(path.join(output, "accessibility"), [
+        "press",
+        "Safari",
+        "Extensions",
+      ])
+      assert(appName, "Missing trial extension name")
+      command(path.join(output, "accessibility"), ["enable", "Safari", appName])
+      fs.writeFileSync(
+        path.join(output, "extension-settings.json"),
+        command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
+      )
+      command("screencapture", [
+        "-x",
+        path.join(output, "extension-settings.png"),
+      ])
+    })
+    await check("Native Cookie evidence", async () => {
+      const deadline = Date.now() + 90000
+      while (Date.now() < deadline) {
+        const evidence = path.join(output, "observations.json")
+        if (fs.existsSync(evidence)) {
+          const data = JSON.parse(fs.readFileSync(evidence, "utf8"))
+          if (
+            data.events.some(
+              (event: { stage: string }) => event.stage === "trial-error",
+            )
+          )
+            throw new Error(
+              "Native Cookie trial failed; inspect observations.json",
+            )
+          if (
+            data.events.some(
+              (event: { stage: string }) => event.stage === "trial-complete",
+            )
+          ) {
+            verifyNativeCookieObservations(data)
+            return
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error(
+        "Native Cookie trial incomplete; inspect observations.json",
+      )
     })
     report.status = "passed"
     return report

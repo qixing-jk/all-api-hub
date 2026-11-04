@@ -24,7 +24,11 @@ for app in NSWorkspace.shared.runningApplications {
         let elements = descendants(window)
         let buttons = elements.filter { attribute($0, "AXRole") as? String == "AXButton" }
         dialogs.append(["app": name, "text": elements.map { text($0) }.joined(separator: "\n"), "buttons": buttons.map { (attribute($0, "AXTitle") as? String) ?? (attribute($0, "AXDescription") as? String) ?? "" }])
-        if args.count > 3 && ["press", "enable"].contains(args[1]), let target = elements.first(where: { (attribute($0, "AXTitle") as? String) == args[3] || (attribute($0, "AXDescription") as? String) == args[3] }) {
+        if args.count > 3 && ["press", "enable"].contains(args[1]), let target = elements.first(where: {
+            let role = attribute($0, "AXRole") as? String ?? ""
+            let actionable = args[1] == "enable" ? role == "AXCheckBox" : ["AXButton", "AXCheckBox", "AXRadioButton", "AXMenuItem", "AXPopUpButton"].contains(role)
+            return actionable && ((attribute($0, "AXTitle") as? String) == args[3] || (attribute($0, "AXDescription") as? String) == args[3])
+        }) {
             if args[1] == "enable" && (attribute(target, "AXValue") as? NSNumber)?.intValue == 1 {
                 pressed = true
             } else {
