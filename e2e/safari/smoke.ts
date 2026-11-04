@@ -66,7 +66,7 @@ export async function runSafariSmoke({
       "-e",
       'tell application "Safari" to activate',
       "-e",
-      'tell application "System Events" to tell process "Safari"\nset frontmost to true\nclick menu item "Settings…" of menu "Safari" of menu bar 1\nrepeat 40 times\nif exists window "General" or exists window "Extensions" or exists window "Developer" then return true\ndelay 0.25\nend repeat\nerror "Safari settings window unavailable"\nend tell',
+      'tell application "System Events" to tell process "Safari"\nset frontmost to true\nclick menu item "Settings…" of menu "Safari" of menu bar 1\nrepeat 40 times\nif (exists window "General") or (exists window "Extensions") or (exists window "Developer") then return true\ndelay 0.25\nend repeat\nerror "Safari settings window unavailable"\nend tell',
     ])
   const allowUnsigned = () => {
     try {
