@@ -29,8 +29,7 @@
       "description": "Nhập cấu hình trang web hiện tại vào AI Toolbox bằng một cú nhấp chuột thông qua liên kết sâu",
       "descriptions": {
         "apiFormat": "AI Toolbox sẽ tái tạo nhà cung cấp cho ứng dụng đích. Chỉ chọn giao thức khi nhà cung cấp này không dùng giao thức mặc định của ứng dụng.",
-        "model": "Nếu khả dụng, danh sách mô hình sẽ tự động được lấy từ /v1/models để lựa chọn; bạn cũng có thể nhập trực tiếp tên mô hình tùy chỉnh.",
-        "modelDiscoveryFailed": "Không thể tải danh sách mô hình từ nhà cung cấp. Hãy nhập mã mô hình thủ công hoặc thử lại."
+        "model": "Nếu khả dụng, danh sách mô hình sẽ tự động được lấy từ /v1/models để lựa chọn; bạn cũng có thể nhập trực tiếp tên mô hình tùy chỉnh."
       },
       "fields": {
         "apiFormat": "Giao thức API",
@@ -630,6 +629,12 @@
   },
   "searchableSelect": {
     "empty": "Không tìm thấy mục phù hợp",
+    "fetchDetails": "Chi tiết lỗi",
+    "fetchEmpty": "Yêu cầu thành công nhưng không trả về mô hình nào.",
+    "fetchEmptyLabel": "Danh sách trống",
+    "fetchFailed": "Không thể lấy danh sách.",
+    "fetchSuccess_other": "Đã lấy {{count}} mô hình.",
+    "manualInputHint": "Bạn có thể nhập trực tiếp ID mô hình.",
     "noOptions": "Hiện không có tùy chọn nào",
     "noOptionsAllowCustom": "Hiện không có tùy chọn, bạn có thể nhập để tạo",
     "searchPlaceholder": "Tìm kiếm...",

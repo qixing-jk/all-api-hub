@@ -1,6 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
 import { KiloCodeDefaultModelSelect } from "~/features/KiloCodeExport/KiloCodeDefaultModelSelect"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -18,6 +19,24 @@ function addLimitedMessageResource() {
 }
 
 describe("KiloCodeDefaultModelSelect", () => {
+  it("shows the shared fetch failure inside its bounded model dropdown", async () => {
+    const user = userEvent.setup()
+    render(
+      <KiloCodeDefaultModelSelect
+        value="saved"
+        modelIds={["saved"]}
+        onChange={vi.fn()}
+        fetchResult={{
+          status: SELECT_FETCH_STATUSES.Error,
+          message: "Model request failed",
+        }}
+      />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+    await user.click(await screen.findByRole("combobox"))
+    expect(screen.getByRole("alert")).toHaveTextContent("Model request failed")
+    expect(screen.getByRole("option", { name: "saved" })).toBeVisible()
+  })
   it("shows the standard empty state when no models or custom values are available", async () => {
     const user = userEvent.setup()
 

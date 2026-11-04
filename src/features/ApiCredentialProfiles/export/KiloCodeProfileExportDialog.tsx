@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   KILO_CODE_MODEL_STATUSES,
@@ -171,6 +172,12 @@ export function KiloCodeProfileExportDialog({
   )
 
   const isKiloV7Target = exportTarget === KILO_CODE_EXPORT_TARGETS.KiloV7
+  const modelFetchResult =
+    modelStatus === KILO_CODE_MODEL_STATUSES.Error
+      ? { status: SELECT_FETCH_STATUSES.Error }
+      : modelStatus === KILO_CODE_MODEL_STATUSES.Loaded
+        ? { status: SELECT_FETCH_STATUSES.Success, count: modelIds.length }
+        : null
   const isLoadingModels = modelStatus === KILO_CODE_MODEL_STATUSES.Loading
   const showModelRecovery =
     !invalidProfile &&
@@ -509,6 +516,8 @@ export function KiloCodeProfileExportDialog({
                 onChange={handleV7ModelChange}
                 placeholder={t("ui:dialog.kiloCode.placeholders.modelId")}
                 loading={isLoadingModels}
+                onRetryFetch={handleRetryModels}
+                fetchResult={modelFetchResult}
                 allowCustomValue
                 disabled={isLoadingModels}
               />
@@ -529,6 +538,8 @@ export function KiloCodeProfileExportDialog({
               }}
               placeholder={t("ui:dialog.kiloCode.placeholders.modelId")}
               loading={isLoadingModels}
+              onRetryFetch={handleRetryModels}
+              fetchResult={modelFetchResult}
               options={legacyModelOptions}
               allowCustomValue
               disabled={isLoadingModels}

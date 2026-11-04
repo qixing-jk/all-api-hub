@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
+import type { SelectFetchResult } from "~/components/ui/SelectFetchFeedback"
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/features/CredentialExport/CCSwitchExportDialog.testIds"
 import { useCredentialExportDisplayName } from "~/features/CredentialExport/useCredentialExportDisplayName"
 import toast from "~/lib/notify"
@@ -165,6 +167,9 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   const [upstreamModelOptions, setUpstreamModelOptions] = useState<
     { value: string; label: string }[]
   >([])
+  const [modelFetchAttempt, setModelFetchAttempt] = useState(0)
+  const [modelFetchResult, setModelFetchResult] =
+    useState<SelectFetchResult | null>(null)
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const formId = useId()
   const limitationNotice = getCCSwitchLimitationNotice(t, app)
@@ -196,6 +201,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       setIsEndpointCustomized(false)
       setCodexEndpointDiscovery(null)
       setUpstreamModelOptions([])
+      setModelFetchResult(null)
       setIsLoadingModels(false)
     }
   }, [defaultProviderName, isOpen, source.baseUrl, source.id, source.notes])
@@ -205,15 +211,18 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
 
     if (!upstreamBaseUrl) {
       setUpstreamModelOptions([])
+      setModelFetchResult(null)
       setIsLoadingModels(false)
       return
     }
 
     let isMounted = true
+    setModelFetchResult(null)
     const handle = setTimeout(() => {
       void (async () => {
         try {
           setIsLoadingModels(true)
+          setModelFetchResult(null)
           const apiKey = await source.resolveApiKey()
           const discovery = await discoverOpenAICompatibleModels({
             baseUrl: upstreamBaseUrl,
@@ -227,6 +236,10 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
 
           if (isMounted) {
             setUpstreamModelOptions(normalized)
+            setModelFetchResult({
+              status: SELECT_FETCH_STATUSES.Success,
+              count: normalized.length,
+            })
             setCodexEndpointDiscovery({
               sourceBaseUrl: upstreamBaseUrl,
               resolvedBaseUrl: discovery.resolvedBaseUrl,
@@ -235,7 +248,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         } catch (error) {
           logger.warn("Failed to fetch upstream model list", error)
           if (isMounted) {
-            setUpstreamModelOptions([])
+            setModelFetchResult({ status: SELECT_FETCH_STATUSES.Error })
             setCodexEndpointDiscovery(null)
           }
         } finally {
@@ -250,7 +263,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       isMounted = false
       clearTimeout(handle)
     }
-  }, [source, isOpen, upstreamBaseUrl])
+  }, [source, isOpen, upstreamBaseUrl, modelFetchAttempt])
 
   useEffect(() => {
     if (!isOpen || isEndpointCustomized) return
@@ -454,6 +467,11 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             onChange={setModel}
             placeholder={t("ui:dialog.ccswitch.placeholders.model")}
             loading={isLoadingModels}
+            fetchResult={modelFetchResult}
+            onRetryFetch={() => {
+              setIsLoadingModels(true)
+              setModelFetchAttempt((attempt) => attempt + 1)
+            }}
             options={[
               {
                 value: "",
