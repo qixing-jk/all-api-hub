@@ -34,6 +34,11 @@ it("prepares only the registered CI trial and grants its loopback fixture access
       Enabled: false,
       AddedDate: "2026-11-04T00:00:00",
       Permissions: [],
+      RevokedPermissions: {
+        cookies: "2026-11-04T00:00:00",
+        nativeMessaging: "2026-11-04T00:00:00",
+        bookmarks: "2026-11-04T00:00:00",
+      },
     },
     "example.other.Extension (OTHER)": { Enabled: false, Permissions: [] },
   }
@@ -54,6 +59,16 @@ it("prepares only the registered CI trial and grants its loopback fixture access
     },
   })
   expect(prepared[key].GrantedPermissionOrigins).not.toHaveProperty("*://*/*")
+  expect(prepared[key].GrantedPermissions).toMatchObject({
+    cookies: "4001-01-01T00:00:00",
+    nativeMessaging: "4001-01-01T00:00:00",
+  })
+  expect(prepared[key].RevokedPermissions).not.toHaveProperty("cookies")
+  expect(prepared[key].RevokedPermissions).not.toHaveProperty("nativeMessaging")
+  expect(prepared[key].RevokedPermissions).toHaveProperty(
+    "bookmarks",
+    "2026-11-04T00:00:00",
+  )
 })
 
 it.each([

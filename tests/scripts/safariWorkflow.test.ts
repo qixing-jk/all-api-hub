@@ -19,4 +19,9 @@ it("retains native evidence even if smoke fails and runs Safari contract regress
   )
   expect(workflow).toContain("if: ${{ !cancelled() }}")
   expect(workflow).toContain("test-results/safari/*.json")
+  expect(workflow).toContain("Run native Safari E2E")
+  expect(workflow).toContain("node e2e/safari/smoke.ts")
+  expect(workflow).toContain(
+    "node e2e/safariNativeCookie/verify.ts test-results/safari/observations.json",
+  )
 })

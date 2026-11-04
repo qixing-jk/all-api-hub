@@ -6,17 +6,20 @@ import {
   unsignedExtensionPasswordDialog,
 } from "~~/e2e/safari/authorization"
 
-it("recognizes the runner's Safari control request and requires an Allow button", () => {
-  expect(
-    safariAuthorizationDialog([
-      {
-        app: "SecurityAgent",
-        text: "“hosted-compute-agent” wants access to control “Safari”.",
-        buttons: ["Don’t Allow", "Allow"],
-      },
-    ]),
-  ).toBe("SecurityAgent")
-})
+it.each(["hosted-compute-agent", "osascript"])(
+  "recognizes a Safari control request from %s and requires an Allow button",
+  (requester) => {
+    expect(
+      safariAuthorizationDialog([
+        {
+          app: "SecurityAgent",
+          text: `“${requester}” wants access to control “Safari”.`,
+          buttons: ["Don’t Allow", "Allow"],
+        },
+      ]),
+    ).toBe("SecurityAgent")
+  },
+)
 
 it("decodes the hosted image's local auto-login format without its zero padding", () => {
   expect(

@@ -62,8 +62,10 @@ export async function runSafariSmoke({
   let appPath = ""
   const driver = path.join(output, "accessibility")
   const fixtureRoot = "http://localhost:41672/safari1669native"
+  const requestFixture = (args: string[]) =>
+    command("curl", ["-fsS", "--max-time", "10", ...args])
   const readFixtureObservations = () =>
-    JSON.parse(command("curl", ["-fsS", fixtureRoot + "/status"]))
+    JSON.parse(requestFixture([fixtureRoot + "/status"]))
   const openSettings = () =>
     command("osascript", [
       "-e",
@@ -104,6 +106,18 @@ export async function runSafariSmoke({
         path.join(output, "accessibility"),
       ]),
     )
+    await check("Accessibility driver input validation", () => {
+      assert.throws(
+        () => command(driver, []),
+        (error) =>
+          error instanceof Error &&
+          "status" in error &&
+          error.status === 2 &&
+          "stderr" in error &&
+          String(error.stderr).includes("usage: accessibility"),
+        "Accessibility driver must provide usage for a missing mode",
+      )
+    })
     await check("Safari UI automation access", () => {
       command("open", ["-a", "Safari"])
       const tree = command("osascript", [
@@ -123,10 +137,10 @@ export async function runSafariSmoke({
       ])
       fs.writeFileSync(path.join(output, "safari-windows.txt"), windows)
       fs.writeFileSync(
-        path.join(output, "safari-initial-url.txt"),
+        path.join(output, "safari-version.txt"),
         command("osascript", [
           "-e",
-          'tell application "Safari" to get URL of current tab of front window',
+          'tell application "Safari" to get version',
         ]),
       )
     })
@@ -335,8 +349,7 @@ export async function runSafariSmoke({
       )
     })
     await check("CI UI fixture", async () => {
-      command("curl", [
-        "-fsS",
+      requestFixture([
         "-X",
         "POST",
         "-H",

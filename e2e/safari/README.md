@@ -4,7 +4,7 @@
 
 The workflow runs Safari manifest, permission, distribution, native Cookie transport and tooling regressions. It builds the Safari release resources, copies them into a uniquely named instrumented trial, generates and compiles its native Xcode host and extension, and operates Safari's actual settings to enable that trial.
 
-The loopback fixture uses synthetic accounts. The native verifier requires fresh server observations of concurrent account isolation, Cookie and Origin handling, response Cookie suppression, redirect rejection, cancellation recovery, scope limits and ordinary fetch isolation. A missing or incomplete native run fails the workflow. The fixture server is stopped by the workflow's exit trap.
+The loopback fixture uses synthetic accounts. Status reads and control commands have a ten-second request limit; timeout failures stop the current stage. The native verifier requires fresh server observations of concurrent account isolation, Cookie and Origin handling, response Cookie suppression, redirect rejection, cancellation recovery, scope limits and ordinary fetch isolation. A missing or incomplete native run fails the workflow. The fixture server is stopped by the workflow's exit trap.
 
 Before the UI checks, the existing native trial controller writes a fresh, empty public-directory cache through the application's cache service and reads it back. The smoke requires fresh extension-side evidence of that round trip. This fixture keeps the basic UI checks independent of external directory requests and their website permission prompts.
 
@@ -14,7 +14,7 @@ The runner uses macOS accessibility APIs and Apple Events. It handles the runner
 
 The CLI requires a GitHub-hosted macOS runner. It uses the image's local automatic-login credential to authenticate Safari's unsigned-extension dialog, changes Safari development settings and enables its generated trial. The credential format is defined by the [official runner image bootstrap](https://github.com/actions/runner-images/blob/main/images/macos/assets/bootstrap-provisioner/kcpassword.py). Passwords are masked in CI and omitted from accessibility snapshots. Use the separate [native validation guide](../safariNativeCookie/README.md) for deliberate local experiments.
 
-System authorization reads only the macOS permission agents, so rendering a large Options page does not block it. The trial is granted only the loopback fixture origins. Navigation locates and activates the extension's account-manager tab while ordinary fixture tabs remain open.
+The compiled accessibility driver is checked for a usage error on missing arguments before UI work. Safari's version query establishes Apple Event authorization without requiring an initial front tab. System authorization reads only the macOS permission agents, so rendering a large Options page does not block it. The trial is granted only the loopback fixture origins. Navigation locates and activates the extension's account-manager tab while ordinary fixture tabs remain open.
 
 ## Evidence
 

@@ -43,6 +43,10 @@ func installedExtensionCheckbox(_ elements: [AXUIElement], _ name: String) -> AX
     return nil
 }
 let args = CommandLine.arguments
+guard args.count > 1 else {
+    FileHandle.standardError.write(Data("usage: accessibility <mode> [args...]\n".utf8))
+    exit(2)
+}
 var dialogs: [[String: Any]] = []
 var pressed = false
 for app in NSWorkspace.shared.runningApplications {
