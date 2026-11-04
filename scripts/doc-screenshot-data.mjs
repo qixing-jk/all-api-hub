@@ -946,13 +946,11 @@ function getMockUsageHistory(t = createTranslator("en")) {
       }
 
       const tokenKeys = ["101", "102", "103"]
-      const tokenSplits = [0.5, 0.3, 0.2]
       const tokenBoundaries = [0, 0.5, 0.8, 1]
       const share = (total, index) =>
         Math.round(total * tokenBoundaries[index + 1]) -
         Math.round(total * tokenBoundaries[index])
       tokenKeys.forEach((tId, tIdx) => {
-        const tSplit = tokenSplits[tIdx]
         dailyByToken[tId][day] = {
           requests: share(dayRequests, tIdx),
           promptTokens: share(dayPrompt, tIdx),
@@ -961,24 +959,12 @@ function getMockUsageHistory(t = createTranslator("en")) {
           quotaConsumed: share(dayQuota, tIdx),
         }
         latencyDailyByToken[tId][day] = {
-          count: Math.round(dayRequests * tSplit),
-          sum: +(dayRequests * tSplit * 1.2).toFixed(2),
+          count: share(dayRequests, tIdx),
+          sum: share(Math.round(latencyDaily[day].sum * 100), tIdx) / 100,
           max: 18.2,
-          slowCount: Math.round(16 * factor * tSplit),
+          slowCount: share(latencyDaily[day].slowCount, tIdx),
           unknownCount: 0,
-          buckets: [
-            Math.round(40 * factor * tSplit),
-            Math.round(75 * factor * tSplit),
-            Math.round(55 * factor * tSplit),
-            Math.round(30 * factor * tSplit),
-            Math.round(18 * factor * tSplit),
-            Math.round(9 * factor * tSplit),
-            Math.round(4 * factor * tSplit),
-            Math.round(2 * factor * tSplit),
-            0,
-            0,
-            0,
-          ],
+          buckets: latencyDaily[day].buckets.map((count) => share(count, tIdx)),
         }
       })
     })

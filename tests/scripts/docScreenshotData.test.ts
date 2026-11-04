@@ -85,6 +85,60 @@ it("preserves daily totals when all demo token filters are selected", () => {
   }
 })
 
+it("keeps token latency samples and all additive latency facts consistent with daily totals", () => {
+  const history = fixtures.getMockUsageHistory()
+  for (const account of Object.values(history.accounts) as Array<{
+    dailyByToken: Record<string, Record<string, { requests: number }>>
+    latencyDaily: Record<
+      string,
+      {
+        count: number
+        sum: number
+        slowCount: number
+        unknownCount: number
+        buckets: number[]
+      }
+    >
+    latencyDailyByToken: Record<
+      string,
+      Record<
+        string,
+        {
+          count: number
+          sum: number
+          slowCount: number
+          unknownCount: number
+          buckets: number[]
+        }
+      >
+    >
+  }>) {
+    for (const [day, totals] of Object.entries(account.latencyDaily)) {
+      const shares = Object.entries(account.latencyDailyByToken).map(
+        ([id, token]) => {
+          expect(token[day]!.count + token[day]!.unknownCount).toBe(
+            account.dailyByToken[id]![day]!.requests,
+          )
+          return token[day]!
+        },
+      )
+      for (const metric of [
+        "count",
+        "sum",
+        "slowCount",
+        "unknownCount",
+      ] as const)
+        expect(
+          shares.reduce((sum, value) => sum + value[metric], 0),
+        ).toBeCloseTo(totals[metric], 8)
+      for (let bucket = 0; bucket < totals.buckets.length; bucket++)
+        expect(
+          shares.reduce((sum, value) => sum + value.buckets[bucket]!, 0),
+        ).toBe(totals.buckets[bucket])
+    }
+  }
+})
+
 it.each([
   ["zh", "开发主密钥 Default"],
   ["ja", "開発用メインキー Default"],
