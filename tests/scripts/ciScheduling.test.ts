@@ -747,11 +747,23 @@ it("still checks permission warnings on every ordinary pull request", () => {
   expect(source).not.toMatch(/labels\.\*\.name/u)
   expect(source).not.toContain("e2e-optional")
   // The warning job consumes the build's artifact, so a gated-off build must take it
-  // down too rather than letting it run against a missing artifact. That holds only
-  // while the job keeps GitHub's implicit success() condition over `needs`.
+  // down too. Explicit build-result gating avoids inheriting a skipped release
+  // ancestor while preserving the artifact prerequisite.
   const warnings = source.split(/^ {2}warnings:/m)[1]?.split(/^ {2}[\w-]+:/m)[0]
   expect(warnings).toBeDefined()
   expect(warnings).toContain("needs: build")
+  expect(
+    shouldRun(
+      "permission-warnings.yml",
+      "warnings",
+      {
+        github: github("pull_request"),
+        needs: { build: { result: "success" } },
+        labels: ["skip-e2e", "e2e-optional"],
+      },
+      false,
+    ),
+  ).toBe(true)
 })
 
 it("merges reports from failed shards but never from skipped or cancelled shards", () => {

@@ -1,0 +1,58 @@
+name: Safari Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 19 * * *"
+  push:
+    branches: [ci/safari-daily-smoke-trial]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safari-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  safari:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+      AAH_SAFARI_CI_SMOKE: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Safari contract regressions
+        run: >-
+          pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/safari/unit-tests.xml tests/config/wxtPermissions.test.ts tests/config/wxtSelfUpdate.test.ts tests/config/distributionChannel.test.ts tests/services/apiTransport/safariNativeCookie.test.ts tests/services/ldohSiteLookup.cache.test.ts tests/scripts/safariNativeCookieTooling.test.ts tests/scripts/safariSmoke.test.ts tests/scripts/safariAuthorization.test.ts tests/scripts/safariActivation.test.ts tests/scripts/safariWorkflow.test.ts
+
+      - name: Run native Safari E2E
+        env:
+          SAFARI_NATIVE_OBSERVATIONS: test-results/safari/observations.json
+          AAH_SAFARI_REAL_TOKEN: ""
+        run: |
+          mkdir -p test-results/safari
+          node e2e/safariNativeCookie/server.mjs > test-results/safari/fixture.log 2>&1 &
+          fixture_pid=$!
+          trap 'kill -TERM "$fixture_pid"; wait "$fixture_pid" || true' EXIT
+          node e2e/safari/smoke.ts
+          node e2e/safariNativeCookie/verify.ts test-results/safari/observations.json
+      - name: Retain Safari evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: safari-smoke-${{ github.run_attempt }}
+          path: |
+            test-results/safari/*.json
+            test-results/safari/*.txt
+            test-results/safari/*.log
+            test-results/safari/*.xml
+            test-results/safari/*.png
+            .scratch/safari-native-cookie/runs/**/project/**/*.pbxproj
+            .scratch/safari-native-cookie/runs/**/project/**/*.entitlements
+          include-hidden-files: true
+          retention-days: 7

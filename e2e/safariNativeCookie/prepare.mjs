@@ -10,6 +10,7 @@ export function prepareInstrumentedExtension({
   output,
   probe,
   appName,
+  fixturePermissions = false,
 }) {
   fs.cpSync(source, output, { recursive: true })
   fs.copyFileSync(probe, path.join(output, "native-probe.js"))
@@ -17,6 +18,15 @@ export function prepareInstrumentedExtension({
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"))
   assert(manifest.permissions.includes("nativeMessaging"))
   assert(Array.isArray(manifest.background.scripts))
+  if (fixturePermissions) {
+    const permissions = ["cookies", "http://127.0.0.1/*", "http://localhost/*"]
+    manifest.permissions = [
+      ...new Set([...manifest.permissions, ...permissions]),
+    ]
+    manifest.optional_permissions = (
+      manifest.optional_permissions ?? []
+    ).filter((permission) => !permissions.includes(permission))
+  }
   manifest.name = appName
   manifest.background.scripts.push("native-probe.js")
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
@@ -69,6 +79,7 @@ function main() {
     output,
     probe: ".scratch/safari-native-cookie/bundle/native-probe.js",
     appName,
+    fixturePermissions: process.env.AAH_SAFARI_CI_SMOKE === "1",
   })
   const projectRoot = path.join(runRoot, "project")
   run("bash", ["scripts/prepare-safari-native-cookie-experiment.sh"], {

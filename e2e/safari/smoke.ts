@@ -1,0 +1,533 @@
+import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import { pathToFileURL } from "node:url"
+
+import { verifyNativeCookieObservations } from "../safariNativeCookie/verify.ts"
+import {
+  decodeHostedRunnerPassword,
+  unsignedExtensionPasswordDialog,
+} from "./authorization.ts"
+
+/** A failed prerequisite is evidence of failure, never a passing Safari smoke. */
+type Check = { name: string; status: string; error?: string }
+
+export async function runSafariSmoke({
+  platform = process.platform,
+  output = path.resolve("test-results/safari"),
+  command = (file, args) =>
+    execFileSync(
+      file === "osascript" ? process.execPath : file,
+      file === "osascript" ? ["e2e/safari/authorization.ts", ...args] : args,
+      {
+        encoding: "utf8",
+        timeout: file === "osascript" ? 30000 : 600000,
+        maxBuffer: 16 * 1024 * 1024,
+      },
+    ),
+}: {
+  platform?: string
+  output?: string
+  command?: (file: string, args: string[]) => string
+} = {}) {
+  const runStartedAt = Date.now()
+  const isCurrentRunEvent = (event: { recordedAt?: number }) =>
+    typeof event.recordedAt === "number" && event.recordedAt >= runStartedAt
+  fs.mkdirSync(output, { recursive: true })
+  const report: { status: string; checks: Check[] } = {
+    status: "running",
+    checks: [],
+  }
+  const save = () =>
+    fs.writeFileSync(
+      path.join(output, "report.json"),
+      JSON.stringify(report, null, 2),
+    )
+  const check = async (name: string, action: () => unknown) => {
+    const row: Check = { name, status: "running" }
+    console.log(`[Safari] ${name}`)
+    report.checks.push(row)
+    save()
+    try {
+      const result = await action()
+      row.status = "passed"
+      save()
+      return result
+    } catch (error) {
+      row.status = "failed"
+      row.error = error instanceof Error ? error.message : String(error)
+      throw error
+    }
+  }
+  let appName = ""
+  let appPath = ""
+  const driver = path.join(output, "accessibility")
+  const fixtureRoot = "http://localhost:41672/safari1669native"
+  const requestFixture = (args: string[]) =>
+    command("curl", ["-fsS", "--max-time", "10", ...args])
+  const readFixtureObservations = () =>
+    JSON.parse(requestFixture([fixtureRoot + "/status"]))
+  const openSettings = () => command(driver, ["open-settings", "Safari"])
+  const allowUnsigned = () => {
+    try {
+      command(driver, ["enable", "Safari", "Allow unsigned extensions"])
+    } catch (error) {
+      const dialogs = JSON.parse(command(driver, ["dialogs", "Safari"]))
+      if (!unsignedExtensionPasswordDialog(dialogs)) throw error
+      assert(
+        process.env.AAH_SAFARI_CI_PASSWORD,
+        "Missing disposable Safari runner password",
+      )
+      execFileSync(driver, ["authenticate", "Safari"], {
+        input: process.env.AAH_SAFARI_CI_PASSWORD + "\n",
+        timeout: 10000,
+      })
+      command(driver, ["enable", "Safari", "Allow unsigned extensions"])
+    }
+  }
+  const activateAccountManager = () =>
+    command("osascript", [
+      "-e",
+      'tell application "Safari"\nrepeat with browserWindow in windows\nrepeat with browserTab in tabs of browserWindow\nset candidateUrl to get URL of browserTab\nif (candidateUrl starts with "safari-web-extension://") and (candidateUrl contains "/options.html") and (candidateUrl ends with "#account") then\nset current tab of browserWindow to browserTab\nset index of browserWindow to 1\nactivate\nreturn candidateUrl\nend if\nend repeat\nend repeat\nreturn ""\nend tell',
+    ]).trim()
+  try {
+    await check("macOS runtime", () =>
+      assert.equal(platform, "darwin", "Safari E2E requires macOS"),
+    )
+    await check("Accessibility driver build", () =>
+      command("swiftc", [
+        "e2e/safari/accessibility.swift",
+        "-o",
+        path.join(output, "accessibility"),
+      ]),
+    )
+    await check("Accessibility driver input validation", () => {
+      for (const args of [[], ["activate"], ["open-settings"]])
+        assert.throws(
+          () => command(driver, args),
+          (error) =>
+            error instanceof Error &&
+            "status" in error &&
+            error.status === 2 &&
+            "stderr" in error &&
+            String(error.stderr).includes("usage: accessibility"),
+          "Accessibility driver must provide usage for missing arguments",
+        )
+    })
+    await check("Safari UI automation access", () => {
+      const tree = command(driver, ["trusted"])
+      fs.writeFileSync(path.join(output, "safari-accessibility.txt"), tree)
+      assert(
+        /^true(?:,|\s|$)/u.test(tree.trim()),
+        "Accessibility access unavailable for the native driver",
+      )
+      command("open", ["-a", "Safari"])
+      command(driver, ["activate", "Safari"])
+      const windows = command(driver, ["dialogs", "Safari"])
+      fs.writeFileSync(path.join(output, "safari-windows.txt"), windows)
+      fs.writeFileSync(
+        path.join(output, "safari-version.txt"),
+        command("osascript", [
+          "-e",
+          'tell application "Safari" to get version',
+        ]),
+      )
+    })
+    await check("Native extension build", () => {
+      const prepared = command(process.execPath, [
+        "e2e/safariNativeCookie/prepare.mjs",
+      ])
+      fs.writeFileSync(path.join(output, "prepare.log"), prepared)
+      const match = prepared.match(/Prepared independent trial: ([^\r\n]+)/u)
+      assert(match, "Missing independent trial identity")
+      const identity = JSON.parse(
+        fs.readFileSync(path.join(match[1]!, "identity.json"), "utf8"),
+      )
+      appName = identity.appName
+      const project = fs
+        .readdirSync(String(identity.projectRoot), {
+          recursive: true,
+          encoding: "utf8",
+        })
+        .find((file) => file.endsWith(".xcodeproj"))
+      assert(project, "Missing converter project")
+      const projectPath = path.join(identity.projectRoot, project)
+      const listing = command("xcodebuild", [
+        "-list",
+        "-json",
+        "-project",
+        projectPath,
+      ])
+      const schemes = JSON.parse(listing.slice(listing.indexOf("{"))).project
+        .schemes
+      assert(schemes.length === 1, "Unexpected Safari trial schemes")
+      const derived = path.join(output, "DerivedData")
+      const build = command("xcodebuild", [
+        "-project",
+        projectPath,
+        "-scheme",
+        schemes[0],
+        "-configuration",
+        "Release",
+        "-destination",
+        "platform=macOS",
+        "-derivedDataPath",
+        derived,
+        "CODE_SIGN_IDENTITY=-",
+        "CODE_SIGN_STYLE=Manual",
+        "DEVELOPMENT_TEAM=",
+        "build",
+      ])
+      fs.writeFileSync(path.join(output, "xcodebuild.log"), build)
+      const app = path.join(
+        derived,
+        "Build/Products/Release",
+        `${identity.appName}.app`,
+      )
+      appPath = app
+      assert(fs.existsSync(app), "Missing compiled Safari containing app")
+      command("open", [app])
+      fs.writeFileSync(
+        path.join(output, "identity.json"),
+        JSON.stringify(identity, null, 2),
+      )
+    })
+    await check("Safari settings accessibility", () => {
+      openSettings()
+      fs.writeFileSync(
+        path.join(output, "settings-before.json"),
+        command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
+      )
+      command(path.join(output, "accessibility"), [
+        "press",
+        "Safari",
+        "Advanced",
+      ])
+      command(path.join(output, "accessibility"), [
+        "enable",
+        "Safari",
+        "Show features for web developers",
+      ])
+      command(path.join(output, "accessibility"), [
+        "press",
+        "Safari",
+        "Developer",
+      ])
+      const tree = command(path.join(output, "accessibility"), [
+        "dialogs",
+        "Safari",
+      ])
+      fs.writeFileSync(path.join(output, "safari-settings.txt"), tree)
+      command("screencapture", ["-x", path.join(output, "safari-settings.png")])
+    })
+    await check("Trial extension activation", async () => {
+      allowUnsigned()
+      const extension = path.join(
+        appPath,
+        "Contents/PlugIns",
+        `${appName} Extension.appex`,
+      )
+      fs.writeFileSync(
+        path.join(output, "native-bundle.json"),
+        command("plutil", [
+          "-convert",
+          "json",
+          "-o",
+          "-",
+          path.join(extension, "Contents/Info.plist"),
+        ]),
+      )
+      command("pluginkit", ["-a", extension])
+      fs.writeFileSync(
+        path.join(output, "native-registration.txt"),
+        command("pluginkit", [
+          "-mAvvv",
+          "-p",
+          "com.apple.Safari.web-extension",
+        ]),
+      )
+      command(path.join(output, "accessibility"), [
+        "press",
+        "Safari",
+        "Extensions",
+      ])
+      assert(appName, "Missing trial extension name")
+      const statePath = path.join(
+        os.homedir(),
+        "Library/Containers/com.apple.Safari/Data/Library/Safari/WebExtensions/Extensions.plist",
+      )
+      fs.writeFileSync(
+        path.join(output, "extension-state-before.xml"),
+        command("plutil", ["-convert", "xml1", "-o", "-", statePath]),
+      )
+      command("osascript", [
+        "-e",
+        'tell application "Safari" to quit',
+        "-e",
+        'tell application "System Events"\nrepeat 40 times\nif not (exists process "Safari") then return true\ndelay 0.25\nend repeat\nerror "Safari did not quit"\nend tell',
+      ])
+      fs.writeFileSync(
+        path.join(output, "activation-state.json"),
+        command("python3", ["e2e/safari/activation.py", extension]),
+      )
+      command("open", ["-a", "Safari"])
+      openSettings()
+      command(driver, ["press", "Safari", "Developer"])
+      allowUnsigned()
+      command("pluginkit", ["-a", extension])
+      fs.writeFileSync(
+        path.join(output, "native-registration-after.txt"),
+        command("pluginkit", [
+          "-mAvvv",
+          "-p",
+          "com.apple.Safari.web-extension",
+        ]),
+      )
+      command(driver, ["press", "Safari", "Extensions"])
+      fs.writeFileSync(
+        path.join(output, "extension-state-after.xml"),
+        command("plutil", ["-convert", "xml1", "-o", "-", statePath]),
+      )
+      const deadline = Date.now() + 15000
+      for (;;) {
+        try {
+          command(driver, ["extension-enabled", "Safari", appName])
+          break
+        } catch (error) {
+          if (Date.now() >= deadline) throw error
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      fs.writeFileSync(
+        path.join(output, "extension-settings.json"),
+        command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
+      )
+      command("screencapture", [
+        "-x",
+        path.join(output, "extension-settings.png"),
+      ])
+    })
+    await check("Native Cookie evidence", async () => {
+      const deadline = Date.now() + 90000
+      while (Date.now() < deadline) {
+        const data = readFixtureObservations()
+        const start = data.events.findLastIndex(
+          (event: { stage: string; recordedAt?: number }) =>
+            event.stage === "trial-start" && isCurrentRunEvent(event),
+        )
+        const current =
+          start < 0
+            ? []
+            : data.events
+                .slice(start)
+                .filter(
+                  (event: { recordedAt?: number }) =>
+                    event.recordedAt === undefined || isCurrentRunEvent(event),
+                )
+        if (
+          current.some(
+            (event: { stage: string; recordedAt?: number }) =>
+              event.stage === "trial-error" && isCurrentRunEvent(event),
+          )
+        )
+          throw new Error(
+            "Native Cookie trial failed; inspect observations.json",
+          )
+        if (
+          current.some(
+            (event: { stage: string; recordedAt?: number }) =>
+              event.stage === "trial-complete" && isCurrentRunEvent(event),
+          )
+        ) {
+          verifyNativeCookieObservations({ ...data, events: current })
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error(
+        "Native Cookie trial incomplete; inspect observations.json",
+      )
+    })
+    await check("CI UI fixture", async () => {
+      requestFixture([
+        "-X",
+        "POST",
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        JSON.stringify({ command: "ci-ui-fixture" }),
+        fixtureRoot + "/control",
+      ])
+      const deadline = Date.now() + 20000
+      while (Date.now() < deadline) {
+        const data = readFixtureObservations()
+        const start = data.events.findLastIndex(
+          (event: { stage: string; recordedAt?: number }) =>
+            event.stage === "trial-start" && isCurrentRunEvent(event),
+        )
+        assert(start >= 0, "Missing native run before CI UI fixture")
+        const fixture = data.events
+          .slice(start)
+          .findLast(
+            (event: { stage: string; recordedAt?: number }) =>
+              event.stage === "ci-ui-fixture" && isCurrentRunEvent(event),
+          )
+        if (fixture) {
+          assert.equal(
+            fixture.nativeContext,
+            true,
+            "CI UI fixture requires the actual extension",
+          )
+          assert.equal(
+            fixture.cacheFresh,
+            true,
+            "CI UI fixture did not persist",
+          )
+          assert.equal(fixture.items, 0, "CI UI fixture directory is not empty")
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("CI UI fixture incomplete")
+    })
+    await check("Toolbar Popup UI", async () => {
+      command(driver, ["close-window", "Safari", "Extensions"])
+      command(driver, ["activate", "Safari"])
+      command(driver, ["press", "Safari", "All API Hub", "toolbar"])
+      const deadline = Date.now() + 10000
+      while (Date.now() < deadline) {
+        const snapshot = command(driver, ["popover", "Safari"])
+        const panels = JSON.parse(snapshot) as {
+          text: string
+          buttons: string[]
+        }[]
+        if (
+          panels.some(
+            (panel) =>
+              /All API Hub/u.test(panel.text) &&
+              panel.buttons.includes("Account Management") &&
+              panel.buttons.includes("Settings"),
+          )
+        ) {
+          fs.writeFileSync(path.join(output, "popup.json"), snapshot)
+          command("screencapture", ["-x", path.join(output, "popup.png")])
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("Toolbar Popup did not render its management controls")
+    })
+    await check("Popup to Options navigation", async () => {
+      const driver = path.join(output, "accessibility")
+      command(driver, ["press", "Safari", "Account Management", "popover"])
+      const deadline = Date.now() + 20000
+      while (Date.now() < deadline) {
+        const url = activateAccountManager()
+        if (
+          url.startsWith("safari-web-extension://") &&
+          /\/options\.html(?:\?[^#]*)?#account$/u.test(url)
+        ) {
+          fs.writeFileSync(path.join(output, "options-url.txt"), url)
+          fs.writeFileSync(
+            path.join(output, "options-ui.json"),
+            command(driver, ["dialogs", "Safari"]),
+          )
+          command("screencapture", ["-x", path.join(output, "options.png")])
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("Popup did not navigate to the Options account manager")
+    })
+    await check("Options account manager UI", async () => {
+      const driver = path.join(output, "accessibility")
+      const deadline = Date.now() + 20000
+      let welcomeDismissed = false
+      while (Date.now() < deadline) {
+        activateAccountManager()
+        const snapshot = command(driver, ["dialogs", "Safari"])
+        const panels = JSON.parse(snapshot) as {
+          text: string
+          buttons: string[]
+        }[]
+        if (
+          panels.some(
+            (panel) =>
+              panel.text.includes("Welcome to All API Hub") &&
+              panel.buttons.includes("Not now"),
+          )
+        ) {
+          if (!welcomeDismissed) {
+            command(driver, ["press", "Safari", "Not now"])
+            welcomeDismissed = true
+          }
+          await new Promise((resolve) => setTimeout(resolve, 250))
+          continue
+        }
+        if (
+          panels.some(
+            (panel) =>
+              /All API Hub/u.test(panel.text) &&
+              panel.buttons.includes("Add Account"),
+          )
+        ) {
+          fs.writeFileSync(path.join(output, "options-ui.json"), snapshot)
+          command("screencapture", ["-x", path.join(output, "options.png")])
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("Options account manager did not render")
+    })
+    report.status = "passed"
+    return report
+  } catch (error) {
+    report.status = "failed"
+    if (platform === "darwin") {
+      try {
+        fs.writeFileSync(
+          path.join(output, "failure-ui.json"),
+          command(path.join(output, "accessibility"), ["dialogs"]),
+        )
+        command("screencapture", ["-x", path.join(output, "failure.png")])
+      } catch {
+        // Preserve the original failed check when screenshot capture also fails.
+      }
+    }
+    throw error
+  } finally {
+    save()
+  }
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  assert(
+    process.env.GITHUB_ACTIONS === "true",
+    "Safari smoke operates only on disposable GitHub CI runners",
+  )
+  assert(
+    process.platform === "darwin" &&
+      process.env.RUNNER_ENVIRONMENT === "github-hosted",
+    "Safari smoke requires a disposable GitHub-hosted Mac",
+  )
+  let password: string
+  try {
+    password = decodeHostedRunnerPassword(
+      execFileSync("sudo", ["cat", "/etc/kcpassword"], {
+        stdio: ["ignore", "pipe", "ignore"],
+      }),
+    )
+  } catch {
+    throw new Error(
+      "Hosted runner's local auto-login credential is unavailable",
+    )
+  }
+  console.log(`::add-mask::${password}`)
+  process.env.AAH_SAFARI_CI_PASSWORD = password
+  await runSafariSmoke()
+}
