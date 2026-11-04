@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { applyModelMappingToChannel } from "~/services/models/modelRedirect/mappingMutation"
@@ -118,7 +118,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
   const mockedUserPreferences = userPreferences as unknown as {
-    getPreferences: ReturnType<typeof vi.fn>
+    getPreferences: Mock
   }
 
   beforeEach(() => {

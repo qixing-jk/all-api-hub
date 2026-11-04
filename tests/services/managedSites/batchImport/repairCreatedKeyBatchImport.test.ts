@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -160,9 +160,7 @@ const createProgress = (
   ],
 })
 
-const createSession = (
-  resolve: ReturnType<typeof vi.fn>,
-): AccountKeyResourceSession => ({
+const createSession = (resolve: Mock): AccountKeyResourceSession => ({
   runtimeKey: { resolve },
   resolveDefaultScope: vi.fn(),
   listScopes: vi.fn(),

@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -281,8 +281,8 @@ describe("useAccountDialog save and auto-config flows", () => {
   })
 
   const renderAddHook = (options?: {
-    onPostSaveAccountRefresh?: ReturnType<typeof vi.fn>
-    onSuccess?: ReturnType<typeof vi.fn>
+    onPostSaveAccountRefresh?: Mock
+    onSuccess?: Mock
   }) =>
     renderHook(() =>
       useAccountDialog({
@@ -334,10 +334,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       autoProvisionKeyOnAccountAddMode: mode,
     })
 
-  const renderEditHook = (options?: {
-    account?: any
-    onSuccess?: ReturnType<typeof vi.fn>
-  }) => {
+  const renderEditHook = (options?: { account?: any; onSuccess?: Mock }) => {
     const accountValue =
       options?.account ??
       ({

@@ -212,7 +212,7 @@ describe("DoneHub advanced editor interactions", () => {
       enManaged.editor.doneHub.proxy.invalid,
     )
     await user.clear(proxy)
-    await user.type(proxy, "socks5://proxy.example:1080")
+    await user.paste("socks5://proxy.example:1080")
     const headers = screen.getByRole("group", {
       name: "Custom request headers",
     })
@@ -250,14 +250,21 @@ describe("DoneHub advanced editor interactions", () => {
     expect(
       screen.getByRole("switch", { name: "Forward extra body fields" }),
     ).toBeChecked()
+  })
+
+  it("keeps API compatibility enabled while opening routing fields", async () => {
+    const user = userEvent.setup()
+    renderEditor()
     await user.click(screen.getByRole("button", { name: "API compatibility" }))
     await user.click(
       screen.getByRole("switch", { name: "Responses API compatibility" }),
     )
-    await user.type(
-      screen.getByRole("textbox", { name: "Responses request path" }),
-      "/custom/responses",
-    )
+    const responsePath = screen.getByRole("textbox", {
+      name: "Responses request path",
+    })
+    await user.click(responsePath)
+    await user.paste("/custom/responses")
+    expect(responsePath).toHaveValue("/custom/responses")
     expect(
       screen.getByRole("switch", { name: "Responses API compatibility" }),
     ).toBeChecked()
