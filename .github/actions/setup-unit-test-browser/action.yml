@@ -1,5 +1,11 @@
-name: Set up the unit test browser
-description: Restore Chromium and verify the host libraries used by browser-backed unit tests.
+name: Set up Chromium
+description: Restore Chromium and verify the host libraries used by the selected browser.
+
+inputs:
+  channel:
+    description: Use chromium for extension E2E; empty selects the unit tests' headless shell.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -21,16 +27,18 @@ runs:
 
     - name: Install Chromium for browser-backed unit tests
       # Keep headed Chromium for E2E consumers of the same cache. Install host
-      # libraries only when a real headless launch reports missing dependencies.
+      # libraries only when the selected browser reports missing dependencies.
       shell: bash
+      env:
+        PLAYWRIGHT_CHROMIUM_CHANNEL: ${{ inputs.channel }}
       run: |
         pnpm exec playwright install chromium
         probe_browser() {
-          pnpm exec node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true, timeout: 15000 }); await browser.close();'
+          pnpm exec node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true, timeout: 15000, ...(process.env.PLAYWRIGHT_CHROMIUM_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHROMIUM_CHANNEL } : {}) }); await browser.close();'
         }
         probe_log="${RUNNER_TEMP}/unit-chromium-probe.log"
         if probe_browser > "$probe_log" 2>&1; then
-          echo "Chromium headless shell starts with existing host libraries."
+          echo "Chromium (${PLAYWRIGHT_CHROMIUM_CHANNEL:-headless shell}) starts with existing host libraries."
           exit 0
         fi
         cat "$probe_log"

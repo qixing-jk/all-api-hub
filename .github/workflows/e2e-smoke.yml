@@ -26,6 +26,7 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
       - ".github/workflows/e2e-build.yml"
+      - ".github/actions/setup-unit-test-browser/**"
       - "scripts/e2e-ci-build-cache.mjs"
       - "scripts/mobile/adapters.*"
       - "scripts/mobile/protocol.*"
@@ -51,6 +52,7 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
       - ".github/workflows/e2e-build.yml"
+      - ".github/actions/setup-unit-test-browser/**"
       - "scripts/e2e-ci-build-cache.mjs"
       - "scripts/mobile/adapters.*"
       - "scripts/mobile/protocol.*"
@@ -202,21 +204,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Get Playwright version
-        id: playwright_version
-        run: |
-          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log('version=' + (pkg.devDependencies?.['@playwright/test'] ?? 'unknown'))" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
+      - name: Prepare E2E Chromium
+        uses: ./.github/actions/setup-unit-test-browser
         with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright_version.outputs.version }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+          channel: chromium
 
       - name: Restore E2E spec durations
         # Published by the previous run's e2e-durations job. A miss only means this

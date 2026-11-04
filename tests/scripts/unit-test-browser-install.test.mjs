@@ -39,30 +39,35 @@ case "$1 $2 $3" in
     touch "$BROWSER_TEST_DIRECTORY/apt-installed"
     ;;
   "exec node --input-type=module")
-    echo probe >> "$BROWSER_TEST_DIRECTORY/probes"
-    if [ "$BROWSER_TEST_SCENARIO" = browser-crashed ]; then
-      echo 'Browser process crashed unexpectedly' >&2
-      exit 1
-    fi
-    if [ "$BROWSER_TEST_SCENARIO" != ready ] && [ ! -f "$BROWSER_TEST_DIRECTORY/apt-installed" ]; then
-      if [ "$BROWSER_TEST_SCENARIO" = loader-missing ]; then
-        echo 'chrome-headless-shell: error while loading shared libraries: libexample.so: cannot open shared object file' >&2
-      else
-        echo 'Host system is missing dependencies to run browsers.' >&2
-      fi
-      exit 1
-    fi
-    if [ "$BROWSER_TEST_SCENARIO" = still-broken ]; then
-      echo 'Browser process crashed after installing libraries' >&2
-      exit 1
-    fi
-    touch "$BROWSER_TEST_DIRECTORY/browser-started"
+    shift 2
+    "$BROWSER_TEST_NODE" "$@"
     ;;
   *) echo "Unexpected external command: $*" >&2; exit 2 ;;
 esac
 `
 
-function install(context, scenario) {
+const playwright = `import { appendFileSync, existsSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
+const directory = process.env.BROWSER_TEST_NODE_DIRECTORY
+export const chromium = {
+  async launch(options) {
+    appendFileSync(join(directory, "probes"), JSON.stringify(options.channel ?? null) + "\\n")
+    const scenario = process.env.BROWSER_TEST_SCENARIO
+    if (scenario === "browser-crashed") throw new Error("Browser process crashed unexpectedly")
+    const missing = scenario === "full-chromium-missing" ? options.channel === "chromium" : scenario !== "ready"
+    if (missing && !existsSync(join(directory, "apt-installed"))) {
+      throw new Error(scenario === "loader-missing"
+        ? "chrome-headless-shell: error while loading shared libraries: libexample.so: cannot open shared object file"
+        : "Host system is missing dependencies to run browsers.")
+    }
+    if (scenario === "still-broken") throw new Error("Browser process crashed after installing libraries")
+    writeFileSync(join(directory, "browser-started"), "")
+    return { async close() {} }
+  },
+}
+`
+
+function install(context, scenario, channel = "") {
   const directory = mkdtempSync(join(tmpdir(), "unit-browser-install-"))
   context.after(() => {
     assert.ok(directory.startsWith(join(tmpdir(), "unit-browser-install-")))
@@ -71,6 +76,13 @@ function install(context, scenario) {
   const bin = join(directory, "bin")
   mkdirSync(bin)
   writeFileSync(join(bin, "pnpm"), pnpm, { mode: 0o755 })
+  const module = join(directory, "node_modules", "@playwright", "test")
+  mkdirSync(module, { recursive: true })
+  writeFileSync(
+    join(module, "package.json"),
+    JSON.stringify({ type: "module", exports: "./index.js" }),
+  )
+  writeFileSync(join(module, "index.js"), playwright)
   const setup =
     process.platform === "win32"
       ? 'export BROWSER_TEST_BIN="$(cygpath -u "$BROWSER_TEST_BIN")"\nexport BROWSER_TEST_DIRECTORY="$(cygpath -u "$BROWSER_TEST_DIRECTORY")"\nexport RUNNER_TEMP="$(cygpath -u "$RUNNER_TEMP")"\n'
@@ -93,7 +105,10 @@ function install(context, scenario) {
         BROWSER_TEST_BIN: bin.replaceAll("\\", "/"),
         RUNNER_TEMP: directory.replaceAll("\\", "/"),
         BROWSER_TEST_DIRECTORY: directory.replaceAll("\\", "/"),
+        BROWSER_TEST_NODE_DIRECTORY: directory.replaceAll("\\", "/"),
+        BROWSER_TEST_NODE: process.execPath.replaceAll("\\", "/"),
         BROWSER_TEST_SCENARIO: scenario,
+        PLAYWRIGHT_CHROMIUM_CHANNEL: channel,
       },
     },
   )
@@ -106,6 +121,9 @@ function install(context, scenario) {
     probes: existsSync(probes)
       ? readFileSync(probes, "utf8").trim().split("\n").length
       : 0,
+    channels: existsSync(probes)
+      ? readFileSync(probes, "utf8").trim().split("\n").map(JSON.parse)
+      : [],
   }
 }
 
@@ -115,6 +133,21 @@ test("a working headless browser avoids installing system packages", (context) =
   assert.equal(result.started, true)
   assert.equal(result.installedDeps, false)
   assert.equal(result.probes, 1)
+  assert.deepEqual(result.channels, [null])
+})
+
+test("E2E preparation probes the full Chromium channel used by extension fixtures", (context) => {
+  const result = install(context, "ready", "chromium")
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.deepEqual(result.channels, ["chromium"])
+  assert.equal(result.installedDeps, false)
+})
+
+test("missing full Chromium libraries are repaired even when the headless shell works", (context) => {
+  const result = install(context, "full-chromium-missing", "chromium")
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.equal(result.installedDeps, true)
+  assert.deepEqual(result.channels, ["chromium", "chromium"])
 })
 
 test("the shared E2E browser cache also retains headed Chromium", (context) => {
