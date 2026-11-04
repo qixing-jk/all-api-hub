@@ -42,10 +42,81 @@ func installedExtensionCheckbox(_ elements: [AXUIElement], _ name: String) -> AX
     }
     return nil
 }
-let args = CommandLine.arguments
-guard args.count > 1 else {
+func waitUntil(_ timeout: TimeInterval, _ condition: () -> Bool) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+        if condition() { return true }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+    } while Date() < deadline
+    return false
+}
+func activateApplication(_ name: String) -> AXUIElement? {
+    var application: NSRunningApplication?
+    guard waitUntil(10, {
+        application = NSWorkspace.shared.runningApplications.first { $0.localizedName == name }
+        return application != nil
+    }), let app = application else { return nil }
+    _ = app.activate(options: [.activateIgnoringOtherApps])
+    guard waitUntil(5, { NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier }) else { return nil }
+    return AXUIElementCreateApplication(app.processIdentifier)
+}
+func settingsWindow(_ root: AXUIElement) -> AXUIElement? {
+    ((attribute(root, "AXWindows") as? [AXUIElement]) ?? []).first { window in
+        descendants(window).contains { element in
+            guard (attribute(element, "AXRole") as? String) == "AXToolbar" else { return false }
+            let buttons = descendants(element).filter { (attribute($0, "AXRole") as? String) == "AXButton" }
+            return ["General", "Extensions", "Advanced"].allSatisfy { title in
+                buttons.contains { (attribute($0, "AXTitle") as? String) == title || (attribute($0, "AXDescription") as? String) == title }
+            }
+        }
+    }
+}
+func openSettings(_ root: AXUIElement, _ name: String) -> Bool {
+    if let window = settingsWindow(root) {
+        guard AXUIElementPerformAction(window, "AXRaise" as CFString) == .success else { return false }
+    } else {
+        var applicationMenu: AXUIElement?
+        guard waitUntil(10, {
+            guard let menuBar = attribute(root, "AXMenuBar") as! AXUIElement? else { return false }
+            applicationMenu = descendants(menuBar).first {
+                (attribute($0, "AXRole") as? String) == "AXMenuBarItem" && (attribute($0, "AXTitle") as? String) == name
+            }
+            return applicationMenu != nil
+        }), let menu = applicationMenu, AXUIElementPerformAction(menu, "AXPress" as CFString) == .success else { return false }
+        var settingsItem: AXUIElement?
+        guard waitUntil(5, {
+            settingsItem = descendants(menu).first {
+                (attribute($0, "AXRole") as? String) == "AXMenuItem" && (attribute($0, "AXTitle") as? String) == "Settings…"
+            }
+            return settingsItem != nil
+        }), let item = settingsItem, AXUIElementPerformAction(item, "AXPress" as CFString) == .success else { return false }
+    }
+    return waitUntil(10) {
+        guard let window = settingsWindow(root), let focused = attribute(root, "AXFocusedWindow") else { return false }
+        return CFEqual(window, focused)
+    }
+}
+func usage() -> Never {
     FileHandle.standardError.write(Data("usage: accessibility <mode> [args...]\n".utf8))
     exit(2)
+}
+let args = CommandLine.arguments
+guard args.count > 1 else { usage() }
+if args[1] == "trusted" {
+    print(AXIsProcessTrusted() ? "true" : "false")
+    exit(0)
+}
+if ["activate", "open-settings"].contains(args[1]) {
+    guard args.count > 2 else { usage() }
+    guard AXIsProcessTrusted(), let root = activateApplication(args[2]) else {
+        FileHandle.standardError.write(Data("Accessibility access or application activation unavailable\n".utf8))
+        exit(1)
+    }
+    if args[1] == "open-settings" && !openSettings(root, args[2]) {
+        FileHandle.standardError.write(Data("Safari settings window unavailable or not focused\n".utf8))
+        exit(1)
+    }
+    exit(0)
 }
 var dialogs: [[String: Any]] = []
 var pressed = false

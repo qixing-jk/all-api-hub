@@ -66,13 +66,7 @@ export async function runSafariSmoke({
     command("curl", ["-fsS", "--max-time", "10", ...args])
   const readFixtureObservations = () =>
     JSON.parse(requestFixture([fixtureRoot + "/status"]))
-  const openSettings = () =>
-    command("osascript", [
-      "-e",
-      'tell application "Safari" to activate',
-      "-e",
-      'tell application "System Events" to tell process "Safari"\nset frontmost to true\nclick menu item "Settings…" of menu "Safari" of menu bar 1\nrepeat 40 times\nif (exists window "General") or (exists window "Extensions") or (exists window "Developer") then return true\ndelay 0.25\nend repeat\nerror "Safari settings window unavailable"\nend tell',
-    ])
+  const openSettings = () => command(driver, ["open-settings", "Safari"])
   const allowUnsigned = () => {
     try {
       command(driver, ["enable", "Safari", "Allow unsigned extensions"])
@@ -107,34 +101,28 @@ export async function runSafariSmoke({
       ]),
     )
     await check("Accessibility driver input validation", () => {
-      assert.throws(
-        () => command(driver, []),
-        (error) =>
-          error instanceof Error &&
-          "status" in error &&
-          error.status === 2 &&
-          "stderr" in error &&
-          String(error.stderr).includes("usage: accessibility"),
-        "Accessibility driver must provide usage for a missing mode",
-      )
+      for (const args of [[], ["activate"], ["open-settings"]])
+        assert.throws(
+          () => command(driver, args),
+          (error) =>
+            error instanceof Error &&
+            "status" in error &&
+            error.status === 2 &&
+            "stderr" in error &&
+            String(error.stderr).includes("usage: accessibility"),
+          "Accessibility driver must provide usage for missing arguments",
+        )
     })
     await check("Safari UI automation access", () => {
-      command("open", ["-a", "Safari"])
-      const tree = command("osascript", [
-        "-e",
-        'tell application "Safari" to activate',
-        "-e",
-        'tell application "System Events" to get UI elements enabled',
-      ])
+      const tree = command(driver, ["trusted"])
       fs.writeFileSync(path.join(output, "safari-accessibility.txt"), tree)
       assert(
         /^true(?:,|\s|$)/u.test(tree.trim()),
-        "Accessibility access unavailable",
+        "Accessibility access unavailable for the native driver",
       )
-      const windows = command("osascript", [
-        "-e",
-        'tell application "System Events" to tell process "Safari" to get name of every window',
-      ])
+      command("open", ["-a", "Safari"])
+      command(driver, ["activate", "Safari"])
+      const windows = command(driver, ["dialogs", "Safari"])
       fs.writeFileSync(path.join(output, "safari-windows.txt"), windows)
       fs.writeFileSync(
         path.join(output, "safari-version.txt"),
@@ -390,12 +378,7 @@ export async function runSafariSmoke({
     })
     await check("Toolbar Popup UI", async () => {
       command(driver, ["close-window", "Safari", "Extensions"])
-      command("osascript", [
-        "-e",
-        'tell application "Safari" to activate',
-        "-e",
-        'tell application "System Events" to tell process "Safari" to set frontmost to true',
-      ])
+      command(driver, ["activate", "Safari"])
       command(driver, ["press", "Safari", "All API Hub", "toolbar"])
       const deadline = Date.now() + 10000
       while (Date.now() < deadline) {

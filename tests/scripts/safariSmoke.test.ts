@@ -21,7 +21,11 @@ afterEach(() => {
 const withUsableDriver =
   (command: (file: string, args: string[]) => string) =>
   (file: string, args: string[]) => {
-    if (file.endsWith("accessibility") && args.length === 0)
+    if (
+      file.endsWith("accessibility") &&
+      (args.length === 0 ||
+        (args.length === 1 && ["activate", "open-settings"].includes(args[0]!)))
+    )
       throw Object.assign(new Error("Missing driver mode"), {
         status: 2,
         stderr: "usage: accessibility <mode> [args...]\n",
@@ -29,27 +33,35 @@ const withUsableDriver =
     return command(file, args)
   }
 
-it.each([0, 132, 2])(
-  "rejects a driver that does not provide usage for a missing mode (exit %s)",
-  async (status) => {
+it.each(
+  [[], ["activate"], ["open-settings"]].flatMap((args) =>
+    [0, 132, 2].map((status) => ({ args, status })),
+  ),
+)(
+  "rejects a driver that does not provide usage for missing arguments (%j)",
+  async ({ args: invalidArgs, status }) => {
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+    const validDriver = withUsableDriver(() => "true")
     await expect(
       runSafariSmoke({
         platform: "darwin",
         output,
         command: (file, args) => {
-          if (file.endsWith("accessibility") && args.length === 0) {
+          if (
+            file.endsWith("accessibility") &&
+            JSON.stringify(args) === JSON.stringify(invalidArgs)
+          ) {
             if (status === 0) return ""
             throw Object.assign(new Error("Invalid driver invocation"), {
               status,
               stderr: "Unexpected driver failure",
             })
           }
-          return "true"
+          return validDriver(file, args)
         },
       }),
     ).rejects.toThrow(
-      "Accessibility driver must provide usage for a missing mode",
+      "Accessibility driver must provide usage for missing arguments",
     )
   },
 )
@@ -73,6 +85,36 @@ it("records unavailable Safari as a failed check without running platform comman
   ).toMatchObject({
     status: "failed",
     checks: [{ name: "macOS runtime", status: "failed" }],
+  })
+})
+
+it("rejects an untrusted native driver even when System Events reports UI automation enabled", async () => {
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  const calls: string[] = []
+  await expect(
+    runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: withUsableDriver((file, args) => {
+        calls.push(file)
+        if (file.endsWith("accessibility") && args[0] === "trusted")
+          return "false"
+        return "true"
+      }),
+    }),
+  ).rejects.toThrow("Accessibility access unavailable for the native driver")
+  expect(calls).not.toContain(process.execPath)
+  expect(
+    JSON.parse(readFileSync(path.join(output, "report.json"), "utf8")),
+  ).toMatchObject({
+    status: "failed",
+    checks: expect.arrayContaining([
+      {
+        name: "Safari UI automation access",
+        status: "failed",
+        error: expect.any(String),
+      },
+    ]),
   })
 })
 
@@ -212,11 +254,23 @@ it.each(
       reportBeingWritten: false,
       fixtureReplyMissing: true,
     },
+    {
+      popupAvailable: true,
+      navigationAvailable: true,
+      optionsRendered: true,
+      shutdownAvailable: true,
+      activationPendingChecks: 0,
+      uiSetupPending: false,
+      fixtureReady: true,
+      reportBeingWritten: false,
+      systemEventsUiDenied: true,
+    },
   ].map((scenario) => ({
     emptyFrontWindow: false,
     stalledStatus: false,
     stalledControl: false,
     fixtureReplyMissing: false,
+    systemEventsUiDenied: false,
     ...scenario,
   })),
 )(
@@ -234,6 +288,7 @@ it.each(
     stalledStatus,
     stalledControl,
     fixtureReplyMissing,
+    systemEventsUiDenied,
   }) => {
     if (
       !optionsRendered ||
@@ -279,6 +334,15 @@ it.each(
       platform: "darwin",
       output,
       command: withUsableDriver((file, args) => {
+        if (
+          systemEventsUiDenied &&
+          file === "osascript" &&
+          args.join(" ").includes('application "System Events"') &&
+          /set frontmost|click menu item/u.test(args.join(" "))
+        )
+          throw new Error("osascript is not allowed assistive access. (-25211)")
+        if (file.endsWith("accessibility") && args[0] === "open-settings")
+          settingsOpen = true
         if (file === "curl" && args.at(-1)?.endsWith("/status")) {
           if (stalledStatus) {
             const timeoutIndex = args.indexOf("--max-time")
