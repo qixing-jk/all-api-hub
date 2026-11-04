@@ -13,6 +13,12 @@ For acceptance, default to exercising all applicable actions and state branches 
 
 Apply this to every UI acceptance task, including settings, permissions, popup/sidepanel, imports/exports, models, account/key workflows and Android CDP/RDP, not only new site integrations. Use the [shared execution and reporting contract](../../../CONTRIBUTING.md#reusable-cdp-ui-checks) for maintained runners: derive `all` from registered suites, reject unknown selections, retain skipped/blocked/unselected coverage and both execution/cleanup errors, and preserve each run's report. A successful focused run proves only its asserted scope; neither all registered suites nor a successful device connection establishes complete product acceptance. Do not expand read-only or explicit-write modes to satisfy coverage.
 
+## Changes to shared interactive controls
+
+Before replacing, relocating, or simplifying an existing action, record its request/selection effects and enabled state in each reachable state. Exercise the original action after failure and after successful recovery; a status message or replacement button does not establish that the original control still works. Preserve current selections and known options where the workflow permits retries, and distinguish failed requests, successful empty results, and searches with no matches.
+
+When a user requests complete before/after evidence, capture a matched state matrix from verified earlier and final source builds using the same fixture, viewport, locale, theme and interaction state. Include closed and open controls, surrounding actions and readable local crops; include loading with existing data, empty, success, failure, detailed diagnostics, search with no matches and manual selection when applicable. Pair every applicable row in one gallery, assert recovery behavior separately from screenshot generation, and identify unavailable baselines or cases explicitly. Do not substitute a representative screenshot for the requested matrix or infer disabled/enabled behavior from appearance. See [task acceptance](../../../docs/agents/task-acceptance.md).
+
 ## Choose the runtime
 
 - **Android phone/tablet, including Firefox, Edge, or Lemur (狐猴):** read [mobile debugging and hot updates](references/mobile-debugging.md). Use the unified `scripts/mobile-browser.mjs` entrypoint for discovery, diagnostics, and development sessions. Diagnose the installed release when that is the user's goal; do not replace it with a dev build merely to obtain execution access.

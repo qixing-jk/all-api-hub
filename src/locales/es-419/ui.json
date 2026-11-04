@@ -29,8 +29,7 @@
       "description": "Enviar esta configuración de proveedor directamente a AI Toolbox mediante deep link",
       "descriptions": {
         "apiFormat": "AI Toolbox reconstruye el proveedor para la app destino. Elige un protocolo solo cuando este proveedor no use el predeterminado de la app.",
-        "model": "Cuando están disponibles, los modelos se cargan desde /v1/models para seleccionarlos. También puedes escribir un id de modelo personalizado.",
-        "modelDiscoveryFailed": "No se pudo cargar la lista de modelos del proveedor. Ingresa un id de modelo manualmente o reintenta."
+        "model": "Cuando están disponibles, los modelos se cargan desde /v1/models para seleccionarlos. También puedes escribir un id de modelo personalizado."
       },
       "fields": {
         "apiFormat": "Protocolo de API",
@@ -652,6 +651,14 @@
   },
   "searchableSelect": {
     "empty": "No se encontraron resultados",
+    "fetchDetails": "Detalles del error",
+    "fetchEmpty": "La solicitud se completó, pero no devolvió modelos.",
+    "fetchEmptyLabel": "Lista vacía",
+    "fetchFailed": "No se pudo obtener la lista.",
+    "fetchSuccess_one": "Se obtuvo {{count}} modelo.",
+    "fetchSuccess_many": "Se obtuvieron {{count}} modelos.",
+    "fetchSuccess_other": "Se obtuvieron {{count}} modelos.",
+    "manualInputHint": "Puedes ingresar un ID de modelo directamente.",
     "noOptions": "No hay opciones disponibles",
     "noOptionsAllowCustom": "No hay opciones disponibles. Escribe para crear una",
     "searchPlaceholder": "Buscar...",

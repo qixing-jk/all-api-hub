@@ -29,8 +29,7 @@
       "description": "このプロバイダー設定をディープリンク経由で AI Toolbox に直接送信します",
       "descriptions": {
         "apiFormat": "AI Toolbox は対象アプリ向けにプロバイダーを再構築します。このプロバイダーがアプリの既定プロトコルを使用しない場合のみ指定してください。",
-        "model": "利用可能な場合、/v1/models からモデルを読み込んで選択できます。カスタムモデル ID を直接入力することも可能です。",
-        "modelDiscoveryFailed": "上流のモデル一覧を取得できませんでした。モデル ID を手動で入力するか、再試行してください。"
+        "model": "利用可能な場合、/v1/models からモデルを読み込んで選択できます。カスタムモデル ID を直接入力することも可能です。"
       },
       "fields": {
         "apiFormat": "API プロトコル",
@@ -630,6 +629,12 @@
   },
   "searchableSelect": {
     "empty": "結果が見つかりません",
+    "fetchDetails": "エラー詳細",
+    "fetchEmpty": "リクエストは成功しましたが、モデル一覧は空でした。",
+    "fetchEmptyLabel": "一覧が空です",
+    "fetchFailed": "一覧の取得に失敗しました。",
+    "fetchSuccess_other": "{{count}} 個のモデルを取得しました。",
+    "manualInputHint": "モデル ID を直接入力できます。",
     "noOptions": "利用可能なオプションがありません",
     "noOptionsAllowCustom": "利用可能なオプションがありません。入力して作成してください",
     "searchPlaceholder": "検索...",

@@ -29,8 +29,7 @@
       "description": "Send this provider configuration directly to AI Toolbox via deep link",
       "descriptions": {
         "apiFormat": "AI Toolbox rebuilds the provider for the target app. Choose a protocol only when this provider does not use the app's default.",
-        "model": "When available, models are loaded from /v1/models for selection. You can also type a custom model id.",
-        "modelDiscoveryFailed": "Could not load the upstream model list. Enter a model id manually or retry."
+        "model": "When available, models are loaded from /v1/models for selection. You can also type a custom model id."
       },
       "fields": {
         "apiFormat": "API protocol",
@@ -638,6 +637,13 @@
   },
   "searchableSelect": {
     "empty": "No results found",
+    "fetchDetails": "Error details",
+    "fetchEmpty": "The request succeeded but returned no models.",
+    "fetchEmptyLabel": "Empty list",
+    "fetchFailed": "Failed to fetch the list.",
+    "fetchSuccess_one": "Fetched {{count}} model.",
+    "fetchSuccess_other": "Fetched {{count}} models.",
+    "manualInputHint": "You can enter a model ID directly.",
     "noOptions": "No options available",
     "noOptionsAllowCustom": "No options available. Type to create one",
     "searchPlaceholder": "Search...",

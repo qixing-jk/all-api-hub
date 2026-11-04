@@ -35,6 +35,9 @@ export function useProfileModelDiscovery({
 }) {
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
   const [modelOptions, setModelOptions] = useState<string[]>([])
+  const [fetchedModelCount, setFetchedModelCount] = useState<number | null>(
+    null,
+  )
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
     string | null
@@ -55,6 +58,7 @@ export function useProfileModelDiscovery({
       const abortController = new AbortController()
       fetchModelsAbortControllerRef.current = abortController
       setFetchModelsDiagnostic(null)
+      setFetchedModelCount(null)
       setIsFetchingModels(true)
 
       try {
@@ -71,6 +75,7 @@ export function useProfileModelDiscovery({
         if (fetchModelsRequestIdRef.current !== requestId) return
 
         setModelOptions(normalized)
+        setFetchedModelCount(normalized.length)
         const suggestedModelId = pickDefaultVerificationModelId(normalized)
         if (suggestedModelId) {
           setModelId((current) => {
@@ -130,6 +135,7 @@ export function useProfileModelDiscovery({
   const resetModelDiscovery = useCallback(() => {
     setModelOptions([])
     setFetchModelsDiagnostic(null)
+    setFetchedModelCount(null)
   }, [])
   return {
     modelOptions,
@@ -137,6 +143,7 @@ export function useProfileModelDiscovery({
     isFetchingModels,
     setFetchModelsDiagnostic,
     fetchModelsError,
+    fetchedModelCount,
     fetchModels,
     cancelModelDiscovery,
     resetModelDiscovery,

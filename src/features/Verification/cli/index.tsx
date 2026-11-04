@@ -9,6 +9,7 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { getSelectFetchResult } from "~/components/ui/SelectFetchFeedback"
 import {
   VerificationConfigSection,
   VerificationDialogHeader,
@@ -52,6 +53,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     setSelectedRuntimeKeyId,
     isLoadingModels,
     fetchModelsError,
+    fetchedModelCount,
+    loadProfileModels,
     tools,
     hasRunnableSource,
     modelOptions,
@@ -172,14 +175,15 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                       onChange={setModelId}
                       placeholder={t("verifyDialog.modelPickerPlaceholder")}
                       loading={isLoadingModels}
+                      onRetryFetch={() => void loadProfileModels()}
+                      retryFetchDisabled={isRunning}
+                      fetchResult={getSelectFetchResult(
+                        fetchModelsError,
+                        fetchedModelCount,
+                      )}
                       allowCustomValue
                       disabled={isRunning}
                     />
-                    {fetchModelsError ? (
-                      <div className="text-destructive-text text-xs">
-                        {fetchModelsError}
-                      </div>
-                    ) : null}
                   </>
                 ) : (
                   <>
