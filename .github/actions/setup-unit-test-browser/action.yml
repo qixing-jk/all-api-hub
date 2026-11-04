@@ -34,7 +34,8 @@ runs:
       run: |
         pnpm exec playwright install chromium
         probe_browser() {
-          pnpm exec node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true, timeout: 15000, ...(process.env.PLAYWRIGHT_CHROMIUM_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHROMIUM_CHANNEL } : {}) }); await browser.close();'
+          # Match the normal Playwright launch budget used by extension fixtures.
+          pnpm exec node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHROMIUM_CHANNEL } : {}) }); await browser.close();'
         }
         probe_log="${RUNNER_TEMP}/unit-chromium-probe.log"
         if probe_browser > "$probe_log" 2>&1; then

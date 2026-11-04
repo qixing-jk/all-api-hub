@@ -98,6 +98,7 @@ function inputHash() {
     "plugins",
     "vitest.config.ts",
     "vitest.shardSequencer.ts",
+    "tsconfig.json",
     "package.json",
     "pnpm-lock.yaml",
   )

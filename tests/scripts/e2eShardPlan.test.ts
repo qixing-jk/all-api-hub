@@ -204,6 +204,20 @@ it("keeps the run's shard assignments when newly published timings change", asyn
   const publish = build
     .split("- name: Upload E2E shard duration profile")[1]
     ?.split("- name:")[0]
+  const restoreProfile = build
+    .split("- name: Restore E2E shard duration profile")[1]
+    ?.split("- name:")[0]
+  expect(restoreProfile).toBeDefined()
+  const cachePath = restoreProfile?.match(/\n\s+path: (\S+)/)?.[1]
+  expect(cachePath).toBe(".e2e-durations")
+  expect(publish).toContain(`path: ${cachePath}/spec-durations.json`)
+  expect(restore).toContain(`path: ${cachePath}`)
+  const restoreKey = restoreProfile?.match(/\n\s+key: ([^\r\n]+)/)?.[1]
+  const save = smokeWorkflow.split("- name: Save spec durations")[1]
+  expect(restoreKey).toBe(save?.match(/\n\s+key: ([^\r\n]+)/)?.[1])
+  const prefix = restoreProfile?.match(/restore-keys:\s*\|\s*(\S+)/)?.[1]
+  expect(prefix).toBeDefined()
+  expect(restoreKey?.startsWith(prefix ?? "")).toBe(true)
   const artifactName = publish?.match(/\n\s+name: (\S+)/)?.[1]
   expect(artifactName).toBeDefined()
   expect(restore).toContain(`name: ${artifactName}`)

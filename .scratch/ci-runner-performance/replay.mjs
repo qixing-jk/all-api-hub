@@ -6,6 +6,7 @@
  */
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
+import { randomUUID } from "node:crypto"
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -57,6 +58,10 @@ function readUnitRun(directory) {
     assert.ok(
       Array.isArray(blob[1]),
       "Expected Vitest [version, files, ...] report",
+    )
+    assert.ok(
+      Array.isArray(blob[2]) && blob[2].length === 0,
+      "Reject worker errors: " + reportPath,
     )
     for (const file of blob[1]) {
       files.push({
@@ -237,7 +242,10 @@ function e2eCases(report) {
 const e2eCaseWork = (report) =>
   e2eCases(report).reduce((total, test) => total + test.duration, 0)
 
-const manifestPath = path.join(path.dirname(outputPath), "e2e-manifest.json")
+const manifestPath = path.join(
+  path.dirname(outputPath),
+  `e2e-manifest-${randomUUID()}.json`,
+)
 execFileSync(
   process.execPath,
   [

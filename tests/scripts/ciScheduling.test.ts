@@ -197,6 +197,12 @@ it.each([
     }
     expect(input("key")).toBe(key)
     expect(input("restore-keys")).toBe(restore)
+    const cachePath = input("path")
+    expect(cachePath).not.toBe("")
+    const shardDurations = workflow
+      .match(/^ {10}UNIT_TEST_SHARD_DURATIONS: (.+)$/m)?.[1]
+      ?.trim()
+    expect(shardDurations?.startsWith(`${cachePath}/`)).toBe(true)
     const save =
       workflow
         .split("      - name: Save unit test durations")[1]
@@ -207,6 +213,7 @@ it.each([
       .replace(/^\$\{\{\s*|\s*\}\}$/g, "")
     expect(guard).toBeDefined()
     expect(runInNewContext(guard ?? "false", context)).toBe(publish)
+    expect(save.match(/^ {10}path: (.+)$/m)?.[1]?.trim()).toBe(cachePath)
   },
 )
 

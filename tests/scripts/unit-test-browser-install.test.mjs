@@ -54,7 +54,12 @@ export const chromium = {
     appendFileSync(join(directory, "probes"), JSON.stringify(options.channel ?? null) + "\\n")
     const scenario = process.env.BROWSER_TEST_SCENARIO
     if (scenario === "browser-crashed") throw new Error("Browser process crashed unexpectedly")
-    const missing = scenario === "full-chromium-missing" ? options.channel === "chromium" : scenario !== "ready"
+    // Model a launch that completes after 20 seconds, within Playwright's default budget.
+    if (scenario === "slow-browser" && (options.timeout ?? 180000) < 20000) {
+      throw new Error("browserType.launch: Timeout exceeded before the browser became ready")
+    }
+    if (scenario === "launch-timeout") throw new Error("browserType.launch: Timeout exceeded")
+    const missing = scenario === "full-chromium-missing" ? options.channel === "chromium" : !["ready", "slow-browser"].includes(scenario)
     if (missing && !existsSync(join(directory, "apt-installed"))) {
       throw new Error(scenario === "loader-missing"
         ? "chrome-headless-shell: error while loading shared libraries: libexample.so: cannot open shared object file"
@@ -141,6 +146,22 @@ test("E2E preparation probes the full Chromium channel used by extension fixture
   assert.equal(result.status, 0, result.stdout + result.stderr)
   assert.deepEqual(result.channels, ["chromium"])
   assert.equal(result.installedDeps, false)
+})
+
+test("a slow browser within the normal launch budget does not fail preparation", (context) => {
+  const result = install(context, "slow-browser", "chromium")
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.equal(result.started, true)
+  assert.equal(result.installedDeps, false)
+  assert.equal(result.probes, 1)
+})
+
+test("an expired launch budget still fails without invoking apt", (context) => {
+  const result = install(context, "launch-timeout")
+  assert.equal(result.status, 1)
+  assert.equal(result.installedDeps, false)
+  assert.equal(result.started, false)
+  assert.equal(result.probes, 1)
 })
 
 test("missing full Chromium libraries are repaired even when the headless shell works", (context) => {
