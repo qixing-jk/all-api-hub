@@ -20,9 +20,25 @@ func snapshot(_ element: AXUIElement, _ depth: Int = 0) -> [String: Any] {
     if depth < 10 { result["children"] = ((attribute(element, "AXChildren") as? [AXUIElement]) ?? []).map { snapshot($0, depth + 1) } }
     return result
 }
-func enableCheckbox(_ target: AXUIElement) -> Bool {
+func click(_ target: AXUIElement) -> Bool {
+    guard let positionValue = attribute(target, "AXPosition"), let sizeValue = attribute(target, "AXSize") else { return false }
+    var position = CGPoint.zero
+    var size = CGSize.zero
+    guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &position), AXValueGetValue(sizeValue as! AXValue, .cgSize, &size), size.width > 0, size.height > 0 else { return false }
+    let point = CGPoint(x: position.x + size.width / 2, y: position.y + size.height / 2)
+    let source = CGEventSource(stateID: .hidSystemState)
+    guard let move = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left),
+          let down = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
+          let up = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else { return false }
+    move.post(tap: .cghidEventTap)
+    down.post(tap: .cghidEventTap)
+    Thread.sleep(forTimeInterval: 0.08)
+    up.post(tap: .cghidEventTap)
+    return true
+}
+func enableCheckbox(_ target: AXUIElement, pointer: Bool = false) -> Bool {
     if (attribute(target, "AXValue") as? NSNumber)?.intValue == 1 { return true }
-    guard AXUIElementPerformAction(target, "AXPress" as CFString) == .success else { return false }
+    guard pointer ? click(target) : AXUIElementPerformAction(target, "AXPress" as CFString) == .success else { return false }
     for _ in 0..<40 {
         if (attribute(target, "AXValue") as? NSNumber)?.intValue == 1 { return true }
         Thread.sleep(forTimeInterval: 0.05)
@@ -58,7 +74,7 @@ for app in NSWorkspace.shared.runningApplications {
         let scopeRole = args.count > 4 ? (args[4] == "toolbar" ? "AXToolbar" : args[4] == "popover" ? "AXPopover" : "") : ""
         let targets = scopeRole.isEmpty ? elements : allElements.filter { attribute($0, "AXRole") as? String == scopeRole }.flatMap { descendants($0) }
         if args.count > 3 && args[1] == "enable-extension", let checkbox = installedExtensionCheckbox(elements, args[3]) {
-            pressed = enableCheckbox(checkbox)
+            pressed = enableCheckbox(checkbox, pointer: true)
         }
         if args[1] == "authenticate" && name == "Safari" && elements.map({ text($0) }).joined(separator: "\n").contains("Safari is trying to allow unsigned extensions."),
            let field = elements.first(where: { (attribute($0, "AXSubrole") as? String) == "AXSecureTextField" }),

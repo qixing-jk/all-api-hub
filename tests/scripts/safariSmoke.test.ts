@@ -2,9 +2,11 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { gunzipSync } from "node:zlib"
-import { expect, it } from "vitest"
+import { afterEach, expect, it, vi } from "vitest"
 
 import { runSafariSmoke } from "~~/e2e/safari/smoke"
+
+afterEach(() => vi.useRealTimers())
 
 it("records unavailable Safari as a failed check without running platform commands", async () => {
   const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
@@ -29,12 +31,14 @@ it("records unavailable Safari as a failed check without running platform comman
 })
 
 it.each([
-  { popupAvailable: true, navigationAvailable: true },
-  { popupAvailable: false, navigationAvailable: true },
-  { popupAvailable: true, navigationAvailable: false },
+  { popupAvailable: true, navigationAvailable: true, optionsRendered: true },
+  { popupAvailable: false, navigationAvailable: true, optionsRendered: true },
+  { popupAvailable: true, navigationAvailable: false, optionsRendered: true },
+  { popupAvailable: true, navigationAvailable: true, optionsRendered: false },
 ])(
   "accepts latest native evidence and requires the Popup flow (%j)",
-  async ({ popupAvailable, navigationAvailable }) => {
+  async ({ popupAvailable, navigationAvailable, optionsRendered }) => {
+    if (!optionsRendered) vi.useFakeTimers()
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
     const projectRoot = path.join(output, "project")
     mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
@@ -81,7 +85,11 @@ it.each([
             {
               app: "Safari",
               text: "All API Hub\nNo accounts yet",
-              buttons: ["Account Management", "Settings"],
+              buttons: [
+                "Account Management",
+                "Settings",
+                ...(optionsRendered ? ["Add Account"] : []),
+              ],
             },
           ])
         return "true"
@@ -91,6 +99,13 @@ it.each([
       await expect(result).rejects.toThrow("Popup unavailable")
     else if (!navigationAvailable)
       await expect(result).rejects.toThrow("Options navigation unavailable")
+    else if (!optionsRendered)
+      await Promise.all([
+        expect(result).rejects.toThrow(
+          "Options account manager did not render",
+        ),
+        vi.runAllTimersAsync(),
+      ])
     else expect((await result).status).toBe("passed")
   },
 )

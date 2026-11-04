@@ -332,6 +332,30 @@ export async function runSafariSmoke({
       }
       throw new Error("Popup did not navigate to the Options account manager")
     })
+    await check("Options account manager UI", async () => {
+      const driver = path.join(output, "accessibility")
+      const deadline = Date.now() + 20000
+      while (Date.now() < deadline) {
+        const snapshot = command(driver, ["dialogs", "Safari"])
+        const panels = JSON.parse(snapshot) as {
+          text: string
+          buttons: string[]
+        }[]
+        if (
+          panels.some(
+            (panel) =>
+              /All API Hub/u.test(panel.text) &&
+              panel.buttons.includes("Add Account"),
+          )
+        ) {
+          fs.writeFileSync(path.join(output, "options-ui.json"), snapshot)
+          command("screencapture", ["-x", path.join(output, "options.png")])
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("Options account manager did not render")
+    })
     report.status = "passed"
     return report
   } catch (error) {

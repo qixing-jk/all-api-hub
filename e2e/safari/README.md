@@ -6,7 +6,7 @@ The workflow runs Safari manifest, permission, distribution, native Cookie trans
 
 The loopback fixture uses synthetic accounts. The native verifier requires fresh server observations of concurrent account isolation, Cookie and Origin handling, response Cookie suppression, redirect rejection, cancellation recovery, scope limits and ordinary fetch isolation. A missing or incomplete native run fails the workflow. The fixture server is stopped by the workflow's exit trap.
 
-The basic UI check opens the real toolbar Popup, requires its management controls, clicks Account Management and reads back the Options account-manager URL. Screenshots and accessibility snapshots accompany these checks.
+The basic UI check opens the real toolbar Popup, requires its management controls, clicks Account Management and reads back the Options account-manager URL. It also requires the rendered account manager's Add Account control. Screenshots and accessibility snapshots accompany these checks.
 
 The runner uses macOS accessibility APIs and Apple Events. It handles the runner's specific system request to control Safari through the actual authorization dialog. Developer controls and extension activation are read back. Safari's [unsigned-extension settings](https://developer.apple.com/documentation/safariservices/running-your-safari-web-extension) reset when Safari quits, so each run performs its own setup.
 
