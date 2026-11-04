@@ -1,6 +1,6 @@
 import path from "node:path"
 import { pathToFileURL } from "node:url"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { hasValidCatalogFacts } from "~/services/modelCatalog/admission"
@@ -19,6 +19,23 @@ const fixtures = {
     pathToFileURL(path.resolve("scripts/doc-screenshot-routes.mjs")).href
   )),
 }
+
+it("keeps the displayed check-in run time stable across regeneration dates", () => {
+  vi.useFakeTimers()
+  try {
+    vi.setSystemTime(new Date("2026-11-04T12:00:00Z"))
+    const before = fixtures.getMockAutoCheckinStatus(
+      fixtures.createTranslator("en"),
+    )
+    vi.setSystemTime(new Date("2027-01-15T12:00:00Z"))
+    const after = fixtures.getMockAutoCheckinStatus(
+      fixtures.createTranslator("en"),
+    )
+    expect(after.lastRunAt).toBe(before.lastRunAt)
+  } finally {
+    vi.useRealTimers()
+  }
+})
 
 it("provides a complete hourly breakdown that preserves each demo day's totals", () => {
   const history = fixtures.getMockUsageHistory()
@@ -45,6 +62,47 @@ it("provides a complete hourly breakdown that preserves each demo day's totals",
     }
   }
 })
+
+it("preserves daily totals when all demo token filters are selected", () => {
+  const history = fixtures.getMockUsageHistory()
+  for (const account of Object.values(history.accounts) as Array<{
+    daily: Record<string, Record<string, number>>
+    dailyByToken: Record<string, Record<string, Record<string, number>>>
+  }>) {
+    for (const [day, totals] of Object.entries(account.daily)) {
+      const shares = Object.values(account.dailyByToken).map(
+        (token) => token[day]!,
+      )
+      for (const metric of Object.keys(totals))
+        expect(shares.reduce((sum, value) => sum + value[metric]!, 0)).toBe(
+          totals[metric],
+        )
+      for (const share of shares)
+        expect(share.totalTokens).toBe(
+          share.promptTokens! + share.completionTokens!,
+        )
+    }
+  }
+})
+
+it.each([
+  ["zh", "开发主密钥 Default"],
+  ["ja", "開発用メインキー Default"],
+  ["en", "Default Dev API Key"],
+])(
+  "uses the token fixture's localized name in analytics (%s)",
+  (locale, name) => {
+    const history = fixtures.getMockUsageHistory(
+      fixtures.createTranslator(locale),
+    )
+    const account = history.accounts["acc-my-newapi"]
+    expect(account.tokenNamesById).toEqual({
+      101: name,
+      102: "Cursor IDE Key",
+      103: "Claude Code CLI",
+    })
+  },
+)
 
 describe("documentation screenshot data", () => {
   for (const locale of ["zh", "en", "ja"]) {

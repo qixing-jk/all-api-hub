@@ -150,7 +150,7 @@ async function renderBatch(localeKey = "zh", requestedPages = null) {
     const tags = getMockTags(t)
     const profiles = getMockApiCredentialProfiles(t)
     const autoCheckin = getMockAutoCheckinStatus(t)
-    const usageHistory = getMockUsageHistory()
+    const usageHistory = getMockUsageHistory(t)
     const balanceHistory = getMockBalanceHistory()
     const modelSyncExecution = getMockModelSyncLastExecution(t)
 

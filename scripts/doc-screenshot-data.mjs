@@ -701,7 +701,8 @@ function getMockBalanceHistory() {
 }
 
 function getMockAutoCheckinStatus(t) {
-  const now = Date.now()
+  // Keep displayed run timestamps stable; daily eligibility still uses capture day.
+  const now = Date.parse("2026-11-04T02:22:31.000Z")
   const accounts = getMockAccounts().filter(
     (account) => account.checkIn.automaticExecutionEnabled,
   )
@@ -752,7 +753,7 @@ function getMockAutoCheckinStatus(t) {
   }
 }
 
-function getMockUsageHistory() {
+function getMockUsageHistory(t = createTranslator("en")) {
   const todayKey = getDayKey()
   const days = []
   for (let i = 6; i >= 0; i--) {
@@ -946,14 +947,18 @@ function getMockUsageHistory() {
 
       const tokenKeys = ["101", "102", "103"]
       const tokenSplits = [0.5, 0.3, 0.2]
+      const tokenBoundaries = [0, 0.5, 0.8, 1]
+      const share = (total, index) =>
+        Math.round(total * tokenBoundaries[index + 1]) -
+        Math.round(total * tokenBoundaries[index])
       tokenKeys.forEach((tId, tIdx) => {
         const tSplit = tokenSplits[tIdx]
         dailyByToken[tId][day] = {
-          requests: Math.round(dayRequests * tSplit),
-          promptTokens: Math.round(dayPrompt * tSplit),
-          completionTokens: Math.round(dayCompletion * tSplit),
-          totalTokens: Math.round(dayTotalTokens * tSplit),
-          quotaConsumed: Math.round(dayQuota * tSplit),
+          requests: share(dayRequests, tIdx),
+          promptTokens: share(dayPrompt, tIdx),
+          completionTokens: share(dayCompletion, tIdx),
+          totalTokens: share(dayPrompt, tIdx) + share(dayCompletion, tIdx),
+          quotaConsumed: share(dayQuota, tIdx),
         }
         latencyDailyByToken[tId][day] = {
           count: Math.round(dayRequests * tSplit),
@@ -992,7 +997,7 @@ function getMockUsageHistory() {
       hourly,
       dailyByModel,
       tokenNamesById: {
-        101: "Default API Key",
+        101: t("Default Dev API Key"),
         102: "Cursor IDE Key",
         103: "Claude Code CLI",
       },
