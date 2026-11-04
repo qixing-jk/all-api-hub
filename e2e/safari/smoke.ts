@@ -228,7 +228,11 @@ export async function runSafariSmoke({
         "Extensions",
       ])
       assert(appName, "Missing trial extension name")
-      command(path.join(output, "accessibility"), ["enable", "Safari", appName])
+      command(path.join(output, "accessibility"), [
+        "enable-extension",
+        "Safari",
+        appName,
+      ])
       fs.writeFileSync(
         path.join(output, "extension-settings.json"),
         command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
@@ -270,6 +274,63 @@ export async function runSafariSmoke({
       throw new Error(
         "Native Cookie trial incomplete; inspect observations.json",
       )
+    })
+    await check("Toolbar Popup UI", async () => {
+      command("osascript", [
+        "-e",
+        'tell application "Safari" to activate',
+        "-e",
+        'tell application "System Events" to tell process "Safari" to set frontmost to true',
+      ])
+      const driver = path.join(output, "accessibility")
+      command(driver, ["press", "Safari", appName, "toolbar"])
+      const deadline = Date.now() + 10000
+      while (Date.now() < deadline) {
+        const snapshot = command(driver, ["popover", "Safari"])
+        const panels = JSON.parse(snapshot) as {
+          text: string
+          buttons: string[]
+        }[]
+        if (
+          panels.some(
+            (panel) =>
+              /All API Hub/u.test(panel.text) &&
+              panel.buttons.includes("Account Management") &&
+              panel.buttons.includes("Settings"),
+          )
+        ) {
+          fs.writeFileSync(path.join(output, "popup.json"), snapshot)
+          command("screencapture", ["-x", path.join(output, "popup.png")])
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("Toolbar Popup did not render its management controls")
+    })
+    await check("Popup to Options navigation", async () => {
+      const driver = path.join(output, "accessibility")
+      command(driver, ["press", "Safari", "Account Management", "popover"])
+      const deadline = Date.now() + 20000
+      while (Date.now() < deadline) {
+        const url = command("osascript", [
+          "-e",
+          'tell application "Safari" to get URL of current tab of front window',
+        ]).trim()
+        if (
+          url.startsWith("safari-web-extension://") &&
+          /\/options\.html(?:\?[^#]*)?#account$/u.test(url)
+        ) {
+          fs.writeFileSync(path.join(output, "options-url.txt"), url)
+          fs.writeFileSync(
+            path.join(output, "options-ui.json"),
+            command(driver, ["dialogs", "Safari"]),
+          )
+          command("screencapture", ["-x", path.join(output, "options.png")])
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+      throw new Error("Popup did not navigate to the Options account manager")
     })
     report.status = "passed"
     return report

@@ -28,38 +28,72 @@ it("records unavailable Safari as a failed check without running platform comman
   })
 })
 
-it("accepts a verified latest native run despite earlier failed attempts", async () => {
-  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
-  const projectRoot = path.join(output, "project")
-  mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
-  mkdirSync(path.join(output, "DerivedData/Build/Products/Release/Trial.app"), {
-    recursive: true,
-  })
-  writeFileSync(
-    path.join(output, "identity.json"),
-    JSON.stringify({ projectRoot, appName: "Trial" }),
-  )
-  writeFileSync(
-    path.join(output, "observations.json"),
-    gunzipSync(
-      readFileSync(
-        "tests/fixtures/safariNativeCookie/observations-2026-10-10.json.gz",
+it.each([
+  { popupAvailable: true, navigationAvailable: true },
+  { popupAvailable: false, navigationAvailable: true },
+  { popupAvailable: true, navigationAvailable: false },
+])(
+  "accepts latest native evidence and requires the Popup flow (%j)",
+  async ({ popupAvailable, navigationAvailable }) => {
+    const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+    const projectRoot = path.join(output, "project")
+    mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
+    mkdirSync(
+      path.join(output, "DerivedData/Build/Products/Release/Trial.app"),
+      {
+        recursive: true,
+      },
+    )
+    writeFileSync(
+      path.join(output, "identity.json"),
+      JSON.stringify({ projectRoot, appName: "Trial" }),
+    )
+    writeFileSync(
+      path.join(output, "observations.json"),
+      gunzipSync(
+        readFileSync(
+          "tests/fixtures/safariNativeCookie/observations-2026-10-10.json.gz",
+        ),
       ),
-    ),
-  )
-  const result = await runSafariSmoke({
-    platform: "darwin",
-    output,
-    command: (file, args) => {
-      if (file === process.execPath)
-        return `Prepared independent trial: ${output}`
-      if (file === "xcodebuild" && args.includes("-list"))
-        return JSON.stringify({ project: { schemes: ["Trial"] } })
-      return "true"
-    },
-  })
-  expect(result.status).toBe("passed")
-})
+    )
+    const result = runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: (file, args) => {
+        if (file === process.execPath)
+          return `Prepared independent trial: ${output}`
+        if (file === "xcodebuild" && args.includes("-list"))
+          return JSON.stringify({ project: { schemes: ["Trial"] } })
+        if (args[0] === "enable" && args[2] === "Trial")
+          throw new Error("Installed extension checkbox has no accessible name")
+        if (args.includes("press") && args.includes("Trial") && !popupAvailable)
+          throw new Error("Popup unavailable")
+        if (
+          args.includes("press") &&
+          args.includes("Account Management") &&
+          !navigationAvailable
+        )
+          throw new Error("Options navigation unavailable")
+        if (file === "osascript" && args.join(" ").includes("get URL"))
+          return "safari-web-extension://test/options.html#account"
+        if (args.includes("dialogs") || args.includes("popover"))
+          return JSON.stringify([
+            {
+              app: "Safari",
+              text: "All API Hub\nNo accounts yet",
+              buttons: ["Account Management", "Settings"],
+            },
+          ])
+        return "true"
+      },
+    })
+    if (!popupAvailable)
+      await expect(result).rejects.toThrow("Popup unavailable")
+    else if (!navigationAvailable)
+      await expect(result).rejects.toThrow("Options navigation unavailable")
+    else expect((await result).status).toBe("passed")
+  },
+)
 
 it("requires registration of the built native extension before activation", async () => {
   const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
@@ -189,7 +223,7 @@ it("requires activation of the compiled trial extension", async () => {
           return `Prepared independent trial: ${output}`
         if (file === "xcodebuild" && args.includes("-list"))
           return JSON.stringify({ project: { schemes: ["Trial"] } })
-        if (args.includes("enable") && args.includes("Trial"))
+        if (args.includes("enable-extension") && args.includes("Trial"))
           throw new Error("Trial extension unavailable")
         return "true"
       },
