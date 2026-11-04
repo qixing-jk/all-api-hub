@@ -210,15 +210,13 @@ jobs:
           channel: chromium
 
       - name: Restore E2E spec durations
-        # Published by the previous run's e2e-durations job. A miss only means this
-        # shard falls back to Playwright's count-based split.
+        # The producer freezes one profile for this run. An empty profile retains
+        # count-based sharding; failed-job reruns keep the same original membership.
         if: ${{ matrix.e2e_type == 'default' }}
-        uses: actions/cache/restore@v5
+        uses: actions/download-artifact@v7
         with:
           path: .e2e-durations
-          key: e2e-spec-durations-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            e2e-spec-durations-
+          name: e2e-shard-duration-profile
 
       # Cold-cache count shards completed 105 tests in 8.2m; allow reporting and
       # additional specs while retaining a bounded 12m deadline.
@@ -319,7 +317,9 @@ jobs:
         with:
           path: .e2e-durations/reports
           pattern: e2e-spec-durations-*
-          merge-multiple: true
+          # Retried shards reuse report filenames. Keep attempt directories so
+          # concurrent downloads cannot overwrite JSON; the writer reads recursively.
+          merge-multiple: false
 
       - name: Write spec durations manifest
         if: ${{ hashFiles('.e2e-durations/reports/**/*.json') != '' }}
