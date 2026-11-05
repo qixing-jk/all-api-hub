@@ -8,6 +8,25 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.9.0
+This release adds account support for AI/ML API and NanoGPT with granular key limits and privacy routing; adds daily check-in support for Bai API; lets you expand account billing groups side-by-side in the model list; brings realistic pricing estimations for video generation, audio, and web search; improves model dropdowns with clearer loading feedback and direct manual input; and smooths out background requests to avoid rate limit errors.
+
+- **New Features:**
+  - **`AI/ML API` account support**: Add AI/ML API accounts to view balances, usage, and model pricing in the extension. Create and manage API keys directly, with custom spending caps and tool permission limits. See [Add an Account](./add-account.md), [Key Management](./key-management.md), and [Supported Sites](./supported-sites.md).
+  - **`NanoGPT` account support and flexible key controls**: Add NanoGPT accounts via automatic web detection or credentials, keeping prepaid cash balances and subscription quotas clearly separated. Create API keys directly within the extension with daily, weekly, or monthly spending and token caps, plus privacy options such as Zero Data Retention (ZDR) and anonymized routing. See [Add an Account](./add-account.md), [Key Management](./key-management.md), and [Supported Sites](./supported-sites.md).
+  - **`Bai API` daily check-in**: Added daily automatic check-in support for Bai API to claim daily rewards without manual visits. See [Automatic Check-in](./auto-checkin.md).
+  - **Compare account billing groups side-by-side in model list**: Added an "Expand account groups" option in the model list to display different tiers or user groups (such as Standard, VIP, and Fast) under the same account as separate rows, making rate differences easy to compare at a glance. See [Model List](./model-list.md).
+
+- **Experience Improvements:**
+  - **More realistic model cost estimates**: Pricing scenarios now support video generation (factoring in reference video, length, quality, and audio), audio generation, code execution, web search, and cached tokens to give you a more accurate cost projection. Clearly indicates dedicated route markups and uncalculated additional fees. See [Model List](./model-list.md).
+  - **Smoother model selection and direct manual input**: Model dropdowns in API verification, export dialogs (Kilo Code, CC Switch, etc.), and web selection popups now clearly show loading progress, loaded model counts, or failure reasons. If a site fails to return a model list, you can type in the model ID directly without waiting. See [Quick Export Profiles](./quick-export.md).
+  - **Hassle-free check-in feedback**: When reporting check-in issues, recent refresh diagnostic logs are automatically attached so you don't have to copy them manually. Also fixes long diagnostic reports getting truncated when submitted to GitHub. See [Automatic Check-in](./auto-checkin.md).
+  - **Smoother background requests to prevent rate limit errors**: Automatically spaces out concurrent background refreshes, check-ins, and model loading for each site. When a site temporarily throttles requests, the extension backs off automatically to avoid refresh failures and temporary IP blocks.
+  - **Streamlined update popup and star prompt adjustments**: Cleaned up the update notes popup for faster display, and improved GitHub Star reminder tracking so users who already starred the repository aren't prompted again.
+
+- **Bug Fixes:**
+  - **Automatic recovery for outdated check-in methods**: Fixed an issue where check-ins could keep failing using an outdated method after a site changed its API endpoint. Check-in methods are now refreshed automatically, and redundant check-in attempts are prevented once login sessions recover. See [Automatic Check-in](./auto-checkin.md).
+
 ## 4.8.0
 This release adds Novita AI account support and key management, and makes account setup, key association, and web detection easier to use.
 
