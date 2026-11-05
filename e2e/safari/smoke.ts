@@ -14,6 +14,11 @@ import {
 /** A failed prerequisite is evidence of failure, never a passing Safari smoke. */
 type Check = { name: string; status: string; error?: string }
 
+/**
+ * Build and activate a disposable native Safari trial, then verify Cookie
+ * transport and the rendered Popup/Options flow. Record each prerequisite and
+ * retain diagnostic evidence on failure; missing native access fails the run.
+ */
 export async function runSafariSmoke({
   platform = process.platform,
   output = path.resolve("test-results/safari"),
@@ -69,7 +74,12 @@ export async function runSafariSmoke({
     command("curl", ["-fsS", "--max-time", "10", ...args])
   const readFixtureObservations = () =>
     JSON.parse(requestFixture([fixtureRoot + "/status"]))
-  const openSettings = () => command(driver, ["open-settings", "Safari"])
+  const openSettings = () => {
+    // The generated host takes foreground after launch. LaunchServices can
+    // reactivate Safari when NSRunningApplication.activate is ignored.
+    command("open", ["-a", "Safari"])
+    return command(driver, ["open-settings", "Safari"])
+  }
   const allowUnsigned = () => {
     try {
       command(driver, ["enable", "Safari", "Allow unsigned extensions"])

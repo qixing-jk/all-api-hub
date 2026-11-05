@@ -53,8 +53,6 @@ export const test = base.extend<ExtensionFixtures>({
     const temporaryUserDataDirs: string[] = []
 
     const chromeExecutablePath = process.env.AAH_E2E_CHROME_EXECUTABLE_PATH
-      ? path.resolve(process.cwd(), process.env.AAH_E2E_CHROME_EXECUTABLE_PATH)
-      : null
     const extensionServiceWorkerTimeoutMs =
       resolveExtensionServiceWorkerTimeoutMs(
         process.env.AAH_E2E_EXTENSION_STARTUP_TIMEOUT_MS,

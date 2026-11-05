@@ -601,6 +601,39 @@ it.each(
   },
 )
 
+it("reactivates Safari after the native host takes foreground before opening settings", async () => {
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  const projectRoot = path.join(output, "project")
+  mkdirSync(path.join(projectRoot, "Trial.xcodeproj"), { recursive: true })
+  mkdirSync(path.join(output, "DerivedData/Build/Products/Release/Trial.app"), {
+    recursive: true,
+  })
+  writeFileSync(
+    path.join(output, "identity.json"),
+    JSON.stringify({ projectRoot, appName: "Trial" }),
+  )
+  let safariIsForeground = false
+  await expect(
+    runSafariSmoke({
+      platform: "darwin",
+      output,
+      command: withUsableDriver((file, args) => {
+        if (file === process.execPath)
+          return `Prepared independent trial: ${output}`
+        if (file === "xcodebuild" && args.includes("-list"))
+          return JSON.stringify({ project: { schemes: ["Trial"] } })
+        if (file === "open") safariIsForeground = args.join(" ") === "-a Safari"
+        if (file.endsWith("accessibility") && args[0] === "open-settings") {
+          if (!safariIsForeground)
+            throw new Error("Safari activation unavailable")
+          throw new Error("Reached Safari settings")
+        }
+        return "true"
+      }),
+    }),
+  ).rejects.toThrow("Reached Safari settings")
+})
+
 it("requires registration of the built native extension before activation", async () => {
   const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
   const projectRoot = path.join(output, "project")
