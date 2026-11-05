@@ -7,6 +7,15 @@ type ExtensionLaunchOptions = {
   chromeExecutablePath?: string | null
 }
 
+/** Resolve the explicit compatibility browser consistently for all fixtures. */
+export function resolveChromeExecutablePath(
+  chromeExecutablePath?: string | null,
+) {
+  return chromeExecutablePath
+    ? path.resolve(process.cwd(), chromeExecutablePath)
+    : undefined
+}
+
 type ChromiumPersistentLaunchOptions = BrowserContextOptions & {
   args: string[]
   channel?: "chromium"
@@ -96,7 +105,7 @@ export function buildExtensionLaunchOptions({
     args,
     ignoreDefaultArgs,
     ...(chromeExecutablePath
-      ? { executablePath: path.resolve(process.cwd(), chromeExecutablePath) }
+      ? { executablePath: resolveChromeExecutablePath(chromeExecutablePath) }
       : {}),
     ...(headless && !chromeExecutablePath
       ? { channel: "chromium" as const }

@@ -10,16 +10,14 @@ afterEach(() => {
   vi.resetModules()
 })
 
-it("uses the compatibility Chrome for ordinary page fixtures with modern headless", async () => {
+it("uses the compatibility Chrome without overriding ordinary fixture launch modes", async () => {
   vi.stubEnv("AAH_E2E_CHROME_EXECUTABLE_PATH", "compat/chrome")
   const { default: config } = await import("~~/playwright.config")
   expect(
     config.projects?.find((project) => project.name === "chromium")?.use
       ?.launchOptions,
-  ).toMatchObject({
+  ).toEqual({
     executablePath: path.resolve("compat/chrome"),
-    args: ["--headless=new"],
-    ignoreDefaultArgs: ["--headless"],
   })
 })
 
