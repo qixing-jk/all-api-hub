@@ -1,8 +1,11 @@
+import path from "node:path"
 import { defineConfig } from "@playwright/test"
 
 import { loadPlaywrightEnvFiles } from "./e2e/utils/playwrightEnv"
 
 loadPlaywrightEnvFiles()
+
+const chromeExecutablePath = process.env.AAH_E2E_CHROME_EXECUTABLE_PATH
 
 const isCI = !!process.env.CI
 const isRealSiteE2E = !!process.env.AAH_E2E_REAL_SITE_CATEGORY
@@ -42,6 +45,16 @@ export default defineConfig({
       dependencies: ["build"],
       use: {
         browserName: "chromium",
+        // Ordinary page fixtures must exercise the same Chrome as extension fixtures.
+        ...(chromeExecutablePath
+          ? {
+              launchOptions: {
+                executablePath: path.resolve(chromeExecutablePath),
+                args: ["--headless=new"],
+                ignoreDefaultArgs: ["--headless"],
+              },
+            }
+          : {}),
       },
     },
   ],

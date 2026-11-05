@@ -69,7 +69,12 @@ export async function runSafariSmoke({
     command("curl", ["-fsS", "--max-time", "10", ...args])
   const readFixtureObservations = () =>
     JSON.parse(requestFixture([fixtureRoot + "/status"]))
-  const openSettings = () => command(driver, ["open-settings", "Safari"])
+  const openSettings = () => {
+    // The generated host takes foreground after launch. LaunchServices can
+    // reactivate Safari when NSRunningApplication.activate is ignored.
+    command("open", ["-a", "Safari"])
+    return command(driver, ["open-settings", "Safari"])
+  }
   const allowUnsigned = () => {
     try {
       command(driver, ["enable", "Safari", "Allow unsigned extensions"])
