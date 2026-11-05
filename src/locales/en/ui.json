@@ -129,13 +129,20 @@
         "export": "Export"
       },
       "appOptions": {
+        "agy": "Antigravity",
         "claude": "Claude",
+        "claudeDesktop": "Claude Desktop",
         "codex": "Codex",
+        "dsh": "DeepSeek Harness",
         "gemini": "Gemini",
         "grokbuild": "Grok CLI",
         "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "mcode": "MiniMax Code",
+        "omp": "Oh My Pi",
         "openclaw": "OpenClaw",
-        "opencode": "OpenCode"
+        "opencode": "OpenCode",
+        "pi": "Pi"
       },
       "description": "Send this provider configuration directly to CC Switch via deep link",
       "descriptions": {
@@ -145,7 +152,7 @@
         "app": "Target app",
         "endpoint": "API endpoint",
         "homepage": "Homepage URL",
-        "model": "Default model (optional)",
+        "model": "Default model",
         "name": "Provider name",
         "notes": "Notes (optional)"
       },
@@ -153,7 +160,9 @@
         "none": "No default model"
       },
       "notices": {
+        "claudeDesktop": "Requires CC Switch v4.0.26 or later. Uses the Anthropic API format. Claude model names (claude-*) or no model import as a direct connection; other model names import as model mappings through CC Switch’s local router.",
         "hermes": "CC Switch imports Hermes using the Chat Completions protocol. During export, the provider name is converted to a valid identifier containing only lowercase letters, numbers, and hyphens. To use another format, such as Anthropic Messages or Codex Responses, adjust it in CC Switch after import.",
+        "modelRequired": "Requires CC Switch v4.0.26 or later. Select or enter a model before export. Uses the OpenAI Chat Completions API format.",
         "openclaw": "CC Switch currently does not support configuring OpenClaw AI service API formats through external import. Adjust it in CC Switch after import if needed.",
         "opencode": "CC Switch currently does not support configuring OpenCode AI service API formats through external import. Adjust it in CC Switch after import if needed."
       },

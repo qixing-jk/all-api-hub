@@ -27,7 +27,9 @@ import {
   toVersionedProtocolMount,
 } from "~/services/aiApi/protocolAddress"
 import {
+  CCSWITCH_APP_IDS,
   CCSWITCH_APPS,
+  ccSwitchRequiresModel,
   openInCCSwitch,
   type CCSwitchApp,
 } from "~/services/integrations/ccSwitch"
@@ -64,17 +66,16 @@ interface CCSwitchExportDialogProps {
  */
 const logger = createLogger("CCSwitchExportDialog")
 
-const DEFAULT_APP: CCSwitchApp = "claude"
+const DEFAULT_APP: CCSwitchApp = CCSWITCH_APP_IDS.ClaudeCode
 const APP_LIMITATION_NOTICE_ID = "ccswitch-app-limitation"
 // Preserve the real debounce in dev/prod so endpoint edits do not spam model-list
 // requests, but skip the wall-clock delay in Vitest.
 const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
 
 /**
- * Only two CC Switch targets own their version segment: Claude Code and Claude
- * Desktop hand the endpoint to the Anthropic SDK, and Gemini CLI hands it to the
- * Google SDK, so both append `/v1` or `/v1beta` themselves. Every other target —
- * Codex, OpenCode, OpenClaw, Hermes, and Grok — is configured with a versioned
+ * Claude Code and Desktop use Anthropic protocol roots; Gemini CLI and
+ * Antigravity use Google protocol roots. Their SDKs append the version segment.
+ * Every other target is configured with a versioned
  * provider base and appends only an operation path, which is also what CC Switch
  * documents for them (its `https://api.example.com/v1` placeholders, and
  * `base_url: "https://openrouter.ai/api/v1"` in its Hermes config module).
@@ -84,11 +85,14 @@ const getAppDefaultEndpoint = (
   baseUrl: string,
   anthropicBaseUrl: string | undefined,
 ): string => {
-  if (app === "claude") {
+  if (
+    app === CCSWITCH_APP_IDS.ClaudeCode ||
+    app === CCSWITCH_APP_IDS.ClaudeDesktop
+  ) {
     return toProtocolRoot("anthropic", anthropicBaseUrl ?? baseUrl) ?? baseUrl
   }
 
-  if (app === "gemini") {
+  if (app === CCSWITCH_APP_IDS.Gemini || app === CCSWITCH_APP_IDS.Antigravity) {
     return toProtocolRoot("google", baseUrl) ?? baseUrl
   }
 
@@ -107,30 +111,48 @@ const getConservativeCodexEndpoint = (baseUrl: string) =>
 
 const getCCSwitchAppLabel = (t: TFunction, app: CCSwitchApp) => {
   switch (app) {
-    case "claude":
+    case CCSWITCH_APP_IDS.ClaudeCode:
       return t("ui:dialog.ccswitch.appOptions.claude")
-    case "codex":
+    case CCSWITCH_APP_IDS.ClaudeDesktop:
+      return t("ui:dialog.ccswitch.appOptions.claudeDesktop")
+    case CCSWITCH_APP_IDS.Antigravity:
+      return t("ui:dialog.ccswitch.appOptions.agy")
+    case CCSWITCH_APP_IDS.Pi:
+      return t("ui:dialog.ccswitch.appOptions.pi")
+    case CCSWITCH_APP_IDS.MiniMaxCode:
+      return t("ui:dialog.ccswitch.appOptions.mcode")
+    case CCSWITCH_APP_IDS.KimiCode:
+      return t("ui:dialog.ccswitch.appOptions.kimi")
+    case CCSWITCH_APP_IDS.DeepSeekHarness:
+      return t("ui:dialog.ccswitch.appOptions.dsh")
+    case CCSWITCH_APP_IDS.OhMyPi:
+      return t("ui:dialog.ccswitch.appOptions.omp")
+    case CCSWITCH_APP_IDS.Codex:
       return t("ui:dialog.ccswitch.appOptions.codex")
-    case "gemini":
+    case CCSWITCH_APP_IDS.Gemini:
       return t("ui:dialog.ccswitch.appOptions.gemini")
-    case "grokbuild":
+    case CCSWITCH_APP_IDS.GrokBuild:
       return t("ui:dialog.ccswitch.appOptions.grokbuild")
-    case "hermes":
+    case CCSWITCH_APP_IDS.Hermes:
       return t("ui:dialog.ccswitch.appOptions.hermes")
-    case "opencode":
+    case CCSWITCH_APP_IDS.OpenCode:
       return t("ui:dialog.ccswitch.appOptions.opencode")
-    case "openclaw":
+    case CCSWITCH_APP_IDS.OpenClaw:
       return t("ui:dialog.ccswitch.appOptions.openclaw")
   }
 }
 
 const getCCSwitchLimitationNotice = (t: TFunction, app: CCSwitchApp) => {
+  if (ccSwitchRequiresModel(app))
+    return t("ui:dialog.ccswitch.notices.modelRequired")
   switch (app) {
-    case "hermes":
+    case CCSWITCH_APP_IDS.ClaudeDesktop:
+      return t("ui:dialog.ccswitch.notices.claudeDesktop")
+    case CCSWITCH_APP_IDS.Hermes:
       return t("ui:dialog.ccswitch.notices.hermes")
-    case "opencode":
+    case CCSWITCH_APP_IDS.OpenCode:
       return t("ui:dialog.ccswitch.notices.opencode")
-    case "openclaw":
+    case CCSWITCH_APP_IDS.OpenClaw:
       return t("ui:dialog.ccswitch.notices.openclaw")
     default:
       return null
@@ -268,7 +290,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   useEffect(() => {
     if (!isOpen || isEndpointCustomized) return
 
-    if (app !== "codex") {
+    if (app !== CCSWITCH_APP_IDS.Codex) {
       setEndpoint(
         getAppDefaultEndpoint(app, source.baseUrl, source.anthropicBaseUrl),
       )
@@ -367,6 +389,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           <Button
             type="submit"
             form={formId}
+            disabled={ccSwitchRequiresModel(app) && !model.trim()}
             data-testid={CC_SWITCH_EXPORT_TEST_IDS.exportButton}
           >
             {t("ui:dialog.ccswitch.actions.export")}
@@ -380,7 +403,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             {t("ui:dialog.ccswitch.fields.app")}
           </Label>
           <Select
-            value={app ?? ""}
+            value={app}
             onValueChange={(value) => setApp(value as CCSwitchApp)}
           >
             <SelectTrigger

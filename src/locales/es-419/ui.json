@@ -134,13 +134,20 @@
         "export": "Exportar"
       },
       "appOptions": {
+        "agy": "Antigravity",
         "claude": "Claude",
+        "claudeDesktop": "Claude Desktop",
         "codex": "Codex",
+        "dsh": "DeepSeek Harness",
         "gemini": "Gemini",
         "grokbuild": "Grok CLI",
         "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "mcode": "MiniMax Code",
+        "omp": "Oh My Pi",
         "openclaw": "OpenClaw",
-        "opencode": "OpenCode"
+        "opencode": "OpenCode",
+        "pi": "Pi"
       },
       "description": "Enviar esta configuración de proveedor directamente a CC Switch mediante deep link",
       "descriptions": {
@@ -150,7 +157,7 @@
         "app": "App destino",
         "endpoint": "Endpoint de API",
         "homepage": "URL de inicio",
-        "model": "Modelo predeterminado (opcional)",
+        "model": "Modelo predeterminado",
         "name": "Nombre del proveedor",
         "notes": "Notas (opcional)"
       },
@@ -158,7 +165,9 @@
         "none": "Sin modelo predeterminado"
       },
       "notices": {
+        "claudeDesktop": "Requiere CC Switch v4.0.26 o posterior. Usa el formato de API Anthropic. Los modelos con nombre claude- o sin modelo se importan como conexión directa; los demás, como asignaciones de modelos mediante el enrutador local de CC Switch.",
         "hermes": "CC Switch importa Hermes con el protocolo Chat Completions. Durante la exportación, el nombre del proveedor se convierte en un identificador válido que solo contiene letras minúsculas, números y guiones. Para usar otro formato, como Anthropic Messages o Codex Responses, ajústalo en CC Switch después de importar.",
+        "modelRequired": "Requiere CC Switch v4.0.26 o posterior. Selecciona o ingresa un modelo antes de exportar. Usa el formato de API OpenAI Chat Completions.",
         "openclaw": "CC Switch actualmente no admite configurar formatos de API del servicio de IA OpenClaw mediante importación externa. Ajústalo en CC Switch después de importar si es necesario.",
         "opencode": "CC Switch actualmente no admite configurar formatos de API del servicio de IA OpenCode mediante importación externa. Ajústalo en CC Switch después de importar si es necesario."
       },

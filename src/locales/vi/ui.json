@@ -127,13 +127,20 @@
         "export": "Xuất"
       },
       "appOptions": {
+        "agy": "Antigravity",
         "claude": "Claude",
+        "claudeDesktop": "Claude Desktop",
         "codex": "Codex",
+        "dsh": "DeepSeek Harness",
         "gemini": "Gemini",
         "grokbuild": "Grok CLI",
         "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "mcode": "MiniMax Code",
+        "omp": "Oh My Pi",
         "openclaw": "OpenClaw",
-        "opencode": "OpenCode"
+        "opencode": "OpenCode",
+        "pi": "Pi"
       },
       "description": "Nhập cấu hình trang web hiện tại vào CC Switch bằng một cú nhấp chuột thông qua liên kết sâu",
       "descriptions": {
@@ -143,7 +150,7 @@
         "app": "Ứng dụng đích",
         "endpoint": "Địa chỉ API",
         "homepage": "Địa chỉ trang chủ",
-        "model": "Mô hình mặc định (tùy chọn)",
+        "model": "Mô hình mặc định",
         "name": "Tên nhà cung cấp",
         "notes": "Ghi chú (tùy chọn)"
       },
@@ -151,7 +158,9 @@
         "none": "Không đặt mô hình mặc định"
       },
       "notices": {
+        "claudeDesktop": "Yêu cầu CC Switch v4.0.26 trở lên. Sử dụng định dạng API Anthropic. Tên mô hình bắt đầu bằng claude- hoặc không chỉ định mô hình sẽ được nhập dưới dạng kết nối trực tiếp; tên khác được nhập dưới dạng ánh xạ mô hình qua bộ định tuyến cục bộ của CC Switch.",
         "hermes": "CC Switch nhập Hermes bằng giao thức Chat Completions. Khi xuất, tên nhà cung cấp được chuyển thành mã định danh hợp lệ chỉ gồm chữ thường, chữ số và dấu gạch nối. Để sử dụng định dạng khác như Anthropic Messages hoặc Codex Responses, hãy điều chỉnh trong CC Switch sau khi nhập.",
+        "modelRequired": "Yêu cầu CC Switch v4.0.26 trở lên. Chọn hoặc nhập mô hình trước khi xuất. Sử dụng định dạng API OpenAI Chat Completions.",
         "openclaw": "CC Switch hiện không hỗ trợ định dạng API của dịch vụ OpenClaw AI thông qua nhập bên ngoài; nếu cần, vui lòng điều chỉnh thủ công trong CC Switch sau khi nhập.",
         "opencode": "CC Switch hiện không hỗ trợ định dạng API của dịch vụ OpenCode AI thông qua nhập bên ngoài; nếu cần, vui lòng điều chỉnh thủ công trong CC Switch sau khi nhập."
       },

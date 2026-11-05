@@ -12,16 +12,55 @@ const logger = createLogger("CcSwitch")
 /**
  * Supported CC Switch client identifiers.
  */
+export const CCSWITCH_APP_IDS = {
+  ClaudeCode: "claude",
+  ClaudeDesktop: "claude-desktop",
+  Codex: "codex",
+  Gemini: "gemini",
+  Antigravity: "agy",
+  Pi: "pi",
+  MiniMaxCode: "mcode",
+  KimiCode: "kimi",
+  DeepSeekHarness: "dsh",
+  OhMyPi: "omp",
+  GrokBuild: "grokbuild",
+  Hermes: "hermes",
+  OpenCode: "opencode",
+  OpenClaw: "openclaw",
+} as const
+
 export const CCSWITCH_APPS = [
-  "claude",
-  "codex",
-  "gemini",
-  "grokbuild",
-  "hermes",
-  "opencode",
-  "openclaw",
+  CCSWITCH_APP_IDS.ClaudeCode,
+  CCSWITCH_APP_IDS.ClaudeDesktop,
+  CCSWITCH_APP_IDS.Codex,
+  CCSWITCH_APP_IDS.Gemini,
+  CCSWITCH_APP_IDS.Antigravity,
+  CCSWITCH_APP_IDS.Pi,
+  CCSWITCH_APP_IDS.MiniMaxCode,
+  CCSWITCH_APP_IDS.KimiCode,
+  CCSWITCH_APP_IDS.DeepSeekHarness,
+  CCSWITCH_APP_IDS.OhMyPi,
+  CCSWITCH_APP_IDS.GrokBuild,
+  CCSWITCH_APP_IDS.Hermes,
+  CCSWITCH_APP_IDS.OpenCode,
+  CCSWITCH_APP_IDS.OpenClaw,
 ] as const
 export type CCSwitchApp = (typeof CCSWITCH_APPS)[number]
+
+const appsRequiringModel = new Set<CCSwitchApp>([
+  CCSWITCH_APP_IDS.Pi,
+  CCSWITCH_APP_IDS.MiniMaxCode,
+  CCSWITCH_APP_IDS.KimiCode,
+  CCSWITCH_APP_IDS.DeepSeekHarness,
+  CCSWITCH_APP_IDS.OhMyPi,
+])
+
+/**
+ * These importers reject links without a model.
+ * @see https://github.com/farion1231/cc-switch/blob/v4.0.26/src-tauri/src/deeplink/parser.rs
+ */
+export const ccSwitchRequiresModel = (app: CCSwitchApp) =>
+  appsRequiringModel.has(app)
 
 // CC Switch's Hermes importer fixes api_mode to chat_completions and derives
 // the provider ID from name, while ProviderForm requires ^[a-z0-9]+(-[a-z0-9]+)*$.
@@ -119,6 +158,11 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     return false
   }
 
+  if (ccSwitchRequiresModel(app) && !model?.trim()) {
+    toast.error(t("ui:dialog.ccswitch.notices.modelRequired"))
+    return false
+  }
+
   const normalizedEndpoint = normalizeHttpUrl(
     endpointOverride ?? credential.baseUrl,
   )
@@ -142,7 +186,7 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
   const deeplink = generateCCSwitchURL({
     app,
     name:
-      app === "hermes"
+      app === CCSWITCH_APP_IDS.Hermes
         ? normalizeHermesProviderName(providerName, normalizedEndpoint)
         : providerName,
     homepage,
