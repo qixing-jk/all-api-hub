@@ -14,6 +14,14 @@ function job(source: string, name: string) {
 }
 
 describe("scheduled E2E build reuse", () => {
+  it("installs the video recorder before compatibility tests use ordinary page fixtures", () => {
+    const source = job(workflow("e2e-browser-compat"), "chrome-compat")
+    const install = source.indexOf("run: pnpm exec playwright install ffmpeg")
+    expect(install).toBeGreaterThan(source.indexOf("run: pnpm install"))
+    expect(install).toBeLessThan(
+      source.indexOf("- name: Run browser compatibility E2E"),
+    )
+  })
   it("ships the resolved Node version on both fresh builds and cache hits", () => {
     const build = job(workflow("e2e-build"), "build")
     const record = build

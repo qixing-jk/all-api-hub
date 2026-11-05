@@ -78,6 +78,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Install Playwright video recorder
+        run: pnpm exec playwright install ffmpeg
+
       - name: Setup Chrome ${{ matrix.chrome_version }}
         id: setup_chrome
         uses: browser-actions/setup-chrome@v2
