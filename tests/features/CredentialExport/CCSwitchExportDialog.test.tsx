@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { CCSwitchExportDialog } from "~/features/CredentialExport/CCSwitchExportDialog"
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/features/CredentialExport/CCSwitchExportDialog.testIds"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
+import { CCSWITCH_APP_IDS } from "~/services/integrations/ccSwitch"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -50,15 +51,21 @@ vi.mock(
       >()
     return {
       ...original,
-      resolveDisplayAccountRuntimeKeySecret: (...args: any[]) =>
-        mockResolveDisplayAccountRuntimeKeySecret(...args),
+      resolveDisplayAccountRuntimeKeySecret: (
+        ...args: Parameters<
+          typeof original.resolveDisplayAccountRuntimeKeySecret
+        >
+      ) => mockResolveDisplayAccountRuntimeKeySecret(...args),
     }
   },
 )
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
-  discoverOpenAICompatibleModels: (...args: any[]) =>
-    mockDiscoverOpenAICompatibleModels(...args),
+  discoverOpenAICompatibleModels: (
+    ...args: Parameters<
+      typeof import("~/services/aiApi/openaiCompatible").discoverOpenAICompatibleModels
+    >
+  ) => mockDiscoverOpenAICompatibleModels(...args),
 }))
 
 vi.mock("~/services/integrations/ccSwitch", async (importOriginal) => {
@@ -66,7 +73,8 @@ vi.mock("~/services/integrations/ccSwitch", async (importOriginal) => {
     await importOriginal<typeof import("~/services/integrations/ccSwitch")>()
   return {
     ...original,
-    openInCCSwitch: (...args: any[]) => mockOpenInCCSwitch(...args),
+    openInCCSwitch: (...args: Parameters<typeof original.openInCCSwitch>) =>
+      mockOpenInCCSwitch(...args),
   }
 })
 
@@ -88,6 +96,114 @@ describe("CCSwitchExportDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it.each([
+    CCSWITCH_APP_IDS.Pi,
+    CCSWITCH_APP_IDS.MiniMaxCode,
+    CCSWITCH_APP_IDS.KimiCode,
+    CCSWITCH_APP_IDS.DeepSeekHarness,
+    CCSWITCH_APP_IDS.OhMyPi,
+  ])("blocks %s export until a model is selected", async (app) => {
+    mockDiscoverOpenAICompatibleModels.mockResolvedValue(
+      createModelDiscovery([{ id: "test-model" }]),
+    )
+    render(
+      <CCSwitchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByLabelText("ui:dialog.ccswitch.fields.app"),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: `ui:dialog.ccswitch.appOptions.${app}`,
+      }),
+    )
+    const button = screen.getByRole("button", {
+      name: "ui:dialog.ccswitch.actions.export",
+    })
+    expect(button).toBeDisabled()
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText("ui:dialog.ccswitch.fields.model"),
+      ).not.toBeDisabled(),
+    )
+    await user.click(screen.getByLabelText("ui:dialog.ccswitch.fields.model"))
+    await user.click(await screen.findByRole("option", { name: "test-model" }))
+    expect(button).toBeEnabled()
+    await user.click(button)
+    await waitFor(() =>
+      expect(mockOpenInCCSwitch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          app,
+          model: "test-model",
+          endpoint: "https://x.test/v1",
+        }),
+      ),
+    )
+  })
+
+  it.each([
+    CCSWITCH_APP_IDS.Pi,
+    CCSWITCH_APP_IDS.MiniMaxCode,
+    CCSWITCH_APP_IDS.KimiCode,
+    CCSWITCH_APP_IDS.DeepSeekHarness,
+    CCSWITCH_APP_IDS.OhMyPi,
+  ])("allows a custom model for %s while discovery is stalled", async (app) => {
+    const discovery = createDeferred<ReturnType<typeof createModelDiscovery>>()
+    mockDiscoverOpenAICompatibleModels.mockReturnValue(discovery.promise)
+    const user = userEvent.setup()
+    render(
+      <CCSwitchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+    const model = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.model",
+    )
+    await waitFor(() => expect(model).toHaveAttribute("aria-busy", "true"))
+    await user.click(screen.getByLabelText("ui:dialog.ccswitch.fields.app"))
+    await user.click(
+      await screen.findByRole("option", {
+        name: `ui:dialog.ccswitch.appOptions.${app}`,
+      }),
+    )
+    const button = screen.getByRole("button", {
+      name: "ui:dialog.ccswitch.actions.export",
+    })
+    expect(button).toBeDisabled()
+    expect(model).toBeEnabled()
+    await user.click(model)
+    await user.type(
+      await screen.findByTestId(CC_SWITCH_EXPORT_TEST_IDS.modelSearchInput),
+      "manual-model",
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:searchableSelect.useValue",
+      }),
+    )
+    expect(model).toHaveAttribute("aria-busy", "true")
+    expect(button).toBeEnabled()
+    await user.click(button)
+    await waitFor(() =>
+      expect(mockOpenInCCSwitch).toHaveBeenCalledWith(
+        expect.objectContaining({ app, model: "manual-model" }),
+      ),
+    )
   })
 
   it("clears the previous catalog status before endpoint debounce completes", async () => {
@@ -147,7 +263,7 @@ describe("CCSwitchExportDialog", () => {
     )
     await waitFor(() => expect(model).toHaveAttribute("aria-busy", "true"))
     expect(model).not.toHaveTextContent("common:status.loading")
-    expect(model).toBeDisabled()
+    expect(model).toBeEnabled()
 
     await act(async () =>
       discovery.resolve(createModelDiscovery([{ id: "gpt-4" }])),
@@ -619,6 +735,10 @@ describe("CCSwitchExportDialog", () => {
       appLabel: "ui:dialog.ccswitch.appOptions.hermes",
       notice: "ui:dialog.ccswitch.notices.hermes",
     },
+    {
+      appLabel: "ui:dialog.ccswitch.appOptions.claudeDesktop",
+      notice: "ui:dialog.ccswitch.notices.claudeDesktop",
+    },
   ])(
     "shows the protocol limitation notice for $appLabel",
     async ({ appLabel, notice }) => {
@@ -663,11 +783,19 @@ describe("CCSwitchExportDialog", () => {
 
   it.each([
     {
-      app: "grokbuild",
+      app: CCSWITCH_APP_IDS.Antigravity,
+      appLabel: "ui:dialog.ccswitch.appOptions.agy",
+    },
+    {
+      app: CCSWITCH_APP_IDS.ClaudeDesktop,
+      appLabel: "ui:dialog.ccswitch.appOptions.claudeDesktop",
+    },
+    {
+      app: CCSWITCH_APP_IDS.GrokBuild,
       appLabel: "ui:dialog.ccswitch.appOptions.grokbuild",
     },
     {
-      app: "hermes",
+      app: CCSWITCH_APP_IDS.Hermes,
       appLabel: "ui:dialog.ccswitch.appOptions.hermes",
     },
   ] as const)(
@@ -682,10 +810,13 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          source={createAccountExportSource(
-            { id: "acc", name: "Example", baseUrl: "https://x.test" },
-            { key: "sk-test" },
-          )}
+          source={{
+            ...createAccountExportSource(
+              { id: "acc", name: "Example", baseUrl: "https://x.test" },
+              { key: "sk-test" },
+            ),
+            anthropicBaseUrl: "https://anthropic.test/proxy/v1",
+          }}
         />,
       )
 
@@ -702,7 +833,15 @@ describe("CCSwitchExportDialog", () => {
 
       await waitFor(() => {
         expect(mockOpenInCCSwitch).toHaveBeenCalledWith(
-          expect.objectContaining({ app }),
+          expect.objectContaining({
+            app,
+            endpoint:
+              app === CCSWITCH_APP_IDS.ClaudeDesktop
+                ? "https://anthropic.test/proxy"
+                : app === CCSWITCH_APP_IDS.Antigravity
+                  ? "https://x.test"
+                  : "https://x.test/v1",
+          }),
         )
       })
     },

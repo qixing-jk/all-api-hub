@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { openInCCSwitch } from "~/services/integrations/ccSwitch"
+import {
+  CCSWITCH_APP_IDS,
+  CCSWITCH_APPS,
+  openInCCSwitch,
+} from "~/services/integrations/ccSwitch"
 import type { CredentialExportData } from "~/services/integrations/credentialExport"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -19,32 +23,81 @@ const mockCredential: CredentialExportData = {
 }
 
 describe("ccSwitch", () => {
-  describe("openInCCSwitch", () => {
-    it.each(["opencode", "openclaw", "grokbuild", "hermes"] as const)(
-      "uses the selected app parameter for %s exports",
-      (app) => {
-        const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+  it("preserves supported wire identifiers and target order", () => {
+    expect(CCSWITCH_APPS).toEqual([
+      "claude",
+      "claude-desktop",
+      "codex",
+      "gemini",
+      "agy",
+      "pi",
+      "mcode",
+      "kimi",
+      "dsh",
+      "omp",
+      "grokbuild",
+      "hermes",
+      "opencode",
+      "openclaw",
+    ])
+  })
 
+  describe("openInCCSwitch", () => {
+    it.each([
+      CCSWITCH_APP_IDS.OpenCode,
+      CCSWITCH_APP_IDS.OpenClaw,
+      CCSWITCH_APP_IDS.GrokBuild,
+      CCSWITCH_APP_IDS.Hermes,
+      CCSWITCH_APP_IDS.ClaudeDesktop,
+      CCSWITCH_APP_IDS.Antigravity,
+    ] as const)("uses the selected app parameter for %s exports", (app) => {
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+
+      openInCCSwitch({
+        credential: mockCredential,
+        app,
+      })
+
+      expect(openSpy).toHaveBeenCalled()
+      const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
+      const parsed = new URL(deeplink)
+      expect(parsed.searchParams.get("app")).toBe(app)
+
+      openSpy.mockRestore()
+    })
+
+    it.each([
+      CCSWITCH_APP_IDS.Pi,
+      CCSWITCH_APP_IDS.MiniMaxCode,
+      CCSWITCH_APP_IDS.KimiCode,
+      CCSWITCH_APP_IDS.DeepSeekHarness,
+      CCSWITCH_APP_IDS.OhMyPi,
+    ] as const)("requires a model before opening %s", (app) => {
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+      expect(openInCCSwitch({ credential: mockCredential, app })).toBe(false)
+      expect(
+        openInCCSwitch({ credential: mockCredential, app, model: "   " }),
+      ).toBe(false)
+      expect(openSpy).not.toHaveBeenCalled()
+      expect(
         openInCCSwitch({
           credential: mockCredential,
           app,
-        })
-
-        expect(openSpy).toHaveBeenCalled()
-        const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
-        const parsed = new URL(deeplink)
-        expect(parsed.searchParams.get("app")).toBe(app)
-
-        openSpy.mockRestore()
-      },
-    )
+          model: "test-model",
+        }),
+      ).toBe(true)
+      expect(
+        new URL(String(openSpy.mock.calls[0]?.[0])).searchParams.get("model"),
+      ).toBe("test-model")
+      openSpy.mockRestore()
+    })
 
     it("exports the provided endpoint without app-specific coercion", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
       openInCCSwitch({
         credential: mockCredential,
-        app: "codex",
+        app: CCSWITCH_APP_IDS.Codex,
         endpoint: "https://x.test/v1",
       })
 
@@ -61,7 +114,7 @@ describe("ccSwitch", () => {
 
       openInCCSwitch({
         credential: { ...mockCredential, baseUrl: "https://x.test" },
-        app: "codex",
+        app: CCSWITCH_APP_IDS.Codex,
       })
 
       const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
@@ -76,7 +129,7 @@ describe("ccSwitch", () => {
 
       openInCCSwitch({
         credential: mockCredential,
-        app: "codex",
+        app: CCSWITCH_APP_IDS.Codex,
         endpoint: "x.test/v1/",
       })
 
@@ -92,7 +145,7 @@ describe("ccSwitch", () => {
 
       openInCCSwitch({
         credential: mockCredential,
-        app: "hermes",
+        app: CCSWITCH_APP_IDS.Hermes,
         name: "  Acme 中文_API Gateway__  ",
       })
 
@@ -108,7 +161,7 @@ describe("ccSwitch", () => {
 
       openInCCSwitch({
         credential: mockCredential,
-        app: "hermes",
+        app: CCSWITCH_APP_IDS.Hermes,
         name: "示例中转",
         endpoint: "https://api.example.invalid/v1",
       })
@@ -125,7 +178,7 @@ describe("ccSwitch", () => {
 
       openInCCSwitch({
         credential: mockCredential,
-        app: "grokbuild",
+        app: CCSWITCH_APP_IDS.GrokBuild,
         name: "示例_Provider",
       })
 

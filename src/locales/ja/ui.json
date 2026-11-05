@@ -127,13 +127,20 @@
         "export": "エクスポート"
       },
       "appOptions": {
+        "agy": "Antigravity",
         "claude": "Claude",
+        "claudeDesktop": "Claude Desktop",
         "codex": "Codex",
+        "dsh": "DeepSeek Harness",
         "gemini": "Gemini",
         "grokbuild": "Grok CLI",
         "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "mcode": "MiniMax Code",
+        "omp": "Oh My Pi",
         "openclaw": "OpenClaw",
-        "opencode": "OpenCode"
+        "opencode": "OpenCode",
+        "pi": "Pi"
       },
       "description": "このプロバイダー設定をディープリンク経由で CC Switch に直接送信します",
       "descriptions": {
@@ -143,7 +150,7 @@
         "app": "対象アプリ",
         "endpoint": "API エンドポイント",
         "homepage": "ホームページ URL",
-        "model": "既定モデル（任意）",
+        "model": "既定のモデル",
         "name": "プロバイダー名",
         "notes": "メモ（任意）"
       },
@@ -151,7 +158,9 @@
         "none": "既定モデルなし"
       },
       "notices": {
+        "claudeDesktop": "CC Switch v4.0.26 以降が必要です。Anthropic API 形式を使用します。claude- で始まるモデル名、またはモデル未指定の場合は直接接続としてインポートされます。その他のモデル名は CC Switch のローカルルーターを使うモデルマッピングとしてインポートされます。",
         "hermes": "CC Switch は Hermes を Chat Completions プロトコルとしてインポートします。エクスポート時に、プロバイダー名は小文字、数字、ハイフンのみの有効な識別子に変換されます。Anthropic Messages や Codex Responses など別の形式を使用する場合は、インポート後に CC Switch 側で調整してください。",
+        "modelRequired": "CC Switch v4.0.26 以降が必要です。エクスポート前にモデルを選択または入力してください。OpenAI Chat Completions API 形式を使用します。",
         "openclaw": "CC Switch は現在、外部インポート経由で OpenClaw AI サービス API 形式を設定できません。必要に応じて、インポート後に CC Switch 側で調整してください。",
         "opencode": "CC Switch は現在、外部インポート経由で OpenCode AI サービス API 形式を設定できません。必要に応じて、インポート後に CC Switch 側で調整してください。"
       },

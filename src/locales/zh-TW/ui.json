@@ -127,13 +127,20 @@
         "export": "匯出"
       },
       "appOptions": {
+        "agy": "Antigravity",
         "claude": "Claude",
+        "claudeDesktop": "Claude Desktop",
         "codex": "Codex",
+        "dsh": "DeepSeek Harness",
         "gemini": "Gemini",
         "grokbuild": "Grok CLI",
         "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "mcode": "MiniMax Code",
+        "omp": "Oh My Pi",
         "openclaw": "OpenClaw",
-        "opencode": "OpenCode"
+        "opencode": "OpenCode",
+        "pi": "Pi"
       },
       "description": "透過深連結一鍵匯入當前站點配置到 CC Switch",
       "descriptions": {
@@ -143,7 +150,7 @@
         "app": "目標應用",
         "endpoint": "介面地址",
         "homepage": "主頁地址",
-        "model": "預設模型（可選）",
+        "model": "預設模型",
         "name": "供應商名稱",
         "notes": "備註（可選）"
       },
@@ -151,7 +158,9 @@
         "none": "不設定預設模型"
       },
       "notices": {
+        "claudeDesktop": "需要 CC Switch v4.0.26 或更新版本。使用 Anthropic API 格式。模型名稱以 claude- 開頭或未指定模型時匯入為直連卡片；其他模型名稱匯入為透過 CC Switch 本機路由轉發的模型對應卡片。",
         "hermes": "CC Switch 會將 Hermes 匯入為 Chat Completions 協定。匯出時，供應商名稱會轉換為只含小寫字母、數字和連字號的有效識別碼；如需 Anthropic Messages、Codex Responses 等其他格式，請在匯入後到 CC Switch 中調整。",
+        "modelRequired": "需要 CC Switch v4.0.26 或更新版本。匯出前請選擇或輸入模型。使用 OpenAI Chat Completions API 格式。",
         "openclaw": "CC Switch 當前不支援透過外部匯入的方式配置 OpenClaw AI 服務的 API 介面格式；如有需要，請在匯入後到 CC Switch 中手動調整。",
         "opencode": "CC Switch 當前不支援透過外部匯入的方式配置 OpenCode AI 服務的 API 介面格式；如有需要，請在匯入後到 CC Switch 中手動調整。"
       },
