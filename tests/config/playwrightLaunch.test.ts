@@ -19,6 +19,10 @@ it("uses the compatibility Chrome without overriding ordinary fixture launch mod
   ).toEqual({
     executablePath: path.resolve("compat/chrome"),
   })
+  expect(
+    config.projects?.find((project) => project.name === "chromium")?.use
+      ?.headless,
+  ).toBeUndefined()
 })
 
 it("keeps Playwright browser selection when no compatibility binary is configured", async () => {

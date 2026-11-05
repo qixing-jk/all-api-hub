@@ -14,6 +14,11 @@ import {
 /** A failed prerequisite is evidence of failure, never a passing Safari smoke. */
 type Check = { name: string; status: string; error?: string }
 
+/**
+ * Build and activate a disposable native Safari trial, then verify Cookie
+ * transport and the rendered Popup/Options flow. Record each prerequisite and
+ * retain diagnostic evidence on failure; missing native access fails the run.
+ */
 export async function runSafariSmoke({
   platform = process.platform,
   output = path.resolve("test-results/safari"),

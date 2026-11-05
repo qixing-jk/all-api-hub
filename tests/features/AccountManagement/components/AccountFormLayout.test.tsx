@@ -129,10 +129,26 @@ describe("AccountFormLayout navigation", () => {
       right: 300,
     } as DOMRect)
     const bounds = vi.spyOn(active, "getBoundingClientRect")
-    bounds.mockReturnValue({ left: 80, right: 180 } as DOMRect)
+    // Browser rectangles move with horizontal scrolling. Keeping a clipped
+    // rectangle fixed makes a repeated reveal scroll again under CI scheduling.
+    bounds.mockImplementation(
+      () =>
+        ({
+          left: 80 + 100 - navigation.scrollLeft,
+          right: 180 + 100 - navigation.scrollLeft,
+        }) as DOMRect,
+    )
+    fireEvent.resize(window)
     fireEvent.resize(window)
     expect(navigation.scrollLeft).toBe(80)
-    bounds.mockReturnValue({ left: 250, right: 350 } as DOMRect)
+    bounds.mockImplementation(
+      () =>
+        ({
+          left: 250 + 80 - navigation.scrollLeft,
+          right: 350 + 80 - navigation.scrollLeft,
+        }) as DOMRect,
+    )
+    fireEvent.resize(window)
     fireEvent.resize(window)
     expect(navigation.scrollLeft).toBe(130)
   })
