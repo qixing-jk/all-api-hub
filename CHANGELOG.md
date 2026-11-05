@@ -1,5 +1,35 @@
 # Changelog
 
+## [4.9.0](https://github.com/qixing-jk/all-api-hub/compare/v4.8.0...v4.9.0) (2026-11-05)
+
+
+### Features
+
+* **aimlapi:** add account onboarding, native keys and structured pricing ([#1803](https://github.com/qixing-jk/all-api-hub/issues/1803)) ([a5493e9](https://github.com/qixing-jk/all-api-hub/commit/a5493e91fb45ce71003ff451974a31e8e5642091))
+* **checkin:** include saved refresh diagnostics in feedback ([#1808](https://github.com/qixing-jk/all-api-hub/issues/1808)) ([50950fa](https://github.com/qixing-jk/all-api-hub/commit/50950fa2a8e31faca0a76e27ace2a4bf39d0f105))
+* **checkin:** support Bai API daily check-in ([#1814](https://github.com/qixing-jk/all-api-hub/issues/1814)) ([5bf6182](https://github.com/qixing-jk/all-api-hub/commit/5bf618247164bc3c6bbc53d98f4e1c3681e66b93))
+* **model-list:** compare account group offers independently ([#1819](https://github.com/qixing-jk/all-api-hub/issues/1819)) ([b511cee](https://github.com/qixing-jk/all-api-hub/commit/b511ceee93e678cdcbadf9849d687438ab373815))
+* **nanogpt:** add accounts, model catalog and native key management ([#1813](https://github.com/qixing-jk/all-api-hub/issues/1813)) ([c8adaec](https://github.com/qixing-jk/all-api-hub/commit/c8adaecf7f16b8d6ba45031e42769c67bf6a7adc))
+* **pricing:** extend shared price presentation, key editors and live acceptance ([#1800](https://github.com/qixing-jk/all-api-hub/issues/1800)) ([34fdd0a](https://github.com/qixing-jk/all-api-hub/commit/34fdd0ac0c87597045dbcc645df70e954631bcfb))
+* **transport:** share site request budgets and 429 cooldowns ([#1815](https://github.com/qixing-jk/all-api-hub/issues/1815)) ([81761a4](https://github.com/qixing-jk/all-api-hub/commit/81761a46f53d3fb99c01fe02b6b2b8f895901bf1))
+* **ui:** show model fetch status and recovery inside selectors ([#1820](https://github.com/qixing-jk/all-api-hub/issues/1820)) ([44123fe](https://github.com/qixing-jk/all-api-hub/commit/44123feb11cddb4d8562d491fbd88f376f295228))
+
+
+### Bug Fixes
+
+* **checkin:** guard Sub2API retries after authentication recovery ([#1816](https://github.com/qixing-jk/all-api-hub/issues/1816)) ([b594caf](https://github.com/qixing-jk/all-api-hub/commit/b594cafd63283ec642ab6297f4eb524e250d46ba))
+* **checkin:** preserve feedback when reports exceed URL limits ([#1806](https://github.com/qixing-jk/all-api-hub/issues/1806)) ([a13da96](https://github.com/qixing-jk/all-api-hub/commit/a13da96b2ebf0d5d43fc615bbd9b3861ac6186f6))
+* **checkin:** recover stale methods across selection modes ([#1807](https://github.com/qixing-jk/all-api-hub/issues/1807)) ([fb5e4cc](https://github.com/qixing-jk/all-api-hub/commit/fb5e4ccef09e64feda8a575912fd5566e9400ef5))
+* **deps:** restore React 19 list compatibility and stabilize CI tests ([#1826](https://github.com/qixing-jk/all-api-hub/issues/1826)) ([3bbdb4f](https://github.com/qixing-jk/all-api-hub/commit/3bbdb4f2299d784e7dcacb4862683799b87724ca))
+* **e2e:** repair compatibility browser setup and Safari settings activation ([#1827](https://github.com/qixing-jk/all-api-hub/issues/1827)) ([171aadd](https://github.com/qixing-jk/all-api-hub/commit/171aaddb7bac86298fc69a09fe48b272d6203bd5))
+* **ui:** simplify update log and correct star invitation state ([#1809](https://github.com/qixing-jk/all-api-hub/issues/1809)) ([ce6c42a](https://github.com/qixing-jk/all-api-hub/commit/ce6c42a1f5a8c2bcaa591e64e32de5e03f8c49f8))
+
+
+### Performance Improvements
+
+* **ci:** cut runner work across the PR and release pipelines ([#1817](https://github.com/qixing-jk/all-api-hub/issues/1817)) ([6f6f611](https://github.com/qixing-jk/all-api-hub/commit/6f6f6116691c4619e812de9c003281dbaadf87eb))
+* **ci:** reduce repeated test work and keep E2E reruns complete ([#1822](https://github.com/qixing-jk/all-api-hub/issues/1822)) ([037c8b7](https://github.com/qixing-jk/all-api-hub/commit/037c8b7870b44b2310b557e4856592afd852ba06))
+
 ## [4.8.0](https://github.com/qixing-jk/all-api-hub/compare/v4.7.0...v4.8.0) (2026-11-01)
 
 
