@@ -11,17 +11,15 @@ import {
   clearWebdavSyncDataSelection,
   clickWebdavAction,
   createStalePreferenceWriteResult,
-  ENCRYPTED_BACKUP_ENVELOPE,
   loggerMocks,
   mockDownloadBackup,
-  mockDownloadBackupRaw,
   mockIsWebdavFileNotFoundError,
   mockMergeWebdavBackupPayloadBySelection,
   mockParseWebdavBackupJson,
   mockTestWebdavConnection,
-  mockTryParseEncryptedWebdavBackupEnvelope,
   mockUploadBackup,
   mockUserPreferences,
+  openManualDecryptDialog,
   render,
   setupWebdavSettingsTestHarness,
 } from "~~/tests/features/ImportExport/components/webdavSettingsHarness"
@@ -582,13 +580,7 @@ describe("WebDAVSettings Backup", () => {
     })
   })
 
-  it("updates the editable fields and toggles password visibility in both forms", async () => {
-    const user = userEvent.setup()
-    mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
-    mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
-      ENCRYPTED_BACKUP_ENVELOPE,
-    )
-
+  it("updates the editable WebDAV fields", async () => {
     render(<WebDAVSettings />)
 
     const urlInput = (await screen.findByDisplayValue(
@@ -597,9 +589,6 @@ describe("WebDAVSettings Backup", () => {
     const usernameInput = screen.getByDisplayValue("alice") as HTMLInputElement
     const webdavPasswordInput = document.getElementById(
       WEBDAV_TARGET_IDS.password,
-    ) as HTMLInputElement
-    const backupPasswordInput = document.getElementById(
-      WEBDAV_TARGET_IDS.encryptionPassword,
     ) as HTMLInputElement
 
     fireEvent.change(urlInput, {
@@ -615,45 +604,51 @@ describe("WebDAVSettings Backup", () => {
     expect(urlInput.value).toBe("https://dav.example.com/backup-2.json")
     expect(usernameInput.value).toBe("bob")
     expect(webdavPasswordInput.value).toBe("pw-2")
+  })
 
-    await user.click(
-      within(webdavPasswordInput.parentElement!).getByRole("button", {
+  it.each([WEBDAV_TARGET_IDS.password, WEBDAV_TARGET_IDS.encryptionPassword])(
+    "toggles password visibility for %s",
+    async (inputId) => {
+      const user = userEvent.setup()
+      render(<WebDAVSettings />)
+      await screen.findByDisplayValue("alice")
+      const input = document.getElementById(inputId) as HTMLInputElement
+      const toggle = within(input.parentElement!).getByRole("button", {
         name: /importExport:webdav\.(show|hide)Password/,
-      }),
-    )
-    await user.click(
-      within(backupPasswordInput.parentElement!).getByRole("button", {
-        name: /importExport:webdav\.(show|hide)Password/,
-      }),
-    )
+      })
+      expect(input).toHaveAttribute("type", "password")
+      await user.click(toggle)
+      expect(input).toHaveAttribute("type", "text")
+      await user.click(toggle)
+      expect(input).toHaveAttribute("type", "password")
+    },
+  )
 
-    expect(webdavPasswordInput).toHaveAttribute("type", "text")
-    expect(backupPasswordInput).toHaveAttribute("type", "text")
-
-    fireEvent.change(backupPasswordInput, {
-      target: { value: "" },
-    })
+  it("disables backup encryption with the switch", async () => {
+    const user = userEvent.setup()
+    render(<WebDAVSettings />)
+    await screen.findByDisplayValue("alice")
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true")
     await user.click(screen.getByRole("switch"))
-    await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false")
+  })
 
-    expect(
-      await screen.findByText(
-        "importExport:webdav.encryption.decryptDialogTitle",
-      ),
-    ).toBeInTheDocument()
+  it("toggles the manual decrypt password when backup encryption is disabled", async () => {
+    const user = userEvent.setup()
+    render(<WebDAVSettings />)
+    await screen.findByDisplayValue("alice")
+    await user.click(screen.getByRole("switch"))
+    await openManualDecryptDialog()
+    const input = document.getElementById("decryptPassword") as HTMLInputElement
+    const toggle = within(input.parentElement!).getByRole("button", {
+      name: /importExport:webdav\.(show|hide)Password/,
+    })
 
-    await user.click(
-      atIndex(
-        screen.getAllByRole("button", {
-          name: /importExport:webdav\.(show|hide)Password/,
-        }),
-        2,
-      ),
-    )
-
-    expect(
-      document.getElementById("decryptPassword") as HTMLInputElement,
-    ).toHaveAttribute("type", "text")
+    expect(input).toHaveAttribute("type", "password")
+    await user.click(toggle)
+    expect(input).toHaveAttribute("type", "text")
+    await user.click(toggle)
+    expect(input).toHaveAttribute("type", "password")
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false")
   })
 })
