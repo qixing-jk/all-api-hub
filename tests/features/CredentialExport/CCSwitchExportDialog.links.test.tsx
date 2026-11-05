@@ -42,23 +42,20 @@ describe("CC Switch export links from the dialog", () => {
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
     const onClose = vi.fn()
     const user = userEvent.setup()
-    render(
-      <CCSwitchExportDialog
-        isOpen
-        onClose={onClose}
-        source={{
-          ...createAccountExportSource(
-            {
-              id: "probe",
-              name: "Example",
-              baseUrl: "https://relay.test/proxy/v1",
-            },
-            { key: "sk-fake+&=测试" },
-          ),
-          anthropicBaseUrl: "https://anthropic.test/proxy/v1",
-        }}
-      />,
-    )
+    const source = {
+      ...createAccountExportSource(
+        {
+          id: "probe",
+          name: "Example",
+          baseUrl: "https://relay.test/proxy/v1",
+        },
+        { key: "sk-fake+&=测试" },
+      ),
+      anthropicBaseUrl: "https://anthropic.test/proxy/v1",
+    }
+    // Account export normalizes the OpenAI-compatible mount before the dialog.
+    expect(source.baseUrl).toBe("https://relay.test/proxy")
+    render(<CCSwitchExportDialog isOpen onClose={onClose} source={source} />)
     await user.click(
       await screen.findByLabelText("ui:dialog.ccswitch.fields.app"),
     )

@@ -503,7 +503,6 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
               ...upstreamModelOptions,
             ]}
             allowCustomValue
-            disabled={isLoadingModels}
             data-testid={CC_SWITCH_EXPORT_TEST_IDS.modelPicker}
             searchInputTestId={CC_SWITCH_EXPORT_TEST_IDS.modelSearchInput}
           />

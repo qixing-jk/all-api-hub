@@ -151,6 +151,61 @@ describe("CCSwitchExportDialog", () => {
     )
   })
 
+  it.each([
+    CCSWITCH_APP_IDS.Pi,
+    CCSWITCH_APP_IDS.MiniMaxCode,
+    CCSWITCH_APP_IDS.KimiCode,
+    CCSWITCH_APP_IDS.DeepSeekHarness,
+    CCSWITCH_APP_IDS.OhMyPi,
+  ])("allows a custom model for %s while discovery is stalled", async (app) => {
+    const discovery = createDeferred<ReturnType<typeof createModelDiscovery>>()
+    mockDiscoverOpenAICompatibleModels.mockReturnValue(discovery.promise)
+    const user = userEvent.setup()
+    render(
+      <CCSwitchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+    const model = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.model",
+    )
+    await waitFor(() => expect(model).toHaveAttribute("aria-busy", "true"))
+    await user.click(screen.getByLabelText("ui:dialog.ccswitch.fields.app"))
+    await user.click(
+      await screen.findByRole("option", {
+        name: `ui:dialog.ccswitch.appOptions.${app}`,
+      }),
+    )
+    const button = screen.getByRole("button", {
+      name: "ui:dialog.ccswitch.actions.export",
+    })
+    expect(button).toBeDisabled()
+    expect(model).toBeEnabled()
+    await user.click(model)
+    await user.type(
+      await screen.findByTestId(CC_SWITCH_EXPORT_TEST_IDS.modelSearchInput),
+      "manual-model",
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:searchableSelect.useValue",
+      }),
+    )
+    expect(model).toHaveAttribute("aria-busy", "true")
+    expect(button).toBeEnabled()
+    await user.click(button)
+    await waitFor(() =>
+      expect(mockOpenInCCSwitch).toHaveBeenCalledWith(
+        expect.objectContaining({ app, model: "manual-model" }),
+      ),
+    )
+  })
+
   it("clears the previous catalog status before endpoint debounce completes", async () => {
     mockDiscoverOpenAICompatibleModels
       .mockResolvedValueOnce(createModelDiscovery([{ id: "known" }]))
@@ -208,7 +263,7 @@ describe("CCSwitchExportDialog", () => {
     )
     await waitFor(() => expect(model).toHaveAttribute("aria-busy", "true"))
     expect(model).not.toHaveTextContent("common:status.loading")
-    expect(model).toBeDisabled()
+    expect(model).toBeEnabled()
 
     await act(async () =>
       discovery.resolve(createModelDiscovery([{ id: "gpt-4" }])),

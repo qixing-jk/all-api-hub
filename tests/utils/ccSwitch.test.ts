@@ -75,6 +75,9 @@ describe("ccSwitch", () => {
     ] as const)("requires a model before opening %s", (app) => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
       expect(openInCCSwitch({ credential: mockCredential, app })).toBe(false)
+      expect(
+        openInCCSwitch({ credential: mockCredential, app, model: "   " }),
+      ).toBe(false)
       expect(openSpy).not.toHaveBeenCalled()
       expect(
         openInCCSwitch({
