@@ -1,6 +1,5 @@
-import CountUp from "react-countup"
-
 import { SUMMARY_ANIMATION_DURATION } from "~/entrypoints/popup/summaryConfig"
+import CountUp from "~/lib/countup"
 
 /**
  * AnimatedStatValue component animates the display of a numeric value using react-countup.
