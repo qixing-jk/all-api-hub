@@ -290,6 +290,23 @@ describe("useAccountDialog auth defaults", () => {
     errorSpy.mockRestore()
   })
 
+  it("does not retry account hydration while the editor is closed", async () => {
+    const getAccountSpy = vi
+      .spyOn(accountQueries, "getAccountById")
+      .mockResolvedValue(null)
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.EDIT,
+      account: buildDisplaySiteData({ id: "closed-retry-edit" }),
+      isOpen: false,
+      onClose: vi.fn(),
+    })
+
+    await act(async () => result.current.handlers.retryAccountLoad())
+
+    expect(getAccountSpy).not.toHaveBeenCalled()
+    getAccountSpy.mockRestore()
+  })
+
   it("keeps the newer account draft when an older edit read resolves late", async () => {
     const olderRead =
       createDeferred<

@@ -470,4 +470,19 @@ describe("DialogStateContext sponsor prefill", () => {
       }),
     ).toThrow("useDialogStateContext")
   })
+
+  it("throws when useAccountDialogActions is rendered outside its provider", () => {
+    function InvalidHarness() {
+      useAccountDialogActions()
+      return null
+    }
+
+    expect(() =>
+      render(<InvalidHarness />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      }),
+    ).toThrow("useAccountDialogActions")
+  })
 })

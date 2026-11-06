@@ -96,6 +96,174 @@ async function sampleFade(page: Page, phase: "open" | "closed") {
   )
 }
 
+type NaturalAnimationCapture = {
+  editId: string
+  animationName: "fadeIn"
+  targets: { slot: string; selector: string }[]
+  loadingSelector?: string
+}
+
+/** Captures a real animation at a controlled midpoint, then records its natural playback. */
+async function captureNaturalAnimation(
+  page: Page,
+  capture: NaturalAnimationCapture,
+) {
+  return page.evaluate(
+    async ({ editId, animationName, targets, loadingSelector }) => {
+      type Sample = {
+        slot: string
+        duration: number
+        opacity: number
+        scaleX: number
+        scaleY: number
+      }
+      type Frame = {
+        time: number
+        samples: Sample[]
+        dark: boolean
+      }
+
+      const startedAt = performance.now()
+      const animationsBySlot = new Map<string, CSSAnimation>()
+      const controlledSamples: Sample[] = []
+      const naturalFrames: Frame[] = []
+      const loading: { spinner: boolean }[] = []
+      let settledSamples: Sample[] = []
+      let timedOut = false
+      let complete = false
+      let resolveCapture!: () => void
+      const observer = loadingSelector
+        ? new MutationObserver(() => {
+            const placeholder = document.querySelector(loadingSelector)
+            if (placeholder)
+              loading.push({
+                spinner: Boolean(placeholder.querySelector("svg")),
+              })
+          })
+        : null
+      observer?.observe(document.body, { childList: true, subtree: true })
+
+      const readSamples = (): Sample[] =>
+        targets.flatMap(({ slot, selector }) => {
+          const element = document.querySelector<HTMLElement>(selector)
+          const animation = animationsBySlot.get(slot)
+          if (!element || !animation) return []
+          const style = getComputedStyle(element)
+          return [
+            {
+              slot,
+              duration: Number(animation.effect!.getComputedTiming().duration),
+              opacity: Number(style.opacity),
+              scaleX: new DOMMatrixReadOnly(style.transform).m11,
+              scaleY: new DOMMatrixReadOnly(style.transform).m22,
+            },
+          ]
+        })
+
+      const capturePromise = new Promise<void>((resolve) => {
+        resolveCapture = resolve
+      })
+      const cleanup = () => {
+        window.clearTimeout(timeout)
+        document.removeEventListener("animationstart", onAnimationStart, true)
+        observer?.disconnect()
+        resolveCapture()
+      }
+      const finish = () => {
+        if (complete) return
+        complete = true
+        if (!timedOut) settledSamples = readSamples()
+        cleanup()
+      }
+      const timeout = window.setTimeout(() => {
+        timedOut = true
+        finish()
+      }, 3000)
+
+      const onAnimationStart = (event: AnimationEvent) => {
+        const element = event.target
+        if (
+          !(element instanceof HTMLElement) ||
+          event.animationName !== animationName
+        )
+          return
+        const target = targets.find(({ selector }) => element.matches(selector))
+        if (!target || animationsBySlot.has(target.slot)) return
+        const animation = element
+          .getAnimations()
+          .find(
+            (item): item is CSSAnimation =>
+              item instanceof CSSAnimation &&
+              item.animationName === animationName,
+          )
+        if (!animation) return
+        animationsBySlot.set(target.slot, animation)
+        if (animationsBySlot.size !== targets.length) return
+
+        const animations = [...animationsBySlot.values()]
+        animations.forEach((item) => item.pause())
+        animations.forEach((item) => {
+          const duration = Number(item.effect!.getComputedTiming().duration)
+          item.currentTime = duration / 2
+        })
+        controlledSamples.push(...readSamples())
+        animations.forEach((item) => item.play())
+      }
+
+      const sampleNaturalFrame = () => {
+        if (complete) return
+        const samples = readSamples()
+        if (
+          controlledSamples.length === targets.length &&
+          samples.length === targets.length
+        ) {
+          naturalFrames.push({
+            time: performance.now() - startedAt,
+            samples,
+            dark: document.documentElement.classList.contains("dark"),
+          })
+        }
+        if (
+          animationsBySlot.size === targets.length &&
+          [...animationsBySlot.values()].every(
+            (animation) => animation.playState === "finished",
+          )
+        ) {
+          finish()
+          return
+        }
+        requestAnimationFrame(sampleNaturalFrame)
+      }
+
+      document.addEventListener("animationstart", onAnimationStart, true)
+      requestAnimationFrame(sampleNaturalFrame)
+      const trigger = document.querySelector<HTMLButtonElement>(
+        `[data-testid="${editId}"]`,
+      )!
+      trigger.focus()
+      trigger.click()
+      await capturePromise
+
+      return {
+        sampling: {
+          controlledSamples: "paused at 50% currentTime",
+          naturalFrames: "requestAnimationFrame after play() resumed",
+        },
+        animationStartedSlots: [...animationsBySlot.keys()],
+        finishedSlots: [...animationsBySlot.entries()]
+          .filter(([, animation]) => animation.playState === "finished")
+          .map(([slot]) => slot),
+        controlledSamples,
+        naturalFrames,
+        settledSamples,
+        loading,
+        timedOut,
+      }
+    },
+    capture,
+  )
+}
+
 test.beforeEach(async ({ context, page, extensionId }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "zh-CN")
@@ -237,7 +405,7 @@ test("account editor can close during entrance and reopen during exit", async ({
   await expect(trigger).toBeFocused()
 })
 
-test("account editor naturally paints its fade on first open, warm open and after refresh", async ({
+test("account editor starts and completes its fade on first open, warm open and after refresh", async ({
   page,
 }, testInfo) => {
   for (const phase of ["first", "warm", "after-refresh"] as const) {
@@ -247,66 +415,55 @@ test("account editor naturally paints its fade on first open, warm open and afte
         .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton)
         .waitFor({ state: "visible" })
     }
-    const frames = await page.evaluate(async (editId) => {
-      const frames: {
-        time: number
-        opacity: number
-        backdrop: number
-        dark: boolean
-      }[] = []
-      const started = performance.now()
-      const trigger = document.querySelector<HTMLButtonElement>(
-        `[data-testid="${editId}"]`,
-      )!
-      trigger.focus()
-      trigger.click()
-      await new Promise<void>((resolve, reject) => {
-        const sample = () => {
-          const content = document.querySelector<HTMLElement>(
-            '[data-slot="modal-content"][data-state="open"]',
-          )
-          const backdrop = document.querySelector<HTMLElement>(
-            '[data-slot="modal-overlay"][data-state="open"]',
-          )
-          if (content && backdrop) {
-            frames.push({
-              time: performance.now() - started,
-              opacity: Number(getComputedStyle(content).opacity),
-              backdrop: Number(getComputedStyle(backdrop).opacity),
-              dark: document.documentElement.classList.contains("dark"),
-            })
-            const fade = content
-              .getAnimations()
-              .find(
-                (animation) =>
-                  animation instanceof CSSAnimation &&
-                  animation.animationName === "fadeIn",
-              )
-            if (fade?.playState === "finished") return resolve()
-          }
-          if (performance.now() - started > 3000)
-            return reject(
-              new Error(
-                `Natural opening did not finish: ${JSON.stringify(frames)}`,
-              ),
-            )
-          requestAnimationFrame(sample)
-        }
-        requestAnimationFrame(sample)
-      })
-      return frames
-    }, ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton)
+    const result = await captureNaturalAnimation(page, {
+      editId: ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton,
+      animationName: "fadeIn",
+      targets: [
+        {
+          slot: "modal-content",
+          selector: '[data-slot="modal-content"][data-state="open"]',
+        },
+        {
+          slot: "modal-overlay",
+          selector: '[data-slot="modal-overlay"][data-state="open"]',
+        },
+      ],
+    })
     await testInfo.attach(`natural-opening-${phase}`, {
-      body: JSON.stringify(frames, null, 2),
+      body: JSON.stringify(result, null, 2),
       contentType: "application/json",
     })
+    expect(result.timedOut).toBe(false)
+    expect(result.animationStartedSlots.sort()).toEqual([
+      "modal-content",
+      "modal-overlay",
+    ])
+    expect(result.finishedSlots.sort()).toEqual([
+      "modal-content",
+      "modal-overlay",
+    ])
+    expect(result.controlledSamples).toHaveLength(2)
+    for (const sample of result.controlledSamples) {
+      expect(sample.duration).toBe(140)
+      expect(sample.opacity).toBeGreaterThan(0)
+      expect(sample.opacity).toBeLessThan(1)
+      expect(sample.scaleX).toBe(1)
+      expect(sample.scaleY).toBe(1)
+    }
     expect(
-      frames.some((frame) => frame.opacity > 0 && frame.opacity < 0.8),
-    ).toBe(true)
-    expect(
-      frames.every((frame) => Math.abs(frame.opacity - frame.backdrop) < 0.05),
-    ).toBe(true)
-    expect(new Set(frames.map((frame) => frame.dark)).size).toBe(1)
+      Math.abs(
+        result.controlledSamples[0]!.opacity -
+          result.controlledSamples[1]!.opacity,
+      ),
+    ).toBeLessThan(0.05)
+    expect(result.settledSamples).toHaveLength(2)
+    expect(result.settledSamples.every((sample) => sample.opacity === 1)).toBe(
+      true,
+    )
+    expect(result.naturalFrames.length).toBeGreaterThan(0)
+    expect(new Set(result.naturalFrames.map((frame) => frame.dark)).size).toBe(
+      1,
+    )
     await page.keyboard.press("Escape")
     await expect(page.getByRole("dialog", { name: "编辑账号" })).toHaveCount(0)
   }
@@ -315,67 +472,32 @@ test("account editor naturally paints its fade on first open, warm open and afte
 test("ready account fields fade in quickly without a loading spinner or replay on typing", async ({
   page,
 }, testInfo) => {
-  const result = await page.evaluate(
-    async ({ editId, formId }) => {
-      const frames: number[] = []
-      const loading: { spinner: boolean }[] = []
-      const observer = new MutationObserver(() => {
-        const placeholder = document.querySelector(
-          '[data-testid="account-dialog-loading"]',
-        )
-        if (placeholder)
-          loading.push({ spinner: Boolean(placeholder.querySelector("svg")) })
-      })
-      observer.observe(document.body, { childList: true, subtree: true })
-      const started = performance.now()
-      const trigger = document.querySelector<HTMLButtonElement>(
-        `[data-testid="${editId}"]`,
-      )!
-      trigger.focus()
-      trigger.click()
-      let duration = 0
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const sample = () => {
-            const form = document.querySelector<HTMLElement>(
-              `[data-testid="${formId}"][data-account-form-ready]`,
-            )
-            const animation = form
-              ?.getAnimations()
-              .find(
-                (item) =>
-                  item instanceof CSSAnimation &&
-                  item.animationName === "fadeIn",
-              )
-            if (form && animation) {
-              duration = Number(animation.effect!.getComputedTiming().duration)
-              frames.push(Number(getComputedStyle(form).opacity))
-              if (animation.playState === "finished") return resolve()
-            }
-            if (performance.now() - started > 3000)
-              return reject(new Error("Ready fields did not finish their fade"))
-            requestAnimationFrame(sample)
-          }
-          requestAnimationFrame(sample)
-        })
-      } finally {
-        observer.disconnect()
-      }
-      return { duration, frames, loading }
-    },
-    {
-      editId: ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton,
-      formId: ACCOUNT_MANAGEMENT_TEST_IDS.accountForm,
-    },
-  )
-  expect(result.duration).toBe(80)
-  expect(result.frames.some((opacity) => opacity > 0 && opacity < 1)).toBe(true)
-  expect(result.frames.at(-1)).toBe(1)
-  expect(result.loading.every((state) => !state.spinner)).toBe(true)
+  const result = await captureNaturalAnimation(page, {
+    editId: ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton,
+    animationName: "fadeIn",
+    targets: [
+      {
+        slot: "account-form",
+        selector: `[data-testid="${ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}"][data-account-form-ready]`,
+      },
+    ],
+    loadingSelector: '[data-testid="account-dialog-loading"]',
+  })
   await testInfo.attach("ready-fields-natural-fade", {
     body: JSON.stringify(result, null, 2),
     contentType: "application/json",
   })
+  expect(result.timedOut).toBe(false)
+  expect(result.animationStartedSlots).toEqual(["account-form"])
+  expect(result.finishedSlots).toEqual(["account-form"])
+  expect(result.controlledSamples).toHaveLength(1)
+  expect(result.controlledSamples[0]!.duration).toBe(80)
+  expect(result.controlledSamples[0]!.opacity).toBeGreaterThan(0)
+  expect(result.controlledSamples[0]!.opacity).toBeLessThan(1)
+  expect(result.settledSamples).toHaveLength(1)
+  expect(result.settledSamples[0]!.opacity).toBe(1)
+  expect(result.naturalFrames.length).toBeGreaterThan(0)
+  expect(result.loading.every((state) => !state.spinner)).toBe(true)
   await page
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
     .fill("输入不重播动画")
