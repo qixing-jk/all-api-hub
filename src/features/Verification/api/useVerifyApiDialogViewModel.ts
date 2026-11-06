@@ -21,6 +21,7 @@ import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificatio
 import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
+  formatAccountRuntimeKeySecretForSite,
   isAccountRuntimeKeyCompatibleWithModel,
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
@@ -316,7 +317,7 @@ export function useVerifyApiDialogViewModel({
         return null
       return {
         baseUrl: selectedRuntimeKey.baseUrl,
-        apiKey: selectedRuntimeKey.secret,
+        apiKey: formatAccountRuntimeKeySecretForSite(selectedRuntimeKey).secret,
         apiType,
         modelId,
         mode: verificationMode,

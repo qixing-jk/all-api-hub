@@ -399,6 +399,60 @@ describe("webAiApiCheck background handlers", () => {
     }
   })
 
+  it.each(["get", "save"] as const)(
+    "returns a safe failure when context history %s fails",
+    async (action) => {
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+      const { contextCapacityHistory } = await import(
+        "~/services/verification/verificationResultHistory/contextCapacityHistory"
+      )
+      const operation = vi
+        .spyOn(contextCapacityHistory, action)
+        .mockRejectedValueOnce(new Error("private history secret"))
+      try {
+        background.setupWebAiApiCheckMessagingListeners()
+        await expect(
+          webAiApiCheckMessageHandlers.get("webAiApiCheck:contextHistory")!({
+            data: {
+              action,
+              request: {
+                apiType: "openai",
+                baseUrl: "https://example.invalid",
+                apiKey: "private history secret",
+                modelId: "model",
+              },
+            },
+          }),
+        ).resolves.toEqual({ success: false })
+      } finally {
+        operation.mockRestore()
+      }
+    },
+  )
+  it("returns a safe failure when interrupted-record cleanup cannot persist", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const checkpoints = await import(
+      "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
+    )
+    const discard = vi
+      .spyOn(checkpoints, "discardInactiveContextCheckpoints")
+      .mockRejectedValueOnce(new Error("private storage detail"))
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      await expect(
+        webAiApiCheckMessageHandlers.get(
+          "webAiApiCheck:discardContextCheckpoints",
+        )!({ data: {} }),
+      ).resolves.toEqual({ success: false })
+    } finally {
+      discard.mockRestore()
+    }
+  })
+
   it("restores compact webpage capacity history without exposing connection credentials", async () => {
     const background = await import(
       "~/services/verification/webAiApiCheck/background"
@@ -2367,7 +2421,7 @@ describe("webAiApiCheck background handlers", () => {
     background.setupWebAiApiCheckMessagingListeners()
     background.setupWebAiApiCheckMessagingListeners()
 
-    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(15)
+    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(16)
     expect(
       onWebAiApiCheckMessageMock.mock.calls.map((call) => call[0]),
     ).toEqual([
@@ -2384,6 +2438,7 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.RunPelican,
       WebAiApiCheckMessageTypes.RunContextCapacity,
       WebAiApiCheckMessageTypes.ContextHistory,
+      WebAiApiCheckMessageTypes.DiscardContextCheckpoints,
       WebAiApiCheckMessageTypes.CancelRunProbe,
       WebAiApiCheckMessageTypes.SaveProfile,
     ])

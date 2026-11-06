@@ -22,7 +22,10 @@ import {
 import type { ApiCheckValidationError } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { useApiCheckModalShell } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "~/features/WebAiApiCheck/content/models/useApiCheckModelDiscovery"
-import { contextHistoryInBackground } from "~/features/WebAiApiCheck/content/probes/contextHistoryInBackground"
+import {
+  contextHistoryInBackground,
+  discardContextCheckpointsInBackground,
+} from "~/features/WebAiApiCheck/content/probes/contextHistoryInBackground"
 import { useApiCheckProbeRunner } from "~/features/WebAiApiCheck/content/probes/useApiCheckProbeRunner"
 import { normalizeApiCheckSourceUrl } from "~/features/WebAiApiCheck/content/profiles/apiCheckSourceUrl"
 import { useApiCheckProfileSaveWorkflow } from "~/features/WebAiApiCheck/content/profiles/useApiCheckProfileSaveWorkflow"
@@ -270,6 +273,7 @@ export function useApiCheckModalViewModel() {
 
   const verificationTools = useVerificationTools({
     contextHistoryAccess: contextHistoryInBackground,
+    discardContextCheckpoints: discardContextCheckpointsInBackground,
     enableContextCapacity: true,
     contextCapacityKey: JSON.stringify([
       isOpen,

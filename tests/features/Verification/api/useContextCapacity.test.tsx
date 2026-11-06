@@ -177,3 +177,156 @@ it("records a resolved request failure as history without exposing its secrets",
   )
   expect(result.current.error).not.toContain("secret")
 })
+
+it("offers explicit cleanup after the interrupted-record limit and unlocks new tests after it completes", async () => {
+  let release!: () => void
+  const discardCheckpoints = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve
+      }),
+  )
+  const runner = vi
+    .fn()
+    .mockRejectedValue(
+      Object.assign(new Error("limit reached"), {
+        name: "ContextCheckpointLimitError",
+      }),
+    )
+  const { result } = renderHook(() =>
+    useContextCapacity({
+      enabled: true,
+      blocked: false,
+      contextKey: "limit",
+      resolveRequest: async () => request,
+      runner,
+      discardCheckpoints,
+    }),
+  )
+  act(() => result.current.run())
+  await waitFor(() => expect(result.current.checkpointLimitReached).toBe(true))
+  expect(result.current.canRun).toBe(false)
+  act(() => result.current.discardCheckpoints!())
+  expect(result.current.discardingCheckpoints).toBe(true)
+  expect(result.current.canRun).toBe(false)
+  await act(async () => release())
+  expect(result.current.checkpointLimitReached).toBe(false)
+  expect(result.current.error).toBeNull()
+  expect(result.current.canRun).toBe(true)
+})
+
+it("keeps the discard control retryable when cleanup fails", async () => {
+  const discardCheckpoints = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("cleanup unavailable"))
+    .mockResolvedValue(undefined)
+  const runner = vi
+    .fn()
+    .mockRejectedValue(
+      Object.assign(new Error("limit"), {
+        name: "ContextCheckpointLimitError",
+      }),
+    )
+  const { result } = renderHook(() =>
+    useContextCapacity({
+      enabled: true,
+      blocked: false,
+      contextKey: "limit",
+      resolveRequest: async () => request,
+      runner,
+      discardCheckpoints,
+    }),
+  )
+  act(() => result.current.run())
+  await waitFor(() => expect(result.current.checkpointLimitReached).toBe(true))
+  act(() => result.current.discardCheckpoints!())
+  await waitFor(() => expect(result.current.error).toBe("cleanup unavailable"))
+  expect(result.current.checkpointLimitReached).toBe(true)
+  expect(result.current.discardingCheckpoints).toBe(false)
+  act(() => result.current.discardCheckpoints!())
+  await waitFor(() => expect(result.current.canRun).toBe(true))
+})
+
+it.each([false, true])(
+  "does not let an old cleanup change a replacement connection: failure=%s",
+  async (failure) => {
+    let settle!: () => void
+    const pending = new Promise<void>((resolve, reject) => {
+      settle = () =>
+        failure ? reject(new Error("old cleanup failed")) : resolve()
+    })
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(
+        Object.assign(new Error("limit"), {
+          name: "ContextCheckpointLimitError",
+        }),
+      )
+      .mockRejectedValue(new Error("current failure"))
+    const { result, rerender } = renderHook(
+      ({ contextKey }) =>
+        useContextCapacity({
+          enabled: true,
+          blocked: false,
+          contextKey,
+          resolveRequest: async () => request,
+          runner,
+          discardCheckpoints: () => pending,
+        }),
+      { initialProps: { contextKey: "old" } },
+    )
+    act(() => result.current.run())
+    await waitFor(() =>
+      expect(result.current.checkpointLimitReached).toBe(true),
+    )
+    act(() => result.current.discardCheckpoints!())
+    rerender({ contextKey: "new" })
+    act(() => result.current.run())
+    await waitFor(() => expect(result.current.error).toBe("current failure"))
+    await act(async () => settle())
+    expect(result.current.error).toBe("current failure")
+    expect(result.current.discardingCheckpoints).toBe(false)
+  },
+)
+
+it("keeps an accepted budget ledger when storage blocks continuation before dispatch", async () => {
+  const paused = {
+    lowerBoundTokens: 1024,
+    reason: "budget",
+    attempts: [{ targetTokens: 1024, outcome: "accepted" }],
+    counter: { encoding: "o200k_base", estimated: true },
+    inputLimit: 8192,
+  }
+  const runner = vi
+    .fn()
+    .mockResolvedValueOnce(paused)
+    .mockRejectedValueOnce(
+      Object.assign(new Error("limit"), {
+        name: "ContextCheckpointLimitError",
+      }),
+    )
+    .mockResolvedValueOnce({ ...paused, reason: "test-limit" })
+  const save = vi.fn().mockResolvedValue(saved)
+  const { result } = renderHook(() =>
+    useContextCapacity({
+      enabled: true,
+      blocked: false,
+      contextKey: "same",
+      resolveRequest: async () => request,
+      runner,
+      historyAccess: { get: vi.fn().mockResolvedValue(null), save },
+      discardCheckpoints: vi.fn().mockResolvedValue(undefined),
+    }),
+  )
+  act(() => result.current.run())
+  await waitFor(() => expect(result.current.result?.reason).toBe("budget"))
+  act(() => result.current.run())
+  await waitFor(() => expect(result.current.checkpointLimitReached).toBe(true))
+  expect(result.current.result).toEqual(paused)
+  act(() => result.current.discardCheckpoints!())
+  await waitFor(() => expect(result.current.canRun).toBe(true))
+  act(() => result.current.run())
+  await waitFor(() => expect(runner).toHaveBeenCalledTimes(3))
+  expect(runner.mock.calls[2]?.[0]).toMatchObject({ resumeFrom: paused })
+  expect(save.mock.calls.some((call) => call[1] === null)).toBe(false)
+})

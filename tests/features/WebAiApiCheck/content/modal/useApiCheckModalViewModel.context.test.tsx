@@ -451,4 +451,100 @@ describe("web context capacity entry", () => {
       ).toEqual(summary)
     },
   )
+  it("lets the user discard inactive interrupted records after a background storage limit", async () => {
+    const previous = vi
+      .mocked(sendWebAiApiCheckMessage)
+      .getMockImplementation()!
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, data: any) => {
+        if (type === "webAiApiCheck:runContextCapacity")
+          return {
+            success: false,
+            checkpointLimitReached: true,
+            error: "limit",
+          }
+        if (type === "webAiApiCheck:discardContextCheckpoints")
+          return { success: true, discarded: 20 }
+        return previous(type, data)
+      },
+    )
+    const { result } = renderHook(() => useApiCheckModalViewModel())
+    act(() => {
+      result.current.actions.updateBaseUrl("https://context.example.com")
+      result.current.actions.setApiKey("secret")
+      result.current.actions.setModelId("model")
+    })
+    act(() => result.current.view.verificationTools.contextCapacity!.run())
+    await waitFor(() =>
+      expect(
+        result.current.view.verificationTools.contextCapacity!
+          .checkpointLimitReached,
+      ).toBe(true),
+    )
+    act(() =>
+      result.current.view.verificationTools.contextCapacity!
+        .discardCheckpoints!(),
+    )
+    await waitFor(() =>
+      expect(
+        result.current.view.verificationTools.contextCapacity!
+          .checkpointLimitReached,
+      ).toBe(false),
+    )
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+      "webAiApiCheck:discardContextCheckpoints",
+      {},
+    )
+  })
+
+  it.each(["reject", "missing"])(
+    "preserves a disconnected-worker error when recovery is %s",
+    async (recovery) => {
+      const previous = vi
+        .mocked(sendWebAiApiCheckMessage)
+        .getMockImplementation()!
+      vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+        async (type: any, data: any) => {
+          if (type !== "webAiApiCheck:runContextCapacity")
+            return previous(type, data)
+          if (!data.recoverOnly || recovery === "reject")
+            throw new Error("Disconnected context-secret")
+          return { success: false }
+        },
+      )
+      const { result } = renderHook(() => useApiCheckModalViewModel())
+      act(() => {
+        result.current.actions.updateBaseUrl("https://context.example.com")
+        result.current.actions.setApiKey("context-secret")
+        result.current.actions.setModelId("model")
+      })
+      act(() => result.current.view.verificationTools.contextCapacity!.run())
+      await waitFor(() =>
+        expect(
+          result.current.view.verificationTools.contextCapacity!.error,
+        ).toContain("Disconnected"),
+      )
+      expect(
+        result.current.view.verificationTools.contextCapacity!.error,
+      ).not.toContain("context-secret")
+      const requests = vi
+        .mocked(sendWebAiApiCheckMessage)
+        .mock.calls.filter(
+          ([type]) => type === "webAiApiCheck:runContextCapacity",
+        )
+      expect(requests).toHaveLength(2)
+      expect(requests[1]?.[1]).toMatchObject({ recoverOnly: true })
+    },
+  )
+  it("keeps cleanup available after a rejected discard response", async () => {
+    const { discardContextCheckpointsInBackground } = await import(
+      "~/features/WebAiApiCheck/content/probes/contextHistoryInBackground"
+    )
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: false,
+    } as never)
+    await expect(discardContextCheckpointsInBackground()).rejects.toThrow(
+      "Could not discard",
+    )
+  })
 })

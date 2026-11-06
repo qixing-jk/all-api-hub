@@ -270,7 +270,7 @@ export type ApiCheckRunContextCapacityRequest = Omit<
 > & { runId: string; recoverOnly?: boolean }
 export type ApiCheckRunContextCapacityResponse =
   | { success: true; result: ContextCapacityRunResult }
-  | { success: false; error?: string }
+  | { success: false; error?: string; checkpointLimitReached?: boolean }
 export type ApiCheckContextCapacityProgress = {
   runId: string
   result: ContextCapacityResult

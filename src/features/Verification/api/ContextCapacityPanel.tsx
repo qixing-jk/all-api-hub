@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 
 import { HelpHintIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
-import { Badge, CollapsibleSection } from "~/components/ui"
+import { Badge, Button, CollapsibleSection } from "~/components/ui"
 import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification"
 import {
   CONTEXT_ATTEMPT_FAILURE_REASONS,
@@ -378,6 +378,23 @@ export function ContextCapacityPanel({
               </div>
             </section>
           </CollapsibleSection>
+        ) : null}
+        {controller.checkpointLimitReached && controller.discardCheckpoints ? (
+          <div className="gap-density-2 flex min-w-0 flex-col">
+            <p className="text-muted-foreground text-xs" role="alert">
+              {t("verifyDialog.tools.context.discardWarning")}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="max-w-full self-start whitespace-normal"
+              disabled={controller.running || controller.discardingCheckpoints}
+              onClick={controller.discardCheckpoints}
+            >
+              {t("verifyDialog.tools.context.discard")}
+            </Button>
+          </div>
         ) : null}
         {controller.historyError ? (
           <p className="text-muted-foreground text-xs" role="status">

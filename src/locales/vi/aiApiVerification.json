@@ -160,6 +160,8 @@
         "coverage": "Ngữ cảnh ≈{{percent}}%",
         "description": "Dùng ngữ cảnh khai báo làm giới hạn kiểm tra, hoặc tối đa 1M tokens khi chưa rõ. Mỗi đợt có ngân sách đầu vào tích lũy khoảng 8M tokens và có thể tiếp tục sau khi tạm dừng.",
         "details": "Chi tiết kiểm tra",
+        "discard": "Bỏ các kiểm tra bị gián đoạn",
+        "discardWarning": "Đã lưu quá nhiều kiểm tra bị gián đoạn. Bỏ các bản ghi không còn chạy để tiếp tục. Trạng thái tính phí chưa rõ; các kiểm tra đang chạy được giữ lại.",
         "emptyResponse": "Phản hồi kết thúc bình thường nhưng không có nội dung; chưa xác nhận được việc nhận đầu vào.",
         "errorTitle": "Không thể hoàn tất kiểm tra",
         "estimated": "Mã hóa mô hình là ước tính.",

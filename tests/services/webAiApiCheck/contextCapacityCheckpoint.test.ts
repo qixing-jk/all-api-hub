@@ -96,3 +96,49 @@ it("preserves the in-flight checkpoint and earlier history when a request is can
   })
   expect(runContextCapacity).not.toHaveBeenCalled()
 })
+
+it("discards abandoned checkpoints while preserving active provider requests", async () => {
+  const checkpoints = await import(
+    "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
+  )
+  const ready = createDeferred<void>()
+  const pending = createDeferred<typeof result>()
+  await storage.set(WEB_AI_API_CHECK_STORAGE_KEYS.CONTEXT_CHECKPOINTS, {
+    abandoned: { result, inFlightTarget: 2048 },
+  })
+  vi.mocked(runContextCapacity).mockImplementationOnce(async (params) => {
+    await params.onCheckpoint?.({ result, inFlightTarget: 2048 })
+    ready.resolve()
+    return pending.promise
+  })
+  const active = runDurableContextCapacity(request)
+  await ready.promise
+  try {
+    expect(await checkpoints.discardInactiveContextCheckpoints()).toBe(1)
+    const remaining = await storage.get<Record<string, unknown>>(
+      WEB_AI_API_CHECK_STORAGE_KEYS.CONTEXT_CHECKPOINTS,
+    )
+    expect(Object.keys(remaining!)).toHaveLength(1)
+    expect(remaining).not.toHaveProperty("abandoned")
+    expect(await checkpoints.discardInactiveContextCheckpoints()).toBe(0)
+  } finally {
+    pending.resolve(result)
+    await active
+  }
+})
+
+it("recovers a completed terminal checkpoint without asking for another paid confirmation", async () => {
+  const complete = { ...result, inputLimit: 1024 }
+  vi.mocked(runContextCapacity).mockImplementationOnce(async (params) => {
+    await params.onCheckpoint?.({ result: complete })
+    throw new Error("worker stopped after completion")
+  })
+  await expect(runDurableContextCapacity(request)).rejects.toThrow(
+    "worker stopped",
+  )
+  expect(await runDurableContextCapacity(request, true)).toMatchObject({
+    reason: "test-limit",
+    lowerBoundTokens: 1024,
+  })
+  expect(runContextCapacity).toHaveBeenCalledOnce()
+})

@@ -238,3 +238,41 @@ it("keeps a connection observation when an unrelated owner is removed", async ()
     lowerBoundTokens: 4096,
   })
 })
+
+it("persists the rejection bound under the actual model of a profile-level target", async () => {
+  const { apiCredentialProfilesStorage } = await import(
+    "~/services/apiCredentialProfiles/storage/profiles"
+  )
+  const profile = await apiCredentialProfilesStorage.createProfile({
+    name: "Context history test",
+    apiType: request.apiType,
+    baseUrl: request.baseUrl,
+    apiKey: request.apiKey,
+  })
+  try {
+    const target = { kind: "profile" as const, profileId: profile.id }
+    await contextCapacityHistory.save(
+      request,
+      { ...result, reason: "bracketed", upperBoundTokens: 8192 },
+      target,
+    )
+    expect(await contextCapacityHistory.get(request, target)).toMatchObject({
+      upperBoundTokens: 8192,
+      target: {
+        kind: "profile-model",
+        profileId: profile.id,
+        modelId: request.modelId,
+      },
+    })
+  } finally {
+    await apiCredentialProfilesStorage.deleteProfile(profile.id)
+  }
+})
+it.each([null, "invalid"])(
+  "rejects a non-object stored capacity summary: %j",
+  async (value) => {
+    await expect(
+      verificationResultHistoryStorage.upsertContextSummary(value as never),
+    ).rejects.toThrow("Invalid context capacity summary")
+  },
+)

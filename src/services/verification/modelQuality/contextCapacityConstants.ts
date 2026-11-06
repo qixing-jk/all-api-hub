@@ -23,3 +23,5 @@ export const CONTEXT_ATTEMPT_FAILURE_REASONS = {
 } as const
 
 export const CONTEXT_CAPACITY_TEST_ID = "context-capacity" as const
+export const CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME =
+  "ContextCheckpointLimitError" as const

@@ -159,6 +159,8 @@
         "coverage": "上下文 ≈{{percent}}%",
         "description": "按模型声明的上下文长度设置测试上限；未知时最高测试 1M tokens。每批累计输入预算约 8M tokens，暂停后可继续。",
         "details": "测试详情",
+        "discard": "丢弃中断测试",
+        "discardWarning": "中断测试记录已达上限。可丢弃未运行的记录后继续；这些请求的计费状态未知，正在运行的测试会保留。",
         "emptyResponse": "接口正常结束但未返回正文，尚无法确认输入接收结果。",
         "errorTitle": "探测未能完成",
         "estimated": "模型编码为估算。",

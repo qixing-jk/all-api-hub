@@ -14,7 +14,7 @@ import {
   getWebAiApiCheckProbeTestId,
   WEB_AI_API_CHECK_TEST_IDS,
 } from "~/features/WebAiApiCheck/content/testIds"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -26,6 +26,7 @@ import {
 import {
   getPlasmoStorageRawValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
@@ -1620,6 +1621,57 @@ test("recovers an interrupted webpage context request after its worker stops wit
       .getByRole("option", { name: "gpt-4o-mini", exact: true })
       .click()
     const panel = modal.getByRole("region", { name: "Model context test" })
+    const checkpointWorker = await getServiceWorker(context)
+    const abandoned = Object.fromEntries(
+      Array.from({ length: 20 }, (_, index) => [
+        `abandoned-${index}`,
+        {
+          inFlightTarget: 1024,
+          result: {
+            lowerBoundTokens: 0,
+            reason: "test-limit",
+            attempts: [],
+            inputLimit: 1024,
+            counter: { encoding: "o200k_base", estimated: true },
+          },
+        },
+      ]),
+    )
+    await setPlasmoStorageValue(
+      checkpointWorker,
+      STORAGE_KEYS.CONTEXT_CHECKPOINTS,
+      abandoned,
+      { lock: STORAGE_LOCKS.WEB_AI_API_CHECK },
+    )
+    await panel.getByRole("button", { name: "Run context probe" }).click()
+    await expect(panel.getByRole("alert")).toContainText(
+      "charge status is unknown",
+    )
+    expect(requests).toBe(0)
+    await expect(
+      panel.getByRole("button", { name: "Run context probe" }),
+    ).toBeDisabled()
+    for (const width of [1280, 380]) {
+      await page.setViewportSize({ width, height: 800 })
+      await panel.scrollIntoViewIfNeeded()
+      expect(
+        await panel.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true)
+      await panel.screenshot({
+        path: test.info().outputPath(`web-context-discard-${width}.png`),
+        animations: "disabled",
+      })
+    }
+    await panel
+      .getByRole("button", { name: "Discard interrupted tests" })
+      .click()
+    await expect(
+      panel.getByRole("button", { name: "Run context probe" }),
+    ).toBeEnabled()
+    await expect(panel.getByRole("alert")).toHaveCount(0)
+    await page.setViewportSize({ width: 1280, height: 720 })
     await panel.getByRole("button", { name: "Run context probe" }).click()
     await expect.poll(() => requests).toBe(1)
     const worker = await getServiceWorker(context)

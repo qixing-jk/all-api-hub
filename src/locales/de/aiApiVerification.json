@@ -161,6 +161,8 @@
         "coverage": "Kontext ≈{{percent}}%",
         "description": "Verwendet den angegebenen Modellkontext als Testgrenze, bei unbekanntem Wert bis zu 1M Tokens. Jede Serie hat ein kumulatives Eingabebudget von etwa 8M Tokens und kann nach einer Pause fortgesetzt werden.",
         "details": "Testdetails",
+        "discard": "Unterbrochene Tests verwerfen",
+        "discardWarning": "Zu viele unterbrochene Tests sind gespeichert. Verwerfen Sie inaktive Einträge, um fortzufahren. Ihr Abrechnungsstatus ist unbekannt; laufende Tests bleiben erhalten.",
         "emptyResponse": "Die Antwort endete normal ohne Antworttext; die Eingabeannahme bleibt unbestätigt.",
         "errorTitle": "Test konnte nicht abgeschlossen werden",
         "estimated": "Modellkodierung geschätzt.",

@@ -162,6 +162,8 @@
         "coverage": "Contexto ≈{{percent}}%",
         "description": "Usa el contexto declarado como límite de prueba, o hasta 1M tokens si se desconoce. Cada lote tiene un presupuesto acumulado de entrada de unos 8M tokens y puede continuar tras una pausa.",
         "details": "Detalles de la prueba",
+        "discard": "Descartar pruebas interrumpidas",
+        "discardWarning": "Hay demasiadas pruebas interrumpidas guardadas. Descarta los registros inactivos para continuar. Se desconoce su estado de cobro; las pruebas en curso se conservan.",
         "emptyResponse": "La respuesta terminó normalmente sin texto; la aceptación de la entrada sigue sin confirmarse.",
         "errorTitle": "La prueba no pudo finalizar",
         "estimated": "Codificación del modelo estimada.",

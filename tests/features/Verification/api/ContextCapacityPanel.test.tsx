@@ -940,3 +940,83 @@ it.each([512, 1048576])(
     expect(screen.getByText(/o200k_base/)).toBeVisible()
   },
 )
+
+it("warns about unknown charges before offering to discard interrupted tests", async () => {
+  const discard = vi.fn()
+  render(
+    <I18nextProvider i18n={testI18n}>
+      <ContextCapacityPanel
+        controller={{
+          enabled: true,
+          running: false,
+          canRun: false,
+          result: null,
+          progress: null,
+          error: "limit",
+          stopped: false,
+          run: vi.fn(),
+          stop: vi.fn(),
+          checkpointLimitReached: true,
+          discardingCheckpoints: false,
+          discardCheckpoints: discard,
+        }}
+      />
+    </I18nextProvider>,
+  )
+  expect(
+    screen.getByText(
+      "aiApiVerification:verifyDialog.tools.context.discardWarning",
+    ),
+  ).toBeVisible()
+  await userEvent
+    .setup()
+    .click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.tools.context.discard",
+      }),
+    )
+  expect(discard).toHaveBeenCalledOnce()
+})
+
+it("shows the incomplete finish reason in context details", async () => {
+  render(
+    <I18nextProvider i18n={testI18n}>
+      <ContextCapacityPanel
+        controller={{
+          enabled: true,
+          running: false,
+          canRun: true,
+          result: {
+            reason: "inconclusive",
+            lowerBoundTokens: 0,
+            counter: { encoding: "o200k_base", estimated: true },
+            attempts: [
+              {
+                targetTokens: 1024,
+                outcome: "inconclusive",
+                finishReason: "content-filter",
+              },
+            ],
+          },
+          progress: null,
+          error: null,
+          stopped: false,
+          run: vi.fn(),
+          stop: vi.fn(),
+        }}
+      />
+    </I18nextProvider>,
+  )
+  await userEvent
+    .setup()
+    .click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.tools.context.details",
+      }),
+    )
+  expect(
+    screen.getByText(
+      "aiApiVerification:verifyDialog.tools.context.incompleteResponse",
+    ),
+  ).toBeVisible()
+})

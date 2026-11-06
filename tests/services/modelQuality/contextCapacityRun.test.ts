@@ -423,3 +423,39 @@ it("rejects an invalid resumed limit before sending provider input", async () =>
     modelMetadataService.clearCache()
   }
 })
+
+it("does not accept generation that resolves after caller cancellation", async () => {
+  const generation = await import(
+    "~/services/verification/aiApiVerification/probes/probeGeneration"
+  )
+  const controller = new AbortController()
+  const run = vi
+    .spyOn(generation, "runProbeGeneration")
+    .mockImplementationOnce(async () => {
+      controller.abort()
+      return { text: "OK", finishReason: "stop", usage: {} } as never
+    })
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ models: [] })),
+  )
+  try {
+    const result = await runContextCapacity({
+      baseUrl: "https://example.invalid",
+      apiKey: "test",
+      apiType: "openai",
+      modelId: "test",
+      maxInputTokens: 1024,
+      abortSignal: controller.signal,
+    })
+    expect(result).toMatchObject({
+      reason: "stopped",
+      lowerBoundTokens: 0,
+      attempts: [],
+    })
+  } finally {
+    run.mockRestore()
+    vi.unstubAllGlobals()
+    modelMetadataService.clearCache()
+  }
+})

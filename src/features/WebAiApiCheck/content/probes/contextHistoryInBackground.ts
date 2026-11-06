@@ -8,6 +8,16 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 
+/** Explicitly discard only records the background no longer owns. */
+export async function discardContextCheckpointsInBackground() {
+  const response = await sendWebAiApiCheckMessage(
+    WebAiApiCheckMessageTypes.DiscardContextCheckpoints,
+    {},
+  )
+  if (!response.success)
+    throw new Error("Could not discard interrupted test records")
+}
+
 /** Send only request identity fields, excluding React helpers and redaction lists. */
 function publicRequest(request: ContextHistoryRequest): ContextHistoryRequest {
   const {

@@ -1,3 +1,4 @@
+import { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } from "~/services/verification/modelQuality/contextCapacityConstants"
 import type { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
 import {
   onWebAiApiCheckMessage,
@@ -60,7 +61,14 @@ export const runContextCapacityInBackground: typeof runContextCapacity = async (
     })
     params.abortSignal.throwIfAborted()
     if (!response.success)
-      throw new Error(response.error ?? "Context capacity test failed")
+      throw Object.assign(
+        new Error(response.error ?? "Context capacity test failed"),
+        {
+          name: response.checkpointLimitReached
+            ? CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME
+            : "Error",
+        },
+      )
     return response.result
   } finally {
     params.abortSignal.removeEventListener("abort", cancel)

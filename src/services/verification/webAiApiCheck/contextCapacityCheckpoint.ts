@@ -9,6 +9,7 @@ import {
   CONTEXT_ATTEMPT_FAILURE_REASONS,
   CONTEXT_ATTEMPT_OUTCOMES,
   CONTEXT_CAPACITY_REASONS,
+  CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
 } from "~/services/verification/modelQuality/contextCapacityConstants"
 import {
   runContextCapacity,
@@ -25,6 +26,23 @@ const activeScopes = new Set<string>()
 const storageKey = WEB_AI_API_CHECK_STORAGE_KEYS.CONTEXT_CHECKPOINTS
 type Checkpoints = Record<string, ContextCapacityCheckpoint>
 
+/** Explicit cleanup keeps every scope currently owned by a live background run. */
+export async function discardInactiveContextCheckpoints() {
+  return withExtensionStorageWriteLock(
+    STORAGE_LOCKS.WEB_AI_API_CHECK,
+    async () => {
+      const entries = (await storage.get<Checkpoints>(storageKey)) ?? {}
+      const retained = Object.fromEntries(
+        Object.entries(entries).filter(([scope]) => activeScopes.has(scope)),
+      )
+      const discarded =
+        Object.keys(entries).length - Object.keys(retained).length
+      if (discarded) await storage.set(storageKey, retained)
+      return discarded
+    },
+  )
+}
+
 /** Only compact measurements cross worker restarts; request secrets never do. */
 async function update(scope: string, checkpoint?: ContextCapacityCheckpoint) {
   return withExtensionStorageWriteLock(
@@ -34,9 +52,9 @@ async function update(scope: string, checkpoint?: ContextCapacityCheckpoint) {
       if (checkpoint) {
         // Never evict an unresolved request merely to start another paid request.
         if (!entries[scope] && Object.keys(entries).length >= 20)
-          throw new Error(
-            "Too many interrupted context tests; recover an earlier test first",
-          )
+          throw Object.assign(new Error("Too many interrupted context tests"), {
+            name: CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
+          })
         entries[scope] = {
           ...checkpoint,
           result: {

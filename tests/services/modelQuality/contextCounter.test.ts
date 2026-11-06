@@ -70,3 +70,19 @@ it("processes cancellation while preparing a long fixture", async () => {
     clearTimeout(cancel)
   }
 })
+
+it("uses an estimated encoding for a resolved model outside known vocabularies", async () => {
+  const counter = await createContextCounter({
+    state: "resolved",
+    match: "exact",
+    metadata: {
+      id: "custom/not-in-tokenizer",
+      name: "Custom",
+      provider_id: "custom",
+    },
+  })
+  expect(counter.info).toMatchObject({
+    encoding: "o200k_base",
+    estimated: true,
+  })
+})

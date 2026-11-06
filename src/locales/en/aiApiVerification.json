@@ -161,6 +161,8 @@
         "coverage": "Context ≈{{percent}}%",
         "description": "Uses the declared model context as the test cap, or up to 1M tokens when unknown. Each batch has about an 8M-token cumulative input budget and can resume after pausing.",
         "details": "Test details",
+        "discard": "Discard interrupted tests",
+        "discardWarning": "Too many interrupted tests are saved. Discard inactive records to continue. Their charge status is unknown; running tests are kept.",
         "emptyResponse": "The response ended normally without answer text; input acceptance remains unconfirmed.",
         "errorTitle": "Probe could not finish",
         "estimated": "Estimated model encoding.",

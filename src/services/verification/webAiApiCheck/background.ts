@@ -28,6 +28,7 @@ import {
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
 import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
+import { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } from "~/services/verification/modelQuality/contextCapacityConstants"
 import { CONTEXT_CAPACITY_DEFAULTS } from "~/services/verification/modelQuality/contextCapacityDefaults"
 import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
@@ -36,7 +37,10 @@ import {
   CONTEXT_HISTORY_ACTIONS,
   WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
 } from "~/services/verification/webAiApiCheck/constants"
-import { runDurableContextCapacity } from "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
+import {
+  discardInactiveContextCheckpoints,
+  runDurableContextCapacity,
+} from "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
 import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
@@ -757,7 +761,14 @@ async function resolveWebAiApiCheckRunContextCapacityMessage(
     )
     return { success: true, result }
   } catch (error) {
-    return { success: false, error: toSanitizedErrorSummary(error, [apiKey]) }
+    return {
+      success: false,
+      error: toSanitizedErrorSummary(error, [apiKey]),
+      ...(error instanceof Error &&
+      error.name === CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME
+        ? { checkpointLimitReached: true }
+        : {}),
+    }
   }
 }
 
@@ -941,6 +952,19 @@ export function setupWebAiApiCheckMessagingListeners() {
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.ContextHistory,
       async ({ data }) => resolveContextHistory(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.DiscardContextCheckpoints,
+      async () => {
+        try {
+          return {
+            success: true as const,
+            discarded: await discardInactiveContextCheckpoints(),
+          }
+        } catch {
+          return { success: false as const }
+        }
+      },
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.CancelRunProbe,

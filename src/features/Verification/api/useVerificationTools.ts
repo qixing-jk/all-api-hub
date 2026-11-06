@@ -89,6 +89,7 @@ export type PelicanRunner = (
 ) => Promise<PelicanTestResult>
 
 export type UseVerificationToolsOptions = {
+  discardContextCheckpoints?: () => Promise<void>
   contextHistoryAccess?: ContextCapacityHistoryAccess
   resolveContextHistoryRequest?: UseVerificationToolsOptions["resolveRequest"]
   runContextCapacityRequest?: typeof runContextCapacity
@@ -159,6 +160,7 @@ export function useVerificationTools({
   runContextCapacityRequest,
   contextHistoryAccess,
   resolveContextHistoryRequest,
+  discardContextCheckpoints,
 }: UseVerificationToolsOptions): VerificationToolsController {
   const [pelicanSummary, setPelicanSummary] =
     useState<DrawingVerificationSummary | null>(null)
@@ -232,6 +234,7 @@ export function useVerificationTools({
     runner: runContextCapacityRequest,
     historyAccess: contextHistoryAccess,
     historyTarget,
+    discardCheckpoints: discardContextCheckpoints,
   })
   const canRun = isSupported && !isBlocked && !isPelicanRunning
 

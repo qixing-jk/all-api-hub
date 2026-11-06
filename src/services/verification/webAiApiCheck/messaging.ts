@@ -38,6 +38,7 @@ import type {
 
 export const WebAiApiCheckMessageTypes = {
   ContextHistory: "webAiApiCheck:contextHistory",
+  DiscardContextCheckpoints: "webAiApiCheck:discardContextCheckpoints",
   RunContextCapacity: "webAiApiCheck:runContextCapacity",
   ContextCapacityProgress: "webAiApiCheck:contextCapacityProgress",
   ShouldPrompt: "webAiApiCheck:shouldPrompt",
@@ -73,6 +74,9 @@ function createWebAiApiCheckMessagingLogger(): Logger {
 }
 
 interface WebAiApiCheckProtocolMap {
+  [WebAiApiCheckMessageTypes.DiscardContextCheckpoints](
+    data: Record<string, never>,
+  ): { success: true; discarded: number } | { success: false }
   [WebAiApiCheckMessageTypes.ContextHistory](
     data: ApiCheckContextHistoryRequest,
   ): ApiCheckContextHistoryResponse

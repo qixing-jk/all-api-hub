@@ -160,6 +160,8 @@
         "coverage": "上下文 ≈{{percent}}%",
         "description": "依模型宣告的上下文長度設定測試上限；未知時最高測試 1M tokens。每批累計輸入預算約 8M tokens，暫停後可繼續。",
         "details": "測試詳情",
+        "discard": "捨棄中斷測試",
+        "discardWarning": "中斷測試記錄已達上限。可捨棄未執行的記錄後繼續；這些請求的計費狀態未知，正在執行的測試會保留。",
         "emptyResponse": "介面正常結束但未回傳正文，尚無法確認輸入接收結果。",
         "errorTitle": "探測未能完成",
         "estimated": "模型編碼為估算。",

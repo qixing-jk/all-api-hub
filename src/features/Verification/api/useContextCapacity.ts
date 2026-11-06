@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react"
 
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ContextCapacityResult } from "~/services/verification/modelQuality/contextCapacity"
-import { CONTEXT_CAPACITY_REASONS } from "~/services/verification/modelQuality/contextCapacityConstants"
+import {
+  CONTEXT_CAPACITY_REASONS,
+  CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
+} from "~/services/verification/modelQuality/contextCapacityConstants"
 import {
   runContextCapacity,
   type ContextCapacityRunResult,
@@ -33,7 +36,10 @@ export function useContextCapacity(options: {
   runner?: typeof runContextCapacity
   historyAccess?: ContextCapacityHistoryAccess
   historyTarget?: ApiVerificationHistoryTarget | null
+  discardCheckpoints?: () => Promise<void>
 }) {
+  const [checkpointLimitReached, setCheckpointLimitReached] = useState(false)
+  const [discardingCheckpoints, setDiscardingCheckpoints] = useState(false)
   const [history, setHistory] = useState<ContextCapacitySummary | null>(null)
   const [historyError, setHistoryError] = useState(false)
   const generation = useRef(0)
@@ -59,6 +65,8 @@ export function useContextCapacity(options: {
     setError(null)
     setStopped(false)
     setRunning(false)
+    setCheckpointLimitReached(false)
+    setDiscardingCheckpoints(false)
     if (configuration.enabled)
       void (async () => {
         try {
@@ -94,7 +102,36 @@ export function useContextCapacity(options: {
   return {
     enabled: options.enabled,
     running,
-    canRun: options.enabled && !options.blocked && !running,
+    canRun:
+      options.enabled &&
+      !options.blocked &&
+      !running &&
+      !discardingCheckpoints &&
+      !checkpointLimitReached,
+    checkpointLimitReached,
+    discardingCheckpoints,
+    discardCheckpoints: options.discardCheckpoints
+      ? () => {
+          if (active.current || discardingCheckpoints) return
+          const context = key.current
+          const version = ++generation.current
+          const current = () =>
+            context === key.current && generation.current === version
+          setDiscardingCheckpoints(true)
+          void options.discardCheckpoints!()
+            .then(() => {
+              if (!current()) return
+              setCheckpointLimitReached(false)
+              setError(null)
+            })
+            .catch((failure) => {
+              if (current()) setError(toSanitizedErrorSummary(failure, []))
+            })
+            .finally(() => {
+              if (current()) setDiscardingCheckpoints(false)
+            })
+        }
+      : undefined,
     result,
     progress,
     error,
@@ -113,6 +150,8 @@ export function useContextCapacity(options: {
       setProgress(null)
       setError(null)
       setStopped(false)
+      setCheckpointLimitReached(false)
+      setDiscardingCheckpoints(false)
     },
     stop: () => {
       active.current?.abort()
@@ -121,7 +160,14 @@ export function useContextCapacity(options: {
       setStopped(true)
     },
     run: () => {
-      if (!options.enabled || options.blocked || active.current) return
+      if (
+        !options.enabled ||
+        options.blocked ||
+        active.current ||
+        discardingCheckpoints ||
+        checkpointLimitReached
+      )
+        return
       const runVersion = ++generation.current
       const targetToSave = options.historyTarget ?? undefined
       const resumeFrom =
@@ -156,6 +202,7 @@ export function useContextCapacity(options: {
       setHistory(null)
       let secrets: string[] = []
       let runRequest: VerificationToolRequestParams | null = null
+      let continuationForRun: ContextCapacityRunResult | undefined
       void (async () => {
         try {
           const request = await options.resolveRequest(controller.signal)
@@ -165,9 +212,11 @@ export function useContextCapacity(options: {
           runRequest = request
           const scope = getContextCapacityRequestIdentity(request)
           if (!current() || controller.signal.aborted) return
+          continuationForRun =
+            resultScope.current === scope ? resumeFrom : undefined
           const response = await (options.runner ?? runContextCapacity)({
             ...request,
-            resumeFrom: resultScope.current === scope ? resumeFrom : undefined,
+            resumeFrom: continuationForRun,
             abortSignal: controller.signal,
             onProgress: (value) => {
               if (current() && !controller.signal.aborted) setProgress(value)
@@ -179,9 +228,26 @@ export function useContextCapacity(options: {
             saveHistory(request, response)
           }
         } catch (failure) {
+          const checkpointLimit =
+            failure instanceof Error &&
+            failure.name === CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME
+          if (current() && !controller.signal.aborted) {
+            setCheckpointLimitReached(checkpointLimit)
+            if (checkpointLimit) {
+              // No provider request was dispatched: keep the accepted ledger so
+              // cleanup can resume it without repeating completed paid attempts.
+              setResult(continuationForRun ?? null)
+              setProgress(null)
+            }
+          }
           if (current() && !controller.signal.aborted)
             setError(toSanitizedErrorSummary(failure, secrets))
-          if (current() && !controller.signal.aborted && runRequest) {
+          if (
+            current() &&
+            !controller.signal.aborted &&
+            runRequest &&
+            !checkpointLimit
+          ) {
             saveHistory(runRequest, null)
           }
         } finally {
@@ -198,5 +264,16 @@ export function useContextCapacity(options: {
 
 export type ContextCapacityController = Omit<
   ReturnType<typeof useContextCapacity>,
-  "history" | "historyError" | "clearHistory"
-> & { history?: ContextCapacitySummary | null; historyError?: boolean }
+  | "history"
+  | "historyError"
+  | "clearHistory"
+  | "checkpointLimitReached"
+  | "discardingCheckpoints"
+  | "discardCheckpoints"
+> & {
+  history?: ContextCapacitySummary | null
+  historyError?: boolean
+  checkpointLimitReached?: boolean
+  discardingCheckpoints?: boolean
+  discardCheckpoints?: () => void
+}
