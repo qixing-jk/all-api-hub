@@ -276,3 +276,57 @@ it.each([null, "invalid"])(
     ).rejects.toThrow("Invalid context capacity summary")
   },
 )
+
+it("restores inventory-bound account history as unverified without persisting the inventory identity", async () => {
+  const { stubVerificationOwnerStoresUnavailable } = await import(
+    "~~/tests/test-utils/verificationOwnerStores"
+  )
+  const { getAccountInventoryContextHistory } = await import(
+    "~/services/verification/verificationResultHistory/contextCapacityHistory"
+  )
+  stubVerificationOwnerStoresUnavailable()
+  const target = {
+    kind: "account-model" as const,
+    accountId: "inventory-history",
+    modelId: request.modelId,
+  }
+  const identity = "private inventory identity"
+  try {
+    await contextCapacityHistory.save(request, result, target, identity)
+    expect(
+      await getAccountInventoryContextHistory(target, identity),
+    ).toMatchObject({
+      lowerBoundTokens: 4096,
+      requiresCredentialVerification: true,
+    })
+    expect(
+      await getAccountInventoryContextHistory(
+        target,
+        identity + " changed mask or endpoint",
+      ),
+    ).toBeNull()
+    expect(
+      await getAccountInventoryContextHistory(
+        { ...target, accountId: "another" },
+        identity,
+      ),
+    ).toBeNull()
+    expect(
+      await contextCapacityHistory.get(
+        { ...request, apiKey: "rotated" },
+        target,
+      ),
+    ).toBeNull()
+    const raw = JSON.stringify(
+      await new Storage({ area: "local" }).get(
+        API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      ),
+    )
+    expect(raw).not.toContain(identity)
+    expect(raw).not.toContain(request.apiKey)
+    expect(raw).not.toContain(request.baseUrl)
+    expect(raw).not.toContain("requiresCredentialVerification")
+  } finally {
+    vi.restoreAllMocks()
+  }
+})

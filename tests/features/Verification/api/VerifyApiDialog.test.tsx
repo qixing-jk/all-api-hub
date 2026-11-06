@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -24,11 +25,14 @@ import {
   createVerificationHistorySummary,
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
+import { server } from "~~/tests/msw/server"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
+import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 import {
   fireEvent,
   render,
@@ -265,6 +269,116 @@ describe("VerifyApiDialog", () => {
       )
       expect(second.result.current.tools.contextCapacity?.history).toBeNull()
       expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(["masked", "empty"])(
+    "restores %s New API capacity history after a run through the real secret resolver",
+    async (inventory) => {
+      const realRegistry = await vi.importActual<
+        typeof import("~/services/apiAdapters/registry")
+      >("~/services/apiAdapters/registry")
+      vi.spyOn(siteCapabilities, "getSiteTypeCapabilities").mockReturnValue(
+        realRegistry.getSiteTypeCapabilities(SITE_TYPES.NEW_API),
+      )
+      const realApi = await vi.importActual<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >("~/services/accounts/utils/apiServiceRequest")
+      mockResolveDisplayAccountRuntimeKeySecret.mockImplementation(
+        realApi.resolveDisplayAccountRuntimeKeySecret,
+      )
+      const account = buildDisplaySiteData({
+        id: `masked-capacity-${inventory}`,
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: `https://${inventory}.masked-capacity.example.invalid`,
+      })
+      const runtime = {
+        ...buildNewApiRuntimeKey(
+          account,
+          buildNewApiToken({
+            id: 73291,
+            key: "sk-visible****suffix",
+            status: 1,
+          }),
+        ),
+        keyMask: { prefix: "sk-visible", suffix: "suffix" },
+        ...(inventory === "empty" ? { secret: "" } : {}),
+      }
+      mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([runtime])
+      let reveals = 0
+      server.use(
+        http.get(`${account.baseUrl}/api/token/73291`, () =>
+          HttpResponse.json({
+            success: true,
+            data: buildNewApiToken({
+              id: 73291,
+              key: "sk-visible****suffix",
+              status: 1,
+            }),
+          }),
+        ),
+        http.post(`${account.baseUrl}/api/token/73291/key`, () => {
+          reveals++
+          return HttpResponse.json({
+            success: true,
+            data: { key: "masked-resolved-secret" },
+          })
+        }),
+      )
+      const capacity = await import(
+        "~/services/verification/modelQuality/contextCapacityRun"
+      )
+      const run = vi.spyOn(capacity, "runContextCapacity").mockResolvedValue({
+        lowerBoundTokens: 4096,
+        reason: "test-limit",
+        attempts: [],
+        counter: { encoding: "o200k_base", estimated: true },
+      })
+      const props = { isOpen: true, account, initialModelId: "gpt-test" }
+      try {
+        const first = renderHook(useVerifyApiDialogViewModel, {
+          initialProps: props,
+        })
+        await waitFor(() =>
+          expect(first.result.current.tools.contextCapacity?.canRun).toBe(true),
+        )
+        expect(reveals).toBe(0)
+        act(() => first.result.current.tools.contextCapacity!.run())
+        await waitFor(() =>
+          expect(first.result.current.tools.contextCapacity?.running).toBe(
+            false,
+          ),
+        )
+        expect(first.result.current.tools.contextCapacity?.error).toBeNull()
+        await waitFor(() =>
+          expect(
+            first.result.current.tools.contextCapacity?.history
+              ?.lowerBoundTokens,
+          ).toBe(4096),
+        )
+        expect(run).toHaveBeenCalledWith(
+          expect.objectContaining({ apiKey: "sk-masked-resolved-secret" }),
+        )
+        expect(reveals).toBe(1)
+        first.unmount()
+        const second = renderHook(useVerifyApiDialogViewModel, {
+          initialProps: props,
+        })
+        await waitFor(() =>
+          expect(
+            second.result.current.tools.contextCapacity?.history
+              ?.lowerBoundTokens,
+          ).toBe(4096),
+        )
+        expect(
+          second.result.current.tools.contextCapacity?.history
+            ?.requiresCredentialVerification,
+        ).toBe(true)
+        expect(reveals).toBe(1)
+        expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledOnce()
+      } finally {
+        run.mockRestore()
+      }
     },
   )
 

@@ -389,6 +389,23 @@ class VerificationResultHistoryStorageService {
     await this.sweepOrphans()
   }
 
+  /** Historical inventory match only; the hidden current secret is unverified. */
+  async getContextSummaryByInventory(
+    target: ApiVerificationHistoryTarget,
+    inventoryKey: string,
+  ): Promise<ContextCapacitySummary | null> {
+    const config = await this.readConfigForRead()
+    const key = serializeVerificationHistoryTarget(target)
+    const summary = config.contextSummaries?.find(
+      (item) => item.targetKey === key && item.inventoryKey === inventoryKey,
+    )
+    return summary &&
+      applyVerificationRetention([summary], { now: Date.now() }).summaries
+        .length
+      ? structuredClone(summary)
+      : null
+  }
+
   async upsertDrawingSummary(
     summary: DrawingVerificationSummary,
   ): Promise<void> {

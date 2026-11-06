@@ -170,6 +170,7 @@
         "incompleteResponse": "Chưa nhận được phản hồi đủ để kết luận. Lý do kết thúc: {{reason}}.",
         "interrupted": "Yêu cầu đã bị gián đoạn; trạng thái tính phí chưa rõ. Yêu cầu không được tự động thử lại. Bắt đầu kiểm tra mới có thể phát sinh thêm mức sử dụng.",
         "lower": "Đầu vào lớn nhất được chấp nhận: {{tokens}} token văn bản cục bộ",
+        "maskedHistoryHint": "Kết quả đo đã lưu cho khóa bị che này. Thông tin xác thực hiện tại chưa được kiểm tra lại.",
         "matched": "Đã khớp mã hóa mô hình; số token của toàn bộ yêu cầu có thể khác.",
         "measuredBadge": "Đã nhận ≈{{tokens}} token",
         "measurementDetails": "Cơ sở đo lường",

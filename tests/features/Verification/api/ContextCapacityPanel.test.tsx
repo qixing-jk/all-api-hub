@@ -968,13 +968,11 @@ it("warns about unknown charges before offering to discard interrupted tests", a
       "aiApiVerification:verifyDialog.tools.context.discardWarning",
     ),
   ).toBeVisible()
-  await userEvent
-    .setup()
-    .click(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.tools.context.discard",
-      }),
-    )
+  await userEvent.setup().click(
+    screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.tools.context.discard",
+    }),
+  )
   expect(discard).toHaveBeenCalledOnce()
 })
 
@@ -1007,16 +1005,54 @@ it("shows the incomplete finish reason in context details", async () => {
       />
     </I18nextProvider>,
   )
-  await userEvent
-    .setup()
-    .click(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.tools.context.details",
-      }),
-    )
+  await userEvent.setup().click(
+    screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.tools.context.details",
+    }),
+  )
   expect(
     screen.getByText(
       "aiApiVerification:verifyDialog.tools.context.incompleteResponse",
     ),
   ).toBeVisible()
+})
+
+it("labels masked-key history as a saved measurement rather than current credential verification", () => {
+  render(
+    <I18nextProvider i18n={testI18n}>
+      <ContextCapacityPanel
+        controller={{
+          enabled: true,
+          running: false,
+          canRun: true,
+          result: null,
+          progress: null,
+          error: null,
+          stopped: false,
+          run: vi.fn(),
+          stop: vi.fn(),
+          history: {
+            targetKey: "fixture",
+            scopeKey: "fixture",
+            verifiedAt: 1,
+            apiType: "openai",
+            modelId: "model",
+            reason: "test-limit",
+            requests: 1,
+            lowerBoundTokens: 4096,
+            outputLimited: false,
+            requiresCredentialVerification: true,
+          },
+        }}
+      />
+    </I18nextProvider>,
+  )
+  expect(
+    screen.getByText(
+      "aiApiVerification:verifyDialog.tools.context.maskedHistoryHint",
+    ),
+  ).toBeVisible()
+  expect(
+    screen.queryByText("aiApiVerification:verifyDialog.status.pass"),
+  ).not.toBeInTheDocument()
 })

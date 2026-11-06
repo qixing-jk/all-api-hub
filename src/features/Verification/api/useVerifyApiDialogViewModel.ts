@@ -7,6 +7,7 @@ import {
   withUnfinishedProbesStopped,
 } from "~/features/Verification/api/probeState"
 import type { VerifyApiDialogProps } from "~/features/Verification/api/types"
+import { MASKED_CONTEXT_HISTORY_REQUEST } from "~/features/Verification/api/useContextCapacity"
 import { useVerificationDialogState } from "~/features/Verification/api/useVerificationDialogState"
 import {
   useVerificationTools,
@@ -31,6 +32,7 @@ import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -283,6 +285,10 @@ export function useVerifyApiDialogViewModel({
       selectedRuntimeKeyId,
       selectedRuntimeKey?.baseUrl,
       selectedRuntimeKey?.secret,
+      selectedRuntimeKey?.keyMask,
+      selectedRuntimeKey?.createdAt,
+      selectedRuntimeKey?.siteType,
+      selectedRuntimeKeyIsCompatible,
       tokenModelHint,
       account.baseUrl,
       account.token,
@@ -309,12 +315,10 @@ export function useVerifyApiDialogViewModel({
     // fetch a hidden credential just to restore a capacity observation.
     resolveContextHistoryRequest: async () => {
       const modelId = requestedModelId.trim() || tokenModelHint?.trim()
-      if (
-        !selectedRuntimeKey?.secret ||
-        !selectedRuntimeKeyIsCompatible ||
-        !modelId
-      )
+      if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible || !modelId)
         return null
+      if (!hasUsableApiTokenKey(selectedRuntimeKey.secret))
+        return MASKED_CONTEXT_HISTORY_REQUEST
       return {
         baseUrl: selectedRuntimeKey.baseUrl,
         apiKey: formatAccountRuntimeKeySecretForSite(selectedRuntimeKey).secret,

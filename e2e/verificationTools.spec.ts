@@ -7,6 +7,7 @@ import {
   API_CREDENTIAL_PROFILES_TEST_IDS as IDS,
 } from "~/features/ApiCredentialProfiles/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -18,12 +19,14 @@ import {
   stubNewApiSiteRoutes,
 } from "~~/e2e/utils/commonUserFlows"
 import {
+  getPlasmoStorageJsonValue,
   getServiceWorker,
   getStoredUserPreferences,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { createDrawingServer } from "~~/e2e/utils/verificationDrawingServer"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 
 test("verification tests run concurrently and cancel independently", async ({
   context,
@@ -836,3 +839,120 @@ for (const outcome of ["timeout", "empty"] as const) {
     }
   })
 }
+
+test("restores masked account context history without another key reveal", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  const baseUrl = "https://masked-history.example.test"
+  await stubLlmMetadataIndex(context)
+  await forceExtensionLanguage(page, "en")
+  await stubNewApiSiteRoutes(context, {
+    baseUrl,
+    models: ["gpt-quality"],
+    initialTokens: [buildNewApiToken({ key: "sk-visible****suffix" })],
+  })
+  let reveals = 0
+  let generations = 0
+  await context.route(`${baseUrl}/api/token/1/key`, async (route) => {
+    reveals++
+    await route.fulfill({
+      json: { success: true, data: { key: "resolved-context-secret" } },
+    })
+  })
+  await context.route("**/chat/completions", async (route) => {
+    generations++
+    expect(route.request().headers().authorization).toBe(
+      "Bearer sk-resolved-context-secret",
+    )
+    await route.fulfill({
+      json: {
+        id: "capacity",
+        object: "chat.completion",
+        created: 1,
+        model: "gpt-quality",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "OK" },
+            finish_reason: "stop",
+          },
+        ],
+        usage: {
+          prompt_tokens: 1000,
+          completion_tokens: 1,
+          total_tokens: 1001,
+        },
+      },
+    })
+  })
+  const worker = await getServiceWorker(context)
+  await seedStoredAccounts(worker, [createStoredAccount({ site_url: baseUrl })])
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?accountId=e2e-account-1#${MENU_ITEM_IDS.MODELS}`,
+  )
+  await waitForExtensionRoot(page)
+  const verify = page.getByTestId(MODEL_LIST_TEST_IDS.verifyApiButton).first()
+  await verify.click()
+  const mode = page.getByRole("combobox", { name: "Test mode", exact: true })
+  await mode.click()
+  await page.getByRole("option", { name: "Non-streaming", exact: true }).click()
+  const panel = page.getByRole("region", {
+    name: "Model context test",
+    exact: true,
+  })
+  const run = panel.getByRole("button", { name: "Run context probe" })
+  await expect(run).toBeEnabled()
+  expect(reveals).toBe(0)
+  await run.click()
+  await expect(panel).toContainText("Model context:", { timeout: 30000 })
+  await expect
+    .poll(async () => {
+      const config = (await getPlasmoStorageJsonValue(
+        worker,
+        STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      )) as { contextSummaries?: { inventoryKey?: string }[] }
+      return (
+        config?.contextSummaries?.some((summary) =>
+          Boolean(summary.inventoryKey),
+        ) ?? false
+      )
+    })
+    .toBe(true)
+  expect(reveals).toBe(1)
+  expect(generations).toBe(1)
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Close", exact: true })
+    .filter({ hasText: "Close" })
+    .click()
+  await verify.click()
+  await mode.click()
+  await page.getByRole("option", { name: "Non-streaming", exact: true }).click()
+  await expect(panel).toContainText("Saved measurement for this masked key")
+  await expect(
+    panel.locator('[data-slot="badge"]').filter({ hasText: "Unverified" }),
+  ).toBeVisible()
+  await expect(
+    panel.locator('[data-slot="badge"]').filter({ hasText: /\bPass\b/ }),
+  ).toHaveCount(0)
+  expect(reveals).toBe(1)
+  expect(generations).toBe(1)
+  for (const width of [1280, 420]) {
+    await page.setViewportSize({ width, height: 850 })
+    await panel.scrollIntoViewIfNeeded()
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true)
+    await panel.screenshot({
+      path: test
+        .info()
+        .outputPath(`masked-account-context-history-${width}.png`),
+      animations: "disabled",
+    })
+  }
+})

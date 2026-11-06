@@ -12,35 +12,70 @@ import {
 } from "~/services/verification/modelQuality/contextCapacityRun"
 import {
   contextCapacityHistory,
+  getAccountInventoryContextHistory,
   getContextCapacityRequestIdentity,
   type ContextCapacityHistoryAccess,
+  type ContextCapacityHistoryView,
 } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
-import type {
-  ApiVerificationHistoryTarget,
-  ContextCapacitySummary,
-} from "~/services/verification/verificationResultHistory/types"
+import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
+import { API_VERIFICATION_HISTORY_TARGET_KINDS } from "~/services/verification/verificationResultHistory/types"
 
 import type { VerificationToolRequestParams } from "./useVerificationTools"
 
-/** Own a cancellable capacity measurement for exactly one dialog configuration. */
-export function useContextCapacity(options: {
+export const MASKED_CONTEXT_HISTORY_REQUEST = "masked-inventory" as const
+export type ContextCapacityHistoryRequestResolver = (
+  signal: AbortSignal,
+) => Promise<
+  VerificationToolRequestParams | typeof MASKED_CONTEXT_HISTORY_REQUEST | null
+>
+
+type ContextCapacityOptions = {
   enabled: boolean
   blocked: boolean
   contextKey: string
   resolveRequest: (
     signal: AbortSignal,
   ) => Promise<VerificationToolRequestParams | null>
-  resolveHistoryRequest?: (
-    signal: AbortSignal,
-  ) => Promise<VerificationToolRequestParams | null>
+  resolveHistoryRequest?: ContextCapacityHistoryRequestResolver
   runner?: typeof runContextCapacity
   historyAccess?: ContextCapacityHistoryAccess
   historyTarget?: ApiVerificationHistoryTarget | null
   discardCheckpoints?: () => Promise<void>
-}) {
+}
+
+/** Read the current scope without starting a provider measurement. */
+async function readContextHistory(
+  configuration: ContextCapacityOptions,
+  signal: AbortSignal,
+) {
+  if (!configuration.historyTarget && !configuration.historyAccess) return null
+  const request = await (
+    configuration.resolveHistoryRequest ?? configuration.resolveRequest
+  )(signal)
+  if (signal.aborted) return null
+  if (request === MASKED_CONTEXT_HISTORY_REQUEST) {
+    return configuration.historyTarget?.kind ===
+      API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel
+      ? getAccountInventoryContextHistory(
+          configuration.historyTarget,
+          configuration.contextKey,
+        )
+      : null
+  }
+  if (!request) return null
+  return (configuration.historyAccess ?? contextCapacityHistory).get(
+    request,
+    configuration.historyTarget ?? undefined,
+  )
+}
+
+/** Own a cancellable capacity measurement for exactly one dialog configuration. */
+export function useContextCapacity(options: ContextCapacityOptions) {
   const [checkpointLimitReached, setCheckpointLimitReached] = useState(false)
   const [discardingCheckpoints, setDiscardingCheckpoints] = useState(false)
-  const [history, setHistory] = useState<ContextCapacitySummary | null>(null)
+  const [history, setHistory] = useState<ContextCapacityHistoryView | null>(
+    null,
+  )
   const [historyError, setHistoryError] = useState(false)
   const generation = useRef(0)
   const [running, setRunning] = useState(false)
@@ -70,15 +105,10 @@ export function useContextCapacity(options: {
     if (configuration.enabled)
       void (async () => {
         try {
-          if (!configuration.historyTarget && !configuration.historyAccess)
-            return
-          const request = await (
-            configuration.resolveHistoryRequest ?? configuration.resolveRequest
-          )(loadController.signal)
-          if (!request || loadController.signal.aborted) return
-          const previous = await (
-            configuration.historyAccess ?? contextCapacityHistory
-          ).get(request, configuration.historyTarget ?? undefined)
+          const previous = await readContextHistory(
+            configuration,
+            loadController.signal,
+          )
           if (
             !loadController.signal.aborted &&
             generation.current === loadVersion
@@ -119,10 +149,20 @@ export function useContextCapacity(options: {
             context === key.current && generation.current === version
           setDiscardingCheckpoints(true)
           void options.discardCheckpoints!()
-            .then(() => {
+            .then(async () => {
               if (!current()) return
               setCheckpointLimitReached(false)
               setError(null)
+              setHistoryError(false)
+              try {
+                const previous = await readContextHistory(
+                  latestOptions.current,
+                  new AbortController().signal,
+                )
+                if (current()) setHistory(previous)
+              } catch {
+                if (current()) setHistoryError(true)
+              }
             })
             .catch((failure) => {
               if (current()) setError(toSanitizedErrorSummary(failure, []))
@@ -182,8 +222,13 @@ export function useContextCapacity(options: {
         response: ContextCapacityRunResult | null,
       ) => {
         if (!targetToSave && !options.historyAccess) return
-        void (options.historyAccess ?? contextCapacityHistory)
-          .save(request, response, targetToSave)
+        const access = options.historyAccess ?? contextCapacityHistory
+        const saving =
+          targetToSave?.kind ===
+          API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel
+            ? access.save(request, response, targetToSave, context)
+            : access.save(request, response, targetToSave)
+        void saving
           .then((saved) => {
             if (generation.current === runVersion && key.current === context)
               setHistory(saved)
@@ -271,7 +316,7 @@ export type ContextCapacityController = Omit<
   | "discardingCheckpoints"
   | "discardCheckpoints"
 > & {
-  history?: ContextCapacitySummary | null
+  history?: ContextCapacityHistoryView | null
   historyError?: boolean
   checkpointLimitReached?: boolean
   discardingCheckpoints?: boolean

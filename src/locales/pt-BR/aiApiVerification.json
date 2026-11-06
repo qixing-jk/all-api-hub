@@ -171,6 +171,7 @@
         "incompleteResponse": "Nenhuma resposta conclusiva foi recebida. Motivo do término: {{reason}}.",
         "interrupted": "A solicitação foi interrompida e o status de cobrança é desconhecido. Não houve nova tentativa. Iniciar outro teste pode gerar uso adicional.",
         "lower": "Maior entrada aceita: {{tokens}} tokens de texto locais",
+        "maskedHistoryHint": "Medição salva para esta chave mascarada. A credencial atual ainda não foi revalidada.",
         "matched": "Codificação do modelo identificada; a contagem da solicitação completa pode variar.",
         "measuredBadge": "≈{{tokens}} tokens aceitos",
         "measurementDetails": "Evidências da medição",

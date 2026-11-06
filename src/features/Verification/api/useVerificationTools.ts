@@ -33,6 +33,7 @@ import { API_VERIFICATION_HISTORY_TARGET_KINDS } from "~/services/verification/v
 import {
   useContextCapacity,
   type ContextCapacityController,
+  type ContextCapacityHistoryRequestResolver,
 } from "./useContextCapacity"
 import { useVerificationPrompts } from "./useVerificationPrompts"
 
@@ -91,7 +92,7 @@ export type PelicanRunner = (
 export type UseVerificationToolsOptions = {
   discardContextCheckpoints?: () => Promise<void>
   contextHistoryAccess?: ContextCapacityHistoryAccess
-  resolveContextHistoryRequest?: UseVerificationToolsOptions["resolveRequest"]
+  resolveContextHistoryRequest?: ContextCapacityHistoryRequestResolver
   runContextCapacityRequest?: typeof runContextCapacity
   enableContextCapacity?: boolean
   contextCapacityKey?: string

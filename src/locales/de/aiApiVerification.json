@@ -171,6 +171,7 @@
         "incompleteResponse": "Keine eindeutige Antwort erhalten. Beendigungsgrund: {{reason}}.",
         "interrupted": "Die Anfrage wurde unterbrochen; der Abrechnungsstatus ist unbekannt. Sie wurde nicht erneut gesendet. Ein neuer Test kann zusätzliche Nutzung verursachen.",
         "lower": "Größte angenommene Eingabe: {{tokens}} lokale Texttokens",
+        "maskedHistoryHint": "Gespeicherte Messung für diesen maskierten Schlüssel. Die aktuellen Zugangsdaten wurden nicht erneut geprüft.",
         "matched": "Modellkodierung zugeordnet; die Tokenzahl der gesamten Anfrage kann abweichen.",
         "measuredBadge": "≈{{tokens}} Tokens akzeptiert",
         "measurementDetails": "Messgrundlage",

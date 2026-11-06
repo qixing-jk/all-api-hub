@@ -172,6 +172,7 @@
         "incompleteResponse": "No se recibió una respuesta concluyente. Motivo de finalización: {{reason}}.",
         "interrupted": "La solicitud se interrumpió y se desconoce su estado de cobro. No se reintentó. Iniciar otra prueba puede generar uso adicional.",
         "lower": "Mayor entrada aceptada: {{tokens}} tokens de texto locales",
+        "maskedHistoryHint": "Medición guardada para esta clave enmascarada. No se han vuelto a verificar las credenciales actuales.",
         "matched": "Codificación del modelo identificada; el conteo de la solicitud completa puede variar.",
         "measuredBadge": "≈{{tokens}} tokens aceptados",
         "measurementDetails": "Evidencia de medición",

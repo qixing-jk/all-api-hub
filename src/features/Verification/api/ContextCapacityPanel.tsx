@@ -114,8 +114,9 @@ export function ContextCapacityPanel({
   const runLabel = canContinue
     ? t("verifyDialog.tools.context.continue")
     : t("verifyDialog.tools.context.run")
-  const status =
-    reason === CONTEXT_CAPACITY_REASONS.Error
+  const status = historical?.requiresCredentialVerification
+    ? API_VERIFICATION_HISTORY_STATUSES.Unverified
+    : reason === CONTEXT_CAPACITY_REASONS.Error
       ? API_VERIFICATION_PROBE_STATUSES.Fail
       : lower > 0 &&
           (reason === CONTEXT_CAPACITY_REASONS.Bracketed ||
@@ -240,6 +241,9 @@ export function ContextCapacityPanel({
                     <p>{title}</p>
                   ) : null}
                   {reasonText ? <p>{reasonText}</p> : null}
+                  {historical?.requiresCredentialVerification ? (
+                    <p>{t("verifyDialog.tools.context.maskedHistoryHint")}</p>
+                  ) : null}
                   {lower > 0 ? (
                     <p className="text-foreground">
                       {t("verifyDialog.tools.context.acceptedTitle", {

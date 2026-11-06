@@ -341,15 +341,15 @@ export function sanitizeConfig(
 }
 
 /**
- * Accept a payload written by this build without walking every entry.
+ * Trust this build's primary summaries; always decode context-capacity entries.
  *
  * The invariant that makes this safe: {@link VerificationResultHistoryStorageService.mutateConfig}
  * is the only writer and every summary it stores already passed
  * `coerceHistorySummary`, so a payload at the current version is sanitized by
  * construction and its target keys are unique. A payload at any other version
  * falls through to {@link sanitizeConfig}. The residual risk is a hand-edited or
- * corrupted current-version payload, which reaches the UI unsanitized instead of
- * being silently dropped.
+ * corrupted current-version primary payload, which reaches the UI unsanitized
+ * instead of being silently dropped. Capacity entries are validated below.
  * @returns The config, or `null` when the payload needs the boundary check.
  */
 export function coerceTrustedConfig(
@@ -421,6 +421,10 @@ export function coerceContextSummary(
       ? serializeVerificationHistoryTarget(target)
       : `connection:${scopeKey}`,
     scopeKey,
+    ...(typeof value.inventoryKey === "string" &&
+    /^[a-f0-9]{64}$/.test(value.inventoryKey)
+      ? { inventoryKey: value.inventoryKey }
+      : {}),
     verifiedAt: normalizeTimestamp(value.verifiedAt),
     apiType: value.apiType,
     modelId: sanitizeText(value.modelId),

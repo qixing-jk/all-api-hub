@@ -30,6 +30,24 @@ export type ContextHistoryRequest = Pick<
   | "requestHeaders"
 >
 
+/** A historical measurement can outlive our ability to verify a masked secret. */
+export type ContextCapacityHistoryView = ContextCapacitySummary & {
+  requiresCredentialVerification?: boolean
+}
+
+/** Restore an inventory-bound historical fact without revealing a secret. */
+export async function getAccountInventoryContextHistory(
+  target: ApiVerificationHistoryTarget,
+  identity: string,
+): Promise<ContextCapacityHistoryView | null> {
+  const summary =
+    await verificationResultHistoryStorage.getContextSummaryByInventory(
+      target,
+      await digestIdentity(identity),
+    )
+  return summary ? { ...summary, requiresCredentialVerification: true } : null
+}
+
 /** Hash the complete request identity; neither credentials nor the URL are stored. */
 export async function getContextCapacityScopeKey(
   request: ContextHistoryRequest,
@@ -95,6 +113,7 @@ export const contextCapacityHistory = {
     request: ContextHistoryRequest,
     result: ContextCapacityRunResult | null,
     target?: ApiVerificationHistoryTarget,
+    inventoryIdentity?: string,
   ): Promise<ContextCapacitySummary> {
     const verifiedAt = Date.now()
     const lastAttempt = result?.attempts.at(-1)
@@ -102,6 +121,10 @@ export const contextCapacityHistory = {
       target: modelTarget(target, request.modelId),
       targetKey: "",
       scopeKey: await getContextCapacityScopeKey(request),
+      ...(target?.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel &&
+      inventoryIdentity
+        ? { inventoryKey: await digestIdentity(inventoryIdentity) }
+        : {}),
       verifiedAt,
       apiType: request.apiType,
       modelId: request.modelId,

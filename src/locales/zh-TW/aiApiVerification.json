@@ -170,6 +170,7 @@
         "incompleteResponse": "未取得可判定的回覆，結束原因：{{reason}}。",
         "interrupted": "請求已中斷，計費狀態未知，未自動重試。重新開始測試可能產生額外用量。",
         "lower": "最大已接收輸入：{{tokens}} 個本地文字 token",
+        "maskedHistoryHint": "這是此遮罩密鑰的歷史測量，目前的真實憑證尚未重新驗證。",
         "matched": "已匹配模型編碼；完整請求的 token 數可能不同。",
         "measuredBadge": "已接收約 {{tokens}} tokens",
         "measurementDetails": "測量依據",

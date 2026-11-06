@@ -20,7 +20,9 @@ import type { ContextCapacityReason } from "~/services/verification/modelQuality
  * payload at this exact version and run the boundary sanitizer on anything else,
  * so bump it whenever the stored shape or the sanitizing rules change: every
  * existing payload is then re-sanitized once on read and rewritten under the new
- * version before it is trusted.
+ * version before it is trusted. Context-capacity entries are independently
+ * decoded on every read; adding optional capacity metadata does not rely on
+ * this primary-summary fast path.
  */
 export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 5
 
@@ -122,6 +124,8 @@ export type ContextCapacitySummary = {
   target?: ApiVerificationHistoryTarget
   targetKey: string
   scopeKey: string
+  /** Digest of observable account/key configuration; never proves a hidden secret. */
+  inventoryKey?: string
   verifiedAt: number
   apiType: ApiVerificationApiType
   modelId: string
