@@ -189,7 +189,7 @@ export default defineConfig({
         ? {
             gecko: {
               id: "{bc73541a-133d-4b50-b261-36ea20df0d24}",
-              // Firefox 104 covers the current Vite baseline and p-queue 9 runtime APIs.
+              // Firefox 104 matches our build target and p-queue 9 runtime APIs.
               strict_min_version: "104.0",
             },
             gecko_android: {
@@ -249,6 +249,9 @@ export default defineConfig({
         },
       },
       build: {
+        // Keep the previous Vite 7 baseline, including Firefox 104 support.
+        // Vite 8's default baseline would raise the Firefox target to 114.
+        target: ["chrome107", "edge107", "firefox104", "safari16"],
         sourcemap: getBuildSourcemap(env.mode),
         minify: env.mode !== "development",
       },
