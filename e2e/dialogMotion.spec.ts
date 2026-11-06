@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test"
 
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -12,6 +15,8 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+
+const ACCOUNT_ID = "dialog-motion-account"
 
 /** Samples the early entrance and midpoint exit in the actual account editor. */
 async function sampleFade(page: Page, phase: "open" | "closed") {
@@ -98,7 +103,7 @@ test.beforeEach(async ({ context, page, extensionId }) => {
   const worker = await getServiceWorker(context)
   await seedUserPreferences(worker, { language: "zh-CN", refreshOnOpen: false })
   await seedStoredAccounts(worker, [
-    createStoredAccount({ site_name: "动画测试站点" }),
+    createStoredAccount({ id: ACCOUNT_ID, site_name: "动画测试站点" }),
   ])
   await page.goto(`chrome-extension://${extensionId}/options.html#account`)
   await waitForExtensionRoot(page)
@@ -159,6 +164,7 @@ test("account editor closes cleanly with reduced motion and a fresh draft on reo
   await page.emulateMedia({ reducedMotion: "reduce" })
   await page.setViewportSize({ width: 390, height: 844 })
   const trigger = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton)
+  await page.getByTestId(getAccountManagementListItemTestId(ACCOUNT_ID)).hover()
   await trigger.click()
   const dialog = page.getByRole("dialog", { name: "编辑账号" })
   await expect(dialog).toBeVisible()
@@ -187,6 +193,7 @@ test("account editor can close during entrance and reopen during exit", async ({
   page,
 }) => {
   const trigger = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton)
+  await page.getByTestId(getAccountManagementListItemTestId(ACCOUNT_ID)).hover()
   await trigger.click()
   // Request a replacement in the closing commit, before the exit can finish.
   await page.evaluate(async (editId) => {
