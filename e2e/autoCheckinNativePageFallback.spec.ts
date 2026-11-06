@@ -343,12 +343,16 @@ for (const nearMidnight of [false, true]) {
       page,
     }) => {
       const serviceWorker = await getServiceWorker(context)
+      const realClockNearMidnight = new Date().setHours(23, 59, 0, 0)
       if (nearMidnight) {
-        // Page timezone emulation does not affect the MV3 worker. Fix only its
-        // Date clock in this disposable context; keep browser alarms/timers real.
+        // Page timezone emulation does not affect the MV3 worker. Use tomorrow's
+        // 23:52 so the real browser cannot fire this alarm if the run crosses
+        // midnight. Keep browser alarms/timers real in this disposable context.
         await serviceWorker.evaluate(() => {
           const NativeDate = (globalThis as any).Date
-          const fixedNow = new NativeDate().setHours(23, 52, 0, 0)
+          const futureDay = new NativeDate()
+          futureDay.setDate(futureDay.getDate() + 1)
+          const fixedNow = futureDay.setHours(23, 52, 0, 0)
           ;(globalThis as any).Date = class extends NativeDate {
             constructor(...args: unknown[]) {
               super(...(args.length ? args : [fixedNow]))
@@ -432,9 +436,17 @@ for (const nearMidnight of [false, true]) {
             today: new Date().toDateString(),
             target: new Date(alarm.scheduledTime).toDateString(),
             hour: new Date().getHours(),
+            scheduledTime: alarm.scheduledTime,
           }
         }, AUTO_CHECKIN_DAILY_ALARM_NAME)
-        if (nearMidnight) expect(scheduledDay.hour).toBe(23)
+        if (nearMidnight) {
+          expect(scheduledDay.hour).toBe(23)
+          // Even if the real clock reaches 23:59 during setup, the alarm must
+          // remain beyond the test's two-minute execution budget.
+          expect(scheduledDay.scheduledTime).toBeGreaterThan(
+            realClockNearMidnight + 120_000,
+          )
+        }
         expect(
           scheduledDay.target,
           "UI-open fixture must schedule today's alarm",
