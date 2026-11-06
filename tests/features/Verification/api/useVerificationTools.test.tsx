@@ -701,4 +701,57 @@ describe("useVerificationTools", () => {
     act(() => result.current.resetAllPrompts())
     expect(result.current.promptDraft).toEqual({})
   })
+
+  it("clears a completed capacity observation with the matching tool history", async () => {
+    const runner = vi.fn().mockResolvedValue({
+      lowerBoundTokens: 4096,
+      reason: "test-limit",
+      attempts: [],
+      counter: { encoding: "o200k_base", estimated: true },
+    })
+    const { result } = renderHook(() =>
+      useVerificationTools({
+        resolveRequest: async () => buildRequest(),
+        isSupported: true,
+        isBlocked: false,
+        enableContextCapacity: true,
+        runContextCapacityRequest: runner,
+      }),
+    )
+    act(() => result.current.contextCapacity!.run())
+    await waitFor(() =>
+      expect(result.current.contextCapacity!.result?.lowerBoundTokens).toBe(
+        4096,
+      ),
+    )
+    act(() => result.current.clearContextCapacityHistory?.())
+    expect(result.current.contextCapacity!.result).toBeNull()
+  })
+
+  it("preserves capacity history when a different target is cleared", async () => {
+    const saved = { lowerBoundTokens: 4096, reason: "test-limit" }
+    const { result } = renderHook(() =>
+      useVerificationTools({
+        resolveRequest: async () => buildRequest(),
+        isSupported: true,
+        isBlocked: false,
+        enableContextCapacity: true,
+        historyTarget: { kind: "profile", profileId: "current" },
+        contextHistoryAccess: {
+          get: vi.fn().mockResolvedValue(saved),
+          save: vi.fn(),
+        },
+      }),
+    )
+    await waitFor(() =>
+      expect(result.current.contextCapacity!.history).toEqual(saved),
+    )
+    act(() =>
+      result.current.clearContextCapacityHistory?.({
+        kind: "profile",
+        profileId: "other",
+      }),
+    )
+    expect(result.current.contextCapacity!.history).toEqual(saved)
+  })
 })

@@ -14,6 +14,8 @@ import {
   type VerifyApiCredentialProfileDialogProps,
 } from "~/features/ApiCredentialProfiles/verification/useProfileVerification"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
+import { STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import {
@@ -305,6 +307,15 @@ describe("VerifyApiCredentialProfileDialog", () => {
     onClose: vi.fn(),
     initialModelId: "model",
   }
+
+  it("blocks capacity when there is no model to send", async () => {
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: { ...sessionProps, initialModelId: undefined },
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    expect(result.current.tools.contextCapacity?.canRun).toBe(false)
+  })
+
   const acceptedProbe: ApiVerificationProbeResult = {
     id: "text-generation",
     status: "pass",
@@ -2799,28 +2810,29 @@ describe("VerifyApiCredentialProfileDialog", () => {
   it("keeps unrelated probes available while a completed probe saves history", async () => {
     const user = userEvent.setup()
     const saving = createDeferred<void>()
-    const originalSave =
-      verificationResultHistoryStorage.upsertLatestSummary.bind(
-        verificationResultHistoryStorage,
-      )
-    vi.spyOn(
-      verificationResultHistoryStorage,
-      "upsertLatestSummary",
-    ).mockImplementationOnce(async (summary) => {
-      await saving.promise
-      return originalSave(summary)
-    })
     mockProbeDefinitions.mockReturnValue([
       { id: "text-generation", requiresModelId: true },
       { id: "models", requiresModelId: false },
     ])
-    mockRunApiVerificationProbe.mockResolvedValue(acceptedProbe)
+    mockRunApiVerificationProbe.mockImplementation(async ({ probeId }) => ({
+      ...acceptedProbe,
+      id: probeId,
+    }))
     render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
     const text = within(
       await screen.findByTestId(
         getApiCredentialProfileVerifyProbeTestId("text-generation"),
       ),
     )
+    const entered = createDeferred<void>()
+    const lockHeld = withExtensionStorageWriteLock(
+      STORAGE_LOCKS.API_VERIFICATION_HISTORY,
+      async () => {
+        entered.resolve()
+        await saving.promise
+      },
+    )
+    await entered.promise
     await user.click(
       text.getByRole("button", {
         name: "aiApiVerification:verifyDialog.actions.runOne",
@@ -2840,7 +2852,21 @@ describe("VerifyApiCredentialProfileDialog", () => {
         name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     ).toBeEnabled()
-    await act(async () => saving.resolve())
+    const sibling = within(
+      screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
+    )
+    await user.click(
+      sibling.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      saving.resolve()
+      await lockHeld
+    })
     await waitFor(() =>
       expect(
         text.getByRole("button", {
@@ -2848,6 +2874,20 @@ describe("VerifyApiCredentialProfileDialog", () => {
         }),
       ).toBeEnabled(),
     )
+    await waitFor(async () => {
+      const summary = await verificationResultHistoryStorage.getLatestSummary(
+        requireHistoryTarget(
+          createProfileModelVerificationHistoryTarget(
+            sessionProfile.id,
+            "model",
+          ),
+        ),
+      )
+      expect(summary?.probes.map((probe) => probe.id).sort()).toEqual([
+        "models",
+        "text-generation",
+      ])
+    })
   })
 
   it("offers the drawing test for a text profile and hides it for embedding models", async () => {

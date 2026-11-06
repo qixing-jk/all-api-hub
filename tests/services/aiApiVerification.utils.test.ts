@@ -113,6 +113,12 @@ describe("aiApiVerification utils", () => {
     expect(summaryKeyFromHttpStatus(404)).toBe(
       "verifyDialog.summaries.endpointNotFound",
     )
+    expect(summaryKeyFromHttpStatus(408)).toBe(
+      "verifyDialog.summaries.requestTimedOut",
+    )
+    expect(summaryKeyFromHttpStatus(504)).toBe(
+      "verifyDialog.summaries.requestTimedOut",
+    )
     expect(summaryKeyFromHttpStatus(500)).toBeUndefined()
   })
 

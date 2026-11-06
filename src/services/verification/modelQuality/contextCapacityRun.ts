@@ -54,6 +54,12 @@ export type RunContextCapacityParams = {
   resumeFrom?: ContextCapacityRunResult
   abortSignal: AbortSignal
   onProgress?: (result: ContextCapacityResult) => void
+  onCheckpoint?: (checkpoint: ContextCapacityCheckpoint) => Promise<void>
+}
+
+export type ContextCapacityCheckpoint = {
+  result: ContextCapacityRunResult
+  inFlightTarget?: number
 }
 
 export type ContextCapacityRunResult = ContextCapacityResult & {
@@ -93,7 +99,7 @@ export async function runContextCapacity(
   ].filter(
     (value): value is number => Number.isSafeInteger(value) && value! > 0,
   )
-  const inputLimit =
+  const requestedInputLimit =
     params.resumeFrom?.inputLimit ??
     params.maxInputTokens ??
     Math.min(
@@ -107,11 +113,12 @@ export async function runContextCapacity(
       ),
     )
   if (
-    !Number.isSafeInteger(inputLimit) ||
-    inputLimit < defaults.minimumInputTokens ||
-    inputLimit > defaults.maxTotalInputTokens
+    !Number.isSafeInteger(requestedInputLimit) ||
+    requestedInputLimit < defaults.minimumInputTokens ||
+    requestedInputLimit > defaults.maxTotalInputTokens
   )
     throw new Error("Invalid capacity continuation limit")
+  const inputLimit = Math.min(requestedInputLimit, counter.maxInputTokens)
   if (
     params.resumeFrom &&
     JSON.stringify(params.resumeFrom.counter) !== JSON.stringify(counter.info)
@@ -121,9 +128,31 @@ export async function runContextCapacity(
     maxInputTokens: inputLimit,
     resumeFrom: params.resumeFrom,
     signal: params.abortSignal,
-    onProgress: params.onProgress,
+    beforeAttempt: async (inFlightTarget, result) => {
+      await params.onCheckpoint?.({
+        result: {
+          ...result,
+          counter: counter.info,
+          inputLimit,
+          mode: params.mode,
+        },
+        inFlightTarget,
+      })
+    },
+    onProgress: async (result) => {
+      await params.onCheckpoint?.({
+        result: {
+          ...result,
+          counter: counter.info,
+          inputLimit,
+          mode: params.mode,
+        },
+      })
+      params.onProgress?.(result)
+    },
     attempt: async (targetTokens) => {
-      const prompt = counter.makePrompt(targetTokens)
+      const { prompt, inputTokens: localInputTokens } =
+        await counter.preparePrompt(targetTokens, params.abortSignal)
       if (new TextEncoder().encode(prompt).byteLength > defaults.maxPromptBytes)
         return {
           outcome: CONTEXT_ATTEMPT_OUTCOMES.Inconclusive,
@@ -156,7 +185,7 @@ export async function runContextCapacity(
             ? CONTEXT_ATTEMPT_OUTCOMES.Accepted
             : CONTEXT_ATTEMPT_OUTCOMES.Inconclusive,
           finishReason: generation.finishReason,
-          localInputTokens: counter.count(prompt),
+          localInputTokens,
           inputTokens: generation.usage?.inputTokens,
           outputTokens: generation.usage?.outputTokens,
         }
@@ -166,7 +195,7 @@ export async function runContextCapacity(
           ...(isRequestTimeoutError(error)
             ? { failureReason: CONTEXT_ATTEMPT_FAILURE_REASONS.Timeout }
             : {}),
-          localInputTokens: counter.count(prompt),
+          localInputTokens,
           message: toSanitizedErrorSummary(error, [
             params.apiKey,
             ...Object.values(params.requestHeaders ?? {}),

@@ -166,6 +166,239 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("webAiApiCheck background handlers", () => {
+  it("recovers an interrupted in-flight request without sending it again", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const capacity = await import(
+      "~/services/verification/modelQuality/contextCapacityRun"
+    )
+    const snapshot = {
+      lowerBoundTokens: 1024,
+      reason: "test-limit" as const,
+      inputLimit: 8192,
+      attempts: [{ targetTokens: 1024, outcome: "accepted" as const }],
+      counter: { encoding: "o200k_base", estimated: true },
+    }
+    const run = vi
+      .spyOn(capacity, "runContextCapacity")
+      .mockImplementationOnce(async (params) => {
+        await params.onCheckpoint?.({ result: snapshot, inFlightTarget: 2048 })
+        throw new Error("worker terminated")
+      })
+      .mockRejectedValue(new Error("Must not repeat provider request"))
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      const handler = webAiApiCheckMessageHandlers.get(
+        "webAiApiCheck:runContextCapacity",
+      )!
+      const data = {
+        runId: "interrupted-first",
+        apiType: "openai",
+        baseUrl: "https://example.invalid",
+        apiKey: "checkpoint-key",
+        modelId: "checkpoint-model",
+      }
+      await expect(handler({ data })).resolves.toMatchObject({ success: false })
+      const recovered = await handler({
+        data: { ...data, runId: "after-restart" },
+      })
+      expect(recovered).toMatchObject({
+        success: true,
+        result: {
+          lowerBoundTokens: 1024,
+          reason: "inconclusive",
+          attempts: [
+            { targetTokens: 1024, outcome: "accepted" },
+            {
+              targetTokens: 2048,
+              outcome: "inconclusive",
+              failureReason: "interrupted",
+            },
+          ],
+        },
+      })
+      expect(run).toHaveBeenCalledOnce()
+    } finally {
+      run.mockRestore()
+    }
+  })
+
+  it("does not dispatch a provider request for a recovery-only lookup without a checkpoint", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const capacity = await import(
+      "~/services/verification/modelQuality/contextCapacityRun"
+    )
+    const run = vi.spyOn(capacity, "runContextCapacity")
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      await expect(
+        webAiApiCheckMessageHandlers.get("webAiApiCheck:runContextCapacity")!({
+          data: {
+            runId: "recover-missing",
+            recoverOnly: true,
+            apiType: "openai",
+            baseUrl: "https://example.invalid",
+            apiKey: "missing-key",
+            modelId: "missing-model",
+          },
+        }),
+      ).resolves.toMatchObject({ success: false })
+      expect(run).not.toHaveBeenCalled()
+    } finally {
+      run.mockRestore()
+    }
+  })
+
+  it("recovers completed attempts as an explicit budget continuation", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const capacity = await import(
+      "~/services/verification/modelQuality/contextCapacityRun"
+    )
+    const history = await import(
+      "~/services/verification/verificationResultHistory/contextCapacityHistory"
+    )
+    const snapshot = {
+      lowerBoundTokens: 1024,
+      reason: "test-limit" as const,
+      inputLimit: 8192,
+      attempts: [{ targetTokens: 1024, outcome: "accepted" as const }],
+      counter: { encoding: "o200k_base", estimated: true },
+    }
+    const run = vi
+      .spyOn(capacity, "runContextCapacity")
+      .mockImplementationOnce(async (params) => {
+        await params.onCheckpoint?.({ result: snapshot })
+        throw new Error("worker terminated between requests")
+      })
+    const request = {
+      apiType: "openai" as const,
+      baseUrl: "https://example.invalid",
+      apiKey: "completed-key",
+      modelId: "completed-model",
+    }
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      const handler = webAiApiCheckMessageHandlers.get(
+        "webAiApiCheck:runContextCapacity",
+      )!
+      await handler({ data: { ...request, runId: "completed-first" } })
+      await expect(
+        handler({
+          data: { ...request, runId: "completed-recovery", recoverOnly: true },
+        }),
+      ).resolves.toMatchObject({
+        success: true,
+        result: { ...snapshot, reason: "budget" },
+      })
+      expect(run).toHaveBeenCalledOnce()
+      expect(await history.contextCapacityHistory.get(request)).toMatchObject({
+        reason: "budget",
+        lowerBoundTokens: 1024,
+      })
+    } finally {
+      run.mockRestore()
+    }
+  })
+
+  it("persists a completed capacity observation before clearing its checkpoint", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const capacity = await import(
+      "~/services/verification/modelQuality/contextCapacityRun"
+    )
+    const history = await import(
+      "~/services/verification/verificationResultHistory/contextCapacityHistory"
+    )
+    const { Storage } = await import("@plasmohq/storage")
+    const { WEB_AI_API_CHECK_STORAGE_KEYS } = await import(
+      "~/services/core/storageKeys"
+    )
+    const result = {
+      lowerBoundTokens: 1024,
+      reason: "test-limit" as const,
+      inputLimit: 1024,
+      attempts: [{ targetTokens: 1024, outcome: "accepted" as const }],
+      counter: { encoding: "o200k_base", estimated: true },
+    }
+    const run = vi
+      .spyOn(capacity, "runContextCapacity")
+      .mockImplementationOnce(async (params) => {
+        await params.onCheckpoint?.({
+          result: { ...result, attempts: [] },
+          inFlightTarget: 1024,
+        })
+        await params.onCheckpoint?.({ result })
+        return result
+      })
+    const request = {
+      apiType: "openai" as const,
+      baseUrl: "https://example.invalid",
+      apiKey: "success-key",
+      modelId: "success-model",
+    }
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      await expect(
+        webAiApiCheckMessageHandlers.get("webAiApiCheck:runContextCapacity")!({
+          data: { ...request, runId: "completed-success" },
+        }),
+      ).resolves.toMatchObject({ success: true, result })
+      expect(await history.contextCapacityHistory.get(request)).toMatchObject({
+        reason: "test-limit",
+        lowerBoundTokens: 1024,
+      })
+      expect(
+        await new Storage({ area: "local" }).get(
+          WEB_AI_API_CHECK_STORAGE_KEYS.CONTEXT_CHECKPOINTS,
+        ),
+      ).toEqual({})
+    } finally {
+      run.mockRestore()
+    }
+  })
+
+  it.each([
+    { mode: "invalid" },
+    { requestProfile: "invalid" },
+    { apiKey: "" },
+    { modelId: "" },
+    { baseUrl: "file:///tmp" },
+  ])("rejects invalid context history identity %j", async (override) => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const history = await import(
+      "~/services/verification/verificationResultHistory/contextCapacityHistory"
+    )
+    const get = vi.spyOn(history.contextCapacityHistory, "get")
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      await expect(
+        webAiApiCheckMessageHandlers.get("webAiApiCheck:contextHistory")!({
+          data: {
+            action: "get",
+            request: {
+              apiType: "openai",
+              baseUrl: "https://example.invalid",
+              apiKey: "key",
+              modelId: "model",
+              ...override,
+            },
+          },
+        }),
+      ).resolves.toEqual({ success: false })
+      expect(get).not.toHaveBeenCalled()
+    } finally {
+      get.mockRestore()
+    }
+  })
+
   it("restores compact webpage capacity history without exposing connection credentials", async () => {
     const background = await import(
       "~/services/verification/webAiApiCheck/background"
@@ -268,10 +501,12 @@ describe("webAiApiCheck background handlers", () => {
         },
         sender: { tab: { id: 947 }, frameId: 3 } as any,
       })
-      expect(send).toHaveBeenCalledWith(
-        "webAiApiCheck:contextCapacityProgress",
-        { runId: "frame-capacity", result: progress },
-        { tabId: 947, frameId: 3 },
+      await vi.waitFor(() =>
+        expect(send).toHaveBeenCalledWith(
+          "webAiApiCheck:contextCapacityProgress",
+          { runId: "frame-capacity", result: progress },
+          { tabId: 947, frameId: 3 },
+        ),
       )
       for (const listener of tabUpdatedListeners)
         listener(946, { status: "loading" })
@@ -378,14 +613,16 @@ describe("webAiApiCheck background handlers", () => {
         },
         sender: { tab: { id: 47 } },
       })
-      expect(spy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          maxInputTokens: undefined,
-          resumeFrom,
-          mode: "non-streaming",
-          requestProfile: "codex",
-          requestProfileEnhanced: true,
-        }),
+      await vi.waitFor(() =>
+        expect(spy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            maxInputTokens: undefined,
+            resumeFrom,
+            mode: "non-streaming",
+            requestProfile: "codex",
+            requestProfileEnhanced: true,
+          }),
+        ),
       )
       await webAiApiCheckMessageHandlers.get(
         WebAiApiCheckMessageTypes.CancelRunProbe,

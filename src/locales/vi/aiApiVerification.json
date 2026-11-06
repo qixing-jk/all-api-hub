@@ -166,6 +166,7 @@
         "hint": "Kiểm tra độ dài ngữ cảnh đầu vào mà mô hình chấp nhận. Kết quả phụ thuộc vào API và cấu hình yêu cầu, không xác nhận toàn bộ cửa sổ ngữ cảnh.",
         "historyError": "Lịch sử hiện không khả dụng. Kết quả hiện tại vẫn được hiển thị.",
         "incompleteResponse": "Chưa nhận được phản hồi đủ để kết luận. Lý do kết thúc: {{reason}}.",
+        "interrupted": "Yêu cầu đã bị gián đoạn; trạng thái tính phí chưa rõ. Yêu cầu không được tự động thử lại. Bắt đầu kiểm tra mới có thể phát sinh thêm mức sử dụng.",
         "lower": "Đầu vào lớn nhất được chấp nhận: {{tokens}} token văn bản cục bộ",
         "matched": "Đã khớp mã hóa mô hình; số token của toàn bộ yêu cầu có thể khác.",
         "measuredBadge": "Đã nhận ≈{{tokens}} token",

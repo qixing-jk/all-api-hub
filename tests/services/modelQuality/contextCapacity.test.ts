@@ -271,3 +271,134 @@ describe("context capacity", () => {
     expect(result.reason).toBe("bracketed")
   })
 })
+
+it.each([
+  { reason: "inconclusive", attempts: [] },
+  {
+    reason: "budget",
+    attempts: [
+      { targetTokens: 1024, outcome: "accepted", localInputTokens: -1 },
+    ],
+  },
+  {
+    reason: "budget",
+    attempts: [
+      { targetTokens: 1024, outcome: "accepted" },
+      { targetTokens: 1024, outcome: "context-limit" },
+    ],
+  },
+])(
+  "rejects invalid continuation ledgers without requests: %j",
+  async (resumeFrom) => {
+    let calls = 0
+    await expect(
+      probeContextCapacity({
+        maxInputTokens: 8192,
+        resumeFrom: { lowerBoundTokens: 0, ...resumeFrom } as any,
+        attempt: async () => {
+          calls++
+          return { outcome: "accepted" }
+        },
+      }),
+    ).rejects.toThrow("Invalid capacity continuation")
+    expect(calls).toBe(0)
+  },
+)
+
+it("continues an accepted-only ledger at the next larger input", async () => {
+  const sent: number[] = []
+  const result = await probeContextCapacity({
+    maxInputTokens: 4096,
+    resumeFrom: {
+      lowerBoundTokens: 1000,
+      reason: "budget",
+      attempts: [
+        { targetTokens: 1024, localInputTokens: 1000, outcome: "accepted" },
+      ],
+    },
+    attempt: async (tokens) => {
+      sent.push(tokens)
+      return { outcome: "accepted" }
+    },
+  })
+  expect(sent).toEqual([2048, 4096])
+  expect(result.reason).toBe("test-limit")
+})
+it("continues a rejection-only ledger below its smallest rejection", async () => {
+  const sent: number[] = []
+  const result = await probeContextCapacity({
+    maxInputTokens: 4096,
+    maxRequests: 1,
+    resumeFrom: {
+      lowerBoundTokens: 0,
+      reason: "budget",
+      upperBoundTokens: 4000,
+      attempts: [
+        {
+          targetTokens: 4096,
+          localInputTokens: 4000,
+          outcome: "context-limit",
+        },
+      ],
+    },
+    attempt: async (tokens) => {
+      sent.push(tokens)
+      return { outcome: "accepted" }
+    },
+  })
+  expect(sent).toEqual([2048])
+  expect(result.reason).toBe("budget")
+})
+it.each(["cancel", "reject"])(
+  "does not report a confirmed boundary when confirmation %s",
+  async (scenario) => {
+    const controller = new AbortController()
+    let calls = 0
+    const result = await probeContextCapacity({
+      maxInputTokens: 2048,
+      signal: controller.signal,
+      attempt: async (tokens) => {
+        calls++
+        if (calls === 3) {
+          if (scenario === "cancel") controller.abort()
+          return { outcome: "inconclusive" }
+        }
+        return { outcome: tokens === 1024 ? "accepted" : "context-limit" }
+      },
+    })
+    expect(result.reason).toBe(
+      scenario === "cancel" ? "stopped" : "inconclusive",
+    )
+    expect(calls).toBe(3)
+  },
+)
+it("stops before dispatch when cancellation arrives at a persisted boundary", async () => {
+  const controller = new AbortController()
+  const sent: number[] = []
+  const result = await probeContextCapacity({
+    maxInputTokens: 2048,
+    signal: controller.signal,
+    attempt: async (tokens) => {
+      sent.push(tokens)
+      return { outcome: tokens === 1024 ? "accepted" : "context-limit" }
+    },
+    onProgress: () => {
+      if (sent.length === 2) controller.abort()
+    },
+  })
+  expect(result.reason).toBe("stopped")
+  expect(sent).toEqual([2048, 1024])
+})
+
+it("sends no provider request when already stopped", async () => {
+  const controller = new AbortController()
+  controller.abort()
+  const result = await probeContextCapacity({
+    maxInputTokens: 1024,
+    signal: controller.signal,
+    attempt: async () => {
+      throw new Error("must not dispatch")
+    },
+  })
+  expect(result).toMatchObject({ reason: "stopped", attempts: [] })
+})

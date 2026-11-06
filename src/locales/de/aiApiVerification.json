@@ -167,6 +167,7 @@
         "hint": "Prüft den Eingabekontext, den das Modell akzeptiert. Das Ergebnis hängt von API und Anfragekonfiguration ab und bestätigt nicht das gesamte Kontextfenster.",
         "historyError": "Verlauf nicht verfügbar. Das aktuelle Ergebnis wird weiterhin angezeigt.",
         "incompleteResponse": "Keine eindeutige Antwort erhalten. Beendigungsgrund: {{reason}}.",
+        "interrupted": "Die Anfrage wurde unterbrochen; der Abrechnungsstatus ist unbekannt. Sie wurde nicht erneut gesendet. Ein neuer Test kann zusätzliche Nutzung verursachen.",
         "lower": "Größte angenommene Eingabe: {{tokens}} lokale Texttokens",
         "matched": "Modellkodierung zugeordnet; die Tokenzahl der gesamten Anfrage kann abweichen.",
         "measuredBadge": "≈{{tokens}} Tokens akzeptiert",

@@ -122,7 +122,6 @@ export type ContextCapacitySummary = {
   target?: ApiVerificationHistoryTarget
   targetKey: string
   scopeKey: string
-  lookupKey?: string
   verifiedAt: number
   apiType: ApiVerificationApiType
   modelId: string
@@ -131,6 +130,7 @@ export type ContextCapacitySummary = {
   declaredContext?: number
   upperBoundTokens?: number
   reason: ContextCapacityReason
+  inconclusiveReason?: "timeout" | "empty-response" | "interrupted"
   requests: number
   outputLimited: boolean
 }

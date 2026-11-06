@@ -33,21 +33,31 @@ export const runContextCapacityInBackground: typeof runContextCapacity = async (
   }
   params.abortSignal.addEventListener("abort", cancel, { once: true })
   try {
+    const request = {
+      runId,
+      baseUrl: params.baseUrl,
+      apiKey: params.apiKey,
+      apiType: params.apiType,
+      modelId: params.modelId,
+      mode: params.mode,
+      requestProfile: params.requestProfile,
+      requestProfileEnhanced: params.requestProfileEnhanced,
+      maxInputTokens: params.maxInputTokens,
+      resumeFrom: params.resumeFrom,
+    }
     const response = await sendWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunContextCapacity,
-      {
-        runId,
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        apiType: params.apiType,
-        modelId: params.modelId,
-        mode: params.mode,
-        requestProfile: params.requestProfile,
-        requestProfileEnhanced: params.requestProfileEnhanced,
-        maxInputTokens: params.maxInputTokens,
-        resumeFrom: params.resumeFrom,
-      },
-    )
+      request,
+    ).catch(async (error) => {
+      params.abortSignal.throwIfAborted()
+      // This message can only read a checkpoint, never dispatch provider input.
+      const recovered = await sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.RunContextCapacity,
+        { ...request, recoverOnly: true },
+      ).catch(() => null)
+      if (!recovered?.success) throw error
+      return recovered
+    })
     params.abortSignal.throwIfAborted()
     if (!response.success)
       throw new Error(response.error ?? "Context capacity test failed")

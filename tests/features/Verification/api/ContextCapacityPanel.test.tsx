@@ -206,6 +206,11 @@ it.each([
     expect(within(details).getByText("测量依据")).toBeVisible()
     expect(within(details).getByText("请求与用量")).toBeVisible()
     expect(
+      within(details).getByText(
+        `容量拒绝位置：${(lower + 1024).toLocaleString()} 个本地文本 token`,
+      ),
+    ).toBeVisible()
+    expect(
       screen.getAllByText(zhCN.verifyDialog.tools.context.reasons[reason]),
     ).toHaveLength(1)
   },
@@ -848,3 +853,90 @@ it("invalidates old context results when the model selection changes", async () 
     }),
   ).toBeEnabled()
 })
+
+it.each([
+  ["timeout", "请求超时"],
+  ["empty-response", "未返回正文"],
+  ["interrupted", "未能确认"],
+] as const)(
+  "restores specific %s feedback",
+  async (inconclusiveReason, label) => {
+    const i18n = await createResourceTestI18n(
+      { "zh-CN": { aiApiVerification: zhCN } },
+      "zh-CN",
+    )
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ContextCapacityPanel
+          controller={{
+            enabled: true,
+            running: false,
+            canRun: true,
+            result: null,
+            progress: null,
+            error: null,
+            stopped: false,
+            run: vi.fn(),
+            stop: vi.fn(),
+            history: {
+              targetKey: "fixture",
+              scopeKey: "fixture",
+              verifiedAt: 1,
+              apiType: "openai-compatible",
+              modelId: "model",
+              lowerBoundTokens: 0,
+              reason: "inconclusive",
+              inconclusiveReason,
+              requests: 1,
+              outputLimited: false,
+            },
+          }}
+        />
+      </I18nextProvider>,
+    )
+    expect(screen.getByText(label).closest('[data-slot="badge"]')).toBeVisible()
+    if (inconclusiveReason === "interrupted")
+      expect(screen.getByText(/计费状态未知/)).toBeVisible()
+  },
+)
+
+it.each([512, 1048576])(
+  "renders the accepted capacity at %i tokens",
+  async (lowerBoundTokens) => {
+    const i18n = await createResourceTestI18n(
+      { "zh-CN": { aiApiVerification: zhCN } },
+      "zh-CN",
+    )
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ContextCapacityPanel
+          controller={{
+            enabled: true,
+            running: false,
+            canRun: true,
+            progress: null,
+            error: null,
+            stopped: false,
+            run: vi.fn(),
+            stop: vi.fn(),
+            result: {
+              lowerBoundTokens,
+              reason: "test-limit",
+              attempts: [],
+              counter: { encoding: "o200k_base", estimated: false },
+            },
+          }}
+        />
+      </I18nextProvider>,
+    )
+    expect(
+      screen.getByRole("status", { name: "上下文探测结果" }),
+    ).toHaveTextContent(
+      lowerBoundTokens === 512 ? "已验证约 512 tokens" : "已验证约 1M tokens",
+    )
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "测试详情" }))
+    expect(screen.getByText(/o200k_base/)).toBeVisible()
+  },
+)

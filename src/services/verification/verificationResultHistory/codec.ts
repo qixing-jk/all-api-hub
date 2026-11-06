@@ -376,8 +376,12 @@ export function coerceTrustedConfig(
             value.drawingSummaries as DrawingVerificationSummary[],
         }
       : {}),
-    ...(value.contextSummaries
-      ? { contextSummaries: value.contextSummaries as ContextCapacitySummary[] }
+    ...(Array.isArray(value.contextSummaries)
+      ? {
+          contextSummaries: value.contextSummaries
+            .map(coerceContextSummary)
+            .filter((item): item is ContextCapacitySummary => item !== null),
+        }
       : {}),
     lastUpdated: value.lastUpdated,
     lastOrphanSweepAt: coercePositiveTimestamp(value.lastOrphanSweepAt),
@@ -402,8 +406,9 @@ export function coerceContextSummary(
     (value.target !== undefined && !target) ||
     !scopeKey ||
     !isApiVerificationApiType(value.apiType) ||
+    typeof value.reason !== "string" ||
     !Object.values(CONTEXT_CAPACITY_REASONS).some(
-      (reason) => reason === String(value.reason),
+      (reason) => reason === value.reason,
     ) ||
     !count(value.lowerBoundTokens) ||
     !count(value.requests) ||
@@ -416,10 +421,6 @@ export function coerceContextSummary(
       ? serializeVerificationHistoryTarget(target)
       : `connection:${scopeKey}`,
     scopeKey,
-    ...(typeof value.lookupKey === "string" &&
-    /^[a-f0-9]{64}$/.test(value.lookupKey)
-      ? { lookupKey: value.lookupKey }
-      : {}),
     verifiedAt: normalizeTimestamp(value.verifiedAt),
     apiType: value.apiType,
     modelId: sanitizeText(value.modelId),
@@ -431,6 +432,12 @@ export function coerceContextSummary(
       ? { upperBoundTokens: value.upperBoundTokens }
       : {}),
     reason: value.reason as ContextCapacitySummary["reason"],
+    ...(value.reason === CONTEXT_CAPACITY_REASONS.Inconclusive &&
+    (value.inconclusiveReason === "timeout" ||
+      value.inconclusiveReason === "empty-response" ||
+      value.inconclusiveReason === "interrupted")
+      ? { inconclusiveReason: value.inconclusiveReason }
+      : {}),
     requests: value.requests,
     outputLimited: value.outputLimited === true,
     ...(typeof value.latencyMs === "number" &&

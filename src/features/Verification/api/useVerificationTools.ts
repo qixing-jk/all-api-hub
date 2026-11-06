@@ -68,6 +68,7 @@ export type VerificationToolsController = {
   canRunPelican: boolean
   isPelicanRunning: boolean
   pelicanStatus: VerificationToolStatus
+  clearContextCapacityHistory?: (target?: ApiVerificationHistoryTarget) => void
   clearPelicanHistory?: () => void
   pelicanSummary?: DrawingVerificationSummary | null
   pelican: PelicanTestResult | null
@@ -89,6 +90,7 @@ export type PelicanRunner = (
 
 export type UseVerificationToolsOptions = {
   contextHistoryAccess?: ContextCapacityHistoryAccess
+  resolveContextHistoryRequest?: UseVerificationToolsOptions["resolveRequest"]
   runContextCapacityRequest?: typeof runContextCapacity
   enableContextCapacity?: boolean
   contextCapacityKey?: string
@@ -156,6 +158,7 @@ export function useVerificationTools({
   contextCapacityKey = "",
   runContextCapacityRequest,
   contextHistoryAccess,
+  resolveContextHistoryRequest,
 }: UseVerificationToolsOptions): VerificationToolsController {
   const [pelicanSummary, setPelicanSummary] =
     useState<DrawingVerificationSummary | null>(null)
@@ -225,6 +228,7 @@ export function useVerificationTools({
     blocked: isBlocked,
     contextKey: `${historyKey}:${historyApiType}:${contextCapacityKey}`,
     resolveRequest,
+    resolveHistoryRequest: resolveContextHistoryRequest,
     runner: runContextCapacityRequest,
     historyAccess: contextHistoryAccess,
     historyTarget,
@@ -352,6 +356,16 @@ export function useVerificationTools({
 
   return useMemo(
     () => ({
+      clearContextCapacityHistory: (target?: ApiVerificationHistoryTarget) => {
+        if (
+          target &&
+          (!historyTarget ||
+            serializeVerificationHistoryTarget(target) !==
+              serializeVerificationHistoryTarget(historyTarget))
+        )
+          return
+        contextCapacity.clearHistory()
+      },
       clearPelicanHistory: () => {
         runVersionRef.current += 1
         setPelicanSummary(null)
@@ -386,6 +400,7 @@ export function useVerificationTools({
       stopPelican,
       prompts,
       contextCapacity,
+      historyTarget,
     ],
   )
 }

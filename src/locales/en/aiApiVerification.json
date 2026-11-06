@@ -167,6 +167,7 @@
         "hint": "Tests the input context the model can accept. Results depend on the API and request configuration and do not establish the full context window.",
         "historyError": "History is unavailable. The current result is still shown.",
         "incompleteResponse": "No conclusive response was received. Finish reason: {{reason}}.",
+        "interrupted": "The request was interrupted; its charge status is unknown. It was not retried. Start a new test only if you accept the possible additional usage.",
         "lower": "Largest accepted input: {{tokens}} local text tokens",
         "matched": "Model encoding matched; full-request token count may differ.",
         "measuredBadge": "Accepted ≈{{tokens}} tokens",

@@ -280,6 +280,9 @@ export function useVerifyApiDialogViewModel({
     contextCapacityKey: JSON.stringify([
       isOpen,
       selectedRuntimeKeyId,
+      selectedRuntimeKey?.baseUrl,
+      selectedRuntimeKey?.secret,
+      tokenModelHint,
       account.baseUrl,
       account.token,
       account.cookieAuthSessionCookie,
@@ -301,8 +304,33 @@ export function useVerifyApiDialogViewModel({
         : null,
     historyApiType: apiType,
     resolveRequest: resolveToolRequest,
+    // History may use an already available secret; opening the dialog must not
+    // fetch a hidden credential just to restore a capacity observation.
+    resolveContextHistoryRequest: async () => {
+      const modelId = requestedModelId.trim() || tokenModelHint?.trim()
+      if (
+        !selectedRuntimeKey?.secret ||
+        !selectedRuntimeKeyIsCompatible ||
+        !modelId
+      )
+        return null
+      return {
+        baseUrl: selectedRuntimeKey.baseUrl,
+        apiKey: selectedRuntimeKey.secret,
+        apiType,
+        modelId,
+        mode: verificationMode,
+        requestProfile,
+        requestProfileEnhanced,
+        secrets: [],
+      }
+    },
     isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
-    isBlocked: isLoadingRuntimeKeys || !selectedRuntimeKeyIsCompatible,
+    isBlocked:
+      isLoadingRuntimeKeys ||
+      !selectedRuntimeKey ||
+      !selectedRuntimeKeyIsCompatible ||
+      !(requestedModelId.trim() || tokenModelHint?.trim()),
   })
 
   const canClose = !isRunning && !isAnyProbeRunning && !tools.isRunning
@@ -420,6 +448,7 @@ export function useVerifyApiDialogViewModel({
     if (!historyTarget) return
     await clearVerificationHistory(apiType)
     tools.clearPelicanHistory?.()
+    tools.clearContextCapacityHistory?.(historyTarget)
   }
 
   // The suite can always run the models probe without a model id.

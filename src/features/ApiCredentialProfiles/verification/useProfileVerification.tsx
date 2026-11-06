@@ -244,7 +244,7 @@ export function useProfileVerification({
     historyApiType: apiType,
     resolveRequest: resolveToolRequest,
     isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
-    isBlocked: !profile,
+    isBlocked: !profile || !requestedModelId.trim(),
   })
 
   const canClose =
@@ -461,6 +461,7 @@ export function useProfileVerification({
     try {
       await clearVerificationHistory(apiType, targetToClear)
       tools.clearPelicanHistory?.()
+      tools.clearContextCapacityHistory?.(targetToClear)
     } catch (error) {
       logger.error("Failed to clear verification history", { error })
     }

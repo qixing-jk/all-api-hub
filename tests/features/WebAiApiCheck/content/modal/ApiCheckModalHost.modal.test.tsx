@@ -262,7 +262,8 @@ describe("ApiCheckModalHost", () => {
       "https://example.com/api",
     )) as HTMLInputElement
 
-    await user.type(baseUrlInput, "https://typed.example.com/api")
+    await user.click(baseUrlInput)
+    await user.paste("https://typed.example.com/api")
 
     await act(async () => {
       historyDeferred.resolve({

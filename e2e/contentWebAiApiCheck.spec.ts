@@ -1559,3 +1559,114 @@ for (const state of [
     release()
   })
 }
+
+test("recovers an interrupted webpage context request after its worker stops without replaying it", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  let requests = 0
+  const server = createServer(async (request, response) => {
+    response.setHeader("Access-Control-Allow-Origin", "*")
+    response.setHeader("Access-Control-Allow-Headers", "*")
+    if (request.method === "OPTIONS") {
+      response.end()
+      return
+    }
+    if (request.method === "GET") {
+      response.setHeader("Content-Type", "application/json")
+      response.end(JSON.stringify({ data: [{ id: "gpt-4o-mini" }] }))
+      return
+    }
+    for await (const _chunk of request) {
+      /* consume the input, leave the provider response pending */
+    }
+    requests++
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const cdp = await context.newCDPSession(page)
+  const versions: Array<{
+    versionId: string
+    scriptURL: string
+    runningStatus: string
+  }> = []
+  cdp.on("ServiceWorker.workerVersionUpdated", ({ versions: updates }) => {
+    for (const version of updates) {
+      const index = versions.findIndex(
+        (entry) => entry.versionId === version.versionId,
+      )
+      if (index >= 0) versions[index] = version
+      else versions.push(version)
+    }
+  })
+  await cdp.send("ServiceWorker.enable")
+  try {
+    await stubLlmMetadataIndex(context)
+    await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    const { modal, contentHost } =
+      await openApiCheckModalFromCopiedCredentials(page)
+    await modal
+      .getByRole("textbox", { name: "Base URL", exact: true })
+      .fill(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)
+    await modal
+      .getByRole("combobox", { name: "Test mode", exact: true })
+      .click()
+    await contentHost
+      .getByRole("option", { name: "Non-streaming", exact: true })
+      .click()
+    await modal.getByRole("combobox", { name: "Model ID", exact: true }).click()
+    await contentHost
+      .getByRole("option", { name: "gpt-4o-mini", exact: true })
+      .click()
+    const panel = modal.getByRole("region", { name: "Model context test" })
+    await panel.getByRole("button", { name: "Run context probe" }).click()
+    await expect.poll(() => requests).toBe(1)
+    const worker = await getServiceWorker(context)
+    const stored = await getPlasmoStorageRawValue(
+      worker,
+      STORAGE_KEYS.CONTEXT_CHECKPOINTS,
+    )
+    expect(JSON.stringify(stored)).not.toContain(API_KEY)
+    expect(JSON.stringify(stored)).toContain("inFlightTarget")
+    await expect
+      .poll(() =>
+        versions.some(
+          (version) =>
+            version.scriptURL.startsWith(
+              `chrome-extension://${extensionId}/`,
+            ) && version.runningStatus === "running",
+        ),
+      )
+      .toBe(true)
+    const version = versions.find(
+      (entry) =>
+        entry.scriptURL.startsWith(`chrome-extension://${extensionId}/`) &&
+        entry.runningStatus === "running",
+    )!
+    await cdp.send("ServiceWorker.stopWorker", { versionId: version.versionId })
+    await expect(
+      panel.getByRole("status", { name: "Context capacity result" }),
+    ).toContainText("charge status is unknown", { timeout: 30000 })
+    expect(requests).toBe(1)
+    await panel.screenshot({
+      path: test.info().outputPath("web-context-worker-interrupted.png"),
+      animations: "disabled",
+    })
+    await page.setViewportSize({ width: 380, height: 800 })
+    await panel.scrollIntoViewIfNeeded()
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true)
+    await panel.screenshot({
+      path: test.info().outputPath("web-context-worker-interrupted-narrow.png"),
+      animations: "disabled",
+    })
+  } finally {
+    await cdp.detach()
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+})

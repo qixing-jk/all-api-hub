@@ -276,3 +276,150 @@ describe("capacity request outcomes", () => {
     expect(classifyContextError(error(413))).toBe("inconclusive")
   })
 })
+
+it.each([false, true])(
+  "bounds explicit and resumed input by fixture ceiling: resume=%s",
+  async (resume) => {
+    const counters = await import(
+      "~/services/verification/modelQuality/contextCounter"
+    )
+    const counter = await counters.createContextCounter({ state: "unmatched" })
+    const preparePrompt = vi.fn(counter.preparePrompt)
+    const spy = vi
+      .spyOn(counters, "createContextCounter")
+      .mockResolvedValue({ ...counter, maxInputTokens: 2048, preparePrompt })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: unknown) =>
+        String(url) === MODEL_METADATA_URL
+          ? Response.json({ models: [] })
+          : Response.json({
+              choices: [
+                {
+                  index: 0,
+                  message: { role: "assistant", content: "OK" },
+                  finish_reason: "stop",
+                },
+              ],
+            }),
+      ),
+    )
+    try {
+      const result = await runContextCapacity({
+        baseUrl: "https://example.invalid",
+        apiKey: "test",
+        apiType: "openai-compatible",
+        modelId: "test",
+        mode: "non-streaming",
+        maxInputTokens: 8388608,
+        abortSignal: new AbortController().signal,
+        ...(resume
+          ? {
+              resumeFrom: {
+                reason: "budget",
+                lowerBoundTokens: 0,
+                attempts: [],
+                inputLimit: 8388608,
+                counter: counter.info,
+              },
+            }
+          : {}),
+      })
+      expect(preparePrompt).toHaveBeenCalledWith(2048, expect.any(AbortSignal))
+      expect(result.inputLimit).toBe(2048)
+    } finally {
+      spy.mockRestore()
+      vi.unstubAllGlobals()
+      modelMetadataService.clearCache()
+    }
+  },
+)
+
+it("awaits the durable in-flight checkpoint before sending provider input", async () => {
+  const calls: string[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      calls.push("provider")
+      return Response.json({
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "OK" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    }),
+  )
+  try {
+    await runContextCapacity({
+      baseUrl: "https://example.invalid",
+      apiKey: "test",
+      apiType: "openai-compatible",
+      modelId: "test",
+      mode: "non-streaming",
+      maxInputTokens: 1024,
+      abortSignal: new AbortController().signal,
+      onCheckpoint: async (checkpoint) => {
+        await Promise.resolve()
+        calls.push(checkpoint.inFlightTarget ? "in-flight" : "completed")
+      },
+    })
+    expect(calls).toEqual(["in-flight", "provider", "completed", "completed"])
+  } finally {
+    vi.unstubAllGlobals()
+    modelMetadataService.clearCache()
+  }
+})
+
+it.each([0, 8388609, 1.5, Number.NaN])(
+  "rejects invalid explicit input %s before resolving metadata",
+  async (maxInputTokens) => {
+    const fetch = vi.fn()
+    vi.stubGlobal("fetch", fetch)
+    try {
+      await expect(
+        runContextCapacity({
+          baseUrl: "https://example.invalid",
+          apiKey: "test",
+          apiType: "openai",
+          modelId: "test",
+          maxInputTokens,
+          abortSignal: new AbortController().signal,
+        }),
+      ).rejects.toThrow("Invalid input limit")
+      expect(fetch).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  },
+)
+it("rejects an invalid resumed limit before sending provider input", async () => {
+  const fetch = vi.fn(async () => Response.json({ models: [] }))
+  vi.stubGlobal("fetch", fetch)
+  try {
+    await expect(
+      runContextCapacity({
+        baseUrl: "https://example.invalid",
+        apiKey: "test",
+        apiType: "openai",
+        modelId: "test",
+        resumeFrom: {
+          reason: "budget",
+          lowerBoundTokens: 0,
+          attempts: [],
+          inputLimit: -1,
+          counter: { encoding: "o200k_base", estimated: true },
+        },
+        abortSignal: new AbortController().signal,
+      }),
+    ).rejects.toThrow("Invalid capacity continuation limit")
+    expect(fetch).toHaveBeenCalledTimes(1)
+  } finally {
+    vi.unstubAllGlobals()
+    modelMetadataService.clearCache()
+  }
+})

@@ -166,6 +166,7 @@
         "hint": "測試模型可接收的輸入上下文長度。結果受介面和請求設定影響，不代表完整上下文視窗。",
         "historyError": "歷史紀錄暫時無法使用，目前結果仍可查看。",
         "incompleteResponse": "未取得可判定的回覆，結束原因：{{reason}}。",
+        "interrupted": "請求已中斷，計費狀態未知，未自動重試。重新開始測試可能產生額外用量。",
         "lower": "最大已接收輸入：{{tokens}} 個本地文字 token",
         "matched": "已匹配模型編碼；完整請求的 token 數可能不同。",
         "measuredBadge": "已接收約 {{tokens}} tokens",

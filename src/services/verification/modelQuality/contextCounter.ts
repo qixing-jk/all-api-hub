@@ -59,37 +59,69 @@ export async function createContextCounter(
         1) /
         2,
     ) * sentenceTokens
+  const validateTarget = (target: number) => {
+    if (!Number.isSafeInteger(target) || target <= 0 || target > maxInputTokens)
+      throw new Error("Test input exceeds the 32 MiB request limit")
+    if (target < api.countTokens(prefix + suffix))
+      throw new Error("Test input is too small for the prompt wrapper")
+  }
+  const yieldToCaller = async (signal: AbortSignal) => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    signal.throwIfAborted()
+  }
+  const tokenBatchSize = 8192
+  const countAsync = async (text: string, signal: AbortSignal) => {
+    let count = 0
+    let batch = 0
+    for (const tokens of api.encodeGenerator(text)) {
+      count += tokens.length
+      batch += tokens.length
+      if (batch >= tokenBatchSize) {
+        await yieldToCaller(signal)
+        batch = 0
+      }
+    }
+    signal.throwIfAborted()
+    return count
+  }
   return {
     info,
     maxInputTokens,
     count: (text: string) => api.countTokens(text),
-    makePrompt(target: number) {
-      if (
-        !Number.isSafeInteger(target) ||
-        target <= 0 ||
-        target > maxInputTokens
-      )
-        throw new Error("Test input exceeds the 32 MiB request limit")
+    /** Yield during long tokenization so UI cancellation can be processed. */
+    async preparePrompt(target: number, signal: AbortSignal) {
+      validateTarget(target)
+      signal.throwIfAborted()
       const content = sentence.repeat(
         Math.ceil(target / sentenceTokens) * 2 + 1,
       )
-      const available = Math.max(
-        0,
-        target - api.countTokens(prefix + suffix) - 8,
-      )
-      let prompt =
-        prefix + api.decode(api.encode(content).slice(0, available)) + suffix
-      while (api.countTokens(prompt) > target) {
-        prompt =
-          prefix +
-          api.decode(
-            api
-              .encode(prompt.slice(prefix.length, -suffix.length))
-              .slice(0, -1),
-          ) +
-          suffix
+      let remaining = Math.max(0, target - api.countTokens(prefix + suffix) - 8)
+      let batch: number[] = []
+      const parts: string[] = []
+      for (const tokens of api.encodeGenerator(content)) {
+        const take = Math.min(tokens.length, remaining)
+        for (let index = 0; index < take; index++) batch.push(tokens[index]!)
+        remaining -= take
+        if (batch.length >= tokenBatchSize) {
+          parts.push(api.decode(batch))
+          batch = []
+          await yieldToCaller(signal)
+        }
+        if (remaining === 0) break
       }
-      return prompt
+      parts.push(api.decode(batch))
+      let prompt = prefix + parts.join("") + suffix
+      let inputTokens = await countAsync(prompt, signal)
+      // The fixture is ASCII. Keep the bound even if vocabulary boundaries change.
+      while (inputTokens > target) {
+        while (parts.length && !parts.at(-1)) parts.pop()
+        if (!parts.length)
+          throw new Error("Test input is too small for the prompt wrapper")
+        parts[parts.length - 1] = parts.at(-1)!.slice(0, -1)
+        prompt = prefix + parts.join("") + suffix
+        inputTokens = await countAsync(prompt, signal)
+      }
+      return { prompt, inputTokens }
     },
   }
 }

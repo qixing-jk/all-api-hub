@@ -167,6 +167,7 @@
         "hint": "Testa o contexto de entrada aceito pelo modelo. O resultado depende da API e da configuração da solicitação e não confirma toda a janela de contexto.",
         "historyError": "O histórico está indisponível. O resultado atual continua visível.",
         "incompleteResponse": "Nenhuma resposta conclusiva foi recebida. Motivo do término: {{reason}}.",
+        "interrupted": "A solicitação foi interrompida e o status de cobrança é desconhecido. Não houve nova tentativa. Iniciar outro teste pode gerar uso adicional.",
         "lower": "Maior entrada aceita: {{tokens}} tokens de texto locais",
         "matched": "Codificação do modelo identificada; a contagem da solicitação completa pode variar.",
         "measuredBadge": "≈{{tokens}} tokens aceitos",

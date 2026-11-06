@@ -122,7 +122,7 @@ describe("verificationResultHistoryStorage", () => {
     ).toBeNull()
   })
 
-  it("looks up an account result with its local identity before resolving runtime credentials", async () => {
+  it("looks up an account result only with its effective request scope", async () => {
     stubLiveOwners({ accountIds: ["context-account"] })
     const target = createAccountModelVerificationHistoryTarget(
       "context-account",
@@ -132,7 +132,6 @@ describe("verificationResultHistoryStorage", () => {
       target,
       targetKey: "",
       scopeKey: "a".repeat(64),
-      lookupKey: "b".repeat(64),
       verifiedAt: Date.now(),
       apiType: API_TYPES.OPENAI,
       modelId: "model",
@@ -142,15 +141,15 @@ describe("verificationResultHistoryStorage", () => {
       outputLimited: false,
     })
     expect(
-      await verificationResultHistoryStorage.getContextSummaryByTarget(
+      await verificationResultHistoryStorage.getContextSummary(
+        "a".repeat(64),
         target,
-        "b".repeat(64),
       ),
     ).toMatchObject({ lowerBoundTokens: 4096 })
     expect(
-      await verificationResultHistoryStorage.getContextSummaryByTarget(
-        target,
+      await verificationResultHistoryStorage.getContextSummary(
         "c".repeat(64),
+        target,
       ),
     ).toBeNull()
   })

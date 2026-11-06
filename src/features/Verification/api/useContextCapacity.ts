@@ -9,14 +9,13 @@ import {
 } from "~/services/verification/modelQuality/contextCapacityRun"
 import {
   contextCapacityHistory,
-  getAccountContextCapacityHistory,
+  getContextCapacityRequestIdentity,
   type ContextCapacityHistoryAccess,
 } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import type {
   ApiVerificationHistoryTarget,
   ContextCapacitySummary,
 } from "~/services/verification/verificationResultHistory/types"
-import { API_VERIFICATION_HISTORY_TARGET_KINDS } from "~/services/verification/verificationResultHistory/types"
 
 import type { VerificationToolRequestParams } from "./useVerificationTools"
 
@@ -26,6 +25,9 @@ export function useContextCapacity(options: {
   blocked: boolean
   contextKey: string
   resolveRequest: (
+    signal: AbortSignal,
+  ) => Promise<VerificationToolRequestParams | null>
+  resolveHistoryRequest?: (
     signal: AbortSignal,
   ) => Promise<VerificationToolRequestParams | null>
   runner?: typeof runContextCapacity
@@ -41,6 +43,7 @@ export function useContextCapacity(options: {
   const [error, setError] = useState<string | null>(null)
   const [stopped, setStopped] = useState(false)
   const active = useRef<AbortController | null>(null)
+  const resultScope = useRef<string | null>(null)
   const key = useRef(options.contextKey)
   const latestOptions = useRef(options)
   latestOptions.current = options
@@ -59,26 +62,11 @@ export function useContextCapacity(options: {
     if (configuration.enabled)
       void (async () => {
         try {
-          if (
-            configuration.historyTarget?.kind ===
-            API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel
-          ) {
-            const previous = await getAccountContextCapacityHistory(
-              configuration.historyTarget,
-              configuration.contextKey,
-            )
-            if (
-              !loadController.signal.aborted &&
-              generation.current === loadVersion
-            )
-              setHistory(previous)
-            return
-          }
           if (!configuration.historyTarget && !configuration.historyAccess)
             return
-          const request = await configuration.resolveRequest(
-            loadController.signal,
-          )
+          const request = await (
+            configuration.resolveHistoryRequest ?? configuration.resolveRequest
+          )(loadController.signal)
           if (!request || loadController.signal.aborted) return
           const previous = await (
             configuration.historyAccess ?? contextCapacityHistory
@@ -102,7 +90,7 @@ export function useContextCapacity(options: {
       active.current?.abort()
       active.current = null
     }
-  }, [options.contextKey])
+  }, [options.contextKey, options.enabled])
   return {
     enabled: options.enabled,
     running,
@@ -113,6 +101,19 @@ export function useContextCapacity(options: {
     history,
     historyError,
     stopped,
+    clearHistory: () => {
+      if (key.current !== options.contextKey) return
+      generation.current += 1
+      active.current?.abort()
+      active.current = null
+      setRunning(false)
+      setHistory(null)
+      setHistoryError(false)
+      setResult(null)
+      setProgress(null)
+      setError(null)
+      setStopped(false)
+    },
     stop: () => {
       active.current?.abort()
       active.current = null
@@ -136,15 +137,7 @@ export function useContextCapacity(options: {
       ) => {
         if (!targetToSave && !options.historyAccess) return
         void (options.historyAccess ?? contextCapacityHistory)
-          .save(
-            request,
-            response,
-            targetToSave,
-            targetToSave?.kind ===
-              API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel
-              ? context
-              : undefined,
-          )
+          .save(request, response, targetToSave)
           .then((saved) => {
             if (generation.current === runVersion && key.current === context)
               setHistory(saved)
@@ -170,15 +163,18 @@ export function useContextCapacity(options: {
           if (!request || !current()) return
           secrets = request.secrets
           runRequest = request
+          const scope = getContextCapacityRequestIdentity(request)
+          if (!current() || controller.signal.aborted) return
           const response = await (options.runner ?? runContextCapacity)({
             ...request,
-            resumeFrom,
+            resumeFrom: resultScope.current === scope ? resumeFrom : undefined,
             abortSignal: controller.signal,
             onProgress: (value) => {
               if (current() && !controller.signal.aborted) setProgress(value)
             },
           })
           if (current() && !controller.signal.aborted) {
+            resultScope.current = scope
             setResult(response)
             saveHistory(request, response)
           }
@@ -202,5 +198,5 @@ export function useContextCapacity(options: {
 
 export type ContextCapacityController = Omit<
   ReturnType<typeof useContextCapacity>,
-  "history" | "historyError"
+  "history" | "historyError" | "clearHistory"
 > & { history?: ContextCapacitySummary | null; historyError?: boolean }

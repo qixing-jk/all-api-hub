@@ -29,7 +29,6 @@ import {
 } from "~/services/verification/aiApiVerification/utils"
 import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_DEFAULTS } from "~/services/verification/modelQuality/contextCapacityDefaults"
-import { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
 import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import { webAiApiCheckBaseUrlHistoryStorage } from "~/services/verification/webAiApiCheck/baseUrlHistory"
@@ -37,6 +36,7 @@ import {
   CONTEXT_HISTORY_ACTIONS,
   WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
 } from "~/services/verification/webAiApiCheck/constants"
+import { runDurableContextCapacity } from "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
 import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
@@ -727,26 +727,29 @@ async function resolveWebAiApiCheckRunContextCapacityMessage(
     const result = await probeRuns.run(
       runId,
       async (signal) => {
-        const result = await runContextCapacity({
-          baseUrl: normalizedBaseUrl,
-          apiKey,
-          apiType,
-          modelId: modelId.trim(),
-          mode,
-          requestProfile,
-          requestProfileEnhanced,
-          maxInputTokens,
-          resumeFrom,
-          abortSignal: signal!,
-          onProgress: (result) => {
-            if (signal?.aborted || sender?.tab?.id === undefined) return
-            void sendWebAiApiCheckMessage(
-              WebAiApiCheckMessageTypes.ContextCapacityProgress,
-              { runId, result },
-              { tabId: sender.tab.id, frameId: sender.frameId },
-            ).catch(() => undefined)
+        const result = await runDurableContextCapacity(
+          {
+            baseUrl: normalizedBaseUrl,
+            apiKey,
+            apiType,
+            modelId: modelId.trim(),
+            mode,
+            requestProfile,
+            requestProfileEnhanced,
+            maxInputTokens,
+            resumeFrom,
+            abortSignal: signal!,
+            onProgress: (result) => {
+              if (signal?.aborted || sender?.tab?.id === undefined) return
+              void sendWebAiApiCheckMessage(
+                WebAiApiCheckMessageTypes.ContextCapacityProgress,
+                { runId, result },
+                { tabId: sender.tab.id, frameId: sender.frameId },
+              ).catch(() => undefined)
+            },
           },
-        })
+          request.recoverOnly === true,
+        )
         signal?.throwIfAborted()
         return result
       },

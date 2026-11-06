@@ -82,10 +82,16 @@ export function ContextCapacityPanel({
   const lastAttempt = live?.attempts.at(-1)
   const timedOut =
     reason === CONTEXT_CAPACITY_REASONS.Inconclusive &&
-    lastAttempt?.failureReason === CONTEXT_ATTEMPT_FAILURE_REASONS.Timeout
+    (lastAttempt?.failureReason === CONTEXT_ATTEMPT_FAILURE_REASONS.Timeout ||
+      historical?.inconclusiveReason === "timeout")
+  const interrupted =
+    lastAttempt?.failureReason ===
+      CONTEXT_ATTEMPT_FAILURE_REASONS.Interrupted ||
+    historical?.inconclusiveReason === "interrupted"
   const emptyResponse =
     reason === CONTEXT_CAPACITY_REASONS.Inconclusive &&
-    lastAttempt?.finishReason === "stop"
+    (lastAttempt?.finishReason === "stop" ||
+      historical?.inconclusiveReason === "empty-response")
   const statusLabel =
     reason === CONTEXT_CAPACITY_REASONS.Stopped
       ? t("verifyDialog.status.stopped")
@@ -137,11 +143,13 @@ export function ContextCapacityPanel({
         : reason === CONTEXT_CAPACITY_REASONS.Budget
           ? t("verifyDialog.tools.context.reasons.budget")
           : reason === CONTEXT_CAPACITY_REASONS.Inconclusive
-            ? timedOut
-              ? t("verifyDialog.tools.context.reasons.timeout")
-              : emptyResponse
-                ? t("verifyDialog.tools.context.emptyResponse")
-                : t("verifyDialog.tools.context.reasons.inconclusive")
+            ? interrupted
+              ? t("verifyDialog.tools.context.interrupted")
+              : timedOut
+                ? t("verifyDialog.tools.context.reasons.timeout")
+                : emptyResponse
+                  ? t("verifyDialog.tools.context.emptyResponse")
+                  : t("verifyDialog.tools.context.reasons.inconclusive")
             : null
   return (
     <section
@@ -301,10 +309,10 @@ export function ContextCapacityPanel({
                       })}
                     </p>
                   ) : null}
-                  {live?.upperBoundTokens !== undefined ? (
+                  {observation?.upperBoundTokens !== undefined ? (
                     <p>
                       {t("verifyDialog.tools.context.upper", {
-                        tokens: live.upperBoundTokens.toLocaleString(),
+                        tokens: observation.upperBoundTokens.toLocaleString(),
                       })}
                     </p>
                   ) : null}
@@ -322,11 +330,9 @@ export function ContextCapacityPanel({
                   !emptyResponse &&
                   lastAttempt?.finishReason ? (
                     <p>
-                      {lastAttempt.finishReason === "stop"
-                        ? t("verifyDialog.tools.context.emptyResponse")
-                        : t("verifyDialog.tools.context.incompleteResponse", {
-                            reason: lastAttempt.finishReason,
-                          })}
+                      {t("verifyDialog.tools.context.incompleteResponse", {
+                        reason: lastAttempt.finishReason,
+                      })}
                     </p>
                   ) : null}
                   {controller.error || lastAttempt?.message ? (

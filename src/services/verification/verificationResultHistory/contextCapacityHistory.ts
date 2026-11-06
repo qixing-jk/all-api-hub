@@ -31,25 +31,32 @@ export type ContextHistoryRequest = Pick<
 >
 
 /** Hash the complete request identity; neither credentials nor the URL are stored. */
-async function scopeKey(request: ContextHistoryRequest) {
+export async function getContextCapacityScopeKey(
+  request: ContextHistoryRequest,
+) {
+  return digestIdentity(getContextCapacityRequestIdentity(request))
+}
+
+/** In-memory equality only; never persist the unhashed request identity. */
+export function getContextCapacityRequestIdentity(
+  request: ContextHistoryRequest,
+) {
   const headers = Object.entries(request.requestHeaders ?? {})
     .map(([name, value]) => [name.toLowerCase(), value])
     .sort()
-  return digestIdentity(
-    JSON.stringify([
-      request.apiType,
-      request.baseUrl.trim().replace(/\/+$/, ""),
-      request.apiKey,
-      request.modelId.trim(),
-      request.mode ?? API_VERIFICATION_MODES.Streaming,
-      request.requestProfile ?? API_VERIFICATION_REQUEST_PROFILES.Default,
-      request.requestProfileEnhanced ?? false,
-      headers,
-    ]),
-  )
+  return JSON.stringify([
+    request.apiType,
+    request.baseUrl.trim().replace(/\/+$/, ""),
+    request.apiKey,
+    request.modelId.trim(),
+    request.mode ?? API_VERIFICATION_MODES.Streaming,
+    request.requestProfile ?? API_VERIFICATION_REQUEST_PROFILES.Default,
+    request.requestProfileEnhanced ?? false,
+    headers,
+  ])
 }
 
-/** Only digests are persisted, including the pre-resolution account identity. */
+/** Only digests are persisted; the unhashed connection identity stays in memory. */
 async function digestIdentity(identity: string) {
   const digest = await crypto.subtle.digest(
     "SHA-256",
@@ -58,17 +65,6 @@ async function digestIdentity(identity: string) {
   return Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("")
-}
-
-/** Restore account history without fetching a full runtime credential. */
-export async function getAccountContextCapacityHistory(
-  target: ApiVerificationHistoryTarget,
-  identity: string,
-) {
-  return verificationResultHistoryStorage.getContextSummaryByTarget(
-    target,
-    await digestIdentity(identity),
-  )
 }
 
 /** Bind profile-level entry points to the model actually tested. */
@@ -91,7 +87,7 @@ export const contextCapacityHistory = {
     target?: ApiVerificationHistoryTarget,
   ) {
     return verificationResultHistoryStorage.getContextSummary(
-      await scopeKey(request),
+      await getContextCapacityScopeKey(request),
       modelTarget(target, request.modelId),
     )
   },
@@ -99,16 +95,14 @@ export const contextCapacityHistory = {
     request: ContextHistoryRequest,
     result: ContextCapacityRunResult | null,
     target?: ApiVerificationHistoryTarget,
-    accountLookupIdentity?: string,
   ): Promise<ContextCapacitySummary> {
+    const verifiedAt = Date.now()
+    const lastAttempt = result?.attempts.at(-1)
     const summary: ContextCapacitySummary = {
       target: modelTarget(target, request.modelId),
       targetKey: "",
-      scopeKey: await scopeKey(request),
-      ...(accountLookupIdentity
-        ? { lookupKey: await digestIdentity(accountLookupIdentity) }
-        : {}),
-      verifiedAt: Date.now(),
+      scopeKey: await getContextCapacityScopeKey(request),
+      verifiedAt,
       apiType: request.apiType,
       modelId: request.modelId,
       latencyMs: result?.latencyMs,
@@ -117,6 +111,18 @@ export const contextCapacityHistory = {
       declaredContext: result?.counter.declaredContext,
       upperBoundTokens: result?.upperBoundTokens,
       reason: result?.reason ?? CONTEXT_CAPACITY_REASONS.Error,
+      ...(result?.reason === CONTEXT_CAPACITY_REASONS.Inconclusive
+        ? {
+            inconclusiveReason:
+              lastAttempt?.failureReason === "interrupted"
+                ? ("interrupted" as const)
+                : lastAttempt?.failureReason === "timeout"
+                  ? ("timeout" as const)
+                  : lastAttempt?.finishReason === "stop"
+                    ? ("empty-response" as const)
+                    : undefined,
+          }
+        : {}),
       requests: result?.attempts.length ?? 0,
       outputLimited:
         result?.attempts.at(-1)?.outcome ===

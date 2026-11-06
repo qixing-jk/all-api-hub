@@ -18,6 +18,48 @@ import { setupApiCheckModalHostTest } from "./apiCheckModalHostTestSupport"
 describe("web context capacity entry", () => {
   setupApiCheckModalHostTest()
 
+  it("recovers a disconnected worker using only the persisted checkpoint", async () => {
+    const recovered = {
+      lowerBoundTokens: 1024,
+      reason: "inconclusive",
+      attempts: [
+        {
+          targetTokens: 2048,
+          outcome: "inconclusive",
+          failureReason: "interrupted",
+        },
+      ],
+      counter: { encoding: "estimate", estimated: true },
+    }
+    const previous = vi
+      .mocked(sendWebAiApiCheckMessage)
+      .getMockImplementation()!
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, data: any) => {
+        if (type !== "webAiApiCheck:runContextCapacity")
+          return previous(type, data)
+        if (data.recoverOnly) return { success: true, result: recovered }
+        throw new Error("Message port closed")
+      },
+    )
+    const { result } = renderHook(() => useApiCheckModalViewModel())
+    act(() => {
+      result.current.actions.updateBaseUrl("https://context.example.com")
+      result.current.actions.setApiKey("secret")
+      result.current.actions.setModelId("model")
+    })
+    act(() => result.current.view.verificationTools.contextCapacity!.run())
+    await waitFor(() =>
+      expect(
+        result.current.view.verificationTools.contextCapacity!.result,
+      ).toEqual(recovered),
+    )
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+      "webAiApiCheck:runContextCapacity",
+      expect.objectContaining({ recoverOnly: true }),
+    )
+  })
+
   it("forwards a budget continuation to background and clears it after a model change", async () => {
     const paused = {
       lowerBoundTokens: 4096,
@@ -317,4 +359,96 @@ describe("web context capacity entry", () => {
       }),
     )
   })
+  it("reports failed background history writes without discarding the measured result", async () => {
+    const measurement = {
+      lowerBoundTokens: 1024,
+      reason: "test-limit",
+      attempts: [],
+      counter: { encoding: "o200k_base", estimated: true },
+    }
+    const previous = vi
+      .mocked(sendWebAiApiCheckMessage)
+      .getMockImplementation()!
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, data: any) => {
+        if (type === "webAiApiCheck:runContextCapacity")
+          return { success: true, result: measurement }
+        if (type === "webAiApiCheck:contextHistory") return { success: false }
+        return previous(type, data)
+      },
+    )
+    const { result } = renderHook(() => useApiCheckModalViewModel())
+    act(() => {
+      result.current.actions.updateBaseUrl("https://context.example.com")
+      result.current.actions.setApiKey("secret")
+      result.current.actions.setModelId("model")
+    })
+    act(() => result.current.view.verificationTools.contextCapacity!.run())
+    await waitFor(() =>
+      expect(
+        result.current.view.verificationTools.contextCapacity!.historyError,
+      ).toBe(true),
+    )
+    expect(
+      result.current.view.verificationTools.contextCapacity!.result,
+    ).toEqual(measurement)
+  })
+
+  it.each(["get", "save"] as const)(
+    "reports a rejected %s history bridge response",
+    async (action) => {
+      const { contextHistoryInBackground } = await import(
+        "~/features/WebAiApiCheck/content/probes/contextHistoryInBackground"
+      )
+      vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+        success: false,
+      } as never)
+      const request = {
+        apiType: "openai" as const,
+        baseUrl: "https://example.invalid",
+        apiKey: "secret",
+        modelId: "model",
+      }
+      await expect(
+        action === "get"
+          ? contextHistoryInBackground.get(request)
+          : contextHistoryInBackground.save(request, null),
+      ).rejects.toThrow("Context history unavailable")
+    },
+  )
+
+  it.each(["get", "save"] as const)(
+    "returns a successful %s history bridge response",
+    async (action) => {
+      const { contextHistoryInBackground } = await import(
+        "~/features/WebAiApiCheck/content/probes/contextHistoryInBackground"
+      )
+      const summary = {
+        targetKey: "fixture",
+        scopeKey: "a".repeat(64),
+        verifiedAt: 1,
+        apiType: "openai" as const,
+        modelId: "model",
+        lowerBoundTokens: 1024,
+        reason: "test-limit" as const,
+        requests: 1,
+        outputLimited: false,
+      }
+      vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+        success: true,
+        summary,
+      } as never)
+      const request = {
+        apiType: "openai" as const,
+        baseUrl: "https://example.invalid",
+        apiKey: "secret",
+        modelId: "model",
+      }
+      expect(
+        await (action === "get"
+          ? contextHistoryInBackground.get(request)
+          : contextHistoryInBackground.save(request, null)),
+      ).toEqual(summary)
+    },
+  )
 })

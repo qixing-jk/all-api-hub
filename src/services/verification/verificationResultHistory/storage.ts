@@ -389,23 +389,6 @@ class VerificationResultHistoryStorageService {
     await this.sweepOrphans()
   }
 
-  /** Read an account observation before lazily fetching its full runtime key. */
-  async getContextSummaryByTarget(
-    target: ApiVerificationHistoryTarget,
-    lookupKey: string,
-  ): Promise<ContextCapacitySummary | null> {
-    const config = await this.readConfigForRead()
-    const key = serializeVerificationHistoryTarget(target)
-    const summary = config.contextSummaries?.find(
-      (item) => item.targetKey === key && item.lookupKey === lookupKey,
-    )
-    return summary &&
-      applyVerificationRetention([summary], { now: Date.now() }).summaries
-        .length
-      ? structuredClone(summary)
-      : null
-  }
-
   async upsertDrawingSummary(
     summary: DrawingVerificationSummary,
   ): Promise<void> {

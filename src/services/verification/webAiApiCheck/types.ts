@@ -266,8 +266,8 @@ export type ApiCheckSaveProfileResponse =
 
 export type ApiCheckRunContextCapacityRequest = Omit<
   RunContextCapacityParams,
-  "abortSignal" | "onProgress" | "requestHeaders"
-> & { runId: string }
+  "abortSignal" | "onProgress" | "onCheckpoint" | "requestHeaders"
+> & { runId: string; recoverOnly?: boolean }
 export type ApiCheckRunContextCapacityResponse =
   | { success: true; result: ContextCapacityRunResult }
   | { success: false; error?: string }

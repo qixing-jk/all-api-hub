@@ -1,4 +1,4 @@
-import { beforeEach, expect, it } from "vitest"
+import { beforeEach, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -33,6 +33,34 @@ const result = {
 }
 beforeEach(async () => {
   await verificationResultHistoryStorage.clearAllData()
+})
+
+it.each([{}, "invalid", 1])(
+  "ignores corrupt current-version context collections: %j",
+  async (contextSummaries) => {
+    await contextCapacityHistory.save(request, result)
+    const store = new Storage({ area: "local" })
+    const key =
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY
+    const config = await store.get<Record<string, unknown>>(key)
+    await store.set(key, { ...config, contextSummaries })
+    expect(await contextCapacityHistory.get(request)).toBeNull()
+    await expect(
+      contextCapacityHistory.save(request, result),
+    ).resolves.toMatchObject({ lowerBoundTokens: 4096 })
+  },
+)
+
+it("rejects non-string reasons in current-version history", async () => {
+  const saved = await contextCapacityHistory.save(request, result)
+  const store = new Storage({ area: "local" })
+  const key = API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY
+  const config = await store.get<Record<string, unknown>>(key)
+  await store.set(key, {
+    ...config,
+    contextSummaries: [{ ...saved, reason: ["test-limit"] }],
+  })
+  expect(await contextCapacityHistory.get(request)).toBeNull()
 })
 
 it("retains the tested metadata expectation across history readback", async () => {
@@ -125,5 +153,88 @@ it("does not let a delayed older save replace a newer observation", async () => 
   expect(await contextCapacityHistory.get(request)).toMatchObject({
     lowerBoundTokens: 4096,
     reason: "test-limit",
+  })
+})
+
+it("timestamps an observation before asynchronous identity hashing", async () => {
+  const digest = crypto.subtle.digest.bind(crypto.subtle)
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const spy = vi
+    .spyOn(crypto.subtle, "digest")
+    .mockImplementationOnce(async (...args) => {
+      await gate
+      return digest(...args)
+    })
+  const clock = vi.spyOn(Date, "now").mockReturnValue(1000)
+  try {
+    const older = contextCapacityHistory.save(request, {
+      ...result,
+      lowerBoundTokens: 1024,
+    })
+    clock.mockReturnValue(2000)
+    await contextCapacityHistory.save(request, result)
+    clock.mockReturnValue(3000)
+    release()
+    await older
+    expect(await contextCapacityHistory.get(request)).toMatchObject({
+      lowerBoundTokens: 4096,
+      verifiedAt: 2000,
+    })
+  } finally {
+    release()
+    spy.mockRestore()
+    clock.mockRestore()
+  }
+})
+
+it.each([
+  { failureReason: "timeout" as const, expected: "timeout" },
+  { finishReason: "stop", expected: "empty-response" },
+])(
+  "preserves completed inconclusive feedback: $expected",
+  async ({ expected, ...attempt }) => {
+    await contextCapacityHistory.save(request, {
+      ...result,
+      reason: "inconclusive",
+      lowerBoundTokens: 0,
+      attempts: [{ targetTokens: 4096, outcome: "inconclusive", ...attempt }],
+    })
+    expect(await contextCapacityHistory.get(request)).toMatchObject({
+      inconclusiveReason: expected,
+    })
+  },
+)
+
+it.each([
+  { scopeKey: "invalid" },
+  { apiType: "invalid" },
+  { reason: ["test-limit"] },
+  { requests: -1 },
+  { lowerBoundTokens: -1 },
+  { upperBoundTokens: -1 },
+  { target: { kind: "invalid" } },
+])(
+  "rejects invalid summary facts at the storage boundary: %j",
+  async (override) => {
+    const saved = await contextCapacityHistory.save(request, result)
+    await expect(
+      verificationResultHistoryStorage.upsertContextSummary({
+        ...saved,
+        ...override,
+      } as any),
+    ).rejects.toThrow("Invalid context capacity summary")
+  },
+)
+it("keeps a connection observation when an unrelated owner is removed", async () => {
+  await contextCapacityHistory.save(request, result)
+  await verificationResultHistoryStorage.reconcileOwners({
+    removeAccountIds: ["other"],
+    removeProfileIds: ["other"],
+  })
+  expect(await contextCapacityHistory.get(request)).toMatchObject({
+    lowerBoundTokens: 4096,
   })
 })

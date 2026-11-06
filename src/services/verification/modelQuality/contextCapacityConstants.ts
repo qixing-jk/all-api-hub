@@ -19,6 +19,7 @@ export type ContextCapacityReason =
 
 export const CONTEXT_ATTEMPT_FAILURE_REASONS = {
   Timeout: "timeout",
+  Interrupted: "interrupted",
 } as const
 
 export const CONTEXT_CAPACITY_TEST_ID = "context-capacity" as const

@@ -17,7 +17,7 @@ export type ContextAttempt = {
   localInputTokens?: number
   finishReason?: string
   message?: string
-  failureReason?: typeof CONTEXT_ATTEMPT_FAILURE_REASONS.Timeout
+  failureReason?: (typeof CONTEXT_ATTEMPT_FAILURE_REASONS)[keyof typeof CONTEXT_ATTEMPT_FAILURE_REASONS]
 }
 
 export type ContextCapacityResult = {
@@ -36,7 +36,11 @@ export async function probeContextCapacity(options: {
   maxTotalInputTokens?: number
   resumeFrom?: ContextCapacityResult
   signal?: AbortSignal
-  onProgress?: (result: ContextCapacityResult) => void
+  onProgress?: (result: ContextCapacityResult) => void | Promise<void>
+  beforeAttempt?: (
+    target: number,
+    result: ContextCapacityResult,
+  ) => Promise<void>
   attempt: (tokens: number) => Promise<ContextAttempt>
 }): Promise<ContextCapacityResult> {
   for (const value of [
@@ -123,6 +127,8 @@ export async function probeContextCapacity(options: {
       result.reason = CONTEXT_CAPACITY_REASONS.Budget
       break
     }
+    await options.beforeAttempt?.(next, result)
+    options.signal?.throwIfAborted()
     const attempt = await options.attempt(next)
     if (options.signal?.aborted) {
       result.reason = CONTEXT_CAPACITY_REASONS.Stopped
@@ -138,9 +144,10 @@ export async function probeContextCapacity(options: {
       rejectedTarget = next
     } else {
       result.reason = CONTEXT_CAPACITY_REASONS.Inconclusive
+      await options.onProgress?.({ ...result, attempts: [...result.attempts] })
       break
     }
-    options.onProgress?.({ ...result, attempts: [...result.attempts] })
+    await options.onProgress?.({ ...result, attempts: [...result.attempts] })
     if (rejectedTarget !== undefined) {
       if (acceptedTarget === 0) {
         if (next === minimum) {
@@ -169,6 +176,8 @@ export async function probeContextCapacity(options: {
     else if (options.signal?.aborted)
       result.reason = CONTEXT_CAPACITY_REASONS.Stopped
     else {
+      await options.beforeAttempt?.(acceptedTarget, result)
+      options.signal?.throwIfAborted()
       const confirmation = await options.attempt(acceptedTarget)
       if (options.signal?.aborted)
         result.reason = CONTEXT_CAPACITY_REASONS.Stopped
@@ -179,6 +188,6 @@ export async function probeContextCapacity(options: {
       }
     }
   }
-  options.onProgress?.({ ...result, attempts: [...result.attempts] })
+  await options.onProgress?.({ ...result, attempts: [...result.attempts] })
   return result
 }
