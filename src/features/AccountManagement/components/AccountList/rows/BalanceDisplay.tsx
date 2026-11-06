@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react"
-import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -8,6 +7,7 @@ import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import CountUp from "~/lib/countup"
 import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import { ACCOUNT_SUBSCRIPTION_STATUSES as subscriptionStatuses } from "~/types"
