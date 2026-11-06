@@ -5,6 +5,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
+import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -13,6 +14,16 @@ import {
   buildSiteAccount,
 } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve
+    reject = promiseReject
+  })
+  return { promise, resolve, reject }
+}
 
 vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -101,6 +112,251 @@ describe("useAccountDialog auth defaults", () => {
       }
     },
   )
+
+  it("keeps an edit draft loading until the stored account is hydrated", async () => {
+    const deferred =
+      createDeferred<
+        Awaited<ReturnType<typeof accountQueries.getAccountById>>
+      >()
+    const getAccountSpy = vi
+      .spyOn(accountQueries, "getAccountById")
+      .mockReturnValue(deferred.promise)
+    const props = {
+      mode: DIALOG_MODES.EDIT,
+      account: buildDisplaySiteData({ id: "deferred-edit" }),
+      isOpen: true,
+      onClose: vi.fn(),
+    } satisfies Parameters<typeof useAccountDialog>[0]
+    const loadingSnapshots: boolean[] = []
+    const { result } = renderHook(
+      () => {
+        const dialog = useAccountDialog(props)
+        loadingSnapshots.push(dialog.state.isLoadingAccount)
+        return dialog
+      },
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    expect(loadingSnapshots[0]).toBe(true)
+    await waitFor(() => {
+      expect(getAccountSpy).toHaveBeenCalledWith("deferred-edit")
+    })
+    expect(result.current.state.isLoadingAccount).toBe(true)
+    expect(result.current.state.accessToken).toBe("")
+
+    await act(async () => {
+      deferred.resolve(
+        buildSiteAccount({
+          id: "deferred-edit",
+          account_info: {
+            ...buildSiteAccount().account_info,
+            access_token: "loaded-access-token",
+          },
+        }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.isLoadingAccount).toBe(false)
+      expect(result.current.state.accessToken).toBe("loaded-access-token")
+    })
+    getAccountSpy.mockRestore()
+  })
+
+  it.each([
+    ["a rejected read", "reject"],
+    ["a missing account", "missing"],
+  ] as const)("ends edit loading after %s", async (_description, outcome) => {
+    const deferred =
+      createDeferred<
+        Awaited<ReturnType<typeof accountQueries.getAccountById>>
+      >()
+    const getAccountSpy = vi
+      .spyOn(accountQueries, "getAccountById")
+      .mockReturnValue(deferred.promise)
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.EDIT,
+      account: buildDisplaySiteData({ id: `edit-${outcome}` }),
+      isOpen: true,
+      onClose: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(getAccountSpy).toHaveBeenCalledWith(`edit-${outcome}`)
+    })
+    expect(result.current.state.isLoadingAccount).toBe(true)
+
+    await act(async () => {
+      if (outcome === "reject") deferred.reject(new Error("read failed"))
+      else deferred.resolve(null)
+      await deferred.promise.catch(() => undefined)
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.isLoadingAccount).toBe(false)
+      expect(result.current.state.accountLoadError).toBe(true)
+    })
+    getAccountSpy.mockRestore()
+  })
+
+  it("retries a failed edit hydration and clears the error after success", async () => {
+    const firstRead =
+      createDeferred<
+        Awaited<ReturnType<typeof accountQueries.getAccountById>>
+      >()
+    const retryRead =
+      createDeferred<
+        Awaited<ReturnType<typeof accountQueries.getAccountById>>
+      >()
+    const getAccountSpy = vi
+      .spyOn(accountQueries, "getAccountById")
+      .mockReturnValueOnce(firstRead.promise)
+      .mockReturnValueOnce(retryRead.promise)
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.EDIT,
+      account: buildDisplaySiteData({ id: "retry-edit" }),
+      isOpen: true,
+      onClose: vi.fn(),
+    })
+
+    await waitFor(() => expect(getAccountSpy).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      firstRead.reject(new Error("initial read failed"))
+      await firstRead.promise.catch(() => undefined)
+    })
+    await waitFor(() => {
+      expect(result.current.state.isLoadingAccount).toBe(false)
+      expect(result.current.state.accountLoadError).toBe(true)
+    })
+
+    const retry = result.current.handlers.retryAccountLoad
+    await act(async () => retry())
+    expect(getAccountSpy).toHaveBeenCalledTimes(2)
+    expect(result.current.handlers.retryAccountLoad).toBe(retry)
+    expect(result.current.state.isLoadingAccount).toBe(true)
+    expect(result.current.state.accountLoadError).toBe(false)
+
+    await act(async () => {
+      retryRead.resolve(
+        buildSiteAccount({
+          id: "retry-edit",
+          account_info: {
+            ...buildSiteAccount().account_info,
+            access_token: "retry-access-token",
+          },
+        }),
+      )
+    })
+    await waitFor(() => {
+      expect(result.current.state.isLoadingAccount).toBe(false)
+      expect(result.current.state.accountLoadError).toBe(false)
+      expect(result.current.state.accessToken).toBe("retry-access-token")
+    })
+    getAccountSpy.mockRestore()
+  })
+
+  it("ignores an edit read that rejects after the dialog closes", async () => {
+    const deferred =
+      createDeferred<
+        Awaited<ReturnType<typeof accountQueries.getAccountById>>
+      >()
+    const getAccountSpy = vi
+      .spyOn(accountQueries, "getAccountById")
+      .mockReturnValue(deferred.promise)
+    const errorSpy = vi.spyOn(toast, "error")
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.EDIT,
+      account: buildDisplaySiteData({ id: "closed-edit" }),
+      isOpen: true,
+      onClose: vi.fn(),
+    })
+
+    await waitFor(() =>
+      expect(getAccountSpy).toHaveBeenCalledWith("closed-edit"),
+    )
+    await act(async () => result.current.handlers.handleClose())
+    await act(async () => {
+      deferred.reject(new Error("late read failure"))
+      await deferred.promise.catch(() => undefined)
+    })
+
+    expect(errorSpy).not.toHaveBeenCalled()
+    expect(result.current.state.isLoadingAccount).toBe(true)
+    expect(result.current.state.accountLoadError).toBe(false)
+    getAccountSpy.mockRestore()
+    errorSpy.mockRestore()
+  })
+
+  it("keeps the newer account draft when an older edit read resolves late", async () => {
+    const olderRead =
+      createDeferred<
+        Awaited<ReturnType<typeof accountQueries.getAccountById>>
+      >()
+    const newerRead =
+      createDeferred<
+        Awaited<ReturnType<typeof accountQueries.getAccountById>>
+      >()
+    const getAccountSpy = vi
+      .spyOn(accountQueries, "getAccountById")
+      .mockImplementation((id) =>
+        id === "older-edit" ? olderRead.promise : newerRead.promise,
+      )
+    const olderAccount = buildDisplaySiteData({ id: "older-edit" })
+    const newerAccount = buildDisplaySiteData({ id: "newer-edit" })
+    const dialogProps = {
+      mode: DIALOG_MODES.EDIT,
+      account: olderAccount,
+      isOpen: true,
+      onClose: vi.fn(),
+    } satisfies Parameters<typeof useAccountDialog>[0]
+    const { result, rerender } = renderHook(
+      (props: typeof dialogProps) => useAccountDialog(props),
+      {
+        initialProps: dialogProps,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await waitFor(() =>
+      expect(getAccountSpy).toHaveBeenCalledWith("older-edit"),
+    )
+    rerender({ ...dialogProps, account: newerAccount })
+    await waitFor(() =>
+      expect(getAccountSpy).toHaveBeenCalledWith("newer-edit"),
+    )
+    await act(async () => {
+      newerRead.resolve(
+        buildSiteAccount({
+          id: "newer-edit",
+          account_info: {
+            ...buildSiteAccount().account_info,
+            access_token: "newer-access-token",
+          },
+        }),
+      )
+    })
+    await waitFor(() =>
+      expect(result.current.state.accessToken).toBe("newer-access-token"),
+    )
+    await act(async () => {
+      olderRead.resolve(
+        buildSiteAccount({
+          id: "older-edit",
+          account_info: {
+            ...buildSiteAccount().account_info,
+            access_token: "stale-access-token",
+          },
+        }),
+      )
+    })
+
+    expect(result.current.state.accessToken).toBe("newer-access-token")
+    getAccountSpy.mockRestore()
+  })
 
   it.each([
     "https://api.laozhang.ai",

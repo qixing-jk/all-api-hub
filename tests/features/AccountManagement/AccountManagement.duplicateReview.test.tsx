@@ -45,6 +45,7 @@ vi.mock(
 )
 vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({ openAddAccount: vi.fn(), openEditAccount }),
+  useAccountDialogActions: () => ({ openAddAccount: vi.fn(), openEditAccount }),
 }))
 vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({

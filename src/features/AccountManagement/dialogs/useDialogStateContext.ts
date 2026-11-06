@@ -32,6 +32,19 @@ interface DialogStateContextType {
   closeEditAccount: () => void
 }
 
+export type DialogAccountActions = Pick<
+  DialogStateContextType,
+  | "openAccountDialog"
+  | "openAddAccount"
+  | "closeAddAccount"
+  | "openEditAccount"
+  | "closeEditAccount"
+>
+
+export const DialogActionsContext = createContext<
+  DialogAccountActions | undefined
+>(undefined)
+
 export const DialogStateContext = createContext<
   DialogStateContextType | undefined
 >(undefined)
@@ -42,6 +55,14 @@ export const useDialogStateContext = () => {
     throw new Error(
       "useDialogStateContext 必须在 DialogStateProvider 中使用，并且必须提供所有必需的函数",
     )
+  }
+  return context
+}
+
+export const useAccountDialogActions = (): DialogAccountActions => {
+  const context = useContext(DialogActionsContext)
+  if (!context) {
+    throw new Error("useAccountDialogActions 必须在 DialogStateProvider 中使用")
   }
   return context
 }

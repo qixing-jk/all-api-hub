@@ -1,5 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from "react"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
@@ -93,6 +93,11 @@ export function useAccountDialogInitialization({
 }: InitializationInput) {
   const { i18n } = useTranslation(["accountDialog", "settings", "messages"])
   const { mode, account, prefill, recoveryState, isOpen } = context
+  const [isLoadingAccount, setIsLoadingAccount] = useState(
+    mode === DIALOG_MODES.EDIT && Boolean(account) && !recoveryState,
+  )
+  const [accountLoadError, setAccountLoadError] = useState(false)
+  const accountLoadGenerationRef = useRef(0)
   const {
     isCloseTransitionStartedRef,
     selectedSiteTypeRef,
@@ -196,10 +201,26 @@ export function useAccountDialogInitialization({
     ],
   )
 
+  const invalidateAccountLoad = useCallback(() => {
+    accountLoadGenerationRef.current += 1
+  }, [])
+
+  const isAccountLoadCurrent = useCallback(
+    (generation: number) =>
+      accountLoadGenerationRef.current === generation &&
+      isOpen &&
+      !isCloseTransitionStartedRef.current,
+    [isCloseTransitionStartedRef, isOpen],
+  )
+
   const loadAccountData = useCallback(
     async (accountId: string) => {
+      const loadGeneration = ++accountLoadGenerationRef.current
+      setIsLoadingAccount(true)
+      setAccountLoadError(false)
       try {
         const siteAccount = await accountQueries.getAccountById(accountId)
+        if (!isAccountLoadCurrent(loadGeneration)) return
         if (siteAccount) {
           setUrl(siteAccount.site_url)
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
@@ -283,10 +304,18 @@ export function useAccountDialogInitialization({
           checkInSelectionChangedRef.current = false
           checkInDiscoveryBaseSelectionRef.current = null
           enterForm(ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT)
+        } else {
+          setAccountLoadError(true)
         }
       } catch (error) {
+        if (!isAccountLoadCurrent(loadGeneration)) return
         logger.error("Failed to load account data", { error, accountId })
+        setAccountLoadError(true)
         toast.error(i18n.t("accountDialog:messages.loadFailed"))
+      } finally {
+        if (isAccountLoadCurrent(loadGeneration)) {
+          setIsLoadingAccount(false)
+        }
       }
     },
     [
@@ -300,7 +329,35 @@ export function useAccountDialogInitialization({
       selectedSiteUrlRef,
       setUrl,
       setDraft,
+      isAccountLoadCurrent,
     ],
+  )
+
+  const retryAccountLoad = useCallback(() => {
+    if (
+      !isOpen ||
+      mode !== DIALOG_MODES.EDIT ||
+      !account?.id ||
+      recoveryState ||
+      isCloseTransitionStartedRef.current
+    ) {
+      return
+    }
+    void loadAccountData(account.id)
+  }, [
+    account?.id,
+    isCloseTransitionStartedRef,
+    isOpen,
+    loadAccountData,
+    mode,
+    recoveryState,
+  ])
+
+  useEffect(
+    () => () => {
+      accountLoadGenerationRef.current += 1
+    },
+    [],
   )
 
   useEffect(() => {
@@ -309,6 +366,9 @@ export function useAccountDialogInitialization({
         mode === DIALOG_MODES.ADD ? normalizeAddAccountPrefill(prefill) : null
       resetForm(nextPrefill)
       if (recoveryState) {
+        invalidateAccountLoad()
+        setIsLoadingAccount(false)
+        setAccountLoadError(false)
         const recoveredDraft = recoveryState.draft
         selectedSiteUrlRef.current = recoveryState.url
         selectedSiteTypeRef.current = recoveredDraft.siteType
@@ -340,9 +400,14 @@ export function useAccountDialogInitialization({
       } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {
+        invalidateAccountLoad()
+        setIsLoadingAccount(false)
+        setAccountLoadError(false)
         // Get current tab URL for add mode
         checkCurrentTab()
       }
+    } else {
+      invalidateAccountLoad()
     }
   }, [
     notifyCurrentTabUrlChanged,
@@ -355,6 +420,7 @@ export function useAccountDialogInitialization({
     recoveryState,
     resetForm,
     loadAccountData,
+    invalidateAccountLoad,
     checkCurrentTab,
     i18n,
     credentialEvidence,
@@ -369,6 +435,13 @@ export function useAccountDialogInitialization({
     setPhase,
     setUrl,
   ])
+
+  return {
+    accountLoadError,
+    invalidateAccountLoad,
+    isLoadingAccount,
+    retryAccountLoad,
+  }
 }
 
 /**

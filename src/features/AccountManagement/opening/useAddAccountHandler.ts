@@ -1,7 +1,7 @@
 import { useCallback, type MouseEvent } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { showFirefoxWarningDialog } from "~/features/AccountManagement/opening/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
 import { ACCOUNT_MANAGEMENT_ROUTE_ACTIONS } from "~/features/AccountManagement/routeParams"
 import { isSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
@@ -20,7 +20,7 @@ import { openSidePanelWithFallback } from "~/utils/navigation/sidepanel"
  * a popup, while touch/mobile-like runtimes continue straight to the dialog.
  */
 export function useAddAccountHandler() {
-  const { openAddAccount } = useDialogStateContext()
+  const { openAddAccount } = useAccountDialogActions()
 
   const handleAddAccountClick = useCallback(
     (prefillOrEvent?: AddAccountPrefill | MouseEvent | null) => {

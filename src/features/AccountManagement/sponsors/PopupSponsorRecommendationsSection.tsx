@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
-import { DialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { DialogActionsContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import type { SponsorRecommendationSurface } from "~/features/AccountManagement/sponsors/constants"
 import { SponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/SponsorRecommendationsSection"
 import type {
@@ -43,7 +43,7 @@ export const PopupSponsorRecommendationsSection = ({
   onOpenApiCredentialProfiles,
   className,
 }: PopupSponsorRecommendationsSectionProps) => {
-  const dialogContext = useContext(DialogStateContext)
+  const dialogActions = useContext(DialogActionsContext)
   const { t } = useTranslation("account")
   const inPopup = isExtensionPopup()
   const targetTab = useRef<browser.tabs.Tab | null>(null)
@@ -85,8 +85,8 @@ export const PopupSponsorRecommendationsSection = ({
         onContinueAddAccount={(prefill) => {
           if (onContinueAddAccount) {
             onContinueAddAccount(prefill)
-          } else if (dialogContext) {
-            dialogContext.openAddAccount(prefill)
+          } else if (dialogActions) {
+            dialogActions.openAddAccount(prefill)
           } else {
             void openFullAccountManagerPage()
           }

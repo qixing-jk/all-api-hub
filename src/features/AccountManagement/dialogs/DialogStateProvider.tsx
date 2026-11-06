@@ -14,7 +14,9 @@ import type { AccountDialogRecoveryState } from "~/features/AccountManagement/co
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/dialogs/useAccountDialogRecoveryReceiver"
 import {
+  DialogActionsContext,
   DialogStateContext,
+  type DialogAccountActions,
   type DialogOptions,
 } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { isAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
@@ -23,6 +25,8 @@ import { UI_HANDOFF_RECEIVE_RESULTS } from "~/hooks/useUiHandoffReceiver"
 import type { DisplaySiteData } from "~/types"
 
 interface DialogState {
+  isMounted: boolean
+  sessionId: number
   isOpen: boolean
   mode: DialogMode
   account: DisplaySiteData | null
@@ -41,6 +45,8 @@ export const DialogStateProvider = ({
   const { loadAccountData, displayData, isInitialLoad } =
     useAccountDataContext()
   const [dialogState, setDialogState] = useState<DialogState>({
+    isMounted: false,
+    sessionId: 0,
     isOpen: false,
     mode: DIALOG_MODES.ADD,
     account: null,
@@ -54,14 +60,16 @@ export const DialogStateProvider = ({
 
   const openAccountDialog = useCallback((options: DialogOptions) => {
     return new Promise<unknown>((resolve, reject) => {
-      setDialogState({
+      setDialogState((prev) => ({
+        isMounted: true,
+        sessionId: prev.sessionId + 1,
         isOpen: true,
         mode: options.mode,
         account: options.account || null,
         prefill: options.prefill ?? null,
         recoveryState: options.recoveryState ?? null,
         focusSection: options.focusSection,
-      })
+      }))
       promiseRef.current = { resolve, reject }
     })
   }, [])
@@ -144,12 +152,9 @@ export const DialogStateProvider = ({
   )
   const closeEditAccount = useCallback(handleClose, [loadAccountData])
 
-  const value = useMemo(
+  const actionsValue = useMemo<DialogAccountActions>(
     () => ({
       openAccountDialog,
-      isAddAccountOpen,
-      isEditAccountOpen,
-      editingAccount,
       openAddAccount,
       closeAddAccount,
       openEditAccount,
@@ -157,9 +162,6 @@ export const DialogStateProvider = ({
     }),
     [
       openAccountDialog,
-      isAddAccountOpen,
-      isEditAccountOpen,
-      editingAccount,
       openAddAccount,
       closeAddAccount,
       openEditAccount,
@@ -167,22 +169,44 @@ export const DialogStateProvider = ({
     ],
   )
 
+  const value = useMemo(
+    () => ({
+      ...actionsValue,
+      isAddAccountOpen,
+      isEditAccountOpen,
+      editingAccount,
+    }),
+    [actionsValue, isAddAccountOpen, isEditAccountOpen, editingAccount],
+  )
+
   return (
-    <DialogStateContext.Provider value={value}>
-      {children}
-      {dialogState.isOpen && (
-        <AccountDialog
-          isOpen={dialogState.isOpen}
-          onClose={handleClose}
-          mode={dialogState.mode}
-          account={dialogState.account}
-          prefill={dialogState.prefill}
-          recoveryState={dialogState.recoveryState}
-          focusSection={dialogState.focusSection}
-          onSuccess={handleSuccess}
-          onError={handleError}
-        />
-      )}
-    </DialogStateContext.Provider>
+    <DialogActionsContext.Provider value={actionsValue}>
+      <DialogStateContext.Provider value={value}>
+        {children}
+        {dialogState.isMounted && (
+          <AccountDialog
+            key={dialogState.sessionId}
+            isOpen={dialogState.isOpen}
+            onClose={handleClose}
+            onCloseComplete={() => {
+              // A delayed completion from a previous session must not remove a
+              // replacement dialog, even when the replacement is already closing.
+              setDialogState((prev) =>
+                prev.sessionId === dialogState.sessionId && !prev.isOpen
+                  ? { ...prev, isMounted: false }
+                  : prev,
+              )
+            }}
+            mode={dialogState.mode}
+            account={dialogState.account}
+            prefill={dialogState.prefill}
+            recoveryState={dialogState.recoveryState}
+            focusSection={dialogState.focusSection}
+            onSuccess={handleSuccess}
+            onError={handleError}
+          />
+        )}
+      </DialogStateContext.Provider>
+    </DialogActionsContext.Provider>
   )
 }

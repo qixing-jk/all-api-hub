@@ -51,6 +51,13 @@ vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
     }
     return context
   },
+  useAccountDialogActions: () => {
+    const context = useContext(DialogStateTestContext)
+    if (!context) {
+      throw new Error("DialogStateTestContext missing")
+    }
+    return context
+  },
 }))
 
 vi.mock(

@@ -80,6 +80,8 @@ const {
     url: "https://api.example.com",
     phase: "site-input",
     formSource: "manual",
+    isLoadingAccount: false,
+    accountLoadError: false,
     isDetecting: false,
     isDetectingSlow: false,
     isSaving: false,
@@ -174,6 +176,7 @@ const {
     setAuthType: vi.fn(),
   },
   mockHandlers: {
+    retryAccountLoad: vi.fn(),
     handleAutoDetect: vi.fn(),
     handleShowManualForm: vi.fn(),
     handleClose: vi.fn(),
@@ -219,6 +222,8 @@ function resetMockState() {
     url: "https://api.example.com",
     phase: ACCOUNT_DIALOG_PHASES.SITE_INPUT,
     formSource: ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+    isLoadingAccount: false,
+    accountLoadError: false,
     isDetecting: false,
     isDetectingSlow: false,
     isSaving: false,
@@ -372,6 +377,9 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 
 vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
+    openEditAccount: mockOpenEditAccount,
+  }),
+  useAccountDialogActions: () => ({
     openEditAccount: mockOpenEditAccount,
   }),
 }))
@@ -619,6 +627,80 @@ describe("AccountDialog", () => {
       )
     },
   )
+
+  it("waits for edit hydration before mounting editable account fields", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.isLoadingAccount = true
+    const props = {
+      isOpen: true,
+      mode: DIALOG_MODES.EDIT,
+      account: buildDisplaySiteData(),
+      focusSection: "check-in" as const,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      onError: vi.fn(),
+    }
+    const view = render(<AccountDialog {...props} />)
+    expect(
+      await screen.findByTestId("account-dialog-loading"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId("account-dialog-loading").querySelector("svg"),
+    ).toBeNull()
+    expect(
+      screen.queryByTestId("account-management-site-name-input"),
+    ).not.toBeInTheDocument()
+
+    // jsdom does not implement scrolling; keep the real section-navigation effect.
+    const scroller = screen
+      .getByTestId("account-dialog-loading")
+      .closest<HTMLElement>('[data-slot="modal-body"]')!
+    const scrollTo = vi.fn()
+    scroller.scrollTo = scrollTo
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    mockState.isLoadingAccount = false
+    view.rerender(<AccountDialog {...props} />)
+    expect(
+      await screen.findByTestId("account-management-site-name-input"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("account-dialog-loading"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps a failed edit load out of the editable form and offers retry", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.accountLoadError = true
+    const user = userEvent.setup()
+    render(
+      <AccountDialog
+        isOpen
+        mode={DIALOG_MODES.EDIT}
+        account={buildDisplaySiteData()}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    expect(
+      await screen.findByTestId("account-dialog-load-error"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("account-management-site-name-input"),
+    ).not.toBeInTheDocument()
+    const form = screen.getByTestId("account-management-account-form")
+    act(() => {
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      )
+    })
+    expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(mockHandlers.retryAccountLoad).toHaveBeenCalledTimes(1)
+  })
 
   it("hides the form before the dialog reaches the account-form phase", async () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT

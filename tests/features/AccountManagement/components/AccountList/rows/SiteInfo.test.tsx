@@ -21,6 +21,7 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({ openEditAccount: mockOpenEditAccount }),
+  useAccountDialogActions: () => ({ openEditAccount: mockOpenEditAccount }),
 }))
 vi.mock("~/features/CheckIn/useCheckInRedetection", () => ({
   useCheckInRedetection: () => ({

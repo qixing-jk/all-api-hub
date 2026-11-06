@@ -28,7 +28,7 @@ import BookmarkAccountImportDialog from "~/features/AccountManagement/components
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
-import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { getAccountRefreshFeedback } from "~/features/AccountManagement/refreshFeedback"
 import {
   ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
@@ -99,7 +99,7 @@ function AccountManagementContent({
   onCloseBookmarkImport,
 }: AccountManagementContentProps) {
   const { t } = useTranslation(["account", "common", "messages"])
-  const { openAddAccount, openEditAccount } = useDialogStateContext()
+  const { openAddAccount, openEditAccount } = useAccountDialogActions()
   const consumedAddRouteActionRef = useRef(false)
   const {
     displayData,

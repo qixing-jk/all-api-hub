@@ -57,7 +57,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay/50 fixed inset-0",
+        "dialog-fade bg-overlay/50 fixed inset-0",
         Z_INDEX.modal,
         className,
       )}
@@ -81,16 +81,16 @@ function DialogContent({
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <ToasterPortalHost />
-      <FloatingLayerProvider layer="modal-contained">
-        <DialogPrimitive.Content
-          data-slot="dialog-content"
-          className={cn(
-            "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 gap-density-4 py-density-6 fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-2xl border px-6 shadow-lg duration-200 outline-none sm:max-w-lg",
-            Z_INDEX.modal,
-            className,
-          )}
-          {...props}
-        >
+      <DialogPrimitive.Content
+        data-slot="dialog-content"
+        className={cn(
+          "bg-popover text-popover-foreground dialog-fade gap-density-4 py-density-6 fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-2xl border px-6 shadow-lg outline-none sm:max-w-lg",
+          Z_INDEX.modal,
+          className,
+        )}
+        {...props}
+      >
+        <FloatingLayerProvider layer="modal-contained">
           {children}
           {showCloseButton && (
             <DialogPrimitive.Close
@@ -101,8 +101,8 @@ function DialogContent({
               <span className="sr-only">{t("common:actions.close")}</span>
             </DialogPrimitive.Close>
           )}
-        </DialogPrimitive.Content>
-      </FloatingLayerProvider>
+        </FloatingLayerProvider>
+      </DialogPrimitive.Content>
     </DialogPortal>
   )
 }

@@ -265,6 +265,21 @@
   }
 }
 
+/* Keep the backdrop and surface in sync. Radix Presence waits for the
+   closing animation before unmounting and restoring the opener's focus. */
+.dialog-fade[data-state="open"] {
+  animation: fadeIn 140ms ease-out both;
+}
+
+.dialog-fade[data-state="closed"] {
+  animation: fadeOut 120ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Reveal ready fields once; later input updates retain the same boundary. */
+[data-account-form-ready] {
+  animation: fadeIn 80ms ease-out both;
+}
+
 /* ===== 自定义工具类 ===== */
 /* Native superellipses preserve borders, shadows and focus rings without masks
    or clipping interactive descendants. Unsupported engines keep border-radius.

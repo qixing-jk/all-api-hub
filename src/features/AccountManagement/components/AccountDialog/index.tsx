@@ -8,7 +8,7 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert } from "~/components/ui"
+import { Alert, Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import AutoDetectErrorAlert from "~/features/AccountManagement/components/AccountDialog/detection/AutoDetectErrorAlert"
@@ -26,7 +26,7 @@ import { useAccountDialogRecoveryHandoff } from "~/features/AccountManagement/co
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/saving/DuplicateAccountWarningDialog"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
-import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { normalizeSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
 import { SponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/SponsorRecommendationsSection"
@@ -66,6 +66,7 @@ const logger = createLogger("AccountDialog")
 
 interface AccountDialogProps {
   isOpen: boolean
+  onCloseComplete?: () => void
   onClose: () => void
   mode: DialogMode
   account?: DisplaySiteData | null
@@ -80,6 +81,7 @@ interface AccountDialogProps {
  * Modal dialog for creating or editing account credentials with auto-detect support.
  * @param props Component props to control dialog visibility and behavior.
  * @param props.isOpen Whether the dialog is currently visible.
+ * @param props.onCloseComplete Releases the dialog after its closing animation.
  * @param props.onClose Handler invoked when closing without saving.
  * @param props.mode Current dialog mode (add or edit).
  * @param props.account Account data to prefill the form when editing.
@@ -91,6 +93,7 @@ interface AccountDialogProps {
  */
 export default function AccountDialog({
   isOpen,
+  onCloseComplete,
   onClose,
   mode,
   account,
@@ -114,7 +117,7 @@ export default function AccountDialog({
     deleteTag,
     reloadAccountsById,
   } = useAccountDataContext()
-  const { openEditAccount } = useDialogStateContext()
+  const { openEditAccount } = useAccountDialogActions()
 
   const { state, setters, handlers } = useAccountDialog({
     isOpen,
@@ -155,6 +158,7 @@ export default function AccountDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (state.isLoadingAccount || state.accountLoadError) return
     try {
       if (
         mode === DIALOG_MODES.ADD &&
@@ -334,12 +338,24 @@ export default function AccountDialog({
     openRouterRecovery?.message || showOpenRouterManualRevocation,
   )
 
+  const showAccountForm =
+    state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
+    !state.isLoadingAccount &&
+    !state.accountLoadError
+
   return (
     <>
       <Modal
         isOpen={isOpen}
+        onCloseComplete={onCloseComplete}
+        focusWorkflowId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
         onClose={handlers.handleClose}
         size="xl"
+        panelClassName={
+          mode === DIALOG_MODES.EDIT
+            ? "h-[calc(100dvh-2rem)] sm:h-[calc(100dvh-4rem)]"
+            : undefined
+        }
         title={dialogTitle}
         panelTestId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
         header={<DialogHeader mode={mode} />}
@@ -360,6 +376,8 @@ export default function AccountDialog({
             onShowManualForm={handlers.handleShowManualForm}
             onClose={handlers.handleClose}
             isFormValid={
+              !state.isLoadingAccount &&
+              !state.accountLoadError &&
               state.isFormValid &&
               (mode !== DIALOG_MODES.ADD ||
                 !isCanonicalAimlApiUrl(state.url) ||
@@ -380,7 +398,23 @@ export default function AccountDialog({
             onSubmit={handleSubmit}
             className="gap-y-density-2 flex flex-col gap-x-2"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}
+            data-account-form-ready={showAccountForm ? "" : undefined}
           >
+            {state.accountLoadError && (
+              <Alert
+                variant="destructive"
+                title={tAccountDialog("messages.loadFailed")}
+                data-testid="account-dialog-load-error"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handlers.retryAccountLoad()}
+                >
+                  {t("common:actions.retry")}
+                </Button>
+              </Alert>
+            )}
             {state.detectionError && !hasInlineCredentialError && (
               <AutoDetectErrorAlert
                 error={state.detectionError}
@@ -507,7 +541,18 @@ export default function AccountDialog({
               </div>
             )}
 
-            {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
+            {state.isLoadingAccount && (
+              <div
+                className="min-h-0 flex-1"
+                aria-busy="true"
+                data-testid="account-dialog-loading"
+              >
+                <span role="status" className="sr-only">
+                  {t("common:status.loading")}
+                </span>
+              </div>
+            )}
+            {showAccountForm && (
               <AccountForm
                 continuous
                 focusSection={focusSection}

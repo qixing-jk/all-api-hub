@@ -1,10 +1,14 @@
+import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DialogStateProvider } from "~/features/AccountManagement/dialogs/DialogStateProvider"
-import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import {
+  useAccountDialogActions,
+  useDialogStateContext,
+} from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -43,6 +47,8 @@ vi.mock("~/features/AccountManagement/components/AccountDialog", () => ({
     return (
       <div data-testid="account-dialog">
         <span>{JSON.stringify(props.prefill)}</span>
+        <input aria-label="Account draft" defaultValue="fresh draft" />
+        <span data-testid="account-dialog-open">{String(props.isOpen)}</span>
         <button type="button" onClick={() => props.onSuccess({ id: "saved" })}>
           save
         </button>
@@ -95,7 +101,61 @@ function Harness() {
   )
 }
 
+const renderCounts = { actions: 0, state: 0 }
+
+function ActionRenderCounter() {
+  const { openAddAccount } = useAccountDialogActions()
+  renderCounts.actions += 1
+  return (
+    <button type="button" onClick={() => openAddAccount()}>
+      open from actions
+    </button>
+  )
+}
+
+function StateRenderCounter() {
+  const { isAddAccountOpen } = useDialogStateContext()
+  renderCounts.state += 1
+  return <output data-testid="dialog-state">{String(isAddAccountOpen)}</output>
+}
+
 describe("DialogStateContext sponsor prefill", () => {
+  it("updates state consumers while keeping action-only consumers mounted across dialog transitions", async () => {
+    const user = userEvent.setup()
+    renderCounts.actions = 0
+    renderCounts.state = 0
+
+    render(
+      <DialogStateProvider>
+        <ActionRenderCounter />
+        <StateRenderCounter />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    expect(renderCounts.actions).toBe(1)
+    expect(renderCounts.state).toBe(1)
+
+    await user.click(screen.getByRole("button", { name: "open from actions" }))
+    expect(renderCounts.actions).toBe(1)
+    expect(renderCounts.state).toBeGreaterThan(1)
+    expect(screen.getByTestId("dialog-state")).toHaveTextContent("true")
+
+    const stateRendersAfterOpen = renderCounts.state
+    const completeClose = accountDialogProps.current.onCloseComplete
+    await user.click(screen.getByRole("button", { name: "close" }))
+    expect(renderCounts.actions).toBe(1)
+    expect(renderCounts.state).toBeGreaterThan(stateRendersAfterOpen)
+    expect(screen.getByTestId("dialog-state")).toHaveTextContent("false")
+
+    act(() => completeClose())
+    expect(renderCounts.actions).toBe(1)
+  })
+
   it.each([undefined, "check-in"] as const)(
     "opens the account editor with focus %s",
     async (focusSection) => {
@@ -171,6 +231,72 @@ describe("DialogStateContext sponsor prefill", () => {
       sponsorId: "aihubmix",
     })
     expect(screen.getByTestId("account-dialog")).toHaveTextContent("aihubmix")
+  })
+
+  it("keeps a closed account dialog mounted until close completion", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <DialogStateProvider>
+        <Harness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "open" }))
+    expect(screen.getByTestId("account-dialog-open")).toHaveTextContent("true")
+
+    const firstCloseComplete = accountDialogProps.current.onCloseComplete
+    await user.click(screen.getByRole("button", { name: "close" }))
+
+    expect(screen.getByTestId("account-dialog")).toBeInTheDocument()
+    expect(screen.getByTestId("account-dialog-open")).toHaveTextContent("false")
+
+    act(() => firstCloseComplete())
+    expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
+  })
+
+  it("does not let an older close completion unmount a newer dialog session", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <DialogStateProvider>
+        <Harness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    await user.click(screen.getByRole("button", { name: "open" }))
+    await user.type(
+      screen.getByRole("textbox", { name: "Account draft" }),
+      " edited",
+    )
+    const firstCloseComplete = accountDialogProps.current.onCloseComplete
+    await user.click(screen.getByRole("button", { name: "close" }))
+
+    await user.click(screen.getByRole("button", { name: "open" }))
+    expect(screen.getByRole("textbox", { name: "Account draft" })).toHaveValue(
+      "fresh draft",
+    )
+    await user.click(screen.getByRole("button", { name: "close" }))
+    const secondCloseComplete = accountDialogProps.current.onCloseComplete
+
+    expect(firstCloseComplete).toBeTypeOf("function")
+    expect(secondCloseComplete).toBeTypeOf("function")
+    act(() => firstCloseComplete())
+    expect(screen.getByTestId("account-dialog")).toBeInTheDocument()
+
+    act(() => secondCloseComplete())
+    expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
   })
 
   it("threads bookmark-import prefill through openAddAccount into AccountDialog", async () => {
@@ -279,6 +405,7 @@ describe("DialogStateContext sponsor prefill", () => {
     await user.click(screen.getByRole("button", { name: "save" }))
 
     await expect(result).resolves.toEqual({ id: "saved" })
+    act(() => accountDialogProps.current.onCloseComplete())
     expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
     expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
   })
@@ -323,6 +450,7 @@ describe("DialogStateContext sponsor prefill", () => {
       expect(loadAccountDataMock).not.toHaveBeenCalled()
       await user.click(screen.getByRole("button", { name: "save" }))
       await expect(result).resolves.toEqual({ id: "saved" })
+      act(() => accountDialogProps.current.onCloseComplete())
       expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
       expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
     },

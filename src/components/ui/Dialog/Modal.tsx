@@ -358,7 +358,7 @@ export function Modal({
   }
 
   const panelBaseClass = cn(
-    `flex flex-col relative w-full ${sizeMap[size]} max-h-[calc(100dvh-2rem)] bg-popover text-popover-foreground rounded-2xl shadow-xl transform transition-all sm:max-h-[calc(100dvh-4rem)]`,
+    `flex flex-col relative w-full ${sizeMap[size]} max-h-[calc(100dvh-2rem)] bg-popover text-popover-foreground rounded-2xl shadow-xl sm:max-h-[calc(100dvh-4rem)]`,
     panelClassName,
   )
 
@@ -369,7 +369,7 @@ export function Modal({
           data-slot="modal-overlay"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay/30 fixed inset-0 backdrop-blur-sm",
+            "dialog-fade bg-overlay/30 fixed inset-0 backdrop-blur-sm",
             Z_INDEX.modal,
           )}
           onPointerDown={handleBackdropPointerDown}
@@ -380,54 +380,54 @@ export function Modal({
         <ToasterPortalHost />
         {floatingContent}
 
-        <FloatingLayerProvider layer="modal-contained">
-          <DialogPrimitive.Content
-            ref={contentRef}
-            aria-describedby={undefined}
-            className={cn(
-              "fixed top-[50%] left-[50%] w-full max-w-[calc(100%-1rem)] translate-x-[-50%] translate-y-[-50%] outline-none sm:max-w-[calc(100%-2rem)]",
-              Z_INDEX.modal,
-            )}
-            onEscapeKeyDown={handleEscapeKeyDown}
-            onOpenAutoFocus={(event) => {
-              const focusSession = activeFocusSessionRef.current
-              if (focusSession && event.currentTarget instanceof HTMLElement) {
-                focusSession.contentElement = event.currentTarget
-                focusSessionsByContentRef.current.set(
-                  event.currentTarget,
-                  focusSession,
-                )
-              }
-            }}
-            onCloseAutoFocus={(event) => {
-              // Radix dispatches close autofocus on a timer after the scope
-              // unmounts. The shared lease prevents a replaced instance from
-              // restoring focus over the currently opened dialog.
-              event.preventDefault()
-              const focusSession =
-                event.currentTarget instanceof HTMLElement
-                  ? focusSessionsByContentRef.current.get(
-                      event.currentTarget,
-                    ) ?? activeFocusSessionRef.current
-                  : null
-              if (!focusSession) return
-              try {
-                const restoreSession = settleFocusLease(focusSession)
-                if (!restoreSession) return
-                const restoreFocusElement = restoreSession.restoreElement
-                if (!restoreFocusElement?.isConnected) return
-                restoreFocusElement.focus()
-              } finally {
-                notifyCloseComplete(focusSession)
-              }
-            }}
-            onPointerDownOutside={(event) => {
-              event.preventDefault()
-            }}
-            onInteractOutside={(event) => {
-              event.preventDefault()
-            }}
-          >
+        <DialogPrimitive.Content
+          data-slot="modal-content"
+          ref={contentRef}
+          aria-describedby={undefined}
+          className={cn(
+            "dialog-fade fixed top-[50%] left-[50%] w-full max-w-[calc(100%-1rem)] translate-x-[-50%] translate-y-[-50%] outline-none sm:max-w-[calc(100%-2rem)]",
+            Z_INDEX.modal,
+          )}
+          onEscapeKeyDown={handleEscapeKeyDown}
+          onOpenAutoFocus={(event) => {
+            const focusSession = activeFocusSessionRef.current
+            if (focusSession && event.currentTarget instanceof HTMLElement) {
+              focusSession.contentElement = event.currentTarget
+              focusSessionsByContentRef.current.set(
+                event.currentTarget,
+                focusSession,
+              )
+            }
+          }}
+          onCloseAutoFocus={(event) => {
+            // Radix dispatches close autofocus on a timer after the scope
+            // unmounts. The shared lease prevents a replaced instance from
+            // restoring focus over the currently opened dialog.
+            event.preventDefault()
+            const focusSession =
+              event.currentTarget instanceof HTMLElement
+                ? focusSessionsByContentRef.current.get(event.currentTarget) ??
+                  activeFocusSessionRef.current
+                : null
+            if (!focusSession) return
+            try {
+              const restoreSession = settleFocusLease(focusSession)
+              if (!restoreSession) return
+              const restoreFocusElement = restoreSession.restoreElement
+              if (!restoreFocusElement?.isConnected) return
+              restoreFocusElement.focus()
+            } finally {
+              notifyCloseComplete(focusSession)
+            }
+          }}
+          onPointerDownOutside={(event) => {
+            event.preventDefault()
+          }}
+          onInteractOutside={(event) => {
+            event.preventDefault()
+          }}
+        >
+          <FloatingLayerProvider layer="modal-contained">
             <DialogPrimitive.Title asChild>
               <span className="sr-only" aria-label={title} />
             </DialogPrimitive.Title>
@@ -483,8 +483,8 @@ export function Modal({
                 )}
               </div>
             </div>
-          </DialogPrimitive.Content>
-        </FloatingLayerProvider>
+          </FloatingLayerProvider>
+        </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   )

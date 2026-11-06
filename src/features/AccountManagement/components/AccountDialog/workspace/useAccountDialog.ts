@@ -414,7 +414,12 @@ export function useAccountDialog({
   const completePendingAccountKeyProvisioningSuccess =
     postSaveWorkflow.completePendingSuccess
 
-  useAccountDialogInitialization({
+  const {
+    accountLoadError,
+    invalidateAccountLoad,
+    isLoadingAccount,
+    retryAccountLoad,
+  } = useAccountDialogInitialization({
     context: { mode, account, prefill, recoveryState, isOpen },
     evidence: {
       isCloseTransitionStartedRef,
@@ -517,6 +522,7 @@ export function useAccountDialog({
 
   const handleClose = useCallback(async () => {
     if (isCloseTransitionStartedRef.current) return
+    invalidateAccountLoad()
     setEditedNovitaCredential(null)
     invalidateDuplicateConfirmation()
     invalidateCookieSession()
@@ -537,6 +543,7 @@ export function useAccountDialog({
     handleManagedSiteConfigPromptClose()
     onClose()
   }, [
+    invalidateAccountLoad,
     invalidateCookieSession,
     invalidateAutoDetection,
 
@@ -738,6 +745,8 @@ export function useAccountDialog({
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
       postSaveOneTimeSecret,
+      isLoadingAccount,
+      accountLoadError,
       postSaveKeyProvisioning,
       postSaveKeyInputAccount,
       postSaveKeyInputSessionId,
@@ -806,6 +815,7 @@ export function useAccountDialog({
       handleSubmit,
       handleAutoConfig,
       handleClose,
+      retryAccountLoad,
       handleImportCookieAuthSessionCookie,
       handleOpenCookiePermissionSettings,
       handleRequestCookieAuthPermissions,

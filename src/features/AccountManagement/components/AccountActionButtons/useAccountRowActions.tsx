@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
-import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
@@ -110,7 +110,7 @@ export function useAccountRowActions({
     selectionDialog,
     onMenuCloseAutoFocus,
   } = useCheckInRedetection(site.id, loadAccountData)
-  const { openEditAccount } = useDialogStateContext()
+  const { openEditAccount } = useAccountDialogActions()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
   const [isRefreshMenuPending, setIsRefreshMenuPending] = useState(false)
   const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false)
