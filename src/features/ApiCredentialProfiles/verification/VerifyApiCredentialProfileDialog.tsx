@@ -69,7 +69,7 @@ export function VerifyApiCredentialProfileDialog(
     fetchModelsError,
     fetchedModelCount,
     isPersisting,
-    activeProbeId,
+    activeProbeIds,
     historyTarget,
     probes,
     replaceProbes,
@@ -311,7 +311,7 @@ export function VerifyApiCredentialProfileDialog(
               // request; the persistence that follows is busy but not stoppable.
               const canStopProbe = probe.isRunning
               const isProbePersisting =
-                !canStopProbe && activeProbeId === probe.definition.id
+                !canStopProbe && activeProbeIds.has(probe.definition.id)
               const probeActionLabel = canStopProbe
                 ? t("aiApiVerification:verifyDialog.actions.stop")
                 : isProbePersisting
@@ -418,11 +418,8 @@ export function VerifyApiCredentialProfileDialog(
                         }
                         disabled={
                           isRunning ||
-                          isPersisting ||
-                          (!canStopProbe &&
-                            (isAnyProbeRunning ||
-                              isDisabledForModel ||
-                              !profile))
+                          isProbePersisting ||
+                          (!canStopProbe && (isDisabledForModel || !profile))
                         }
                       >
                         {probeActionLabel}

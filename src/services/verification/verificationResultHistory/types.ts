@@ -10,6 +10,7 @@ import {
   type DrawingVerificationOutcome,
   type PelicanExecutionMode,
 } from "~/services/verification/modelQuality/constants"
+import type { ContextCapacityReason } from "~/services/verification/modelQuality/contextCapacityConstants"
 
 /**
  * Stored schema version.
@@ -21,7 +22,7 @@ import {
  * existing payload is then re-sanitized once on read and rewritten under the new
  * version before it is trusted.
  */
-export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 3
+export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 5
 
 export const API_VERIFICATION_HISTORY_STATUSES = {
   Pass: API_VERIFICATION_PROBE_STATUSES.Pass,
@@ -105,10 +106,31 @@ export type ApiVerificationHistoryConfig = {
   version: number
   summaries: ApiVerificationHistorySummary[]
   drawingSummaries?: DrawingVerificationSummary[]
+  contextSummaries?: ContextCapacitySummary[]
   lastUpdated: number
   /**
    * When the last complete orphan sweep finished. `0` means "never swept", which
    * keeps sweeps enabled for payloads written before this field existed.
    */
   lastOrphanSweepAt: number
+}
+
+/** Latest capacity observation; never contains credentials, prompts or responses. */
+export type ContextCapacitySummary = {
+  latencyMs?: number
+  mode?: ApiVerificationMode
+  target?: ApiVerificationHistoryTarget
+  targetKey: string
+  scopeKey: string
+  lookupKey?: string
+  verifiedAt: number
+  apiType: ApiVerificationApiType
+  modelId: string
+  lowerBoundTokens: number
+  /** Metadata expectation captured at test time; absent in older history. */
+  declaredContext?: number
+  upperBoundTokens?: number
+  reason: ContextCapacityReason
+  requests: number
+  outputLimited: boolean
 }

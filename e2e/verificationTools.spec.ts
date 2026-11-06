@@ -25,6 +25,105 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { createDrawingServer } from "~~/e2e/utils/verificationDrawingServer"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
+test("verification tests run concurrently and cancel independently", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  let releaseDrawing!: () => void
+  let releaseCapacity!: () => void
+  const drawingGate = new Promise<void>((resolve) => {
+    releaseDrawing = resolve
+  })
+  const capacityGate = new Promise<void>((resolve) => {
+    releaseCapacity = resolve
+  })
+  const fixture = createDrawingServer({
+    beforeRespond: async (request) => {
+      const prompt = String(request.messages.at(-1)?.content)
+      if (prompt.includes("pelican")) await drawingGate
+      if (prompt.startsWith("Read the following reference text."))
+        await capacityGate
+    },
+  })
+  await new Promise<void>((resolve) =>
+    fixture.server.listen(0, "127.0.0.1", resolve),
+  )
+  try {
+    const baseUrl = `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`
+    await stubLlmMetadataIndex(context)
+    await forceExtensionLanguage(page, "en")
+    await seedApiCredentialProfiles(await getServiceWorker(context), [
+      createStoredApiCredentialProfile({
+        id: "concurrent-verification",
+        name: "Concurrent verification",
+        apiType: "openai-compatible",
+        baseUrl,
+        apiKey: "synthetic-key",
+        telemetryConfig: { mode: "disabled" },
+      }),
+    ])
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+    )
+    await waitForExtensionRoot(page)
+    await page.getByTestId(IDS.verifyButton).click()
+    await expect(page.getByTestId(IDS.verifyModelId)).toContainText(
+      "gpt-quality",
+    )
+    const drawing = page.getByTestId("verification-tools-panel")
+    await drawing
+      .getByRole("button", { name: "Run drawing test", exact: true })
+      .click()
+    await expect.poll(() => fixture.requests.length).toBe(1)
+    const text = page.getByTestId(
+      getApiCredentialProfileVerifyProbeTestId("text-generation"),
+    )
+    await text.getByRole("button", { name: "Run", exact: true }).click()
+    await expect(
+      text.locator('[data-slot="badge"]').filter({ hasText: "Pass" }),
+    ).toBeVisible()
+    const capacity = page.getByRole("region", {
+      name: "Model context test",
+      exact: true,
+    })
+    await capacity
+      .getByRole("button", { name: "Run context probe", exact: true })
+      .click()
+    await expect.poll(() => fixture.requests.length).toBe(3)
+    await capacity.getByRole("button", { name: "Stop", exact: true }).click()
+    await expect(capacity).toContainText("Probe stopped")
+    await expect(
+      drawing.getByRole("button", { name: "Stop", exact: true }),
+    ).toBeEnabled()
+    await drawing.scrollIntoViewIfNeeded()
+    await page.getByRole("dialog").screenshot({
+      path: test.info().outputPath("concurrent-verification.png"),
+      animations: "disabled",
+    })
+    releaseDrawing()
+    await expect(page.getByTestId("pelican-svg-preview")).toBeVisible()
+    await expect(page.getByTestId(IDS.verifyDialogCloseButton)).toBeEnabled()
+    await page.reload()
+    await waitForExtensionRoot(page)
+    await page.getByTestId(IDS.verifyButton).click()
+    await expect(page.getByTestId("pelican-history-summary")).toContainText(
+      "Drawing generated",
+    )
+    await expect(
+      page.getByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      ),
+    ).toContainText("Pass")
+  } finally {
+    releaseDrawing()
+    releaseCapacity()
+    fixture.server.closeAllConnections()
+    await new Promise<void>((resolve) => fixture.server.close(() => resolve()))
+  }
+})
+
 for (const mode of ["Streaming", "Non-streaming"] as const) {
   test(`agent drawing executes JavaScript in the extension (${mode})`, async ({
     context,
@@ -650,3 +749,90 @@ test("account verification configuration aligns fields without empty grid cells"
     animations: "disabled",
   })
 })
+
+for (const outcome of ["timeout", "empty"] as const) {
+  test(`verification result badges explain ${outcome} without opening details`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const fixture = createDrawingServer({ contextOutcome: outcome })
+    await new Promise<void>((resolve) =>
+      fixture.server.listen(0, "127.0.0.1", resolve),
+    )
+    try {
+      const baseUrl = `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`
+      await stubLlmMetadataIndex(context)
+      await forceExtensionLanguage(page, "zh-CN")
+      await seedApiCredentialProfiles(await getServiceWorker(context), [
+        createStoredApiCredentialProfile({
+          id: "result-badges",
+          name: "Result badge fixture",
+          apiType: "openai-compatible",
+          baseUrl,
+          apiKey: "synthetic-key",
+          telemetryConfig: { mode: "disabled" },
+        }),
+      ])
+      await page.emulateMedia({ reducedMotion: "reduce" })
+      await page.goto(
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+      )
+      await waitForExtensionRoot(page)
+      await page.getByTestId(IDS.verifyButton).click()
+      await expect(page.getByTestId(IDS.verifyModelId)).toContainText(
+        "gpt-quality",
+      )
+      const textProbe = page.getByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      )
+      await textProbe.getByRole("button", { name: "运行", exact: true }).click()
+      await expect(
+        textProbe.locator('[data-slot="badge"]').filter({ hasText: "通过" }),
+      ).toBeVisible()
+      await textProbe.screenshot({
+        path: test.info().outputPath("passed-badge.png"),
+        animations: "disabled",
+      })
+      const panel = page.getByRole("region", {
+        name: "模型上下文测试",
+        exact: true,
+      })
+      await panel
+        .getByRole("button", { name: "探测上下文", exact: true })
+        .click()
+      await expect(
+        panel.locator('[data-slot="badge"]').filter({
+          hasText: outcome === "timeout" ? "请求超时" : "未返回正文",
+        }),
+      ).toBeVisible({ timeout: 30_000 })
+      await expect(panel.getByRole("status")).toContainText(
+        outcome === "timeout"
+          ? "超时不能证明输入超过模型容量"
+          : "接口正常结束但未返回正文",
+      )
+      await expect(panel.getByRole("region", { name: "测试详情" })).toHaveCount(
+        0,
+      )
+      await panel.screenshot({
+        path: test.info().outputPath(`context-${outcome}.png`),
+        animations: "disabled",
+      })
+      await panel.getByRole("button", { name: "测试详情", exact: true }).click()
+      await expect(
+        panel.getByRole("region", { name: "测试详情" }),
+      ).toContainText("已发送 1 次请求")
+      expect(fixture.requests).toHaveLength(2)
+      await page.setViewportSize({ width: 420, height: 840 })
+      await panel.screenshot({
+        path: test.info().outputPath(`context-${outcome}-narrow.png`),
+        animations: "disabled",
+      })
+    } finally {
+      fixture.server.closeAllConnections()
+      await new Promise<void>((resolve) =>
+        fixture.server.close(() => resolve()),
+      )
+    }
+  })
+}

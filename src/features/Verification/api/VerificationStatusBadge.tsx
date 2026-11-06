@@ -20,20 +20,20 @@ export type VerificationStatusBadgeProps = {
   latencyMs?: number | null
   mode?: ApiVerificationMode
   className?: string
+  label?: string
 }
 
 /**
  * Render a standardized status badge for verification results and persisted
  * verification summaries.
- * When successful and latencyMs is provided, embeds the formatted latency
- * directly inside the badge (e.g. [✓ 1.2s] or [✓ 350ms]) while preserving
- * screen-reader pass text for accessibility.
+ * Keep the result visible even when latency and generation mode are available.
  */
 export function VerificationStatusBadge({
   status,
   latencyMs,
   mode,
   className,
+  label,
 }: VerificationStatusBadgeProps) {
   const { t } = useTranslation("aiApiVerification")
   const modeLabel = mode ? getApiVerificationModeLabel(t, mode) : null
@@ -53,11 +53,11 @@ export function VerificationStatusBadge({
       <Badge variant="success" size="sm" className={className}>
         <span className="gap-y-density-1 flex items-center gap-x-1">
           <CircleCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className={latencyText ? "sr-only" : undefined}>
-            {t("verifyDialog.status.pass")}
-          </span>
-          {latencyText ? <span aria-hidden="true">{latencyText}</span> : null}
+          <span>{label ?? t("verifyDialog.status.pass")}</span>
         </span>
+        {latencyText ? (
+          <span className="font-normal">{latencyText}</span>
+        ) : null}
         {modeContent}
       </Badge>
     )
@@ -73,7 +73,7 @@ export function VerificationStatusBadge({
           className,
         )}
       >
-        {t("verifyDialog.status.unsupported")}
+        {label ?? t("verifyDialog.status.unsupported")}
         {modeContent}
       </Badge>
     )
@@ -82,7 +82,7 @@ export function VerificationStatusBadge({
   if (status === API_VERIFICATION_HISTORY_STATUSES.Unverified) {
     return (
       <Badge variant="outline" size="sm" className={className}>
-        {t("verifyDialog.status.unverified")}
+        {label ?? t("verifyDialog.status.unverified")}
         {modeContent}
       </Badge>
     )
@@ -92,7 +92,7 @@ export function VerificationStatusBadge({
     <Badge variant="destructive" size="sm" className={className}>
       <span className="gap-y-density-1 flex items-center gap-x-1">
         <CircleX className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        {t("verifyDialog.status.fail")}
+        {label ?? t("verifyDialog.status.fail")}
       </span>
       {modeContent}
     </Badge>

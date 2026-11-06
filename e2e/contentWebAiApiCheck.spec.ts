@@ -1,3 +1,5 @@
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
 import type { Locator, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
@@ -18,6 +20,7 @@ import {
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedUserPreferences,
+  stubLlmMetadataIndex,
   waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
 import {
@@ -270,6 +273,210 @@ test.beforeEach(async ({ context, page }) => {
       }),
     })
   })
+})
+
+test("web context probe shows progress, measured bounds and cancellation", async ({
+  context,
+  page,
+}) => {
+  const requests: Record<string, any>[] = []
+  let hold = false
+  let release!: () => void
+  let held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const server = createServer(async (request, response) => {
+    response.setHeader("Access-Control-Allow-Origin", "*")
+    response.setHeader("Access-Control-Allow-Headers", "*")
+    if (request.method === "OPTIONS") {
+      response.end()
+      return
+    }
+    response.setHeader("Content-Type", "application/json")
+    if (request.method === "GET") {
+      response.end(JSON.stringify({ data: [{ id: "gpt-4o-mini" }] }))
+      return
+    }
+    let raw = ""
+    for await (const chunk of request) raw += chunk.toString()
+    const body = JSON.parse(raw)
+    requests.push(body)
+    expect(request.headers.authorization).toBe(`Bearer ${API_KEY}`)
+    // Hold later requests so the page must receive an intermediate measurement.
+    if (requests.length === 2 || hold) await held
+    if (JSON.stringify(body.messages).length > 16000) {
+      response.statusCode = 400
+      response.end(
+        JSON.stringify({
+          error: {
+            code: "context_length_exceeded",
+            message: "maximum context length exceeded",
+          },
+        }),
+      )
+    } else
+      response.end(
+        JSON.stringify({
+          id: "context",
+          object: "chat.completion",
+          created: 1,
+          model: "gpt-4o-mini",
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "OK" },
+              finish_reason: "stop",
+            },
+          ],
+          usage: { prompt_tokens: 1000, completion_tokens: 1 },
+        }),
+      )
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  try {
+    await stubLlmMetadataIndex(context)
+    await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    const { modal, contentHost } =
+      await openApiCheckModalFromCopiedCredentials(page)
+    await modal
+      .getByRole("textbox", { name: "Base URL", exact: true })
+      .fill(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)
+    await modal
+      .getByRole("combobox", { name: "Test mode", exact: true })
+      .click()
+    await contentHost
+      .getByRole("option", { name: "Non-streaming", exact: true })
+      .click()
+    await expect(
+      modal.getByRole("combobox", { name: "Model ID", exact: true }),
+    ).toContainText("gpt-4o-mini")
+    await modal.getByRole("combobox", { name: "Model ID", exact: true }).click()
+    await contentHost
+      .getByRole("option", { name: "gpt-4o-mini", exact: true })
+      .click()
+    const panel = modal.getByRole("region", {
+      name: "Model context test",
+    })
+    await expect(panel).toBeVisible()
+    await test.info().attach("context-configuration", {
+      body: await modal.ariaSnapshot(),
+      contentType: "text/plain",
+    })
+    await expect(
+      panel.getByRole("button", { name: "Run context probe" }),
+    ).toBeEnabled()
+    await expect(panel).toContainText("Pending")
+    await expect(panel.getByRole("spinbutton")).toHaveCount(0)
+    for (const width of [1280, 380]) {
+      await page.setViewportSize({ width, height: 800 })
+      await panel.scrollIntoViewIfNeeded()
+      expect(
+        await panel.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true)
+      await panel.screenshot({
+        path: test.info().outputPath(`web-context-idle-${width}.png`),
+        animations: "disabled",
+      })
+    }
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await panel.getByRole("button", { name: "Run context probe" }).click()
+    await expect(
+      panel.getByRole("button", { name: "Test details", exact: true }),
+    ).toBeVisible({ timeout: 30000 })
+    await expect(
+      modal
+        .getByRole("group")
+        .getByRole("button", { name: "Test", exact: true }),
+    ).toBeEnabled()
+    release()
+    await expect(panel).toContainText("Model context:", { timeout: 30000 })
+    await expect(panel).not.toContainText("Result saved")
+    await expect(panel).not.toContainText("Tokenizer:")
+    await panel.screenshot({
+      path: test.info().outputPath("web-context-summary.png"),
+      animations: "disabled",
+    })
+    await panel
+      .getByRole("button", { name: "Test details", exact: true })
+      .click()
+    await expect(panel).toContainText("Capacity rejection at:")
+    const resultDetails = panel.getByRole("region", {
+      name: "Test details",
+      exact: true,
+    })
+    await expect(resultDetails).toBeVisible()
+    await panel
+      .getByRole("button", { name: "Test details", exact: true })
+      .click()
+    await expect(resultDetails).toHaveCount(0)
+    await expect(panel).toContainText("Model context:")
+    await panel
+      .getByRole("button", { name: "Test details", exact: true })
+      .click()
+    expect(
+      requests.every(
+        (body) =>
+          !body.stream &&
+          body.model === "gpt-4o-mini" &&
+          body.max_tokens === 128,
+      ),
+    ).toBe(true)
+    await panel.scrollIntoViewIfNeeded()
+    await panel.screenshot({
+      path: test.info().outputPath("web-context-capacity.png"),
+      animations: "disabled",
+    })
+    hold = true
+    held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const completedRequests = requests.length
+    await panel.getByRole("button", { name: "Run context probe" }).click()
+    await expect.poll(() => requests.length).toBeGreaterThan(completedRequests)
+    await panel.getByRole("button", { name: "Stop", exact: true }).click()
+    await expect(
+      panel.getByRole("button", { name: "Run context probe" }),
+    ).toBeEnabled()
+    await expect(
+      panel.getByRole("status", { name: "Context capacity result" }),
+    ).toContainText("Probe stopped")
+    const sentBeforeReopen = requests.length
+    const reopened = await openApiCheckModalFromCopiedCredentials(page)
+    await reopened.modal
+      .getByRole("textbox", { name: "Base URL", exact: true })
+      .fill(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)
+    await reopened.modal
+      .getByRole("combobox", { name: "Test mode", exact: true })
+      .click()
+    await reopened.contentHost
+      .getByRole("option", { name: "Non-streaming", exact: true })
+      .click()
+    await reopened.modal
+      .getByRole("combobox", { name: "Model ID", exact: true })
+      .click()
+    await reopened.contentHost
+      .getByRole("option", { name: "gpt-4o-mini", exact: true })
+      .click()
+    const restoredPanel = reopened.modal.getByRole("region", {
+      name: "Model context test",
+    })
+    await expect(restoredPanel).toContainText("Non-streaming")
+    await expect(
+      restoredPanel.getByRole("status", { name: "Context capacity result" }),
+    ).toContainText("Model context:")
+    expect(requests.length).toBe(sentBeforeReopen)
+    await restoredPanel.screenshot({
+      path: test.info().outputPath("web-context-history.png"),
+      animations: "disabled",
+    })
+  } finally {
+    release()
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
 })
 
 test("keeps page verification actions visible while scrolling at desktop and narrow widths", async ({

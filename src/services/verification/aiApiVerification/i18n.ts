@@ -113,6 +113,13 @@ export function translateApiVerificationSummary(
       : localized
   }
   switch (summaryKey) {
+    case "verifyDialog.summaries.requestTimedOut":
+      return withHttpDetails(
+        t(
+          "aiApiVerification:verifyDialog.summaries.requestTimedOut",
+          summaryParams,
+        ),
+      )
     case "verifyDialog.errors.unexpected":
       return t(
         "aiApiVerification:verifyDialog.errors.unexpected",

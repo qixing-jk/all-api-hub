@@ -58,14 +58,18 @@ describe("VerificationStatusBadge", () => {
     render(<VerificationStatusBadge status="pass" latencyMs={1200} />)
 
     expect(screen.getByText("1.2s")).toBeInTheDocument()
-    expect(screen.getByText("verifyDialog.status.pass")).toHaveClass("sr-only")
+    expect(screen.getByText("verifyDialog.status.pass")).not.toHaveClass(
+      "sr-only",
+    )
   })
 
   it("formats sub-second latency in milliseconds", () => {
     render(<VerificationStatusBadge status="pass" latencyMs={350} />)
 
     expect(screen.getByText("350ms")).toBeInTheDocument()
-    expect(screen.getByText("verifyDialog.status.pass")).toHaveClass("sr-only")
+    expect(screen.getByText("verifyDialog.status.pass")).not.toHaveClass(
+      "sr-only",
+    )
   })
 
   it.each([
@@ -100,6 +104,34 @@ describe("VerificationStatusBadge", () => {
 })
 
 describe("ProbeStatusBadge", () => {
+  it.each([
+    [
+      "verifyDialog.summaries.stopped",
+      "verifyDialog.status.stopped",
+      "unsupported",
+    ],
+    [
+      "verifyDialog.summaries.requestTimedOut",
+      "verifyDialog.status.timeout",
+      "fail",
+    ],
+  ] as const)(
+    "shows the specific result for %s",
+    (summaryKey, label, status) => {
+      render(
+        <ProbeStatusBadge
+          result={{
+            id: "text-generation",
+            status,
+            latencyMs: 0,
+            summary: "diagnostic",
+            summaryKey,
+          }}
+        />,
+      )
+      expect(screen.getByText(label)).toBeVisible()
+    },
+  )
   it.each(["streaming", "non-streaming"] as const)(
     "keeps the recorded %s mode inside the result badge",
     (mode) => {

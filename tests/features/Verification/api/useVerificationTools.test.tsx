@@ -82,6 +82,66 @@ const buildPelicanResult = () => ({
 })
 
 describe("useVerificationTools", () => {
+  it.each(["drawing", "capacity"])(
+    "runs drawing and capacity independently when %s starts first",
+    async (first) => {
+      let drawingSignal!: AbortSignal
+      let capacitySignal!: AbortSignal
+      mockRunPelicanTest.mockImplementation(({ abortSignal }) => {
+        drawingSignal = abortSignal
+        return new Promise((_resolve, reject) => {
+          abortSignal.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          )
+        })
+      })
+      const capacityRunner = vi.fn(({ abortSignal }) => {
+        capacitySignal = abortSignal
+        return new Promise<never>(() => {})
+      })
+      const { result, unmount } = renderHook(() =>
+        useVerificationTools({
+          resolveRequest: async () => buildRequest(),
+          isSupported: true,
+          isBlocked: false,
+          enableContextCapacity: true,
+          runContextCapacityRequest: capacityRunner,
+        }),
+      )
+      act(() => {
+        if (first === "drawing") result.current.runPelican()
+        else result.current.contextCapacity!.run()
+      })
+      expect(
+        first === "drawing"
+          ? result.current.contextCapacity!.canRun
+          : result.current.canRunPelican,
+      ).toBe(true)
+      act(() => {
+        if (first === "drawing") result.current.contextCapacity!.run()
+        else result.current.runPelican()
+      })
+      await waitFor(() => expect(capacityRunner).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(mockRunPelicanTest).toHaveBeenCalledTimes(1))
+      expect(result.current.isPelicanRunning).toBe(true)
+      expect(result.current.contextCapacity!.running).toBe(true)
+      // Repeated starts must not replace either in-flight request.
+      act(() => {
+        result.current.runPelican()
+        result.current.contextCapacity!.run()
+      })
+      expect(mockRunPelicanTest).toHaveBeenCalledTimes(1)
+      expect(capacityRunner).toHaveBeenCalledTimes(1)
+      expect(drawingSignal.aborted).toBe(false)
+      act(() => result.current.stopPelican())
+      await waitFor(() => expect(result.current.isPelicanRunning).toBe(false))
+      expect(capacitySignal.aborted).toBe(false)
+      expect(result.current.isRunning).toBe(true)
+      unmount()
+      expect(capacitySignal.aborted).toBe(true)
+    },
+  )
+
   it("persists a no-artifact outcome when a completed drawing has no SVG", async () => {
     mockRunPelicanTest.mockResolvedValue({ ...buildPelicanResult(), svg: null })
     const { result } = renderHook(() =>

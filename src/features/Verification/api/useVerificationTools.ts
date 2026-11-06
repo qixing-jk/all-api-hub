@@ -14,6 +14,7 @@ import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
+import type { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
 import {
   runPelicanTest,
   type PelicanExecutionMode,
@@ -26,8 +27,13 @@ import {
   type ApiVerificationHistoryTarget,
   type DrawingVerificationSummary,
 } from "~/services/verification/verificationResultHistory"
+import type { ContextCapacityHistoryAccess } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import { API_VERIFICATION_HISTORY_TARGET_KINDS } from "~/services/verification/verificationResultHistory/types"
 
+import {
+  useContextCapacity,
+  type ContextCapacityController,
+} from "./useContextCapacity"
 import { useVerificationPrompts } from "./useVerificationPrompts"
 
 export const VERIFICATION_TOOL_STATUSES = {
@@ -56,7 +62,8 @@ export type VerificationToolRequestParams = {
 }
 
 export type VerificationToolsController = {
-  /** A drawing test is in flight. */
+  contextCapacity?: ContextCapacityController
+  /** At least one shared verification tool is in flight. */
   isRunning: boolean
   canRunPelican: boolean
   isPelicanRunning: boolean
@@ -81,6 +88,10 @@ export type PelicanRunner = (
 ) => Promise<PelicanTestResult>
 
 export type UseVerificationToolsOptions = {
+  contextHistoryAccess?: ContextCapacityHistoryAccess
+  runContextCapacityRequest?: typeof runContextCapacity
+  enableContextCapacity?: boolean
+  contextCapacityKey?: string
   historyTarget?: ApiVerificationHistoryTarget | null
   historyApiType?: ApiVerificationApiType
 
@@ -90,7 +101,7 @@ export type UseVerificationToolsOptions = {
   ) => Promise<VerificationToolRequestParams | null>
   /** Only text models support the drawing test. */
   isSupported: boolean
-  /** Another run already owns the dialog. */
+  /** Required configuration is unavailable; unrelated tests do not block runs. */
   isBlocked: boolean
   /** Pelican prompt override; blank falls back to the built-in prompt. */
   pelicanPrompt?: string
@@ -141,6 +152,10 @@ export function useVerificationTools({
   isBlocked,
   pelicanPrompt,
   runPelicanRequest = runPelicanTest,
+  enableContextCapacity = false,
+  contextCapacityKey = "",
+  runContextCapacityRequest,
+  contextHistoryAccess,
 }: UseVerificationToolsOptions): VerificationToolsController {
   const [pelicanSummary, setPelicanSummary] =
     useState<DrawingVerificationSummary | null>(null)
@@ -205,7 +220,16 @@ export function useVerificationTools({
   )
 
   const isPelicanRunning = pelicanStatus === VERIFICATION_TOOL_STATUSES.Running
-  const canRun = isSupported && !isBlocked
+  const contextCapacity = useContextCapacity({
+    enabled: enableContextCapacity && isSupported,
+    blocked: isBlocked,
+    contextKey: `${historyKey}:${historyApiType}:${contextCapacityKey}`,
+    resolveRequest,
+    runner: runContextCapacityRequest,
+    historyAccess: contextHistoryAccess,
+    historyTarget,
+  })
+  const canRun = isSupported && !isBlocked && !isPelicanRunning
 
   const setPelicanExecutionMode = useCallback((mode: PelicanExecutionMode) => {
     if (pelicanControllerRef.current) return
@@ -216,10 +240,9 @@ export function useVerificationTools({
   }, [])
 
   const runPelican = useCallback(() => {
-    if (!canRun) return
+    if (!canRun || pelicanControllerRef.current) return
     runVersionRef.current += 1
 
-    pelicanControllerRef.current?.abort()
     const controller = new AbortController()
     pelicanControllerRef.current = controller
 
@@ -336,7 +359,8 @@ export function useVerificationTools({
         setPelicanErrorMessage(null)
         setPelicanStatus(VERIFICATION_TOOL_STATUSES.Idle)
       },
-      isRunning: isPelicanRunning,
+      isRunning: isPelicanRunning || contextCapacity.running,
+      contextCapacity,
       canRunPelican: canRun,
       isPelicanRunning,
       pelicanStatus,
@@ -361,6 +385,7 @@ export function useVerificationTools({
       runPelican,
       stopPelican,
       prompts,
+      contextCapacity,
     ],
   )
 }

@@ -6,11 +6,19 @@ import type {
   ApiVerificationProbeResult,
   ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification"
+import type { ContextCapacityResult } from "~/services/verification/modelQuality/contextCapacity"
+import type {
+  ContextCapacityRunResult,
+  RunContextCapacityParams,
+} from "~/services/verification/modelQuality/contextCapacityRun"
 import type {
   PelicanExecutionMode,
   PelicanTestResult,
 } from "~/services/verification/modelQuality/pelican"
+import type { ContextHistoryRequest } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
+import type { ContextCapacitySummary } from "~/services/verification/verificationResultHistory/types"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
+import { type CONTEXT_HISTORY_ACTIONS } from "~/services/verification/webAiApiCheck/constants"
 import type { Tag } from "~/types"
 
 /**
@@ -255,3 +263,27 @@ export type ApiCheckSaveProfileResponse =
       error?: string
       errorCategory?: ProductAnalyticsErrorCategory
     }
+
+export type ApiCheckRunContextCapacityRequest = Omit<
+  RunContextCapacityParams,
+  "abortSignal" | "onProgress" | "requestHeaders"
+> & { runId: string }
+export type ApiCheckRunContextCapacityResponse =
+  | { success: true; result: ContextCapacityRunResult }
+  | { success: false; error?: string }
+export type ApiCheckContextCapacityProgress = {
+  runId: string
+  result: ContextCapacityResult
+}
+
+export type ApiCheckContextHistoryRequest = {
+  request: ContextHistoryRequest
+  action: (typeof CONTEXT_HISTORY_ACTIONS)[keyof typeof CONTEXT_HISTORY_ACTIONS]
+  result?: ContextCapacityRunResult | null
+}
+export type ApiCheckContextHistoryResponse =
+  | {
+      success: true
+      summary: ContextCapacitySummary | null
+    }
+  | { success: false }

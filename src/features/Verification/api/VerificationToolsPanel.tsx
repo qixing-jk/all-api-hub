@@ -25,6 +25,8 @@ import {
 import { PELICAN_PROMPT_ID } from "~/services/verification/promptOverrides"
 import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
+import { ContextCapacityPanel } from "./ContextCapacityPanel"
+
 /** Inline preview of a model-drawn SVG, rendered as an image so scripts never run. */
 function PelicanSvgPreview({ svg }: { svg: string }) {
   const { t } = useTranslation("aiApiVerification")
@@ -80,12 +82,22 @@ export function VerificationToolsPanel({
     () => (pelican ? { summary: pelican.text } : null),
     [pelican],
   )
-  const outcome = pelican
-    ? pelican.svg
-      ? DRAWING_VERIFICATION_OUTCOMES.Generated
-      : DRAWING_VERIFICATION_OUTCOMES.NoArtifact
-    : pelicanSummary?.outcome
-  const latencyMs = pelican?.latencyMs ?? pelicanSummary?.latencyMs
+  const transient =
+    isPelicanRunning || pelicanStatus === VERIFICATION_TOOL_STATUSES.Stopped
+  const outcome =
+    pelicanStatus === VERIFICATION_TOOL_STATUSES.Error
+      ? DRAWING_VERIFICATION_OUTCOMES.Error
+      : transient
+        ? undefined
+        : pelican
+          ? pelican.svg
+            ? DRAWING_VERIFICATION_OUTCOMES.Generated
+            : DRAWING_VERIFICATION_OUTCOMES.NoArtifact
+          : pelicanSummary?.outcome
+  const latencyMs =
+    transient || pelicanStatus === VERIFICATION_TOOL_STATUSES.Error
+      ? undefined
+      : pelican?.latencyMs ?? pelicanSummary?.latencyMs
 
   return (
     <section
@@ -120,15 +132,20 @@ export function VerificationToolsPanel({
                       }
                       size="sm"
                     >
-                      {outcome === DRAWING_VERIFICATION_OUTCOMES.Generated
-                        ? t("verifyDialog.tools.pelican.outcomes.generated")
-                        : outcome === DRAWING_VERIFICATION_OUTCOMES.Error
-                          ? t("verifyDialog.tools.pelican.outcomes.error")
-                          : outcome === DRAWING_VERIFICATION_OUTCOMES.NoArtifact
-                            ? t(
-                                "verifyDialog.tools.pelican.outcomes.no-artifact",
-                              )
-                            : t("verifyDialog.tools.manualBadge")}
+                      {isPelicanRunning
+                        ? t("verifyDialog.actions.running")
+                        : pelicanStatus === VERIFICATION_TOOL_STATUSES.Stopped
+                          ? t("verifyDialog.status.stopped")
+                          : outcome === DRAWING_VERIFICATION_OUTCOMES.Generated
+                            ? t("verifyDialog.tools.pelican.outcomes.generated")
+                            : outcome === DRAWING_VERIFICATION_OUTCOMES.Error
+                              ? t("verifyDialog.tools.pelican.outcomes.error")
+                              : outcome ===
+                                  DRAWING_VERIFICATION_OUTCOMES.NoArtifact
+                                ? t(
+                                    "verifyDialog.tools.pelican.outcomes.no-artifact",
+                                  )
+                                : t("verifyDialog.tools.manualBadge")}
                       {latencyMs != null && latencyMs > 0 ? (
                         <>
                           <span aria-hidden="true">·</span>
@@ -269,6 +286,9 @@ export function VerificationToolsPanel({
           ) : null}
         </VerificationProbeDetails>
       </div>
+      {controller.contextCapacity ? (
+        <ContextCapacityPanel controller={controller.contextCapacity} />
+      ) : null}
     </section>
   )
 }

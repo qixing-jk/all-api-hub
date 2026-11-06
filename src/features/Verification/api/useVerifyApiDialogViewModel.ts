@@ -276,6 +276,19 @@ export function useVerifyApiDialogViewModel({
   )
 
   const tools = useVerificationTools({
+    enableContextCapacity: isOpen,
+    contextCapacityKey: JSON.stringify([
+      isOpen,
+      selectedRuntimeKeyId,
+      account.baseUrl,
+      account.token,
+      account.cookieAuthSessionCookie,
+      requestedModelId,
+      apiType,
+      verificationMode,
+      requestProfile,
+      requestProfileEnhanced,
+    ]),
     historyTarget:
       requestedModelId.trim() ||
       selectedRuntimeKey?.modelAccess.suggestedModelIds[0]?.trim()
@@ -289,7 +302,7 @@ export function useVerifyApiDialogViewModel({
     historyApiType: apiType,
     resolveRequest: resolveToolRequest,
     isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
-    isBlocked: isRunning || isAnyProbeRunning,
+    isBlocked: isLoadingRuntimeKeys || !selectedRuntimeKeyIsCompatible,
   })
 
   const canClose = !isRunning && !isAnyProbeRunning && !tools.isRunning

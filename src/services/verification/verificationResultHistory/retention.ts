@@ -7,8 +7,8 @@ import { serializeVerificationHistoryTarget } from "./utils"
 
 type OwnedVerificationSummary = Pick<
   ApiVerificationHistorySummary,
-  "target" | "targetKey" | "verifiedAt"
->
+  "targetKey" | "verifiedAt"
+> & { target?: ApiVerificationHistoryTarget }
 
 /**
  * How long a persisted verification result stays meaningful.
@@ -52,9 +52,10 @@ export type VerificationOwnerReconcile = {
  * happens to match a profile id, so ownership follows the target kind.
  */
 function isLiveOwner(
-  target: ApiVerificationHistoryTarget,
+  target: ApiVerificationHistoryTarget | undefined,
   source: VerificationRetentionSource,
 ): boolean {
+  if (!target) return true
   if (target.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel) {
     return (
       source.liveAccountIds === undefined ||
@@ -96,9 +97,10 @@ export function applyVerificationRetention<T extends OwnedVerificationSummary>(
 
 /** Returns whether a target belongs to an owner the caller removed. */
 function isRemovedOwner(
-  target: ApiVerificationHistoryTarget,
+  target: ApiVerificationHistoryTarget | undefined,
   reconcile: VerificationOwnerReconcile,
 ): boolean {
+  if (!target) return false
   if (target.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel) {
     return reconcile.removeAccountIds?.has(target.accountId) ?? false
   }
@@ -116,6 +118,7 @@ function remapProfileOwner<T extends OwnedVerificationSummary>(
 ): T {
   if (
     !remapProfileIds ||
+    !summary.target ||
     summary.target.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel
   ) {
     return summary

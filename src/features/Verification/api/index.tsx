@@ -268,7 +268,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                   onChange={(value) =>
                     setApiType(value as ApiVerificationApiType)
                   }
-                  disabled={isRunning}
+                  disabled={isRunning || tools.isRunning}
                   placeholder={t("verifyDialog.meta.apiTypePlaceholder")}
                 />
               </div>
@@ -283,7 +283,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                   value={modelId}
                   onChange={(e) => setModelId(e.target.value)}
                   placeholder={t("verifyDialog.meta.modelPlaceholder")}
-                  disabled={isRunning}
+                  disabled={isRunning || tools.isRunning}
                 />
               </div>
 

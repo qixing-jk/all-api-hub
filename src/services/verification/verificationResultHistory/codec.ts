@@ -11,6 +11,7 @@ import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
+import { CONTEXT_CAPACITY_REASONS } from "~/services/verification/modelQuality/contextCapacityConstants"
 import {
   API_VERIFICATION_HISTORY_STATUSES,
   API_VERIFICATION_HISTORY_TARGET_KINDS,
@@ -18,6 +19,7 @@ import {
   type ApiVerificationHistoryConfig,
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
+  type ContextCapacitySummary,
   type DrawingVerificationSummary,
   type PersistedApiVerificationProbeSummary,
 } from "~/services/verification/verificationResultHistory/types"
@@ -326,6 +328,13 @@ export function sanitizeConfig(
     ...(value.drawingSummaries
       ? { drawingSummaries: coerceDrawings(value.drawingSummaries) }
       : {}),
+    ...(Array.isArray(value.contextSummaries)
+      ? {
+          contextSummaries: value.contextSummaries
+            .map(coerceContextSummary)
+            .filter((item): item is ContextCapacitySummary => item !== null),
+        }
+      : {}),
     lastUpdated: normalizeTimestamp(value.lastUpdated),
     lastOrphanSweepAt: coercePositiveTimestamp(value.lastOrphanSweepAt),
   }
@@ -367,7 +376,71 @@ export function coerceTrustedConfig(
             value.drawingSummaries as DrawingVerificationSummary[],
         }
       : {}),
+    ...(value.contextSummaries
+      ? { contextSummaries: value.contextSummaries as ContextCapacitySummary[] }
+      : {}),
     lastUpdated: value.lastUpdated,
     lastOrphanSweepAt: coercePositiveTimestamp(value.lastOrphanSweepAt),
+  }
+}
+
+/** Keep only typed capacity facts; discard raw request and response material. */
+export function coerceContextSummary(
+  raw: unknown,
+): ContextCapacitySummary | null {
+  if (!raw || typeof raw !== "object") return null
+  const value = raw as Record<string, unknown>
+  const target =
+    value.target === undefined ? undefined : coerceTarget(value.target)
+  const scopeKey =
+    typeof value.scopeKey === "string" && /^[a-f0-9]{64}$/.test(value.scopeKey)
+      ? value.scopeKey
+      : null
+  const count = (input: unknown): input is number =>
+    typeof input === "number" && Number.isSafeInteger(input) && input >= 0
+  if (
+    (value.target !== undefined && !target) ||
+    !scopeKey ||
+    !isApiVerificationApiType(value.apiType) ||
+    !Object.values(CONTEXT_CAPACITY_REASONS).some(
+      (reason) => reason === String(value.reason),
+    ) ||
+    !count(value.lowerBoundTokens) ||
+    !count(value.requests) ||
+    (value.upperBoundTokens !== undefined && !count(value.upperBoundTokens))
+  )
+    return null
+  return {
+    ...(target ? { target } : {}),
+    targetKey: target
+      ? serializeVerificationHistoryTarget(target)
+      : `connection:${scopeKey}`,
+    scopeKey,
+    ...(typeof value.lookupKey === "string" &&
+    /^[a-f0-9]{64}$/.test(value.lookupKey)
+      ? { lookupKey: value.lookupKey }
+      : {}),
+    verifiedAt: normalizeTimestamp(value.verifiedAt),
+    apiType: value.apiType,
+    modelId: sanitizeText(value.modelId),
+    lowerBoundTokens: value.lowerBoundTokens,
+    ...(count(value.declaredContext) && value.declaredContext > 0
+      ? { declaredContext: value.declaredContext }
+      : {}),
+    ...(value.upperBoundTokens !== undefined
+      ? { upperBoundTokens: value.upperBoundTokens }
+      : {}),
+    reason: value.reason as ContextCapacitySummary["reason"],
+    requests: value.requests,
+    outputLimited: value.outputLimited === true,
+    ...(typeof value.latencyMs === "number" &&
+    Number.isFinite(value.latencyMs) &&
+    value.latencyMs >= 0
+      ? { latencyMs: value.latencyMs }
+      : {}),
+    ...(value.mode === API_VERIFICATION_MODES.Streaming ||
+    value.mode === API_VERIFICATION_MODES.NonStreaming
+      ? { mode: value.mode }
+      : {}),
   }
 }

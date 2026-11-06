@@ -92,6 +92,36 @@ const renderPanel = (controller: VerificationToolsController) =>
   )
 
 describe("VerificationToolsPanel", () => {
+  it.each([
+    [VERIFICATION_TOOL_STATUSES.Running, "verifyDialog.actions.running"],
+    [VERIFICATION_TOOL_STATUSES.Stopped, "verifyDialog.status.stopped"],
+    [
+      VERIFICATION_TOOL_STATUSES.Error,
+      "verifyDialog.tools.pelican.outcomes.error",
+    ],
+  ] as const)(
+    "shows the current drawing state %s instead of a prior outcome",
+    (pelicanStatus, key) => {
+      renderPanel(
+        buildController({
+          pelicanStatus,
+          isPelicanRunning:
+            pelicanStatus === VERIFICATION_TOOL_STATUSES.Running,
+          pelican: buildPelican(),
+        }),
+      )
+      expect(
+        screen
+          .getByText(`aiApiVerification:${key}`)
+          .closest('[data-slot="badge"]'),
+      ).toBeVisible()
+      expect(
+        screen.queryByText(
+          "aiApiVerification:verifyDialog.tools.pelican.outcomes.generated",
+        ),
+      ).not.toBeInTheDocument()
+    },
+  )
   it("shows the drawing outcome and elapsed time even before history is available", () => {
     renderPanel(buildController({ pelican: buildPelican() }))
     const latency = screen.getByText("100ms")

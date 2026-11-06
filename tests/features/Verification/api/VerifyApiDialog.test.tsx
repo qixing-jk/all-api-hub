@@ -2165,7 +2165,7 @@ describe("VerifyApiDialog", () => {
     )
   })
 
-  it("runs the drawing test for a text model and blocks closing while it runs", async () => {
+  it("runs probes alongside drawing and blocks closing until both finish", async () => {
     const account = buildDisplaySiteData({ id: "quality-run" })
     const key = buildServiceCredentialRuntimeKey(account, {
       kind: "singleton_service_key",
@@ -2208,6 +2208,29 @@ describe("VerifyApiDialog", () => {
     await waitFor(() => expect(result.current.tools.isRunning).toBe(true))
     expect(result.current.canClose).toBe(false)
 
+    const probe = createDeferred<any>()
+    mockRunApiVerificationProbe.mockReturnValue(probe.promise)
+    expect(result.current.canRunAll).toBe(true)
+    act(() => {
+      void result.current.runSingleProbe("text-generation")
+    })
+    await waitFor(() => expect(mockRunApiVerificationProbe).toHaveBeenCalled())
+    await act(async () => {
+      probe.resolve({
+        id: "text-generation",
+        status: "pass",
+        summary: "Concurrent",
+        latencyMs: 1,
+      })
+    })
+    await waitFor(() =>
+      expect(
+        result.current.probes.find((p) => p.definition.id === "text-generation")
+          ?.result?.summary,
+      ).toBe("Concurrent"),
+    )
+    expect(result.current.tools.isRunning).toBe(true)
+
     await act(async () => {
       finishPelican({
         runAt: 0,
@@ -2238,6 +2261,50 @@ describe("VerifyApiDialog", () => {
 
     await waitFor(() => expect(result.current.tools.isRunning).toBe(false))
     expect(result.current.canClose).toBe(true)
+  })
+
+  it("keeps other test buttons available during an account probe", async () => {
+    const user = userEvent.setup()
+    const account = buildDisplaySiteData({ id: "concurrent-buttons" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+    mockRunApiVerificationProbe.mockReturnValue(new Promise(() => {}))
+    mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        account={account}
+        initialModelId="gpt-4o"
+      />,
+    )
+    const text = within(
+      await screen.findByTestId("verify-probe-text-generation"),
+    )
+    const runText = text.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(runText).toBeEnabled())
+    await user.click(runText)
+    const drawing = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.tools.pelican.run",
+    })
+    expect(drawing).toBeEnabled()
+    await user.click(drawing)
+    expect(
+      within(screen.getByTestId("verify-probe-models")).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    ).toBeEnabled()
+    expect(text.getByRole("button", { name: /stopProbe/ })).toBeEnabled()
   })
 
   it("does not offer the drawing test for non-text models", async () => {

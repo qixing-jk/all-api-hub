@@ -27,11 +27,13 @@ export function VerificationProbeDetails({
   action,
   children,
   detailsContent,
+  defaultDetailsOpen = true,
 }: {
   heading?: ReactNode
   action?: ReactNode
   children?: ReactNode
   detailsContent?: ReactNode
+  defaultDetailsOpen?: boolean
   controller?: VerificationToolsController
   probeId?: ApiVerificationProbeId
   result?: ProbeDetailsResult | null
@@ -45,10 +47,10 @@ export function VerificationProbeDetails({
           result.output !== undefined ||
           result.media)),
   )
-  const [showResult, setShowResult] = useState(hasDetails)
+  const [showResult, setShowResult] = useState(hasDetails && defaultDetailsOpen)
   useEffect(() => {
-    if (hasDetails) setShowResult(true)
-  }, [result, hasDetails])
+    if (hasDetails && defaultDetailsOpen) setShowResult(true)
+  }, [result, hasDetails, defaultDetailsOpen])
   const hasPrompt =
     controller && probeId && controller.promptIds.includes(probeId)
   if (!heading && !action && !hasPrompt && !hasDetails) return null

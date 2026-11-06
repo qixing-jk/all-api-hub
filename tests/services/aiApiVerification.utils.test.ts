@@ -41,6 +41,33 @@ vi.mock(
 )
 
 describe("aiApiVerification utils", () => {
+  it.each([
+    {
+      error: new DOMException("signal timed out", "TimeoutError"),
+      timeout: true,
+    },
+    { error: { cause: { code: "ETIMEDOUT" } }, timeout: true },
+    { error: { statusCode: 408 }, timeout: true },
+    { error: { statusCode: 504 }, timeout: true },
+    { error: new DOMException("Stopped", "AbortError"), timeout: false },
+    { error: new Error("timeout is not supported"), timeout: false },
+  ])(
+    "uses structured timeout evidence for readable failures: $error",
+    async ({ error, timeout }) => {
+      const { buildSafeProbeFailureDiagnostics } = await import(
+        "~/services/verification/aiApiVerification/utils"
+      )
+      const diagnostic = buildSafeProbeFailureDiagnostics(
+        error,
+        "safe diagnostic",
+      )
+      if (timeout)
+        expect(diagnostic.summaryKey).toBe(
+          "verifyDialog.summaries.requestTimedOut",
+        )
+      else expect(diagnostic.summaryKey).toBeUndefined()
+    },
+  )
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()

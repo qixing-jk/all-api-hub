@@ -25,6 +25,7 @@ describe("aiApiVerification i18n", () => {
     "verifyDialog.summaries.unauthorized",
     "verifyDialog.summaries.forbidden",
     "verifyDialog.summaries.endpointNotFound",
+    "verifyDialog.summaries.requestTimedOut",
   ])(
     "retains HTTP diagnostics and falls back to localized copy for %s",
     (key) => {
