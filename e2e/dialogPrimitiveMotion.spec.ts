@@ -68,7 +68,15 @@ async function armMotionCapture(page: Page, phase: "open" | "closed") {
       })
       if (samples.length === 2) {
         document.removeEventListener("animationstart", listener, true)
-        animations.forEach((item) => item.play())
+        animations.forEach((item) => {
+          item.play()
+          // Older Chrome retains script-controlled, filled entrance animations
+          // over the next CSS fade. Release each sampled effect after playback.
+          void item.finished.then(
+            () => item.cancel(),
+            () => {},
+          )
+        })
         targetWindow.__dialogMotionSamples = samples
       }
     }

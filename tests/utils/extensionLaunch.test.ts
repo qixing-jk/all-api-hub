@@ -1,4 +1,5 @@
 import path from "node:path"
+import { errors } from "@playwright/test"
 import { describe, expect, it, vi } from "vitest"
 
 import {
@@ -67,7 +68,7 @@ describe("launchExtensionContextWithStartupRetry", () => {
     expect(onRetry).not.toHaveBeenCalled()
   })
 
-  it("does not retry browser launch failures", async () => {
+  it("does not retry non-timeout browser launch failures", async () => {
     const launchError = new Error("browser executable is unavailable")
     const launch = vi.fn().mockRejectedValue(launchError)
     const waitForReady = vi.fn()
@@ -78,6 +79,78 @@ describe("launchExtensionContextWithStartupRetry", () => {
 
     expect(launch).toHaveBeenCalledOnce()
     expect(waitForReady).not.toHaveBeenCalled()
+  })
+
+  it("recovers a timed-out browser launch before checking worker readiness", async () => {
+    const launchError = new errors.TimeoutError("browser launch timed out")
+    const context = { close: vi.fn().mockResolvedValue(undefined) }
+    const launch = vi
+      .fn()
+      .mockRejectedValueOnce(launchError)
+      .mockResolvedValueOnce(context)
+    const waitForReady = vi.fn().mockResolvedValue(undefined)
+    const onRetry = vi.fn()
+
+    await expect(
+      launchExtensionContextWithStartupRetry({ launch, waitForReady, onRetry }),
+    ).resolves.toBe(context)
+    expect(launch).toHaveBeenNthCalledWith(2, 2)
+    expect(waitForReady).toHaveBeenCalledExactlyOnceWith(context, 2)
+    expect(onRetry).toHaveBeenCalledExactlyOnceWith(launchError, 1)
+    expect(context.close).not.toHaveBeenCalled()
+  })
+
+  it("preserves the second launch timeout without a third attempt", async () => {
+    const finalError = new errors.TimeoutError("second launch timed out")
+    const launch = vi
+      .fn()
+      .mockRejectedValueOnce(new errors.TimeoutError("first launch timed out"))
+      .mockRejectedValueOnce(finalError)
+    const waitForReady = vi.fn()
+    const onRetry = vi.fn()
+
+    await expect(
+      launchExtensionContextWithStartupRetry({ launch, waitForReady, onRetry }),
+    ).rejects.toBe(finalError)
+    expect(launch).toHaveBeenCalledTimes(2)
+    expect(waitForReady).not.toHaveBeenCalled()
+    expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it("does not retry a timed-out launch when attempts reuse the profile", async () => {
+    const launchError = new errors.TimeoutError("launch timed out")
+    const launch = vi.fn().mockRejectedValue(launchError)
+    const onRetry = vi.fn()
+
+    await expect(
+      launchExtensionContextWithStartupRetry({
+        launch,
+        waitForReady: async () => {},
+        retryLaunchTimeouts: false,
+        onRetry,
+      }),
+    ).rejects.toBe(launchError)
+    expect(launch).toHaveBeenCalledOnce()
+    expect(onRetry).not.toHaveBeenCalled()
+  })
+
+  it("shares the retry limit between launch and readiness failures", async () => {
+    const context = { close: vi.fn().mockResolvedValue(undefined) }
+    const launchError = new errors.TimeoutError("second launch timed out")
+    const launch = vi
+      .fn()
+      .mockResolvedValueOnce(context)
+      .mockRejectedValueOnce(launchError)
+    const waitForReady = vi
+      .fn()
+      .mockRejectedValue(new Error("worker not ready"))
+
+    await expect(
+      launchExtensionContextWithStartupRetry({ launch, waitForReady }),
+    ).rejects.toBe(launchError)
+    expect(context.close).toHaveBeenCalledOnce()
+    expect(launch).toHaveBeenCalledTimes(2)
+    expect(waitForReady).toHaveBeenCalledOnce()
   })
 
   it("closes a context whose worker startup failed and retries once", async () => {
@@ -98,6 +171,7 @@ describe("launchExtensionContextWithStartupRetry", () => {
         launch,
         onRetry,
         waitForReady,
+        retryLaunchTimeouts: false,
       }),
     ).resolves.toBe(secondContext)
 
@@ -131,6 +205,35 @@ describe("launchExtensionContextWithStartupRetry", () => {
     expect(atIndex(contexts, 0).close).toHaveBeenCalledOnce()
     expect(atIndex(contexts, 1).close).toHaveBeenCalledOnce()
     expect(launch).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports readiness failures before cleanup on both attempts", async () => {
+    const startupError = new Error("worker startup timed out")
+    const onReadinessFailure = vi.fn()
+    const context = {
+      close: vi.fn(async () => {
+        // Cleanup can outlive the test timeout, so diagnostics must already be
+        // available even if this close never returns.
+        expect(onReadinessFailure).toHaveBeenCalledTimes(
+          context.close.mock.calls.length,
+        )
+        expect(onReadinessFailure).toHaveBeenLastCalledWith(
+          startupError,
+          context.close.mock.calls.length,
+        )
+      }),
+    }
+
+    await expect(
+      launchExtensionContextWithStartupRetry({
+        launch: async () => context,
+        waitForReady: async () => {
+          throw startupError
+        },
+        onReadinessFailure,
+      }),
+    ).rejects.toBe(startupError)
+    expect(context.close).toHaveBeenCalledTimes(2)
   })
 
   it("does not retry when the failed context cannot be closed", async () => {

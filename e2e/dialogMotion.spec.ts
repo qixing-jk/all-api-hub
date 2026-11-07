@@ -40,7 +40,15 @@ async function sampleFade(page: Page, phase: "open" | "closed") {
         const cleanup = () => {
           clearTimeout(timeout)
           document.removeEventListener("animationstart", capture, true)
-          animations.forEach((animation) => animation.play())
+          animations.forEach((animation) => {
+            animation.play()
+            // Release sampled effects after playback: older Chrome otherwise
+            // keeps the filled entrance animation above the subsequent exit.
+            void animation.finished.then(
+              () => animation.cancel(),
+              () => {},
+            )
+          })
         }
         const capture = (event: AnimationEvent) => {
           const element = event.target

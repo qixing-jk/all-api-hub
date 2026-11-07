@@ -242,7 +242,12 @@ test("introduces options modules without navigating or performing actions", asyn
   await expect(navigationTarget).not.toBeInViewport()
 
   await compactTooltip.getByRole("button", { name: "Next" }).click()
-  await compactTooltip.getByRole("button", { name: "Next" }).click()
+  // The previous step also has a Next button while the sidebar is opening.
+  // Advance only after the navigation step owns the tooltip.
+  await page
+    .getByRole("alertdialog", { name: "Multi-site management in one place" })
+    .getByRole("button", { name: "Next" })
+    .click()
   await expect(
     compactTooltip.getByRole("heading", {
       name: "Finish each task in one place",

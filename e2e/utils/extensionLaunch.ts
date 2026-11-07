@@ -1,5 +1,5 @@
 import path from "node:path"
-import type { BrowserContextOptions } from "@playwright/test"
+import { errors, type BrowserContextOptions } from "@playwright/test"
 
 type ExtensionLaunchOptions = {
   extensionDir: string
@@ -29,29 +29,51 @@ type ExtensionContextStartupRetryOptions<
 > = {
   launch: (attempt: number) => Promise<TContext>
   waitForReady: (context: TContext, attempt: number) => Promise<void>
+  /** Disable when launch attempts reuse a profile whose process is unobservable. */
+  retryLaunchTimeouts?: boolean
+  onReadinessFailure?: (error: unknown, attempt: number) => void
   onRetry?: (error: unknown, attempt: number) => void
 }
 
 /**
- * Launch an extension context and retry once when only service-worker startup
- * readiness fails. Browser launch errors still fail immediately.
+ * Retry once after a browser launch timeout or failed service-worker readiness.
+ * Other launch errors fail immediately. Playwright starts cleanup of a timed-out
+ * launch asynchronously; callers reusing its profile must disable launch retries.
+ * Returned contexts are closed here before retrying readiness failures.
  */
 export async function launchExtensionContextWithStartupRetry<
   TContext extends { close(): Promise<void> },
 >({
   launch,
+  onReadinessFailure,
   onRetry,
   waitForReady,
+  retryLaunchTimeouts = true,
 }: ExtensionContextStartupRetryOptions<TContext>): Promise<TContext> {
   const maxAttempts = 2
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const context = await launch(attempt)
+    let context: TContext
+    try {
+      context = await launch(attempt)
+    } catch (launchError) {
+      if (
+        !retryLaunchTimeouts ||
+        !(launchError instanceof errors.TimeoutError) ||
+        attempt === maxAttempts
+      ) {
+        throw launchError
+      }
+      onRetry?.(launchError, attempt)
+      continue
+    }
 
     try {
       await waitForReady(context, attempt)
       return context
     } catch (startupError) {
+      // Report before cleanup, which can outlive the enclosing test timeout.
+      onReadinessFailure?.(startupError, attempt)
       try {
         await context.close()
       } catch (closeError) {
