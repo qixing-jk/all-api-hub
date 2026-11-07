@@ -70,7 +70,7 @@ describe("Shared saved Cookie validation", () => {
 
   it.each([
     { cookieAuth: undefined, reason: "missing_cookie" },
-    { cookieAuth: {}, reason: "missing_cookie" },
+    { cookieAuth: { sessionCookie: "" }, reason: "missing_cookie" },
     {
       cookieAuth: account.cookieAuth,
       account_info: {},
