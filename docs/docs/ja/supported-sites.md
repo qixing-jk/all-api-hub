@@ -55,6 +55,7 @@
 | Novita AI | 開発者とエージェント向けの AI モデル API クラウド。OpenAI/Anthropic 互換エンドポイントとキー管理を提供します。 | [公式サイト](https://novita.ai/) / [ドキュメント](https://docs.novita.ai/) |
 | AI/ML API | 統合モデル API、アカウントコンソール、キー管理を提供する独立系 AI モデル集約ゲートウェイ。 | [サイト](https://aimlapi.com/) / [ドキュメント](https://docs.aimlapi.com/) |
 | NanoGPT | 複数のプロバイダーのモデルを集約する独立系 AI モデルプラットフォーム。統一 API とアカウントコンソールを提供します。 | — |
+| Teapot Router | コーディングエージェント向けデュアルプロトコル API ゲートウェイ。1 つのキーで Anthropic プロトコル（Claude Code 直結）と OpenAI プロトコル（/v1）の両方に対応。従量課金・最低チャージ $1・残高無期限、公開の機械可読価格表、登録ボーナス付き。 | [公式](https://teapotrouter.com/) / [ドキュメント](https://teapotrouter.com/docs) |
 
 ## ❤️ 推奨スポンサーサイト
 

@@ -55,6 +55,7 @@
 | Novita AI | 面向开发者与 Agent 的 AI 模型 API 云平台，提供 OpenAI/Anthropic 兼容接口与密钥管理。 | [官网](https://novita.ai/) / [文档](https://docs.novita.ai/) |
 | AI/ML API | 独立 AI 模型聚合网关，提供统一模型接口、账号控制台与密钥管理。 | [官网](https://aimlapi.com/) / [文档](https://docs.aimlapi.com/) |
 | NanoGPT | 独立的 AI 模型聚合平台，聚合多家供应商的模型，提供统一 API 与账户控制台。 | — |
+| Teapot Router | 面向 coding agent 的双协议 API 网关：一个 Key 同时接入 Anthropic 协议（Claude Code 直连）与 OpenAI 协议（/v1）；按量计费、$1 起充、余额永不过期，价格表公开且机器可读；注册送体验额度。 | [官网](https://teapotrouter.com/) / [文档](https://teapotrouter.com/docs) |
 
 ## ❤️ 推荐赞助站点
 

@@ -55,6 +55,7 @@ AI model platforms and relay services with independent account systems, dedicate
 | Novita AI | AI model API cloud for developers and agents, with OpenAI/Anthropic-compatible endpoints and key management. | [Website](https://novita.ai/) / [Docs](https://docs.novita.ai/) |
 | AI/ML API | An independent AI model aggregation gateway with unified model APIs, an account console and key management. | [Site](https://aimlapi.com/) / [Docs](https://docs.aimlapi.com/) |
 | NanoGPT | Independent AI model aggregation platform offering a unified API across multiple provider models and its own account console. | — |
+| Teapot Router | Dual-protocol API gateway for coding agents: one key serves both the Anthropic protocol (Claude Code direct) and the OpenAI protocol (/v1); pay-as-you-go from $1, credit never expires, public machine-readable pricing, signup bonus credit. | [Website](https://teapotrouter.com/) / [Docs](https://teapotrouter.com/docs) |
 
 ## ❤️ Recommended Sponsored Sites
 
