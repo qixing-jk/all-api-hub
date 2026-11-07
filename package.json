@@ -164,6 +164,7 @@
     "echarts": "^6.0.0",
     "fast-uri": "4.1.4",
     "framer-motion": "^12.23.24",
+    "gpt-tokenizer": "^4.1.0",
     "i18next": "^25.6.0",
     "i18next-browser-languagedetector": "^8.2.0",
     "input-otp": "^1.4.2",

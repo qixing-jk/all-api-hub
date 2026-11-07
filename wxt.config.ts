@@ -222,6 +222,11 @@ export default defineConfig({
   vite: (env) => {
     console.log("当前构建模式:", env.mode)
     return {
+      // Vite's default HTML scan also finds nested diagnostic checkouts,
+      // which can introduce a second React runtime into the extension.
+      optimizeDeps: {
+        entries: ["src/entrypoints/**/*.html"],
+      },
       // Baked for every command so release bundles bake an explicit `null`
       // instead of leaking a local path or leaving the global undefined.
       define: {

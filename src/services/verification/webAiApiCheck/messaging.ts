@@ -7,6 +7,9 @@ import { createLogger } from "~/utils/core/logger"
 import type {
   ApiCheckCancelRunProbeRequest,
   ApiCheckCancelRunProbeResponse,
+  ApiCheckContextCapacityProgress,
+  ApiCheckContextHistoryRequest,
+  ApiCheckContextHistoryResponse,
   ApiCheckCreateTagRequest,
   ApiCheckCreateTagResponse,
   ApiCheckFetchModelsRequest,
@@ -21,6 +24,8 @@ import type {
   ApiCheckRemoveBaseUrlHistoryResponse,
   ApiCheckRenameTagRequest,
   ApiCheckRenameTagResponse,
+  ApiCheckRunContextCapacityRequest,
+  ApiCheckRunContextCapacityResponse,
   ApiCheckRunPelicanRequest,
   ApiCheckRunPelicanResponse,
   ApiCheckRunProbeRequest,
@@ -32,6 +37,10 @@ import type {
 } from "./types"
 
 export const WebAiApiCheckMessageTypes = {
+  ContextHistory: "webAiApiCheck:contextHistory",
+  DiscardContextCheckpoints: "webAiApiCheck:discardContextCheckpoints",
+  RunContextCapacity: "webAiApiCheck:runContextCapacity",
+  ContextCapacityProgress: "webAiApiCheck:contextCapacityProgress",
   ShouldPrompt: "webAiApiCheck:shouldPrompt",
   SetSiteAccess: "webAiApiCheck:setSiteAccess",
   FetchModels: "webAiApiCheck:fetchModels",
@@ -65,6 +74,18 @@ function createWebAiApiCheckMessagingLogger(): Logger {
 }
 
 interface WebAiApiCheckProtocolMap {
+  [WebAiApiCheckMessageTypes.DiscardContextCheckpoints](
+    data: Record<string, never>,
+  ): { success: true; discarded: number } | { success: false }
+  [WebAiApiCheckMessageTypes.ContextHistory](
+    data: ApiCheckContextHistoryRequest,
+  ): ApiCheckContextHistoryResponse
+  [WebAiApiCheckMessageTypes.RunContextCapacity](
+    data: ApiCheckRunContextCapacityRequest,
+  ): ApiCheckRunContextCapacityResponse
+  [WebAiApiCheckMessageTypes.ContextCapacityProgress](
+    data: ApiCheckContextCapacityProgress,
+  ): void
   [WebAiApiCheckMessageTypes.SetSiteAccess](data: {
     pageUrl: string
     enabled: boolean

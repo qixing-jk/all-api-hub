@@ -13,6 +13,27 @@ vi.mock("ai", async (importOriginal) => ({
 }))
 
 describe("runProbeGeneration", () => {
+  it("retains usage and completion reasons for capacity measurements", async () => {
+    const usage = { inputTokens: 1234, outputTokens: 2 }
+    mocks.generateText.mockResolvedValueOnce({
+      text: "OK",
+      usage,
+      finishReason: "stop",
+      rawFinishReason: "end_turn",
+    })
+    const { runProbeGeneration } = await import(
+      "~/services/verification/aiApiVerification/probes/probeGeneration"
+    )
+    const result = await runProbeGeneration(
+      { model: {} as never, prompt: "test" },
+      "non-streaming",
+    )
+    expect(result).toMatchObject({
+      usage,
+      finishReason: "stop",
+      rawFinishReason: "end_turn",
+    })
+  })
   beforeEach(() => {
     vi.resetAllMocks()
   })

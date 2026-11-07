@@ -310,7 +310,7 @@ describe("VerifyCliSupportDialog", () => {
     },
   )
 
-  it("sends the profile's custom request headers to the drawing test", async () => {
+  it("starts drawing alongside a CLI check with the profile's custom headers", async () => {
     mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(
       (nextProps) => useCliSupportVerification(nextProps),
@@ -327,6 +327,10 @@ describe("VerifyCliSupportDialog", () => {
       },
     )
 
+    mockRunCliSupportTool.mockReturnValue(new Promise(() => {}))
+    act(() => result.current.runSingleToolCheck("claude"))
+    await waitFor(() => expect(mockRunCliSupportTool).toHaveBeenCalled())
+    expect(result.current.sharedTools.canRunPelican).toBe(true)
     act(() => result.current.sharedTools.runPelican())
 
     await waitFor(() =>

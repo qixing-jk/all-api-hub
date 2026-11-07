@@ -13,7 +13,10 @@ type DrawingRequest = {
 }
 
 /** Deterministic inference fixture; tools still execute inside the real extension. */
-export function createDrawingServer() {
+export function createDrawingServer(options?: {
+  contextOutcome?: "timeout" | "empty"
+  beforeRespond?: (request: DrawingRequest) => Promise<void>
+}) {
   const prompts: string[] = []
   const requests: DrawingRequest[] = []
   const server = http.createServer(async (request, response) => {
@@ -26,12 +29,21 @@ export function createDrawingServer() {
     for await (const chunk of request) chunks.push(chunk as Buffer)
     const body = JSON.parse(Buffer.concat(chunks).toString()) as DrawingRequest
     requests.push(body)
+    await options?.beforeRespond?.(body)
     prompts.push(
       String(
         [...body.messages].reverse().find((message) => message.role === "user")
           ?.content ?? "",
       ),
     )
+    const contextTest = prompts
+      .at(-1)
+      ?.startsWith("Read the following reference text.")
+    if (contextTest && options?.contextOutcome === "timeout") {
+      response.writeHead(504, { "Content-Type": "application/json" })
+      response.end(JSON.stringify({ error: { message: "Gateway timed out" } }))
+      return
+    }
     const agent = body.tools?.some(
       (tool) => tool.function.name === AGENT_TEST_TOOL_NAMES.ExecuteJs,
     )
@@ -48,7 +60,16 @@ export function createDrawingServer() {
             },
           }
         : null
-    const text = call ? null : agent ? "Created pelican.svg." : PELICAN_SVG
+    const text =
+      options && prompts.at(-1) === "Reply with exactly: OK"
+        ? "OK"
+        : contextTest && options?.contextOutcome === "empty"
+          ? ""
+          : call
+            ? null
+            : agent
+              ? "Created pelican.svg."
+              : PELICAN_SVG
     const finish = call ? "tool_calls" : "stop"
     if (body.stream) {
       const chunk = (
