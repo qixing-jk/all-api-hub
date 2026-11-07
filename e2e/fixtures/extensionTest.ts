@@ -106,6 +106,9 @@ export const test = base.extend<ExtensionFixtures>({
             viewport,
           })
         },
+        // A timed-out launch exposes no context/process to await. Even a missing
+        // lock file can precede Chromium acquiring the profile during startup.
+        retryLaunchTimeouts: !reusableUserDataDir,
         waitForReady: async (candidateContext) => {
           await Promise.all([
             stubSponsorRemoteCatalog(candidateContext),
@@ -114,6 +117,12 @@ export const test = base.extend<ExtensionFixtures>({
               timeoutMs: extensionServiceWorkerTimeoutMs,
             }),
           ])
+        },
+        onReadinessFailure: (error, attempt) => {
+          console.warn(
+            `Extension service-worker readiness failed on attempt ${attempt}; closing browser context`,
+            error,
+          )
         },
         onRetry: (error, attempt) => {
           console.warn(

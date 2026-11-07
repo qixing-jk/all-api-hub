@@ -117,6 +117,23 @@ describe("launchExtensionContextWithStartupRetry", () => {
     expect(onRetry).toHaveBeenCalledOnce()
   })
 
+  it("does not retry a timed-out launch when attempts reuse the profile", async () => {
+    const launchError = new errors.TimeoutError("launch timed out")
+    const launch = vi.fn().mockRejectedValue(launchError)
+    const onRetry = vi.fn()
+
+    await expect(
+      launchExtensionContextWithStartupRetry({
+        launch,
+        waitForReady: async () => {},
+        retryLaunchTimeouts: false,
+        onRetry,
+      }),
+    ).rejects.toBe(launchError)
+    expect(launch).toHaveBeenCalledOnce()
+    expect(onRetry).not.toHaveBeenCalled()
+  })
+
   it("shares the retry limit between launch and readiness failures", async () => {
     const context = { close: vi.fn().mockResolvedValue(undefined) }
     const launchError = new errors.TimeoutError("second launch timed out")
@@ -154,6 +171,7 @@ describe("launchExtensionContextWithStartupRetry", () => {
         launch,
         onRetry,
         waitForReady,
+        retryLaunchTimeouts: false,
       }),
     ).resolves.toBe(secondContext)
 
@@ -187,6 +205,35 @@ describe("launchExtensionContextWithStartupRetry", () => {
     expect(atIndex(contexts, 0).close).toHaveBeenCalledOnce()
     expect(atIndex(contexts, 1).close).toHaveBeenCalledOnce()
     expect(launch).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports readiness failures before cleanup on both attempts", async () => {
+    const startupError = new Error("worker startup timed out")
+    const onReadinessFailure = vi.fn()
+    const context = {
+      close: vi.fn(async () => {
+        // Cleanup can outlive the test timeout, so diagnostics must already be
+        // available even if this close never returns.
+        expect(onReadinessFailure).toHaveBeenCalledTimes(
+          context.close.mock.calls.length,
+        )
+        expect(onReadinessFailure).toHaveBeenLastCalledWith(
+          startupError,
+          context.close.mock.calls.length,
+        )
+      }),
+    }
+
+    await expect(
+      launchExtensionContextWithStartupRetry({
+        launch: async () => context,
+        waitForReady: async () => {
+          throw startupError
+        },
+        onReadinessFailure,
+      }),
+    ).rejects.toBe(startupError)
+    expect(context.close).toHaveBeenCalledTimes(2)
   })
 
   it("does not retry when the failed context cannot be closed", async () => {

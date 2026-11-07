@@ -29,20 +29,26 @@ type ExtensionContextStartupRetryOptions<
 > = {
   launch: (attempt: number) => Promise<TContext>
   waitForReady: (context: TContext, attempt: number) => Promise<void>
+  /** Disable when launch attempts reuse a profile whose process is unobservable. */
+  retryLaunchTimeouts?: boolean
+  onReadinessFailure?: (error: unknown, attempt: number) => void
   onRetry?: (error: unknown, attempt: number) => void
 }
 
 /**
  * Retry once after a browser launch timeout or failed service-worker readiness.
- * Other launch errors fail immediately. Playwright owns cleanup of a timed-out
- * launch; returned contexts are closed here before retrying readiness failures.
+ * Other launch errors fail immediately. Playwright starts cleanup of a timed-out
+ * launch asynchronously; callers reusing its profile must disable launch retries.
+ * Returned contexts are closed here before retrying readiness failures.
  */
 export async function launchExtensionContextWithStartupRetry<
   TContext extends { close(): Promise<void> },
 >({
   launch,
+  onReadinessFailure,
   onRetry,
   waitForReady,
+  retryLaunchTimeouts = true,
 }: ExtensionContextStartupRetryOptions<TContext>): Promise<TContext> {
   const maxAttempts = 2
 
@@ -52,6 +58,7 @@ export async function launchExtensionContextWithStartupRetry<
       context = await launch(attempt)
     } catch (launchError) {
       if (
+        !retryLaunchTimeouts ||
         !(launchError instanceof errors.TimeoutError) ||
         attempt === maxAttempts
       ) {
@@ -65,6 +72,8 @@ export async function launchExtensionContextWithStartupRetry<
       await waitForReady(context, attempt)
       return context
     } catch (startupError) {
+      // Report before cleanup, which can outlive the enclosing test timeout.
+      onReadinessFailure?.(startupError, attempt)
       try {
         await context.close()
       } catch (closeError) {

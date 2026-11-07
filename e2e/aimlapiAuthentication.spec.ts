@@ -42,6 +42,13 @@ const key = {
 }
 
 test.beforeEach(async ({ context }) => {
+  // A reusable test profile can retain a real console session. Each scenario
+  // starts signed out; the logged-in scenario installs its own synthetic cookie.
+  await context.clearCookies({
+    name: "playground.token",
+    domain: /(^|\.)aimlapi\.com$/,
+  })
+
   // Scenario routes registered later take precedence. A missing provider mock
   // must fail here instead of depending on the live console or its assets.
   await context.route(
