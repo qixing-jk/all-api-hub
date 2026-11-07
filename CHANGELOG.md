@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.10.0](https://github.com/qixing-jk/all-api-hub/compare/v4.9.0...v4.10.0) (2026-11-07)
+
+
+### Features
+
+* **dev:** persist browser data and organize cleanup tools ([#1836](https://github.com/qixing-jk/all-api-hub/issues/1836)) ([fc9ca64](https://github.com/qixing-jk/all-api-hub/commit/fc9ca64bc3dfff18cc9112812ca65059578a129d))
+* expand CC Switch provider export targets ([#1828](https://github.com/qixing-jk/all-api-hub/issues/1828)) ([c4c20d2](https://github.com/qixing-jk/all-api-hub/commit/c4c20d2a17f4c5547e88adc3fff3e672fa179c44))
+* **ui:** add quick dialog fade transitions ([#1834](https://github.com/qixing-jk/all-api-hub/issues/1834)) ([adbd219](https://github.com/qixing-jk/all-api-hub/commit/adbd21980a0941128ea9b9985515698cd2f6b7e6))
+* **verification:** add resumable model context capacity probes ([#1833](https://github.com/qixing-jk/all-api-hub/issues/1833)) ([2c8e4af](https://github.com/qixing-jk/all-api-hub/commit/2c8e4afdda00b69bdbf66365b420559f181f26f3))
+
 ## [4.9.0](https://github.com/qixing-jk/all-api-hub/compare/v4.8.0...v4.9.0) (2026-11-05)
 
 
