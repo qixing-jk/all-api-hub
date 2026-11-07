@@ -136,6 +136,9 @@ for (const signedIn of [true, false]) {
           "preserve this draft",
         )
       } finally {
+        // Detection keeps the site tab active. Older Chrome may not paint the
+        // background extension page for capture until it is brought forward.
+        await popup.bringToFront()
         await popup.screenshot({
           path: testInfo.outputPath("current-tab-after-reload.png"),
           animations: "disabled",
