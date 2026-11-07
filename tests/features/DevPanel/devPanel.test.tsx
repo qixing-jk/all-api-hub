@@ -132,6 +132,55 @@ async function openDevPanel() {
 }
 
 describe("DevPanel", () => {
+  it("shows an empty toolbox without build details when no provider registers tools", async () => {
+    render(<DevPanel />, {
+      withReleaseUpdateStatusProvider: false,
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await openDevPanel()
+    expect(screen.getByRole("tab", { name: "Current page" })).toBeDisabled()
+    expect(screen.getByRole("tab", { name: "Toolbox" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+    expect(
+      screen.getByText("No global tools available on this surface."),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("group", { name: "Build information" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("displays a read-only section without adding command buttons", async () => {
+    function ReadOnlyTools() {
+      useRegisterDevPanelSection({
+        id: "read-only",
+        title: "Read-only diagnostics",
+        rows: [{ id: "status", label: "Status", value: "Idle" }],
+        actions: [],
+      })
+      return null
+    }
+    render(
+      <DevPanelProvider surface="options">
+        <ReadOnlyTools />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+    await openDevPanel()
+    await userEvent.click(
+      screen.getByRole("button", { name: "Read-only diagnostics" }),
+    )
+    expect(screen.getByText("Idle")).toBeVisible()
+    expect(screen.getByText("Status")).toBeVisible()
+  })
+
   it("separates page tools from a categorized toolbox and keeps build details in the footer", async () => {
     render(
       <DevPanelProvider surface="options" page={MENU_ITEM_IDS.AUTO_CHECKIN}>

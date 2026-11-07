@@ -8,7 +8,11 @@ import { addDevFixtureAccounts } from "~/features/DevPanel/fixtureAccounts"
 import { addDevFixtureApiCredentials } from "~/features/DevPanel/fixtureApiCredentials"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  I18NEXT_LANGUAGE_STORAGE_KEY,
+  STORAGE_KEYS,
+} from "~/services/core/storageKeys"
+import { THEME_BOOTSTRAP_CACHE_KEY } from "~/utils/ui/themePreferences"
 
 describe("development data cleanup", () => {
   beforeEach(() => vi.stubEnv("MODE", "development"))
@@ -67,6 +71,48 @@ describe("development data cleanup", () => {
     )
     expect(remaining[STORAGE_KEYS.ACCOUNTS]).toBe("accounts")
     expect(remaining[STORAGE_KEYS.USER_PREFERENCES]).toBe("preferences")
+  })
+
+  it.each(["settings", "all"] as const)(
+    "clears page storage according to the %s scope",
+    async (scope) => {
+      const local = new Map([
+        [I18NEXT_LANGUAGE_STORAGE_KEY, "ja"],
+        [THEME_BOOTSTRAP_CACHE_KEY, "dark"],
+        ["unrelated", "keep"],
+      ])
+      const session = new Map([["pending", "keep"]])
+      vi.stubGlobal("localStorage", {
+        removeItem: (key: string) => local.delete(key),
+        clear: () => local.clear(),
+      })
+      vi.stubGlobal("sessionStorage", { clear: () => session.clear() })
+
+      await clearDevData([scope])
+
+      expect([...local]).toEqual(scope === "all" ? [] : [["unrelated", "keep"]])
+      expect([...session]).toEqual(scope === "all" ? [] : [["pending", "keep"]])
+    },
+  )
+
+  it("stops when a cache cannot be deleted and permits a later retry", async () => {
+    const saved = new Set(["community", "other"])
+    const remove = vi
+      .fn(async (name: string) => saved.delete(name))
+      .mockResolvedValueOnce(false)
+    vi.stubGlobal("caches", {
+      keys: async () => [...saved],
+      delete: remove,
+    })
+
+    await expect(clearDevData(["caches"])).rejects.toThrow(
+      "Could not remove cache: community",
+    )
+    expect([...saved]).toEqual(["community", "other"])
+    expect(remove).toHaveBeenCalledTimes(1)
+
+    await clearDevData(["caches"])
+    expect([...saved]).toEqual([])
   })
 
   it("clears persistent caches without deleting history or settings", async () => {

@@ -8,6 +8,7 @@ import {
   useDevPanelSections,
 } from "~/features/DevPanel/DevPanelSectionsContext"
 import { DataCleanupSection } from "~/features/DevPanel/sections/dataCleanupSection"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/features/DevPanel/dataCleanup", () => ({ clearDevData: vi.fn() }))
@@ -114,6 +115,88 @@ describe("development data cleanup dialog", () => {
     ).toBeChecked()
     expect(clearDevData).not.toHaveBeenCalled()
     expect(browser.runtime.reload).not.toHaveBeenCalled()
+  })
+
+  it.each(["Cancel", "Escape"])(
+    "dismisses scope selection with %s without deleting data",
+    async (method) => {
+      const user = userEvent.setup()
+      mount()
+      await user.click(
+        await screen.findByRole("button", { name: "Dev: Clear saved data" }),
+      )
+      await user.click(screen.getByRole("checkbox", { name: "Settings" }))
+      if (method === "Escape") await user.keyboard("{Escape}")
+      else await user.click(screen.getByRole("button", { name: "Cancel" }))
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      )
+      expect(clearDevData).not.toHaveBeenCalled()
+      expect(browser.runtime.reload).not.toHaveBeenCalled()
+      await user.click(
+        screen.getByRole("button", { name: "Dev: Clear saved data" }),
+      )
+      expect(
+        screen.getByRole("checkbox", { name: "Settings" }),
+      ).not.toBeChecked()
+      expect(
+        screen.getByRole("button", { name: "Review cleanup" }),
+      ).toBeDisabled()
+    },
+  )
+
+  it("removes deselected scopes while preserving the remaining selection", async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(
+      await screen.findByRole("button", { name: "Dev: Clear saved data" }),
+    )
+    await user.click(
+      screen.getByRole("checkbox", { name: "All saved extension data" }),
+    )
+    await user.click(
+      screen.getByRole("checkbox", { name: "All saved extension data" }),
+    )
+    expect(screen.getByRole("checkbox", { name: "Settings" })).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Review cleanup" }),
+    ).toBeDisabled()
+    await user.click(screen.getByRole("checkbox", { name: "Settings" }))
+    await user.click(screen.getByRole("checkbox", { name: "History and logs" }))
+    await user.click(screen.getByRole("checkbox", { name: "Settings" }))
+    await user.click(screen.getByRole("button", { name: "Review cleanup" }))
+    await user.click(
+      screen.getByRole("button", { name: "Clear selected data and reload" }),
+    )
+    await waitFor(() => expect(clearDevData).toHaveBeenCalledWith(["history"]))
+  })
+
+  it("keeps an admitted cleanup pending until it finishes without duplicate execution", async () => {
+    const pending = createDeferred<void>()
+    vi.mocked(clearDevData).mockReturnValueOnce(pending.promise)
+    const user = userEvent.setup()
+    mount()
+    await user.click(
+      await screen.findByRole("button", { name: "Dev: Clear saved data" }),
+    )
+    await user.click(screen.getByRole("checkbox", { name: "Settings" }))
+    await user.click(screen.getByRole("button", { name: "Review cleanup" }))
+    await user.click(
+      screen.getByRole("button", { name: "Clear selected data and reload" }),
+    )
+    expect(screen.getByRole("button", { name: "Clearing…" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled()
+    await user.keyboard("{Escape}")
+    expect(
+      screen.getByRole("dialog", { name: "Clear selected development data?" }),
+    ).toBeVisible()
+    expect(clearDevData).toHaveBeenCalledOnce()
+    expect(browser.runtime.reload).not.toHaveBeenCalled()
+    pending.resolve()
+    await waitFor(() => expect(browser.runtime.reload).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    )
   })
 
   it("distinguishes all accounts from mock-only cleanup and all saved data", async () => {

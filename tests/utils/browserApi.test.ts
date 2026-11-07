@@ -16,6 +16,7 @@ import {
 } from "~/utils/browser/action"
 import {
   clearAlarm,
+  clearAllAlarms,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
@@ -73,6 +74,7 @@ import {
   setNativeSidePanelActionClick,
 } from "~/utils/browser/sidePanel"
 import {
+  clearSessionStorage,
   getSessionStorageValues,
   hasSessionStorageArea,
   hasStorageChangedListener,
@@ -442,6 +444,11 @@ describe("browserApi alarms helpers", () => {
     cleanup()
   })
 
+  it("allows clearing schedules when the alarms API is unavailable", async () => {
+    ;(globalThis as any).browser = {}
+    await expect(clearAllAlarms()).resolves.toBeUndefined()
+  })
+
   it("onAlarm should register and unregister listener when supported", () => {
     const addListenerMock = vi.fn()
     const removeListenerMock = vi.fn()
@@ -487,14 +494,17 @@ describe("browserApi session storage helpers", () => {
 
   it("returns compatibility fallbacks when storage.session is unavailable", async () => {
     const removeLocal = vi.fn()
+    const clearLocal = vi.fn()
     ;(globalThis as any).browser = {
-      storage: { local: { remove: removeLocal } },
+      storage: { local: { remove: removeLocal, clear: clearLocal } },
     }
     expect(hasSessionStorageArea()).toBe(false)
     await expect(getSessionStorageValues("key")).resolves.toEqual({})
     await expect(setSessionStorageValues({ key: "value" })).resolves.toBe(false)
     await expect(removeSessionStorageValues("key")).resolves.toBeUndefined()
+    await expect(clearSessionStorage()).resolves.toBeUndefined()
     expect(removeLocal).not.toHaveBeenCalled()
+    expect(clearLocal).not.toHaveBeenCalled()
   })
 
   it("reads, writes, and removes ephemeral data only through storage.session", async () => {
