@@ -8,6 +8,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   BALANCE_HISTORY_BREAKDOWN_CHART_TYPES,
   BALANCE_HISTORY_TREND_SERIES_SCOPES,
+  QUICK_RANGES,
   type BalanceHistoryBreakdownChartType,
   type BalanceHistoryTrendSeriesScope,
   type BalanceHistoryVisibleMetric,
@@ -53,6 +54,8 @@ function resolveVisibleMetric(
 function clampRetentionDays(value: unknown): number {
   return clampBalanceHistoryRetentionDays(value)
 }
+
+const DEFAULT_RANGE_DAYS = 30
 
 /** Compose history query state and report facts for the options view. */
 export function useBalanceHistoryViewModel() {
@@ -193,16 +196,57 @@ export function useBalanceHistoryViewModel() {
   const [startDayKey, setStartDayKey] = useState<string>("")
   const [endDayKey, setEndDayKey] = useState<string>("")
 
+  const defaultStartDayKey = subtractDaysFromDayKey(
+    maxDayKey,
+    Math.min(DEFAULT_RANGE_DAYS, safeRetentionDays) - 1,
+  )
+  const effectiveRange = useMemo(() => {
+    const clamp = (day: string) =>
+      day < minDayKey ? minDayKey : day > maxDayKey ? maxDayKey : day
+    const end = clamp(endDayKey || maxDayKey)
+    const start = clamp(
+      startDayKey || (endDayKey ? minDayKey : defaultStartDayKey),
+    )
+    return { startDayKey: start > end ? end : start, endDayKey: end }
+  }, [defaultStartDayKey, endDayKey, maxDayKey, minDayKey, startDayKey])
+
+  const hasActiveFilters =
+    selectedTagIds.length > 0 ||
+    selectedAccountIds.length > 0 ||
+    effectiveRange.startDayKey !== defaultStartDayKey ||
+    effectiveRange.endDayKey !== maxDayKey
+
+  const activeQuickRangeId =
+    endDayKey === maxDayKey
+      ? QUICK_RANGES.find(
+          ({ days }) =>
+            days <= safeRetentionDays &&
+            startDayKey === subtractDaysFromDayKey(maxDayKey, days - 1),
+        )?.id
+      : undefined
+
+  const applyQuickRange = (days: number) => {
+    setEndDayKey(maxDayKey)
+    setStartDayKey(
+      subtractDaysFromDayKey(maxDayKey, Math.min(days, safeRetentionDays) - 1),
+    )
+  }
+
+  const resetFilters = () => {
+    setSelectedTagIds([])
+    setSelectedAccountIds([])
+    applyQuickRange(DEFAULT_RANGE_DAYS)
+  }
+
   // Initialize the date range once we know the retention window.
   useEffect(() => {
     if (startDayKey || endDayKey) {
       return
     }
 
-    const defaultDays = Math.min(30, safeRetentionDays)
     setEndDayKey(maxDayKey)
-    setStartDayKey(subtractDaysFromDayKey(maxDayKey, defaultDays - 1))
-  }, [endDayKey, maxDayKey, safeRetentionDays, startDayKey])
+    setStartDayKey(defaultStartDayKey)
+  }, [defaultStartDayKey, endDayKey, maxDayKey, startDayKey])
 
   // Initialize the breakdown reference day once the range is ready.
   useEffect(() => {
@@ -210,20 +254,13 @@ export function useBalanceHistoryViewModel() {
     setBreakdownBalanceDayKey(endDayKey)
   }, [breakdownBalanceDayKey, endDayKey])
 
-  // Clamp the range when retention changes or when the user types an out-of-bounds date.
+  // Keep manually entered dates in sync with the bounded range used by reports.
   useEffect(() => {
-    if (!startDayKey || !endDayKey) return
-
-    let nextStart = startDayKey
-    let nextEnd = endDayKey
-
-    if (nextStart < minDayKey) nextStart = minDayKey
-    if (nextEnd > maxDayKey) nextEnd = maxDayKey
-    if (nextStart > nextEnd) nextStart = nextEnd
-
-    if (nextStart !== startDayKey) setStartDayKey(nextStart)
-    if (nextEnd !== endDayKey) setEndDayKey(nextEnd)
-  }, [endDayKey, maxDayKey, minDayKey, startDayKey])
+    if (startDayKey && startDayKey !== effectiveRange.startDayKey)
+      setStartDayKey(effectiveRange.startDayKey)
+    if (endDayKey && endDayKey !== effectiveRange.endDayKey)
+      setEndDayKey(effectiveRange.endDayKey)
+  }, [effectiveRange, endDayKey, startDayKey])
 
   const exchangeRateByAccountId = useMemo(() => {
     return new Map(
@@ -254,19 +291,13 @@ export function useBalanceHistoryViewModel() {
   const formatTooltipMoneyValue = useCallback(
     (value: number | string, _dataIndex: number): string => {
       void _dataIndex
+      if (typeof value === "string" && value.trim() === "") return "—"
       const numeric = typeof value === "number" ? value : Number(value)
       if (!Number.isFinite(numeric)) return "-"
       return `${currencySymbol}${formatMoneyFixed(numeric)}`
     },
     [currencySymbol],
   )
-
-  const effectiveRange = useMemo(() => {
-    return {
-      startDayKey: startDayKey || minDayKey,
-      endDayKey: endDayKey || maxDayKey,
-    }
-  }, [endDayKey, maxDayKey, minDayKey, startDayKey])
 
   const accountOptions = useMemo(() => {
     const selected = new Set(selectedAccountIds)
@@ -526,6 +557,11 @@ export function useBalanceHistoryViewModel() {
     currencyType,
     handleCurrencyChange,
     safeRetentionDays,
+    activeQuickRangeId,
+    applyQuickRange,
+    hasActiveFilters,
+    resetFilters,
+    effectiveAccountCount: effectiveAccountIds.length,
     startDayKey,
     minDayKey,
     maxDayKey,

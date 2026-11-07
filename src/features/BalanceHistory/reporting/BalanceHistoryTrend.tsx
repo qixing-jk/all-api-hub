@@ -59,9 +59,9 @@ export function BalanceHistoryTrend({
   return (
     <Card padding="md">
       <div className="space-y-density-3">
-        <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
-          <div className="space-y-density-1 min-w-0">
-            <div className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
+        <div className="space-y-density-1">
+          <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-3">
+            <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-x-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -137,23 +137,28 @@ export function BalanceHistoryTrend({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div className="text-muted-foreground text-xs">
-              {trendScope === BALANCE_HISTORY_TREND_SERIES_SCOPES.Total
-                ? t("trend.subtitleTotal")
-                : t("trend.subtitle")}
-            </div>
+
+            <SegmentedControl
+              layout="fit"
+              size="sm"
+              className="ml-auto shrink-0 flex-nowrap"
+              aria-label={t("trend.controls.chartType")}
+              value={trendChartType}
+              onValueChange={setTrendChartType}
+              options={[
+                { value: "line", label: t("trend.chartTypes.line") },
+                { value: "bar", label: t("trend.chartTypes.bar") },
+              ]}
+            />
           </div>
-          <SegmentedControl
-            layout="fit"
-            size="sm"
-            aria-label={t("trend.controls.chartType")}
-            value={trendChartType}
-            onValueChange={setTrendChartType}
-            options={[
-              { value: "line", label: t("trend.chartTypes.line") },
-              { value: "bar", label: t("trend.chartTypes.bar") },
-            ]}
-          />
+          <div className="text-muted-foreground text-xs">
+            {trendScope === BALANCE_HISTORY_TREND_SERIES_SCOPES.Total
+              ? t("trend.subtitleTotal")
+              : trendChartType === "bar"
+                ? t("trend.subtitle")
+                : null}
+            {trendChartType === "line" && <> {t("trend.gapBridge")}</>}
+          </div>
         </div>
 
         {hasAnyTrendMetricData ? (

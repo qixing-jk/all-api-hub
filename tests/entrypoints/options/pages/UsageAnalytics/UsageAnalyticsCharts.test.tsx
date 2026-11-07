@@ -436,7 +436,11 @@ describe("UsageAnalytics charts", () => {
     await screen.findByText("usageAnalytics:charts.modelDistribution.title")
 
     await waitFor(() => {
-      expect(echartsInstances[1]).toBeDefined()
+      expect(echartsInstances[1]?.setOption.mock.lastCall?.[0]).toMatchObject({
+        series: [
+          { type: "pie", data: [expect.objectContaining({ name: "gpt-4" })] },
+        ],
+      })
     })
 
     const modelDistributionInstance = echartsInstances[1]!
@@ -559,14 +563,12 @@ describe("UsageAnalytics charts", () => {
     render(<UsageAnalytics />)
     await screen.findByText("usageAnalytics:charts.usageTimeHeatmap.title")
 
-    await waitFor(() => {
-      expect(findTimeHeatmapOption()).toBeDefined()
-    })
-
     // 2026-01-01 is a Thursday, the fourth weekday label after Monday, at the "09" hour.
-    expect(findTimeHeatmapOption()?.series?.[0]?.data).toContainEqual([
-      9, 3, 15,
-    ])
+    await waitFor(() => {
+      expect(findTimeHeatmapOption()?.series?.[0]?.data).toContainEqual([
+        9, 3, 15,
+      ])
+    })
   })
 
   it("focuses and unfocuses a clicked model across related charts", async () => {

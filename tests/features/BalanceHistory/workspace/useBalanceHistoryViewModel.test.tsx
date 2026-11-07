@@ -175,6 +175,8 @@ describe("useBalanceHistoryViewModel", () => {
 
   it.each([
     [12.5, "12.50", "$12.50"],
+    [0, "0.00", "$0.00"],
+    ["", "0.00", "—"],
     ["-3.25", "-3.25", "$-3.25"],
     ["invalid", "", "-"],
     [Infinity, "", "-"],
@@ -339,6 +341,53 @@ describe("useBalanceHistoryViewModel", () => {
 
     expect(result.current.startDayKey >= result.current.minDayKey).toBe(true)
     expect(result.current.endDayKey <= result.current.maxDayKey).toBe(true)
+  })
+
+  it.each([
+    ["2000-01-01", "minDayKey"],
+    ["2099-12-31", "maxDayKey"],
+  ] as const)(
+    "bounds both endpoints when both are entered as %s",
+    (day, limit) => {
+      const { result } = renderHook(() => useBalanceHistoryViewModel())
+
+      act(() => {
+        result.current.setStartDayKey(day)
+        result.current.setEndDayKey(day)
+      })
+
+      const boundary = result.current[limit]
+      expect(result.current.startDayKey).toBe(boundary)
+      expect(result.current.endDayKey).toBe(boundary)
+      for (const [{ effectiveRange }] of vi.mocked(useBalanceHistoryReporting)
+        .mock.calls) {
+        expect(effectiveRange.startDayKey >= result.current.minDayKey).toBe(
+          true,
+        )
+        expect(effectiveRange.endDayKey <= result.current.maxDayKey).toBe(true)
+      }
+    },
+  )
+
+  it("keeps the report range valid while clearing or shortening the dates", () => {
+    const { result } = renderHook(() => useBalanceHistoryViewModel())
+    const { minDayKey, maxDayKey } = result.current
+
+    act(() => result.current.setStartDayKey(""))
+    expect(result.current.effectiveRange).toEqual({
+      startDayKey: minDayKey,
+      endDayKey: maxDayKey,
+    })
+
+    act(() => {
+      result.current.setStartDayKey(maxDayKey)
+      result.current.setEndDayKey(minDayKey)
+    })
+    expect(result.current.effectiveRange).toEqual({
+      startDayKey: minDayKey,
+      endDayKey: minDayKey,
+    })
+    expect(result.current.startDayKey).toBe(minDayKey)
   })
 
   it("shows incomplete total hint when total trend has partial days for multiple accounts", () => {

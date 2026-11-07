@@ -13,7 +13,7 @@ import {
 import { Spinner } from "~/components/ui/spinner"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import { BalanceHistoryFilters } from "~/features/BalanceHistory/filtering/BalanceHistoryFilters"
+import { BalanceHistoryFilterSheet } from "~/features/BalanceHistory/filtering/BalanceHistoryFilterSheet"
 import BalanceHistoryAccountSummaryTable from "~/features/BalanceHistory/reporting/BalanceHistoryAccountSummaryTable"
 import { BalanceHistoryBreakdown } from "~/features/BalanceHistory/reporting/BalanceHistoryBreakdown"
 import { BalanceHistoryOverview } from "~/features/BalanceHistory/reporting/BalanceHistoryOverview"
@@ -126,7 +126,12 @@ export default function BalanceHistory() {
         </Alert>
       ) : (
         <>
-          <BalanceHistoryFilters model={viewModel} />
+          {!isInitialLoading && (
+            <BalanceHistoryOverview
+              model={viewModel}
+              actions={<BalanceHistoryFilterSheet model={viewModel} />}
+            />
+          )}
 
           {isInitialLoading ? (
             <div className="py-density-6 flex justify-center" aria-busy="true">
@@ -154,8 +159,6 @@ export default function BalanceHistory() {
             </Card>
           ) : (
             <div className="space-y-density-6">
-              <BalanceHistoryOverview model={viewModel} />
-
               <div className="gap-y-density-6 grid grid-cols-1 gap-x-6 lg:grid-cols-2">
                 <BalanceHistoryBreakdown model={viewModel} />
 

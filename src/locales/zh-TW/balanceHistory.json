@@ -30,12 +30,15 @@
     "title": "該範圍內暫無快照"
   },
   "filters": {
+    "accountCount_other": "{{count}} 個帳戶",
     "accounts": "帳戶",
     "accountsHint": "選擇要納入圖表的帳戶。",
     "allAccounts": "全部帳戶",
     "allTags": "全部標籤",
+    "description": "依標籤、帳戶、貨幣與時間範圍篩選，變更後立即生效。",
     "endDay": "結束時間",
     "noDataInRange": "該範圍內無快照",
+    "noResults": "沒有符合的結果",
     "quickRanges": {
       "180d": "近180天",
       "30d": "近30天",
@@ -45,9 +48,12 @@
     },
     "range": "時間範圍",
     "rangeHint": "受保留視窗限制（{{days}} 天）。",
+    "searchAccounts": "搜尋帳戶",
+    "searchTags": "搜尋標籤",
     "startDay": "開始時間",
     "tags": "標籤",
-    "tagsHint": "按標籤過濾帳戶。"
+    "tagsHint": "按標籤過濾帳戶。",
+    "title": "篩選"
   },
   "hints": {
     "disabled": {
@@ -146,6 +152,7 @@
       "scope": "檢視"
     },
     "emptyMetric": "該時間範圍內暫無{{metric}}資料。",
+    "gapBridge": "虛線表示中間日期沒有記錄。",
     "scopes": {
       "accounts": "按帳戶",
       "total": "彙總"

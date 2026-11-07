@@ -30,12 +30,15 @@
     "title": "この期間にはスナップショットがありません"
   },
   "filters": {
+    "accountCount_other": "{{count}} 件のアカウント",
     "accounts": "アカウント",
     "accountsHint": "グラフに含めるアカウントを選択します。",
     "allAccounts": "すべてのアカウント",
     "allTags": "すべてのタグ",
+    "description": "タグ、アカウント、通貨、期間で絞り込みます。変更はすぐに反映されます。",
     "endDay": "終了日",
     "noDataInRange": "この期間のデータはありません",
+    "noResults": "一致する結果がありません",
     "quickRanges": {
       "180d": "180 日",
       "30d": "30 日",
@@ -45,9 +48,12 @@
     },
     "range": "期間",
     "rangeHint": "保持期間（{{days}} 日）内で制限されます。",
+    "searchAccounts": "アカウントを検索",
+    "searchTags": "タグを検索",
     "startDay": "開始日",
     "tags": "タグ",
-    "tagsHint": "タグでアカウントを絞り込みます。"
+    "tagsHint": "タグでアカウントを絞り込みます。",
+    "title": "絞り込み"
   },
   "hints": {
     "disabled": {
@@ -146,6 +152,7 @@
       "scope": "表示範囲"
     },
     "emptyMetric": "この期間には {{metric}} データがありません。",
+    "gapBridge": "破線は、途中の日付に記録がないことを示します。",
     "scopes": {
       "accounts": "アカウント別",
       "total": "合計"

@@ -30,12 +30,15 @@
     "title": "Chưa có ảnh chụp nhanh trong khoảng thời gian này"
   },
   "filters": {
+    "accountCount_other": "{{count}} tài khoản",
     "accounts": "Tài khoản",
     "accountsHint": "Chọn các tài khoản để đưa vào biểu đồ.",
     "allAccounts": "Tất cả tài khoản",
     "allTags": "Tất cả thẻ",
+    "description": "Lọc theo thẻ, tài khoản, đơn vị tiền tệ và khoảng thời gian. Thay đổi được áp dụng ngay.",
     "endDay": "Thời gian kết thúc",
     "noDataInRange": "Không có ảnh chụp nhanh trong khoảng thời gian này",
+    "noResults": "Không có kết quả phù hợp",
     "quickRanges": {
       "180d": "180 ngày qua",
       "30d": "30 ngày qua",
@@ -45,9 +48,12 @@
     },
     "range": "Khoảng thời gian",
     "rangeHint": "Bị giới hạn bởi khoảng thời gian lưu giữ ({{days}} ngày).",
+    "searchAccounts": "Tìm tài khoản",
+    "searchTags": "Tìm thẻ",
     "startDay": "Thời gian bắt đầu",
     "tags": "Thẻ",
-    "tagsHint": "Lọc tài khoản theo thẻ."
+    "tagsHint": "Lọc tài khoản theo thẻ.",
+    "title": "Bộ lọc"
   },
   "hints": {
     "disabled": {
@@ -146,6 +152,7 @@
       "scope": "Chế độ xem"
     },
     "emptyMetric": "Không có dữ liệu {{metric}} trong khoảng thời gian này.",
+    "gapBridge": "Đoạn nét đứt biểu thị những ngày không có bản ghi.",
     "scopes": {
       "accounts": "Theo tài khoản",
       "total": "Tổng hợp"

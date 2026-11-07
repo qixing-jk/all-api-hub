@@ -30,18 +30,59 @@ describe("BalanceHistory echartsOptions", () => {
     expect(option.xAxis.axisLabel.color).toBe("var(--chart-axis)")
   })
 
+  it("bridges only internal line gaps using recorded endpoints, without tooltip entries", () => {
+    const dayKeys = Array.from(
+      { length: 9 },
+      (_, index) => `2026-01-0${index + 1}`,
+    )
+    const values = [null, 0, null, 12, 15, null, null, 5, null]
+    const option = buildMultiSeriesTrendOption({
+      dayKeys,
+      series: [
+        { name: "Alpha", values },
+        { name: "Beta", values: [null, 2, 3, null] },
+      ],
+      chartType: "line",
+    })
+
+    expect(option.series).toEqual([
+      expect.objectContaining({
+        name: "Alpha",
+        data: values,
+        connectNulls: false,
+      }),
+      expect.objectContaining({ name: "Beta" }),
+      expect.objectContaining({
+        name: "Alpha",
+        type: "line",
+        data: [
+          ["2026-01-02", 0],
+          ["2026-01-04", 12],
+          ["2026-01-05", null],
+          ["2026-01-05", 15],
+          ["2026-01-08", 5],
+        ],
+        silent: true,
+        showSymbol: false,
+        tooltip: { show: false, trigger: "none" },
+        lineStyle: expect.objectContaining({ type: "dashed" }),
+      }),
+    ])
+  })
+
   it("builds bar-series trend charts without line-only markers", () => {
     const option = buildMultiSeriesTrendOption({
-      dayKeys: ["2026-01-01", "2026-01-02"],
-      series: [{ name: "Bravo", values: [1, null] }],
+      dayKeys: ["2026-01-01", "2026-01-02", "2026-01-03"],
+      series: [{ name: "Bravo", values: [1, null, 2] }],
       chartType: "bar",
     }) as any
 
     expect(option.series[0]).toMatchObject({
       type: "bar",
-      data: [1, null],
+      data: [1, null, 2],
       barMaxWidth: 18,
     })
+    expect(option.series).toHaveLength(1)
     expect(option.series[0]).not.toHaveProperty("connectNulls")
   })
 

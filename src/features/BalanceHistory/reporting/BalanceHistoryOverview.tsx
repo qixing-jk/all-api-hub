@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Card } from "~/components/ui"
@@ -8,18 +9,23 @@ import { formatMoneyFixed } from "~/utils/core/money"
 /** Render this reporting section from its existing ViewModel snapshot. */
 export function BalanceHistoryOverview({
   model,
+  actions,
 }: {
   model: Pick<
     ReturnType<typeof useBalanceHistoryViewModel>,
     "overviewTotals" | "currencySymbol"
   >
+  actions?: ReactNode
 }) {
   const { t } = useTranslation("balanceHistory")
   const { overviewTotals, currencySymbol } = model
   return (
     <Card padding="md" data-testid={BALANCE_HISTORY_TEST_IDS.overview}>
       <div className="space-y-density-4">
-        <div className="text-sm font-medium">{t("overview.title")}</div>
+        <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-3">
+          <div className="text-sm font-medium">{t("overview.title")}</div>
+          {actions}
+        </div>
         <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="dark:bg-card bg-surface-subtle py-density-3 rounded-lg px-3">
             <div className="text-muted-foreground text-xs">

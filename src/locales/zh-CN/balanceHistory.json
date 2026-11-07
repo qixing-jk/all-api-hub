@@ -30,12 +30,15 @@
     "title": "该范围内暂无快照"
   },
   "filters": {
+    "accountCount": "{{count}} 个账户",
     "accounts": "账户",
     "accountsHint": "选择要纳入图表的账户。",
     "allAccounts": "全部账户",
     "allTags": "全部标签",
+    "description": "按标签、账户、货币和时间范围筛选，修改后立即生效。",
     "endDay": "结束时间",
     "noDataInRange": "该范围内无快照",
+    "noResults": "没有匹配的结果",
     "quickRanges": {
       "180d": "近180天",
       "30d": "近30天",
@@ -45,9 +48,12 @@
     },
     "range": "时间范围",
     "rangeHint": "受保留窗口限制（{{days}} 天）。",
+    "searchAccounts": "搜索账户",
+    "searchTags": "搜索标签",
     "startDay": "开始时间",
     "tags": "标签",
-    "tagsHint": "按标签过滤账户。"
+    "tagsHint": "按标签过滤账户。",
+    "title": "筛选"
   },
   "hints": {
     "disabled": {
@@ -146,6 +152,7 @@
       "scope": "视图"
     },
     "emptyMetric": "该时间范围内暂无{{metric}}数据。",
+    "gapBridge": "虚线表示中间日期没有记录。",
     "scopes": {
       "accounts": "按账户",
       "total": "汇总"
