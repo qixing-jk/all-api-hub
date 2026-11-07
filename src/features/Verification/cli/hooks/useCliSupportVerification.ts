@@ -252,7 +252,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
       resolveVerificationApiType({ modelId: resolvedModelId }),
     resolveRequest: resolveToolRequest,
     isSupported: true,
-    isBlocked: isRunning || isAnyToolRunning,
+    isBlocked: isLoadingRuntimeKeys,
   })
 
   const canClose = !isRunning && !isAnyToolRunning && !sharedTools.isRunning

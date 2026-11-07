@@ -8,6 +8,7 @@ import {
   List,
   MessageSquareText,
   Palette,
+  ScanText,
   Terminal,
   Video,
   Wrench,
@@ -21,11 +22,13 @@ import {
 } from "~/services/verification/aiApiVerification"
 import type { CliToolId } from "~/services/verification/cliSupportVerification"
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
+import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
 
 type VerificationTestId =
   | ApiVerificationProbeId
   | CliToolId
   | typeof PELICAN_PROMPT_ID
+  | typeof CONTEXT_CAPACITY_TEST_ID
 
 const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
   [API_VERIFICATION_PROBE_IDS.Models]: List,
@@ -39,6 +42,7 @@ const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
   [API_VERIFICATION_PROBE_IDS.VideoGeneration]: Video,
   [API_VERIFICATION_PROBE_IDS.Decision]: GitBranch,
   [PELICAN_PROMPT_ID]: Palette,
+  [CONTEXT_CAPACITY_TEST_ID]: ScanText,
   claude: Terminal,
   codex: Terminal,
   gemini: Terminal,

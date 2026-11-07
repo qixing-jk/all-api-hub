@@ -4,6 +4,8 @@ Use this workflow before handing off implemented changes. The agent owns executi
 
 ## Account for the behavior changes
 
+For capabilities shared by several product entry points, enumerate the existing consumers before implementation and map each to the user's requested scope. Keep requested entry points in the acceptance table even when they need different transport or lifecycle plumbing; resolve an ambiguous exclusion with the user while continuing independent work. Completion requires evidence for each in-scope entry point, and any deferred entry remains an explicit delivery gap.
+
 Build a task-local acceptance table from the requested outcomes and the final task-owned diff. Include intentional behavior changes discovered during implementation, including defaults, compatibility and recovery behavior. For behavior-preserving refactors, identify the observable contracts being preserved. Reconcile the table after the last implementation change so that every outcome has a result or an explicit gap.
 
 | Outcome / scenario | Before | Expected after | Automated assertion / command | Result and evidence |

@@ -13,6 +13,7 @@ import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
+import { CONTEXT_CAPACITY_REASONS } from "~/services/verification/modelQuality/contextCapacityConstants"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -29,6 +30,129 @@ import { API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION } from "~/services/verif
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("verificationResultHistoryStorage", () => {
+  it("persists only compact context results and clears by owner", async () => {
+    const target = createProfileModelVerificationHistoryTarget(
+      "context-profile",
+      "test-model",
+    )!
+    const summary = {
+      target,
+      targetKey: "ignored",
+      scopeKey: "a".repeat(64),
+      verifiedAt: Date.now(),
+      apiType: API_TYPES.OPENAI,
+      modelId: "test-model",
+      lowerBoundTokens: 131004,
+      reason: CONTEXT_CAPACITY_REASONS.TestLimit,
+      requests: 1,
+      outputLimited: true,
+      apiKey: "secret",
+      prompt: "private long text",
+      attempts: [{ message: "private response" }],
+    }
+    await verificationResultHistoryStorage.upsertContextSummary(summary)
+    const restored = await verificationResultHistoryStorage.getContextSummary(
+      summary.scopeKey,
+      target,
+    )
+    expect(restored).toMatchObject({
+      lowerBoundTokens: 131004,
+      outputLimited: true,
+    })
+    expect(restored).not.toHaveProperty("apiKey")
+    expect(restored).not.toHaveProperty("prompt")
+    expect(restored).not.toHaveProperty("attempts")
+    expect(
+      await verificationResultHistoryStorage.getContextSummary(
+        "b".repeat(64),
+        target,
+      ),
+    ).toBeNull()
+    await verificationResultHistoryStorage.reconcileOwners({
+      remapProfileIds: new Map([["context-profile", "new-profile"]]),
+    })
+    const destination = createProfileModelVerificationHistoryTarget(
+      "new-profile",
+      "test-model",
+    )!
+    expect(
+      await verificationResultHistoryStorage.getContextSummary(
+        summary.scopeKey,
+        destination,
+      ),
+    ).not.toBeNull()
+    await verificationResultHistoryStorage.clearTarget(destination)
+    expect(
+      await verificationResultHistoryStorage.getContextSummary(
+        summary.scopeKey,
+        destination,
+      ),
+    ).toBeNull()
+  })
+
+  it("retains anonymous context observations through owner sweeps but expires old ones", async () => {
+    stubLiveOwners({ accountIds: [], profileIds: [] })
+    const summary = {
+      targetKey: "",
+      scopeKey: "c".repeat(64),
+      verifiedAt: Date.now(),
+      apiType: API_TYPES.OPENAI,
+      modelId: "test",
+      lowerBoundTokens: 4096,
+      reason: CONTEXT_CAPACITY_REASONS.TestLimit,
+      requests: 1,
+      outputLimited: false,
+    }
+    await verificationResultHistoryStorage.upsertContextSummary(summary)
+    await verificationResultHistoryStorage.sweepOrphans({
+      now: Date.now() + ORPHAN_SWEEP_INTERVAL_MS,
+    })
+    expect(
+      await verificationResultHistoryStorage.getContextSummary(
+        summary.scopeKey,
+      ),
+    ).not.toBeNull()
+    await verificationResultHistoryStorage.upsertContextSummary({
+      ...summary,
+      scopeKey: "d".repeat(64),
+      verifiedAt: Date.now() - VERIFICATION_SUMMARY_MAX_AGE_MS - 1000,
+    })
+    expect(
+      await verificationResultHistoryStorage.getContextSummary("d".repeat(64)),
+    ).toBeNull()
+  })
+
+  it("looks up an account result only with its effective request scope", async () => {
+    stubLiveOwners({ accountIds: ["context-account"] })
+    const target = createAccountModelVerificationHistoryTarget(
+      "context-account",
+      "model",
+    )!
+    await verificationResultHistoryStorage.upsertContextSummary({
+      target,
+      targetKey: "",
+      scopeKey: "a".repeat(64),
+      verifiedAt: Date.now(),
+      apiType: API_TYPES.OPENAI,
+      modelId: "model",
+      lowerBoundTokens: 4096,
+      reason: CONTEXT_CAPACITY_REASONS.TestLimit,
+      requests: 1,
+      outputLimited: false,
+    })
+    expect(
+      await verificationResultHistoryStorage.getContextSummary(
+        "a".repeat(64),
+        target,
+      ),
+    ).toMatchObject({ lowerBoundTokens: 4096 })
+    expect(
+      await verificationResultHistoryStorage.getContextSummary(
+        "c".repeat(64),
+        target,
+      ),
+    ).toBeNull()
+  })
   let readAccountsSpy: MockInstance
   let listProfileIdsSpy: MockInstance
 

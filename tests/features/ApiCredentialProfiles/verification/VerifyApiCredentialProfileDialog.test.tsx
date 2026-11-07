@@ -14,6 +14,8 @@ import {
   type VerifyApiCredentialProfileDialogProps,
 } from "~/features/ApiCredentialProfiles/verification/useProfileVerification"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
+import { STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import {
@@ -305,6 +307,15 @@ describe("VerifyApiCredentialProfileDialog", () => {
     onClose: vi.fn(),
     initialModelId: "model",
   }
+
+  it("blocks capacity when there is no model to send", async () => {
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: { ...sessionProps, initialModelId: undefined },
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    expect(result.current.tools.contextCapacity?.canRun).toBe(false)
+  })
+
   const acceptedProbe: ApiVerificationProbeResult = {
     id: "text-generation",
     status: "pass",
@@ -627,7 +638,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
         else older.reject(new DOMException("Aborted", "AbortError"))
         await oldRun
       })
-      expect(result.current.activeProbeId).toBe("text-generation")
+      expect(result.current.activeProbeIds).toEqual(
+        new Set(["text-generation"]),
+      )
       expect(
         result.current.probes.find(
           (probe) => probe.definition.id === "text-generation",
@@ -644,7 +657,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
         newer.resolve(acceptedProbe)
         await newRun
       })
-      expect(result.current.activeProbeId).toBeNull()
+      expect(result.current.activeProbeIds.size).toBe(0)
     },
   )
 
@@ -693,7 +706,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
       await oldRun
     })
     expect(result.current.isPersisting).toBe(true)
-    expect(result.current.activeProbeId).toBe("text-generation")
+    expect(result.current.activeProbeIds).toEqual(new Set(["text-generation"]))
     expect(result.current.persistedSummary).toBeNull()
     expect(
       await verificationResultHistoryStorage.getLatestSummary(
@@ -1200,17 +1213,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
     // actionable while it carries the progress state.
     expect(initiatingButton).toBeEnabled()
     expect(initiatingButton).toHaveAttribute("aria-busy", "true")
-    expect(siblingButton).toBeDisabled()
+    expect(siblingButton).toBeEnabled()
     expect(siblingButton).toHaveAccessibleName(
       "aiApiVerification:verifyDialog.actions.runOne",
     )
     expect(siblingButton).not.toHaveAttribute("aria-busy")
     expect(suiteButton).toBeDisabled()
     expect(suiteButton).not.toHaveAttribute("aria-busy")
-
-    // A disabled sibling cannot start a second probe while one is in flight.
-    fireEvent.click(siblingButton)
-    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
 
     deferredProbe.reject(new Error("probe failed"))
 
@@ -2764,6 +2773,123 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("keeps other test buttons available during a profile probe", async () => {
+    const user = userEvent.setup()
+    mockProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+      { id: "models", requiresModelId: false },
+    ])
+    mockRunApiVerificationProbe.mockReturnValue(new Promise(() => {}))
+    mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
+    render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
+    const text = within(
+      await screen.findByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      ),
+    )
+    const runText = text.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(runText).toBeEnabled())
+    await user.click(runText)
+    const drawing = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.tools.pelican.run",
+    })
+    expect(drawing).toBeEnabled()
+    await user.click(drawing)
+    expect(
+      within(
+        screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
+      ).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    ).toBeEnabled()
+    expect(text.getByRole("button", { name: /stopProbe/ })).toBeEnabled()
+  })
+
+  it("keeps unrelated probes available while a completed probe saves history", async () => {
+    const user = userEvent.setup()
+    const saving = createDeferred<void>()
+    mockProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+      { id: "models", requiresModelId: false },
+    ])
+    mockRunApiVerificationProbe.mockImplementation(async ({ probeId }) => ({
+      ...acceptedProbe,
+      id: probeId,
+    }))
+    render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
+    const text = within(
+      await screen.findByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      ),
+    )
+    const entered = createDeferred<void>()
+    const lockHeld = withExtensionStorageWriteLock(
+      STORAGE_LOCKS.API_VERIFICATION_HISTORY,
+      async () => {
+        entered.resolve()
+        await saving.promise
+      },
+    )
+    await entered.promise
+    await user.click(
+      text.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+    await waitFor(() =>
+      expect(
+        text.getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.running",
+        }),
+      ).toBeDisabled(),
+    )
+    expect(
+      within(
+        screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
+      ).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    ).toBeEnabled()
+    const sibling = within(
+      screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
+    )
+    await user.click(
+      sibling.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      saving.resolve()
+      await lockHeld
+    })
+    await waitFor(() =>
+      expect(
+        text.getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.retry",
+        }),
+      ).toBeEnabled(),
+    )
+    await waitFor(async () => {
+      const summary = await verificationResultHistoryStorage.getLatestSummary(
+        requireHistoryTarget(
+          createProfileModelVerificationHistoryTarget(
+            sessionProfile.id,
+            "model",
+          ),
+        ),
+      )
+      expect(summary?.probes.map((probe) => probe.id).sort()).toEqual([
+        "models",
+        "text-generation",
+      ])
+    })
+  })
+
   it("offers the drawing test for a text profile and hides it for embedding models", async () => {
     const { result } = renderHook(useProfileVerification, {
       initialProps: sessionProps,
@@ -2779,7 +2905,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(result.current.tools.canRunPelican).toBe(false)
   })
 
-  it("blocks closing the profile dialog while a drawing test runs", async () => {
+  it("runs independent probes alongside drawing and stops only the chosen probe", async () => {
     mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(useProfileVerification, {
       initialProps: sessionProps,
@@ -2791,6 +2917,38 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await waitFor(() => expect(result.current.tools.isRunning).toBe(true))
     expect(result.current.canClose).toBe(false)
+    const text = createDeferred<ApiVerificationProbeResult>()
+    const models = createDeferred<ApiVerificationProbeResult>()
+    mockRunApiVerificationProbe.mockImplementation(({ probeId }) =>
+      probeId === "text-generation" ? text.promise : models.promise,
+    )
+    act(() => {
+      void result.current.runSingleProbe("text-generation")
+      void result.current.runSingleProbe("models")
+    })
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2),
+    )
+    act(() => result.current.stopProbe("text-generation"))
+    await act(async () => {
+      text.resolve(acceptedProbe)
+      models.resolve({
+        ...acceptedProbe,
+        id: "models",
+        summary: "Models completed",
+      })
+    })
+    await waitFor(() =>
+      expect(
+        result.current.probes.find((p) => p.definition.id === "models")?.result
+          ?.summary,
+      ).toBe("Models completed"),
+    )
+    expect(
+      result.current.probes.find((p) => p.definition.id === "text-generation")
+        ?.result?.summaryKey,
+    ).toBe("verifyDialog.summaries.stopped")
+    expect(result.current.tools.isRunning).toBe(true)
   })
 
   it("sends the profile's custom request headers to the drawing test", async () => {

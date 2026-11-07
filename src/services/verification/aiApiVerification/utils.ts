@@ -78,7 +78,24 @@ export function summaryKeyFromHttpStatus(
   if (status === 401) return "verifyDialog.summaries.unauthorized"
   if (status === 403) return "verifyDialog.summaries.forbidden"
   if (status === 404) return "verifyDialog.summaries.endpointNotFound"
+  if (status === 408 || status === 504)
+    return "verifyDialog.summaries.requestTimedOut"
   return undefined
+}
+
+/** Recognize timeout evidence without inferring it from arbitrary backend text. */
+export function isRequestTimeoutError(error: unknown): boolean {
+  const record = readObjectRecord(error)
+  return (
+    record?.name === "TimeoutError" ||
+    record?.code === "ETIMEDOUT" ||
+    [408, 504].includes(inferStructuredHttpStatus(error) ?? 0) ||
+    Boolean(
+      record?.cause &&
+        record.cause !== error &&
+        isRequestTimeoutError(record.cause),
+    )
+  )
 }
 
 /**
@@ -96,7 +113,9 @@ export function buildSafeProbeFailureDiagnostics(
   const analyticsStatus = inferStructuredHttpStatus(error)
 
   return {
-    summaryKey: summaryKeyFromHttpStatus(displayStatus),
+    summaryKey: isRequestTimeoutError(error)
+      ? "verifyDialog.summaries.requestTimedOut"
+      : summaryKeyFromHttpStatus(displayStatus),
     summaryParams:
       typeof displayStatus === "number" ? { status: displayStatus } : undefined,
     output:

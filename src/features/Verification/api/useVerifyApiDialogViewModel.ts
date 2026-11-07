@@ -7,6 +7,7 @@ import {
   withUnfinishedProbesStopped,
 } from "~/features/Verification/api/probeState"
 import type { VerifyApiDialogProps } from "~/features/Verification/api/types"
+import { MASKED_CONTEXT_HISTORY_REQUEST } from "~/features/Verification/api/useContextCapacity"
 import { useVerificationDialogState } from "~/features/Verification/api/useVerificationDialogState"
 import {
   useVerificationTools,
@@ -21,6 +22,7 @@ import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificatio
 import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
+  formatAccountRuntimeKeySecretForSite,
   isAccountRuntimeKeyCompatibleWithModel,
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
@@ -30,6 +32,7 @@ import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -276,6 +279,26 @@ export function useVerifyApiDialogViewModel({
   )
 
   const tools = useVerificationTools({
+    enableContextCapacity: isOpen,
+    contextCapacityKey: JSON.stringify([
+      isOpen,
+      selectedRuntimeKeyId,
+      selectedRuntimeKey?.baseUrl,
+      selectedRuntimeKey?.secret,
+      selectedRuntimeKey?.keyMask,
+      selectedRuntimeKey?.createdAt,
+      selectedRuntimeKey?.siteType,
+      selectedRuntimeKeyIsCompatible,
+      tokenModelHint,
+      account.baseUrl,
+      account.token,
+      account.cookieAuthSessionCookie,
+      requestedModelId,
+      apiType,
+      verificationMode,
+      requestProfile,
+      requestProfileEnhanced,
+    ]),
     historyTarget:
       requestedModelId.trim() ||
       selectedRuntimeKey?.modelAccess.suggestedModelIds[0]?.trim()
@@ -288,8 +311,31 @@ export function useVerifyApiDialogViewModel({
         : null,
     historyApiType: apiType,
     resolveRequest: resolveToolRequest,
+    // History may use an already available secret; opening the dialog must not
+    // fetch a hidden credential just to restore a capacity observation.
+    resolveContextHistoryRequest: async () => {
+      const modelId = requestedModelId.trim() || tokenModelHint?.trim()
+      if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible || !modelId)
+        return null
+      if (!hasUsableApiTokenKey(selectedRuntimeKey.secret))
+        return MASKED_CONTEXT_HISTORY_REQUEST
+      return {
+        baseUrl: selectedRuntimeKey.baseUrl,
+        apiKey: formatAccountRuntimeKeySecretForSite(selectedRuntimeKey).secret,
+        apiType,
+        modelId,
+        mode: verificationMode,
+        requestProfile,
+        requestProfileEnhanced,
+        secrets: [],
+      }
+    },
     isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
-    isBlocked: isRunning || isAnyProbeRunning,
+    isBlocked:
+      isLoadingRuntimeKeys ||
+      !selectedRuntimeKey ||
+      !selectedRuntimeKeyIsCompatible ||
+      !(requestedModelId.trim() || tokenModelHint?.trim()),
   })
 
   const canClose = !isRunning && !isAnyProbeRunning && !tools.isRunning
@@ -407,6 +453,7 @@ export function useVerifyApiDialogViewModel({
     if (!historyTarget) return
     await clearVerificationHistory(apiType)
     tools.clearPelicanHistory?.()
+    tools.clearContextCapacityHistory?.(historyTarget)
   }
 
   // The suite can always run the models probe without a model id.

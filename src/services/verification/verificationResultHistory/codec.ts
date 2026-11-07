@@ -11,6 +11,7 @@ import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
+import { CONTEXT_CAPACITY_REASONS } from "~/services/verification/modelQuality/contextCapacityConstants"
 import {
   API_VERIFICATION_HISTORY_STATUSES,
   API_VERIFICATION_HISTORY_TARGET_KINDS,
@@ -18,6 +19,7 @@ import {
   type ApiVerificationHistoryConfig,
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
+  type ContextCapacitySummary,
   type DrawingVerificationSummary,
   type PersistedApiVerificationProbeSummary,
 } from "~/services/verification/verificationResultHistory/types"
@@ -326,21 +328,28 @@ export function sanitizeConfig(
     ...(value.drawingSummaries
       ? { drawingSummaries: coerceDrawings(value.drawingSummaries) }
       : {}),
+    ...(Array.isArray(value.contextSummaries)
+      ? {
+          contextSummaries: value.contextSummaries
+            .map(coerceContextSummary)
+            .filter((item): item is ContextCapacitySummary => item !== null),
+        }
+      : {}),
     lastUpdated: normalizeTimestamp(value.lastUpdated),
     lastOrphanSweepAt: coercePositiveTimestamp(value.lastOrphanSweepAt),
   }
 }
 
 /**
- * Accept a payload written by this build without walking every entry.
+ * Trust this build's primary summaries; always decode context-capacity entries.
  *
  * The invariant that makes this safe: {@link VerificationResultHistoryStorageService.mutateConfig}
  * is the only writer and every summary it stores already passed
  * `coerceHistorySummary`, so a payload at the current version is sanitized by
  * construction and its target keys are unique. A payload at any other version
  * falls through to {@link sanitizeConfig}. The residual risk is a hand-edited or
- * corrupted current-version payload, which reaches the UI unsanitized instead of
- * being silently dropped.
+ * corrupted current-version primary payload, which reaches the UI unsanitized
+ * instead of being silently dropped. Capacity entries are validated below.
  * @returns The config, or `null` when the payload needs the boundary check.
  */
 export function coerceTrustedConfig(
@@ -367,7 +376,82 @@ export function coerceTrustedConfig(
             value.drawingSummaries as DrawingVerificationSummary[],
         }
       : {}),
+    ...(Array.isArray(value.contextSummaries)
+      ? {
+          contextSummaries: value.contextSummaries
+            .map(coerceContextSummary)
+            .filter((item): item is ContextCapacitySummary => item !== null),
+        }
+      : {}),
     lastUpdated: value.lastUpdated,
     lastOrphanSweepAt: coercePositiveTimestamp(value.lastOrphanSweepAt),
+  }
+}
+
+/** Keep only typed capacity facts; discard raw request and response material. */
+export function coerceContextSummary(
+  raw: unknown,
+): ContextCapacitySummary | null {
+  if (!raw || typeof raw !== "object") return null
+  const value = raw as Record<string, unknown>
+  const target =
+    value.target === undefined ? undefined : coerceTarget(value.target)
+  const scopeKey =
+    typeof value.scopeKey === "string" && /^[a-f0-9]{64}$/.test(value.scopeKey)
+      ? value.scopeKey
+      : null
+  const count = (input: unknown): input is number =>
+    typeof input === "number" && Number.isSafeInteger(input) && input >= 0
+  if (
+    (value.target !== undefined && !target) ||
+    !scopeKey ||
+    !isApiVerificationApiType(value.apiType) ||
+    typeof value.reason !== "string" ||
+    !Object.values(CONTEXT_CAPACITY_REASONS).some(
+      (reason) => reason === value.reason,
+    ) ||
+    !count(value.lowerBoundTokens) ||
+    !count(value.requests) ||
+    (value.upperBoundTokens !== undefined && !count(value.upperBoundTokens))
+  )
+    return null
+  return {
+    ...(target ? { target } : {}),
+    targetKey: target
+      ? serializeVerificationHistoryTarget(target)
+      : `connection:${scopeKey}`,
+    scopeKey,
+    ...(typeof value.inventoryKey === "string" &&
+    /^[a-f0-9]{64}$/.test(value.inventoryKey)
+      ? { inventoryKey: value.inventoryKey }
+      : {}),
+    verifiedAt: normalizeTimestamp(value.verifiedAt),
+    apiType: value.apiType,
+    modelId: sanitizeText(value.modelId),
+    lowerBoundTokens: value.lowerBoundTokens,
+    ...(count(value.declaredContext) && value.declaredContext > 0
+      ? { declaredContext: value.declaredContext }
+      : {}),
+    ...(value.upperBoundTokens !== undefined
+      ? { upperBoundTokens: value.upperBoundTokens }
+      : {}),
+    reason: value.reason as ContextCapacitySummary["reason"],
+    ...(value.reason === CONTEXT_CAPACITY_REASONS.Inconclusive &&
+    (value.inconclusiveReason === "timeout" ||
+      value.inconclusiveReason === "empty-response" ||
+      value.inconclusiveReason === "interrupted")
+      ? { inconclusiveReason: value.inconclusiveReason }
+      : {}),
+    requests: value.requests,
+    outputLimited: value.outputLimited === true,
+    ...(typeof value.latencyMs === "number" &&
+    Number.isFinite(value.latencyMs) &&
+    value.latencyMs >= 0
+      ? { latencyMs: value.latencyMs }
+      : {}),
+    ...(value.mode === API_VERIFICATION_MODES.Streaming ||
+    value.mode === API_VERIFICATION_MODES.NonStreaming
+      ? { mode: value.mode }
+      : {}),
   }
 }

@@ -163,8 +163,9 @@ export function useProfileVerification({
   )
   const [isPersisting, setIsPersisting] = useState(false)
   const persistenceLeases = useRef(new Set<symbol>())
-  const [activeProbeId, setActiveProbeId] =
-    useState<ApiVerificationProbeId | null>(null)
+  const [activeProbeIds, setActiveProbeIds] = useState(
+    new Set<ApiVerificationProbeId>(),
+  )
 
   const apiTypeRef = useRef(apiType)
   const {
@@ -226,11 +227,24 @@ export function useProfileVerification({
       verificationMode,
     ])
   const tools = useVerificationTools({
+    enableContextCapacity: isOpen,
+    contextCapacityKey: JSON.stringify([
+      isOpen,
+      requestedModelId,
+      apiType,
+      verificationMode,
+      requestProfile,
+      requestProfileEnhanced,
+      profile?.id,
+      profile?.baseUrl,
+      profile?.apiKey,
+      profile?.requestHeaders,
+    ]),
     historyTarget: getHistoryTargetForModel(requestedModelId),
     historyApiType: apiType,
     resolveRequest: resolveToolRequest,
     isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
-    isBlocked: isRunning || isAnyProbeRunning || isPersisting,
+    isBlocked: !profile || !requestedModelId.trim(),
   })
 
   const canClose =
@@ -267,7 +281,7 @@ export function useProfileVerification({
 
   useEffect(() => {
     reset()
-    setActiveProbeId(null)
+    setActiveProbeIds(new Set())
     persistenceLeases.current.clear()
     setIsPersisting(false)
     if (!isOpen || !profile) {
@@ -447,6 +461,7 @@ export function useProfileVerification({
     try {
       await clearVerificationHistory(apiType, targetToClear)
       tools.clearPelicanHistory?.()
+      tools.clearContextCapacityHistory?.(targetToClear)
     } catch (error) {
       logger.error("Failed to clear verification history", { error })
     }
@@ -454,18 +469,22 @@ export function useProfileVerification({
 
   const runSingleProbe = async (probeId: ApiVerificationProbeId) => {
     await runProbeTask(probeId, async (signal) => {
-      setActiveProbeId(probeId)
+      setActiveProbeIds((current) => new Set(current).add(probeId))
       try {
         await runProbe(probeId, undefined, true, signal)
       } finally {
         if (isCurrent(signal))
-          setActiveProbeId((current) => (current === probeId ? null : current))
+          setActiveProbeIds((current) => {
+            const next = new Set(current)
+            next.delete(probeId)
+            return next
+          })
       }
     })
   }
 
   const stopProbe = (probeId: ApiVerificationProbeId) => {
-    abortProbe(probeId, { interruptRun: true })
+    abortProbe(probeId)
   }
 
   const runAll = async () => {
@@ -589,7 +608,7 @@ export function useProfileVerification({
     fetchModelsError,
     fetchedModelCount,
     isPersisting,
-    activeProbeId,
+    activeProbeIds,
     historyTarget,
     probes,
     replaceProbes,

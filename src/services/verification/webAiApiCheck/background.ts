@@ -28,9 +28,19 @@ import {
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
 import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
+import { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } from "~/services/verification/modelQuality/contextCapacityConstants"
+import { CONTEXT_CAPACITY_DEFAULTS } from "~/services/verification/modelQuality/contextCapacityDefaults"
 import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
+import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import { webAiApiCheckBaseUrlHistoryStorage } from "~/services/verification/webAiApiCheck/baseUrlHistory"
-import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
+import {
+  CONTEXT_HISTORY_ACTIONS,
+  WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
+} from "~/services/verification/webAiApiCheck/constants"
+import {
+  discardInactiveContextCheckpoints,
+  runDurableContextCapacity,
+} from "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
 import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
@@ -41,11 +51,17 @@ import { onTabRemoved, onTabUpdated } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
-import { onWebAiApiCheckMessage, WebAiApiCheckMessageTypes } from "./messaging"
+import {
+  onWebAiApiCheckMessage,
+  sendWebAiApiCheckMessage,
+  WebAiApiCheckMessageTypes,
+} from "./messaging"
 import { isWebAiApiCheckPageAllowed } from "./siteAccess"
 import type {
   ApiCheckCancelRunProbeRequest,
   ApiCheckCancelRunProbeResponse,
+  ApiCheckContextHistoryRequest,
+  ApiCheckContextHistoryResponse,
   ApiCheckCreateTagRequest,
   ApiCheckCreateTagResponse,
   ApiCheckFetchModelsRequest,
@@ -60,6 +76,8 @@ import type {
   ApiCheckRemoveBaseUrlHistoryResponse,
   ApiCheckRenameTagRequest,
   ApiCheckRenameTagResponse,
+  ApiCheckRunContextCapacityRequest,
+  ApiCheckRunContextCapacityResponse,
   ApiCheckRunPelicanRequest,
   ApiCheckRunPelicanResponse,
   ApiCheckRunProbeRequest,
@@ -76,6 +94,45 @@ import type {
 const logger = createLogger("WebAiApiCheck")
 
 const probeRuns = createApiCheckProbeRunRegistry()
+
+/** Keep request fingerprinting and persistence in the secure extension context. */
+async function resolveContextHistory({
+  request,
+  action,
+  result,
+}: ApiCheckContextHistoryRequest): Promise<ApiCheckContextHistoryResponse> {
+  if (
+    !request ||
+    !Object.values(API_TYPES).includes(request.apiType) ||
+    typeof request.apiKey !== "string" ||
+    !request.apiKey.trim() ||
+    typeof request.baseUrl !== "string" ||
+    typeof request.modelId !== "string" ||
+    !request.modelId.trim() ||
+    !normalizeProbeBaseUrl(request) ||
+    !Object.values(CONTEXT_HISTORY_ACTIONS).includes(action)
+  )
+    return { success: false }
+  if (
+    request.mode !== undefined &&
+    !Object.values(API_VERIFICATION_MODES).includes(request.mode)
+  )
+    return { success: false }
+  if (
+    request.requestProfile !== undefined &&
+    !isVerificationRequestProfile(request.requestProfile)
+  )
+    return { success: false }
+  try {
+    const summary =
+      action === CONTEXT_HISTORY_ACTIONS.Get
+        ? await contextCapacityHistory.get(request)
+        : await contextCapacityHistory.save(request, result ?? null)
+    return { success: true, summary }
+  } catch {
+    return { success: false }
+  }
+}
 
 /**
  * Read Web AI API Check preferences with safe defaults.
@@ -619,6 +676,102 @@ async function resolveWebAiApiCheckRunPelicanMessage(
   }
 }
 
+/** Keep generated long prompts in background; return only compact measurements. */
+async function resolveWebAiApiCheckRunContextCapacityMessage(
+  request: ApiCheckRunContextCapacityRequest,
+  sender?: browser.runtime.MessageSender,
+): Promise<ApiCheckRunContextCapacityResponse> {
+  const {
+    runId,
+    apiType,
+    baseUrl,
+    apiKey,
+    modelId,
+    mode,
+    requestProfile,
+    requestProfileEnhanced,
+    maxInputTokens,
+    resumeFrom,
+  } = request
+  if (
+    !runId?.trim() ||
+    !Object.values(API_TYPES).includes(apiType) ||
+    !baseUrl?.trim() ||
+    !apiKey?.trim() ||
+    !modelId?.trim()
+  )
+    return {
+      success: false,
+      error: "Missing or invalid context probe configuration",
+    }
+  if (
+    maxInputTokens !== undefined &&
+    (!Number.isSafeInteger(maxInputTokens) ||
+      maxInputTokens < CONTEXT_CAPACITY_DEFAULTS.minimumInputTokens ||
+      maxInputTokens > CONTEXT_CAPACITY_DEFAULTS.maxTotalInputTokens)
+  )
+    return {
+      success: false,
+      error: "Invalid input limit",
+    }
+  if (
+    mode !== undefined &&
+    mode !== API_VERIFICATION_MODES.Streaming &&
+    mode !== API_VERIFICATION_MODES.NonStreaming
+  )
+    return { success: false, error: "Invalid verification mode" }
+  if (
+    requestProfile !== undefined &&
+    !isVerificationRequestProfile(requestProfile)
+  )
+    return { success: false, error: "Invalid request profile" }
+  const normalizedBaseUrl = normalizeProbeBaseUrl({ apiType, baseUrl })
+  if (!normalizedBaseUrl) return { success: false, error: "Invalid baseUrl" }
+  try {
+    const result = await probeRuns.run(
+      runId,
+      async (signal) => {
+        const result = await runDurableContextCapacity(
+          {
+            baseUrl: normalizedBaseUrl,
+            apiKey,
+            apiType,
+            modelId: modelId.trim(),
+            mode,
+            requestProfile,
+            requestProfileEnhanced,
+            maxInputTokens,
+            resumeFrom,
+            abortSignal: signal!,
+            onProgress: (result) => {
+              if (signal?.aborted || sender?.tab?.id === undefined) return
+              void sendWebAiApiCheckMessage(
+                WebAiApiCheckMessageTypes.ContextCapacityProgress,
+                { runId, result },
+                { tabId: sender.tab.id, frameId: sender.frameId },
+              ).catch(() => undefined)
+            },
+          },
+          request.recoverOnly === true,
+        )
+        signal?.throwIfAborted()
+        return result
+      },
+      sender?.tab?.id,
+    )
+    return { success: true, result }
+  } catch (error) {
+    return {
+      success: false,
+      error: toSanitizedErrorSummary(error, [apiKey]),
+      ...(error instanceof Error &&
+      error.name === CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME
+        ? { checkpointLimitReached: true }
+        : {}),
+    }
+  }
+}
+
 /**
  * Abort a single in-flight API verification probe.
  */
@@ -790,6 +943,28 @@ export function setupWebAiApiCheckMessagingListeners() {
       WebAiApiCheckMessageTypes.RunPelican,
       async ({ data, sender }) =>
         resolveWebAiApiCheckRunPelicanMessage(data, sender?.tab?.id),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RunContextCapacity,
+      async ({ data, sender }) =>
+        resolveWebAiApiCheckRunContextCapacityMessage(data, sender),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.ContextHistory,
+      async ({ data }) => resolveContextHistory(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.DiscardContextCheckpoints,
+      async () => {
+        try {
+          return {
+            success: true as const,
+            discarded: await discardInactiveContextCheckpoints(),
+          }
+        } catch {
+          return { success: false as const }
+        }
+      },
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.CancelRunProbe,

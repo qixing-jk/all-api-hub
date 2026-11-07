@@ -98,6 +98,15 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // Each entry also lists the allowed import targets as prefix matches, so a
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
+  // Capacity probes load only the selected tokenizer vocabulary after user initiation.
+  {
+    file: "src/services/verification/modelQuality/contextCounter.ts",
+    imports: [
+      "gpt-tokenizer/modelsMap",
+      "gpt-tokenizer/encoding/cl100k_base",
+      "gpt-tokenizer/encoding/o200k_base",
+    ],
+  },
   // Optional code execution loads the WASM interpreter only when a test uses JS.
   {
     file: "src/services/verification/agentTest/environment.ts",

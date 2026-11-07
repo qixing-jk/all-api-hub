@@ -10,6 +10,7 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   cloneConfig,
   cloneSummaries,
+  coerceContextSummary,
   coerceDrawingSummary,
   coerceHistorySummary,
   coerceTrustedConfig,
@@ -31,6 +32,7 @@ import {
   type ApiVerificationHistoryConfig,
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
+  type ContextCapacitySummary,
   type DrawingVerificationSummary,
 } from "~/services/verification/verificationResultHistory/types"
 import { serializeVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/utils"
@@ -338,6 +340,72 @@ class VerificationResultHistoryStorageService {
     return null
   }
 
+  async getContextSummary(
+    scopeKey: string,
+    target?: ApiVerificationHistoryTarget,
+  ): Promise<ContextCapacitySummary | null> {
+    const config = await this.readConfigForRead()
+    const key = target
+      ? serializeVerificationHistoryTarget(target)
+      : `connection:${scopeKey}`
+    const summary = config.contextSummaries?.find(
+      (item) => item.targetKey === key && item.scopeKey === scopeKey,
+    )
+    return summary &&
+      applyVerificationRetention([summary], { now: Date.now() }).summaries
+        .length
+      ? structuredClone(summary)
+      : null
+  }
+
+  async upsertContextSummary(summary: ContextCapacitySummary): Promise<void> {
+    const incoming = coerceContextSummary(summary)
+    if (!incoming) throw new Error("Invalid context capacity summary")
+    await this.mutateConfig((config) => {
+      const current = config.contextSummaries?.find(
+        (item) => item.targetKey === incoming.targetKey,
+      )
+      if (current && current.verifiedAt > incoming.verifiedAt)
+        return { result: undefined, changed: false, next: config }
+      const retained = applyVerificationRetention(
+        [
+          incoming,
+          ...(config.contextSummaries ?? []).filter(
+            (item) => item.targetKey !== incoming.targetKey,
+          ),
+        ],
+        { now: Date.now() },
+      )
+      return {
+        result: undefined,
+        changed: true,
+        next: {
+          ...config,
+          contextSummaries: retained.summaries,
+          lastUpdated: Date.now(),
+        },
+      }
+    })
+    await this.sweepOrphans()
+  }
+
+  /** Historical inventory match only; the hidden current secret is unverified. */
+  async getContextSummaryByInventory(
+    target: ApiVerificationHistoryTarget,
+    inventoryKey: string,
+  ): Promise<ContextCapacitySummary | null> {
+    const config = await this.readConfigForRead()
+    const key = serializeVerificationHistoryTarget(target)
+    const summary = config.contextSummaries?.find(
+      (item) => item.targetKey === key && item.inventoryKey === inventoryKey,
+    )
+    return summary &&
+      applyVerificationRetention([summary], { now: Date.now() }).summaries
+        .length
+      ? structuredClone(summary)
+      : null
+  }
+
   async upsertDrawingSummary(
     summary: DrawingVerificationSummary,
   ): Promise<void> {
@@ -376,7 +444,11 @@ class VerificationResultHistoryStorageService {
       const drawingSummaries = config.drawingSummaries?.filter(
         (item) => item.targetKey !== targetKey,
       )
+      const contextSummaries = config.contextSummaries?.filter(
+        (item) => item.targetKey !== targetKey,
+      )
       const changed =
+        contextSummaries?.length !== config.contextSummaries?.length ||
         summaries.length !== config.summaries.length ||
         drawingSummaries?.length !== config.drawingSummaries?.length
       return {
@@ -384,6 +456,7 @@ class VerificationResultHistoryStorageService {
         next: {
           ...config,
           summaries,
+          ...(contextSummaries ? { contextSummaries } : {}),
           ...(drawingSummaries ? { drawingSummaries } : {}),
           lastUpdated: Date.now(),
         },
@@ -418,7 +491,13 @@ class VerificationResultHistoryStorageService {
         config.drawingSummaries ?? [],
         normalized,
       )
+      const contexts = applyOwnerReconcile(
+        config.contextSummaries ?? [],
+        normalized,
+      )
       const changed =
+        contexts.removed > 0 ||
+        contexts.remapped > 0 ||
         outcome.removed > 0 ||
         outcome.remapped > 0 ||
         drawings.removed > 0 ||
@@ -426,12 +505,15 @@ class VerificationResultHistoryStorageService {
 
       return {
         result: {
-          removed: outcome.removed + drawings.removed,
-          remapped: outcome.remapped + drawings.remapped,
+          removed: outcome.removed + drawings.removed + contexts.removed,
+          remapped: outcome.remapped + drawings.remapped + contexts.remapped,
         },
         next: {
           ...config,
           summaries: outcome.summaries,
+          ...(config.contextSummaries
+            ? { contextSummaries: contexts.summaries }
+            : {}),
           ...(config.drawingSummaries
             ? { drawingSummaries: drawings.summaries }
             : {}),
@@ -511,9 +593,15 @@ class VerificationResultHistoryStorageService {
         { now, liveProfileIds, liveAccountIds },
       )
 
+      const contexts = applyVerificationRetention(
+        config.contextSummaries ?? [],
+        { now, liveProfileIds, liveAccountIds },
+      )
       return {
         result: {
           removed:
+            (config.contextSummaries?.length ?? 0) -
+            contexts.summaries.length +
             config.summaries.length -
             retention.summaries.length +
             (config.drawingSummaries?.length ?? 0) -
@@ -523,6 +611,9 @@ class VerificationResultHistoryStorageService {
         next: {
           ...config,
           summaries: retention.summaries,
+          ...(config.contextSummaries
+            ? { contextSummaries: contexts.summaries }
+            : {}),
           ...(config.drawingSummaries
             ? { drawingSummaries: drawings.summaries }
             : {}),
@@ -530,7 +621,11 @@ class VerificationResultHistoryStorageService {
           // retries on the next write instead of stalling for a full interval.
           lastOrphanSweepAt: completed ? now : config.lastOrphanSweepAt,
         },
-        changed: retention.changed || drawings.changed || completed,
+        changed:
+          retention.changed ||
+          drawings.changed ||
+          contexts.changed ||
+          completed,
       }
     })
   }

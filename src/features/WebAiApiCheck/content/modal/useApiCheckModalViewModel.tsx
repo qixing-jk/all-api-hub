@@ -22,6 +22,10 @@ import {
 import type { ApiCheckValidationError } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { useApiCheckModalShell } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "~/features/WebAiApiCheck/content/models/useApiCheckModelDiscovery"
+import {
+  contextHistoryInBackground,
+  discardContextCheckpointsInBackground,
+} from "~/features/WebAiApiCheck/content/probes/contextHistoryInBackground"
 import { useApiCheckProbeRunner } from "~/features/WebAiApiCheck/content/probes/useApiCheckProbeRunner"
 import { normalizeApiCheckSourceUrl } from "~/features/WebAiApiCheck/content/profiles/apiCheckSourceUrl"
 import { useApiCheckProfileSaveWorkflow } from "~/features/WebAiApiCheck/content/profiles/useApiCheckProfileSaveWorkflow"
@@ -48,6 +52,8 @@ import {
 } from "~/services/verification/webAiApiCheck/messaging"
 import type { Tag } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
+
+import { runContextCapacityInBackground } from "../probes/runContextCapacityInBackground"
 
 /**
  * Builds the state and action contract for the content API check modal UI.
@@ -266,15 +272,32 @@ export function useApiCheckModalViewModel() {
     ])
 
   const verificationTools = useVerificationTools({
+    contextHistoryAccess: contextHistoryInBackground,
+    discardContextCheckpoints: discardContextCheckpointsInBackground,
+    enableContextCapacity: true,
+    contextCapacityKey: JSON.stringify([
+      isOpen,
+      baseUrl,
+      apiKey,
+      apiType,
+      modelId,
+      verificationMode,
+      requestProfile,
+      requestProfileEnhanced,
+    ]),
+    runContextCapacityRequest: runContextCapacityInBackground,
     resolveRequest: resolveToolRequest,
     isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
-    isBlocked: isRunningAll || isAnyProbeRunning,
+    isBlocked: !baseUrl.trim() || !apiKey.trim() || !modelId.trim(),
     runPelicanRequest: runPelicanInBackground,
   })
 
   const canClose =
     !isRunningAll && !isAnyProbeRunning && !verificationTools.isRunning
-  const canFetchModels = canFetchModelsFromModelDiscovery && !isRunningAll
+  const canFetchModels =
+    canFetchModelsFromModelDiscovery &&
+    !isRunningAll &&
+    !verificationTools.isRunning
   const isRunAllActionDisabled =
     isStoppingRunAll ||
     (!isRunningAll && (isFetchingModels || isAnyProbeRunning))

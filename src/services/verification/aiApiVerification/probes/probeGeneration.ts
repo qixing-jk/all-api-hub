@@ -13,7 +13,13 @@ type ProbeGenerationResult<
   OUTPUT extends Output.Output,
 > = Pick<
   GenerateTextResult<TOOLS, Record<string, unknown>, OUTPUT>,
-  "text" | "toolCalls" | "toolResults" | "sources"
+  | "text"
+  | "toolCalls"
+  | "toolResults"
+  | "sources"
+  | "usage"
+  | "finishReason"
+  | "rawFinishReason"
 > & {
   output?: GenerateTextResult<TOOLS, Record<string, unknown>, OUTPUT>["output"]
 }
@@ -45,6 +51,9 @@ export async function runProbeGeneration<
         toolCalls: result.toolCalls,
         toolResults: result.toolResults,
         sources: result.sources,
+        usage: result.usage,
+        finishReason: result.finishReason,
+        rawFinishReason: result.rawFinishReason,
       }
     } catch (error) {
       options.abortSignal?.throwIfAborted()
@@ -63,22 +72,41 @@ export async function runProbeGeneration<
     },
   })
   try {
-    const [output, text, toolCalls, toolResults, sources, finishReason] =
-      await Promise.all([
-        options.output ? result.output : undefined,
-        result.text,
-        result.toolCalls,
-        result.toolResults,
-        result.sources,
-        result.finishReason,
-      ])
+    const [
+      output,
+      text,
+      toolCalls,
+      toolResults,
+      sources,
+      finishReason,
+      usage,
+      rawFinishReason,
+    ] = await Promise.all([
+      options.output ? result.output : undefined,
+      result.text,
+      result.toolCalls,
+      result.toolResults,
+      result.sources,
+      result.finishReason,
+      result.usage,
+      result.rawFinishReason,
+    ])
 
     options.abortSignal?.throwIfAborted()
     if (hasStreamError || finishReason === "error") {
       throw streamError ?? new Error("AI generation stream failed")
     }
 
-    return { output, text, toolCalls, toolResults, sources }
+    return {
+      output,
+      text,
+      toolCalls,
+      toolResults,
+      sources,
+      finishReason,
+      usage,
+      rawFinishReason,
+    }
   } catch (error) {
     options.abortSignal?.throwIfAborted()
     // The SDK's aggregate output may reject with NoOutputGeneratedError before
