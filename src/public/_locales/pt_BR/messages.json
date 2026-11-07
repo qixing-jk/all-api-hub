@@ -18,6 +18,6 @@
     "message": "Testar a API de IA selecionada"
   },
   "context_menu_ai_api_check_page": {
-    "message": "Abrir teste de API de IA"
+    "message": "Abrir painel de testes de API de IA"
   }
 }

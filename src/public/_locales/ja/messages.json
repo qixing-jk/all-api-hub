@@ -18,6 +18,6 @@
     "message": "選択した AI API をテスト"
   },
   "context_menu_ai_api_check_page": {
-    "message": "AI API テストを開く"
+    "message": "AI API テストパネルを開く"
   }
 }

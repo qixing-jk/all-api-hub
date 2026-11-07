@@ -108,7 +108,7 @@ describe("background context menu refresh", () => {
     expect(contextMenusCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "ai-api-check-page-context-menu",
-        title: "打开 AI API 测试",
+        title: "打开 AI API 测试面板",
         contexts: ["page"],
       }),
     )

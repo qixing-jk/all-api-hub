@@ -140,7 +140,7 @@ export async function refreshContextMenus(preferences: UserPreferences) {
       getBrowserI18nMessage("context_menu_ai_api_check") || "测试选中的 AI API"
     const apiCheckPageTitle =
       getBrowserI18nMessage("context_menu_ai_api_check_page") ||
-      "打开 AI API 测试"
+      "打开 AI API 测试面板"
 
     const shouldShowRedemptionAssistMenu =
       (preferences.redemptionAssist?.enabled ?? true) &&
