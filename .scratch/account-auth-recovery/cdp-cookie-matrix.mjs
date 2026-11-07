@@ -235,7 +235,7 @@ try {
       token: "",
       recovery: true,
       incompleteLogin: true,
-      expected: "non-auth-failure",
+      expected: "auth-failure",
     },
     {
       name: "native-login-identity-mismatch-does-not-write-cookie",
