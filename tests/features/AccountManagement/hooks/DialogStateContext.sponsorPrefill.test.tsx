@@ -1,5 +1,6 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useImperativeHandle } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -17,6 +18,7 @@ const accountDialogProps = vi.hoisted(() => ({
   current: null as any,
   renderCount: 0,
   inOptions: false,
+  beforeReplace: undefined as undefined | (() => Promise<void>),
 }))
 
 const loadAccountDataMock = vi.hoisted(() => vi.fn())
@@ -41,7 +43,12 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 vi.mock("~/features/AccountManagement/components/AccountDialog", () => ({
-  default: (props: any) => {
+  default: function MockAccountDialog(props: any) {
+    useImperativeHandle(props.ref, () => ({
+      close: async () => {
+        await accountDialogProps.beforeReplace?.()
+      },
+    }))
     accountDialogProps.current = props
     accountDialogProps.renderCount += 1
     return (
@@ -120,6 +127,90 @@ function StateRenderCounter() {
 }
 
 describe("DialogStateContext sponsor prefill", () => {
+  it("waits for old-session reconciliation before mounting the latest replacement", async () => {
+    const user = userEvent.setup()
+    let finish!: () => void
+    accountDialogProps.beforeReplace = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        }),
+    )
+    render(
+      <DialogStateProvider>
+        <Harness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+    await user.click(screen.getByRole("button", { name: "open" }))
+    await user.type(
+      screen.getByRole("textbox", { name: "Account draft" }),
+      " original",
+    )
+    await user.click(screen.getByRole("button", { name: "open" }))
+    await user.click(screen.getByRole("button", { name: "open" }))
+    expect(screen.getByRole("textbox", { name: "Account draft" })).toHaveValue(
+      "fresh draft original",
+    )
+    expect(accountDialogProps.beforeReplace).toHaveBeenCalledTimes(1)
+    await act(async () => finish())
+    expect(screen.getByRole("textbox", { name: "Account draft" })).toHaveValue(
+      "fresh draft",
+    )
+    expect(screen.getByTestId("account-dialog-open")).toHaveTextContent("true")
+  })
+  it.each(["onSuccess", "onClose"])(
+    "ignores stale %s callbacks after another session opens",
+    async (callback) => {
+      const user = userEvent.setup()
+      const saved = vi.fn()
+      function SaveHarness() {
+        const { openAccountDialog } = useDialogStateContext()
+        return (
+          <button
+            onClick={() =>
+              void openAccountDialog({ mode: DIALOG_MODES.ADD }).then(saved)
+            }
+          >
+            open
+          </button>
+        )
+      }
+      render(
+        <DialogStateProvider>
+          <SaveHarness />
+        </DialogStateProvider>,
+        {
+          withUserPreferencesProvider: false,
+          withThemeProvider: false,
+          withReleaseUpdateStatusProvider: false,
+        },
+      )
+      await user.click(screen.getByRole("button", { name: "open" }))
+      const stale = accountDialogProps.current[callback]
+      await user.click(screen.getByRole("button", { name: "close" }))
+      await user.click(screen.getByRole("button", { name: "open" }))
+      await user.type(
+        screen.getByRole("textbox", { name: "Account draft" }),
+        " second",
+      )
+      await act(async () => stale({ id: "old-save" }))
+      expect(screen.getByTestId("account-dialog-open")).toHaveTextContent(
+        "true",
+      )
+      expect(
+        screen.getByRole("textbox", { name: "Account draft" }),
+      ).toHaveValue("fresh draft second")
+      expect(saved).not.toHaveBeenCalled()
+      await user.click(screen.getByRole("button", { name: "save" }))
+      expect(saved).toHaveBeenCalledExactlyOnceWith({ id: "saved" })
+    },
+  )
+
   it("updates state consumers while keeping action-only consumers mounted across dialog transitions", async () => {
     const user = userEvent.setup()
     renderCounts.actions = 0
@@ -193,6 +284,7 @@ describe("DialogStateContext sponsor prefill", () => {
     },
   )
   beforeEach(() => {
+    accountDialogProps.beforeReplace = undefined
     accountDialogProps.current = null
     accountDialogProps.renderCount = 0
     vi.clearAllMocks()

@@ -1,10 +1,12 @@
 import { Info } from "lucide-react"
 import {
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
   type ComponentProps,
+  type Ref,
 } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -64,7 +66,12 @@ import {
 
 const logger = createLogger("AccountDialog")
 
+export interface AccountDialogHandle {
+  close: () => Promise<void>
+}
+
 interface AccountDialogProps {
+  ref?: Ref<AccountDialogHandle>
   isOpen: boolean
   onCloseComplete?: () => void
   onClose: () => void
@@ -80,6 +87,7 @@ interface AccountDialogProps {
 /**
  * Modal dialog for creating or editing account credentials with auto-detect support.
  * @param props Component props to control dialog visibility and behavior.
+ * @param props.ref Exposes close completion to the session replacement owner.
  * @param props.isOpen Whether the dialog is currently visible.
  * @param props.onCloseComplete Releases the dialog after its closing animation.
  * @param props.onClose Handler invoked when closing without saving.
@@ -92,6 +100,7 @@ interface AccountDialogProps {
  * @param props.onError Callback fired when submission fails.
  */
 export default function AccountDialog({
+  ref,
   isOpen,
   onCloseComplete,
   onClose,
@@ -133,6 +142,9 @@ export default function AccountDialog({
   })
 
   const accountFormRef = useRef<AccountFormHandle>(null)
+  useImperativeHandle(ref, () => ({ close: handlers.handleClose }), [
+    handlers.handleClose,
+  ])
   // Login-context claims are read from the already-loaded account list, which
   // refreshes with account changes; the edited account never claims against
   // itself, so its own stored selection stays changeable and clearable. The

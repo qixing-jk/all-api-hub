@@ -15,6 +15,7 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 type MotionSample = {
   slot: "dialog-content" | "dialog-overlay"
   duration: number
+  startTime: number | null
   opacity: number
   scaleX: number
   scaleY: number
@@ -45,6 +46,11 @@ async function armMotionCapture(page: Page, phase: "open" | "closed") {
         )
       if (!animation || animations.includes(animation)) return
       animations.push(animation)
+      const startTime =
+        animation.startTime === null
+          ? null
+          : Number(animation.startTime) +
+            Number(animation.effect!.getTiming().delay)
       animation.pause()
       const duration = Number(animation.effect!.getComputedTiming().duration)
       animation.currentTime = duration / 2
@@ -53,6 +59,7 @@ async function armMotionCapture(page: Page, phase: "open" | "closed") {
       samples.push({
         slot,
         duration,
+        startTime,
         opacity: Number(style.opacity),
         scaleX: new DOMMatrixReadOnly(style.transform).m11,
         scaleY: new DOMMatrixReadOnly(style.transform).m22,
@@ -111,6 +118,10 @@ test("native Dialog fades its content and overlay together without zoom and rest
   await trigger.click()
   const dialog = page.getByRole("dialog", { name: "Recent logs" })
   const entrance = await readMotionSamples(page)
+  expect(entrance.every((sample) => sample.startTime !== null)).toBe(true)
+  expect(
+    Math.abs(entrance[0]!.startTime! - entrance[1]!.startTime!),
+  ).toBeLessThan(20)
   expect(entrance.map((sample) => sample.slot).sort()).toEqual([
     "dialog-content",
     "dialog-overlay",
@@ -138,6 +149,8 @@ test("native Dialog fades its content and overlay together without zoom and rest
   await armMotionCapture(page, "closed")
   await page.keyboard.press("Escape")
   const exit = await readMotionSamples(page)
+  expect(exit.every((sample) => sample.startTime !== null)).toBe(true)
+  expect(Math.abs(exit[0]!.startTime! - exit[1]!.startTime!)).toBeLessThan(20)
   expect(exit.map((sample) => sample.slot).sort()).toEqual([
     "dialog-content",
     "dialog-overlay",

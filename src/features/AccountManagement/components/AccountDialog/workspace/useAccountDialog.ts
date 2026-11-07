@@ -178,6 +178,7 @@ export function useAccountDialog({
   const [credentialEvidence] = useState(createAccountCredentialEvidence)
   const selectedSiteTypeRef = useRef<AccountSiteType>(SITE_TYPES.UNKNOWN)
   const isCloseTransitionStartedRef = useRef(false)
+  const closeCompletionRef = useRef<Promise<void> | null>(null)
 
   const siteName = draft.siteName
   const username = draft.username
@@ -520,28 +521,33 @@ export function useAccountDialog({
     }
   }
 
-  const handleClose = useCallback(async () => {
-    if (isCloseTransitionStartedRef.current) return
-    invalidateAccountLoad()
-    setEditedNovitaCredential(null)
-    invalidateDuplicateConfirmation()
-    invalidateCookieSession()
-    invalidateSub2ApiSession()
+  const handleClose = useCallback(() => {
+    if (isCloseTransitionStartedRef.current)
+      return closeCompletionRef.current ?? Promise.resolve()
     isCloseTransitionStartedRef.current = true
-    invalidateAutoDetection()
-    try {
-      await beforeOpenRouterOnboardingClose()
-    } catch {
-      logger.warn("OpenRouter onboarding close handling failed", {
-        siteType: SITE_TYPES.OPENROUTER,
-        status: "reconciliation_failed",
-        category: "onboarding_close",
-      })
-    }
-    completePendingAccountKeyProvisioningSuccess()
-    clearPostSaveWorkflowState()
-    handleManagedSiteConfigPromptClose()
-    onClose()
+    const completion = (async () => {
+      invalidateAccountLoad()
+      setEditedNovitaCredential(null)
+      invalidateDuplicateConfirmation()
+      invalidateCookieSession()
+      invalidateSub2ApiSession()
+      invalidateAutoDetection()
+      try {
+        await beforeOpenRouterOnboardingClose()
+      } catch {
+        logger.warn("OpenRouter onboarding close handling failed", {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "reconciliation_failed",
+          category: "onboarding_close",
+        })
+      }
+      completePendingAccountKeyProvisioningSuccess()
+      clearPostSaveWorkflowState()
+      handleManagedSiteConfigPromptClose()
+      onClose()
+    })()
+    closeCompletionRef.current = completion
+    return completion
   }, [
     invalidateAccountLoad,
     invalidateCookieSession,

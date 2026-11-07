@@ -25,6 +25,7 @@ async function sampleFade(page: Page, phase: "open" | "closed") {
       const samples: {
         slot: string
         duration: number
+        startTime: number | null
         opacity: number
         scaleX: number
         scaleY: number
@@ -57,6 +58,11 @@ async function sampleFade(page: Page, phase: "open" | "closed") {
           if (!animation) return
           captured.add(element)
           animations.push(animation)
+          const startTime =
+            animation.startTime === null
+              ? null
+              : Number(animation.startTime) +
+                Number(animation.effect!.getTiming().delay)
           animation.pause()
           const duration = Number(
             animation.effect!.getComputedTiming().duration,
@@ -66,6 +72,7 @@ async function sampleFade(page: Page, phase: "open" | "closed") {
           samples.push({
             slot,
             duration,
+            startTime,
             opacity: Number(style.opacity),
             scaleX: new DOMMatrixReadOnly(style.transform).m11,
             scaleY: new DOMMatrixReadOnly(style.transform).m22,
@@ -291,6 +298,10 @@ test("account editor fades in and out together with its backdrop", async ({
     )
     const entrance = await sampleFade(page, "open")
     expect(entrance).toHaveLength(2)
+    expect(entrance.every((sample) => sample.startTime !== null)).toBe(true)
+    expect(
+      Math.abs(entrance[0]!.startTime! - entrance[1]!.startTime!),
+    ).toBeLessThan(20)
     for (const sample of entrance) {
       expect(sample.duration).toBe(140)
       expect(sample.opacity).toBeGreaterThan(0)
@@ -309,6 +320,8 @@ test("account editor fades in and out together with its backdrop", async ({
     })
     const exit = await sampleFade(page, "closed")
     expect(exit).toHaveLength(2)
+    expect(exit.every((sample) => sample.startTime !== null)).toBe(true)
+    expect(Math.abs(exit[0]!.startTime! - exit[1]!.startTime!)).toBeLessThan(20)
     for (const sample of exit) {
       expect(sample.duration).toBe(120)
       expect(sample.opacity).toBeGreaterThan(0)
@@ -362,7 +375,47 @@ test("account editor can close during entrance and reopen during exit", async ({
 }) => {
   const trigger = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton)
   await page.getByTestId(getAccountManagementListItemTestId(ACCOUNT_ID)).hover()
-  await trigger.click()
+  await page.evaluate(async (editId) => {
+    await new Promise<void>((resolve) => {
+      const capture = (event: AnimationEvent) => {
+        if (
+          !(event.target instanceof HTMLElement) ||
+          event.target.dataset.slot !== "modal-content" ||
+          event.animationName !== "fadeIn"
+        )
+          return
+        const animation = event.target
+          .getAnimations()
+          .find(
+            (item) =>
+              item instanceof CSSAnimation && item.animationName === "fadeIn",
+          )!
+        animation.pause()
+        animation.currentTime =
+          Number(animation.effect!.getComputedTiming().duration) / 4
+        document.removeEventListener("animationstart", capture, true)
+        resolve()
+      }
+      document.addEventListener("animationstart", capture, true)
+      const trigger = document.querySelector<HTMLButtonElement>(
+        `[data-testid="${editId}"]`,
+      )!
+      trigger.focus()
+      trigger.click()
+    })
+  }, ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton)
+  const entrance = await page
+    .locator('[data-slot="modal-content"]')
+    .evaluate((element) => {
+      const animation = element.getAnimations()[0]!
+      return {
+        state: animation.playState,
+        progress: animation.effect!.getComputedTiming().progress,
+      }
+    })
+  expect(entrance.state).toBe("paused")
+  expect(entrance.progress).toBeGreaterThan(0)
+  expect(entrance.progress).toBeLessThan(1)
   // Request a replacement in the closing commit, before the exit can finish.
   await page.evaluate(async (editId) => {
     await new Promise<void>((resolve, reject) => {
@@ -499,19 +552,30 @@ test("ready account fields fade in quickly without a loading spinner or replay o
   expect(result.naturalFrames.length).toBeGreaterThan(0)
   expect(result.loading.every((state) => !state.spinner)).toBe(true)
   await page
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountForm)
+    .evaluate((form) => {
+      form.setAttribute("data-fade-replays", "0")
+      form.addEventListener("animationstart", (event) => {
+        if (
+          event.target === form &&
+          (event as AnimationEvent).animationName === "fadeIn"
+        )
+          form.setAttribute(
+            "data-fade-replays",
+            String(Number(form.getAttribute("data-fade-replays")) + 1),
+          )
+      })
+    })
+  await page
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
     .fill("输入不重播动画")
-  const replaying = await page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountForm)
-    .evaluate((form) =>
-      form
-        .getAnimations()
-        .some(
-          (animation) =>
-            animation instanceof CSSAnimation &&
-            animation.animationName === "fadeIn" &&
-            animation.playState === "running",
-        ),
-    )
-  expect(replaying).toBe(false)
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  )
+  await expect(
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountForm),
+  ).toHaveAttribute("data-fade-replays", "0")
 })

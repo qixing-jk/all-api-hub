@@ -160,7 +160,54 @@ for (const { width, language } of [
       sessionStorage.getItem("feedback-github-url"),
     )
     expect(new URL(issueUrl!).searchParams.get("feedback")).toBe(report)
-    await page.keyboard.press("Escape")
+    const exitSample = await feedback.evaluate(async (dialog) => {
+      return new Promise<{
+        duration: number
+        opacity: number
+        connected: boolean
+      }>((resolve, reject) => {
+        const timeout = window.setTimeout(
+          () => reject(new Error("Feedback exit fade did not start")),
+          2000,
+        )
+        dialog.addEventListener("animationstart", (event) => {
+          if (
+            event.target !== dialog ||
+            (event as AnimationEvent).animationName !== "fadeOut"
+          )
+            return
+          const animation = dialog
+            .getAnimations()
+            .find(
+              (item) =>
+                item instanceof CSSAnimation &&
+                item.animationName === "fadeOut",
+            )!
+          animation.pause()
+          const duration = Number(
+            animation.effect!.getComputedTiming().duration,
+          )
+          animation.currentTime = duration / 2
+          const sample = {
+            duration,
+            opacity: Number(getComputedStyle(dialog).opacity),
+            connected: dialog.isConnected,
+          }
+          animation.play()
+          window.clearTimeout(timeout)
+          resolve(sample)
+        })
+        dialog
+          .querySelector<HTMLButtonElement>(
+            'button[aria-label="Close"], button[aria-label="关闭"]',
+          )!
+          .click()
+      })
+    })
+    expect(exitSample.duration).toBe(120)
+    expect(exitSample.connected).toBe(true)
+    expect(exitSample.opacity).toBeGreaterThan(0)
+    expect(exitSample.opacity).toBeLessThan(1)
     await expect(feedback).toBeHidden()
     await row.hover()
     await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()

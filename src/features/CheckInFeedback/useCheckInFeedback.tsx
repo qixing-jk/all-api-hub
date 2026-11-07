@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react"
+import { lazy, Suspense, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Spinner } from "~/components/ui"
@@ -16,18 +16,41 @@ export type CheckInFeedbackSource =
 export function useCheckInFeedback() {
   const { t } = useTranslation("accountDialog")
   const [source, setSource] = useState<CheckInFeedbackSource | null>(null)
-  const close = () => setSource(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const sessionRef = useRef(0)
+  const sessionId = sessionRef.current
+  const close = () => {
+    if (sessionId === sessionRef.current) setIsOpen(false)
+  }
+  const completeClose = () => {
+    if (sessionId === sessionRef.current) setSource(null)
+  }
   return {
-    openFeedback: (value: CheckInFeedbackSource) => setSource(value),
+    openFeedback: (value: CheckInFeedbackSource) => {
+      sessionRef.current += 1
+      setSource(value)
+      setIsOpen(true)
+    },
     feedbackDialog: source ? (
       <Suspense
+        key={sessionId}
         fallback={
-          <Modal isOpen onClose={close} title={t("checkInFeedback.title")}>
+          <Modal
+            isOpen={isOpen}
+            onClose={close}
+            onCloseComplete={completeClose}
+            title={t("checkInFeedback.title")}
+          >
             <Spinner />
           </Modal>
         }
       >
-        <CheckInFeedbackDialog source={source} onClose={close} />
+        <CheckInFeedbackDialog
+          source={source}
+          isOpen={isOpen}
+          onClose={close}
+          onCloseComplete={completeClose}
+        />
       </Suspense>
     ) : null,
   }

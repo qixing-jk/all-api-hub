@@ -1447,6 +1447,49 @@ describe("useAccountDialog OpenRouter behavior", () => {
     })
   })
 
+  it("keeps concurrent close callers waiting for OpenRouter reconciliation", async () => {
+    const provisioning = createDeferred<any>()
+    mockAutoDetectAccount.mockReturnValue(provisioning.promise)
+    const onClose = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () =>
+      result.current.handlers.handleUrlChange("https://openrouter.ai"),
+    )
+    act(() => {
+      void result.current.handlers.handleAutoDetect()
+    })
+    await waitFor(() => expect(mockAutoDetectAccount).toHaveBeenCalledOnce())
+    const finished = vi.fn()
+    let first!: Promise<void>
+    let second!: Promise<void>
+    act(() => {
+      first = result.current.handlers.handleClose()
+      second = result.current.handlers.handleClose().then(finished)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(finished).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+    await act(async () => {
+      provisioning.resolve({
+        kind: "bootstrap_failure",
+        mutationState: "not_dispatched",
+      })
+      await Promise.all([first, second])
+    })
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(finished).toHaveBeenCalledOnce()
+  })
+
   it("still closes when OpenRouter close reconciliation rejects", async () => {
     const secretSentinel = "sk-or-close-secret-sentinel"
     mockAutoDetectAccount.mockReturnValue(new Promise(() => {}))
