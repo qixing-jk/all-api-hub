@@ -127,6 +127,10 @@ export default defineConfig({
   webExt: {
     // Keep WXT's default startup; opt out via dev:no-browser or the CDP runner.
     disabled: process.env.WXT_OPEN_BROWSER === "0",
+    // Config/module edits can restart Chrome. Reuse this worktree's data
+    // instead of web-ext's disposable profile; Windows requires an absolute path.
+    chromiumProfile: path.join(getProjectRootPath(), ".wxt", "chrome-data"),
+    keepProfileChanges: true,
   },
   manifest: (env) => {
     const projectPath = getProjectRootPath()

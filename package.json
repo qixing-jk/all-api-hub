@@ -215,6 +215,7 @@
     "@types/react-dom": "^19.1.9",
     "@types/selenium-webdriver": "^4.35.7",
     "@types/webextension-polyfill": "^0.12.4",
+    "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "4.0.17",
     "@wxt-dev/auto-icons": "^1.1.2",
     "@wxt-dev/module-react": "^1.2.2",
