@@ -19,6 +19,7 @@ import {
   ApiError,
   isAuthenticationRequiredError,
 } from "~/services/apiTransport/errors"
+import { notifyApiTransportObserver } from "~/services/apiTransport/requestExecution"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
@@ -49,18 +50,25 @@ function assertActive(request: ApiServiceRequest): void {
   request.abortDeadline?.signal.throwIfAborted()
 }
 
-/** Replaces all credential fields consumed by the retry transport. */
+// Assigned under the account recovery lock, before concurrent retries complete.
+// This process-local order is used only by in-memory request observers.
+let recoveryGeneration = 0
+
+/** Replaces retry credentials and records their recovery order. */
 function withCookie(
   request: ApiServiceRequest,
   cookie: string,
-): ApiServiceRequest {
+): { request: ApiServiceRequest; generation: number } {
   return {
-    ...request,
-    auth: { ...request.auth, cookie },
-    cookieAuthSessionCookie: cookie,
-    ...(request.cookieSession
-      ? { cookieSession: { ...request.cookieSession, cookieHeader: cookie } }
-      : {}),
+    generation: ++recoveryGeneration,
+    request: {
+      ...request,
+      auth: { ...request.auth, cookie },
+      cookieAuthSessionCookie: cookie,
+      ...(request.cookieSession
+        ? { cookieSession: { ...request.cookieSession, cookieHeader: cookie } }
+        : {}),
+    },
   }
 }
 
@@ -174,8 +182,13 @@ export async function executeWithAccountCredentialRecovery<T>(
     )
     assertActive(request)
     // Exactly one retry: a second rejection never starts another login.
-    const result = await runner(recovered)
-    request.observer?.onCookieRecovered?.(recovered.auth.cookie!)
+    const result = await runner(recovered.request)
+    notifyApiTransportObserver(
+      request.observer,
+      "onCookieRecovered",
+      recovered.request.auth.cookie!,
+      recovered.generation,
+    )
     return result
   }
 }

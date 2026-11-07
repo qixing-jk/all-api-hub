@@ -293,6 +293,7 @@ try {
       cookie: "session=valid",
       token: "invalid-token",
       ambient: "ambient-valid",
+      ambientOther: true,
       authType: "access_token",
       recovery: true,
       expected: "auth-failure",
@@ -608,6 +609,10 @@ try {
         ])
       const beforeBrowserCookies = await dev.context.cookies(origin)
       assert.equal(beforeBrowserCookies.length > 0, Boolean(scenario.ambient))
+      if (scenario.ambientOther)
+        await dev.context.addCookies([
+          { name: "unrecognized_preference", value: "present", url: origin },
+        ])
       const now = Date.now()
       const account = {
         id: fixtureAccountId,
@@ -780,10 +785,7 @@ try {
         })),
       }
       assert(selfRequests.length > 0)
-      if (
-        scenario.authType === "access_token" &&
-        scenario.expected === "success"
-      )
+      if (scenario.authType === "access_token")
         assert(selfRequests.every((request) => !request.cookie))
       assert.equal(
         updated.cookieAuth?.sessionCookie,

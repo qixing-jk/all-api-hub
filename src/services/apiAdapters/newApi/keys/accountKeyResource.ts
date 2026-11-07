@@ -57,11 +57,14 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
       // later writes, while the caller's original request remains unchanged.
       const request: ApiServiceRequest = { ...input.request }
       const observer = input.request.observer
+      let latestRecoveryGeneration = 0
       request.observer = {
         ...observer,
         onDispatch: () => observer?.onDispatch(),
         onResponse: () => observer?.onResponse(),
-        onCookieRecovered(cookie) {
+        onCookieRecovered(cookie, generation) {
+          if (generation <= latestRecoveryGeneration) return
+          latestRecoveryGeneration = generation
           request.auth = { ...request.auth, cookie }
           request.cookieAuthSessionCookie = cookie
           if (request.cookieSession)
@@ -69,7 +72,7 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
               ...request.cookieSession,
               cookieHeader: cookie,
             }
-          observer?.onCookieRecovered?.(cookie)
+          observer?.onCookieRecovered?.(cookie, generation)
         },
       }
       return {

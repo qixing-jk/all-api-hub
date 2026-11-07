@@ -148,7 +148,7 @@ describe("New API account key resources", () => {
         .mockImplementationOnce(async (input) => {
           input.observer?.onDispatch()
           input.observer?.onResponse()
-          input.observer?.onCookieRecovered?.("session=fresh")
+          input.observer?.onCookieRecovered?.("session=fresh", 1)
           return []
         })
         .mockResolvedValueOnce([])
@@ -180,7 +180,10 @@ describe("New API account key resources", () => {
         expect.anything(),
       )
       expect(cookieRequest.auth.cookie).toBe("session=expired")
-      expect(onCookieRecovered).toHaveBeenCalledExactlyOnceWith("session=fresh")
+      expect(onCookieRecovered).toHaveBeenCalledExactlyOnceWith(
+        "session=fresh",
+        1,
+      )
       expect(cookieRequest.observer.onDispatch).toHaveBeenCalledOnce()
       expect(cookieRequest.observer.onResponse).toHaveBeenCalledOnce()
     },

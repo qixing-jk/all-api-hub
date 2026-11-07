@@ -62,6 +62,9 @@ describe("AccountFormLayout navigation", () => {
     await userEvent.click(
       within(nav).getByRole("button", { name: "accountDialog:login.title" }),
     )
+    expect(
+      within(nav).getByRole("button", { name: "accountDialog:login.title" }),
+    ).toHaveAttribute("aria-current", "location")
     view.rerender(form(false))
     await waitFor(() =>
       expect(nav.querySelector('[aria-current="location"]')).not.toBeNull(),

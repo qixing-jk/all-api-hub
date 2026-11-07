@@ -151,7 +151,10 @@ describe("account credential recovery", () => {
         vi.fn().mockRejectedValueOnce(f.error).mockResolvedValueOnce("ok"),
       ),
     ).resolves.toBe("ok")
-    expect(onCookieRecovered).toHaveBeenCalledExactlyOnceWith("session=new")
+    expect(onCookieRecovered).toHaveBeenCalledExactlyOnceWith(
+      "session=new",
+      expect.any(Number),
+    )
     onCookieRecovered.mockClear()
     await expect(
       executeWithAccountCredentialRecovery(
@@ -160,6 +163,27 @@ describe("account credential recovery", () => {
       ),
     ).rejects.toBe(f.error)
     expect(onCookieRecovered).not.toHaveBeenCalled()
+  })
+
+  it("preserves a successful recovered read when an optional observer throws", async () => {
+    const f = fixture()
+    const request = {
+      ...f.request,
+      observer: {
+        onDispatch: vi.fn(),
+        onResponse: vi.fn(),
+        onCookieRecovered: () => {
+          throw new Error("observer failed")
+        },
+      },
+    }
+    await expect(
+      executeWithAccountCredentialRecovery(
+        request,
+        vi.fn().mockRejectedValueOnce(f.error).mockResolvedValueOnce("ok"),
+      ),
+    ).resolves.toBe("ok")
+    expect(f.get().cookieAuth?.sessionCookie).toBe("session=new")
   })
   it("rejects missing request identity before recovery", async () => {
     const f = fixture()

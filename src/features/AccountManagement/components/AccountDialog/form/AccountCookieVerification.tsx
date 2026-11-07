@@ -197,7 +197,7 @@ export function AccountCookieVerification({
                 className="h-auto min-h-0 p-0 text-left text-xs leading-5"
                 disabled={
                   recovery.pending ||
-                  recovery.disabled ||
+                  (recovery.configured && recovery.disabled) ||
                   busy ||
                   pending ||
                   !userId.trim() ||
