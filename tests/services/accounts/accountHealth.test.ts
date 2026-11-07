@@ -24,6 +24,34 @@ describe("account health helpers", () => {
     vi.useRealTimers()
   })
 
+  it("retains authentication rejection as an actionable health reason", () => {
+    const result = determineHealthStatus(
+      new ApiError("session expired", 401, "/api/user/self"),
+    )
+    expect(result).toMatchObject({
+      status: SiteHealthStatus.Warning,
+      code: "authentication_required",
+    })
+    expect(result.message).toContain("session expired")
+  })
+
+  it.each([
+    [401, API_ERROR_CODES.ROBOT_CHALLENGE],
+    [401, API_ERROR_CODES.CONTENT_TYPE_MISMATCH],
+    [403, undefined],
+    [429, undefined],
+    [500, undefined],
+  ])(
+    "does not label protection or non-authentication errors as recoverable (%s, %s)",
+    (statusCode, code) => {
+      expect(
+        determineHealthStatus(
+          new ApiError("request blocked", statusCode, "/api/user/self", code),
+        ).code,
+      ).not.toBe("authentication_required")
+    },
+  )
+
   it("determineHealthStatus handles ApiError, network, and unknown failures", () => {
     expect(
       determineHealthStatus(

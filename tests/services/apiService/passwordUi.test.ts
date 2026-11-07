@@ -244,19 +244,22 @@ it("reuses the verified target session for ordinary authentication without loggi
   })
   expect(fetchMock).toHaveBeenCalledTimes(1)
 })
-it("does not log out a shared target session even when a fresh login is required", async () => {
-  fetchMock.mockResolvedValue(
-    Response.json({ success: true, data: { id: 17 } }),
-  )
-  await expect(
-    invoke({
-      phase: PASSWORD_UI_PHASES.Prepare,
-      sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
-      canResetSession: false,
-    }),
-  ).resolves.toEqual({ kind: "manual", reason: "session" })
-  expect(fetchMock).toHaveBeenCalledTimes(1)
-})
+it.each([17, 18])(
+  "preserves shared browser identity %s and requests manual login when a fresh session is required",
+  async (identity) => {
+    fetchMock.mockResolvedValue(
+      Response.json({ success: true, data: { id: identity } }),
+    )
+    await expect(
+      invoke({
+        phase: PASSWORD_UI_PHASES.Prepare,
+        sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+        canResetSession: false,
+      }),
+    ).resolves.toEqual({ kind: "manual", reason: "session" })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  },
+)
 
 it("requires a fresh native form after isolated logout and verifies the old session is gone", async () => {
   let loggedIn = true

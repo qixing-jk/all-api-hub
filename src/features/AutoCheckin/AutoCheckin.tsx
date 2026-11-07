@@ -31,6 +31,7 @@ export default function AutoCheckin(props: {
     status,
     siteTypeMismatches,
     exchangeRateByAccountId,
+    accountInfoById,
     accountSetupState,
     isLoading,
     isRunning,
@@ -83,6 +84,7 @@ export default function AutoCheckin(props: {
       siteTypeMismatches={siteTypeMismatches}
       currencyType={currencyType}
       exchangeRateByAccountId={exchangeRateByAccountId}
+      accountInfoById={accountInfoById}
       showDevActions={showDebugButtons}
       retryingAccountId={retryingAccountId}
       verifyingAccountId={verifyingAccountId}

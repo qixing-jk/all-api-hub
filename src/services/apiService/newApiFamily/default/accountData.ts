@@ -1,3 +1,4 @@
+import { ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS } from "~/constants/accountLogin"
 import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import type {
   AccountData,
@@ -143,6 +144,7 @@ export async function fetchAccountQuota(
     request,
     {
       endpoint: "/api/user/self",
+      credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
     },
   )
 
@@ -301,6 +303,7 @@ const fetchPaginatedLogs = async <T>(
 
         const logData = await newApiFamilyRequests.data<unknown>(request, {
           endpoint: `${resolvedQueryConfig.endpoint}?${params.toString()}`,
+          credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
         })
 
         const normalizedLogData = normalizeLogResponse(logData)
@@ -473,6 +476,7 @@ const fetchTodayUsageFast = async (
     request,
     {
       endpoint: `/api/log/self/stat?${statParams.toString()}`,
+      credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
     },
   )
 

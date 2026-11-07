@@ -7,11 +7,11 @@ import {
   type AccountUsageRecord,
   type AccountUsageSummary,
   type CheckInConfig,
+  type HealthStatusCode,
   type KimiOpenPlatformAuthConfig,
   type SiteAccount,
   type SiteHealthStatus,
   type Sub2ApiAuthConfig,
-  type TempWindowHealthStatusCode,
 } from "~/types"
 
 export interface TodayUsageData {
@@ -114,5 +114,5 @@ export interface HealthCheckResult {
   /**
    * Optional machine-readable reason code for actionable UI.
    */
-  code?: TempWindowHealthStatusCode
+  code?: HealthStatusCode
 }

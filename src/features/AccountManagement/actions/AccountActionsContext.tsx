@@ -9,6 +9,10 @@ import {
 } from "react"
 
 import { CHECK_IN_STATUS_REFRESH_OUTCOMES } from "~/constants/checkIn"
+import {
+  hasCredentialRecoveryAuthenticationFailure,
+  openAccountCredentialRecoverySettings,
+} from "~/features/AccountManagement/credentialRecovery/guidance"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
 import toast from "~/lib/notify"
@@ -154,6 +158,48 @@ export const AccountActionsProvider = ({
                       }),
                     })
                     return t("messages:toast.success.refreshSkipped")
+                  }
+                  const refreshedAccount = result.account
+                  if (
+                    refreshedAccount &&
+                    hasCredentialRecoveryAuthenticationFailure({
+                      siteType: refreshedAccount.site_type,
+                      baseUrl: refreshedAccount.site_url,
+                      authType: refreshedAccount.authType,
+                      disabled: refreshedAccount.disabled,
+                      health: refreshedAccount.health,
+                    })
+                  ) {
+                    analyticsCompleted = true
+                    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+                      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+                      diagnostics: buildAccountRefreshDiagnostics({
+                        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+                        mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                        siteType: account.siteType,
+                        requestedAuthMode: account.authType,
+                        itemCount: 1,
+                        successCount: 0,
+                        failureCount: 1,
+                        skippedCount: 0,
+                      }),
+                    })
+                    toast.warning(
+                      t("accountDialog:login.recoveryFailureDescription"),
+                      {
+                        title: t("messages:toast.error.refreshAccount", {
+                          accountName: account.name,
+                        }),
+                        action: {
+                          label: t("accountDialog:login.configureRecovery"),
+                          onClick: () =>
+                            openAccountCredentialRecoverySettings(
+                              refreshedAccount.id,
+                            ),
+                        },
+                      },
+                    )
+                    return null
                   }
                   const partial =
                     result.checkInStatusRefreshOutcome ===

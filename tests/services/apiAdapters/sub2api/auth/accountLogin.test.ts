@@ -339,3 +339,16 @@ describe("Sub2API adapter-owned OAuth login", () => {
     })
   })
 })
+
+it("exposes OAuth and password configuration for the account editor", () => {
+  const methods = sub2ApiAccountLogin.methods
+  expect(methods.find((method) => method.id === "password")).toMatchObject({
+    configuration: { kind: "password" },
+  })
+  expect(
+    methods.filter((method) => method.id !== "password").length,
+  ).toBeGreaterThan(0)
+  for (const method of methods.filter((method) => method.id !== "password")) {
+    expect(method.configuration).toEqual({ kind: "none" })
+  }
+})

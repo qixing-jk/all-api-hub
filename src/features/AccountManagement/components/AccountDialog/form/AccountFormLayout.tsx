@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react"
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -32,6 +32,7 @@ export function AccountFormLayout({
   children,
   guidance,
   focusSection,
+  hasAccountLogin = false,
 }: {
   continuous: boolean
   children: ReactNode
@@ -42,6 +43,7 @@ export function AccountFormLayout({
    * dialog lands on the control it is asking the user to fix.
    */
   focusSection?: AccountFormSectionId
+  hasAccountLogin?: boolean
 }) {
   const { t } = useTranslation("accountDialog")
   const isCompact = useMediaQuery("(max-width: 639px)")
@@ -51,17 +53,34 @@ export function AccountFormLayout({
   const rootRef = useRef<HTMLDivElement>(null)
   const navigationRef = useRef<HTMLElement>(null)
   const directoryRef = useRef<HTMLDivElement>(null)
+  const sections = useMemo(
+    () =>
+      ACCOUNT_EDIT_SECTIONS.filter(
+        ({ id }) =>
+          hasAccountLogin ||
+          id !== ACCOUNT_FORM_SECTION_ELEMENT_IDS["account-login"],
+      ),
+    [hasAccountLogin],
+  )
   const requestedSectionId = focusSection
     ? ACCOUNT_FORM_SECTION_ELEMENT_IDS[focusSection]
     : undefined
   const [activeId, setActiveId] = useState<string>(
-    requestedSectionId ?? ACCOUNT_EDIT_SECTIONS[0].id,
+    requestedSectionId ?? sections[0]!.id,
   )
-  const activeSection = ACCOUNT_EDIT_SECTIONS.find(({ id }) => id === activeId)
+  const activeSection = sections.find(({ id }) => id === activeId)
   const navigationSelection = useRef<string | null>(null)
   const pendingMenuDestination = useRef<string | null>(null)
   const destinationAnimation = useRef<Animation | null>(null)
   useEffect(() => () => destinationAnimation.current?.cancel(), [])
+
+  useEffect(() => {
+    if (sections.some(({ id }) => id === activeId)) return
+    navigationSelection.current = null
+    pendingMenuDestination.current = null
+    destinationAnimation.current?.cancel()
+    setActiveId(sections[0]!.id)
+  }, [activeId, sections])
 
   useEffect(() => {
     const navigation = navigationRef.current
@@ -96,8 +115,8 @@ export function AccountFormLayout({
         scroller.getBoundingClientRect().top +
         getTopInset(directoryRef.current) +
         1
-      let current: string = ACCOUNT_EDIT_SECTIONS[0].id
-      for (const section of ACCOUNT_EDIT_SECTIONS) {
+      let current: string = sections[0]!.id
+      for (const section of sections) {
         const element = root.querySelector<HTMLElement>(`#${section.id}`)
         if (element && element.getBoundingClientRect().top <= top)
           current = section.id
@@ -106,7 +125,7 @@ export function AccountFormLayout({
         scroller.scrollTop > 0 &&
         scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
       )
-        current = ACCOUNT_EDIT_SECTIONS.at(-1)?.id ?? current
+        current = sections.at(-1)?.id ?? current
       setActiveId(current)
     }
     const interrupt = () => {
@@ -127,7 +146,7 @@ export function AccountFormLayout({
       scroller.removeEventListener("keydown", interrupt)
       window.removeEventListener("resize", update)
     }
-  }, [continuous])
+  }, [continuous, sections])
 
   const navigate = (id: string) => {
     const root = rootRef.current
@@ -194,11 +213,8 @@ export function AccountFormLayout({
           "[data-account-form-section]",
         )
         if (!section) return
-        const id =
-          section.id === "account-login-config"
-            ? ACCOUNT_FORM_SECTION_ELEMENT_IDS["check-in"]
-            : section.id
-        if (ACCOUNT_EDIT_SECTIONS.some((entry) => entry.id === id)) {
+        const id = section.id
+        if (sections.some((entry) => entry.id === id)) {
           navigationSelection.current = id
           setActiveId(id)
         }
@@ -223,14 +239,17 @@ export function AccountFormLayout({
                     aria-label={`${activeSection ? t(activeSection.title) : ""}, ${t("sections.navigation")}`}
                     rightIcon={<ChevronDown className="size-4" />}
                   >
-                    {ACCOUNT_EDIT_SECTIONS.filter(
-                      ({ id }) => id === activeId,
-                    ).map(({ id, title, icon: Icon }) => (
-                      <span key={id} className="flex items-center gap-2.5">
-                        <Icon aria-hidden="true" className="size-4 shrink-0" />
-                        {t(title)}
-                      </span>
-                    ))}
+                    {sections
+                      .filter(({ id }) => id === activeId)
+                      .map(({ id, title, icon: Icon }) => (
+                        <span key={id} className="flex items-center gap-2.5">
+                          <Icon
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                          />
+                          {t(title)}
+                        </span>
+                      ))}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -244,7 +263,7 @@ export function AccountFormLayout({
                     navigate(destination)
                   }}
                 >
-                  {ACCOUNT_EDIT_SECTIONS.map(({ id, title, icon: Icon }) => (
+                  {sections.map(({ id, title, icon: Icon }) => (
                     <DropdownMenuItem
                       key={id}
                       aria-current={activeId === id ? "location" : undefined}
@@ -259,7 +278,7 @@ export function AccountFormLayout({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              ACCOUNT_EDIT_SECTIONS.map(({ id, title, icon: Icon }) => (
+              sections.map(({ id, title, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"

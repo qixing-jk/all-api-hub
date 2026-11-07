@@ -28,6 +28,7 @@ import BookmarkAccountImportDialog from "~/features/AccountManagement/components
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useAccountEditRouteAction } from "~/features/AccountManagement/dialogs/useAccountEditRouteAction"
 import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { getAccountRefreshFeedback } from "~/features/AccountManagement/refreshFeedback"
 import {
@@ -83,6 +84,8 @@ const headerSurface =
 interface AccountManagementContentProps {
   searchQuery?: string
   routeAction?: string
+  routeAccountId?: string
+  routeFocusSection?: string
   isBookmarkImportDialogOpen: boolean
   onOpenBookmarkImport: () => void
   onCloseBookmarkImport: () => void
@@ -94,12 +97,15 @@ interface AccountManagementContentProps {
 function AccountManagementContent({
   searchQuery,
   routeAction,
+  routeAccountId,
+  routeFocusSection,
   isBookmarkImportDialogOpen,
   onOpenBookmarkImport,
   onCloseBookmarkImport,
 }: AccountManagementContentProps) {
   const { t } = useTranslation(["account", "common", "messages"])
   const { openAddAccount, openEditAccount } = useAccountDialogActions()
+  useAccountEditRouteAction({ routeAction, routeAccountId, routeFocusSection })
   const consumedAddRouteActionRef = useRef(false)
   const {
     displayData,
@@ -557,6 +563,12 @@ function AccountManagement({
       <AccountManagementContent
         searchQuery={routeParams?.search}
         routeAction={routeParams?.[ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]}
+        routeAccountId={
+          routeParams?.[ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountId]
+        }
+        routeFocusSection={
+          routeParams?.[ACCOUNT_MANAGEMENT_ROUTE_PARAMS.FocusSection]
+        }
         isBookmarkImportDialogOpen={isBookmarkImportDialogOpen}
         onOpenBookmarkImport={openBookmarkImportDialog}
         onCloseBookmarkImport={closeBookmarkImportDialog}

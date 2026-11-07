@@ -36,6 +36,7 @@ import {
   fetchDisplayAccountServiceRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   AccountKeyResourceError,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as keyFailures,
@@ -118,6 +119,7 @@ export function useCopyKeyDialog(
   )
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setError] = useState<string | null>(null)
+  const [authenticationFailed, setAuthenticationFailed] = useState(false)
   const [managementConfigurationRequired, setManagementConfigurationRequired] =
     useState(false)
   const [postCreateFailure, setPostCreateError] =
@@ -148,6 +150,7 @@ export function useCopyKeyDialog(
     setRuntimeKeys([])
     setNativeKeyRows([])
     setError(null)
+    setAuthenticationFailed(false)
     setManagementConfigurationRequired(false)
     setPostCreateError(null)
     setOneTimeSecret(null)
@@ -178,6 +181,7 @@ export function useCopyKeyDialog(
     inventoryAbortControllerRef.current = controller
     setIsLoading(true)
     setError(null)
+    setAuthenticationFailed(false)
     setManagementConfigurationRequired(false)
     setPostCreateError(null)
 
@@ -198,6 +202,10 @@ export function useCopyKeyDialog(
         setNativeKeyRows([])
         if (serviceResult.status === "rejected") {
           setError(getErrorMessage(serviceResult.reason))
+          setAuthenticationFailed(
+            mapAccountKeyResourceFailure(serviceResult.reason).code ===
+              keyFailures.AuthenticationFailed,
+          )
         }
         if (inventoryResult.status === "rejected") {
           if (
@@ -251,6 +259,10 @@ export function useCopyKeyDialog(
         siteType: account.siteType,
       })
       setError(getErrorMessage(error))
+      setAuthenticationFailed(
+        mapAccountKeyResourceFailure(error).code ===
+          keyFailures.AuthenticationFailed,
+      )
     } finally {
       if (fetchRequestIdRef.current === requestId) {
         if (inventoryAbortControllerRef.current === controller) {
@@ -374,6 +386,7 @@ export function useCopyKeyDialog(
     runtimeKeys,
     nativeKeyRows,
     isLoading,
+    authenticationFailed,
     managementConfigurationRequired,
     error:
       loadError !== null

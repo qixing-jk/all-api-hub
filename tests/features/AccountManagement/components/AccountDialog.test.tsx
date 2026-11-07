@@ -12,6 +12,7 @@ import {
   ACCOUNT_DIALOG_PHASES,
   createEmptyAccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
+import * as recoveryHandoff from "~/features/AccountManagement/components/AccountDialog/recovery/useAccountDialogRecoveryHandoff"
 import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/sponsors/constants"
 import type { SponsorRecommendation } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -25,6 +26,7 @@ import * as siteRoutes from "~/services/accounts/utils/siteRouteResolver"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { AuthTypeEnum } from "~/types"
+import * as browserUtils from "~/utils/browser"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -189,6 +191,7 @@ const {
     handleSub2apiUseRefreshTokenChange: vi.fn(),
     handleImportSub2apiSession: vi.fn(),
     handleImportCookieAuthSessionCookie: vi.fn(),
+    handleRecoverCookieSession: vi.fn(),
     handleOpenCookiePermissionSettings: vi.fn(),
     handleSaveAccount: vi.fn(),
     handleDuplicateAccountWarningCancel: vi.fn(),
@@ -232,6 +235,7 @@ function resetMockState() {
     isFormValid: true,
     isAutoConfiguring: false,
     detectionError: null,
+    cookieRecoveryState: null,
     openRouterBootstrapRecovery: null,
     isDetected: false,
     siteType: emptyDraft.siteType,
@@ -430,6 +434,65 @@ vi.mock("~/utils/navigation/feedbackPages", () => ({
 }))
 
 describe("AccountDialog", () => {
+  it("hands the popup Cookie recovery draft to a persistent editor before starting login", async () => {
+    const continueRecovery = vi.fn()
+    const popup = vi
+      .spyOn(browserUtils, "isExtensionPopup")
+      .mockReturnValue(true)
+    const handoff = vi
+      .spyOn(recoveryHandoff, "useAccountDialogRecoveryHandoff")
+      .mockReturnValue({
+        sidePanelSupported: true,
+        isPending: false,
+        disabled: false,
+        errorMessage: null,
+        onContinue: continueRecovery,
+      })
+    onTestFinished(() => {
+      popup.mockRestore()
+      handoff.mockRestore()
+    })
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.siteType = SITE_TYPES.ANYROUTER
+    mockState.authType = AuthTypeEnum.Cookie
+    mockState.draft = {
+      ...mockState.draft,
+      siteType: SITE_TYPES.ANYROUTER,
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "",
+      login: {
+        methodId: "password",
+        credentials: { username: "member", password: "unsaved" },
+      },
+    }
+    mockState.cookieRecoveryState = {
+      recoveryAction: "cookie",
+      url: mockState.url,
+      draft: mockState.draft,
+      checkInSelectionChanged: false,
+      checkInDiscoveryBaseSelection: null,
+    }
+    render(
+      <AccountDialog
+        isOpen
+        mode={DIALOG_MODES.ADD}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "accountDialog:cookieValidation.recover",
+      }),
+    )
+    expect(handoff).toHaveBeenLastCalledWith({
+      enabled: true,
+      state: mockState.cookieRecoveryState,
+    })
+    expect(continueRecovery).toHaveBeenCalledOnce()
+    expect(mockHandlers.handleRecoverCookieSession).not.toHaveBeenCalled()
+  })
   it("exposes the workspace close completion to its replacement owner", async () => {
     let finish!: () => void
     mockHandlers.handleClose.mockReturnValue(

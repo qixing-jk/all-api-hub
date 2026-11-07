@@ -64,6 +64,16 @@ import { getManagedResourceRegistration } from "~/services/apiAdapters/managedRe
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
 
+it("admits only AnyRouter to account credential recovery", () => {
+  expect(
+    getAccountSiteDefinitions()
+      .filter(
+        (definition) => definition.accountLogin?.supportsCredentialRecovery,
+      )
+      .map((definition) => definition.siteType),
+  ).toEqual([SITE_TYPES.ANYROUTER])
+})
+
 it("routes Daya manual redemption to the current purchase form", () => {
   expect(
     getAccountSiteDefinition(SITE_TYPES.DAYA)?.onboarding?.routes.redeemPath,

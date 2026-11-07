@@ -240,6 +240,7 @@ describe("newApiFamily accountData", () => {
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
     expect(mockFetchApiData).toHaveBeenCalledWith(baseRequest, {
+      credentialRecovery: "read",
       endpoint: `/api/log/self/stat?${new URLSearchParams({
         p: "1",
         page_size: "2",
@@ -334,6 +335,7 @@ describe("newApiFamily accountData", () => {
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
     expect(mockFetchApiData).toHaveBeenCalledWith(baseRequest, {
+      credentialRecovery: "read",
       endpoint: `/api/log/self/stat?${new URLSearchParams({
         page: "1",
         size: "2",
@@ -523,6 +525,7 @@ describe("newApiFamily accountData", () => {
     })
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      credentialRecovery: "read",
       endpoint: `/api/log/self?${new URLSearchParams({
         p: "1",
         page_size: "2",
@@ -784,6 +787,7 @@ describe("newApiFamily accountData", () => {
     })
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, baseRequest, {
+      credentialRecovery: "read",
       endpoint: `/api/log/self?${new URLSearchParams({
         page: "1",
         size: "2",
@@ -796,6 +800,7 @@ describe("newApiFamily accountData", () => {
     })
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      credentialRecovery: "read",
       endpoint: `/api/log/self?${new URLSearchParams({
         page: "1",
         size: "2",

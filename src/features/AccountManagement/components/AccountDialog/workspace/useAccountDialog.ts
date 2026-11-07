@@ -41,6 +41,8 @@ import { useAccountManagedSiteSetup } from "~/features/AccountManagement/compone
 import { useAccountPostSaveWorkflow } from "~/features/AccountManagement/components/AccountDialog/postSave/useAccountPostSaveWorkflow"
 import { useAccountDialogSaveWorkflow } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDialogSaveWorkflow"
 import { useAccountDuplicateConfirmation } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDuplicateConfirmation"
+import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import {
   isValidAccount,
   parseManualQuotaFromUsd,
@@ -55,6 +57,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { type CheckInConfig, type DisplaySiteData } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
+import { isExtensionPopup } from "~/utils/browser"
 import { createLogger } from "~/utils/core/logger"
 import { openSettingsTab } from "~/utils/navigation"
 
@@ -302,9 +305,18 @@ export function useAccountDialog({
     authType,
     getContext: getCookieImportContextForUrl,
     applyCookie: applyImportedCookie,
+    validationTarget: {
+      site_type: siteType,
+      site_url: url,
+      account_info: { id: userId },
+      cookieAuth: { sessionCookie: cookieAuthSessionCookie },
+      login: draft.login,
+    },
   })
   const {
     isImportingCookies,
+    isRecoveringCookies,
+    verifiedCookie,
     showCookiePermissionWarning,
     cookieAuthPermissionState,
   } = cookieSession.state
@@ -312,6 +324,7 @@ export function useAccountDialog({
     invalidate: invalidateCookieSession,
     reset: resetCookieSession,
     importManually: handleImportCookieAuthSessionCookie,
+    recoverManually: handleRecoverCookieSession,
     requestPermissions: handleRequestCookieAuthPermissions,
   } = cookieSession
   const sub2ApiSession = useSub2ApiAccountSession({
@@ -683,6 +696,14 @@ export function useAccountDialog({
     : SITE_TYPES.UNKNOWN
   const isFormValid = isValidAccount({
     loginChange: draft.loginChanged ? draft.login : undefined,
+    loginMethods:
+      draft.loginChanged && draft.login
+        ? getAccountLoginMethods({
+            site_type: normalizedFormSiteType,
+            site_url: url,
+            account_info: { id: userId, username },
+          })
+        : undefined,
     siteName,
     username,
     userId,
@@ -697,6 +718,49 @@ export function useAccountDialog({
     parseManualQuotaFromUsd(manualBalanceUsd) === undefined
   const isAccountFormValid =
     isFormValid && sub2ApiSession.isValid && !isManualBalanceUsdInvalid
+
+  const cookieRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
+    if (
+      !supportsAccountCookieRecovery({
+        site_type: draft.siteType,
+        site_url: url,
+        authType: draft.authType,
+        account_info: { id: draft.userId },
+        login: draft.login,
+      })
+    )
+      return null
+    return {
+      recoveryAction: "cookie",
+      url,
+      draft,
+      ...(mode === DIALOG_MODES.EDIT && account
+        ? { accountId: account.id }
+        : {}),
+      checkInSelectionChanged: checkInSelectionChangedRef.current,
+      checkInDiscoveryBaseSelection: checkInDiscoveryBaseSelectionRef.current,
+    }
+  }, [account, draft, mode, url])
+
+  const continuedRecovery = useRef<AccountDialogRecoveryState | null>(null)
+  useEffect(() => {
+    if (!isOpen) {
+      continuedRecovery.current = null
+      return
+    }
+    if (
+      isExtensionPopup() ||
+      recoveryState?.recoveryAction !== "cookie" ||
+      continuedRecovery.current === recoveryState ||
+      url !== recoveryState.url ||
+      draft.siteType !== recoveryState.draft.siteType ||
+      draft.userId !== recoveryState.draft.userId ||
+      draft.login !== recoveryState.draft.login
+    )
+      return
+    continuedRecovery.current = recoveryState
+    void cookieSession.recoverManually()
+  }, [cookieSession, draft, isOpen, recoveryState, url])
 
   const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
     if (
@@ -722,6 +786,7 @@ export function useAccountDialog({
       phase,
       formSource,
       draft,
+      cookieRecoveryState,
       tokenRecoveryState,
       isDetecting,
       isDetectingSlow,
@@ -758,6 +823,8 @@ export function useAccountDialog({
       openRouterBootstrapRecovery: openRouterOnboardingRecovery,
       cookieAuthSessionCookie,
       isImportingCookies,
+      isRecoveringCookies,
+      verifiedCookie,
       showCookiePermissionWarning,
       cookieAuthPermissionsGranted: cookieAuthPermissionState.granted,
       isRequestingCookieAuthPermissions: cookieAuthPermissionState.pending,
@@ -836,6 +903,7 @@ export function useAccountDialog({
       handleClose,
       retryAccountLoad,
       handleImportCookieAuthSessionCookie,
+      handleRecoverCookieSession,
       handleOpenCookiePermissionSettings,
       handleRequestCookieAuthPermissions,
       handleImportSub2apiSession,

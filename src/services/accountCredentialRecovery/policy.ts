@@ -1,0 +1,27 @@
+import { ACCOUNT_LOGIN_CREDENTIAL_KINDS } from "~/constants/accountLogin"
+import { isAccountSiteType } from "~/constants/siteType"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
+import { supportsAccountCookieValidation } from "~/services/accounts/cookieValidation"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import type { AccountLoginTarget } from "~/services/apiAdapters/contracts/accountLogin"
+import { AuthTypeEnum, type SiteAccount } from "~/types"
+
+/** Cookie capture is opt-in per site; a login capability alone is insufficient. */
+export function supportsAccountCookieRecovery(
+  account: AccountLoginTarget & Partial<Pick<SiteAccount, "authType">>,
+  methodId?: string,
+): boolean {
+  return (
+    (account.authType === undefined ||
+      account.authType === AuthTypeEnum.Cookie) &&
+    isAccountSiteType(account.site_type) &&
+    supportsAccountCookieValidation(account.site_type) &&
+    getAccountSiteDefinition(account.site_type)?.accountLogin
+      ?.supportsCredentialRecovery === true &&
+    getAccountLoginMethods(account).some(
+      (method) =>
+        method.credentialRecovery === ACCOUNT_LOGIN_CREDENTIAL_KINDS.Cookie &&
+        (methodId === undefined || method.id === methodId),
+    )
+  )
+}

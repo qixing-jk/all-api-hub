@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import AccountLinkButton from "~/components/AccountLinkButton"
 import { TableCell, TableRow } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
+import { AccountCredentialRecoveryGuidance } from "~/features/AccountManagement/credentialRecovery/AccountCredentialRecoveryGuidance"
 import type { ResultsTableActionsProps } from "~/features/AutoCheckin/results/ResultsTable.types"
 import ResultsTableRowActions from "~/features/AutoCheckin/results/ResultsTableRowActions"
 import ResultStatusBadge from "~/features/AutoCheckin/results/ResultStatusBadge"
@@ -17,8 +18,9 @@ import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/compone
 import { cn } from "~/lib/utils"
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
-import type { CurrencyType } from "~/types"
+import type { CurrencyType, DisplaySiteData } from "~/types"
 import {
+  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
@@ -31,6 +33,7 @@ import { openProtectionBypassHistory } from "~/utils/navigation"
 
 interface ResultsTableRowProps extends ResultsTableActionsProps {
   result: CheckinAccountResult
+  account?: DisplaySiteData
   siteTypeMismatch?: SiteTypeMismatch
   /** Currency the reward line is shown in. */
   currencyType?: CurrencyType
@@ -45,6 +48,7 @@ interface ResultsTableRowProps extends ResultsTableActionsProps {
 /** Renders one execution result while keeping table orchestration in the parent. */
 export default function ResultsTableRow({
   result,
+  account,
   siteTypeMismatch,
   currencyType = "USD",
   exchangeRateByAccountId = {},
@@ -148,6 +152,13 @@ export default function ResultsTableRow({
               {getTroubleshootingHintLabel(troubleshootingHintKey)}
             </div>
           )}
+          {account &&
+            (result.status === CHECKIN_RESULT_STATUS.FAILED ||
+              result.status === CHECKIN_RESULT_STATUS.SKIPPED) &&
+            result.reasonCode ===
+              AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED && (
+              <AccountCredentialRecoveryGuidance account={account} failure />
+            )}
           {(troubleshootingHintKey ===
             AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.manualVerificationRequired ||
             troubleshootingHintKey ===

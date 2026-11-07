@@ -1,6 +1,11 @@
-import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
+import {
+  ACCOUNT_LOGIN_CONFIGURATION_KINDS,
+  ACCOUNT_LOGIN_CREDENTIAL_KINDS,
+  ACCOUNT_LOGIN_METHODS,
+} from "~/constants/accountLogin"
 import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import type { AccountSiteType } from "~/constants/siteType"
+import { passwordLoginMethod } from "~/services/accountLogin/methods"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import type {
   AccountLoginCapability,
@@ -8,7 +13,10 @@ import type {
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { createNewApiOAuthFlow } from "~/services/apiAdapters/newApi/account/browserOAuth"
 import { loginNewApiWithPassword } from "~/services/apiAdapters/newApi/account/passwordLogin"
-import type { NewApiOAuthProvider } from "~/services/apiService/newApiFamily/oauth/contracts"
+import {
+  NEW_API_OAUTH_PROVIDER_LABELS,
+  type NewApiOAuthProvider,
+} from "~/services/apiService/newApiFamily/oauth/contracts"
 import { isNewApiLoginProvider } from "~/services/apiService/newApiFamily/oauth/discovery"
 import { fetchNewApiLoginMethods } from "~/services/apiService/newApiFamily/oauth/publicStatus"
 import { createBrowserOAuthContext } from "~/services/browserOAuth/browserOAuth"
@@ -44,6 +52,16 @@ export function createNewApiAccountLogin(
     }
   }
   return {
+    methods: providers.map((id) => ({
+      ...(id === ACCOUNT_LOGIN_METHODS.Password
+        ? passwordLoginMethod(config.passwordIdentity)
+        : {
+            id,
+            label: NEW_API_OAUTH_PROVIDER_LABELS[id],
+            configuration: { kind: ACCOUNT_LOGIN_CONFIGURATION_KINDS.None },
+          }),
+      credentialRecovery: ACCOUNT_LOGIN_CREDENTIAL_KINDS.Cookie,
+    })),
     async discover(account) {
       if (!supports(account)) return []
       const methods = await fetchNewApiLoginMethods(account.site_url, providers)
@@ -72,6 +90,8 @@ export function createNewApiAccountLogin(
         origin: new URL(request.account.site_url).origin,
         expectedIdentity,
         requestId: request.requestId,
+        captureCredential: request.captureCredential,
+        abortSignal: request.abortSignal,
         ...(request.attended === undefined
           ? {}
           : { attended: request.attended }),

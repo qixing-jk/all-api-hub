@@ -201,11 +201,19 @@ const dynamicImportAllowlist = [
   // startup path or break module cycles.
   {
     file: "src/entrypoints/background/runtimeMessages.ts",
-    imports: ["~/services/managedSites/newApiOwnedSession/background"],
+    imports: [
+      "~/services/managedSites/newApiOwnedSession/background",
+      // Manual editor recovery loads the login adapter graph only on demand.
+      "~/services/accountCredentialRecovery/manual",
+    ],
   },
   {
     file: "src/services/accountLogin/index.ts",
     imports: ["~/services/apiAdapters/registry"],
+  },
+  {
+    file: "src/services/apiService/common/providerRequest.ts",
+    imports: ["~/services/accountCredentialRecovery"],
   },
   {
     file: "src/services/checkin/autoCheckin/scheduling/refresh.ts",

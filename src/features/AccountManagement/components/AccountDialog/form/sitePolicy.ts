@@ -5,6 +5,7 @@ import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
 } from "~/services/accounts/accountSiteProfile/contracts"
+import { supportsAccountCookieValidation } from "~/services/accounts/cookieValidation"
 import type { AccountSiteDefinitionOnboardingMetadata } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -32,6 +33,7 @@ export interface AccountDialogSitePolicy {
   forceAccessTokenAuth: boolean
   allowCookieAuthSession: boolean
   usesBrowserCookieSession?: boolean
+  supportsCookieValidation: boolean
   allowCookieAutoImport: boolean
   allowKimiOpenPlatformAuthState: boolean
   allowSub2ApiRefreshTokenState: boolean
@@ -85,6 +87,7 @@ export function getAccountDialogSitePolicy(
     requireUsername: productProfile.identity.usernameRequired,
     allowCookieAuthSession: allowsCookieAuth,
     usesBrowserCookieSession: productProfile.auth.usesBrowserCookieSession,
+    supportsCookieValidation: supportsAccountCookieValidation(siteType),
     allowCookieAutoImport: allowsCookieAuth,
     allowKimiOpenPlatformAuthState:
       productProfile.authSession.kind ===

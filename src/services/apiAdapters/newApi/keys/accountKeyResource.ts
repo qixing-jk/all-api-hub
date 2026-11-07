@@ -30,6 +30,8 @@ import {
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { AuthTypeEnum } from "~/types"
 
 /** Creates the New API-family native account-token resource capability. */
 export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
@@ -40,12 +42,46 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
       !resourceValuesEqual(command.baseline, command.values),
     inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
     defaultCreation: variant.defaultCreation,
-    openConfig: async (input) => ({
-      account: input.account,
-      request: input.request,
-      transport: variant.transport,
-      variant,
-    }),
+    openConfig: async (input) => {
+      if (
+        !input.request.allowAccountCredentialRecovery ||
+        input.request.auth.authType !== AuthTypeEnum.Cookie
+      )
+        return {
+          account: input.account,
+          request: input.request,
+          transport: variant.transport,
+          variant,
+        }
+      // The session owns its request: a recovered read supplies credentials for
+      // later writes, while the caller's original request remains unchanged.
+      const request: ApiServiceRequest = { ...input.request }
+      const observer = input.request.observer
+      let latestRecoveryGeneration = 0
+      request.observer = {
+        ...observer,
+        onDispatch: () => observer?.onDispatch(),
+        onResponse: () => observer?.onResponse(),
+        onCookieRecovered(cookie, generation) {
+          if (generation <= latestRecoveryGeneration) return
+          latestRecoveryGeneration = generation
+          request.auth = { ...request.auth, cookie }
+          request.cookieAuthSessionCookie = cookie
+          if (request.cookieSession)
+            request.cookieSession = {
+              ...request.cookieSession,
+              cookieHeader: cookie,
+            }
+          observer?.onCookieRecovered?.(cookie, generation)
+        },
+      }
+      return {
+        account: input.account,
+        request,
+        transport: variant.transport,
+        variant,
+      }
+    },
     listScopes: async (config): Promise<readonly AccountKeyScope[]> => [
       {
         scopeKey: ACCOUNT_SCOPE_KEY,

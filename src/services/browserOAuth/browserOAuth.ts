@@ -48,6 +48,10 @@ export interface BrowserOAuthFlow<Evidence> {
   prepareDetails?: Record<string, unknown>
   completeAction: string
   clearEvidenceAction: string
+  captureCredential?: (
+    tabId: number,
+    origin: string,
+  ) => Promise<{ cookie: string } | null>
   authorizationInteraction?: {
     action: string
     isInteractionUrl(currentUrl: URL, requestedUrl: URL): boolean

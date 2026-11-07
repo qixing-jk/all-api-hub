@@ -77,6 +77,8 @@ export interface AccountDialogDraft {
 
 /** Form state carried from a popup into manual New API token recovery. */
 export interface AccountDialogRecoveryState {
+  /** Resume the user-requested Cookie login only after the draft reaches a persistent view. */
+  recoveryAction?: "cookie"
   url: string
   draft: AccountDialogDraft
   accountId?: string

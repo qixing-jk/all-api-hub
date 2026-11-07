@@ -36,6 +36,27 @@ const status = {
 }
 
 describe("adapter-owned account login", () => {
+  it("offers AnyRouter's verified GitHub, Linux DO and password login protocols", async () => {
+    dependencies.status.mockResolvedValue({
+      success: true,
+      data: {
+        github_oauth: true,
+        github_client_id: "github",
+        linuxdo_oauth: true,
+        linuxdo_client_id: "linuxdo",
+      },
+    })
+    const capability = createNewApiAccountLogin(SITE_TYPES.ANYROUTER)
+    expect(capability).toBeDefined()
+    expect(
+      (
+        await capability!.discover({
+          ...account,
+          site_type: SITE_TYPES.ANYROUTER,
+        })
+      ).map((m) => m.id),
+    ).toEqual(["github", "linuxdo", "password"])
+  })
   beforeEach(() => {
     vi.resetAllMocks()
     dependencies.createBrowser.mockReturnValue({

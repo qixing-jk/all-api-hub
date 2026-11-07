@@ -396,7 +396,8 @@ export function useAccountDialogInitialization({
             ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
             : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
         )
-        requireAccessTokenVerification()
+        if (recoveryState.recoveryAction !== "cookie")
+          requireAccessTokenVerification()
       } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {

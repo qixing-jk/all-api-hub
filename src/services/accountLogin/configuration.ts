@@ -1,9 +1,8 @@
-import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import {
-  normalizeAccountLogin,
+  isAccountLoginConfigured,
   resolveAccountLogin,
 } from "~/services/accountLogin/configCodec"
-import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
 import { createLoginProviderClaimGuard } from "~/services/accountLogin/providerClaims"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import {
@@ -42,15 +41,9 @@ export const accountLoginConfiguration = {
     target: Target,
     value: AccountLoginConfiguration | null,
   ): Promise<void> {
-    const credentials =
-      value?.methodId === ACCOUNT_LOGIN_METHODS.Password
-        ? normalizePasswordCredentials(value.credentials)
-        : undefined
     if (
       value &&
-      (value.methodId === ACCOUNT_LOGIN_METHODS.Password
-        ? !credentials
-        : !normalizeAccountLogin(value))
+      !isAccountLoginConfigured(value, getAccountLoginMethods(target))
     )
       throw new Error("Invalid account login configuration")
     const guard = await createLoginProviderClaimGuard({

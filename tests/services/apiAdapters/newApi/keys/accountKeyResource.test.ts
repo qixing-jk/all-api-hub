@@ -118,6 +118,76 @@ const token = (overrides: Partial<NewApiToken>): NewApiToken => ({
 })
 
 describe("New API account key resources", () => {
+  it.each([false, true])(
+    "uses the recovered Cookie for the subsequent create and preserves lifecycle observers (private: %s)",
+    async (privateSession) => {
+      const onCookieRecovered = vi.fn()
+      const cookieRequest = {
+        ...request,
+        allowAccountCredentialRecovery: true,
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "17",
+          cookie: "session=expired",
+        },
+        cookieAuthSessionCookie: "session=expired",
+        cookieSession: privateSession
+          ? {
+              origin: request.baseUrl,
+              cookieHeader: "session=expired",
+            }
+          : undefined,
+        observer: {
+          onDispatch: vi.fn(),
+          onResponse: vi.fn(),
+          onCookieRecovered,
+        },
+      }
+      mockFetchUserGroups.mockResolvedValue({ vip: { desc: "VIP", ratio: 2 } })
+      mockFetchAccountTokens
+        .mockImplementationOnce(async (input) => {
+          input.observer?.onDispatch()
+          input.observer?.onResponse()
+          input.observer?.onCookieRecovered?.("session=fresh", 1)
+          return []
+        })
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([token({ id: 9, group: "vip" })])
+      mockCreateApiToken.mockResolvedValueOnce(true)
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.ANYROUTER,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.ANYROUTER },
+        request: cookieRequest,
+      })
+      const snapshot = await session.provisioning!.inspect()
+      await expect(
+        session.provisioning!.provision(
+          atIndex(snapshot.requirements, 0).requirementKey,
+        ),
+      ).resolves.toMatchObject({ certainty: "applied" })
+      expect(mockCreateApiToken).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          auth: { ...cookieRequest.auth, cookie: "session=fresh" },
+          cookieAuthSessionCookie: "session=fresh",
+          cookieSession: privateSession
+            ? {
+                origin: request.baseUrl,
+                cookieHeader: "session=fresh",
+              }
+            : undefined,
+        }),
+        expect.anything(),
+      )
+      expect(cookieRequest.auth.cookie).toBe("session=expired")
+      expect(onCookieRecovered).toHaveBeenCalledExactlyOnceWith(
+        "session=fresh",
+        1,
+      )
+      expect(cookieRequest.observer.onDispatch).toHaveBeenCalledOnce()
+      expect(cookieRequest.observer.onResponse).toHaveBeenCalledOnce()
+    },
+  )
   it.each([
     ["abcd**********1234", { prefix: "abcd", suffix: "1234" }],
     ["ab****34", { prefix: "ab", suffix: "34" }],

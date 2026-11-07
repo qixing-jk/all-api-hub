@@ -1,7 +1,11 @@
-import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
+import {
+  ACCOUNT_LOGIN_CONFIGURATION_KINDS,
+  ACCOUNT_LOGIN_METHODS,
+} from "~/constants/accountLogin"
 import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES } from "~/constants/siteType"
+import { passwordLoginMethod } from "~/services/accountLogin/methods"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import type {
   AccountLoginCapability,
@@ -11,6 +15,7 @@ import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/brow
 import { fetchSub2ApiPublicSettings } from "~/services/apiService/sub2api/account/publicSettings"
 import {
   discoverSub2ApiOAuthMethods,
+  getSub2ApiOAuthMethod,
   isSub2ApiOAuthProvider,
   normalizeSub2ApiLoginIdentity,
 } from "~/services/apiService/sub2api/oauth/protocol"
@@ -52,6 +57,23 @@ function supportsSub2ApiAccountLogin(account: AccountLoginTarget): boolean {
 }
 
 export const sub2ApiAccountLogin: AccountLoginCapability = {
+  get methods() {
+    const policy = loginPolicy()
+    return [
+      ...policy.providers.map((id) => ({
+        ...getSub2ApiOAuthMethod(id),
+        configuration: { kind: ACCOUNT_LOGIN_CONFIGURATION_KINDS.None },
+      })),
+      ...(policy.password
+        ? [
+            passwordLoginMethod(
+              getAccountSiteDefinition(SITE_TYPES.SUB2API)?.accountLogin
+                ?.passwordIdentity,
+            ),
+          ]
+        : []),
+    ]
+  },
   supports: supportsSub2ApiAccountLogin,
   async discover(account) {
     if (!supportsSub2ApiAccountLogin(account)) return []
@@ -100,6 +122,7 @@ export const sub2ApiAccountLogin: AccountLoginCapability = {
       origin,
       expectedIdentity,
       requestId,
+      abortSignal: request.abortSignal,
       ...(attended === undefined ? {} : { attended }),
     })
     return result.status === BROWSER_LOGIN_STATUS.Authenticated
