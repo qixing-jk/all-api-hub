@@ -1,13 +1,11 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import { useStarPromotionDevSection } from "~/features/DevPanel/sections/starPromotionSection"
 import {
   STAR_PROMOTION_INITIAL_THRESHOLD,
   type StarPromotionState,
 } from "~/services/starPromotion/contracts"
-import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { render } from "~~/tests/test-utils/render"
 
 const {
@@ -15,14 +13,12 @@ const {
   deferThresholdPromptMock,
   getStateMock,
   markCompletedMock,
-  navigateWithinOptionsPageMock,
   resetMock,
 } = vi.hoisted(() => ({
   addCheckinSuccessesMock: vi.fn(),
   deferThresholdPromptMock: vi.fn(),
   getStateMock: vi.fn(),
   markCompletedMock: vi.fn(),
-  navigateWithinOptionsPageMock: vi.fn(),
   resetMock: vi.fn(),
 }))
 
@@ -35,13 +31,6 @@ vi.mock("~/services/starPromotion/state", () => ({
     reset: resetMock,
   },
 }))
-
-vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
-
-  return { ...actual, navigateWithinOptionsPage: navigateWithinOptionsPageMock }
-})
 
 const activeState: StarPromotionState = {
   status: "active",
@@ -80,21 +69,13 @@ describe("star promotion dev section", () => {
     addCheckinSuccessesMock.mockResolvedValue(undefined)
     deferThresholdPromptMock.mockResolvedValue(undefined)
     markCompletedMock.mockResolvedValue(undefined)
-    vi.mocked(navigateWithinOptionsPage).mockResolvedValue(undefined)
   })
 
-  it("navigates to the star promotion preview route", async () => {
+  it("leaves the standalone preview page to sidebar navigation", () => {
     render(<SectionHarness />, RENDER_OPTIONS)
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Open star promotion preview" }),
-    )
-
-    await waitFor(() => {
-      expect(navigateWithinOptionsPage).toHaveBeenCalledWith(
-        `#${DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW}`,
-      )
-    })
+    expect(
+      screen.queryByRole("button", { name: "Open star promotion preview" }),
+    ).not.toBeInTheDocument()
   })
 
   it("resets the stored promotion state", async () => {

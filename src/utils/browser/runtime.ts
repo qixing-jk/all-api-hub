@@ -154,11 +154,18 @@ export function getExtensionVersion(fallback = "0.0.0"): string {
 
 /**
  * Reloads the extension runtime when the current browser exposes the API.
+ * Destructive maintenance can request errors instead of the default best effort.
  */
-export function reloadRuntime(): void {
+export function reloadRuntime(): void
+export function reloadRuntime(options: { throwOnError: boolean }): void
+export function reloadRuntime(options: { throwOnError?: boolean } = {}): void {
   try {
+    if (options.throwOnError && typeof browser.runtime.reload !== "function") {
+      throw new Error("Extension runtime reload is unavailable")
+    }
     browser.runtime.reload?.()
   } catch (error) {
+    if (options.throwOnError) throw error
     logger.warn("Failed to reload extension runtime", error)
   }
 }

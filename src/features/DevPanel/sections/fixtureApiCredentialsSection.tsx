@@ -1,4 +1,4 @@
-import { KeyRound, Plus, Sparkles, Trash2 } from "lucide-react"
+import { Gauge, KeyRound, ListPlus, Plus, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -79,7 +79,7 @@ export function useFixtureApiCredentialsDevSection(
         {
           id: "add-allowance",
           label: "Dev: Add allowance fixtures",
-          icon: Sparkles,
+          icon: Gauge,
           loading: pendingAction === "allowance",
           disabled: pendingAction !== null,
           run: () => run("allowance"),
@@ -87,7 +87,7 @@ export function useFixtureApiCredentialsDevSection(
         {
           id: "add-five",
           label: "Dev: Add 5 fixture credentials",
-          icon: Plus,
+          icon: ListPlus,
           loading: pendingAction === "add",
           disabled: pendingAction !== null,
           run: () => run("add", 5),

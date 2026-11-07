@@ -1,4 +1,13 @@
-import { Trash2 } from "lucide-react"
+import {
+  AppWindow,
+  PanelsTopLeft,
+  PanelTop,
+  PanelTopDashed,
+  Power,
+  RefreshCw,
+  ScanLine,
+  Trash2,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -304,7 +313,8 @@ export function useTempContextDevSection(): DevPanelSection {
     () => ({
       id: "temp-context-debug",
       title: "Temporary pages",
-      icon: Trash2,
+      category: "diagnostics",
+      icon: PanelsTopLeft,
       description:
         "Reproduce a temp window/tab left behind, reload the extension or terminate its service worker, then reopen this page: the next worker start reclaims it. A marker from an earlier browser session is only cleared.",
       rows,
@@ -312,6 +322,7 @@ export function useTempContextDevSection(): DevPanelSection {
       actions: [
         {
           id: ACTION_IDS.leakOwnedWindow,
+          icon: AppWindow,
           label: "Dev: Leak an owned popup window",
           disabled: isBusy,
           loading: pendingActionId === ACTION_IDS.leakOwnedWindow,
@@ -319,6 +330,7 @@ export function useTempContextDevSection(): DevPanelSection {
         },
         {
           id: ACTION_IDS.leakSharedTab,
+          icon: PanelTopDashed,
           label: "Dev: Leak a shared background tab",
           disabled: isBusy,
           loading: pendingActionId === ACTION_IDS.leakSharedTab,
@@ -326,6 +338,7 @@ export function useTempContextDevSection(): DevPanelSection {
         },
         {
           id: ACTION_IDS.leakVisibleTab,
+          icon: PanelTop,
           label: "Dev: Leak a visible tab",
           disabled: isBusy,
           loading: pendingActionId === ACTION_IDS.leakVisibleTab,
@@ -333,6 +346,7 @@ export function useTempContextDevSection(): DevPanelSection {
         },
         {
           id: ACTION_IDS.openTrackedContext,
+          icon: ScanLine,
           label: "Dev: Open a tracked temp context",
           disabled: isBusy,
           loading: pendingActionId === ACTION_IDS.openTrackedContext,
@@ -340,6 +354,7 @@ export function useTempContextDevSection(): DevPanelSection {
         },
         {
           id: ACTION_IDS.reclaimNow,
+          icon: Trash2,
           label: "Dev: Run reclamation now",
           disabled: isBusy,
           loading: pendingActionId === ACTION_IDS.reclaimNow,
@@ -347,6 +362,7 @@ export function useTempContextDevSection(): DevPanelSection {
         },
         {
           id: ACTION_IDS.refresh,
+          icon: RefreshCw,
           label: "Dev: Refresh temp page state",
           disabled: isBusy,
           loading: readsState,
@@ -354,6 +370,7 @@ export function useTempContextDevSection(): DevPanelSection {
         },
         {
           id: ACTION_IDS.restartWorker,
+          icon: Power,
           label: "Dev: Restart background worker",
           disabled: isBusy,
           run: restartWorker,

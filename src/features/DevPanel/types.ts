@@ -17,6 +17,7 @@ export interface DevPanelContextValue {
 export interface DevPanelAction {
   id: string
   label: string
+  /** Uses a terminal icon when omitted so command labels remain aligned. */
   icon?: LucideIcon
   /** Shows a spinner and disables sibling actions while awaiting the handler. */
   loading?: boolean
@@ -47,6 +48,11 @@ export interface DevPanelInfoRow {
 export interface DevPanelSection {
   id: string
   title: string
+  /** Toolbox purpose; page relevance still comes from pages/prominentPages. */
+  category?: "preview" | "diagnostics" | "data"
+  /** Read-only build information stays outside the tool navigation. */
+  placement?: "footer"
+  /** Uses a tool icon when omitted so every section has the same header layout. */
   icon?: LucideIcon
   /** Optional one-line hint shown under the title. */
   description?: string

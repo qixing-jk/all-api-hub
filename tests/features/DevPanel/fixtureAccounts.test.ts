@@ -26,6 +26,7 @@ vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: {
     getAllAccounts: getAllAccountsMock,
+    getAllAccountsOrThrow: getAllAccountsMock,
   },
 }))
 

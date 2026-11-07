@@ -1,4 +1,4 @@
-import { CalendarCheck2, FlaskConical, Plus, Trash2 } from "lucide-react"
+import { CalendarCheck2, ListPlus, Plus, Trash2, Users } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -82,7 +82,7 @@ export function useFixtureAccountsDevSection(
     () => ({
       id: "fixture-accounts",
       title: "Fixture accounts",
-      icon: FlaskConical,
+      icon: Users,
       description:
         "Add check-in scenarios, refresh the page, then redetect from an account's More menu or Auto Check-in's Readiness tab. Multiple methods opens the real chooser; selecting a method keeps it on the next retry. Add fresh scenarios to test again. Automatic check-in stays off. Clear removes all registered fixture accounts.",
       pages: [
@@ -103,7 +103,7 @@ export function useFixtureAccountsDevSection(
         {
           id: "add-five",
           label: "Dev: Add 5 fixture accounts",
-          icon: Plus,
+          icon: ListPlus,
           loading: pendingAction === "add",
           disabled: pendingAction !== null,
           run: () => handleAdd(5),

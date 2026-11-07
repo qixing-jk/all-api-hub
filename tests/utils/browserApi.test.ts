@@ -1705,6 +1705,19 @@ describe("browserApi window and manifest helpers", () => {
     expect(() => reloadRuntime()).not.toThrow()
   })
 
+  it("reports reload failures when the caller needs an explicit completion result", () => {
+    ;(globalThis as any).browser.runtime.reload = vi.fn(() => {
+      throw new Error("reload unavailable")
+    })
+    expect(() => reloadRuntime({ throwOnError: true })).toThrow(
+      "reload unavailable",
+    )
+    delete (globalThis as any).browser.runtime.reload
+    expect(() => reloadRuntime({ throwOnError: true })).toThrow(
+      "reload is unavailable",
+    )
+  })
+
   it("sets the uninstall URL through the runtime API", async () => {
     // Native browser API methods require their own receiver; calling a
     // detached reference throws "Illegal invocation" in Chromium.

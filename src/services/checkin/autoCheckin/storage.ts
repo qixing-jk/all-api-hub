@@ -1,7 +1,10 @@
 import { Storage } from "@plasmohq/storage"
 
 import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
-import { STORAGE_LOCKS } from "~/services/core/storageKeys"
+import {
+  AUTO_CHECKIN_STORAGE_KEYS as STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   PRODUCT_ANALYTICS_STORAGE_AREAS,
@@ -36,13 +39,6 @@ function trackStatusStorageFailure(
     error,
   })
 }
-
-/**
- * Storage keys for Auto Check-in
- */
-const STORAGE_KEYS = {
-  AUTO_CHECKIN_STATUS: "autoCheckin_status",
-} as const
 
 /**
  * Recalculate the aggregated auto check-in run summary from per-account results.

@@ -164,7 +164,7 @@ const fixtureAccountRegistry = new DevFixtureAccountRegistry()
 async function readLiveFixtureAccounts(): Promise<SiteAccount[]> {
   const [ids, accounts] = await Promise.all([
     fixtureAccountRegistry.read(),
-    accountQueries.getAllAccounts(),
+    accountQueries.getAllAccountsOrThrow(),
   ])
   const idSet = new Set(ids)
   return accounts.filter((account) => idSet.has(account.id))

@@ -22,6 +22,9 @@ export const INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY =
   "internalBrowsingBrowserSession_v1"
 
 export const STORAGE_LOCKS = {
+  /** Serializes explicit data cleanup operations in development builds. */
+  DEV_DATA_CLEANUP: "all-api-hub:dev-data-cleanup",
+  LOGIN_PROVIDER_EVIDENCE: "all-api-hub:login-provider-evidence",
   AIMLAPI_ONBOARDING: "all-api-hub:aimlapi-onboarding",
   /** Serializes sponsor creation handoffs between popup and side panels. */
   SPONSOR_WORKFLOW: "all-api-hub:sponsor-workflow",
@@ -202,6 +205,10 @@ export const PRODUCT_ANALYTICS_STORAGE_KEYS = {
 /** Worker recovery facts kept independently of persistent local-storage writes. */
 export const AUTO_CHECKIN_SESSION_STORAGE_KEYS = {
   DAILY_RUN_PERSIST_FAILED_AT: "autoCheckin_dailyRunPersistFailedAt_v1",
+} as const
+
+export const AUTO_CHECKIN_STORAGE_KEYS = {
+  AUTO_CHECKIN_STATUS: "autoCheckin_status",
 } as const
 
 export const PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS = {

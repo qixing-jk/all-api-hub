@@ -1,4 +1,5 @@
 import { act } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -131,6 +132,99 @@ async function openDevPanel() {
 }
 
 describe("DevPanel", () => {
+  it("separates page tools from a categorized toolbox and keeps build details in the footer", async () => {
+    render(
+      <DevPanelProvider surface="options" page={MENU_ITEM_IDS.AUTO_CHECKIN}>
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+    await openDevPanel()
+    expect(screen.getByRole("tab", { name: "Current page" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+    expect(
+      screen.getByRole("button", { name: "Dev: Add 5 fixture accounts" }),
+    ).toBeVisible()
+    expect(screen.queryByText("Dialogs")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Build information" }),
+    ).toBeVisible()
+    await userEvent.click(screen.getByRole("tab", { name: "Toolbox" }))
+    expect(
+      screen.queryByRole("button", { name: "Dev: Add 5 fixture accounts" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Interface previews" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("group", { name: "Extension diagnostics" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("group", { name: "Data maintenance" }),
+    ).toBeVisible()
+    expect(screen.queryByText("Dev pages")).not.toBeInTheDocument()
+    // A single preview command is immediately actionable, without a wrapper toggle.
+    expect(
+      screen.getByRole("button", { name: "Dev: Preview key provisioning" }),
+    ).toBeVisible()
+    const help = screen.getByRole("button", {
+      name: "About Key provisioning preview",
+    })
+    expect(help).toHaveAccessibleDescription(
+      "Preview key creation, required inputs, and one-time secrets across site types.",
+    )
+    await userEvent.click(help)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Preview key creation, required inputs, and one-time secrets across site types.",
+    )
+    expect(
+      screen.queryByRole("button", { name: "Key provisioning preview" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen
+        .getByRole("button", { name: "Dev: Trigger translation crash" })
+        .closest('[role="group"]'),
+    ).toHaveAccessibleName("Extension diagnostics")
+  })
+
+  it("supplies consistent decorative icons when a section or action omits one", async () => {
+    function Tools() {
+      useRegisterDevPanelSection({
+        id: "iconless-tools",
+        title: "Custom tools",
+        collapsible: true,
+        actions: [
+          { id: "custom-command", label: "Run custom command", run: () => {} },
+        ],
+      })
+      return null
+    }
+    render(
+      <DevPanelProvider surface="options">
+        <Tools />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+    await openDevPanel()
+    const section = screen.getByRole("button", { name: "Custom tools" })
+    // Each header has a tool icon and a separate disclosure indicator.
+    expect(section.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(2)
+    fireEvent.click(section)
+    const action = screen.getByRole("button", { name: "Run custom command" })
+    expect(action.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+  })
+
   it("offers credential fixtures on the credential page and refreshes their count", async () => {
     render(
       <DevPanelProvider
@@ -155,28 +249,15 @@ describe("DevPanel", () => {
       expect(addDevFixtureApiCredentials).toHaveBeenCalledWith(5),
     )
     expect(countDevFixtureApiCredentials).toHaveBeenCalled()
-    expect(screen.getByRole("button", { name: "Dialogs" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
+    expect(screen.getByRole("tab", { name: "Current page" })).toHaveAttribute(
+      "aria-selected",
+      "true",
     )
   })
 
-  it("shows page actions first and folds unrelated sections individually", async () => {
-    function PageSection() {
-      useRegisterDevPanelSection({
-        id: "page-task",
-        title: "Page task",
-        pages: [MENU_ITEM_IDS.AUTO_CHECKIN],
-        actions: [
-          { id: "run-page-task", label: "Run page task", run: () => {} },
-        ],
-      })
-      return null
-    }
-
+  it("returns to page tools after browsing the toolbox", async () => {
     render(
       <DevPanelProvider surface="options" page={MENU_ITEM_IDS.AUTO_CHECKIN}>
-        <PageSection />
         <DevPanel />
       </DevPanelProvider>,
       {
@@ -185,44 +266,28 @@ describe("DevPanel", () => {
         withThemeProvider: false,
       },
     )
-
     await openDevPanel()
-    expect(screen.getByRole("button", { name: "Run page task" })).toBeVisible()
-    expect(
-      screen.queryByRole("button", { name: /Other tools/ }),
-    ).not.toBeInTheDocument()
-    const dialogs = screen.getByRole("button", { name: "Dialogs" })
-    const devPages = screen.getByRole("button", { name: "Dev pages" })
-    expect(dialogs).toHaveAttribute("aria-expanded", "false")
-    expect(devPages).toHaveAttribute("aria-expanded", "false")
-    expect(
-      screen.getByRole("button", { name: "Uninstall survey" }),
-    ).toHaveAttribute("aria-expanded", "false")
-    expect(
-      screen.getByRole("button", { name: /^Star promotion/ }),
-    ).toHaveAttribute("aria-expanded", "false")
-    expect(screen.getByRole("button", { name: /^This build/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    )
-    expect(
-      screen.queryByRole("button", { name: "Dev: Trigger update log" }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen
-        .getByRole("button", { name: "Run page task" })
-        .compareDocumentPosition(dialogs) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    fireEvent.click(dialogs)
-    expect(
-      screen.getByRole("button", { name: "Dev: Trigger update log" }),
-    ).toBeVisible()
-    expect(devPages).toHaveAttribute("aria-expanded", "false")
     expect(
       screen.getByRole("button", {
         name: "Dev: Add check-in discovery scenarios",
       }),
     ).toBeVisible()
+    await userEvent.click(screen.getByRole("tab", { name: "Toolbox" }))
+    const dialogs = screen.getByRole("button", { name: "Dialogs" })
+    expect(dialogs).toHaveAttribute("aria-expanded", "false")
+    fireEvent.click(dialogs)
+    expect(
+      screen.getByRole("button", { name: "Dev: Trigger update log" }),
+    ).toBeVisible()
+    await userEvent.click(screen.getByRole("tab", { name: "Current page" }))
+    expect(
+      screen.getByRole("button", {
+        name: "Dev: Add check-in discovery scenarios",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Dev: Trigger update log" }),
+    ).not.toBeInTheDocument()
   })
 
   it("shows account fixtures on account pages but not on the credential page", async () => {
@@ -680,6 +745,7 @@ describe("DevPanel", () => {
       useRegisterDevPanelSection({
         id: "pending-section",
         title: "Pending section",
+        collapsible: true,
         surfaces: ["options"],
         actions: [
           {
@@ -746,7 +812,6 @@ describe("DevPanel", () => {
       )
 
       await openDevPanel()
-      fireEvent.click(screen.getByRole("button", { name: "Dialogs" }))
       fireEvent.click(
         await screen.findByRole("button", {
           name: "Dev: Trigger translation crash",

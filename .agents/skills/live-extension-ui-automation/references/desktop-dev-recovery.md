@@ -11,6 +11,8 @@ the kill switch; a hand-rolled launch must add it too, or `Extensions.loadUnpack
 `chrome://extensions` is empty, and the `chrome.developerPrivate` list is empty even with
 `includeDisabled`.
 
+An extension loaded by automation can initially run with Developer mode off, then be disabled by `runtime.reload()` with `unsupportedDeveloperExtension`. Enable Developer mode through the native extension manager in the selected dev profile before testing reloads. On Windows Chromium, writing `extensions.ui.developer_mode` into `Preferences` alone is not reliable because the protected setting can override it; verify the enabled state and replacement worker after reloading.
+
 ## Identify the current worktree's server
 
 Read `.scratch/wxt-dev.log`, the launch output, and `.output/chrome-mv3-dev/options.html` in the checkout being tested. Probe the generated server URL's `/@vite/client`; the root `/` can legitimately return 404. Diagnose proxy interception of loopback CDP separately from WXT readiness, using an invocation-scoped proxy bypass when indicated.
@@ -18,6 +20,8 @@ Read `.scratch/wxt-dev.log`, the launch output, and `.output/chrome-mv3-dev/opti
 The launcher can accept the first Vite response on ports 3000–3005 without establishing worktree ownership. If the generated URL is unreachable but another port responds, inspect the listener's PID, command line and working directory where available, together with this checkout's WXT log/PID. A Vite response or a visible Options shell alone does not resolve the mismatch.
 
 When output files disappear or a build reports `ENOTEMPTY`, check for multiple WXT processes writing the same output directory before starting another server. Compare the dev origins in `options.html`, `background.js`, and `manifest.json`'s content security policy; competing writers can leave these files pointing at different ports even though each server responds. Establish process ownership, retain one writer for that output directory, and regenerate the complete dev output before reloading the extension.
+
+For concurrent isolated WXT validation in the same checkout, put its build output under a separate child of `.output` and ignore all sibling `.output` trees in the validation server's `watchOptions`. Both servers must ignore the other's generated files. A custom output under `.scratch` can make the normal dev server react to generated `options.html` or CSS files, while the isolated server reacts to the normal output, producing repeated reloads despite using different ports and output paths. Confirm that the validation log reports source edits rather than changes to another server's generated files.
 
 For a mismatched server, select a verified free dev-server port and launch from the intended checkout:
 

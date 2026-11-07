@@ -4,7 +4,10 @@ import {
   isAccountLoginProvider,
   type AccountLoginProvider,
 } from "~/constants/accountLogin"
-import { LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type { LoginProviderEvidenceOutcome } from "~/types/loginProviderEvidence"
 import {
@@ -20,7 +23,7 @@ const logger = createLogger("LoginProviderEvidence")
 const STORAGE_KEY = LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS.EVIDENCE
 
 const LOGIN_PROVIDER_EVIDENCE_STORAGE_LOCK =
-  "all-api-hub:login-provider-evidence" as const
+  STORAGE_LOCKS.LOGIN_PROVIDER_EVIDENCE
 
 const EMPTY_EVIDENCE: LoginProviderEvidenceMap = {}
 

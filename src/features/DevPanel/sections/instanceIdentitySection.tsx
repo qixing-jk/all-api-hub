@@ -145,6 +145,7 @@ export function useInstanceIdentityDevSection(): DevPanelSection {
     return {
       id: "instance-identity",
       title: "This build",
+      placement: "footer",
       icon: Fingerprint,
       description:
         "Which directory's code is loaded here, and which icon it owns.",

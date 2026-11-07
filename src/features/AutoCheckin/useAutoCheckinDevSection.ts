@@ -1,4 +1,12 @@
-import { CalendarClock } from "lucide-react"
+import {
+  AlarmClock,
+  CalendarClock,
+  CalendarPlus,
+  CalendarX2,
+  Play,
+  RotateCw,
+  ScanSearch,
+} from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -315,6 +323,7 @@ export function useAutoCheckinDevSection(
       actions: [
         {
           id: "trigger-daily-alarm-now",
+          icon: AlarmClock,
           label: t("execution.debug.triggerDailyAlarmNow"),
           loading:
             activeDebugAction ===
@@ -324,6 +333,7 @@ export function useAutoCheckinDevSection(
         },
         {
           id: "trigger-retry-alarm-now",
+          icon: RotateCw,
           label: t("execution.debug.triggerRetryAlarmNow"),
           loading:
             activeDebugAction ===
@@ -333,6 +343,7 @@ export function useAutoCheckinDevSection(
         },
         {
           id: "schedule-daily-alarm-for-today",
+          icon: CalendarPlus,
           label: t("execution.debug.scheduleDailyAlarmForToday"),
           loading:
             activeDebugAction ===
@@ -342,6 +353,7 @@ export function useAutoCheckinDevSection(
         },
         {
           id: "evaluate-ui-open-pretrigger",
+          icon: ScanSearch,
           label: t("execution.debug.evaluateUiOpenPretrigger"),
           loading:
             activeDebugAction ===
@@ -351,6 +363,7 @@ export function useAutoCheckinDevSection(
         },
         {
           id: "trigger-ui-open-pretrigger",
+          icon: Play,
           label: t("execution.debug.triggerUiOpenPretrigger"),
           loading:
             activeDebugAction ===
@@ -360,6 +373,7 @@ export function useAutoCheckinDevSection(
         },
         {
           id: "reset-last-daily-run-day",
+          icon: CalendarX2,
           label: t("execution.debug.resetLastDailyRunDay"),
           loading:
             activeDebugAction ===

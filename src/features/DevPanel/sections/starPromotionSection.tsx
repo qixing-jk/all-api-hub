@@ -1,7 +1,13 @@
-import { FlaskConical, RefreshCw, RotateCcw, Star, Zap } from "lucide-react"
+import {
+  CalendarCheck2,
+  CircleCheck,
+  Clock,
+  RefreshCw,
+  RotateCcw,
+  Star,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -14,7 +20,6 @@ import {
 } from "~/services/starPromotion/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { getErrorMessage } from "~/utils/core/error"
-import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import type { DevPanelInfoRow, DevPanelSection } from "../types"
 
@@ -142,6 +147,7 @@ export function useStarPromotionDevSection(
     return {
       id: "star-promotion",
       title: "Star promotion",
+      category: "preview",
       prominentPages: [MENU_ITEM_IDS.OVERVIEW],
       icon: Star,
       description: `Initial thresholds: ${STAR_PROMOTION_INITIAL_THRESHOLD} check-ins or ${STAR_PROMOTION_INITIAL_ACCOUNT_THRESHOLD} accounts since the baseline. State changes apply the next time Overview loads, so reload after seeding.`,
@@ -152,24 +158,16 @@ export function useStarPromotionDevSection(
       rows,
       actions: [
         {
-          id: "open-preview",
-          label: "Open star promotion preview",
-          icon: FlaskConical,
-          run: () =>
-            void navigateWithinOptionsPage(
-              `#${DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW}`,
-            ),
-        },
-        {
           id: "seed-checkins",
           label: "Dev: Seed check-in threshold",
-          icon: Zap,
+          icon: CalendarCheck2,
           loading: pendingAction === "seed",
           disabled: pendingAction !== null,
           run: handleSeedCheckins,
         },
         {
           id: "simulate-defer",
+          icon: Clock,
           label: "Dev: Simulate deferral",
           loading: pendingAction === "defer",
           disabled: pendingAction !== null,
@@ -177,6 +175,7 @@ export function useStarPromotionDevSection(
         },
         {
           id: "simulate-complete",
+          icon: CircleCheck,
           label: "Dev: Mark completed",
           loading: pendingAction === "complete",
           disabled: pendingAction !== null,
