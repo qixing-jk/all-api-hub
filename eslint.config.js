@@ -212,6 +212,10 @@ const dynamicImportAllowlist = [
     imports: ["~/services/apiAdapters/registry"],
   },
   {
+    file: "src/services/apiService/common/providerRequest.ts",
+    imports: ["~/services/accountCredentialRecovery"],
+  },
+  {
     file: "src/services/checkin/autoCheckin/scheduling/refresh.ts",
     imports: ["~/services/checkin/autoCheckin/providers"],
   },

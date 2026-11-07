@@ -204,3 +204,63 @@ it("does not export an authenticated response without a captured Cookie", async 
     status: "failed",
   })
 })
+
+it.each([
+  null,
+  {},
+  { requestId: 3 },
+  { requestId: " " },
+  { requestId: "invalid" },
+  { ...request, account: { ...request.account, authType: "invalid" } },
+  { ...request, account: { ...request.account, site_type: "invalid" } },
+  { ...request, account: { ...request.account, site_url: null } },
+  { ...request, account: { ...request.account, account_info: null } },
+])(
+  "rejects malformed runtime recovery input %j without login",
+  async (input) => {
+    expect(await recoverAccountCookieForDialog(input)).toEqual({
+      status: "unsupported",
+    })
+    expect(login).not.toHaveBeenCalled()
+  },
+)
+
+it("rejects duplicate ownership and releases the ID after a login error", async () => {
+  let reject!: (error: Error) => void
+  login.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail
+      }),
+  )
+  const first = recoverAccountCookieForDialog(request)
+  expect(await recoverAccountCookieForDialog(request)).toEqual({
+    status: "session_busy",
+  })
+  const rejected = expect(first).rejects.toThrow("login failed")
+  reject(new Error("login failed"))
+  await rejected
+  expect(cancelAccountCookieRecovery(request.requestId)).toBe(false)
+  expect(cancelAccountCookieRecovery(null)).toBe(false)
+  login.mockResolvedValue({ status: "cancelled" })
+  expect(await recoverAccountCookieForDialog(request)).toEqual({
+    status: "cancelled",
+  })
+})
+
+it("turns an aborted login rejection into cancellation", async () => {
+  login.mockImplementationOnce(
+    ({ abortSignal }) =>
+      new Promise((_resolve, reject) => {
+        abortSignal.addEventListener(
+          "abort",
+          () => reject(new Error("aborted")),
+          { once: true },
+        )
+      }),
+  )
+  const pending = recoverAccountCookieForDialog(request)
+  cancelAccountCookieRecovery(request.requestId)
+  expect(await pending).toEqual({ status: "cancelled" })
+  expect(verify).not.toHaveBeenCalled()
+})

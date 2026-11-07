@@ -444,7 +444,7 @@ for (const siteType of [
     } else {
       await expect(help).toHaveAttribute("aria-expanded", "false")
       const explanation = dialog.getByText(
-        "Refresh can use an access token or browser session.",
+        "Refresh may use an access token or browser session.",
         { exact: false },
       )
       await expect(explanation).toHaveCount(0)

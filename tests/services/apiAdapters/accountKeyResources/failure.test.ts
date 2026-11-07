@@ -11,6 +11,14 @@ import {
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 
 describe("account key resource failure mapping", () => {
+  it("preserves a non-auth HTTP rejection when its message is unattributed", () => {
+    const error = new ApiError("key limit reached", 409, "/v1/account/keys")
+    error.unattributedMessage = true
+    expect(mapAccountKeyResourceFailure(error).code).toBe(
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+    )
+  })
+
   it.each([
     API_ERROR_CODES.ROBOT_CHALLENGE,
     API_ERROR_CODES.CONTENT_TYPE_MISMATCH,

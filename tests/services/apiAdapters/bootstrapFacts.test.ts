@@ -51,6 +51,7 @@ describe("provider-neutral bootstrap facts", () => {
         }),
       ).resolves.toMatchObject({ username: "owner", access_token: "" })
       expect(requestData).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
+        credentialRecovery: "read",
         endpoint: "/api/user/self",
       })
       expect(requestEnvelope).not.toHaveBeenCalled()

@@ -87,6 +87,20 @@ describe("account login recovery navigation", () => {
     scenario.isEditAccountOpen = false
   })
 
+  it("opens the normal editor when no focus section was requested", async () => {
+    render(
+      <AccountManagement
+        routeParams={{ action: "edit", accountId: routeParams.accountId }}
+      />,
+    )
+    await waitFor(() =>
+      expect(openEditAccount).toHaveBeenCalledWith(
+        scenario.displayData[0],
+        undefined,
+      ),
+    )
+  })
+
   it("waits for saved accounts and opens the matching login section once", async () => {
     const account = scenario.displayData[0]!
     scenario.isInitialLoad = true

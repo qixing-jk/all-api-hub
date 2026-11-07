@@ -58,6 +58,47 @@ describe("Shared saved Cookie validation", () => {
     vi.resetAllMocks()
   })
 
+  it.each(["invalid", "https://user:pass@anyrouter.top"])(
+    "rejects invalid Cookie origins %s before transport",
+    async (site_url) => {
+      expect(
+        await validateAccountCookie({ ...account, site_url }),
+      ).toMatchObject({ status: "unavailable", reason: "unsupported" })
+      expect(deps.response).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { cookieAuth: undefined, reason: "missing_cookie" },
+    { cookieAuth: {}, reason: "missing_cookie" },
+    {
+      cookieAuth: account.cookieAuth,
+      account_info: {},
+      reason: "missing_identity",
+    },
+  ])(
+    "does not send incomplete Cookie inputs ($reason)",
+    async ({ reason, ...input }) => {
+      expect(
+        await validateAccountCookie({ ...account, ...input }),
+      ).toMatchObject({ status: "unavailable", reason })
+      expect(deps.response).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not verify a Cookie without an identity reader", async () => {
+    const capabilities = registry.getSiteTypeCapabilities(SITE_TYPES.ANYROUTER)
+    vi.spyOn(registry, "getSiteTypeCapabilities").mockReturnValue({
+      ...capabilities,
+      account: { ...capabilities.account, bootstrap: undefined },
+    })
+    expect(await validateAccountCookie(account)).toMatchObject({
+      status: "unavailable",
+      reason: "unsupported",
+    })
+    expect(deps.response).not.toHaveBeenCalled()
+  })
+
   it("validates New API Cookies without requiring login recovery", async () => {
     deps.response.mockResolvedValue({
       ok: true,

@@ -63,7 +63,8 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-vi.mock("~/services/apiAdapters/registry", () => ({
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 

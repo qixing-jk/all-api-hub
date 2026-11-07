@@ -130,9 +130,11 @@ describe("newApiFamily keyManagement", () => {
       { id: 3, key: "sk-final" },
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=1&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=2&size=100",
     })
     expect(mockFetchApiData).toHaveBeenCalledTimes(2)
@@ -181,9 +183,11 @@ describe("newApiFamily keyManagement", () => {
       { id: 3, key: "final" },
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=0&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=2&size=100",
     })
     expect(mockFetchApiData).toHaveBeenCalledTimes(2)
@@ -204,6 +208,7 @@ describe("newApiFamily keyManagement", () => {
       }),
     ).resolves.toEqual([{ id: 1, key: "sk-only" }])
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=0&size=100",
     })
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
@@ -220,12 +225,15 @@ describe("newApiFamily keyManagement", () => {
       { id: 2, key: "second" },
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=0&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=1&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=2&size=100",
     })
   })
@@ -246,9 +254,11 @@ describe("newApiFamily keyManagement", () => {
       { id: 2, key: "second" },
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=0&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=1&size=100",
     })
   })
@@ -264,6 +274,7 @@ describe("newApiFamily keyManagement", () => {
     ).resolves.toEqual([{ id: 1, key: "only" }])
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=0&size=100",
     })
   })
@@ -284,6 +295,7 @@ describe("newApiFamily keyManagement", () => {
 
     await expect(fetchAccountTokens(request)).resolves.toHaveLength(2)
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=2&size=100",
     })
   })
@@ -423,12 +435,15 @@ describe("newApiFamily keyManagement", () => {
       "vip",
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      credentialRecovery: "read",
       endpoint: "/api/user/models",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      credentialRecovery: "read",
       endpoint: "/api/user/self/groups",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
+      credentialRecovery: "read",
       endpoint: "/api/group",
     })
   })
@@ -438,6 +453,7 @@ describe("newApiFamily keyManagement", () => {
 
     await expect(fetchCurrentUserGroup(request)).resolves.toBe("default")
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      credentialRecovery: "read",
       endpoint: "/api/user/self",
     })
 
@@ -487,6 +503,7 @@ describe("newApiFamily keyManagement", () => {
       },
     })
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/9",
     })
     expect(mockFetchApi).toHaveBeenNthCalledWith(2, request, {
@@ -558,6 +575,7 @@ describe("newApiFamily keyManagement", () => {
     ).resolves.toEqual(["gpt-4o"])
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      credentialRecovery: "read",
       endpoint: "/api/token/?p=1&size=100",
     })
     expect(mockResolveApiTokenKey).toHaveBeenCalledWith(

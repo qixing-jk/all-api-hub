@@ -46,3 +46,8 @@ Regression owners:
 The reusable task-scoped [CDP matrix](cdp-cookie-matrix.mjs) uses fake accounts and a local HTTP fixture in its own profile. From the repository root, build the DNR variant with `AAH_E2E_BUILD_VARIANT=dnr-required pnpm build:e2e`, then run `node .scratch/account-auth-recovery/cdp-cookie-matrix.mjs`. Set that environment variable using the current shell's syntax. The runner verifies build freshness, supports `--case` and `--group` selection, asserts request/storage/UI outcomes and records cleanup errors. It is controlled Chromium evidence, not a production OAuth or Firefox test.
 
 The final implementation's [acceptance report](artifacts/scout-20261108/report.md) indexes unit, browser, CDP and visual evidence. Intermediate logs and screenshots are retained locally for diagnosis; their existence is not evidence of a passing case. The first cancellation browser scenario used Escape after a popup opened; the maintained test uses the explicit Cancel button. A later diagnostic was unavailable once and passed unchanged with tracing; its cause remains unknown.
+
+
+## PR 1839 repair evidence
+
+The follow-up repair retains opt-in recovery while deferring the recovery dependency graph until an admitted read, preserves non-authentication HTTP rejection classification, and completes automatic Cookie import before applying detected identity. Local red/green results and the per-file coverage disposition are retained in [the PR worklist](../pr-1839/artifacts/worklist.md). Controlled browser artifacts are in `artifacts/pr-1839/`; CI/Codecov/CodeRabbit acceptance remains tied to the final pushed SHA. These artifacts remain local until remote reconciliation and developer review finish.

@@ -126,6 +126,51 @@ describe("account credential recovery", () => {
     }
   }
 
+  it("does not recover a removed account", async () => {
+    const f = fixture()
+    deps.read.mockResolvedValue({ accounts: [] })
+    await expect(
+      executeWithAccountCredentialRecovery(
+        f.request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toBe(f.error)
+    expect(deps.login).not.toHaveBeenCalled()
+  })
+  it("rejects missing request identity before recovery", async () => {
+    const f = fixture()
+    const request = {
+      ...f.request,
+      auth: { ...f.request.auth, userId: undefined },
+    }
+    await expect(
+      executeWithAccountCredentialRecovery(
+        request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toBe(f.error)
+    expect(deps.login).not.toHaveBeenCalled()
+  })
+  it("recovers a rejected Cookie supplied through the compatibility request field", async () => {
+    const f = fixture()
+    const request = {
+      ...f.request,
+      auth: { ...f.request.auth, cookie: undefined },
+      cookieAuthSessionCookie: "session=expired",
+    }
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(f.error)
+      .mockResolvedValueOnce("ok")
+    expect(await executeWithAccountCredentialRecovery(request, runner)).toBe(
+      "ok",
+    )
+    expect(deps.login).toHaveBeenCalledOnce()
+    expect(runner.mock.calls[1]?.[0].cookieAuthSessionCookie).toBe(
+      "session=new",
+    )
+  })
+
   it("keeps accounts without explicit recovery permission unchanged", async () => {
     const f = fixture()
     f.change({ login: { methodId: "github" } })

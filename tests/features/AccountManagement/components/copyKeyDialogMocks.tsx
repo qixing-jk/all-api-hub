@@ -85,42 +85,49 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
-  getSiteTypeCapabilities: (siteType: string) => ({
-    account:
-      siteType === SITE_TYPES.SHAREDCHAT
-        ? {
-            serviceCredential: {
-              fetch: (...args: any[]) => fetchServiceCredentialMock(...args),
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiAdapters/registry")>()
+  return {
+    ...actual,
+    getSiteTypeCapabilities: (
+      siteType: Parameters<typeof actual.getSiteTypeCapabilities>[0],
+    ) => ({
+      account:
+        siteType === SITE_TYPES.SHAREDCHAT
+          ? {
+              serviceCredential: {
+                fetch: (...args: any[]) => fetchServiceCredentialMock(...args),
+              },
+            }
+          : {
+              ...actual.getSiteTypeCapabilities(siteType).account,
+              ...(siteType === SITE_TYPES.NANOGPT
+                ? {
+                    serviceCredential: {
+                      fetch: (...args: any[]) =>
+                        fetchServiceCredentialMock(...args),
+                    },
+                  }
+                : {}),
+              keyResourceManagement: {
+                defaultCreation: creationPolicies.EditorDefaults,
+                inventorySecretAvailability:
+                  siteType === SITE_TYPES.NANOGPT
+                    ? "website-verification"
+                    : [
+                          SITE_TYPES.AIHUBMIX,
+                          SITE_TYPES.OPENROUTER,
+                          SITE_TYPES.FREEMODEL,
+                        ].includes(siteType as any)
+                      ? "create-response-only"
+                      : "recoverable",
+                open: (...args: any[]) => openAccountKeyResourcesMock(...args),
+              },
             },
-          }
-        : {
-            ...(siteType === SITE_TYPES.NANOGPT
-              ? {
-                  serviceCredential: {
-                    fetch: (...args: any[]) =>
-                      fetchServiceCredentialMock(...args),
-                  },
-                }
-              : {}),
-            keyResourceManagement: {
-              defaultCreation: creationPolicies.EditorDefaults,
-              inventorySecretAvailability:
-                siteType === SITE_TYPES.NANOGPT
-                  ? "website-verification"
-                  : [
-                        SITE_TYPES.AIHUBMIX,
-                        SITE_TYPES.OPENROUTER,
-                        SITE_TYPES.FREEMODEL,
-                      ].includes(siteType as any)
-                    ? "create-response-only"
-                    : "recoverable",
-              open: (...args: any[]) => openAccountKeyResourcesMock(...args),
-            },
-          },
-  }),
-}))
+    }),
+  }
+})
 
 const inventoryFixtures = new Map<string, any[]>()
 vi.mock(

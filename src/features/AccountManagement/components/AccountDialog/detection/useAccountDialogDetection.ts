@@ -154,6 +154,20 @@ export function useAccountDialogDetection({
     ) {
       checkInDiscoveryBaseSelectionRef.current = { ...checkIn.selection }
     }
+
+    if (
+      shouldAutoImportCookieAuthForAccountDialogSite({
+        policy,
+        authType,
+        cookieAuthSessionCookie,
+        url,
+      })
+    ) {
+      if (!(await importCookieAutomatically(isCurrent))) return false
+    }
+    if (!isCurrent()) return false
+
+    // Keep the identity stable until its automatic Cookie import completes.
     setDraft((prev) => {
       return buildDraftFromAutoDetectResult({
         draft: prev,
@@ -168,18 +182,6 @@ export function useAccountDialogDetection({
         policy,
       })
     })
-
-    if (
-      shouldAutoImportCookieAuthForAccountDialogSite({
-        policy,
-        authType,
-        cookieAuthSessionCookie,
-        url,
-      })
-    ) {
-      if (!(await importCookieAutomatically(isCurrent))) return false
-    }
-    if (!isCurrent()) return false
 
     enterForm(ACCOUNT_DIALOG_FORM_SOURCES.DETECTED)
     if (mode === DIALOG_MODES.EDIT) {

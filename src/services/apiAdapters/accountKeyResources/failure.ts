@@ -77,7 +77,11 @@ const classifyFailureCode = (error: unknown): ResourceFailure["code"] => {
   }
   const apiCode = getApiErrorCode(error)
   if (
-    hasUnattributedMessage(error) ||
+    (hasUnattributedMessage(error) &&
+      (status === 401 ||
+        status === 403 ||
+        apiCode === API_ERROR_CODES.HTTP_401 ||
+        apiCode === API_ERROR_CODES.HTTP_403)) ||
     apiCode === API_ERROR_CODES.ROBOT_CHALLENGE ||
     apiCode === API_ERROR_CODES.CONTENT_TYPE_MISMATCH
   ) {

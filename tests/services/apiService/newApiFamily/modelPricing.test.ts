@@ -64,6 +64,7 @@ describe("newApiFamily modelPricing", () => {
     )
 
     expect(fetchApiMock).toHaveBeenCalledWith(request, {
+      credentialRecovery: "read",
       endpoint: "/api/pricing",
     })
   })

@@ -319,3 +319,44 @@ describe("Saved Cookie diagnostic", () => {
     expect(signal.aborted).toBe(true)
   })
 })
+
+it("shows network feedback when the validator rejects unexpectedly", async () => {
+  const user = userEvent.setup()
+  deps.verify.mockRejectedValueOnce(new Error("offline"))
+  render(<AccountCookieVerification {...props} />)
+  await user.click(await action())
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "cookieValidation.unavailable",
+  )
+})
+
+it("shows recovery progress after a rejected Cookie", async () => {
+  const user = userEvent.setup()
+  deps.verify.mockResolvedValue({
+    status: ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid,
+  })
+  const recovery = {
+    configured: true,
+    pending: false,
+    onRecover: vi.fn(),
+    onConfigure: vi.fn(),
+  }
+  const { rerender } = render(
+    <AccountCookieVerification {...props} recovery={recovery} />,
+  )
+  await user.click(await action())
+  await screen.findByRole("button", {
+    name: "accountDialog:cookieValidation.recover",
+  })
+  rerender(
+    <AccountCookieVerification
+      {...props}
+      recovery={{ ...recovery, pending: true }}
+    />,
+  )
+  expect(
+    await screen.findByRole("button", {
+      name: "accountDialog:cookieValidation.recovering",
+    }),
+  ).toBeDisabled()
+})

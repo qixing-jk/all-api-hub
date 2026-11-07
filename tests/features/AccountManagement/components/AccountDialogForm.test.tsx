@@ -91,6 +91,41 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
 const { openSettingsTabInNewTab } = await import("~/utils/navigation")
 
 describe("AccountDialog AccountForm", () => {
+  it("opens login from route focus and invokes configured recovery after Cookie rejection", async () => {
+    const props = createProps()
+    props.siteUrl = "https://anyrouter.top"
+    props.draft.siteType = SITE_TYPES.ANYROUTER
+    props.draft.authType = AuthTypeEnum.Cookie
+    props.draft.cookieAuthSessionCookie = "session=old"
+    props.draft.login = {
+      methodId: "password",
+      credentials: { username: "member", password: "secret" },
+    }
+    props.focusSection = "account-login"
+    props.cookieRecovery = { pending: false, onRecover: vi.fn() }
+    cookieValidation.run.mockResolvedValue({
+      status: ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid,
+    })
+    const user = userEvent.setup()
+    render(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:login.method",
+      }),
+    ).toHaveFocus()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:cookieValidation.action",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:cookieValidation.recover",
+      }),
+    )
+    expect(props.cookieRecovery.onRecover).toHaveBeenCalledOnce()
+  })
+
   it("puts Cookie field guidance beside its label and action guidance on each button", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.ANYROUTER

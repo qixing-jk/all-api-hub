@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import {
@@ -9,6 +10,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -196,6 +198,56 @@ describe("useAccountDialog current tab detection", () => {
           surface,
         }),
     )
+  })
+
+  it("enters the detected form after a delayed Cookie import for the new identity", async () => {
+    let finishImport!: (value: unknown) => void
+    vi.mocked(sendRuntimeMessage).mockImplementation((message) =>
+      typeof message === "object" &&
+      message !== null &&
+      "action" in message &&
+      message.action ===
+        RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie
+        ? new Promise((resolve) => {
+            finishImport = resolve
+          })
+        : Promise.resolve(undefined),
+    )
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        siteType: SITE_TYPES.CUBENCE,
+        siteName: "Cubence",
+        userId: "7",
+        username: "member",
+        accessToken: "",
+        authType: AuthTypeEnum.Cookie,
+        balance: 1,
+        exchangeRate: 7,
+        checkIn: buildCheckInConfig(),
+      },
+    })
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+    await act(async () => {
+      result.current.handlers.handleUrlChange("https://cubence.com")
+    })
+    let detection!: Promise<void>
+    act(() => {
+      detection = result.current.handlers.handleAutoDetect()
+    })
+    await waitFor(() => expect(finishImport).toBeTypeOf("function"))
+    await act(async () => {
+      finishImport({ success: true, data: "token=fixture" })
+      await detection
+    })
+    expect(result.current.state.isDetected).toBe(true)
+    expect(result.current.state.userId).toBe("7")
+    expect(result.current.state.cookieAuthSessionCookie).toBe("token=fixture")
   })
 
   it("passes the detected Kimi refresh session to account creation", async () => {

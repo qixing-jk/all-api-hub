@@ -338,6 +338,7 @@ describe("newApiFamily accountBootstrap", () => {
     expect(implementation.extractDefaultExchangeRate(siteStatus)).toBe(7.2)
 
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      credentialRecovery: "read",
       endpoint: "/api/user/self",
     })
   })

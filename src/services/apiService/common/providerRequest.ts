@@ -1,5 +1,4 @@
 import { ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS } from "~/constants/accountLogin"
-import { executeWithAccountCredentialRecovery } from "~/services/accountCredentialRecovery"
 import {
   fetchApi as fetchTransportApi,
   fetchApiData as fetchTransportApiData,
@@ -56,16 +55,25 @@ export function createProviderJsonRequests(
     errorResponseDecoder,
   })
 
-  const run = <T>(
+  const run = async <T>(
     request: ApiTransportRequest,
     options: ProviderJsonRequestOptions,
     runner: (request: ApiTransportRequest) => Promise<T>,
-  ): Promise<T> =>
-    options.credentialRecovery ===
-      ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read &&
-    (options.options?.method ?? "GET").toUpperCase() === "GET"
-      ? executeWithAccountCredentialRecovery(request, runner)
-      : runner(request)
+  ): Promise<T> => {
+    if (
+      request.allowAccountCredentialRecovery === true &&
+      options.credentialRecovery ===
+        ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read &&
+      (options.options?.method ?? "GET").toUpperCase() === "GET"
+    ) {
+      // Recovery depends on the adapter registry; load it after registration.
+      const { executeWithAccountCredentialRecovery } = await import(
+        "~/services/accountCredentialRecovery"
+      )
+      return executeWithAccountCredentialRecovery(request, runner)
+    }
+    return runner(request)
+  }
 
   return {
     async data<T>(

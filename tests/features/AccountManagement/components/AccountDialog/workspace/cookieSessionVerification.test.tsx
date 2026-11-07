@@ -420,3 +420,85 @@ it("aborts pending import validation and keeps the draft after closing the edito
   })
   expect(apply).not.toHaveBeenCalled()
 })
+
+it.each([false, true])(
+  "reports only current recovery failures (closed: %s)",
+  async (closed) => {
+    let fail!: (error: Error) => void
+    deps.send.mockImplementation((message) =>
+      message.action === RuntimeActionIds.AccountDialogCancelCookieRecovery
+        ? Promise.resolve(true)
+        : new Promise((_resolve, reject) => {
+            fail = reject
+          }),
+    )
+    const apply = vi.fn()
+    const { result, unmount } = renderHook(() =>
+      useAccountCookieSession({
+        isOpen: true,
+        mode: DIALOG_MODES.EDIT,
+        url: target.site_url,
+        authType: AuthTypeEnum.Cookie,
+        getContext: () => ({}),
+        applyCookie: apply,
+        validationTarget: {
+          ...target,
+          login: {
+            methodId: "password",
+            credentials: { username: "user", password: "secret" },
+          },
+        },
+      }),
+    )
+    let pending!: Promise<void>
+    act(() => {
+      pending = result.current.recoverManually()
+    })
+    if (closed) unmount()
+    await act(async () => {
+      fail(new Error("transport closed"))
+      await pending
+    })
+    expect(apply).not.toHaveBeenCalled()
+    if (closed) expect(deps.error).not.toHaveBeenCalled()
+    else
+      expect(deps.error).toHaveBeenCalledWith(
+        "accountDialog:cookieValidation.recoveryFailed",
+      )
+  },
+)
+
+it("ignores an import validation rejection after the editor closes", async () => {
+  deps.send.mockResolvedValue({ success: true, data: "session=browser" })
+  let fail!: (error: Error) => void
+  deps.verify.mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject
+      }),
+  )
+  const apply = vi.fn()
+  const { result, unmount } = renderHook(() =>
+    useAccountCookieSession({
+      isOpen: true,
+      mode: DIALOG_MODES.EDIT,
+      url: target.site_url,
+      authType: AuthTypeEnum.Cookie,
+      getContext: () => ({}),
+      applyCookie: apply,
+      validationTarget: target,
+    }),
+  )
+  let pending!: Promise<void>
+  await act(async () => {
+    pending = result.current.importManually()
+    await Promise.resolve()
+  })
+  unmount()
+  await act(async () => {
+    fail(new Error("validation aborted"))
+    await pending
+  })
+  expect(apply).not.toHaveBeenCalled()
+  expect(deps.error).not.toHaveBeenCalled()
+})
