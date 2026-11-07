@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import {
@@ -9,6 +10,8 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import { isRecord } from "~/utils/core/object"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -196,6 +199,129 @@ describe("useAccountDialog current tab detection", () => {
           surface,
         }),
     )
+  })
+
+  it.each([false, true])(
+    "settles delayed Cookie detection with a changed URL: %s",
+    async (changeUrl) => {
+      let finishImport!: (value: unknown) => void
+      vi.mocked(sendRuntimeMessage).mockImplementation((message) =>
+        typeof message === "object" &&
+        message !== null &&
+        "action" in message &&
+        message.action ===
+          RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie
+          ? new Promise((resolve) => {
+              finishImport = resolve
+            })
+          : Promise.resolve(undefined),
+      )
+      mockAutoDetectAccount.mockResolvedValueOnce({
+        success: true,
+        data: {
+          siteType: SITE_TYPES.CUBENCE,
+          siteName: "Cubence",
+          userId: "7",
+          username: "member",
+          accessToken: "",
+          authType: AuthTypeEnum.Cookie,
+          balance: 1,
+          exchangeRate: 7,
+          checkIn: buildCheckInConfig(),
+        },
+      })
+      const { result } = renderAccountDialogHook({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      })
+      await act(async () => {
+        result.current.handlers.handleUrlChange("https://cubence.com")
+      })
+      let detection!: Promise<void>
+      act(() => {
+        detection = result.current.handlers.handleAutoDetect()
+      })
+      await waitFor(() => expect(finishImport).toBeTypeOf("function"))
+      if (changeUrl) {
+        act(() =>
+          result.current.handlers.handleUrlChange("https://other.example.com"),
+        )
+      }
+      await act(async () => {
+        finishImport({ success: true, data: "token=fixture" })
+        await detection
+      })
+      expect(result.current.state.isDetected).toBe(!changeUrl)
+      expect(result.current.state.userId).toBe(changeUrl ? "" : "7")
+      expect(result.current.state.cookieAuthSessionCookie).toBe(
+        changeUrl ? "" : "token=fixture",
+      )
+      expect(result.current.state.url).toBe(
+        changeUrl ? "https://other.example.com" : "https://cubence.com",
+      )
+    },
+  )
+
+  it("preserves a Cookie edited while site detection is still pending", async () => {
+    let finishDetection!: (value: unknown) => void
+    mockAutoDetectAccount.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishDetection = resolve
+        }),
+    )
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+      success: true,
+      data: "token=browser",
+    })
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+    })
+    act(() => result.current.handlers.handleUrlChange("https://cubence.com"))
+    let detection!: Promise<void>
+    act(() => {
+      detection = result.current.handlers.handleAutoDetect()
+    })
+    await waitFor(() => expect(finishDetection).toBeTypeOf("function"))
+    act(() =>
+      result.current.setters.setCookieAuthSessionCookie(
+        "token=manually-edited",
+      ),
+    )
+    await act(async () => {
+      finishDetection({
+        success: true,
+        data: {
+          siteType: SITE_TYPES.CUBENCE,
+          siteName: "Cubence",
+          userId: "7",
+          username: "member",
+          accessToken: "",
+          authType: AuthTypeEnum.Cookie,
+          balance: 1,
+          exchangeRate: 7,
+          checkIn: buildCheckInConfig(),
+        },
+      })
+      await detection
+    })
+    expect(result.current.state.cookieAuthSessionCookie).toBe(
+      "token=manually-edited",
+    )
+    expect(
+      vi
+        .mocked(sendRuntimeMessage)
+        .mock.calls.filter(
+          ([message]) =>
+            isRecord(message) &&
+            message.action ===
+              RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        ),
+    ).toHaveLength(0)
   })
 
   it("passes the detected Kimi refresh session to account creation", async () => {

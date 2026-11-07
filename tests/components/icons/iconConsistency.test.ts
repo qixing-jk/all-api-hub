@@ -4,6 +4,7 @@ import {
   Globe2,
   KeyRound,
   Layers,
+  LogIn,
   Pencil,
   RefreshCw,
   RotateCcw,
@@ -43,6 +44,7 @@ describe("Icon consistency across features and shared interactions", () => {
       Globe2,
       ShieldCheck,
       AutoCheckinIcon,
+      LogIn,
       AccountBalanceIcon,
       Tag,
     ])

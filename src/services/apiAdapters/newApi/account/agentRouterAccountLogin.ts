@@ -1,9 +1,11 @@
 import {
+  ACCOUNT_LOGIN_CONFIGURATION_KINDS,
   ACCOUNT_LOGIN_METHODS,
   ACCOUNT_LOGIN_PROVIDERS,
 } from "~/constants/accountLogin"
 import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { passwordLoginMethod } from "~/services/accountLogin/methods"
 import {
   isAgentRouterLoginUrl,
   isAgentRouterSystemName,
@@ -14,6 +16,7 @@ import type {
   AccountLoginEvidence,
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { createNewApiOAuthFlow } from "~/services/apiAdapters/newApi/account/browserOAuth"
+import { NEW_API_OAUTH_PROVIDER_LABELS } from "~/services/apiService/newApiFamily/oauth/contracts"
 import {
   buildGithubAuthorizeUrl,
   buildLinuxDoAuthorizeUrl,
@@ -59,6 +62,14 @@ export function createAgentRouterOAuthFlow(
 }
 
 export const agentRouterAccountLogin: AccountLoginCapability = {
+  methods: [
+    passwordLoginMethod(),
+    ...AGENT_ROUTER_ACCOUNT_LOGIN.methods.map((id) => ({
+      id,
+      label: NEW_API_OAUTH_PROVIDER_LABELS[id],
+      configuration: { kind: ACCOUNT_LOGIN_CONFIGURATION_KINDS.None },
+    })),
+  ],
   supports: (account) => isAgentRouterLoginUrl(account.site_url),
   async discover(account) {
     if (!isAgentRouterLoginUrl(account.site_url)) return []
@@ -91,6 +102,7 @@ export const agentRouterAccountLogin: AccountLoginCapability = {
       origin: new URL(account.site_url).origin,
       expectedIdentity,
       requestId,
+      abortSignal: request.abortSignal,
       ...(attended === undefined ? {} : { attended }),
     })
   },

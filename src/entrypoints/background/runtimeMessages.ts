@@ -1,3 +1,4 @@
+import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -396,7 +397,11 @@ export function setupRuntimeMessageListeners() {
             })
             const sessionOnly = extractSessionCookieHeader(result.header)
             if (sessionOnly) {
-              sendResponse({ success: true, data: sessionOnly })
+              sendResponse({
+                success: true,
+                data: sessionOnly,
+                ...(cookieStoreId ? { cookieStoreId } : {}),
+              })
             } else {
               sendResponse({
                 success: false,
@@ -410,6 +415,29 @@ export function setupRuntimeMessageListeners() {
             sendResponse({ success: false, error: getErrorMessage(error) })
           }
         })()
+        return true
+      }
+
+      if (
+        request.action === RuntimeActionIds.AccountDialogCancelCookieRecovery
+      ) {
+        void import("~/services/accountCredentialRecovery/manual")
+          .then(({ cancelAccountCookieRecovery }) =>
+            sendResponse(cancelAccountCookieRecovery(request.requestId)),
+          )
+          .catch(() => sendResponse(false))
+        return true
+      }
+
+      if (
+        request.action === RuntimeActionIds.AccountDialogRecoverCookieSession
+      ) {
+        void import("~/services/accountCredentialRecovery/manual")
+          .then(({ recoverAccountCookieForDialog }) =>
+            recoverAccountCookieForDialog(request),
+          )
+          .then(sendResponse)
+          .catch(() => sendResponse({ status: BROWSER_LOGIN_STATUS.Failed }))
         return true
       }
 

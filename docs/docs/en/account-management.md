@@ -75,7 +75,7 @@ The extension monitors account connectivity. A warning or error on an account ca
 - **429 Too Many Requests**: The site rate limit was reached. The extension queues an automatic retry.
 - **403 Forbidden**: Cloudflare protection was probably triggered. See the [Cloudflare Helper](./cloudflare-helper.md).
 
-Click the health status icon on the account card to view detailed error information. See the [FAQ](./faq.md) for more troubleshooting guidance.
+Hover over the health status icon or focus it with the keyboard to view error details and available recovery actions. Clicking the icon refreshes the account. AnyRouter authentication failures offer **Configure login recovery**, which opens that account's login settings; see [automatic login recovery](./auto-detect.md). See the [FAQ](./faq.md) for more troubleshooting guidance.
 
 ---
 

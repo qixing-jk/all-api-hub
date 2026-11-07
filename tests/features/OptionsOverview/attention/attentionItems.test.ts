@@ -15,6 +15,7 @@ import {
   OPTIONS_OVERVIEW_ATTENTION_KINDS,
 } from "~/features/OptionsOverview/ids"
 import {
+  AuthTypeEnum,
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
@@ -57,6 +58,33 @@ const skippedResult = (
 })
 
 describe("overview attention items", () => {
+  it("takes a recoverable authentication warning directly to that account's login settings", () => {
+    const account = buildDisplaySiteData({
+      id: "expired-cookie",
+      siteType: SITE_TYPES.ANYROUTER,
+      authType: AuthTypeEnum.Cookie,
+      health: {
+        status: SiteHealthStatus.Warning,
+        code: "authentication_required",
+        reason: "login rejected",
+      },
+    })
+    const items = buildAttentionItems({
+      enabledAccountCount: 1,
+      profileCount: 1,
+      problemAccounts: [account],
+    })
+    expect(items[0]?.target).toEqual({
+      menuItemId: MENU_ITEM_IDS.ACCOUNT,
+      params: {
+        action: "edit",
+        accountId: account.id,
+        focusSection: "account-login",
+      },
+    })
+    expect(items[0]?.descriptionOptions?.reason).toBe("login rejected")
+  })
+
   it("turns unhealthy accounts into sorted actionable attention items", () => {
     expect(
       buildAttentionItems({

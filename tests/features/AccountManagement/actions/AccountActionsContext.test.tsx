@@ -2,6 +2,7 @@ import { act, render, waitFor } from "@testing-library/react"
 import { useEffect } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   AccountActionsProvider,
   useAccountActionsContext,
@@ -20,7 +21,9 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { openTargetedOptionsPage } from "~/utils/navigation/optionsPage"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 // Verifies account action flows through the public context API, including
@@ -48,6 +51,7 @@ const {
   mockToast: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
     promise: vi.fn(),
   },
   mockDeleteAccounts: vi.fn(),
@@ -64,6 +68,11 @@ const {
 
 vi.mock("~/lib/notify", () => ({
   default: mockToast,
+}))
+
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation/optionsPage")>()),
+  openTargetedOptionsPage: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
@@ -596,6 +605,139 @@ describe("AccountActionsContext", () => {
       },
     )
   })
+
+  it("guides a rejected Cookie refresh to login configuration instead of showing refresh success", async () => {
+    const { getContext } = await renderContext()
+    const account = createAccount({
+      siteType: SITE_TYPES.ANYROUTER,
+      authType: AuthTypeEnum.Cookie,
+    })
+    mockRefreshAccount.mockResolvedValueOnce({
+      refreshed: true,
+      account: {
+        id: account.id,
+        site_url: account.baseUrl,
+        site_type: SITE_TYPES.ANYROUTER,
+        authType: AuthTypeEnum.Cookie,
+        health: {
+          status: SiteHealthStatus.Warning,
+          code: "authentication_required",
+        },
+      },
+    })
+    await act(async () => {
+      await getContext().handleRefreshAccount(account)
+    })
+    expect(mockToast.warning).toHaveBeenCalledWith(
+      "accountDialog:login.recoveryFailureDescription",
+      expect.objectContaining({
+        action: expect.objectContaining({
+          label: "accountDialog:login.configureRecovery",
+          onClick: expect.any(Function),
+        }),
+      }),
+    )
+    await expect(
+      atIndex(mockToast.promise.mock.calls, 0)[0],
+    ).resolves.toBeNull()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+        diagnostics: expect.objectContaining({
+          outcome: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+          },
+        }),
+      }),
+    )
+    await act(async () => {
+      await atIndex(mockToast.warning.mock.calls, 0)[1].action.onClick()
+    })
+    expect(openTargetedOptionsPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inPageSearchParams: {
+          action: "edit",
+          accountId: account.id,
+          focusSection: "account-login",
+        },
+      }),
+    )
+    expect(mockRefreshAccount).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports a failed recovery configuration navigation so the notification action can be retried", async () => {
+    const { getContext } = await renderContext()
+    const account = createAccount({
+      siteType: SITE_TYPES.ANYROUTER,
+      authType: AuthTypeEnum.Cookie,
+    })
+    mockRefreshAccount.mockResolvedValueOnce({
+      refreshed: true,
+      account: {
+        id: account.id,
+        site_url: account.baseUrl,
+        site_type: SITE_TYPES.ANYROUTER,
+        authType: AuthTypeEnum.Cookie,
+        health: {
+          status: SiteHealthStatus.Warning,
+          code: "authentication_required",
+        },
+      },
+    })
+    await act(async () => {
+      await getContext().handleRefreshAccount(account)
+    })
+    const navigationError = new Error("Unable to open account configuration")
+    vi.mocked(openTargetedOptionsPage).mockRejectedValueOnce(navigationError)
+    await expect(
+      atIndex(mockToast.warning.mock.calls, 0)[1].action.onClick(),
+    ).rejects.toBe(navigationError)
+    expect(mockToast.error).toHaveBeenCalledWith(navigationError.message)
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      "Failed to open account login configuration",
+      expect.objectContaining({
+        accountId: account.id,
+        error: navigationError,
+      }),
+    )
+    expect(mockRefreshAccount).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    { site_type: SITE_TYPES.NEW_API, authType: AuthTypeEnum.Cookie },
+    { site_type: SITE_TYPES.ANYROUTER, authType: AuthTypeEnum.AccessToken },
+    {
+      site_type: SITE_TYPES.ANYROUTER,
+      authType: AuthTypeEnum.Cookie,
+      health: { status: SiteHealthStatus.Warning, reason: "HTTP 401 text" },
+    },
+  ])(
+    "keeps other refresh feedback outside login recovery (%j)",
+    async (overrides) => {
+      const { getContext } = await renderContext()
+      mockRefreshAccount.mockResolvedValueOnce({
+        refreshed: true,
+        account: {
+          health: {
+            status: SiteHealthStatus.Warning,
+            code: "authentication_required",
+          },
+          ...overrides,
+        },
+      })
+      await act(async () => {
+        await getContext().handleRefreshAccount(createAccount())
+      })
+      expect(mockToast.warning).not.toHaveBeenCalled()
+      await expect(atIndex(mockToast.promise.mock.calls, 0)[0]).resolves.toBe(
+        "messages:toast.success.refreshAccount",
+      )
+    },
+  )
 
   it("reports partial success when account data refreshed but the check-in query failed", async () => {
     const { getContext } = await renderContext()

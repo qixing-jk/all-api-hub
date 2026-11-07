@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
@@ -11,6 +12,8 @@ import {
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import { isRecord } from "~/utils/core/object"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -70,6 +73,89 @@ vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
 })
 
 describe("useAccountDialog sponsor prefill", () => {
+  it.each([DIALOG_MODES.ADD, DIALOG_MODES.EDIT])(
+    "continues a carried Cookie recovery once and retains the unsaved %s draft",
+    async (mode) => {
+      vi.mocked(sendRuntimeMessage).mockImplementation(async (message) => {
+        if (
+          isRecord(message) &&
+          message.action === RuntimeActionIds.AccountDialogRecoverCookieSession
+        )
+          return {
+            status: "authenticated",
+            identity: "42",
+            credential: { cookie: "session=fresh" },
+          }
+        return undefined
+      })
+      const recoveryState = {
+        recoveryAction: "cookie" as const,
+        ...(mode === DIALOG_MODES.EDIT
+          ? { accountId: "recovered-account" }
+          : {}),
+        url: "https://anyrouter.example.com",
+        draft: {
+          ...createEmptyAccountDialogDraft(SITE_TYPES.ANYROUTER),
+          authType: AuthTypeEnum.Cookie,
+          userId: "42",
+          notes: "unsaved notes",
+          cookieAuthSessionCookie: "session=expired",
+          login: {
+            methodId: "password",
+            credentials: { username: "member", password: "unsaved-password" },
+            automaticRecovery: false,
+          },
+          loginChanged: true,
+        },
+        checkInSelectionChanged: false,
+        checkInDiscoveryBaseSelection: null,
+      }
+      const { result, rerender } = renderAccountDialogHook({
+        mode,
+        ...(mode === DIALOG_MODES.EDIT
+          ? {
+              account: buildDisplaySiteData({
+                id: "recovered-account",
+                siteType: SITE_TYPES.ANYROUTER,
+              }),
+            }
+          : {}),
+        isOpen: true,
+        onClose: vi.fn(),
+        recoveryState,
+      })
+      await waitFor(() =>
+        expect(result.current.state.cookieAuthSessionCookie).toBe(
+          "session=fresh",
+        ),
+      )
+      expect(result.current.state.draft).toMatchObject({
+        ...recoveryState.draft,
+        cookieAuthSessionCookie: "session=fresh",
+      })
+      expect(result.current.state.detectionError).toBeNull()
+      expect(result.current.state.cookieRecoveryState?.accountId).toBe(
+        recoveryState.accountId,
+      )
+      rerender()
+      const requests = vi
+        .mocked(sendRuntimeMessage)
+        .mock.calls.filter(
+          ([message]) =>
+            isRecord(message) &&
+            message.action ===
+              RuntimeActionIds.AccountDialogRecoverCookieSession,
+        )
+      expect(requests).toHaveLength(1)
+      expect(requests[0]?.[0]).toMatchObject({
+        account: {
+          site_url: recoveryState.url,
+          account_info: { id: "42" },
+          login: recoveryState.draft.login,
+        },
+      })
+    },
+  )
   const renderAccountDialogHook = (
     props: Parameters<typeof useAccountDialog>[0],
   ) =>

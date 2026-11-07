@@ -11,6 +11,33 @@ import {
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 
 describe("account key resource failure mapping", () => {
+  it("preserves a non-auth HTTP rejection when its message is unattributed", () => {
+    const error = new ApiError("key limit reached", 409, "/v1/account/keys")
+    error.unattributedMessage = true
+    expect(mapAccountKeyResourceFailure(error).code).toBe(
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+    )
+  })
+
+  it.each([
+    API_ERROR_CODES.ROBOT_CHALLENGE,
+    API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
+  ])("does not turn a protected 401 into login guidance (%s)", (code) => {
+    expect(
+      mapAccountKeyResourceFailure(
+        new ApiError("verification required", 401, "/api/token/", code),
+      ).code,
+    ).toBe(ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable)
+  })
+
+  it("does not turn an unattributed 401 into login guidance", () => {
+    const error = new ApiError("interceptor page", 401, "/api/token/")
+    error.unattributedMessage = true
+    expect(mapAccountKeyResourceFailure(error).code).toBe(
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    )
+  })
+
   it("preserves controlled failures and safe optional details", () => {
     const failure = {
       code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,

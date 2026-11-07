@@ -1,5 +1,6 @@
 /** Account creation workflow. */
 
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import {
   createLoginProviderClaimGuard,
   LoginProviderClaimConflictError,
@@ -67,6 +68,13 @@ export async function validateAndSaveAccount(
   if (
     !isValidAccount({
       loginChange: request.loginChange,
+      loginMethods: request.loginChange
+        ? getAccountLoginMethods({
+            site_type: normalizedSiteType,
+            site_url: url,
+            account_info: { id: userId, username },
+          })
+        : undefined,
       siteName,
       username,
       userId,

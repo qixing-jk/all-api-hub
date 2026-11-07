@@ -1,3 +1,4 @@
+import { ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS } from "~/constants/accountLogin"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -28,6 +29,7 @@ export const defaultInviteLinkImplementation: InviteLinkImplementation = {
       // the affiliate code, and the registration page consumes /register?aff=.
       const inviteCode = await newApiFamilyRequests.data<string>(request, {
         endpoint: INVITE_CODE_ENDPOINT,
+        credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
       })
 
       if (typeof inviteCode !== "string" || inviteCode.trim().length === 0) {

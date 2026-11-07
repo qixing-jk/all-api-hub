@@ -7,19 +7,26 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ACCOUNT_COOKIE_VALIDATION_STATUS } from "~/constants/accountCookieValidation"
+import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
 import toast from "~/lib/notify"
+import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
 import {
-  ensurePermissionsDetailed,
-  hasPermissions,
-  onOptionalPermissionsChanged,
-  OPTIONAL_PERMISSION_IDS,
-  OPTIONAL_PERMISSIONS,
-  type ManifestOptionalPermissions,
-} from "~/services/permissions/permissionManager"
+  getAccountCookieRecoveryMessage,
+  type AccountCookieRecoveryResult,
+} from "~/services/accountCredentialRecovery/result"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
+import { isAccountLoginConfigured } from "~/services/accountLogin/configCodec"
+import { validateAccountCookie } from "~/services/accounts/cookieValidation"
+import type {
+  AccountCookieValidationEvidence,
+  AccountCookieValidationTarget,
+} from "~/services/apiAdapters/contracts/accountLogin"
+import { API_TRANSPORT_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -28,66 +35,26 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnostics/diagnosticsError"
-import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/facts/permissions"
-import { AuthTypeEnum } from "~/types"
+import {
+  createUserCommandProtectionBypassExecution,
+  withProtectionBypassUserCommand,
+} from "~/services/protectionBypass/client"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { type AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
-interface CookieAuthPermissionState {
-  granted: boolean | null
-  pending: boolean
-}
-
-const createInitialCookieAuthPermissionState =
-  (): CookieAuthPermissionState => ({
-    granted: null,
-    pending: false,
-  })
-
-const getCookieAuthAdvancedPermissions = (): ManifestOptionalPermissions[] => {
-  const advancedCandidates: ManifestOptionalPermissions[] = []
-
-  if (
-    OPTIONAL_PERMISSIONS.includes(
-      OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
-    )
-  ) {
-    advancedCandidates.push(
-      OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
-    )
-  }
-
-  if (OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.WebRequest)) {
-    advancedCandidates.push(OPTIONAL_PERMISSION_IDS.WebRequest)
-  }
-
-  if (
-    OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.WebRequestBlocking)
-  ) {
-    advancedCandidates.push(OPTIONAL_PERMISSION_IDS.WebRequestBlocking)
-  }
-
-  return advancedCandidates
-}
-
-const getCookieAuthPermissions = (): ManifestOptionalPermissions[] => {
-  const permissions: ManifestOptionalPermissions[] = []
-
-  if (OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.Cookies)) {
-    permissions.push(OPTIONAL_PERMISSION_IDS.Cookies)
-  }
-
-  permissions.push(...getCookieAuthAdvancedPermissions())
-
-  return permissions
-}
+import { useAccountCookiePermissions } from "./useAccountCookiePermissions"
 
 interface CookieImportResponse {
   success?: boolean
   data?: string
   error?: string
   errorCode?: string
+  cookieStoreId?: string
 }
 
 const logger = createLogger("AccountDialogHook")
@@ -107,6 +74,7 @@ export function useAccountCookieSession({
   authType,
   getContext,
   applyCookie,
+  validationTarget,
 }: {
   isOpen: boolean
   mode: DialogMode
@@ -115,42 +83,90 @@ export function useAccountCookieSession({
   authType: AuthTypeEnum
   getContext: (url: string) => CookieImportContext
   applyCookie: (value: string) => void
+  validationTarget?: AccountCookieValidationTarget
 }) {
   const { t } = useTranslation("accountDialog")
   const [isImportingCookies, setIsImportingCookies] = useState(false)
+  const [verifiedCookie, setVerifiedCookie] =
+    useState<AccountCookieValidationEvidence | null>(null)
+  const [isRecoveringCookies, setIsRecoveringCookies] = useState(false)
+  const recoveryGeneration = useRef(0)
+  const activeRecovery = useRef<string | null>(null)
+  const importValidation = useRef<AbortController | null>(null)
   const [showCookiePermissionWarning, setShowCookiePermissionWarning] =
     useState(false)
-  const [cookieAuthPermissionState, setCookieAuthPermissionState] = useState(
-    createInitialCookieAuthPermissionState,
-  )
+  const {
+    state: cookieAuthPermissionState,
+    invalidate: invalidatePermissions,
+    requestPermissions: handleRequestCookieAuthPermissions,
+  } = useAccountCookiePermissions({ isOpen, authType })
   const importGeneration = useRef(0)
-  const permissionGeneration = useRef(0)
-  const permissionReadGeneration = useRef(0)
-  const permissionRequestGeneration = useRef(0)
+  const cancelRecovery = useCallback(() => {
+    const requestId = activeRecovery.current
+    activeRecovery.current = null
+    if (requestId)
+      void sendRuntimeMessage(
+        {
+          action: RuntimeActionIds.AccountDialogCancelCookieRecovery,
+          requestId,
+        },
+        { maxAttempts: 1 },
+      ).catch(() => {})
+  }, [])
   const invalidate = useCallback(() => {
     importGeneration.current += 1
-    permissionGeneration.current += 1
+    recoveryGeneration.current += 1
+    cancelRecovery()
+    importValidation.current?.abort()
+    invalidatePermissions()
     setIsImportingCookies(false)
-    setCookieAuthPermissionState((prev) => ({ ...prev, pending: false }))
-  }, [])
+    setVerifiedCookie(null)
+    setIsRecoveringCookies(false)
+  }, [cancelRecovery, invalidatePermissions])
   const reset = useCallback(() => {
     invalidate()
     setShowCookiePermissionWarning(false)
   }, [invalidate])
   useLayoutEffect(() => {
     invalidate()
-  }, [isOpen, mode, accountId, url, invalidate])
-  useLayoutEffect(() => {
-    permissionGeneration.current += 1
-    setCookieAuthPermissionState((prev) => ({ ...prev, pending: false }))
-  }, [isOpen, mode, accountId, authType])
+  }, [
+    isOpen,
+    mode,
+    accountId,
+    url,
+    authType,
+    validationTarget?.site_type,
+    validationTarget?.account_info.id,
+    validationTarget?.login?.methodId,
+    validationTarget?.login?.credentials?.username,
+    validationTarget?.login?.credentials?.password,
+    validationTarget?.login?.automaticRecovery,
+    invalidate,
+  ])
   useEffect(
     () => () => {
+      cancelRecovery()
       importGeneration.current += 1
-      permissionGeneration.current += 1
+      recoveryGeneration.current += 1
+      importValidation.current?.abort()
     },
-    [],
+    [cancelRecovery],
   )
+  useLayoutEffect(() => {
+    const currentCookie = validationTarget?.cookieAuth?.sessionCookie
+    if (currentCookie === undefined) return
+    importGeneration.current += 1
+    recoveryGeneration.current += 1
+    importValidation.current?.abort()
+    cancelRecovery()
+    setIsImportingCookies(false)
+    setIsRecoveringCookies(false)
+    if (currentCookie !== verifiedCookie?.cookie) setVerifiedCookie(null)
+  }, [
+    validationTarget?.cookieAuth?.sessionCookie,
+    verifiedCookie,
+    cancelRecovery,
+  ])
 
   const readCookies = async ({
     source,
@@ -163,130 +179,103 @@ export function useAccountCookieSession({
     const ownsRequest = () => generation === importGeneration.current
     const current = () => ownsRequest() && isCurrent()
     setIsImportingCookies(source === "manual")
+    let sourceContext: CookieImportContext = {}
     try {
+      sourceContext = getContext(url.trim())
       const response = await sendRuntimeMessage<CookieImportResponse>({
         action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
         url: url.trim(),
-        ...getContext(url.trim()),
+        ...sourceContext,
       })
       return {
         current: current(),
         response,
+        sourceContext,
         failed: false,
         error: undefined as unknown,
       }
     } catch (error) {
-      return { current: current(), response: undefined, failed: true, error }
+      return {
+        current: current(),
+        response: undefined,
+        sourceContext,
+        failed: true,
+        error,
+      }
     } finally {
       if (ownsRequest()) setIsImportingCookies(false)
     }
   }
 
-  const refreshCookieAuthPermissionState = useCallback(async () => {
-    const scope = permissionGeneration.current
-    const read = ++permissionReadGeneration.current
-    const current = () =>
-      scope === permissionGeneration.current &&
-      read === permissionReadGeneration.current
-    try {
-      const cookieAuthPermissions = getCookieAuthPermissions()
-      const granted = await hasPermissions(cookieAuthPermissions)
-      if (!current()) return
-
-      setCookieAuthPermissionState((prev) => ({
-        ...prev,
-        granted,
-      }))
-    } catch (error) {
-      if (!current()) return
-      logger.warn("Failed to refresh cookie auth permission state", { error })
-      setCookieAuthPermissionState((prev) => ({
-        ...prev,
-        granted: false,
-      }))
+  const verifyImportedCookie = async (
+    completion: Awaited<ReturnType<typeof readCookies>>,
+    target: AccountCookieValidationTarget | undefined,
+    isCurrent: () => boolean,
+  ): Promise<boolean> => {
+    const cookie = completion.response?.data
+    if (!cookie || !isCurrent()) return false
+    if (
+      !target?.site_type ||
+      !supportsAccountCookieRecovery(target) ||
+      !String(target.account_info.id ?? "").trim()
+    )
+      return true
+    setIsImportingCookies(true)
+    const controller = new AbortController()
+    importValidation.current = controller
+    const source = getCurrentTempWindowRequestSource()
+    const sourceContext = completion.sourceContext
+    const cookieStoreId =
+      completion.response?.cookieStoreId ?? sourceContext.cookieStoreId
+    const verification = await withProtectionBypassUserCommand(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+      source,
+      (protectionBypassExecution) =>
+        validateAccountCookie({
+          ...target,
+          site_url: url,
+          cookieAuth: { sessionCookie: cookie },
+          protectionBypassExecution,
+          tempWindowRequestSource: source,
+          abortSignal: controller.signal,
+          ...(cookieStoreId || sourceContext.sourceTabIncognito
+            ? {
+                fetchContext: {
+                  kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+                  ...(cookieStoreId ? { cookieStoreId } : {}),
+                  ...(sourceContext.sourceTabIncognito
+                    ? { incognito: true }
+                    : {}),
+                },
+              }
+            : {}),
+        }),
+    )
+    if (!isCurrent()) return false
+    if (verification.status !== ACCOUNT_COOKIE_VALIDATION_STATUS.Valid) {
+      toast.error(
+        verification.status ===
+          ACCOUNT_COOKIE_VALIDATION_STATUS.IdentityMismatch
+          ? t("cookieValidation.importIdentityMismatch")
+          : verification.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid
+            ? t("cookieValidation.importInvalid")
+            : t("cookieValidation.importUnconfirmed"),
+      )
+      return false
     }
-  }, [])
-  useEffect(() => {
-    if (!isOpen || authType !== AuthTypeEnum.Cookie) {
-      return
-    }
-
-    void refreshCookieAuthPermissionState()
-    const unsubscribe = onOptionalPermissionsChanged(() => {
-      void refreshCookieAuthPermissionState()
+    setVerifiedCookie({
+      cookie,
+      siteUrl: url,
+      siteType: target.site_type,
+      userId: String(target.account_info.id).trim(),
     })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [authType, isOpen, refreshCookieAuthPermissionState])
-
-  const handleRequestCookieAuthPermissions = useCallback(async () => {
-    const scope = permissionGeneration.current
-    const request = ++permissionRequestGeneration.current
-    const current = () =>
-      scope === permissionGeneration.current &&
-      request === permissionRequestGeneration.current
-    const cookieAuthPermissions = getCookieAuthPermissions()
-
-    if (cookieAuthPermissions.length === 0) {
-      setCookieAuthPermissionState((prev) => ({
-        ...prev,
-        granted: true,
-      }))
-      return
-    }
-
-    setCookieAuthPermissionState((prev) => ({ ...prev, pending: true }))
-
-    try {
-      const result = await ensurePermissionsDetailed(cookieAuthPermissions)
-      const granted = result.success
-      for (const permissionResult of result.requestedResults) {
-        trackOptionalPermissionRequestResult(permissionResult.id, {
-          success: permissionResult.success,
-          failureReason: permissionResult.failureReason
-            ? permissionResult.failureReason
-            : undefined,
-          wasGrantedBefore: permissionResult.wasGrantedBefore,
-          wasGrantedAfter: permissionResult.wasGrantedAfter,
-        })
-      }
-      if (!current()) return
-      await refreshCookieAuthPermissionState()
-      if (!current()) return
-
-      if (granted) {
-        toast.success(t("messages.cookiePermissionGranted"))
-      } else {
-        toast.error(t("messages.cookiePermissionGrantFailed"))
-      }
-    } catch (error) {
-      const wasGrantedBefore = cookieAuthPermissionState.granted === true
-      for (const permissionId of cookieAuthPermissions) {
-        trackOptionalPermissionRequestResult(permissionId, {
-          success: false,
-          failureReason: error,
-          wasGrantedBefore,
-          wasGrantedAfter: wasGrantedBefore,
-        })
-      }
-      if (!current()) return
-      logger.warn("Failed to request cookie auth permissions", {
-        error,
-        permissions: cookieAuthPermissions,
-      })
-      toast.error(t("messages.cookiePermissionGrantFailed"))
-    } finally {
-      if (current())
-        setCookieAuthPermissionState((prev) => ({
-          ...prev,
-          pending: false,
-        }))
-    }
-  }, [cookieAuthPermissionState.granted, refreshCookieAuthPermissionState, t])
+    return true
+  }
 
   const handleImportCookieAuthSessionCookie = async () => {
+    if (activeRecovery.current) return
+    importValidation.current?.abort()
+    const generation = importGeneration.current + 1
     const analyticsAction = startAccountDialogAnalyticsAction(
       PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountCookies,
     )
@@ -307,6 +296,19 @@ export function useAccountCookieSession({
       if (completion.failed) throw completion.error
       const response = completion.response
       if (response?.success && response.data) {
+        const accepted = await verifyImportedCookie(
+          completion,
+          validationTarget,
+          () => generation === importGeneration.current,
+        )
+        if (!accepted) {
+          analyticsAction.complete(
+            generation === importGeneration.current
+              ? PRODUCT_ANALYTICS_RESULTS.Failure
+              : PRODUCT_ANALYTICS_RESULTS.Cancelled,
+          )
+          return
+        }
         applyCookie(response.data)
         setShowCookiePermissionWarning(false)
         toast.success(t("messages.importCookiesSuccess"))
@@ -370,6 +372,10 @@ export function useAccountCookieSession({
         }
       }
     } catch (error) {
+      if (generation !== importGeneration.current) {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        return
+      }
       logger.warn("Failed to import cookies", { error, url: url.trim() })
       toast.error(
         t("messages.importCookiesFailed", { error: getErrorMessage(error) }),
@@ -379,10 +385,90 @@ export function useAccountCookieSession({
           failure: buildActionFailureDiagnostics({ error }),
         },
       })
+    } finally {
+      if (generation === importGeneration.current) setIsImportingCookies(false)
     }
   }
 
-  const importAutomatically = async (isCurrent: () => boolean) => {
+  const recoverManually = async () => {
+    if (
+      activeRecovery.current ||
+      isImportingCookies ||
+      !validationTarget ||
+      !validationTarget.site_type ||
+      !supportsAccountCookieRecovery(
+        { ...validationTarget, authType },
+        validationTarget.login?.methodId,
+      ) ||
+      !isAccountLoginConfigured(
+        validationTarget.login,
+        getAccountLoginMethods(validationTarget),
+      )
+    )
+      return
+    const generation = ++recoveryGeneration.current
+    const requestId = safeRandomUUID("account-cookie-recovery")
+    activeRecovery.current = requestId
+    setIsRecoveringCookies(true)
+    try {
+      const source = getCurrentTempWindowRequestSource()
+      const response = await sendRuntimeMessage<AccountCookieRecoveryResult>(
+        {
+          action: RuntimeActionIds.AccountDialogRecoverCookieSession,
+          account: { ...validationTarget, authType, site_url: url },
+          requestId,
+          tempWindowRequestSource: source,
+          protectionBypassExecution: createUserCommandProtectionBypassExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
+            source,
+          ),
+        },
+        { maxAttempts: 1 },
+      )
+      if (generation !== recoveryGeneration.current) return
+      activeRecovery.current = null
+      if (
+        response?.status === BROWSER_LOGIN_STATUS.Authenticated &&
+        response.identity === String(validationTarget.account_info.id).trim() &&
+        response.credential?.cookie.trim()
+      ) {
+        setVerifiedCookie({
+          cookie: response.credential.cookie,
+          siteUrl: url,
+          siteType: validationTarget.site_type,
+          userId: String(validationTarget.account_info.id).trim(),
+        })
+        applyCookie(response.credential.cookie)
+        toast.success(t("cookieValidation.recovered"))
+      } else {
+        toast.error(
+          response?.status === BROWSER_LOGIN_STATUS.IdentityMismatch ||
+            (response?.status === BROWSER_LOGIN_STATUS.Authenticated &&
+              response.identity !==
+                String(validationTarget.account_info.id).trim())
+            ? t("cookieValidation.importIdentityMismatch")
+            : response && response.status !== BROWSER_LOGIN_STATUS.Authenticated
+              ? getAccountCookieRecoveryMessage(response)
+              : t("cookieValidation.recoveryFailed"),
+        )
+      }
+    } catch {
+      if (generation === recoveryGeneration.current)
+        toast.error(t("cookieValidation.recoveryFailed"))
+    } finally {
+      if (generation === recoveryGeneration.current) {
+        activeRecovery.current = null
+        setIsRecoveringCookies(false)
+      }
+    }
+  }
+
+  const importAutomatically = async (
+    isCurrent: () => boolean,
+    detectedTarget?: AccountCookieValidationTarget,
+  ) => {
+    const generation = importGeneration.current + 1
+    const current = () => generation === importGeneration.current && isCurrent()
     const completion = await readCookies({ source: "automatic", isCurrent })
     if (!completion.current) return false
     if (completion.failed) {
@@ -395,7 +481,22 @@ export function useAccountCookieSession({
     const response = completion.response
     const header =
       typeof response?.data === "string" ? response.data.trim() : ""
-    if (header) {
+    if (response?.success && header) {
+      try {
+        if (
+          !(await verifyImportedCookie(
+            completion,
+            detectedTarget ?? validationTarget,
+            current,
+          ))
+        )
+          return current()
+      } catch {
+        if (current()) toast.error(t("cookieValidation.importUnconfirmed"))
+        return current()
+      } finally {
+        if (current()) setIsImportingCookies(false)
+      }
       applyCookie(header)
       setShowCookiePermissionWarning(false)
     } else if (
@@ -413,12 +514,15 @@ export function useAccountCookieSession({
   return {
     state: {
       isImportingCookies,
+      verifiedCookie,
+      isRecoveringCookies,
       showCookiePermissionWarning,
       cookieAuthPermissionState,
     },
     invalidate,
     reset,
     importManually: handleImportCookieAuthSessionCookie,
+    recoverManually,
     importAutomatically,
     requestPermissions: handleRequestCookieAuthPermissions,
   }

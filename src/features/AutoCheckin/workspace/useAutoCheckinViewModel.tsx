@@ -491,6 +491,7 @@ export function useAutoCheckinViewModel(props: {
     siteTypeMismatches,
     exchangeRateByAccountId,
     accountSetupState,
+    accountInfoById,
     isLoading,
     isRunning,
     isManualRefreshing,

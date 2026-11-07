@@ -11,6 +11,7 @@ import {
   PASSWORD_UI_PHASES,
   PASSWORD_UI_REASONS,
 } from "~/services/accountLogin/passwordUiProtocol"
+import { captureNewApiLoginCookieCredential } from "~/services/apiAdapters/newApi/account/cookieCredential"
 import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/browserOAuth"
 import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
 import { getLoginVerificationContext } from "~/services/browserLogin/verificationContexts"
@@ -53,6 +54,10 @@ const browserApi = vi.hoisted(() => ({
 }))
 const hasCookieReadPermissionForUrl = vi.hoisted(() => vi.fn())
 const getPreferences = vi.hoisted(() => vi.fn())
+const cookieCapture = vi.hoisted(() => ({ stores: vi.fn(), header: vi.fn() }))
+vi.mock("~/utils/browser/cookies", () => ({
+  getAllCookieStores: cookieCapture.stores,
+}))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences },
@@ -71,6 +76,7 @@ vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
 })
 vi.mock("~/utils/browser/cookieHelper", () => ({
   hasCookieReadPermissionForUrl,
+  getCookieHeaderForUrlResult: cookieCapture.header,
 }))
 
 const origin = "https://account.example.invalid"
@@ -82,6 +88,7 @@ const actions = {
   authorize: "test:authorize-oauth",
 } as const
 const testFlow = {
+  captureCredential: captureNewApiLoginCookieCredential,
   id: "example-oauth",
   concurrencyKey: "example-session",
   displayName: "Example Account",
@@ -138,8 +145,268 @@ const completedTab = {
 }
 
 describe("browser OAuth context", () => {
+  it.each(["page", "content", "capture"] as const)(
+    "closes an active login cancelled during %s wait without accepting late work",
+    async (phase) => {
+      const controller = new AbortController()
+      let release!: () => void
+      let waiting = false
+      const pending = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      let flow = testFlow
+      if (phase === "page")
+        browserApi.getTab.mockImplementation(async () => {
+          waiting = true
+          return { ...loginTab, status: "loading" }
+        })
+      if (phase === "content")
+        browserApi.sendTabMessageWithRetry
+          .mockReset()
+          .mockImplementation(async () => {
+            waiting = true
+            await pending
+            return { success: true, authorizationUrl }
+          })
+      if (phase === "capture")
+        flow = {
+          ...testFlow,
+          captureCredential: async () => {
+            waiting = true
+            await pending
+            return { cookie: "session=late" }
+          },
+        }
+      const started = createBrowserOAuthContext(flow).authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: `cancel-${phase}`,
+        abortSignal: controller.signal,
+        captureCredential: phase === "capture",
+      })
+      await vi.waitFor(() => expect(waiting).toBe(true))
+      controller.abort()
+      await expect(started).resolves.toMatchObject({ status: "cancelled" })
+      expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+      const navigations = browserApi.updateTab.mock.calls.length
+      release()
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(browserApi.updateTab).toHaveBeenCalledTimes(navigations)
+    },
+  )
+
+  it("cancels a queued caller promptly without cancelling the session holder", async () => {
+    let release!: () => void
+    const opening = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    browserApi.createWindow.mockImplementationOnce(async () => {
+      await opening
+      return { id: 7, tabs: [loginTab] }
+    })
+    const first = browserOAuthContext.authenticate({
+      origin,
+      expectedIdentity: "user-1",
+      requestId: "holder",
+    })
+    const controller = new AbortController()
+    let outcome: unknown
+    const second = browserOAuthContext
+      .authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: "queued",
+        abortSignal: controller.signal,
+      })
+      .then((value) => {
+        outcome = value
+        return value
+      })
+    controller.abort()
+    try {
+      await vi.waitFor(
+        () => expect(outcome).toMatchObject({ status: "cancelled" }),
+        { timeout: 150 },
+      )
+      expect(browserApi.createWindow).toHaveBeenCalledOnce()
+    } finally {
+      release()
+      await first
+      await second
+    }
+    await expect(first).resolves.toMatchObject({ status: "authenticated" })
+    expect(browserApi.createWindow).toHaveBeenCalledOnce()
+  })
+
+  it("cleans up the request's observed session before closing a cancelled fallback login", async () => {
+    const controller = new AbortController()
+    const flow: BrowserOAuthFlow<{ completed: boolean }> = {
+      ...testFlow,
+      captureCredential: async () => {
+        controller.abort()
+        return { cookie: "session=observed" }
+      },
+    }
+    await expect(
+      createBrowserOAuthContext(flow).authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: "cancel-observed",
+        abortSignal: controller.signal,
+        captureCredential: true,
+      }),
+    ).resolves.toMatchObject({ status: "cancelled" })
+    const clearIndex = browserApi.sendTabMessageWithRetry.mock.calls.findIndex(
+      ([, message]) =>
+        message.action === actions.clear &&
+        message.requestId === "cancel-observed",
+    )
+    expect(clearIndex).toBeGreaterThanOrEqual(0)
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.invocationCallOrder[clearIndex],
+    ).toBeLessThan(browserApi.removeWindow.mock.invocationCallOrder[0]!)
+  })
+
+  it("closes a window created after its session holder cancels", async () => {
+    let release!: () => void
+    const opening = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    browserApi.createWindow.mockImplementationOnce(async () => {
+      await opening
+      return { id: 7, tabs: [loginTab] }
+    })
+    const controller = new AbortController()
+    const pending = browserOAuthContext.authenticate({
+      origin,
+      expectedIdentity: "user-1",
+      requestId: "cancel-opening",
+      abortSignal: controller.signal,
+    })
+    await vi.waitFor(() =>
+      expect(browserApi.createWindow).toHaveBeenCalledOnce(),
+    )
+    controller.abort()
+    release()
+    await expect(pending).resolves.toMatchObject({ status: "cancelled" })
+    await vi.waitFor(() =>
+      expect(browserApi.removeWindow).toHaveBeenCalledWith(7),
+    )
+  })
+
+  it("stops a cancelled login before a late preparation can navigate", async () => {
+    const controller = new AbortController()
+    browserApi.updateTab.mockClear()
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(async (_tab, message) => {
+        if (message.action === actions.prepare) {
+          controller.abort()
+          return { success: true, authorizationUrl }
+        }
+        return { success: true, identity: "user-1", completed: true }
+      })
+    await expect(
+      browserOAuthContext.authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: "cancel-preparation",
+        abortSignal: controller.signal,
+      }),
+    ).resolves.toMatchObject({ status: "cancelled" })
+    expect(browserApi.updateTab).not.toHaveBeenCalled()
+    expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.some(
+        ([, message]) => message.action === actions.complete,
+      ),
+    ).toBe(false)
+  })
+
+  it("does not open a login window for an already cancelled caller", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      browserOAuthContext.authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: "cancelled-before-login",
+        abortSignal: controller.signal,
+      }),
+    ).resolves.toMatchObject({ status: "cancelled" })
+    expect(browserApi.createWindow).not.toHaveBeenCalled()
+  })
+
+  it("captures the verified login tab's own session Cookie before closing it", async () => {
+    cookieCapture.stores.mockResolvedValue([
+      { id: "other", tabIds: [99] },
+      { id: "login-partition", tabIds: [11] },
+    ])
+    cookieCapture.header.mockImplementation(async (_url, options) => {
+      expect(options.storeId).toBe("login-partition")
+      expect(browserApi.removeWindow).not.toHaveBeenCalled()
+      return { header: "waf=protection; session=verified-login" }
+    })
+    const result = await browserOAuthContext.authenticate({
+      origin,
+      expectedIdentity: "user-1",
+      requestId: "capture",
+      captureCredential: true,
+    })
+    expect(result).toMatchObject({
+      status: "authenticated",
+      identity: "user-1",
+      credential: { cookie: "session=verified-login" },
+    })
+    expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    {
+      name: "the login partition is missing",
+      stores: [{ id: "other", tabIds: [99] }],
+      header: "session=other",
+    },
+    {
+      name: "Cookie permission is missing",
+      stores: [{ id: "login", tabIds: [11] }],
+      header: "",
+      failureReason: "permissionDenied",
+    },
+    {
+      name: "the session is empty",
+      stores: [{ id: "login", tabIds: [11] }],
+      header: "waf=protection; session=",
+    },
+    {
+      name: "the session is ambiguous",
+      stores: [{ id: "login", tabIds: [11] }],
+      header: "session=first; session=second",
+    },
+  ])("does not export credentials when $name", async (scenario) => {
+    cookieCapture.stores.mockResolvedValue(scenario.stores)
+    cookieCapture.header.mockResolvedValue({
+      header: scenario.header,
+      failureReason:
+        "failureReason" in scenario ? scenario.failureReason : undefined,
+    })
+    await expect(
+      browserOAuthContext.authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: "unavailable-cookie",
+        captureCredential: true,
+      }),
+    ).resolves.toEqual({ status: "uncertain" })
+    expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    if (scenario.stores[0]?.id === "other")
+      expect(cookieCapture.header).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
+    cookieCapture.stores.mockReset()
+    cookieCapture.header.mockReset()
     getPreferences.mockReset()
     getPreferences.mockResolvedValue({})
     browserApi.isAllowedIncognitoAccess.mockResolvedValue(false)

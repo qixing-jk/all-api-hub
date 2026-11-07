@@ -909,6 +909,17 @@ const ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.ANYROUTER,
+    // anyrouter.top public status and native login bundle verified 2026-11-04.
+    accountLogin: {
+      methods: ["github", "linuxdo", ACCOUNT_LOGIN_METHODS.Password],
+      supportsCredentialRecovery: true,
+      protocols: {
+        newApi: {
+          userIdHeader: "New-Api-User",
+          completionPaths: ["/console", "/console/token"],
+        },
+      },
+    },
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,

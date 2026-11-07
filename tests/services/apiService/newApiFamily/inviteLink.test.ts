@@ -53,6 +53,7 @@ describe("newApiFamily inviteLink", () => {
     ).resolves.toBe("https://invite.example.invalid/register?aff=invite-code")
 
     expect(fetchApiDataMock).toHaveBeenCalledWith(request, {
+      credentialRecovery: "read",
       endpoint: "/api/user/aff",
     })
   })

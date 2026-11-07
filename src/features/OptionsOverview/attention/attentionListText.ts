@@ -1,5 +1,7 @@
 import type { TFunction } from "i18next"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
 import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "~/features/OptionsOverview/ids"
 import type {
   OptionsOverviewAttentionCategory,
@@ -331,7 +333,10 @@ export function getAttentionDescription(
   item: OptionsOverviewAttentionItem,
   t: TFunction,
 ) {
-  return attentionDescriptionResolvers[item.kind](item, t)
+  const description = attentionDescriptionResolvers[item.kind](item, t)
+  return isCredentialRecoveryTarget(item)
+    ? `${description}\n${t("accountDialog:login.recoveryFailureDescription")}`
+    : description
 }
 
 /**
@@ -341,5 +346,18 @@ export function getAttentionActionLabel(
   item: OptionsOverviewAttentionItem,
   t: TFunction,
 ) {
-  return attentionActionResolvers[item.kind](t)
+  return isCredentialRecoveryTarget(item)
+    ? t("accountDialog:login.configureRecovery")
+    : attentionActionResolvers[item.kind](t)
+}
+
+/** The action label follows the account section the attention item actually opens. */
+function isCredentialRecoveryTarget(
+  item: OptionsOverviewAttentionItem,
+): boolean {
+  return (
+    item.target.menuItemId === MENU_ITEM_IDS.ACCOUNT &&
+    item.target.params?.[ACCOUNT_MANAGEMENT_ROUTE_PARAMS.FocusSection] ===
+      "account-login"
+  )
 }

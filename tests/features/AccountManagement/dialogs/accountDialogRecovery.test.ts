@@ -13,6 +13,7 @@ import {
   receiveAccountDialogRecovery,
 } from "~/features/AccountManagement/dialogs/accountDialogRecovery"
 import { ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { AuthTypeEnum } from "~/types"
 import { setSessionStorageValues } from "~/utils/browser/storage"
 import { getActiveTab } from "~/utils/browser/tabs"
 import { createDeferred } from "~~/tests/test-utils/deferred"
@@ -38,7 +39,8 @@ vi.mock("~/utils/browser/tabs", () => ({
   getActiveTab: vi.fn(async () => activeTab),
   createTab,
 }))
-vi.mock("~/utils/browser/runtime", () => ({
+vi.mock("~/utils/browser/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtime")>()),
   getExtensionURL: (path: string) => `chrome-extension://test/${path}`,
 }))
 vi.mock("~/utils/browser/sidePanel", () => ({
@@ -77,6 +79,41 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it("rejects a Cookie recovery handoff for a provider that has not adopted recovery", async () => {
+    const original = recoveryState(SITE_TYPES.NEW_API)
+    await expect(
+      prepareAccountDialogRecovery({
+        ...original,
+        recoveryAction: "cookie",
+        draft: { ...original.draft, authType: AuthTypeEnum.Cookie },
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(sessionValues.size).toBe(0)
+  })
+  it("retains a Cookie recovery intent and unsaved login credentials across the persistent handoff", async () => {
+    const initial = recoveryState(SITE_TYPES.ANYROUTER)
+    const state = {
+      ...initial,
+      recoveryAction: "cookie" as const,
+      draft: {
+        ...initial.draft,
+        authType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=expired",
+        login: {
+          methodId: "password",
+          credentials: { username: "member", password: "unsaved-password" },
+          automaticRecovery: false,
+        },
+        loginChanged: true,
+      },
+    }
+    const prepared = await prepareAccountDialogRecovery(state)
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith(state)
+  })
   it("retains an explicit API-key method before any credential is pasted", async () => {
     const original = recoveryState(SITE_TYPES.NOVITA)
     const state = {

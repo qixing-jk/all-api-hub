@@ -8,4 +8,6 @@ export interface AccountPasswordCredentials {
 export interface AccountLoginConfiguration {
   methodId: string
   credentials?: AccountPasswordCredentials
+  /** Explicit permission to recover failed account requests through this login. */
+  automaticRecovery?: boolean
 }

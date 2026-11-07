@@ -10,6 +10,7 @@ describe("accountFormSections config", () => {
     expect(ACCOUNT_FORM_SECTION_IDS).toEqual([
       "site-info",
       "account-auth",
+      "account-login",
       "tags-notes",
       "check-in",
       "balance",
@@ -20,6 +21,7 @@ describe("accountFormSections config", () => {
     expect(ACCOUNT_FORM_MOBILE_DEFAULT_OPEN).toEqual({
       "site-info": true,
       "account-auth": true,
+      "account-login": true,
       "tags-notes": true,
       "check-in": true,
       balance: false,

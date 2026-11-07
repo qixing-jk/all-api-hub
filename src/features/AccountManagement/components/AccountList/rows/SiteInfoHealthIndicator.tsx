@@ -2,6 +2,8 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { IconButton, WorkflowTransitionButton } from "~/components/ui"
+import { AccountCredentialRecoveryGuidance } from "~/features/AccountManagement/credentialRecovery/AccountCredentialRecoveryGuidance"
+import { hasCredentialRecoveryAuthenticationFailure } from "~/features/AccountManagement/credentialRecovery/guidance"
 import {
   getTempWindowFallbackSettingsAnchor,
   getTempWindowFallbackSettingsTab,
@@ -48,6 +50,8 @@ export function SiteInfoHealthIndicator({
   const isAccountDisabled = site.disabled === true
   const healthStatusDisplay = getHealthStatusDisplay(site.health?.status, t)
   const healthCode = site.health?.code
+  const canOpenCredentialRecovery =
+    hasCredentialRecoveryAuthenticationFailure(site)
   const canOpenProtectionBypassHistory =
     site.health?.status === SiteHealthStatus.Warning &&
     Object.values(TEMP_WINDOW_HEALTH_STATUS_CODES).some(
@@ -89,6 +93,13 @@ export function SiteInfoHealthIndicator({
 
   return (
     <Tooltip
+      className={
+        canOpenCredentialRecovery
+          ? "max-w-[min(22rem,calc(100vw-2rem))]! leading-relaxed whitespace-normal [&_button]:text-inherit [&_button]:underline [&_p]:text-inherit"
+          : undefined
+      }
+      positionStrategy={canOpenCredentialRecovery ? "fixed" : undefined}
+      portalContainer={canOpenCredentialRecovery ? document.body : undefined}
       content={
         <div className="space-y-density-1">
           <p>
@@ -124,6 +135,9 @@ export function SiteInfoHealthIndicator({
               className="text-xs"
               onOpen={openProtectionBypassHistory}
             />
+          )}
+          {canOpenCredentialRecovery && (
+            <AccountCredentialRecoveryGuidance account={site} failure />
           )}
         </div>
       }

@@ -777,6 +777,25 @@ describe("browserApi isMessageReceiverUnavailableError", () => {
 })
 
 describe("browserApi sendTabMessageWithRetry", () => {
+  it("does not dispatch a retry after its caller cancels", async () => {
+    const controller = new AbortController()
+    const send = vi
+      .fn()
+      .mockImplementationOnce(async () => {
+        controller.abort()
+        throw new Error("Receiving end does not exist")
+      })
+      .mockResolvedValue({ ok: true })
+    ;(globalThis as any).browser = { tabs: { sendMessage: send } }
+    await expect(
+      sendTabMessageWithRetry(
+        123,
+        {},
+        { abortSignal: controller.signal, delayMs: 0 },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    expect(send).toHaveBeenCalledTimes(1)
+  })
   beforeEach(() => {
     vi.restoreAllMocks()
     ;(globalThis as any).browser = undefined

@@ -48,12 +48,18 @@ const logger = createLogger("ApiTransportRequest")
 /** Keeps optional lifecycle evidence isolated from transport results. */
 export function notifyApiTransportObserver(
   observer: ApiTransportRequestObserver | undefined,
-  event: keyof ApiTransportRequestObserver,
+  ...notification:
+    | [event: Exclude<keyof ApiTransportRequestObserver, "onCookieRecovered">]
+    | [event: "onCookieRecovered", cookie: string, generation: number]
 ): void {
   try {
-    observer?.[event]?.()
+    if (notification[0] === "onCookieRecovered")
+      observer?.onCookieRecovered?.(notification[1], notification[2])
+    else observer?.[notification[0]]?.()
   } catch {
-    logger.warn("API transport observer callback failed", { event })
+    logger.warn("API transport observer callback failed", {
+      event: notification[0],
+    })
   }
 }
 

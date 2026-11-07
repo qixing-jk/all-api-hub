@@ -23,6 +23,7 @@ export const API_ERROR_CODES = {
   NETWORK_ERROR: "NETWORK_ERROR",
   TOKEN_SECRET_UNAVAILABLE: "TOKEN_SECRET_UNAVAILABLE",
   ACCOUNT_IDENTITY_MISMATCH: "ACCOUNT_IDENTITY_MISMATCH",
+  ACCOUNT_CREDENTIAL_RECOVERY_FAILED: "ACCOUNT_CREDENTIAL_RECOVERY_FAILED",
   COOKIE_PERMISSION_REQUIRED: "COOKIE_PERMISSION_REQUIRED",
   COOKIE_REQUEST_UNAVAILABLE: "COOKIE_REQUEST_UNAVAILABLE",
   /**
@@ -91,6 +92,19 @@ export class ApiError extends Error {
    * Unset means the site's own JSON answer or the raising caller supplied it.
    */
   public unattributedMessage?: boolean
+}
+
+/** Recognizes a site's explicit authentication rejection, excluding protection pages. */
+export function isAuthenticationRequiredError(
+  error: unknown,
+): error is ApiError & { statusCode: 401 } {
+  return (
+    error instanceof ApiError &&
+    error.statusCode === 401 &&
+    !error.unattributedMessage &&
+    error.code !== API_ERROR_CODES.ROBOT_CHALLENGE &&
+    error.code !== API_ERROR_CODES.CONTENT_TYPE_MISMATCH
+  )
 }
 
 /**

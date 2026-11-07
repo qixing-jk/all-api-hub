@@ -2,6 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import ResultsTable from "~/features/AutoCheckin/results/ResultsTable"
 import { EMRANK_TOKEN_ASSET } from "~/services/apiService/emrank/constants"
 import {
@@ -10,11 +11,20 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { AuthTypeEnum } from "~/types"
 import {
+  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
+import { openTargetedOptionsPage } from "~/utils/navigation/optionsPage"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
+
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation/optionsPage")>()),
+  openTargetedOptionsPage: vi.fn().mockResolvedValue(undefined),
+}))
 
 vi.mock("~/components/AccountLinkButton", () => ({
   default: ({ accountName }: { accountName: string }) => (
@@ -79,6 +89,81 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
+  it.each([CHECKIN_RESULT_STATUS.FAILED, CHECKIN_RESULT_STATUS.SKIPPED])(
+    "guides an authentication rejection to the current account's login settings (%s)",
+    async (status) => {
+      const account = buildDisplaySiteData({
+        id: failedResult.accountId,
+        siteType: SITE_TYPES.ANYROUTER,
+        authType: AuthTypeEnum.Cookie,
+      })
+      const user = userEvent.setup()
+      const result: CheckinAccountResult =
+        status === CHECKIN_RESULT_STATUS.FAILED
+          ? {
+              ...failedResult,
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+            }
+          : {
+              accountId: account.id,
+              accountName: failedResult.accountName,
+              status: CHECKIN_RESULT_STATUS.SKIPPED,
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+              timestamp: failedResult.timestamp,
+            }
+      render(
+        <ResultsTable
+          results={[result]}
+          accountInfoById={{ [account.id]: account }}
+        />,
+      )
+      await screen.findByText(failedResult.accountName)
+      await user.click(
+        screen.getByRole("button", {
+          name: "accountDialog:login.configureRecovery",
+        }),
+      )
+      expect(openTargetedOptionsPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inPageSearchParams: {
+            action: "edit",
+            accountId: account.id,
+            focusSection: "account-login",
+          },
+        }),
+      )
+    },
+  )
+
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.ANYROUTER])(
+    "does not use a verification-required result as login recovery guidance (%s)",
+    async (siteType) => {
+      const account = buildDisplaySiteData({
+        id: failedResult.accountId,
+        siteType,
+        authType: AuthTypeEnum.Cookie,
+      })
+      render(
+        <ResultsTable
+          results={[
+            {
+              ...failedResult,
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+            },
+          ]}
+          accountInfoById={{ [account.id]: account }}
+        />,
+      )
+      await screen.findByText(failedResult.accountName)
+      expect(
+        screen.queryByRole("button", {
+          name: "accountDialog:login.configureRecovery",
+        }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   it("offers an independent already-checked result filter", async () => {
     const user = userEvent.setup()
     render(

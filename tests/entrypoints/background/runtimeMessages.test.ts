@@ -36,10 +36,16 @@ describe("setupRuntimeMessageListeners routing", () => {
   let handleTempContextDebugMessage: ReturnType<typeof vi.fn>
   let appendLogHistory: ReturnType<typeof vi.fn>
   let clearLogHistory: ReturnType<typeof vi.fn>
+  const recoverCookie = vi.fn()
+  const cancelRecovery = vi.fn()
   const openFeedback = vi.fn().mockResolvedValue(undefined)
   const dismissFeedback = vi.fn().mockResolvedValue(undefined)
 
   beforeAll(async () => {
+    vi.doMock("~/services/accountCredentialRecovery/manual", () => ({
+      recoverAccountCookieForDialog: recoverCookie,
+      cancelAccountCookieRecovery: cancelRecovery,
+    }))
     vi.doMock("~/services/checkin/feedback/githubTab", () => ({
       openCheckInFeedbackIssueTab: openFeedback,
       dismissCheckInFeedbackTabHint: dismissFeedback,
@@ -233,6 +239,52 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/siteAnnouncements/runtimeMessages")
     vi.resetModules()
     vi.restoreAllMocks()
+  })
+
+  it("routes editor recovery and cancellation and sanitizes handler failures", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    const call = (action: string) =>
+      new Promise((resolve) => {
+        expect(
+          runtimeMessageListener?.(
+            { action, requestId: "editor-1" },
+            {},
+            resolve,
+          ),
+        ).toBe(true)
+      })
+    recoverCookie.mockResolvedValueOnce({
+      status: "authenticated",
+      credential: { cookie: "session=test" },
+    })
+    expect(
+      await call(RuntimeActionIds.AccountDialogRecoverCookieSession),
+    ).toEqual({
+      status: "authenticated",
+      credential: { cookie: "session=test" },
+    })
+    expect(recoverCookie).toHaveBeenCalledWith({
+      action: RuntimeActionIds.AccountDialogRecoverCookieSession,
+      requestId: "editor-1",
+    })
+    recoverCookie.mockRejectedValueOnce(new Error("private detail"))
+    expect(
+      await call(RuntimeActionIds.AccountDialogRecoverCookieSession),
+    ).toEqual({ status: "failed" })
+    cancelRecovery.mockReturnValueOnce(true)
+    expect(await call(RuntimeActionIds.AccountDialogCancelCookieRecovery)).toBe(
+      true,
+    )
+    expect(cancelRecovery).toHaveBeenCalledWith("editor-1")
+    cancelRecovery.mockImplementationOnce(() => {
+      throw new Error("private detail")
+    })
+    expect(await call(RuntimeActionIds.AccountDialogCancelCookieRecovery)).toBe(
+      false,
+    )
   })
 
   it("opens guided feedback only for extension-page requests and dismisses only the sender tab", async () => {
@@ -868,6 +920,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: "session=incognito",
+      cookieStoreId: "1-incognito",
     })
   })
 
@@ -917,6 +970,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: "session=incognito",
+      cookieStoreId: "1-incognito",
     })
   })
 

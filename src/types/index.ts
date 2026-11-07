@@ -17,7 +17,7 @@ import type {
   AccountTodayStatsAvailability,
   AccountTodayStatsCoverage,
 } from "~/types/accountTodayStats"
-import type { AuthTypeEnum } from "~/types/auth"
+import type { AccountAuthHealthStatusCode, AuthTypeEnum } from "~/types/auth"
 import type { CheckInConfig } from "~/types/checkIn"
 import { type TempWindowHealthStatusCode } from "~/types/tempWindow"
 
@@ -41,7 +41,9 @@ export interface HealthStatus {
 /**
  * Subset of health status codes that the UI can act on (e.g., open Settings).
  */
-export type HealthStatusCode = TempWindowHealthStatusCode
+export type HealthStatusCode =
+  | TempWindowHealthStatusCode
+  | AccountAuthHealthStatusCode
 
 export type AccountIdentity = string
 
@@ -550,7 +552,7 @@ export const DASHBOARD_TAB_TYPES = [
 ] as const
 export type DashboardTabType = (typeof DASHBOARD_TAB_TYPES)[number]
 
-export { AuthTypeEnum } from "~/types/auth"
+export { AuthTypeEnum, ACCOUNT_AUTH_HEALTH_STATUS_CODES } from "~/types/auth"
 export * from "~/types/accountTodayStats"
 export type { TempWindowHealthStatusCode } from "~/types/tempWindow"
 export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"

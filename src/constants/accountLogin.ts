@@ -6,6 +6,22 @@ export const ACCOUNT_LOGIN_METHODS = {
   Password: "password",
 } as const
 
+/** Input requirements declared by an implemented login method. */
+export const ACCOUNT_LOGIN_CONFIGURATION_KINDS = {
+  None: "none",
+  Password: "password",
+} as const
+
+/** Credentials that an implemented login method can export. */
+export const ACCOUNT_LOGIN_CREDENTIAL_KINDS = {
+  Cookie: "cookie",
+} as const
+
+/** Provider operations admitted to automatic credential recovery. */
+export const ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS = {
+  Read: "read",
+} as const
+
 /** Known OAuth providers used by existing integrations and saved check-in settings. */
 export const ACCOUNT_LOGIN_PROVIDERS = {
   Github: "github",

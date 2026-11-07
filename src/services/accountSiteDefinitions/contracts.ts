@@ -195,6 +195,8 @@ export interface AccountSiteLoginConfig {
   /** Accepted identifier for the native password protocol, independent of its JSON field name. */
   passwordIdentity?: AccountPasswordIdentity
   methods: readonly AccountLoginMethodId[]
+  /** Explicit product adoption of recovery for failed account operations. */
+  supportsCredentialRecovery?: boolean
   /** Only protocols needing per-site overrides declare options here. */
   protocols?: {
     newApi?: NewApiAccountLoginProtocolConfig

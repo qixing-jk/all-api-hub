@@ -10,6 +10,7 @@ import type {
   AccountLoginRequest,
   AccountLoginResult,
 } from "~/services/apiAdapters/contracts/accountLogin"
+import { captureNewApiLoginCookieCredential } from "~/services/apiAdapters/newApi/account/cookieCredential"
 
 /** Reuses the exact session queue used by New API OAuth, including AgentRouter. */
 export async function loginNewApiWithPassword(
@@ -33,11 +34,14 @@ export async function loginNewApiWithPassword(
     loginAction: RuntimeActionIds.ContentNewApiPasswordLogin,
     clearEvidenceAction: RuntimeActionIds.ContentClearNewApiPasswordLogin,
     credentials,
+    captureCredential: captureNewApiLoginCookieCredential,
   }).authenticate({
     origin: new URL(request.account.site_url).origin,
     expectedIdentity,
     requestId: request.requestId,
     sessionMode: request.sessionMode,
+    captureCredential: request.captureCredential,
+    abortSignal: request.abortSignal,
     ...(request.attended === undefined ? {} : { attended: request.attended }),
   })
 }

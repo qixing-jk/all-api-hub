@@ -69,6 +69,14 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.AccountDialog,
     "importCookieAuthSessionCookie",
   ),
+  AccountDialogRecoverCookieSession: composeRuntimeAction(
+    RuntimeActionPrefixes.AccountDialog,
+    "recoverCookieSession",
+  ),
+  AccountDialogCancelCookieRecovery: composeRuntimeAction(
+    RuntimeActionPrefixes.AccountDialog,
+    "cancelCookieRecovery",
+  ),
 
   AccountRefreshCompleted: composeRuntimeAction(
     RuntimeActionPrefixes.AccountRefresh,

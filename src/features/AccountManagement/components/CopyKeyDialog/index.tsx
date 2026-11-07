@@ -67,6 +67,7 @@ export default function CopyKeyDialog({
     nativeKeyRows,
     isLoading,
     error,
+    authenticationFailed,
     managementConfigurationRequired,
     postCreateError,
     oneTimeSecret,
@@ -165,7 +166,15 @@ export default function CopyKeyDialog({
       return <LoadingIndicator />
     }
     if (error && runtimeKeys.length === 0 && nativeKeyRows.length === 0) {
-      return <ErrorDisplay error={error} onRetry={fetchKeyInventory} />
+      return (
+        <ErrorDisplay
+          error={error}
+          onRetry={fetchKeyInventory}
+          account={account}
+          authenticationFailed={authenticationFailed}
+          onNavigate={onClose}
+        />
+      )
     }
     if (!account) {
       return null
@@ -230,7 +239,13 @@ export default function CopyKeyDialog({
             />
           ) : null}
           {error && (runtimeKeys.length > 0 || nativeKeyRows.length > 0) ? (
-            <ErrorDisplay error={error} onRetry={fetchKeyInventory} />
+            <ErrorDisplay
+              error={error}
+              onRetry={fetchKeyInventory}
+              account={account}
+              authenticationFailed={authenticationFailed}
+              onNavigate={onClose}
+            />
           ) : null}
           {showCreateResponseOnlyWarning ? (
             <Alert

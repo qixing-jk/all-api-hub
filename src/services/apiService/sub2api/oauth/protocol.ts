@@ -11,6 +11,11 @@ const PROVIDER_SETTINGS = {
 
 export type Sub2ApiOAuthProvider = keyof typeof PROVIDER_SETTINGS
 
+/** Static method labels; discovery may refine the deployment's OIDC display name. */
+export function getSub2ApiOAuthMethod(id: Sub2ApiOAuthProvider) {
+  return { id, label: PROVIDER_SETTINGS[id].label }
+}
+
 const COMPLETION_PATH = "/dashboard"
 const COMPLETION_REQUEST_PARAM = "all_api_hub_login"
 
@@ -39,7 +44,10 @@ export function discoverSub2ApiOAuthMethods(
         ? settings.oidc_oauth_provider_name.trim()
         : ""
     return [
-      { id, label: id === "oidc" && oidcName ? oidcName : provider.label },
+      {
+        ...getSub2ApiOAuthMethod(id),
+        ...(id === "oidc" && oidcName ? { label: oidcName } : {}),
+      },
     ]
   })
 }

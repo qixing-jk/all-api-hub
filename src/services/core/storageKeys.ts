@@ -27,6 +27,8 @@ export const STORAGE_LOCKS = {
   /** Serializes explicit data cleanup operations in development builds. */
   DEV_DATA_CLEANUP: "all-api-hub:dev-data-cleanup",
   LOGIN_PROVIDER_EVIDENCE: "all-api-hub:login-provider-evidence",
+  /** Serializes account login recovery across extension contexts. */
+  ACCOUNT_CREDENTIAL_RECOVERY: "all-api-hub:account-credential-recovery",
   AIMLAPI_ONBOARDING: "all-api-hub:aimlapi-onboarding",
   /** Serializes sponsor creation handoffs between popup and side panels. */
   SPONSOR_WORKFLOW: "all-api-hub:sponsor-workflow",
