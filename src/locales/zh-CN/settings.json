@@ -559,7 +559,7 @@
         "title": "浏览器书签"
       },
       "clipboardRead": {
-        "description": "在你复制相关内容后，帮助兑换助手或 AI API 测试识别兑换码和 API 信息。",
+        "description": "在你复制相关内容后，帮助兑换助手或网页 API 测试识别兑换码和 API 信息。",
         "title": "读取剪贴板"
       },
       "cookies": {
@@ -847,7 +847,7 @@
     "refresh": "数据刷新",
     "select": "选择一个分组",
     "siteAnnouncements": "网站公告",
-    "webAiApiCheck": "AI API 测试"
+    "webAiApiCheck": "网页 API 测试"
   },
   "taskNotifications": {
     "channels": {

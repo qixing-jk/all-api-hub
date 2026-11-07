@@ -1,6 +1,6 @@
 {
   "confirmToast": {
-    "body": "Möchten Sie den KI-API-Testbereich öffnen, um die Verfügbarkeit der KI-API zu prüfen?",
+    "body": "API-Testbereich öffnen, um die Verfügbarkeit dieser API zu prüfen?",
     "enhancedInfo": "Ausgelöst durch verbesserte automatische Erkennung. Wenn dies falsch aussieht, melden Sie es oder deaktivieren Sie die erweiterte automatische Erkennung in den Einstellungen.",
     "feedback": "Problem melden",
     "keyOnlyBody": "Ein möglicher API-Schlüssel wurde dekodiert, aber keine API-URL gefunden. Testpanel öffnen, um vor dem Testen die URL einzutragen?",
@@ -17,13 +17,12 @@
       "openApiProfiles": "API-Anmeldeinformationsbibliothek öffnen",
       "retry": "Wiederholen",
       "running": "Testen…",
-      "runOne": "Test",
       "saveToProfiles": "In API-Anmeldeinformationsbibliothek speichern",
       "saving": "Speichern…",
       "showKey": "Schlüssel anzeigen",
       "stopping": "Stoppt…",
       "stopTest": "Test stoppen",
-      "test": "Test"
+      "test": "Standardtests ausführen"
     },
     "candidates": {
       "apiKey": "Kandidatenschlüssel {{index}}"
@@ -72,14 +71,11 @@
       "tags": "Tags auswählen"
     },
     "privacyHint": "API-Schlüssel werden als vertrauliche Informationen betrachtet: standardmäßig ausgeblendet und nichts wird gespeichert, es sei denn, Sie entscheiden sich für die Speicherung in der API-Anmeldeinformationsbibliothek.",
-    "probes": {
-      "notRunYet": "Noch nicht ausgeführt"
-    },
     "sourceText": {
       "label": "Text, aus dem extrahiert werden soll",
       "placeholder": "Fügen Sie hier eine Basis-URL und einen API-Schlüssel ein oder verwenden Sie das Kontextmenü, um die Auswahl vorab auszufüllen."
     },
-    "title": "Funktions- und Verfügbarkeitstest für KI-APIs"
+    "title": "API-Tests"
   },
   "settings": {
     "autoDetect": {
@@ -157,7 +153,7 @@
       "wildcard": "Platzhalter (Standard)",
       "wildcardHint": "* ersetzt beliebigen Text. Domains werden zu *://Domain/*; für Subdomains *.example.com verwenden."
     },
-    "title": "Funktions- und Verfügbarkeitstest für Web-KI-APIs"
+    "title": "API-Tests auf Webseiten"
   },
   "siteControl": {
     "disable": "Automatische Erkennung auf dieser Website beenden",

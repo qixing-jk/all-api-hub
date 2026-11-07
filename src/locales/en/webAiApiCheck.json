@@ -1,6 +1,6 @@
 {
   "confirmToast": {
-    "body": "Do you want to open the AI API test Panel to check and test the AI API's availability?",
+    "body": "Open the API testing panel to check this API’s availability?",
     "enhancedInfo": "Triggered by enhanced auto-detect. If this looks wrong, report it or turn off enhanced auto-detect in settings.",
     "feedback": "Report issue",
     "keyOnlyBody": "A likely API key was decoded, but no API URL was found. Open the test panel to add the URL before testing?",
@@ -17,13 +17,12 @@
       "openApiProfiles": "Open API credential library",
       "retry": "Retry",
       "running": "Testing…",
-      "runOne": "Test",
       "saveToProfiles": "Save to API credential library",
       "saving": "Saving…",
       "showKey": "Show key",
       "stopping": "Stopping…",
       "stopTest": "Stop test",
-      "test": "Test"
+      "test": "Run routine tests"
     },
     "candidates": {
       "apiKey": "Candidate key {{index}}"
@@ -72,14 +71,11 @@
       "tags": "Select tags"
     },
     "privacyHint": "API Keys will be considered sensitive information: hidden by default, and nothing is stored unless you choose to save to API credential library.",
-    "probes": {
-      "notRunYet": "Not run yet"
-    },
     "sourceText": {
       "label": "Text to extract from",
       "placeholder": "Paste a base URL and API key here, or use the context menu to prefill from selection."
     },
-    "title": "AI API Functionality Availability Test"
+    "title": "API Testing"
   },
   "settings": {
     "autoDetect": {
@@ -157,7 +153,7 @@
       "wildcard": "Wildcard (default)",
       "wildcardHint": "* matches any text. A bare domain becomes *://domain/*; use *.example.com for subdomains."
     },
-    "title": "Web AI API Functionality Availability Test"
+    "title": "Web API Testing"
   },
   "siteControl": {
     "disable": "Stop auto-detect on this website",

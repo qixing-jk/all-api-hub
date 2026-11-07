@@ -65,7 +65,7 @@ In the AI era, many of us keep multiple relay-site accounts to save money or try
 ### 🛠️ I am an advanced user (Key collector)
 
 - **Key management**: [Save standalone URL+Key pairs to the API Credential Library](./api-credential-profiles.md)
-- **Availability testing**: [Batch verify API and CLI compatibility](./web-ai-api-check.md)
+- **Availability testing**: [Web API Testing and client compatibility checks](./web-ai-api-check.md)
 - **Cross-device sync**: [Configure encrypted WebDAV backup](./webdav-sync.md)
 
 ### 👑 I am a site admin (operator area)

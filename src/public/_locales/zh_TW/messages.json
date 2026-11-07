@@ -15,6 +15,6 @@
     "message": "使用兌換助手兌換選取文字"
   },
   "context_menu_ai_api_check": {
-    "message": "快速測試 AI API 的功能可用性"
+    "message": "測試 API"
   }
 }

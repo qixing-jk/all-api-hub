@@ -66,6 +66,7 @@ export interface VerifyApiCredentialProfileDialogProps {
   isOpen: boolean
   onClose: () => void
   profile: ApiCredentialProfile | null
+  initialRequestProfile?: ApiVerificationRequestProfile
   initialModelId?: string
   initialSupportedEndpointTypes?: string[]
 }
@@ -111,6 +112,7 @@ export function useProfileVerification({
   isOpen,
   profile,
   initialModelId,
+  initialRequestProfile,
   initialSupportedEndpointTypes,
 }: VerifyApiCredentialProfileDialogProps) {
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
@@ -138,6 +140,7 @@ export function useProfileVerification({
       API_VERIFICATION_REQUEST_PROFILES.Default,
     )
   const [requestProfileEnhanced, setRequestProfileEnhanced] = useState(false)
+  const [showRequestProfileHint, setShowRequestProfileHint] = useState(false)
   const requestedModelId = modelId.trim() || initialModelId?.trim() || ""
   const metadataLookup = useModelMetadataLookup(isOpen && !isRunning, () =>
     probesRef.current.some((probe) => probe.isRunning),
@@ -259,7 +262,6 @@ export function useProfileVerification({
   const savedApiTypeLabel = profile
     ? getApiVerificationApiTypeLabel(t, profile.apiType)
     : ""
-  const currentApiTypeLabel = getApiVerificationApiTypeLabel(t, apiType)
 
   const {
     modelOptions,
@@ -290,14 +292,23 @@ export function useProfileVerification({
       return
     }
 
-    const nextApiType = profile.apiType
+    const nextApiType =
+      (initialRequestProfile &&
+        getVerificationRequestProfileApiType(initialRequestProfile)) ||
+      profile.apiType
     const nextModelId = initialModelId?.trim() ?? ""
     beginHistoryContext(nextApiType, nextModelId)
 
     setApiType(nextApiType)
     setModelId(nextModelId)
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
-    setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
+    setRequestProfile(
+      initialRequestProfile ?? API_VERIFICATION_REQUEST_PROFILES.Default,
+    )
+    setShowRequestProfileHint(
+      !!initialRequestProfile &&
+        initialRequestProfile !== API_VERIFICATION_REQUEST_PROFILES.Default,
+    )
     setRequestProfileEnhanced(false)
     resetModelDiscovery()
     setPersistedSummary(null)
@@ -319,6 +330,7 @@ export function useProfileVerification({
     cancelModelDiscovery,
     resetModelDiscovery,
     initialModelId,
+    initialRequestProfile,
     isOpen,
     initialSupportedEndpointTypes,
     profile,
@@ -567,11 +579,11 @@ export function useProfileVerification({
     isRunning,
     apiType,
     setApiType: (next: ApiVerificationApiType) => {
-      setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
-      setRequestProfileEnhanced(false)
+      setShowRequestProfileHint(false)
       setApiType(next)
     },
     requestProfile,
+    showRequestProfileHint,
     requestProfileEnhanced,
     setRequestProfileEnhanced: (next: boolean) => {
       if (
@@ -585,6 +597,7 @@ export function useProfileVerification({
     },
     setRequestProfile: (next: ApiVerificationRequestProfile) => {
       if (!canClose) return
+      setShowRequestProfileHint(false)
       const nextApiType = getVerificationRequestProfileApiType(next) ?? apiType
       if (nextApiType !== apiType) {
         setModelId("")
@@ -619,7 +632,6 @@ export function useProfileVerification({
     hasAnyResult,
     hasApiTypeOverride,
     savedApiTypeLabel,
-    currentApiTypeLabel,
     fetchModels,
     clearHistory,
     runSingleProbe,

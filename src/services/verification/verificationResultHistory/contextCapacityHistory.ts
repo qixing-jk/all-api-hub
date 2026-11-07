@@ -3,6 +3,7 @@ import {
   API_VERIFICATION_REQUEST_PROFILES,
 } from "~/services/verification/aiApiVerification/types"
 import {
+  CONTEXT_ATTEMPT_FAILURE_REASONS,
   CONTEXT_ATTEMPT_OUTCOMES,
   CONTEXT_CAPACITY_REASONS,
 } from "~/services/verification/modelQuality/contextCapacityConstants"
@@ -10,6 +11,7 @@ import type {
   ContextCapacityRunResult,
   RunContextCapacityParams,
 } from "~/services/verification/modelQuality/contextCapacityRun"
+import { CONTEXT_CAPACITY_INCONCLUSIVE_REASONS } from "~/services/verification/verificationResultHistory/types"
 
 import { verificationResultHistoryStorage } from "./storage"
 import type {
@@ -137,12 +139,14 @@ export const contextCapacityHistory = {
       ...(result?.reason === CONTEXT_CAPACITY_REASONS.Inconclusive
         ? {
             inconclusiveReason:
-              lastAttempt?.failureReason === "interrupted"
-                ? ("interrupted" as const)
-                : lastAttempt?.failureReason === "timeout"
-                  ? ("timeout" as const)
+              lastAttempt?.failureReason ===
+              CONTEXT_ATTEMPT_FAILURE_REASONS.Interrupted
+                ? CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Interrupted
+                : lastAttempt?.failureReason ===
+                    CONTEXT_ATTEMPT_FAILURE_REASONS.Timeout
+                  ? CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Timeout
                   : lastAttempt?.finishReason === "stop"
-                    ? ("empty-response" as const)
+                    ? CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.EmptyResponse
                     : undefined,
           }
         : {}),

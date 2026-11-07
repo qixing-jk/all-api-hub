@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { runCliSupportTool } from "~/services/verification/cliSupportVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://cli-modes.example.invalid"
@@ -19,7 +19,7 @@ const cliFixtures = [
 
 describe.each(cliFixtures)("$toolId verification modes", (fixture) => {
   it.each([undefined, "streaming", "non-streaming"] as const)(
-    "sends only the selected mode %s through the public CLI service",
+    "sends only the selected mode %s through the shared API probe",
     async (mode) => {
       const expectedMode = mode ?? "streaming"
       const streaming = expectedMode === "streaming"
@@ -57,8 +57,15 @@ describe.each(cliFixtures)("$toolId verification modes", (fixture) => {
         }),
       )
 
-      const result = await runCliSupportTool({
-        toolId: fixture.toolId,
+      const result = await runApiVerificationProbe({
+        probeId: "tool-calling",
+        requestProfile: fixture.toolId,
+        apiType:
+          fixture.toolId === "claude"
+            ? "anthropic"
+            : fixture.toolId === "codex"
+              ? "openai"
+              : "google",
         baseUrl,
         apiKey: "sk-mode-fixture",
         requestHeaders: { "x-client": "cli-credential" },
@@ -70,12 +77,10 @@ describe.each(cliFixtures)("$toolId verification modes", (fixture) => {
         { path: endpoint.replace("{model}", "mode-test"), streaming },
       ])
       expect(result).toMatchObject({
-        id: fixture.toolId,
-        probeId: "tool-calling",
+        id: "tool-calling",
         status: "fail",
         mode: expectedMode,
         summary: rejection,
-        input: { endpoint },
       })
       expect(headers).toHaveLength(1)
       expect(headers[0]?.get("x-client")).toBe("cli-credential")

@@ -122,6 +122,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           >
             <div className="pr-8">
               <VerificationDialogHeader
+                portalContainer={view.popoverPortalContainer ?? undefined}
                 title={
                   <h2
                     id="api-check-modal-title"
@@ -171,6 +172,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
 
           <div
             ref={refs.scrollContainerRef}
+            data-verification-scroll
             data-testid={WEB_AI_API_CHECK_TEST_IDS.scrollContainer}
             className="py-density-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6"
           >
@@ -382,7 +384,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     <div>
                       <VerificationRequestProfileSelect
                         value={view.requestProfile}
-                        enhanced={view.requestProfileEnhanced}
+                        apiType={view.apiType}
                         onChange={actions.setRequestProfile}
                         disabled={!view.canClose}
                         portalContainer={
@@ -569,7 +571,11 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   <Notice tone="info" description={view.testStoppedMessage} />
                 ) : null}
               </div>
-              <VerificationTestSection>
+              <VerificationTestSection
+                tools={
+                  <VerificationToolsPanel controller={view.verificationTools} />
+                }
+              >
                 <ApiCheckProbeList
                   t={t}
                   probes={view.probes}
@@ -579,7 +585,6 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   onRunProbe={actions.runProbe}
                   onStopProbe={actions.stopProbe}
                 />
-                <VerificationToolsPanel controller={view.verificationTools} />
               </VerificationTestSection>
             </div>
           </div>

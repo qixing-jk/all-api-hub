@@ -31,8 +31,8 @@
     "saveToApiProfiles": "Speichern und mit API-Anmeldedaten verknüpfen",
     "showKey": "Schlüssel anzeigen",
     "useInCherry": "Verwendung in Cherry Studio",
-    "verifyApi": "API überprüfen",
-    "verifyCliSupport": "Überprüfen Sie die CLI-Unterstützung"
+    "verifyApi": "API testen",
+    "verifyCliSupport": "CLI-Kompatibilitätstest"
   },
   "actionToolbar": {
     "apiCredential": "API-Anmeldedaten",
@@ -367,8 +367,8 @@
     "serviceCredentialCopied": "Serviceschlüssel in Zwischenablage kopiert",
     "serviceCredentialRotated": "Serviceschlüssel-Reset",
     "serviceCredentialRotateFailed": "Dienstschlüssel konnte nicht zurückgesetzt werden",
-    "verifyApiFailed": "Fehler beim Öffnen der API-Verifizierung",
-    "verifyCliSupportFailed": "Fehler beim Öffnen der CLI-Kompatibilitätsüberprüfung"
+    "verifyApiFailed": "API-Tests konnten nicht geöffnet werden",
+    "verifyCliSupportFailed": "CLI-Kompatibilitätstest konnte nicht geöffnet werden"
   },
   "native": {
     "actions": {

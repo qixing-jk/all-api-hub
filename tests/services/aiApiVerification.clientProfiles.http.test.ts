@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
-import { runCliSupportTool } from "~/services/verification/cliSupportVerification"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://cli-profile.example.invalid"
@@ -63,26 +62,25 @@ describe("verification CLI request profiles", () => {
       apiType: "openai-compatible",
       probeId: "text-generation",
       requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
-    },
-    {
-      apiType: "openai",
-      probeId: "embedding",
-      requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+      path: "/v1/chat/completions",
     },
     {
       apiType: "anthropic",
       probeId: "text-generation",
       requestProfile: API_VERIFICATION_REQUEST_PROFILES.Gemini,
+      path: "/v1/messages",
     },
   ] as const)(
-    "rejects an incompatible $requestProfile / $apiType / $probeId before sending a request",
+    "attempts the user's $requestProfile / $apiType combination without replacing the configuration",
     async (selection) => {
       let requests = 0
       server.use(
-        http.all(baseUrl + "/*", () => {
+        http.all(baseUrl + "/*", ({ request }) => {
           requests++
+          expect(new URL(request.url).pathname).toBe(selection.path)
+          expect(request.headers.get("x-user-config")).toBe("preserved")
           return HttpResponse.json(
-            { error: { message: "Must not dispatch" } },
+            { error: { message: "Fixture protocol rejected" } },
             { status: 400 },
           )
         }),
@@ -93,14 +91,93 @@ describe("verification CLI request profiles", () => {
         apiKey: "sk-test",
         modelId: "test",
         mode: "non-streaming",
+        requestProfileEnhanced: true,
+        requestHeaders: { "x-user-config": "preserved" },
       })
       expect(result).toMatchObject({
-        status: "unsupported",
+        status: "fail",
         requestProfile: selection.requestProfile,
+        requestProfileEnhanced: true,
       })
-      expect(requests).toBe(0)
+      expect(requests).toBe(1)
     },
   )
+
+  it.each([
+    ["embedding", "/v1/embeddings"],
+    ["rerank", "/v1/rerank"],
+    ["image-generation", "/v1/images/generations"],
+    ["video-generation", "/v1/video/generations"],
+    ["decision", "/v1/decisions"],
+  ] as const)(
+    "dispatches %s with the selected client configuration and reports an upstream failure",
+    async (probeId, path) => {
+      const received: Array<{ path: string; originator: string | null }> = []
+      server.use(
+        http.post(`${baseUrl}/*`, ({ request }) => {
+          received.push({
+            path: new URL(request.url).pathname,
+            originator: request.headers.get("originator"),
+          })
+          return HttpResponse.json(
+            { error: { message: "Fixture capability unavailable" } },
+            { status: 400 },
+          )
+        }),
+      )
+      const result = await runApiVerificationProbe({
+        apiType: "openai",
+        probeId,
+        requestProfile: "codex",
+        requestProfileEnhanced: true,
+        mode: "non-streaming",
+        baseUrl,
+        apiKey: "synthetic-key",
+        modelId: "test-model",
+      })
+      expect(received).toEqual([{ path, originator: "codex_cli_rs" }])
+      expect(result).toMatchObject({
+        status: "fail",
+        requestProfile: "codex",
+        requestProfileEnhanced: true,
+      })
+    },
+  )
+
+  it("allows a simulated embedding request while retaining native protocol checks", async () => {
+    let requests = 0
+    server.use(
+      http.post(`${baseUrl}/v1/embeddings`, ({ request }) => {
+        requests++
+        expect(request.headers.get("originator")).toBe("codex_cli_rs")
+        return HttpResponse.json({ data: [{ embedding: [0.2, 0.4, 0.6] }] })
+      }),
+    )
+    const params = {
+      baseUrl,
+      apiKey: "synthetic-key",
+      probeId: "embedding" as const,
+      modelId: "embedding-model",
+      mode: "non-streaming" as const,
+    }
+    const accepted = await runApiVerificationProbe({
+      ...params,
+      apiType: "openai",
+      requestProfile: "codex",
+    })
+    expect(accepted).toMatchObject({ status: "pass", requestProfile: "codex" })
+    expect(requests).toBe(1)
+    const unsupported = await runApiVerificationProbe({
+      ...params,
+      apiType: "anthropic",
+      requestProfile: "claude",
+    })
+    expect(unsupported).toMatchObject({
+      status: "unsupported",
+      summaryKey: "verifyDialog.summaries.embeddingUnsupportedAnthropic",
+    })
+    expect(requests).toBe(1)
+  })
 
   it("lets ordinary text tests opt into a Codex request while leaving the default ordinary", async () => {
     const requests: Array<{ headers: Headers; body: Record<string, unknown> }> =
@@ -316,7 +393,7 @@ describe("verification CLI request profiles", () => {
       })),
     ),
   )(
-    "enables the $toolId request profile by default in CLI verification",
+    "enables the $toolId request profile for API tool calling",
     async ({ toolId, path, ua, requestProfileEnhanced }) => {
       let capture: { headers: Headers; body: Record<string, any> } | undefined
       server.use(
@@ -339,8 +416,15 @@ describe("verification CLI request profiles", () => {
           )
         }),
       )
-      const result = await runCliSupportTool({
-        toolId: toolId as "codex" | "claude" | "gemini",
+      const result = await runApiVerificationProbe({
+        probeId: "tool-calling",
+        requestProfile: toolId as "codex" | "claude" | "gemini",
+        apiType:
+          toolId === "claude"
+            ? "anthropic"
+            : toolId === "codex"
+              ? "openai"
+              : "google",
         requestProfileEnhanced,
         baseUrl,
         apiKey: "sk-cli-test",
@@ -349,8 +433,7 @@ describe("verification CLI request profiles", () => {
       })
       expect(capture?.headers.get("user-agent")).toContain(ua)
       expect(result).toMatchObject({
-        id: toolId,
-        probeId: "tool-calling",
+        id: "tool-calling",
         requestProfile: toolId,
         status: "fail",
       })

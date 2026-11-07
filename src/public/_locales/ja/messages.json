@@ -15,6 +15,6 @@
     "message": "選択したテキストを Redemption Assist で引き換える"
   },
   "context_menu_ai_api_check": {
-    "message": "AI API の機能可用性をすばやくテスト"
+    "message": "API をテスト"
   }
 }

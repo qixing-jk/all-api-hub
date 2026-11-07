@@ -63,7 +63,7 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 
 ### 🛠️ 我是进阶玩家 (Key 收藏家)
 - **密钥管理**：[将独立 URL+Key 保存到 API 凭据库](./api-credential-profiles.md)
-- **可用性测试**：[批量验证接口与 CLI 兼容性](./web-ai-api-check.md)
+- **可用性测试**：[网页 API 测试与客户端兼容性检查](./web-ai-api-check.md)
 - **跨端同步**：[配置 WebDAV 加密备份](./webdav-sync.md)
 
 ### 👑 我是站点管理员 (站长专区)

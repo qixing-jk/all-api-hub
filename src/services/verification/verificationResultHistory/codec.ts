@@ -16,6 +16,7 @@ import {
   API_VERIFICATION_HISTORY_STATUSES,
   API_VERIFICATION_HISTORY_TARGET_KINDS,
   API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
+  CONTEXT_CAPACITY_INCONCLUSIVE_REASONS,
   type ApiVerificationHistoryConfig,
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
@@ -437,9 +438,12 @@ export function coerceContextSummary(
       : {}),
     reason: value.reason as ContextCapacitySummary["reason"],
     ...(value.reason === CONTEXT_CAPACITY_REASONS.Inconclusive &&
-    (value.inconclusiveReason === "timeout" ||
-      value.inconclusiveReason === "empty-response" ||
-      value.inconclusiveReason === "interrupted")
+    (value.inconclusiveReason ===
+      CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Timeout ||
+      value.inconclusiveReason ===
+        CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.EmptyResponse ||
+      value.inconclusiveReason ===
+        CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Interrupted)
       ? { inconclusiveReason: value.inconclusiveReason }
       : {}),
     requests: value.requests,

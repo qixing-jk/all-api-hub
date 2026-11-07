@@ -1,10 +1,12 @@
 {
   "verifyDialog": {
+    "about": "測試說明",
     "actions": {
       "close": "關閉",
       "manageModelKey": "開啟模型對應金鑰",
       "retry": "重試",
-      "run": "開始驗證",
+      "runAll": "執行常規測試",
+      "runAllHint": "僅執行常規測試；繪圖與模型上下文測試需單獨啟動。",
       "running": "執行中...",
       "runOne": "執行",
       "stop": "停止",
@@ -29,9 +31,86 @@
     "generatedVideoPreview": "生成的影片預覽",
     "history": {
       "clear": "清除歷史",
-      "lastVerified": "最近驗證"
+      "lastVerified": "最近測試"
     },
-    "idleHint": "請選擇金鑰開始驗證；模型相關探測需要填寫模型 ID。",
+    "intro": {
+      "flow": "測試步驟",
+      "probes": {
+        "decision": "傳送測試請求，檢查決策模型是否傳回有效結果。",
+        "embedding": "傳送範例文字，檢查是否傳回有效向量及其維度。",
+        "image-generation": "提交繪圖提示詞，檢查圖像回應並預覽產生的圖片。",
+        "models": "檢查介面能否傳回模型清單，查看模型數量與名稱，並取得後續測試的建議模型。",
+        "rerank": "提交查詢和候選文件，檢查相關性排序結果。",
+        "structured-output": "要求模型依指定結構傳回資料，檢查結果是否符合約定格式。",
+        "text-generation": "傳送提示詞，檢查是否能產生文字，並查看傳回內容。",
+        "tool-calling": "讓模型選擇工具並提供呼叫參數，檢查工具呼叫是否符合預期。",
+        "video-generation": "提交影片產生任務，等待任務狀態並查看產生的影片。",
+        "web-search": "檢查介面能否使用網路搜尋，並查看搜尋結果與引用資訊。"
+      },
+      "startHint": "點選 <run>執行</run> 開始此項測試。",
+      "steps": {
+        "context-capacity": {
+          "input": "建立長文字",
+          "output": "記錄邊界",
+          "process": "多輪探測"
+        },
+        "decision": {
+          "input": "提交狀態",
+          "output": "檢查結果",
+          "process": "取得決策"
+        },
+        "embedding": {
+          "input": "範例文字",
+          "output": "檢查維度",
+          "process": "接收向量"
+        },
+        "image-generation": {
+          "input": "傳送提示詞",
+          "output": "預覽圖片",
+          "process": "接收影像"
+        },
+        "models": {
+          "input": "取得清單",
+          "output": "建議模型",
+          "process": "檢查模型"
+        },
+        "pelican": {
+          "input": "描述畫面",
+          "output": "人工看圖",
+          "process": "產生 SVG"
+        },
+        "rerank": {
+          "input": "查詢與文件",
+          "output": "檢查回傳項目",
+          "process": "請求重新排序"
+        },
+        "structured-output": {
+          "input": "指定結構",
+          "output": "驗證格式",
+          "process": "產生 JSON"
+        },
+        "text-generation": {
+          "input": "傳送提示詞",
+          "output": "檢查回覆",
+          "process": "接收文字"
+        },
+        "tool-calling": {
+          "input": "定義工具",
+          "output": "檢查參數",
+          "process": "請求呼叫"
+        },
+        "video-generation": {
+          "input": "提交影片任務",
+          "output": "預覽影片",
+          "process": "查詢任務狀態"
+        },
+        "web-search": {
+          "input": "發起搜尋",
+          "output": "查看引用",
+          "process": "檢查搜尋證據"
+        }
+      }
+    },
     "loadingRuntimeKeysHint": "正在載入金鑰...",
     "mediaPreviewUnavailable": "無法載入預覽。",
     "meta": {
@@ -56,7 +135,6 @@
       "streaming": "串流"
     },
     "noCompatibleRuntimeKeyHint": "目前沒有適用於此模型分組的金鑰。請在金鑰管理中建立或選擇可用分組的金鑰。",
-    "notRunYet": "尚未執行",
     "openGeneratedMedia": "開啟生成的媒體",
     "probes": {
       "decision": "決策模型",
@@ -73,15 +151,28 @@
     "requestProfiles": {
       "claude": "Claude Code",
       "codex": "Codex CLI",
-      "default": "不模擬（一般請求）",
+      "default": "一般 API",
       "enhancedBadge": "增強",
+      "enhancedCostHint": "可能增加輸入用量",
       "enhancedHint": "補充已知的身分提示詞、SDK 請求標頭、快取和工作階段特徵。可能增加輸入用量；不保證所有站點放行。",
       "enhancedLabel": "增強 CLI 模擬",
       "gemini": "Gemini CLI",
-      "hint": "模擬用戶端請求特徵，並切換至對應 API 協定；測試內容保持不變。"
+      "hint": "選擇用戶端會匹配其預設協定，之後仍可手動修改協定。模擬對應用戶端的 API 請求，不會啟動本機 CLI。",
+      "protocolMismatch": "與用戶端預設協定（{{apiType}}）不同，可能不相容。",
+      "shortcutHint": "已選擇 {{client}}，你可以直接執行測試，或切換其他用戶端。",
+      "shortcutTooltip": "測試此 API 對 CLI 用戶端的支援情況"
     },
     "requiresModelId": "請輸入模型 ID 後執行該測試。",
+    "sections": {
+      "onDemand": "按需測試",
+      "onDemandHint": "單獨執行",
+      "routine": "常規測試"
+    },
     "selectedRuntimeKeyIncompatibleHint": "目前選擇的金鑰不適用於此模型分組。請先選擇適用的金鑰後再測試。",
+    "source": {
+      "account": "帳號：{{name}}",
+      "profile": "憑據：{{name}}"
+    },
     "status": {
       "emptyResponse": "未傳回正文",
       "fail": "失敗",
@@ -92,7 +183,7 @@
       "stopped": "已停止",
       "timeout": "請求逾時",
       "unsupported": "不支援",
-      "unverified": "未驗證"
+      "unverified": "未測試"
     },
     "summaries": {
       "decisionSucceeded": "決策模型探測測試成功。",
@@ -140,7 +231,7 @@
       "webSearchUnsupportedAnthropic": "Anthropic 介面不支援聯網搜尋探測。",
       "webSearchUnsupportedForApiType": "當前介面型別不支援聯網搜尋探測。"
     },
-    "title": "介面驗證",
+    "title": "API 測試",
     "tools": {
       "agent": {
         "calls": "工具呼叫記錄",
@@ -197,7 +288,6 @@
       "errors": {
         "unexpected": "請求失敗：{{message}}"
       },
-      "manualBadge": "按需執行",
       "pelican": {
         "analysis": "{{shapes}} 個形狀 · {{wheels}} 個圓形/橢圓 · viewBox {{viewBox}}",
         "description": "讓模型畫一隻騎腳踏車的鵜鶘 SVG，方便你直接比對畫風與結構；結論由人工判斷。",
@@ -217,14 +307,15 @@
       },
       "prompts": {
         "editorLabel": "{{probe}} 提示詞",
+        "label": "提示詞",
         "resetOne": "回復此項預設",
         "saveFailed": "儲存提示詞失敗：{{message}}",
-        "sharedHint": "已儲存的提示詞對所有驗證入口生效。"
+        "sharedHint": "已儲存的提示詞對所有測試入口生效。"
       },
       "stop": "停止",
       "stopped": "已停止，本次結果未記錄。"
     },
     "unsupportedProbeForApiType": "當前介面型別不支援 {{probe}} 探測。",
-    "warning": "測試僅反映目前的介面、模型和請求設定；通過不代表完整相容，失敗請查看執行結果。"
+    "warning": "結果僅適用於本次測試的介面、模型和請求設定。"
   }
 }

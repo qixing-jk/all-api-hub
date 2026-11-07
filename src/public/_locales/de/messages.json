@@ -15,6 +15,6 @@
     "message": "Ausgewählten Text mit Redemption Assist einlösen"
   },
   "context_menu_ai_api_check": {
-    "message": "Funktion und Verfügbarkeit von KI-APIs schnell testen"
+    "message": "API testen"
   }
 }

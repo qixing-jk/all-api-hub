@@ -171,8 +171,10 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={onVerifyCliSupport}
-                title={t("modelList:actions.verifyCliSupport")}
                 aria-label={t("modelList:actions.verifyCliSupport")}
+                tooltip={t(
+                  "aiApiVerification:verifyDialog.requestProfiles.shortcutTooltip",
+                )}
                 data-testid={MODEL_LIST_TEST_IDS.verifyCliSupportButton}
                 className="shrink-0"
                 analyticsAction={

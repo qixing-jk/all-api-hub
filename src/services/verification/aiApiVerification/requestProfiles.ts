@@ -25,7 +25,7 @@ export function isVerificationRequestProfile(
   )
 }
 
-/** CLI profiles own a protocol; changing identity must not keep another wire format. */
+/** Default protocol applied when selecting a client preset; users may override it. */
 export function getVerificationRequestProfileApiType(
   profile: ApiVerificationRequestProfile,
 ) {

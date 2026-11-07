@@ -93,15 +93,15 @@ When a source supports multiple user groups, use the group filter to limit parti
 
 Click the verification icon on a model card:
 
-- **Verify API**: Send one probe to check whether the model or endpoint currently works and whether its response matches expectations.
-- **Verify CLI Compatibility**: Evaluate whether the model is suitable for CLI tools, such as support for streaming and text generation.
+- **Test API**: Send one probe to check whether the model or endpoint currently works and whether its response matches expectations.
+- **CLI compatibility test**: Evaluate whether the model is suitable for CLI tools, such as support for streaming and text generation.
 
-In the **`Verify API`** dialog, choose **`Streaming`** (the default) or **`Non-streaming`** under **`Test mode`**. Generation tests use the selected mode, and their results and newly saved history show that mode. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically. Fetching the model list is unaffected by this option.
+In the **`API Testing`** dialog, choose **`Streaming`** (the default) or **`Non-streaming`** under **`Test mode`**. Generation tests use the selected mode, and their results and newly saved history show that mode. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically. Fetching the model list is unaffected by this option.
 
-The **`Verify CLI Compatibility`** dialog also offers **`Streaming`** (the default) and **`Non-streaming`**. Each CLI keeps its corresponding API type for the tool-calling probe. Results show the selected mode, and failures do not trigger an automatic mode switch.
+**`CLI compatibility test`** opens the same **`API Testing`** dialog with a client simulation preset. You can still choose the client, API type and **`Streaming`** (the default) or **`Non-streaming`** mode. Results show the selected mode, and failures do not trigger an automatic mode switch.
 
 > - Verification is a **one-time probe**. It does not guarantee long-term availability or permanent failure.
-> - CLI compatibility verification **does not launch a real external CLI**. It performs a protocol-level simulation only.
+> - CLI compatibility testing **does not launch a real external CLI**. It performs a protocol-level simulation only.
 
 ### 6. Advanced Verification: Drawing Test and Prompts
 
@@ -109,7 +109,7 @@ Ordinary verification history retains status, summary and latency, without raw i
 
 Verification parameters stay in the body in a compact grid. Test scope guidance and existing verification summaries appear in the dialog header without a separate colored notice. Each test separates **`Edit prompt`** from **`Execution result`**, which opens automatically when a run completes. Text responses are shown directly; input parameters and raw output can be expanded. The editor shows the current prompt, and switching to results preserves unsaved edits. Tests apply to the current API, model and request settings and do not guarantee full compatibility.
 
-The **`Verify API`**, **`Verify CLI compatibility`** and web API check dialogs show a visible **`Drawing test`** card. It runs only when you press its run button, never with **`Start verification`** or bulk testing, because each action spends real model calls.
+The **`Test API`**, **`CLI compatibility test`** and web API check dialogs show a visible **`Drawing test`** card. It runs only when you press its run button, never with **`Run routine tests`** or bulk testing, because each action spends real model calls.
 
 **`Drawing test`** asks the model to draw a pelican riding a bicycle as SVG, so you can compare style and structure directly; the judgement is yours. The dialog only extracts the SVG, counts shapes, and refuses to render answers containing scripts or external references.
 

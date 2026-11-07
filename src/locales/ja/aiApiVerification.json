@@ -1,10 +1,12 @@
 {
   "verifyDialog": {
+    "about": "テストについて",
     "actions": {
       "close": "閉じる",
       "manageModelKey": "モデル対応キーを開く",
       "retry": "再試行",
-      "run": "実行",
+      "runAll": "通常テストを実行",
+      "runAllHint": "通常テストのみ実行します。描画とモデルコンテキストのテストは個別に開始してください。",
       "running": "実行中...",
       "runOne": "実行",
       "stop": "停止",
@@ -29,9 +31,86 @@
     "generatedVideoPreview": "生成された動画のプレビュー",
     "history": {
       "clear": "履歴をクリア",
-      "lastVerified": "前回の検証"
+      "lastVerified": "最終テスト"
     },
-    "idleHint": "検証を開始するにはキーを選択してください。モデル依存のプローブにはモデル ID が必要です。",
+    "intro": {
+      "flow": "テストの手順",
+      "probes": {
+        "decision": "テストリクエストを送信し、判断モデルが有効な結果を返すか確認します。",
+        "embedding": "サンプルテキストを送信し、返されたベクトルとその次元を確認します。",
+        "image-generation": "画像用のプロンプトを送信し、応答を確認して生成画像をプレビューします。",
+        "models": "APIがモデル一覧を返せるか確認し、モデルの名前と件数、後続のテストで使う推奨モデルを取得します。",
+        "rerank": "クエリと候補文書を送信し、関連度による順位を確認します。",
+        "structured-output": "指定した構造のデータをモデルに要求し、結果が形式に従っているか確認します。",
+        "text-generation": "プロンプトを送信し、テキスト生成と返された内容を確認します。",
+        "tool-calling": "モデルにツールと引数を選ばせ、ツール呼び出しを確認します。",
+        "video-generation": "動画生成タスクを送信し、状態を待って生成された動画を確認します。",
+        "web-search": "APIがウェブ検索を利用できるか確認し、検索結果と引用を確認します。"
+      },
+      "startHint": "<run>実行</run> を選択して、このテストを開始します。",
+      "steps": {
+        "context-capacity": {
+          "input": "長文を作成",
+          "output": "境界を記録",
+          "process": "繰り返しテスト"
+        },
+        "decision": {
+          "input": "状態を送信",
+          "output": "結果を確認",
+          "process": "判断を取得"
+        },
+        "embedding": {
+          "input": "サンプル文",
+          "output": "次元を確認",
+          "process": "ベクトル受信"
+        },
+        "image-generation": {
+          "input": "プロンプト送信",
+          "output": "画像をプレビュー",
+          "process": "画像を受信"
+        },
+        "models": {
+          "input": "一覧を取得",
+          "output": "候補を選択",
+          "process": "モデルを確認"
+        },
+        "pelican": {
+          "input": "場面を記述",
+          "output": "目視で確認",
+          "process": "SVG を生成"
+        },
+        "rerank": {
+          "input": "クエリと文書",
+          "output": "返却項目を確認",
+          "process": "再順位付け要求"
+        },
+        "structured-output": {
+          "input": "構造を指定",
+          "output": "形式を検証",
+          "process": "JSON を生成"
+        },
+        "text-generation": {
+          "input": "プロンプト送信",
+          "output": "応答を確認",
+          "process": "テキスト受信"
+        },
+        "tool-calling": {
+          "input": "ツールを定義",
+          "output": "引数を確認",
+          "process": "呼び出し要求"
+        },
+        "video-generation": {
+          "input": "動画タスク送信",
+          "output": "動画をプレビュー",
+          "process": "状態を照会"
+        },
+        "web-search": {
+          "input": "検索を実行",
+          "output": "引用を表示",
+          "process": "検索の証拠を確認"
+        }
+      }
+    },
     "loadingRuntimeKeysHint": "キーを読み込み中...",
     "mediaPreviewUnavailable": "プレビューを読み込めませんでした。",
     "meta": {
@@ -41,7 +120,7 @@
       "mode": "テスト方式",
       "model": "モデル",
       "modelPlaceholder": "モデル ID を入力",
-      "requestProfile": "クライアントの模擬",
+      "requestProfile": "クライアントシミュレーション",
       "runtimeKey": "キー",
       "runtimeKeyIncompatible": "このモデルでは使用不可",
       "runtimeKeyPlaceholder": "キーを選択"
@@ -56,7 +135,6 @@
       "streaming": "ストリーミング"
     },
     "noCompatibleRuntimeKeyHint": "このモデルのグループで使用できるキーがありません。キー管理で有効なグループのキーを作成するか選択してください。",
-    "notRunYet": "未実行",
     "openGeneratedMedia": "生成されたメディアを開く",
     "probes": {
       "decision": "ディシジョン",
@@ -73,15 +151,28 @@
     "requestProfiles": {
       "claude": "Claude Code",
       "codex": "Codex CLI",
-      "default": "なし（通常のリクエスト）",
+      "default": "通常の API",
       "enhancedBadge": "強化",
+      "enhancedCostHint": "入力使用量が増える場合があります",
       "enhancedHint": "既知の識別プロンプト、SDK ヘッダー、キャッシュ、セッション情報を追加します。入力使用量が増える場合があり、サイトでの許可は保証されません。",
       "enhancedLabel": "CLI シミュレーションの強化",
       "gemini": "Gemini CLI",
-      "hint": "クライアントのリクエスト形式を模擬し、対応する API プロトコルに切り替えます。テスト内容は変わりません。"
+      "hint": "クライアントを選択すると、既定のプロトコルが設定されます。後から手動で変更することもできます。クライアントの API リクエストを模擬し、端末上の CLI は起動しません。",
+      "protocolMismatch": "クライアントの既定プロトコル（{{apiType}}）と異なるため、互換性がない場合があります。",
+      "shortcutHint": "{{client}} が選択されています。テストを実行するか、別のクライアントに切り替えられます。",
+      "shortcutTooltip": "この API の CLI クライアントへの対応状況をテストします"
     },
     "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
+    "sections": {
+      "onDemand": "個別テスト",
+      "onDemandHint": "個別に実行",
+      "routine": "通常テスト"
+    },
     "selectedRuntimeKeyIncompatibleHint": "選択中のキーはこのモデルのグループでは使用できません。互換性のあるキーを選択してから検証してください。",
+    "source": {
+      "account": "アカウント：{{name}}",
+      "profile": "認証情報：{{name}}"
+    },
     "status": {
       "emptyResponse": "本文なし",
       "fail": "失敗",
@@ -92,7 +183,7 @@
       "stopped": "停止済み",
       "timeout": "リクエストがタイムアウト",
       "unsupported": "未対応",
-      "unverified": "未検証"
+      "unverified": "未テスト"
     },
     "summaries": {
       "decisionSucceeded": "ディシジョン検証に成功しました。",
@@ -140,7 +231,7 @@
       "webSearchUnsupportedAnthropic": "Anthropic エンドポイントでは Web 検索プローブはサポートされていません。",
       "webSearchUnsupportedForApiType": "この API 種別では Web 検索プローブはサポートされていません。"
     },
-    "title": "API 検証",
+    "title": "API テスト",
     "tools": {
       "agent": {
         "calls": "ツール実行履歴",
@@ -197,7 +288,6 @@
       "errors": {
         "unexpected": "リクエストに失敗しました：{{message}}"
       },
-      "manualBadge": "任意実行",
       "pelican": {
         "analysis": "図形 {{shapes}} 個 · 円/楕円 {{wheels}} 個 · viewBox {{viewBox}}",
         "description": "自転車に乗ったペリカンの SVG を描かせ、見比べられるようにします。判定は目視で行います。",
@@ -217,14 +307,15 @@
       },
       "prompts": {
         "editorLabel": "{{probe}} のプロンプト",
+        "label": "プロンプト",
         "resetOne": "この項目を既定に戻す",
         "saveFailed": "プロンプトを保存できませんでした：{{message}}",
-        "sharedHint": "保存したプロンプトはすべての検証入口で共有されます。"
+        "sharedHint": "保存したプロンプトはすべてのテスト入口で共有されます。"
       },
       "stop": "停止",
       "stopped": "途中で停止したため、結果は保存していません。"
     },
     "unsupportedProbeForApiType": "{{probe}} プローブはこの API 種別ではサポートされていません。",
-    "warning": "結果は現在の API、モデル、リクエスト設定に対するものです。成功しても完全な互換性は保証されません。失敗した場合は実行結果を確認してください。"
+    "warning": "結果は、このテストで使用した API、モデル、リクエスト設定にのみ適用されます。"
   }
 }

@@ -15,6 +15,6 @@
     "message": "Resgatar a seleção com o Assistente de Resgate"
   },
   "context_menu_ai_api_check": {
-    "message": "Testar rapidamente a disponibilidade funcional das APIs de IA"
+    "message": "Testar API"
   }
 }

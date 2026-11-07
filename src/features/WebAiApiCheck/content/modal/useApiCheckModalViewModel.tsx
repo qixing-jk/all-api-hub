@@ -597,11 +597,7 @@ export function useApiCheckModalViewModel() {
       removeBaseUrlHistory,
       setApiKey,
       setApiKeyVisible,
-      setApiType: (next: ApiVerificationApiType) => {
-        setRequestProfileEnhanced(false)
-        setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
-        setApiType(next)
-      },
+      setApiType,
       setRequestProfileEnhanced: (value: boolean) => {
         if (!canClose) return
         setRequestProfileEnhanced(value)

@@ -101,12 +101,14 @@ export function useVerifyApiDialogViewModel({
   isOpen,
   account,
   initialModelId,
+  initialRequestProfile,
   initialSupportedEndpointTypes,
   modelEnableGroups,
 }: Pick<
   VerifyApiDialogProps,
   | "isOpen"
   | "account"
+  | "initialRequestProfile"
   | "initialModelId"
   | "initialSupportedEndpointTypes"
   | "modelEnableGroups"
@@ -137,6 +139,7 @@ export function useVerifyApiDialogViewModel({
     API_VERIFICATION_MODES.Streaming,
   )
   const [requestProfileEnhanced, setRequestProfileEnhanced] = useState(false)
+  const [showRequestProfileHint, setShowRequestProfileHint] = useState(false)
   const [requestProfile, setRequestProfile] =
     useState<ApiVerificationRequestProfile>(
       API_VERIFICATION_REQUEST_PROFILES.Default,
@@ -553,13 +556,22 @@ export function useVerifyApiDialogViewModel({
     setModelId(trimmedModelId)
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
     setRequestProfileEnhanced(false)
-    setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
+    setRequestProfile(
+      initialRequestProfile ?? API_VERIFICATION_REQUEST_PROFILES.Default,
+    )
+    setShowRequestProfileHint(
+      !!initialRequestProfile &&
+        initialRequestProfile !== API_VERIFICATION_REQUEST_PROFILES.Default,
+    )
     applyPersistedSummary(null)
 
-    const initialApiType = resolveVerificationApiType({
-      modelId: trimmedModelId,
-      supportedEndpointTypes: initialSupportedEndpointTypes,
-    })
+    const initialApiType =
+      (initialRequestProfile &&
+        getVerificationRequestProfileApiType(initialRequestProfile)) ||
+      resolveVerificationApiType({
+        modelId: trimmedModelId,
+        supportedEndpointTypes: initialSupportedEndpointTypes,
+      })
 
     setApiType(initialApiType)
     replaceProbes(buildProbeState(initialApiType, null, modelModality))
@@ -583,6 +595,7 @@ export function useVerifyApiDialogViewModel({
     account.id,
     historyTarget,
     initialModelId,
+    initialRequestProfile,
     initialSupportedEndpointTypes,
     isOpen,
   ])
@@ -599,11 +612,11 @@ export function useVerifyApiDialogViewModel({
     setSelectedRuntimeKeyId,
     apiType,
     setApiType: (next: ApiVerificationApiType) => {
-      setRequestProfileEnhanced(false)
-      setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
+      setShowRequestProfileHint(false)
       setApiType(next)
     },
     requestProfile,
+    showRequestProfileHint,
     requestProfileEnhanced,
     setRequestProfileEnhanced: (value: boolean) => {
       if (!canClose) return
@@ -613,6 +626,7 @@ export function useVerifyApiDialogViewModel({
     },
     setRequestProfile: (next: ApiVerificationRequestProfile) => {
       if (!canClose) return
+      setShowRequestProfileHint(false)
       const nextApiType = getVerificationRequestProfileApiType(next) ?? apiType
       setApiType(nextApiType)
       setRequestProfileEnhanced(false)

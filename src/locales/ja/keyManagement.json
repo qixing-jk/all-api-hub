@@ -29,8 +29,8 @@
     "saveToApiProfiles": "保存して API 認証情報に関連付け",
     "showKey": "キーを表示",
     "useInCherry": "Cherry Studio で使う",
-    "verifyApi": "API を検証",
-    "verifyCliSupport": "CLI 対応を検証"
+    "verifyApi": "API をテスト",
+    "verifyCliSupport": "CLI 互換性テスト"
   },
   "actionToolbar": {
     "apiCredential": "API 認証情報",
@@ -357,8 +357,8 @@
     "serviceCredentialCopied": "サービスキーをクリップボードにコピーしました",
     "serviceCredentialRotated": "サービスキーをリセットしました",
     "serviceCredentialRotateFailed": "サービスキーのリセットに失敗しました",
-    "verifyApiFailed": "API 検証を開けませんでした",
-    "verifyCliSupportFailed": "CLI 互換性検証を開けませんでした"
+    "verifyApiFailed": "API テストを開けませんでした",
+    "verifyCliSupportFailed": "CLI 互換性テストを開けませんでした"
   },
   "native": {
     "actions": {

@@ -1561,23 +1561,23 @@ describe("ApiCredentialProfiles page", () => {
     )
 
     expect(
-      await screen.findByText("cliSupportVerification:verifyDialog.title"),
+      await screen.findByText("aiApiVerification:verifyDialog.title"),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("combobox", {
-        name: "cliSupportVerification:verifyDialog.meta.model",
+        name: "aiApiVerification:verifyDialog.meta.model",
       }),
     ).toBeInTheDocument()
     await user.click(
       screen.getByRole("combobox", {
-        name: "cliSupportVerification:verifyDialog.meta.model",
+        name: "aiApiVerification:verifyDialog.meta.model",
       }),
     )
     expect(
       await screen.findByRole("option", { name: "gpt-4o-mini" }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText("cliSupportVerification:verifyDialog.meta.runtimeKey"),
+      screen.queryByText("aiApiVerification:verifyDialog.meta.runtimeKey"),
     ).not.toBeInTheDocument()
   })
 

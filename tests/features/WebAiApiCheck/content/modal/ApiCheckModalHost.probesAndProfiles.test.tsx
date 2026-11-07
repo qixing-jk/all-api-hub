@@ -112,7 +112,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -180,7 +180,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -290,7 +290,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -395,7 +395,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
     await user.click(
@@ -462,7 +462,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
     await user.click(
@@ -531,7 +531,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -599,7 +599,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -1288,7 +1288,12 @@ describe("ApiCheckModalHost", () => {
       )
       await user.click(
         within(probeCard).getByRole("button", {
-          name: "webAiApiCheck:modal.actions.runOne",
+          name: "aiApiVerification:verifyDialog.actions.runOne",
+        }),
+      )
+      await user.click(
+        within(probeCard).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
         }),
       )
       expect(
@@ -1423,7 +1428,12 @@ describe("ApiCheckModalHost", () => {
     )
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
       }),
     )
     expect(
@@ -1505,7 +1515,7 @@ describe("ApiCheckModalHost", () => {
     )
     await user.click(
       within(modelsProbeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
     expect(
@@ -1528,7 +1538,12 @@ describe("ApiCheckModalHost", () => {
     )
     await user.click(
       within(textGenerationProbeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+    await user.click(
+      within(textGenerationProbeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
       }),
     )
     expect(
@@ -2364,6 +2379,11 @@ describe("ApiCheckModalHost", () => {
       await screen.findByText("webAiApiCheck:modal.actions.test"),
     )
 
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
+    )
     expect(
       await within(probeCard).findByText(
         "webAiApiCheck:modal.errors.runProbeFailed",
@@ -2477,7 +2497,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -2537,7 +2557,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -2928,7 +2948,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 

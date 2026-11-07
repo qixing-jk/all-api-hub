@@ -38,8 +38,8 @@
     "keyForModel": "Clave para este modelo",
     "openSelectedAccountKeys": "Administrar claves de cuenta",
     "openSite": "Abrir sitio",
-    "verifyApi": "Verificar API",
-    "verifyCliSupport": "Verificar compatibilidad con CLI"
+    "verifyApi": "Probar API",
+    "verifyCliSupport": "Prueba de compatibilidad con CLI"
   },
   "allAccountGroups": "Todos los grupos",
   "allAccounts": "Todas las cuentas",

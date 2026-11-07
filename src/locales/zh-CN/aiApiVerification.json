@@ -1,10 +1,12 @@
 {
   "verifyDialog": {
+    "about": "测试说明",
     "actions": {
       "close": "关闭",
       "manageModelKey": "打开模型对应密钥",
       "retry": "重试",
-      "run": "开始验证",
+      "runAll": "运行常规测试",
+      "runAllHint": "仅运行常规测试；绘图和模型上下文测试需单独启动。",
       "running": "运行中...",
       "runOne": "运行",
       "stop": "停止",
@@ -29,9 +31,86 @@
     "generatedVideoPreview": "生成的视频预览",
     "history": {
       "clear": "清除历史",
-      "lastVerified": "最近验证"
+      "lastVerified": "最近测试"
     },
-    "idleHint": "请选择密钥开始验证；模型相关探测需要填写模型 ID。",
+    "intro": {
+      "flow": "测试步骤",
+      "probes": {
+        "decision": "发送测试请求，检查决策模型是否返回有效结果。",
+        "embedding": "发送示例文本，检查是否返回有效向量及其维度。",
+        "image-generation": "提交绘图提示词，检查图像响应并预览生成的图片。",
+        "models": "检查接口能否返回模型列表，查看模型数量与名称，并获取后续测试的建议模型。",
+        "rerank": "提交查询和候选文档，检查相关性排序结果。",
+        "structured-output": "要求模型按指定结构返回数据，检查结果是否符合约定格式。",
+        "text-generation": "发送提示词，检查是否能生成文本，并查看返回内容。",
+        "tool-calling": "让模型选择工具并提供调用参数，检查工具调用是否符合预期。",
+        "video-generation": "提交视频生成任务，等待任务状态并查看生成的视频。",
+        "web-search": "检查接口能否使用联网搜索，并查看搜索结果与引用信息。"
+      },
+      "startHint": "点击 <run>运行</run> 开始本项测试。",
+      "steps": {
+        "context-capacity": {
+          "input": "构造长文本",
+          "output": "记录边界",
+          "process": "多轮探测"
+        },
+        "decision": {
+          "input": "提交状态",
+          "output": "检查结果",
+          "process": "获取决策"
+        },
+        "embedding": {
+          "input": "示例文本",
+          "output": "检查维度",
+          "process": "接收向量"
+        },
+        "image-generation": {
+          "input": "发送提示词",
+          "output": "预览图片",
+          "process": "接收图像"
+        },
+        "models": {
+          "input": "获取列表",
+          "output": "建议模型",
+          "process": "检查模型"
+        },
+        "pelican": {
+          "input": "描述画面",
+          "output": "人工看图",
+          "process": "生成 SVG"
+        },
+        "rerank": {
+          "input": "查询与文档",
+          "output": "检查返回项",
+          "process": "请求重排"
+        },
+        "structured-output": {
+          "input": "指定结构",
+          "output": "校验格式",
+          "process": "生成 JSON"
+        },
+        "text-generation": {
+          "input": "发送提示词",
+          "output": "检查回复",
+          "process": "接收文本"
+        },
+        "tool-calling": {
+          "input": "定义工具",
+          "output": "检查参数",
+          "process": "请求调用"
+        },
+        "video-generation": {
+          "input": "提交视频任务",
+          "output": "预览视频",
+          "process": "查询任务状态"
+        },
+        "web-search": {
+          "input": "发起搜索",
+          "output": "查看引用",
+          "process": "检查搜索证据"
+        }
+      }
+    },
     "loadingRuntimeKeysHint": "正在加载密钥...",
     "mediaPreviewUnavailable": "无法加载预览。",
     "meta": {
@@ -56,7 +135,6 @@
       "streaming": "流式"
     },
     "noCompatibleRuntimeKeyHint": "当前没有适用于该模型分组的密钥。请在密钥管理中创建或选择可用分组的密钥。",
-    "notRunYet": "尚未运行",
     "openGeneratedMedia": "打开生成的媒体",
     "probes": {
       "decision": "决策模型",
@@ -73,15 +151,28 @@
     "requestProfiles": {
       "claude": "Claude Code",
       "codex": "Codex CLI",
-      "default": "不模拟（普通请求）",
+      "default": "普通 API",
       "enhancedBadge": "增强",
+      "enhancedCostHint": "可能增加输入用量",
       "enhancedHint": "补充已知的身份提示词、SDK 请求头、缓存和会话特征。可能增加输入用量；不保证所有站点放行。",
       "enhancedLabel": "增强 CLI 模拟",
       "gemini": "Gemini CLI",
-      "hint": "模拟客户端请求特征，并切换到对应 API 协议；测试内容保持不变。"
+      "hint": "选择客户端会匹配其默认协议，之后仍可手动修改协议。模拟对应客户端的 API 请求，不会启动本机 CLI。",
+      "protocolMismatch": "与客户端默认协议（{{apiType}}）不同，可能不兼容。",
+      "shortcutHint": "已选择 {{client}}，你可以直接运行测试，或切换其他客户端。",
+      "shortcutTooltip": "测试此 API 对 CLI 客户端的支持情况"
     },
     "requiresModelId": "请输入模型 ID 后运行该测试。",
+    "sections": {
+      "onDemand": "按需测试",
+      "onDemandHint": "单独运行",
+      "routine": "常规测试"
+    },
     "selectedRuntimeKeyIncompatibleHint": "当前选择的密钥不适用于该模型分组。请先选择适用的密钥后再测试。",
+    "source": {
+      "account": "账号：{{name}}",
+      "profile": "凭据：{{name}}"
+    },
     "status": {
       "emptyResponse": "未返回正文",
       "fail": "失败",
@@ -92,7 +183,7 @@
       "stopped": "已停止",
       "timeout": "请求超时",
       "unsupported": "不支持",
-      "unverified": "未验证"
+      "unverified": "未测试"
     },
     "summaries": {
       "decisionSucceeded": "决策模型探测测试成功。",
@@ -139,7 +230,7 @@
       "webSearchUnsupportedAnthropic": "Anthropic 接口不支持联网搜索探测。",
       "webSearchUnsupportedForApiType": "当前接口类型不支持联网搜索探测。"
     },
-    "title": "接口验证",
+    "title": "API 测试",
     "tools": {
       "agent": {
         "calls": "工具调用记录",
@@ -196,7 +287,6 @@
       "errors": {
         "unexpected": "请求失败：{{message}}"
       },
-      "manualBadge": "按需运行",
       "pelican": {
         "analysis": "{{shapes}} 个形状 · {{wheels}} 个圆形/椭圆 · viewBox {{viewBox}}",
         "description": "让模型画一只骑自行车的鹈鹕 SVG，方便你直接比对画风与结构；结论由人工判断。",
@@ -216,14 +306,15 @@
       },
       "prompts": {
         "editorLabel": "{{probe}} 提示词",
+        "label": "提示词",
         "resetOne": "恢复此项默认",
         "saveFailed": "保存提示词失败：{{message}}",
-        "sharedHint": "已保存的提示词对所有验证入口生效。"
+        "sharedHint": "已保存的提示词对所有测试入口生效。"
       },
       "stop": "停止",
       "stopped": "已停止，本次结果未记录。"
     },
     "unsupportedProbeForApiType": "当前接口类型不支持 {{probe}} 探测。",
-    "warning": "测试仅反映当前接口、模型和请求配置；通过不代表完整兼容，失败请查看执行结果。"
+    "warning": "结果仅适用于本次测试的接口、模型和请求配置。"
   }
 }

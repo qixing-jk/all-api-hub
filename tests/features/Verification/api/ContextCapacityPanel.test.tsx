@@ -6,6 +6,8 @@ import { expect, it, vi } from "vitest"
 
 import { ContextCapacityPanel } from "~/features/Verification/api/ContextCapacityPanel"
 import { useContextCapacity } from "~/features/Verification/api/useContextCapacity"
+import { VerificationTestSection } from "~/features/Verification/api/VerificationLayout"
+import { VerificationProbeDetails } from "~/features/Verification/api/VerificationProbeDetails"
 import zhCN from "~/locales/zh-CN/aiApiVerification.json"
 import {
   CONTEXT_ATTEMPT_FAILURE_REASONS,
@@ -18,7 +20,136 @@ import type {
 } from "~/services/verification/modelQuality/contextCapacityRun"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory/storage"
+import { CONTEXT_CAPACITY_INCONCLUSIVE_REASONS } from "~/services/verification/verificationResultHistory/types"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
+
+it("places context help before status without nesting it in the selection button", async () => {
+  const user = userEvent.setup()
+  const run = vi.fn()
+  const i18n = await createResourceTestI18n(
+    { "zh-CN": { aiApiVerification: zhCN } },
+    "zh-CN",
+  )
+  render(
+    <I18nextProvider i18n={i18n}>
+      <VerificationTestSection
+        tools={
+          <ContextCapacityPanel
+            controller={{
+              enabled: true,
+              canRun: true,
+              running: false,
+              stopped: false,
+              progress: null,
+              result: null,
+              error: null,
+              run,
+              stop: vi.fn(),
+            }}
+          />
+        }
+      >
+        <VerificationProbeDetails
+          label="Models"
+          heading={<span>Models</span>}
+        />
+      </VerificationTestSection>
+    </I18nextProvider>,
+  )
+  const select = screen.getByRole("button", { name: "模型上下文测试" })
+  const help = screen.getByRole("button", {
+    name: zhCN.verifyDialog.tools.context.about,
+  })
+  const status = within(
+    select.closest("[data-verification-summary]")! as HTMLElement,
+  ).getByText("待运行")
+  expect(
+    help.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+  expect(help.parentElement?.closest("button")).toBeNull()
+  await user.click(help)
+  expect(select).toHaveAttribute("aria-expanded", "false")
+  expect(run).not.toHaveBeenCalled()
+  await user.tab({ shift: true })
+  expect(select).toHaveFocus()
+  await user.keyboard("{Enter}")
+  expect(select).toHaveAttribute("aria-expanded", "true")
+})
+
+it("runs context probing from the inline hint only when allowed", async () => {
+  const user = userEvent.setup()
+  const run = vi.fn()
+  const i18n = await createResourceTestI18n(
+    { "zh-CN": { aiApiVerification: zhCN } },
+    "zh-CN",
+  )
+  const panel = (canRun: boolean) => (
+    <I18nextProvider i18n={i18n}>
+      <ContextCapacityPanel
+        controller={{
+          enabled: true,
+          canRun,
+          running: false,
+          stopped: false,
+          progress: null,
+          result: null,
+          error: null,
+          run,
+          stop: vi.fn(),
+        }}
+      />
+    </I18nextProvider>
+  )
+  const { rerender } = render(panel(false))
+  const inlineRun = screen.getByRole("button", { name: "运行" })
+  expect(inlineRun).toBeDisabled()
+  await user.click(inlineRun)
+  expect(run).not.toHaveBeenCalled()
+  rerender(panel(true))
+  await user.click(inlineRun)
+  expect(run).toHaveBeenCalledOnce()
+})
+
+it.each([
+  { running: false, stopped: false, error: null, idle: true },
+  { running: true, stopped: false, error: null, idle: false },
+  { running: false, stopped: true, error: null, idle: false },
+  { running: false, stopped: false, error: "Request failed", idle: false },
+])(
+  "shows context instructions only for an idle test: $idle",
+  ({ idle, ...state }) => {
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <ContextCapacityPanel
+          controller={{
+            enabled: true,
+            canRun: true,
+            progress: null,
+            result: null,
+            run: vi.fn(),
+            stop: vi.fn(),
+            ...state,
+          }}
+        />
+      </I18nextProvider>,
+    )
+    const intro = screen.queryByRole("list", {
+      name: "aiApiVerification:verifyDialog.intro.flow",
+    })
+    if (idle) {
+      expect(intro).toBeVisible()
+      expect(
+        within(intro!)
+          .getAllByRole("listitem")
+          .map((item) => item.textContent),
+      ).toEqual([
+        "aiApiVerification:verifyDialog.intro.steps.context-capacity.input",
+        "aiApiVerification:verifyDialog.intro.steps.context-capacity.process",
+        "aiApiVerification:verifyDialog.intro.steps.context-capacity.output",
+      ])
+    } else expect(intro).not.toBeInTheDocument()
+  },
+)
 
 it.each([
   {
@@ -371,12 +502,19 @@ it.each([0, 32768])(
       </I18nextProvider>,
     )
     expect(
-      screen.getByText(
+      within(
+        screen.getByRole("status", {
+          name: "aiApiVerification:verifyDialog.tools.context.resultLabel",
+        }),
+      ).getByText(
         lowerBoundTokens > 0
           ? "aiApiVerification:verifyDialog.tools.context.acceptedTitle"
           : "aiApiVerification:verifyDialog.actions.running",
       ),
     ).toBeVisible()
+    expect(
+      screen.queryByText("aiApiVerification:verifyDialog.status.pending"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText(
         "aiApiVerification:verifyDialog.tools.context.runningTitle",
@@ -665,6 +803,14 @@ it("offers an automatic probe without parameter settings and shares result detai
   expect(
     screen.getByText("aiApiVerification:verifyDialog.status.pending"),
   ).toBeVisible()
+  expect(
+    screen.queryByText("aiApiVerification:verifyDialog.notRunYet"),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByRole("status", {
+      name: "aiApiVerification:verifyDialog.tools.context.resultLabel",
+    }),
+  ).not.toBeInTheDocument()
   expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument()
   expect(controller.run).not.toHaveBeenCalled()
   expect(
@@ -855,9 +1001,9 @@ it("invalidates old context results when the model selection changes", async () 
 })
 
 it.each([
-  ["timeout", "请求超时"],
-  ["empty-response", "未返回正文"],
-  ["interrupted", "未能确认"],
+  [CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Timeout, "请求超时"],
+  [CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.EmptyResponse, "未返回正文"],
+  [CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Interrupted, "未能确认"],
 ] as const)(
   "restores specific %s feedback",
   async (inconclusiveReason, label) => {
@@ -895,7 +1041,9 @@ it.each([
       </I18nextProvider>,
     )
     expect(screen.getByText(label).closest('[data-slot="badge"]')).toBeVisible()
-    if (inconclusiveReason === "interrupted")
+    if (
+      inconclusiveReason === CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Interrupted
+    )
       expect(screen.getByText(/计费状态未知/)).toBeVisible()
   },
 )

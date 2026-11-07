@@ -559,7 +559,7 @@
         "title": "瀏覽器書籤"
       },
       "clipboardRead": {
-        "description": "在你複製相關內容後，協助兌換助手或 AI API 測試識別兌換碼和 API 資訊。",
+        "description": "在你複製相關內容後，協助兌換助手或網頁 API 測試識別兌換碼和 API 資訊。",
         "title": "讀取剪貼簿"
       },
       "cookies": {
@@ -847,7 +847,7 @@
     "refresh": "資料重新整理",
     "select": "選擇一個分組",
     "siteAnnouncements": "網站公告",
-    "webAiApiCheck": "AI API 測試"
+    "webAiApiCheck": "網頁 API 測試"
   },
   "taskNotifications": {
     "channels": {

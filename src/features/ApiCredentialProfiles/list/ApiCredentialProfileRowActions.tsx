@@ -179,6 +179,9 @@ export function ApiCredentialProfileRowActions({
         </IconButton>
         <IconButton
           aria-label={t("apiCredentialProfiles:actions.verifyCliSupport")}
+          tooltip={t(
+            "aiApiVerification:verifyDialog.requestProfiles.shortcutTooltip",
+          )}
           size="sm"
           variant="ghost"
           onClick={() => onVerifyCliSupport(profile)}

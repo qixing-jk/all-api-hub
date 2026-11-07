@@ -29,8 +29,8 @@
     "saveToApiProfiles": "保存并关联到 API 凭据库",
     "showKey": "显示密钥",
     "useInCherry": "在 Cherry Studio 中使用",
-    "verifyApi": "验证接口",
-    "verifyCliSupport": "验证 CLI 兼容性"
+    "verifyApi": "测试 API",
+    "verifyCliSupport": "CLI 兼容性测试"
   },
   "actionToolbar": {
     "apiCredential": "API 凭据",
@@ -357,8 +357,8 @@
     "serviceCredentialCopied": "服务密钥已复制到剪贴板",
     "serviceCredentialRotated": "服务密钥已重置",
     "serviceCredentialRotateFailed": "重置服务密钥失败",
-    "verifyApiFailed": "打开接口验证失败",
-    "verifyCliSupportFailed": "打开 CLI 兼容性验证失败"
+    "verifyApiFailed": "打开 API 测试失败",
+    "verifyCliSupportFailed": "打开 CLI 兼容性测试失败"
   },
   "native": {
     "actions": {

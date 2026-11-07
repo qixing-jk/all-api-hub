@@ -553,10 +553,15 @@ describe("ApiCheckModalHost", () => {
     )
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
+    )
     expect(await within(probeCard).findByText("OpenAI result")).toBeVisible()
 
     await user.click(

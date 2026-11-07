@@ -15,6 +15,6 @@
     "message": "Canjear selección con Redemption Assist"
   },
   "context_menu_ai_api_check": {
-    "message": "Probar rápidamente la disponibilidad funcional de las API de IA"
+    "message": "Probar API"
   }
 }

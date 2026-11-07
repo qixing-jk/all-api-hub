@@ -175,6 +175,9 @@ export function RuntimeKeyActionButtons({
             </IconButton>
             <IconButton
               aria-label={t("keyManagement:actions.verifyCliSupport")}
+              tooltip={t(
+                "aiApiVerification:verifyDialog.requestProfiles.shortcutTooltip",
+              )}
               size="sm"
               variant="ghost"
               data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton}
