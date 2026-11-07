@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS,
   ACCOUNT_LOGIN_PROVIDERS,
   isAccountLoginProvider,
   type AccountLoginProvider,
@@ -173,6 +174,7 @@ export async function fetchUserInfo(
 }> {
   const userData = await newApiFamilyRequests.data<UserInfo>(request, {
     endpoint: "/api/user/self",
+    credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
   })
   const userId = normalizeAccountIdentity(userData.id)
 

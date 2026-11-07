@@ -4,6 +4,10 @@ import type { BrowserContext, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
@@ -15,6 +19,7 @@ import {
   saveManualAccountFromApp,
 } from "~~/e2e/scenarios/accountManualAdd"
 import {
+  createStoredAccount,
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedStoredAccounts,
@@ -399,6 +404,291 @@ test("isolates same-site cookie and access-token accounts through account refres
   }
 })
 
+test("Cookie verification stays isolated after a direct DNR installation failure", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  skipUnlessDnrRequiredVariant()
+  const localSite = await startDnrCaptureNewApiServer()
+  try {
+    const worker = await getServiceWorker(context)
+    await seedUserPreferences(worker, {
+      accountAutoRefresh: { enabled: false, refreshOnOpen: false },
+      autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+    })
+    await seedStoredAccounts(worker, [
+      createStoredAccount({
+        id: "cookie-rule-failure",
+        site_name: "Cookie rule failure fixture",
+        site_type: SITE_TYPES.ANYROUTER,
+        site_url: localSite.origin,
+        authType: AuthTypeEnum.Cookie,
+        cookieAuth: { sessionCookie: "session=invalid" },
+        account_info: {
+          id: "201",
+          username: "cookie-user-a",
+          access_token: ACCESS_TOKEN_A,
+        },
+      }),
+    ])
+    await context.addCookies([
+      {
+        name: "session",
+        value: "user-a",
+        url: localSite.origin,
+        httpOnly: true,
+      },
+    ])
+    await openAccountManagementPage({ page, extensionId })
+    await grantCookieDnrPermissions(page, localSite.origin)
+    // Fail only this editor's direct rule installation. Background page rules remain native.
+    await page.evaluate(() => {
+      const runtime = globalThis as any
+      runtime.cookieValidationRuleFailures = 0
+      const dnr = runtime.chrome.declarativeNetRequest
+      const updateSessionRules = dnr.updateSessionRules.bind(dnr)
+      dnr.updateSessionRules = (update: { addRules?: unknown[] }) => {
+        if (update.addRules?.length) {
+          runtime.cookieValidationRuleFailures += 1
+          dnr.updateSessionRules = updateSessionRules
+          return Promise.reject(
+            new Error("Injected direct DNR installation failure"),
+          )
+        }
+        return updateSessionRules(update)
+      }
+    })
+    const row = page.getByTestId(
+      getAccountManagementListItemTestId("cookie-rule-failure"),
+    )
+    await row.hover()
+    await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+    const credential = page
+      .getByRole("dialog")
+      .getByRole("group", { name: "Session Cookie", exact: true })
+    localSite.clearSelfRequests()
+    await credential
+      .getByRole("button", { name: "Verify this Cookie", exact: true })
+      .click()
+    await expect(credential.getByRole("status")).toContainText(
+      "This Cookie is invalid.",
+    )
+    expect(
+      await page.evaluate(
+        () => (globalThis as any).cookieValidationRuleFailures,
+      ),
+    ).toBe(1)
+    expect(localSite.selfRequests).toHaveLength(1)
+    expect(localSite.selfRequests[0]).toMatchObject({
+      cookieHeader: "session=invalid",
+      matchedAccessToken: null,
+    })
+    expect(
+      (await context.cookies(localSite.origin)).find(
+        (cookie) => cookie.name === "session",
+      )?.value,
+    ).toBe("user-a")
+    expect(
+      (await readStoredAccounts(worker)).find(
+        (account) => account.id === "cookie-rule-failure",
+      )?.cookieAuth?.sessionCookie,
+    ).toBe("session=invalid")
+  } finally {
+    await closeOtherPages(context)
+    await localSite.close()
+  }
+})
+
+test("AnyRouter Cookie verification carries WAF clearance without borrowing browser login", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  test.slow()
+  skipUnlessDnrRequiredVariant()
+  const localSite = await startDnrCaptureNewApiServer({
+    requiredWafCookie: "acw_sc__v2=clearance",
+  })
+  try {
+    const worker = await getServiceWorker(context)
+    await seedUserPreferences(worker, {
+      accountAutoRefresh: { enabled: false, refreshOnOpen: false },
+      autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+    })
+    await seedStoredAccounts(worker, [
+      createStoredAccount({
+        id: "anyrouter-waf-diagnostic",
+        site_name: "AnyRouter WAF fixture",
+        site_type: SITE_TYPES.ANYROUTER,
+        site_url: localSite.origin,
+        authType: AuthTypeEnum.Cookie,
+        cookieAuth: { sessionCookie: ACCOUNT_A_SESSION_COOKIE },
+        account_info: {
+          id: "201",
+          username: "cookie-user-a",
+          access_token: ACCESS_TOKEN_A,
+        },
+      }),
+    ])
+    await context.addCookies([
+      {
+        name: "session",
+        value: "user-b",
+        url: localSite.origin,
+        httpOnly: true,
+      },
+      { name: "acw_sc__v2", value: "clearance", url: localSite.origin },
+    ])
+    await openAccountManagementPage({ page, extensionId })
+    await grantCookieDnrPermissions(page, localSite.origin)
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    const row = page.getByTestId(
+      getAccountManagementListItemTestId("anyrouter-waf-diagnostic"),
+    )
+    await row.hover()
+    await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+    const dialog = page.getByRole("dialog")
+    const credential = dialog.getByRole("group", {
+      name: "Session Cookie",
+      exact: true,
+    })
+    const cookie = credential.getByRole("textbox")
+    const verify = credential.getByRole("button", {
+      name: "Verify this Cookie",
+      exact: true,
+    })
+    localSite.clearSelfRequests()
+    await verify.click()
+    await expect(credential.getByRole("status")).toContainText(
+      "Cookie verified for this account.",
+    )
+    expect(localSite.selfRequests).toMatchObject([
+      { cookieHeader: "session=user-a", matchedAccessToken: null },
+      {
+        cookieHeader: "acw_sc__v2=clearance; session=user-a",
+        matchedAccessToken: null,
+      },
+    ])
+    expect(
+      (await context.cookies(localSite.origin)).find(
+        (value) => value.name === "session",
+      )?.value,
+    ).toBe("user-b")
+    expect(
+      (await readStoredAccounts(worker)).find(
+        (account) => account.id === "anyrouter-waf-diagnostic",
+      )?.cookieAuth?.sessionCookie,
+    ).toBe(ACCOUNT_A_SESSION_COOKIE)
+    await credential.screenshot({
+      path: testInfo.outputPath("anyrouter-waf-valid.png"),
+      animations: "disabled",
+    })
+
+    // A browser session for another identity must not replace the account draft.
+    await dialog
+      .getByRole("button", { name: "Import from current login", exact: true })
+      .click()
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "Your current Cookie was kept" }),
+    ).toBeVisible()
+    await expect(cookie).toHaveValue(ACCOUNT_A_SESSION_COOKIE)
+    await context.addCookies([
+      {
+        name: "session",
+        value: "user-a",
+        url: localSite.origin,
+        httpOnly: true,
+      },
+    ])
+    await dialog
+      .getByRole("button", { name: "Import from current login", exact: true })
+      .click()
+    await expect(credential.getByRole("status")).toContainText(
+      "Cookie verified for this account.",
+    )
+    await expect(cookie).toHaveValue(ACCOUNT_A_SESSION_COOKIE)
+
+    await cookie.fill(ACCOUNT_B_SESSION_COOKIE)
+    await expect(credential.getByRole("status")).toHaveCount(0)
+    await verify.click()
+    await expect(credential.getByRole("status")).toContainText(
+      "This Cookie belongs to another account",
+    )
+
+    await cookie.fill("session=invalid")
+    await verify.click()
+    await expect(credential.getByRole("status")).toContainText(
+      "This Cookie is invalid.",
+    )
+    await page.setViewportSize({ width: 320, height: 844 })
+    expect(
+      await credential.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1)
+    await credential.screenshot({
+      path: testInfo.outputPath("anyrouter-cookie-configure-narrow.png"),
+      animations: "disabled",
+    })
+    await credential
+      .getByRole("button", { name: "Configure login recovery", exact: true })
+      .click()
+    await expect(
+      dialog.getByRole("combobox", { name: "Login method" }),
+    ).toBeFocused()
+    await cookie.scrollIntoViewIfNeeded()
+
+    await context.clearCookies()
+    await cookie.fill(ACCOUNT_A_SESSION_COOKIE)
+    await verify.click()
+    await expect(credential.getByRole("status")).toContainText(
+      "Unable to verify right now.",
+    )
+    expect(
+      await credential.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1)
+    expect(context.pages().filter((current) => current === page)).toHaveLength(
+      1,
+    )
+    expect(localSite.selfRequests.at(-1)?.cookieHeader).toBe(
+      ACCOUNT_A_SESSION_COOKIE,
+    )
+    await credential.screenshot({
+      path: testInfo.outputPath("anyrouter-waf-unconfirmed.png"),
+      animations: "disabled",
+    })
+    const firstLineDelta = await credential.evaluate((element) => {
+      const textCenter = (node: Element) => {
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT)
+        let text = walker.nextNode()
+        while (text && !text.textContent?.trim()) text = walker.nextNode()
+        const range = document.createRange()
+        range.selectNodeContents(text!)
+        const box = range.getClientRects()[0]!
+        return box.y + box.height / 2
+      }
+      return Math.abs(
+        textCenter(element.querySelector("button")!) -
+          textCenter(element.querySelector('[role="status"]')!),
+      )
+    })
+    expect(firstLineDelta).toBeLessThanOrEqual(1)
+    expect(
+      (await readStoredAccounts(worker)).find(
+        (account) => account.id === "anyrouter-waf-diagnostic",
+      )?.cookieAuth?.sessionCookie,
+    ).toBe(ACCOUNT_A_SESSION_COOKIE)
+  } finally {
+    await closeOtherPages(context)
+    await localSite.close()
+  }
+})
+
 function skipUnlessDnrRequiredVariant() {
   test.skip(
     process.env[E2E_BUILD_VARIANT_ENV] !== E2E_BUILD_VARIANTS.DnrRequired,
@@ -481,7 +771,9 @@ type DnrCaptureNewApiServer = {
   close: () => Promise<void>
 }
 
-async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
+async function startDnrCaptureNewApiServer({
+  requiredWafCookie,
+}: { requiredWafCookie?: string } = {}): Promise<DnrCaptureNewApiServer> {
   const selfRequests: CapturedSelfRequest[] = []
   const tokenRequests: CapturedTokenRequest[] = []
   const sockets = new Set<Socket>()
@@ -546,6 +838,9 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
     if (method === "GET" && url.pathname === "/api/user/self") {
       const cookieHeader = request.headers.cookie ?? ""
       const authorizationHeader = request.headers.authorization ?? ""
+      const wafChallenge = Boolean(
+        requiredWafCookie && !cookieHeader.includes(requiredWafCookie),
+      )
       const matchedSessionCookie = matchAccountSessionCookie(cookieHeader)
       const matchedAccessToken = matchAccessToken(authorizationHeader)
       const account =
@@ -560,10 +855,18 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
         userIdHeader: extractCompatUserIdHeader(request.headers),
         matchedSessionCookie,
         matchedAccessToken,
-        responseStatus: account ? 200 : 401,
+        responseStatus: wafChallenge ? 200 : account ? 200 : 401,
       }
       selfRequests.push(captured)
       resolveMatchingWaiters(captured)
+
+      if (wafChallenge) {
+        response.writeHead(200, { "Content-Type": "text/html" })
+        response.end(
+          "<!doctype html><html><body>acw_sc__v2 verification required</body></html>",
+        )
+        return
+      }
 
       if (!account) {
         sendJson(401, {

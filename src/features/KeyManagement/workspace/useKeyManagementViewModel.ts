@@ -159,6 +159,7 @@ export function useKeyManagementViewModel(
     aggregateCounts,
     retryCombinedFailedAccounts,
     nativeInventoryLoadError,
+    authenticationFailedAccountIds,
     isNativeInventoryLoading,
   } = useKeyManagementInventoryPresentation({
     nativeKeys,
@@ -522,6 +523,7 @@ export function useKeyManagementViewModel(
     aggregateCounts,
     retryCombinedFailedAccounts,
     nativeInventoryLoadError,
+    authenticationFailedAccountIds,
     isNativeInventoryLoading,
     managedSiteTokenStatuses,
     isManagedSiteChannelStatusSupported,

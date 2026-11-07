@@ -127,6 +127,7 @@ export default function KeyManagement(props: {
     aggregateCounts,
     retryCombinedFailedAccounts,
     nativeInventoryLoadError,
+    authenticationFailedAccountIds,
     isNativeInventoryLoading,
     managedSiteTokenStatuses,
     isManagedSiteChannelStatusSupported,
@@ -339,6 +340,7 @@ export default function KeyManagement(props: {
         displayData={displayData}
         currentAccountLoadError={currentAccountLoadError}
         nativeInventoryLoadError={nativeInventoryLoadError}
+        authenticationFailedAccountIds={authenticationFailedAccountIds}
         currentAccountUnsupportedKeyManagement={
           currentAccountUnsupportedKeyManagement
         }

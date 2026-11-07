@@ -188,6 +188,7 @@ const createAccountApiContextFromSource = (
     ...(aimlApiKey ? { aimlApiKey } : {}),
     managementApiBaseUrl: resolveDeploymentApiOrigin(source.siteUrl),
     accountId: source.id,
+    allowAccountCredentialRecovery: true,
     ...(isSafariNativeCookieEnabled() &&
     source.authType === AuthTypeEnum.Cookie &&
     hasNonEmptyString(cookie)

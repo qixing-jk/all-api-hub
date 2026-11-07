@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react"
+import { LogIn, ShieldCheck } from "lucide-react"
 
 import {
   AccountBalanceIcon,
@@ -10,6 +10,7 @@ import {
 export const ACCOUNT_FORM_SECTION_IDS = [
   "site-info",
   "account-auth",
+  "account-login",
   "tags-notes",
   "check-in",
   "balance",
@@ -30,6 +31,7 @@ export const ACCOUNT_FORM_SECTION_ELEMENT_IDS: Record<
 > = {
   "site-info": "account-form-site-info",
   "account-auth": "account-form-auth",
+  "account-login": "account-login-config",
   "tags-notes": "account-form-tags-notes",
   "check-in": "account-check-in-config",
   balance: "account-form-balance",
@@ -52,6 +54,11 @@ export const ACCOUNT_EDIT_SECTIONS = [
     icon: AutoCheckinIcon,
   },
   {
+    id: ACCOUNT_FORM_SECTION_ELEMENT_IDS["account-login"],
+    title: "login.title",
+    icon: LogIn,
+  },
+  {
     id: ACCOUNT_FORM_SECTION_ELEMENT_IDS["balance"],
     title: "sections.balanceAndStats.title",
     icon: AccountBalanceIcon,
@@ -69,6 +76,7 @@ export const ACCOUNT_FORM_MOBILE_DEFAULT_OPEN: Record<
 > = {
   "site-info": true,
   "account-auth": true,
+  "account-login": true,
   "tags-notes": true,
   "check-in": true,
   balance: false,

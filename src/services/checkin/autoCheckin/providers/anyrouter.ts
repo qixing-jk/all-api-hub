@@ -1,5 +1,9 @@
 import { CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
+import { executeWithAccountCredentialRecovery } from "~/services/accountCredentialRecovery"
+import { resolveAccountLogin } from "~/services/accountLogin/configCodec"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createTerminalFailureResult,
@@ -12,7 +16,10 @@ import {
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 import type {
@@ -42,11 +49,58 @@ const checkinAnyRouter = async (
   )
   const protectionBypassExecution = context.protectionBypassExecution
   const { site_url, account_info } = account
-  const cookieAuthSessionCookie = isSiteAccount(account)
+  let cookieAuthSessionCookie = isSiteAccount(account)
     ? account.cookieAuth?.sessionCookie
     : account.cookieAuthSessionCookie
 
   try {
+    if (
+      isSiteAccount(account) &&
+      resolveAccountLogin(account)?.automaticRecovery === true
+    ) {
+      // Authenticate before dispatch: a rejected mutation is never replayed.
+      const verifiedRequest = await executeWithAccountCredentialRecovery(
+        {
+          baseUrl: site_url,
+          accountId: account.id,
+          allowAccountCredentialRecovery: true,
+          siteType: SITE_TYPES.ANYROUTER,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            userId: account_info.id,
+            cookie: cookieAuthSessionCookie,
+          },
+          cookieAuthSessionCookie,
+          tempWindowRequestSource,
+          protectionBypassExecution,
+          forceTempWindow: true,
+        },
+        async (request) => {
+          const self = await newApiFamilyRequests.data<{
+            id?: string | number
+          }>(request, { endpoint: "/api/user/self" })
+          if (String(self.id) !== String(account_info.id))
+            throw new ApiError(
+              "AnyRouter login belongs to another account",
+              undefined,
+              "/api/user/self",
+              API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH,
+            )
+          return request
+        },
+      )
+      cookieAuthSessionCookie = verifiedRequest.auth.cookie
+      if (
+        context.beforeRecoveredMutation &&
+        !(await context.beforeRecoveredMutation())
+      ) {
+        return {
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
+          messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+        }
+      }
+    }
     const response = (await newApiFamilyRequests.envelope(
       {
         baseUrl: site_url,

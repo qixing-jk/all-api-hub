@@ -32,6 +32,10 @@ interface BrowserPasswordFlow {
   loginAction: string
   clearEvidenceAction: string
   credentials: AccountPasswordCredentials
+  captureCredential?: (
+    tabId: number,
+    origin: string,
+  ) => Promise<{ cookie: string } | null>
 }
 
 /** Native execution shares session scheduling, while retaining its own result contract. */

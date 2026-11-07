@@ -6,6 +6,10 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { isUnknownAccountSiteType } from "~/constants/siteType"
 import {
+  buildCredentialRecoveryNavigationTarget,
+  hasCredentialRecoveryAuthenticationFailure,
+} from "~/features/AccountManagement/credentialRecovery/guidance"
+import {
   getTempWindowFallbackSettingsAnchor,
   getTempWindowFallbackSettingsTab,
   isTempWindowFallbackReminderCode,
@@ -123,7 +127,9 @@ export function buildAttentionItems(input: {
             : "warning",
         titleOptions: { name: account.name },
         descriptionOptions: { reason: account.health.reason },
-        target: buildAccountNavigationTarget(account.id),
+        target: hasCredentialRecoveryAuthenticationFailure(account)
+          ? buildCredentialRecoveryNavigationTarget(account.id)
+          : buildAccountNavigationTarget(account.id),
       }
     },
   )

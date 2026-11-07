@@ -1,3 +1,5 @@
+import { ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS } from "~/constants/accountLogin"
+import { executeWithAccountCredentialRecovery } from "~/services/accountCredentialRecovery"
 import {
   fetchApi as fetchTransportApi,
   fetchApiData as fetchTransportApiData,
@@ -13,7 +15,10 @@ import type {
 type ProviderJsonRequestOptions = Omit<
   FetchApiOptions,
   "errorResponseDecoder" | "responseType"
->
+> & {
+  /** A provider-declared safe GET read; never set for credential issuance or writes. */
+  credentialRecovery?: typeof ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read
+}
 
 /** Provider-owned JSON request modes with explicit response projections. */
 interface ProviderJsonRequests {
@@ -40,32 +45,52 @@ interface ProviderJsonRequests {
 export function createProviderJsonRequests(
   errorResponseDecoder: ApiResponseErrorDecoder,
 ): ProviderJsonRequests {
-  const withDecoder = (
-    options: ProviderJsonRequestOptions,
-  ): FetchApiOptions & { responseType: "json" } => ({
+  const withDecoder = ({
+    credentialRecovery: _credentialRecovery,
+    ...options
+  }: ProviderJsonRequestOptions): FetchApiOptions & {
+    responseType: "json"
+  } => ({
     ...options,
     responseType: "json",
     errorResponseDecoder,
   })
+
+  const run = <T>(
+    request: ApiTransportRequest,
+    options: ProviderJsonRequestOptions,
+    runner: (request: ApiTransportRequest) => Promise<T>,
+  ): Promise<T> =>
+    options.credentialRecovery ===
+      ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read &&
+    (options.options?.method ?? "GET").toUpperCase() === "GET"
+      ? executeWithAccountCredentialRecovery(request, runner)
+      : runner(request)
 
   return {
     async data<T>(
       request: ApiTransportRequest,
       options: ProviderJsonRequestOptions,
     ): Promise<T> {
-      return await fetchTransportApiData<T>(request, withDecoder(options))
+      return await run(request, options, (next) =>
+        fetchTransportApiData<T>(next, withDecoder(options)),
+      )
     },
     async envelope<T>(
       request: ApiTransportRequest,
       options: ProviderJsonRequestOptions,
     ): Promise<ApiResponse<T>> {
-      return await fetchTransportApi<T>(request, withDecoder(options), false)
+      return await run(request, options, (next) =>
+        fetchTransportApi<T>(next, withDecoder(options), false),
+      )
     },
     async payload<T>(
       request: ApiTransportRequest,
       options: ProviderJsonRequestOptions,
     ): Promise<T> {
-      return await fetchTransportApi<T>(request, withDecoder(options), true)
+      return await run(request, options, (next) =>
+        fetchTransportApi<T>(next, withDecoder(options), true),
+      )
     },
   }
 }

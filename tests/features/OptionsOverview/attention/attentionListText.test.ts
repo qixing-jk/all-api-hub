@@ -29,6 +29,27 @@ function createAttentionItem(
 }
 
 describe("attention list text helpers", () => {
+  it("names the login configuration action for an authentication recovery target", () => {
+    const t = ((key: string) => key) as TFunction
+    const item = createAttentionItem({
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
+    })
+    item.target = {
+      menuItemId: "account",
+      params: {
+        action: "edit",
+        accountId: "expired-cookie",
+        focusSection: "account-login",
+      },
+    }
+    expect(getAttentionActionLabel(item, t)).toBe(
+      "accountDialog:login.configureRecovery",
+    )
+    expect(getAttentionDescription(item, t)).toContain(
+      "accountDialog:login.recoveryFailureDescription",
+    )
+  })
+
   it("resolves severity labels", () => {
     const t = ((key: string) => key) as TFunction
 

@@ -33,7 +33,23 @@ Auto-identification relies on you being logged into the target site in the same 
 Different sites/modified versions handle interfaces and login states differently. When identification fails, prioritize trying to switch authentication methods:
 
 -   **Access Token authentication failed**: Switch to **Cookie authentication** and auto-identify again.
--   **AnyRouter**: Must use **Cookie authentication**, and the Cookie must come from the currently logged-in account; Cookie authentication does not support multiple accounts on the same site simultaneously.
+-   **AnyRouter**: Configure **Cookie authentication**. Normal operations may succeed using a saved access token or website login session, so success does not establish the saved Cookie's validity.
+
+The compatibility explanation beside Cookie authentication applies across sites: normal operations may use an access token or the browser's current login session, so success does not establish that the entered Cookie is valid or renewed. The saved-token note appears only when the account actually stores a token. Browser-session-only sites retain their specific login-session guidance. Cookie verification is available for sites that support Cookie authentication and can independently read account identity. Login recovery requires separate integration and currently supports only AnyRouter.
+
+## AnyRouter: automatically recover login
+
+Click **Verify this Cookie** to independently check whether the entered Cookie is accepted for the expected account. This result is separate from account health: other credentials may still allow normal operations after Cookie rejection. Network errors, site verification or permission limits leave Cookie validity unconfirmed. Verification does not sign in, change credentials or alter normal request authentication. Verify again after editing the Cookie. Automatic recovery still starts only after a normal operation receives an explicit authentication rejection.
+
+1. In **Edit Account**, click **Configure login recovery** beside the Cookie authentication field, or choose **Account login** in the editor's section directory.
+2. Select GitHub, Linux DO or password login, enter the required details, then enable **Automatically recover login** and save. This setting is saved per account and is off by default. Password login requires the website's login username and password.
+3. Authentication failures during balance refresh, key loading or copying, and check-in also provide **Configure login recovery**, which opens that account's login settings. Save the configuration or corrections, then retry the original operation. Related authentication warnings in Overview provide the same entry point.
+
+If verification reports a rejected Cookie or a different account, you can recover manually with the configured login method, or open login settings if configuration is missing. Manual recovery independently verifies the returned Cookie and fills the editor draft only after confirming the expected account. Save to replace the stored credential; manual recovery does not enable automatic recovery. When the account identity is known, manually importing an AnyRouter Cookie also verifies it before replacing the draft and preserves the previous value if verification fails.
+
+When refreshing balances, reading keys or checking in, the extension attempts the selected login method after the website explicitly requires authentication. It verifies the account identity, updates the saved Cookie and continues the operation. The existing check-in method stays the same. Network errors and website verification pages do not trigger login recovery. Site verification, an identity mismatch or an unconfirmed login result stops the recovery attempt.
+
+AnyRouter's website may check in automatically during login, so credential recovery may also trigger a website check-in. If that check-in has completed, the subsequent check-in request keeps the site's “already checked in” result.
 
 ## The Identified Site Type Is Wrong
 

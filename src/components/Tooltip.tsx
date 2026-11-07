@@ -6,10 +6,12 @@ import {
   useId,
   useRef,
   useState,
+  type ComponentProps,
   type FocusEventHandler,
   type ReactElement,
   type ReactNode,
 } from "react"
+import { createPortal } from "react-dom"
 import { Tooltip as ReactTooltip } from "react-tooltip"
 
 import { Z_INDEX } from "~/constants/designTokens"
@@ -33,6 +35,8 @@ interface TooltipProps {
     | "left-end"
   delay?: number
   positionStrategy?: "absolute" | "fixed"
+  /** Mounts the popup outside a clipping or transformed anchor container when provided. */
+  portalContainer?: HTMLElement
   className?: string
   wrapperClassName?: string
   anchorAsChild?: boolean
@@ -59,6 +63,7 @@ export default function Tooltip({
   position = "top",
   delay = 0,
   positionStrategy = "absolute",
+  portalContainer,
   className = "",
   wrapperClassName = "",
   anchorAsChild = false,
@@ -187,6 +192,27 @@ export default function Tooltip({
 
   // Keep library positioning styles; project tokens own all visual styling.
   const defaultClassName = `${Z_INDEX.tooltip} w-max max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground ${className}`
+  const popupProps = {
+    anchorId,
+    place: position,
+    positionStrategy,
+    delayShow: delay,
+    disableStyleInjection: true,
+    classNameArrow: "size-[var(--rt-arrow-size)] rotate-45",
+    className: defaultClassName,
+    isOpen,
+    setIsOpen,
+    role: isOpen ? "tooltip" : "presentation",
+    closeEvents: { mouseout: true, blur: false },
+    globalCloseEvents: { escape: true },
+  } satisfies ComponentProps<typeof ReactTooltip>
+  const popup = isString ? (
+    <ReactTooltip {...popupProps} id={tooltipId} content={content} />
+  ) : (
+    <ReactTooltip {...popupProps} id={popupId} clickable>
+      {content}
+    </ReactTooltip>
+  )
   return (
     <TooltipContext.Provider value={anchorId}>
       {anchor}
@@ -197,43 +223,7 @@ export default function Tooltip({
         </span>
       ) : null}
 
-      {isString ? (
-        <ReactTooltip
-          id={tooltipId}
-          anchorId={anchorId}
-          place={position}
-          positionStrategy={positionStrategy}
-          content={content}
-          delayShow={delay}
-          disableStyleInjection
-          classNameArrow="size-[var(--rt-arrow-size)] rotate-45"
-          className={defaultClassName}
-          isOpen={isOpen}
-          setIsOpen={setIsOpen}
-          role={isOpen ? "tooltip" : "presentation"}
-          closeEvents={{ mouseout: true, blur: false }}
-          globalCloseEvents={{ escape: true }}
-        />
-      ) : (
-        <ReactTooltip
-          id={popupId}
-          anchorId={anchorId}
-          place={position}
-          positionStrategy={positionStrategy}
-          delayShow={delay}
-          clickable
-          disableStyleInjection
-          classNameArrow="size-[var(--rt-arrow-size)] rotate-45"
-          className={defaultClassName}
-          isOpen={isOpen}
-          setIsOpen={setIsOpen}
-          role={isOpen ? "tooltip" : "presentation"}
-          closeEvents={{ mouseout: true, blur: false }}
-          globalCloseEvents={{ escape: true }}
-        >
-          {content}
-        </ReactTooltip>
-      )}
+      {portalContainer ? createPortal(popup, portalContainer) : popup}
     </TooltipContext.Provider>
   )
 }

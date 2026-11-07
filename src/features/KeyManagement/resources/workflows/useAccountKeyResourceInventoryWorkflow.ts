@@ -44,9 +44,7 @@ type WorkflowInputs = {
   }
   actions: {
     clearDialogs: () => void
-    clearTerminalResourceState: ({
-      preserveCreatedSecret,
-    }?: {
+    clearTerminalResourceState: (options?: {
       preserveCreatedSecret?: boolean | undefined
     }) => void
     clearActiveResourceRefs: () => void

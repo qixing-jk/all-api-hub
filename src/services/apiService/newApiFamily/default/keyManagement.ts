@@ -1,3 +1,4 @@
+import { ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS } from "~/constants/accountLogin"
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   invalidateResolvedApiTokenKeyCache,
@@ -86,6 +87,7 @@ export async function fetchAccountTokens(
       })
       const tokensData = await newApiFamilyRequests.data<unknown>(request, {
         endpoint: `/api/token/?${searchParams.toString()}`,
+        credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
       })
 
       if (Array.isArray(tokensData)) {
@@ -148,6 +150,7 @@ export async function fetchAccountAvailableModels(
   try {
     return await newApiFamilyRequests.data<string[]>(request, {
       endpoint: "/api/user/models",
+      credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
     })
   } catch (error) {
     logger.error("获取模型列表失败", error)
@@ -166,6 +169,7 @@ export async function fetchUserGroups(
       request,
       {
         endpoint: "/api/user/self/groups",
+        credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
       },
     )
   } catch (error) {
@@ -184,6 +188,7 @@ export async function fetchCurrentUserGroup(
 ): Promise<string> {
   const userData = await newApiFamilyRequests.data<unknown>(request, {
     endpoint: "/api/user/self",
+    credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
   })
   if (!isRecord(userData) || typeof userData.group !== "string") {
     throw new Error("invalid_current_user_group_payload")
@@ -202,6 +207,7 @@ export async function fetchSiteUserGroups(
   try {
     return await newApiFamilyRequests.data<Array<string>>(request, {
       endpoint: "/api/group",
+      credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
     })
   } catch (error) {
     logger.error("获取站点分组信息失败", error)
@@ -262,6 +268,7 @@ export async function fetchTokenById(
   try {
     const token = await newApiFamilyRequests.data<NewApiToken>(request, {
       endpoint: `/api/token/${tokenId}`,
+      credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
     })
     return normalizeApiTokenKey(token)
   } catch (error) {

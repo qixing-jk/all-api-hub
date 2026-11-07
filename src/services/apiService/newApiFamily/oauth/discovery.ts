@@ -1,4 +1,8 @@
-import { NEW_API_OAUTH_PROVIDERS, type NewApiOAuthProvider } from "./contracts"
+import {
+  NEW_API_OAUTH_PROVIDER_LABELS,
+  NEW_API_OAUTH_PROVIDERS,
+  type NewApiOAuthProvider,
+} from "./contracts"
 
 /** Narrows a site-owned method ID to this protocol's implemented OAuth providers. */
 export function isNewApiLoginProvider(
@@ -60,28 +64,28 @@ export function discoverNewApiLoginMethods(
   const definitions = [
     {
       provider: "github",
-      label: "GitHub",
+      label: NEW_API_OAUTH_PROVIDER_LABELS.github,
       flag: "github_oauth",
       client: "github_client_id",
       endpoint: "https://github.com/login/oauth/authorize",
     },
     {
       provider: "linuxdo",
-      label: "Linux DO",
+      label: NEW_API_OAUTH_PROVIDER_LABELS.linuxdo,
       flag: "linuxdo_oauth",
       client: "linuxdo_client_id",
       endpoint: "https://connect.linux.do/oauth2/authorize",
     },
     {
       provider: "discord",
-      label: "Discord",
+      label: NEW_API_OAUTH_PROVIDER_LABELS.discord,
       flag: "discord_oauth",
       client: "discord_client_id",
       endpoint: "https://discord.com/oauth2/authorize",
     },
     {
       provider: "oidc",
-      label: "OIDC",
+      label: NEW_API_OAUTH_PROVIDER_LABELS.oidc,
       flag: "oidc_enabled",
       client: "oidc_client_id",
       endpoint: status.oidc_authorization_endpoint,

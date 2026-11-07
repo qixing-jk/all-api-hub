@@ -2,6 +2,7 @@ import { BROWSER_LOGIN_SESSION_KEYS } from "~/constants/browserLogin"
 import { BROWSER_OAUTH_COMPLETION_STATUS } from "~/constants/browserOAuth"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountLoginEvidence } from "~/services/apiAdapters/contracts/accountLogin"
+import { captureNewApiLoginCookieCredential } from "~/services/apiAdapters/newApi/account/cookieCredential"
 import {
   NEW_API_OAUTH_PROVIDERS,
   type NewApiOAuthProvider,
@@ -53,6 +54,7 @@ export function createNewApiOAuthFlow(input: {
     concurrencyKey: BROWSER_LOGIN_SESSION_KEYS.NewApi,
     displayName: "New API",
     loginPath: input.loginPath,
+    captureCredential: captureNewApiLoginCookieCredential,
     prepareAction: RuntimeActionIds.ContentPrepareNewApiOAuth,
     prepareDetails: {
       loginProvider: provider,

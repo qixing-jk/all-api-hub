@@ -19,6 +19,7 @@ import {
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
 import {
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -342,6 +343,13 @@ export function useKeyManagementInventoryPresentation({
       : selectedAccount && nativeKeys.failures[selectedAccount]
         ? t("keyManagement:messages.loadFailed")
         : undefined
+  const authenticationFailedAccountIds = Object.entries(nativeKeys.failures)
+    .filter(
+      ([, failure]) =>
+        failure.code ===
+        ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+    )
+    .map(([accountId]) => accountId)
   const isNativeInventoryLoading =
     nativeKeys.isLoading || nativeKeys.isScopeInventoryLoading
   return {
@@ -354,6 +362,7 @@ export function useKeyManagementInventoryPresentation({
     aggregateCounts,
     retryCombinedFailedAccounts,
     nativeInventoryLoadError,
+    authenticationFailedAccountIds,
     isNativeInventoryLoading,
   }
 }

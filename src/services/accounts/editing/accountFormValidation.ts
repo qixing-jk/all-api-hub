@@ -1,15 +1,15 @@
-import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import {
   isAccountSiteType,
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
+import { isAccountLoginConfigured } from "~/services/accountLogin/configCodec"
 import {
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
 } from "~/services/accounts/accountSiteProfile"
+import type { AccountLoginMethodDefinition } from "~/services/apiAdapters/contracts/accountLogin"
 import { AuthTypeEnum } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 
@@ -31,6 +31,7 @@ export function isValidAccount({
   username,
   userId,
   siteType,
+  loginMethods = [],
   authType,
   accessToken,
   cookieAuthSessionCookie,
@@ -41,6 +42,7 @@ export function isValidAccount({
   username: string
   userId: string
   siteType?: AccountSiteType
+  loginMethods?: readonly AccountLoginMethodDefinition[]
   authType: AuthTypeEnum
   accessToken: string
   cookieAuthSessionCookie?: string
@@ -54,8 +56,7 @@ export function isValidAccount({
 
   return (
     !!siteName.trim() &&
-    (loginChange?.methodId !== ACCOUNT_LOGIN_METHODS.Password ||
-      !!normalizePasswordCredentials(loginChange.credentials)) &&
+    (!loginChange || isAccountLoginConfigured(loginChange, loginMethods)) &&
     (authType === AuthTypeEnum.None ||
       isAccountAuthTypeAllowed(normalizedSiteType, authType)) &&
     (!profile.identity.usernameRequired || !!username.trim()) &&

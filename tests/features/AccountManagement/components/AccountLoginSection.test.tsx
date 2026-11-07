@@ -1,9 +1,15 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ACCOUNT_PASSWORD_IDENTITIES } from "~/constants/accountLogin"
+import {
+  ACCOUNT_LOGIN_CONFIGURATION_KINDS,
+  ACCOUNT_PASSWORD_IDENTITIES,
+} from "~/constants/accountLogin"
+import { SITE_TYPES } from "~/constants/siteType"
 import { AccountLoginSection } from "~/features/AccountManagement/components/AccountDialog/login/AccountLoginSection"
 import { IncognitoAccessNotice } from "~/features/Permissions/components/IncognitoAccessNotice"
+import * as loginCapabilities from "~/services/accountLogin/capabilities"
+import { AuthTypeEnum } from "~/types"
 import {
   detectBrowserFamily,
   isDesktopDevice,
@@ -26,6 +32,7 @@ vi.mock("~/utils/browser/index", () => ({
 }))
 
 const props = {
+  authType: AuthTypeEnum.Cookie,
   siteUrl: "https://agentrouter.org",
   login: {
     methodId: "password" as const,
@@ -35,6 +42,125 @@ const props = {
 }
 
 describe("account password login guidance", () => {
+  it("only offers Cookie recovery for Cookie authentication and preserves login settings across auth changes", async () => {
+    const login = { ...props.login, automaticRecovery: true }
+    const target = {
+      ...props,
+      siteType: SITE_TYPES.ANYROUTER,
+      siteUrl: "https://anyrouter.top",
+      login,
+    }
+    const { rerender } = render(<AccountLoginSection {...target} />)
+    expect(
+      await screen.findByRole("switch", {
+        name: "accountDialog:login.automaticRecovery",
+      }),
+    ).toBeChecked()
+    rerender(
+      <AccountLoginSection {...target} authType={AuthTypeEnum.AccessToken} />,
+    )
+    expect(
+      screen.queryByRole("switch", {
+        name: "accountDialog:login.automaticRecovery",
+      }),
+    ).not.toBeInTheDocument()
+    rerender(<AccountLoginSection {...target} />)
+    expect(
+      await screen.findByRole("switch", {
+        name: "accountDialog:login.automaticRecovery",
+      }),
+    ).toBeChecked()
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+  it("offers and configures the actual adapter's Discord method", async () => {
+    render(
+      <AccountLoginSection
+        {...props}
+        login={undefined}
+        siteUrl="https://gateway.example"
+        siteType={SITE_TYPES.NEW_API}
+      />,
+    )
+    await userEvent.click(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:login.method",
+      }),
+    )
+    await userEvent.click(screen.getByRole("option", { name: "Discord" }))
+    expect(props.onChange).toHaveBeenLastCalledWith({ methodId: "discord" })
+  })
+  it("does not offer a password method absent from the adapter", async () => {
+    render(
+      <AccountLoginSection
+        {...props}
+        login={undefined}
+        siteUrl="https://veloera.example"
+        siteType={SITE_TYPES.VELOERA}
+      />,
+    )
+    await userEvent.click(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:login.method",
+      }),
+    )
+    expect(
+      screen.queryByRole("option", {
+        name: "accountDialog:login.passwordMethod",
+      }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole("option", { name: "OIDC" }))
+    expect(props.onChange).toHaveBeenLastCalledWith({ methodId: "oidc" })
+  })
+  it("preserves an unsupported saved selection and prevents automatic recovery", async () => {
+    render(
+      <AccountLoginSection
+        {...props}
+        siteUrl="https://anyrouter.top"
+        siteType={SITE_TYPES.ANYROUTER}
+        login={{ methodId: "retired-sso", automaticRecovery: true }}
+      />,
+    )
+    expect(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:login.method",
+      }),
+    ).toHaveTextContent("retired-sso")
+    expect(
+      screen.getByRole("switch", {
+        name: "accountDialog:login.automaticRecovery",
+      }),
+    ).toBeDisabled()
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+  it("keeps credential recovery out of the existing AgentRouter login section", async () => {
+    render(<AccountLoginSection {...props} siteType={SITE_TYPES.NEW_API} />)
+    await screen.findByRole("combobox", {
+      name: "accountDialog:login.method",
+    })
+    expect(
+      screen.queryByRole("switch", {
+        name: "accountDialog:login.automaticRecovery",
+      }),
+    ).not.toBeInTheDocument()
+  })
+  it("lets AnyRouter opt into recovery without changing its selected login", async () => {
+    render(
+      <AccountLoginSection
+        {...props}
+        siteUrl="https://anyrouter.top"
+        siteType={SITE_TYPES.ANYROUTER}
+      />,
+    )
+    const toggle = await screen.findByRole("switch", {
+      name: "accountDialog:login.automaticRecovery",
+    })
+    expect(toggle).not.toBeChecked()
+    await userEvent.click(toggle)
+    expect(props.onChange).toHaveBeenLastCalledWith({
+      ...props.login,
+      automaticRecovery: true,
+    })
+  })
   afterEach(() => vi.restoreAllMocks())
   beforeEach(() => {
     vi.clearAllMocks()
@@ -143,9 +269,17 @@ describe("account password login guidance", () => {
     "labels the configured %s identity capability",
     async (passwordIdentity) => {
       vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
-      render(
-        <AccountLoginSection {...props} passwordIdentity={passwordIdentity} />,
-      )
+      vi.spyOn(loginCapabilities, "getAccountLoginMethods").mockReturnValue([
+        {
+          id: "password",
+          label: "Password",
+          configuration: {
+            kind: ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password,
+            identity: passwordIdentity,
+          },
+        },
+      ])
+      render(<AccountLoginSection {...props} />)
       expect(
         await screen.findByLabelText(
           new RegExp(`accountDialog:login.${passwordIdentity}`),

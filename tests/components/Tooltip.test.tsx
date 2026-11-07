@@ -5,6 +5,39 @@ import { describe, expect, it, vi } from "vitest"
 import Tooltip from "~/components/Tooltip"
 
 describe("Tooltip", () => {
+  it("places an opted-in rich tooltip outside its clipped container and keeps the action usable", async () => {
+    const user = userEvent.setup()
+    const onAction = vi.fn()
+    render(
+      <div data-testid="clipped-account-list" className="overflow-hidden">
+        <Tooltip
+          portalContainer={document.body}
+          content={
+            <button type="button" onClick={onAction}>
+              Configure account login
+            </button>
+          }
+        >
+          <button type="button">Account health</button>
+        </Tooltip>
+      </div>,
+    )
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Account health" })).toHaveFocus()
+    const tooltip = await screen.findByRole("tooltip")
+    expect(screen.getByTestId("clipped-account-list")).not.toContainElement(
+      tooltip,
+    )
+    await user.click(
+      within(tooltip).getByRole("button", { name: "Configure account login" }),
+    )
+    expect(onAction).toHaveBeenCalledTimes(1)
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+    })
+  })
+
   it("uses the actual child as a focusable described anchor when requested", async () => {
     const user = userEvent.setup()
 

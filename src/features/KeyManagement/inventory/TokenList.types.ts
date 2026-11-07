@@ -38,6 +38,7 @@ export interface TokenListProps {
   displayData: DisplaySiteData[]
   currentAccountLoadError?: string | null
   nativeInventoryLoadError?: string | null
+  authenticationFailedAccountIds?: readonly string[]
   currentAccountUnsupportedKeyManagement?: boolean
   onRetryCurrentAccount?: () => void
   managedSiteTokenStatuses?: Record<

@@ -1,6 +1,14 @@
 import type { HealthCheckResult } from "~/services/accounts/accountDataModel"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { SiteHealthStatus, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
+import {
+  API_ERROR_CODES,
+  ApiError,
+  isAuthenticationRequiredError,
+} from "~/services/apiTransport/errors"
+import {
+  ACCOUNT_AUTH_HEALTH_STATUS_CODES,
+  SiteHealthStatus,
+  TEMP_WINDOW_HEALTH_STATUS_CODES,
+} from "~/types"
 import { t } from "~/utils/i18n/core"
 
 // ============= 健康状态判断 =============
@@ -49,6 +57,9 @@ export const determineHealthStatus = (error: any): HealthCheckResult => {
           statusCode: error.statusCode,
           message: error.message,
         }),
+        ...(isAuthenticationRequiredError(error)
+          ? { code: ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED }
+          : {}),
       }
     }
     // 其他API错误（数据格式错误等）

@@ -320,7 +320,11 @@ test("slow detection hint uses available width", async ({
   await expect.poll(async () => (await opened).url()).toContain("auto-detect")
 })
 
-for (const siteType of [SITE_TYPES.NEW_API, SITE_TYPES.CUBENCE]) {
+for (const siteType of [
+  SITE_TYPES.NEW_API,
+  SITE_TYPES.CUBENCE,
+  SITE_TYPES.ANYROUTER,
+]) {
   test(`account editor cookie layout ${siteType}`, async ({
     context,
     page,
@@ -414,6 +418,42 @@ for (const siteType of [SITE_TYPES.NEW_API, SITE_TYPES.CUBENCE]) {
       id: `cookie-${siteType}`,
       extensionDir,
     })
+    const help = dialog.getByRole("button", {
+      name:
+        siteType === SITE_TYPES.ANYROUTER
+          ? "About the session Cookie"
+          : "Cookie usage help",
+      exact: true,
+    })
+    if (siteType === SITE_TYPES.ANYROUTER) {
+      await expect(help).toBeVisible()
+      await help.focus()
+      await expect(help).toHaveAccessibleDescription(
+        "A session Cookie is created when you sign in to the website. Paste it here or import it from your browser. Accounts on the same site need separate Cookies.",
+      )
+      await help.blur()
+      await expect(
+        dialog.getByRole("button", { name: "Verify this Cookie", exact: true }),
+      ).toBeEnabled()
+      await expect(
+        dialog.getByRole("button", {
+          name: "Configure login recovery",
+          exact: true,
+        }),
+      ).toBeVisible()
+    } else {
+      await expect(help).toHaveAttribute("aria-expanded", "false")
+      const explanation = dialog.getByText(
+        "Refresh can use an access token or browser session.",
+        { exact: false },
+      )
+      await expect(explanation).toHaveCount(0)
+      await help.focus()
+      await page.keyboard.press("Enter")
+      await expect(help).toHaveAttribute("aria-expanded", "true")
+      await expect(explanation).toBeVisible()
+      await help.click()
+    }
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({ width, height: 900 })
       await chooseAccountSection(page, navigation, "Account Authentication")
@@ -429,13 +469,79 @@ for (const siteType of [SITE_TYPES.NEW_API, SITE_TYPES.CUBENCE]) {
         exact: true,
       })
       await expect(importButton).toBeVisible()
+      const label = dialog.locator('label[for="account-session-cookie"]')
+      const alignment = await label.evaluate((element) => {
+        const labelBounds = element.getBoundingClientRect()
+        const center = labelBounds.y + labelBounds.height / 2
+        const delta = (action: Element) => {
+          const bounds = action.getBoundingClientRect()
+          return Math.abs(center - (bounds.y + bounds.height / 2))
+        }
+        const row = element.parentElement!
+        const help = row.querySelector(
+          'button[aria-label="About the session Cookie"]',
+        )
+        return {
+          importing: delta(
+            row.querySelector(
+              'button[aria-label="Import from current login"]',
+            )!,
+          ),
+          help: help ? delta(help) : null,
+        }
+      })
+      expect(alignment.importing).toBeLessThanOrEqual(2)
+      if (siteType === SITE_TYPES.ANYROUTER) {
+        const credential = dialog.getByRole("group", {
+          name: "Session Cookie",
+          exact: true,
+        })
+        await expect(credential.getByRole("textbox")).toBeVisible()
+        await expect(
+          credential.getByRole("button", {
+            name: "Verify this Cookie",
+            exact: true,
+          }),
+        ).toBeVisible()
+        await expect(help).toBeVisible()
+        expect(alignment.help).not.toBeNull()
+        expect(alignment.help!).toBeLessThanOrEqual(2)
+        await expect(
+          dialog.getByRole("button", {
+            name: "Configure login recovery",
+            exact: true,
+          }),
+        ).toBeVisible()
+      }
       if (width === 1440) {
         const fieldBounds = await cookie.boundingBox()
         const importBounds = await importButton.boundingBox()
         expect(importBounds!.width).toBeLessThan(fieldBounds!.width / 2)
       }
     }
+    if (siteType === SITE_TYPES.ANYROUTER) {
+      const credential = dialog.getByRole("group", {
+        name: "Session Cookie",
+        exact: true,
+      })
+      await credential
+        .getByRole("button", { name: "Verify this Cookie", exact: true })
+        .click()
+      await expect(credential.getByRole("status")).toBeVisible()
+      expect(
+        await credential.evaluate(
+          (element) => element.scrollWidth - element.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1)
+    }
     await cookie.fill("session=edited-cookie")
+    if (siteType === SITE_TYPES.ANYROUTER) {
+      await expect(
+        dialog
+          .getByRole("group", { name: "Session Cookie", exact: true })
+          .getByRole("status"),
+      ).toHaveCount(0)
+    }
     const refreshedIdentity = page.waitForResponse(
       (response) =>
         response.url() ===

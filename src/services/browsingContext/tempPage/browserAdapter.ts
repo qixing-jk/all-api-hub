@@ -1,6 +1,7 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { startAbortableTask } from "~/services/apiTransport/abortableTask"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { checkTempContextProtectionGuards } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
@@ -137,10 +138,24 @@ export async function prepareTempContextFetchOptions(params: {
 
   const ruleIds = new Set<number>()
   let effectiveFetchOptions: RequestInit = rawOptions
+  const sessionCookie =
+    resolvedAuthType === AuthTypeEnum.Cookie
+      ? typeof params.cookieAuthSessionCookie === "string" &&
+        params.cookieAuthSessionCookie.trim()
+        ? params.cookieAuthSessionCookie
+        : params.accountId
+          ? (await accountQueries.getAccountById(params.accountId))?.cookieAuth
+              ?.sessionCookie
+          : undefined
+      : undefined
 
   // Chromium-based browsers: for token-auth (credentials=omit) we still need WAF cookies,
   // but MUST exclude session cookies to prevent cross-account contamination (issue #204).
-  if (!isProtectionBypassFirefoxEnv() && rawOptions.credentials === "omit") {
+  if (
+    !isProtectionBypassFirefoxEnv() &&
+    rawOptions.credentials === "omit" &&
+    !sessionCookie?.trim()
+  ) {
     const cookieHeader = await getCookieHeaderForUrl(url, {
       includeSession: false,
       ...(params.cookieStoreId ? { storeId: params.cookieStoreId } : {}),
@@ -165,15 +180,6 @@ export async function prepareTempContextFetchOptions(params: {
 
   // Multi-account cookie auth: merge WAF cookies (no session) + per-account session cookie bundle.
   if (resolvedAuthType === AuthTypeEnum.Cookie) {
-    const sessionCookie =
-      typeof params.cookieAuthSessionCookie === "string" &&
-      params.cookieAuthSessionCookie.trim()
-        ? params.cookieAuthSessionCookie
-        : params.accountId
-          ? (await accountQueries.getAccountById(params.accountId))?.cookieAuth
-              ?.sessionCookie
-          : undefined
-
     if (sessionCookie && sessionCookie.trim()) {
       const wafCookieHeader = await getCookieHeaderForUrl(url, {
         includeSession: false,
@@ -198,6 +204,13 @@ export async function prepareTempContextFetchOptions(params: {
             ...rawOptions,
             credentials: "include",
           }
+        } else {
+          throw new ApiError(
+            t("messages:cookieTransport.requestUnavailable"),
+            undefined,
+            undefined,
+            API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
+          )
         }
       } else {
         // Firefox: pass session cookie bundle through a private header.

@@ -1,6 +1,7 @@
 import "~/utils/browser/browserEnvironment"
 
 import { type RuntimeActionId } from "~/constants/runtimeActions"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { getErrorMessage } from "~/utils/core/error"
 
 /**
@@ -50,6 +51,8 @@ export async function sendRuntimeActionMessage<TResponse>(
 }
 
 export interface SendMessageRetryOptions {
+  /** Local cancellation; never serialized into the message or tab targeting options. */
+  abortSignal?: AbortSignal
   maxAttempts?: number
   delayMs?: number
 }
@@ -107,8 +110,9 @@ async function withMessageRetry<T>(
   const delayMs = options?.delayMs ?? defaults.delayMs
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    options?.abortSignal?.throwIfAborted()
     try {
-      return await work()
+      return await runAbortableTask(work, { signals: [options?.abortSignal] })
     } catch (error) {
       const shouldRetry =
         attempt < maxAttempts - 1 && isRecoverableMessageError(error)
@@ -117,9 +121,18 @@ async function withMessageRetry<T>(
         throw error
       }
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, delayMs * Math.pow(2, attempt)),
-      )
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        await runAbortableTask(
+          () =>
+            new Promise<void>((resolve) => {
+              timer = setTimeout(resolve, delayMs * Math.pow(2, attempt))
+            }),
+          { signals: [options?.abortSignal] },
+        )
+      } finally {
+        clearTimeout(timer)
+      }
     }
   }
 

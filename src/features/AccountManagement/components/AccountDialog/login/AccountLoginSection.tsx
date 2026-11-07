@@ -9,30 +9,34 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
 } from "~/components/ui"
 import {
-  ACCOUNT_LOGIN_METHODS,
+  ACCOUNT_LOGIN_CONFIGURATION_KINDS,
   ACCOUNT_LOGIN_PROVIDER_LABELS,
-  ACCOUNT_LOGIN_PROVIDERS,
   ACCOUNT_PASSWORD_IDENTITIES,
-  isAccountLoginProvider,
 } from "~/constants/accountLogin"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
+import { ACCOUNT_FORM_SECTION_ELEMENT_IDS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { IncognitoAccessNotice } from "~/features/Permissions/components/IncognitoAccessNotice"
+import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
-import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
-import type { AccountSiteLoginConfig } from "~/services/accountSiteDefinitions"
+import type { AccountSiteType } from "~/services/accountSiteDefinitions"
+import type { AuthTypeEnum } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 
-export const ACCOUNT_LOGIN_SECTION_ID = "account-login-config"
+export const ACCOUNT_LOGIN_SECTION_ID =
+  ACCOUNT_FORM_SECTION_ELEMENT_IDS["account-login"]
 const UNSET_LOGIN_METHOD = "unset"
 
 /** Existing login configuration, owned by the account rather than its consumers. */
 export function AccountLoginSection({
   continuous,
   siteUrl,
-  passwordIdentity = ACCOUNT_PASSWORD_IDENTITIES.UsernameOrEmail,
+  siteType,
+  authType,
   login,
   claimedLoginProviders = [],
   onChange,
@@ -42,7 +46,8 @@ export function AccountLoginSection({
 }: {
   continuous?: boolean
   siteUrl?: string
-  passwordIdentity?: AccountSiteLoginConfig["passwordIdentity"]
+  siteType?: AccountSiteType
+  authType: AuthTypeEnum
   login?: AccountLoginConfiguration
   claimedLoginProviders?: readonly LoginProviderClaimConflict[]
   onChange: (value: AccountLoginConfiguration | undefined) => void
@@ -56,7 +61,31 @@ export function AccountLoginSection({
   )
   const [showPassword, setShowPassword] = useState(false)
   const credentials = login?.credentials ?? { username: "", password: "" }
-  if (!isAgentRouterLoginUrl(siteUrl)) return null
+  const target = {
+    authType,
+    site_type: siteType,
+    site_url: siteUrl ?? "",
+    account_info: {},
+  }
+  const methods = getAccountLoginMethods(target)
+    .slice()
+    .sort(
+      (a, b) =>
+        Number(
+          b.configuration.kind === ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password,
+        ) -
+        Number(
+          a.configuration.kind === ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password,
+        ),
+    )
+  const selectedMethod = methods.find((method) => method.id === login?.methodId)
+  const passwordIdentity =
+    selectedMethod?.configuration.kind ===
+    ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password
+      ? selectedMethod.configuration.identity
+      : undefined
+  const supportsRecovery = supportsAccountCookieRecovery(target)
+  if (methods.length === 0) return null
   return (
     <AccountFormSection
       continuous={continuous}
@@ -67,17 +96,32 @@ export function AccountLoginSection({
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionLogin}
       id={ACCOUNT_LOGIN_SECTION_ID}
     >
-      <FormField label={t("login.method")} description={t("login.description")}>
+      <FormField
+        label={t("login.method")}
+        description={
+          supportsRecovery
+            ? t("login.recoveryConfigurationDescription")
+            : t("login.description")
+        }
+      >
         <Select
           value={login?.methodId ?? UNSET_LOGIN_METHOD}
           onValueChange={(methodId) => {
-            if (login?.methodId === ACCOUNT_LOGIN_METHODS.Password)
-              passwordDraft.current = credentials
+            if (passwordIdentity) passwordDraft.current = credentials
             setShowPassword(false)
             if (methodId === UNSET_LOGIN_METHOD) onChange(undefined)
-            else if (methodId === ACCOUNT_LOGIN_METHODS.Password)
-              onChange({ methodId, credentials: passwordDraft.current })
-            else if (isAccountLoginProvider(methodId)) onChange({ methodId })
+            else if (methods.some((method) => method.id === methodId))
+              onChange({
+                methodId,
+                ...(methods.find((method) => method.id === methodId)
+                  ?.configuration.kind ===
+                ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password
+                  ? { credentials: passwordDraft.current }
+                  : {}),
+                ...(login?.automaticRecovery === undefined
+                  ? {}
+                  : { automaticRecovery: login.automaticRecovery }),
+              })
           }}
         >
           <SelectTrigger ref={methodRef} aria-label={t("login.method")}>
@@ -87,24 +131,26 @@ export function AccountLoginSection({
             <SelectItem value={UNSET_LOGIN_METHOD}>
               {t("login.notConfigured")}
             </SelectItem>
-            <SelectItem value={ACCOUNT_LOGIN_METHODS.Password}>
-              {t("login.passwordMethod")}
-            </SelectItem>
-            {[
-              ACCOUNT_LOGIN_PROVIDERS.Github,
-              ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
-            ].map((provider) => (
+            {login && !selectedMethod && (
+              <SelectItem value={login.methodId} disabled>
+                {login.methodId}
+              </SelectItem>
+            )}
+            {methods.map((method) => (
               <SelectItem
-                key={provider}
-                value={provider}
+                key={method.id}
+                value={method.id}
                 disabled={
-                  provider !== login?.methodId &&
+                  method.id !== login?.methodId &&
                   claimedLoginProviders.some(
-                    (claim) => claim.provider === provider,
+                    (claim) => claim.provider === method.id,
                   )
                 }
               >
-                {ACCOUNT_LOGIN_PROVIDER_LABELS[provider]}
+                {method.configuration.kind ===
+                ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password
+                  ? t("login.passwordMethod")
+                  : method.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -122,7 +168,29 @@ export function AccountLoginSection({
           </p>
         )}
       </FormField>
-      {login?.methodId === ACCOUNT_LOGIN_METHODS.Password && (
+      {supportsRecovery && (
+        <FormField
+          label={t("login.automaticRecovery")}
+          htmlFor="account-login-automatic-recovery"
+          description={t("login.automaticRecoveryDescription")}
+          labelAction={
+            <Switch
+              id="account-login-automatic-recovery"
+              aria-label={t("login.automaticRecovery")}
+              checked={login?.automaticRecovery === true}
+              disabled={
+                !login || !supportsAccountCookieRecovery(target, login.methodId)
+              }
+              onChange={(automaticRecovery) => {
+                if (login) onChange({ ...login, automaticRecovery })
+              }}
+            />
+          }
+        >
+          {null}
+        </FormField>
+      )}
+      {login && passwordIdentity && (
         <>
           <IncognitoAccessNotice />
           <FormField
@@ -142,7 +210,8 @@ export function AccountLoginSection({
               value={credentials.username}
               onChange={(event) =>
                 onChange({
-                  methodId: ACCOUNT_LOGIN_METHODS.Password,
+                  ...login,
+                  methodId: login.methodId,
                   credentials: { ...credentials, username: event.target.value },
                 })
               }
@@ -169,7 +238,8 @@ export function AccountLoginSection({
               value={credentials.password}
               onChange={(event) =>
                 onChange({
-                  methodId: ACCOUNT_LOGIN_METHODS.Password,
+                  ...login,
+                  methodId: login.methodId,
                   credentials: { ...credentials, password: event.target.value },
                 })
               }

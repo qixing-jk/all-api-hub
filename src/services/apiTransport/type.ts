@@ -151,6 +151,8 @@ export interface ApiTransportRequest {
   managementApiBaseUrl?: string
   data?: Record<string, any>
   accountId?: string
+  /** Explicit account operation admission; passive probes leave this unset. */
+  allowAccountCredentialRecovery?: boolean
   abortSignal?: AbortSignal
   /** Maximum dispatched request duration; limiter queue time is excluded. */
   requestTimeoutMs?: number

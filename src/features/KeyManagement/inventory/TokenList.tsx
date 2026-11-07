@@ -8,9 +8,12 @@ import {
   Card,
   Checkbox,
   IconButton,
+  Notice,
   Spinner,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { AccountCredentialRecoveryGuidance } from "~/features/AccountManagement/credentialRecovery/AccountCredentialRecoveryGuidance"
+import { supportsAccountCredentialRecovery } from "~/features/AccountManagement/credentialRecovery/guidance"
 import { DeeplinkExportDialog } from "~/features/CredentialExport/DeeplinkExportDialog"
 import { useTokenCredentialAssociations } from "~/features/KeyManagement/associations/useTokenCredentialAssociations"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/batchExport/ManagedSiteTokenBatchExportDialog"
@@ -77,6 +80,7 @@ export function TokenList(props: TokenListProps) {
     displayData,
     currentAccountLoadError,
     nativeInventoryLoadError,
+    authenticationFailedAccountIds = [],
     currentAccountUnsupportedKeyManagement,
     onRetryCurrentAccount,
     managedSiteTokenStatuses,
@@ -283,29 +287,51 @@ export function TokenList(props: TokenListProps) {
     />
   )
   const nativeResourceList = renderNativeResourceList(nativeRows)
+  const recoveryAccounts = displayData.filter(
+    (account) =>
+      authenticationFailedAccountIds.includes(account.id) &&
+      supportsAccountCredentialRecovery(account) &&
+      (isAllAccountsMode
+        ? allAccountsFilterAccountIds.length === 0 ||
+          allAccountsFilterAccountIds.includes(account.id)
+        : selectedAccount === account.id),
+  )
+  const recoveryGuidance = recoveryAccounts.length > 0 && (
+    <div className="space-y-density-2 mb-density-4">
+      {recoveryAccounts.map((account) => (
+        <Notice key={account.id} tone="warning" title={account.name}>
+          <AccountCredentialRecoveryGuidance account={account} failure />
+        </Notice>
+      ))}
+    </div>
+  )
   if (filteredDisplayRows.length === 0) {
     return (
-      <TokenEmptyState
-        selectedAccount={selectedAccount}
-        totalCount={displayRows.length}
-        handleAddToken={handleAddToken}
-        canCreateTokens={canCreateTokens}
-        displayData={displayData}
-        currentAccountLoadError={
-          currentAccountLoadError ?? nativeInventoryLoadError
-        }
-        currentAccountUnsupportedKeyManagement={
-          currentAccountUnsupportedKeyManagement
-        }
-        onRetryCurrentAccount={onRetryCurrentAccount}
-        onAddAccount={onAddAccount}
-        onRequestAccountSelection={onRequestAccountSelection}
-      />
+      <>
+        <TokenEmptyState
+          selectedAccount={selectedAccount}
+          totalCount={displayRows.length}
+          handleAddToken={handleAddToken}
+          canCreateTokens={canCreateTokens}
+          displayData={displayData}
+          currentAccountLoadError={
+            currentAccountLoadError ?? nativeInventoryLoadError
+          }
+          currentAccountUnsupportedKeyManagement={
+            currentAccountUnsupportedKeyManagement
+          }
+          onRetryCurrentAccount={onRetryCurrentAccount}
+          onAddAccount={onAddAccount}
+          onRequestAccountSelection={onRequestAccountSelection}
+        />
+        {recoveryGuidance}
+      </>
     )
   }
 
   return (
     <>
+      {recoveryGuidance}
       {filteredEligibleEntries.length > 0 ? (
         <div className="gap-density-2 py-density-3 mb-density-4 flex flex-wrap items-center justify-between rounded-md border px-3">
           <div className="gap-density-1 flex items-center">

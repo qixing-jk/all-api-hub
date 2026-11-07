@@ -277,6 +277,7 @@ function createAccountRefreshRequest(
   return {
     baseUrl,
     accountId: account.id,
+    allowAccountCredentialRecovery: true,
     checkIn: account.checkIn,
     siteType: account.site_type,
     exchangeRate: account.exchange_rate,

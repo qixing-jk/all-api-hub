@@ -669,6 +669,11 @@ export default function AccountDialog({
                 onSiteTypeChange={setters.setSiteType}
                 onAuthTypeChange={setters.setAuthType}
                 isImportingCookies={state.isImportingCookies}
+                cookieRecovery={{
+                  pending: state.isRecoveringCookies,
+                  verifiedCookie: state.verifiedCookie,
+                  onRecover: () => void handlers.handleRecoverCookieSession(),
+                }}
                 showCookiePermissionWarning={state.showCookiePermissionWarning}
                 cookieAuthPermissionsGranted={
                   state.cookieAuthPermissionsGranted

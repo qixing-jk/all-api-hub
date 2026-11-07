@@ -164,6 +164,45 @@ describe("browserAdapter", () => {
   })
 
   describe("prepareTempContextFetchOptions", () => {
+    it("installs one combined Cookie rule instead of a preliminary WAF rule for an explicit session", async () => {
+      vi.spyOn(cookieHelper, "getCookieHeaderForUrl").mockResolvedValue(
+        "acw_sc__v2=clearance",
+      )
+      const inject = vi
+        .spyOn(dnrCookieInjector, "applyTempWindowCookieRule")
+        .mockResolvedValue(1001)
+      const result = await prepareTempContextFetchOptions({
+        tabId: 5,
+        url: "https://anyrouter.top/api/user/self",
+        rawOptions: { credentials: "omit" },
+        resolvedAuthType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=draft",
+      })
+      expect(inject).toHaveBeenCalledExactlyOnceWith({
+        tabId: 5,
+        url: "https://anyrouter.top/api/user/self",
+        cookieHeader: "acw_sc__v2=clearance; session=draft",
+      })
+      expect(result.ruleIds).toEqual([1001])
+    })
+    it("refuses to borrow the browser login when the supplied session cannot be injected", async () => {
+      vi.spyOn(cookieHelper, "getCookieHeaderForUrl").mockResolvedValue(
+        "acw_sc__v2=clearance",
+      )
+      vi.spyOn(
+        dnrCookieInjector,
+        "applyTempWindowCookieRule",
+      ).mockResolvedValue(null)
+      await expect(
+        prepareTempContextFetchOptions({
+          tabId: 5,
+          url: "https://anyrouter.top/api/user/self",
+          rawOptions: { credentials: "include" },
+          resolvedAuthType: AuthTypeEnum.Cookie,
+          cookieAuthSessionCookie: "session=draft",
+        }),
+      ).rejects.toMatchObject({ code: "COOKIE_REQUEST_UNAVAILABLE" })
+    })
     it("injects WAF cookies in chromium for credentials=omit", async () => {
       vi.spyOn(
         protectionBypass,

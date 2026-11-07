@@ -35,6 +35,23 @@ const account = normalizeSiteAccount({
 } as SiteAccount)
 
 describe("per-account login configuration", () => {
+  it("persists explicit automatic recovery permission with the account login", async () => {
+    await accountLoginConfiguration.configure(account, {
+      methodId: "github",
+      automaticRecovery: true,
+    })
+    expect(await accountLoginConfiguration.read(account)).toEqual({
+      methodId: "github",
+      automaticRecovery: true,
+    })
+  })
+  it("rejects a method not implemented by the target adapter without writing", async () => {
+    const before = structuredClone(storage.value)
+    await expect(
+      accountLoginConfiguration.configure(account, { methodId: "company-sso" }),
+    ).rejects.toThrow("Invalid account login configuration")
+    expect(storage.value).toEqual(before)
+  })
   beforeEach(() => {
     storage.value = {
       ...createDefaultAccountStorageConfig(),

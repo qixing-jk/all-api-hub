@@ -85,7 +85,8 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-vi.mock("~/services/apiAdapters/registry", () => ({
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
   getSiteTypeCapabilities: (siteType: string) => ({
     account:
       siteType === SITE_TYPES.SHAREDCHAT

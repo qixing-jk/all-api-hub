@@ -8,6 +8,7 @@ import type {
   LoginVerificationReason,
 } from "~/constants/browserLogin"
 import { TURNSTILE_MANUAL_WAIT_MS } from "~/constants/turnstile"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { resolveTempWindowSize } from "~/services/browsingContext/tempPage/windowSize"
 import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
@@ -61,6 +62,8 @@ interface OpenedAuthContext {
 }
 
 export interface BrowserLoginInput {
+  /** Cancels this caller's queued or active login and its owned browser context. */
+  abortSignal?: AbortSignal
   expectedIdentity?: string
   origin: string
   requestId: string
@@ -70,6 +73,7 @@ export interface BrowserLoginInput {
    */
   attended?: boolean
   sessionMode?: BrowserLoginSessionMode
+  captureCredential?: boolean
 }
 
 type BrowserLoginProtocolFailureStatus =
@@ -89,6 +93,7 @@ export type BrowserLoginResult<Evidence> =
       status: typeof BROWSER_LOGIN_STATUS.Authenticated
       evidence: Evidence
       identity: string
+      credential?: { cookie: string }
     }
   | {
       status: BrowserLoginFailureStatus
@@ -134,6 +139,11 @@ export interface BrowserLoginProtocol<Evidence> {
   clearEvidenceAction: string
   preferIncognito?: boolean
   joinConcurrent?: boolean
+  /** The adapter owns which credential its verified login context can export. */
+  captureCredential?: (
+    tabId: number,
+    origin: string,
+  ) => Promise<{ cookie: string } | null>
   execute(session: BrowserLoginSession): Promise<BrowserLoginResult<Evidence>>
   failure?(error: unknown): BrowserLoginResult<Evidence>
 }
@@ -202,6 +212,7 @@ async function waitForTab(
   predicate: (tab: browser.tabs.Tab) => boolean,
   timeoutMs: number,
   onPending?: (tab: browser.tabs.Tab) => void,
+  signal?: AbortSignal,
 ): Promise<browser.tabs.Tab> {
   return await new Promise((resolve, reject) => {
     let settled = false
@@ -213,6 +224,7 @@ async function waitForTab(
       removeUpdated()
       removeTabClosed()
       removeWindowClosed()
+      signal?.removeEventListener("abort", onAbort)
       if ("tab" in outcome) resolve(outcome.tab)
       else reject(outcome.error)
     }
@@ -257,6 +269,11 @@ async function waitForTab(
         })
     }, KEEPALIVE_INTERVAL_MS)
 
+    const onAbort = () =>
+      finish({ error: new AuthCancelledError("Authentication was cancelled.") })
+    signal?.addEventListener("abort", onAbort, { once: true })
+    if (signal?.aborted) onAbort()
+
     void getTab(context.tabId)
       .then(inspect)
       .catch(() => {
@@ -284,6 +301,7 @@ async function sendContentMessage<T>(
   action: string,
   requestId: string,
   details: Record<string, unknown> = {},
+  abortSignal?: AbortSignal,
 ): Promise<T> {
   return await sendTabMessageWithRetry<T>(
     tabId,
@@ -293,6 +311,7 @@ async function sendContentMessage<T>(
       // The shared helper never replays a dispatched action after a lost response.
       maxAttempts: 8,
       delayMs: 400,
+      ...(abortSignal ? { abortSignal } : {}),
     },
   )
 }
@@ -307,7 +326,10 @@ async function authenticateBrowserLogin<Evidence>(
   let disposeVerification: (() => void) | undefined
   let interactionDeadline = 0
   let openedReminder = false
+  const active = <T>(task: () => Promise<T>) =>
+    runAbortableTask(task, { signals: [input.abortSignal] })
   try {
+    input.abortSignal?.throwIfAborted()
     context = await openVisibleAuthContext(
       input.origin,
       flow.loginPath,
@@ -320,6 +342,8 @@ async function authenticateBrowserLogin<Evidence>(
         tab.status === "complete" &&
         Boolean(tab.url?.startsWith(`${input.origin}/`)),
       BROWSER_LOGIN_PAGE_TIMEOUT_MS,
+      undefined,
+      input.abortSignal,
     )
     await assertTabOrigin(context, input.origin)
     const opened = context
@@ -336,38 +360,71 @@ async function authenticateBrowserLogin<Evidence>(
         },
       })
     }
-    const result = await flow.execute({
-      input,
-      send: (action, details) =>
-        sendContentMessage(opened.tabId, action, input.requestId, details),
-      navigate: (url) => updateTab(opened.tabId, { url, active: true }),
-      assertOrigin: () => assertTabOrigin(opened, input.origin),
-      async canResetSession() {
-        const tab = await getTab(opened.tabId)
-        if (!tab.incognito) return false
-        const others = await queryTabs({})
-        return !others.some(
-          (other) =>
-            other.id !== opened.tabId &&
-            other.incognito === true &&
-            other.url &&
-            new URL(other.url).origin === input.origin,
-        )
-      },
-      async requestAssist(reason) {
-        const registered = getLoginVerificationContext(input.requestId)
-        if (registered) registered.reason = reason
-        return requestLoginVerificationAssist(input.requestId)
-      },
-      interactionDeadline: () => interactionDeadline,
-      waitForTab: (predicate, timeoutMs, onPending) =>
-        waitForTab(opened, predicate, timeoutMs, onPending),
-    })
+    const result = await active(() =>
+      flow.execute({
+        input,
+        send: (action, details) =>
+          active(() =>
+            sendContentMessage(
+              opened.tabId,
+              action,
+              input.requestId,
+              details,
+              input.abortSignal,
+            ),
+          ),
+        navigate: (url) =>
+          active(() => updateTab(opened.tabId, { url, active: true })),
+        assertOrigin: () => active(() => assertTabOrigin(opened, input.origin)),
+        async canResetSession() {
+          input.abortSignal?.throwIfAborted()
+          const tab = await getTab(opened.tabId)
+          if (!tab.incognito) return false
+          const others = await queryTabs({})
+          return !others.some(
+            (other) =>
+              other.id !== opened.tabId &&
+              other.incognito === true &&
+              other.url &&
+              new URL(other.url).origin === input.origin,
+          )
+        },
+        async requestAssist(reason) {
+          input.abortSignal?.throwIfAborted()
+          const registered = getLoginVerificationContext(input.requestId)
+          if (registered) registered.reason = reason
+          return requestLoginVerificationAssist(input.requestId)
+        },
+        interactionDeadline: () => interactionDeadline,
+        waitForTab: (predicate, timeoutMs, onPending) =>
+          waitForTab(
+            opened,
+            predicate,
+            timeoutMs,
+            onPending,
+            input.abortSignal,
+          ),
+      }),
+    )
+    input.abortSignal?.throwIfAborted()
+    if (
+      result.status === BROWSER_LOGIN_STATUS.Authenticated &&
+      input.captureCredential
+    ) {
+      await assertTabOrigin(opened, input.origin)
+      const credential = await active(async () =>
+        flow.captureCredential?.(opened.tabId, input.origin),
+      )
+      input.abortSignal?.throwIfAborted()
+      if (!credential) return { status: BROWSER_LOGIN_STATUS.Uncertain }
+      authenticated = true
+      return { ...result, credential }
+    }
     authenticated = result.status === BROWSER_LOGIN_STATUS.Authenticated
     return result
   } catch (error) {
-    if (error instanceof AuthCancelledError)
-      return { status: BROWSER_LOGIN_STATUS.Cancelled, message: error.message }
+    if (input.abortSignal?.aborted || error instanceof AuthCancelledError)
+      return { status: BROWSER_LOGIN_STATUS.Cancelled }
     if (error instanceof AuthTimeoutError)
       return {
         status: BROWSER_LOGIN_STATUS.InteractionRequired,
@@ -384,7 +441,7 @@ async function authenticateBrowserLogin<Evidence>(
       message: getErrorMessage(error),
     }
   } finally {
-    if (!authenticated && context) {
+    if (!authenticated && context && !input.abortSignal?.aborted) {
       try {
         await assertTabOrigin(context, input.origin)
         await sendContentMessage(
@@ -405,6 +462,7 @@ async function authenticateBrowserLogin<Evidence>(
 
 /** Signals that a queued login never got the shared session in time. */
 const SESSION_WAIT_EXPIRED = Symbol("session-wait-expired")
+const SESSION_WAIT_CANCELLED = Symbol("session-wait-cancelled")
 
 /**
  * Waits for the shared session, then either runs the flow or reports it busy.
@@ -419,6 +477,12 @@ async function authenticateWithinSessionWait<Evidence>(
 ): Promise<BrowserLoginResult<Evidence>> {
   let waitExpired = false
   let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined
+  let cancelWait!: () => void
+  const cancelled = new Promise<typeof SESSION_WAIT_CANCELLED>((resolve) => {
+    cancelWait = () => resolve(SESSION_WAIT_CANCELLED)
+    input.abortSignal?.addEventListener("abort", cancelWait, { once: true })
+    if (input.abortSignal?.aborted) cancelWait()
+  })
   const waitBound = new Promise<typeof SESSION_WAIT_EXPIRED>((resolve) => {
     timeoutId = globalThis.setTimeout(() => {
       waitExpired = true
@@ -431,12 +495,21 @@ async function authenticateWithinSessionWait<Evidence>(
     `${flow.concurrencyKey}:${input.origin}`,
     async () => {
       globalThis.clearTimeout(timeoutId)
+      input.abortSignal?.removeEventListener("abort", cancelWait)
+      if (input.abortSignal?.aborted) return SESSION_WAIT_CANCELLED
       if (waitExpired) return SESSION_WAIT_EXPIRED
       return await authenticateBrowserLogin(flow, input)
     },
   )
 
-  const outcome = await Promise.race([queued, waitBound])
+  const outcome = await Promise.race([queued, waitBound, cancelled]).finally(
+    () => {
+      globalThis.clearTimeout(timeoutId)
+      input.abortSignal?.removeEventListener("abort", cancelWait)
+    },
+  )
+  if (outcome === SESSION_WAIT_CANCELLED)
+    return { status: BROWSER_LOGIN_STATUS.Cancelled }
   if (outcome === SESSION_WAIT_EXPIRED) {
     return {
       status: BROWSER_LOGIN_STATUS.SessionBusy,
@@ -451,10 +524,16 @@ function buildJoinKey<Evidence>(
   flow: BrowserLoginProtocol<Evidence>,
   input: BrowserLoginInput,
 ): string | null {
-  if (!input.expectedIdentity || flow.joinConcurrent === false) return null
+  // A cancellable caller owns its lifetime; it cannot cancel another caller's flow.
+  if (
+    !input.expectedIdentity ||
+    flow.joinConcurrent === false ||
+    input.abortSignal
+  )
+    return null
   // Different interaction budgets cannot share one deadline. They still take
   // turns through the shared session queue.
-  return `${flow.id}\u0000${input.origin}\u0000${input.expectedIdentity}\u0000${input.attended === false ? "unattended" : "attended"}`
+  return `${flow.id}\u0000${input.origin}\u0000${input.expectedIdentity}\u0000${input.attended === false ? "unattended" : "attended"}\u0000${input.captureCredential === true ? "credential" : "identity"}`
 }
 
 /** Owns lifecycle and session scheduling for both native and OAuth protocols. */
@@ -467,6 +546,8 @@ export function createBrowserLoginContext<Evidence>(
 
   return {
     async authenticate(input) {
+      if (input.abortSignal?.aborted)
+        return { status: BROWSER_LOGIN_STATUS.Cancelled }
       const joinKey = buildJoinKey(flow, input)
       const joined = joinKey ? inFlightAuthentications.get(joinKey) : undefined
       if (joined) return (await joined) as BrowserLoginResult<Evidence>

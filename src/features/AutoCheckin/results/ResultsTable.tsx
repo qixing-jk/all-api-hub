@@ -52,7 +52,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
 import type { SiteTypeMismatchMap } from "~/services/siteDetection/siteTypeObservations"
-import type { CurrencyType } from "~/types"
+import type { CurrencyType, DisplaySiteData } from "~/types"
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
@@ -70,6 +70,7 @@ interface ResultsTableProps extends ResultsTableActionsProps {
   currencyType?: CurrencyType
   /** Each account's USD-to-CNY rate, keyed by account id. */
   exchangeRateByAccountId?: Record<string, number>
+  accountInfoById?: Record<string, DisplaySiteData>
 }
 
 const RESULT_STATUS_SORT_RANK: Record<CheckinResultStatus, number> = {
@@ -88,6 +89,7 @@ export default function ResultsTable({
   siteTypeMismatches,
   currencyType,
   exchangeRateByAccountId,
+  accountInfoById,
   ...actionProps
 }: ResultsTableProps) {
   const { t } = useTranslation(["autoCheckin", "account"])
@@ -285,6 +287,7 @@ export default function ResultsTable({
                 <ResultsTableRow
                   key={result.accountId}
                   result={result}
+                  account={accountInfoById?.[result.accountId]}
                   siteTypeMismatch={siteTypeMismatches?.[result.accountId]}
                   currencyType={currencyType}
                   exchangeRateByAccountId={exchangeRateByAccountId}

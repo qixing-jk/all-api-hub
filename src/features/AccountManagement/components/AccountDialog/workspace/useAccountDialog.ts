@@ -41,6 +41,7 @@ import { useAccountManagedSiteSetup } from "~/features/AccountManagement/compone
 import { useAccountPostSaveWorkflow } from "~/features/AccountManagement/components/AccountDialog/postSave/useAccountPostSaveWorkflow"
 import { useAccountDialogSaveWorkflow } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDialogSaveWorkflow"
 import { useAccountDuplicateConfirmation } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDuplicateConfirmation"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import {
   isValidAccount,
   parseManualQuotaFromUsd,
@@ -302,9 +303,18 @@ export function useAccountDialog({
     authType,
     getContext: getCookieImportContextForUrl,
     applyCookie: applyImportedCookie,
+    validationTarget: {
+      site_type: siteType,
+      site_url: url,
+      account_info: { id: userId },
+      cookieAuth: { sessionCookie: cookieAuthSessionCookie },
+      login: draft.login,
+    },
   })
   const {
     isImportingCookies,
+    isRecoveringCookies,
+    verifiedCookie,
     showCookiePermissionWarning,
     cookieAuthPermissionState,
   } = cookieSession.state
@@ -312,6 +322,7 @@ export function useAccountDialog({
     invalidate: invalidateCookieSession,
     reset: resetCookieSession,
     importManually: handleImportCookieAuthSessionCookie,
+    recoverManually: handleRecoverCookieSession,
     requestPermissions: handleRequestCookieAuthPermissions,
   } = cookieSession
   const sub2ApiSession = useSub2ApiAccountSession({
@@ -683,6 +694,14 @@ export function useAccountDialog({
     : SITE_TYPES.UNKNOWN
   const isFormValid = isValidAccount({
     loginChange: draft.loginChanged ? draft.login : undefined,
+    loginMethods:
+      draft.loginChanged && draft.login
+        ? getAccountLoginMethods({
+            site_type: normalizedFormSiteType,
+            site_url: url,
+            account_info: { id: userId, username },
+          })
+        : undefined,
     siteName,
     username,
     userId,
@@ -758,6 +777,8 @@ export function useAccountDialog({
       openRouterBootstrapRecovery: openRouterOnboardingRecovery,
       cookieAuthSessionCookie,
       isImportingCookies,
+      isRecoveringCookies,
+      verifiedCookie,
       showCookiePermissionWarning,
       cookieAuthPermissionsGranted: cookieAuthPermissionState.granted,
       isRequestingCookieAuthPermissions: cookieAuthPermissionState.pending,
@@ -836,6 +857,7 @@ export function useAccountDialog({
       handleClose,
       retryAccountLoad,
       handleImportCookieAuthSessionCookie,
+      handleRecoverCookieSession,
       handleOpenCookiePermissionSettings,
       handleRequestCookieAuthPermissions,
       handleImportSub2apiSession,

@@ -868,6 +868,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: "session=incognito",
+      cookieStoreId: "1-incognito",
     })
   })
 
@@ -917,6 +918,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: "session=incognito",
+      cookieStoreId: "1-incognito",
     })
   })
 

@@ -6,6 +6,14 @@ import { migrateAccountConfig } from "~/services/accounts/migrations/accountData
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("account-owned login migration", () => {
+  it("does not attach an unused legacy password to an OAuth selection", () => {
+    const old = buildSiteAccount({
+      configVersion: 7,
+      passwordAuth: { username: "alice", password: "secret" },
+    })
+    old.checkIn.loginCheckIn = { provider: "github" }
+    expect(migrateAccountConfig(old).login).toEqual({ methodId: "github" })
+  })
   it("moves released check-in selection and passwords to the account without changing user timestamps or enabling new background work", () => {
     const old = buildSiteAccount({
       configVersion: 7,

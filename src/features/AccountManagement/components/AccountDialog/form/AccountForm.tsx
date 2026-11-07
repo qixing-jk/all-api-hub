@@ -33,7 +33,6 @@ import {
   FormField,
   IconButton,
   Input,
-  Label,
   Notice,
   Select,
   SelectContent,
@@ -43,13 +42,10 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
-import {
-  ACCOUNT_LOGIN_METHODS,
-  isAccountLoginProvider,
-} from "~/constants/accountLogin"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
+import { AccountCookieVerification } from "~/features/AccountManagement/components/AccountDialog/form/AccountCookieVerification"
 import { AccountFormLayout } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormLayout"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
 import {
@@ -57,6 +53,7 @@ import {
   ACCOUNT_FORM_SECTION_ELEMENT_IDS,
   type AccountFormSectionId,
 } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import { CookieAuthCompatibilityHint } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthCompatibilityHint"
 import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
@@ -78,14 +75,17 @@ import {
   type AccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import { AccountCredentialRecoveryGuidance } from "~/features/AccountManagement/credentialRecovery/AccountCredentialRecoveryGuidance"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
-import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
+import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
+import { isAccountLoginConfigured } from "~/services/accountLogin/configCodec"
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
 import { isValidExchangeRate } from "~/services/accounts/editing/accountFormValidation"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import type { AccountCookieValidationEvidence } from "~/services/apiAdapters/contracts/accountLogin"
 import {
   encodeNanoGptCredentials,
   parseNanoGptCredentials,
@@ -110,6 +110,7 @@ type AccountFormPresentationSitePolicy = Pick<
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
   | "usesBrowserCookieSession"
+  | "supportsCookieValidation"
   | "allowSub2ApiRefreshTokenState"
   | "allowAimlApiKey"
   | "requireUsername"
@@ -164,6 +165,11 @@ interface AccountFormProps {
   onExcludeFromTodayIncomeChange: (value: boolean) => void
   onCookieAuthSessionCookieChange: (value: string) => void
   onImportCookieAuthSessionCookie: () => void
+  cookieRecovery?: {
+    pending: boolean
+    onRecover: () => void
+    verifiedCookie?: AccountCookieValidationEvidence | null
+  }
   onOpenCookiePermissionSettings: () => void
   cookieAuthPermissionsGranted?: CookieAuthPermissionRecommendationProps["cookieAuthPermissionsGranted"]
   isRequestingCookieAuthPermissions?: boolean
@@ -221,6 +227,7 @@ export default function AccountForm({
   onExcludeFromTodayIncomeChange,
   onCookieAuthSessionCookieChange,
   onImportCookieAuthSessionCookie,
+  cookieRecovery,
   onOpenCookiePermissionSettings,
   cookieAuthPermissionsGranted,
   isRequestingCookieAuthPermissions,
@@ -322,14 +329,31 @@ export default function AccountForm({
   const clearLoginHighlightRef = useRef<(() => void) | undefined>(undefined)
   const [isLoginSectionOpen, setIsLoginSectionOpen] = useState(true)
   const [loginFocusRequested, setLoginFocusRequested] = useState(false)
-  const usesAccountLogin =
+  const handleConfigureLogin = () => {
+    setIsLoginSectionOpen(true)
+    setLoginFocusRequested(true)
+  }
+  const usesLoginCheckIn =
     resolveSelectedCheckInMethod({ config: checkIn, siteType, siteUrl }) ===
     AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn
-  const loginConfigured =
-    !!draft.login &&
-    (draft.login.methodId === ACCOUNT_LOGIN_METHODS.Password
-      ? !!normalizePasswordCredentials(draft.login.credentials)
-      : isAccountLoginProvider(draft.login.methodId))
+  const loginTarget = {
+    authType,
+    site_type: siteType,
+    site_url: siteUrl ?? "",
+    account_info: { id: userId },
+  }
+  const supportsCookieRecovery = supportsAccountCookieRecovery(loginTarget)
+  const usesAccountLogin = usesLoginCheckIn || supportsCookieRecovery
+  useEffect(() => {
+    if (focusSection === "account-login" && usesAccountLogin) {
+      setIsLoginSectionOpen(true)
+      setLoginFocusRequested(true)
+    }
+  }, [focusSection, usesAccountLogin])
+  const loginConfigured = isAccountLoginConfigured(
+    draft.login,
+    getAccountLoginMethods(loginTarget),
+  )
   const [isAuthSectionOpen, setIsAuthSectionOpen] = useState(
     ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"],
   )
@@ -414,21 +438,65 @@ export default function AccountForm({
     </>
   )
 
-  const cookieImportAction = (
+  const cookieImportButton = (
     <Button
       type="button"
       variant="outline"
       size="sm"
       onClick={onImportCookieAuthSessionCookie}
       loading={isImportingCookies}
+      disabled={cookieRecovery?.pending}
       leftIcon={<Download className="h-4 w-4" />}
-      className={continuous ? "shrink-0" : "w-full"}
+      className="shrink-0"
+      aria-label={
+        isImportingCookies
+          ? t("messages.importCookiesLoading")
+          : t("form.importCookieAuthSessionCookie")
+      }
     >
-      {isImportingCookies
-        ? t("messages.importCookiesLoading")
-        : t("form.importCookieAuthSessionCookie")}
+      <span className="sm:hidden">{t("common:actions.import")}</span>
+      <span className="hidden sm:inline">
+        {isImportingCookies
+          ? t("messages.importCookiesLoading")
+          : t("form.importCookieAuthSessionCookie")}
+      </span>
     </Button>
   )
+  const cookieFieldActions = sitePolicy.supportsCookieValidation ? (
+    <>
+      <Tooltip
+        anchorAsChild
+        positionStrategy="fixed"
+        content={t("form.cookieAuthSessionCookieHelpDesc")}
+        className="max-w-[min(22rem,calc(100vw-2rem))]! text-left leading-relaxed font-normal whitespace-normal"
+      >
+        <button
+          type="button"
+          aria-label={t("form.cookieAuthSessionCookieHelp")}
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring mr-auto inline-flex size-6 shrink-0 items-center justify-center rounded-sm outline-none focus-visible:ring-2"
+        >
+          <HelpHintIcon className="size-4" aria-hidden="true" />
+        </button>
+      </Tooltip>
+      <Tooltip
+        anchorAsChild
+        positionStrategy="fixed"
+        content={t("form.importCookieAuthSessionCookieHint")}
+        className="max-w-[min(22rem,calc(100vw-2rem))]! text-left leading-relaxed font-normal whitespace-normal"
+      >
+        {cookieImportButton}
+      </Tooltip>
+    </>
+  ) : (
+    cookieImportButton
+  )
+  const cookieRecoveryAction = supportsCookieRecovery ? (
+    <AccountCredentialRecoveryGuidance
+      compact
+      account={{ siteType, authType, baseUrl: siteUrl ?? "" }}
+      onConfigure={handleConfigureLogin}
+    />
+  ) : null
 
   const tagsAndNotes = (
     <AccountFormSection
@@ -561,6 +629,7 @@ export default function AccountForm({
     <AccountFormLayout
       continuous={continuous}
       focusSection={focusSection}
+      hasAccountLogin={usesAccountLogin}
       guidance={guidance}
     >
       <AccountFormSection
@@ -912,36 +981,25 @@ export default function AccountForm({
         {authType === AuthTypeEnum.Cookie && (
           <FormField
             className={continuous ? "col-span-full" : undefined}
-            label={continuous ? undefined : t("form.cookieAuthSessionCookie")}
+            label={t("form.cookieAuthSessionCookie")}
+            labelAction={cookieFieldActions}
             htmlFor="account-session-cookie"
             description={
               sitePolicy.usesBrowserCookieSession
                 ? t("siteInfo.browserCookieSession")
-                : t("form.cookieAuthSessionCookieDesc")
+                : undefined
             }
             required={!sitePolicy.usesBrowserCookieSession}
           >
-            {continuous && (
-              <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-3">
-                <Label
-                  htmlFor="account-session-cookie"
-                  required={!sitePolicy.usesBrowserCookieSession}
-                >
-                  {t("form.cookieAuthSessionCookie")}
-                </Label>
-                {cookieImportAction}
-              </div>
-            )}
             <div className="space-y-density-2">
               <CookieAuthPermissionRecommendation
-                inlineAction={continuous}
+                compact
                 cookieAuthPermissionsGranted={cookieAuthPermissionsGranted}
                 isRequestingCookieAuthPermissions={
                   isRequestingCookieAuthPermissions
                 }
                 onRequestCookieAuthPermissions={onRequestCookieAuthPermissions}
               />
-              {!continuous && cookieImportAction}
               {showCookiePermissionWarning && (
                 <Alert
                   variant="warning"
@@ -959,16 +1017,68 @@ export default function AccountForm({
                   </div>
                 </Alert>
               )}
-              <Textarea
-                id="account-session-cookie"
-                className={continuous ? "font-mono" : undefined}
-                value={cookieAuthSessionCookie}
-                onChange={(e) =>
-                  onCookieAuthSessionCookieChange(e.target.value)
+              <div
+                role="group"
+                aria-label={t("form.cookieAuthSessionCookie")}
+                className={
+                  sitePolicy.supportsCookieValidation
+                    ? "border-input bg-card focus-within:ring-ring overflow-hidden rounded-md border focus-within:ring-2"
+                    : undefined
                 }
-                placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
-                rows={2}
-                required={!sitePolicy.usesBrowserCookieSession}
+              >
+                <Textarea
+                  id="account-session-cookie"
+                  className={
+                    sitePolicy.supportsCookieValidation
+                      ? "rounded-none border-0 font-mono leading-relaxed focus:ring-0"
+                      : "font-mono leading-relaxed"
+                  }
+                  value={cookieAuthSessionCookie}
+                  onChange={(e) =>
+                    onCookieAuthSessionCookieChange(e.target.value)
+                  }
+                  placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
+                  rows={2}
+                  required={!sitePolicy.usesBrowserCookieSession}
+                />
+                {sitePolicy.supportsCookieValidation && (
+                  <AccountCookieVerification
+                    siteType={siteType}
+                    siteUrl={siteUrl ?? ""}
+                    userId={userId}
+                    cookie={cookieAuthSessionCookie}
+                    verifiedCookie={cookieRecovery?.verifiedCookie}
+                    busy={isImportingCookies}
+                    recovery={
+                      supportsCookieRecovery
+                        ? {
+                            configured:
+                              loginConfigured &&
+                              supportsAccountCookieRecovery(
+                                loginTarget,
+                                draft.login?.methodId,
+                              ) &&
+                              Boolean(cookieRecovery),
+                            pending: cookieRecovery?.pending === true,
+                            onRecover: () => cookieRecovery?.onRecover(),
+                            onConfigure: handleConfigureLogin,
+                          }
+                        : undefined
+                    }
+                  />
+                )}
+              </div>
+              <CookieAuthCompatibilityHint
+                hasAccessToken={Boolean(accessToken.trim())}
+                description={
+                  sitePolicy.usesBrowserCookieSession ||
+                  sitePolicy.supportsCookieValidation
+                    ? undefined
+                    : t("form.cookieAuthSessionCookieDesc")
+                }
+                supportsValidation={sitePolicy.supportsCookieValidation}
+                recovery={supportsCookieRecovery}
+                recoveryAction={cookieRecoveryAction}
               />
             </div>
           </FormField>
@@ -981,14 +1091,7 @@ export default function AccountForm({
         continuous={continuous}
         loginMethodId={draft.login?.methodId}
         loginConfigured={loginConfigured}
-        onConfigureLogin={
-          usesAccountLogin
-            ? () => {
-                setIsLoginSectionOpen(true)
-                setLoginFocusRequested(true)
-              }
-            : undefined
-        }
+        onConfigureLogin={usesLoginCheckIn ? handleConfigureLogin : undefined}
         feedbackSource={{
           accountId: feedbackAccountId,
           snapshot: {
@@ -1018,20 +1121,31 @@ export default function AccountForm({
 
       {!usesAccountLogin &&
         draft.loginChanged &&
-        draft.login?.methodId === ACCOUNT_LOGIN_METHODS.Password &&
+        Boolean(draft.login) &&
         !loginConfigured && (
-          <Notice tone="warning" description={t("login.incompleteHidden")} />
+          <Notice
+            tone="warning"
+            description={t("login.incompleteHidden")}
+            actions={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onLoginChange(undefined)}
+              >
+                {t("common:actions.clear")}
+              </Button>
+            }
+          />
         )}
 
       {usesAccountLogin && (
         <AccountLoginSection
           continuous={continuous}
           siteUrl={siteUrl}
-          passwordIdentity={
-            getAccountSiteDefinition(draft.siteType)?.accountLogin
-              ?.passwordIdentity
-          }
+          siteType={siteType}
           login={draft.login}
+          authType={authType}
           claimedLoginProviders={claimedLoginProviders}
           onChange={onLoginChange}
           methodRef={loginMethodRef}
