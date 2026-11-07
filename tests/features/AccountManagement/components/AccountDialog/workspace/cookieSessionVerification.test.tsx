@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, expect, it, vi } from "vitest"
 
 import {
@@ -41,6 +41,50 @@ const target = {
   account_info: { id: "17" },
 }
 beforeEach(() => vi.clearAllMocks())
+
+it.each([false, true])(
+  "keeps the draft after automatic import validation rejects (closed: %s)",
+  async (closed) => {
+    deps.send.mockResolvedValue({ success: true, data: "session=browser" })
+    let fail!: (error: Error) => void
+    deps.verify.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          fail = reject
+        }),
+    )
+    const apply = vi.fn()
+    const { result, unmount } = renderHook(() =>
+      useAccountCookieSession({
+        isOpen: true,
+        mode: DIALOG_MODES.ADD,
+        url: target.site_url,
+        authType: AuthTypeEnum.Cookie,
+        getContext: () => ({}),
+        applyCookie: apply,
+        validationTarget: target,
+      }),
+    )
+    let pending!: Promise<boolean>
+    act(() => {
+      pending = result.current.importAutomatically(() => true)
+    })
+    await waitFor(() => expect(fail).toBeTypeOf("function"))
+    if (closed) unmount()
+    await act(async () => {
+      fail(new Error("validation failed"))
+      await pending
+    })
+    expect(apply).not.toHaveBeenCalled()
+    if (closed) expect(deps.error).not.toHaveBeenCalled()
+    else {
+      expect(deps.error).toHaveBeenCalledExactlyOnceWith(
+        "accountDialog:cookieValidation.importUnconfirmed",
+      )
+      expect(result.current.state.isImportingCookies).toBe(false)
+    }
+  },
+)
 
 it.each([
   ACCOUNT_COOKIE_VALIDATION_STATUS.Valid,

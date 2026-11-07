@@ -79,6 +79,17 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it("rejects a Cookie recovery handoff for a provider that has not adopted recovery", async () => {
+    const original = recoveryState(SITE_TYPES.NEW_API)
+    await expect(
+      prepareAccountDialogRecovery({
+        ...original,
+        recoveryAction: "cookie",
+        draft: { ...original.draft, authType: AuthTypeEnum.Cookie },
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(sessionValues.size).toBe(0)
+  })
   it("retains a Cookie recovery intent and unsaved login credentials across the persistent handoff", async () => {
     const initial = recoveryState(SITE_TYPES.ANYROUTER)
     const state = {

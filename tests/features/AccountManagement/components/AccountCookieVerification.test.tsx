@@ -26,6 +26,31 @@ const props = {
 const action = () =>
   screen.findByRole("button", { name: "accountDialog:cookieValidation.action" })
 
+it("shows a handoff preparation failure beside the disabled recovery action", async () => {
+  render(
+    <AccountCookieVerification
+      {...props}
+      cookie=""
+      recovery={{
+        configured: true,
+        pending: false,
+        disabled: true,
+        errorMessage: "Unable to preserve the form",
+        onRecover: vi.fn(),
+        onConfigure: vi.fn(),
+      }}
+    />,
+  )
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Unable to preserve the form",
+  )
+  expect(
+    await screen.findByRole("button", {
+      name: "accountDialog:cookieValidation.recover",
+    }),
+  ).toBeDisabled()
+})
+
 it("can restore an empty Cookie through configured login without probing it", async () => {
   const onRecover = vi.fn()
   render(
