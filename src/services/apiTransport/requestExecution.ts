@@ -48,7 +48,7 @@ const logger = createLogger("ApiTransportRequest")
 /** Keeps optional lifecycle evidence isolated from transport results. */
 export function notifyApiTransportObserver(
   observer: ApiTransportRequestObserver | undefined,
-  event: keyof ApiTransportRequestObserver,
+  event: Exclude<keyof ApiTransportRequestObserver, "onCookieRecovered">,
 ): void {
   try {
     observer?.[event]?.()

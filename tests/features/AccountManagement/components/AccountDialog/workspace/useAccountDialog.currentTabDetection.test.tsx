@@ -11,6 +11,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import { isRecord } from "~/utils/core/object"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -316,8 +317,9 @@ describe("useAccountDialog current tab detection", () => {
         .mocked(sendRuntimeMessage)
         .mock.calls.filter(
           ([message]) =>
+            isRecord(message) &&
             message.action ===
-            RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+              RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
         ),
     ).toHaveLength(0)
   })

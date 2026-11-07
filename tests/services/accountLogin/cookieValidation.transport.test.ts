@@ -13,6 +13,7 @@ import { executeTempWindowFetch } from "~/services/browsingContext/tempPage/fetc
 import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
 import { registerWebRequestInterceptor } from "~/utils/browser/cookieHelper"
 import * as runtimeMessages from "~/utils/browser/runtimeMessages"
+import { isRecord } from "~/utils/core/object"
 import { isolateWebLocks } from "~~/tests/test-utils/webLocks"
 
 const account: AccountCookieValidationTarget = {
@@ -157,11 +158,18 @@ describe("Cookie validation transport isolation", () => {
           handlePerformTempWindowFetch(message, resolve),
         ),
     )
-    protectedRequest.mockImplementation(async (message) => {
-      if (message.action !== RuntimeActionIds.ProtectionBypassExecuteTask)
+    protectedRequest.mockImplementation(async (message: unknown) => {
+      if (
+        !isRecord(message) ||
+        message.action !== RuntimeActionIds.ProtectionBypassExecuteTask ||
+        !isRecord(message.task)
+      )
         return undefined
+      const params = message.task.params as Parameters<
+        typeof executeTempWindowFetch
+      >[0]
       return new Promise((resolve) => {
-        void executeTempWindowFetch(message.task.params, false, resolve)
+        void executeTempWindowFetch(params, false, resolve)
       })
     })
     expect(await validateAccountCookie(account)).toEqual({

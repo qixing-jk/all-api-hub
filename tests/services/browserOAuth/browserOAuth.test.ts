@@ -241,7 +241,7 @@ describe("browser OAuth context", () => {
 
   it("cleans up the request's observed session before closing a cancelled fallback login", async () => {
     const controller = new AbortController()
-    const flow: BrowserOAuthFlow = {
+    const flow: BrowserOAuthFlow<{ completed: boolean }> = {
       ...testFlow,
       captureCredential: async () => {
         controller.abort()

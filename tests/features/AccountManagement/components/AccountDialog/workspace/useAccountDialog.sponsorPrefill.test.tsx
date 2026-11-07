@@ -13,6 +13,7 @@ import { useAccountDialog } from "~/features/AccountManagement/components/Accoun
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import { isRecord } from "~/utils/core/object"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -74,7 +75,10 @@ vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
 describe("useAccountDialog sponsor prefill", () => {
   it("continues a carried Cookie recovery once using the unsaved login and retains the draft", async () => {
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message) => {
-      if (message.action === RuntimeActionIds.AccountDialogRecoverCookieSession)
+      if (
+        isRecord(message) &&
+        message.action === RuntimeActionIds.AccountDialogRecoverCookieSession
+      )
         return {
           status: "authenticated",
           identity: "42",
@@ -122,6 +126,7 @@ describe("useAccountDialog sponsor prefill", () => {
       .mocked(sendRuntimeMessage)
       .mock.calls.filter(
         ([message]) =>
+          isRecord(message) &&
           message.action === RuntimeActionIds.AccountDialogRecoverCookieSession,
       )
     expect(requests).toHaveLength(1)
