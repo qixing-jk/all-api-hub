@@ -12,6 +12,8 @@
 
 ## Prerequisites
 
+You can also select a redemption code and choose **"Redeem selected codes"** from the context menu to start redemption. This entry appears only when content is selected.
+
 1. **Corresponding Site Account Exists in All API Hub**:
    - At least one account is functional, with no issues regarding balance or permissions.
 2. **Redemption Code Actually Exists on the Page**:

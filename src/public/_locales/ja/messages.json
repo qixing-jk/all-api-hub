@@ -12,9 +12,12 @@
     "message": "ポップアップで All API Hub を開く"
   },
   "context_menu_redeem_selection": {
-    "message": "選択したテキストを Redemption Assist で引き換える"
+    "message": "選択したコードを引き換える"
   },
   "context_menu_ai_api_check": {
-    "message": "API をテスト"
+    "message": "選択した AI API をテスト"
+  },
+  "context_menu_ai_api_check_page": {
+    "message": "AI API テストを開く"
   }
 }

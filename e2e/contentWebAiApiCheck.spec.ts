@@ -1531,6 +1531,19 @@ test("opens the API check modal from the background context-menu message path", 
   await expect(modal.getByRole("textbox", { name: "Base URL" })).toHaveValue(
     API_BASE_URL,
   )
+
+  await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
+  await expect(modal).toBeHidden()
+  await sendApiCheckContextMenuTrigger(serviceWorker, {
+    pageUrl: TEST_PAGE_URL,
+    selectionText: "",
+  })
+  await expect(modal).toBeVisible()
+  // Existing URL history may prefill the address, but never the previous key.
+  await expect(modal.getByRole("textbox", { name: "Base URL" })).toHaveValue(
+    API_BASE_URL,
+  )
+  await expect(modal.getByLabel("API key", { exact: true })).toHaveValue("")
 })
 
 test("closes the API check modal with detected credentials in one click", async ({

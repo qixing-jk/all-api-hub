@@ -12,9 +12,12 @@
     "message": "All API Hub im Popup öffnen"
   },
   "context_menu_redeem_selection": {
-    "message": "Ausgewählten Text mit Redemption Assist einlösen"
+    "message": "Ausgewählte Einlösecodes einlösen"
   },
   "context_menu_ai_api_check": {
-    "message": "API testen"
+    "message": "Ausgewählte KI-API testen"
+  },
+  "context_menu_ai_api_check_page": {
+    "message": "KI-API-Test öffnen"
   }
 }

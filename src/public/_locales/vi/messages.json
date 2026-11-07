@@ -12,9 +12,12 @@
     "message": "Mở All API Hub trong popup"
   },
   "context_menu_redeem_selection": {
-    "message": "Đổi nội dung đã chọn bằng trợ lý đổi mã"
+    "message": "Đổi mã đã chọn"
   },
   "context_menu_ai_api_check": {
-    "message": "Kiểm tra API"
+    "message": "Kiểm thử AI API đã chọn"
+  },
+  "context_menu_ai_api_check_page": {
+    "message": "Mở kiểm thử AI API"
   }
 }

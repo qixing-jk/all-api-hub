@@ -82,8 +82,10 @@ test("waits for native context menu removal before recreating owned menus", asyn
   const expected = [
     "removed:redemption-assist-context-menu",
     "removed:ai-api-check-context-menu",
+    "removed:ai-api-check-page-context-menu",
     "created:redemption-assist-context-menu",
     "created:ai-api-check-context-menu",
+    "created:ai-api-check-page-context-menu",
   ]
   expect(events).toEqual([...expected, ...expected])
 })

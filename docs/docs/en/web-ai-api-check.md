@@ -7,13 +7,13 @@
 When browsing AI communities (e.g., Linux.do), GitHub Issues, or technical documentation, you often encounter shared test keys. The traditional approach is to copy the `Base URL`, copy the `Key`, open the extension, fill in the configuration, and click verify.
 
 The **Web API Testing** feature simplifies this process into:
-- Select text → Right-click "Test API" → Test directly.
+- Select text → Right-click "Test selected AI API" → Choose a test in the panel.
 - Or: Select or copy content containing credentials to receive a confirmation prompt.
 
 ## Core Capabilities
 
 ### 1. Right-Click Menu Check (Context Menu)
-Select text containing a `Base URL` or `API Key` on any webpage, right-click, and select **"Test API"**.
+Select text containing a `Base URL` or `API Key` on any webpage, right-click, and select **"Test selected AI API"**. With nothing selected, right-click a blank part of the page and choose **"Open AI API testing"** to enter the details in the panel.
 The extension will attempt to extract valid interface information from the selected text (or clipboard) and pop up a test overlay within the current page.
 
 ![Test dialog opened over the page](../static/image/en/web-ai-api-check-page.png)
@@ -47,7 +47,7 @@ Run the drawing test in the same in-page panel to generate and preview an SVG of
 Navigate to **`Settings → Basic Settings → Web API Testing`** to configure the following:
 
 ### 1. Basic Switches
-- **Right-Click Menu**: Whether to show "Test API" in the browser's right-click menu.
+- **Right-Click Menu**: Whether to show "Test selected AI API" and "Open AI API testing". The browser shows the matching entry depending on whether content is selected.
 - **Auto Detect**: Whether to detect selected or copied content on participating websites.
 
 ### 2. Website Black/White Lists

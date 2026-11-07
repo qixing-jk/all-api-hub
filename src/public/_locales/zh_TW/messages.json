@@ -12,9 +12,12 @@
     "message": "在彈出視窗中開啟 All API Hub"
   },
   "context_menu_redeem_selection": {
-    "message": "使用兌換助手兌換選取文字"
+    "message": "兌換選取的兌換碼"
   },
   "context_menu_ai_api_check": {
-    "message": "測試 API"
+    "message": "測試選取的 AI API"
+  },
+  "context_menu_ai_api_check_page": {
+    "message": "開啟 AI API 測試"
   }
 }

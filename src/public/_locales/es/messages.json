@@ -12,9 +12,12 @@
     "message": "Abrir All API Hub en el popup"
   },
   "context_menu_redeem_selection": {
-    "message": "Canjear selección con Redemption Assist"
+    "message": "Canjear los códigos seleccionados"
   },
   "context_menu_ai_api_check": {
-    "message": "Probar API"
+    "message": "Probar la API de IA seleccionada"
+  },
+  "context_menu_ai_api_check_page": {
+    "message": "Abrir pruebas de API de IA"
   }
 }
