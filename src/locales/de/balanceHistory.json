@@ -30,12 +30,16 @@
     "title": "Keine Schnappschüsse in diesem Bereich"
   },
   "filters": {
+    "accountCount_one": "{{count}} Konto",
+    "accountCount_other": "{{count}} Konten",
     "accounts": "Konten",
     "accountsHint": "Wählen Sie Konten aus, die in Diagramme einbezogen werden sollen.",
     "allAccounts": "Alle Konten",
     "allTags": "Alle Tags",
+    "description": "Nach Tags, Konten, Währung und Zeitraum filtern. Änderungen werden sofort übernommen.",
     "endDay": "Enddatum",
     "noDataInRange": "Keine Daten in diesem Bereich",
+    "noResults": "Keine passenden Ergebnisse",
     "quickRanges": {
       "180d": "180 Tage",
       "30d": "30 Tage",
@@ -45,9 +49,12 @@
     },
     "range": "Datumsbereich",
     "rangeHint": "Begrenzt durch den Aufbewahrungszeitraum ({{days}} Tage).",
+    "searchAccounts": "Konten suchen",
+    "searchTags": "Tags suchen",
     "startDay": "Startdatum",
     "tags": "Tags",
-    "tagsHint": "Konten nach Tags filtern."
+    "tagsHint": "Konten nach Tags filtern.",
+    "title": "Filter"
   },
   "hints": {
     "disabled": {
@@ -146,6 +153,7 @@
       "scope": "Ansicht"
     },
     "emptyMetric": "Keine {{metric}}-Daten in diesem Bereich.",
+    "gapBridge": "Gestrichelte Abschnitte kennzeichnen Tage ohne Daten.",
     "scopes": {
       "accounts": "Nach Konto",
       "total": "Gesamt"

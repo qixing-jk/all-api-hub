@@ -175,6 +175,8 @@ describe("useBalanceHistoryViewModel", () => {
 
   it.each([
     [12.5, "12.50", "$12.50"],
+    [0, "0.00", "$0.00"],
+    ["", "0.00", "—"],
     ["-3.25", "-3.25", "$-3.25"],
     ["invalid", "", "-"],
     [Infinity, "", "-"],
@@ -340,6 +342,32 @@ describe("useBalanceHistoryViewModel", () => {
     expect(result.current.startDayKey >= result.current.minDayKey).toBe(true)
     expect(result.current.endDayKey <= result.current.maxDayKey).toBe(true)
   })
+
+  it.each([
+    ["2000-01-01", "minDayKey"],
+    ["2099-12-31", "maxDayKey"],
+  ] as const)(
+    "bounds both endpoints when both are entered as %s",
+    (day, limit) => {
+      const { result } = renderHook(() => useBalanceHistoryViewModel())
+
+      act(() => {
+        result.current.setStartDayKey(day)
+        result.current.setEndDayKey(day)
+      })
+
+      const boundary = result.current[limit]
+      expect(result.current.startDayKey).toBe(boundary)
+      expect(result.current.endDayKey).toBe(boundary)
+      for (const [{ effectiveRange }] of vi.mocked(useBalanceHistoryReporting)
+        .mock.calls) {
+        expect(effectiveRange.startDayKey >= result.current.minDayKey).toBe(
+          true,
+        )
+        expect(effectiveRange.endDayKey <= result.current.maxDayKey).toBe(true)
+      }
+    },
+  )
 
   it("shows incomplete total hint when total trend has partial days for multiple accounts", () => {
     const { result } = renderHook(() => useBalanceHistoryViewModel())

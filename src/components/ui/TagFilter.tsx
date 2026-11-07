@@ -1,3 +1,9 @@
+import {
+  AnimatePresence,
+  motion,
+  useIsPresent,
+  type MotionProps,
+} from "framer-motion"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -5,7 +11,7 @@ import { cn } from "~/lib/utils"
 
 import { Badge } from "./badge"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"
-import { ToggleButton } from "./ToggleButton"
+import { ToggleButton, type ToggleButtonProps } from "./ToggleButton"
 
 type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
 
@@ -41,6 +47,8 @@ interface CommonTagFilterProps {
    */
   maxVisible?: number
   maxVisibleLines?: number
+  /** Animate changes to inline options after measuring the collapsed list. */
+  animateInlineOptions?: boolean
   /**
    * How to display overflow tags once the visible limit is reached.
    *
@@ -79,6 +87,38 @@ interface SingleModeProps {
 export type TagFilterProps = CommonTagFilterProps &
   (MultipleModeProps | SingleModeProps)
 
+const MotionToggleButton = motion.create(ToggleButton)
+
+const AnimatedTagFilterChip = React.forwardRef<
+  HTMLButtonElement,
+  React.PropsWithChildren<
+    Omit<ToggleButtonProps, keyof MotionProps> & { index: number }
+  >
+>(({ index, ...props }, ref) => {
+  const isPresent = useIsPresent()
+
+  return (
+    <MotionToggleButton
+      {...props}
+      ref={ref}
+      data-tag-filter-chip={isPresent ? "true" : undefined}
+      aria-hidden={!isPresent || undefined}
+      inert={!isPresent || undefined}
+      layout="position"
+      initial={{ opacity: 0, y: 3 }}
+      animate={{ opacity: props.disabled ? 0.6 : 1, y: 0 }}
+      exit={{ opacity: 0, y: -2, transition: { duration: 0.12 } }}
+      transition={{
+        duration: 0.18,
+        ease: [0.22, 1, 0.36, 1],
+        opacity: { duration: 0.18, delay: Math.min(index, 7) * 0.012 },
+        layout: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+      }}
+    />
+  )
+})
+AnimatedTagFilterChip.displayName = "AnimatedTagFilterChip"
+
 /**
  * TagFilter renders a row of pill-like tag buttons that supports both single
  * and multiple selection modes. It optionally shows an "All" chip when there
@@ -100,9 +140,9 @@ export function TagFilter(props: TagFilterProps) {
 
   const { t } = useTranslation(["common"])
 
-  const [lineVisibleCount, setLineVisibleCount] = React.useState<number | null>(
-    null,
-  )
+  const [lineVisibleCount, setLineVisibleCount] = React.useState<
+    number | null
+  >()
   const [isOverflowExpanded, setIsOverflowExpanded] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -114,6 +154,12 @@ export function TagFilter(props: TagFilterProps) {
 
   const useLineBasedLimit =
     typeof maxVisibleLines === "number" && maxVisibleLines > 0
+
+  // Let the first layout measurement settle before retaining any exiting chips.
+  const animateInline =
+    props.animateInlineOptions &&
+    overflowDisplay === "expand" &&
+    lineVisibleCount !== undefined
 
   const normalizedMaxVisible = Math.max(1, maxVisible)
 
@@ -128,7 +174,7 @@ export function TagFilter(props: TagFilterProps) {
   if (shouldCollapseOverflow) {
     if (useLineBasedLimit) {
       if (
-        lineVisibleCount !== null &&
+        lineVisibleCount != null &&
         lineVisibleCount >= 0 &&
         lineVisibleCount < options.length
       ) {
@@ -259,7 +305,11 @@ export function TagFilter(props: TagFilterProps) {
     }
   }
 
-  const renderTagButton = (option: TagFilterOption, isInOverflow: boolean) => {
+  const renderTagButton = (
+    option: TagFilterOption,
+    isInOverflow: boolean,
+    index = 0,
+  ) => {
     const isActive = selectedSet.has(option.value)
     const isOptionDisabled = disabled || (option.disabled && !isActive)
     const handleClick = () => {
@@ -274,38 +324,50 @@ export function TagFilter(props: TagFilterProps) {
       ? "border-primary-soft-border bg-primary-soft text-primary-soft-foreground"
       : "border-border bg-card text-secondary-foreground dark:bg-card/60"
 
-    return (
+    const animated = animateInline && !isInOverflow
+    const chipProps: ToggleButtonProps = {
+      type: "button",
+      variant: "ghost",
+      size: "sm",
+      shape: "pill",
+      isActive,
+      disabled: isOptionDisabled,
+      className: cn(
+        "py-density-1 border px-3 text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-60 sm:text-[length:calc(0.8125rem+var(--text-size-increment))]",
+        chipBaseClasses,
+        isInOverflow && "w-full justify-between",
+      ),
+      onClick: handleClick,
+    }
+    const content = (
+      <span className="gap-y-density-1 flex min-w-0 items-center gap-x-1">
+        {option.icon && <span className="shrink-0">{option.icon}</span>}
+        <span className="truncate" title={option.title ?? option.label}>
+          {option.label}
+        </span>
+        {typeof count === "number" && (
+          <Badge
+            variant={option.variant ?? (isActive ? "default" : "outline")}
+            size="sm"
+            className="text-2xs shrink-0 border-transparent px-1.5"
+          >
+            {count}
+          </Badge>
+        )}
+      </span>
+    )
+
+    return animated ? (
+      <AnimatedTagFilterChip key={option.value} index={index} {...chipProps}>
+        {content}
+      </AnimatedTagFilterChip>
+    ) : (
       <ToggleButton
         key={option.value}
-        type="button"
-        variant="ghost"
-        size="sm"
-        shape="pill"
-        isActive={isActive}
-        disabled={isOptionDisabled}
         data-tag-filter-chip="true"
-        className={cn(
-          "py-density-1 border px-3 text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-60 sm:text-[length:calc(0.8125rem+var(--text-size-increment))]",
-          chipBaseClasses,
-          isInOverflow && "w-full justify-between",
-        )}
-        onClick={handleClick}
+        {...chipProps}
       >
-        <span className="gap-y-density-1 flex min-w-0 items-center gap-x-1">
-          {option.icon && <span className="shrink-0">{option.icon}</span>}
-          <span className="truncate" title={option.title ?? option.label}>
-            {option.label}
-          </span>
-          {typeof count === "number" && (
-            <Badge
-              variant={option.variant ?? (isActive ? "default" : "outline")}
-              size="sm"
-              className="text-2xs shrink-0 border-transparent px-1.5"
-            >
-              {count}
-            </Badge>
-          )}
-        </span>
+        {content}
       </ToggleButton>
     )
   }
@@ -317,6 +379,7 @@ export function TagFilter(props: TagFilterProps) {
       ref={containerRef}
       className={cn(
         "gap-y-density-2 flex flex-wrap items-center gap-x-2",
+        animateInline && "relative",
         className,
       )}
     >
@@ -353,7 +416,15 @@ export function TagFilter(props: TagFilterProps) {
       )}
 
       {/* Inline tag options */}
-      {visibleOptions.map((option) => renderTagButton(option, false))}
+      {animateInline ? (
+        <AnimatePresence mode="popLayout">
+          {visibleOptions.map((option, index) =>
+            renderTagButton(option, false, index),
+          )}
+        </AnimatePresence>
+      ) : (
+        visibleOptions.map((option) => renderTagButton(option, false))
+      )}
 
       {overflowOptions.length > 0 &&
         (overflowDisplay === "popover" ? (

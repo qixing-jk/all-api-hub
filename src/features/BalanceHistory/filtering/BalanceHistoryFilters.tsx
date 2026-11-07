@@ -1,18 +1,14 @@
+import { Info } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { SegmentedControl } from "~/components/SegmentedControl"
-import {
-  ActionGroup,
-  Button,
-  Card,
-  Input,
-  Label,
-  TagFilter,
-} from "~/components/ui"
+import { ActionGroup, Button, Label } from "~/components/ui"
+import { useDatePickerLocale } from "~/components/ui/useDatePickerLocale"
 import { QUICK_RANGES } from "~/features/BalanceHistory/contracts"
+import { BalanceHistoryDateField } from "~/features/BalanceHistory/filtering/BalanceHistoryDateField"
+import { BalanceHistoryOptionFilter } from "~/features/BalanceHistory/filtering/BalanceHistoryOptionFilter"
 import { getBalanceHistoryQuickRangeLabel } from "~/features/BalanceHistory/reporting/presentation"
 import { type useBalanceHistoryViewModel } from "~/features/BalanceHistory/workspace/useBalanceHistoryViewModel"
-import { subtractDaysFromDayKey } from "~/utils/core/dayKey"
 
 /** Render this reporting section from its existing ViewModel snapshot. */
 export function BalanceHistoryFilters({
@@ -29,6 +25,8 @@ export function BalanceHistoryFilters({
     | "currencyType"
     | "handleCurrencyChange"
     | "safeRetentionDays"
+    | "activeQuickRangeId"
+    | "applyQuickRange"
     | "startDayKey"
     | "minDayKey"
     | "maxDayKey"
@@ -41,7 +39,11 @@ export function BalanceHistoryFilters({
     | "perAccountSeries"
   >
 }) {
-  const { t } = useTranslation("balanceHistory")
+  const { t, i18n } = useTranslation("balanceHistory")
+  const calendarLocale = useDatePickerLocale(
+    undefined,
+    i18n.resolvedLanguage ?? i18n.language,
+  )
   const {
     tagOptions,
     selectedTagIds,
@@ -52,6 +54,8 @@ export function BalanceHistoryFilters({
     currencyType,
     handleCurrencyChange,
     safeRetentionDays,
+    activeQuickRangeId,
+    applyQuickRange,
     startDayKey,
     minDayKey,
     maxDayKey,
@@ -64,40 +68,29 @@ export function BalanceHistoryFilters({
     perAccountSeries,
   } = model
   return (
-    <Card padding="md">
-      <div className="space-y-density-4">
-        <div>
-          <Label className="text-sm font-medium">{t("filters.tags")}</Label>
-          <div className="text-muted-foreground text-xs">
-            {t("filters.tagsHint")}
-          </div>
-        </div>
-        <TagFilter
-          options={tagOptions}
-          value={selectedTagIds}
-          onChange={setSelectedTagIds}
-          includeAllOption
-          allLabel={t("filters.allTags")}
-          maxVisibleLines={2}
-          disabled={tagOptions.length === 0}
-        />
+    <div className="divide-border divide-y">
+      <BalanceHistoryOptionFilter
+        title={t("filters.tags")}
+        hint={t("filters.tagsHint")}
+        searchLabel={t("filters.searchTags")}
+        options={tagOptions}
+        value={selectedTagIds}
+        onChange={setSelectedTagIds}
+        allLabel={t("filters.allTags")}
+        maxVisibleLines={2}
+      />
+      <BalanceHistoryOptionFilter
+        title={t("filters.accounts")}
+        hint={t("filters.accountsHint")}
+        searchLabel={t("filters.searchAccounts")}
+        options={accountOptions}
+        value={selectedAccountIds}
+        onChange={setSelectedAccountIds}
+        allLabel={t("filters.allAccounts")}
+        maxVisibleLines={3}
+      />
 
-        <div>
-          <Label className="text-sm font-medium">{t("filters.accounts")}</Label>
-          <div className="text-muted-foreground text-xs">
-            {t("filters.accountsHint")}
-          </div>
-        </div>
-        <TagFilter
-          options={accountOptions}
-          value={selectedAccountIds}
-          onChange={setSelectedAccountIds}
-          includeAllOption
-          allLabel={t("filters.allAccounts")}
-          maxVisibleLines={3}
-          disabled={accountOptions.length === 0}
-        />
-
+      <div className="py-density-4 gap-y-density-2 flex flex-wrap items-center justify-between gap-x-3">
         <div>
           <Label className="text-sm font-medium">
             {t("settings:display.currencyUnit")}
@@ -109,7 +102,7 @@ export function BalanceHistoryFilters({
 
         <SegmentedControl
           layout="fit"
-          size="default"
+          size="sm"
           aria-label={t("settings:display.currencyUnit")}
           value={currencyType}
           onValueChange={handleCurrencyChange}
@@ -118,7 +111,9 @@ export function BalanceHistoryFilters({
             { value: "CNY", label: t("settings:display.cny") },
           ]}
         />
+      </div>
 
+      <div className="space-y-density-3 py-density-4">
         <div>
           <Label className="text-sm font-medium">{t("filters.range")}</Label>
           <div className="text-muted-foreground text-xs">
@@ -126,48 +121,17 @@ export function BalanceHistoryFilters({
           </div>
         </div>
 
-        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 md:grid-cols-2">
-          <div className="space-y-density-2">
-            <Label className="text-sm font-medium">
-              {t("filters.startDay")}
-            </Label>
-            <Input
-              type="date"
-              value={startDayKey}
-              min={minDayKey || undefined}
-              max={maxDayKey || undefined}
-              aria-label={t("filters.startDay")}
-              onChange={(event) => setStartDayKey(event.target.value)}
-              disabled={!minDayKey}
-            />
-          </div>
-          <div className="space-y-density-2">
-            <Label className="text-sm font-medium">{t("filters.endDay")}</Label>
-            <Input
-              type="date"
-              value={endDayKey}
-              min={minDayKey || undefined}
-              max={maxDayKey || undefined}
-              aria-label={t("filters.endDay")}
-              onChange={(event) => setEndDayKey(event.target.value)}
-              disabled={!maxDayKey}
-            />
-          </div>
-        </div>
-
         <ActionGroup className="items-stretch justify-start">
           {QUICK_RANGES.map((preset) => {
             const label = getBalanceHistoryQuickRangeLabel(t, preset.id)
+            const active = activeQuickRangeId === preset.id
             return (
               <Button
                 key={preset.id}
                 size="sm"
-                variant="outline"
-                onClick={() => {
-                  const desired = Math.min(preset.days, safeRetentionDays)
-                  setEndDayKey(maxDayKey)
-                  setStartDayKey(subtractDaysFromDayKey(maxDayKey, desired - 1))
-                }}
+                variant={active ? "default" : "secondary"}
+                aria-pressed={active}
+                onClick={() => applyQuickRange(preset.days)}
               >
                 {label}
               </Button>
@@ -175,7 +139,31 @@ export function BalanceHistoryFilters({
           })}
         </ActionGroup>
 
-        <div className="text-muted-foreground text-xs">
+        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2">
+          <BalanceHistoryDateField
+            label={t("filters.startDay")}
+            value={startDayKey}
+            minDayKey={minDayKey}
+            maxDayKey={
+              endDayKey && endDayKey < maxDayKey ? endDayKey : maxDayKey
+            }
+            locale={calendarLocale}
+            onChange={setStartDayKey}
+          />
+          <BalanceHistoryDateField
+            label={t("filters.endDay")}
+            value={endDayKey}
+            minDayKey={startDayKey > minDayKey ? startDayKey : minDayKey}
+            maxDayKey={maxDayKey}
+            locale={calendarLocale}
+            onChange={setEndDayKey}
+          />
+        </div>
+      </div>
+
+      <div className="text-muted-foreground py-density-3 flex items-start gap-2 text-xs">
+        <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+        <span>
           {t("summary.coverage", {
             snapshotAvailableDays,
             snapshotCompleteDays: snapshotCompleteDays.snapshotComplete,
@@ -183,8 +171,8 @@ export function BalanceHistoryFilters({
             cashflowCompleteDays: snapshotCompleteDays.cashflowComplete,
             totalDays: perAccountSeries.dayKeys.length,
           })}
-        </div>
+        </span>
       </div>
-    </Card>
+    </div>
   )
 }

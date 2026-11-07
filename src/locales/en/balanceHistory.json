@@ -30,12 +30,16 @@
     "title": "No snapshots in this range"
   },
   "filters": {
+    "accountCount_one": "{{count}} account",
+    "accountCount_other": "{{count}} accounts",
     "accounts": "Accounts",
     "accountsHint": "Select accounts to include in charts.",
     "allAccounts": "All accounts",
     "allTags": "All tags",
+    "description": "Filter by tags, accounts, currency, and date range. Changes apply immediately.",
     "endDay": "End Date",
     "noDataInRange": "No data in this range",
+    "noResults": "No matching results",
     "quickRanges": {
       "180d": "180 days",
       "30d": "30 days",
@@ -45,9 +49,12 @@
     },
     "range": "Date range",
     "rangeHint": "Bounded by retention window ({{days}} days).",
+    "searchAccounts": "Search accounts",
+    "searchTags": "Search tags",
     "startDay": "Start Date",
     "tags": "Tags",
-    "tagsHint": "Filter accounts by tags."
+    "tagsHint": "Filter accounts by tags.",
+    "title": "Filters"
   },
   "hints": {
     "disabled": {
@@ -146,6 +153,7 @@
       "scope": "View"
     },
     "emptyMetric": "No {{metric}} data in this range.",
+    "gapBridge": "Dashed segments indicate missing days.",
     "scopes": {
       "accounts": "By account",
       "total": "Total"

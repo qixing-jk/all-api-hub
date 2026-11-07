@@ -147,6 +147,7 @@ describe("BalanceHistory options page", () => {
   const END_DAY_LABEL = "balanceHistory:filters.endDay"
   const QUICK_RANGE_7D_LABEL = "balanceHistory:filters.quickRanges.7d"
   const TAG_FILTER_LABEL = "balanceHistory:filters.tags"
+  const FILTERS_BUTTON_LABEL = "balanceHistory:filters.title"
 
   const DEFAULT_RETENTION_DAYS = 30
   const DEFAULT_THEME_MODE = "light" as const
@@ -244,8 +245,80 @@ describe("BalanceHistory options page", () => {
       expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
       expect(await screen.findByText(EMPTY_TITLE)).toBeInTheDocument()
       expect(screen.queryByText(DISABLED_HINT_TITLE)).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: FILTERS_BUTTON_LABEL }),
+      ).toBeInTheDocument()
     },
   )
+
+  it("keeps filters in a closed sheet and restores the trigger after close and Escape", async () => {
+    render(<BalanceHistory />)
+
+    const trigger = await screen.findByRole("button", {
+      name: FILTERS_BUTTON_LABEL,
+    })
+    expect(screen.queryByLabelText(START_DAY_LABEL)).not.toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.click(trigger)
+    expect(
+      await screen.findByRole("dialog", { name: FILTERS_BUTTON_LABEL }),
+    ).toBeInTheDocument()
+    expect(await screen.findByLabelText(START_DAY_LABEL)).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+    await waitFor(() => {
+      expect(trigger).toHaveFocus()
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+
+    await user.click(trigger)
+    expect(
+      await screen.findByRole("dialog", { name: FILTERS_BUTTON_LABEL }),
+    ).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(trigger).toHaveFocus()
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("preserves filter selection when the sheet is closed and reopened", async () => {
+    const fixedNowMs = new Date(2026, 1, 7, 12, 0, 0).getTime()
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
+
+    try {
+      render(<BalanceHistory />)
+
+      const user = userEvent.setup()
+      const trigger = await screen.findByRole("button", {
+        name: FILTERS_BUTTON_LABEL,
+      })
+      await user.click(trigger)
+      const startInput = await screen.findByLabelText(START_DAY_LABEL)
+      const expectedStart = subtractDaysFromDayKey(
+        getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000)),
+        6,
+      )
+      await user.click(
+        screen.getByRole("button", { name: QUICK_RANGE_7D_LABEL }),
+      )
+      await waitFor(() => expect(startInput).toHaveValue(expectedStart))
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.close" }),
+      )
+      await waitFor(() => expect(trigger).toHaveFocus())
+
+      await user.click(trigger)
+      expect(await screen.findByLabelText(START_DAY_LABEL)).toHaveValue(
+        expectedStart,
+      )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
 
   it("shows a cashflow warning when showTodayCashflow is disabled and end-of-day capture is disabled", async () => {
     vi.mocked(useUserPreferencesContext).mockReturnValue(
@@ -321,10 +394,14 @@ describe("BalanceHistory options page", () => {
 
     render(<BalanceHistory />)
 
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole("button", { name: FILTERS_BUTTON_LABEL }),
+    )
+
     expect(await screen.findByText(ACCOUNT_OPTION_LABEL_A)).toBeInTheDocument()
     expect(screen.getByText(ACCOUNT_OPTION_LABEL_B)).toBeInTheDocument()
 
-    const user = userEvent.setup()
     await user.click(screen.getByRole("button", { name: TAG_CHIP_NAME_WORK }))
 
     await waitFor(() => {
@@ -376,6 +453,11 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const maxDayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
+      const user = userEvent.setup()
+      await user.click(
+        await screen.findByRole("button", { name: FILTERS_BUTTON_LABEL }),
+      )
+
       const startInput = await screen.findByLabelText(START_DAY_LABEL)
       const endInput = await screen.findByLabelText(END_DAY_LABEL)
 
@@ -383,7 +465,6 @@ describe("BalanceHistory options page", () => {
         expect(endInput).toHaveValue(maxDayKey)
       })
 
-      const user = userEvent.setup()
       await user.click(
         screen.getByRole("button", { name: QUICK_RANGE_7D_LABEL }),
       )
@@ -395,6 +476,82 @@ describe("BalanceHistory options page", () => {
       await waitFor(() => {
         expect(startInput).toHaveValue(expectedStart)
       })
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it("keeps filters available from an empty range so the user can restore data", async () => {
+    const factor = QUOTA_PER_USD
+    const fixedNowMs = new Date(2026, 1, 7, 12, 0, 0).getTime()
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
+
+    try {
+      const firstDayKey = "2026-02-01"
+      const lastDayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+        {
+          id: "a1",
+          site_name: "Site A",
+          site_url: "https://a.example.com",
+          site_type: SITE_TYPES.ONE_API,
+          account_info: { username: "User A" },
+        },
+      ] as any)
+      vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        snapshotsByAccountId: {
+          a1: {
+            [firstDayKey]: {
+              quota: 8 * factor,
+              today_income: 1 * factor,
+              today_quota_consumption: 1 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+            [lastDayKey]: {
+              quota: 10 * factor,
+              today_income: 1 * factor,
+              today_quota_consumption: 1 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        },
+      } as any)
+
+      render(<BalanceHistory />)
+      expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
+
+      const user = userEvent.setup()
+      const filtersButton = await screen.findByRole("button", {
+        name: FILTERS_BUTTON_LABEL,
+      })
+      await user.click(filtersButton)
+      fireEvent.change(await screen.findByLabelText(START_DAY_LABEL), {
+        target: { value: "2026-02-02" },
+      })
+      fireEvent.change(screen.getByLabelText(END_DAY_LABEL), {
+        target: { value: "2026-02-06" },
+      })
+
+      expect(
+        await screen.findByText("balanceHistory:emptyRange.title"),
+      ).toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.close" }),
+      )
+      await waitFor(() => expect(filtersButton).toHaveFocus())
+      expect(filtersButton).toBeInTheDocument()
+
+      await user.click(filtersButton)
+      await user.click(
+        screen.getByRole("button", { name: QUICK_RANGE_7D_LABEL }),
+      )
+      expect(
+        screen.queryByText("balanceHistory:emptyRange.title"),
+      ).not.toBeInTheDocument()
+      await waitFor(() => expect(vi.mocked(echarts.init)).toHaveBeenCalled())
     } finally {
       dateNowSpy.mockRestore()
     }
@@ -726,7 +883,16 @@ describe("BalanceHistory options page", () => {
       expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
 
       const user = userEvent.setup()
+      await user.click(
+        await screen.findByRole("button", { name: FILTERS_BUTTON_LABEL }),
+      )
       await user.click(screen.getByRole("button", { name: "Site A" }))
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.close" }),
+      )
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      )
       await user.click(
         screen.getByRole("button", {
           name: "balanceHistory:actions.refreshNow",
@@ -1249,6 +1415,9 @@ describe("BalanceHistory options page", () => {
       ).toBeInTheDocument()
 
       const user = userEvent.setup()
+      await user.click(
+        await screen.findByRole("button", { name: FILTERS_BUTTON_LABEL }),
+      )
       await user.click(
         screen.getByRole("button", { name: "settings:display.usd" }),
       )

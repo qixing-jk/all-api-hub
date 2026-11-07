@@ -1,3 +1,5 @@
+import type { LineSeriesOption } from "echarts"
+
 import { CHART_COLORS } from "~/components/charts/chartColors"
 import type { EChartsOption } from "~/components/charts/echarts"
 
@@ -19,6 +21,25 @@ function normalizeTooltipValue(value: unknown): number | string {
 }
 
 export type BalanceHistoryTrendChartType = "line" | "bar"
+
+/** Build independent bridges using only the recorded points on either side. */
+function buildGapBridgeData(dayKeys: string[], values: Array<number | null>) {
+  const data: Array<[string, number | null]> = []
+  let previous: { index: number; day: string; value: number } | undefined
+
+  dayKeys.forEach((day, index) => {
+    const value = values[index]
+    if (value == null || !Number.isFinite(value)) return
+    if (previous && index > previous.index + 1) {
+      // A null separator stops separate bridges from joining over observed days.
+      if (data.length > 0) data.push([previous.day, null])
+      data.push([previous.day, previous.value], [day, value])
+    }
+    previous = { index, day, value }
+  })
+
+  return data
+}
 
 /**
  * Build a multi-series trend option for per-account daily values (line or bar).
@@ -51,8 +72,26 @@ export function buildMultiSeriesTrendOption(params: {
 
   const legendTextColor = CHART_COLORS.axis
 
+  const gapBridges: LineSeriesOption[] = []
   const resolvedSeries = series.map((entry) => {
     if (chartType === "line") {
+      const bridge = buildGapBridgeData(dayKeys, entry.values)
+      if (bridge.length > 0) {
+        gapBridges.push({
+          // Sharing the name keeps color and visibility tied to the account legend.
+          name: entry.name,
+          type: "line",
+          data: bridge,
+          encode: { x: 0, y: 1 },
+          connectNulls: false,
+          showSymbol: false,
+          silent: true,
+          tooltip: { show: false, trigger: "none" },
+          emphasis: { disabled: true },
+          lineStyle: { type: "dashed", width: 1.5, opacity: 0.45 },
+          z: 1,
+        })
+      }
       return {
         name: entry.name,
         type: "line" as const,
@@ -114,7 +153,7 @@ export function buildMultiSeriesTrendOption(params: {
       },
       splitLine: { lineStyle: { color: CHART_COLORS.grid } },
     },
-    series: resolvedSeries,
+    series: [...resolvedSeries, ...gapBridges],
   }
 }
 

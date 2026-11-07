@@ -30,12 +30,17 @@
     "title": "No hay instantáneas en este rango"
   },
   "filters": {
+    "accountCount_one": "{{count}} cuenta",
+    "accountCount_many": "{{count}} cuentas",
+    "accountCount_other": "{{count}} cuentas",
     "accounts": "Cuentas",
     "accountsHint": "Selecciona cuentas para incluir en los gráficos.",
     "allAccounts": "Todas las cuentas",
     "allTags": "Todas las etiquetas",
+    "description": "Filtra por etiquetas, cuentas, moneda y rango de fechas. Los cambios se aplican de inmediato.",
     "endDay": "Fecha de fin",
     "noDataInRange": "No hay datos en este rango",
+    "noResults": "No hay resultados coincidentes",
     "quickRanges": {
       "180d": "180 días",
       "30d": "30 días",
@@ -45,9 +50,12 @@
     },
     "range": "Rango de fechas",
     "rangeHint": "Limitado por la ventana de retención ({{days}} días).",
+    "searchAccounts": "Buscar cuentas",
+    "searchTags": "Buscar etiquetas",
     "startDay": "Fecha de inicio",
     "tags": "Etiquetas",
-    "tagsHint": "Filtra cuentas por etiquetas."
+    "tagsHint": "Filtra cuentas por etiquetas.",
+    "title": "Filtros"
   },
   "hints": {
     "disabled": {
@@ -146,6 +154,7 @@
       "scope": "Vista"
     },
     "emptyMetric": "No hay datos de {{metric}} en este rango.",
+    "gapBridge": "Los tramos discontinuos indican días sin registros.",
     "scopes": {
       "accounts": "Por cuenta",
       "total": "Total"
