@@ -3,12 +3,13 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import Tooltip from "~/components/Tooltip"
+import { render as renderWithProviders } from "~~/tests/test-utils/render"
 
 describe("Tooltip", () => {
   it("places an opted-in rich tooltip outside its clipped container and keeps the action usable", async () => {
     const user = userEvent.setup()
     const onAction = vi.fn()
-    render(
+    renderWithProviders(
       <div data-testid="clipped-account-list" className="overflow-hidden">
         <Tooltip
           portalContainer={document.body}
@@ -22,6 +23,7 @@ describe("Tooltip", () => {
         </Tooltip>
       </div>,
     )
+    await screen.findByRole("button", { name: "Account health" })
     await user.tab()
     expect(screen.getByRole("button", { name: "Account health" })).toHaveFocus()
     const tooltip = await screen.findByRole("tooltip")

@@ -12,7 +12,10 @@ describe("account-owned login migration", () => {
       passwordAuth: { username: "alice", password: "secret" },
     })
     old.checkIn.loginCheckIn = { provider: "github" }
-    expect(migrateAccountConfig(old).login).toEqual({ methodId: "github" })
+    const migrated = migrateAccountConfig(old)
+    expect(migrated.login).toEqual({ methodId: "github" })
+    expect(migrated).not.toHaveProperty("passwordAuth")
+    expect(migrated.checkIn).not.toHaveProperty("loginCheckIn")
   })
   it("moves released check-in selection and passwords to the account without changing user timestamps or enabling new background work", () => {
     const old = buildSiteAccount({

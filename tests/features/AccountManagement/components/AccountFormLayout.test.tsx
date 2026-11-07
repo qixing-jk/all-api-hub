@@ -42,6 +42,32 @@ async function renderScrollableForm(options?: { focusSection?: "check-in" }) {
 describe("AccountFormLayout navigation", () => {
   afterEach(() => vi.restoreAllMocks())
 
+  it("selects an available section when the active login section disappears", async () => {
+    Element.prototype.scrollTo = vi.fn()
+    const form = (hasAccountLogin: boolean) => (
+      <div data-slot="modal-body">
+        <AccountFormLayout continuous hasAccountLogin={hasAccountLogin}>
+          {ACCOUNT_EDIT_SECTIONS.filter(
+            ({ id }) => hasAccountLogin || id !== "account-login-config",
+          ).map(({ id, title }) => (
+            <section key={id} id={id} data-account-form-section>
+              <h3 tabIndex={-1}>{title}</h3>
+            </section>
+          ))}
+        </AccountFormLayout>
+      </div>
+    )
+    const view = render(form(true))
+    const nav = await screen.findByRole("navigation")
+    await userEvent.click(
+      within(nav).getByRole("button", { name: "accountDialog:login.title" }),
+    )
+    view.rerender(form(false))
+    await waitFor(() =>
+      expect(nav.querySelector('[aria-current="location"]')).not.toBeNull(),
+    )
+  })
+
   it.each([false, true])(
     "scrolls to a section and focuses its heading (reduced motion: %s)",
     async (reducedMotion) => {

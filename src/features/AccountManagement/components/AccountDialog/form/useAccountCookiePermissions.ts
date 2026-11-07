@@ -50,9 +50,11 @@ export function useAccountCookiePermissions({
   const permissionGeneration = useRef(0)
   const permissionReadGeneration = useRef(0)
   const permissionRequestGeneration = useRef(0)
+  const [refreshVersion, setRefreshVersion] = useState(0)
   const invalidate = useCallback(() => {
     permissionGeneration.current += 1
     setCookieAuthPermissionState((prev) => ({ ...prev, pending: false }))
+    setRefreshVersion((value) => value + 1)
   }, [])
   useEffect(
     () => () => {
@@ -91,6 +93,10 @@ export function useAccountCookiePermissions({
     }
 
     void refreshCookieAuthPermissionState()
+  }, [authType, isOpen, refreshCookieAuthPermissionState, refreshVersion])
+
+  useEffect(() => {
+    if (!isOpen || authType !== AuthTypeEnum.Cookie) return
     const unsubscribe = onOptionalPermissionsChanged(() => {
       void refreshCookieAuthPermissionState()
     })

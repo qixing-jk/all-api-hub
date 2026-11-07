@@ -6,6 +6,8 @@ import {
   type AccountDialogRecoveryState,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
+import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import { normalizeAccountLogin } from "~/services/accountLogin/configCodec"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS,
@@ -47,7 +49,12 @@ function normalizeRecoveryState(
     !isHttpUrl(state.url) ||
     !isRecord(state.draft) ||
     !isAccountSiteType(state.draft.siteType) ||
-    state.draft.authType !== AuthTypeEnum.AccessToken ||
+    (state.recoveryAction !== undefined && state.recoveryAction !== "cookie") ||
+    (state.draft.authType !== AuthTypeEnum.AccessToken &&
+      !(
+        state.recoveryAction === "cookie" &&
+        state.draft.authType === AuthTypeEnum.Cookie
+      )) ||
     typeof state.checkInSelectionChanged !== "boolean" ||
     (state.accountId !== undefined &&
       (typeof state.accountId !== "string" || !state.accountId.trim())) ||
@@ -78,6 +85,21 @@ function normalizeRecoveryState(
   const draft = Object.fromEntries(
     Object.keys(defaults).map((key) => [key, rawDraft[key]]),
   ) as unknown as AccountDialogDraft
+  const login = normalizeAccountLogin(rawDraft.login)
+  if (login) draft.login = login
+  if (typeof rawDraft.loginChanged === "boolean")
+    draft.loginChanged = rawDraft.loginChanged
+  if (
+    state.recoveryAction === "cookie" &&
+    !supportsAccountCookieRecovery({
+      site_type: draft.siteType,
+      site_url: state.url,
+      authType: draft.authType,
+      account_info: { id: draft.userId },
+      login,
+    })
+  )
+    return null
   if (typeof rawDraft.siteNameEdited === "boolean") {
     draft.siteNameEdited = rawDraft.siteNameEdited
   }
@@ -90,6 +112,9 @@ function normalizeRecoveryState(
   draft.checkIn = normalizeCheckInConfigV7(rawDraft.checkIn)
 
   return {
+    ...(state.recoveryAction === "cookie"
+      ? { recoveryAction: "cookie" as const }
+      : {}),
     url: state.url,
     draft,
     ...(typeof state.accountId === "string"

@@ -139,6 +139,29 @@ it("does not accept a late verification after its editor cancels", async () => {
     status: "cancelled",
   })
 })
+
+it("preserves the admitted protection context for independent Cookie verification", async () => {
+  login.mockResolvedValue({
+    status: "authenticated",
+    identity: "17",
+    credential: { cookie: "session=captured" },
+  })
+  const protectionBypassExecution = {
+    version: 2,
+    kind: "user_command",
+    command: "detect_account",
+    surface: "options",
+  }
+  expect(
+    await recoverAccountCookieForDialog({
+      ...request,
+      protectionBypassExecution,
+    }),
+  ).toMatchObject({ status: "authenticated" })
+  expect(verify).toHaveBeenCalledWith(
+    expect.objectContaining({ protectionBypassExecution }),
+  )
+})
 it("captures a confirmed session with the configured login without requiring automatic recovery", async () => {
   login.mockResolvedValue({
     status: "authenticated",

@@ -6,8 +6,13 @@ import {
 } from "~/constants/accountCookieValidation"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { handlePerformTempWindowFetch } from "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
 import { validateAccountCookie } from "~/services/accounts/cookieValidation"
 import type { AccountCookieValidationTarget } from "~/services/apiAdapters/contracts/accountLogin"
+import { executeTempWindowFetch } from "~/services/browsingContext/tempPage/fetchTasks"
+import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
+import { registerWebRequestInterceptor } from "~/utils/browser/cookieHelper"
+import * as runtimeMessages from "~/utils/browser/runtimeMessages"
 import { isolateWebLocks } from "~~/tests/test-utils/webLocks"
 
 const account: AccountCookieValidationTarget = {
@@ -99,6 +104,72 @@ describe("Cookie validation transport isolation", () => {
     const protectedRequest = vi.spyOn(browser.runtime, "sendMessage")
     return { nativeFetch, protectedRequest }
   }
+
+  it("rejects an explicit Firefox Cookie through the actual page receiver and registered interceptor despite a valid ambient login", async () => {
+    const { nativeFetch, protectedRequest } = installFirefoxTransport()
+    vi.stubGlobal("location", new URL(account.site_url))
+    vi.spyOn(browser.cookies, "getAll").mockResolvedValue([
+      { name: "session", value: "ambient-valid" },
+    ] as browser.cookies.Cookie[])
+    let intercept!: (details: any) => Promise<any>
+    vi.spyOn(
+      browser.webRequest.onBeforeSendHeaders,
+      "addListener",
+    ).mockImplementation((listener) => {
+      intercept = listener as typeof intercept
+    })
+    registerWebRequestInterceptor([`${account.site_url}/*`])
+    expect(intercept).toBeTypeOf("function")
+    const sentCookies: string[] = []
+    nativeFetch.mockImplementation(async (url, options) => {
+      const headers = new Headers(options.headers)
+      headers.set("Cookie", "session=ambient-valid")
+      const rewritten = await intercept({
+        url,
+        requestHeaders: [...headers].map(([name, value]) => ({ name, value })),
+      })
+      const cookie = rewritten.requestHeaders.find(
+        (header: { name: string }) => header.name.toLowerCase() === "cookie",
+      )?.value
+      sentCookies.push(cookie)
+      const ambient = cookie === "session=ambient-valid"
+      return new Response(
+        JSON.stringify(
+          ambient
+            ? { success: true, data: { id: 17 } }
+            : { success: false, message: "login required" },
+        ),
+        {
+          status: ambient ? 200 : 401,
+          headers: { "Content-Type": "application/json" },
+        },
+      )
+    })
+    vi.spyOn(tempWindowBackgroundRuntime, "acquire").mockResolvedValue({
+      tabId: 42,
+    } as any)
+    vi.spyOn(tempWindowBackgroundRuntime, "release").mockResolvedValue(
+      undefined,
+    )
+    vi.spyOn(runtimeMessages, "sendTabMessageWithRetry").mockImplementation(
+      async (_tabId, message) =>
+        new Promise((resolve) =>
+          handlePerformTempWindowFetch(message, resolve),
+        ),
+    )
+    protectedRequest.mockImplementation(async (message) => {
+      if (message.action !== RuntimeActionIds.ProtectionBypassExecuteTask)
+        return undefined
+      return new Promise((resolve) => {
+        void executeTempWindowFetch(message.task.params, false, resolve)
+      })
+    })
+    expect(await validateAccountCookie(account)).toEqual({
+      status: ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid,
+    })
+    expect(sentCookies).toEqual(["session=rejected"])
+    expect(nativeFetch).toHaveBeenCalledOnce()
+  })
 
   it.each([
     { httpStatus: 200, id: 17, status: ACCOUNT_COOKIE_VALIDATION_STATUS.Valid },

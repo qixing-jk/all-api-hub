@@ -125,6 +125,8 @@ export const summarizeApiServiceFetchContext = summarizeApiTransportFetchContext
 export interface ApiTransportRequestObserver {
   onDispatch(): void
   onResponse(): void
+  /** An admitted read succeeded with this independently recovered Cookie. */
+  onCookieRecovered?(cookie: string): void
   /** Provider protocol confirmed one mutating request succeeded, before any follow-up. */
   onMutationAccepted?(): void
   /** Clears pre-handler evidence before a bounded recovered mutation attempt. */

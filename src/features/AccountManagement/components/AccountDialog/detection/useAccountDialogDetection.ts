@@ -1,4 +1,9 @@
-import type { Dispatch, RefObject, SetStateAction } from "react"
+import {
+  useRef,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
@@ -102,6 +107,8 @@ export function useAccountDialogDetection({
   const { t } = useTranslation(["accountDialog", "settings", "messages"])
   const { mode, url, draft, formSource, isDetected } = context
   const { siteType, checkIn, authType, cookieAuthSessionCookie } = draft
+  const currentCookie = useRef(cookieAuthSessionCookie)
+  currentCookie.current = cookieAuthSessionCookie
   const {
     credentialEvidence,
     automaticExecutionPreferenceChangedRef,
@@ -156,6 +163,7 @@ export function useAccountDialogDetection({
     }
 
     if (
+      currentCookie.current === cookieAuthSessionCookie &&
       shouldAutoImportCookieAuthForAccountDialogSite({
         policy,
         authType,
@@ -163,7 +171,14 @@ export function useAccountDialogDetection({
         url,
       })
     ) {
-      if (!(await importCookieAutomatically(isCurrent))) return false
+      if (
+        !(await importCookieAutomatically(isCurrent, {
+          site_type: nextSiteType,
+          site_url: url,
+          account_info: { id: resultData.userId },
+        }))
+      )
+        return false
     }
     if (!isCurrent()) return false
 

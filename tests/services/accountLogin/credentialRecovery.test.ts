@@ -137,6 +137,30 @@ describe("account credential recovery", () => {
     ).rejects.toBe(f.error)
     expect(deps.login).not.toHaveBeenCalled()
   })
+
+  it("notifies the operation owner only after a recovered request succeeds", async () => {
+    const f = fixture()
+    const onCookieRecovered = vi.fn()
+    const request = {
+      ...f.request,
+      observer: { onDispatch: vi.fn(), onResponse: vi.fn(), onCookieRecovered },
+    }
+    await expect(
+      executeWithAccountCredentialRecovery(
+        request,
+        vi.fn().mockRejectedValueOnce(f.error).mockResolvedValueOnce("ok"),
+      ),
+    ).resolves.toBe("ok")
+    expect(onCookieRecovered).toHaveBeenCalledExactlyOnceWith("session=new")
+    onCookieRecovered.mockClear()
+    await expect(
+      executeWithAccountCredentialRecovery(
+        request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toBe(f.error)
+    expect(onCookieRecovered).not.toHaveBeenCalled()
+  })
   it("rejects missing request identity before recovery", async () => {
     const f = fixture()
     const request = {
@@ -167,6 +191,29 @@ describe("account credential recovery", () => {
     )
     expect(deps.login).toHaveBeenCalledOnce()
     expect(runner.mock.calls[1]?.[0].cookieAuthSessionCookie).toBe(
+      "session=new",
+    )
+  })
+
+  it("recovers a rejected Cookie carried only by the private Cookie session", async () => {
+    const f = fixture()
+    const request = {
+      ...f.request,
+      auth: { ...f.request.auth, cookie: undefined },
+      cookieSession: {
+        origin: f.request.baseUrl,
+        cookieHeader: "session=expired",
+      },
+    }
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(f.error)
+      .mockResolvedValueOnce("ok")
+    expect(await executeWithAccountCredentialRecovery(request, runner)).toBe(
+      "ok",
+    )
+    expect(deps.login).toHaveBeenCalledOnce()
+    expect(runner.mock.calls[1]?.[0].cookieSession.cookieHeader).toBe(
       "session=new",
     )
   })

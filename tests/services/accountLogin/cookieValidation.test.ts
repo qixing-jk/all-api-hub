@@ -58,6 +58,24 @@ describe("Shared saved Cookie validation", () => {
     vi.resetAllMocks()
   })
 
+  it.each([SITE_TYPES.XIAOEN, SITE_TYPES.EMRANK])(
+    "rejects an empty normalized Cookie for %s before using browser authentication",
+    async (site_type) => {
+      deps.response.mockResolvedValue({
+        status: 200,
+        body: { success: true, data: { id: "17" } },
+      })
+      expect(
+        await validateAccountCookie({
+          ...account,
+          site_type,
+          cookieAuth: { sessionCookie: " Cookie:  " },
+        }),
+      ).toMatchObject({ status: "unavailable", reason: "missing_cookie" })
+      expect(deps.response).not.toHaveBeenCalled()
+    },
+  )
+
   it.each(["invalid", "https://user:pass@anyrouter.top"])(
     "rejects invalid Cookie origins %s before transport",
     async (site_url) => {

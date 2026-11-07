@@ -163,10 +163,16 @@ export default function AccountDialog({
       }),
     [accounts, account?.id, loginProviderEvidence],
   )
-  const accessTokenContinuation = useAccountDialogRecoveryHandoff({
+  const recoveryContinuation = useAccountDialogRecoveryHandoff({
     enabled: isOpen && isExtensionPopup(),
-    state: state.tokenRecoveryState ?? null,
+    state: state.cookieRecoveryState ?? state.tokenRecoveryState ?? null,
   })
+  const accessTokenContinuation = state.cookieRecoveryState
+    ? undefined
+    : recoveryContinuation
+  const cookieRecoveryContinuation = state.cookieRecoveryState
+    ? recoveryContinuation
+    : undefined
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -670,9 +676,15 @@ export default function AccountDialog({
                 onAuthTypeChange={setters.setAuthType}
                 isImportingCookies={state.isImportingCookies}
                 cookieRecovery={{
-                  pending: state.isRecoveringCookies,
+                  pending:
+                    state.isRecoveringCookies ||
+                    cookieRecoveryContinuation?.isPending === true,
+                  disabled: cookieRecoveryContinuation?.disabled,
+                  errorMessage: cookieRecoveryContinuation?.errorMessage,
                   verifiedCookie: state.verifiedCookie,
-                  onRecover: () => void handlers.handleRecoverCookieSession(),
+                  onRecover:
+                    cookieRecoveryContinuation?.onContinue ??
+                    (() => void handlers.handleRecoverCookieSession()),
                 }}
                 showCookiePermissionWarning={state.showCookiePermissionWarning}
                 cookieAuthPermissionsGranted={

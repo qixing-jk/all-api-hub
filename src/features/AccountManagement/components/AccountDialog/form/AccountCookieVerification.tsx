@@ -19,6 +19,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { normalizeCookieHeaderValue } from "~/utils/browser/cookieString"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
@@ -41,6 +42,8 @@ export function AccountCookieVerification({
   recovery?: {
     configured: boolean
     pending: boolean
+    disabled?: boolean
+    errorMessage?: string | null
     onRecover: () => void
     onConfigure: () => void
   }
@@ -50,6 +53,13 @@ export function AccountCookieVerification({
     null,
   )
   const [pending, setPending] = useState(false)
+  const hasCookie = Boolean(normalizeCookieHeaderValue(cookie))
+  const showRecovery = Boolean(
+    recovery &&
+      (!hasCookie ||
+        result?.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid ||
+        result?.status === ACCOUNT_COOKIE_VALIDATION_STATUS.IdentityMismatch),
+  )
   const active = useRef<AbortController | null>(null)
   useLayoutEffect(() => {
     active.current?.abort()
@@ -142,7 +152,7 @@ export function AccountCookieVerification({
             pending ||
             busy ||
             recovery?.pending ||
-            !cookie.trim() ||
+            !hasCookie ||
             !userId.trim() ||
             !isHttpUrl(siteUrl)
           }
@@ -153,54 +163,62 @@ export function AccountCookieVerification({
             : t("cookieValidation.shortAction")}
         </Button>
       </Tooltip>
-      {message && (
+      {(message || showRecovery) && (
         <p
           role="status"
           // Match the button's first line, including its density-dependent height.
           className="gap-density-1 flex min-w-0 items-start py-[calc((var(--density-control-sm)-1.25rem)/2)] text-xs leading-5"
         >
-          {result?.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Valid ? (
-            <CircleCheck
-              className="text-success-text mt-0.5 h-4 w-4 shrink-0"
-              aria-hidden="true"
-            />
-          ) : result?.status ===
-            ACCOUNT_COOKIE_VALIDATION_STATUS.Unavailable ? (
-            <Info
-              className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
-              aria-hidden="true"
-            />
-          ) : (
-            <CircleAlert
-              className="text-warning-text mt-0.5 h-4 w-4 shrink-0"
-              aria-hidden="true"
-            />
-          )}
+          {message &&
+            (result?.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Valid ? (
+              <CircleCheck
+                className="text-success-text mt-0.5 h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
+            ) : result?.status ===
+              ACCOUNT_COOKIE_VALIDATION_STATUS.Unavailable ? (
+              <Info
+                className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
+            ) : (
+              <CircleAlert
+                className="text-warning-text mt-0.5 h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
+            ))}
           <span className="gap-density-1 flex min-w-0 flex-wrap items-center">
             <span>{message}</span>
-            {recovery &&
-              (result?.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid ||
-                result?.status ===
-                  ACCOUNT_COOKIE_VALIDATION_STATUS.IdentityMismatch) && (
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  className="h-auto min-h-0 p-0 text-left text-xs leading-5"
-                  disabled={recovery.pending || busy}
-                  onClick={
-                    recovery.configured
-                      ? recovery.onRecover
-                      : recovery.onConfigure
-                  }
-                >
-                  {recovery.pending
-                    ? t("cookieValidation.recovering")
-                    : recovery.configured
-                      ? t("cookieValidation.recover")
-                      : t("login.configureRecovery")}
-                </Button>
-              )}
+            {recovery && showRecovery && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto min-h-0 p-0 text-left text-xs leading-5"
+                disabled={
+                  recovery.pending ||
+                  recovery.disabled ||
+                  busy ||
+                  pending ||
+                  !userId.trim() ||
+                  !isHttpUrl(siteUrl)
+                }
+                onClick={
+                  recovery.configured
+                    ? recovery.onRecover
+                    : recovery.onConfigure
+                }
+              >
+                {recovery.pending
+                  ? t("cookieValidation.recovering")
+                  : recovery.configured
+                    ? t("cookieValidation.recover")
+                    : t("login.configureRecovery")}
+              </Button>
+            )}
+            {showRecovery && recovery?.errorMessage && (
+              <span role="alert">{recovery.errorMessage}</span>
+            )}
           </span>
         </p>
       )}

@@ -104,7 +104,9 @@ export async function executeWithAccountCredentialRecovery<T>(
               throw error
             const cookie = account.cookieAuth?.sessionCookie
             const rejectedCookie =
-              request.auth.cookie ?? request.cookieAuthSessionCookie
+              request.cookieSession?.cookieHeader ??
+              request.auth.cookie ??
+              request.cookieAuthSessionCookie
             // Another operation already rotated the saved credential while we waited.
             if (cookie?.trim() && cookie !== rejectedCookie)
               return withCookie(request, cookie)
@@ -172,6 +174,8 @@ export async function executeWithAccountCredentialRecovery<T>(
     )
     assertActive(request)
     // Exactly one retry: a second rejection never starts another login.
-    return runner(recovered)
+    const result = await runner(recovered)
+    request.observer?.onCookieRecovered?.(recovered.auth.cookie!)
+    return result
   }
 }

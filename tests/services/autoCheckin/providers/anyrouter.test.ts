@@ -6,6 +6,7 @@ import { executeWithAccountCredentialRecovery } from "~/services/accountCredenti
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
 import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import type { AnyrouterCheckInParams } from "~/services/checkin/autoCheckin/providers/contracts"
@@ -31,6 +32,11 @@ vi.mock("~/services/accountCredentialRecovery", () => ({
     runner(request),
   ),
 }))
+const recoveryDeps = vi.hoisted(() => ({ read: vi.fn(), login: vi.fn() }))
+vi.mock("~/services/accounts/accountStorage/accountConfigStore", () => ({
+  accountConfigStore: { read: recoveryDeps.read },
+}))
+vi.mock("~/services/accountLogin", () => ({ loginAccount: recoveryDeps.login }))
 
 const mockEnvelope = newApiFamilyRequests.envelope as unknown as Mock
 
@@ -108,6 +114,40 @@ describe("anyrouterProvider", () => {
   })
 
   describe("checkIn", () => {
+    it("never recovers or replays a rejected POST with the real recovery wrapper", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/services/accountCredentialRecovery")
+      >("~/services/accountCredentialRecovery")
+      vi.mocked(executeWithAccountCredentialRecovery).mockImplementationOnce(
+        actual.executeWithAccountCredentialRecovery,
+      )
+      const account = {
+        ...mockAccount,
+        cookieAuth: { sessionCookie: "session=old" },
+        login: { methodId: "github", automaticRecovery: true },
+      }
+      recoveryDeps.read.mockResolvedValue({ accounts: [account] })
+      recoveryDeps.login.mockClear()
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+        id: account.account_info.id,
+      })
+      mockEnvelope.mockRejectedValue(
+        new ApiError(
+          "login required",
+          401,
+          "/api/user/sign_in",
+          API_ERROR_CODES.HTTP_401,
+        ),
+      )
+      const result = await checkInForTest(account)
+      expect(result.status).toBe("failed")
+      expect(mockEnvelope).toHaveBeenCalledOnce()
+      expect(mockEnvelope.mock.calls[0]?.[1]).toMatchObject({
+        endpoint: "/api/user/sign_in",
+        options: { method: "POST" },
+      })
+      expect(recoveryDeps.login).not.toHaveBeenCalled()
+    })
     it("does not POST when execution intent changes during credential preparation", async () => {
       vi.mocked(newApiFamilyRequests.data).mockResolvedValue({ id: "12345" })
       const result = await checkInForTest(

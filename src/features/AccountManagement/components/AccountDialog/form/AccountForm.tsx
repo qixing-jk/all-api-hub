@@ -167,6 +167,8 @@ interface AccountFormProps {
   onImportCookieAuthSessionCookie: () => void
   cookieRecovery?: {
     pending: boolean
+    disabled?: boolean
+    errorMessage?: string | null
     onRecover: () => void
     verifiedCookie?: AccountCookieValidationEvidence | null
   }
@@ -1060,6 +1062,8 @@ export default function AccountForm({
                               ) &&
                               Boolean(cookieRecovery),
                             pending: cookieRecovery?.pending === true,
+                            disabled: cookieRecovery?.disabled,
+                            errorMessage: cookieRecovery?.errorMessage,
                             onRecover: () => cookieRecovery?.onRecover(),
                             onConfigure: handleConfigureLogin,
                           }

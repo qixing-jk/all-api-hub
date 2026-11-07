@@ -224,6 +224,7 @@ test("AnyRouter authentication failures guide login setup and recover the saved 
       await expect(dialog).not.toBeVisible()
     }
     rejectOriginalCookie = true
+    await row.hover()
     await row
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
       .click()
@@ -614,6 +615,14 @@ test("AnyRouter authentication failures guide login setup and recover the saved 
     expect(logins).toBe(2)
     requireBrowserProof = false
     await context.clearCookies()
+    await cookieInput.fill("")
+    await expect(
+      credential.getByRole("button", { name: "Restore login", exact: true }),
+    ).toBeEnabled()
+    await credential.screenshot({
+      path: testInfo.outputPath("cookie-empty-recovery-offered.png"),
+      animations: "disabled",
+    })
     await credential
       .getByRole("button", { name: "Restore login", exact: true })
       .click()

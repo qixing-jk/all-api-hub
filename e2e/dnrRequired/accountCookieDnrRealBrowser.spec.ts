@@ -603,6 +603,8 @@ test("AnyRouter Cookie verification carries WAF clearance without borrowing brow
         httpOnly: true,
       },
     ])
+    // Start with a distinct value so the assertion waits for this import.
+    await cookie.fill("session=before-valid-import")
     await dialog
       .getByRole("button", { name: "Import from current login", exact: true })
       .click()
@@ -641,6 +643,7 @@ test("AnyRouter Cookie verification carries WAF clearance without borrowing brow
     ).toBeFocused()
     await cookie.scrollIntoViewIfNeeded()
 
+    const pageCountBeforeVerification = context.pages().length
     await context.clearCookies()
     await cookie.fill(ACCOUNT_A_SESSION_COOKIE)
     await verify.click()
@@ -652,9 +655,7 @@ test("AnyRouter Cookie verification carries WAF clearance without borrowing brow
         (element) => element.scrollWidth - element.clientWidth,
       ),
     ).toBeLessThanOrEqual(1)
-    expect(context.pages().filter((current) => current === page)).toHaveLength(
-      1,
-    )
+    expect(context.pages()).toHaveLength(pageCountBeforeVerification)
     expect(localSite.selfRequests.at(-1)?.cookieHeader).toBe(
       ACCOUNT_A_SESSION_COOKIE,
     )

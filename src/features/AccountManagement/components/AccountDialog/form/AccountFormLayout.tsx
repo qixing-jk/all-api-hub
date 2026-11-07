@@ -75,6 +75,14 @@ export function AccountFormLayout({
   useEffect(() => () => destinationAnimation.current?.cancel(), [])
 
   useEffect(() => {
+    if (sections.some(({ id }) => id === activeId)) return
+    navigationSelection.current = null
+    pendingMenuDestination.current = null
+    destinationAnimation.current?.cancel()
+    setActiveId(sections[0]!.id)
+  }, [activeId, sections])
+
+  useEffect(() => {
     const navigation = navigationRef.current
     if (!navigation) return
     const reveal = () => {

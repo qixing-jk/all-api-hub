@@ -239,6 +239,62 @@ describe("browser OAuth context", () => {
     expect(browserApi.createWindow).toHaveBeenCalledOnce()
   })
 
+  it("cleans up the request's observed session before closing a cancelled fallback login", async () => {
+    const controller = new AbortController()
+    const flow: BrowserOAuthFlow = {
+      ...testFlow,
+      captureCredential: async () => {
+        controller.abort()
+        return { cookie: "session=observed" }
+      },
+    }
+    await expect(
+      createBrowserOAuthContext(flow).authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: "cancel-observed",
+        abortSignal: controller.signal,
+        captureCredential: true,
+      }),
+    ).resolves.toMatchObject({ status: "cancelled" })
+    const clearIndex = browserApi.sendTabMessageWithRetry.mock.calls.findIndex(
+      ([, message]) =>
+        message.action === actions.clear &&
+        message.requestId === "cancel-observed",
+    )
+    expect(clearIndex).toBeGreaterThanOrEqual(0)
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.invocationCallOrder[clearIndex],
+    ).toBeLessThan(browserApi.removeWindow.mock.invocationCallOrder[0]!)
+  })
+
+  it("closes a window created after its session holder cancels", async () => {
+    let release!: () => void
+    const opening = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    browserApi.createWindow.mockImplementationOnce(async () => {
+      await opening
+      return { id: 7, tabs: [loginTab] }
+    })
+    const controller = new AbortController()
+    const pending = browserOAuthContext.authenticate({
+      origin,
+      expectedIdentity: "user-1",
+      requestId: "cancel-opening",
+      abortSignal: controller.signal,
+    })
+    await vi.waitFor(() =>
+      expect(browserApi.createWindow).toHaveBeenCalledOnce(),
+    )
+    controller.abort()
+    release()
+    await expect(pending).resolves.toMatchObject({ status: "cancelled" })
+    await vi.waitFor(() =>
+      expect(browserApi.removeWindow).toHaveBeenCalledWith(7),
+    )
+  })
+
   it("stops a cancelled login before a late preparation can navigate", async () => {
     const controller = new AbortController()
     browserApi.updateTab.mockClear()

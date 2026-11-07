@@ -20,6 +20,7 @@ import {
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { checkCookieInterceptorRequirement } from "~/utils/browser/cookieHelper"
+import { normalizeCookieHeaderValue } from "~/utils/browser/cookieString"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
@@ -106,7 +107,9 @@ export async function validateAccountCookie(
       status: ACCOUNT_COOKIE_VALIDATION_STATUS.Unavailable,
       reason: ACCOUNT_COOKIE_VALIDATION_REASONS.Unsupported,
     }
-  const cookie = account.cookieAuth?.sessionCookie?.trim() ?? ""
+  const cookie = normalizeCookieHeaderValue(
+    account.cookieAuth?.sessionCookie ?? "",
+  )
   const identity = String(account.account_info.id ?? "").trim()
   if (!cookie)
     return {

@@ -37,6 +37,7 @@ import {
 
 const logger = createLogger("BrowserLogin")
 const KEEPALIVE_INTERVAL_MS = 20 * 1000
+const CLEANUP_TIMEOUT_MS = 3_000
 /**
  * How long a queued login waits for the shared session. Its clock starts
  * together with the flow ahead of it, so it only has to outlive that flow's own
@@ -441,14 +442,22 @@ async function authenticateBrowserLogin<Evidence>(
       message: getErrorMessage(error),
     }
   } finally {
-    if (!authenticated && context && !input.abortSignal?.aborted) {
+    if (!authenticated && context) {
       try {
-        await assertTabOrigin(context, input.origin)
-        await sendContentMessage(
-          context.tabId,
-          flow.clearEvidenceAction,
-          input.requestId,
-          { origin: input.origin },
+        const cleanupContext = context
+        await runAbortableTask(
+          async (signal) => {
+            await assertTabOrigin(cleanupContext, input.origin)
+            signal?.throwIfAborted()
+            await sendContentMessage(
+              cleanupContext.tabId,
+              flow.clearEvidenceAction,
+              input.requestId,
+              { origin: input.origin },
+              signal,
+            )
+          },
+          { timeoutMs: CLEANUP_TIMEOUT_MS },
         )
       } catch {
         // The document may already be closed or outside the account origin.

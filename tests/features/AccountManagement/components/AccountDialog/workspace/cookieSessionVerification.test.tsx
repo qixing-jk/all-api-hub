@@ -42,6 +42,51 @@ const target = {
 }
 beforeEach(() => vi.clearAllMocks())
 
+it.each([
+  ACCOUNT_COOKIE_VALIDATION_STATUS.Valid,
+  ACCOUNT_COOKIE_VALIDATION_STATUS.IdentityMismatch,
+])(
+  "validates automatic import against the newly detected identity: %s",
+  async (status) => {
+    deps.send.mockResolvedValue({
+      success: true,
+      data: "session=browser",
+      cookieStoreId: "detected-store",
+    })
+    deps.verify.mockResolvedValue({ status })
+    const apply = vi.fn()
+    const detected = { ...target, account_info: { id: "new-identity" } }
+    const { result } = renderHook(() =>
+      useAccountCookieSession({
+        isOpen: true,
+        mode: DIALOG_MODES.ADD,
+        url: target.site_url,
+        authType: AuthTypeEnum.Cookie,
+        getContext: () => ({ sourceTabIncognito: true }),
+        applyCookie: apply,
+        validationTarget: target,
+      }),
+    )
+    await act(async () => {
+      await result.current.importAutomatically(() => true, detected)
+    })
+    expect(deps.verify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account_info: detected.account_info,
+        cookieAuth: { sessionCookie: "session=browser" },
+        fetchContext: {
+          kind: "browser-context",
+          cookieStoreId: "detected-store",
+          incognito: true,
+        },
+      }),
+    )
+    if (status === ACCOUNT_COOKIE_VALIDATION_STATUS.Valid)
+      expect(apply).toHaveBeenCalledExactlyOnceWith("session=browser")
+    else expect(apply).not.toHaveBeenCalled()
+  },
+)
+
 it("uses the resolved source store returned by the background importer", async () => {
   deps.send.mockResolvedValue({
     success: true,

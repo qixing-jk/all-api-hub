@@ -30,6 +30,9 @@ assert.equal(
   build.inputHash,
   "The CDP matrix needs a current extension build",
 )
+await fs.mkdir(path.resolve(".scratch/account-auth-recovery/artifacts"), {
+  recursive: true,
+})
 const runDir = await fs.mkdtemp(
   path.resolve(".scratch/account-auth-recovery/artifacts/cdp-cookie-matrix-"),
 )
@@ -431,11 +434,16 @@ try {
     !scenarios.some((scenario) => scenario.name === selectedName)
   )
     throw new Error("Unknown CDP matrix case")
+  const selectedScenarios = scenarios.filter(selected)
+  assert(
+    selectedScenarios.length > 0,
+    "CDP matrix filters selected no scenarios",
+  )
   report.selection = scenarios.map((scenario) => ({
     name: scenario.name,
     status: selected(scenario) ? "selected" : "unselected",
   }))
-  for (const scenario of scenarios.filter(selected)) {
+  for (const scenario of selectedScenarios) {
     const fixtureAccountId = `cdp-matrix-${scenarios.indexOf(scenario) + 1}`
     const result = { name: scenario.name, expected: scenario.expected }
     report.cases.push(result)
@@ -772,6 +780,11 @@ try {
         })),
       }
       assert(selfRequests.length > 0)
+      if (
+        scenario.authType === "access_token" &&
+        scenario.expected === "success"
+      )
+        assert(selfRequests.every((request) => !request.cookie))
       assert.equal(
         updated.cookieAuth?.sessionCookie,
         scenario.changedCookie ? "session=renewed" : scenario.cookie,
@@ -785,6 +798,7 @@ try {
           scenario.source,
         )
       } else {
+        assert.notEqual(updated.health.status, "healthy")
         if (scenario.expected === "auth-failure")
           assert.equal(updated.health.code, "authentication_required")
         if (

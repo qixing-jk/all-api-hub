@@ -8,7 +8,7 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountCookieVerification } from "~/features/AccountManagement/components/AccountDialog/form/AccountCookieVerification"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
-import { render, screen } from "~~/tests/test-utils/render"
+import { act, render, screen } from "~~/tests/test-utils/render"
 
 const deps = vi.hoisted(() => ({ verify: vi.fn() }))
 vi.mock("~/services/accounts/cookieValidation", async (importOriginal) => ({
@@ -25,6 +25,30 @@ const props = {
 }
 const action = () =>
   screen.findByRole("button", { name: "accountDialog:cookieValidation.action" })
+
+it("can restore an empty Cookie through configured login without probing it", async () => {
+  const onRecover = vi.fn()
+  render(
+    <AccountCookieVerification
+      {...props}
+      cookie=""
+      recovery={{
+        configured: true,
+        pending: false,
+        onRecover,
+        onConfigure: vi.fn(),
+      }}
+    />,
+  )
+  expect(await action()).toBeDisabled()
+  await userEvent.click(
+    await screen.findByRole("button", {
+      name: "accountDialog:cookieValidation.recover",
+    }),
+  )
+  expect(onRecover).toHaveBeenCalledOnce()
+  expect(deps.verify).not.toHaveBeenCalled()
+})
 
 it("offers configured login recovery after rejection without starting it during verification", async () => {
   const user = userEvent.setup()
@@ -248,8 +272,9 @@ describe("Saved Cookie diagnostic", () => {
         <AccountCookieVerification {...props} {...{ [field]: "changed" }} />,
       )
       expect(signal.aborted).toBe(true)
-      finish({ status: ACCOUNT_COOKIE_VALIDATION_STATUS.Valid })
-      await Promise.resolve()
+      await act(async () => {
+        finish({ status: ACCOUNT_COOKIE_VALIDATION_STATUS.Valid })
+      })
       expect(screen.queryByRole("status")).not.toBeInTheDocument()
     },
   )
@@ -328,6 +353,24 @@ it("shows network feedback when the validator rejects unexpectedly", async () =>
   expect(await screen.findByRole("status")).toHaveTextContent(
     "cookieValidation.unavailable",
   )
+})
+
+it("ignores a rejected probe after the user edits the Cookie", async () => {
+  let reject!: (error: Error) => void
+  deps.verify.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail
+      }),
+  )
+  const view = render(<AccountCookieVerification {...props} />)
+  await userEvent.click(await action())
+  view.rerender(<AccountCookieVerification {...props} cookie="session=new" />)
+  await act(async () => {
+    reject(new Error("cancelled request"))
+  })
+  expect(screen.queryByRole("status")).not.toBeInTheDocument()
+  expect(await action()).toBeEnabled()
 })
 
 it("shows recovery progress after a rejected Cookie", async () => {

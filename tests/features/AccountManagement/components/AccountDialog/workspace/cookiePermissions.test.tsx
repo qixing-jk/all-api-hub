@@ -36,6 +36,22 @@ const renderPermissions = () =>
       authType: AuthTypeEnum.Cookie,
     }),
   )
+it("refreshes permission state after an in-flight read is invalidated", async () => {
+  let finish!: (granted: boolean) => void
+  deps.read
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    .mockResolvedValue(true)
+  const { result } = renderPermissions()
+  act(() => result.current.invalidate())
+  await waitFor(() => expect(result.current.state.granted).toBe(true))
+  await act(async () => finish(false))
+  expect(result.current.state.granted).toBe(true)
+})
 it("accepts a manifest that already requires every Cookie permission without requesting more", async () => {
   deps.permissions.splice(0)
   const { result } = renderPermissions()
@@ -59,7 +75,7 @@ it("ignores a stale permission read rejection", async () => {
   await act(async () => {
     fail(new Error("closed"))
   })
-  expect(result.current.state.granted).toBeNull()
+  expect(result.current.state.granted).toBe(false)
 })
 it.each(["read", "request"])(
   "suppresses stale %s completion feedback",

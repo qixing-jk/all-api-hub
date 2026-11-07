@@ -207,6 +207,71 @@ export function useAccountCookieSession({
     }
   }
 
+  const verifyImportedCookie = async (
+    completion: Awaited<ReturnType<typeof readCookies>>,
+    target: AccountCookieValidationTarget | undefined,
+    isCurrent: () => boolean,
+  ): Promise<boolean> => {
+    const cookie = completion.response?.data
+    if (!cookie || !isCurrent()) return false
+    if (
+      !target?.site_type ||
+      !supportsAccountCookieRecovery(target) ||
+      !String(target.account_info.id ?? "").trim()
+    )
+      return true
+    setIsImportingCookies(true)
+    const controller = new AbortController()
+    importValidation.current = controller
+    const source = getCurrentTempWindowRequestSource()
+    const sourceContext = completion.sourceContext
+    const cookieStoreId =
+      completion.response?.cookieStoreId ?? sourceContext.cookieStoreId
+    const verification = await withProtectionBypassUserCommand(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+      source,
+      (protectionBypassExecution) =>
+        validateAccountCookie({
+          ...target,
+          site_url: url,
+          cookieAuth: { sessionCookie: cookie },
+          protectionBypassExecution,
+          tempWindowRequestSource: source,
+          abortSignal: controller.signal,
+          ...(cookieStoreId || sourceContext.sourceTabIncognito
+            ? {
+                fetchContext: {
+                  kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+                  ...(cookieStoreId ? { cookieStoreId } : {}),
+                  ...(sourceContext.sourceTabIncognito
+                    ? { incognito: true }
+                    : {}),
+                },
+              }
+            : {}),
+        }),
+    )
+    if (!isCurrent()) return false
+    if (verification.status !== ACCOUNT_COOKIE_VALIDATION_STATUS.Valid) {
+      toast.error(
+        verification.status ===
+          ACCOUNT_COOKIE_VALIDATION_STATUS.IdentityMismatch
+          ? t("cookieValidation.importIdentityMismatch")
+          : verification.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid
+            ? t("cookieValidation.importInvalid")
+            : t("cookieValidation.importUnconfirmed"),
+      )
+      return false
+    }
+    setVerifiedCookie({
+      cookie,
+      siteUrl: url,
+      siteType: target.site_type,
+      userId: String(target.account_info.id).trim(),
+    })
+    return true
+  }
+
   const handleImportCookieAuthSessionCookie = async () => {
     if (activeRecovery.current) return
     importValidation.current?.abort()
@@ -231,65 +296,18 @@ export function useAccountCookieSession({
       if (completion.failed) throw completion.error
       const response = completion.response
       if (response?.success && response.data) {
-        if (
-          validationTarget?.site_type &&
-          supportsAccountCookieRecovery(validationTarget) &&
-          String(validationTarget.account_info.id ?? "").trim()
-        ) {
-          setIsImportingCookies(true)
-          const controller = new AbortController()
-          importValidation.current = controller
-          const source = getCurrentTempWindowRequestSource()
-          const sourceContext = completion.sourceContext
-          const cookieStoreId =
-            response.cookieStoreId ?? sourceContext.cookieStoreId
-          const verification = await withProtectionBypassUserCommand(
-            PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
-            source,
-            (protectionBypassExecution) =>
-              validateAccountCookie({
-                ...validationTarget,
-                site_url: url,
-                cookieAuth: { sessionCookie: response.data! },
-                protectionBypassExecution,
-                tempWindowRequestSource: source,
-                abortSignal: controller.signal,
-                ...(cookieStoreId || sourceContext.sourceTabIncognito
-                  ? {
-                      fetchContext: {
-                        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
-                        ...(cookieStoreId ? { cookieStoreId } : {}),
-                        ...(sourceContext.sourceTabIncognito
-                          ? { incognito: true }
-                          : {}),
-                      },
-                    }
-                  : {}),
-              }),
+        const accepted = await verifyImportedCookie(
+          completion,
+          validationTarget,
+          () => generation === importGeneration.current,
+        )
+        if (!accepted) {
+          analyticsAction.complete(
+            generation === importGeneration.current
+              ? PRODUCT_ANALYTICS_RESULTS.Failure
+              : PRODUCT_ANALYTICS_RESULTS.Cancelled,
           )
-          if (generation !== importGeneration.current) {
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
-            return
-          }
-          if (verification.status !== ACCOUNT_COOKIE_VALIDATION_STATUS.Valid) {
-            toast.error(
-              verification.status ===
-                ACCOUNT_COOKIE_VALIDATION_STATUS.IdentityMismatch
-                ? t("cookieValidation.importIdentityMismatch")
-                : verification.status ===
-                    ACCOUNT_COOKIE_VALIDATION_STATUS.Invalid
-                  ? t("cookieValidation.importInvalid")
-                  : t("cookieValidation.importUnconfirmed"),
-            )
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
-            return
-          }
-          setVerifiedCookie({
-            cookie: response.data,
-            siteUrl: url,
-            siteType: validationTarget.site_type,
-            userId: String(validationTarget.account_info.id).trim(),
-          })
+          return
         }
         applyCookie(response.data)
         setShowCookiePermissionWarning(false)
@@ -445,7 +463,12 @@ export function useAccountCookieSession({
     }
   }
 
-  const importAutomatically = async (isCurrent: () => boolean) => {
+  const importAutomatically = async (
+    isCurrent: () => boolean,
+    detectedTarget?: AccountCookieValidationTarget,
+  ) => {
+    const generation = importGeneration.current + 1
+    const current = () => generation === importGeneration.current && isCurrent()
     const completion = await readCookies({ source: "automatic", isCurrent })
     if (!completion.current) return false
     if (completion.failed) {
@@ -458,7 +481,22 @@ export function useAccountCookieSession({
     const response = completion.response
     const header =
       typeof response?.data === "string" ? response.data.trim() : ""
-    if (header) {
+    if (response?.success && header) {
+      try {
+        if (
+          !(await verifyImportedCookie(
+            completion,
+            detectedTarget ?? validationTarget,
+            current,
+          ))
+        )
+          return current()
+      } catch {
+        if (current()) toast.error(t("cookieValidation.importUnconfirmed"))
+        return current()
+      } finally {
+        if (current()) setIsImportingCookies(false)
+      }
       applyCookie(header)
       setShowCookiePermissionWarning(false)
     } else if (
