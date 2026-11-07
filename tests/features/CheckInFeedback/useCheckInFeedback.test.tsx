@@ -14,6 +14,10 @@ describe("useCheckInFeedback lifecycle", () => {
       false,
     )
     act(() => result.current.openFeedback({ accountId: "second" }))
+    act(() => first.onClose())
+    expect(result.current.feedbackDialog!.props.children.props.isOpen).toBe(
+      true,
+    )
     act(() => first.onCloseComplete())
     expect(
       result.current.feedbackDialog!.props.children.props.source.accountId,

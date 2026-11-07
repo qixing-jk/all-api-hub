@@ -541,10 +541,23 @@ export function useAccountDialog({
           category: "onboarding_close",
         })
       }
-      completePendingAccountKeyProvisioningSuccess()
-      clearPostSaveWorkflowState()
-      handleManagedSiteConfigPromptClose()
-      onClose()
+      try {
+        completePendingAccountKeyProvisioningSuccess()
+        clearPostSaveWorkflowState()
+        handleManagedSiteConfigPromptClose()
+      } catch {
+        logger.warn("Account dialog close cleanup failed", {
+          category: "close_cleanup",
+        })
+      } finally {
+        try {
+          onClose()
+        } catch {
+          logger.warn("Account dialog close callback failed", {
+            category: "close_callback",
+          })
+        }
+      }
     })()
     closeCompletionRef.current = completion
     return completion

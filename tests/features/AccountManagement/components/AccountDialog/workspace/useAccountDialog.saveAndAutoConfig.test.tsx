@@ -281,6 +281,7 @@ describe("useAccountDialog save and auto-config flows", () => {
   })
 
   const renderAddHook = (options?: {
+    onClose?: Mock
     onPostSaveAccountRefresh?: Mock
     onSuccess?: Mock
   }) =>
@@ -288,7 +289,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       useAccountDialog({
         mode: DIALOG_MODES.ADD,
         isOpen: true,
-        onClose: vi.fn(),
+        onClose: options?.onClose ?? vi.fn(),
         onPostSaveAccountRefresh: options?.onPostSaveAccountRefresh,
         onSuccess: options?.onSuccess ?? vi.fn(),
       }),
@@ -999,6 +1000,41 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
     },
   )
+
+  it("closes even when a pending provisioning success callback throws", async () => {
+    mockAutoProvisionKeyOnAccountAdd(
+      true,
+      ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+    )
+    const account = buildSiteAccount({
+      id: "saved-account-id",
+      site_type: SITE_TYPES.NEW_API,
+    })
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(account),
+    )
+    const onSuccess = vi.fn(() => {
+      throw new Error("sk-success-secret")
+    })
+    const onClose = vi.fn()
+    const { result } = renderAddHook({ onSuccess, onClose })
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await fillStandardAddAccountDraft(result)
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+    expect(result.current.state.postSaveKeyProvisioning).not.toBeNull()
+    await act(async () => {
+      await expect(
+        result.current.handlers.handleClose(),
+      ).resolves.toBeUndefined()
+      await expect(
+        result.current.handlers.handleClose(),
+      ).resolves.toBeUndefined()
+    })
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
+    expect(onClose).toHaveBeenCalledOnce()
+  })
 
   it("ignores a provisioning owner lookup that finishes after the account view closes", async () => {
     mockAutoProvisionKeyOnAccountAdd(

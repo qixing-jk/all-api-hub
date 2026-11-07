@@ -1490,6 +1490,37 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(finished).toHaveBeenCalledOnce()
   })
 
+  it("settles repeated closes when the external close callback throws without logging its secret", async () => {
+    const onClose = vi.fn(() => {
+      throw new Error("sk-close-secret")
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      await expect(
+        result.current.handlers.handleClose(),
+      ).resolves.toBeUndefined()
+      await expect(
+        result.current.handlers.handleClose(),
+      ).resolves.toBeUndefined()
+    })
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "Account dialog close callback failed",
+      { category: "close_callback" },
+    )
+    expect(JSON.stringify(mockLoggerWarn.mock.calls)).not.toContain(
+      "sk-close-secret",
+    )
+  })
+
   it("still closes when OpenRouter close reconciliation rejects", async () => {
     const secretSentinel = "sk-or-close-secret-sentinel"
     mockAutoDetectAccount.mockReturnValue(new Promise(() => {}))

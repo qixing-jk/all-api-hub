@@ -688,6 +688,7 @@ describe("AccountDialog", () => {
       .closest<HTMLElement>('[data-slot="modal-body"]')!
     const scrollTo = vi.fn()
     scroller.scrollTo = scrollTo
+    view.rerender(<AccountDialog {...props} focusSection="account-auth" />)
     expect(scrollTo).not.toHaveBeenCalled()
 
     mockState.isLoadingAccount = false
