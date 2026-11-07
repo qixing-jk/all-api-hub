@@ -41,6 +41,26 @@ const key = {
   monthly_usage_usd: 0,
 }
 
+test.beforeEach(async ({ context }) => {
+  // Scenario routes registered later take precedence. A missing provider mock
+  // must fail here instead of depending on the live console or its assets.
+  await context.route(
+    /^https:\/\/(?:[\w-]+\.)?aimlapi\.com\//,
+    async (route) => {
+      await route.abort("blockedbyclient")
+      throw new Error(
+        `Unmocked AI/ML API request: ${new URL(route.request().url()).pathname}`,
+      )
+    },
+  )
+  await context.route("https://aimlapi.com/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<html><title>AI/ML API</title></html>",
+    }),
+  )
+})
+
 test("editing an AIMLAPI account offers one credential detection action", async ({
   page,
   context,
@@ -101,12 +121,6 @@ test("live runner verifies pasted credentials, saves and cleans its onboarding a
     tempWindowFallback: { enabled: false },
   })
   await stubLlmMetadataIndex(context)
-  await context.route("https://aimlapi.com/**", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: "<html><title>AI/ML API</title></html>",
-    }),
-  )
   const requests: { path: string; credential: string }[] = []
   await context.route("https://api.aimlapi.com/**", async (route) => {
     const request = route.request()
@@ -175,7 +189,9 @@ test("authentication matrix saves each supported combination and rejects invalid
   await seedStoredAccounts(serviceWorker, [])
   await seedUserPreferences(serviceWorker, {
     warnOnDuplicateAccountAdd: false,
-    tempWindowFallback: { enabled: false },
+    // The credential matrix repeatedly opens the signed-out console. Keep
+    // those reads in tabs; native window presentation has separate E2E coverage.
+    tempWindowFallback: { enabled: false, tempContextMode: "tab" },
   })
   await stubLlmMetadataIndex(context)
   const requests: { path: string; credential: string }[] = []
