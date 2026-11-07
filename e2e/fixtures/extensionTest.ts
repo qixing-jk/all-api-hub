@@ -65,10 +65,10 @@ export const test = base.extend<ExtensionFixtures>({
     const originalTestTimeoutMs = testInfo.timeout
 
     // Preserve unlimited timeouts while extending finite test-body budgets for
-    // one bounded fresh-context retry during extension startup.
+    // two attempts, each with a browser-launch and service-worker budget.
     if (originalTestTimeoutMs > 0) {
       testInfo.setTimeout(
-        originalTestTimeoutMs + extensionServiceWorkerTimeoutMs * 2,
+        originalTestTimeoutMs + extensionServiceWorkerTimeoutMs * 4,
       )
     }
 
@@ -97,6 +97,9 @@ export const test = base.extend<ExtensionFixtures>({
           return await chromium.launchPersistentContext(userDataDir, {
             ...contextOptions,
             ...launchOptions,
+            // Bound the launch itself so its timeout can reach the retry helper
+            // before the enclosing fixture/test timeout aborts the worker.
+            timeout: extensionServiceWorkerTimeoutMs,
             deviceScaleFactor,
             locale,
             timezoneId,
@@ -114,7 +117,7 @@ export const test = base.extend<ExtensionFixtures>({
         },
         onRetry: (error, attempt) => {
           console.warn(
-            `Extension service worker startup failed on attempt ${attempt}; retrying with a fresh context`,
+            `Extension startup failed on attempt ${attempt}; retrying browser context startup`,
             error,
           )
         },

@@ -1,5 +1,5 @@
 import path from "node:path"
-import type { BrowserContextOptions } from "@playwright/test"
+import { errors, type BrowserContextOptions } from "@playwright/test"
 
 type ExtensionLaunchOptions = {
   extensionDir: string
@@ -33,8 +33,9 @@ type ExtensionContextStartupRetryOptions<
 }
 
 /**
- * Launch an extension context and retry once when only service-worker startup
- * readiness fails. Browser launch errors still fail immediately.
+ * Retry once after a browser launch timeout or failed service-worker readiness.
+ * Other launch errors fail immediately. Playwright owns cleanup of a timed-out
+ * launch; returned contexts are closed here before retrying readiness failures.
  */
 export async function launchExtensionContextWithStartupRetry<
   TContext extends { close(): Promise<void> },
@@ -46,7 +47,19 @@ export async function launchExtensionContextWithStartupRetry<
   const maxAttempts = 2
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const context = await launch(attempt)
+    let context: TContext
+    try {
+      context = await launch(attempt)
+    } catch (launchError) {
+      if (
+        !(launchError instanceof errors.TimeoutError) ||
+        attempt === maxAttempts
+      ) {
+        throw launchError
+      }
+      onRetry?.(launchError, attempt)
+      continue
+    }
 
     try {
       await waitForReady(context, attempt)
