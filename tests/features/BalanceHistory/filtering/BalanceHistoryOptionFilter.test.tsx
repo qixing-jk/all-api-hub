@@ -1,10 +1,10 @@
 import userEvent from "@testing-library/user-event"
 import React from "react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { TagFilterOption } from "~/components/ui"
 import { BalanceHistoryOptionFilter } from "~/features/BalanceHistory/filtering/BalanceHistoryOptionFilter"
-import { render, screen } from "~~/tests/test-utils/render"
+import { act, render, screen } from "~~/tests/test-utils/render"
 
 const options: TagFilterOption[] = [
   { value: "production", label: "Production" },
@@ -144,6 +144,89 @@ describe("BalanceHistoryOptionFilter", () => {
       screen.getByRole("searchbox", { name: "Search tags" }),
     ).toBeDisabled()
     expect(screen.getByRole("button", { name: "All tags" })).toBeDisabled()
+  })
+
+  it("retargets the option list height from the visible height during a transition", () => {
+    const resizeCallbacks = new Map<Element, () => void>()
+    const disconnect = vi.fn()
+    class RecordingResizeObserver {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+
+      observe(element: Element) {
+        resizeCallbacks.set(element, () =>
+          this.callback([], this as unknown as ResizeObserver),
+        )
+      }
+
+      disconnect = disconnect
+    }
+
+    const originalAnimate = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      "animate",
+    )
+    Object.defineProperty(Element.prototype, "animate", {
+      configurable: true,
+      value: () => ({
+        cancel() {},
+        pause() {},
+        play() {},
+        finished: new Promise(() => {}),
+      }),
+    })
+    vi.stubGlobal("ResizeObserver", RecordingResizeObserver)
+    const view = renderFilter()
+
+    try {
+      const [content, notifyResize] = [...resizeCallbacks].find(([node]) =>
+        node.contains(screen.getByRole("button", { name: "Production" })),
+      )!
+      const list = content.parentElement!
+      const first = { cancel: vi.fn(), playState: "running" }
+      const second = { cancel: vi.fn(), playState: "running" }
+      const animate = vi
+        .fn()
+        .mockReturnValueOnce(first)
+        .mockReturnValueOnce(second)
+      Object.defineProperty(list, "animate", { value: animate })
+      let contentHeight = 100
+      vi.spyOn(content, "getBoundingClientRect").mockImplementation(
+        () => new DOMRect(0, 0, 100, contentHeight),
+      )
+      vi.spyOn(list, "getBoundingClientRect").mockReturnValue(
+        new DOMRect(0, 0, 100, 80),
+      )
+
+      act(notifyResize)
+      act(notifyResize)
+      expect(animate).not.toHaveBeenCalled()
+      contentHeight = 60
+      act(notifyResize)
+      expect(animate).toHaveBeenNthCalledWith(
+        1,
+        { height: ["100px", "60px"] },
+        expect.any(Object),
+      )
+      contentHeight = 40
+      act(notifyResize)
+      expect(first.cancel).toHaveBeenCalledOnce()
+      expect(animate).toHaveBeenNthCalledWith(
+        2,
+        { height: ["80px", "40px"] },
+        expect.any(Object),
+      )
+      view.unmount()
+      expect(second.cancel).toHaveBeenCalledOnce()
+      expect(disconnect).toHaveBeenCalledOnce()
+    } finally {
+      view.unmount()
+      vi.unstubAllGlobals()
+      if (originalAnimate) {
+        Object.defineProperty(Element.prototype, "animate", originalAnimate)
+      } else {
+        Reflect.deleteProperty(Element.prototype, "animate")
+      }
+    }
   })
 
   it("resets search after unmount while preserving the parent selection", async () => {

@@ -31,8 +31,8 @@ export function BalanceHistoryDateField({
     month?: Date
   }>({ value })
   const selected = parseDatePickerValue(value) ?? undefined
-  const minDate = parseDatePickerValue(minDayKey) ?? undefined
-  const maxDate = parseDatePickerValue(maxDayKey) ?? undefined
+  const minDate = parseDatePickerValue(minDayKey)
+  const maxDate = parseDatePickerValue(maxDayKey)
   const displayedMonth =
     (navigation.value === value ? navigation.month : undefined) ??
     selected ??
@@ -46,8 +46,8 @@ export function BalanceHistoryDateField({
       <Input
         type="date"
         value={value}
-        min={minDayKey || undefined}
-        max={maxDayKey || undefined}
+        min={minDayKey}
+        max={maxDayKey}
         aria-label={label}
         onChange={(event) => onChange(event.target.value)}
         disabled={!minDate || !maxDate}
@@ -69,9 +69,7 @@ export function BalanceHistoryDateField({
             setNavigation({ value, month: nextMonth })
           }
           selected={selected}
-          onSelect={(date) => {
-            if (date) onChange(formatDatePickerValue(date))
-          }}
+          onSelect={(date) => onChange(formatDatePickerValue(date))}
           startMonth={minDate}
           endMonth={maxDate}
           disabled={[{ before: minDate }, { after: maxDate }]}

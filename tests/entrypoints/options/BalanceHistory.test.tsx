@@ -476,6 +476,38 @@ describe("BalanceHistory options page", () => {
       await waitFor(() => {
         expect(startInput).toHaveValue(expectedStart)
       })
+
+      const startCalendar = screen.getByRole("group", { name: START_DAY_LABEL })
+      await user.click(
+        within(startCalendar).getByRole("button", { name: /previous month/i }),
+      )
+      const earlierDay = subtractDaysFromDayKey(expectedStart, 2)
+      const dayButton = startCalendar.querySelector<HTMLButtonElement>(
+        `[role="gridcell"][data-day="${earlierDay}"] button`,
+      )
+      expect(dayButton).toBeEnabled()
+      await user.click(dayButton!)
+      expect(startInput).toHaveValue(earlierDay)
+      expect(
+        screen.getByRole("button", { name: QUICK_RANGE_7D_LABEL }),
+      ).toHaveAttribute("aria-pressed", "false")
+
+      await user.keyboard("{Escape}")
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.reset" }),
+      )
+      const trigger = screen.getByRole("button", { name: FILTERS_BUTTON_LABEL })
+      expect(trigger).toHaveFocus()
+      expect(
+        screen.queryByRole("button", { name: "common:actions.reset" }),
+      ).not.toBeInTheDocument()
+      await user.click(trigger)
+      expect(await screen.findByLabelText(START_DAY_LABEL)).toHaveValue(
+        subtractDaysFromDayKey(maxDayKey, 29),
+      )
     } finally {
       dateNowSpy.mockRestore()
     }
@@ -627,6 +659,32 @@ describe("BalanceHistory options page", () => {
       expect(seriesA.data.some((value: any) => typeof value === "number")).toBe(
         true,
       )
+
+      const user = userEvent.setup()
+      await user.click(
+        screen.getByRole("button", {
+          name: "balanceHistory:trend.chartTypes.bar",
+        }),
+      )
+      expect(
+        screen.getByText("balanceHistory:trend.subtitle", { exact: true }),
+      ).toBeVisible()
+      await user.click(
+        screen.getByRole("button", {
+          name: /balanceHistory:trend.controls.scope/,
+        }),
+      )
+      await user.click(
+        screen.getByRole("menuitemradio", {
+          name: "balanceHistory:trend.scopes.total",
+        }),
+      )
+      expect(
+        screen.getByText("balanceHistory:trend.subtitleTotal", { exact: true }),
+      ).toBeVisible()
+      expect(
+        screen.getByText("balanceHistory:hints.incompleteSelection.title"),
+      ).toBeVisible()
     } finally {
       dateNowSpy.mockRestore()
     }

@@ -369,6 +369,27 @@ describe("useBalanceHistoryViewModel", () => {
     },
   )
 
+  it("keeps the report range valid while clearing or shortening the dates", () => {
+    const { result } = renderHook(() => useBalanceHistoryViewModel())
+    const { minDayKey, maxDayKey } = result.current
+
+    act(() => result.current.setStartDayKey(""))
+    expect(result.current.effectiveRange).toEqual({
+      startDayKey: minDayKey,
+      endDayKey: maxDayKey,
+    })
+
+    act(() => {
+      result.current.setStartDayKey(maxDayKey)
+      result.current.setEndDayKey(minDayKey)
+    })
+    expect(result.current.effectiveRange).toEqual({
+      startDayKey: minDayKey,
+      endDayKey: minDayKey,
+    })
+    expect(result.current.startDayKey).toBe(minDayKey)
+  })
+
   it("shows incomplete total hint when total trend has partial days for multiple accounts", () => {
     const { result } = renderHook(() => useBalanceHistoryViewModel())
 
