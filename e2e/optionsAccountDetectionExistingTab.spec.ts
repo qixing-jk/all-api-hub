@@ -434,19 +434,14 @@ test("Options discovers and saves an unknown Sub2API account through the shared 
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
     .fill(baseUrl)
   await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
-  await expect(
-    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
-  ).toHaveValue("123")
-  await expect(
-    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
-  ).toHaveAttribute("data-site-type", SITE_TYPES.SUB2API)
-  await expect(
-    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
-  ).toHaveValue(accessToken)
+  // Wait for the complete temporary-page detection before checking its fields.
+  await assertAccountDetectionOutcome({
+    page,
+    expectedType: SITE_TYPES.SUB2API,
+    fields: { userIdInput: "123", accessTokenInput: accessToken },
+    saveState: "enabled",
+  })
   expect(verifiedPageReads).toBeGreaterThan(0)
-  await expect(
-    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
-  ).toBeEnabled()
   await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
   await expect(dialog).toBeHidden()
   const saved = (await readStoredAccounts(serviceWorker)).find(
