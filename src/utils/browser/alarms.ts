@@ -42,6 +42,12 @@ export async function clearAlarm(name: string): Promise<boolean> {
   return (await browser.alarms.clear(name)) || false
 }
 
+/** Removes this extension's schedules, preserving any API failure for the caller. */
+export async function clearAllAlarms(): Promise<void> {
+  if (!hasAlarmsAPI()) return
+  await browser.alarms.clearAll()
+}
+
 /**
  * 获取定时任务
  * @param name 需要获取的定时任务名称。

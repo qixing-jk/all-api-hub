@@ -129,6 +129,7 @@ export function KeyProvisioningPreviewSection() {
     () => ({
       id: "key-provisioning-preview",
       title: "Key provisioning preview",
+      category: "preview",
       description:
         "Preview key creation, required inputs, and one-time secrets across site types.",
       icon: KeyRound,
@@ -138,6 +139,7 @@ export function KeyProvisioningPreviewSection() {
         {
           id: "open-key-provisioning-preview",
           label: "Dev: Preview key provisioning",
+          icon: KeyRound,
           run: () => setOpen(true),
         },
       ],

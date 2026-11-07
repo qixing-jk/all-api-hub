@@ -222,6 +222,7 @@ export function useUninstallSurveyDevSection(): DevPanelSection {
     () => ({
       id: "uninstall-survey",
       title: "Uninstall survey",
+      category: "diagnostics",
       icon: MousePointerClick,
       description:
         "Preview or register the page the browser opens after the extension is uninstalled. Opening the page from here strips the anonymous id so a preview never counts as a real uninstall.",

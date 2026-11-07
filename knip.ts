@@ -63,7 +63,6 @@ const config: KnipConfig = {
     "@vitest/coverage-v8",
     // Loaded by string from wxt.config.ts modules.
     "@wxt-dev/auto-icons",
-    "@wxt-dev/module-react",
     // Spawned by plugins/react-devtools-auto.ts during development.
     "react-devtools",
     // On-demand UI generator configured by components.json.

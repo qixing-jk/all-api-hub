@@ -33,6 +33,11 @@ vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
   },
 }))
 
+vi.mock("~/services/apiCredentialProfiles/storage/configReader", () => ({
+  listApiCredentialProfileIdsOrThrow: async () =>
+    (await listProfiles()).map((profile: { id: string }) => profile.id),
+}))
+
 const storage = new Map<string, unknown>()
 let storageSetShouldThrow = false
 vi.mock("@plasmohq/storage", () => ({

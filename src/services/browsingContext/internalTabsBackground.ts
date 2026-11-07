@@ -1,11 +1,14 @@
-import { INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY } from "~/services/core/storageKeys"
+import {
+  INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY,
+  INTERNAL_TAB_STORAGE_KEY_PREFIX,
+} from "~/services/core/storageKeys"
 import { getLocalStorage } from "~/utils/browser/extensionStorage"
 import { removeLocalStorage, setLocalStorage } from "~/utils/browser/storage"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
 
-const KEY_PREFIX = "internalBrowsingTab:"
+const KEY_PREFIX = INTERNAL_TAB_STORAGE_KEY_PREFIX
 const internalTabIds = new Set<number>()
 const logger = createLogger("InternalBrowsingTabs")
 

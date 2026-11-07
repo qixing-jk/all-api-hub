@@ -1,14 +1,12 @@
-import { Database, FlaskConical } from "lucide-react"
+import { Database, Sprout } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
-import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import toast from "~/lib/notify"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import type { DevPanelSection } from "../types"
 
@@ -66,6 +64,7 @@ export function useBalanceHistoryDevSection(): DevPanelSection {
         {
           id: "seed-estimate-snapshots",
           label: "Dev: Seed estimate snapshots",
+          icon: Sprout,
           loading: isSeeding,
           disabled: isSeeding,
           run: handleSeedEstimateSnapshots,
@@ -73,46 +72,5 @@ export function useBalanceHistoryDevSection(): DevPanelSection {
       ],
     }),
     [handleSeedEstimateSnapshots, isSeeding],
-  )
-}
-
-/**
- * Quick navigation to the development-only options routes.
- */
-export function useDevPagesSection(): DevPanelSection {
-  return useMemo(
-    () => ({
-      id: "dev-pages",
-      title: "Dev pages",
-      icon: FlaskConical,
-      surfaces: ["options"],
-      actions: [
-        {
-          id: "open-browser-api-lab",
-          label: "Open Browser API Lab",
-          run: () =>
-            void navigateWithinOptionsPage(
-              `#${DEV_MENU_ITEM_IDS.BROWSER_API_LAB}`,
-            ),
-        },
-        {
-          id: "open-mesh-gradient-lab",
-          label: "Open Mesh Gradient Lab",
-          run: () =>
-            void navigateWithinOptionsPage(
-              `#${DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB}`,
-            ),
-        },
-        {
-          id: "open-unified-api-guidance-preview",
-          label: "Open Unified API Guidance preview",
-          run: () =>
-            void navigateWithinOptionsPage(
-              `#${DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW}`,
-            ),
-        },
-      ],
-    }),
-    [],
   )
 }

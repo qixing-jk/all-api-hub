@@ -2,6 +2,7 @@ import {
   Bell,
   FileText,
   Languages,
+  PanelsTopLeft,
   ShieldAlert,
   Sparkles,
   TriangleAlert,
@@ -40,7 +41,10 @@ function createDevTranslationCrashError() {
  * Throwing state (translation crash) lives here so the failure surfaces through
  * the same root error boundary as before.
  */
-export function useDialogDebugDevSection(): DevPanelSection {
+export function useDialogDebugDevSections(): {
+  previews: DevPanelSection
+  diagnostics: DevPanelSection
+} {
   const { openDialog } = useUpdateLogDialogContext()
   const [shouldTriggerTranslationCrash, setShouldTriggerTranslationCrash] =
     useState(false)
@@ -148,47 +152,59 @@ export function useDialogDebugDevSection(): DevPanelSection {
 
   return useMemo(
     () => ({
-      id: "dialog-debug",
-      title: "Dialogs",
-      surfaces: ["options", "popup", "sidepanel"] as const,
-      actions: [
-        {
-          id: "preview-turnstile-reminder",
-          label: "Dev: Preview Turnstile reminder",
-          icon: Bell,
-          run: handlePreviewTurnstileReminder,
-        },
-        {
-          id: "preview-content-notice",
-          label: "Dev: Preview ContentNotice (toast)",
-          icon: ShieldAlert,
-          run: handlePreviewContentNotice,
-        },
-        {
-          id: "trigger-update-log",
-          label: "Dev: Trigger update log",
-          icon: FileText,
-          run: handleTriggerUpdateLog,
-        },
-        {
-          id: "trigger-onboarding",
-          label: "Dev: Trigger onboarding",
-          icon: Sparkles,
-          run: handleTriggerOnboarding,
-        },
-        {
-          id: "queue-popup-interruption-hint",
-          label: "Dev: Queue popup interruption hint",
-          icon: TriangleAlert,
-          run: handleQueuePopupInterruptionHint,
-        },
-        {
-          id: "trigger-translation-crash",
-          label: "Dev: Trigger translation crash",
-          icon: Languages,
-          run: () => setShouldTriggerTranslationCrash(true),
-        },
-      ],
+      previews: {
+        id: "dialog-debug",
+        category: "preview",
+        title: "Dialogs",
+        icon: PanelsTopLeft,
+        surfaces: ["options", "popup", "sidepanel"] as const,
+        actions: [
+          {
+            id: "preview-turnstile-reminder",
+            label: "Dev: Preview Turnstile reminder",
+            icon: Bell,
+            run: handlePreviewTurnstileReminder,
+          },
+          {
+            id: "preview-content-notice",
+            label: "Dev: Preview ContentNotice (toast)",
+            icon: ShieldAlert,
+            run: handlePreviewContentNotice,
+          },
+          {
+            id: "trigger-update-log",
+            label: "Dev: Trigger update log",
+            icon: FileText,
+            run: handleTriggerUpdateLog,
+          },
+          {
+            id: "trigger-onboarding",
+            label: "Dev: Trigger onboarding",
+            icon: Sparkles,
+            run: handleTriggerOnboarding,
+          },
+          {
+            id: "queue-popup-interruption-hint",
+            label: "Dev: Queue popup interruption hint",
+            icon: TriangleAlert,
+            run: handleQueuePopupInterruptionHint,
+          },
+        ],
+      },
+      diagnostics: {
+        id: "error-recovery",
+        title: "Error recovery",
+        category: "diagnostics",
+        icon: Languages,
+        actions: [
+          {
+            id: "trigger-translation-crash",
+            label: "Dev: Trigger translation crash",
+            icon: Languages,
+            run: () => setShouldTriggerTranslationCrash(true),
+          },
+        ],
+      },
     }),
     [
       handlePreviewContentNotice,

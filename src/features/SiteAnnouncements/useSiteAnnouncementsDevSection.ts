@@ -1,4 +1,4 @@
-import { ListPlus, ListX, Plus, TriangleAlert } from "lucide-react"
+import { Layers, ListPlus, ListX, Plus, TriangleAlert } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -149,7 +149,7 @@ export function useSiteAnnouncementsDevSection({
         {
           id: "seed-200",
           label: "Dev: Seed 200 announcements",
-          icon: Plus,
+          icon: Layers,
           loading: pendingAction === "seed-200",
           disabled: isPending,
           run: () => runFixtureAction("seed-200", { announcementCount: 200 }),

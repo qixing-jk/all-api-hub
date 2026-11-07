@@ -76,6 +76,7 @@ node_modules
 stats.html
 stats-*.json
 .wxt
+/.browser-data/
 web-ext.config.ts
 
 # Editor directories and files

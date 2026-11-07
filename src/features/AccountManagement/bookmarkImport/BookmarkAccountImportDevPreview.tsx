@@ -1,4 +1,4 @@
-import { FlaskConical } from "lucide-react"
+import { BookMarked, FolderInput } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -115,7 +115,7 @@ function DevPreviewContent() {
     () => ({
       id: "bookmark-import-fixtures",
       title: "Bookmark import fixtures",
-      icon: FlaskConical,
+      icon: BookMarked,
       description:
         "Pure-local mixed results. Retry twice to simulate recovery; reopen to reset. No bookmark permissions, network requests, account writes, or analytics.",
       surfaces: ["options"],
@@ -124,7 +124,7 @@ function DevPreviewContent() {
         {
           id: "open-bookmark-import-fixtures",
           label: "Dev: Open bookmark import fixtures",
-          icon: FlaskConical,
+          icon: FolderInput,
           run: () => {
             setSession((value) => value + 1)
             setIsOpen(true)

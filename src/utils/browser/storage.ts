@@ -54,6 +54,24 @@ export async function removeLocalStorage(keys: string | string[]) {
   await browser.storage.local.remove(keys)
 }
 
+/** Reads raw local values; failures remain visible to destructive maintenance callers. */
+export async function getLocalStorageValues(
+  keys: string | string[] | Record<string, unknown> | null = null,
+): Promise<Record<string, unknown>> {
+  return await browser.storage.local.get(keys)
+}
+
+/** Clears this extension's synchronized values without affecting website storage. */
+export async function clearSyncStorage(): Promise<void> {
+  await browser.storage.sync.clear()
+}
+
+/** Clears memory-only extension state when the browser supports it. */
+export async function clearSessionStorage(): Promise<void> {
+  if (!hasSessionStorageArea()) return
+  await browser.storage.session.clear()
+}
+
 /**
  * Reports whether this browser exposes the memory-only storage.session area.
  */

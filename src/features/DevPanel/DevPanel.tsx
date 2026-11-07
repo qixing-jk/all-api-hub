@@ -1,7 +1,9 @@
-import { Bug, ChevronRight, Copy, X } from "lucide-react"
+import { Bug, ChevronRight, Copy, Terminal, Wrench, X } from "lucide-react"
 import { useCallback, useState } from "react"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { Z_INDEX } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import toast from "~/lib/notify"
@@ -17,20 +19,19 @@ import {
   useDevPanelSurface,
   useRegisterDevPanelSection,
 } from "./DevPanelSectionsContext"
-import { useDialogDebugDevSection } from "./sections/dialogDebugSection"
+import { DataCleanupSection } from "./sections/dataCleanupSection"
+import { useDialogDebugDevSections } from "./sections/dialogDebugSection"
 import { useFixtureAccountsDevSection } from "./sections/fixtureAccountsSection"
 import { useFixtureApiCredentialsDevSection } from "./sections/fixtureApiCredentialsSection"
 import { useInstanceIdentityDevSection } from "./sections/instanceIdentitySection"
 import { KeyProvisioningPreviewSection } from "./sections/keyProvisioningPreviewSection"
-import {
-  useBalanceHistoryDevSection,
-  useDevPagesSection,
-} from "./sections/miscSections"
+import { useBalanceHistoryDevSection } from "./sections/miscSections"
 import { useStarPromotionDevSection } from "./sections/starPromotionSection"
 import { useTempContextDevSection } from "./sections/tempContextSection"
 import { useUninstallSurveyDevSection } from "./sections/uninstallSurveySection"
 import {
   isDevPanelSectionVisible,
+  type DevPanelAction,
   type DevPanelInfoRow,
   type DevPanelSection,
 } from "./types"
@@ -77,7 +78,7 @@ function DevPanelInfoRowView({ row }: { row: DevPanelInfoRow }) {
   }, [row.label, row.value])
 
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-1">
       <div className="flex items-baseline justify-between gap-x-2">
         <span className="text-muted-foreground text-xs">{row.label}</span>
         {row.tone && row.tone !== "stable" ? (
@@ -100,7 +101,7 @@ function DevPanelInfoRowView({ row }: { row: DevPanelInfoRow }) {
             type="button"
             aria-label={`Copy ${row.label}`}
             onClick={() => void handleCopy()}
-            className="text-muted-foreground hover:text-foreground shrink-0 rounded-sm p-0.5"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring shrink-0 rounded-md p-1 focus-visible:ring-2 focus-visible:outline-hidden"
           >
             <Copy className="size-3.5" />
           </button>
@@ -110,6 +111,47 @@ function DevPanelInfoRowView({ row }: { row: DevPanelInfoRow }) {
         <p className="text-muted-foreground text-xs leading-snug">{row.hint}</p>
       ) : null}
     </div>
+  )
+}
+
+/** One command keeps identical interaction and icon treatment in every layout. */
+function DevPanelActionView({
+  action,
+  standalone = false,
+  sectionBusy = false,
+}: {
+  action: DevPanelAction
+  standalone?: boolean
+  sectionBusy?: boolean
+}) {
+  const ActionIcon = action.icon ?? Terminal
+  return (
+    <button
+      type="button"
+      aria-label={action.label}
+      onClick={() => void action.run()}
+      disabled={sectionBusy || action.disabled || action.loading}
+      aria-busy={action.loading || undefined}
+      className={cn(
+        "hover:bg-accent text-foreground hover:text-accent-foreground focus-visible:ring-ring flex min-w-0 flex-1 items-start gap-3 rounded-md px-3 py-2 text-left text-xs leading-5 transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
+        standalone && "min-h-11 items-center text-sm font-medium",
+      )}
+    >
+      {action.loading ? (
+        <span
+          aria-hidden="true"
+          className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
+        />
+      ) : (
+        <ActionIcon
+          aria-hidden="true"
+          className="text-muted-foreground mt-0.5 size-4 shrink-0"
+        />
+      )}
+      <span className="min-w-0 flex-1 wrap-break-word">
+        {action.label.replace(/^Dev:\s*/, "")}
+      </span>
+    </button>
   )
 }
 
@@ -125,7 +167,7 @@ function DevPanelSectionView({
   section: DevPanelSection
   isCurrentPage: boolean
 }) {
-  const SectionIcon = section.icon
+  const SectionIcon = section.icon ?? Wrench
   const [isExpanded, setIsExpanded] = useState(
     isCurrentPage && !section.defaultCollapsed,
   )
@@ -133,85 +175,110 @@ function DevPanelSectionView({
     section.collapsible || section.defaultCollapsed || !isCurrentPage,
   )
   const showsBody = !isCollapsible || isExpanded
+  const sectionBusy = section.actions.some((action) => action.loading)
+
+  const singleAction =
+    section.actions.length === 1 ? section.actions[0] : undefined
+  const isSingleCommand =
+    singleAction &&
+    !section.rows?.length &&
+    !section.collapsible &&
+    !section.defaultCollapsed
+  if (isSingleCommand) {
+    return (
+      <div className="flex min-h-11 items-center gap-1">
+        <DevPanelActionView action={singleAction} standalone />
+        {section.description ? (
+          <Tooltip
+            content={section.description}
+            anchorAsChild
+            position="left"
+            positionStrategy="fixed"
+          >
+            <button
+              type="button"
+              aria-label={`About ${section.title}`}
+              className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring mr-1 shrink-0 rounded-md p-2 focus-visible:ring-2 focus-visible:outline-hidden"
+            >
+              <HelpHintIcon aria-hidden="true" className="size-3.5" />
+            </button>
+          </Tooltip>
+        ) : null}
+      </div>
+    )
+  }
 
   const header = (
     <>
-      {SectionIcon ? <SectionIcon className="h-3.5 w-3.5 shrink-0" /> : null}
-      <span className="shrink-0">{section.title}</span>
-      {!showsBody && section.summary ? (
-        <span className="text-muted-foreground min-w-0 truncate">
-          {section.summary}
+      <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
+        <SectionIcon aria-hidden="true" className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="text-foreground block text-sm leading-snug font-medium wrap-break-word">
+          {section.title}
         </span>
-      ) : null}
+        {!showsBody && section.summary ? (
+          <span
+            className="text-muted-foreground mt-0.5 block truncate text-xs font-normal"
+            title={section.summary}
+          >
+            {section.summary}
+          </span>
+        ) : null}
+      </span>
     </>
   )
 
   return (
-    <div className="border-border rounded-lg border px-3 py-2.5">
+    <div className="min-w-0">
       {isCollapsible ? (
         <button
           type="button"
           onClick={() => setIsExpanded((expanded) => !expanded)}
           aria-expanded={isExpanded}
-          className="text-muted-foreground hover:text-foreground flex w-full items-center gap-x-1.5 text-left text-xs font-medium"
+          className="hover:bg-accent focus-visible:ring-ring flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset"
         >
+          {header}
           <ChevronRight
+            aria-hidden="true"
             className={cn(
-              "size-3.5 shrink-0 transition-transform",
+              "text-muted-foreground size-4 shrink-0 transition-transform motion-reduce:transition-none",
               isExpanded && "rotate-90",
             )}
           />
-          {header}
         </button>
       ) : (
-        <div className="text-muted-foreground flex items-center gap-x-1.5 text-xs font-medium">
+        <div className="flex min-h-11 items-center gap-3 px-3 py-2">
           {header}
         </div>
       )}
-      {showsBody && section.description ? (
-        <p className="text-muted-foreground mt-2 mb-2 text-xs leading-snug">
-          {section.description}
-        </p>
-      ) : null}
-      {showsBody && section.rows?.length ? (
-        <div className="mt-2 mb-2 flex flex-col gap-2">
-          {section.rows.map((row) => (
-            <DevPanelInfoRowView key={row.id} row={row} />
-          ))}
-        </div>
-      ) : null}
       {showsBody ? (
-        <div
-          className={cn(
-            "flex flex-col items-stretch gap-1.5",
-            !section.description && !section.rows?.length && "mt-2",
-          )}
-        >
-          {section.actions.map((action) => {
-            const ActionIcon = action.icon
-            return (
-              <button
-                key={action.id}
-                type="button"
-                onClick={() => void action.run()}
-                disabled={action.disabled || action.loading}
-                aria-busy={action.loading || undefined}
-                className={cn(
-                  "border-border bg-background hover:bg-accent text-foreground hover:text-accent-foreground focus-visible:ring-ring flex items-center gap-x-2 rounded-md border px-2.5 py-1.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
-                )}
-              >
-                {action.loading ? (
-                  <span className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : ActionIcon ? (
-                  <ActionIcon className="size-3.5 shrink-0" />
-                ) : (
-                  <span className="size-3.5 shrink-0" />
-                )}
-                <span className="min-w-0 flex-1 truncate">{action.label}</span>
-                <ChevronRight className="text-muted-foreground size-3.5 shrink-0" />
-              </button>
-            )
-          })}
+        <div className="border-border mr-3 mb-2 ml-5 flex min-w-0 flex-col gap-3 border-l pt-1 pl-3">
+          {section.description ? (
+            <p className="text-muted-foreground px-3 text-xs leading-relaxed">
+              {section.description}
+            </p>
+          ) : null}
+          {section.rows?.length ? (
+            <div className="flex min-w-0 flex-col gap-3 px-3 py-2">
+              {section.rows.map((row) => (
+                <DevPanelInfoRowView key={row.id} row={row} />
+              ))}
+            </div>
+          ) : null}
+          {section.actions.length ? (
+            <div className="flex flex-col">
+              {section.actions.map((action) => {
+                return (
+                  <DevPanelActionView
+                    key={action.id}
+                    action={action}
+                    sectionBusy={sectionBusy}
+                  />
+                )
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -225,7 +292,9 @@ function DevPanelSectionView({
 function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
   const { surface, page } = useDevPanelSurface()
   useRegisterDevPanelSection(useInstanceIdentityDevSection())
-  useRegisterDevPanelSection(useDialogDebugDevSection())
+  const { previews, diagnostics } = useDialogDebugDevSections()
+  useRegisterDevPanelSection(previews)
+  useRegisterDevPanelSection(diagnostics)
   useRegisterDevPanelSection(
     useFixtureAccountsDevSection(
       isPanelOpen &&
@@ -243,14 +312,24 @@ function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
     ),
   )
   useRegisterDevPanelSection(useBalanceHistoryDevSection())
-  useRegisterDevPanelSection(useDevPagesSection())
   useRegisterDevPanelSection(useStarPromotionDevSection(isPanelOpen))
   useRegisterDevPanelSection(useUninstallSurveyDevSection())
   useRegisterDevPanelSection(useTempContextDevSection())
-  return <KeyProvisioningPreviewSection />
+  return (
+    <>
+      <KeyProvisioningPreviewSection />
+      <DataCleanupSection />
+    </>
+  )
 }
 
-/** Put actions for the active page first and fold each general tool separately. */
+const TOOLBOX_CATEGORIES = [
+  { id: "preview", label: "Interface previews" },
+  { id: "diagnostics", label: "Extension diagnostics" },
+  { id: "data", label: "Data maintenance" },
+] as const
+
+/** Page tools and global tools have separate navigation; build facts stay pinned. */
 function DevPanelSectionGroups({
   sections,
   page,
@@ -258,45 +337,121 @@ function DevPanelSectionGroups({
   sections: readonly DevPanelSection[]
   page?: string
 }) {
+  const footerSections = sections.filter(
+    (section) => section.placement === "footer",
+  )
+  const tools = sections.filter((section) => section.placement !== "footer")
   const belongsToCurrentPage = (section: DevPanelSection) =>
     Boolean(
       page &&
         (section.pages?.includes(page) ||
           section.prominentPages?.includes(page)),
     )
-  const currentSections = sections.filter(belongsToCurrentPage)
-  const otherSections = sections.filter(
+  const currentSections = tools.filter(belongsToCurrentPage)
+  const otherSections = tools.filter(
     (section) => !belongsToCurrentPage(section),
   )
+  const [selectedTab, setSelectedTab] = useState("current")
+  // Registrations arrive after mount; derive the fallback without locking out late page tools.
+  const activeTab = currentSections.length === 0 ? "toolbox" : selectedTab
 
   return (
     <>
-      {currentSections.length > 0 ? (
+      <Tabs
+        value={activeTab}
+        onValueChange={setSelectedTab}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <TabsList
+          aria-label="Dev tools"
+          className="border-border grid shrink-0 grid-cols-2 gap-1 border-b px-3 py-2"
+        >
+          {[
+            {
+              id: "current",
+              label: "Current page",
+              disabled: currentSections.length === 0,
+            },
+            { id: "toolbox", label: "Toolbox", disabled: false },
+          ].map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              disabled={tab.disabled}
+              className="text-muted-foreground hover:bg-accent data-[state=active]:bg-accent data-[state=active]:text-accent-foreground focus-visible:ring-ring rounded-lg px-3 py-2 text-xs font-medium focus-visible:ring-2 focus-visible:outline-hidden disabled:opacity-40"
+            >
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+          <TabsContent
+            value="current"
+            className="focus-visible:ring-ring rounded-lg focus-visible:ring-2 focus-visible:outline-hidden"
+          >
+            <div
+              role="group"
+              aria-label="Current page"
+              className="divide-border flex flex-col divide-y"
+            >
+              {currentSections.map((section) => (
+                <DevPanelSectionView
+                  key={section.id}
+                  section={section}
+                  isCurrentPage
+                />
+              ))}
+            </div>
+          </TabsContent>
+          <TabsContent
+            value="toolbox"
+            className="focus-visible:ring-ring flex flex-col gap-4 rounded-lg focus-visible:ring-2 focus-visible:outline-hidden"
+          >
+            {otherSections.length === 0 ? (
+              <p className="text-muted-foreground py-4 text-center text-xs">
+                No global tools available on this surface.
+              </p>
+            ) : null}
+            {TOOLBOX_CATEGORIES.map((category) => {
+              const categorySections = otherSections.filter(
+                (section) =>
+                  (section.category ?? "diagnostics") === category.id,
+              )
+              if (!categorySections.length) return null
+              return (
+                <div
+                  key={category.id}
+                  role="group"
+                  aria-label={category.label}
+                  className="flex flex-col"
+                >
+                  <p className="text-muted-foreground mb-1 flex items-center gap-3 px-3 text-xs font-medium">
+                    <span>{category.label}</span>
+                    <span
+                      aria-hidden="true"
+                      className="bg-border h-px min-w-4 flex-1"
+                    />
+                  </p>
+                  {categorySections.map((section) => (
+                    <DevPanelSectionView
+                      key={section.id}
+                      section={section}
+                      isCurrentPage={false}
+                    />
+                  ))}
+                </div>
+              )
+            })}
+          </TabsContent>
+        </div>
+      </Tabs>
+      {footerSections.length ? (
         <div
           role="group"
-          aria-label="Current page"
-          className="flex flex-col gap-2"
+          aria-label="Build information"
+          className="border-border max-h-[40%] shrink-0 overflow-y-auto border-t px-3 py-2"
         >
-          <p className="text-muted-foreground px-1 text-xs font-semibold tracking-wide uppercase">
-            Current page
-          </p>
-          {currentSections.map((section) => (
-            <DevPanelSectionView
-              key={section.id}
-              section={section}
-              isCurrentPage
-            />
-          ))}
-        </div>
-      ) : null}
-      {otherSections.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {currentSections.length > 0 ? (
-            <p className="text-muted-foreground px-1 pt-2 text-xs font-semibold tracking-wide uppercase">
-              Other tools
-            </p>
-          ) : null}
-          {otherSections.map((section) => (
+          {footerSections.map((section) => (
             <DevPanelSectionView
               key={section.id}
               section={section}
@@ -379,14 +534,17 @@ function DevPanelBall() {
         <div
           className={cn(
             Z_INDEX.modal,
-            "bg-popover text-popover-foreground border-border fixed inset-y-0 right-0 flex w-80 max-w-[85vw] flex-col border-l shadow-lg",
+            "bg-popover text-popover-foreground border-border fixed inset-y-0 right-0 flex w-96 max-w-full flex-col border-l shadow-xl",
           )}
           role="dialog"
           aria-label="Dev panel"
           data-testid="dev-panel"
         >
-          <div className="border-border flex items-center justify-between border-b px-4 py-3">
-            <div>
+          <div className="border-border flex shrink-0 items-center gap-3 border-b px-4 py-4">
+            <span className="bg-accent text-accent-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
+              <Bug aria-hidden="true" className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
               <p className="text-foreground text-sm font-semibold">Dev panel</p>
               <p className="text-muted-foreground text-xs">{surfaceLabel}</p>
             </div>
@@ -395,25 +553,17 @@ function DevPanelBall() {
                 type="button"
                 aria-label="Close dev panel"
                 onClick={() => setIsOpen(false)}
-                className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-md p-1"
+                className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring shrink-0 rounded-lg p-2 focus-visible:ring-2 focus-visible:outline-hidden"
               >
                 <X className="size-4" />
               </button>
             </Tooltip>
           </div>
-          <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
-            {visibleSections.length === 0 ? (
-              <p className="text-muted-foreground px-1 py-4 text-center text-xs">
-                No dev sections registered on this page.
-              </p>
-            ) : (
-              <DevPanelSectionGroups
-                key={`${surface}:${page ?? ""}`}
-                sections={visibleSections}
-                page={page}
-              />
-            )}
-          </div>
+          <DevPanelSectionGroups
+            key={`${surface}:${page ?? ""}`}
+            sections={visibleSections}
+            page={page}
+          />
         </div>
       ) : null}
     </>
