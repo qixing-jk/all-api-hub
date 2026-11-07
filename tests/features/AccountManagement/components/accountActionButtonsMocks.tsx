@@ -176,6 +176,9 @@ vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openEditAccount: vi.fn(),
   }),
+  useAccountDialogActions: () => ({
+    openEditAccount: vi.fn(),
+  }),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({

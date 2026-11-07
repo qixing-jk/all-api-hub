@@ -93,6 +93,9 @@ vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openAddAccount: openAddAccountMock,
   }),
+  useAccountDialogActions: () => ({
+    openAddAccount: openAddAccountMock,
+  }),
 }))
 
 vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {

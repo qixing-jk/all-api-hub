@@ -13,7 +13,7 @@ import type {
   BookmarkAccountImportScanSummary,
 } from "~/features/AccountManagement/bookmarkImport/types"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
-import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import {
   ensurePermissionsDetailed,
@@ -130,7 +130,7 @@ export function useBookmarkAccountImportDialog(
     runtime?.requestPermissions ?? ensurePermissionsDetailed
   const readBookmarks = runtime?.readBookmarks ?? getBrowserBookmarkTree
   const startAnalytics = runtime?.startAnalytics ?? startProductAnalyticsAction
-  const { openAddAccount } = useDialogStateContext()
+  const { openAddAccount } = useAccountDialogActions()
   const [stage, setStage] =
     useState<BookmarkAccountImportDialogStage>("permission-needed")
   const [error, setError] = useState<BookmarkAccountImportDialogError>(null)

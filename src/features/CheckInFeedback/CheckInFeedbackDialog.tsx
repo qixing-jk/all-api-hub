@@ -66,10 +66,14 @@ function getRefreshSnapshot(
 /** Preserves editor drafts while enriching identified accounts with saved execution facts. */
 export default function CheckInFeedbackDialog({
   source,
+  isOpen = true,
   onClose,
+  onCloseComplete,
 }: {
   source: CheckInFeedbackSource
+  isOpen?: boolean
   onClose: () => void
+  onCloseComplete?: () => void
 }) {
   const { t } = useTranslation(["accountDialog", "autoCheckin"])
   const [data, setData] = useState<{
@@ -145,10 +149,19 @@ export default function CheckInFeedbackDialog({
       active = false
     }
   }, [source])
-  if (data) return <FeedbackForm {...data} onClose={onClose} />
+  if (data)
+    return (
+      <FeedbackForm
+        {...data}
+        isOpen={isOpen}
+        onClose={onClose}
+        onCloseComplete={onCloseComplete}
+      />
+    )
   return (
     <Modal
-      isOpen
+      isOpen={isOpen}
+      onCloseComplete={onCloseComplete}
       title={t("checkInFeedback.title")}
       header={
         <h2 className="text-lg font-semibold">{t("checkInFeedback.title")}</h2>

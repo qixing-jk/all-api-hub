@@ -1,10 +1,12 @@
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import { createRef, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
-import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
+import AccountDialog, {
+  type AccountDialogHandle,
+} from "~/features/AccountManagement/components/AccountDialog"
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
   ACCOUNT_DIALOG_PHASES,
@@ -80,6 +82,8 @@ const {
     url: "https://api.example.com",
     phase: "site-input",
     formSource: "manual",
+    isLoadingAccount: false,
+    accountLoadError: false,
     isDetecting: false,
     isDetectingSlow: false,
     isSaving: false,
@@ -174,6 +178,7 @@ const {
     setAuthType: vi.fn(),
   },
   mockHandlers: {
+    retryAccountLoad: vi.fn(),
     handleAutoDetect: vi.fn(),
     handleShowManualForm: vi.fn(),
     handleClose: vi.fn(),
@@ -219,6 +224,8 @@ function resetMockState() {
     url: "https://api.example.com",
     phase: ACCOUNT_DIALOG_PHASES.SITE_INPUT,
     formSource: ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+    isLoadingAccount: false,
+    accountLoadError: false,
     isDetecting: false,
     isDetectingSlow: false,
     isSaving: false,
@@ -374,6 +381,9 @@ vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openEditAccount: mockOpenEditAccount,
   }),
+  useAccountDialogActions: () => ({
+    openEditAccount: mockOpenEditAccount,
+  }),
 }))
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
@@ -420,6 +430,35 @@ vi.mock("~/utils/navigation/feedbackPages", () => ({
 }))
 
 describe("AccountDialog", () => {
+  it("exposes the workspace close completion to its replacement owner", async () => {
+    let finish!: () => void
+    mockHandlers.handleClose.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+    )
+    const ref = createRef<AccountDialogHandle>()
+    render(
+      <AccountDialog
+        ref={ref}
+        isOpen
+        mode={DIALOG_MODES.ADD}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(ref.current).not.toBeNull())
+    const settled = vi.fn()
+    const completion = ref.current!.close().then(settled)
+    expect(mockHandlers.handleClose).toHaveBeenCalledOnce()
+    expect(settled).not.toHaveBeenCalled()
+    await act(async () => {
+      finish()
+      await completion
+    })
+    expect(settled).toHaveBeenCalledOnce()
+  })
   it("detects the entered site instead of saving an incomplete account on Enter", async () => {
     const user = userEvent.setup()
     const onError = vi.fn()
@@ -619,6 +658,139 @@ describe("AccountDialog", () => {
       )
     },
   )
+
+  it("waits for edit hydration before mounting editable account fields", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.isLoadingAccount = true
+    const props = {
+      isOpen: true,
+      mode: DIALOG_MODES.EDIT,
+      account: buildDisplaySiteData(),
+      focusSection: "check-in" as const,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      onError: vi.fn(),
+    }
+    const view = render(<AccountDialog {...props} />)
+    expect(
+      await screen.findByTestId("account-dialog-loading"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId("account-dialog-loading").querySelector("svg"),
+    ).toBeNull()
+    expect(
+      screen.queryByTestId("account-management-site-name-input"),
+    ).not.toBeInTheDocument()
+
+    // jsdom does not implement scrolling; keep the real section-navigation effect.
+    const scroller = screen
+      .getByTestId("account-dialog-loading")
+      .closest<HTMLElement>('[data-slot="modal-body"]')!
+    const scrollTo = vi.fn()
+    scroller.scrollTo = scrollTo
+    view.rerender(<AccountDialog {...props} focusSection="account-auth" />)
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    mockState.isLoadingAccount = false
+    view.rerender(<AccountDialog {...props} />)
+    expect(
+      await screen.findByTestId("account-management-site-name-input"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("account-dialog-loading"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("disables saving an invalid loaded draft", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.isFormValid = false
+    render(
+      <AccountDialog
+        isOpen
+        mode={DIALOG_MODES.EDIT}
+        account={buildDisplaySiteData()}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    expect(
+      await screen.findByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
+    ).toBeDisabled()
+  })
+
+  it.each([undefined, "error", "success"])(
+    "requires matching AI/ML API verification before saving: %s",
+    async (status) => {
+      mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+      mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+      mockState.url = "https://aimlapi.com"
+      mockState.siteType = SITE_TYPES.AIMLAPI
+      Object.assign(mockState, {
+        accessToken: mockState.draft.accessToken,
+        userId: mockState.draft.userId,
+        credentialVerification: status
+          ? {
+              status,
+              aimlApiKey: mockState.draft.aimlApiKey,
+              accessToken: mockState.draft.accessToken,
+              siteType: mockState.siteType,
+              userId: mockState.draft.userId,
+            }
+          : undefined,
+      })
+      onTestFinished(() => {
+        Object.assign(mockState, { credentialVerification: undefined })
+      })
+      render(
+        <AccountDialog
+          isOpen
+          mode={DIALOG_MODES.ADD}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+        />,
+      )
+      const save = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton,
+      )
+      if (status === "success") expect(save).toBeEnabled()
+      else expect(save).toBeDisabled()
+    },
+  )
+
+  it("keeps a failed edit load out of the editable form and offers retry", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.accountLoadError = true
+    const user = userEvent.setup()
+    render(
+      <AccountDialog
+        isOpen
+        mode={DIALOG_MODES.EDIT}
+        account={buildDisplaySiteData()}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    expect(
+      await screen.findByTestId("account-dialog-load-error"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("account-management-site-name-input"),
+    ).not.toBeInTheDocument()
+    const form = screen.getByTestId("account-management-account-form")
+    act(() => {
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      )
+    })
+    expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(mockHandlers.retryAccountLoad).toHaveBeenCalledTimes(1)
+  })
 
   it("hides the form before the dialog reaches the account-form phase", async () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT

@@ -1154,39 +1154,42 @@ test("enables all-group key provisioning, adds an account, saves a created key a
   await waitForExtensionRoot(page)
   await expect(allGroups).toHaveAttribute("aria-pressed", "true")
 
-  const accountFixture = await runAccountAutoDetectScenario({
-    extensionId,
-    extensionPage: page,
-    baseUrl: "https://example.com",
-    siteType: SITE_TYPES.NEW_API,
-    getServiceWorker: async () => serviceWorker,
-    openSitePage: async () => {
-      const sitePage = await context.newPage()
-      await forceExtensionLanguage(sitePage, "en")
-      await sitePage.addInitScript(() => {
-        window.localStorage.setItem(
-          "user",
-          JSON.stringify({
-            id: 1,
-            username: "e2e-user",
-            quota: 1000,
-          }),
-        )
-      })
-      await sitePage.goto("https://example.com")
-      await sitePage.bringToFront()
-      return sitePage
-    },
-    prepareDetectableSite: async () => undefined,
-  })
+  // Observe the short-lived toast while the scenario settles storage and closes its site tab.
+  const [accountFixture] = await Promise.all([
+    runAccountAutoDetectScenario({
+      extensionId,
+      extensionPage: page,
+      baseUrl: "https://example.com",
+      siteType: SITE_TYPES.NEW_API,
+      getServiceWorker: async () => serviceWorker,
+      openSitePage: async () => {
+        const sitePage = await context.newPage()
+        await forceExtensionLanguage(sitePage, "en")
+        await sitePage.addInitScript(() => {
+          window.localStorage.setItem(
+            "user",
+            JSON.stringify({
+              id: 1,
+              username: "e2e-user",
+              quota: 1000,
+            }),
+          )
+        })
+        await sitePage.goto("https://example.com")
+        await sitePage.bringToFront()
+        return sitePage
+      },
+      prepareDetectableSite: async () => undefined,
+    }),
+    expect(
+      page.getByText("Account keys ready: 2 created, 0 already covered.", {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 30_000 }),
+  ])
   await expect(
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListView),
   ).toContainText("e2e-user")
-  await expect(
-    page.getByText("Account keys ready: 2 created, 0 already covered.", {
-      exact: true,
-    }),
-  ).toBeVisible()
   expect(createdGroups).toHaveLength(2)
   expect(createdGroups).toEqual(expect.arrayContaining(["default", "vip"]))
 

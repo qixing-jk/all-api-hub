@@ -178,6 +178,7 @@ export function useAccountDialog({
   const [credentialEvidence] = useState(createAccountCredentialEvidence)
   const selectedSiteTypeRef = useRef<AccountSiteType>(SITE_TYPES.UNKNOWN)
   const isCloseTransitionStartedRef = useRef(false)
+  const closeCompletionRef = useRef<Promise<void> | null>(null)
 
   const siteName = draft.siteName
   const username = draft.username
@@ -414,7 +415,12 @@ export function useAccountDialog({
   const completePendingAccountKeyProvisioningSuccess =
     postSaveWorkflow.completePendingSuccess
 
-  useAccountDialogInitialization({
+  const {
+    accountLoadError,
+    invalidateAccountLoad,
+    isLoadingAccount,
+    retryAccountLoad,
+  } = useAccountDialogInitialization({
     context: { mode, account, prefill, recoveryState, isOpen },
     evidence: {
       isCloseTransitionStartedRef,
@@ -515,28 +521,48 @@ export function useAccountDialog({
     }
   }
 
-  const handleClose = useCallback(async () => {
-    if (isCloseTransitionStartedRef.current) return
-    setEditedNovitaCredential(null)
-    invalidateDuplicateConfirmation()
-    invalidateCookieSession()
-    invalidateSub2ApiSession()
+  const handleClose = useCallback(() => {
+    if (isCloseTransitionStartedRef.current)
+      return closeCompletionRef.current ?? Promise.resolve()
     isCloseTransitionStartedRef.current = true
-    invalidateAutoDetection()
-    try {
-      await beforeOpenRouterOnboardingClose()
-    } catch {
-      logger.warn("OpenRouter onboarding close handling failed", {
-        siteType: SITE_TYPES.OPENROUTER,
-        status: "reconciliation_failed",
-        category: "onboarding_close",
-      })
-    }
-    completePendingAccountKeyProvisioningSuccess()
-    clearPostSaveWorkflowState()
-    handleManagedSiteConfigPromptClose()
-    onClose()
+    const completion = (async () => {
+      invalidateAccountLoad()
+      setEditedNovitaCredential(null)
+      invalidateDuplicateConfirmation()
+      invalidateCookieSession()
+      invalidateSub2ApiSession()
+      invalidateAutoDetection()
+      try {
+        await beforeOpenRouterOnboardingClose()
+      } catch {
+        logger.warn("OpenRouter onboarding close handling failed", {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "reconciliation_failed",
+          category: "onboarding_close",
+        })
+      }
+      try {
+        completePendingAccountKeyProvisioningSuccess()
+        clearPostSaveWorkflowState()
+        handleManagedSiteConfigPromptClose()
+      } catch {
+        logger.warn("Account dialog close cleanup failed", {
+          category: "close_cleanup",
+        })
+      } finally {
+        try {
+          onClose()
+        } catch {
+          logger.warn("Account dialog close callback failed", {
+            category: "close_callback",
+          })
+        }
+      }
+    })()
+    closeCompletionRef.current = completion
+    return completion
   }, [
+    invalidateAccountLoad,
     invalidateCookieSession,
     invalidateAutoDetection,
 
@@ -738,6 +764,8 @@ export function useAccountDialog({
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
       postSaveOneTimeSecret,
+      isLoadingAccount,
+      accountLoadError,
       postSaveKeyProvisioning,
       postSaveKeyInputAccount,
       postSaveKeyInputSessionId,
@@ -806,6 +834,7 @@ export function useAccountDialog({
       handleSubmit,
       handleAutoConfig,
       handleClose,
+      retryAccountLoad,
       handleImportCookieAuthSessionCookie,
       handleOpenCookiePermissionSettings,
       handleRequestCookieAuthPermissions,

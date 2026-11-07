@@ -24,7 +24,7 @@ import {
   SITE_CHECK_IN_DISPLAY_KINDS,
 } from "~/features/AccountManagement/checkInStatus"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
-import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { cn } from "~/lib/utils"
@@ -113,7 +113,7 @@ export function SiteInfoCheckInIndicators({
   const { t } = useTranslation(["account", "messages", "common"])
   const { handleMarkCustomCheckInAsCheckedIn } = useAccountActionsContext()
   const { preferences } = useUserPreferencesContext()
-  const { openEditAccount } = useDialogStateContext()
+  const { openEditAccount } = useAccountDialogActions()
   const { loadAccountData } = useAccountDataContext()
   const {
     redetect,

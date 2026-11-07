@@ -26,6 +26,19 @@ const createDeferred = <T,>() => {
   return { promise, reject, resolve }
 }
 
+function mockDefaultNumberFormatLocale(locale: string) {
+  const NativeNumberFormat = Intl.NumberFormat
+  const numberFormatSpy = vi
+    .spyOn(Intl, "NumberFormat")
+    .mockImplementation(function (
+      locales?: Intl.LocalesArgument,
+      options?: Intl.NumberFormatOptions,
+    ) {
+      return new NativeNumberFormat(locales ?? locale, options)
+    })
+  onTestFinished(() => numberFormatSpy.mockRestore())
+}
+
 const {
   mockUseAccountActionsContext,
   mockUseAccountDataContext,
@@ -399,25 +412,32 @@ describe("BalanceDisplay", () => {
       screen.getByText("account:stats.nativeCreditsDetail"),
     ).toBeInTheDocument()
   })
-  it("labels token credit separately from subscription request counts", () => {
-    render(
-      <BalanceDisplay
-        site={buildDisplaySiteData({
-          subscription: {
-            name: "Dahl",
-            remainingTokens: 100000000,
-            isActive: true,
-          },
-        })}
-      />,
-    )
-    expect(
-      screen.getByTitle("account:stats.subscriptionRemainingTokens"),
-    ).toHaveTextContent("100M")
-    expect(
-      screen.queryByTitle("account:stats.subscriptionRemainingCount"),
-    ).not.toBeInTheDocument()
-  })
+  it.each([
+    ["en-US", "100M"],
+    ["zh-SG", "1亿"],
+  ] as const)(
+    "labels token credit separately from subscription request counts (%s)",
+    (locale, formattedTokens) => {
+      mockDefaultNumberFormatLocale(locale)
+      render(
+        <BalanceDisplay
+          site={buildDisplaySiteData({
+            subscription: {
+              name: "Dahl",
+              remainingTokens: 100000000,
+              isActive: true,
+            },
+          })}
+        />,
+      )
+      expect(
+        screen.getByTitle("account:stats.subscriptionRemainingTokens"),
+      ).toHaveTextContent(formattedTokens)
+      expect(
+        screen.queryByTitle("account:stats.subscriptionRemainingCount"),
+      ).not.toBeInTheDocument()
+    },
+  )
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -1136,45 +1156,52 @@ describe("BalanceDisplay", () => {
     expect(balanceNode).toHaveTextContent("¥28.00")
   })
 
-  it("renders provider usage and subscription details when account data exposes them", () => {
-    render(
-      <BalanceDisplay
-        site={buildDisplaySiteData({
-          usage: {
-            scope: "current_period",
-            totalRequests: 42,
-            totalTokens: 12345,
-            totalCost: 6.5,
-            lastRequestTime: "2026-07-01T12:00:00.000Z",
-          },
-          subscription: {
-            name: "Codex Pro",
-            billingType: "amount",
-            remainingAmount: 13.5,
-            amountLimit: 20,
-            remainingCount: 8,
-            usedCount: 2,
-            periodResetTime: "2026-08-01T00:00:00.000Z",
-            expireTime: "2026-12-31T23:59:59.000Z",
-            isActive: true,
-          },
-        } as any)}
-      />,
-    )
+  it.each([
+    ["en-US", "12.3K"],
+    ["zh-SG", "1.2万"],
+  ] as const)(
+    "renders provider usage and subscription details when account data exposes them (%s)",
+    (locale, formattedTokens) => {
+      mockDefaultNumberFormatLocale(locale)
+      render(
+        <BalanceDisplay
+          site={buildDisplaySiteData({
+            usage: {
+              scope: "current_period",
+              totalRequests: 42,
+              totalTokens: 12345,
+              totalCost: 6.5,
+              lastRequestTime: "2026-07-01T12:00:00.000Z",
+            },
+            subscription: {
+              name: "Codex Pro",
+              billingType: "amount",
+              remainingAmount: 13.5,
+              amountLimit: 20,
+              remainingCount: 8,
+              usedCount: 2,
+              periodResetTime: "2026-08-01T00:00:00.000Z",
+              expireTime: "2026-12-31T23:59:59.000Z",
+              isActive: true,
+            },
+          } as any)}
+        />,
+      )
 
-    expect(
-      screen.getByTitle("account:stats.subscriptionTitle"),
-    ).toHaveTextContent("Codex Pro")
-    expect(screen.getByTitle("account:stats.usageRequests")).toHaveTextContent(
-      "42",
-    )
-    expect(screen.getByTitle("account:stats.usageTokens")).toHaveTextContent(
-      "12.3K",
-    )
-    expect(
-      screen.getByTitle("account:stats.subscriptionRemainingCount"),
-    ).toHaveTextContent("8")
-  })
+      expect(
+        screen.getByTitle("account:stats.subscriptionTitle"),
+      ).toHaveTextContent("Codex Pro")
+      expect(
+        screen.getByTitle("account:stats.usageRequests"),
+      ).toHaveTextContent("42")
+      expect(screen.getByTitle("account:stats.usageTokens")).toHaveTextContent(
+        formattedTokens,
+      )
+      expect(
+        screen.getByTitle("account:stats.subscriptionRemainingCount"),
+      ).toHaveTextContent("8")
+    },
+  )
 
   it("marks inactive provider subscriptions so stale remaining quota is not shown as healthy", () => {
     render(

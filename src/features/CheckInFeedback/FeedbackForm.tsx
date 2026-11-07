@@ -28,11 +28,15 @@ import { useFeedbackSubmission } from "./useFeedbackSubmission"
 export function FeedbackForm({
   snapshot,
   auth,
+  isOpen = true,
   onClose,
+  onCloseComplete,
 }: {
   snapshot: CheckInFeedbackSnapshot
   auth?: AuthConfig
+  isOpen?: boolean
   onClose: () => void
+  onCloseComplete?: () => void
 }) {
   const { t } = useTranslation(["accountDialog", "autoCheckin"])
   const id = useId()
@@ -105,7 +109,8 @@ export function FeedbackForm({
     submission
   return (
     <Modal
-      isOpen
+      isOpen={isOpen}
+      onCloseComplete={onCloseComplete}
       onClose={onClose}
       title={t("checkInFeedback.title")}
       header={

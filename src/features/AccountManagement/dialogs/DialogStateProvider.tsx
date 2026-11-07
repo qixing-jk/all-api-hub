@@ -8,13 +8,17 @@ import {
 } from "react"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
+import AccountDialog, {
+  type AccountDialogHandle,
+} from "~/features/AccountManagement/components/AccountDialog"
 import type { AccountFormSectionId } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/dialogs/useAccountDialogRecoveryReceiver"
 import {
+  DialogActionsContext,
   DialogStateContext,
+  type DialogAccountActions,
   type DialogOptions,
 } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { isAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
@@ -23,6 +27,8 @@ import { UI_HANDOFF_RECEIVE_RESULTS } from "~/hooks/useUiHandoffReceiver"
 import type { DisplaySiteData } from "~/types"
 
 interface DialogState {
+  isMounted: boolean
+  sessionId: number
   isOpen: boolean
   mode: DialogMode
   account: DisplaySiteData | null
@@ -41,20 +47,39 @@ export const DialogStateProvider = ({
   const { loadAccountData, displayData, isInitialLoad } =
     useAccountDataContext()
   const [dialogState, setDialogState] = useState<DialogState>({
+    isMounted: false,
+    sessionId: 0,
     isOpen: false,
     mode: DIALOG_MODES.ADD,
     account: null,
     prefill: null,
   })
 
+  const sessionIdRef = useRef(0)
+  const accountDialogRef = useRef<AccountDialogHandle>(null)
+  const replacementRequestRef = useRef(0)
+  const replacementCloseRef = useRef<Promise<void> | null>(null)
   const promiseRef = useRef<{
+    sessionId: number
     resolve: (value: unknown) => void
     reject: (reason?: unknown) => void
   } | null>(null)
 
-  const openAccountDialog = useCallback((options: DialogOptions) => {
+  const openAccountDialog = useCallback(async (options: DialogOptions) => {
+    const request = ++replacementRequestRef.current
+    if (accountDialogRef.current) {
+      // Retain the old workspace until its credential reconciliation and
+      // post-save cleanup finish, including overlapping replacement requests.
+      replacementCloseRef.current ??= accountDialogRef.current.close()
+      await replacementCloseRef.current
+      if (request !== replacementRequestRef.current) return
+    }
+    replacementCloseRef.current = null
     return new Promise<unknown>((resolve, reject) => {
+      const sessionId = ++sessionIdRef.current
       setDialogState({
+        isMounted: true,
+        sessionId,
         isOpen: true,
         mode: options.mode,
         account: options.account || null,
@@ -62,7 +87,7 @@ export const DialogStateProvider = ({
         recoveryState: options.recoveryState ?? null,
         focusSection: options.focusSection,
       })
-      promiseRef.current = { resolve, reject }
+      promiseRef.current = { sessionId, resolve, reject }
     })
   }, [])
 
@@ -92,14 +117,20 @@ export const DialogStateProvider = ({
     onReceive: receiveRecovery,
   })
 
-  const handleClose = () => {
-    setDialogState((prev) => ({ ...prev, isOpen: false }))
-    loadAccountData()
-  }
+  const handleClose = useCallback(
+    (sessionId = sessionIdRef.current) => {
+      if (promiseRef.current?.sessionId !== sessionId) return
+      promiseRef.current = null
+      setDialogState((prev) => ({ ...prev, isOpen: false }))
+      loadAccountData()
+    },
+    [loadAccountData],
+  )
 
   const handleSuccess = (data: unknown) => {
+    if (promiseRef.current?.sessionId !== dialogState.sessionId) return
     promiseRef.current?.resolve(data)
-    handleClose()
+    handleClose(dialogState.sessionId)
   }
 
   const handleError = () => {
@@ -127,7 +158,7 @@ export const DialogStateProvider = ({
     [openAccountDialog],
   )
 
-  const closeAddAccount = useCallback(handleClose, [loadAccountData])
+  const closeAddAccount = useCallback(() => handleClose(), [handleClose])
   const openEditAccount = useCallback(
     (
       account: DisplaySiteData,
@@ -142,14 +173,11 @@ export const DialogStateProvider = ({
       }),
     [openAccountDialog],
   )
-  const closeEditAccount = useCallback(handleClose, [loadAccountData])
+  const closeEditAccount = closeAddAccount
 
-  const value = useMemo(
+  const actionsValue = useMemo<DialogAccountActions>(
     () => ({
       openAccountDialog,
-      isAddAccountOpen,
-      isEditAccountOpen,
-      editingAccount,
       openAddAccount,
       closeAddAccount,
       openEditAccount,
@@ -157,9 +185,6 @@ export const DialogStateProvider = ({
     }),
     [
       openAccountDialog,
-      isAddAccountOpen,
-      isEditAccountOpen,
-      editingAccount,
       openAddAccount,
       closeAddAccount,
       openEditAccount,
@@ -167,22 +192,45 @@ export const DialogStateProvider = ({
     ],
   )
 
+  const value = useMemo(
+    () => ({
+      ...actionsValue,
+      isAddAccountOpen,
+      isEditAccountOpen,
+      editingAccount,
+    }),
+    [actionsValue, isAddAccountOpen, isEditAccountOpen, editingAccount],
+  )
+
   return (
-    <DialogStateContext.Provider value={value}>
-      {children}
-      {dialogState.isOpen && (
-        <AccountDialog
-          isOpen={dialogState.isOpen}
-          onClose={handleClose}
-          mode={dialogState.mode}
-          account={dialogState.account}
-          prefill={dialogState.prefill}
-          recoveryState={dialogState.recoveryState}
-          focusSection={dialogState.focusSection}
-          onSuccess={handleSuccess}
-          onError={handleError}
-        />
-      )}
-    </DialogStateContext.Provider>
+    <DialogActionsContext.Provider value={actionsValue}>
+      <DialogStateContext.Provider value={value}>
+        {children}
+        {dialogState.isMounted && (
+          <AccountDialog
+            ref={accountDialogRef}
+            key={dialogState.sessionId}
+            isOpen={dialogState.isOpen}
+            onClose={() => handleClose(dialogState.sessionId)}
+            onCloseComplete={() => {
+              // A delayed completion from a previous session must not remove a
+              // replacement dialog, even when the replacement is already closing.
+              setDialogState((prev) =>
+                prev.sessionId === dialogState.sessionId && !prev.isOpen
+                  ? { ...prev, isMounted: false }
+                  : prev,
+              )
+            }}
+            mode={dialogState.mode}
+            account={dialogState.account}
+            prefill={dialogState.prefill}
+            recoveryState={dialogState.recoveryState}
+            focusSection={dialogState.focusSection}
+            onSuccess={handleSuccess}
+            onError={handleError}
+          />
+        )}
+      </DialogStateContext.Provider>
+    </DialogActionsContext.Provider>
   )
 }
