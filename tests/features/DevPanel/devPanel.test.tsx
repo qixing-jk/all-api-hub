@@ -781,6 +781,7 @@ describe("DevPanel", () => {
   })
 
   it("runs a section action and shows its pending state", async () => {
+    const reload = vi.fn()
     let release!: () => void
     const runMock = vi.fn(
       () =>
@@ -807,6 +808,7 @@ describe("DevPanel", () => {
               setIsPending(false)
             },
           },
+          { id: "reload", label: "Reload after action", run: reload },
         ],
       })
       return null
@@ -834,11 +836,19 @@ describe("DevPanel", () => {
     const pendingButton = screen.getByRole("button", { name: "Slow action" })
     expect(pendingButton).toBeDisabled()
     expect(pendingButton).toHaveAttribute("aria-busy", "true")
+    const sibling = screen.getByRole("button", { name: "Reload after action" })
+    expect(sibling).toBeDisabled()
+    expect(sibling).not.toHaveAttribute("aria-busy")
+    await userEvent.click(sibling)
+    expect(reload).not.toHaveBeenCalled()
 
     release()
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Slow action" })).toBeEnabled()
     })
+    expect(sibling).toBeEnabled()
+    await userEvent.click(sibling)
+    expect(reload).toHaveBeenCalledOnce()
   })
 
   it("triggers the root translation crash fallback from the panel", async () => {

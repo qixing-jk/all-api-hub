@@ -81,6 +81,11 @@ describe("development data cleanup dialog", () => {
       screen.getByRole("button", { name: "Review cleanup" }),
     ).toBeDisabled()
     await user.click(screen.getByRole("checkbox", { name: "Settings" }))
+    expect(
+      screen.getByRole("checkbox", { name: "Settings" }),
+    ).toHaveAccessibleDescription(
+      "Restore application preferences. Keeps analytics opt-out, accounts, credentials and history.",
+    )
     await user.click(screen.getByRole("button", { name: "Review cleanup" }))
     expect(clearDevData).not.toHaveBeenCalled()
     await user.click(

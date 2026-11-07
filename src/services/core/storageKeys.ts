@@ -20,6 +20,8 @@ export const AIMLAPI_ONBOARDING_STORAGE_KEY = "aimlapiConnectionCredentials_v1"
  */
 export const INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY =
   "internalBrowsingBrowserSession_v1"
+/** Ownership markers retained until temporary-page reclamation completes. */
+export const INTERNAL_TAB_STORAGE_KEY_PREFIX = "internalBrowsingTab:"
 
 export const STORAGE_LOCKS = {
   /** Serializes explicit data cleanup operations in development builds. */

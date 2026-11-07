@@ -196,12 +196,14 @@ describe("dev fixture accounts", () => {
     await expect(countDevFixtureAccounts()).resolves.toBe(0)
   })
 
-  it("degrades to an empty registry when storage reads fail", async () => {
+  it("reports an unavailable count and refuses cleanup when registry reads fail", async () => {
     storageGetShouldThrow = true
 
     await expect(countDevFixtureAccounts()).resolves.toBe(0)
     // A failed read must not fall back to matching editable account fields.
-    await expect(clearDevFixtureAccounts()).resolves.toBe(0)
+    await expect(clearDevFixtureAccounts()).rejects.toThrow(
+      "storage unavailable",
+    )
     expect(deleteAccountsMock).not.toHaveBeenCalled()
   })
 })

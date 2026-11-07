@@ -118,9 +118,11 @@ function DevPanelInfoRowView({ row }: { row: DevPanelInfoRow }) {
 function DevPanelActionView({
   action,
   standalone = false,
+  sectionBusy = false,
 }: {
   action: DevPanelAction
   standalone?: boolean
+  sectionBusy?: boolean
 }) {
   const ActionIcon = action.icon ?? Terminal
   return (
@@ -128,7 +130,7 @@ function DevPanelActionView({
       type="button"
       aria-label={action.label}
       onClick={() => void action.run()}
-      disabled={action.disabled || action.loading}
+      disabled={sectionBusy || action.disabled || action.loading}
       aria-busy={action.loading || undefined}
       className={cn(
         "hover:bg-accent text-foreground hover:text-accent-foreground focus-visible:ring-ring flex min-w-0 flex-1 items-start gap-3 rounded-md px-3 py-2 text-left text-xs leading-5 transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
@@ -173,6 +175,7 @@ function DevPanelSectionView({
     section.collapsible || section.defaultCollapsed || !isCurrentPage,
   )
   const showsBody = !isCollapsible || isExpanded
+  const sectionBusy = section.actions.some((action) => action.loading)
 
   const singleAction =
     section.actions.length === 1 ? section.actions[0] : undefined
@@ -266,7 +269,13 @@ function DevPanelSectionView({
           {section.actions.length ? (
             <div className="flex flex-col">
               {section.actions.map((action) => {
-                return <DevPanelActionView key={action.id} action={action} />
+                return (
+                  <DevPanelActionView
+                    key={action.id}
+                    action={action}
+                    sectionBusy={sectionBusy}
+                  />
+                )
               })}
             </div>
           ) : null}

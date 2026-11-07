@@ -132,7 +132,7 @@ class DevFixtureAccountRegistry {
       )
     } catch (error) {
       logger.warn("Failed to read dev fixture account registry", error)
-      return []
+      throw error
     }
   }
 

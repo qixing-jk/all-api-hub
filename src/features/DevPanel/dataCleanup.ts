@@ -4,6 +4,8 @@ import {
   AIMLAPI_ONBOARDING_STORAGE_KEY,
   AUTO_CHECKIN_STORAGE_KEYS,
   I18NEXT_LANGUAGE_STORAGE_KEY,
+  INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY,
+  INTERNAL_TAB_STORAGE_KEY_PREFIX,
   SITE_TYPE_OBSERVATION_STORAGE_KEYS,
   SPONSOR_WORKFLOW_STORAGE_KEYS,
   STORAGE_KEYS,
@@ -234,7 +236,6 @@ async function clearSelectedData(
   scopes: readonly DevDataCleanupScope[],
 ): Promise<void> {
   const all = scopes.includes("all")
-  if (all) await clearAllAlarms()
   if (!all && !scopes.includes("accounts") && scopes.includes("fixtures")) {
     await clearDevFixtureAccounts()
     await clearDevFixtureApiCredentials()
@@ -274,6 +275,8 @@ async function clearSelectedData(
     ])
     const otherKeys = Object.keys(await getLocalStorageValues()).filter(
       (key) =>
+        key !== INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY &&
+        !key.startsWith(INTERNAL_TAB_STORAGE_KEY_PREFIX) &&
         !knownKeys.has(key) &&
         !knownPrefixes.some((prefix) => key.startsWith(prefix)),
     )
@@ -294,4 +297,6 @@ async function clearSelectedData(
       },
     )
   }
+  // Preserve existing schedules if a storage/cache operation fails before reload.
+  if (all) await clearAllAlarms()
 }

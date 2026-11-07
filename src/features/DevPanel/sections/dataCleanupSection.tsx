@@ -52,7 +52,7 @@ export function DataCleanupSection() {
       id: "settings",
       label: "Settings",
       description:
-        "Restore application preferences. Keeps accounts, credentials and history.",
+        "Restore application preferences. Keeps analytics opt-out, accounts, credentials and history.",
     },
     {
       id: "all",

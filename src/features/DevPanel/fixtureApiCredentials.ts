@@ -1,6 +1,7 @@
 /** Local API credential fixtures for the dev panel; no endpoint is contacted. */
 import { Storage } from "@plasmohq/storage"
 
+import { listApiCredentialProfileIdsOrThrow } from "~/services/apiCredentialProfiles/storage/configReader"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
@@ -80,8 +81,7 @@ export async function addDevFixtureApiCredentials(
 /** Remove only profiles whose ids were registered by this generator. */
 export async function clearDevFixtureApiCredentials(): Promise<number> {
   const registeredIds = await readIds()
-  const profiles = await apiCredentialProfilesStorage.listProfiles()
-  const storedIds = new Set(profiles.map((profile) => profile.id))
+  const storedIds = new Set(await listApiCredentialProfileIdsOrThrow())
   const ids = registeredIds.filter((id) => storedIds.has(id))
   const staleIds = new Set(registeredIds.filter((id) => !storedIds.has(id)))
   let deleted = 0

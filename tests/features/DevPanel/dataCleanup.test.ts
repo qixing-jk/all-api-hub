@@ -10,6 +10,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import {
   I18NEXT_LANGUAGE_STORAGE_KEY,
+  INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY,
   STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { THEME_BOOTSTRAP_CACHE_KEY } from "~/utils/ui/themePreferences"
@@ -193,6 +194,34 @@ describe("development data cleanup", () => {
     )
   })
 
+  it.each([
+    STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS,
+    STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+  ])(
+    "preserves fixture registration when reading %s fails",
+    async (failedKey) => {
+      await addDevFixtureAccounts(1)
+      await addDevFixtureApiCredentials(1)
+      const storage = new Storage({ area: "local" })
+      const registryKey =
+        failedKey === STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS
+          ? STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS
+          : STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS
+      const registered = await storage.get(registryKey)
+      const originalGet = browser.storage.local.get.bind(browser.storage.local)
+      vi.spyOn(browser.storage.local, "get").mockImplementation((keys) => {
+        if (JSON.stringify(keys).includes(failedKey))
+          return Promise.reject(new Error("read unavailable"))
+        return originalGet(keys)
+      })
+      await expect(clearDevData(["fixtures"])).rejects.toThrow(
+        "read unavailable",
+      )
+      vi.restoreAllMocks()
+      expect(await storage.get(registryKey)).toEqual(registered)
+    },
+  )
+
   it("clears all saved extension storage, including keys outside the registry", async () => {
     await browser.storage.local.set({
       [STORAGE_KEYS.ACCOUNTS]: "accounts",
@@ -206,6 +235,19 @@ describe("development data cleanup", () => {
     expect(await browser.storage.sync.get(null)).toEqual({})
     expect(await browser.storage.session.get(null)).toEqual({})
     expect(await browser.alarms.getAll()).toEqual([])
+  })
+
+  it("retains temporary-page ownership and its session for reclamation after reset", async () => {
+    const recovery = {
+      [INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY]: "current-browser-session",
+      "internalBrowsingTab:42": {
+        browserSession: "current-browser-session",
+        windowId: 7,
+      },
+    }
+    await browser.storage.local.set({ ...recovery, obsolete: "remove" })
+    await clearDevData(["all"])
+    expect(await browser.storage.local.get(null)).toEqual(recovery)
   })
 
   it.each([{ selection: [] }, { selection: ["unknown"] }])(
@@ -238,6 +280,15 @@ describe("development data cleanup", () => {
         STORAGE_KEYS.USER_PREFERENCES
       ],
     ).toBe("keep")
+  })
+
+  it("preserves schedules when full cleanup fails before it can reload", async () => {
+    await browser.alarms.create("webdav-auto-sync", { periodInMinutes: 60 })
+    vi.spyOn(browser.storage.local, "remove").mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+    await expect(clearDevData(["all"])).rejects.toThrow("storage unavailable")
+    expect(await browser.alarms.get("webdav-auto-sync")).toBeDefined()
   })
 
   it("clears extension cache storage and propagates cache failures", async () => {

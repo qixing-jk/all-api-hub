@@ -1,3 +1,4 @@
+import { existsSync, mkdirSync, renameSync } from "node:fs"
 import { writeFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -10,6 +11,7 @@ import {
 } from "./e2e/utils/e2eBuildVariants"
 import packageJson from "./package.json"
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
+import { isUserDataDirInUse } from "./scripts/cdp/dev-browser-identity.mjs"
 import {
   CRX_ENV_VARS,
   SELF_UPDATE_CHANNELS,
@@ -104,6 +106,22 @@ export default defineConfig({
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   hooks: {
+    "config:resolved": (wxt) => {
+      const webExt = wxt.config.webExt.config
+      // Resolve after local overrides: Firefox keeps web-ext's copy behavior.
+      webExt.keepProfileChanges ??= wxt.config.browser !== "firefox"
+      const profile = path.join(wxt.config.root, ".browser-data", "chrome")
+      const legacy = path.join(wxt.config.root, ".wxt", "chrome-data")
+      if (!existsSync(legacy)) return
+      // Also protect legacy data before `wxt clean` removes generated folders.
+      if (existsSync(profile) || isUserDataDirInUse(legacy)) {
+        throw new Error(
+          `Cannot migrate ${legacy} to ${profile}. Close its browser and ensure the destination does not already exist; preserve both profiles when resolving a conflict.`,
+        )
+      }
+      mkdirSync(path.dirname(profile), { recursive: true })
+      renameSync(legacy, profile)
+    },
     "build:done": async (wxt) => {
       const channel = resolveDistributionChannel(
         process.env.AAH_DISTRIBUTION_CHANNEL,
@@ -129,8 +147,7 @@ export default defineConfig({
     disabled: process.env.WXT_OPEN_BROWSER === "0",
     // Config/module edits can restart Chrome. Reuse this worktree's data
     // instead of web-ext's disposable profile; Windows requires an absolute path.
-    chromiumProfile: path.join(getProjectRootPath(), ".wxt", "chrome-data"),
-    keepProfileChanges: true,
+    chromiumProfile: path.join(getProjectRootPath(), ".browser-data", "chrome"),
   },
   manifest: (env) => {
     const projectPath = getProjectRootPath()
