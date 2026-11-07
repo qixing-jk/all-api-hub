@@ -94,6 +94,26 @@ const renderPanel = (controller: VerificationToolsController) =>
   )
 
 describe("VerificationToolsPanel", () => {
+  it("previews a safe drawing without a declared viewBox", async () => {
+    const i18n = await createResourceTestI18n(
+      { "zh-CN": { aiApiVerification: zhCN } },
+      "zh-CN",
+    )
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerificationToolsPanel
+          controller={buildController({
+            pelican: buildPelican({
+              analysis: { ...buildPelican().analysis, viewBox: null },
+            }),
+          })}
+        />
+      </I18nextProvider>,
+    )
+    expect(screen.getByTestId("pelican-svg-preview")).toBeVisible()
+    expect(screen.getByTestId("pelican-result")).toHaveTextContent("viewBox -")
+  })
+
   it("runs drawing from the inline hint only when allowed", async () => {
     const user = userEvent.setup()
     const runPelican = vi.fn()
@@ -200,6 +220,21 @@ describe("VerificationToolsPanel", () => {
     await user.click(toggle)
     expect(setPelicanExecutionMode).toHaveBeenCalledWith(
       PELICAN_EXECUTION_MODES.Agent,
+    )
+    rerender(
+      <I18nextProvider i18n={testI18n}>
+        <VerificationToolsPanel
+          controller={buildController({
+            pelicanExecutionMode: PELICAN_EXECUTION_MODES.Agent,
+            setPelicanExecutionMode,
+          })}
+        />
+      </I18nextProvider>,
+    )
+    expect(toggle).toBeChecked()
+    await user.click(toggle)
+    expect(setPelicanExecutionMode).toHaveBeenLastCalledWith(
+      PELICAN_EXECUTION_MODES.Reply,
     )
     rerender(
       <I18nextProvider i18n={testI18n}>

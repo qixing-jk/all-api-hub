@@ -963,6 +963,20 @@ test("an edited probe prompt persists and is used by the next run", async ({
       .toBeGreaterThan(shortHeight + 60)
     await page.setViewportSize({ width: 1920, height: 1200 })
     const dialog = page.getByRole("dialog")
+    // Resizing schedules the workspace measurement on the next animation frame.
+    // Capture the baseline only after the dialog uses the new height budget.
+    await expect
+      .poll(() =>
+        dialog
+          .locator('[data-slot="modal-panel"]')
+          .evaluate((panel) =>
+            Math.abs(
+              panel.getBoundingClientRect().height -
+                Number.parseFloat(getComputedStyle(panel).maxHeight),
+            ),
+          ),
+      )
+      .toBeLessThanOrEqual(2)
     await captureVisualViews({
       page,
       ready: textbox,
@@ -1401,6 +1415,16 @@ test("account verification configuration aligns fields without empty grid cells"
     await contextHelp.click()
     const contextTooltip = page.getByRole("tooltip")
     await expect(contextTooltip).toContainText("每批累计输入预算约 8M tokens")
+    // Tooltip text can be mounted before its floating position is calculated.
+    await expect
+      .poll(async () => {
+        const tooltip = await contextTooltip.boundingBox()
+        const anchor = await contextHelp.boundingBox()
+        if (!tooltip || !anchor) return false
+        const gap = anchor.y - tooltip.y - tooltip.height
+        return gap >= 0 && gap <= 16
+      })
+      .toBe(true)
     await expect(contextSelection).toHaveAttribute("aria-expanded", "false")
     await captureVisualViews({
       page,

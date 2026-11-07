@@ -14,6 +14,25 @@ import {
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 describe("Verification test workspace", () => {
+  it("names a selectable detail from its heading when no explicit label is supplied", () => {
+    render(
+      <VerificationTestSection tools={null}>
+        <VerificationProbeDetails
+          heading={<span>Drawing</span>}
+          headingAccessory={<button type="button">Help</button>}
+        >
+          <p>Drawing details</p>
+        </VerificationProbeDetails>
+      </VerificationTestSection>,
+    )
+    expect(screen.getByRole("button", { name: "Drawing" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    )
+    expect(screen.getByRole("button", { name: "Help" })).toBeVisible()
+    expect(screen.getByText("Drawing details")).toBeVisible()
+  })
+
   it.each(["disabled", "loading"] as const)(
     "runs from the inline hint and respects the row's %s state",
     async (blockedState) => {

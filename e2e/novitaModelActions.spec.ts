@@ -122,7 +122,16 @@ test("Novita exposes account-bound model actions and masked key recovery", async
   await expect(page.getByRole("dialog")).toBeHidden()
 
   await page.getByTestId(ids.verifyCliSupportButton).click()
-  await expect(page.getByRole("dialog")).toContainText("CLI Support Simulation")
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("heading", { name: "API Testing", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("combobox", { name: "Client simulation", exact: true }),
+  ).toContainText("Claude Code")
   await expect(page.getByRole("dialog")).toContainText("Novita inference key")
   await page.keyboard.press("Escape")
   await expect(page.getByRole("dialog")).toBeHidden()

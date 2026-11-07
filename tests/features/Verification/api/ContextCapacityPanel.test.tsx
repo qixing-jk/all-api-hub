@@ -23,6 +23,46 @@ import { verificationResultHistoryStorage } from "~/services/verification/verifi
 import { CONTEXT_CAPACITY_INCONCLUSIVE_REASONS } from "~/services/verification/verificationResultHistory/types"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
+it("offers continuation without duplicate failure copy when a budget pause has no accepted input", () => {
+  render(
+    <I18nextProvider i18n={testI18n}>
+      <ContextCapacityPanel
+        controller={{
+          enabled: true,
+          running: false,
+          canRun: true,
+          stopped: false,
+          progress: null,
+          error: null,
+          run: vi.fn(),
+          stop: vi.fn(),
+          result: {
+            reason: CONTEXT_CAPACITY_REASONS.Budget,
+            lowerBoundTokens: 0,
+            attempts: [],
+            counter: { encoding: "o200k_base", estimated: true },
+          },
+        }}
+      />
+    </I18nextProvider>,
+  )
+  expect(
+    screen.getAllByText(
+      "aiApiVerification:verifyDialog.tools.context.pausedTitle",
+    ),
+  ).toHaveLength(1)
+  expect(
+    screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.tools.context.continue",
+    }),
+  ).toBeEnabled()
+  expect(
+    screen.queryByText(
+      "aiApiVerification:verifyDialog.tools.context.unableTitle",
+    ),
+  ).not.toBeInTheDocument()
+})
+
 it("places context help before status without nesting it in the selection button", async () => {
   const user = userEvent.setup()
   const run = vi.fn()

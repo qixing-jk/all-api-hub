@@ -1287,7 +1287,9 @@ test("verifies embedding and image models after changing the selected modality",
   })
   expect(requests[1]).not.toHaveProperty("size")
   expect(requests[1]).not.toHaveProperty("quality")
-  await imageProbe.getByRole("button", { name: "Output", exact: true }).click()
+  await imageProbe
+    .getByRole("button", { name: "Image generation", exact: true })
+    .click()
   await expect(
     imageProbe.getByRole("img", { name: "Generated image preview" }),
   ).toBeVisible()
@@ -1385,7 +1387,9 @@ test("previews Base64 images and plays completed video tasks", async ({
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
     .click()
   await expect(imageProbe).toContainText("Image generation succeeded")
-  await imageProbe.getByRole("button", { name: "Output", exact: true }).click()
+  await imageProbe
+    .getByRole("button", { name: "Image generation", exact: true })
+    .click()
   const image = imageProbe.getByRole("img", { name: "Generated image preview" })
   await expect(image).toHaveAttribute(
     "src",
@@ -1420,7 +1424,9 @@ test("previews Base64 images and plays completed video tasks", async ({
   await expect(videoProbe).toContainText("Video generated successfully.")
   expect(videoPosts).toBe(1)
   expect(videoPolls).toBe(2)
-  await videoProbe.getByRole("button", { name: "Output", exact: true }).click()
+  await videoProbe
+    .getByRole("button", { name: "Video task", exact: true })
+    .click()
   const player = videoProbe.getByLabel("Generated video preview")
   await expect(player).toBeVisible()
   await expect(player).toHaveAttribute("controls", "")

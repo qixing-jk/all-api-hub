@@ -1828,6 +1828,9 @@ test("recovers an interrupted webpage context request after its worker stops wit
       .getByRole("option", { name: "gpt-4o-mini", exact: true })
       .click()
     const panel = modal.getByRole("region", { name: "Model context test" })
+    await panel
+      .getByRole("button", { name: "Model context test", exact: true })
+      .click()
     const checkpointWorker = await getServiceWorker(context)
     const abandoned = Object.fromEntries(
       Array.from({ length: 20 }, (_, index) => [
