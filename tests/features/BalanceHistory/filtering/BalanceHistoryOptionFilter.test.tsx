@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type { TagFilterOption } from "~/components/ui"
 import { BalanceHistoryOptionFilter } from "~/features/BalanceHistory/filtering/BalanceHistoryOptionFilter"
-import { act, render, screen } from "~~/tests/test-utils/render"
+import { act, fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 const options: TagFilterOption[] = [
   { value: "production", label: "Production" },
@@ -215,6 +215,13 @@ describe("BalanceHistoryOptionFilter", () => {
         { height: ["80px", "40px"] },
         expect.any(Object),
       )
+      const production = screen.getByRole("button", { name: "Production" })
+      fireEvent.click(production)
+      expect(production).toHaveAttribute("aria-pressed", "true")
+      expect(screen.getByLabelText("Selected values")).toHaveTextContent(
+        "production",
+      )
+
       view.unmount()
       expect(second.cancel).toHaveBeenCalledOnce()
       expect(disconnect).toHaveBeenCalledOnce()

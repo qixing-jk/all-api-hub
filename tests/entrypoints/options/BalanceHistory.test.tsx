@@ -563,9 +563,11 @@ describe("BalanceHistory options page", () => {
       fireEvent.change(await screen.findByLabelText(START_DAY_LABEL), {
         target: { value: "2026-02-02" },
       })
+      fireEvent.blur(screen.getByLabelText(START_DAY_LABEL))
       fireEvent.change(screen.getByLabelText(END_DAY_LABEL), {
         target: { value: "2026-02-06" },
       })
+      fireEvent.blur(screen.getByLabelText(END_DAY_LABEL))
 
       expect(
         await screen.findByText("balanceHistory:emptyRange.title"),
@@ -576,6 +578,7 @@ describe("BalanceHistory options page", () => {
       await waitFor(() => expect(filtersButton).toHaveFocus())
       expect(filtersButton).toBeInTheDocument()
 
+      vi.mocked(echarts.init).mockClear()
       await user.click(filtersButton)
       await user.click(
         screen.getByRole("button", { name: QUICK_RANGE_7D_LABEL }),
@@ -1486,9 +1489,11 @@ describe("BalanceHistory options page", () => {
       fireEvent.change(screen.getByLabelText(START_DAY_LABEL), {
         target: { value: "2026-02-01" },
       })
+      fireEvent.blur(screen.getByLabelText(START_DAY_LABEL))
       fireEvent.change(screen.getByLabelText(END_DAY_LABEL), {
         target: { value: "2026-02-07" },
       })
+      fireEvent.blur(screen.getByLabelText(END_DAY_LABEL))
       fireEvent.change(
         screen.getByLabelText("balanceHistory:breakdown.controls.reference"),
         { target: { value: "2026-02-07" } },

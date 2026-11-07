@@ -26,6 +26,7 @@ export function BalanceHistoryDateField({
   locale,
   onChange,
 }: BalanceHistoryDateFieldProps) {
+  const [draft, setDraft] = useState<string | null>(null)
   const [navigation, setNavigation] = useState<{
     value: string
     month?: Date
@@ -45,11 +46,23 @@ export function BalanceHistoryDateField({
       <legend className="text-sm font-medium">{label}</legend>
       <Input
         type="date"
-        value={value}
+        value={draft ?? value}
         min={minDayKey}
         max={maxDayKey}
         aria-label={label}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={() => {
+          if (draft !== null) {
+            onChange(draft)
+            setDraft(null)
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault()
+            event.currentTarget.blur()
+          }
+        }}
         disabled={!minDate || !maxDate}
       />
       {minDate && maxDate && minDate <= maxDate && displayedMonth && (

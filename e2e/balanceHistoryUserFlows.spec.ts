@@ -445,10 +445,23 @@ test("filters balance history by tag/account and persists the selected currency"
   const emptyRangeDay = subtractDaysFromDayKey(todayKey, 5)
   await startDate.fill(emptyRangeDay)
   await endDate.fill(emptyRangeDay)
+  await endDate.press("Enter")
   await expect(main.getByText("No snapshots in this range")).toBeVisible()
+
+  // Native date fields can emit an intermediate year while the user types.
+  await endDate.fill("0002-01-01")
+  await expect(endDate).toHaveValue("0002-01-01")
+  await expect(startDate).toHaveValue(emptyRangeDay)
+  await endDate.fill(todayKey)
+  await endDate.blur()
+  await expect(endDate).toHaveValue(todayKey)
+  await expect(startDate).toHaveValue(emptyRangeDay)
+  await expect(main.getByText("No snapshots in this range")).toBeHidden()
+
   const oldestAllowedDay = await startDate.getAttribute("min")
   expect(oldestAllowedDay).toBeTruthy()
   await endDate.fill(subtractDaysFromDayKey(oldestAllowedDay!, 1))
+  await endDate.blur()
   await expect(startDate).toHaveValue(oldestAllowedDay!)
   await expect(endDate).toHaveValue(oldestAllowedDay!)
   await expect(startCalendar.getByRole("grid")).toBeVisible()
@@ -830,40 +843,46 @@ for (const width of [320, 390]) {
       "extra-large",
     )
     await expect(page.locator("canvas").last()).toBeVisible()
-    await page.getByRole("button", { name: /View: By account/ }).click()
-    await page
-      .getByRole("menuitemradio", { name: "Total", exact: true })
-      .click()
     const lineButton = page.getByRole("button", { name: "Line", exact: true })
     const barButton = page.getByRole("button", { name: "Bar", exact: true })
-    for (const [breakdown, trend] of [
-      ["Pie", "Line"],
-      ["Histogram", "Bar"],
-    ]) {
-      await page.getByRole("button", { name: breakdown, exact: true }).click()
-      await page.getByRole("button", { name: trend, exact: true }).click()
-      const lineBounds = (await lineButton.boundingBox())!
-      const barBounds = (await barButton.boundingBox())!
-      expect(lineBounds.y).toBeCloseTo(barBounds.y)
-      expect(lineBounds.x + lineBounds.width).toBeLessThanOrEqual(barBounds.x)
-      await expect
-        .poll(() =>
-          page.evaluate(
-            () => document.documentElement.scrollWidth <= innerWidth,
-          ),
-        )
-        .toBe(true)
-      for (const chart of await page.locator("canvas").all()) {
-        await chart.scrollIntoViewIfNeeded()
-        const bounds = (await chart.boundingBox())!
-        expect(bounds.x).toBeGreaterThanOrEqual(0)
-        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+    for (const scope of ["By account", "Total"]) {
+      if (scope === "Total") {
+        await page.getByRole("button", { name: /View: By account/ }).click()
+        await page
+          .getByRole("menuitemradio", { name: "Total", exact: true })
+          .click()
       }
-      await page.screenshot({
-        fullPage: true,
-        animations: "disabled",
-        path: testInfo.outputPath(`${breakdown}-${trend}-${width}.png`),
-      })
+      for (const [breakdown, trend] of [
+        ["Pie", "Line"],
+        ["Histogram", "Bar"],
+      ]) {
+        await page.getByRole("button", { name: breakdown, exact: true }).click()
+        await page.getByRole("button", { name: trend, exact: true }).click()
+        const lineBounds = (await lineButton.boundingBox())!
+        const barBounds = (await barButton.boundingBox())!
+        expect(lineBounds.y).toBeCloseTo(barBounds.y)
+        expect(lineBounds.x + lineBounds.width).toBeLessThanOrEqual(barBounds.x)
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+          )
+          .toBe(true)
+        for (const chart of await page.locator("canvas").all()) {
+          await chart.scrollIntoViewIfNeeded()
+          const bounds = (await chart.boundingBox())!
+          expect(bounds.x).toBeGreaterThanOrEqual(0)
+          expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+        }
+        await page.screenshot({
+          fullPage: true,
+          animations: "disabled",
+          path: testInfo.outputPath(
+            `${scope}-${breakdown}-${trend}-${width}.png`,
+          ),
+        })
+      }
     }
   })
 }
