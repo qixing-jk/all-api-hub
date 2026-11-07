@@ -66,3 +66,28 @@ it("commits a date only after Enter or blur", () => {
   fireEvent.blur(input)
   expect(onChange).toHaveBeenLastCalledWith("2026-03-20")
 })
+
+it("discards a draft when the committed date changes externally", () => {
+  const props = {
+    label: "End date",
+    value: "2026-03-15",
+    minDayKey: "2026-01-01",
+    maxDayKey: "2026-03-31",
+    locale: undefined,
+    onChange: vi.fn(),
+  }
+  const { rerender } = render(<BalanceHistoryDateField {...props} />, {
+    withUserPreferencesProvider: false,
+    withThemeProvider: false,
+  })
+
+  const input = screen.getByLabelText("End date")
+  input.focus()
+  fireEvent.change(input, { target: { value: "2026-02-10" } })
+  expect(input).toHaveValue("2026-02-10")
+
+  rerender(<BalanceHistoryDateField {...props} value="2026-03-20" />)
+  expect(input).toHaveValue("2026-03-20")
+  fireEvent.blur(input)
+  expect(props.onChange).not.toHaveBeenCalled()
+})

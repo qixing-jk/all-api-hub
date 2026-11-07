@@ -39,7 +39,10 @@ export function BalanceHistoryDateField({
     selected ??
     maxDate
 
-  if (navigation.value !== value) setNavigation({ value })
+  if (navigation.value !== value) {
+    setNavigation({ value })
+    setDraft(null)
+  }
 
   return (
     <fieldset className="space-y-density-2 min-w-0">
