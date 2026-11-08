@@ -5,6 +5,11 @@ import { useTranslation } from "react-i18next"
 
 import { HelpHintIcon } from "~/components/icons/productIcons"
 import { Badge, IconButton, SearchableSelect, Switch } from "~/components/ui"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
 import { cn } from "~/lib/utils"
 import type {
   ApiVerificationApiType,
@@ -79,16 +84,31 @@ export function VerificationRequestProfileSelect({
         <span className="text-muted-foreground text-xs">
           {t("verifyDialog.meta.requestProfile")}
         </span>
-        <IconButton
-          type="button"
-          variant="ghost"
-          size="none"
-          className="text-muted-foreground size-4 min-h-0 p-0"
-          aria-label={t("verifyDialog.meta.requestProfile")}
-          tooltip={t("verifyDialog.requestProfiles.hint")}
-        >
-          <HelpHintIcon className="size-3.5" aria-hidden="true" />
-        </IconButton>
+        <Popover>
+          <PopoverTrigger asChild>
+            <IconButton
+              type="button"
+              variant="ghost"
+              size="none"
+              className="text-muted-foreground size-4 min-h-0 shrink-0 p-0"
+              aria-label={t("verifyDialog.meta.requestProfile")}
+              title={t("verifyDialog.requestProfiles.hint")}
+              disableAutoTooltip
+            >
+              <HelpHintIcon className="size-3.5" aria-hidden="true" />
+            </IconButton>
+          </PopoverTrigger>
+          <PopoverContent
+            container={portalContainer}
+            aria-label={t("verifyDialog.meta.requestProfile")}
+            align="end"
+            className="w-72 max-w-[calc(100vw-2rem)] p-3 text-xs leading-relaxed"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+            onEscapeKeyDown={(event) => event.stopPropagation()}
+          >
+            {t("verifyDialog.requestProfiles.hint")}
+          </PopoverContent>
+        </Popover>
       </div>
       <SearchableSelect
         aria-label={t("verifyDialog.meta.requestProfile")}
