@@ -1431,8 +1431,21 @@ test("account verification configuration aligns fields without empty grid cells"
         if (!tooltip || !anchor) return false
         const gapAbove = anchor.y - tooltip.y - tooltip.height
         const gapBelow = tooltip.y - anchor.y - anchor.height
+        const gapLeft = anchor.x - tooltip.x - tooltip.width
+        const gapRight = tooltip.x - anchor.x - anchor.width
+        const overlapsX =
+          tooltip.x < anchor.x + anchor.width &&
+          tooltip.x + tooltip.width > anchor.x
+        const overlapsY =
+          tooltip.y < anchor.y + anchor.height &&
+          tooltip.y + tooltip.height > anchor.y
         return (
-          (gapAbove >= 0 && gapAbove <= 16) || (gapBelow >= 0 && gapBelow <= 16)
+          (overlapsX &&
+            ((gapAbove >= 0 && gapAbove <= 16) ||
+              (gapBelow >= 0 && gapBelow <= 16))) ||
+          (overlapsY &&
+            ((gapLeft >= 0 && gapLeft <= 16) ||
+              (gapRight >= 0 && gapRight <= 16)))
         )
       })
       .toBe(true)

@@ -630,7 +630,7 @@ describe("ApiCheckModalHost", () => {
       "webAiApiCheck:modal.fields.apiKey",
     )
     await user.clear(apiKeyInput)
-    await user.type(apiKeyInput, "sk-test-second-fixture")
+    await pasteIntoField(user, apiKeyInput, "sk-test-second-fixture")
 
     await waitFor(() => {
       expect(secondFetchDeferred).toBeDefined()
