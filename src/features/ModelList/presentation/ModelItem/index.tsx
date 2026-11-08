@@ -327,9 +327,15 @@ export default function ModelItem(props: ModelItemProps) {
         }
       : undefined
 
-  const modelActionEnableGroups = hasGroupSemantics
-    ? activeGroupContext.actionGroups
-    : undefined
+  // Missing support evidence is distinct from a known, explicitly empty scope.
+  const modelActionEnableGroups =
+    hasGroupSemantics &&
+    !(
+      groupContext.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN &&
+      groupContext.supportedGroups.length === 0
+    )
+      ? activeGroupContext.actionGroups
+      : undefined
 
   const sourceBadge = sourceLabel.label ? (
     handleFilterAccount ? (

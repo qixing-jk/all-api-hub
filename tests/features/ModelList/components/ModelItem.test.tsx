@@ -940,66 +940,84 @@ describe("ModelItem", () => {
     )
   })
 
-  it("passes an exact empty restriction for known-empty account actions", async () => {
-    const user = userEvent.setup()
-    const onOpenModelKeyDialog = vi.fn()
-    const onVerifyModel = vi.fn()
-    const props = createDefaultProps()
+  it.each([
+    { accessState: MODEL_GROUP_ACCESS_STATES.KNOWN, expectedGroups: [] },
+    {
+      accessState: MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+      expectedGroups: undefined,
+    },
+  ])(
+    "preserves $accessState group evidence for account actions without support metadata",
+    async ({ accessState, expectedGroups }) => {
+      const user = userEvent.setup()
+      const onOpenModelKeyDialog = vi.fn()
+      const onVerifyModel = vi.fn()
+      const onVerifyCliSupport = vi.fn()
+      const props = createDefaultProps()
 
-    render(
-      <ModelItem
-        {...props}
-        model={{
-          ...props.model,
-          enable_groups: [],
-        }}
-        source={{
-          ...props.source,
-          capabilities: {
-            ...props.source.capabilities,
+      render(
+        <ModelItem
+          {...props}
+          model={{
+            ...props.model,
+            enable_groups: [],
+          }}
+          source={{
+            ...props.source,
+            capabilities: {
+              ...props.source.capabilities,
+              supportsTokenCompatibility: true,
+              supportsCredentialVerification: true,
+              supportsCliVerification: true,
+            },
+          }}
+          displayCapabilities={{
+            supportsPricing: true,
+            supportsGroupFiltering: true,
+            supportsAccountSummary: true,
             supportsTokenCompatibility: true,
             supportsCredentialVerification: true,
-          },
-        }}
-        displayCapabilities={{
-          supportsPricing: true,
-          supportsGroupFiltering: true,
-          supportsAccountSummary: true,
-          supportsTokenCompatibility: true,
-          supportsCredentialVerification: true,
-          supportsBatchCredentialVerification: true,
-          supportsCliVerification: false,
-        }}
-        groupContext={{
-          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
-          supportedGroups: [],
-          usableGroups: [],
-          priceableGroups: [],
-        }}
-        activeGroupContext={{
-          activeUsableGroups: [],
-          activePriceableGroups: [],
-          actionGroups: [],
-        }}
-        onOpenModelKeyDialog={onOpenModelKeyDialog}
-        onVerifyModel={onVerifyModel}
-      />,
-    )
+            supportsBatchCredentialVerification: true,
+            supportsCliVerification: true,
+          }}
+          groupContext={{
+            accessState,
+            supportedGroups: [],
+            usableGroups: [],
+            priceableGroups: [],
+          }}
+          activeGroupContext={{
+            activeUsableGroups: [],
+            activePriceableGroups: [],
+            actionGroups: [],
+          }}
+          onOpenModelKeyDialog={onOpenModelKeyDialog}
+          onVerifyModel={onVerifyModel}
+          onVerifyCliSupport={onVerifyCliSupport}
+        />,
+      )
 
-    await user.click(screen.getByRole("button", { name: "key" }))
-    await user.click(screen.getByRole("button", { name: "verify-api" }))
+      await user.click(screen.getByRole("button", { name: "key" }))
+      await user.click(screen.getByRole("button", { name: "verify-api" }))
+      await user.click(screen.getByRole("button", { name: "verify-cli" }))
 
-    expect(onOpenModelKeyDialog).toHaveBeenCalledWith(
-      props.source.account,
-      props.model.model_name,
-      [],
-    )
-    expect(onVerifyModel).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "account" }),
-      props.model.model_name,
-      [],
-    )
-  })
+      expect(onOpenModelKeyDialog).toHaveBeenCalledWith(
+        props.source.account,
+        props.model.model_name,
+        expectedGroups,
+      )
+      expect(onVerifyModel).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "account" }),
+        props.model.model_name,
+        expectedGroups,
+      )
+      expect(onVerifyCliSupport).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "account" }),
+        props.model.model_name,
+        expectedGroups,
+      )
+    },
+  )
 
   it("passes no group restriction for not-applicable profile verification", async () => {
     const user = userEvent.setup()

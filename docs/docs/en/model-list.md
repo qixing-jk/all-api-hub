@@ -93,14 +93,14 @@ When a source supports multiple user groups, use the group filter to limit parti
 
 Click the verification icon on a model card:
 
-- **Test API**: Send one probe to check whether the model or endpoint currently works and whether its response matches expectations.
+- **Test API**: Open the testing dialog to run an individual probe or routine tests and check whether the model or endpoint currently works and whether its response matches expectations.
 - **CLI compatibility test**: Evaluate whether the model is suitable for CLI tools, such as support for streaming and text generation.
 
 In the **`API Testing`** dialog, choose **`Streaming`** (the default) or **`Non-streaming`** under **`Test mode`**. Generation tests use the selected mode, and their results and newly saved history show that mode. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically. Fetching the model list is unaffected by this option.
 
 **`CLI compatibility test`** opens the same **`API Testing`** dialog with a client simulation preset. You can still choose the client, API type and **`Streaming`** (the default) or **`Non-streaming`** mode. Results show the selected mode, and failures do not trigger an automatic mode switch.
 
-> - Verification is a **one-time probe**. It does not guarantee long-term availability or permanent failure.
+> - An individual test runs the selected probe; routine tests for a text model run multiple model probes. Results do not prove long-term availability or permanent failure.
 > - CLI compatibility testing **does not launch a real external CLI**. It performs a protocol-level simulation only.
 
 ### 6. Advanced Verification: Drawing Test and Prompts
