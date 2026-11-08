@@ -1229,15 +1229,22 @@ test("excludes recovered internal tabs while preserving ordinary same-site brows
   await openAccountManagement(page, extensionId)
   // Seed only the durable ownership marker, as after a worker restart. The live
   // background memory set deliberately has no ownership entry for this tab.
-  const temporaryId = await worker.evaluate(async (url) => {
-    const tab = await chrome.tabs.create({ url: "about:blank", active: false })
-    if (tab.id == null) throw new Error("Missing fixture tab ID")
-    await chrome.storage.local.set({
-      [`internalBrowsingTab:${tab.id}`]: true,
-    })
-    await chrome.tabs.update(tab.id, { url })
-    return tab.id
-  }, siteUrl)
+  const [temporaryPage, temporaryId] = await Promise.all([
+    context.waitForEvent("page"),
+    worker.evaluate(async () => {
+      const tab = await chrome.tabs.create({
+        url: "about:blank",
+        active: false,
+      })
+      if (tab.id == null) throw new Error("Missing fixture tab ID")
+      await chrome.storage.local.set({
+        [`internalBrowsingTab:${tab.id}`]: true,
+      })
+      return tab.id
+    }),
+  ])
+  // Complete the fixture navigation before polling its content-script identity.
+  await temporaryPage.goto(siteUrl)
   const rows = page.getByTestId(/^account-management-account-list-item-/)
   const ownedRow = page.getByTestId(
     getAccountManagementListItemTestId("context-owned"),
