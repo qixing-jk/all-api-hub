@@ -619,13 +619,10 @@ async function continueAfterAccountExecution(
     input: ExecuteSelectedCheckInInput,
   ) => Promise<ExecuteSelectedCheckInResult>,
 ): Promise<ExecuteSelectedCheckInResult> {
-  let result: ExecuteSelectedCheckInResult
-  try {
-    result = await previous.promise
-  } catch (error) {
+  const result = await previous.promise.catch((error: unknown) => {
     if (!(error instanceof CheckInExecutionError)) throw error
     throw new CheckInExecutionError(error.cause, error.completedAt, true)
-  }
+  })
   let latestAccount = input.account
   if (input.revalidateAccount) {
     try {
