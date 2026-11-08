@@ -41,14 +41,46 @@ import {
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("dailyBatch", () => {
+  it("refreshes a manual retry's shared success exactly once", async () => {
+    const account = buildSiteAccount({
+      id: "manual-owner",
+      site_type: SITE_TYPES.VELOERA,
+      checkIn: runnableCheckIn(),
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedAccountStorage.getAccountById.mockResolvedValue(account)
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: () => ({ ready: true }),
+    })
+    const completion = {
+      kind: "executed" as const,
+      methodId: "veloera:daily-checkin" as const,
+      result: { status: "success" as const, reward: { quota: 95000 } },
+      retryable: false,
+      completedAt: Date.now(),
+    }
+    mockedMethods.executeSelectedCheckIn
+      .mockResolvedValueOnce(completion)
+      .mockResolvedValueOnce({ ...completion, reused: true })
+    await retryAccountForTest(account.id)
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.MANUAL })
+    expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledOnce()
+    expect(mockedAccountStorage.refreshAccount.mock.calls[0]?.[0]).toBe(
+      account.id,
+    )
+  })
+
   it.each([
     ["manual retry", true],
     ["automatic retry", true],
     ["manual retry", false],
     ["automatic retry", false],
+    ["manual retry", "blocked"],
+    ["automatic retry", "blocked"],
   ] as const)(
     "does not spend another attempt or repeat effects for a reused %s (successful %s)",
-    async (runKind, successful) => {
+    async (runKind, outcomeKind) => {
+      const successful = outcomeKind === true
       const account = buildSiteAccount({
         id: "reused",
         site_type: SITE_TYPES.VELOERA,
@@ -88,7 +120,7 @@ describe("dailyBatch", () => {
           },
         },
       }
-      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      const sharedCompletion = {
         kind: "executed",
         methodId: "veloera:daily-checkin",
         result: successful
@@ -97,7 +129,18 @@ describe("dailyBatch", () => {
         retryable: !successful,
         reused: true,
         completedAt: timestamp,
-      })
+      } as const
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce(
+        outcomeKind === "blocked"
+          ? {
+              kind: "blocked",
+              reason: "network_error",
+              retryable: true,
+              reused: true,
+              completedAt: timestamp,
+            }
+          : sharedCompletion,
+      )
       const successes = vi
         .spyOn(accountCheckinRunWorkflow, "recordStarPromotionCheckinSuccesses")
         .mockResolvedValue()
@@ -112,9 +155,11 @@ describe("dailyBatch", () => {
       const status = schedulerTestState.storedStatus
       expect(status.perAccount[account.id]).toMatchObject({
         status: successful ? "success" : "failed",
-        reward: successful ? { quota: 95000 } : undefined,
         timestamp,
       })
+      expect(status.perAccount[account.id].reward).toEqual(
+        successful ? { quota: 95000 } : undefined,
+      )
       expect(status.retryState).toMatchObject({
         pendingAccountIds: successful ? [] : [account.id],
         attemptsByAccount: { [account.id]: 1 },

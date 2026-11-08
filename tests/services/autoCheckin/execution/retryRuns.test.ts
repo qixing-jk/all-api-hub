@@ -12,6 +12,8 @@ import {
   mockedAccountStorage,
   mockedBrowserApi,
   mockedMethods,
+  mockedNotifyTaskResult,
+  mockedProductAnalytics,
   mockedUserPreferences,
   resolveProviderForTest,
   RETRY_EXECUTION,
@@ -93,6 +95,23 @@ describe("execution/retryRuns", () => {
       pendingAccountIds: [],
       attemptsByAccount: { [account.id]: 2 },
     })
+    expect(mockedNotifyTaskResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        counts: expect.objectContaining({ success: 1, failed: 0, total: 1 }),
+      }),
+    )
+    expect(
+      mockedProductAnalytics.trackProductAnalyticsActionCompleted,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        diagnostics: expect.objectContaining({
+          outcome: expect.objectContaining({
+            successCount: 1,
+            failureCount: 0,
+          }),
+        }),
+      }),
+    )
     vi.useRealTimers()
   })
   it("retries only queued accounts and stops when maxAttemptsPerDay is reached", async () => {

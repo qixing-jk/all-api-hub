@@ -338,7 +338,7 @@ export async function runCheckins(options: {
             result: mergedSummary,
             patch: {
               lastRunAt: new Date().toISOString(),
-              lastRunResult: AUTO_CHECKIN_RUN_RESULT.SKIPPED,
+              lastRunResult: getAutoCheckinRunResultFromSummary(mergedSummary),
               perAccount,
               summary: mergedSummary,
               accountsSnapshot,

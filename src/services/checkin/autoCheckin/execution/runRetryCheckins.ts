@@ -100,7 +100,6 @@ export async function runRetryCheckins(
 
   const updates: Record<string, CheckinAccountResult> = {}
   const attemptedAccountIds: string[] = []
-  const updatedAccountIds: string[] = []
   const accountIdsToRefresh: string[] = []
   let successfulAttemptCount = 0
   const loginProviderOwners =
@@ -162,7 +161,6 @@ export async function runRetryCheckins(
     if (!outcome.reused) attemptedAccountIds.push(accountId)
     updates[accountId] = outcome.result
     if (isSuccessfulCheckinStatus(outcome.result.status)) {
-      updatedAccountIds.push(outcome.result.accountId)
       if (!outcome.reused) successfulAttemptCount++
     }
     if (
@@ -208,6 +206,7 @@ export async function runRetryCheckins(
       return {
         result: {
           summary,
+          results: currentResults,
           accountsSnapshot: nextSnapshots,
           nextRetryState,
         },
@@ -232,6 +231,10 @@ export async function runRetryCheckins(
     retryOutcome?.summary ?? recalculateSummaryFromResults(updates)
   const accountsSnapshot = retryOutcome?.accountsSnapshot
   const nextRetryState = retryOutcome?.nextRetryState
+  const retryResults = Object.values(retryOutcome?.results ?? updates)
+  const updatedAccountIds = retryResults
+    .filter((result) => isSuccessfulCheckinStatus(result.status))
+    .map((result) => result.accountId)
 
   await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
     accountIds: accountIdsToRefresh,
@@ -248,7 +251,6 @@ export async function runRetryCheckins(
     })
   }
 
-  const retryResults = Object.values(updates)
   const retrySuccessCount = retryResults.filter((result) =>
     isSuccessfulCheckinStatus(result.status),
   ).length

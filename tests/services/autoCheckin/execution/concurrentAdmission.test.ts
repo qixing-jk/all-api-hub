@@ -238,6 +238,31 @@ it("keeps different accounts parallel and admits a later independent attempt", a
   expect(checkIn).toHaveBeenCalledTimes(3)
 })
 
+it("shares one blocked status read without spending another retry attempt", async () => {
+  const { input, status, checkIn } = setup()
+  const entered = deferred<void>()
+  const release = deferred<void>()
+  status!.mockImplementationOnce(async () => {
+    entered.resolve()
+    await release.promise
+    return { outcome: "unknown", reason: "network", attemptedAt: Date.now() }
+  })
+  const request = {
+    ...input,
+    context: dailyContext,
+    requireStatusConfirmationBeforeMutation: true,
+  }
+  const first = executeSelectedCheckIn(request)
+  await entered.promise
+  const second = executeSelectedCheckIn(request)
+  release.resolve()
+  const [owner, waiter] = await Promise.all([first, second])
+  expect(owner).toMatchObject({ kind: "blocked", retryable: true })
+  expect(waiter).toMatchObject({ ...owner, reused: true })
+  expect(status).toHaveBeenCalledOnce()
+  expect(checkIn).not.toHaveBeenCalled()
+})
+
 it.each(["authentication_required", "manual_verification_required"] as const)(
   "allows a waiting manual command to recover an automatic %s failure with its own authority",
   async (reasonCode) => {
@@ -456,6 +481,32 @@ it("honors disabled automatic intent after waiting without another network reque
   expect(checkIn).toHaveBeenCalledOnce()
 })
 
+it.each(["global", "automatic", "account"] as const)(
+  "retains the completed reward when a queued caller becomes %s disabled",
+  async (disabled) => {
+    const { input, started, completion, checkIn } = setup()
+    const first = executeSelectedCheckIn(input)
+    await started.promise
+    const second = executeSelectedCheckIn({
+      ...input,
+      context: dailyContext,
+      isAutomaticExecutionEnabled: async () => disabled !== "global",
+      revalidateAccount: async () => ({
+        ...input.account,
+        disabled: disabled === "account",
+        checkIn: {
+          ...input.account.checkIn,
+          automaticExecutionEnabled: disabled !== "automatic",
+        },
+      }),
+    })
+    completion.resolve({ status: "success", reward: { quota: 95000 } })
+    const [owner, waiter] = await Promise.all([first, second])
+    expect(waiter).toMatchObject({ ...owner, reused: true })
+    expect(checkIn).toHaveBeenCalledOnce()
+  },
+)
+
 it("blocks a queued command when the saved account cannot be reloaded", async () => {
   const { input, started, completion, status, checkIn } = setup()
   const first = executeSelectedCheckIn({ ...input, context: dailyContext })
@@ -578,7 +629,17 @@ it("shares the method actually executed after selection changes during confirmat
     reason: "network",
     attemptedAt: Date.now(),
   })
-  const second = executeSelectedCheckIn({ ...input, account: latestAccount })
+  const second = executeSelectedCheckIn({
+    ...input,
+    account: {
+      ...input.account,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        selection: { mode: "manual", methodId: "denxio:daily-checkin" },
+      }),
+    },
+    revalidateAccount: async () => latestAccount,
+  })
   completion.resolve({ status: "uncertain", reasonCode: "checkin_unconfirmed" })
   await expect(first).resolves.toMatchObject({
     kind: "executed",

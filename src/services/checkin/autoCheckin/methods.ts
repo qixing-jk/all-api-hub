@@ -94,6 +94,8 @@ type ExecuteSelectedCheckInResult =
       kind: typeof CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked
       reason: CheckInExecutionSkipReason
       retryable: boolean
+      completedAt?: number
+      reused?: true
     }
 
 const resolveSelectedCheckInRegistration = (input: {
@@ -175,6 +177,7 @@ const statusReadFailure = (
         kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked,
         reason,
         retryable: canRetryStatusConfirmationFailure(reason),
+        completedAt: Date.now(),
       }
 
 const toUnknownStatusSkipReason = (
@@ -203,6 +206,7 @@ const accountStateWriteFailure = (): ExecuteSelectedCheckInResult => ({
   kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked,
   reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
   retryable: false,
+  completedAt: Date.now(),
 })
 
 const createMutationLifecycle = (): AutoCheckinMutationLifecycle => {
@@ -636,9 +640,9 @@ async function continueAfterAccountExecution(
     }
   }
   const methodId = resolveSelectedCheckInMethod({
-    config: input.account.checkIn,
-    siteType: input.account.site_type,
-    siteUrl: input.account.site_url,
+    config: latestAccount.checkIn,
+    siteType: latestAccount.site_type,
+    siteUrl: latestAccount.site_url,
   })
   const registration = methodId
     ? autoCheckinMethodRegistry.resolveById(methodId)
@@ -666,6 +670,21 @@ async function continueAfterAccountExecution(
       loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
       isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
     })
+    // Disabling future execution cannot erase an already completed attempt for
+    // this identity and method. No new read or mutation is admitted here.
+    if (
+      !admission.eligible &&
+      hasMutationOutcomeToReuse &&
+      methodId === result.methodId &&
+      hasSameCheckInAccountIdentity(previous.input.account, latestAccount) &&
+      (admission.reason === CHECK_IN_EXECUTION_SKIP_REASONS.AccountDisabled ||
+        admission.reason ===
+          CHECK_IN_EXECUTION_SKIP_REASONS.AutomaticExecutionDisabled ||
+        admission.reason ===
+          CHECK_IN_EXECUTION_SKIP_REASONS.GlobalAutomaticExecutionDisabled)
+    ) {
+      return { ...result, reused: true }
+    }
     if (
       !admission.eligible &&
       !(
@@ -718,7 +737,7 @@ async function continueAfterAccountExecution(
       requireStatusConfirmationBeforeMutation: true,
     })
   }
-  return result.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed
+  return result.kind !== CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped
     ? { ...result, reused: true }
     : result
 }

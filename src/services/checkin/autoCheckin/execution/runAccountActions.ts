@@ -147,6 +147,14 @@ export async function retryAccount(
   if (!outcome.reused && isSuccessfulCheckinStatus(result.status)) {
     await accountCheckinRunWorkflow.recordStarPromotionCheckinSuccesses(1)
   }
+  if (!outcome.reused && result.status === CHECKIN_RESULT_STATUS.SUCCESS) {
+    await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
+      accountIds: [account.id],
+      force: true,
+      tempWindowRequestSource,
+      protectionBypassExecution,
+    })
+  }
   const summary: AutoCheckinRunSummary =
     retryOutcome?.summary ??
     recalculateSummaryFromResults({ [result.accountId]: result })

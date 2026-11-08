@@ -156,10 +156,14 @@ export async function executeAccountCheckin(
             reasonCode,
             ...(execution.kind ===
             CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked
-              ? { retryable: execution.retryable }
+              ? {
+                  retryable: execution.retryable,
+                  timestamp: execution.completedAt ?? Date.now(),
+                }
               : {}),
           },
         ),
+        ...(blocked && execution.reused ? { reused: true } : {}),
       }
     }
     const providerResult = execution.result
