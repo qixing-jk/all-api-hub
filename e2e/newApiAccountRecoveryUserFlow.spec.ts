@@ -77,7 +77,7 @@ const recoveryTest = test.extend<{
 })
 
 recoveryTest(
-  "credential recovery rejects a focused inspection window at the user tab URL",
+  "credential recovery matches the originating window when pages share a URL",
   async ({ context, page, securitySite }) => {
     securitySite.html = "<!doctype html><title>Security</title><p>Security</p>"
     const url = `${securitySite.baseUrl}/security`
@@ -87,22 +87,26 @@ recoveryTest(
       async () => (await chrome.windows.getLastFocused()).id!,
     )
     const inspectionPagePromise = context.waitForEvent("page")
-    await worker.evaluate(async (url) => {
-      await chrome.windows.create({ url, type: "popup", focused: true })
-    }, url)
+    const inspectionWindowId = await worker.evaluate(
+      async (url) =>
+        (await chrome.windows.create({ url, type: "popup", focused: true }))
+          .id!,
+      url,
+    )
     const inspectionPage = await inspectionPagePromise
     await inspectionPage.waitForLoadState("domcontentloaded")
-    await expect
-      .poll(() =>
-        worker.evaluate(async () => (await chrome.windows.getLastFocused()).id),
-      )
-      .not.toBe(sourceWindowId)
-
-    // Focus can move to an inspection window. It must never become the user's
-    // credential page even when it has a visible document at the same URL.
+    // Chrome versions differ in whether creating this window moves OS focus.
+    // Both documents must match only their own window regardless of that state.
     expect(await inspectionPage.evaluate(() => document.visibilityState)).toBe(
       "visible",
     )
+    expect(
+      await isUserFacingCredentialPage(
+        inspectionPage,
+        worker,
+        inspectionWindowId,
+      ),
+    ).toBe(true)
     expect(
       await isUserFacingCredentialPage(inspectionPage, worker, sourceWindowId),
     ).toBe(false)
@@ -119,28 +123,21 @@ recoveryTest(
 recoveryTest(
   "credential recovery rechecks a new page that becomes active after its first inspection",
   async ({ context, page, securitySite }) => {
-    securitySite.html = "<!doctype html><title>Security</title><p>Security</p>"
+    // tabs.create can load before Playwright installs init scripts. Serve the
+    // observer with the document so every candidate records its first check.
+    securitySite.html = `<!doctype html><title>Security</title><p>Security</p>
+      <script>
+        globalThis.credentialInspections = 0;
+        new MutationObserver((records) => {
+          if (records.some((record) =>
+            record.attributeName?.startsWith("data-aah-credential-candidate-") &&
+            !record.target.hasAttribute(record.attributeName)
+          )) globalThis.credentialInspections++;
+        }).observe(document, { attributes: true, subtree: true });
+      </script>`
     const url = `${securitySite.baseUrl}/security`
     const worker = await getServiceWorker(context)
     await page.goto(url)
-    await context.addInitScript(() => {
-      const scope = globalThis as typeof globalThis & {
-        credentialInspections: number
-      }
-      scope.credentialInspections = 0
-      new MutationObserver((records) => {
-        if (
-          records.some(
-            (record) =>
-              record.attributeName?.startsWith(
-                "data-aah-credential-candidate-",
-              ) &&
-              !(record.target as Element).hasAttribute(record.attributeName),
-          )
-        )
-          scope.credentialInspections++
-      }).observe(document, { attributes: true, subtree: true })
-    })
     const sourceWindowId = await worker.evaluate(
       async () => (await chrome.windows.getLastFocused()).id!,
     )
