@@ -1669,6 +1669,95 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  it.each([undefined, "checked", "not_checked"] as const)(
+    "keeps a reused check-in completion on its original day across midnight (newer status %s)",
+    async (newerToday) => {
+      const { executeAccountCheckin } = await import(
+        "~/services/checkin/autoCheckin/execution/accountExecution"
+      )
+      const methods = await import("~/services/checkin/autoCheckin/methods")
+      const completedAt = new Date(2026, 0, 2, 23, 59, 59).getTime()
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2026, 0, 3, 0, 0, 1))
+      const account = createAccount({
+        id: "reused-midnight",
+        site_type: SITE_TYPES.ANYROUTER,
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "automatic", methodId: "anyrouter:daily-checkin" },
+          methodKnowledge: {
+            methods: {
+              "anyrouter:daily-checkin": {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: completedAt - 1 },
+                },
+                ...(newerToday
+                  ? {
+                      status: {
+                        outcome: "known" as const,
+                        today: newerToday,
+                        evidence: {
+                          source: "probe" as const,
+                          observedAt: Date.now(),
+                        },
+                      },
+                    }
+                  : {}),
+              },
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      const execution = vi
+        .spyOn(methods, "executeSelectedCheckIn")
+        .mockResolvedValue({
+          kind: "executed",
+          methodId: "anyrouter:daily-checkin",
+          result: { status: "success" },
+          retryable: false,
+          completedAt,
+          reused: true,
+        })
+      try {
+        const outcome = await executeAccountCheckin(
+          account,
+          account.site_name,
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+          userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin),
+        )
+        expect(outcome).toMatchObject({
+          reused: true,
+          result: {
+            status: "success",
+            timestamp: completedAt,
+            accountStateDurability: "persisted",
+          },
+        })
+        const saved = await accountStorage.getAccountById(account.id)
+        expect(
+          saved?.checkIn.methodKnowledge.methods["anyrouter:daily-checkin"]
+            ?.status,
+        ).toMatchObject({
+          today: newerToday ?? "checked",
+          evidence: newerToday
+            ? { source: "probe", observedAt: Date.now() }
+            : { source: "execution", observedAt: completedAt },
+        })
+        expect(
+          isSelectedCheckInStatusCurrent({
+            checkIn: saved!.checkIn,
+            siteType: SITE_TYPES.ANYROUTER,
+          }),
+        ).toBe(newerToday !== undefined)
+      } finally {
+        execution.mockRestore()
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it("persists preflight status without overwriting current user intent", async () => {
     const account = createAccount({
       id: "preflight-check-in",

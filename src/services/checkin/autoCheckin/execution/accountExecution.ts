@@ -190,9 +190,12 @@ export async function executeAccountCheckin(
       providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
       providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
     ) {
-      const persisted = await accountCheckInState.markAccountAsSiteCheckedIn(
-        account.id,
-      )
+      const persisted = execution.reused
+        ? await accountCheckInState.markAccountAsSiteCheckedIn(
+            account.id,
+            result.timestamp,
+          )
+        : await accountCheckInState.markAccountAsSiteCheckedIn(account.id)
       result.accountStateDurability =
         persisted === false
           ? CHECKIN_ACCOUNT_STATE_DURABILITY.FAILED
