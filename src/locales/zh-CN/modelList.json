@@ -32,8 +32,8 @@
     "keyForModel": "模型对应密钥",
     "openSelectedAccountKeys": "管理账号密钥",
     "openSite": "打开站点",
-    "verifyApi": "验证接口",
-    "verifyCliSupport": "验证 CLI 兼容性"
+    "verifyApi": "测试 API",
+    "verifyCliSupport": "CLI 兼容性测试"
   },
   "allAccountGroups": "全部分组",
   "allAccounts": "所有账号",

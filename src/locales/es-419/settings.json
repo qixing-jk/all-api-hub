@@ -559,7 +559,7 @@
         "title": "Marcadores del navegador"
       },
       "clipboardRead": {
-        "description": "Después de copiar contenido relacionado, ayuda al asistente de canje o a la prueba de AI API a reconocer códigos de canje y datos de API.",
+        "description": "Después de copiar contenido relacionado, ayuda al asistente de canje o a las pruebas de API en páginas web a reconocer códigos de canje y datos de API.",
         "title": "Lectura del portapapeles"
       },
       "cookies": {
@@ -849,7 +849,7 @@
     "refresh": "Actualización de datos",
     "select": "Selecciona una pestaña",
     "siteAnnouncements": "Anuncios del sitio",
-    "webAiApiCheck": "Prueba de AI API"
+    "webAiApiCheck": "Pruebas de API en páginas web"
   },
   "taskNotifications": {
     "channels": {

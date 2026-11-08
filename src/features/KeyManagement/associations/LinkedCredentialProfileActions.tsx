@@ -100,6 +100,9 @@ export function LinkedCredentialProfileActions({
           </IconButton>
           <IconButton
             aria-label={t("keyManagement:actions.verifyCliSupport")}
+            tooltip={t(
+              "aiApiVerification:verifyDialog.requestProfiles.shortcutTooltip",
+            )}
             size="sm"
             variant="ghost"
             onClick={() => controller.openDialog("verify-cli")}

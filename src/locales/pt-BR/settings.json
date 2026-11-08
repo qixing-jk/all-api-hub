@@ -559,7 +559,7 @@
         "title": "Favoritos do navegador"
       },
       "clipboardRead": {
-        "description": "Depois que você copia um conteúdo relacionado, ajuda o assistente de resgate ou o teste de AI API a reconhecer códigos de resgate e dados de API.",
+        "description": "Depois que você copia um conteúdo relacionado, ajuda o assistente de resgate ou os testes de API em páginas web a reconhecer códigos de resgate e dados de API.",
         "title": "Leitura da área de transferência"
       },
       "cookies": {
@@ -849,7 +849,7 @@
     "refresh": "Atualização de dados",
     "select": "Selecionar uma guia",
     "siteAnnouncements": "Anúncios do site",
-    "webAiApiCheck": "Teste da AI API"
+    "webAiApiCheck": "Testes de API em páginas web"
   },
   "taskNotifications": {
     "channels": {

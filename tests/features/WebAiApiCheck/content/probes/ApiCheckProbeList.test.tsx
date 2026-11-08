@@ -70,6 +70,9 @@ describe("ApiCheckProbeList", () => {
     expect(
       await screen.findByText("aiApiVerification:verifyDialog.status.pending"),
     ).toBeVisible()
+    expect(
+      screen.queryByText("webAiApiCheck:modal.probes.notRunYet"),
+    ).not.toBeInTheDocument()
   })
 
   it("shows successful latency only in the formatted status badge", async () => {

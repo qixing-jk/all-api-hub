@@ -1,10 +1,12 @@
 {
   "verifyDialog": {
+    "about": "Test information",
     "actions": {
       "close": "Close",
       "manageModelKey": "Open model key setup",
       "retry": "Retry",
-      "run": "Run",
+      "runAll": "Run routine tests",
+      "runAllHint": "Runs routine tests only. Start drawing and context tests separately.",
       "running": "Running...",
       "runOne": "Run",
       "stop": "Stop",
@@ -29,9 +31,86 @@
     "generatedVideoPreview": "Generated video preview",
     "history": {
       "clear": "Clear history",
-      "lastVerified": "Last verified"
+      "lastVerified": "Last tested"
     },
-    "idleHint": "Select a key to start verification. Model id is required for model-dependent probes.",
+    "intro": {
+      "flow": "Test steps",
+      "probes": {
+        "decision": "Send a test request and check whether the decision model returns a valid result.",
+        "embedding": "Send sample text and check the returned vector and its dimensions.",
+        "image-generation": "Send an image prompt, check the response and preview the generated image.",
+        "models": "Check whether the API returns a model list, inspect model names and counts, and obtain a suggested model for later tests.",
+        "rerank": "Submit a query and candidate documents, then check their relevance ranking.",
+        "structured-output": "Ask the model for structured data and check whether it matches the requested format.",
+        "text-generation": "Send a prompt, check text generation and inspect the returned content.",
+        "tool-calling": "Ask the model to select a tool and provide arguments, then check the tool call.",
+        "video-generation": "Submit a video generation task, wait for its status and inspect the generated video.",
+        "web-search": "Check whether the API can use web search and inspect the results and citations."
+      },
+      "startHint": "Select <run>Run</run> to start this test.",
+      "steps": {
+        "context-capacity": {
+          "input": "Build long input",
+          "output": "Record bounds",
+          "process": "Run probes"
+        },
+        "decision": {
+          "input": "Submit state",
+          "output": "Check result",
+          "process": "Get decision"
+        },
+        "embedding": {
+          "input": "Sample text",
+          "output": "Check dimensions",
+          "process": "Receive vector"
+        },
+        "image-generation": {
+          "input": "Send prompt",
+          "output": "Preview image",
+          "process": "Receive image"
+        },
+        "models": {
+          "input": "Fetch list",
+          "output": "Suggest model",
+          "process": "Inspect models"
+        },
+        "pelican": {
+          "input": "Describe scene",
+          "output": "Review drawing",
+          "process": "Generate SVG"
+        },
+        "rerank": {
+          "input": "Query and documents",
+          "output": "Inspect entries",
+          "process": "Request reranking"
+        },
+        "structured-output": {
+          "input": "Set schema",
+          "output": "Validate format",
+          "process": "Generate JSON"
+        },
+        "text-generation": {
+          "input": "Send prompt",
+          "output": "Check reply",
+          "process": "Receive text"
+        },
+        "tool-calling": {
+          "input": "Define tool",
+          "output": "Check arguments",
+          "process": "Request call"
+        },
+        "video-generation": {
+          "input": "Submit video task",
+          "output": "Preview video",
+          "process": "Poll status"
+        },
+        "web-search": {
+          "input": "Run search",
+          "output": "View citations",
+          "process": "Check search evidence"
+        }
+      }
+    },
     "loadingRuntimeKeysHint": "Loading keys...",
     "mediaPreviewUnavailable": "The preview could not be loaded.",
     "meta": {
@@ -56,7 +135,6 @@
       "streaming": "Streaming"
     },
     "noCompatibleRuntimeKeyHint": "No key is available for this model's group. Create or choose a key for an enabled group in Key Management.",
-    "notRunYet": "Not run yet",
     "openGeneratedMedia": "Open generated media",
     "probes": {
       "decision": "Decision",
@@ -73,15 +151,28 @@
     "requestProfiles": {
       "claude": "Claude Code",
       "codex": "Codex CLI",
-      "default": "None (ordinary request)",
+      "default": "Ordinary API",
       "enhancedBadge": "Enhanced",
+      "enhancedCostHint": "May increase input usage",
       "enhancedHint": "Add known identity prompts, SDK headers, cache and session features. May increase input usage; acceptance depends on the site.",
       "enhancedLabel": "Enhanced CLI simulation",
       "gemini": "Gemini CLI",
-      "hint": "Simulates client request features and switches to the matching API protocol. Keeps the selected test."
+      "hint": "Selecting a client sets its default protocol. You can still change the protocol manually. Tests simulate the client’s API requests without launching a CLI on your device.",
+      "protocolMismatch": "Differs from the client’s default protocol ({{apiType}}); compatibility may be limited.",
+      "shortcutHint": "{{client}} is selected. Run a test or choose another client.",
+      "shortcutTooltip": "Test this API’s support for CLI clients"
     },
     "requiresModelId": "Enter a model id to run this test.",
+    "sections": {
+      "onDemand": "On-demand tests",
+      "onDemandHint": "Run individually",
+      "routine": "Routine tests"
+    },
     "selectedRuntimeKeyIncompatibleHint": "The selected key is not available for this model's group. Choose a compatible key before running verification.",
+    "source": {
+      "account": "Account: {{name}}",
+      "profile": "Credential: {{name}}"
+    },
     "status": {
       "emptyResponse": "No answer text",
       "fail": "Fail",
@@ -92,7 +183,7 @@
       "stopped": "Stopped",
       "timeout": "Request timed out",
       "unsupported": "Unsupported",
-      "unverified": "Unverified"
+      "unverified": "Not tested"
     },
     "summaries": {
       "decisionSucceeded": "Decision probe succeeded.",
@@ -141,7 +232,7 @@
       "webSearchUnsupportedAnthropic": "Web search probe is not supported for Anthropic endpoints.",
       "webSearchUnsupportedForApiType": "Web search probe is not supported for this API type."
     },
-    "title": "API Verification",
+    "title": "API Testing",
     "tools": {
       "agent": {
         "calls": "Tool activity",
@@ -198,7 +289,6 @@
       "errors": {
         "unexpected": "Request failed: {{message}}"
       },
-      "manualBadge": "On demand",
       "pelican": {
         "analysis": "{{shapes}} shapes · {{wheels}} circles/ellipses · viewBox {{viewBox}}",
         "description": "Asks the model to draw a pelican riding a bicycle as SVG for a side-by-side look. Judgement stays manual.",
@@ -218,14 +308,15 @@
       },
       "prompts": {
         "editorLabel": "{{probe}} prompt",
+        "label": "Prompt",
         "resetOne": "Reset this prompt",
         "saveFailed": "Could not save prompts: {{message}}",
-        "sharedHint": "Saved prompts are shared by every verification entry point."
+        "sharedHint": "Saved prompts are shared by every test entry point."
       },
       "stop": "Stop",
       "stopped": "Stopped before finishing; nothing was recorded."
     },
     "unsupportedProbeForApiType": "{{probe}} probe is not supported for this API type.",
-    "warning": "Tests apply to the current API, model and request settings. Passing does not guarantee full compatibility; inspect execution results when a test fails."
+    "warning": "Results apply only to the API, model and request configuration used in this test."
   }
 }

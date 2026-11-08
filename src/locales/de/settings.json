@@ -559,7 +559,7 @@
         "title": "Browser-Lesezeichen"
       },
       "clipboardRead": {
-        "description": "Nachdem Sie verwandte Inhalte kopiert haben, helfen Sie Redemption Assist oder AI API Test dabei, Einlösecodes und API-Details zu erkennen.",
+        "description": "Hilft nach dem Kopieren relevanter Inhalte dem Einlöseassistenten oder den API-Tests auf Webseiten, Einlösecodes und API-Daten zu erkennen.",
         "title": "Zwischenablage lesen"
       },
       "cookies": {
@@ -848,7 +848,7 @@
     "refresh": "Datenaktualisierung",
     "select": "Wählen Sie eine Registerkarte",
     "siteAnnouncements": "Website-Ankündigungen",
-    "webAiApiCheck": "AI API-Test"
+    "webAiApiCheck": "API-Tests auf Webseiten"
   },
   "taskNotifications": {
     "channels": {

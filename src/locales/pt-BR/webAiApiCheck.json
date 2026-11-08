@@ -1,6 +1,6 @@
 {
   "confirmToast": {
-    "body": "Deseja abrir o painel de testes da AI API para verificar sua disponibilidade?",
+    "body": "Abrir o painel de testes de API para verificar a disponibilidade desta API?",
     "enhancedInfo": "Acionado por detecção automática aprimorada. Se isso parecer errado, denuncie ou desative a detecção automática aprimorada nas configurações.",
     "feedback": "Relatar problema",
     "keyOnlyBody": "Uma possível chave de API foi decodificada, mas nenhuma URL de API foi encontrada. Abrir o painel de testes para adicionar a URL antes de testar?",
@@ -17,13 +17,12 @@
       "openApiProfiles": "Abrir biblioteca de credenciais API",
       "retry": "Tentar novamente",
       "running": "Testando…",
-      "runOne": "Testar",
       "saveToProfiles": "Salvar na biblioteca de credenciais API",
       "saving": "Salvando…",
       "showKey": "Mostrar chave",
       "stopping": "Parando…",
       "stopTest": "Parar teste",
-      "test": "Testar"
+      "test": "Executar testes padrão"
     },
     "candidates": {
       "apiKey": "Chave candidata {{index}}"
@@ -72,14 +71,11 @@
       "tags": "Selecionar tags"
     },
     "privacyHint": "As chaves de API são tratadas como informações confidenciais: ficam ocultas por padrão e nada é armazenado, a menos que você opte por salvar na biblioteca de credenciais de API.",
-    "probes": {
-      "notRunYet": "Ainda não executado"
-    },
     "sourceText": {
       "label": "Texto para extrair",
       "placeholder": "Cole uma URL base e uma chave de API aqui ou use o menu de contexto para preencher os campos com o texto selecionado."
     },
-    "title": "Teste de disponibilidade da AI API"
+    "title": "Testes de API"
   },
   "settings": {
     "autoDetect": {
@@ -157,7 +153,7 @@
       "wildcard": "Curinga (padrão)",
       "wildcardHint": "* corresponde a qualquer texto. Domínios viram *://domínio/*; use *.example.com para subdomínios."
     },
-    "title": "Teste de disponibilidade da Web AI API"
+    "title": "Testes de API em páginas web"
   },
   "siteControl": {
     "disable": "Desativar a detecção automática neste site",

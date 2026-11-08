@@ -1,6 +1,7 @@
 import type {
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
+  ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification"
 import type { DisplaySiteData } from "~/types"
 
@@ -11,6 +12,7 @@ export type VerifyApiDialogProps = {
   isOpen: boolean
   onClose: () => void
   account: DisplaySiteData
+  initialRequestProfile?: ApiVerificationRequestProfile
   initialModelId?: string
   initialSupportedEndpointTypes?: string[]
   modelEnableGroups?: string[]
@@ -26,3 +28,12 @@ export type ProbeItemState = {
   attempts: number
   result: ApiVerificationProbeResult | null
 }
+
+/** Source identity shown by the shared verification header. */
+export const VERIFICATION_SOURCE_KINDS = {
+  Account: "account",
+  Profile: "profile",
+} as const
+
+export type VerificationSourceKind =
+  (typeof VERIFICATION_SOURCE_KINDS)[keyof typeof VERIFICATION_SOURCE_KINDS]

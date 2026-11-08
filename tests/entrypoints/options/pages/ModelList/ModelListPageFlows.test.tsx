@@ -255,7 +255,7 @@ vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
       </button>
       <button
         type="button"
-        onClick={() => onVerifyCliSupport(ACCOUNT_SOURCE, "gpt-4")}
+        onClick={() => onVerifyCliSupport(ACCOUNT_SOURCE, "gpt-4", ["vip"])}
       >
         Verify CLI account
       </button>
@@ -298,10 +298,11 @@ vi.mock("~/features/Verification/cli", () => ({
     account,
     profile,
     initialModelId,
+    modelEnableGroups,
     onClose,
   }: any) => (
     <div>
-      <div>
+      <div data-model-groups={JSON.stringify(modelEnableGroups ?? [])}>
         Verify CLI Dialog{" "}
         {account ? `account:${account.id}` : `profile:${profile.id}`}:
         {initialModelId}
@@ -1505,7 +1506,7 @@ describe("ModelList page flows", () => {
     await user.click(screen.getByRole("button", { name: "Verify CLI account" }))
     expect(
       await screen.findByText("Verify CLI Dialog account:acc-1:gpt-4"),
-    ).toBeInTheDocument()
+    ).toHaveAttribute("data-model-groups", '["vip"]')
     await user.click(screen.getByRole("button", { name: "Close verify CLI" }))
 
     await user.click(screen.getByRole("button", { name: "Verify CLI profile" }))
@@ -1513,6 +1514,6 @@ describe("ModelList page flows", () => {
       await screen.findByText(
         "Verify CLI Dialog profile:profile-1:claude-3-5-sonnet",
       ),
-    ).toBeInTheDocument()
+    ).toHaveAttribute("data-model-groups", "[]")
   })
 })

@@ -159,6 +159,7 @@ describe("ModelItem profile actions", () => {
     expect(onVerifyCliSupport).toHaveBeenCalledWith(
       profileSource,
       "gpt-4o-mini",
+      undefined,
     )
   })
 

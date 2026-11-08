@@ -2,13 +2,9 @@ import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApi
 import { getProbePromptOverrides } from "~/services/verification/probePromptStore"
 
 import { apiVerificationProbeRegistry } from "./probeRegistry"
-import {
-  createVerificationProfileHeaders,
-  getVerificationRequestProfileApiType,
-} from "./requestProfiles"
+import { createVerificationProfileHeaders } from "./requestProfiles"
 import {
   API_VERIFICATION_MODES,
-  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "./types"
 import type {
@@ -61,29 +57,6 @@ export async function runApiVerificationProbe(
       ? { requestProfileEnhanced: true as const }
       : {}
   const profile = params.requestProfile
-  if (
-    profile &&
-    profile !== API_VERIFICATION_REQUEST_PROFILES.Default &&
-    (getVerificationRequestProfileApiType(profile) !== params.apiType ||
-      ![
-        API_VERIFICATION_PROBE_IDS.Models,
-        API_VERIFICATION_PROBE_IDS.TextGeneration,
-        API_VERIFICATION_PROBE_IDS.ToolCalling,
-        API_VERIFICATION_PROBE_IDS.StructuredOutput,
-        API_VERIFICATION_PROBE_IDS.WebSearch,
-      ].some((id) => id === params.probeId))
-  ) {
-    return {
-      id: params.probeId,
-      mode: params.mode ?? API_VERIFICATION_MODES.Streaming,
-      requestProfile: profile,
-      status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
-      latencyMs: 0,
-      summary:
-        "This CLI request profile does not support the selected protocol or probe",
-      summaryKey: "verifyDialog.summaries.requestProfileIncompatible",
-    }
-  }
 
   // Resolve prompts once per call: the saved preference is the shared source,
   // and an explicit parameter still wins for tests and one-off callers.

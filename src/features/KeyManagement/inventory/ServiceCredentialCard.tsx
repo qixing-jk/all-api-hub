@@ -482,6 +482,9 @@ export function ServiceCredentialCard({
                   </IconButton>
                   <IconButton
                     aria-label={t("actions.verifyCliSupport")}
+                    tooltip={t(
+                      "aiApiVerification:verifyDialog.requestProfiles.shortcutTooltip",
+                    )}
                     size="sm"
                     variant="ghost"
                     onClick={() => void handleVerifyCliSupport()}

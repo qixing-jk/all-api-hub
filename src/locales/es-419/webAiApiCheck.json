@@ -1,6 +1,6 @@
 {
   "confirmToast": {
-    "body": "¿Quieres abrir el panel de prueba de AI API para comprobar y probar la disponibilidad de la AI API?",
+    "body": "¿Abrir el panel de pruebas de API para comprobar la disponibilidad de esta API?",
     "enhancedInfo": "Activado por la autodetección mejorada. Si esto parece incorrecto, repórtalo o desactiva la autodetección mejorada en ajustes.",
     "feedback": "Reportar problema",
     "keyOnlyBody": "Se decodificó una posible clave API, pero no se encontró la URL de la API. ¿Abrir el panel de pruebas para agregar la URL antes de probar?",
@@ -17,13 +17,12 @@
       "openApiProfiles": "Abrir biblioteca de credenciales API",
       "retry": "Reintentar",
       "running": "Probando…",
-      "runOne": "Probar",
       "saveToProfiles": "Guardar en biblioteca de credenciales API",
       "saving": "Guardando…",
       "showKey": "Mostrar clave",
       "stopping": "Deteniendo…",
       "stopTest": "Detener prueba",
-      "test": "Probar"
+      "test": "Ejecutar pruebas habituales"
     },
     "candidates": {
       "apiKey": "Clave candidata {{index}}"
@@ -72,14 +71,11 @@
       "tags": "Seleccionar etiquetas"
     },
     "privacyHint": "Las claves de API se considerarán información sensible: se ocultan de forma predeterminada y no se almacena nada a menos que elijas guardar en la biblioteca de credenciales API.",
-    "probes": {
-      "notRunYet": "Aún no ejecutado"
-    },
     "sourceText": {
       "label": "Texto del cual extraer",
       "placeholder": "Pega aquí una Base URL y API key, o usa el menú contextual para rellenar desde la selección."
     },
-    "title": "Prueba de disponibilidad de funcionalidad de AI API"
+    "title": "Pruebas de API"
   },
   "settings": {
     "autoDetect": {
@@ -157,7 +153,7 @@
       "wildcard": "Comodín (predeterminado)",
       "wildcardHint": "* coincide con cualquier texto. Los dominios pasan a *://dominio/*; usa *.example.com para subdominios."
     },
-    "title": "Prueba de disponibilidad de funcionalidad de Web AI API"
+    "title": "Pruebas de API en páginas web"
   },
   "siteControl": {
     "disable": "Desactivar la detección automática en este sitio",

@@ -559,7 +559,7 @@
         "title": "Dấu trang trình duyệt"
       },
       "clipboardRead": {
-        "description": "Sau khi bạn sao chép nội dung liên quan, giúp trợ lý đổi mã hoặc công cụ kiểm tra AI API nhận diện mã đổi thưởng và thông tin API.",
+        "description": "Sau khi bạn sao chép nội dung liên quan, giúp trợ lý đổi mã hoặc công cụ kiểm tra API trên trang web nhận diện mã đổi thưởng và thông tin API.",
         "title": "Đọc clipboard"
       },
       "cookies": {
@@ -847,7 +847,7 @@
     "refresh": "Làm mới dữ liệu",
     "select": "Chọn một nhóm",
     "siteAnnouncements": "Thông báo website",
-    "webAiApiCheck": "Kiểm tra AI API"
+    "webAiApiCheck": "Kiểm tra API trên trang web"
   },
   "taskNotifications": {
     "channels": {

@@ -18,7 +18,7 @@
 - **Create, edit, and delete**: Ordinary Tokens can configure a name, quota, expiration, group, model restrictions, and IP/subnet restrictions. Available fields depend on site capabilities.
 - **Reveal and copy**: A full value is available only when the server returns it or the item matches a locally saved API credential exactly. Save one-time keys immediately because they may be unrecoverable later.
 - **Key check (repair)**: Checks saved accounts for a usable key, creates one when supported and missing, and lists remaining problems.
-- **Verification and export**: When a full key is available and the account supports the action, verify API and CLI compatibility, save it to the API Credential Library, export it to an AI tool, or submit it to a self-hosted site.
+- **Testing and export**: When a full key is available and the account supports the action, verify API and CLI compatibility, save it to the API Credential Library, export it to an AI tool, or submit it to a self-hosted site.
 
 ## How to Access
 
@@ -104,12 +104,12 @@ Click **`Key Check`** at the top:
 
 > Key Check fills gaps only when the source, permissions, and recoverability allow it. It cannot recover every key. Actions that may create a remote key explicitly warn that a new key may be created on the corresponding site.
 
-### 8. Verify API and CLI Compatibility
+### 8. Test API and CLI Compatibility
 
-The key action area provides **`Verify API`** and **`Verify CLI Compatibility`**:
+The key action area provides **`Test API`** and **`CLI compatibility test`**:
 
 - Verification is a single probe that checks whether the current key and endpoint work and whether the response matches expectations.
-- CLI compatibility verification evaluates suitability for CLI tools. It **does not launch or fully run an external CLI**.
+- CLI compatibility testing evaluates suitability for CLI tools. It **does not launch or fully run an external CLI**.
 - A result reflects that probe only. It does not guarantee long-term availability or permanent failure.
 
 ### 9. Bulk Operations

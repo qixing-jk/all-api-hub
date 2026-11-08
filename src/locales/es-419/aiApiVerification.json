@@ -1,10 +1,12 @@
 {
   "verifyDialog": {
+    "about": "Información de la prueba",
     "actions": {
       "close": "Cerrar",
       "manageModelKey": "Abrir configuración de clave de modelo",
       "retry": "Reintentar",
-      "run": "Ejecutar",
+      "runAll": "Ejecutar pruebas habituales",
+      "runAllHint": "Solo ejecuta las pruebas habituales. Inicia las pruebas de dibujo y contexto del modelo por separado.",
       "running": "Ejecutando...",
       "runOne": "Ejecutar",
       "stop": "Detener",
@@ -29,9 +31,86 @@
     "generatedVideoPreview": "Vista previa del video generado",
     "history": {
       "clear": "Borrar historial",
-      "lastVerified": "Última verificación"
+      "lastVerified": "Última prueba"
     },
-    "idleHint": "Selecciona una clave para iniciar la verificación. El id del modelo es obligatorio para pruebas dependientes del modelo.",
+    "intro": {
+      "flow": "Pasos de la prueba",
+      "probes": {
+        "decision": "Envía una solicitud de prueba y comprueba si el modelo de decisión devuelve un resultado válido.",
+        "embedding": "Envía un texto de ejemplo y revisa el vector devuelto y sus dimensiones.",
+        "image-generation": "Envía una instrucción para generar una imagen, revisa la respuesta y previsualiza la imagen.",
+        "models": "Comprueba si la API devuelve una lista de modelos, revisa sus nombres y cantidad y obtén un modelo sugerido para las siguientes pruebas.",
+        "rerank": "Envía una consulta y documentos candidatos y comprueba su orden de relevancia.",
+        "structured-output": "Solicita datos estructurados al modelo y comprueba si cumplen el formato solicitado.",
+        "text-generation": "Envía una instrucción, comprueba la generación de texto y revisa el contenido devuelto.",
+        "tool-calling": "Pide al modelo que elija una herramienta y proporcione argumentos y revisa la llamada.",
+        "video-generation": "Envía una tarea de generación de video, espera su estado y revisa el video generado.",
+        "web-search": "Comprueba si la API puede usar la búsqueda web y revisa los resultados y las citas."
+      },
+      "startHint": "Selecciona <run>Ejecutar</run> para iniciar esta prueba.",
+      "steps": {
+        "context-capacity": {
+          "input": "Crear texto largo",
+          "output": "Registrar límites",
+          "process": "Repetir pruebas"
+        },
+        "decision": {
+          "input": "Enviar estado",
+          "output": "Revisar resultado",
+          "process": "Obtener decisión"
+        },
+        "embedding": {
+          "input": "Texto de ejemplo",
+          "output": "Revisar dimensiones",
+          "process": "Recibir vector"
+        },
+        "image-generation": {
+          "input": "Enviar prompt",
+          "output": "Vista previa",
+          "process": "Recibir imagen"
+        },
+        "models": {
+          "input": "Obtener lista",
+          "output": "Sugerir modelo",
+          "process": "Revisar modelos"
+        },
+        "pelican": {
+          "input": "Describir escena",
+          "output": "Evaluar dibujo",
+          "process": "Generar SVG"
+        },
+        "rerank": {
+          "input": "Consulta y documentos",
+          "output": "Revisar elementos",
+          "process": "Solicitar reclasificación"
+        },
+        "structured-output": {
+          "input": "Definir estructura",
+          "output": "Validar formato",
+          "process": "Generar JSON"
+        },
+        "text-generation": {
+          "input": "Enviar prompt",
+          "output": "Revisar respuesta",
+          "process": "Recibir texto"
+        },
+        "tool-calling": {
+          "input": "Definir herramienta",
+          "output": "Revisar argumentos",
+          "process": "Solicitar llamada"
+        },
+        "video-generation": {
+          "input": "Enviar tarea de video",
+          "output": "Vista previa de video",
+          "process": "Consultar estado"
+        },
+        "web-search": {
+          "input": "Iniciar búsqueda",
+          "output": "Ver citas",
+          "process": "Revisar evidencia"
+        }
+      }
+    },
     "loadingRuntimeKeysHint": "Cargando claves...",
     "mediaPreviewUnavailable": "No se pudo cargar la vista previa.",
     "meta": {
@@ -41,7 +120,7 @@
       "mode": "Modo de prueba",
       "model": "Modelo",
       "modelPlaceholder": "Ingresa id de modelo",
-      "requestProfile": "Simulación de cliente",
+      "requestProfile": "Simulación del cliente",
       "runtimeKey": "Clave",
       "runtimeKeyIncompatible": "No disponible para este modelo",
       "runtimeKeyPlaceholder": "Seleccionar clave"
@@ -56,7 +135,6 @@
       "streaming": "Con streaming"
     },
     "noCompatibleRuntimeKeyHint": "No hay ninguna clave disponible para el grupo de este modelo. Crea o elige una clave para un grupo habilitado en Administración de claves.",
-    "notRunYet": "Aún no ejecutado",
     "openGeneratedMedia": "Abrir contenido generado",
     "probes": {
       "decision": "Modelo de decisión",
@@ -73,15 +151,28 @@
     "requestProfiles": {
       "claude": "Claude Code",
       "codex": "Codex CLI",
-      "default": "Ninguna (solicitud normal)",
+      "default": "API normal",
       "enhancedBadge": "Mejorada",
+      "enhancedCostHint": "Puede aumentar el uso de entrada",
       "enhancedHint": "Agrega prompts de identidad, encabezados SDK y características conocidas de caché y sesión. Puede aumentar el uso de entrada; la aceptación depende del sitio.",
       "enhancedLabel": "Simulación CLI mejorada",
       "gemini": "Gemini CLI",
-      "hint": "Simula las solicitudes del cliente y cambia al protocolo de API correspondiente. Conserva la prueba seleccionada."
+      "hint": "Al seleccionar un cliente se establece su protocolo predeterminado. Puedes cambiarlo manualmente después. Las pruebas simulan las solicitudes de API del cliente sin iniciar una CLI en tu dispositivo.",
+      "protocolMismatch": "Difiere del protocolo predeterminado del cliente ({{apiType}}); podría no ser compatible.",
+      "shortcutHint": "{{client}} está seleccionado. Ejecuta una prueba o elige otro cliente.",
+      "shortcutTooltip": "Prueba la compatibilidad de esta API con clientes CLI"
     },
     "requiresModelId": "Ingresa un id de modelo para ejecutar esta prueba.",
+    "sections": {
+      "onDemand": "Pruebas opcionales",
+      "onDemandHint": "Ejecutar por separado",
+      "routine": "Pruebas habituales"
+    },
     "selectedRuntimeKeyIncompatibleHint": "La clave seleccionada no está disponible para el grupo de este modelo. Elige una clave compatible antes de ejecutar la verificación.",
+    "source": {
+      "account": "Cuenta: {{name}}",
+      "profile": "Credencial: {{name}}"
+    },
     "status": {
       "emptyResponse": "Sin texto de respuesta",
       "fail": "Falló",
@@ -92,7 +183,7 @@
       "stopped": "Detenido",
       "timeout": "Solicitud agotó el tiempo",
       "unsupported": "No compatible",
-      "unverified": "Sin verificar"
+      "unverified": "Sin probar"
     },
     "summaries": {
       "decisionSucceeded": "La prueba de decisión se realizó con éxito.",
@@ -142,7 +233,7 @@
       "webSearchUnsupportedAnthropic": "La prueba de búsqueda web no es compatible con endpoints de Anthropic.",
       "webSearchUnsupportedForApiType": "La prueba de búsqueda web no es compatible con este tipo de API."
     },
-    "title": "Verificación de API",
+    "title": "Pruebas de API",
     "tools": {
       "agent": {
         "calls": "Actividad de herramientas",
@@ -199,7 +290,6 @@
       "errors": {
         "unexpected": "La solicitud falló: {{message}}"
       },
-      "manualBadge": "Bajo demanda",
       "pelican": {
         "analysis": "{{shapes}} formas · {{wheels}} círculos/elipses · viewBox {{viewBox}}",
         "description": "Pide al modelo un SVG de un pelícano en bicicleta para compararlo a simple vista. La valoración sigue siendo manual.",
@@ -219,14 +309,15 @@
       },
       "prompts": {
         "editorLabel": "Prompt de {{probe}}",
+        "label": "Prompt",
         "resetOne": "Restablecer este prompt",
         "saveFailed": "No se pudieron guardar los prompts: {{message}}",
-        "sharedHint": "Los prompts guardados se comparten entre todos los accesos de verificación."
+        "sharedHint": "Los prompts guardados se comparten entre todos los accesos a las pruebas."
       },
       "stop": "Detener",
       "stopped": "Detenido antes de terminar; no se guardó nada."
     },
     "unsupportedProbeForApiType": "La prueba {{probe}} no es compatible con este tipo de API.",
-    "warning": "Las pruebas corresponden a la API, el modelo y la configuración actuales. Aprobar no garantiza compatibilidad total; revisa los resultados de ejecución si una prueba falla."
+    "warning": "Los resultados solo se aplican a la API, el modelo y la configuración de la solicitud utilizados en esta prueba."
   }
 }

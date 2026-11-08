@@ -81,7 +81,7 @@ describe("background context menu refresh", () => {
     ;(globalThis as any).browser = originalBrowser
   })
 
-  it("creates both context menu entries by default", async () => {
+  it("uses separate page and selection actions with context-specific labels", async () => {
     const { refreshContextMenus } = await import(
       "~/services/preferences/runtime/contextMenus"
     )
@@ -92,10 +92,25 @@ describe("background context menu refresh", () => {
     } as any)
 
     expect(contextMenusCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "redemption-assist-context-menu" }),
+      expect.objectContaining({
+        id: "redemption-assist-context-menu",
+        title: "兑换选中的兑换码",
+        contexts: ["selection"],
+      }),
     )
     expect(contextMenusCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "ai-api-check-context-menu" }),
+      expect.objectContaining({
+        id: "ai-api-check-context-menu",
+        title: "测试选中的 AI API",
+        contexts: ["selection"],
+      }),
+    )
+    expect(contextMenusCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "ai-api-check-page-context-menu",
+        title: "打开 AI API 测试面板",
+        contexts: ["page"],
+      }),
     )
   })
 
@@ -115,50 +130,63 @@ describe("background context menu refresh", () => {
     expect(contextMenusCreate).not.toHaveBeenCalledWith(
       expect.objectContaining({ id: "ai-api-check-context-menu" }),
     )
+    expect(contextMenusCreate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ai-api-check-page-context-menu" }),
+    )
+    expect(contextMenusRemove).toHaveBeenCalledWith("ai-api-check-context-menu")
+    expect(contextMenusRemove).toHaveBeenCalledWith(
+      "ai-api-check-page-context-menu",
+    )
   })
 
-  it("keeps click handling idempotent across multiple refreshes", async () => {
-    const { refreshContextMenus } = await import(
-      "~/services/preferences/runtime/contextMenus"
-    )
+  it.each([
+    { menuItemId: "ai-api-check-context-menu", selectionText: "sk-test" },
+    { menuItemId: "ai-api-check-page-context-menu", selectionText: "" },
+  ])(
+    "forwards $menuItemId once across multiple refreshes",
+    async ({ menuItemId, selectionText }) => {
+      const { refreshContextMenus } = await import(
+        "~/services/preferences/runtime/contextMenus"
+      )
 
-    const preferences = {
-      redemptionAssist: { enabled: true, contextMenu: { enabled: true } },
-      webAiApiCheck: { enabled: true, contextMenu: { enabled: true } },
-    }
+      const preferences = {
+        redemptionAssist: { enabled: true, contextMenu: { enabled: true } },
+        webAiApiCheck: { enabled: true, contextMenu: { enabled: true } },
+      }
 
-    await refreshContextMenus(preferences as any)
-    await refreshContextMenus(preferences as any)
+      await refreshContextMenus(preferences as any)
+      await refreshContextMenus(preferences as any)
 
-    expect(listeners).toHaveLength(1)
+      expect(listeners).toHaveLength(1)
 
-    const clickInfo = {
-      menuItemId: "ai-api-check-context-menu",
-      selectionText: "sk-test",
-      pageUrl: "https://example.com",
-    }
-    const tab = { id: 123, url: "https://example.com" }
-
-    await Promise.all(listeners.map((listener) => listener(clickInfo, tab)))
-
-    expect(tabsSendMessage).toHaveBeenCalledTimes(1)
-    expect(tabsSendMessage).toHaveBeenCalledWith(
-      123,
-      expect.objectContaining({
-        action: RuntimeActionIds.ApiCheckContextMenuTrigger,
+      const clickInfo = {
+        menuItemId,
+        selectionText,
         pageUrl: "https://example.com",
-        selectionText: "sk-test",
-      }),
-    )
-    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
-      actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.TriggerApiCredentialCheckFromContextMenu,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundContextMenu,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-    })
-    expect(trackerCompleteMock).toHaveBeenCalledWith()
-  })
+      }
+      const tab = { id: 123, url: "https://example.com" }
+
+      await Promise.all(listeners.map((listener) => listener(clickInfo, tab)))
+
+      expect(tabsSendMessage).toHaveBeenCalledTimes(1)
+      expect(tabsSendMessage).toHaveBeenCalledWith(
+        123,
+        expect.objectContaining({
+          action: RuntimeActionIds.ApiCheckContextMenuTrigger,
+          pageUrl: "https://example.com",
+          selectionText,
+        }),
+      )
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.TriggerApiCredentialCheckFromContextMenu,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundContextMenu,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      })
+      expect(trackerCompleteMock).toHaveBeenCalledWith()
+    },
+  )
 
   it("reports a skipped redemption context-menu action when no text is selected", async () => {
     const { refreshContextMenus } = await import(

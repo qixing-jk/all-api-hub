@@ -195,6 +195,89 @@ describe("VerifyApiDialog", () => {
     mockRunPelicanTest.mockReset()
   })
 
+  it("opens a CLI shortcut with editable protocol and normal test order", async () => {
+    const user = userEvent.setup()
+    mockProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: true },
+      { id: "tool-calling", requiresModelId: true },
+    ])
+    const account = buildDisplaySiteData()
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([])
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        account={account}
+        initialModelId="test-model"
+        initialRequestProfile="claude"
+      />,
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole("combobox", {
+          name: "aiApiVerification:verifyDialog.meta.requestProfile",
+        }),
+      ).toHaveTextContent(
+        "aiApiVerification:verifyDialog.requestProfiles.claude",
+      ),
+    )
+    expect(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.apiType",
+      }),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.apiTypes.anthropic")
+    expect(
+      screen
+        .getAllByTestId(/^verify-probe-/)
+        .map((node) => node.getAttribute("data-testid")),
+    ).toEqual([
+      "verify-probe-models",
+      "verify-probe-text-generation",
+      "verify-probe-tool-calling",
+    ])
+    expect(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.apiType",
+      }),
+    ).toBeEnabled()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("cli-tool-comparison")).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "aiApiVerification:verifyDialog.requestProfiles.shortcutHint",
+      ),
+    ).toBeVisible()
+    await user.click(screen.getByRole("switch", { name: /enhancedLabel/ }))
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.apiType",
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.apiTypes.openaiCompatible",
+      }),
+    )
+    expect(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.requestProfile",
+      }),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.requestProfiles.claude")
+    expect(screen.getByRole("switch", { name: /enhancedLabel/ })).toBeChecked()
+    expect(
+      screen.queryByText(
+        "aiApiVerification:verifyDialog.requestProfiles.shortcutHint",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "aiApiVerification:verifyDialog.requestProfiles.protocolMismatch",
+      ),
+    ).toBeVisible()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+  })
+
   it.each(["known-secret", "sk-known-secret"])(
     "restores account capacity for effective New API secret %s without fetching credentials",
     async (secret) => {
@@ -871,24 +954,24 @@ describe("VerifyApiDialog", () => {
     expect(sourceLink).toHaveAttribute("href", "https://example.com")
     expect(sourceLink).toHaveAttribute("target", "_blank")
     expect(
-      await screen.findByText(
-        "aiApiVerification:verifyDialog.probes.text-generation",
-      ),
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(
-        "aiApiVerification:verifyDialog.probes.tool-calling",
-      ),
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.tool-calling",
+      }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(
-        "aiApiVerification:verifyDialog.probes.structured-output",
-      ),
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.structured-output",
+      }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(
-        "aiApiVerification:verifyDialog.probes.web-search",
-      ),
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.web-search",
+      }),
     ).toBeInTheDocument()
   })
 
@@ -966,12 +1049,22 @@ describe("VerifyApiDialog", () => {
       }),
     ).toBeInTheDocument()
 
+    fireEvent.click(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
+    )
     const inputToggle = within(probeCard).getByRole("button", {
       name: "aiApiVerification:verifyDialog.details.input",
     })
     fireEvent.click(inputToggle)
     expect(await within(probeCard).findByText(/"foo": 1/)).toBeInTheDocument()
 
+    const outputToggle = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.details.output",
+    })
+    expect(outputToggle).toHaveAttribute("aria-expanded", "false")
+    fireEvent.click(outputToggle)
     expect(await within(probeCard).findByText(/"bar": 2/)).toBeInTheDocument()
   })
 
@@ -1317,6 +1410,38 @@ describe("VerifyApiDialog", () => {
     expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
     expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
+
+  it.each(["allow", "deny"] as const)(
+    "enforces the model %s-list without model groups",
+    async (policy) => {
+      const account = buildDisplaySiteData()
+      const key = buildNewApiRuntimeKey(account, buildNewApiToken())
+      key.modelAccess = {
+        ...key.modelAccess,
+        allowedModelIds: policy === "allow" ? ["other-model"] : null,
+        deniedModelIds: policy === "deny" ? ["gpt-test"] : [],
+      }
+      mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([key])
+      render(
+        <VerifyApiDialog
+          isOpen
+          onClose={() => {}}
+          account={account}
+          initialModelId="gpt-test"
+        />,
+      )
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.noCompatibleRuntimeKeyHint",
+      )
+      const probe = screen.getByTestId("verify-probe-text-generation")
+      expect(
+        within(probe).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.runOne",
+        }),
+      ).toBeDisabled()
+      expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    },
+  )
 
   it("does not fall back to an incompatible enabled token for a requested model group", async () => {
     const onManageModelKey = vi.fn()
@@ -1699,7 +1824,7 @@ describe("VerifyApiDialog", () => {
     )
 
     const runAllButton = await screen.findByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
     await waitFor(() => expect(runAllButton).toBeEnabled())
     fireEvent.click(runAllButton)
@@ -1789,7 +1914,7 @@ describe("VerifyApiDialog", () => {
     )
 
     const runAllButton = await screen.findByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
     await waitFor(() => expect(runAllButton).toBeEnabled())
     fireEvent.click(runAllButton)
@@ -1902,7 +2027,7 @@ describe("VerifyApiDialog", () => {
     )
 
     const runAllButton = await screen.findByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
     await waitFor(() => expect(runAllButton).toBeEnabled())
     fireEvent.click(runAllButton)
@@ -2085,7 +2210,7 @@ describe("VerifyApiDialog", () => {
     )
 
     const runAllButton = await screen.findByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
     await waitFor(() => expect(runAllButton).toBeEnabled())
     fireEvent.click(runAllButton)
@@ -2172,7 +2297,7 @@ describe("VerifyApiDialog", () => {
     )
 
     const runAllButton = await screen.findByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
     await waitFor(() => expect(runAllButton).toBeEnabled())
     fireEvent.click(runAllButton)
@@ -2261,7 +2386,7 @@ describe("VerifyApiDialog", () => {
     )
 
     const runAllButton = await screen.findByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
     await waitFor(() => expect(runAllButton).toBeEnabled())
     fireEvent.click(runAllButton)

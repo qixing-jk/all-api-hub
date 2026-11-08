@@ -29,6 +29,7 @@ const logger = createLogger("ContextMenus")
 
 const REDEMPTION_MENU_ID = "redemption-assist-context-menu"
 const API_CHECK_MENU_ID = "ai-api-check-context-menu"
+const API_CHECK_PAGE_MENU_ID = "ai-api-check-page-context-menu"
 
 let cleanupContextMenuClickListener: (() => void) | null = null
 
@@ -41,7 +42,9 @@ const handleContextMenuClick = async (
   const selectionText = (info.selectionText || "").trim()
   const pageUrl = info.pageUrl || tab.url || ""
   const isRedemptionMenu = info.menuItemId === REDEMPTION_MENU_ID
-  const isApiCheckMenu = info.menuItemId === API_CHECK_MENU_ID
+  const isApiCheckMenu =
+    info.menuItemId === API_CHECK_MENU_ID ||
+    info.menuItemId === API_CHECK_PAGE_MENU_ID
   const tracker = isRedemptionMenu
     ? startProductAnalyticsAction({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
@@ -131,11 +134,13 @@ export async function refreshContextMenus(preferences: UserPreferences) {
 
     const redemptionTitle =
       getBrowserI18nMessage("context_menu_redeem_selection") ||
-      "使用兑换助手兑换选中文本"
+      "兑换选中的兑换码"
 
     const apiCheckTitle =
-      getBrowserI18nMessage("context_menu_ai_api_check") ||
-      "快速测试 AI API 的功能可用性"
+      getBrowserI18nMessage("context_menu_ai_api_check") || "测试选中的 AI API"
+    const apiCheckPageTitle =
+      getBrowserI18nMessage("context_menu_ai_api_check_page") ||
+      "打开 AI API 测试面板"
 
     const shouldShowRedemptionAssistMenu =
       (preferences.redemptionAssist?.enabled ?? true) &&
@@ -148,6 +153,7 @@ export async function refreshContextMenus(preferences: UserPreferences) {
     // Best-effort cleanup: remove only the menus we own to avoid breaking other features.
     await removeContextMenu(REDEMPTION_MENU_ID).catch(() => {})
     await removeContextMenu(API_CHECK_MENU_ID).catch(() => {})
+    await removeContextMenu(API_CHECK_PAGE_MENU_ID).catch(() => {})
 
     if (shouldShowRedemptionAssistMenu) {
       createContextMenu({
@@ -161,7 +167,12 @@ export async function refreshContextMenus(preferences: UserPreferences) {
       createContextMenu({
         id: API_CHECK_MENU_ID,
         title: `${devPrefix}${apiCheckTitle}`,
-        contexts: ["page", "selection"],
+        contexts: ["selection"],
+      })
+      createContextMenu({
+        id: API_CHECK_PAGE_MENU_ID,
+        title: `${devPrefix}${apiCheckPageTitle}`,
+        contexts: ["page"],
       })
     }
   } catch (error) {

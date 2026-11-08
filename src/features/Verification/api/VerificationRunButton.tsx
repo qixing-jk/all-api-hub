@@ -3,13 +3,13 @@ import type { ComponentProps } from "react"
 
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
 
-/** Quiet row action shared by account, credential, CLI and webpage probes. */
+/** Compact, visible row action shared by verification workspaces. */
 export function VerificationRunButton(props: ComponentProps<typeof Button>) {
   return (
     <Button
       size="sm"
       variant="ghost"
-      className="text-muted-foreground hover:text-foreground gap-x-1 px-2 text-xs"
+      className="gap-x-1 px-2.5 text-xs"
       loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
       leftIcon={
         props.loading ? (

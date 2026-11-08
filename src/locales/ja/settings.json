@@ -559,7 +559,7 @@
         "title": "ブラウザのブックマーク"
       },
       "clipboardRead": {
-        "description": "関連する内容をコピーした後、引き換えアシスタントや AI API テストが引き換えコードや API 情報を認識するために使用します。",
+        "description": "関連する内容をコピーした後、引き換えアシスタントやウェブページの API テストが引き換えコードや API 情報を認識するために使用します。",
         "title": "クリップボード読み取り"
       },
       "cookies": {
@@ -847,7 +847,7 @@
     "refresh": "データ更新",
     "select": "タブを選択",
     "siteAnnouncements": "サイト公告",
-    "webAiApiCheck": "AI API テスト"
+    "webAiApiCheck": "ウェブページの API テスト"
   },
   "taskNotifications": {
     "channels": {

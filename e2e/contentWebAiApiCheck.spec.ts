@@ -26,9 +26,11 @@ import {
 import {
   getPlasmoStorageRawValue,
   getServiceWorker,
+  getStoredUserPreferences,
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { createDrawingServer } from "~~/e2e/utils/verificationDrawingServer"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -368,6 +370,8 @@ test("web context probe shows progress, measured bounds and cancellation", async
       panel.getByRole("button", { name: "Run context probe" }),
     ).toBeEnabled()
     await expect(panel).toContainText("Pending")
+    await expect(panel).not.toContainText("Not run yet")
+    await expect(panel.getByRole("status")).toHaveCount(0)
     await expect(panel.getByRole("spinbutton")).toHaveCount(0)
     for (const width of [1280, 380]) {
       await page.setViewportSize({ width, height: 800 })
@@ -383,6 +387,9 @@ test("web context probe shows progress, measured bounds and cancellation", async
       })
     }
     await page.setViewportSize({ width: 1280, height: 720 })
+    await panel
+      .getByRole("button", { name: "Model context test", exact: true })
+      .click()
     await panel.getByRole("button", { name: "Run context probe" }).click()
     await expect(
       panel.getByRole("button", { name: "Test details", exact: true }),
@@ -390,7 +397,7 @@ test("web context probe shows progress, measured bounds and cancellation", async
     await expect(
       modal
         .getByRole("group")
-        .getByRole("button", { name: "Test", exact: true }),
+        .getByRole("button", { name: "Run routine tests", exact: true }),
     ).toBeEnabled()
     release()
     await expect(panel).toContainText("Model context:", { timeout: 30000 })
@@ -400,6 +407,7 @@ test("web context probe shows progress, measured bounds and cancellation", async
       path: test.info().outputPath("web-context-summary.png"),
       animations: "disabled",
     })
+    const compactContextWidth = (await panel.boundingBox())!.width
     await panel
       .getByRole("button", { name: "Test details", exact: true })
       .click()
@@ -409,10 +417,18 @@ test("web context probe shows progress, measured bounds and cancellation", async
       exact: true,
     })
     await expect(resultDetails).toBeVisible()
+    expect((await panel.boundingBox())!.width).toBeCloseTo(
+      compactContextWidth,
+      0,
+    )
     await panel
       .getByRole("button", { name: "Test details", exact: true })
       .click()
     await expect(resultDetails).toHaveCount(0)
+    expect((await panel.boundingBox())!.width).toBeCloseTo(
+      compactContextWidth,
+      0,
+    )
     await expect(panel).toContainText("Model context:")
     await panel
       .getByRole("button", { name: "Test details", exact: true })
@@ -464,6 +480,9 @@ test("web context probe shows progress, measured bounds and cancellation", async
     const restoredPanel = reopened.modal.getByRole("region", {
       name: "Model context test",
     })
+    await restoredPanel
+      .getByRole("button", { name: "Model context test", exact: true })
+      .click()
     await expect(restoredPanel).toContainText("Non-streaming")
     await expect(
       restoredPanel.getByRole("status", { name: "Context capacity result" }),
@@ -480,13 +499,164 @@ test("web context probe shows progress, measured bounds and cancellation", async
   }
 })
 
+test("keeps web probe rows compact when execution results expand", async ({
+  context,
+  page,
+  extensionDir,
+}) => {
+  const fixture = createDrawingServer({})
+  await new Promise<void>((resolve) =>
+    fixture.server.listen(0, "127.0.0.1", resolve),
+  )
+  try {
+    await stubLlmMetadataIndex(context)
+    await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.setViewportSize({ width: 1920, height: 1000 })
+    const { modal, contentHost } =
+      await openApiCheckModalFromCopiedCredentials(page)
+    await modal
+      .getByRole("textbox", { name: "Base URL", exact: true })
+      .fill(
+        `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`,
+      )
+    await expect(
+      modal.getByRole("combobox", { name: "Model ID", exact: true }),
+    ).not.toHaveAttribute("aria-busy", "true")
+    const models = modal.getByTestId(getWebAiApiCheckProbeTestId("models"))
+    const textProbe = modal.getByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+    await textProbe
+      .getByRole("button", { name: "Text generation", exact: true })
+      .click()
+    const before = (await textProbe.boundingBox())!
+    const modelsHeight = (await models.boundingBox())!.height
+    await textProbe.getByRole("button", { name: "Run", exact: true }).click()
+    await expect(
+      textProbe.getByRole("button", { name: "Execution result", exact: true }),
+    ).toHaveAttribute("aria-expanded", "true")
+    await captureVisualViews({
+      page,
+      ready: textProbe,
+      id: "web-expanded",
+      extensionDir,
+    })
+    const after = (await textProbe.boundingBox())!
+    expect(after.width).toBeCloseTo(before.width, 0)
+    expect(after.x).toBeCloseTo(before.x, 0)
+    expect((await models.boundingBox())!.height).toBeCloseTo(modelsHeight, 0)
+    await textProbe
+      .getByRole("button", { name: "Execution result", exact: true })
+      .click()
+    expect((await textProbe.boundingBox())!.width).toBeCloseTo(before.width, 0)
+    await modal.getByRole("combobox", { name: "Model ID", exact: true }).click()
+    await contentHost
+      .getByRole("option", { name: "gpt-quality", exact: true })
+      .click()
+    await textProbe
+      .getByRole("button", { name: "Text generation prompt", exact: true })
+      .click()
+    await textProbe
+      .getByRole("textbox", { name: "Text generation prompt", exact: true })
+      .fill("LongPrompt".repeat(80))
+    const worker = await getServiceWorker(context)
+    await expect
+      .poll(async () => {
+        const preferences = await getStoredUserPreferences(worker)
+        return (
+          preferences.verificationProbePrompts as
+            | Record<string, string>
+            | undefined
+        )?.["text-generation"]
+      })
+      .toBe("LongPrompt".repeat(80))
+    await textProbe
+      .getByRole("button", { name: "Text generation prompt", exact: true })
+      .click()
+    await textProbe
+      .getByRole("button", { name: /^(Run|Retry)$/, exact: true })
+      .click()
+    await expect.poll(() => fixture.requests.length).toBe(1)
+    expect(fixture.prompts[0]).toBe("LongPrompt".repeat(80))
+    await expect(
+      textProbe.locator('[data-slot="badge"]').filter({ hasText: "Fail" }),
+    ).toBeVisible()
+    await expect(textProbe).toContainText("Unexpected response text.")
+    await textProbe.getByRole("button", { name: "Input", exact: true }).click()
+    await expect(
+      textProbe.getByRole("button", { name: "Execution result", exact: true }),
+    ).toHaveAttribute("aria-expanded", "true")
+    for (const width of [1280, 900, 380]) {
+      await page.setViewportSize({ width, height: 800 })
+      const left = (await models.boundingBox())!
+      const right = (await textProbe.boundingBox())!
+      expect(right.x).toBeCloseTo(left.x, 0)
+      expect(right.y).toBeGreaterThanOrEqual(left.y + left.height)
+      expect(right.y - (left.y + left.height)).toBeLessThanOrEqual(24)
+      // Evidence stays in the detail pane; the test list does not move.
+      expect(right.width).toBeCloseTo(left.width, 0)
+      const scroll = modal.getByTestId(
+        WEB_AI_API_CHECK_TEST_IDS.scrollContainer,
+      )
+      expect(
+        await scroll.evaluate(
+          (element) => element.scrollWidth - element.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1)
+      await captureVisualViews({
+        page,
+        ready: textProbe,
+        id: `web-expanded-${width}`,
+        extensionDir,
+      })
+    }
+    await textProbe
+      .getByRole("button", { name: "Text generation prompt", exact: true })
+      .click()
+    await textProbe
+      .getByRole("button", { name: "Reset this prompt", exact: true })
+      .click()
+    await expect
+      .poll(async () => {
+        const preferences = await getStoredUserPreferences(worker)
+        return (
+          preferences.verificationProbePrompts as
+            | Record<string, string>
+            | undefined
+        )?.["text-generation"]
+      })
+      .toBeUndefined()
+    await textProbe.getByRole("button", { name: "Retry", exact: true }).click()
+    await expect(
+      textProbe.locator('[data-slot="badge"]').filter({ hasText: "Pass" }),
+    ).toBeVisible()
+    await expect(
+      textProbe.getByRole("region", { name: "Execution result", exact: true }),
+    ).toContainText("OK")
+  } finally {
+    fixture.server.closeAllConnections()
+    await new Promise<void>((resolve) => fixture.server.close(() => resolve()))
+  }
+})
+
 test("keeps page verification actions visible while scrolling at desktop and narrow widths", async ({
   context,
   page,
 }) => {
+  await stubLlmMetadataIndex(context)
   await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
   await page.emulateMedia({ reducedMotion: "reduce" })
   const { modal } = await openApiCheckModalFromCopiedCredentials(page)
+  const profileHelp = modal.getByRole("button", {
+    name: "Client simulation",
+    exact: true,
+  })
+  await profileHelp.click()
+  await expect(modal.getByRole("tooltip")).toContainText("Selecting a client")
+  await modal
+    .getByRole("combobox", { name: "Client simulation", exact: true })
+    .focus()
   const sourceEditor = modal.getByRole("textbox", {
     name: "Text to extract from",
     exact: true,
@@ -535,11 +705,8 @@ test("keeps page verification actions visible while scrolling at desktop and nar
       .boundingBox()
     expect(textProbe).not.toBeNull()
     if (width >= 1024) {
-      expect(Math.abs(textProbe!.y - models!.y)).toBeLessThanOrEqual(2)
-      expect(Math.abs(textProbe!.height - models!.height)).toBeLessThanOrEqual(
-        2,
-      )
-      expect(textProbe!.x).toBeGreaterThan(models!.x + models!.width)
+      expect(textProbe!.y).toBeGreaterThanOrEqual(models!.y + models!.height)
+      expect(textProbe!.x).toBeCloseTo(models!.x, 0)
       const controls = await Promise.all(
         ["API type", "Model ID", "Test mode", "Client simulation"].map((name) =>
           modal.getByRole("combobox", { name, exact: true }).boundingBox(),
@@ -550,7 +717,7 @@ test("keeps page verification actions visible while scrolling at desktop and nar
           Math.min(...controls.map((box) => box!.y)),
       ).toBeLessThanOrEqual(2)
     } else {
-      expect(textProbe!.y).toBeGreaterThan(models!.y + models!.height)
+      expect(textProbe!.y).toBeGreaterThanOrEqual(models!.y + models!.height)
     }
     const source = modal.getByRole("textbox", {
       name: "Text to extract from",
@@ -572,7 +739,7 @@ test("keeps page verification actions visible while scrolling at desktop and nar
     const drawingBounds = await modal
       .getByTestId("verification-tools-panel")
       .boundingBox()
-    expect(drawingBounds!.width).toBeGreaterThanOrEqual(config!.width - 2)
+    expect(drawingBounds!.width).toBeCloseTo(models!.width, 0)
     await modal.getByRole("dialog").screenshot({
       path: test.info().outputPath(`layout-${width}-drawing.png`),
       animations: "disabled",
@@ -763,19 +930,43 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   const header = modal.getByTestId("verification-header")
   await expect(
     header.getByRole("heading", {
-      name: "AI API Functionality Availability Test",
+      name: "API Testing",
       exact: true,
     }),
   ).toBeVisible()
-  await expect(header.getByRole("note")).toContainText(
-    "Tests apply to the current API",
+  await expect(header.getByRole("note")).toHaveCount(0)
+  const help = header.getByRole("button", {
+    name: "Test information",
+    exact: true,
+  })
+  await expect(help).toHaveAttribute(
+    "title",
+    "Results apply only to the API, model and request configuration used in this test.",
   )
+  await help.click()
+  const helpPanel = contentHost.getByRole("dialog", {
+    name: "Test information",
+    exact: true,
+  })
+  await expect(helpPanel).toHaveText(
+    "Results apply only to the API, model and request configuration used in this test.",
+  )
+  await expect(helpPanel).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
+  await captureVisualViews({
+    page,
+    ready: helpPanel,
+    id: "web-test-information",
+    extensionDir,
+  })
+  await help.press("Escape")
+  await expect(helpPanel).toHaveCount(0)
+  await expect(header).toBeVisible()
   await expect(header.getByTestId("verification-config")).toHaveCount(0)
   const selector = modal.getByRole("combobox", {
     name: "Client simulation",
     exact: true,
   })
-  await expect(selector).toContainText("None (ordinary request)")
+  await expect(selector).toContainText("Ordinary API")
   await selector.click()
   await contentHost
     .getByRole("option", { name: "Codex CLI", exact: true })
@@ -811,14 +1002,14 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   })
   const modelsProbe = modal.getByTestId(getWebAiApiCheckProbeTestId("models"))
   await expect(modelsProbe.getByText("Pending", { exact: true })).toBeVisible()
-  await modelsProbe.getByRole("button", { name: "Test", exact: true }).click()
+  await modelsProbe.getByRole("button", { name: "Run", exact: true }).click()
   await expect(modelsProbe).toContainText("Fetched 1 model.")
   const configBounds = await modal
     .getByTestId("verification-config")
     .boundingBox()
   await expect
     .poll(async () => (await modelsProbe.boundingBox())!.width)
-    .toBeGreaterThanOrEqual(configBounds!.width - 2)
+    .toBeLessThan(configBounds!.width * 0.6)
   const resultToggle = modelsProbe.getByRole("button", {
     name: "Execution result",
     exact: true,
@@ -899,7 +1090,7 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   })
   await selector.click()
   await contentHost
-    .getByRole("option", { name: "None (ordinary request)", exact: true })
+    .getByRole("option", { name: "Ordinary API", exact: true })
     .click()
   const apiType = modal.getByRole("combobox", { name: "API type", exact: true })
   await apiType.click()
@@ -909,12 +1100,15 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   const textProbe = modal.getByTestId(
     getWebAiApiCheckProbeTestId("text-generation"),
   )
+  await textProbe
+    .getByRole("button", { name: "Text generation", exact: true })
+    .click()
   for (const mode of ["Streaming", "Non-streaming"]) {
     await modal
       .getByRole("combobox", { name: "Test mode", exact: true })
       .click()
     await contentHost.getByRole("option", { name: mode, exact: true }).click()
-    await textProbe.getByRole("button", { name: /^(Test|Retry)$/ }).click()
+    await textProbe.getByRole("button", { name: /^(Run|Retry)$/ }).click()
     const badge = textProbe
       .locator('[data-slot="badge"]')
       .filter({ hasText: mode })
@@ -953,7 +1147,7 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   const searchProbe = modal.getByTestId(
     getWebAiApiCheckProbeTestId("web-search"),
   )
-  await searchProbe.getByRole("button", { name: "Test", exact: true }).click()
+  await searchProbe.getByRole("button", { name: "Run", exact: true }).click()
   await expect(
     searchProbe.getByText("Unsupported", { exact: true }),
   ).toBeVisible()
@@ -1256,9 +1450,9 @@ test("turns selected web API credentials into a verified profile and model catal
     popupPage.getByRole("heading", { name: "api-console.example.test" }),
   ).toBeVisible()
 
-  await popupPage.getByRole("button", { name: "Verify API" }).click()
+  await popupPage.getByRole("button", { name: "Test API" }).click()
   const verificationDialog = popupPage
-    .getByRole("heading", { name: "API Verification" })
+    .getByRole("heading", { name: "API Testing" })
     .locator("xpath=ancestor::*[.//button[normalize-space()='Close']][1]")
   const modelsProbe = popupPage.getByTestId(
     getApiCredentialProfileVerifyProbeTestId("models"),
@@ -1337,6 +1531,19 @@ test("opens the API check modal from the background context-menu message path", 
   await expect(modal.getByRole("textbox", { name: "Base URL" })).toHaveValue(
     API_BASE_URL,
   )
+
+  await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
+  await expect(modal).toBeHidden()
+  await sendApiCheckContextMenuTrigger(serviceWorker, {
+    pageUrl: TEST_PAGE_URL,
+    selectionText: "",
+  })
+  await expect(modal).toBeVisible()
+  // Existing URL history may prefill the address, but never the previous key.
+  await expect(modal.getByRole("textbox", { name: "Base URL" })).toHaveValue(
+    API_BASE_URL,
+  )
+  await expect(modal.getByLabel("API key", { exact: true })).toHaveValue("")
 })
 
 test("closes the API check modal with detected credentials in one click", async ({
@@ -1621,6 +1828,9 @@ test("recovers an interrupted webpage context request after its worker stops wit
       .getByRole("option", { name: "gpt-4o-mini", exact: true })
       .click()
     const panel = modal.getByRole("region", { name: "Model context test" })
+    await panel
+      .getByRole("button", { name: "Model context test", exact: true })
+      .click()
     const checkpointWorker = await getServiceWorker(context)
     const abandoned = Object.fromEntries(
       Array.from({ length: 20 }, (_, index) => [

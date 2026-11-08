@@ -139,6 +139,11 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       const panel = page.getByRole("region", {
         name: "Model context test",
       })
+      const selection = panel.getByRole("button", {
+        name: "Model context test",
+        exact: true,
+      })
+      await selection.click()
       await expect(panel).toContainText("Pending")
       await expect(
         panel.getByText("Tests the input context the model can accept", {
@@ -146,9 +151,7 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
         }),
       ).toBeVisible()
       await expect(panel.getByRole("spinbutton")).toHaveCount(0)
-      const titleBounds = await panel
-        .getByText("Model context test", { exact: true })
-        .boundingBox()
+      const titleBounds = await selection.boundingBox()
       const helpBounds = await panel
         .getByRole("button", { name: "About the model context test" })
         .boundingBox()
@@ -164,9 +167,10 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       expect(
         helpBounds!.x - titleBounds!.x - titleBounds!.width,
       ).toBeLessThanOrEqual(8)
-      expect(helpBounds!.x + helpBounds!.width).toBeLessThanOrEqual(
-        statusBounds!.x,
-      )
+      expect(
+        statusBounds!.x >= helpBounds!.x + helpBounds!.width ||
+          statusBounds!.y >= helpBounds!.y + helpBounds!.height,
+      ).toBe(true)
       await panel
         .getByRole("button", { name: "About the model context test" })
         .hover()
@@ -290,6 +294,7 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
           .getByRole("option", { name: "Non-streaming", exact: true })
           .click()
         await expect(panel).toContainText("Non-streaming")
+        await selection.click()
         await expect(
           panel.getByRole("status", { name: "Context capacity result" }),
         ).toContainText("Model context:")

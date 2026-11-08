@@ -36,6 +36,7 @@ export function useModelListVerificationWorkflow({
   const [verifyCliContext, setVerifyCliContext] = useState<{
     source: ModelManagementItemSource
     modelId: string
+    modelEnableGroups?: string[]
   } | null>(null)
 
   const [verifyProfileContext, setVerifyProfileContext] = useState<{
@@ -97,8 +98,9 @@ export function useModelListVerificationWorkflow({
   const handleVerifyCliSupport = (
     source: ModelManagementItemSource,
     modelId: string,
+    modelEnableGroups?: string[],
   ) => {
-    setVerifyCliContext({ source, modelId })
+    setVerifyCliContext({ source, modelId, modelEnableGroups })
   }
 
   const handleOpenModelKeyDialog = (

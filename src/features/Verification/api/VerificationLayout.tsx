@@ -1,9 +1,25 @@
 import { Info } from "lucide-react"
-import type { ReactNode } from "react"
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ExternalUrlText, Heading5 } from "~/components/ui"
+import {
+  ExternalUrlText,
+  Heading5,
+  Heading6,
+  IconButton,
+} from "~/components/ui"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
+import {
+  VERIFICATION_SOURCE_KINDS,
+  type VerificationSourceKind,
+} from "~/features/Verification/api/types"
+import { useVerificationWorkspaceHeight } from "~/features/Verification/api/useVerificationWorkspaceHeight"
 import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
+import { VerificationSelectionContext } from "~/features/Verification/api/VerificationSelectionContext"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
@@ -11,17 +27,24 @@ import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 export function VerificationSourceSubtitle({
   baseUrl,
   name,
+  sourceKind,
 }: {
   baseUrl: string
   name: string
+  sourceKind: VerificationSourceKind
 }) {
+  const { t } = useTranslation("aiApiVerification")
   return (
     <>
       <ExternalUrlText value={baseUrl} className="font-mono break-all" />
       <span aria-hidden="true" className="text-muted-foreground/50">
         ·
       </span>
-      <span className="text-foreground/80 font-medium">{name}</span>
+      <span className="text-foreground/80 min-w-0 font-medium break-words">
+        {sourceKind === VERIFICATION_SOURCE_KINDS.Account
+          ? t("verifyDialog.source.account", { name })
+          : t("verifyDialog.source.profile", { name })}
+      </span>
     </>
   )
 }
@@ -44,31 +67,122 @@ export function VerificationConfigSection({
   )
 }
 
-/** Owns test separators and spacing; the dialog body owns the final inset. */
-export function VerificationTestSection({ children }: { children: ReactNode }) {
+/** One persistent test tree: a scrolling list and detail pane, or inline details on narrow screens. */
+export function VerificationTestSection({
+  children,
+  tools,
+}: {
+  children: ReactNode
+  tools: ReactNode
+}) {
+  const { t } = useTranslation("aiApiVerification")
+  const [selectedId, select] = useState<string | null>(null)
+  const { frameRef, isWide } = useVerificationWorkspaceHeight(selectedId)
+  const items = useRef(new Set<string>())
+  const register = useCallback((id: string) => {
+    items.current.add(id)
+    select((current) => current ?? id)
+    return () => {
+      items.current.delete(id)
+      select((current) =>
+        current === id ? items.current.values().next().value ?? null : current,
+      )
+    }
+  }, [])
+  const selection = useMemo(
+    () => ({ selectedId, select, register, isWide }),
+    [selectedId, register, isWide],
+  )
   return (
-    <div className="border-border pt-density-6 border-t">
-      <div className="divide-border-subtle [&>*]:py-density-4 divide-y [&>:first-child]:pt-0 [&>:last-child]:pb-0">
-        {children}
+    <VerificationSelectionContext.Provider value={selection}>
+      <div
+        className="pt-density-1 sm:pt-density-2 @container"
+        data-testid="verification-workspace"
+      >
+        <div
+          ref={frameRef}
+          className="relative min-w-0 [--verification-list-width:21rem] [@container(min-width:52rem)]:h-(--verification-workspace-height)"
+        >
+          <div
+            aria-hidden="true"
+            className="bg-surface-subtle pointer-events-none absolute inset-y-0 right-0 left-[calc(var(--verification-list-width)+1.25rem)] hidden rounded-xl [@container(min-width:52rem)]:block"
+          />
+          <div
+            data-verification-list
+            className="overscroll-y-contain [@container(min-width:52rem)]:h-full [@container(min-width:52rem)]:w-(--verification-list-width) [@container(min-width:52rem)]:overflow-y-auto"
+          >
+            <div
+              data-verification-list-content
+              className="space-y-3 [@container(min-width:52rem)]:space-y-5"
+            >
+              <section
+                aria-label={t("verifyDialog.sections.routine")}
+                className="min-w-0 space-y-2"
+              >
+                <Heading6 className="text-muted-foreground px-2 text-xs font-medium [@container(min-width:52rem)]:px-3">
+                  {t("verifyDialog.sections.routine")}
+                </Heading6>
+                <div className="[@container(min-width:52rem)]:space-y-1">
+                  {children}
+                </div>
+              </section>
+              <section
+                aria-label={t("verifyDialog.sections.onDemand")}
+                className="min-w-0 space-y-2"
+              >
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-2 [@container(min-width:52rem)]:px-3">
+                  <Heading6 className="text-muted-foreground text-xs font-medium">
+                    {t("verifyDialog.sections.onDemand")}
+                  </Heading6>
+                  <span className="text-muted-foreground text-xs">
+                    {t("verifyDialog.sections.onDemandHint")}
+                  </span>
+                </div>
+                <div className="[@container(min-width:52rem)]:space-y-1">
+                  {tools}
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </VerificationSelectionContext.Provider>
   )
 }
 
-/** Explains the scope of a probe; this is context, not a warning state. */
-function VerificationTestNotice() {
+/** Native hover text and a keyboard/touch disclosure work in both document and shadow roots. */
+function VerificationTestNotice({
+  portalContainer,
+}: {
+  portalContainer?: HTMLElement
+}) {
   const { t } = useTranslation("aiApiVerification")
   return (
-    <p
-      role="note"
-      className="text-muted-foreground/80 flex items-center gap-1.5 text-xs leading-normal"
-    >
-      <Info
-        className="text-muted-foreground/70 size-3.5 shrink-0"
-        aria-hidden="true"
-      />
-      <span>{t("verifyDialog.warning")}</span>
-    </p>
+    <Popover>
+      <PopoverTrigger asChild>
+        <IconButton
+          type="button"
+          variant="ghost"
+          size="none"
+          className="text-muted-foreground size-6 shrink-0"
+          aria-label={t("verifyDialog.about")}
+          title={t("verifyDialog.warning")}
+          disableAutoTooltip
+        >
+          <Info className="size-3.5" aria-hidden="true" />
+        </IconButton>
+      </PopoverTrigger>
+      <PopoverContent
+        container={portalContainer}
+        aria-label={t("verifyDialog.about")}
+        align="start"
+        className="w-72 max-w-[calc(100vw-2rem)] p-3 text-xs leading-relaxed"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => event.stopPropagation()}
+      >
+        {t("verifyDialog.warning")}
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -78,6 +192,7 @@ export type VerificationDialogHeaderProps = {
   historySummary?: ApiVerificationHistorySummary | null
   summary?: ReactNode
   children?: ReactNode
+  portalContainer?: HTMLElement
 }
 
 /** Keeps test interpretation and existing history with the dialog identity. */
@@ -87,6 +202,7 @@ export function VerificationDialogHeader({
   historySummary,
   summary,
   children,
+  portalContainer,
 }: VerificationDialogHeaderProps) {
   const { t } = useTranslation("aiApiVerification")
 
@@ -117,6 +233,7 @@ export function VerificationDialogHeader({
             ) : (
               title
             )}
+            <VerificationTestNotice portalContainer={portalContainer} />
             {resolvedSummary ? (
               <div className="flex shrink-0 items-center">
                 {resolvedSummary}
@@ -148,12 +265,12 @@ export function VerificationDialogHeader({
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0 flex-1">{children}</div>
+          <VerificationTestNotice portalContainer={portalContainer} />
           {resolvedSummary ? (
             <div className="flex shrink-0 items-center">{resolvedSummary}</div>
           ) : null}
         </div>
       )}
-      <VerificationTestNotice />
     </div>
   )
 }

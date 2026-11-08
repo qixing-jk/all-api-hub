@@ -1,10 +1,12 @@
 {
   "verifyDialog": {
+    "about": "Thông tin kiểm tra",
     "actions": {
       "close": "Đóng",
       "manageModelKey": "Mở thiết lập khóa cho mô hình",
       "retry": "Thử lại",
-      "run": "Bắt đầu xác minh",
+      "runAll": "Chạy kiểm tra thông thường",
+      "runAllHint": "Chỉ chạy các kiểm tra thông thường. Hãy bắt đầu kiểm tra vẽ và ngữ cảnh mô hình riêng.",
       "running": "Đang chạy...",
       "runOne": "Chạy",
       "stop": "Dừng",
@@ -29,9 +31,86 @@
     "generatedVideoPreview": "Xem trước video đã tạo",
     "history": {
       "clear": "Xóa lịch sử",
-      "lastVerified": "Lần xác minh gần nhất"
+      "lastVerified": "Lần kiểm tra gần nhất"
     },
-    "idleHint": "Vui lòng chọn khóa để bắt đầu xác minh; thăm dò liên quan đến mô hình cần điền ID mô hình.",
+    "intro": {
+      "flow": "Các bước kiểm tra",
+      "probes": {
+        "decision": "Gửi yêu cầu thử và kiểm tra xem mô hình quyết định có trả về kết quả hợp lệ hay không.",
+        "embedding": "Gửi văn bản mẫu và kiểm tra vectơ trả về cùng số chiều của nó.",
+        "image-generation": "Gửi lời nhắc tạo ảnh, kiểm tra phản hồi và xem trước ảnh được tạo.",
+        "models": "Kiểm tra xem API có trả về danh sách mô hình hay không, xem tên và số lượng mô hình, rồi lấy mô hình gợi ý cho các bài kiểm tra tiếp theo.",
+        "rerank": "Gửi truy vấn và các tài liệu ứng viên, rồi kiểm tra thứ tự mức độ liên quan.",
+        "structured-output": "Yêu cầu mô hình trả về dữ liệu có cấu trúc và kiểm tra định dạng của kết quả.",
+        "text-generation": "Gửi lời nhắc, kiểm tra khả năng tạo văn bản và xem nội dung trả về.",
+        "tool-calling": "Yêu cầu mô hình chọn công cụ và cung cấp tham số, rồi kiểm tra lệnh gọi công cụ.",
+        "video-generation": "Gửi tác vụ tạo video, đợi trạng thái và xem video được tạo.",
+        "web-search": "Kiểm tra xem API có thể tìm kiếm trên web hay không, rồi xem kết quả và trích dẫn."
+      },
+      "startHint": "Chọn <run>Chạy</run> để bắt đầu kiểm tra này.",
+      "steps": {
+        "context-capacity": {
+          "input": "Tạo văn bản dài",
+          "output": "Ghi nhận giới hạn",
+          "process": "Thử nhiều lượt"
+        },
+        "decision": {
+          "input": "Gửi trạng thái",
+          "output": "Kiểm tra kết quả",
+          "process": "Nhận quyết định"
+        },
+        "embedding": {
+          "input": "Văn bản mẫu",
+          "output": "Kiểm tra số chiều",
+          "process": "Nhận vectơ"
+        },
+        "image-generation": {
+          "input": "Gửi lời nhắc",
+          "output": "Xem trước ảnh",
+          "process": "Nhận hình ảnh"
+        },
+        "models": {
+          "input": "Lấy danh sách",
+          "output": "Gợi ý mô hình",
+          "process": "Kiểm tra mô hình"
+        },
+        "pelican": {
+          "input": "Mô tả cảnh",
+          "output": "Đánh giá hình vẽ",
+          "process": "Tạo SVG"
+        },
+        "rerank": {
+          "input": "Truy vấn và tài liệu",
+          "output": "Kiểm tra mục trả về",
+          "process": "Yêu cầu xếp hạng lại"
+        },
+        "structured-output": {
+          "input": "Chỉ định cấu trúc",
+          "output": "Kiểm tra định dạng",
+          "process": "Tạo JSON"
+        },
+        "text-generation": {
+          "input": "Gửi lời nhắc",
+          "output": "Kiểm tra phản hồi",
+          "process": "Nhận văn bản"
+        },
+        "tool-calling": {
+          "input": "Định nghĩa công cụ",
+          "output": "Kiểm tra tham số",
+          "process": "Yêu cầu gọi"
+        },
+        "video-generation": {
+          "input": "Gửi tác vụ video",
+          "output": "Xem trước video",
+          "process": "Kiểm tra trạng thái"
+        },
+        "web-search": {
+          "input": "Bắt đầu tìm kiếm",
+          "output": "Xem trích dẫn",
+          "process": "Kiểm tra bằng chứng"
+        }
+      }
+    },
     "loadingRuntimeKeysHint": "Đang tải khóa...",
     "mediaPreviewUnavailable": "Không thể tải bản xem trước.",
     "meta": {
@@ -41,7 +120,7 @@
       "mode": "Chế độ kiểm tra",
       "model": "Mô hình",
       "modelPlaceholder": "Nhập ID mô hình",
-      "requestProfile": "Mô phỏng ứng dụng",
+      "requestProfile": "Mô phỏng ứng dụng khách",
       "runtimeKey": "Khóa",
       "runtimeKeyIncompatible": "Không dùng được cho mô hình này",
       "runtimeKeyPlaceholder": "Chọn khóa"
@@ -56,7 +135,6 @@
       "streaming": "Truyền luồng"
     },
     "noCompatibleRuntimeKeyHint": "Không có khóa nào dùng được cho nhóm của mô hình này. Hãy tạo hoặc chọn khóa thuộc nhóm khả dụng trong Quản lý khóa.",
-    "notRunYet": "Chưa chạy",
     "openGeneratedMedia": "Mở nội dung đã tạo",
     "probes": {
       "decision": "Mô hình quyết định",
@@ -73,15 +151,28 @@
     "requestProfiles": {
       "claude": "Claude Code",
       "codex": "Codex CLI",
-      "default": "Không (yêu cầu thông thường)",
+      "default": "API thông thường",
       "enhancedBadge": "Nâng cao",
+      "enhancedCostHint": "Có thể tăng lượng đầu vào sử dụng",
       "enhancedHint": "Thêm lời nhắc nhận dạng, tiêu đề SDK, bộ nhớ đệm và đặc điểm phiên đã biết. Có thể tăng mức sử dụng đầu vào; việc chấp nhận tùy thuộc trang web.",
       "enhancedLabel": "Mô phỏng CLI nâng cao",
       "gemini": "Gemini CLI",
-      "hint": "Mô phỏng yêu cầu của ứng dụng và chuyển sang giao thức API tương ứng. Giữ nguyên bài kiểm tra đã chọn."
+      "hint": "Khi chọn ứng dụng khách, giao thức mặc định của ứng dụng đó sẽ được thiết lập. Bạn vẫn có thể thay đổi giao thức thủ công. Các bài kiểm tra mô phỏng yêu cầu API của ứng dụng khách mà không khởi chạy CLI trên thiết bị của bạn.",
+      "protocolMismatch": "Khác với giao thức mặc định của ứng dụng ({{apiType}}); có thể không tương thích.",
+      "shortcutHint": "Đã chọn {{client}}. Bạn có thể chạy kiểm tra hoặc chọn ứng dụng khách khác.",
+      "shortcutTooltip": "Kiểm tra khả năng hỗ trợ ứng dụng khách CLI của API này"
     },
     "requiresModelId": "Vui lòng nhập ID mô hình trước khi chạy bài kiểm tra này.",
+    "sections": {
+      "onDemand": "Kiểm tra theo yêu cầu",
+      "onDemandHint": "Chạy riêng lẻ",
+      "routine": "Kiểm tra thông thường"
+    },
     "selectedRuntimeKeyIncompatibleHint": "Khóa đang chọn không dùng được cho nhóm của mô hình này. Hãy chọn khóa tương thích trước khi xác minh.",
+    "source": {
+      "account": "Tài khoản: {{name}}",
+      "profile": "Thông tin xác thực: {{name}}"
+    },
     "status": {
       "emptyResponse": "Không có nội dung trả lời",
       "fail": "Thất bại",
@@ -92,7 +183,7 @@
       "stopped": "Đã dừng",
       "timeout": "Yêu cầu hết thời gian",
       "unsupported": "Không hỗ trợ",
-      "unverified": "Chưa xác minh"
+      "unverified": "Chưa kiểm tra"
     },
     "summaries": {
       "decisionSucceeded": "Kiểm tra mô hình quyết định thành công.",
@@ -140,7 +231,7 @@
       "webSearchUnsupportedAnthropic": "API Anthropic không hỗ trợ thăm dò tìm kiếm web.",
       "webSearchUnsupportedForApiType": "Loại API hiện tại không hỗ trợ thăm dò tìm kiếm web."
     },
-    "title": "Xác minh API",
+    "title": "Kiểm tra API",
     "tools": {
       "agent": {
         "calls": "Lịch sử gọi công cụ",
@@ -197,7 +288,6 @@
       "errors": {
         "unexpected": "Yêu cầu thất bại: {{message}}"
       },
-      "manualBadge": "Chạy khi cần",
       "pelican": {
         "analysis": "{{shapes}} hình · {{wheels}} hình tròn/elip · viewBox {{viewBox}}",
         "description": "Yêu cầu mô hình vẽ SVG một con bồ nông đi xe đạp để bạn so sánh trực tiếp. Việc đánh giá vẫn do người xem.",
@@ -217,14 +307,15 @@
       },
       "prompts": {
         "editorLabel": "Lời nhắc cho {{probe}}",
+        "label": "Lời nhắc",
         "resetOne": "Khôi phục mục này",
         "saveFailed": "Không lưu được lời nhắc: {{message}}",
-        "sharedHint": "Lời nhắc đã lưu dùng chung cho mọi lối vào xác minh."
+        "sharedHint": "Lời nhắc đã lưu dùng chung cho mọi lối vào kiểm tra."
       },
       "stop": "Dừng",
       "stopped": "Đã dừng trước khi hoàn tất; không lưu kết quả."
     },
     "unsupportedProbeForApiType": "Loại API hiện tại không hỗ trợ thăm dò {{probe}}.",
-    "warning": "Bài kiểm tra áp dụng cho API, mô hình và cấu hình yêu cầu hiện tại. Thành công không đảm bảo tương thích hoàn toàn; hãy xem kết quả thực thi khi kiểm tra thất bại."
+    "warning": "Kết quả chỉ áp dụng cho API, mô hình và cấu hình yêu cầu được sử dụng trong lần kiểm tra này."
   }
 }

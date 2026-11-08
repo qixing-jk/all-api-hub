@@ -295,7 +295,7 @@ test("filters options-page profiles and copies reusable credentials", async ({
     .click()
 
   await expect(page.getByText("Pass", { exact: true })).toBeVisible()
-  await expect(page.getByText("Unverified", { exact: true })).toHaveCount(0)
+  await expect(page.getByText("Not tested", { exact: true })).toHaveCount(0)
 
   const endpointBaseUrl = page.getByTestId(
     API_CREDENTIAL_PROFILES_TEST_IDS.endpointBaseUrl,
@@ -1005,6 +1005,7 @@ test("aligns the credential verification meta fields across the paired rows", as
   extensionDir,
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
   const modelRequestUrls: string[] = []
   await context.route(
     (url) =>
@@ -1035,6 +1036,11 @@ test("aligns the credential verification meta fields across the paired rows", as
   ).toBeVisible()
 
   const config = page.getByTestId("verification-config")
+  const shortcutHint = page.getByText(
+    "Claude Code is selected. Run a test or choose another client.",
+    { exact: true },
+  )
+  await expect(shortcutHint).toHaveCount(0)
   const apiTypeLabel = config.getByText("API type", { exact: true })
   const modelLabel = config.getByText("Model", { exact: true })
   const modeLabel = config.getByText("Test mode", { exact: true })
@@ -1089,6 +1095,7 @@ test("aligns the credential verification meta fields across the paired rows", as
   })
   await expect(enhanced).not.toBeChecked()
   await enhanced.click()
+  await expect(shortcutHint).toHaveCount(0)
   await captureVisualViews({
     page,
     ready: page.getByRole("dialog"),
@@ -1098,9 +1105,18 @@ test("aligns the credential verification meta fields across the paired rows", as
   await page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyDialogCloseButton)
     .click()
-  await page
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyCliSupportButton)
-    .click()
+  const cliShortcut = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.verifyCliSupportButton,
+  )
+  await cliShortcut.hover()
+  await expect(
+    page.getByRole("tooltip", {
+      name: "Test this API’s support for CLI clients",
+      exact: true,
+    }),
+  ).toBeVisible()
+  await cliShortcut.click()
+  await expect(shortcutHint).toBeVisible()
   const cliEnhanced = page.getByRole("switch", {
     name: "Enhanced CLI simulation",
     exact: true,
@@ -1114,6 +1130,25 @@ test("aligns the credential verification meta fields across the paired rows", as
     extensionDir,
     id: "verification-enhanced-cli",
   })
+  await selector.click()
+  await page.getByRole("option", { name: "Codex CLI", exact: true }).click()
+  await expect(shortcutHint).toHaveCount(0)
+  await selector.click()
+  await page.getByRole("option", { name: "Claude Code", exact: true }).click()
+  await expect(shortcutHint).toHaveCount(0)
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyDialogCloseButton)
+    .click()
+  await cliShortcut.click()
+  await expect(shortcutHint).toBeVisible()
+  await apiTypeTrigger.click()
+  await page
+    .getByRole("option", { name: "OpenAI-compatible", exact: true })
+    .click()
+  await expect(shortcutHint).toHaveCount(0)
+  await apiTypeTrigger.click()
+  await page.getByRole("option", { name: "Anthropic", exact: true }).click()
+  await expect(shortcutHint).toHaveCount(0)
 })
 
 test("verifies embedding and image models after changing the selected modality", async ({
@@ -1252,7 +1287,9 @@ test("verifies embedding and image models after changing the selected modality",
   })
   expect(requests[1]).not.toHaveProperty("size")
   expect(requests[1]).not.toHaveProperty("quality")
-  await imageProbe.getByRole("button", { name: "Output", exact: true }).click()
+  await imageProbe
+    .getByRole("button", { name: "Image generation", exact: true })
+    .click()
   await expect(
     imageProbe.getByRole("img", { name: "Generated image preview" }),
   ).toBeVisible()
@@ -1350,7 +1387,9 @@ test("previews Base64 images and plays completed video tasks", async ({
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
     .click()
   await expect(imageProbe).toContainText("Image generation succeeded")
-  await imageProbe.getByRole("button", { name: "Output", exact: true }).click()
+  await imageProbe
+    .getByRole("button", { name: "Image generation", exact: true })
+    .click()
   const image = imageProbe.getByRole("img", { name: "Generated image preview" })
   await expect(image).toHaveAttribute(
     "src",
@@ -1385,12 +1424,15 @@ test("previews Base64 images and plays completed video tasks", async ({
   await expect(videoProbe).toContainText("Video generated successfully.")
   expect(videoPosts).toBe(1)
   expect(videoPolls).toBe(2)
-  await videoProbe.getByRole("button", { name: "Output", exact: true }).click()
+  await videoProbe
+    .getByRole("button", { name: "Video task", exact: true })
+    .click()
   const player = videoProbe.getByLabel("Generated video preview")
   await expect(player).toBeVisible()
   await expect(player).toHaveAttribute("controls", "")
   await player.evaluate(async (element: HTMLVideoElement) => {
     element.muted = true
+    element.loop = true
     await element.play()
   })
   await expect
@@ -1401,7 +1443,17 @@ test("previews Base64 images and plays completed video tasks", async ({
       ),
     )
     .toBe(true)
-  await player.evaluate((element: HTMLVideoElement) => element.pause())
+  await page.getByRole("button", { name: "Model list", exact: true }).click()
+  await expect
+    .poll(() => player.evaluate((element: HTMLVideoElement) => element.paused))
+    .toBe(true)
+  await videoProbe
+    .getByRole("button", { name: "Video task", exact: true })
+    .click()
+  await expect(player).toBeVisible()
+  expect(
+    await player.evaluate((element: HTMLVideoElement) => element.paused),
+  ).toBe(true)
   await expect(
     videoProbe.getByRole("link", { name: "Open generated media" }),
   ).toHaveAttribute("href", "https://media-api.example.com/result.webm")

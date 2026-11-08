@@ -17,6 +17,160 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { createDrawingServer } from "~~/e2e/utils/verificationDrawingServer"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+
+test("CLI enhancement stays below the fields and temporary protocol is a field note", async ({
+  context,
+  extensionId,
+  extensionDir,
+  page,
+}) => {
+  const fixture = createDrawingServer()
+  await new Promise<void>((resolve) =>
+    fixture.server.listen(0, "127.0.0.1", resolve),
+  )
+  try {
+    await stubLlmMetadataIndex(context)
+    await forceExtensionLanguage(page, "zh-CN")
+    await seedApiCredentialProfiles(await getServiceWorker(context), [
+      createStoredApiCredentialProfile({
+        id: "cli-layout",
+        name: "CLI 模拟布局",
+        apiType: "openai-compatible",
+        baseUrl: `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`,
+        apiKey: "synthetic-key",
+        telemetryConfig: { mode: "disabled" },
+      }),
+    ])
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+    )
+    await waitForExtensionRoot(page)
+    await page.getByTestId(IDS.verifyButton).click()
+    await expect(page.getByTestId(IDS.verifyModelId)).toContainText(
+      "gpt-quality",
+    )
+    const selector = page.getByRole("combobox", {
+      name: "客户端模拟",
+      exact: true,
+    })
+    await selector.click()
+    await page.getByRole("option", { name: "Codex CLI", exact: true }).click()
+    const protocol = page.getByRole("combobox", {
+      name: "接口类型",
+      exact: true,
+    })
+    await protocol.click()
+    await page.getByRole("option", { name: "Anthropic", exact: true }).click()
+    const enhanced = page.getByRole("switch", {
+      name: "增强 CLI 模拟",
+      exact: true,
+    })
+    await expect(enhanced).not.toBeChecked()
+    const config = page.getByTestId("verification-config")
+    await captureVisualViews({
+      page,
+      ready: config,
+      id: "cli-settings",
+      extensionDir,
+    })
+    const fieldBoxes = await Promise.all(
+      [
+        selector,
+        protocol,
+        page.getByTestId(IDS.verifyModelId),
+        page.getByRole("combobox", { name: "测试方式", exact: true }),
+      ].map((field) => field.boundingBox()),
+    )
+    expect(
+      Math.max(...fieldBoxes.map((box) => box!.y)) -
+        Math.min(...fieldBoxes.map((box) => box!.y)),
+    ).toBeLessThanOrEqual(2)
+    const help = page.getByRole("button", { name: "客户端模拟", exact: true })
+    await expect(help).toHaveAccessibleDescription(
+      "选择客户端会匹配其默认协议，之后仍可手动修改协议。模拟对应客户端的 API 请求，不会启动本机 CLI。",
+    )
+    await help.focus()
+    await expect(page.getByRole("tooltip")).toContainText(
+      "选择客户端会匹配其默认协议",
+    )
+    await selector.focus()
+    await expect(config.getByRole("alert")).toContainText(
+      "与客户端默认协议（OpenAI）不同，可能不兼容。",
+    )
+    await expect(
+      page.getByText(
+        "点击「运行」开始验证；模型相关探测需要填写模型 ID。会在可能时自动尝试获取模型建议（也可手动输入）。",
+        { exact: true },
+      ),
+    ).toHaveCount(0)
+    const runAll = page.getByRole("button", {
+      name: "运行常规测试",
+      exact: true,
+    })
+    await expect(runAll).toHaveAccessibleDescription(
+      "仅运行常规测试；绘图和模型上下文测试需单独启动。",
+    )
+    await runAll.focus()
+    await expect(page.getByRole("tooltip")).toContainText(
+      "绘图和模型上下文测试需单独启动",
+    )
+    await selector.focus()
+    const mode = (await page
+      .getByRole("combobox", { name: "测试方式", exact: true })
+      .boundingBox())!
+    expect((await enhanced.boundingBox())!.y).toBeGreaterThanOrEqual(
+      mode.y + mode.height,
+    )
+    await expect(protocol).toHaveAccessibleDescription(
+      "仅用于本次测试，已保存类型仍为 OpenAI 兼容。",
+    )
+    await expect(
+      page.getByRole("alert").filter({ hasText: "临时 API 类型" }),
+    ).toHaveCount(0)
+    await enhanced.click()
+    await expect(enhanced).toBeChecked()
+    await page.setViewportSize({ width: 380, height: 800 })
+    const enhancementHelp = page.getByRole("button", {
+      name: "增强 CLI 模拟",
+      exact: true,
+    })
+    await enhancementHelp.click()
+    await expect(page.getByRole("tooltip")).toContainText("SDK 请求头")
+    await expect(enhanced).toBeChecked()
+    await captureVisualViews({
+      page,
+      ready: enhancementHelp,
+      id: "cli-enhancement-help",
+      extensionDir,
+    })
+    await selector.focus()
+    expect(
+      await config.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1)
+    await captureVisualViews({
+      page,
+      ready: enhanced,
+      id: "cli-settings-narrow",
+      extensionDir,
+    })
+    await protocol.click()
+    await page.getByRole("option", { name: "OpenAI 兼容", exact: true }).click()
+    await expect(protocol).not.toHaveAttribute("aria-describedby")
+    await selector.click()
+    await page.getByRole("option", { name: "普通 API", exact: true }).click()
+    await expect(enhanced).toHaveCount(0)
+    await expect(config.getByRole("alert")).toHaveCount(0)
+  } finally {
+    fixture.server.closeAllConnections()
+    await new Promise<void>((resolve) => fixture.server.close(() => resolve()))
+  }
+})
 
 test("ordinary probes can opt into actual CLI headers and return to ordinary requests", async ({
   context,
@@ -166,7 +320,7 @@ test("ordinary probes can opt into actual CLI headers and return to ordinary req
     await expect(probe).toContainText("Codex CLI · Enhanced")
     await selector.click()
     await page
-      .getByRole("option", { name: "None (ordinary request)", exact: true })
+      .getByRole("option", { name: "Ordinary API", exact: true })
       .click()
     await run.click()
     await expect(probe).toContainText("Forbidden (403)")

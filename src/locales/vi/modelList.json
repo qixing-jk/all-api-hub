@@ -32,8 +32,8 @@
     "keyForModel": "Khóa tương ứng với mô hình",
     "openSelectedAccountKeys": "Quản lý khóa tài khoản",
     "openSite": "Mở trang",
-    "verifyApi": "Xác minh API",
-    "verifyCliSupport": "Xác minh khả năng tương thích CLI"
+    "verifyApi": "Kiểm tra API",
+    "verifyCliSupport": "Kiểm tra khả năng tương thích CLI"
   },
   "allAccountGroups": "Tất cả nhóm",
   "allAccounts": "Tất cả tài khoản",

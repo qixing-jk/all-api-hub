@@ -79,7 +79,7 @@ export async function verifyOpenApiCredentialProfileModelsProbeDialog(
       .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyDialogCloseButton)
       .click()
     await expect(
-      params.page.getByRole("heading", { name: "API Verification" }),
+      params.page.getByRole("heading", { name: "API Testing" }),
     ).toHaveCount(0)
   }
 }

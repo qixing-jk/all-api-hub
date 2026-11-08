@@ -12,9 +12,12 @@
     "message": "Abrir o All API Hub na janela pop-up"
   },
   "context_menu_redeem_selection": {
-    "message": "Resgatar a seleção com o Assistente de Resgate"
+    "message": "Resgatar os códigos selecionados"
   },
   "context_menu_ai_api_check": {
-    "message": "Testar rapidamente a disponibilidade funcional das APIs de IA"
+    "message": "Testar a API de IA selecionada"
+  },
+  "context_menu_ai_api_check_page": {
+    "message": "Abrir painel de testes de API de IA"
   }
 }

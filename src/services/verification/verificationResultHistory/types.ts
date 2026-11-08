@@ -117,6 +117,13 @@ export type ApiVerificationHistoryConfig = {
   lastOrphanSweepAt: number
 }
 
+/** Persisted diagnostic values; keep these literals stable across readers and writers. */
+export const CONTEXT_CAPACITY_INCONCLUSIVE_REASONS = {
+  Timeout: "timeout",
+  EmptyResponse: "empty-response",
+  Interrupted: "interrupted",
+} as const
+
 /** Latest capacity observation; never contains credentials, prompts or responses. */
 export type ContextCapacitySummary = {
   latencyMs?: number
@@ -134,7 +141,7 @@ export type ContextCapacitySummary = {
   declaredContext?: number
   upperBoundTokens?: number
   reason: ContextCapacityReason
-  inconclusiveReason?: "timeout" | "empty-response" | "interrupted"
+  inconclusiveReason?: (typeof CONTEXT_CAPACITY_INCONCLUSIVE_REASONS)[keyof typeof CONTEXT_CAPACITY_INCONCLUSIVE_REASONS]
   requests: number
   outputLimited: boolean
 }

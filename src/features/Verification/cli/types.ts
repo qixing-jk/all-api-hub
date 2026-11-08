@@ -1,7 +1,7 @@
-import type {
-  CliSupportResult,
-  CliToolId,
-} from "~/services/verification/cliSupportVerification"
+import {
+  type API_VERIFICATION_REQUEST_PROFILES,
+  type ApiVerificationRequestProfile,
+} from "~/services/verification/aiApiVerification"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
@@ -11,25 +11,20 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 type VerifyCliSupportDialogBaseProps = {
   isOpen: boolean
   onClose: () => void
+  initialClient?: Exclude<
+    ApiVerificationRequestProfile,
+    typeof API_VERIFICATION_REQUEST_PROFILES.Default
+  >
   initialModelId?: string
 }
 
 export type VerifyCliSupportDialogProps =
   | (VerifyCliSupportDialogBaseProps & {
       account: DisplaySiteData
+      modelEnableGroups?: string[]
       profile?: never
     })
   | (VerifyCliSupportDialogBaseProps & {
       profile: ApiCredentialProfile
       account?: never
     })
-
-/**
- * Local UI state for a single tool row.
- */
-export type ToolItemState = {
-  toolId: CliToolId
-  isRunning: boolean
-  attempts: number
-  result: CliSupportResult | null
-}

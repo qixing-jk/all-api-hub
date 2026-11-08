@@ -1,4 +1,4 @@
-# Web AI API Sniffing and Verification
+# Web API Testing
 
 > Sniff `Base URL` and `API Key` on webpages and verify them instantly. Supports right-click checks and automatic detection with a configurable website scope.
 
@@ -6,14 +6,14 @@
 
 When browsing AI communities (e.g., Linux.do), GitHub Issues, or technical documentation, you often encounter shared test keys. The traditional approach is to copy the `Base URL`, copy the `Key`, open the extension, fill in the configuration, and click verify.
 
-The **Web AI API Sniffing** feature simplifies this process into:
-- Select text → Right-click "Check AI API" → Test directly.
+The **Web API Testing** feature simplifies this process into:
+- Select text → Right-click "Test selected AI API" → Choose a test in the panel.
 - Or: Select or copy content containing credentials to receive a confirmation prompt.
 
 ## Core Capabilities
 
 ### 1. Right-Click Menu Check (Context Menu)
-Select text containing a `Base URL` or `API Key` on any webpage, right-click, and select **"Check AI API"**.
+Select text containing a `Base URL` or `API Key` on any webpage, right-click, and select **"Test selected AI API"**. With nothing selected, right-click a blank part of the page and choose **"Open AI API test panel"** to enter the details in the panel.
 The extension will attempt to extract valid interface information from the selected text (or clipboard) and pop up a test overlay within the current page.
 
 ![Test dialog opened over the page](../static/image/en/web-ai-api-check-page.png)
@@ -44,10 +44,10 @@ Run the drawing test in the same in-page panel to generate and preview an SVG of
 
 ## Configuration and Customization
 
-Navigate to **`Settings → Basic Settings → Web AI API Check`** to configure the following:
+Navigate to **`Settings → Basic Settings → Web API Testing`** to configure the following:
 
 ### 1. Basic Switches
-- **Right-Click Menu**: Whether to show "Check AI API" in the browser's right-click menu.
+- **Right-Click Menu**: Whether to show "Test selected AI API" and "Open AI API test panel". The browser shows the matching entry depending on whether content is selected.
 - **Auto Detect**: Whether to detect selected or copied content on participating websites.
 
 ### 2. Website Black/White Lists
@@ -70,10 +70,10 @@ Click **Stop auto-detect on this website** in the notice to save a disabled choi
 ## Privacy and Security
 
 - **Local Extraction**: The sniffing and extraction process is executed entirely locally in your browser.
-- **Request timing**: The selection or copy notice does not make API verification requests. After you confirm opening the panel with a complete URL and key, the panel may fetch models. Tests send requests to the configured `Base URL`.
+- **Request timing**: The selection or copy notice does not make API testing requests. After you confirm opening the panel with a complete URL and key, the panel may fetch models. Tests send requests to the configured `Base URL`.
 - **Credential storage**: Extracted keys are persisted only when you choose to save them to the API Credential Library.
 
 ## Related Documents
 
 - [API Credential Library](./api-credential-profiles.md): Manage saved sniffing results.
-- [Interface Verification and Health Status](./auto-refresh.md): Learn how the extension verifies interfaces.
+- [API Testing and Health Status](./auto-refresh.md): Learn how the extension verifies interfaces.

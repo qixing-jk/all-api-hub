@@ -102,6 +102,7 @@ interface ModelItemProps {
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
     modelId: string,
+    modelEnableGroups?: string[],
   ) => void
   onOpenModelKeyDialog?: (
     account: Extract<
@@ -326,9 +327,12 @@ export default function ModelItem(props: ModelItemProps) {
         }
       : undefined
 
-  const modelActionEnableGroups = hasGroupSemantics
-    ? activeGroupContext.actionGroups
-    : undefined
+  // Unknown user access is distinct from a known, explicitly empty scope.
+  const modelActionEnableGroups =
+    hasGroupSemantics &&
+    groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.UNKNOWN
+      ? activeGroupContext.actionGroups
+      : undefined
 
   const sourceBadge = sourceLabel.label ? (
     handleFilterAccount ? (
@@ -470,7 +474,12 @@ export default function ModelItem(props: ModelItemProps) {
             onVerifyCliSupport={
               effectiveCapabilities.supportsCliVerification &&
               onVerifyCliSupport
-                ? () => onVerifyCliSupport(source, model.model_name)
+                ? () =>
+                    onVerifyCliSupport(
+                      source,
+                      model.model_name,
+                      modelActionEnableGroups,
+                    )
                 : undefined
             }
             trailingContent={

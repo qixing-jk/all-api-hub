@@ -21,13 +21,21 @@ import {
 export function VerificationPromptEditor({
   controller,
   probeId,
+  autoOpen = false,
 }: {
   controller: VerificationToolsController
   probeId: VerificationPromptId
+  autoOpen?: boolean
 }) {
   const { t } = useTranslation("aiApiVerification")
   const editorId = useId()
-  const [isOpen, setIsOpen] = useState(false)
+  const editorLabel = t("verifyDialog.tools.prompts.editorLabel", {
+    probe: getApiVerificationProbeLabel(t, probeId),
+  })
+  // Automatic presentation is only a default. A deliberate choice or an active
+  // edit survives result arrivals, selection changes and window resizing.
+  const [manualOpen, setManualOpen] = useState<boolean>()
+  const isOpen = manualOpen ?? autoOpen
   const defaultPrompt =
     controller.getDefaultPrompt(probeId) ??
     (probeId === PELICAN_PROMPT_ID ? PELICAN_TEST_PROMPT : "")
@@ -40,7 +48,7 @@ export function VerificationPromptEditor({
   return (
     <Collapsible
       open={isOpen}
-      onOpenChange={setIsOpen}
+      onOpenChange={setManualOpen}
       className="space-y-density-2"
     >
       <div
@@ -51,7 +59,10 @@ export function VerificationPromptEditor({
       >
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <CollapsibleTrigger className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm py-1 text-left text-xs focus-visible:ring-2 focus-visible:outline-none">
+            <CollapsibleTrigger
+              aria-label={editorLabel}
+              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm py-1 text-left text-xs focus-visible:ring-2 focus-visible:outline-none"
+            >
               <ChevronDown
                 aria-hidden="true"
                 className={cn(
@@ -59,9 +70,7 @@ export function VerificationPromptEditor({
                   !isOpen && "-rotate-90",
                 )}
               />
-              {t("verifyDialog.tools.prompts.editorLabel", {
-                probe: getApiVerificationProbeLabel(t, probeId),
-              })}
+              {t("verifyDialog.tools.prompts.label")}
             </CollapsibleTrigger>
             {isSavingPrompts ? <Spinner size="sm" variant="gray" /> : null}
           </div>
@@ -77,10 +86,9 @@ export function VerificationPromptEditor({
               <Textarea
                 autoSize
                 id={editorId}
-                aria-label={t("verifyDialog.tools.prompts.editorLabel", {
-                  probe: getApiVerificationProbeLabel(t, probeId),
-                })}
+                aria-label={editorLabel}
                 value={value}
+                onFocus={() => setManualOpen(true)}
                 onChange={(event) =>
                   setPromptDraftValue(probeId, event.target.value)
                 }

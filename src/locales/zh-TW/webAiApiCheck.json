@@ -1,6 +1,6 @@
 {
   "confirmToast": {
-    "body": "是否開啟 AI API 測試面板，以檢查並測試 AI API 可用性？",
+    "body": "是否開啟 API 測試面板，檢查此 API 的可用性？",
     "enhancedInfo": "此提示由增強自動檢測觸發。若判斷有誤，建議回報問題；也可在設定中關閉增強自動檢測。",
     "feedback": "回報問題",
     "keyOnlyBody": "已解碼出疑似 API 金鑰，尚未辨識到 API 網址。是否開啟測試面板，補充網址後再測試？",
@@ -17,13 +17,12 @@
       "openApiProfiles": "開啟 API 憑據庫",
       "retry": "重試",
       "running": "測試中…",
-      "runOne": "測試",
       "saveToProfiles": "儲存到 API 憑據庫",
       "saving": "儲存中…",
       "showKey": "顯示 Key",
       "stopping": "正在停止…",
       "stopTest": "停止測試",
-      "test": "測試"
+      "test": "執行常規測試"
     },
     "candidates": {
       "apiKey": "候選 Key {{index}}"
@@ -72,14 +71,11 @@
       "tags": "選擇標籤"
     },
     "privacyHint": "API Key 會被視為敏感資訊：預設隱藏，且除非你主動儲存到 API 憑據庫，否則不會持久化儲存任何資料。",
-    "probes": {
-      "notRunYet": "尚未執行"
-    },
     "sourceText": {
       "label": "用於提取的文字",
       "placeholder": "將 Base URL 和 API Key 貼上到這裡，或使用右鍵選單從選中文字預填。"
     },
-    "title": "AI API 功能可用性測試"
+    "title": "API 測試"
   },
   "settings": {
     "autoDetect": {
@@ -157,7 +153,7 @@
       "wildcard": "萬用字元（預設）",
       "wildcardHint": "* 符合任意字元。網域會補為 *://網域/*；子網域請寫 *.example.com。"
     },
-    "title": "網頁 AI API 功能可用性測試"
+    "title": "網頁 API 測試"
   },
   "siteControl": {
     "disable": "在此網站關閉自動偵測",

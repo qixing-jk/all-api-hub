@@ -31,8 +31,8 @@
     "saveToApiProfiles": "Save and associate with API credential library",
     "showKey": "Show Key",
     "useInCherry": "Use in Cherry Studio",
-    "verifyApi": "Verify API",
-    "verifyCliSupport": "Verify CLI Support"
+    "verifyApi": "Test API",
+    "verifyCliSupport": "CLI compatibility test"
   },
   "actionToolbar": {
     "apiCredential": "API credential",
@@ -367,8 +367,8 @@
     "serviceCredentialCopied": "Service key copied to clipboard",
     "serviceCredentialRotated": "Service key reset",
     "serviceCredentialRotateFailed": "Failed to reset service key",
-    "verifyApiFailed": "Failed to open API verification",
-    "verifyCliSupportFailed": "Failed to open CLI compatibility verification"
+    "verifyApiFailed": "Failed to open API testing",
+    "verifyCliSupportFailed": "Failed to open CLI compatibility testing"
   },
   "native": {
     "actions": {

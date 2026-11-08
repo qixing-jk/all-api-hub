@@ -1,6 +1,6 @@
 # API Credential Library
 
-> Suitable for scenarios where you only have `Base URL + API Key` without a site account. Save common API keys in one place for quick copying, API verification, model lookup, and balance/usage checks without first creating a full site account.
+> Suitable for scenarios where you only have `Base URL + API Key` without a site account. Save common API keys in one place for quick copying, API testing, model lookup, and balance/usage checks without first creating a full site account.
 
 ## Suitable Scenarios
 
@@ -21,7 +21,7 @@ The complete API key is stored in the extension's local storage. Masking in the 
 - **Credential Library Management**: Store name, `Base URL`, API key, tags, and notes without relying on a site account.
 - **Search and Filter**: Supports filtering by name, `Base URL`, tags, notes, source page, and API type.
 - **Allowance and Usage Overview**: View balance, remaining quota windows, reset countdowns, today's usage, today's requests, available models, last refresh time, and health status when the endpoint provides that data.
-- **Interface Verification**: Supports verifying API availability and separately testing CLI compatibility.
+- **API Testing**: Supports verifying API availability and separately testing CLI compatibility.
 - **Model Integration**: Directly open the current credentials in the model list to view the model catalog and verification results.
 - **Quick Export**: Prioritizes a direct action for the currently configured self-hosted site. Other targets are grouped as chat clients, coding agents, and gateways and routing tools: Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, Cursor++, and Claude Code Router.
 
@@ -150,9 +150,9 @@ This limit primarily applies to refresh and verification actions in the extensio
 
 ## Common Operations
 
-### 1. Verify Interface
+### 1. Test API
 
-Click **`Verify Interface`** on the card to confirm:
+Click **`Test API`** on the card to confirm:
 
 - If the current key can still be used.
 - If the model list can be fetched.
@@ -164,9 +164,9 @@ Under **`Test mode`**, choose **`Streaming`** (the default) or **`Non-streaming`
 
 A verification result describes only that probe. It does not mean the key is permanently valid or invalid; verify again after changing networks or keys, or whenever you notice a problem.
 
-### 2. Verify CLI Compatibility
+### 2. CLI compatibility test
 
-Click **`Verify CLI Compatibility`** to separately test:
+Click **`CLI compatibility test`** to open the same **`API Testing`** dialog with a client simulation preset selected. Use it to check:
 
 - If the current interface is suitable for CLI tools.
 - If the model ID can be used in CLI scenarios.
@@ -174,7 +174,7 @@ Click **`Verify CLI Compatibility`** to separately test:
 
 This check does not launch Claude Code, Codex, Gemini CLI, or another program. It simulates the protocols and tool-calling patterns commonly used by those CLIs to help you assess compatibility in advance.
 
-Under **`Test mode`**, choose **`Streaming`** (the default) or **`Non-streaming`**. Each CLI keeps its corresponding API type for the tool-calling probe. Results show the selected mode, and failures do not trigger an automatic mode switch.
+Selecting a client sets its default API type; you can then change the protocol manually and choose a test. Under **`Test mode`**, choose **`Streaming`** (the default) or **`Non-streaming`**. Results show the selected mode, and failures do not trigger an automatic mode switch. Opening the shortcut does not start a test.
 
 ### 3. Open in Model List
 
@@ -223,7 +223,7 @@ Copying an API key places the complete secret on the system clipboard. When expo
 |------|------|
 | I only saved the credential, why is there no balance data? | The current query method may not be compatible with the site, or the site does not provide a corresponding read-only interface. Missing balance data does not necessarily mean the key is invalid; try switching the query method or using a custom read-only query. |
 | Why does the model-related verification require a model ID? | Some CLI compatibility checks and model call verifications require a specific model. The interface will try to automatically suggest a model, or you can manually enter one. |
-| Can it replace account management? | Not entirely. The `API Credential Library` is better for saving and using standalone API keys for API verification, model lookup, and export; account management is still responsible for site identification, balance refresh, check-ins, usage synchronization, and other account-level capabilities. |
+| Can it replace account management? | Not entirely. The `API Credential Library` is better for saving and using standalone API keys for API testing, model lookup, and export; account management is still responsible for site identification, balance refresh, check-ins, usage synchronization, and other account-level capabilities. |
 | Will the API Credential Library be included in backups? | Yes. It is part of the shared data and can be migrated along with data import/export and selective synchronization via WebDAV. Importing profile data may show Merge, Replace, or Skip options. |
 | Does successful verification guarantee that every tool will work? | No. Verification represents one API probe. A target tool may use a different protocol, model, or configuration, so test again in that tool. |
 | Does deleting a profile revoke the remote API key? | No. Deletion only removes the local record; revoke the remote key separately in the provider console. |

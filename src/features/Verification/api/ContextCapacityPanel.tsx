@@ -10,10 +10,14 @@ import {
   CONTEXT_CAPACITY_REASONS,
   CONTEXT_CAPACITY_TEST_ID,
 } from "~/services/verification/modelQuality/contextCapacityConstants"
-import { API_VERIFICATION_HISTORY_STATUSES } from "~/services/verification/verificationResultHistory/types"
+import {
+  API_VERIFICATION_HISTORY_STATUSES,
+  CONTEXT_CAPACITY_INCONCLUSIVE_REASONS,
+} from "~/services/verification/verificationResultHistory/types"
 
 import type { ContextCapacityController } from "./useContextCapacity"
 import { VerificationProbeDetails } from "./VerificationProbeDetails"
+import { VerificationProbeIntroduction } from "./VerificationProbeIntroduction"
 import { VerificationRunButton } from "./VerificationRunButton"
 import { VerificationStatusBadge } from "./VerificationStatusBadge"
 import { VerificationTestLabel } from "./VerificationTestLabel"
@@ -48,6 +52,11 @@ export function ContextCapacityPanel({
       ? controller.history
       : null
   const observation = live ?? historical
+  const idle =
+    !controller.running &&
+    !observation &&
+    !controller.error &&
+    !controller.stopped
   const lower = observation?.lowerBoundTokens ?? 0
   const declaredContext =
     controller.result?.counter.declaredContext ?? historical?.declaredContext
@@ -83,15 +92,18 @@ export function ContextCapacityPanel({
   const timedOut =
     reason === CONTEXT_CAPACITY_REASONS.Inconclusive &&
     (lastAttempt?.failureReason === CONTEXT_ATTEMPT_FAILURE_REASONS.Timeout ||
-      historical?.inconclusiveReason === "timeout")
+      historical?.inconclusiveReason ===
+        CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Timeout)
   const interrupted =
     lastAttempt?.failureReason ===
       CONTEXT_ATTEMPT_FAILURE_REASONS.Interrupted ||
-    historical?.inconclusiveReason === "interrupted"
+    historical?.inconclusiveReason ===
+      CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Interrupted
   const emptyResponse =
     reason === CONTEXT_CAPACITY_REASONS.Inconclusive &&
     (lastAttempt?.finishReason === "stop" ||
-      historical?.inconclusiveReason === "empty-response")
+      historical?.inconclusiveReason ===
+        CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.EmptyResponse)
   const statusLabel =
     reason === CONTEXT_CAPACITY_REASONS.Stopped
       ? t("verifyDialog.status.stopped")
@@ -153,13 +165,21 @@ export function ContextCapacityPanel({
                   : t("verifyDialog.tools.context.reasons.inconclusive")
             : null
   return (
-    <section
-      className="border-border-subtle mt-density-4 pt-density-4 border-t"
-      aria-label={t("verifyDialog.tools.context.title")}
-    >
+    <section aria-label={t("verifyDialog.tools.context.title")}>
       <VerificationProbeDetails
+        label={t("verifyDialog.tools.context.title")}
+        idleContent={
+          idle ? (
+            <VerificationProbeIntroduction
+              probeId={CONTEXT_CAPACITY_TEST_ID}
+              title={t("verifyDialog.tools.context.title")}
+              onRun={controller.run}
+              disabled={!controller.canRun}
+            />
+          ) : undefined
+        }
         heading={
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
               <div className="flex min-w-0 items-center gap-1.5">
                 <div className="text-foreground min-w-0 truncate text-sm font-medium">
@@ -167,110 +187,127 @@ export function ContextCapacityPanel({
                     {t("verifyDialog.tools.context.title")}
                   </VerificationTestLabel>
                 </div>
-                <Tooltip
-                  anchorAsChild
-                  content={
-                    <div className="max-w-sm space-y-2">
-                      <p>{t("verifyDialog.tools.context.description")}</p>
-                      <p>{t("verifyDialog.tools.context.startHint")}</p>
-                    </div>
-                  }
-                >
-                  <button
-                    type="button"
-                    className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                    aria-label={t("verifyDialog.tools.context.about")}
-                  >
-                    <HelpHintIcon className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </Tooltip>
               </div>
-              {controller.running ||
-              !(observation || controller.error || controller.stopped) ? (
-                <Badge variant="outline" size="sm">
-                  {t("verifyDialog.status.pending")}
-                </Badge>
-              ) : (
-                <>
-                  {lower > 0 ? (
-                    <Badge variant={coverageVariant} size="sm">
-                      {hasComparison
-                        ? t("verifyDialog.tools.context.coverage", {
-                            percent: Number(
-                              ((lower / declaredContext!) * 100).toFixed(1),
-                            ),
-                          })
-                        : t("verifyDialog.tools.context.measuredBadge", {
-                            tokens: readableTokens(lower),
-                          })}
-                    </Badge>
-                  ) : null}
-                  <VerificationStatusBadge
-                    status={status}
-                    label={statusLabel}
-                    latencyMs={
-                      controller.result?.latencyMs ?? historical?.latencyMs
-                    }
-                    mode={controller.result?.mode ?? historical?.mode}
-                  />
-                </>
-              )}
-            </div>
-            <p className="text-muted-foreground mt-density-1 text-xs">
-              {t("verifyDialog.tools.context.hint")}
-            </p>
-            <div
-              className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs"
-              role="status"
-              aria-label={t("verifyDialog.tools.context.resultLabel")}
-            >
-              {controller.running ? (
-                lower > 0 ? (
-                  t("verifyDialog.tools.context.acceptedTitle", {
-                    tokens: readableTokens(lower),
-                  })
-                ) : (
-                  t("verifyDialog.actions.running")
-                )
-              ) : observation || controller.error || controller.stopped ? (
-                <>
-                  {reason === CONTEXT_CAPACITY_REASONS.Budget ||
-                  reason === CONTEXT_CAPACITY_REASONS.Inconclusive ||
-                  reason === CONTEXT_CAPACITY_REASONS.Error ||
-                  reason === CONTEXT_CAPACITY_REASONS.Stopped ? (
-                    <p>{title}</p>
-                  ) : null}
-                  {reasonText ? <p>{reasonText}</p> : null}
-                  {historical?.requiresCredentialVerification ? (
-                    <p>{t("verifyDialog.tools.context.maskedHistoryHint")}</p>
-                  ) : null}
-                  {lower > 0 ? (
-                    <p className="text-foreground">
-                      {t("verifyDialog.tools.context.acceptedTitle", {
-                        tokens: readableTokens(lower),
-                      })}
-                      {hasComparison ? (
-                        <>
-                          {" "}
-                          ·{" "}
-                          {t("verifyDialog.tools.context.comparison", {
-                            expected: readableTokens(declaredContext!),
-                          })}
-                        </>
-                      ) : null}
-                    </p>
-                  ) : reason !== CONTEXT_CAPACITY_REASONS.Budget &&
-                    reason !== CONTEXT_CAPACITY_REASONS.Error &&
-                    reason !== CONTEXT_CAPACITY_REASONS.Stopped &&
-                    reason !== CONTEXT_CAPACITY_REASONS.Inconclusive ? (
-                    <p>{title}</p>
-                  ) : null}
-                </>
-              ) : (
-                t("verifyDialog.notRunYet")
-              )}
             </div>
           </div>
+        }
+        headingAccessory={
+          <Tooltip
+            anchorAsChild
+            content={
+              <div className="max-w-[min(16rem,calc(100vw-6rem))] space-y-2">
+                <p>{t("verifyDialog.tools.context.description")}</p>
+                <p>{t("verifyDialog.tools.context.startHint")}</p>
+              </div>
+            }
+          >
+            <button
+              type="button"
+              className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+              aria-label={t("verifyDialog.tools.context.about")}
+            >
+              <HelpHintIcon className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
+        }
+        description={
+          <>
+            {!idle ? (
+              <p className="text-muted-foreground mt-density-1 text-xs">
+                {t("verifyDialog.tools.context.hint")}
+              </p>
+            ) : null}
+            {controller.running ||
+            observation ||
+            controller.error ||
+            controller.stopped ? (
+              <div
+                className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs"
+                role="status"
+                aria-label={t("verifyDialog.tools.context.resultLabel")}
+              >
+                {controller.running ? (
+                  lower > 0 ? (
+                    t("verifyDialog.tools.context.acceptedTitle", {
+                      tokens: readableTokens(lower),
+                    })
+                  ) : (
+                    t("verifyDialog.actions.running")
+                  )
+                ) : (
+                  <>
+                    {reason === CONTEXT_CAPACITY_REASONS.Budget ||
+                    reason === CONTEXT_CAPACITY_REASONS.Inconclusive ||
+                    reason === CONTEXT_CAPACITY_REASONS.Error ||
+                    reason === CONTEXT_CAPACITY_REASONS.Stopped ? (
+                      <p>{title}</p>
+                    ) : null}
+                    {reasonText ? <p>{reasonText}</p> : null}
+                    {historical?.requiresCredentialVerification ? (
+                      <p>{t("verifyDialog.tools.context.maskedHistoryHint")}</p>
+                    ) : null}
+                    {lower > 0 ? (
+                      <p className="text-foreground">
+                        {t("verifyDialog.tools.context.acceptedTitle", {
+                          tokens: readableTokens(lower),
+                        })}
+                        {hasComparison ? (
+                          <>
+                            {" "}
+                            ·{" "}
+                            {t("verifyDialog.tools.context.comparison", {
+                              expected: readableTokens(declaredContext!),
+                            })}
+                          </>
+                        ) : null}
+                      </p>
+                    ) : reason !== CONTEXT_CAPACITY_REASONS.Budget &&
+                      reason !== CONTEXT_CAPACITY_REASONS.Error &&
+                      reason !== CONTEXT_CAPACITY_REASONS.Stopped &&
+                      reason !== CONTEXT_CAPACITY_REASONS.Inconclusive ? (
+                      <p>{title}</p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            ) : null}
+          </>
+        }
+        status={
+          <>
+            {controller.running ||
+            !(observation || controller.error || controller.stopped) ? (
+              <Badge variant="outline" size="sm">
+                {controller.running
+                  ? t("verifyDialog.actions.running")
+                  : t("verifyDialog.status.pending")}
+              </Badge>
+            ) : (
+              <>
+                {lower > 0 ? (
+                  <Badge variant={coverageVariant} size="sm">
+                    {hasComparison
+                      ? t("verifyDialog.tools.context.coverage", {
+                          percent: Number(
+                            ((lower / declaredContext!) * 100).toFixed(1),
+                          ),
+                        })
+                      : t("verifyDialog.tools.context.measuredBadge", {
+                          tokens: readableTokens(lower),
+                        })}
+                  </Badge>
+                ) : null}
+                <VerificationStatusBadge
+                  status={status}
+                  label={statusLabel}
+                  latencyMs={
+                    controller.result?.latencyMs ?? historical?.latencyMs
+                  }
+                  mode={controller.result?.mode ?? historical?.mode}
+                />
+              </>
+            )}
+          </>
         }
         action={
           <VerificationRunButton

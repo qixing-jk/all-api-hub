@@ -559,7 +559,7 @@
         "title": "Browser bookmarks"
       },
       "clipboardRead": {
-        "description": "After you copy related content, help Redemption Assist or AI API Test recognize redemption codes and API details.",
+        "description": "After you copy relevant content, helps Redemption Assist or Web API Testing recognize redemption codes and API details.",
         "title": "Clipboard Read"
       },
       "cookies": {
@@ -848,7 +848,7 @@
     "refresh": "Data Refresh",
     "select": "Select a tab",
     "siteAnnouncements": "Site announcements",
-    "webAiApiCheck": "AI API Test"
+    "webAiApiCheck": "Web API Testing"
   },
   "taskNotifications": {
     "channels": {

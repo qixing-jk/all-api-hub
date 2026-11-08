@@ -1,6 +1,6 @@
 {
   "confirmToast": {
-    "body": "AI API の可用性を確認・テストするために、AI API テストパネルを開きますか？",
+    "body": "API テストパネルを開いて、この API の可用性を確認しますか？",
     "enhancedInfo": "この通知は拡張自動検出によって表示されました。誤検出の場合は問題を報告するか、設定で拡張自動検出を無効にできます。",
     "feedback": "問題を報告",
     "keyOnlyBody": "API キーと思われる値をデコードしましたが、API URL が見つかりませんでした。テストパネルを開いて URL を入力しますか？",
@@ -17,13 +17,12 @@
       "openApiProfiles": "API 認証情報庫を開く",
       "retry": "再試行",
       "running": "テスト中…",
-      "runOne": "テスト",
       "saveToProfiles": "API 認証情報庫に保存",
       "saving": "保存中…",
       "showKey": "キーを表示",
       "stopping": "停止中…",
       "stopTest": "テストを停止",
-      "test": "テスト"
+      "test": "通常テストを実行"
     },
     "candidates": {
       "apiKey": "候補 Key {{index}}"
@@ -72,14 +71,11 @@
       "tags": "タグを選択"
     },
     "privacyHint": "API キーは機密情報として扱われます。既定では非表示で、API 認証情報庫に保存する操作を行わない限り、何も保存されません。",
-    "probes": {
-      "notRunYet": "未実行"
-    },
     "sourceText": {
       "label": "抽出元テキスト",
       "placeholder": "ここに Base URL と API キーを貼り付けるか、コンテキストメニューから選択内容を使って事前入力してください。"
     },
-    "title": "AI API 機能可用性テスト"
+    "title": "API テスト"
   },
   "settings": {
     "autoDetect": {
@@ -157,7 +153,7 @@
       "wildcard": "ワイルドカード（既定）",
       "wildcardHint": "* は任意の文字列に一致します。ドメインは *://ドメイン/* に補完。サブドメインは *.example.com。"
     },
-    "title": "Web AI API 機能可用性テスト"
+    "title": "ウェブページの API テスト"
   },
   "siteControl": {
     "disable": "このサイトで自動検出を停止",

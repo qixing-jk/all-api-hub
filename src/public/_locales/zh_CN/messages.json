@@ -12,9 +12,12 @@
     "message": "在弹窗中打开 All API Hub"
   },
   "context_menu_redeem_selection": {
-    "message": "使用兑换助手兑换选中文本"
+    "message": "兑换选中的兑换码"
   },
   "context_menu_ai_api_check": {
-    "message": "快速测试 AI API 的功能可用性"
+    "message": "测试选中的 AI API"
+  },
+  "context_menu_ai_api_check_page": {
+    "message": "打开 AI API 测试面板"
   }
 }

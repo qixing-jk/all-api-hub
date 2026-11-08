@@ -308,6 +308,58 @@ describe("VerifyApiCredentialProfileDialog", () => {
     initialModelId: "model",
   }
 
+  it("opens the profile CLI preset with editable protocol and normal test order", async () => {
+    const user = userEvent.setup()
+    mockProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: true },
+      { id: "tool-calling", requiresModelId: true },
+    ])
+    render(
+      <VerifyApiCredentialProfileDialog
+        {...sessionProps}
+        initialRequestProfile="gemini"
+      />,
+    )
+    await waitFor(() =>
+      expect(getApiTypeSelect()).toHaveValue(API_TYPES.GOOGLE),
+    )
+    expect(
+      screen
+        .getAllByTestId(/^profile-verify-probe-/)
+        .map((node) => node.getAttribute("data-testid")),
+    ).toEqual([
+      getApiCredentialProfileVerifyProbeTestId("models"),
+      getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      getApiCredentialProfileVerifyProbeTestId("tool-calling"),
+    ])
+    expect(getApiTypeSelect()).toBeEnabled()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("cli-tool-comparison")).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "aiApiVerification:verifyDialog.requestProfiles.shortcutHint",
+      ),
+    ).toBeVisible()
+    await user.click(screen.getByRole("switch", { name: /enhancedLabel/ }))
+    await user.selectOptions(getApiTypeSelect(), API_TYPES.OPENAI_COMPATIBLE)
+    expect(
+      screen.getByRole("combobox", { name: /requestProfile/ }),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.requestProfiles.gemini")
+    expect(screen.getByRole("switch", { name: /enhancedLabel/ })).toBeChecked()
+    expect(
+      screen.queryByText(
+        "aiApiVerification:verifyDialog.requestProfiles.shortcutHint",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "aiApiVerification:verifyDialog.requestProfiles.protocolMismatch",
+      ),
+    ).toBeVisible()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+  })
+
   it("blocks capacity when there is no model to send", async () => {
     const { result } = renderHook(useProfileVerification, {
       initialProps: { ...sessionProps, initialModelId: undefined },
@@ -427,6 +479,10 @@ describe("VerifyApiCredentialProfileDialog", () => {
         "aiApiVerification:verifyDialog.summaries.requestProfileIncompatible",
       ),
     )
+    expect(getApiTypeSelect()).toBeEnabled()
+    await user.click(selector)
+    await user.click(screen.getByRole("option", { name: /default/ }))
+    expect(getApiTypeSelect()).toBeEnabled()
     await user.selectOptions(getApiTypeSelect(), API_TYPES.ANTHROPIC)
     expect(selector).toHaveTextContent(/default/)
   })
@@ -871,17 +927,19 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(sourceLink).toHaveAttribute("href", "https://example.com")
     expect(sourceLink).toHaveAttribute("target", "_blank")
     expect(
-      await screen.findByText("aiApiVerification:verifyDialog.probes.models"),
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.models",
+      }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(
-        "aiApiVerification:verifyDialog.probes.text-generation",
-      ),
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(
-        "aiApiVerification:verifyDialog.probes.tool-calling",
-      ),
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.tool-calling",
+      }),
     ).toBeInTheDocument()
   })
 
@@ -921,7 +979,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     const suiteButton = await screen.findByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
     await user.click(suiteButton)
 
@@ -965,7 +1023,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await waitFor(() => {
       const restoredButton = screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       })
       expect(restoredButton).toBeEnabled()
       expect(restoredButton).not.toHaveAttribute("aria-busy")
@@ -1008,7 +1066,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
     await waitFor(() => expect(probeSignal).toBeDefined())
@@ -1034,7 +1092,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await waitFor(() => {
       const restoredButton = screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       })
       expect(restoredButton).toBeEnabled()
     })
@@ -1132,7 +1190,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 
@@ -1199,7 +1257,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
       name: "aiApiVerification:verifyDialog.actions.runOne",
     })
     const suiteButton = screen.getByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.run",
+      name: "aiApiVerification:verifyDialog.actions.runAll",
     })
 
     await user.click(initiatingButton)
@@ -1566,6 +1624,11 @@ describe("VerifyApiCredentialProfileDialog", () => {
       await within(probeCard).findByText(/"endpoint":/),
     ).toBeInTheDocument()
 
+    const outputToggle = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.details.output",
+    })
+    expect(outputToggle).toHaveAttribute("aria-expanded", "false")
+    await user.click(outputToggle)
     expect(
       await within(probeCard).findByText(/"modelCount": 1/),
     ).toBeInTheDocument()
@@ -1805,14 +1868,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
       expect(getApiTypeSelect()).toHaveValue(API_TYPES.ANTHROPIC)
     })
     expect(
-      await screen.findByText("apiCredentialProfiles:verify.override.badge"),
-    ).toBeInTheDocument()
+      await screen.findByText(
+        "apiCredentialProfiles:verify.override.description",
+      ),
+    ).toHaveAttribute("role", "note")
     expect(
-      screen.getByText("apiCredentialProfiles:verify.override.title"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText("apiCredentialProfiles:verify.override.description"),
-    ).toBeInTheDocument()
+      screen.queryByText("apiCredentialProfiles:verify.override.title"),
+    ).not.toBeInTheDocument()
 
     await waitFor(() =>
       expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith(
@@ -1896,7 +1958,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 
@@ -1965,7 +2027,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 
@@ -2034,7 +2096,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 
@@ -2090,7 +2152,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 
@@ -2177,7 +2239,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 
@@ -2232,7 +2294,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 
@@ -2290,7 +2352,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.run",
+        name: "aiApiVerification:verifyDialog.actions.runAll",
       }),
     )
 

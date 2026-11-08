@@ -1,10 +1,16 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it } from "vitest"
 
-import { VerificationDialogHeader } from "~/features/Verification/api/VerificationLayout"
+import { VERIFICATION_SOURCE_KINDS } from "~/features/Verification/api/types"
+import {
+  VerificationDialogHeader,
+  VerificationSourceSubtitle,
+} from "~/features/Verification/api/VerificationLayout"
+import zhVerification from "~/locales/zh-CN/aiApiVerification.json"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const historySummary = (
   overrides: Partial<ApiVerificationHistorySummary> = {},
@@ -26,6 +32,63 @@ const renderHeader = (props: Parameters<typeof VerificationDialogHeader>[0]) =>
   )
 
 describe("VerificationDialogHeader", () => {
+  it.each([
+    [VERIFICATION_SOURCE_KINDS.Account, "账号：12"],
+    [VERIFICATION_SOURCE_KINDS.Profile, "凭据：12"],
+  ] as const)(
+    "labels a numeric %s name in the source subtitle",
+    async (sourceKind, label) => {
+      const i18n = await createResourceTestI18n(
+        { "zh-CN": { aiApiVerification: zhVerification } },
+        "zh-CN",
+      )
+      render(
+        <I18nextProvider i18n={i18n}>
+          <VerificationSourceSubtitle
+            baseUrl="https://example.com"
+            name="12"
+            sourceKind={sourceKind}
+          />
+        </I18nextProvider>,
+      )
+      expect(screen.getByText(label)).toBeVisible()
+      expect(
+        screen.getByRole("link", { name: "https://example.com" }),
+      ).toHaveAttribute("href", "https://example.com")
+    },
+  )
+
+  it("keeps the explanation behind an accessible help button", async () => {
+    const user = userEvent.setup()
+    renderHeader({ title: "Verification" })
+    expect(screen.queryByRole("note")).not.toBeInTheDocument()
+    const help = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.about",
+    })
+    expect(help).toHaveAttribute(
+      "title",
+      "aiApiVerification:verifyDialog.warning",
+    )
+    expect(help).toHaveAttribute("aria-expanded", "false")
+    await user.tab()
+    expect(help).toHaveFocus()
+    await user.keyboard("{Enter}")
+    expect(
+      await screen.findByRole("dialog", {
+        name: "aiApiVerification:verifyDialog.about",
+      }),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.warning")
+    await user.keyboard("{Escape}")
+    expect(help).toHaveAttribute("aria-expanded", "false")
+    expect(help).toHaveFocus()
+    await user.click(help)
+    expect(
+      await screen.findByRole("dialog", {
+        name: "aiApiVerification:verifyDialog.about",
+      }),
+    ).toBeVisible()
+  })
+
   it("shows the persisted summary and its timestamp beside the title", () => {
     renderHeader({
       title: "Verification",

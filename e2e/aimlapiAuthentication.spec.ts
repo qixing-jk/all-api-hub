@@ -1,3 +1,5 @@
+import type { BrowserContext } from "@playwright/test"
+
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
@@ -187,11 +189,13 @@ test("live runner verifies pasted credentials, saves and cleans its onboarding a
   expect(await readStoredAccounts(serviceWorker)).toEqual([])
 })
 
-test("authentication matrix saves each supported combination and rejects invalid primary credentials", async ({
+async function setupAuthenticationScenario({
   context,
   extensionId,
-}) => {
-  test.setTimeout(180000)
+}: {
+  context: BrowserContext
+  extensionId: string
+}) {
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccounts(serviceWorker, [])
   await seedUserPreferences(serviceWorker, {
@@ -246,8 +250,38 @@ test("authentication matrix saves each supported combination and rejects invalid
     managementKey: primary,
     apiKey: regular,
   }
+  return { options, requests }
+}
+
+test("authentication matrix saves each supported combination and rejects invalid primary credentials", async ({
+  context,
+  extensionId,
+}) => {
+  test.setTimeout(180000)
+  const { options, requests } = await setupAuthenticationScenario({
+    context,
+    extensionId,
+  })
   const results = await runAimlapiAuthMatrix(options)
   expect(results.every((r) => r.status === "passed")).toBe(true)
+  expect(
+    requests
+      .filter((r) => r.path.startsWith("/v2/billing"))
+      .every((r) => r.credential === regular),
+  ).toBe(true)
+  expect(
+    requests.some((r) => r.path === "/v1/key" && r.credential === primary),
+  ).toBe(true)
+})
+
+test("authentication keeps replacement credentials after saving and reopening", async ({
+  context,
+  extensionId,
+}) => {
+  const { options, requests } = await setupAuthenticationScenario({
+    context,
+    extensionId,
+  })
   await checkAimlapiSavedCredentials(options, {
     primary,
     regular,
@@ -256,37 +290,41 @@ test("authentication matrix saves each supported combination and rejects invalid
       { primary: "e2e-management-replacement", regular: "" },
     ],
   })
-  for (const [credential, message] of [
-    ["revoked", "The AI/ML API key is invalid or has expired."],
-    [
-      "denied",
-      "This AI/ML API credential cannot perform that action. Key management needs a management key; balance and billing need a regular API key.",
-    ],
-  ] as const) {
-    await checkAimlapiRejectedCredential(options, {
-      primary: credential,
-      message,
-    })
-  }
   expect(
     requests
       .filter((r) => r.path.startsWith("/v2/billing"))
       .every((r) => r.credential === regular),
   ).toBe(true)
-  for (const supplemental of ["revoked", "denied"]) {
-    await checkAimlapiRejectedCredential(options, {
-      primary,
-      regular: supplemental,
-      message:
-        supplemental === "revoked"
-          ? "The AI/ML API key is invalid or has expired."
-          : "This AI/ML API credential cannot perform that action. Key management needs a management key; balance and billing need a regular API key.",
+})
+
+for (const field of ["primary", "supplemental"] as const) {
+  for (const credential of ["revoked", "denied"] as const) {
+    test(`authentication rejects a ${credential} ${field} credential`, async ({
+      context,
+      extensionId,
+    }) => {
+      const { options, requests } = await setupAuthenticationScenario({
+        context,
+        extensionId,
+      })
+      await checkAimlapiRejectedCredential(options, {
+        primary: field === "primary" ? credential : primary,
+        regular: field === "supplemental" ? credential : "",
+        message:
+          credential === "revoked"
+            ? "The AI/ML API key is invalid or has expired."
+            : "This AI/ML API credential cannot perform that action. Key management needs a management key; balance and billing need a regular API key.",
+      })
+      expect(
+        requests.some(
+          (r) =>
+            r.path === "/v1/key" &&
+            r.credential === (field === "primary" ? credential : primary),
+        ),
+      ).toBe(true)
     })
   }
-  expect(
-    requests.some((r) => r.path === "/v1/key" && r.credential === primary),
-  ).toBe(true)
-})
+}
 
 test("clearing the primary key blocks saving even when a regular key remains", async ({
   context,

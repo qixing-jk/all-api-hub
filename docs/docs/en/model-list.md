@@ -10,7 +10,7 @@
 - 💰 **Cross-account price comparison**: Compare currently available quotes for the same model across accounts using a consistent basis.
 - 🎯 **Usage-based estimates**: Select a scenario such as regular chat, code completion, or coding agent, or adjust input, output, and cache proportions yourself.
 - 🏷️ **Search, filter, and sort**: Search names and descriptions; filter by vendor, billing method, capability, group, or verification result; and sort by price, latency, and other fields.
-- ✅ **Model verification**: Single and bulk verification are one-time probes that check whether a model or endpoint currently works and whether it is CLI-compatible.
+- ✅ **Model verification**: Run individual probes, routine tests, or bulk verification to check whether a model or endpoint currently works and whether it is CLI-compatible. Routine tests for text models run multiple probes and may incur charges on paid endpoints.
 - 📦 **Keys for a model**: Select a compatible key or, when supported, create a Token restricted to that model.
 
 ## How to Access
@@ -93,15 +93,15 @@ When a source supports multiple user groups, use the group filter to limit parti
 
 Click the verification icon on a model card:
 
-- **Verify API**: Send one probe to check whether the model or endpoint currently works and whether its response matches expectations.
-- **Verify CLI Compatibility**: Evaluate whether the model is suitable for CLI tools, such as support for streaming and text generation.
+- **Test API**: Open the testing dialog to run an individual probe or routine tests and check whether the model or endpoint currently works and whether its response matches expectations.
+- **CLI compatibility test**: Evaluate whether the model is suitable for CLI tools, such as support for streaming and text generation.
 
-In the **`Verify API`** dialog, choose **`Streaming`** (the default) or **`Non-streaming`** under **`Test mode`**. Generation tests use the selected mode, and their results and newly saved history show that mode. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically. Fetching the model list is unaffected by this option.
+In the **`API Testing`** dialog, choose **`Streaming`** (the default) or **`Non-streaming`** under **`Test mode`**. Generation tests use the selected mode, and their results and newly saved history show that mode. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically. Fetching the model list is unaffected by this option.
 
-The **`Verify CLI Compatibility`** dialog also offers **`Streaming`** (the default) and **`Non-streaming`**. Each CLI keeps its corresponding API type for the tool-calling probe. Results show the selected mode, and failures do not trigger an automatic mode switch.
+**`CLI compatibility test`** opens the same **`API Testing`** dialog with a client simulation preset. You can still choose the client, API type and **`Streaming`** (the default) or **`Non-streaming`** mode. Results show the selected mode, and failures do not trigger an automatic mode switch.
 
-> - Verification is a **one-time probe**. It does not guarantee long-term availability or permanent failure.
-> - CLI compatibility verification **does not launch a real external CLI**. It performs a protocol-level simulation only.
+> - An individual test runs the selected probe; routine tests for a text model run multiple model probes. Results do not prove long-term availability or permanent failure.
+> - CLI compatibility testing **does not launch a real external CLI**. It performs a protocol-level simulation only.
 
 ### 6. Advanced Verification: Drawing Test and Prompts
 
@@ -109,7 +109,7 @@ Ordinary verification history retains status, summary and latency, without raw i
 
 Verification parameters stay in the body in a compact grid. Test scope guidance and existing verification summaries appear in the dialog header without a separate colored notice. Each test separates **`Edit prompt`** from **`Execution result`**, which opens automatically when a run completes. Text responses are shown directly; input parameters and raw output can be expanded. The editor shows the current prompt, and switching to results preserves unsaved edits. Tests apply to the current API, model and request settings and do not guarantee full compatibility.
 
-The **`Verify API`**, **`Verify CLI compatibility`** and web API check dialogs show a visible **`Drawing test`** card. It runs only when you press its run button, never with **`Start verification`** or bulk testing, because each action spends real model calls.
+The **`Test API`**, **`CLI compatibility test`** and web API check dialogs show a visible **`Drawing test`** card. It runs only when you press its run button, never with **`Run routine tests`** or bulk testing, because each action spends real model calls.
 
 **`Drawing test`** asks the model to draw a pelican riding a bicycle as SVG, so you can compare style and structure directly; the judgement is yours. The dialog only extracts the SVG, counts shapes, and refuses to render answers containing scripts or external references.
 
@@ -179,7 +179,7 @@ Click **`Refresh Data`** to request the current source again and invalidate rela
 | Why is a model price 0, or why can't it participate in comparison? | A model may genuinely be free when the site explicitly reports a zero price. Incomplete price data is marked not comparable and is not treated as free. |
 | How is cross-site price comparison calculated? | It is a local calculation over currently loaded data with valid, comparable prices. Use the source and precision shown on the page; actual charges follow each site's published prices. |
 | Why does a quote show "Not Included in Current Comparison"? | A price required by the current conditions, such as cache-read price, is missing. Choose another scenario, adjust the proportions, or expand the quote to see available prices. |
-| Why does verification show failed or unknown? | Verification is one probe and can be affected by permissions, model restrictions, rate limits, and other conditions. Use the target tool's actual behavior as the final reference. |
+| Why does verification show failed or unknown? | An individual test runs the selected probe; routine tests for text models run multiple probes and may incur charges on paid endpoints. Results can be affected by permissions, model restrictions, rate limits, and other conditions. Use the target tool's actual behavior as the final reference. |
 | Why does my account have no price or multiplier? | The source may not provide price, multiplier, or group data. For example, API Credentials generally support model discovery and verification only. |
 
 ## Related Documentation

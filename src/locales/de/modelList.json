@@ -35,8 +35,8 @@
     "keyForModel": "Schlüssel für dieses Modell",
     "openSelectedAccountKeys": "Kontoschlüssel verwalten",
     "openSite": "Website öffnen",
-    "verifyApi": "API überprüfen",
-    "verifyCliSupport": "Überprüfen Sie die CLI-Unterstützung"
+    "verifyApi": "API testen",
+    "verifyCliSupport": "CLI-Kompatibilitätstest"
   },
   "allAccountGroups": "Alle Gruppen",
   "allAccounts": "Alle Konten",

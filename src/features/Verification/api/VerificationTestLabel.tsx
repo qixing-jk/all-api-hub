@@ -9,7 +9,6 @@ import {
   MessageSquareText,
   Palette,
   ScanText,
-  Terminal,
   Video,
   Wrench,
   type LucideIcon,
@@ -20,13 +19,11 @@ import {
   API_VERIFICATION_PROBE_IDS,
   type ApiVerificationProbeId,
 } from "~/services/verification/aiApiVerification"
-import type { CliToolId } from "~/services/verification/cliSupportVerification"
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
 
-type VerificationTestId =
+export type VerificationTestId =
   | ApiVerificationProbeId
-  | CliToolId
   | typeof PELICAN_PROMPT_ID
   | typeof CONTEXT_CAPACITY_TEST_ID
 
@@ -43,12 +40,21 @@ const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
   [API_VERIFICATION_PROBE_IDS.Decision]: GitBranch,
   [PELICAN_PROMPT_ID]: Palette,
   [CONTEXT_CAPACITY_TEST_ID]: ScanText,
-  claude: Terminal,
-  codex: Terminal,
-  gemini: Terminal,
 }
 
 /** Consistent decorative test icons without changing translated labels. */
+function VerificationTestIcon({
+  testId,
+  className,
+}: {
+  testId: VerificationTestId
+  className?: string
+}) {
+  const Icon = TEST_ICONS[testId]
+  return <Icon className={className} aria-hidden="true" />
+}
+
+/** Pairs the shared decorative icon with a readable test label. */
 export function VerificationTestLabel({
   testId,
   children,
@@ -56,12 +62,11 @@ export function VerificationTestLabel({
   testId: VerificationTestId
   children: ReactNode
 }) {
-  const Icon = TEST_ICONS[testId]
   return (
-    <span className="inline-flex max-w-full min-w-0 items-center gap-2">
-      <Icon
+    <span className="flex max-w-full min-w-0 items-center gap-2">
+      <VerificationTestIcon
+        testId={testId}
         className="text-muted-foreground size-4 shrink-0"
-        aria-hidden="true"
       />
       <span className="truncate">{children}</span>
     </span>

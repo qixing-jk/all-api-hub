@@ -16,7 +16,8 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
-vi.mock("lucide-react", () => ({
+vi.mock("lucide-react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("lucide-react")>()),
   CircleCheck: (props: React.SVGProps<SVGSVGElement>) => (
     <svg data-testid="check-circle-icon" {...props} />
   ),

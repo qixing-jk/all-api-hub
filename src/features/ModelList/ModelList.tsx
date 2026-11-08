@@ -526,6 +526,7 @@ export default function ModelList(props: {
                   onClose={handleCloseCliVerification}
                   account={verifyCliContext.source.account}
                   initialModelId={verifyCliContext.modelId}
+                  modelEnableGroups={verifyCliContext.modelEnableGroups}
                 />
               ) : (
                 <VerifyCliSupportDialog

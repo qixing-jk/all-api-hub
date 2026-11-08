@@ -187,12 +187,27 @@ describe("web API verification modes", () => {
     const enhanced = screen.getByRole("switch", { name: /enhancedLabel/ })
     expect(enhanced).not.toBeChecked()
     await user.click(enhanced)
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "webAiApiCheck:modal.fields.apiType",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "OpenAI-compatible" }))
+    expect(
+      screen.getByRole("combobox", { name: /requestProfile/ }),
+    ).toHaveTextContent(/codex/)
+    expect(screen.getByRole("switch", { name: /enhancedLabel/ })).toBeChecked()
+    expect(
+      screen.getByText(
+        "aiApiVerification:verifyDialog.requestProfiles.protocolMismatch",
+      ),
+    ).toBeVisible()
     const probe = screen.getByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
     )
     await user.click(
       within(probe).getByRole("button", {
-        name: "webAiApiCheck:modal.actions.runOne",
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
     await waitFor(() =>
@@ -201,7 +216,7 @@ describe("web API verification modes", () => {
       ).toContainEqual([
         WebAiApiCheckMessageTypes.RunProbe,
         expect.objectContaining({
-          apiType: "openai",
+          apiType: "openai-compatible",
           requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
           requestProfileEnhanced: true,
           probeId: "text-generation",
@@ -264,6 +279,11 @@ describe("web API verification modes", () => {
       })
       const textProbe = screen.getByTestId(
         getWebAiApiCheckProbeTestId("text-generation"),
+      )
+      await user.click(
+        within(textProbe).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
       )
       expect(
         within(textProbe).getByText(
@@ -365,7 +385,7 @@ describe("web API verification modes", () => {
               name: "webAiApiCheck:modal.actions.test",
             })
           : within(textProbe).getByRole("button", {
-              name: "webAiApiCheck:modal.actions.runOne",
+              name: "aiApiVerification:verifyDialog.actions.runOne",
             }),
       )
 
@@ -390,6 +410,11 @@ describe("web API verification modes", () => {
       await act(async () => {
         probeGate.resolve()
       })
+      await user.click(
+        within(textProbe).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
+      )
       expect(
         await within(textProbe).findByText("Mode fixture passed"),
       ).toBeVisible()

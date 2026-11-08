@@ -1,6 +1,6 @@
 {
   "confirmToast": {
-    "body": "Bạn có muốn mở bảng kiểm tra AI API để kiểm tra và dùng thử khả năng khả dụng của AI API không?",
+    "body": "Mở bảng kiểm tra API để kiểm tra khả năng sử dụng của API này?",
     "enhancedInfo": "Thông báo này được kích hoạt bởi tự động phát hiện nâng cao. Nếu kết quả sai, hãy báo lỗi hoặc tắt tự động phát hiện nâng cao trong cài đặt.",
     "feedback": "Báo lỗi",
     "keyOnlyBody": "Đã giải mã một giá trị có thể là khóa API nhưng chưa tìm thấy URL API. Mở bảng kiểm tra để thêm URL trước khi kiểm tra?",
@@ -17,13 +17,12 @@
       "openApiProfiles": "Mở API Profiles",
       "retry": "Thử lại",
       "running": "Đang kiểm tra...",
-      "runOne": "Kiểm tra",
       "saveToProfiles": "Lưu vào API Profiles",
       "saving": "Đang lưu...",
       "showKey": "Hiện Key",
       "stopping": "Đang dừng...",
       "stopTest": "Dừng kiểm tra",
-      "test": "Kiểm tra"
+      "test": "Chạy kiểm tra thông thường"
     },
     "candidates": {
       "apiKey": "Key ứng viên {{index}}"
@@ -72,14 +71,11 @@
       "tags": "Chọn thẻ"
     },
     "privacyHint": "API Key được coi là thông tin nhạy cảm: mặc định bị ẩn và trừ khi bạn chủ động lưu vào API Profiles, sẽ không có bất kỳ dữ liệu nào được lưu trữ liên tục.",
-    "probes": {
-      "notRunYet": "Chưa chạy"
-    },
     "sourceText": {
       "label": "Văn bản để trích xuất",
       "placeholder": "Dán Base URL và API Key vào đây, hoặc sử dụng menu chuột phải để điền sẵn từ văn bản được chọn."
     },
-    "title": "Kiểm tra khả năng khả dụng của AI API"
+    "title": "Kiểm tra API"
   },
   "settings": {
     "autoDetect": {
@@ -157,7 +153,7 @@
       "wildcard": "Ký tự đại diện (mặc định)",
       "wildcardHint": "* khớp mọi ký tự. Tên miền thành *://tên-miền/*; dùng *.example.com cho tên miền phụ."
     },
-    "title": "Kiểm tra khả năng khả dụng của AI API trên trang web"
+    "title": "Kiểm tra API trên trang web"
   },
   "siteControl": {
     "disable": "Tắt phát hiện tự động trên trang web này",
