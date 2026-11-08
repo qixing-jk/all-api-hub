@@ -38,6 +38,12 @@ export interface RunAccountCheckinOptions {
   loginProviderOwners?: ReadonlyMap<AccountLoginProvider, SiteAccount>
 }
 
+/** One observation, with reuse kept out of persisted account results. */
+export type AccountCheckinExecutionOutcome = {
+  result: CheckinAccountResult
+  reused?: true
+}
+
 /** Executes the selected method and preserves mutation certainty, discovery, and persistence outcomes. */
 export async function executeAccountCheckin(
   account: SiteAccount,
@@ -49,9 +55,7 @@ export async function executeAccountCheckin(
     allowAutomaticDiscovery = false,
     loginProviderOwners,
   }: RunAccountCheckinOptions = {},
-): Promise<{
-  result: CheckinAccountResult
-}> {
+): Promise<AccountCheckinExecutionOutcome> {
   const buildResult = (
     status: CheckinResultStatus,
     partial?: Partial<
@@ -67,6 +71,7 @@ export async function executeAccountCheckin(
         | "reconciliation"
         | "accountStateDurability"
         | "reward"
+        | "timestamp"
       >
     >,
   ): CheckinAccountResult =>
@@ -74,8 +79,8 @@ export async function executeAccountCheckin(
       accountId: account.id,
       accountName,
       status,
-      ...(partial ?? {}),
       timestamp: Date.now(),
+      ...(partial ?? {}),
     }) as CheckinAccountResult
 
   // One shared browser login context per provider: only the owning account may
@@ -166,6 +171,7 @@ export async function executeAccountCheckin(
       methodId: execution.methodId,
       reconciliation: providerResult.reconciliation,
       reward: providerResult.reward,
+      timestamp: execution.completedAt ?? Date.now(),
       ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED ||
       providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
         ? { retryable: execution.retryable === true }
@@ -189,7 +195,7 @@ export async function executeAccountCheckin(
         status: providerResult.status,
         message: providerResult.rawMessage ?? providerResult.messageKey ?? "",
       })
-      return { result }
+      return { result, ...(execution.reused ? { reused: true } : {}) }
     }
 
     logger.warn("Check-in failed", {
@@ -198,7 +204,7 @@ export async function executeAccountCheckin(
       status: providerResult.status,
       message: providerResult.rawMessage ?? providerResult.messageKey ?? "",
     })
-    return { result }
+    return { result, ...(execution.reused ? { reused: true } : {}) }
   } catch (error) {
     const errorMessage = getErrorMessage(error)
     const normalizedError = resolveProviderErrorResult({ error })

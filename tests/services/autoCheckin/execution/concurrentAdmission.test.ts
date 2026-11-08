@@ -6,6 +6,7 @@ import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
+import { replaceCheckInMethodStatus } from "~/services/checkin/autoCheckin/state"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
@@ -17,6 +18,7 @@ import {
   automaticExecution,
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 afterEach(() => vi.restoreAllMocks())
@@ -86,6 +88,7 @@ it.each(["daily-first", "manual-first"] as const)(
   },
 )
 
+/** Controls when an in-flight provider attempt settles. */
 function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((done) => {
@@ -108,10 +111,19 @@ const manualContext = {
   ),
 }
 
-function setup(readback = true) {
-  const siteType = readback ? SITE_TYPES.NEW_API : SITE_TYPES.ANYROUTER
+/** Provides an account and a held mutation for overlapping public execution calls. */
+function setup(readback = true, nonRepeatSafe = false) {
+  const siteType = nonRepeatSafe
+    ? SITE_TYPES.SUB2API
+    : readback
+      ? SITE_TYPES.NEW_API
+      : SITE_TYPES.ANYROUTER
   const registration = autoCheckinMethodRegistry.resolveById(
-    readback ? "new-api:daily-checkin" : "anyrouter:daily-checkin",
+    nonRepeatSafe
+      ? "hiyo:daily-checkin"
+      : readback
+        ? "new-api:daily-checkin"
+        : "anyrouter:daily-checkin",
   )!
   const account = buildSiteAccount({
     site_type: siteType,
@@ -121,6 +133,25 @@ function setup(readback = true) {
       automaticExecutionEnabled: true,
     }),
   })
+  if (nonRepeatSafe) {
+    account.checkIn = buildCheckInConfig({
+      automaticExecutionEnabled: true,
+      selection: { mode: "manual", methodId: "hiyo:daily-checkin" },
+      methodKnowledge: {
+        methods: {
+          "hiyo:daily-checkin": {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "probe", observedAt: 100 },
+            },
+          },
+        },
+      },
+    })
+    vi.spyOn(registration.provider, "getReadiness").mockReturnValue({
+      ready: true,
+    })
+  }
   const status = readback
     ? vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
         outcome: "known",
@@ -157,9 +188,9 @@ it.each([true, false])(
     completion.resolve({ status: "success" })
     const results = await Promise.all([first, second, third])
     expect(checkIn).toHaveBeenCalledOnce()
-    expect(results.slice(1)).toEqual([
-      { kind: "skipped", reason: "already_checked" },
-      { kind: "skipped", reason: "already_checked" },
+    expect(results.slice(1)).toMatchObject([
+      { kind: "executed", result: { status: "success" }, reused: true },
+      { kind: "executed", result: { status: "success" }, reused: true },
     ])
   },
 )
@@ -242,6 +273,85 @@ it("requires fresh status for manual recovery after waiting", async () => {
   const results = await Promise.all([first, second])
   expect(results[1]).toMatchObject({ kind: "blocked", reason: "network_error" })
   expect(checkIn).toHaveBeenCalledOnce()
+})
+
+it("does not replay a failed non-repeat-safe method even when readback permits a claim", async () => {
+  const { input, started, completion, checkIn } = setup(true, true)
+  const first = executeSelectedCheckIn({ ...input, context: dailyContext })
+  await started.promise
+  const second = executeSelectedCheckIn(input)
+  completion.resolve({
+    status: "failed",
+    reasonCode: "manual_verification_required",
+  })
+  await first
+  await expect(second).resolves.toMatchObject({
+    kind: "executed",
+    result: { status: "failed" },
+  })
+  expect(checkIn).toHaveBeenCalledOnce()
+})
+
+it.each([false, true])(
+  "allows a manual command after an automatic skip (non-repeat-safe %s)",
+  async (nonRepeatSafe) => {
+    const { input, checkIn } = setup(nonRepeatSafe, nonRepeatSafe)
+    checkIn.mockReset().mockResolvedValue({ status: "success" })
+    const enteredAdmission = deferred<void>()
+    const automaticEnabled = deferred<boolean>()
+    const first = executeSelectedCheckIn({
+      ...input,
+      context: dailyContext,
+      isAutomaticExecutionEnabled: async () => {
+        enteredAdmission.resolve()
+        return automaticEnabled.promise
+      },
+    })
+    await enteredAdmission.promise
+    const second = executeSelectedCheckIn(input)
+    automaticEnabled.resolve(false)
+    await expect(first).resolves.toMatchObject({
+      kind: "skipped",
+      reason: "global_automatic_execution_disabled",
+    })
+    await expect(second).resolves.toMatchObject({
+      kind: "executed",
+      result: { status: "success" },
+    })
+    expect(checkIn).toHaveBeenCalledOnce()
+  },
+)
+
+it("refreshes a cached disabled method before a queued manual recovery", async () => {
+  const { input, started, completion, checkIn } = setup()
+  const first = executeSelectedCheckIn({ ...input, context: dailyContext })
+  await started.promise
+  const disabledConfig = replaceCheckInMethodStatus({
+    config: input.account.checkIn,
+    methodId: "new-api:daily-checkin",
+    status: {
+      outcome: "known",
+      availability: "disabled",
+      evidence: { source: "probe", observedAt: Date.now() },
+    },
+  })
+  const second = executeSelectedCheckIn({
+    ...input,
+    revalidateAccount: async (refreshedConfig) => ({
+      ...input.account,
+      checkIn: refreshedConfig ?? disabledConfig,
+    }),
+  })
+  completion.resolve({
+    status: "failed",
+    reasonCode: "authentication_required",
+  })
+  await first
+  await expect(second).resolves.toMatchObject({
+    kind: "executed",
+    result: { status: "success" },
+  })
+  expect(checkIn).toHaveBeenCalledTimes(2)
 })
 
 it.each(["automatic-follower", "no-readback"])(
@@ -346,6 +456,70 @@ it("honors disabled automatic intent after waiting without another network reque
   expect(checkIn).toHaveBeenCalledOnce()
 })
 
+it("blocks a queued command when the saved account cannot be reloaded", async () => {
+  const { input, started, completion, status, checkIn } = setup()
+  const first = executeSelectedCheckIn({ ...input, context: dailyContext })
+  await started.promise
+  const second = executeSelectedCheckIn({
+    ...input,
+    revalidateAccount: async () => {
+      throw new Error("Account storage unavailable")
+    },
+  })
+  completion.resolve({
+    status: "failed",
+    reasonCode: "authentication_required",
+  })
+  await first
+  await expect(second).resolves.toMatchObject({
+    kind: "blocked",
+    reason: "account_unavailable",
+    retryable: false,
+  })
+  expect(status).toHaveBeenCalledTimes(2)
+  expect(checkIn).toHaveBeenCalledOnce()
+})
+
+it("skips overlapping commands when the account has no selected method", async () => {
+  const { input, status, checkIn } = setup()
+  const account = {
+    ...input.account,
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: false,
+      automaticExecutionEnabled: true,
+    }),
+  }
+  const results = await Promise.all(
+    [dailyContext, manualContext].map((context) =>
+      executeSelectedCheckIn({ ...input, account, context }),
+    ),
+  )
+  expect(results).toEqual([
+    { kind: "skipped", reason: "no_selected_method" },
+    { kind: "skipped", reason: "no_selected_method" },
+  ])
+  expect(status).not.toHaveBeenCalled()
+  expect(checkIn).not.toHaveBeenCalled()
+})
+
+it("respects provider ownership before reusing an overlapping completion", async () => {
+  const { input, started, completion, checkIn } = setup()
+  const first = executeSelectedCheckIn(input)
+  await started.promise
+  const second = executeSelectedCheckIn({
+    ...input,
+    loginProviderClaimedByAnother: true,
+  })
+  completion.resolve({ status: "success" })
+  await first
+  await expect(second).resolves.toEqual({
+    kind: "skipped",
+    reason: "login_provider_in_use",
+  })
+  expect(checkIn).toHaveBeenCalledOnce()
+})
+
 it("does not share completion across account identities with the same saved id", async () => {
   const { input, started, completion, checkIn } = setup()
   const first = executeSelectedCheckIn(input)
@@ -358,6 +532,105 @@ it("does not share completion across account identities with the same saved id",
   await Promise.all([first, second])
   expect(checkIn).toHaveBeenCalledTimes(2)
 })
+
+it("shares the method actually executed after selection changes during confirmation", async () => {
+  const { input, started, completion, checkIn, status } = setup(true, true)
+  const originalMethod = autoCheckinMethodRegistry.resolveById(
+    "denxio:daily-checkin",
+  )!
+  const detection = {
+    outcome: "matched" as const,
+    evidence: { source: "probe" as const, observedAt: 100 },
+  }
+  vi.spyOn(originalMethod.provider, "detect").mockResolvedValue(detection)
+  vi.spyOn(originalMethod.provider, "getStatus").mockResolvedValue({
+    outcome: "known",
+    availability: "enabled",
+    today: "not_checked",
+    evidence: { source: "probe", observedAt: 100 },
+  })
+  const latestAccount = {
+    ...input.account,
+    checkIn: {
+      ...input.account.checkIn,
+      methodKnowledge: {
+        methods: {
+          ...input.account.checkIn.methodKnowledge.methods,
+          "denxio:daily-checkin": { detection },
+        },
+      },
+    },
+  }
+  const first = executeSelectedCheckIn({
+    ...input,
+    account: {
+      ...input.account,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        selection: { mode: "manual", methodId: "denxio:daily-checkin" },
+      }),
+    },
+    revalidateAccount: async () => latestAccount,
+  })
+  await started.promise
+  status!.mockResolvedValueOnce({
+    outcome: "unknown",
+    reason: "network",
+    attemptedAt: Date.now(),
+  })
+  const second = executeSelectedCheckIn({ ...input, account: latestAccount })
+  completion.resolve({ status: "uncertain", reasonCode: "checkin_unconfirmed" })
+  await expect(first).resolves.toMatchObject({
+    kind: "executed",
+    methodId: "hiyo:daily-checkin",
+    result: { status: "uncertain" },
+  })
+  const secondResult = await second
+  expect(checkIn).toHaveBeenCalledOnce()
+  expect(secondResult).toMatchObject({
+    kind: "executed",
+    methodId: "hiyo:daily-checkin",
+    result: { status: "uncertain" },
+  })
+})
+
+it.each([false, true])(
+  "retains the successful reward for overlapping callers (cached checked %s)",
+  async (cachedChecked) => {
+    const { input, started, completion, checkIn } = setup()
+    const first = executeSelectedCheckIn(input)
+    await started.promise
+    const second = executeSelectedCheckIn({
+      ...input,
+      ...(cachedChecked
+        ? {
+            revalidateAccount: async () => ({
+              ...input.account,
+              checkIn: replaceCheckInMethodStatus({
+                config: input.account.checkIn,
+                methodId: "new-api:daily-checkin",
+                status: {
+                  outcome: "known",
+                  availability: "enabled",
+                  today: "checked",
+                  evidence: { source: "probe", observedAt: Date.now() },
+                },
+              }),
+            }),
+          }
+        : {}),
+    })
+    completion.resolve({ status: "success", reward: { quota: 95000 } })
+    const [winner, follower] = await Promise.all([first, second])
+    expect(follower).toMatchObject({
+      kind: "executed",
+      result: { status: "success", reward: { quota: 95000 } },
+      reused: true,
+    })
+    expect(follower).toMatchObject({ ...winner, reused: true })
+    expect(checkIn).toHaveBeenCalledOnce()
+  },
+)
 
 it("retains a completed mutation when an intervening automatic waiter is disabled", async () => {
   const { input, started, completion, checkIn } = setup()
@@ -372,8 +645,9 @@ it("retains a completed mutation when an intervening automatic waiter is disable
   completion.resolve({ status: "success" })
   const results = await Promise.all([first, disabled, manual])
   expect(results[2]).toMatchObject({
-    kind: "skipped",
-    reason: "already_checked",
+    kind: "executed",
+    result: { status: "success" },
+    reused: true,
   })
   expect(checkIn).toHaveBeenCalledOnce()
 })

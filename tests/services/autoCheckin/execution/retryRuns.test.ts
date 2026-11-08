@@ -4,7 +4,9 @@ import "~~/tests/services/autoCheckin/schedulerTestHarness"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
   mockedAccountStorage,
@@ -16,11 +18,82 @@ import {
   runnableCheckIn,
   schedulerTestState,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("execution/retryRuns", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
+  })
+  it("keeps a newer manual success when an older retry result is persisted", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    const account = buildSiteAccount({
+      id: "recovering",
+      site_type: SITE_TYPES.VELOERA,
+      checkIn: runnableCheckIn(),
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedAccountStorage.getAccountById.mockResolvedValue(account)
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: () => ({ ready: true }),
+    })
+    const failure = {
+      accountId: account.id,
+      accountName: "Recovering",
+      status: "failed" as const,
+      retryable: true,
+      timestamp: Date.now(),
+    }
+    const success = {
+      ...failure,
+      status: "success" as const,
+      retryable: false,
+      timestamp: Date.now() + 1,
+    }
+    schedulerTestState.storedStatus = {
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: [account.id],
+        attemptsByAccount: { [account.id]: 1 },
+      },
+      perAccount: { [account.id]: failure },
+      accountsSnapshot: [{ accountId: account.id, lastResult: failure }],
+    }
+    vi.spyOn(
+      accountCheckinRunWorkflow,
+      "runAccountCheckin",
+    ).mockImplementationOnce(async () => {
+      // Another run publishes recovery after this attempt observed its failure.
+      schedulerTestState.storedStatus.perAccount[account.id] = success
+      return { result: failure }
+    })
+    await (autoCheckinScheduler as any).runRetryCheckins()
+    const status = schedulerTestState.storedStatus
+    expect(status.perAccount[account.id]).toEqual(success)
+    expect(status.accountsSnapshot[0].lastResult).toEqual(success)
+    expect(status.summary).toMatchObject({
+      successCount: 1,
+      failedCount: 0,
+      needsRetry: false,
+    })
+    expect(status.retryState).toMatchObject({
+      pendingAccountIds: [],
+      attemptsByAccount: { [account.id]: 2 },
+    })
+    vi.useRealTimers()
   })
   it("retries only queued accounts and stops when maxAttemptsPerDay is reached", async () => {
     vi.useFakeTimers()

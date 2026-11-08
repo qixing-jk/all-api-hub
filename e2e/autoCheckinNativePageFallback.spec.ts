@@ -14,7 +14,6 @@ import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypas
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
-  AUTO_CHECKIN_SKIP_REASON,
   type AutoCheckinStatus,
 } from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -354,9 +353,14 @@ for (const order of ["daily-first", "manual-first"] as const) {
       () => postResponse,
     )
     const runs: Promise<unknown>[] = []
+    let markManualPending!: () => void
+    const manualPending = new Promise<void>((resolve) => {
+      markManualPending = resolve
+    })
     try {
       await stubLlmMetadataIndex(context)
       await seedUserPreferences(serviceWorker, {
+        logging: { consoleEnabled: true, level: "debug" },
         autoCheckin: {
           ...DEFAULT_PREFERENCES.autoCheckin!,
           globalEnabled: true,
@@ -412,14 +416,20 @@ for (const order of ["daily-first", "manual-first"] as const) {
               AutoCheckinMessageTypes.RunNow,
               AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
             ]
-      await serviceWorker.evaluate((types) => {
+      await serviceWorker.evaluate((accountId) => {
         const scope = globalThis as any
-        scope.__concurrentCheckinMessages = []
-        scope.chrome.runtime.onMessage.addListener((message: any) => {
-          if (types.includes(message?.type))
-            scope.__concurrentCheckinMessages.push(message.type)
-        })
-      }, triggers)
+        scope.__concurrentCheckinEntered = false
+        const originalDebug = console.debug.bind(console)
+        console.debug = (message, details) => {
+          originalDebug(message, details)
+          if (
+            String(message).endsWith("Queued concurrent check-in") &&
+            details?.accountId === accountId &&
+            details.pendingCallers >= 2
+          )
+            scope.__concurrentCheckinEntered = true
+        }
+      }, NATIVE_ACCOUNT_ID)
       const run = async (type: string) => {
         if (type === AutoCheckinMessageTypes.RunNow) {
           // The UI owns the user-command lease needed for CAPTCHA/login recovery.
@@ -428,6 +438,7 @@ for (const order of ["daily-first", "manual-first"] as const) {
           )
           await button.click()
           await expect(button).toBeDisabled()
+          markManualPending()
           await expect(button).toBeEnabled()
         } else {
           const response = await sendTypedRuntimeMessageFromPage(page, type)
@@ -442,12 +453,13 @@ for (const order of ["daily-first", "manual-first"] as const) {
       await expect
         .poll(() =>
           serviceWorker.evaluate(
-            () => (globalThis as any).__concurrentCheckinMessages.length,
+            () => (globalThis as any).__concurrentCheckinEntered,
           ),
         )
-        .toBe(2)
-      // Both runtime commands have arrived while the first HTTP mutation is
-      // still in flight. Let the real provider and native-page workflow finish.
+        .toBe(true)
+      await manualPending
+      // The second command has joined account execution while the first POST
+      // is held, and the manual UI has entered its pending state.
       releasePost()
       await Promise.all(runs)
       expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
@@ -455,11 +467,7 @@ for (const order of ["daily-first", "manual-first"] as const) {
       const status = await readAutoCheckinStatus(serviceWorker)
       const result = status?.perAccount?.[NATIVE_ACCOUNT_ID]
       expect(result).toBeDefined()
-      if (result?.status === "skipped")
-        expect(result.reasonCode).toBe(
-          AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
-        )
-      else expect(["success", "already_checked"]).toContain(result?.status)
+      expect(["success", "already_checked"]).toContain(result?.status)
       expect(status?.pendingRetry).toBe(false)
     } finally {
       releasePost()

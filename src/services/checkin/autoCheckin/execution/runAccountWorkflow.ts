@@ -7,6 +7,7 @@ import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/dis
 import { recordSiteTypeObservationForResult } from "~/services/checkin/autoCheckin/discovery/recordSiteTypeObservation"
 import {
   executeAccountCheckin,
+  type AccountCheckinExecutionOutcome,
   type RunAccountCheckinOptions,
 } from "~/services/checkin/autoCheckin/execution/accountExecution"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
@@ -14,10 +15,7 @@ import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/provi
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { type SiteAccount } from "~/types"
-import {
-  CHECKIN_RESULT_STATUS,
-  type CheckinAccountResult,
-} from "~/types/autoCheckin"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -140,9 +138,7 @@ class AccountCheckinRunWorkflow {
     tempWindowRequestSource: TempWindowRequestSource,
     protectionBypassExecution: ProtectionBypassExecution,
     options: RunAccountCheckinOptions = {},
-  ): Promise<{
-    result: CheckinAccountResult
-  }> {
+  ): Promise<AccountCheckinExecutionOutcome> {
     const outcome = await executeAccountCheckin(
       account,
       accountName,
@@ -165,11 +161,7 @@ class AccountCheckinRunWorkflow {
     protectionBypassExecution: ProtectionBypassExecution
     loginProviderOwners: ReadonlyMap<AccountLoginProvider, SiteAccount>
     allowAutomaticDiscovery?: boolean
-  }): Promise<
-    Array<{
-      result: CheckinAccountResult
-    }>
-  > {
+  }): Promise<AccountCheckinExecutionOutcome[]> {
     return Promise.all(
       params.accounts.map(async (account) => {
         const accountName =

@@ -13,6 +13,7 @@ import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
 } from "~/services/apiService/sub2api/auth/authSession"
 import { ApiError } from "~/services/apiTransport/errors"
+import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import {
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
@@ -79,6 +80,10 @@ type ExecuteSelectedCheckInResult =
       result: AutoCheckinProviderResult
       /** Whether a later attempt can safely begin with authoritative readback. */
       retryable: boolean
+      /** Observation time belongs to the actual attempt, including its waiters. */
+      completedAt?: number
+      /** A waiter observed this attempt without executing another mutation. */
+      reused?: true
     }
   | {
       kind: typeof CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped
@@ -638,26 +643,51 @@ async function continueAfterAccountExecution(
   const registration = methodId
     ? autoCheckinMethodRegistry.resolveById(methodId)
     : null
+  const isManualFollowingAutomatic =
+    input.context.protectionBypassExecution.kind ===
+      PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
+    previous.input.context.protectionBypassExecution.kind ===
+      PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
+  const canRecoverAutomaticallyStartedAttempt =
+    isManualFollowingAutomatic &&
+    registration?.provider.getStatus &&
+    !NON_REPEAT_SAFE_CHECKIN_METHOD_IDS.has(registration.id) &&
+    (result.kind !== CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed ||
+      result.result.status === CHECKIN_RESULT_STATUS.FAILED)
+  const hasMutationOutcomeToReuse =
+    result.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed &&
+    result.result.status !== CHECKIN_RESULT_STATUS.FAILED
   if (registration) {
     const admission = await inspectCheckInMutationAdmission({
       expectedAccount: input.account,
       account: latestAccount,
       registration,
       globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+      loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
       isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
     })
-    if (!admission.eligible) {
+    if (
+      !admission.eligible &&
+      !(
+        (canRecoverAutomaticallyStartedAttempt || hasMutationOutcomeToReuse) &&
+        (admission.reason === CHECK_IN_EXECUTION_SKIP_REASONS.MethodDisabled ||
+          admission.reason === CHECK_IN_EXECUTION_SKIP_REASONS.AlreadyChecked)
+      )
+    ) {
       return {
         kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
         reason: admission.reason,
       }
     }
   }
-  const previousMethodId = resolveSelectedCheckInMethod({
-    config: previous.input.account.checkIn,
-    siteType: previous.input.account.site_type,
-    siteUrl: previous.input.account.site_url,
-  })
+  const previousMethodId =
+    result.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed
+      ? result.methodId
+      : resolveSelectedCheckInMethod({
+          config: previous.input.account.checkIn,
+          siteType: previous.input.account.site_type,
+          siteUrl: previous.input.account.site_url,
+        })
   if (
     !hasSameCheckInAccountIdentity(previous.input.account, latestAccount) ||
     methodId !== previousMethodId
@@ -669,20 +699,18 @@ async function continueAfterAccountExecution(
     (result.result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
       result.result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED)
   ) {
-    return {
-      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.AlreadyChecked,
-    }
+    return { ...result, reused: true }
   }
-  const canRecoverAutomaticallyStartedAttempt =
-    input.context.protectionBypassExecution.kind ===
-      PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
-    previous.input.context.protectionBypassExecution.kind ===
-      PROTECTION_BYPASS_EXECUTION_KINDS.Automatic &&
-    registration?.provider.getStatus &&
-    !NON_REPEAT_SAFE_CHECKIN_METHOD_IDS.has(registration.id) &&
-    (result.kind !== CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed ||
-      result.result.status === CHECKIN_RESULT_STATUS.FAILED)
+  // The global switch stopped the automatic attempt before mutation. The
+  // explicit command can start even when replaying a mutation would be unsafe.
+  if (
+    isManualFollowingAutomatic &&
+    result.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped &&
+    result.reason ===
+      CHECK_IN_EXECUTION_SKIP_REASONS.GlobalAutomaticExecutionDisabled
+  ) {
+    return execute({ ...input, account: latestAccount })
+  }
   if (canRecoverAutomaticallyStartedAttempt) {
     return execute({
       ...input,
@@ -690,7 +718,9 @@ async function continueAfterAccountExecution(
       requireStatusConfirmationBeforeMutation: true,
     })
   }
-  return result
+  return result.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed
+    ? { ...result, reused: true }
+    : result
 }
 
 /** Coordinate overlapping status/mutation sequences for one saved account in this worker. */
@@ -702,6 +732,12 @@ export async function executeSelectedCheckIn(
   }
   group.pendingCallers++
   activeAccountExecutions.set(input.account.id, group)
+  if (group.pendingCallers > 1) {
+    logger.debug("Queued concurrent check-in", {
+      accountId: input.account.id,
+      pendingCallers: group.pendingCallers,
+    })
+  }
   const execute = (next: ExecuteSelectedCheckInInput) => {
     const attempt = { input: next, promise: executeSelectedCheckInOnce(next) }
     group.attempt = attempt
@@ -910,5 +946,6 @@ async function executeSelectedCheckInOnce(
     methodId: registration.id,
     result,
     retryable: result.retryable,
+    completedAt: Date.now(),
   }
 }

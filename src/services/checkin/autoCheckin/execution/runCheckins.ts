@@ -156,6 +156,7 @@ export async function runCheckins(options: {
     summary: AutoCheckinRunSummary,
     perAccount: Record<string, CheckinAccountResult>,
     runResults: Record<string, CheckinAccountResult>,
+    accountSnapshots: AutoCheckinAccountSnapshot[],
   ): AutoCheckinRunSummary => {
     if (
       !mergeHistory &&
@@ -164,8 +165,17 @@ export async function runCheckins(options: {
       )
     )
       return summary
+    const eligibleIds = new Set(
+      accountSnapshots.map(({ accountId }) => accountId),
+    )
     return recalculateSummaryFromResults(
-      perAccount,
+      mergeHistory
+        ? perAccount
+        : Object.fromEntries(
+            Object.entries(perAccount).filter(([accountId]) =>
+              eligibleIds.has(accountId),
+            ),
+          ),
       mergeHistory ? base?.summary ?? summary : summary,
     )
   }
@@ -321,6 +331,7 @@ export async function runCheckins(options: {
             summary,
             perAccount,
             results,
+            accountSnapshots,
           )
 
           return {
@@ -428,12 +439,17 @@ export async function runCheckins(options: {
       .map((outcome) => outcome.result.accountId)
 
     await accountCheckinRunWorkflow.recordStarPromotionCheckinSuccesses(
-      updatedAccountIds.length,
+      checkinOutcomes.filter(
+        (outcome) =>
+          !outcome.reused && isSuccessfulCheckinStatus(outcome.result.status),
+      ).length,
     )
 
     const accountIdsToRefresh = checkinOutcomes
       .filter(
-        (outcome) => outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
+        (outcome) =>
+          !outcome.reused &&
+          outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
       )
       .map((outcome) => outcome.result.accountId)
 
@@ -476,6 +492,7 @@ export async function runCheckins(options: {
           summary,
           perAccount,
           results,
+          accountSnapshots,
         )
         const pendingRetry = Boolean(
           retryState?.day === today && retryState.pendingAccountIds.length > 0,

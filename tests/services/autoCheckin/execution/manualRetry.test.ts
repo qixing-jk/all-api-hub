@@ -10,6 +10,7 @@ import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
   mockedAccountStorage,
   mockedAutoCheckinStorage,
+  mockedMethods,
   mockedUserPreferences,
   resolveProviderForTest,
   retryAccountExecution,
@@ -17,11 +18,53 @@ import {
   runnableCheckIn,
   schedulerTestState,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("autoCheckinScheduler.retryAccount", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
+  })
+
+  it("keeps a newer result when a single-account retry finishes persistence late", async () => {
+    const account = buildSiteAccount({
+      id: "recovering",
+      site_type: SITE_TYPES.VELOERA,
+      checkIn: runnableCheckIn(),
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    const timestamp = Date.now()
+    const success = {
+      accountId: account.id,
+      accountName: "Recovering",
+      status: "success",
+      reward: { quota: 95000 },
+      timestamp: timestamp + 1,
+    }
+    schedulerTestState.storedStatus = {
+      perAccount: { [account.id]: success },
+      accountsSnapshot: [{ accountId: account.id, lastResult: success }],
+    }
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "veloera:daily-checkin",
+      result: { status: "failed", reasonCode: "network_error" },
+      retryable: true,
+      completedAt: timestamp,
+    })
+    const response = await retryAccountForTest(account.id)
+    expect(response.result).toEqual(success)
+    expect(schedulerTestState.storedStatus.perAccount[account.id]).toEqual(
+      success,
+    )
+    expect(
+      schedulerTestState.storedStatus.accountsSnapshot[0].lastResult,
+    ).toEqual(success)
+    expect(response.summary).toMatchObject({
+      successCount: 1,
+      failedCount: 0,
+      needsRetry: false,
+    })
   })
 
   it("throws when retrying an account that no longer exists", async () => {

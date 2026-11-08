@@ -398,27 +398,38 @@ export async function waitForNewUserFacingCredentialPage(
 ): Promise<Page> {
   const existingPages = new Set(context.pages())
   let selectedPage: Page | undefined
+  const inspecting = new Set<Page>()
+  let finished = false
   // A page event can precede tab activation. Keep inspecting new candidates
   // until the document matches the source window's active tab. Inspection
   // windows may briefly gain focus, but they never own the user's token flow.
-  await expect
-    .poll(
-      async () => {
-        for (const candidate of context.pages()) {
-          if (existingPages.has(candidate)) continue
-          if (
-            await isUserFacingCredentialPage(candidate, worker, sourceWindowId)
-          ) {
-            selectedPage = candidate
-            return true
+  try {
+    await expect
+      .poll(
+        () => {
+          for (const candidate of context.pages()) {
+            if (
+              existingPages.has(candidate) ||
+              candidate.isClosed() ||
+              inspecting.has(candidate)
+            )
+              continue
+            inspecting.add(candidate)
+            void isUserFacingCredentialPage(candidate, worker, sourceWindowId)
+              .then((matches) => {
+                if (!finished && matches) selectedPage = candidate
+              })
+              .finally(() => inspecting.delete(candidate))
           }
-        }
-        return false
-      },
-      { timeout },
-    )
-    .toBe(true)
-  return selectedPage!
+          return selectedPage !== undefined
+        },
+        { timeout },
+      )
+      .toBe(true)
+    return selectedPage!
+  } finally {
+    finished = true
+  }
 }
 
 /** Excludes temporary inspection windows even when they gain focus at the same URL. */
