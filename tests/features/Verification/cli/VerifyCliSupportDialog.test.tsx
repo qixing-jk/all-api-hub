@@ -44,6 +44,7 @@ it.each([
       onClose={() => {}}
       account={account}
       initialModelId="test"
+      modelEnableGroups={["vip"]}
       initialClient={client}
     />,
   )
@@ -51,6 +52,7 @@ it.each([
   expect(accountView.mock.lastCall?.[0]).toMatchObject({
     account,
     initialModelId: "test",
+    modelEnableGroups: ["vip"],
     initialRequestProfile: client,
   })
 })

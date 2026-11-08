@@ -100,6 +100,9 @@ export function VerificationProbeDetails({
               aria-labelledby={selection && !label ? `${id}-label` : undefined}
               aria-expanded={selection ? selected : undefined}
               aria-controls={selection ? `${id}-detail` : undefined}
+              aria-describedby={
+                selection && status ? `${id}-status` : undefined
+              }
               onClick={selection ? () => selection.select(id) : undefined}
               className={cn(
                 "focus-visible:ring-ring flex min-h-(--density-control-sm) min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none",
@@ -110,7 +113,10 @@ export function VerificationProbeDetails({
             >
               <div id={`${id}-label`}>{heading}</div>
               {!headingAccessory && status ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div
+                  id={`${id}-status`}
+                  className="flex flex-wrap items-center gap-2"
+                >
                   {status}
                 </div>
               ) : null}
@@ -123,7 +129,10 @@ export function VerificationProbeDetails({
                 {headingAccessory}
               </div>
               {status ? (
-                <div className="pointer-events-none flex flex-wrap items-center gap-2">
+                <div
+                  id={`${id}-status`}
+                  className="pointer-events-none flex flex-wrap items-center gap-2"
+                >
                   {status}
                 </div>
               ) : null}
@@ -213,6 +222,7 @@ export function VerificationProbeDetails({
                   <VerificationMediaPreview
                     output={output}
                     media={result?.media}
+                    active={selected}
                   />
                   {text !== null ? (
                     <pre className="text-foreground bg-card border-border-subtle max-h-64 overflow-auto rounded-md border p-3 text-sm break-words whitespace-pre-wrap">

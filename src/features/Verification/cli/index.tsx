@@ -15,6 +15,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   return props.profile ? (
     <VerifyApiCredentialProfileDialog {...preset} profile={props.profile} />
   ) : (
-    <VerifyApiDialog {...preset} account={props.account} />
+    <VerifyApiDialog
+      {...preset}
+      account={props.account}
+      modelEnableGroups={props.modelEnableGroups}
+    />
   )
 }

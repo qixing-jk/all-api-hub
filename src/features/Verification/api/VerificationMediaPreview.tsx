@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -10,12 +10,19 @@ import {
 export function VerificationMediaPreview({
   output,
   media,
+  active = true,
 }: {
   output?: unknown
   media?: ApiVerificationProbeResult["media"]
+  active?: boolean
 }) {
   const { t } = useTranslation("aiApiVerification")
   const [failedUrl, setFailedUrl] = useState<string>()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  useEffect(() => {
+    if (!active && videoRef.current && !videoRef.current.paused)
+      videoRef.current.pause()
+  }, [active])
   const url =
     media?.url ??
     (output &&
@@ -41,6 +48,7 @@ export function VerificationMediaPreview({
         </p>
       ) : isVideo ? (
         <video
+          ref={videoRef}
           src={url}
           aria-label={t("verifyDialog.generatedVideoPreview")}
           controls

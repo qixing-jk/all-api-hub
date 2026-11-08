@@ -21,6 +21,7 @@ type VerifyCliSupportDialogBaseProps = {
 export type VerifyCliSupportDialogProps =
   | (VerifyCliSupportDialogBaseProps & {
       account: DisplaySiteData
+      modelEnableGroups?: string[]
       profile?: never
     })
   | (VerifyCliSupportDialogBaseProps & {

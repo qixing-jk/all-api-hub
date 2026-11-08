@@ -1411,6 +1411,38 @@ describe("VerifyApiDialog", () => {
     expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
 
+  it.each(["allow", "deny"] as const)(
+    "enforces the model %s-list without model groups",
+    async (policy) => {
+      const account = buildDisplaySiteData()
+      const key = buildNewApiRuntimeKey(account, buildNewApiToken())
+      key.modelAccess = {
+        ...key.modelAccess,
+        allowedModelIds: policy === "allow" ? ["other-model"] : null,
+        deniedModelIds: policy === "deny" ? ["gpt-test"] : [],
+      }
+      mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([key])
+      render(
+        <VerifyApiDialog
+          isOpen
+          onClose={() => {}}
+          account={account}
+          initialModelId="gpt-test"
+        />,
+      )
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.noCompatibleRuntimeKeyHint",
+      )
+      const probe = screen.getByTestId("verify-probe-text-generation")
+      expect(
+        within(probe).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.runOne",
+        }),
+      ).toBeDisabled()
+      expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    },
+  )
+
   it("does not fall back to an incompatible enabled token for a requested model group", async () => {
     const onManageModelKey = vi.fn()
     mockFetchAccountTokens.mockResolvedValueOnce([

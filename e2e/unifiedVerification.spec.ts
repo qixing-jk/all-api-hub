@@ -212,10 +212,14 @@ test("API and CLI shortcuts share the workspace with CLI presets only", async ({
       .click()
     await expect(page.getByTestId(IDS.verifyDialogCloseButton)).toBeEnabled()
     expect(captures.length).toBeGreaterThan(3)
-    for (const capture of captures)
+    for (const capture of captures) {
       expect(JSON.stringify(capture.body)).not.toContain(
         "Read the following reference text.",
       )
+      expect(JSON.stringify(capture.body)).not.toContain(
+        "Generate an SVG of a pelican riding a bicycle",
+      )
+    }
     await page.setViewportSize({ width: 420, height: 900 })
     await client.scrollIntoViewIfNeeded()
     await page.getByTestId("verification-config").screenshot({

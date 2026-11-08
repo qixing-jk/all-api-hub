@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
 import en from "~/locales/en/aiApiVerification.json"
@@ -41,6 +41,31 @@ describe("VerificationMediaPreview", () => {
     expect(player).toHaveAttribute("controls")
     expect(player).not.toHaveAttribute("autoplay")
   })
+  it.each([true, false])(
+    "stops hidden video playback without restarting it (already paused: %s)",
+    async (paused) => {
+      const media = {
+        type: API_VERIFICATION_MEDIA_TYPES.Video,
+        url: "https://example.com/result.mp4",
+      } as const
+      const { rerender } = render(<VerificationMediaPreview media={media} />)
+      const player = (await screen.findByLabelText(
+        "Generated video preview",
+      )) as HTMLVideoElement
+      const pause = vi.spyOn(player, "pause").mockImplementation(() => {})
+      const play = vi.spyOn(player, "play").mockResolvedValue(undefined)
+      Object.defineProperty(player, "paused", {
+        configurable: true,
+        value: paused,
+      })
+
+      rerender(<VerificationMediaPreview media={media} active={false} />)
+      expect(pause).toHaveBeenCalledTimes(paused ? 0 : 1)
+      rerender(<VerificationMediaPreview media={media} active />)
+      expect(play).not.toHaveBeenCalled()
+      expect(player).toHaveAttribute("src", media.url)
+    },
+  )
   it("omits the external media link when the media is marked credentialed", async () => {
     render(
       <VerificationMediaPreview

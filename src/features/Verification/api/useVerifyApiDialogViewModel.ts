@@ -81,13 +81,13 @@ const logger = createLogger("VerifyApiDialog")
 function isRuntimeKeyCompatibleWithModel(
   runtimeKey: AccountRuntimeKey,
   options: {
-    hasModelGroupContext: boolean
+    hasModelContext: boolean
     requestedModelId: string
     modelEnableGroups: VerifyApiDialogProps["modelEnableGroups"]
   },
 ) {
   if (!isSelectableAccountRuntimeKey(runtimeKey)) return false
-  if (!options.hasModelGroupContext) return true
+  if (!options.hasModelContext) return true
   return isAccountRuntimeKeyCompatibleWithModel(runtimeKey, {
     id: options.requestedModelId,
     enableGroups: options.modelEnableGroups,
@@ -191,22 +191,16 @@ export function useVerifyApiDialogViewModel({
     (runtimeKey) => runtimeKey.id === selectedRuntimeKeyId,
   )
 
-  const hasModelGroupContext =
-    requestedModelId.length > 0 && Array.isArray(modelEnableGroups)
+  const hasModelContext = requestedModelId.length > 0
   const compatibleRuntimeKeys = useMemo(() => {
     return accountRuntimeKeys.filter((runtimeKey) =>
       isRuntimeKeyCompatibleWithModel(runtimeKey, {
-        hasModelGroupContext,
+        hasModelContext,
         requestedModelId,
         modelEnableGroups,
       }),
     )
-  }, [
-    accountRuntimeKeys,
-    hasModelGroupContext,
-    modelEnableGroups,
-    requestedModelId,
-  ])
+  }, [accountRuntimeKeys, hasModelContext, modelEnableGroups, requestedModelId])
   const compatibleRuntimeKeyIds = useMemo(
     () => new Set(compatibleRuntimeKeys.map((runtimeKey) => runtimeKey.id)),
     [compatibleRuntimeKeys],
@@ -214,13 +208,13 @@ export function useVerifyApiDialogViewModel({
   const hasLoadedRuntimeKeys =
     !isLoadingRuntimeKeys && accountRuntimeKeys.length > 0
   const hasNoCompatibleRuntimeKey =
-    hasModelGroupContext &&
+    hasModelContext &&
     hasLoadedRuntimeKeys &&
     compatibleRuntimeKeys.length === 0
   const selectedRuntimeKeyIsCompatible =
     !selectedRuntimeKey || compatibleRuntimeKeyIds.has(selectedRuntimeKey.id)
   const hasIncompatibleSelectedRuntimeKey =
-    hasModelGroupContext &&
+    hasModelContext &&
     selectedRuntimeKey !== undefined &&
     !selectedRuntimeKeyIsCompatible
   const runtimeKeyCompatibilityHint = hasNoCompatibleRuntimeKey
@@ -362,10 +356,10 @@ export function useVerifyApiDialogViewModel({
 
       setAccountRuntimeKeys(sorted)
 
-      const defaultRuntimeKey = hasModelGroupContext
+      const defaultRuntimeKey = hasModelContext
         ? sorted.find((runtimeKey) =>
             isRuntimeKeyCompatibleWithModel(runtimeKey, {
-              hasModelGroupContext,
+              hasModelContext,
               requestedModelId,
               modelEnableGroups,
             }),

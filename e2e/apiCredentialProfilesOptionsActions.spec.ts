@@ -1432,6 +1432,7 @@ test("previews Base64 images and plays completed video tasks", async ({
   await expect(player).toHaveAttribute("controls", "")
   await player.evaluate(async (element: HTMLVideoElement) => {
     element.muted = true
+    element.loop = true
     await element.play()
   })
   await expect
@@ -1442,7 +1443,17 @@ test("previews Base64 images and plays completed video tasks", async ({
       ),
     )
     .toBe(true)
-  await player.evaluate((element: HTMLVideoElement) => element.pause())
+  await page.getByRole("button", { name: "Model list", exact: true }).click()
+  await expect
+    .poll(() => player.evaluate((element: HTMLVideoElement) => element.paused))
+    .toBe(true)
+  await videoProbe
+    .getByRole("button", { name: "Video task", exact: true })
+    .click()
+  await expect(player).toBeVisible()
+  expect(
+    await player.evaluate((element: HTMLVideoElement) => element.paused),
+  ).toBe(true)
   await expect(
     videoProbe.getByRole("link", { name: "Open generated media" }),
   ).toHaveAttribute("href", "https://media-api.example.com/result.webm")

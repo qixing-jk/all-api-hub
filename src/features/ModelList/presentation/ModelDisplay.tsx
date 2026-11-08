@@ -61,6 +61,7 @@ interface ModelDisplayProps {
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
     modelId: string,
+    modelEnableGroups?: string[],
   ) => void
   onOpenModelKeyDialog?: (
     account: Extract<

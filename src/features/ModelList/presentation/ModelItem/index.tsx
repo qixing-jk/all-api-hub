@@ -102,6 +102,7 @@ interface ModelItemProps {
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
     modelId: string,
+    modelEnableGroups?: string[],
   ) => void
   onOpenModelKeyDialog?: (
     account: Extract<
@@ -470,7 +471,12 @@ export default function ModelItem(props: ModelItemProps) {
             onVerifyCliSupport={
               effectiveCapabilities.supportsCliVerification &&
               onVerifyCliSupport
-                ? () => onVerifyCliSupport(source, model.model_name)
+                ? () =>
+                    onVerifyCliSupport(
+                      source,
+                      model.model_name,
+                      modelActionEnableGroups,
+                    )
                 : undefined
             }
             trailingContent={

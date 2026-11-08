@@ -61,6 +61,10 @@ describe("verification workspace height", () => {
     expect(
       frame.style.getPropertyValue("--verification-workspace-height"),
     ).toBe("549px")
+    const writeHeight = vi.spyOn(frame.style, "setProperty")
+    act(() => window.dispatchEvent(new Event("resize")))
+    act(() => pending!(0))
+    expect(writeHeight).not.toHaveBeenCalled()
     // Even a configuration taller than the available body retains an operable area.
     shell.style.maxHeight = "200px"
     act(() => window.dispatchEvent(new Event("resize")))

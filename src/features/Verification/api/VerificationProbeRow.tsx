@@ -40,7 +40,7 @@ export function VerificationProbeRow({
       controller={controller}
       probeId={probeId}
       label={label}
-      result={result}
+      result={isRunning ? null : result}
       idleContent={
         idle ? (
           <VerificationProbeIntroduction
@@ -59,7 +59,7 @@ export function VerificationProbeRow({
         </div>
       }
       description={
-        summary ? (
+        summary && !isRunning ? (
           <div className="text-muted-foreground mt-density-1 text-xs break-words">
             {summary}
           </div>

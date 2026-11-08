@@ -167,9 +167,10 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       expect(
         helpBounds!.x - titleBounds!.x - titleBounds!.width,
       ).toBeLessThanOrEqual(8)
-      expect(helpBounds!.x + helpBounds!.width).toBeLessThanOrEqual(
-        statusBounds!.x,
-      )
+      expect(
+        statusBounds!.x >= helpBounds!.x + helpBounds!.width ||
+          statusBounds!.y >= helpBounds!.y + helpBounds!.height,
+      ).toBe(true)
       await panel
         .getByRole("button", { name: "About the model context test" })
         .hover()

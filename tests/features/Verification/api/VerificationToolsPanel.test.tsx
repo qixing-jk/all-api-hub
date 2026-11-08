@@ -274,6 +274,9 @@ describe("VerificationToolsPanel", () => {
     expect(screen.getByTestId("pelican-history-summary")).toHaveTextContent(
       "aiApiVerification:verifyDialog.tools.pelican.historyOnly",
     )
+    expect(
+      screen.queryByText("aiApiVerification:verifyDialog.intro.startHint"),
+    ).not.toBeInTheDocument()
     const summary = screen.getByTestId("pelican-history-summary")
     const latency = within(summary).getByText("500ms")
     expect(latency.closest('[data-slot="badge"]')).toHaveTextContent(

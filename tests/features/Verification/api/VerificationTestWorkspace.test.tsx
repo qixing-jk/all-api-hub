@@ -14,6 +14,33 @@ import {
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 describe("Verification test workspace", () => {
+  it.each(["Pass", "Fail", "Stopped"])(
+    "announces the %s status on the selection button",
+    (status) => {
+      render(
+        <VerificationTestSection tools={null}>
+          <VerificationProbeDetails
+            label="Text"
+            heading={<span>Text</span>}
+            status={<span>{status}</span>}
+          />
+          <VerificationProbeDetails
+            label="Context"
+            heading={<span>Context</span>}
+            headingAccessory={<button>Help</button>}
+            status={<span>{status}</span>}
+          />
+        </VerificationTestSection>,
+      )
+      expect(
+        screen.getByRole("button", { name: "Text" }),
+      ).toHaveAccessibleDescription(status)
+      expect(
+        screen.getByRole("button", { name: "Context" }),
+      ).toHaveAccessibleDescription(status)
+    },
+  )
+
   it("names a selectable detail from its heading when no explicit label is supplied", () => {
     render(
       <VerificationTestSection tools={null}>
@@ -185,10 +212,12 @@ describe("Verification test workspace", () => {
         <VerificationProbeRow
           probeId={API_VERIFICATION_PROBE_IDS.TextGeneration}
           isRunning
+          summary="Previous summary"
           result={{
             id: API_VERIFICATION_PROBE_IDS.TextGeneration,
             status: API_VERIFICATION_PROBE_STATUSES.Pass,
             summary: "Previous result",
+            output: "Previous output",
             latencyMs: 10,
           }}
           runButtonProps={{ children: "Stop" }}
@@ -201,6 +230,8 @@ describe("Verification test workspace", () => {
     expect(
       screen.queryByText("aiApiVerification:verifyDialog.status.pass"),
     ).not.toBeInTheDocument()
+    expect(screen.queryByText("Previous summary")).not.toBeInTheDocument()
+    expect(screen.queryByText("Previous output")).not.toBeInTheDocument()
   })
   const runDrawing = vi.fn()
   const workspace = (result?: string, includeModels = true) => (

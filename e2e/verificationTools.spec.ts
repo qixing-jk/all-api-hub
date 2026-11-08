@@ -522,6 +522,9 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
       )
       await expect(page.getByTestId("pelican-svg-preview")).toHaveCount(0)
       expect(fixture.requests).toHaveLength(2)
+      await page
+        .getByRole("button", { name: "Drawing test", exact: true })
+        .click()
       await page.getByTestId("pelican-history-summary").scrollIntoViewIfNeeded()
       await page.getByRole("dialog").screenshot({
         path: test.info().outputPath("drawing-history-restored.png"),
@@ -1409,8 +1412,13 @@ test("account verification configuration aligns fields without empty grid cells"
     exact: true,
   })
   const contextSummary = contextPanel.locator("[data-verification-summary]")
-  for (const width of [1280, 660, 420]) {
-    await page.setViewportSize({ width, height: 1280 })
+  for (const [width, height] of [
+    [1280, 1280],
+    [660, 1280],
+    [420, 1280],
+    [1280, 480],
+  ] as const) {
+    await page.setViewportSize({ width, height })
     await page.getByRole("button", { name: "文本生成", exact: true }).click()
     await contextHelp.click()
     const contextTooltip = page.getByRole("tooltip")
@@ -1421,15 +1429,35 @@ test("account verification configuration aligns fields without empty grid cells"
         const tooltip = await contextTooltip.boundingBox()
         const anchor = await contextHelp.boundingBox()
         if (!tooltip || !anchor) return false
-        const gap = anchor.y - tooltip.y - tooltip.height
-        return gap >= 0 && gap <= 16
+        const gapAbove = anchor.y - tooltip.y - tooltip.height
+        const gapBelow = tooltip.y - anchor.y - anchor.height
+        return (
+          (gapAbove >= 0 && gapAbove <= 16) || (gapBelow >= 0 && gapBelow <= 16)
+        )
       })
+      .toBe(true)
+    await expect
+      .poll(() =>
+        contextTooltip.evaluate((tooltip) => {
+          const box = tooltip.getBoundingClientRect()
+          const root = tooltip.getRootNode() as Document | ShadowRoot
+          return (
+            [
+              [box.left + 6, box.top + 6],
+              [box.right - 6, box.bottom - 6],
+            ] as const
+          ).every(([x, y]) => {
+            const hit = root.elementFromPoint(x, y)
+            return hit !== null && tooltip.contains(hit)
+          })
+        }),
+      )
       .toBe(true)
     await expect(contextSelection).toHaveAttribute("aria-expanded", "false")
     await captureVisualViews({
       page,
       ready: contextHelp,
-      id: `context-help-${width}`,
+      id: `context-help-${width}-${height}`,
       extensionDir,
     })
     await expect
@@ -1442,18 +1470,19 @@ test("account verification configuration aligns fields without empty grid cells"
     const tooltipBox = (await contextTooltip.boundingBox())!
     expect(tooltipBox.x).toBeGreaterThanOrEqual(0)
     expect(tooltipBox.x + tooltipBox.width).toBeLessThanOrEqual(width)
+    expect(tooltipBox.y).toBeGreaterThanOrEqual(0)
+    expect(tooltipBox.y + tooltipBox.height).toBeLessThanOrEqual(height)
     const labelBox = (await contextSelection.boundingBox())!
     const helpBox = (await contextHelp.boundingBox())!
-    expect(helpBox.y - tooltipBox.y - tooltipBox.height).toBeGreaterThanOrEqual(
-      0,
-    )
-    expect(helpBox.y - tooltipBox.y - tooltipBox.height).toBeLessThanOrEqual(16)
     const badgeBox = (await contextSummary
       .getByText("待运行", { exact: true })
       .boundingBox())!
     expect(helpBox.x - labelBox.x - labelBox.width).toBeGreaterThanOrEqual(0)
     expect(helpBox.x - labelBox.x - labelBox.width).toBeLessThanOrEqual(10)
-    expect(badgeBox.x).toBeGreaterThanOrEqual(helpBox.x + helpBox.width)
+    expect(
+      badgeBox.x >= helpBox.x + helpBox.width ||
+        badgeBox.y >= helpBox.y + helpBox.height,
+    ).toBe(true)
     await contextSelection.focus()
     await expect(contextTooltip).toHaveCount(0)
     const summaryBox = (await contextSummary.boundingBox())!

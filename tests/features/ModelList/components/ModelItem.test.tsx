@@ -936,6 +936,7 @@ describe("ModelItem", () => {
     expect(onVerifyCliSupport).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "account" }),
       props.model.model_name,
+      ["vip"],
     )
   })
 

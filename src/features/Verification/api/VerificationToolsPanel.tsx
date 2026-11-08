@@ -68,6 +68,7 @@ export function VerificationToolsPanel({
   const idle =
     pelicanStatus === VERIFICATION_TOOL_STATUSES.Idle &&
     !pelican &&
+    !pelicanSummary &&
     !pelicanErrorMessage &&
     !isPelicanRunning
 
