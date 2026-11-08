@@ -1501,15 +1501,18 @@ test("account verification configuration aligns fields without empty grid cells"
     await page.setViewportSize({ width, height: height - 48 })
     await expect(contextTooltip).toHaveCount(0)
     await contextSummary.scrollIntoViewIfNeeded()
-    // The status still selects the test, while help has its own hit target.
-    await contextSummary.click({
+    // Target the selection button's hit area over the status, so Playwright
+    // checks that the button receives the click instead of accepting any
+    // descendant of the summary (such as the adjacent help control).
+    await contextSelection.click({
       position: await contextStatus.evaluate((badge) => {
         const summary = badge.closest("[data-verification-summary]")!
-        const summaryBox = summary.getBoundingClientRect()
+        const selection = summary.querySelector("button[aria-expanded]")!
+        const selectionBox = selection.getBoundingClientRect()
         const statusBox = badge.getBoundingClientRect()
         return {
-          x: statusBox.x + statusBox.width / 2 - summaryBox.x,
-          y: statusBox.y + statusBox.height / 2 - summaryBox.y,
+          x: statusBox.x + statusBox.width / 2 - selectionBox.x,
+          y: statusBox.y + statusBox.height / 2 - selectionBox.y,
         }
       }),
     })

@@ -77,29 +77,42 @@ const recoveryTest = test.extend<{
 })
 
 recoveryTest(
-  "credential recovery rejects a visible inspection window at the user tab URL",
+  "credential recovery rejects a focused inspection window at the user tab URL",
   async ({ context, page, securitySite }) => {
     securitySite.html = "<!doctype html><title>Security</title><p>Security</p>"
     const url = `${securitySite.baseUrl}/security`
     const worker = await getServiceWorker(context)
     await page.goto(url)
+    const sourceWindowId = await worker.evaluate(
+      async () => (await chrome.windows.getLastFocused()).id!,
+    )
     const inspectionPagePromise = context.waitForEvent("page")
     await worker.evaluate(async (url) => {
-      await chrome.windows.create({ url, type: "popup", focused: false })
+      await chrome.windows.create({ url, type: "popup", focused: true })
     }, url)
     const inspectionPage = await inspectionPagePromise
     await inspectionPage.waitForLoadState("domcontentloaded")
-    await page.bringToFront()
+    await expect
+      .poll(() =>
+        worker.evaluate(async () => (await chrome.windows.getLastFocused()).id),
+      )
+      .not.toBe(sourceWindowId)
 
-    // A background window can expose a visible document with the same URL as
-    // the user's focused tab. URL and visibility alone do not identify it.
+    // Focus can move to an inspection window. It must never become the user's
+    // credential page even when it has a visible document at the same URL.
     expect(await inspectionPage.evaluate(() => document.visibilityState)).toBe(
       "visible",
     )
-    expect(await isUserFacingCredentialPage(inspectionPage, worker)).toBe(false)
-    expect(await isUserFacingCredentialPage(page, worker)).toBe(true)
+    expect(
+      await isUserFacingCredentialPage(inspectionPage, worker, sourceWindowId),
+    ).toBe(false)
+    expect(await isUserFacingCredentialPage(page, worker, sourceWindowId)).toBe(
+      true,
+    )
     await inspectionPage.close()
-    expect(await isUserFacingCredentialPage(inspectionPage, worker)).toBe(false)
+    expect(
+      await isUserFacingCredentialPage(inspectionPage, worker, sourceWindowId),
+    ).toBe(false)
   },
 )
 
@@ -128,7 +141,15 @@ recoveryTest(
           scope.credentialInspections++
       }).observe(document, { attributes: true, subtree: true })
     })
-    const waiting = waitForNewUserFacingCredentialPage(context, worker, 10_000)
+    const sourceWindowId = await worker.evaluate(
+      async () => (await chrome.windows.getLastFocused()).id!,
+    )
+    const waiting = waitForNewUserFacingCredentialPage(
+      context,
+      worker,
+      sourceWindowId,
+      10_000,
+    )
     void waiting.catch(() => {})
     const opened = context.waitForEvent("page")
     const tabId = await worker.evaluate(

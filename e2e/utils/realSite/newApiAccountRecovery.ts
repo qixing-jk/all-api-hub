@@ -89,8 +89,14 @@ export function createNewApiAccountRecovery(params: {
 
       const context = params.page.context()
       const worker = await getServiceWorker(context)
+      const sourceTab = await params.page.evaluate(() =>
+        chrome.tabs.getCurrent(),
+      )
+      if (sourceTab?.windowId == null) {
+        throw new Error("Credential recovery requires the account dialog's tab")
+      }
       const [securityPage] = await Promise.all([
-        waitForNewUserFacingCredentialPage(context, worker),
+        waitForNewUserFacingCredentialPage(context, worker, sourceTab.windowId),
         dialog.dialog
           .getByRole("button", { name: "Open token page", exact: true })
           .click(),
@@ -383,22 +389,26 @@ async function readDetectedDialogFailureText(dialog: AccountAddDialog) {
   }
 }
 
-/** Waits for a new credential page to become the actual user-facing tab. */
+/** Waits for a new credential page to become active in the account dialog's window. */
 export async function waitForNewUserFacingCredentialPage(
   context: BrowserContext,
   worker: Worker,
+  sourceWindowId: number,
   timeout = 30_000,
 ): Promise<Page> {
   const existingPages = new Set(context.pages())
   let selectedPage: Page | undefined
   // A page event can precede tab activation. Keep inspecting new candidates
-  // until the document matches the focused tab, excluding earlier pages.
+  // until the document matches the source window's active tab. Inspection
+  // windows may briefly gain focus, but they never own the user's token flow.
   await expect
     .poll(
       async () => {
         for (const candidate of context.pages()) {
           if (existingPages.has(candidate)) continue
-          if (await isUserFacingCredentialPage(candidate, worker)) {
+          if (
+            await isUserFacingCredentialPage(candidate, worker, sourceWindowId)
+          ) {
             selectedPage = candidate
             return true
           }
@@ -411,8 +421,12 @@ export async function waitForNewUserFacingCredentialPage(
   return selectedPage!
 }
 
-/** Excludes hidden temporary inspection pages, including those at the same URL. */
-export async function isUserFacingCredentialPage(page: Page, worker: Worker) {
+/** Excludes temporary inspection windows even when they gain focus at the same URL. */
+export async function isUserFacingCredentialPage(
+  page: Page,
+  worker: Worker,
+  sourceWindowId: number,
+) {
   const marker = `data-aah-credential-candidate-${crypto.randomUUID()}`
   try {
     await page.waitForLoadState("domcontentloaded")
@@ -420,10 +434,10 @@ export async function isUserFacingCredentialPage(page: Page, worker: Worker) {
       document.documentElement.setAttribute(marker, "")
     }, marker)
     return await worker.evaluate(
-      async ({ marker, url }) => {
+      async ({ marker, url, sourceWindowId }) => {
         const [tab] = await chrome.tabs.query({
           active: true,
-          lastFocusedWindow: true,
+          windowId: sourceWindowId,
         })
         if (tab?.id == null || tab.url !== url) return false
         // Different windows can have visible documents at the same URL, even
@@ -435,7 +449,7 @@ export async function isUserFacingCredentialPage(page: Page, worker: Worker) {
         })
         return result?.result === true
       },
-      { marker, url: page.url() },
+      { marker, url: page.url(), sourceWindowId },
     )
   } catch {
     // An owned inspection page may be released before loading completes.
