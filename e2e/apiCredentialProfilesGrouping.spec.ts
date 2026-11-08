@@ -14,17 +14,20 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 test.beforeEach(async ({ page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
 })
 
-test("groups credentials by Base URL while preserving each credential card", async ({
+test("groups credentials by Base URL while preserving each credential entry", async ({
   context,
+  extensionDir,
   extensionId,
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
   const firstBaseUrl = "https://team-gateway.example.invalid"
   const secondBaseUrl = "https://backup-gateway.example.invalid"
   const serviceWorker = await getServiceWorker(context)
@@ -77,6 +80,17 @@ test("groups credentials by Base URL while preserving each credential card", asy
     page.getByText("Backup endpoint key", { exact: true }),
   ).toHaveCount(0)
 
+  await captureVisualViews({
+    page,
+    ready: page.getByText("Team primary", { exact: true }),
+    id: "endpoint-credentials-options",
+    extensionDir,
+    views: [
+      { id: "light", width: 1920, height: 1080, theme: "light" },
+      { id: "dark", width: 1920, height: 1080, theme: "dark" },
+    ],
+  })
+
   await endpointNavigation
     .getByRole("button", {
       name: "https://backup-gateway.example.invalid",
@@ -108,6 +122,22 @@ test("groups credentials by Base URL while preserving each credential card", asy
   await expect(
     page.getByText("Backup endpoint key", { exact: true }),
   ).toBeVisible()
+  await endpointSelector.click()
+  await page
+    .getByRole("option", { name: /team-gateway\.example\.invalid/ })
+    .click()
+  await expect(page.getByText("Team primary", { exact: true })).toBeVisible()
+  await expect(page.getByText("Team fallback", { exact: true })).toBeVisible()
+  await captureVisualViews({
+    page,
+    ready: page.getByText("Team primary", { exact: true }),
+    id: "endpoint-credentials-popup",
+    extensionDir,
+    views: [
+      { id: "light", width: 420, height: 1000, theme: "light" },
+      { id: "dark", width: 320, height: 1100, theme: "dark" },
+    ],
+  })
   expect(
     await page.evaluate(
       () =>
