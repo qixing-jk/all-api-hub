@@ -19,6 +19,7 @@ import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   AUTO_CHECKIN_RUN_RESULT,
+  AUTO_CHECKIN_SCHEDULE_MODE,
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
@@ -52,14 +53,31 @@ test("overview automation explains mixed announcement and sync results", async (
   extensionDir,
 }) => {
   const serviceWorker = await getServiceWorker(context)
+  // This is a never-run overview fixture, so keep the real scheduler beyond
+  // the test even near midnight, using the worker's local timezone.
+  const schedule = await serviceWorker.evaluate(() => {
+    const formatTime = (offsetHours: number) => {
+      const time = new Date(Date.now() + offsetHours * 60 * 60 * 1000)
+      return `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`
+    }
+    return { windowStart: formatTime(1), windowEnd: formatTime(2) }
+  })
   await seedUserPreferences(serviceWorker, {
     preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
-    autoCheckin: { globalEnabled: true, pretriggerDailyOnUiOpen: false },
+    autoCheckin: {
+      ...DEFAULT_PREFERENCES.autoCheckin!,
+      globalEnabled: true,
+      pretriggerDailyOnUiOpen: false,
+      ...schedule,
+      scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+      deterministicTime: schedule.windowStart,
+    },
     managedSiteType: SITE_TYPES.NEW_API,
     managedSiteModelSync: { enabled: true },
     siteAnnouncementNotifications: { enabled: true },
     webdav: { autoSync: true },
   })
+  await seedAutoCheckinStatus(serviceWorker, {})
   const time = Date.parse("2026-10-20T01:00:00Z")
   await seedSiteAnnouncementsStore(
     serviceWorker,
