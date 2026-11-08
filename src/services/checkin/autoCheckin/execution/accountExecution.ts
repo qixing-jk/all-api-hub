@@ -163,7 +163,10 @@ export async function executeAccountCheckin(
               : {}),
           },
         ),
-        ...(blocked && execution.reused ? { reused: true } : {}),
+        ...(execution.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked &&
+        execution.reused
+          ? { reused: true }
+          : {}),
       }
     }
     const providerResult = execution.result
