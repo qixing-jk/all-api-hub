@@ -941,14 +941,29 @@ describe("ModelItem", () => {
   })
 
   it.each([
-    { accessState: MODEL_GROUP_ACCESS_STATES.KNOWN, expectedGroups: [] },
+    {
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: [],
+      expectedGroups: [],
+    },
     {
       accessState: MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+      supportedGroups: [],
+      expectedGroups: undefined,
+    },
+    {
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: ["vip"],
+      expectedGroups: [],
+    },
+    {
+      accessState: MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+      supportedGroups: ["vip"],
       expectedGroups: undefined,
     },
   ])(
-    "preserves $accessState group evidence for account actions without support metadata",
-    async ({ accessState, expectedGroups }) => {
+    "preserves $accessState group evidence for account actions with support $supportedGroups",
+    async ({ accessState, supportedGroups, expectedGroups }) => {
       const user = userEvent.setup()
       const onOpenModelKeyDialog = vi.fn()
       const onVerifyModel = vi.fn()
@@ -960,7 +975,7 @@ describe("ModelItem", () => {
           {...props}
           model={{
             ...props.model,
-            enable_groups: [],
+            enable_groups: supportedGroups,
           }}
           source={{
             ...props.source,
@@ -982,7 +997,7 @@ describe("ModelItem", () => {
           }}
           groupContext={{
             accessState,
-            supportedGroups: [],
+            supportedGroups,
             usableGroups: [],
             priceableGroups: [],
           }}

@@ -327,13 +327,10 @@ export default function ModelItem(props: ModelItemProps) {
         }
       : undefined
 
-  // Missing support evidence is distinct from a known, explicitly empty scope.
+  // Unknown user access is distinct from a known, explicitly empty scope.
   const modelActionEnableGroups =
     hasGroupSemantics &&
-    !(
-      groupContext.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN &&
-      groupContext.supportedGroups.length === 0
-    )
+    groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.UNKNOWN
       ? activeGroupContext.actionGroups
       : undefined
 

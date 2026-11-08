@@ -10,7 +10,7 @@
 - 💰 **Cross-account price comparison**: Compare currently available quotes for the same model across accounts using a consistent basis.
 - 🎯 **Usage-based estimates**: Select a scenario such as regular chat, code completion, or coding agent, or adjust input, output, and cache proportions yourself.
 - 🏷️ **Search, filter, and sort**: Search names and descriptions; filter by vendor, billing method, capability, group, or verification result; and sort by price, latency, and other fields.
-- ✅ **Model verification**: Single and bulk verification are one-time probes that check whether a model or endpoint currently works and whether it is CLI-compatible.
+- ✅ **Model verification**: Run individual probes, routine tests, or bulk verification to check whether a model or endpoint currently works and whether it is CLI-compatible. Routine tests for text models run multiple probes and may incur charges on paid endpoints.
 - 📦 **Keys for a model**: Select a compatible key or, when supported, create a Token restricted to that model.
 
 ## How to Access
@@ -179,7 +179,7 @@ Click **`Refresh Data`** to request the current source again and invalidate rela
 | Why is a model price 0, or why can't it participate in comparison? | A model may genuinely be free when the site explicitly reports a zero price. Incomplete price data is marked not comparable and is not treated as free. |
 | How is cross-site price comparison calculated? | It is a local calculation over currently loaded data with valid, comparable prices. Use the source and precision shown on the page; actual charges follow each site's published prices. |
 | Why does a quote show "Not Included in Current Comparison"? | A price required by the current conditions, such as cache-read price, is missing. Choose another scenario, adjust the proportions, or expand the quote to see available prices. |
-| Why does verification show failed or unknown? | Verification is one probe and can be affected by permissions, model restrictions, rate limits, and other conditions. Use the target tool's actual behavior as the final reference. |
+| Why does verification show failed or unknown? | An individual test runs the selected probe; routine tests for text models run multiple probes and may incur charges on paid endpoints. Results can be affected by permissions, model restrictions, rate limits, and other conditions. Use the target tool's actual behavior as the final reference. |
 | Why does my account have no price or multiplier? | The source may not provide price, multiplier, or group data. For example, API Credentials generally support model discovery and verification only. |
 
 ## Related Documentation
