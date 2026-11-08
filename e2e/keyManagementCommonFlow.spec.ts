@@ -617,6 +617,7 @@ test("opens the CC Switch model picker for an account API key", async ({
 
 test("exports a SharedChat service credential to CC Switch", async ({
   context,
+  extensionDir,
   extensionId,
   page,
 }) => {
@@ -650,6 +651,17 @@ test("exports a SharedChat service credential to CC Switch", async ({
   await expect(
     serviceCredentialCard.getByRole("heading", { name: "Codex" }),
   ).toBeVisible()
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await captureVisualViews({
+    page,
+    ready: serviceCredentialCard,
+    id: "service-credential-single",
+    extensionDir,
+    views: [
+      { id: "desktop", width: 1280, height: 900, theme: "light" },
+      { id: "compact", width: 320, height: 900, theme: "dark" },
+    ],
+  })
 
   await serviceCredentialCard
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportMenuButton)
@@ -670,6 +682,22 @@ test("exports a SharedChat service credential to CC Switch", async ({
       endpoint: "https://new.sharedchat.cc/codex",
       apiKey: "sk-sharedchat-service-e2e",
     },
+  })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=all`,
+  )
+  await waitForExtensionRoot(page)
+  await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.expandAllButton).click()
+  await expect(serviceCredentialCard).toBeVisible()
+  await captureVisualViews({
+    page,
+    ready: serviceCredentialCard,
+    id: "service-credential-grouped",
+    extensionDir,
+    views: [
+      { id: "desktop", width: 1280, height: 900, theme: "light" },
+      { id: "compact", width: 320, height: 900, theme: "dark" },
+    ],
   })
 })
 

@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   Card,
+  CardList,
   Checkbox,
   IconButton,
   Notice,
@@ -191,13 +192,18 @@ export function TokenList(props: TokenListProps) {
     return <LoadingSkeleton />
   }
 
-  const renderServiceCredentialCard = (entry: KeyManagementEntry) => {
+  const renderServiceCredentialCard = (
+    entry: KeyManagementEntry,
+    embedded = false,
+  ) => {
     if (!isServiceCredentialRuntimeKey(entry.runtimeKey)) return null
 
     const managedSiteStatusEntry =
       managedSiteTokenStatuses?.[entry.runtimeKey.id]
     return onCopyServiceCredential ? (
       <ServiceCredentialCard
+        key={entry.id}
+        embedded={embedded}
         account={entry.runtimeKey.account as DisplaySiteData}
         credential={entry.runtimeKey.credential}
         isRotating={entry.uiState.isRotating}
@@ -225,8 +231,10 @@ export function TokenList(props: TokenListProps) {
 
   const renderNativeResourceList = (
     rows: readonly NativeKeyManagementRow[],
+    embedded = false,
   ) => (
     <AccountKeyResourceList
+      embedded={embedded}
       rows={rows}
       accounts={displayData}
       ariaLabel={t("keyManagement:native.heading")}
@@ -558,14 +566,12 @@ export function TokenList(props: TokenListProps) {
                     </div>
 
                     {!isCollapsed ? (
-                      <div className="space-y-density-3 py-density-3 px-3">
-                        {group.filteredEntries.map((entry) => (
-                          <div key={entry.id}>
-                            {renderServiceCredentialCard(entry)}
-                          </div>
-                        ))}
-                        {renderNativeResourceList(group.nativeRows)}
-                      </div>
+                      <CardList>
+                        {group.filteredEntries.map((entry) =>
+                          renderServiceCredentialCard(entry, true),
+                        )}
+                        {renderNativeResourceList(group.nativeRows, true)}
+                      </CardList>
                     ) : null}
                   </Card>
                 )

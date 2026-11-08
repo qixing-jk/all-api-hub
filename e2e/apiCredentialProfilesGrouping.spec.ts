@@ -145,4 +145,48 @@ test("groups credentials by Base URL while preserving each credential entry", as
         document.documentElement.clientWidth,
     ),
   ).toBe(true)
+
+  const toolbar = page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)
+    .first()
+  const separators = toolbar.locator(":scope > div > span[aria-hidden='true']")
+  await expect(separators).toHaveCount(3)
+  for (const separator of await separators.all()) {
+    await expect(separator).toBeVisible()
+  }
+
+  // A narrow parent can wrap actions even when the viewport stays unchanged.
+  await toolbar.evaluate((element) => {
+    element.style.maxWidth = "160px"
+  })
+  await expect
+    .poll(() =>
+      separators.evaluateAll(
+        (elements) =>
+          elements.filter(
+            (element) => getComputedStyle(element).visibility === "hidden",
+          ).length,
+      ),
+    )
+    .toBeGreaterThan(0)
+  for (const separator of await separators.all()) {
+    const startsRow = await separator.evaluate((element) => {
+      const group = element.parentElement!
+      const previous = group.previousElementSibling!
+      return (
+        Math.abs(
+          group.getBoundingClientRect().top -
+            previous.getBoundingClientRect().top,
+        ) > 1
+      )
+    })
+    if (startsRow) await expect(separator).toBeHidden()
+    else await expect(separator).toBeVisible()
+  }
+  await toolbar.evaluate((element) => {
+    element.style.removeProperty("max-width")
+  })
+  for (const separator of await separators.all()) {
+    await expect(separator).toBeVisible()
+  }
 })

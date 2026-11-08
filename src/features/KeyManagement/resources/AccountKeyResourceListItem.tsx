@@ -36,6 +36,7 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 /** Composes one native account-key resource with the shared key-resource card. */
 export function AccountKeyResourceListItem({
+  embedded = false,
   row,
   account,
   cardAdapter,
@@ -62,6 +63,7 @@ export function AccountKeyResourceListItem({
   onManagedSiteVerificationRetry,
   guidedManagedSiteImportRequest,
 }: {
+  embedded?: boolean
   row: NativeKeyManagementRow
   account: DisplaySiteData
   cardAdapter: AccountKeyResourceCardAdapter
@@ -293,6 +295,7 @@ export function AccountKeyResourceListItem({
 
   return (
     <KeyResourceCard
+      embedded={embedded}
       presentation={presentation}
       secret={secret}
       secretControls={secretControls}

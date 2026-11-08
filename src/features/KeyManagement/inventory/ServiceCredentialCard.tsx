@@ -78,6 +78,7 @@ import { openSettingsTab } from "~/utils/navigation"
 const logger = createLogger("ServiceCredentialCard")
 
 interface ServiceCredentialCardProps {
+  embedded?: boolean
   account: DisplaySiteData
   credential: AccountServiceCredential
   isRotating?: boolean
@@ -98,6 +99,7 @@ interface ServiceCredentialCardProps {
  * Displays a provider-managed singleton service key that is not token CRUD.
  */
 export function ServiceCredentialCard({
+  embedded = false,
   account,
   credential,
   isRotating = false,
@@ -113,6 +115,7 @@ export function ServiceCredentialCard({
   targetId,
   isNavigationTarget = false,
 }: ServiceCredentialCardProps) {
+  const Container = embedded ? "div" : Card
   const { t } = useTranslation(["keyManagement", "messages"])
   const identityKey = `${account.id}:${credential.service}`
   const visibleKeys = new Set<string>()
@@ -320,8 +323,8 @@ export function ServiceCredentialCard({
           profile={cliVerifyingProfile}
         />
       ) : null}
-      <Card
-        variant="interactive"
+      <Container
+        {...(!embedded ? { variant: "interactive" as const } : {})}
         data-testid={KEY_MANAGEMENT_TEST_IDS.serviceCredentialCard}
         id={targetId}
         data-navigation-target={isNavigationTarget ? "true" : undefined}
@@ -329,9 +332,14 @@ export function ServiceCredentialCard({
         className={cn(
           isNavigationTarget &&
             "ring-primary-500 dark:ring-primary-400 ring-2 ring-offset-2 outline-none",
+          embedded && "ring-offset-0 ring-inset",
         )}
       >
-        <CardContent padding="default" spacing="default">
+        <CardContent
+          padding="default"
+          spacing="default"
+          className={embedded ? "px-3" : undefined}
+        >
           <div className="gap-density-3 flex min-w-0 flex-col">
             <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2">
               <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
@@ -535,7 +543,7 @@ export function ServiceCredentialCard({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Container>
     </>
   )
 }

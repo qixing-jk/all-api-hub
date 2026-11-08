@@ -1,5 +1,5 @@
 import { Info } from "lucide-react"
-import { useId, type ReactNode } from "react"
+import { useId, useLayoutEffect, useRef, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -45,6 +45,8 @@ export type KeyResourceCredentialAssociation = {
 }
 
 export type KeyResourceCardProps = {
+  /** Render as a flat row inside an account group. */
+  embedded?: boolean
   presentation: KeyResourceCardPresentation
   secret?: ReactNode
   secretControls?: ReactNode
@@ -231,12 +233,41 @@ export function KeyResourceActionToolbar({
   children,
   testId,
 }: KeyResourceActionToolbarProps) {
+  const toolbarRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const toolbar = toolbarRef.current
+    if (!toolbar) return
+    const groups = Array.from(
+      toolbar.querySelectorAll<HTMLElement>(":scope > [data-key-action-group]"),
+    )
+    const measureRows = () => {
+      let previousCenter: number | undefined
+      for (const group of groups) {
+        const bounds = group.getBoundingClientRect()
+        if (bounds.width === 0) continue
+        const center = bounds.top + bounds.height / 2
+        group.dataset.rowStart = String(
+          previousCenter === undefined || Math.abs(center - previousCenter) > 1,
+        )
+        previousCenter = center
+      }
+    }
+    measureRows()
+    if (typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(measureRows)
+    observer.observe(toolbar)
+    groups.forEach((group) => observer.observe(group))
+    return () => observer.disconnect()
+  }, [children])
+
   return (
     <div
+      ref={toolbarRef}
       role="toolbar"
       aria-label={label}
       data-testid={testId}
-      className="gap-y-density-1 flex w-full flex-wrap items-center justify-start gap-x-2 sm:w-auto sm:shrink-0 sm:justify-end"
+      className="gap-y-density-1 flex w-full flex-wrap items-center justify-start gap-x-4 sm:w-auto sm:shrink-0 sm:justify-end"
     >
       {children}
     </div>
@@ -250,12 +281,12 @@ type KeyResourceActionGroupProps = {
   testId?: string
 }
 
-/** Renders the desktop-only boundary between semantic action groups. */
+/** Shows a boundary only between action groups sharing the same rendered row. */
 function KeyResourceActionSeparator() {
   return (
     <span
       aria-hidden="true"
-      className="bg-secondary hidden h-4 w-px sm:block"
+      className="bg-border absolute top-1/2 -left-2 h-4 w-px -translate-y-1/2 group-data-[row-start=true]/key-actions:invisible"
     />
   )
 }
@@ -268,7 +299,10 @@ export function KeyResourceActionGroup({
   testId,
 }: KeyResourceActionGroupProps) {
   return (
-    <div className="gap-y-density-2 inline-flex shrink-0 items-center gap-x-2">
+    <div
+      data-key-action-group
+      className="group/key-actions relative inline-flex shrink-0 items-center"
+    >
       {separated ? <KeyResourceActionSeparator /> : null}
       <div
         role="group"
@@ -399,6 +433,7 @@ export function KeyResourceSecretDisplay({
  * Renders a provider-neutral key resource summary with controlled detail disclosure.
  */
 export function KeyResourceCard({
+  embedded = false,
   presentation,
   secret,
   secretControls,
@@ -464,9 +499,10 @@ export function KeyResourceCard({
       <KeyResourceCredentialAssociationControl association={association} />
     ) : undefined,
   }
+  const Container = embedded ? "div" : Card
 
   return (
-    <Card
+    <Container
       id={targetId}
       data-resource-id={resourceId}
       data-testid={testId}
@@ -475,9 +511,14 @@ export function KeyResourceCard({
       className={cn(
         isNavigationTarget &&
           "ring-theme-500 dark:ring-offset-surface-subtle ring-offset-background ring-2 ring-offset-2",
+        embedded && "ring-offset-0 ring-inset",
       )}
     >
-      <CardContent padding="default" spacing="default">
+      <CardContent
+        padding="default"
+        spacing="default"
+        className={embedded ? "px-3" : undefined}
+      >
         <div className="gap-density-3 flex min-w-0 flex-col">
           {renderHeader ? (
             renderHeader(headerProps)
@@ -543,6 +584,6 @@ export function KeyResourceCard({
           ) : null}
         </div>
       </CardContent>
-    </Card>
+    </Container>
   )
 }
