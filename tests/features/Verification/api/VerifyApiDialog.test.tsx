@@ -1421,7 +1421,10 @@ describe("VerifyApiDialog", () => {
         allowedModelIds: policy === "allow" ? ["other-model"] : null,
         deniedModelIds: policy === "deny" ? ["gpt-test"] : [],
       }
-      mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([key])
+      const runtimeKeys = createDeferred<AccountRuntimeKey[]>()
+      mockFetchDisplayAccountRuntimeKeys.mockReturnValueOnce(
+        runtimeKeys.promise,
+      )
       render(
         <VerifyApiDialog
           isOpen
@@ -1430,15 +1433,23 @@ describe("VerifyApiDialog", () => {
           initialModelId="gpt-test"
         />,
       )
-      await screen.findByText(
-        "aiApiVerification:verifyDialog.noCompatibleRuntimeKeyHint",
-      )
-      const probe = screen.getByTestId("verify-probe-text-generation")
+      const probe = await screen.findByTestId("verify-probe-text-generation")
+      const runButton = within(probe).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      })
+      expect(runButton).toBeDisabled()
+      // Resolve the external read inside React's update boundary; rendering the
+      // dialog must not consume the hint query's default one-second deadline.
+      await act(async () => {
+        runtimeKeys.resolve([key])
+        await runtimeKeys.promise
+      })
       expect(
-        within(probe).getByRole("button", {
-          name: "aiApiVerification:verifyDialog.actions.runOne",
-        }),
-      ).toBeDisabled()
+        screen.getByText(
+          "aiApiVerification:verifyDialog.noCompatibleRuntimeKeyHint",
+        ),
+      ).toBeInTheDocument()
+      expect(runButton).toBeDisabled()
       expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
     },
   )
