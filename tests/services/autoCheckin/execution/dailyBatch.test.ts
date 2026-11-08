@@ -35,8 +35,100 @@ import {
   SCHEDULED_EXECUTION,
   schedulerTestState,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("dailyBatch", () => {
+  it.each([0, 1])(
+    "does not overwrite a manual recovery when an older batch commits later (timestamp delta %s)",
+    async (timestampDelta) => {
+      const now = Date.now()
+      const accounts = ["recovering", "slow"].map((id) =>
+        buildSiteAccount({
+          id,
+          site_type: SITE_TYPES.VELOERA,
+          checkIn: runnableCheckIn(),
+        }),
+      )
+      mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
+      resolveProviderForTest.mockReturnValue({
+        getReadiness: () => ({ ready: true }),
+      })
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin!,
+          globalEnabled: true,
+          notifyUiOnCompletion: false,
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      const started = createDeferred<void>()
+      const finishBatch = createDeferred<void>()
+      vi.spyOn(accountCheckinRunWorkflow, "runAccountCheckins")
+        .mockImplementationOnce(async () => {
+          started.resolve()
+          await finishBatch.promise
+          return [
+            {
+              result: {
+                accountId: "recovering",
+                accountName: "Recovering",
+                status: "failed",
+                retryable: true,
+                timestamp: now,
+              },
+            },
+            {
+              result: {
+                accountId: "slow",
+                accountName: "Slow",
+                status: "success",
+                timestamp: now + 2,
+              },
+            },
+          ]
+        })
+        .mockResolvedValueOnce([
+          {
+            result: {
+              accountId: "recovering",
+              accountName: "Recovering",
+              status: "success",
+              timestamp: now + timestampDelta,
+            },
+          },
+        ])
+      const daily = runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+      await started.promise
+      await runCheckinsForTest({
+        runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+        targetAccountIds: ["recovering"],
+      })
+      expect(schedulerTestState.storedStatus.perAccount.recovering.status).toBe(
+        "success",
+      )
+      finishBatch.resolve()
+      await daily
+      const status = schedulerTestState.storedStatus
+      expect(status.perAccount.recovering.status).toBe("success")
+      expect(
+        status.accountsSnapshot.find(
+          (snapshot: { accountId: string }) =>
+            snapshot.accountId === "recovering",
+        ).lastResult.status,
+      ).toBe("success")
+      expect(status.summary).toMatchObject({
+        successCount: 2,
+        failedCount: 0,
+        needsRetry: false,
+      })
+      expect(status.pendingRetry).toBe(false)
+    },
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)

@@ -18,7 +18,7 @@ export const toProviderReadinessSkipReason = (
     ? CHECK_IN_EXECUTION_SKIP_REASONS.CredentialsMissing
     : CHECK_IN_EXECUTION_SKIP_REASONS.AccountDataMissing
 
-const hasSameCheckInAccountIdentity = (
+export const hasSameCheckInAccountIdentity = (
   currentAccount: SiteAccount,
   latestAccount: SiteAccount,
 ): boolean =>

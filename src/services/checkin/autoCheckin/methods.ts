@@ -23,6 +23,7 @@ import {
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
 import {
+  hasSameCheckInAccountIdentity,
   inspectCheckInMutationAdmission,
   toProviderReadinessSkipReason,
 } from "~/services/checkin/autoCheckin/execution/checkInMutationAdmission"
@@ -36,6 +37,7 @@ import type {
 import { readProviderDetectResult } from "~/services/checkin/autoCheckin/providers/detection"
 import {
   isCheckInMethodId,
+  NON_REPEAT_SAFE_CHECKIN_METHOD_IDS,
   type AutoCheckinMethodRegistration,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -45,6 +47,7 @@ import {
   replaceCheckInMethodDetection,
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
+import { PROTECTION_BYPASS_EXECUTION_KINDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -558,8 +561,7 @@ const confirmSelectedCheckInMethod = async (input: {
   return { outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue, account }
 }
 
-/** Compatibility execution entrance used by the scheduler. */
-export async function executeSelectedCheckIn(input: {
+type ExecuteSelectedCheckInInput = {
   account: SiteAccount
   globalAutomaticExecutionEnabled: boolean
   context: AutoCheckinProviderContext
@@ -578,7 +580,152 @@ export async function executeSelectedCheckIn(input: {
    * `requiresAuthoritativeStatusBeforeMutation`.
    */
   requireStatusConfirmationBeforeMutation?: boolean
-}): Promise<ExecuteSelectedCheckInResult> {
+}
+
+type ActiveAccountExecution = {
+  input: ExecuteSelectedCheckInInput
+  promise: Promise<ExecuteSelectedCheckInResult>
+}
+
+type AccountExecutionQueue = {
+  tail: Promise<unknown>
+  /** The last actual attempt; a skipped waiter must not erase its outcome. */
+  attempt?: ActiveAccountExecution
+}
+
+const activeAccountExecutions = new Map<string, AccountExecutionQueue>()
+
+/**
+ * Reuse an overlapping attempt instead of replaying a successful or uncertain
+ * write. A manual command may recover an automatic failure, but only with its
+ * own authority and fresh authoritative readback from a repeat-safe method.
+ */
+async function continueAfterAccountExecution(
+  input: ExecuteSelectedCheckInInput,
+  previous: ActiveAccountExecution,
+  execute: (
+    input: ExecuteSelectedCheckInInput,
+  ) => Promise<ExecuteSelectedCheckInResult>,
+): Promise<ExecuteSelectedCheckInResult> {
+  const result = await previous.promise
+  let latestAccount = input.account
+  if (input.revalidateAccount) {
+    try {
+      const latest = await input.revalidateAccount()
+      if (!latest)
+        return {
+          kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
+          reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
+        }
+      latestAccount = latest
+    } catch {
+      return accountStateWriteFailure()
+    }
+  }
+  if (!hasSameCheckInAccountIdentity(input.account, latestAccount)) {
+    return {
+      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
+      reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
+    }
+  }
+  const methodId = resolveSelectedCheckInMethod({
+    config: input.account.checkIn,
+    siteType: input.account.site_type,
+    siteUrl: input.account.site_url,
+  })
+  const registration = methodId
+    ? autoCheckinMethodRegistry.resolveById(methodId)
+    : null
+  if (registration) {
+    const admission = await inspectCheckInMutationAdmission({
+      expectedAccount: input.account,
+      account: latestAccount,
+      registration,
+      globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+      isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
+    })
+    if (!admission.eligible) {
+      return {
+        kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
+        reason: admission.reason,
+      }
+    }
+  }
+  const previousMethodId = resolveSelectedCheckInMethod({
+    config: previous.input.account.checkIn,
+    siteType: previous.input.account.site_type,
+    siteUrl: previous.input.account.site_url,
+  })
+  if (
+    !hasSameCheckInAccountIdentity(previous.input.account, latestAccount) ||
+    methodId !== previousMethodId
+  ) {
+    return execute({ ...input, account: latestAccount })
+  }
+  if (
+    result.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed &&
+    (result.result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+      result.result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED)
+  ) {
+    return {
+      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
+      reason: CHECK_IN_EXECUTION_SKIP_REASONS.AlreadyChecked,
+    }
+  }
+  const canRecoverAutomaticallyStartedAttempt =
+    input.context.protectionBypassExecution.kind ===
+      PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
+    previous.input.context.protectionBypassExecution.kind ===
+      PROTECTION_BYPASS_EXECUTION_KINDS.Automatic &&
+    registration?.provider.getStatus &&
+    !NON_REPEAT_SAFE_CHECKIN_METHOD_IDS.has(registration.id) &&
+    (result.kind !== CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed ||
+      result.result.status === CHECKIN_RESULT_STATUS.FAILED)
+  if (canRecoverAutomaticallyStartedAttempt) {
+    return execute({
+      ...input,
+      account: latestAccount,
+      requireStatusConfirmationBeforeMutation: true,
+    })
+  }
+  return result
+}
+
+/** Coordinate overlapping status/mutation sequences for one saved account in this worker. */
+export async function executeSelectedCheckIn(
+  input: ExecuteSelectedCheckInInput,
+): Promise<ExecuteSelectedCheckInResult> {
+  const queue = activeAccountExecutions.get(input.account.id) ?? {
+    tail: Promise.resolve(),
+  }
+  const execute = (next: ExecuteSelectedCheckInInput) => {
+    const attempt = { input: next, promise: executeSelectedCheckInOnce(next) }
+    queue.attempt = attempt
+    return attempt.promise
+  }
+  const execution = queue.tail.then(() =>
+    queue.attempt
+      ? continueAfterAccountExecution(input, queue.attempt, execute)
+      : execute(input),
+  )
+  // A crashed attempt remains in `attempt` for its waiters, while the queue
+  // itself can drain and release the account for a later independent command.
+  const tail = execution.catch(() => undefined)
+  queue.tail = tail
+  activeAccountExecutions.set(input.account.id, queue)
+  try {
+    return await execution
+  } finally {
+    if (queue.tail === tail) {
+      activeAccountExecutions.delete(input.account.id)
+    }
+  }
+}
+
+/** Execute after this account's preceding status/mutation sequence has settled. */
+async function executeSelectedCheckInOnce(
+  input: ExecuteSelectedCheckInInput,
+): Promise<ExecuteSelectedCheckInResult> {
   const prepared = await confirmSelectedCheckInMethod(input)
   if (prepared.outcome === SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished)
     return prepared.result

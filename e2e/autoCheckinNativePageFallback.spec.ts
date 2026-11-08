@@ -14,6 +14,7 @@ import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypas
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
+  AUTO_CHECKIN_SKIP_REASON,
   type AutoCheckinStatus,
 } from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -195,6 +196,7 @@ function fulfillHtml(response: ServerResponse, body: string) {
 
 async function createNativeCheckinFixture(
   captcha: false | "turnstile" | "image" | "interactive" = false,
+  beforeDirectPostResponse?: () => Promise<void>,
 ): Promise<NativeCheckinFixture> {
   const counts = {
     directCheckinPostCount: 0,
@@ -218,6 +220,7 @@ async function createNativeCheckinFixture(
     if (url.pathname === "/api/user/checkin") {
       if (request.method === "POST") {
         counts.directCheckinPostCount += 1
+        await beforeDirectPostResponse?.()
         fulfillJson(response, 200, {
           success: false,
           message: "dynamic check-in requires page action",
@@ -333,6 +336,137 @@ async function createNativeCheckinFixture(
         server.closeIdleConnections?.()
       }),
   }
+}
+
+for (const order of ["daily-first", "manual-first"] as const) {
+  test(`${order}: overlapping automatic and manual runs perform one native check-in`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const serviceWorker = await getServiceWorker(context)
+    let releasePost!: () => void
+    const postResponse = new Promise<void>((resolve) => {
+      releasePost = resolve
+    })
+    const nativeFixture = await createNativeCheckinFixture(
+      false,
+      () => postResponse,
+    )
+    const runs: Promise<unknown>[] = []
+    try {
+      await stubLlmMetadataIndex(context)
+      await seedUserPreferences(serviceWorker, {
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin!,
+          globalEnabled: true,
+          pretriggerDailyOnUiOpen: false,
+          notifyUiOnCompletion: false,
+          retryStrategy: {
+            enabled: false,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 1,
+          },
+        },
+        tempWindowFallback: {
+          ...DEFAULT_PREFERENCES.tempWindowFallback!,
+          enabled: true,
+          tempContextMode: TEMP_CONTEXT_MODES.Tab,
+          automaticFeatureBypass: {
+            ...DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+            [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: true,
+          },
+        },
+      })
+      await seedStoredAccounts(serviceWorker, [
+        createStoredAccount({
+          id: NATIVE_ACCOUNT_ID,
+          site_name: NATIVE_ACCOUNT_NAME,
+          site_url: nativeFixture.siteUrl,
+          site_type: SITE_TYPES.NEW_API,
+          account_info: {
+            id: NATIVE_ACCOUNT_USER_ID,
+            username: "native-page-user",
+            access_token: "native-page-token",
+          },
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        }),
+      ])
+      await forceExtensionLanguage(page, "en")
+      installExtensionPageGuards(page)
+      await page.goto(autoCheckinOptionsUrl(extensionId))
+      await waitForExtensionRoot(page)
+      await expectPermissionOnboardingHidden(page)
+      await seedTodayDailyRunTarget(page)
+      const triggers: [string, string] =
+        order === "daily-first"
+          ? [
+              AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+              AutoCheckinMessageTypes.RunNow,
+            ]
+          : [
+              AutoCheckinMessageTypes.RunNow,
+              AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+            ]
+      await serviceWorker.evaluate((types) => {
+        const scope = globalThis as any
+        scope.__concurrentCheckinMessages = []
+        scope.chrome.runtime.onMessage.addListener((message: any) => {
+          if (types.includes(message?.type))
+            scope.__concurrentCheckinMessages.push(message.type)
+        })
+      }, triggers)
+      const run = async (type: string) => {
+        if (type === AutoCheckinMessageTypes.RunNow) {
+          // The UI owns the user-command lease needed for CAPTCHA/login recovery.
+          const button = page.getByTestId(
+            BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton,
+          )
+          await button.click()
+          await expect(button).toBeDisabled()
+          await expect(button).toBeEnabled()
+        } else {
+          const response = await sendTypedRuntimeMessageFromPage(page, type)
+          expect(response).toMatchObject({ success: true })
+        }
+      }
+      runs.push(run(triggers[0]))
+      await expect
+        .poll(() => nativeFixture.counts.directCheckinPostCount)
+        .toBe(1)
+      runs.push(run(triggers[1]))
+      await expect
+        .poll(() =>
+          serviceWorker.evaluate(
+            () => (globalThis as any).__concurrentCheckinMessages.length,
+          ),
+        )
+        .toBe(2)
+      // Both runtime commands have arrived while the first HTTP mutation is
+      // still in flight. Let the real provider and native-page workflow finish.
+      releasePost()
+      await Promise.all(runs)
+      expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
+      expect(nativeFixture.counts.nativePageClickCount).toBe(1)
+      const status = await readAutoCheckinStatus(serviceWorker)
+      const result = status?.perAccount?.[NATIVE_ACCOUNT_ID]
+      expect(result).toBeDefined()
+      if (result?.status === "skipped")
+        expect(result.reasonCode).toBe(
+          AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+        )
+      else expect(["success", "already_checked"]).toContain(result?.status)
+      expect(status?.pendingRetry).toBe(false)
+    } finally {
+      releasePost()
+      await Promise.allSettled(runs)
+      await nativeFixture.close()
+    }
+  })
 }
 
 for (const nearMidnight of [false, true]) {
