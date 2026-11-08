@@ -675,6 +675,7 @@ test("keeps page verification actions visible while scrolling at desktop and nar
   expect(
     Math.abs(profileBoundsWithHelp.y - profileBoundsBeforeHelp.y),
   ).toBeLessThanOrEqual(2)
+  await profileSelector.click({ trial: true })
   await profileHelp.press("Escape")
   await expect(profileHint).toBeHidden()
   await expect(modal).toBeVisible()
@@ -783,6 +784,14 @@ test("keeps page verification actions visible while scrolling at desktop and nar
         .getByRole("dialog")
         .evaluate((element) => element.scrollWidth <= element.clientWidth),
     ).toBe(true)
+    if (width === 380) {
+      await profileHelp.click()
+      await expect(profileHint).toBeVisible()
+      await profileSelector.click({ trial: true })
+      await profileHelp.press("Escape")
+      await expect(profileHint).toBeHidden()
+      await expect(modal).toBeVisible()
+    }
   }
 })
 

@@ -78,37 +78,43 @@ export function VerificationRequestProfileSelect({
   const defaultApiType = getVerificationRequestProfileApiType(value)
   const hasProtocolMismatch =
     apiType && defaultApiType && apiType !== defaultApiType
+  const helpButton = (
+    <IconButton
+      type="button"
+      variant="ghost"
+      size="none"
+      className="text-muted-foreground size-4 min-h-0 shrink-0 p-0"
+      aria-label={t("verifyDialog.meta.requestProfile")}
+      title={t("verifyDialog.requestProfiles.hint")}
+      tooltip={t("verifyDialog.requestProfiles.hint")}
+      disableAutoTooltip={Boolean(portalContainer)}
+    >
+      <HelpHintIcon className="size-3.5" aria-hidden="true" />
+    </IconButton>
+  )
   return (
     <div className="space-y-density-1-5">
       <div className={cn("flex items-center gap-1", labelRowClassName)}>
         <span className="text-muted-foreground text-xs">
           {t("verifyDialog.meta.requestProfile")}
         </span>
-        <Popover>
-          <PopoverTrigger asChild>
-            <IconButton
-              type="button"
-              variant="ghost"
-              size="none"
-              className="text-muted-foreground size-4 min-h-0 shrink-0 p-0"
+        {portalContainer ? (
+          <Popover>
+            <PopoverTrigger asChild>{helpButton}</PopoverTrigger>
+            <PopoverContent
+              container={portalContainer}
               aria-label={t("verifyDialog.meta.requestProfile")}
-              title={t("verifyDialog.requestProfiles.hint")}
-              disableAutoTooltip
+              align="end"
+              className="w-72 max-w-[calc(100vw-2rem)] p-3 text-xs leading-relaxed"
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onEscapeKeyDown={(event) => event.stopPropagation()}
             >
-              <HelpHintIcon className="size-3.5" aria-hidden="true" />
-            </IconButton>
-          </PopoverTrigger>
-          <PopoverContent
-            container={portalContainer}
-            aria-label={t("verifyDialog.meta.requestProfile")}
-            align="end"
-            className="w-72 max-w-[calc(100vw-2rem)] p-3 text-xs leading-relaxed"
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            onEscapeKeyDown={(event) => event.stopPropagation()}
-          >
-            {t("verifyDialog.requestProfiles.hint")}
-          </PopoverContent>
-        </Popover>
+              {t("verifyDialog.requestProfiles.hint")}
+            </PopoverContent>
+          </Popover>
+        ) : (
+          helpButton
+        )}
       </div>
       <SearchableSelect
         aria-label={t("verifyDialog.meta.requestProfile")}

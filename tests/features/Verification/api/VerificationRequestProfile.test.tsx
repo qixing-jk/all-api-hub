@@ -35,7 +35,7 @@ it.each([
 )
 
 describe("verification result client identity", () => {
-  it("opens client help without stealing focus and closes it without dismissing the workspace", async () => {
+  it("opens portalled client help without stealing focus and closes it without dismissing the workspace", async () => {
     const user = userEvent.setup()
     const onKeyDown = vi.fn()
     render(
@@ -44,6 +44,7 @@ describe("verification result client identity", () => {
           <VerificationRequestProfileSelect
             value="default"
             onChange={vi.fn()}
+            portalContainer={document.body}
           />
         </div>
       </I18nextProvider>,
