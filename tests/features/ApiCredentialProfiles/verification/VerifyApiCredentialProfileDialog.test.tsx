@@ -1784,9 +1784,8 @@ describe("VerifyApiCredentialProfileDialog", () => {
   })
 
   it("keeps the saved profile apiType when the fetched model belongs to another vendor", async () => {
-    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
-      "claude-3-5-sonnet",
-    ])
+    const models = createDeferred<string[]>()
+    mockFetchOpenAICompatibleModelIds.mockReturnValueOnce(models.promise)
 
     render(
       <VerifyApiCredentialProfileDialog
@@ -1806,12 +1805,15 @@ describe("VerifyApiCredentialProfileDialog", () => {
       />,
     )
 
-    expect(await screen.findByText("claude-3-5-sonnet")).toBeVisible()
-    expect(
-      screen.getByRole("combobox", {
-        name: "aiApiVerification:verifyDialog.meta.model",
-      }),
-    ).toHaveTextContent("claude-3-5-sonnet")
+    const modelSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.model",
+    })
+    expect(modelSelect).not.toHaveTextContent("claude-3-5-sonnet")
+    await act(async () => {
+      models.resolve(["claude-3-5-sonnet"])
+    })
+    expect(screen.getByText("claude-3-5-sonnet")).toBeVisible()
+    expect(modelSelect).toHaveTextContent("claude-3-5-sonnet")
     expect(getApiTypeSelect()).toHaveValue(API_TYPES.OPENAI_COMPATIBLE)
     expect(mockFetchAnthropicModelIds).not.toHaveBeenCalled()
   })
