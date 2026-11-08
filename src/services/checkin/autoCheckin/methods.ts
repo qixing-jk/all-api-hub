@@ -47,6 +47,7 @@ import {
   replaceCheckInMethodDetection,
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
+import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import { PROTECTION_BYPASS_EXECUTION_KINDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import {
@@ -587,13 +588,14 @@ type ActiveAccountExecution = {
   promise: Promise<ExecuteSelectedCheckInResult>
 }
 
-type AccountExecutionQueue = {
-  tail: Promise<unknown>
+type AccountExecutionGroup = {
+  pendingCallers: number
   /** The last actual attempt; a skipped waiter must not erase its outcome. */
   attempt?: ActiveAccountExecution
 }
 
-const activeAccountExecutions = new Map<string, AccountExecutionQueue>()
+const accountExecutionQueue = createKeyedTaskQueue()
+const activeAccountExecutions = new Map<string, AccountExecutionGroup>()
 
 /**
  * Reuse an overlapping attempt instead of replaying a successful or uncertain
@@ -695,28 +697,27 @@ async function continueAfterAccountExecution(
 export async function executeSelectedCheckIn(
   input: ExecuteSelectedCheckInInput,
 ): Promise<ExecuteSelectedCheckInResult> {
-  const queue = activeAccountExecutions.get(input.account.id) ?? {
-    tail: Promise.resolve(),
+  const group = activeAccountExecutions.get(input.account.id) ?? {
+    pendingCallers: 0,
   }
+  group.pendingCallers++
+  activeAccountExecutions.set(input.account.id, group)
   const execute = (next: ExecuteSelectedCheckInInput) => {
     const attempt = { input: next, promise: executeSelectedCheckInOnce(next) }
-    queue.attempt = attempt
+    group.attempt = attempt
     return attempt.promise
   }
-  const execution = queue.tail.then(() =>
-    queue.attempt
-      ? continueAfterAccountExecution(input, queue.attempt, execute)
-      : execute(input),
-  )
-  // A crashed attempt remains in `attempt` for its waiters, while the queue
-  // itself can drain and release the account for a later independent command.
-  const tail = execution.catch(() => undefined)
-  queue.tail = tail
-  activeAccountExecutions.set(input.account.id, queue)
   try {
-    return await execution
+    return await accountExecutionQueue.run(input.account.id, () =>
+      group.attempt
+        ? continueAfterAccountExecution(input, group.attempt, execute)
+        : execute(input),
+    )
   } finally {
-    if (queue.tail === tail) {
+    // Keep the last attempt (including a rejection) until every overlapping
+    // caller has observed it. A later independent command starts a new group.
+    group.pendingCallers--
+    if (group.pendingCallers === 0) {
       activeAccountExecutions.delete(input.account.id)
     }
   }
