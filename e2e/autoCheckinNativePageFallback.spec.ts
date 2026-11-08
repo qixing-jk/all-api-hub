@@ -622,7 +622,9 @@ for (const { captcha, completeVerification } of [
         await seedUserPreferences(serviceWorker, {
           autoCheckin: {
             ...DEFAULT_PREFERENCES.autoCheckin!,
-            globalEnabled: true,
+            // This scenario exercises Run now; an unrelated daily alarm must
+            // not issue another POST while the user completes verification.
+            globalEnabled: false,
             pretriggerDailyOnUiOpen: false,
             notifyUiOnCompletion: false,
             retryStrategy: {
@@ -635,6 +637,10 @@ for (const { captcha, completeVerification } of [
             ...DEFAULT_PREFERENCES.tempWindowFallback!,
             enabled: true,
             tempContextMode: TEMP_CONTEXT_MODES.Tab,
+            automaticFeatureBypass: {
+              ...DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+              [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: false,
+            },
             turnstileAssistPresentation: completeVerification
               ? "page"
               : "quiet",
@@ -664,6 +670,17 @@ for (const { captcha, completeVerification } of [
         await waitForExtensionRoot(page)
         await expectPermissionOnboardingHidden(page)
         await page.bringToFront()
+        if (captcha === "turnstile" && completeVerification) {
+          // Exercise a pending daily callback instead of relying on the random
+          // schedule to collide with this manual flow in CI.
+          await seedTodayDailyRunTarget(page)
+          const alarmResponse = await sendTypedRuntimeMessageFromPage(
+            page,
+            AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+          )
+          expect(alarmResponse).toMatchObject({ success: true })
+        }
+        expect(nativeFixture.counts.directCheckinPostCount).toBe(0)
         await page
           .getByTestId(BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton)
           .click()
@@ -749,8 +766,8 @@ for (const { captcha, completeVerification } of [
           .toMatchObject({
             perAccount: { [NATIVE_ACCOUNT_ID]: { status: "already_checked" } },
           })
-        expect(nativeFixture.counts.nativePageClickCount).toBe(1)
         expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
+        expect(nativeFixture.counts.nativePageClickCount).toBe(1)
         await expect(openVerification).toBeHidden()
       } finally {
         await nativeFixture.close()

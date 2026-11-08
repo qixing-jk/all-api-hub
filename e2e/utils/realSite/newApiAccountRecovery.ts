@@ -388,21 +388,39 @@ async function readDetectedDialogFailureText(dialog: AccountAddDialog) {
 
 /** Excludes hidden temporary inspection pages, including those at the same URL. */
 export async function isUserFacingCredentialPage(page: Page, worker: Worker) {
+  const marker = `data-aah-credential-candidate-${crypto.randomUUID()}`
   try {
     await page.waitForLoadState("domcontentloaded")
-    const activeUrl = await worker.evaluate(async () => {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        lastFocusedWindow: true,
-      })
-      return tab?.url
-    })
-    return (
-      page.url() === activeUrl &&
-      (await page.evaluate(() => document.visibilityState === "visible"))
+    await page.evaluate((marker) => {
+      document.documentElement.setAttribute(marker, "")
+    }, marker)
+    return await worker.evaluate(
+      async ({ marker, url }) => {
+        const [tab] = await chrome.tabs.query({
+          active: true,
+          lastFocusedWindow: true,
+        })
+        if (tab?.id == null || tab.url !== url) return false
+        // Different windows can have visible documents at the same URL, even
+        // with hasFocus() true in headless Chrome. Match the actual document.
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: (marker) => document.documentElement.hasAttribute(marker),
+          args: [marker],
+        })
+        return result?.result === true
+      },
+      { marker, url: page.url() },
     )
   } catch {
     // An owned inspection page may be released before loading completes.
     return false
+  } finally {
+    await page
+      .evaluate(
+        (marker) => document.documentElement.removeAttribute(marker),
+        marker,
+      )
+      .catch(() => {})
   }
 }

@@ -14,7 +14,10 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForSavedAccount } from "~~/e2e/utils/realSite/accountAdd"
 import { createCompatibleRealSiteAccountFixturePreparer } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
 import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
-import { createNewApiAccountRecovery } from "~~/e2e/utils/realSite/newApiAccountRecovery"
+import {
+  createNewApiAccountRecovery,
+  isUserFacingCredentialPage,
+} from "~~/e2e/utils/realSite/newApiAccountRecovery"
 
 const scenarios = [
   {
@@ -71,6 +74,33 @@ const recoveryTest = test.extend<{
     }
   },
 })
+
+recoveryTest(
+  "credential recovery rejects a visible inspection window at the user tab URL",
+  async ({ context, page, securitySite }) => {
+    securitySite.html = "<!doctype html><title>Security</title><p>Security</p>"
+    const url = `${securitySite.baseUrl}/security`
+    const worker = await getServiceWorker(context)
+    await page.goto(url)
+    const inspectionPagePromise = context.waitForEvent("page")
+    await worker.evaluate(async (url) => {
+      await chrome.windows.create({ url, type: "popup", focused: false })
+    }, url)
+    const inspectionPage = await inspectionPagePromise
+    await inspectionPage.waitForLoadState("domcontentloaded")
+    await page.bringToFront()
+
+    // A background window can expose a visible document with the same URL as
+    // the user's focused tab. URL and visibility alone do not identify it.
+    expect(await inspectionPage.evaluate(() => document.visibilityState)).toBe(
+      "visible",
+    )
+    expect(await isUserFacingCredentialPage(inspectionPage, worker)).toBe(false)
+    expect(await isUserFacingCredentialPage(page, worker)).toBe(true)
+    await inspectionPage.close()
+    expect(await isUserFacingCredentialPage(inspectionPage, worker)).toBe(false)
+  },
+)
 
 for (const scenario of scenarios) {
   recoveryTest(
