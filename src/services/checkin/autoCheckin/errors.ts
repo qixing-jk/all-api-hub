@@ -1,6 +1,19 @@
 import { CHECK_IN_METHOD_UNKNOWN_REASON_CODES } from "~/constants/checkIn"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import type { CheckInMethodUnknownReason } from "~/types/checkIn"
+import { getErrorMessage } from "~/utils/core/error"
+
+/** Preserves one rejected attempt's cause and completion across queued callers. */
+export class CheckInExecutionError extends Error {
+  constructor(
+    cause: unknown,
+    readonly completedAt = Date.now(),
+    readonly reused = false,
+  ) {
+    super(getErrorMessage(cause), { cause })
+    this.name = "CheckInExecutionError"
+  }
+}
 
 export const AUTO_CHECKIN_ERROR_CATEGORIES = {
   AuthenticationRequired: "authentication_required",

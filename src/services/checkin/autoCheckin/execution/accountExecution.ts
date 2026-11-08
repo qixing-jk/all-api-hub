@@ -9,6 +9,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { CheckInExecutionError } from "~/services/checkin/autoCheckin/errors"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
@@ -213,8 +214,11 @@ export async function executeAccountCheckin(
     })
     return { result, ...(execution.reused ? { reused: true } : {}) }
   } catch (error) {
-    const errorMessage = getErrorMessage(error)
-    const normalizedError = resolveProviderErrorResult({ error })
+    const executionFailure =
+      error instanceof CheckInExecutionError ? error : null
+    const cause = executionFailure ? executionFailure.cause : error
+    const errorMessage = getErrorMessage(cause)
+    const normalizedError = resolveProviderErrorResult({ error: cause })
     logger.error("Check-in error", {
       accountId: account.id,
       siteName: account.site_name,
@@ -235,6 +239,9 @@ export async function executeAccountCheckin(
     )
     return {
       result: buildResult(normalizedError.status, {
+        ...(executionFailure
+          ? { timestamp: executionFailure.completedAt }
+          : {}),
         // Every other produced result names its method. Naming it here too
         // keeps capability gating (status readback, the not-repeat-safe set)
         // working for a row that came from a crash.
@@ -253,6 +260,7 @@ export async function executeAccountCheckin(
             }
           : {}),
       }),
+      ...(executionFailure?.reused ? { reused: true } : {}),
     }
   }
 }

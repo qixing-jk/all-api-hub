@@ -728,10 +728,24 @@ it("releases the account after provider crashes without replaying its overlappin
   const second = executeSelectedCheckIn(input)
   const results = Promise.allSettled([first, second])
   completion.resolve({ status: "success" })
-  expect((await results).map((result) => result.status)).toEqual([
+  const settled = await results
+  expect(settled.map((result) => result.status)).toEqual([
     "rejected",
     "rejected",
   ])
+  const failures = settled.map((result) =>
+    result.status === "rejected" ? result.reason : undefined,
+  )
+  expect(failures[0]).toMatchObject({
+    completedAt: expect.any(Number),
+    reused: false,
+    cause: expect.objectContaining({ message: "provider crashed" }),
+  })
+  expect(failures[1]).toMatchObject({
+    completedAt: failures[0].completedAt,
+    reused: true,
+    cause: failures[0].cause,
+  })
   expect(checkIn).toHaveBeenCalledOnce()
   await expect(executeSelectedCheckIn(input)).resolves.toMatchObject({
     kind: "executed",

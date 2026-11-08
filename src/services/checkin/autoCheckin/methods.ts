@@ -21,6 +21,7 @@ import {
 } from "~/services/checkin/autoCheckin/discovery/inspection"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
+  CheckInExecutionError,
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
 import {
@@ -618,7 +619,13 @@ async function continueAfterAccountExecution(
     input: ExecuteSelectedCheckInInput,
   ) => Promise<ExecuteSelectedCheckInResult>,
 ): Promise<ExecuteSelectedCheckInResult> {
-  const result = await previous.promise
+  let result: ExecuteSelectedCheckInResult
+  try {
+    result = await previous.promise
+  } catch (error) {
+    if (!(error instanceof CheckInExecutionError)) throw error
+    throw new CheckInExecutionError(error.cause, error.completedAt, true)
+  }
   let latestAccount = input.account
   if (input.revalidateAccount) {
     try {
@@ -758,7 +765,12 @@ export async function executeSelectedCheckIn(
     })
   }
   const execute = (next: ExecuteSelectedCheckInInput) => {
-    const attempt = { input: next, promise: executeSelectedCheckInOnce(next) }
+    const attempt = {
+      input: next,
+      promise: executeSelectedCheckInOnce(next).catch((error) => {
+        throw new CheckInExecutionError(error)
+      }),
+    }
     group.attempt = attempt
     return attempt.promise
   }
