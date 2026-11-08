@@ -1,4 +1,4 @@
-import type { Locator, Page, Worker } from "@playwright/test"
+import type { BrowserContext, Locator, Page, Worker } from "@playwright/test"
 
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import { expect } from "~~/e2e/fixtures/extensionTest"
@@ -90,10 +90,7 @@ export function createNewApiAccountRecovery(params: {
       const context = params.page.context()
       const worker = await getServiceWorker(context)
       const [securityPage] = await Promise.all([
-        context.waitForEvent("page", {
-          predicate: (candidate) =>
-            isUserFacingCredentialPage(candidate, worker),
-        }),
+        waitForNewUserFacingCredentialPage(context, worker),
         dialog.dialog
           .getByRole("button", { name: "Open token page", exact: true })
           .click(),
@@ -384,6 +381,34 @@ async function readDetectedDialogFailureText(dialog: AccountAddDialog) {
   } catch {
     return ""
   }
+}
+
+/** Waits for a new credential page to become the actual user-facing tab. */
+export async function waitForNewUserFacingCredentialPage(
+  context: BrowserContext,
+  worker: Worker,
+  timeout = 30_000,
+): Promise<Page> {
+  const existingPages = new Set(context.pages())
+  let selectedPage: Page | undefined
+  // A page event can precede tab activation. Keep inspecting new candidates
+  // until the document matches the focused tab, excluding earlier pages.
+  await expect
+    .poll(
+      async () => {
+        for (const candidate of context.pages()) {
+          if (existingPages.has(candidate)) continue
+          if (await isUserFacingCredentialPage(candidate, worker)) {
+            selectedPage = candidate
+            return true
+          }
+        }
+        return false
+      },
+      { timeout },
+    )
+    .toBe(true)
+  return selectedPage!
 }
 
 /** Excludes hidden temporary inspection pages, including those at the same URL. */

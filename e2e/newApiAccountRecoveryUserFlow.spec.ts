@@ -17,6 +17,7 @@ import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatib
 import {
   createNewApiAccountRecovery,
   isUserFacingCredentialPage,
+  waitForNewUserFacingCredentialPage,
 } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 
 const scenarios = [
@@ -99,6 +100,60 @@ recoveryTest(
     expect(await isUserFacingCredentialPage(page, worker)).toBe(true)
     await inspectionPage.close()
     expect(await isUserFacingCredentialPage(inspectionPage, worker)).toBe(false)
+  },
+)
+
+recoveryTest(
+  "credential recovery rechecks a new page that becomes active after its first inspection",
+  async ({ context, page, securitySite }) => {
+    securitySite.html = "<!doctype html><title>Security</title><p>Security</p>"
+    const url = `${securitySite.baseUrl}/security`
+    const worker = await getServiceWorker(context)
+    await page.goto(url)
+    await context.addInitScript(() => {
+      const scope = globalThis as typeof globalThis & {
+        credentialInspections: number
+      }
+      scope.credentialInspections = 0
+      new MutationObserver((records) => {
+        if (
+          records.some(
+            (record) =>
+              record.attributeName?.startsWith(
+                "data-aah-credential-candidate-",
+              ) &&
+              !(record.target as Element).hasAttribute(record.attributeName),
+          )
+        )
+          scope.credentialInspections++
+      }).observe(document, { attributes: true, subtree: true })
+    })
+    const waiting = waitForNewUserFacingCredentialPage(context, worker, 10_000)
+    void waiting.catch(() => {})
+    const opened = context.waitForEvent("page")
+    const tabId = await worker.evaluate(
+      async (url) => (await chrome.tabs.create({ url, active: false })).id!,
+      url,
+    )
+    const candidate = await opened
+    await expect
+      .poll(() =>
+        candidate.evaluate(
+          () =>
+            (
+              globalThis as typeof globalThis & {
+                credentialInspections: number
+              }
+            ).credentialInspections,
+        ),
+      )
+      .toBeGreaterThan(0)
+    await worker.evaluate(
+      (tabId) => chrome.tabs.update(tabId, { active: true }),
+      tabId,
+    )
+    await expect(waiting).resolves.toBe(candidate)
+    await candidate.close()
   },
 )
 
