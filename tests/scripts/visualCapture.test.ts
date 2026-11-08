@@ -290,6 +290,10 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
       fixture: "generic-api-hint-v1",
     })
     expect(capture.checkpoints).toHaveLength(2)
+    const preview = readFileSync(result.report, "utf8")
+    for (const state of capture.checkpoints) {
+      expect(preview).toContain(`![${state.id}](${state.image})`)
+    }
     for (const state of capture.checkpoints) {
       expect(state.source.inputHash).toMatch(/^[a-f0-9]{64}$/)
       expect(state.source.gitHead).toMatch(/^[a-f0-9]{40}$/)
@@ -327,6 +331,19 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
       ),
     )
     expect(after.comparisons).toHaveLength(2)
+    const comparisonPreview = readFileSync(after.report, "utf8")
+    for (const [index, comparison] of after.comparisons.entries()) {
+      const imagePath = path
+        .relative(
+          after.directory,
+          path.join(comparison.directory, "comparison.png"),
+        )
+        .split(path.sep)
+        .join("/")
+      expect(comparisonPreview).toContain(
+        `![${capture.checkpoints[index].id}: Before | After](${imagePath})`,
+      )
+    }
     for (const comparison of after.comparisons) {
       const report = JSON.parse(
         readFileSync(
