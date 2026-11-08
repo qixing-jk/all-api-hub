@@ -308,7 +308,11 @@ class AccountCheckInState {
     }
   }
 
-  async markAccountAsSiteCheckedIn(id: string): Promise<boolean> {
+  /** Preserves completion evidence for reused attempts without replacing newer observations. */
+  async markAccountAsSiteCheckedIn(
+    id: string,
+    observedAt?: number,
+  ): Promise<boolean> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
         if (account.disabled) {
@@ -319,16 +323,26 @@ class AccountCheckInState {
           ? markCheckInMethodExecuted({
               config: account.checkIn,
               methodId: selectedMethodId,
-              observedAt: Date.now(),
+              observedAt: observedAt ?? Date.now(),
             })
           : account.checkIn
         if (nextCheckIn === account.checkIn) {
           return { nextAccount: account, result: false, changed: false }
         }
+        const acceptedCheckIn =
+          observedAt === undefined
+            ? nextCheckIn
+            : mergeRefreshedCheckInStatus({
+                latest: account.checkIn,
+                refreshed: nextCheckIn,
+              })
+        if (acceptedCheckIn === account.checkIn) {
+          return { nextAccount: account, result: true, changed: false }
+        }
         return {
           nextAccount: applySiteAccountUpdates({
             account,
-            updates: { checkIn: nextCheckIn },
+            updates: { checkIn: acceptedCheckIn },
             now: Date.now(),
             userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
           }),

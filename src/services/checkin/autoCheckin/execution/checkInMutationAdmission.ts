@@ -18,7 +18,7 @@ export const toProviderReadinessSkipReason = (
     ? CHECK_IN_EXECUTION_SKIP_REASONS.CredentialsMissing
     : CHECK_IN_EXECUTION_SKIP_REASONS.AccountDataMissing
 
-const hasSameCheckInAccountIdentity = (
+export const hasSameCheckInAccountIdentity = (
   currentAccount: SiteAccount,
   latestAccount: SiteAccount,
 ): boolean =>
@@ -41,6 +41,7 @@ export async function inspectCheckInMutationAdmission(input: {
   account: SiteAccount | null
   registration: AutoCheckinMethodRegistration
   globalAutomaticExecutionEnabled: boolean
+  loginProviderClaimedByAnother?: boolean
   isAutomaticExecutionEnabled?: () => Promise<boolean>
 }): Promise<
   | { eligible: true; account: SiteAccount }
@@ -62,6 +63,7 @@ export async function inspectCheckInMutationAdmission(input: {
     siteUrl: account.site_url,
     accountDisabled: account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
   if (!state.executionEligibility.eligible) {
     return { eligible: false, reason: state.executionEligibility.skipReason }

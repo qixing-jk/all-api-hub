@@ -647,16 +647,45 @@ test("keeps page verification actions visible while scrolling at desktop and nar
   await stubLlmMetadataIndex(context)
   await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
   await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.setViewportSize({ width: 1920, height: 800 })
   const { modal } = await openApiCheckModalFromCopiedCredentials(page)
   const profileHelp = modal.getByRole("button", {
     name: "Client simulation",
     exact: true,
   })
+  const profileSelector = modal.getByRole("combobox", {
+    name: "Client simulation",
+    exact: true,
+  })
+  const profileBoundsBeforeHelp = (await profileSelector.boundingBox())!
   await profileHelp.click()
-  await expect(modal.getByRole("tooltip")).toContainText("Selecting a client")
+  const profileHint = modal.getByRole("dialog", {
+    name: "Client simulation",
+    exact: true,
+  })
+  await expect(profileHint).toBeVisible()
+  await expect(profileHint).toContainText("Selecting a client")
   await modal
-    .getByRole("combobox", { name: "Client simulation", exact: true })
-    .focus()
+    .getByRole("dialog", { name: "API Testing", exact: true })
+    .screenshot({
+      path: test.info().outputPath("profile-help-open.png"),
+      animations: "disabled",
+    })
+  const profileBoundsWithHelp = (await profileSelector.boundingBox())!
+  expect(
+    Math.abs(profileBoundsWithHelp.y - profileBoundsBeforeHelp.y),
+  ).toBeLessThanOrEqual(2)
+  await profileSelector.click({ trial: true })
+  await profileHelp.press("Escape")
+  await expect(profileHint).toBeHidden()
+  await expect(modal).toBeVisible()
+  await profileHelp.click()
+  await expect(profileHint).toBeVisible()
+  await profileSelector.click()
+  await expect(profileSelector).toHaveAttribute("aria-expanded", "true")
+  await modal.getByRole("option", { name: "Ordinary API", exact: true }).click()
+  await expect(profileSelector).toHaveAttribute("aria-expanded", "false")
+  await profileSelector.focus()
   const sourceEditor = modal.getByRole("textbox", {
     name: "Text to extract from",
     exact: true,
@@ -761,6 +790,26 @@ test("keeps page verification actions visible while scrolling at desktop and nar
         .getByRole("dialog")
         .evaluate((element) => element.scrollWidth <= element.clientWidth),
     ).toBe(true)
+    if (width === 380) {
+      await profileHelp.scrollIntoViewIfNeeded()
+      const beforeHelp = (await profileSelector.boundingBox())!
+      await profileHelp.click()
+      await expect(profileHint).toBeVisible()
+      const withHelp = (await profileSelector.boundingBox())!
+      expect(Math.abs(withHelp.y - beforeHelp.y)).toBeLessThanOrEqual(2)
+      await profileSelector.click({ trial: true })
+      await profileHelp.press("Escape")
+      await expect(profileHint).toBeHidden()
+      await expect(modal).toBeVisible()
+      await profileHelp.click()
+      await expect(profileHint).toBeVisible()
+      await profileSelector.click()
+      await expect(profileSelector).toHaveAttribute("aria-expanded", "true")
+      await modal
+        .getByRole("option", { name: "Ordinary API", exact: true })
+        .click()
+      await expect(profileSelector).toHaveAttribute("aria-expanded", "false")
+    }
   }
 })
 

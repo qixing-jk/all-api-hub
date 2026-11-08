@@ -125,6 +125,7 @@ describe("autoCheckinScheduler targeting support", () => {
       skippedCount: 2,
       needsRetry: false,
     })
+    expect(schedulerTestState.storedStatus.lastRunResult).toBe("success")
     expect(schedulerTestState.storedStatus.pendingRetry).toBe(true)
     expect(schedulerTestState.storedStatus.retryState).toEqual({
       day: "2024-01-01",

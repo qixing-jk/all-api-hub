@@ -14,7 +14,11 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForSavedAccount } from "~~/e2e/utils/realSite/accountAdd"
 import { createCompatibleRealSiteAccountFixturePreparer } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
 import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
-import { createNewApiAccountRecovery } from "~~/e2e/utils/realSite/newApiAccountRecovery"
+import {
+  createNewApiAccountRecovery,
+  isUserFacingCredentialPage,
+  waitForNewUserFacingCredentialPage,
+} from "~~/e2e/utils/realSite/newApiAccountRecovery"
 
 const scenarios = [
   {
@@ -44,13 +48,26 @@ const scenarios = [
 ] as const
 
 const recoveryTest = test.extend<{
-  securitySite: { baseUrl: string; html: string; requests: number }
+  securitySite: {
+    baseUrl: string
+    html: string
+    requests: number
+    pendingRequests: number
+  }
 }>({
   securitySite: async ({ extensionId }, runFixture) => {
     void extensionId
-    const site = { baseUrl: "", html: "", requests: 0 }
+    const site = { baseUrl: "", html: "", requests: 0, pendingRequests: 0 }
     const server = createServer((request, response) => {
-      if (request.url === "/security") {
+      if (request.url === "/pending-security") {
+        response.writeHead(200, { "Content-Type": "text/html" })
+        response.end(
+          '<!doctype html><title>Inspection</title><script src="/pending-script"></script>',
+        )
+      } else if (request.url === "/pending-script") {
+        site.pendingRequests++
+        // Hold this inspection page before DOMContentLoaded.
+      } else if (request.url === "/security") {
         site.requests += 1
         response.writeHead(200, { "Content-Type": "text/html" })
         response.end(site.html)
@@ -71,6 +88,148 @@ const recoveryTest = test.extend<{
     }
   },
 })
+
+recoveryTest(
+  "credential recovery matches the originating window when pages share a URL",
+  async ({ context, page, securitySite }) => {
+    securitySite.html = "<!doctype html><title>Security</title><p>Security</p>"
+    const url = `${securitySite.baseUrl}/security`
+    const worker = await getServiceWorker(context)
+    await page.goto(url)
+    const sourceWindowId = await worker.evaluate(
+      async () => (await chrome.windows.getLastFocused()).id!,
+    )
+    const inspectionPagePromise = context.waitForEvent("page")
+    const inspectionWindowId = await worker.evaluate(
+      async (url) =>
+        (await chrome.windows.create({ url, type: "popup", focused: true }))
+          .id!,
+      url,
+    )
+    const inspectionPage = await inspectionPagePromise
+    await inspectionPage.waitForLoadState("domcontentloaded")
+    // Chrome versions differ in whether creating this window moves OS focus.
+    // Both documents must match only their own window regardless of that state.
+    expect(await inspectionPage.evaluate(() => document.visibilityState)).toBe(
+      "visible",
+    )
+    expect(
+      await isUserFacingCredentialPage(
+        inspectionPage,
+        worker,
+        inspectionWindowId,
+      ),
+    ).toBe(true)
+    expect(
+      await isUserFacingCredentialPage(inspectionPage, worker, sourceWindowId),
+    ).toBe(false)
+    expect(await isUserFacingCredentialPage(page, worker, sourceWindowId)).toBe(
+      true,
+    )
+    await inspectionPage.close()
+    expect(
+      await isUserFacingCredentialPage(inspectionPage, worker, sourceWindowId),
+    ).toBe(false)
+  },
+)
+
+recoveryTest(
+  "credential recovery rechecks a new page that becomes active after its first inspection",
+  async ({ context, page, securitySite }) => {
+    // tabs.create can load before Playwright installs init scripts. Serve the
+    // observer with the document so every candidate records its first check.
+    securitySite.html = `<!doctype html><title>Security</title><p>Security</p>
+      <script>
+        globalThis.credentialInspections = 0;
+        new MutationObserver((records) => {
+          if (records.some((record) =>
+            record.attributeName?.startsWith("data-aah-credential-candidate-") &&
+            !record.target.hasAttribute(record.attributeName)
+          )) globalThis.credentialInspections++;
+        }).observe(document, { attributes: true, subtree: true });
+      </script>`
+    const url = `${securitySite.baseUrl}/security`
+    const worker = await getServiceWorker(context)
+    await page.goto(url)
+    const sourceWindowId = await worker.evaluate(
+      async () => (await chrome.windows.getLastFocused()).id!,
+    )
+    const waiting = waitForNewUserFacingCredentialPage(
+      context,
+      worker,
+      sourceWindowId,
+      10_000,
+    )
+    void waiting.catch(() => {})
+    const opened = context.waitForEvent("page")
+    const tabId = await worker.evaluate(
+      async (url) => (await chrome.tabs.create({ url, active: false })).id!,
+      url,
+    )
+    const candidate = await opened
+    await expect
+      .poll(() =>
+        candidate.evaluate(
+          () =>
+            (
+              globalThis as typeof globalThis & {
+                credentialInspections: number
+              }
+            ).credentialInspections,
+        ),
+      )
+      .toBeGreaterThan(0)
+    await worker.evaluate(
+      (tabId) => chrome.tabs.update(tabId, { active: true }),
+      tabId,
+    )
+    await expect(waiting).resolves.toBe(candidate)
+    await candidate.close()
+  },
+)
+
+recoveryTest(
+  "credential recovery finds the active page while another candidate is still loading",
+  async ({ context, page, securitySite }) => {
+    securitySite.html = "<!doctype html><title>Security</title><p>Security</p>"
+    await page.goto(`${securitySite.baseUrl}/security`)
+    const worker = await getServiceWorker(context)
+    const sourceWindowId = await worker.evaluate(
+      async () => (await chrome.windows.getLastFocused()).id!,
+    )
+    const waiting = waitForNewUserFacingCredentialPage(
+      context,
+      worker,
+      sourceWindowId,
+      5000,
+    )
+    void waiting.catch(() => {})
+    const pendingOpened = context.waitForEvent("page")
+    await worker.evaluate(
+      async ({ url, windowId }) =>
+        chrome.tabs.create({ url, windowId, active: false }),
+      {
+        url: `${securitySite.baseUrl}/pending-security`,
+        windowId: sourceWindowId,
+      },
+    )
+    const pending = await pendingOpened
+    await expect.poll(() => securitySite.pendingRequests).toBe(1)
+    const activeOpened = context.waitForEvent("page")
+    await worker.evaluate(
+      async ({ url, windowId }) =>
+        chrome.tabs.create({ url, windowId, active: true }),
+      { url: `${securitySite.baseUrl}/security`, windowId: sourceWindowId },
+    )
+    const active = await activeOpened
+    try {
+      expect(await waiting).toBe(active)
+    } finally {
+      await pending.close()
+      await active.close()
+    }
+  },
+)
 
 for (const scenario of scenarios) {
   recoveryTest(
@@ -175,6 +334,43 @@ for (const scenario of scenarios) {
         serviceWorker,
         config,
         ...recovery,
+        prepareDetectedDialog: async (dialog) => {
+          if (
+            scenario.method !== "password" ||
+            scenario.clipboardWriteDelayMs !== 0
+          ) {
+            await recovery.prepareDetectedDialog(dialog)
+            return
+          }
+          // Model another last-focused window without relying on OS focus,
+          // whose headless behavior differs on Chrome 114.
+          const foreignWindowId = await serviceWorker.evaluate(async () => {
+            const foreignWindow = await chrome.windows.create({
+              url: "about:blank",
+              focused: false,
+            })
+            const scope = globalThis as any
+            scope.__originalGetLastFocused = chrome.windows.getLastFocused
+            ;(chrome.windows as any).getLastFocused = async () => foreignWindow
+            return foreignWindow.id!
+          })
+          try {
+            expect(
+              await serviceWorker.evaluate(
+                async () => (await chrome.windows.getLastFocused()).id,
+              ),
+            ).toBe(foreignWindowId)
+            await recovery.prepareDetectedDialog(dialog)
+          } finally {
+            await serviceWorker.evaluate(async (windowId) => {
+              chrome.windows.getLastFocused = (
+                globalThis as any
+              ).__originalGetLastFocused
+              delete (globalThis as any).__originalGetLastFocused
+              await chrome.windows.remove(windowId)
+            }, foreignWindowId)
+          }
+        },
         siteType: SITE_TYPES.NEW_API,
         login: async (sitePage) => {
           await sitePage.goto(baseUrl)

@@ -1540,6 +1540,7 @@ describe("check-in methods compatibility activation", () => {
         kind: "blocked",
         reason: "account_unavailable",
         retryable: false,
+        completedAt: expect.any(Number),
       })
       expect(checkInRequest).not.toHaveBeenCalled()
     },
@@ -1779,7 +1780,12 @@ describe("check-in methods compatibility activation", () => {
           context: createExecutionContext(),
           requireStatusConfirmationBeforeMutation,
         })
-        expect(result).toEqual(expected)
+        expect(result).toEqual({
+          ...expected,
+          ...(expected.kind === "blocked"
+            ? { completedAt: expect.any(Number) }
+            : {}),
+        })
       }
       expect(mutate).not.toHaveBeenCalled()
     },
@@ -1812,6 +1818,7 @@ describe("check-in methods compatibility activation", () => {
         kind: "blocked",
         reason: expectedReason,
         retryable: true,
+        completedAt: expect.any(Number),
       })
       expect(mutate).not.toHaveBeenCalled()
     },

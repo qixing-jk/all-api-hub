@@ -652,7 +652,8 @@ describe("ApiCheckModalHost", () => {
     expect(apiKeyInput.value).toBe("sk-test-source-clear-fixture")
 
     await user.clear(sourceTextInput)
-    await user.type(sourceTextInput, "No credentials here")
+    await pasteIntoField(user, sourceTextInput, "No credentials here")
+    expect(sourceTextInput).toHaveValue("No credentials here")
 
     await waitFor(() => {
       expect(baseUrlInput.value).toBe("https://proxy.example.com/api")

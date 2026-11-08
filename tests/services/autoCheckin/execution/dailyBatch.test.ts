@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { CheckInExecutionError } from "~/services/checkin/autoCheckin/errors"
 import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -20,6 +22,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
   createDeferred,
   expectRecordedRetryDecision,
@@ -30,13 +33,330 @@ import {
   mockedProductAnalytics,
   mockedUserPreferences,
   resolveProviderForTest,
+  retryAccountForTest,
   runCheckinsForTest,
   runnableCheckIn,
   SCHEDULED_EXECUTION,
   schedulerTestState,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("dailyBatch", () => {
+  it("refreshes a manual retry's shared success exactly once", async () => {
+    const account = buildSiteAccount({
+      id: "manual-owner",
+      site_type: SITE_TYPES.VELOERA,
+      checkIn: runnableCheckIn(),
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedAccountStorage.getAccountById.mockResolvedValue(account)
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: () => ({ ready: true }),
+    })
+    const completion = {
+      kind: "executed" as const,
+      methodId: "veloera:daily-checkin" as const,
+      result: { status: "success" as const, reward: { quota: 95000 } },
+      retryable: false,
+      completedAt: Date.now(),
+    }
+    mockedMethods.executeSelectedCheckIn
+      .mockResolvedValueOnce(completion)
+      .mockResolvedValueOnce({ ...completion, reused: true })
+    await retryAccountForTest(account.id)
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.MANUAL })
+    expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledOnce()
+    expect(mockedAccountStorage.refreshAccount.mock.calls[0]?.[0]).toBe(
+      account.id,
+    )
+  })
+
+  it.each([
+    ["manual retry", true],
+    ["automatic retry", true],
+    ["manual retry", false],
+    ["automatic retry", false],
+    ["manual retry", "blocked"],
+    ["automatic retry", "blocked"],
+    ["manual retry", "thrown"],
+    ["automatic retry", "thrown"],
+  ] as const)(
+    "does not spend another attempt or repeat effects for a reused %s (successful %s)",
+    async (runKind, outcomeKind) => {
+      const successful = outcomeKind === true
+      const account = buildSiteAccount({
+        id: "reused",
+        site_type: SITE_TYPES.VELOERA,
+        checkIn: runnableCheckIn(),
+      })
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      mockedAccountStorage.getAccountById.mockResolvedValue(account)
+      resolveProviderForTest.mockReturnValue({
+        getReadiness: () => ({ ready: true }),
+      })
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin!,
+          globalEnabled: true,
+          notifyUiOnCompletion: false,
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      const timestamp = Date.now() - 1000
+      schedulerTestState.storedStatus = {
+        retryState: {
+          day: formatLocalDayKey(),
+          pendingAccountIds: [account.id],
+          attemptsByAccount: { [account.id]: 1 },
+        },
+        perAccount: {
+          [account.id]: {
+            accountId: account.id,
+            accountName: "Reused",
+            status: "failed",
+            retryable: true,
+            timestamp: timestamp - 1,
+          },
+        },
+      }
+      const sharedCompletion = {
+        kind: "executed",
+        methodId: "veloera:daily-checkin",
+        result: successful
+          ? { status: "success", reward: { quota: 95000 } }
+          : { status: "failed", reasonCode: "network_error" },
+        retryable: !successful,
+        reused: true,
+        completedAt: timestamp,
+      } as const
+      if (outcomeKind === "thrown") {
+        mockedMethods.executeSelectedCheckIn.mockRejectedValueOnce(
+          new CheckInExecutionError(
+            new TypeError("Failed to fetch"),
+            timestamp,
+            true,
+          ),
+        )
+      } else
+        mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce(
+          outcomeKind === "blocked"
+            ? {
+                kind: "blocked",
+                reason: "network_error",
+                retryable: true,
+                reused: true,
+                completedAt: timestamp,
+              }
+            : sharedCompletion,
+        )
+      const successes = vi
+        .spyOn(accountCheckinRunWorkflow, "recordStarPromotionCheckinSuccesses")
+        .mockResolvedValue()
+      const refresh = vi
+        .spyOn(
+          accountCheckinRunWorkflow,
+          "refreshAccountsAfterSuccessfulCheckins",
+        )
+        .mockResolvedValue()
+      if (runKind === "manual retry") await retryAccountForTest(account.id)
+      else await (autoCheckinScheduler as any).runRetryCheckins()
+      const status = schedulerTestState.storedStatus
+      expect(status.perAccount[account.id]).toMatchObject({
+        status: successful ? "success" : "failed",
+        timestamp,
+      })
+      expect(status.perAccount[account.id].reward).toEqual(
+        successful ? { quota: 95000 } : undefined,
+      )
+      expect(status.retryState).toMatchObject({
+        pendingAccountIds: successful ? [] : [account.id],
+        attemptsByAccount: { [account.id]: 1 },
+      })
+      expect(
+        successes.mock.calls.reduce((sum, [count]) => sum + count, 0),
+      ).toBe(0)
+      expect(
+        refresh.mock.calls.flatMap(([request]) => request.accountIds),
+      ).toEqual([])
+    },
+  )
+
+  it.each([false, true])(
+    "preserves one rewarded completion in either persistence order (waiter first %s)",
+    async (waiterFirst) => {
+      const account = buildSiteAccount({
+        id: "rewarded",
+        site_type: SITE_TYPES.VELOERA,
+        checkIn: runnableCheckIn(),
+      })
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      resolveProviderForTest.mockReturnValue({
+        getReadiness: () => ({ ready: true }),
+      })
+      const completion = {
+        kind: "executed" as const,
+        methodId: "veloera:daily-checkin" as const,
+        result: { status: "success" as const, reward: { quota: 95000 } },
+        retryable: false,
+        completedAt: Date.now() - 1000,
+      }
+      const reused = { ...completion, reused: true as const }
+      mockedMethods.executeSelectedCheckIn
+        .mockResolvedValueOnce(waiterFirst ? reused : completion)
+        .mockResolvedValueOnce(waiterFirst ? completion : reused)
+      const successes = vi
+        .spyOn(accountCheckinRunWorkflow, "recordStarPromotionCheckinSuccesses")
+        .mockResolvedValue()
+      const refresh = vi
+        .spyOn(
+          accountCheckinRunWorkflow,
+          "refreshAccountsAfterSuccessfulCheckins",
+        )
+        .mockResolvedValue()
+      await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.MANUAL })
+      await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.MANUAL })
+      const status = schedulerTestState.storedStatus
+      expect(status.perAccount[account.id]).toMatchObject({
+        status: "success",
+        reward: { quota: 95000 },
+        timestamp: completion.completedAt,
+      })
+      expect(status.accountsSnapshot[0].lastResult).toEqual(
+        status.perAccount[account.id],
+      )
+      expect(status.summary).toMatchObject({
+        successCount: 1,
+        skippedCount: 0,
+        executed: 1,
+      })
+      expect(
+        successes.mock.calls.reduce((sum, [count]) => sum + count, 0),
+      ).toBe(1)
+      expect(
+        refresh.mock.calls.flatMap(([request]) => request.accountIds),
+      ).toEqual([account.id])
+    },
+  )
+
+  it.each([
+    [-1, false],
+    [0, false],
+    [1, false],
+    [1, true],
+  ] as const)(
+    "selects the freshest result when a batch commits after manual recovery (timestamp delta %s, disabled account %s)",
+    async (timestampDelta, includeDisabled) => {
+      const now = Date.now()
+      const accounts = ["recovering", "slow"].map((id) =>
+        buildSiteAccount({
+          id,
+          site_type: SITE_TYPES.VELOERA,
+          checkIn: runnableCheckIn(),
+        }),
+      )
+      if (includeDisabled) {
+        accounts.push(buildSiteAccount({ id: "disabled", disabled: true }))
+      }
+      mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
+      resolveProviderForTest.mockReturnValue({
+        getReadiness: () => ({ ready: true }),
+      })
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin!,
+          globalEnabled: true,
+          notifyUiOnCompletion: false,
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      const started = createDeferred<void>()
+      const finishBatch = createDeferred<void>()
+      vi.spyOn(accountCheckinRunWorkflow, "runAccountCheckins")
+        .mockImplementationOnce(async () => {
+          started.resolve()
+          await finishBatch.promise
+          return [
+            {
+              result: {
+                accountId: "recovering",
+                accountName: "Recovering",
+                status: "failed",
+                retryable: true,
+                timestamp: now,
+              },
+            },
+            {
+              result: {
+                accountId: "slow",
+                accountName: "Slow",
+                status: "success",
+                timestamp: now + 2,
+              },
+            },
+          ]
+        })
+        .mockResolvedValueOnce([
+          {
+            result: {
+              accountId: "recovering",
+              accountName: "Recovering",
+              status: "success",
+              timestamp: now + timestampDelta,
+            },
+          },
+        ])
+      const daily = runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+      await started.promise
+      await runCheckinsForTest({
+        runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+        targetAccountIds: ["recovering"],
+      })
+      expect(schedulerTestState.storedStatus.perAccount.recovering.status).toBe(
+        "success",
+      )
+      finishBatch.resolve()
+      await daily
+      const status = schedulerTestState.storedStatus
+      expect(status.perAccount.recovering.status).toBe(
+        timestampDelta < 0 ? "failed" : "success",
+      )
+      expect(
+        status.accountsSnapshot.find(
+          (snapshot: { accountId: string }) =>
+            snapshot.accountId === "recovering",
+        ).lastResult.status,
+      ).toBe(timestampDelta < 0 ? "failed" : "success")
+      expect(status.summary).toMatchObject({
+        totalEligible: 2,
+        successCount: timestampDelta < 0 ? 1 : 2,
+        failedCount: timestampDelta < 0 ? 1 : 0,
+        skippedCount: 0,
+        needsRetry: timestampDelta < 0,
+      })
+      if (includeDisabled) {
+        expect(status.perAccount.disabled).toMatchObject({
+          status: "skipped",
+          reasonCode: "account_disabled",
+        })
+      }
+      expect(status.pendingRetry).toBe(timestampDelta < 0)
+      if (timestampDelta < 0) {
+        expect(status.retryState).toMatchObject({
+          pendingAccountIds: ["recovering"],
+          attemptsByAccount: { recovering: 1 },
+        })
+      }
+    },
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)

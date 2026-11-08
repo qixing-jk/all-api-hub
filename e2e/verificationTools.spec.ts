@@ -1412,6 +1412,7 @@ test("account verification configuration aligns fields without empty grid cells"
     exact: true,
   })
   const contextSummary = contextPanel.locator("[data-verification-summary]")
+  const contextStatus = contextSummary.getByText("待运行", { exact: true })
   for (const [width, height] of [
     [1280, 1280],
     [660, 1280],
@@ -1487,9 +1488,7 @@ test("account verification configuration aligns fields without empty grid cells"
     expect(tooltipBox.y + tooltipBox.height).toBeLessThanOrEqual(height)
     const labelBox = (await contextSelection.boundingBox())!
     const helpBox = (await contextHelp.boundingBox())!
-    const badgeBox = (await contextSummary
-      .getByText("待运行", { exact: true })
-      .boundingBox())!
+    const badgeBox = (await contextStatus.boundingBox())!
     expect(helpBox.x - labelBox.x - labelBox.width).toBeGreaterThanOrEqual(0)
     expect(helpBox.x - labelBox.x - labelBox.width).toBeLessThanOrEqual(10)
     expect(
@@ -1497,14 +1496,25 @@ test("account verification configuration aligns fields without empty grid cells"
         badgeBox.y >= helpBox.y + helpBox.height,
     ).toBe(true)
     await contextSelection.focus()
+    // Keep the status click valid when the viewport moves the dialog after its
+    // geometry checks, as can happen while responsive layout settles.
+    await page.setViewportSize({ width, height: height - 48 })
     await expect(contextTooltip).toHaveCount(0)
-    const summaryBox = (await contextSummary.boundingBox())!
-    // The status still selects the test, while help has its own hit target.
-    await contextSummary.click({
-      position: {
-        x: badgeBox.x + badgeBox.width / 2 - summaryBox.x,
-        y: badgeBox.y + badgeBox.height / 2 - summaryBox.y,
-      },
+    await contextSummary.scrollIntoViewIfNeeded()
+    // Target the selection button's hit area over the status, so Playwright
+    // checks that the button receives the click instead of accepting any
+    // descendant of the summary (such as the adjacent help control).
+    await contextSelection.click({
+      position: await contextStatus.evaluate((badge) => {
+        const summary = badge.closest("[data-verification-summary]")!
+        const selection = summary.querySelector("button[aria-expanded]")!
+        const selectionBox = selection.getBoundingClientRect()
+        const statusBox = badge.getBoundingClientRect()
+        return {
+          x: statusBox.x + statusBox.width / 2 - selectionBox.x,
+          y: statusBox.y + statusBox.height / 2 - selectionBox.y,
+        }
+      }),
     })
     await expect(contextSelection).toHaveAttribute("aria-expanded", "true")
   }

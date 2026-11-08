@@ -1,4 +1,4 @@
-import type { Locator, Page, Worker } from "@playwright/test"
+import type { BrowserContext, Locator, Page, Worker } from "@playwright/test"
 
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import { expect } from "~~/e2e/fixtures/extensionTest"
@@ -89,11 +89,14 @@ export function createNewApiAccountRecovery(params: {
 
       const context = params.page.context()
       const worker = await getServiceWorker(context)
+      const sourceTab = await params.page.evaluate(() =>
+        chrome.tabs.getCurrent(),
+      )
+      if (sourceTab?.windowId == null) {
+        throw new Error("Credential recovery requires the account dialog's tab")
+      }
       const [securityPage] = await Promise.all([
-        context.waitForEvent("page", {
-          predicate: (candidate) =>
-            isUserFacingCredentialPage(candidate, worker),
-        }),
+        waitForNewUserFacingCredentialPage(context, worker, sourceTab.windowId),
         dialog.dialog
           .getByRole("button", { name: "Open token page", exact: true })
           .click(),
@@ -386,23 +389,88 @@ async function readDetectedDialogFailureText(dialog: AccountAddDialog) {
   }
 }
 
-/** Excludes hidden temporary inspection pages, including those at the same URL. */
-export async function isUserFacingCredentialPage(page: Page, worker: Worker) {
+/** Waits for a new credential page to become active in the account dialog's window. */
+export async function waitForNewUserFacingCredentialPage(
+  context: BrowserContext,
+  worker: Worker,
+  sourceWindowId: number,
+  timeout = 30_000,
+): Promise<Page> {
+  const existingPages = new Set(context.pages())
+  let selectedPage: Page | undefined
+  const inspecting = new Set<Page>()
+  let finished = false
+  // A page event can precede tab activation. Keep inspecting new candidates
+  // until the document matches the source window's active tab. Inspection
+  // windows may briefly gain focus, but they never own the user's token flow.
+  try {
+    await expect
+      .poll(
+        () => {
+          for (const candidate of context.pages()) {
+            if (
+              existingPages.has(candidate) ||
+              candidate.isClosed() ||
+              inspecting.has(candidate)
+            )
+              continue
+            inspecting.add(candidate)
+            void isUserFacingCredentialPage(candidate, worker, sourceWindowId)
+              .then((matches) => {
+                if (!finished && matches) selectedPage = candidate
+              })
+              .finally(() => inspecting.delete(candidate))
+          }
+          return selectedPage !== undefined
+        },
+        { timeout },
+      )
+      .toBe(true)
+    return selectedPage!
+  } finally {
+    finished = true
+  }
+}
+
+/** Excludes temporary inspection windows even when they gain focus at the same URL. */
+export async function isUserFacingCredentialPage(
+  page: Page,
+  worker: Worker,
+  sourceWindowId: number,
+) {
+  const marker = `data-aah-credential-candidate-${crypto.randomUUID()}`
   try {
     await page.waitForLoadState("domcontentloaded")
-    const activeUrl = await worker.evaluate(async () => {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        lastFocusedWindow: true,
-      })
-      return tab?.url
-    })
-    return (
-      page.url() === activeUrl &&
-      (await page.evaluate(() => document.visibilityState === "visible"))
+    await page.evaluate((marker) => {
+      document.documentElement.setAttribute(marker, "")
+    }, marker)
+    return await worker.evaluate(
+      async ({ marker, url, sourceWindowId }) => {
+        const [tab] = await chrome.tabs.query({
+          active: true,
+          windowId: sourceWindowId,
+        })
+        if (tab?.id == null || tab.url !== url) return false
+        // Different windows can have visible documents at the same URL, even
+        // with hasFocus() true in headless Chrome. Match the actual document.
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: (marker) => document.documentElement.hasAttribute(marker),
+          args: [marker],
+        })
+        return result?.result === true
+      },
+      { marker, url: page.url(), sourceWindowId },
     )
   } catch {
     // An owned inspection page may be released before loading completes.
     return false
+  } finally {
+    await page
+      .evaluate(
+        (marker) => document.documentElement.removeAttribute(marker),
+        marker,
+      )
+      .catch(() => {})
   }
 }

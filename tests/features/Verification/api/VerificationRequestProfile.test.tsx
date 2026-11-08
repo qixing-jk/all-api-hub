@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
@@ -34,6 +35,37 @@ it.each([
 )
 
 describe("verification result client identity", () => {
+  it("opens portalled client help without stealing focus and closes it without dismissing the workspace", async () => {
+    const user = userEvent.setup()
+    const onKeyDown = vi.fn()
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <div onKeyDown={onKeyDown}>
+          <VerificationRequestProfileSelect
+            value="default"
+            onChange={vi.fn()}
+            portalContainer={document.body}
+          />
+        </div>
+      </I18nextProvider>,
+    )
+    const label = "aiApiVerification:verifyDialog.meta.requestProfile"
+    const trigger = screen.getByRole("button", { name: label })
+    const hint = "aiApiVerification:verifyDialog.requestProfiles.hint"
+    expect(trigger).toHaveAttribute("title", hint)
+    await user.click(trigger)
+    expect(
+      await screen.findByRole("dialog", { name: label }),
+    ).toHaveTextContent(hint)
+    expect(trigger).toHaveFocus()
+    await user.keyboard("{Escape}")
+    expect(
+      screen.queryByRole("dialog", { name: label }),
+    ).not.toBeInTheDocument()
+    expect(onKeyDown).not.toHaveBeenCalled()
+    expect(screen.getByRole("combobox", { name: label })).toBeVisible()
+  })
+
   it.each([
     ["codex", "anthropic", true],
     ["claude", "openai-compatible", true],

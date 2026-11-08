@@ -16,6 +16,7 @@ import type { AutoCheckinRetryScheduling } from "~/services/checkin/autoCheckin/
 import {
   isSuccessfulCheckinStatus,
   recalculateSummaryFromResults,
+  selectCurrentRunResults,
   updateSnapshotWithResult,
 } from "~/services/checkin/autoCheckin/execution/runResults"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -61,27 +62,29 @@ export async function retryAccount(
     throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
   }
 
-  const result: CheckinAccountResult =
+  const outcome =
     account.disabled === true
       ? {
-          accountId: account.id,
-          accountName: accountDisplayNameById.get(account.id) ?? account.id,
-          status: CHECKIN_RESULT_STATUS.SKIPPED,
-          messageKey: getAutoCheckinSkipReasonTranslationKey(
-            AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
-          ),
-          reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
-          timestamp: Date.now(),
+          result: {
+            accountId: account.id,
+            accountName: accountDisplayNameById.get(account.id) ?? account.id,
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            messageKey: getAutoCheckinSkipReasonTranslationKey(
+              AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+            ),
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+            timestamp: Date.now(),
+          },
+          reused: false,
         }
-      : (
-          await accountCheckinRunWorkflow.runAccountCheckin(
-            account,
-            accountDisplayNameById.get(account.id) ?? account.id,
-            tempWindowRequestSource,
-            protectionBypassExecution,
-            { loginProviderOwners },
-          )
-        ).result
+      : await accountCheckinRunWorkflow.runAccountCheckin(
+          account,
+          accountDisplayNameById.get(account.id) ?? account.id,
+          tempWindowRequestSource,
+          protectionBypassExecution,
+          { loginProviderOwners },
+        )
+  const result = outcome.result
 
   // Derived from the stored status inside the update so a run that persisted
   // while this one was executing is not reverted. The result carries what was
@@ -92,9 +95,13 @@ export async function retryAccount(
   const manualRetryStrategy = manualRetryConfig?.retryStrategy
   const { result: retryOutcome } = await autoCheckinStorage.updateStatus(
     (current) => {
+      const currentResults = selectCurrentRunResults(current?.perAccount, {
+        [result.accountId]: result,
+      })
+      const selectedResult = currentResults[result.accountId]!
       const perAccount: Record<string, CheckinAccountResult> = {
         ...(current?.perAccount ?? {}),
-        [result.accountId]: result,
+        ...currentResults,
       }
 
       const summary = recalculateSummaryFromResults(
@@ -111,7 +118,7 @@ export async function retryAccount(
           manualRetryStrategy?.enabled === true,
         maxAttempts: manualRetryStrategy?.maxAttemptsPerDay ?? 0,
         current: current?.retryState,
-        results: { [result.accountId]: result },
+        results: currentResults,
         replacePendingWithResults: false,
       })
 
@@ -120,7 +127,7 @@ export async function retryAccount(
       )
 
       return {
-        result: { summary, pendingRetry },
+        result: { summary, pendingRetry, selectedResult },
         patch: {
           lastRunAt: new Date().toISOString(),
           lastRunResult: getAutoCheckinRunResultFromSummary(summary),
@@ -130,15 +137,23 @@ export async function retryAccount(
           pendingRetry,
           accountsSnapshot: updateSnapshotWithResult(
             current?.accountsSnapshot,
-            result,
+            selectedResult,
           ),
         },
       }
     },
   )
 
-  if (isSuccessfulCheckinStatus(result.status)) {
+  if (!outcome.reused && isSuccessfulCheckinStatus(result.status)) {
     await accountCheckinRunWorkflow.recordStarPromotionCheckinSuccesses(1)
+  }
+  if (!outcome.reused && result.status === CHECKIN_RESULT_STATUS.SUCCESS) {
+    await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
+      accountIds: [account.id],
+      force: true,
+      tempWindowRequestSource,
+      protectionBypassExecution,
+    })
   }
   const summary: AutoCheckinRunSummary =
     retryOutcome?.summary ??
@@ -151,7 +166,7 @@ export async function retryAccount(
   await retryScheduling.scheduleRetryAlarm(config)
 
   return {
-    result,
+    result: retryOutcome?.selectedResult ?? result,
     summary,
     pendingRetry,
   }

@@ -9,6 +9,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { CheckInExecutionError } from "~/services/checkin/autoCheckin/errors"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
@@ -38,6 +39,12 @@ export interface RunAccountCheckinOptions {
   loginProviderOwners?: ReadonlyMap<AccountLoginProvider, SiteAccount>
 }
 
+/** One observation, with reuse kept out of persisted account results. */
+export type AccountCheckinExecutionOutcome = {
+  result: CheckinAccountResult
+  reused?: true
+}
+
 /** Executes the selected method and preserves mutation certainty, discovery, and persistence outcomes. */
 export async function executeAccountCheckin(
   account: SiteAccount,
@@ -49,9 +56,7 @@ export async function executeAccountCheckin(
     allowAutomaticDiscovery = false,
     loginProviderOwners,
   }: RunAccountCheckinOptions = {},
-): Promise<{
-  result: CheckinAccountResult
-}> {
+): Promise<AccountCheckinExecutionOutcome> {
   const buildResult = (
     status: CheckinResultStatus,
     partial?: Partial<
@@ -67,6 +72,7 @@ export async function executeAccountCheckin(
         | "reconciliation"
         | "accountStateDurability"
         | "reward"
+        | "timestamp"
       >
     >,
   ): CheckinAccountResult =>
@@ -74,8 +80,8 @@ export async function executeAccountCheckin(
       accountId: account.id,
       accountName,
       status,
-      ...(partial ?? {}),
       timestamp: Date.now(),
+      ...(partial ?? {}),
     }) as CheckinAccountResult
 
   // One shared browser login context per provider: only the owning account may
@@ -151,10 +157,17 @@ export async function executeAccountCheckin(
             reasonCode,
             ...(execution.kind ===
             CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked
-              ? { retryable: execution.retryable }
+              ? {
+                  retryable: execution.retryable,
+                  timestamp: execution.completedAt ?? Date.now(),
+                }
               : {}),
           },
         ),
+        ...(execution.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked &&
+        execution.reused
+          ? { reused: true }
+          : {}),
       }
     }
     const providerResult = execution.result
@@ -166,6 +179,7 @@ export async function executeAccountCheckin(
       methodId: execution.methodId,
       reconciliation: providerResult.reconciliation,
       reward: providerResult.reward,
+      timestamp: execution.completedAt ?? Date.now(),
       ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED ||
       providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
         ? { retryable: execution.retryable === true }
@@ -176,9 +190,12 @@ export async function executeAccountCheckin(
       providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
       providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
     ) {
-      const persisted = await accountCheckInState.markAccountAsSiteCheckedIn(
-        account.id,
-      )
+      const persisted = execution.reused
+        ? await accountCheckInState.markAccountAsSiteCheckedIn(
+            account.id,
+            result.timestamp,
+          )
+        : await accountCheckInState.markAccountAsSiteCheckedIn(account.id)
       result.accountStateDurability =
         persisted === false
           ? CHECKIN_ACCOUNT_STATE_DURABILITY.FAILED
@@ -189,7 +206,7 @@ export async function executeAccountCheckin(
         status: providerResult.status,
         message: providerResult.rawMessage ?? providerResult.messageKey ?? "",
       })
-      return { result }
+      return { result, ...(execution.reused ? { reused: true } : {}) }
     }
 
     logger.warn("Check-in failed", {
@@ -198,10 +215,13 @@ export async function executeAccountCheckin(
       status: providerResult.status,
       message: providerResult.rawMessage ?? providerResult.messageKey ?? "",
     })
-    return { result }
+    return { result, ...(execution.reused ? { reused: true } : {}) }
   } catch (error) {
-    const errorMessage = getErrorMessage(error)
-    const normalizedError = resolveProviderErrorResult({ error })
+    const executionFailure =
+      error instanceof CheckInExecutionError ? error : null
+    const cause = executionFailure ? executionFailure.cause : error
+    const errorMessage = getErrorMessage(cause)
+    const normalizedError = resolveProviderErrorResult({ error: cause })
     logger.error("Check-in error", {
       accountId: account.id,
       siteName: account.site_name,
@@ -222,6 +242,9 @@ export async function executeAccountCheckin(
     )
     return {
       result: buildResult(normalizedError.status, {
+        ...(executionFailure
+          ? { timestamp: executionFailure.completedAt }
+          : {}),
         // Every other produced result names its method. Naming it here too
         // keeps capability gating (status readback, the not-repeat-safe set)
         // working for a row that came from a crash.
@@ -240,6 +263,7 @@ export async function executeAccountCheckin(
             }
           : {}),
       }),
+      ...(executionFailure?.reused ? { reused: true } : {}),
     }
   }
 }

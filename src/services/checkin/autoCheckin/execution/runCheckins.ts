@@ -18,6 +18,7 @@ import {
   isFailedCheckinStatus,
   isSuccessfulCheckinStatus,
   recalculateSummaryFromResults,
+  selectCurrentRunResults,
   updateSnapshotWithResult,
 } from "~/services/checkin/autoCheckin/execution/runResults"
 import { mergeRunResults } from "~/services/checkin/autoCheckin/scheduling/retryQueue"
@@ -154,9 +155,29 @@ export async function runCheckins(options: {
     base: AutoCheckinStatus | null,
     summary: AutoCheckinRunSummary,
     perAccount: Record<string, CheckinAccountResult>,
+    runResults: Record<string, CheckinAccountResult>,
+    accountSnapshots: AutoCheckinAccountSnapshot[],
   ): AutoCheckinRunSummary => {
-    if (!mergeHistory) return summary
-    return recalculateSummaryFromResults(perAccount, base?.summary ?? summary)
+    if (
+      !mergeHistory &&
+      Object.entries(perAccount).every(
+        ([id, result]) => result === runResults[id],
+      )
+    )
+      return summary
+    const eligibleIds = new Set(
+      accountSnapshots.map(({ accountId }) => accountId),
+    )
+    return recalculateSummaryFromResults(
+      mergeHistory
+        ? perAccount
+        : Object.fromEntries(
+            Object.entries(perAccount).filter(([accountId]) =>
+              eligibleIds.has(accountId),
+            ),
+          ),
+      mergeHistory ? base?.summary ?? summary : summary,
+    )
   }
 
   try {
@@ -295,23 +316,29 @@ export async function runCheckins(options: {
 
       const { ok: persisted, result: runSummary } =
         await autoCheckinStorage.updateStatus((current) => {
-          const perAccount = mergePerAccountIfNeeded(current, results)
+          const currentResults = selectCurrentRunResults(
+            current?.perAccount,
+            results,
+          )
+          const perAccount = mergePerAccountIfNeeded(current, currentResults)
           const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
             current,
             accountSnapshots,
-            results,
+            currentResults,
           )
           const mergedSummary = mergeSummaryIfNeeded(
             current,
             summary,
             perAccount,
+            results,
+            accountSnapshots,
           )
 
           return {
             result: mergedSummary,
             patch: {
               lastRunAt: new Date().toISOString(),
-              lastRunResult: AUTO_CHECKIN_RUN_RESULT.SKIPPED,
+              lastRunResult: getAutoCheckinRunResultFromSummary(mergedSummary),
               perAccount,
               summary: mergedSummary,
               accountsSnapshot,
@@ -412,12 +439,17 @@ export async function runCheckins(options: {
       .map((outcome) => outcome.result.accountId)
 
     await accountCheckinRunWorkflow.recordStarPromotionCheckinSuccesses(
-      updatedAccountIds.length,
+      checkinOutcomes.filter(
+        (outcome) =>
+          !outcome.reused && isSuccessfulCheckinStatus(outcome.result.status),
+      ).length,
     )
 
     const accountIdsToRefresh = checkinOutcomes
       .filter(
-        (outcome) => outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
+        (outcome) =>
+          !outcome.reused &&
+          outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
       )
       .map((outcome) => outcome.result.accountId)
 
@@ -434,6 +466,10 @@ export async function runCheckins(options: {
     // reverted.
     const { ok: persisted, result: runOutcome } =
       await autoCheckinStorage.updateStatus((current) => {
+        const currentResults = selectCurrentRunResults(
+          current?.perAccount,
+          results,
+        )
         const retryStrategy = config.retryStrategy
         const retryState = mergeRunResults({
           today,
@@ -441,17 +477,23 @@ export async function runCheckins(options: {
             config.globalEnabled === true && retryStrategy?.enabled === true,
           maxAttempts: retryStrategy?.maxAttemptsPerDay ?? 0,
           current: current?.retryState,
-          results,
+          results: currentResults,
           replacePendingWithResults: isDailyRun,
         })
 
-        const perAccount = mergePerAccountIfNeeded(current, results)
+        const perAccount = mergePerAccountIfNeeded(current, currentResults)
         const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
           current,
           accountSnapshots,
-          results,
+          currentResults,
         )
-        const mergedSummary = mergeSummaryIfNeeded(current, summary, perAccount)
+        const mergedSummary = mergeSummaryIfNeeded(
+          current,
+          summary,
+          perAccount,
+          results,
+          accountSnapshots,
+        )
         const pendingRetry = Boolean(
           retryState?.day === today && retryState.pendingAccountIds.length > 0,
         )

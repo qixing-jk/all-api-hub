@@ -19,6 +19,31 @@ export const isSuccessfulCheckinStatus = (
 export const isFailedCheckinStatus = (status: CheckinResultStatus): boolean =>
   status === CHECKIN_RESULT_STATUS.FAILED
 
+/**
+ * Choose the freshest observation for each account answered by this run. A
+ * slow batch must not restore an old failure after another run recovered it.
+ * Equal millisecond timestamps retain confirmed success over a failure/skip.
+ * Call under the status write lock, and use the same selection for history,
+ * snapshots, summaries and retry bookkeeping.
+ */
+export function selectCurrentRunResults(
+  current: Record<string, CheckinAccountResult> | undefined,
+  incoming: Record<string, CheckinAccountResult>,
+): Record<string, CheckinAccountResult> {
+  return Object.fromEntries(
+    Object.entries(incoming).map(([accountId, result]) => {
+      const previous = current?.[accountId]
+      const keepPrevious =
+        previous &&
+        (previous.timestamp > result.timestamp ||
+          (previous.timestamp === result.timestamp &&
+            isSuccessfulCheckinStatus(previous.status) &&
+            !isSuccessfulCheckinStatus(result.status)))
+      return [accountId, keepPrevious ? previous : result]
+    }),
+  )
+}
+
 /** Rebuilds run counts while preserving the prior eligible-account total. */
 export function recalculateSummaryFromResults(
   perAccount: Record<string, CheckinAccountResult>,

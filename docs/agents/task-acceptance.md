@@ -44,6 +44,8 @@ If a genuine baseline or compatible environment cannot be obtained within the ta
 
 Keep the task-local report and review-only images outside Git, using an existing ignored output directory or a verified task-local exclusion. Retain separate run directories so later runs do not overwrite before images or useful failures. Only deliberately maintained fixtures and visual-test baselines belong in version control.
 
+Playwright cleans its configured output directory before a run. Keep retained evidence and downloaded browsers outside that directory, and pass a unique `--output=.scratch/<feature>/artifacts/<run>` for task-local runs. Redirect console logs to a sibling file outside that run directory; an open log inside the directory being cleaned can also stall cleanup on Windows.
+
 Record the tested revision/build, target, environment prerequisites by name, commands, actual results and artifact paths. Link each table row to the relevant assertion and evidence. Preserve failure artifacts even if a retry passes, and report the retry rather than treating it as proof that a flaky failure was fixed. Evidence from an older tree can be reused only when the affected behavior and relevant build inputs remain unchanged.
 
 For live extension work, follow the project's `live-extension-ui-automation` skill. Site integration evidence and previews follow [evidence storage](../../.agents/skills/add-site-integration/references/evidence-and-validation.md) and [visual previews](../../.agents/skills/add-site-integration/references/visual-previews.md). Preserve existing authenticated automatic-capture policies. Local raw evidence stays local; prepare and inspect a separate shareable copy before any authorized publication.
