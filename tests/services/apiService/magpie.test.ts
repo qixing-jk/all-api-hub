@@ -15,6 +15,7 @@ import {
   requestMagpie,
   withMagpieRequestSession,
 } from "~/services/apiService/magpie/request"
+import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import { createApiOperationContext } from "~/services/apiTransport/operationContext"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { isolateWebLocks } from "~~/tests/test-utils/webLocks"
@@ -49,10 +50,14 @@ afterEach(() => {
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 function installOriginRules() {
   isolateWebLocks()
+  vi.spyOn(browser.runtime, "getURL").mockReturnValue(
+    "chrome-extension://extension-id/",
+  )
   vi.stubEnv("BROWSER", "chrome")
   let rule: browser.declarativeNetRequest.Rule | undefined
   const updateSessionRules = vi.fn(
@@ -69,35 +74,110 @@ function installOriginRules() {
 }
 
 describe("Magpie management transport", () => {
-  it("creates through the scoped shared Origin transport on a LAN HTTP deployment", async () => {
-    const rules = installOriginRules()
-    const requests: { method: string; origin: string | undefined }[] = []
-    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
-      const origin = rules
-        .current()
-        ?.action.requestHeaders?.find(
-          (header) => header.header === "origin",
-        )?.value
-      requests.push({ method: init.method!, origin })
-      if (init.method === "POST" && origin !== "http://192.168.1.20:3430") {
-        return new Response("magpie's API answers magpie's own page only", {
-          status: 403,
+  it.each(["standalone", "new-session", "authenticated-session"])(
+    "bounds header-lock waiting before dispatch for %s",
+    async (mode) => {
+      const rules = installOriginRules()
+      const httpConfig = { ...config, baseUrl: "http://192.168.1.20:3430" }
+      const sessionConfig =
+        mode === "standalone"
+          ? httpConfig
+          : withMagpieRequestSession(httpConfig)
+      fetchMock.mockImplementation(async () => json({ providers: [provider] }))
+      if (mode === "authenticated-session")
+        await listMagpieProviders(sessionConfig)
+
+      const locked = Promise.withResolvers<void>()
+      const response = Promise.withResolvers<Response>()
+      fetchMock.mockImplementation(() => {
+        locked.resolve()
+        return response.promise
+      })
+      const blocker = fetchWithHeaderOverrides(
+        "https://other.test/slow",
+        {},
+        { "User-Agent": "other-client" },
+      )
+      await locked.promise
+      fetchMock.mockClear()
+      vi.useFakeTimers()
+      const controller = new AbortController()
+      let outcome: unknown
+      const pending = saveMagpieProvider(
+        sessionConfig,
+        { id: "relay" },
+        { signal: controller.signal },
+      ).then(
+        (value) => {
+          outcome = value
+        },
+        (error) => {
+          outcome = error
+        },
+      )
+      try {
+        await vi.waitFor(async () => {
+          const locks = await navigator.locks.query()
+          expect(
+            locks.pending?.some((lock) =>
+              lock.name?.endsWith("request-header-overrides"),
+            ),
+          ).toBe(true)
         })
+        await vi.advanceTimersByTimeAsync(30_000)
+        await vi.waitFor(() =>
+          expect(outcome).toMatchObject({
+            dispatched: false,
+            confirmedNonApplication: true,
+          }),
+        )
+        expect(fetchMock).not.toHaveBeenCalled()
+      } finally {
+        controller.abort()
+        response.resolve(json({}))
+        await Promise.all([pending, blocker])
       }
-      return json({ providers: [provider] })
-    })
-    await expect(
-      saveMagpieProvider(
-        { ...config, baseUrl: "http://192.168.1.20:3430/magpie" },
-        { new: true, name: "Relay" },
-      ),
-    ).resolves.toEqual([provider])
-    expect(requests).toEqual([
-      { method: "GET", origin: undefined },
-      { method: "POST", origin: "http://192.168.1.20:3430" },
-    ])
-    expect(rules.current()).toBeUndefined()
-  })
+      expect(rules.current()).toBeUndefined()
+      fetchMock.mockImplementation(async () => json({ providers: [provider] }))
+      await expect(listMagpieProviders(sessionConfig)).resolves.toEqual([
+        provider,
+      ])
+    },
+  )
+
+  it.each(["chrome", "edge", "custom-chromium"])(
+    "creates through the scoped shared Origin transport on a LAN HTTP deployment in %s",
+    async (browser) => {
+      const rules = installOriginRules()
+      vi.stubEnv("BROWSER", browser)
+      const requests: { method: string; origin: string | undefined }[] = []
+      fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+        const origin = rules
+          .current()
+          ?.action.requestHeaders?.find(
+            (header) => header.header === "origin",
+          )?.value
+        requests.push({ method: init.method!, origin })
+        if (init.method === "POST" && origin !== "http://192.168.1.20:3430") {
+          return new Response("magpie's API answers magpie's own page only", {
+            status: 403,
+          })
+        }
+        return json({ providers: [provider] })
+      })
+      await expect(
+        saveMagpieProvider(
+          { ...config, baseUrl: "http://192.168.1.20:3430/magpie" },
+          { new: true, name: "Relay" },
+        ),
+      ).resolves.toEqual([provider])
+      expect(requests).toEqual([
+        { method: "GET", origin: undefined },
+        { method: "POST", origin: "http://192.168.1.20:3430" },
+      ])
+      expect(rules.current()).toBeUndefined()
+    },
+  )
 
   it.each([
     "/api/provider/save",
@@ -159,9 +239,17 @@ describe("Magpie management transport", () => {
     ["safari", "http://192.168.1.20:3430", "/api/provider/save", {}],
   ] as const)(
     "keeps the ordinary transport for %s %s %s",
-    async (browser, baseUrl, endpoint, body) => {
+    async (target, baseUrl, endpoint, body) => {
       const rules = installOriginRules()
-      vi.stubEnv("BROWSER", browser)
+      vi.stubEnv("BROWSER", target)
+      if (target === "firefox")
+        vi.mocked(browser.runtime.getURL).mockReturnValue(
+          "moz-extension://extension-id/",
+        )
+      if (target === "safari")
+        vi.mocked(browser.runtime.getURL).mockReturnValue(
+          "safari-web-extension://extension-id/",
+        )
       fetchMock.mockImplementation(async () => json({ ok: true }))
       await requestMagpie({ ...config, baseUrl }, endpoint, body)
       expect(
@@ -174,7 +262,11 @@ describe("Magpie management transport", () => {
       })
       expect(fetchMock.mock.calls[1]![1]).toMatchObject({
         credentials: "include",
+        method: body === undefined ? "GET" : "POST",
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       })
+      if (body === undefined)
+        expect(fetchMock.mock.calls[1]![1].body).toBeUndefined()
     },
   )
 

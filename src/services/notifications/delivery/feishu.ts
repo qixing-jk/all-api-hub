@@ -1,3 +1,4 @@
+import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import { getNotificationParsedErrorMessage } from "~/services/notifications/delivery/httpErrors"
 import type { TaskNotificationContent } from "~/services/notifications/taskNotificationContracts"
 import {
@@ -31,7 +32,7 @@ export async function sendFeishuNotification(
       ? webhookInput
       : `${FEISHU_CUSTOM_BOT_WEBHOOK_PREFIX}${encodeURIComponent(webhookInput)}`
 
-  const response = await fetch(webhookUrl, {
+  const response = await fetchWithHeaderOverrides(webhookUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

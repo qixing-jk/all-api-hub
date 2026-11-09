@@ -40,40 +40,13 @@ interface MagpieRequestSession {
   authenticated: boolean
   pendingLogin?: {
     read: SharedRead<void>
-    dispatched: boolean
+    started: boolean
     listeners: Set<() => void>
   }
 }
 const requestSessions = new WeakMap<MagpieConfig, MagpieRequestSession>()
 const sessionBinding = (config: MagpieConfig) =>
   JSON.stringify([normalizeMagpieBaseUrl(config.baseUrl), config.webKey.trim()])
-
-/**
- * Chromium omits Fetch Metadata on non-trustworthy HTTP destinations. Magpie's
- * webOwnPage then compares every /api/ POST's Origin with its own host, including
- * read-only POSTs such as provider/key and provider/list. HTTPS and loopback
- * requests already carry Sec-Fetch-Site: none and need no header rule.
- * https://github.com/yetone/magpie/commit/361da10ee90ad48496af116f9d5261c5257ee1e1
- */
-function needsRequestOrigin(baseUrl: string, path: string, body: unknown) {
-  if (
-    import.meta.env.BROWSER !== "chrome" ||
-    body === undefined ||
-    !path.startsWith("/api/")
-  )
-    return false
-  const url = new URL(baseUrl)
-  const hostname = url.hostname.replace(/\.$/, "")
-  return (
-    url.protocol === "http:" &&
-    !(
-      hostname === "localhost" ||
-      hostname.endsWith(".localhost") ||
-      hostname === "[::1]" ||
-      /^127(?:\.\d{1,3}){3}$/.test(hostname)
-    )
-  )
-}
 
 /** Shares authentication only within a caller-owned operation or native workspace. */
 export const withMagpieRequestSession = createOperationScopedValue(
@@ -130,11 +103,13 @@ export async function requestMagpie(
     const session = requestSessions.get(config)
     const loginWithSignal = async (
       loginSignal?: AbortSignal,
-      onDispatch = deadline.start,
+      onStart = deadline.start,
     ) => {
       return await withSiteApiRequestTask(
         baseUrl,
         async () => {
+          // Bound header-lock waiting after the site scheduler admits the task.
+          onStart()
           const login = await fetchWithHeaderOverrides(
             `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
             {
@@ -143,8 +118,6 @@ export async function requestMagpie(
               redirect: "follow",
               signal: loginSignal,
             },
-            undefined,
-            { onDispatch },
           )
           reportSiteRateLimitResponse(baseUrl, login)
           if (!login.ok)
@@ -165,12 +138,12 @@ export async function requestMagpie(
       if (!session) return loginWithSignal(signal.signal)
       if (!session.pendingLogin || session.pendingLogin.read.signal.aborted) {
         const pending = {
-          dispatched: false,
+          started: false,
           listeners: new Set<() => void>(),
           read: new SharedRead<void>(async (sharedOptions) => {
             try {
               await loginWithSignal(sharedOptions.signal, () => {
-                pending.dispatched = true
+                pending.started = true
                 for (const listener of pending.listeners) listener()
               })
               sharedOptions.signal.throwIfAborted()
@@ -184,7 +157,7 @@ export async function requestMagpie(
         session.pendingLogin = pending
       }
       const pending = session.pendingLogin
-      if (pending.dispatched) deadline.start()
+      if (pending.started) deadline.start()
       pending.listeners.add(deadline.start)
       try {
         await pending.read.read({ signal: signal.signal })
@@ -198,6 +171,7 @@ export async function requestMagpie(
       withSiteApiRequestTask(
         baseUrl,
         async () => {
+          deadline.start()
           const response = await fetchWithHeaderOverrides(
             `${baseUrl}${path}`,
             {
@@ -214,9 +188,12 @@ export async function requestMagpie(
             },
             undefined,
             {
-              matchRequestOrigin: needsRequestOrigin(baseUrl, path, body),
+              // Magpie validates Origin for every /api/ POST, including reads.
+              // Runtime compatibility belongs to the shared header transport.
+              // https://github.com/yetone/magpie/commit/361da10ee90ad48496af116f9d5261c5257ee1e1
+              matchRequestOrigin:
+                body !== undefined && path.startsWith("/api/"),
               onDispatch: () => {
-                deadline.start()
                 dispatched = true
               },
             },

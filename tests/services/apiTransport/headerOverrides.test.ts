@@ -12,6 +12,9 @@ describe("credential request header overrides", () => {
 
   beforeEach(() => {
     isolateWebLocks()
+    vi.spyOn(browser.runtime, "getURL").mockReturnValue(
+      "chrome-extension://extension-id/",
+    )
     nativeFetch.mockReset().mockResolvedValue(new Response("ok"))
     vi.stubGlobal("fetch", nativeFetch)
   })
@@ -110,6 +113,33 @@ describe("credential request header overrides", () => {
     return updateSessionRules
   }
 
+  it.each([
+    "moz-extension://extension-id/",
+    "safari-web-extension://extension-id/",
+  ])(
+    "preserves native Origin behavior for runtime %s even when DNR is exposed",
+    async (runtimeUrl) => {
+      const rules = installDnr()
+      vi.mocked(browser.runtime.getURL).mockReturnValue(runtimeUrl)
+      const options = {
+        method: "POST",
+        credentials: "include" as const,
+        body: "{}",
+      }
+      await fetchWithHeaderOverrides(
+        "http://console.test/api",
+        options,
+        undefined,
+        { matchRequestOrigin: true },
+      )
+      expect(rules.mock.calls.some(([input]) => input.addRules)).toBe(false)
+      expect(nativeFetch).toHaveBeenCalledWith(
+        "http://console.test/api",
+        options,
+      )
+    },
+  )
+
   it("matches the request origin without replacing the browser Cookie session", async () => {
     const updateSessionRules = installDnr()
     const onDispatch = vi.fn()
@@ -145,6 +175,36 @@ describe("credential request header overrides", () => {
       body: "{}",
     })
     expect(onDispatch).toHaveBeenCalledOnce()
+    expect(updateSessionRules).toHaveBeenLastCalledWith({
+      removeRuleIds: [rule.id],
+    })
+  })
+
+  it("preserves a Request input's method, body and Cookie mode while matching Origin", async () => {
+    const updateSessionRules = installDnr()
+    const request = new Request("http://console.test/api/provider/save", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "relay" }),
+    })
+    await fetchWithHeaderOverrides(request, undefined, undefined, {
+      matchRequestOrigin: true,
+    })
+    const rule = updateSessionRules.mock.calls.find(
+      ([input]) => input.addRules,
+    )?.[0].addRules[0]
+    expect(rule.action.requestHeaders).toEqual([
+      { header: "origin", operation: "set", value: "http://console.test" },
+    ])
+    expect(rule.condition.requestMethods).toEqual(["post"])
+    const [input, init] = nativeFetch.mock.calls[0]!
+    const dispatched = new Request(input, init)
+    expect(dispatched.method).toBe("POST")
+    expect(dispatched.credentials).toBe("include")
+    expect(dispatched.redirect).toBe("error")
+    expect(dispatched.headers.get("Content-Type")).toBe("application/json")
+    await expect(dispatched.json()).resolves.toEqual({ id: "relay" })
     expect(updateSessionRules).toHaveBeenLastCalledWith({
       removeRuleIds: [rule.id],
     })
@@ -335,43 +395,47 @@ describe("credential request header overrides", () => {
     expect(nativeFetch).not.toHaveBeenCalled()
   })
 
-  it("sends private Cookie credentials without using the browser session", async () => {
-    const updateSessionRules = installDnr()
-    const onDispatch = vi.fn()
-    await fetchWithHeaderOverrides(
-      "https://console.example/api/keys",
-      { method: "POST", credentials: "include" },
-      undefined,
-      {
-        cookieSession: {
-          cookieHeader: "session=account-A",
-          origin: "https://console.example",
-        },
-        onDispatch,
-      },
-    )
-    expect(nativeFetch.mock.calls[0]![1]).toMatchObject({
-      credentials: "omit",
-      redirect: "error",
-    })
-    const rule = updateSessionRules.mock.calls[0]![0].addRules[0]
-    expect(rule.action.requestHeaders).toEqual(
-      expect.arrayContaining([
-        { header: "cookie", operation: "set", value: "session=account-A" },
+  it.each([undefined, true])(
+    "sends private Cookie credentials without using the browser session (Origin compatibility=%s)",
+    async (matchRequestOrigin) => {
+      const updateSessionRules = installDnr()
+      const onDispatch = vi.fn()
+      await fetchWithHeaderOverrides(
+        "https://console.example/api/keys",
+        { method: "POST", credentials: "include" },
+        undefined,
         {
-          header: "origin",
-          operation: "set",
-          value: "https://console.example",
+          matchRequestOrigin,
+          cookieSession: {
+            cookieHeader: "session=account-A",
+            origin: "https://console.example",
+          },
+          onDispatch,
         },
-      ]),
-    )
-    expect(rule.condition.initiatorDomains).toEqual(["extension-id"])
-    expect(rule.condition.requestMethods).toEqual(["post"])
-    expect(onDispatch).toHaveBeenCalledOnce()
-    expect(updateSessionRules.mock.invocationCallOrder[0]).toBeLessThan(
-      onDispatch.mock.invocationCallOrder[0]!,
-    )
-  })
+      )
+      expect(nativeFetch.mock.calls[0]![1]).toMatchObject({
+        credentials: "omit",
+        redirect: "error",
+      })
+      const rule = updateSessionRules.mock.calls[0]![0].addRules[0]
+      expect(rule.action.requestHeaders).toEqual(
+        expect.arrayContaining([
+          { header: "cookie", operation: "set", value: "session=account-A" },
+          {
+            header: "origin",
+            operation: "set",
+            value: "https://console.example",
+          },
+        ]),
+      )
+      expect(rule.condition.initiatorDomains).toEqual(["extension-id"])
+      expect(rule.condition.requestMethods).toEqual(["post"])
+      expect(onDispatch).toHaveBeenCalledOnce()
+      expect(updateSessionRules.mock.invocationCallOrder[0]).toBeLessThan(
+        onDispatch.mock.invocationCallOrder[0]!,
+      )
+    },
+  )
 
   it("retires pending header rules even when an ordinary request sees no installed rule", async () => {
     const updateSessionRules = installDnr()

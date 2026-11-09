@@ -4,6 +4,7 @@ import {
   isSafariNativeCookieEnabled,
 } from "~/services/apiTransport/safariNativeCookie"
 import { getChromiumRequestHeaderApi } from "~/utils/browser/requestHeaderApi"
+import { getExtensionURL } from "~/utils/browser/runtime"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
@@ -22,7 +23,7 @@ export interface CookieRequestSession {
 
 interface HeaderFetchExecution {
   cookieSession?: CookieRequestSession
-  /** Internal transport policy: derive Origin from the exact request URL. */
+  /** Apply runtime compatibility for servers requiring a matching Origin. */
   matchRequestOrigin?: boolean
   onDispatch?: () => void
 }
@@ -30,6 +31,27 @@ interface HeaderFetchExecution {
 const HEADER_FETCH_LOCK = "all-api-hub:request-header-overrides"
 // Separate from the per-tab Cookie and download rules (1M and 2M).
 const HEADER_OVERRIDE_RULE_ID = 3_000_000
+
+/**
+ * Chromium extension fetches omit Fetch Metadata on non-trustworthy HTTP URLs.
+ * Runtime scheme identifies that behavior without a browser-brand allowlist;
+ * the existing DNR capability checks still decide whether it can be applied.
+ * https://www.w3.org/TR/secure-contexts/#is-origin-trustworthy
+ * https://www.w3.org/TR/fetch-metadata/
+ */
+function shouldOverrideRequestOrigin(url: URL): boolean {
+  if (url.protocol !== "http:") return false
+  const hostname = url.hostname.replace(/\.$/, "")
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "[::1]" ||
+    /^127(?:\.\d{1,3}){3}$/.test(hostname)
+  )
+    return false
+  return getExtensionURL("").startsWith("chrome-extension://")
+}
+
 const forbiddenHeaders = new Set([
   "accept-charset",
   "accept-encoding",
@@ -170,7 +192,7 @@ export async function fetchWithHeaderOverrides(
         API_ERROR_CODES.FEATURE_UNSUPPORTED,
       )
     }
-    requestOrigin = url.origin
+    if (shouldOverrideRequestOrigin(url)) requestOrigin = url.origin
   }
   const options = session
     ? {
