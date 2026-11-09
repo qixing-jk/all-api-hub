@@ -242,6 +242,7 @@ export const API_VERIFICATION_HISTORY_STORAGE_KEYS = {
 export const WEB_AI_API_CHECK_STORAGE_KEYS = {
   BASE_URL_HISTORY: "webAiApiCheck_baseUrlHistory_v1",
   CONTEXT_CHECKPOINTS: "webAiApiCheck_contextCheckpoints_v1",
+  NEEDLE_CHECKPOINTS: "webAiApiCheck_needleCheckpoints_v1",
 } as const
 
 export const LDOH_SITE_LOOKUP_STORAGE_KEYS = {

@@ -499,6 +499,253 @@ test("web context probe shows progress, measured bounds and cancellation", async
   }
 })
 
+test("web needle test plans automatically, follows a context probe and restores its results", async ({
+  context,
+  page,
+  extensionDir,
+}) => {
+  let capacityRequests = 0
+  let needleRequests = 0
+  let releaseRequest!: () => void
+  const pendingRequest = new Promise<void>((resolve) => {
+    releaseRequest = resolve
+  })
+  const server = createServer(async (request, response) => {
+    response.setHeader("Access-Control-Allow-Origin", "*")
+    response.setHeader("Access-Control-Allow-Headers", "*")
+    if (request.method === "OPTIONS") {
+      response.end()
+      return
+    }
+    response.setHeader("Content-Type", "application/json")
+    if (request.method === "GET") {
+      response.end(JSON.stringify({ data: [{ id: "gpt-4o-mini" }] }))
+      return
+    }
+    const chunks: Buffer[] = []
+    for await (const chunk of request) chunks.push(Buffer.from(chunk))
+    const body = JSON.parse(Buffer.concat(chunks).toString())
+    const prompt = body.messages.at(-1).content as string
+    const key =
+      /Question: Return only the archive code for record "([^"]+)"/.exec(
+        prompt,
+      )?.[1]
+    let answer = "OK"
+    if (key) {
+      needleRequests++
+      if (needleRequests === 2) await pendingRequest
+      // The explicit column retest stays pending until its scoped stop reaches the background.
+      if (needleRequests === 4) return
+      answer = new RegExp(`Record "${key}" has archive code "([^"]+)"`).exec(
+        prompt,
+      )![1]!
+    } else {
+      capacityRequests++
+      if (prompt.length > 14000) {
+        response.statusCode = 400
+        response.end(
+          JSON.stringify({
+            error: { message: "maximum context length exceeded" },
+          }),
+        )
+        return
+      }
+    }
+    response.end(
+      JSON.stringify({
+        id: "needle",
+        object: "chat.completion",
+        created: 1,
+        model: "gpt-4o-mini",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: answer },
+            finish_reason: "stop",
+          },
+        ],
+        usage: {
+          prompt_tokens: 1500,
+          completion_tokens: 20,
+          total_tokens: 1520,
+        },
+      }),
+    )
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  try {
+    await stubLlmMetadataIndex(context)
+    await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    const open = async () => {
+      const { modal, contentHost } =
+        await openApiCheckModalFromCopiedCredentials(page)
+      await modal
+        .getByRole("textbox", { name: "Base URL", exact: true })
+        .fill(baseUrl)
+      await modal
+        .getByRole("combobox", { name: "Test mode", exact: true })
+        .click()
+      await contentHost
+        .getByRole("option", { name: "Non-streaming", exact: true })
+        .click()
+      await modal
+        .getByRole("combobox", { name: "Model ID", exact: true })
+        .click()
+      await contentHost
+        .getByRole("option", { name: "gpt-4o-mini", exact: true })
+        .click()
+      const panel = modal.getByRole("region", {
+        name: "Needle in a haystack",
+        exact: true,
+      })
+      await panel
+        .getByRole("button", { name: "Needle in a haystack", exact: true })
+        .click()
+      return { modal, panel }
+    }
+    const { panel } = await open()
+    await captureVisualViews({
+      page,
+      ready: panel.getByRole("group", { name: "Test settings" }),
+      id: "web-needle-idle",
+      extensionDir,
+      views: [
+        { id: "desktop", theme: "light", width: 1280, height: 850 },
+        { id: "narrow", theme: "light", width: 380, height: 800 },
+      ],
+    })
+    await panel.getByRole("button", { name: "How are lengths chosen?" }).click()
+    const lengthHelp = page.getByRole("dialog", {
+      name: "How are lengths chosen?",
+      exact: true,
+    })
+    await expect(lengthHelp).toContainText("No usable model limits")
+    await page.keyboard.press("Escape")
+    await expect(lengthHelp).toBeHidden()
+    expect(capacityRequests + needleRequests).toBe(0)
+    await panel
+      .getByRole("button", { name: "Check available context", exact: true })
+      .click()
+    const limit = panel.getByRole("combobox", {
+      name: "Maximum text length (tokens)",
+    })
+    await expect(limit).toHaveAccessibleDescription(
+      "Previously accepted: 2K input (maximum unknown)",
+      { timeout: 30000 },
+    )
+    await expect(limit).toHaveText("Automatic (2K)")
+    await expect(
+      panel.getByRole("button", { name: "Run needle test", exact: true }),
+    ).toBeEnabled()
+    expect(capacityRequests).toBeGreaterThan(0)
+    expect(needleRequests).toBe(0)
+    await panel
+      .getByRole("region", { name: "Test preview" })
+      .getByRole("button", { name: "Run", exact: true })
+      .click()
+    await expect.poll(() => needleRequests).toBe(2)
+    await expect(panel).toContainText("Processed 1/3 requests")
+    await expect(
+      panel.getByRole("button", { name: /tokens · 50%: Running\.\.\.$/ }),
+    ).toBeVisible()
+    await captureVisualViews({
+      page,
+      ready: panel.getByRole("table"),
+      id: "needle-progress",
+      extensionDir,
+      views: [{ id: "desktop", theme: "light", width: 1280, height: 850 }],
+    })
+    const cells = panel.getByRole("table").getByRole("cell")
+    await expect(cells.nth(0)).toHaveText("Match")
+    await expect(
+      cells.nth(1).getByText("Running...", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      cells.nth(2).getByText("Pending", { exact: true }),
+    ).toBeVisible()
+    releaseRequest()
+    await expect(panel).toContainText("Processed 3/3 requests", {
+      timeout: 30000,
+    })
+    await expect(panel).toContainText("3/3 graded answers matched")
+    expect(needleRequests).toBe(3)
+    await captureVisualViews({
+      page,
+      ready: panel.getByRole("table"),
+      id: "needle-results",
+      extensionDir,
+      views: [
+        { id: "desktop", theme: "light", width: 1280, height: 850 },
+        { id: "narrow", theme: "light", width: 380, height: 800 },
+      ],
+    })
+    await panel.getByRole("button", { name: /10%: Match/ }).click()
+    await panel
+      .getByRole("region", { name: "Cell details", exact: true })
+      .getByRole("button", { name: "Request and answer details" })
+      .click()
+    await expect(
+      panel.getByRole("region", { name: "Cell details", exact: true }),
+    ).toContainText("Expected:")
+    const stored = await getPlasmoStorageRawValue(
+      await getServiceWorker(context),
+      STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+    )
+    expect(JSON.stringify(stored)).not.toContain(API_KEY)
+    expect(JSON.stringify(stored)).not.toContain("archive-")
+    const reopened = await open()
+    await expect(reopened.panel).toContainText("3/3 graded answers matched")
+    await expect(reopened.panel).toContainText("Saved result")
+    await reopened.panel
+      .getByRole("button", {
+        name: "Test parameters and reproduction",
+        exact: true,
+      })
+      .click()
+    await expect(reopened.panel).not.toContainText(
+      "Only measurements are saved",
+    )
+    await expect(
+      reopened.panel.getByRole("button", { name: /^Previously:/ }),
+    ).toHaveAccessibleDescription(/History keeps measurements/)
+    expect(needleRequests).toBe(3)
+    await reopened.panel.getByRole("button", { name: /50%: Match$/ }).click()
+    const cellDetails = reopened.panel.getByRole("region", {
+      name: "Cell details",
+      exact: true,
+    })
+    await cellDetails
+      .getByRole("button", {
+        name: "Retest this cell",
+        exact: true,
+      })
+      .click()
+    await expect.poll(() => needleRequests).toBe(4)
+    await cellDetails
+      .getByRole("button", { name: /^Stop .*50%$/, exact: true })
+      .click()
+    await expect(
+      reopened.panel.getByRole("button", {
+        name: "Run needle test",
+        exact: true,
+      }),
+    ).toBeEnabled()
+    expect(needleRequests).toBe(4)
+    await expect(
+      reopened.panel.getByRole("button", { name: /50%: Cancelled$/ }),
+    ).toBeVisible()
+    await expect(
+      reopened.panel.getByRole("table").getByRole("cell"),
+    ).toHaveCount(3)
+  } finally {
+    releaseRequest()
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+})
+
 test("keeps web probe rows compact when execution results expand", async ({
   context,
   page,
@@ -532,7 +779,10 @@ test("keeps web probe rows compact when execution results expand", async ({
       .click()
     const before = (await textProbe.boundingBox())!
     const modelsHeight = (await models.boundingBox())!.height
-    await textProbe.getByRole("button", { name: "Run", exact: true }).click()
+    await textProbe
+      .locator("[data-verification-summary]")
+      .getByRole("button", { name: "Run", exact: true })
+      .click()
     await expect(
       textProbe.getByRole("button", { name: "Execution result", exact: true }),
     ).toHaveAttribute("aria-expanded", "true")
@@ -574,11 +824,15 @@ test("keeps web probe rows compact when execution results expand", async ({
     await textProbe
       .getByRole("button", { name: "Text generation prompt", exact: true })
       .click()
+    const requestsBeforeEditedPrompt = fixture.requests.length
     await textProbe
+      .locator("[data-verification-summary]")
       .getByRole("button", { name: /^(Run|Retry)$/, exact: true })
       .click()
-    await expect.poll(() => fixture.requests.length).toBe(1)
-    expect(fixture.prompts[0]).toBe("LongPrompt".repeat(80))
+    await expect
+      .poll(() => fixture.requests.length)
+      .toBe(requestsBeforeEditedPrompt + 1)
+    expect(fixture.prompts.at(-1)).toBe("LongPrompt".repeat(80))
     await expect(
       textProbe.locator('[data-slot="badge"]').filter({ hasText: "Fail" }),
     ).toBeVisible()
@@ -1051,7 +1305,10 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   })
   const modelsProbe = modal.getByTestId(getWebAiApiCheckProbeTestId("models"))
   await expect(modelsProbe.getByText("Pending", { exact: true })).toBeVisible()
-  await modelsProbe.getByRole("button", { name: "Run", exact: true }).click()
+  await modelsProbe
+    .locator("[data-verification-summary]")
+    .getByRole("button", { name: "Run", exact: true })
+    .click()
   await expect(modelsProbe).toContainText("Fetched 1 model.")
   const configBounds = await modal
     .getByTestId("verification-config")
@@ -1157,7 +1414,10 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
       .getByRole("combobox", { name: "Test mode", exact: true })
       .click()
     await contentHost.getByRole("option", { name: mode, exact: true }).click()
-    await textProbe.getByRole("button", { name: /^(Run|Retry)$/ }).click()
+    await textProbe
+      .locator("[data-verification-summary]")
+      .getByRole("button", { name: /^(Run|Retry)$/ })
+      .click()
     const badge = textProbe
       .locator('[data-slot="badge"]')
       .filter({ hasText: mode })
@@ -1196,7 +1456,10 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   const searchProbe = modal.getByTestId(
     getWebAiApiCheckProbeTestId("web-search"),
   )
-  await searchProbe.getByRole("button", { name: "Run", exact: true }).click()
+  await searchProbe
+    .locator("[data-verification-summary]")
+    .getByRole("button", { name: "Run", exact: true })
+    .click()
   await expect(
     searchProbe.getByText("Unsupported", { exact: true }),
   ).toBeVisible()
@@ -1509,7 +1772,10 @@ test("turns selected web API credentials into a verified profile and model catal
   await expect(
     popupPage.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
   ).toBeVisible()
-  await modelsProbe.getByRole("button", { name: "Run" }).click()
+  await modelsProbe
+    .locator("[data-verification-summary]")
+    .getByRole("button", { name: "Run" })
+    .click()
   await expect(modelsProbe).toContainText("Pass")
   await expect(modelsProbe).toContainText("Fetched 1 model.")
   await verificationDialog.getByText("Close", { exact: true }).click()
@@ -1973,6 +2239,120 @@ test("recovers an interrupted webpage context request after its worker stops wit
     ).toBe(true)
     await panel.screenshot({
       path: test.info().outputPath("web-context-worker-interrupted-narrow.png"),
+      animations: "disabled",
+    })
+  } finally {
+    await cdp.detach()
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+})
+
+test("recovers an interrupted webpage needle request after its worker stops without replaying it", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  let requests = 0
+  const server = createServer(async (request, response) => {
+    response.setHeader("Access-Control-Allow-Origin", "*")
+    response.setHeader("Access-Control-Allow-Headers", "*")
+    if (request.method === "OPTIONS") {
+      response.end()
+      return
+    }
+    if (request.method === "GET") {
+      response.setHeader("Content-Type", "application/json")
+      response.end(JSON.stringify({ data: [{ id: "gpt-4o-mini" }] }))
+      return
+    }
+    for await (const _chunk of request) {
+      /* consume the input, leave the provider response pending */
+    }
+    requests++
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const cdp = await context.newCDPSession(page)
+  const versions: Array<{
+    versionId: string
+    scriptURL: string
+    runningStatus: string
+  }> = []
+  cdp.on("ServiceWorker.workerVersionUpdated", ({ versions: updates }) => {
+    for (const version of updates) {
+      const index = versions.findIndex(
+        (entry) => entry.versionId === version.versionId,
+      )
+      if (index >= 0) versions[index] = version
+      else versions.push(version)
+    }
+  })
+  await cdp.send("ServiceWorker.enable")
+  try {
+    await stubLlmMetadataIndex(context)
+    await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    const { modal, contentHost } =
+      await openApiCheckModalFromCopiedCredentials(page)
+    await modal
+      .getByRole("textbox", { name: "Base URL", exact: true })
+      .fill(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)
+    await modal
+      .getByRole("combobox", { name: "Test mode", exact: true })
+      .click()
+    await contentHost
+      .getByRole("option", { name: "Non-streaming", exact: true })
+      .click()
+    await modal.getByRole("combobox", { name: "Model ID", exact: true }).click()
+    await contentHost
+      .getByRole("option", { name: "gpt-4o-mini", exact: true })
+      .click()
+    const panel = modal.getByRole("region", { name: "Needle in a haystack" })
+    await panel
+      .getByRole("button", { name: "Needle in a haystack", exact: true })
+      .click()
+    await panel.getByRole("button", { name: "Run needle test" }).click()
+    await expect.poll(() => requests).toBe(1)
+    const worker = await getServiceWorker(context)
+    const stored = await getPlasmoStorageRawValue(
+      worker,
+      STORAGE_KEYS.NEEDLE_CHECKPOINTS,
+    )
+    expect(JSON.stringify(stored)).not.toContain(API_KEY)
+    expect(JSON.stringify(stored)).toContain("inFlight")
+    await expect
+      .poll(() =>
+        versions.some(
+          (version) =>
+            version.scriptURL.startsWith(
+              `chrome-extension://${extensionId}/`,
+            ) && version.runningStatus === "running",
+        ),
+      )
+      .toBe(true)
+    const version = versions.find(
+      (entry) =>
+        entry.scriptURL.startsWith(`chrome-extension://${extensionId}/`) &&
+        entry.runningStatus === "running",
+    )!
+    await cdp.send("ServiceWorker.stopWorker", { versionId: version.versionId })
+    await expect(panel).toContainText("Interrupted; outcome unknown", {
+      timeout: 30000,
+    })
+    expect(requests).toBe(1)
+    await panel.screenshot({
+      path: test.info().outputPath("web-needle-worker-interrupted.png"),
+      animations: "disabled",
+    })
+    await page.setViewportSize({ width: 380, height: 800 })
+    await panel.scrollIntoViewIfNeeded()
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true)
+    await panel.screenshot({
+      path: test.info().outputPath("web-needle-worker-interrupted-narrow.png"),
       animations: "disabled",
     })
   } finally {

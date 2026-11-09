@@ -881,9 +881,11 @@ describe("VerifyApiCredentialProfileDialog", () => {
         ),
       )
       expect(
-        await within(probeCard).findByText(
-          "aiApiVerification:verifyDialog.modes.nonStreaming",
-        ),
+        await within(
+          within(probeCard).getByRole("button", {
+            name: "aiApiVerification:verifyDialog.probes.text-generation",
+          }),
+        ).findByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
       ).toBeVisible()
       const target = requireHistoryTarget(
         createProfileModelVerificationHistoryTarget("p-1", "gpt-test"),

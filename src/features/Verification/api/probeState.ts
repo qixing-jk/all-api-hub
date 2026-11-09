@@ -30,6 +30,7 @@ export function buildProbeState(
       definition,
       isRunning: false,
       attempts: 0,
+      ...(persistedProbe ? { historical: true } : {}),
       result: persistedProbe
         ? {
             id: persistedProbe.id,
@@ -73,6 +74,7 @@ export function withStoppedProbe(
           ...probe,
           isRunning: false,
           result: buildStoppedProbeResult(probeId, mode),
+          historical: false,
         }
       : probe,
   )
@@ -92,6 +94,7 @@ export function withUnfinishedProbesStopped(
           ...probe,
           isRunning: false,
           result: buildStoppedProbeResult(probe.definition.id),
+          historical: false,
         },
   )
 }

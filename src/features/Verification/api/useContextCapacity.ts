@@ -13,10 +13,10 @@ import {
 import {
   contextCapacityHistory,
   getAccountInventoryContextHistory,
-  getContextCapacityRequestIdentity,
   type ContextCapacityHistoryAccess,
   type ContextCapacityHistoryView,
 } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
+import { getVerificationRequestIdentity } from "~/services/verification/verificationResultHistory/requestIdentity"
 import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
 import { API_VERIFICATION_HISTORY_TARGET_KINDS } from "~/services/verification/verificationResultHistory/types"
 
@@ -255,7 +255,7 @@ export function useContextCapacity(options: ContextCapacityOptions) {
           if (!request || !current()) return
           secrets = request.secrets
           runRequest = request
-          const scope = getContextCapacityRequestIdentity(request)
+          const scope = getVerificationRequestIdentity(request)
           if (!current() || controller.signal.aborted) return
           continuationForRun =
             resultScope.current === scope ? resumeFrom : undefined

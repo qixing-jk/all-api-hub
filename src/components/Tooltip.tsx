@@ -8,6 +8,7 @@ import {
   useState,
   type ComponentProps,
   type FocusEventHandler,
+  type MouseEventHandler,
   type ReactElement,
   type ReactNode,
 } from "react"
@@ -41,6 +42,8 @@ interface TooltipProps {
   wrapperClassName?: string
   anchorAsChild?: boolean
   includeAccessibleDescription?: boolean
+  /** Allow touch/click activation in addition to hover and keyboard focus. */
+  openOnClick?: boolean
 }
 
 interface TooltipChildProps {
@@ -49,6 +52,7 @@ interface TooltipChildProps {
   "aria-describedby"?: string
   onFocusCapture?: FocusEventHandler<HTMLElement>
   onBlurCapture?: FocusEventHandler<HTMLElement>
+  onClickCapture?: MouseEventHandler<HTMLElement>
 }
 
 /** Identifies the anchor managed by the nearest explicit Tooltip instance. */
@@ -68,6 +72,7 @@ export default function Tooltip({
   wrapperClassName = "",
   anchorAsChild = false,
   includeAccessibleDescription = true,
+  openOnClick = false,
 }: TooltipProps) {
   const instanceId = useId()
   const generatedAnchorId = `tooltip-${instanceId}`
@@ -77,6 +82,7 @@ export default function Tooltip({
     null,
   )
   const [isOpen, setIsOpen] = useState(false)
+  const [isClickOpen, setIsClickOpen] = useState(false)
 
   const isString = typeof content === "string"
   const shouldRenderDescription =
@@ -123,9 +129,11 @@ export default function Tooltip({
     (event) => {
       if (anchorAsChild) childProps.onFocusCapture?.(event)
       cancelFocusCheck()
-      setIsOpen(true)
+      // Interactive hints use the library's event queue for focus and click,
+      // so a pending Escape dismissal cannot overtake an immediate reopen.
+      if (!openOnClick || !anchorAsChild) setIsOpen(true)
     },
-    [anchorAsChild, cancelFocusCheck, childProps],
+    [anchorAsChild, cancelFocusCheck, childProps, openOnClick],
   )
   const handleBlurCapture = useCallback<FocusEventHandler<HTMLElement>>(
     (event) => {
@@ -148,6 +156,16 @@ export default function Tooltip({
     },
     [anchorAsChild, cancelFocusCheck, childProps, popupId, scheduleFocusCheck],
   )
+  const handleClickCapture: MouseEventHandler<HTMLElement> = (event) => {
+    if (anchorAsChild) childProps.onClickCapture?.(event)
+    // Touch taps synthesize mouseout; keep an explicitly opened hint until
+    // blur, Escape, or an outside click dismisses it.
+    if (openOnClick) setIsClickOpen(true)
+  }
+
+  useEffect(() => {
+    if (!isOpen) setIsClickOpen(false)
+  }, [isOpen])
 
   useEffect(() => cancelFocusCheck, [cancelFocusCheck])
   useEffect(() => {
@@ -166,32 +184,41 @@ export default function Tooltip({
     children as ReactElement<Record<string, unknown>>,
     {
       "data-tooltip-anchor-id": anchorId,
+      "data-tooltip-open": openOnClick && isOpen ? "true" : undefined,
     },
   )
   const anchor = anchorAsChild ? (
     cloneElement(children as ReactElement<Record<string, unknown>>, {
       id: anchorId,
       "data-tooltip-anchor-id": anchorId,
+      "data-tooltip-open": openOnClick && isOpen ? "true" : undefined,
       ...(describedBy ? { "aria-describedby": describedBy } : {}),
       onFocusCapture: handleFocusCapture,
       onBlurCapture: handleBlurCapture,
+      onClickCapture: handleClickCapture,
     })
   ) : (
     <div
       id={anchorId}
+      data-tooltip-open={openOnClick && isOpen ? "true" : undefined}
       className={cn(
         "gap-y-density-2 flex items-center justify-center gap-x-2",
         wrapperClassName,
       )}
       onFocusCapture={handleFocusCapture}
       onBlurCapture={handleBlurCapture}
+      onClickCapture={handleClickCapture}
     >
       {managedChild}
     </div>
   )
 
   // Keep library positioning styles; project tokens own all visual styling.
-  const defaultClassName = `${Z_INDEX.tooltip} w-max max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground ${className}`
+  const defaultClassName = cn(
+    Z_INDEX.tooltip,
+    "w-max max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground",
+    className,
+  )
   const popupProps = {
     anchorId,
     place: position,
@@ -203,8 +230,14 @@ export default function Tooltip({
     isOpen,
     setIsOpen,
     role: isOpen ? "tooltip" : "presentation",
-    closeEvents: { mouseout: true, blur: false },
-    globalCloseEvents: { escape: true },
+    openEvents: openOnClick
+      ? { mouseover: true, focus: true, click: true }
+      : undefined,
+    closeEvents: { mouseout: !isClickOpen, blur: false },
+    globalCloseEvents: {
+      escape: true,
+      ...(openOnClick ? { clickOutsideAnchor: true } : {}),
+    },
   } satisfies ComponentProps<typeof ReactTooltip>
   const popup = isString ? (
     <ReactTooltip {...popupProps} id={tooltipId} content={content} />

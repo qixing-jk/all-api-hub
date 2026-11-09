@@ -9,6 +9,7 @@ import {
   MessageSquareText,
   Palette,
   ScanText,
+  Search,
   Video,
   Wrench,
   type LucideIcon,
@@ -21,11 +22,13 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
+import { NEEDLE_TEST_ID } from "~/services/verification/modelQuality/needleConstants"
 
 export type VerificationTestId =
   | ApiVerificationProbeId
   | typeof PELICAN_PROMPT_ID
   | typeof CONTEXT_CAPACITY_TEST_ID
+  | typeof NEEDLE_TEST_ID
 
 const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
   [API_VERIFICATION_PROBE_IDS.Models]: List,
@@ -40,6 +43,7 @@ const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
   [API_VERIFICATION_PROBE_IDS.Decision]: GitBranch,
   [PELICAN_PROMPT_ID]: Palette,
   [CONTEXT_CAPACITY_TEST_ID]: ScanText,
+  [NEEDLE_TEST_ID]: Search,
 }
 
 /** Consistent decorative test icons without changing translated labels. */

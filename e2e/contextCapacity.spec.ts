@@ -217,18 +217,22 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       if (outputLimited) {
         await expect(panel).toContainText("Model context:", { timeout: 30000 })
         await expect(
-          panel.getByText("Context ≈99.9%", { exact: true }),
+          panel
+            .locator("[data-verification-summary]")
+            .getByText("Context ≈99.9%", { exact: true }),
         ).toBeVisible()
         await expect(
           panel.getByRole("status", { name: "Context capacity result" }),
         ).toContainText("metadata declares 128K tokens")
         await expect(
-          panel.getByText("Context ≈99.9%", { exact: true }),
+          panel
+            .locator("[data-verification-summary]")
+            .getByText("Context ≈99.9%", { exact: true }),
         ).toHaveClass(/bg-success-soft/)
         await expect(panel).toContainText("Non-streaming")
         await expect(
           panel.getByRole("button", { name: "Execution result", exact: true }),
-        ).toHaveCount(0)
+        ).toBeVisible()
         const disclosure = panel.getByRole("button", {
           name: "Test details",
           exact: true,
@@ -300,7 +304,9 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
         ).toContainText("Model context:")
         expect(requests.length).toBe(completedRequests)
         await expect(
-          panel.getByText("Context ≈99.9%", { exact: true }),
+          panel
+            .locator("[data-verification-summary]")
+            .getByText("Context ≈99.9%", { exact: true }),
         ).toBeVisible()
         await expect(
           panel.getByRole("status", { name: "Context capacity result" }),
@@ -309,6 +315,25 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
           path: test.info().outputPath("context-history.png"),
           animations: "disabled",
         })
+        const historyBadge = panel
+          .getByRole("button", { name: /^Previously:/ })
+          .first()
+        await historyBadge.hover()
+        await expect(
+          page
+            .getByRole("tooltip")
+            .filter({
+              hasText:
+                "History keeps measurements, without individual request details",
+            }),
+        ).toBeVisible()
+        await page
+          .getByRole("dialog")
+          .screenshot({
+            path: test.info().outputPath("context-history-tooltip.png"),
+            animations: "disabled",
+          })
+        await page.keyboard.press("Escape")
         return
       }
       if (inconclusive) {

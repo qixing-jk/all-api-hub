@@ -1,5 +1,3 @@
-import { APICallError } from "ai"
-
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { runProbeGeneration } from "~/services/verification/aiApiVerification/probes/probeGeneration"
 import { createModel } from "~/services/verification/aiApiVerification/providers"
@@ -20,26 +18,13 @@ import {
 
 import {
   probeContextCapacity,
-  type ContextAttemptOutcome,
   type ContextCapacityResult,
 } from "./contextCapacity"
 import { CONTEXT_CAPACITY_DEFAULTS as defaults } from "./contextCapacityDefaults"
-import { createContextCounter, type ContextCounterInfo } from "./contextCounter"
-
-/** Only structured input validation errors with explicit capacity evidence qualify. */
-export function classifyContextError(error: unknown): ContextAttemptOutcome {
-  if (
-    !APICallError.isInstance(error) ||
-    ![400, 422].includes(error.statusCode ?? 0)
-  )
-    return CONTEXT_ATTEMPT_OUTCOMES.Inconclusive
-  const evidence = `${error.message} ${error.responseBody ?? ""}`
-  return /context_length_exceeded|maximum context length.{0,160}(?:exceed|resulted in|requested)|context window.{0,60}exceed|exceed.{0,40}context (?:window|limit)|(?:input length|input tokens|input token count).{0,80}exceed.{0,40}(?:context|token limit|maximum number of tokens)|prompt is too long/i.test(
-    evidence,
-  )
-    ? CONTEXT_ATTEMPT_OUTCOMES.ContextLimit
-    : CONTEXT_ATTEMPT_OUTCOMES.Inconclusive
-}
+import { createContextCounter } from "./contextCounter"
+import { classifyContextError } from "./contextErrors"
+import { getDeclaredInputLimit } from "./contextLimits"
+import type { ContextCounterInfo } from "./contextTokens"
 
 export type RunContextCapacityParams = {
   baseUrl: string
@@ -91,13 +76,9 @@ export async function runContextCapacity(
   const model = createModel(params)
   const maxOutputTokens = defaults.maxOutputTokens
   // Declarations guide the first request, never establish a measured boundary.
-  const declaredLimits = [
-    counter.info.declaredInput,
-    counter.info.declaredContext === undefined
-      ? undefined
-      : counter.info.declaredContext - maxOutputTokens,
-  ].filter(
-    (value): value is number => Number.isSafeInteger(value) && value! > 0,
+  const declaredInputLimit = getDeclaredInputLimit(
+    counter.info,
+    maxOutputTokens,
   )
   const requestedInputLimit =
     params.resumeFrom?.inputLimit ??
@@ -107,9 +88,7 @@ export async function runContextCapacity(
       counter.maxInputTokens,
       Math.max(
         defaults.minimumInputTokens,
-        declaredLimits.length
-          ? Math.min(...declaredLimits)
-          : defaults.unknownInputTokens,
+        declaredInputLimit ?? defaults.unknownInputTokens,
       ),
     )
   if (

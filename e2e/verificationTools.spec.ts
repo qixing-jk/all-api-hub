@@ -259,7 +259,9 @@ test("verification tests run concurrently and cancel independently", async ({
       .getByRole("button", { name: "Run", exact: true })
       .click()
     await expect(
-      text.locator('[data-slot="badge"]').filter({ hasText: "Pass" }),
+      text
+        .locator('[data-verification-summary] [data-slot="badge"]')
+        .filter({ hasText: "Pass" }),
     ).toBeVisible()
     await text
       .getByRole("button", { name: "Text generation", exact: true })
@@ -517,9 +519,9 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
       await expect(page.getByTestId("pelican-history-summary")).toContainText(
         "Drawing generated",
       )
-      await expect(page.getByTestId("pelican-history-summary")).toContainText(
-        "Only the run summary was saved",
-      )
+      await expect(
+        page.getByTestId("pelican-history-summary"),
+      ).not.toContainText("Only the run summary was saved")
       await expect(page.getByTestId("pelican-svg-preview")).toHaveCount(0)
       expect(fixture.requests).toHaveLength(2)
       await page
@@ -530,6 +532,69 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         path: test.info().outputPath("drawing-history-restored.png"),
         animations: "disabled",
       })
+      const historyBadge = page
+        .getByTestId("pelican-history-summary")
+        .getByRole("button", { name: /^Previously:/ })
+      const drawingSelection = page.getByRole("button", {
+        name: "Drawing test",
+        exact: true,
+      })
+      await expect(historyBadge.locator("button")).toHaveCount(0)
+      await historyBadge.hover()
+      const historyHint = page
+        .getByRole("tooltip")
+        .filter({ hasText: "History does not retain the drawing" })
+      await expect(historyHint).toBeVisible()
+      await expect(historyHint).toHaveClass(/react-tooltip__show/)
+      await page
+        .getByRole("dialog")
+        .screenshot({
+          path: test.info().outputPath("drawing-history-tooltip.png"),
+          animations: "disabled",
+        })
+      await page.keyboard.press("Escape")
+      await expect(historyHint).toBeHidden()
+      await historyBadge.focus()
+      await expect(historyHint).toBeVisible()
+      await page.keyboard.press("Escape")
+      await expect(historyHint).toBeHidden()
+      await expect(page.getByRole("dialog")).toBeVisible()
+      await page.setViewportSize({ width: 380, height: 800 })
+      await historyBadge.scrollIntoViewIfNeeded()
+      const touch = await context.newCDPSession(page)
+      try {
+        await touch.send("Emulation.setTouchEmulationEnabled", {
+          enabled: true,
+        })
+        const bounds = (await historyBadge.boundingBox())!
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [
+            { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+          ],
+        })
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        })
+        await expect(historyHint).toBeVisible()
+        await expect(historyHint).toHaveClass(/react-tooltip__show/)
+        await expect(drawingSelection).toHaveAttribute("aria-expanded", "true")
+        await page
+          .getByRole("dialog")
+          .screenshot({
+            path: test.info().outputPath("drawing-history-tooltip-narrow.png"),
+            animations: "disabled",
+          })
+        await page.keyboard.press("Escape")
+        await expect(historyHint).toBeHidden()
+      } finally {
+        await touch.send("Emulation.setTouchEmulationEnabled", {
+          enabled: false,
+        })
+        await touch.detach()
+      }
+      await page.setViewportSize({ width: 1280, height: 720 })
       await page
         .getByRole("button", { name: "Clear history", exact: true })
         .click()
@@ -612,8 +677,23 @@ test("the shared verification tools run an on-demand drawing test", async ({
       name: "Drawing test prompt",
       exact: true,
     })
+    await page.setViewportSize({ width: 1280, height: 650 })
     await expect(promptToggle).toHaveAttribute("aria-expanded", "false")
     await expect(drawingPanel.getByRole("textbox")).toHaveCount(0)
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await expect(promptToggle).toHaveAttribute("aria-expanded", "true")
+    await expect(drawingPanel.getByRole("textbox")).toBeVisible()
+    await page.setViewportSize({ width: 420, height: 650 })
+    await expect(promptToggle).toHaveAttribute("aria-expanded", "false")
+    await page.setViewportSize({ width: 420, height: 1400 })
+    await expect(promptToggle).toHaveAttribute("aria-expanded", "true")
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await promptToggle.click()
+    // An explicit choice wins over subsequent automatic layout changes.
+    await page.setViewportSize({ width: 1280, height: 650 })
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await expect(promptToggle).toHaveAttribute("aria-expanded", "false")
+    expect(fixture.requests).toHaveLength(0)
     await expect(
       drawingPanel.getByRole("button", {
         name: "Run drawing test",
@@ -649,6 +729,29 @@ test("the shared verification tools run an on-demand drawing test", async ({
 
     const preview = page.getByTestId("pelican-svg-preview")
     await expect(preview).toBeVisible({ timeout: 30_000 })
+    const drawingResult = drawingPanel.getByRole("region", {
+      name: "Execution result",
+      exact: true,
+    })
+    await expect(drawingResult.getByTestId("pelican-svg-preview")).toBeVisible()
+    const drawingResultBox = (await drawingResult.boundingBox())!
+    const drawingSettingsBox = (await drawingPanel
+      .getByRole("group", { name: "Test settings" })
+      .boundingBox())!
+    expect(drawingResultBox.y + drawingResultBox.height).toBeLessThanOrEqual(
+      drawingSettingsBox.y,
+    )
+    await captureVisualViews({
+      page,
+      ready: preview,
+      id: "drawing-result",
+      extensionDir,
+      views: [
+        { id: "desktop", theme: "light", width: 1280, height: 1000 },
+        { id: "dark", theme: "dark", width: 1280, height: 1000 },
+        { id: "narrow", theme: "light", width: 380, height: 800 },
+      ],
+    })
     await expect(
       page.getByRole("heading", { name: "On-demand tests", exact: true }),
     ).toBeVisible()
@@ -766,6 +869,12 @@ test("the shared verification tools run an on-demand drawing test", async ({
         actions: await chinesePage
           .getByRole("dialog")
           .getByRole("group")
+          .filter({
+            has: chinesePage.getByRole("button", {
+              name: "运行常规测试",
+              exact: true,
+            }),
+          })
           .locator("..")
           .boundingBox(),
       }),
@@ -833,6 +942,19 @@ test("an edited probe prompt persists and is used by the next run", async ({
     await expect(textGenerationRow.getByRole("textbox")).toHaveValue(
       "Reply with exactly: OK",
     )
+    const settings = textGenerationRow.getByRole("group", {
+      name: "Test settings",
+    })
+    await expect(
+      settings.getByRole("heading", { name: "Test settings" }),
+    ).toBeVisible()
+    await expect(settings.getByRole("textbox")).toHaveValue(
+      "Reply with exactly: OK",
+    )
+    await textGenerationRow.locator("[data-verification-detail]").screenshot({
+      path: test.info().outputPath("prompt-settings-desktop.png"),
+      animations: "disabled",
+    })
     await captureVisualViews({
       page,
       ready: textGenerationRow,
@@ -866,6 +988,8 @@ test("an edited probe prompt persists and is used by the next run", async ({
     })
     await expect(title).toHaveCSS("font-size", "20px")
     const compactTitle = (await title.boundingBox())!
+    const settingsBox = (await settings.boundingBox())!
+    expect(settingsBox.y + settingsBox.height).toBeLessThan(compactTitle.y)
     await page.setViewportSize({ width: 1280, height: 1280 })
     await expect
       .poll(async () => (await measureFlow()).width)
@@ -926,6 +1050,11 @@ test("an edited probe prompt persists and is used by the next run", async ({
       const detail = (await textGenerationRow
         .locator("[data-verification-detail]")
         .boundingBox())!
+      const settingsBox = (await settings.boundingBox())!
+      await textGenerationRow.locator("[data-verification-detail]").screenshot({
+        path: test.info().outputPath(`prompt-settings-collapsed-${width}.png`),
+        animations: "disabled",
+      })
       if (width >= 1280)
         expect(detail.x).toBeGreaterThan(summary.x + summary.width)
       else {
@@ -936,10 +1065,11 @@ test("an edited probe prompt persists and is used by the next run", async ({
             { exact: true },
           )
           .boundingBox())!
-        const prompt = (await promptToggle.boundingBox())!
-        expect.soft(Math.abs(introduction.x - prompt.x)).toBeLessThanOrEqual(1)
+        expect
+          .soft(Math.abs(introduction.x - settingsBox.x))
+          .toBeLessThanOrEqual(1)
         expect(introduction.y + introduction.height).toBeLessThanOrEqual(
-          prompt.y,
+          settingsBox.y,
         )
       }
     }
@@ -1099,6 +1229,18 @@ test("an edited probe prompt persists and is used by the next run", async ({
     await page
       .getByRole("button", { name: "Text generation", exact: true })
       .click()
+    const workspaceFrame = page
+      .getByTestId("verification-workspace")
+      .locator(":scope > div")
+    // Reopening resets the presentation choice; this short dialog has limited room.
+    await expect
+      .poll(async () => (await workspaceFrame.boundingBox())!.height)
+      .toBeLessThan(480)
+    await expect(promptToggle).toHaveAttribute("aria-expanded", "false")
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await expect
+      .poll(async () => (await workspaceFrame.boundingBox())!.height)
+      .toBeGreaterThanOrEqual(480)
     await expect(
       page
         .getByTestId("verification-prompt-text-generation")
@@ -1133,6 +1275,26 @@ test("an edited probe prompt persists and is used by the next run", async ({
     await expect(
       probeCard.getByRole("region", { name: "Execution result", exact: true }),
     ).toContainText("svg")
+    const textResult = probeCard.getByRole("region", {
+      name: "Execution result",
+      exact: true,
+    })
+    const textResultBox = (await textResult.boundingBox())!
+    const textSettingsBox = (await probeCard
+      .getByRole("group", { name: "Test settings" })
+      .boundingBox())!
+    expect(textResultBox.y + textResultBox.height).toBeLessThanOrEqual(
+      textSettingsBox.y,
+    )
+    expect(
+      await textResult.evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
+    ).not.toBe(
+      await probeCard
+        .locator("[data-verification-detail]")
+        .evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
     await expect(
       probeCard.getByRole("button", {
         name: "Text generation prompt",
@@ -1176,6 +1338,9 @@ test("an edited probe prompt persists and is used by the next run", async ({
       .click()
     await expect(
       probeCard.getByRole("region", { name: "Execution result", exact: true }),
+    ).toBeVisible()
+    await expect(
+      probeCard.getByRole("button", { name: "Output", exact: true }),
     ).toHaveCount(0)
     expect((await dialog.boundingBox())!.height).toBeCloseTo(
       beforeRun.height,
@@ -1199,6 +1364,22 @@ test("an edited probe prompt persists and is used by the next run", async ({
     await expect(restored).not.toContainText(
       "This test returned no additional content",
     )
+    const historyBadge = restored
+      .getByRole("button", { name: /^Previously:/ })
+      .first()
+    await historyBadge.hover()
+    await expect(
+      page
+        .getByRole("tooltip")
+        .filter({ hasText: "History keeps the test summary" }),
+    ).toBeVisible()
+    await page
+      .getByRole("dialog")
+      .screenshot({
+        path: test.info().outputPath("probe-history-tooltip.png"),
+        animations: "disabled",
+      })
+    await page.keyboard.press("Escape")
     const header = page.getByTestId("verification-header")
     const titleBounds = await header.getByRole("heading").boundingBox()
     const historyBounds = await header.locator("time").boundingBox()
@@ -1610,6 +1791,7 @@ for (const outcome of ["timeout", "empty"] as const) {
   test(`verification result badges explain ${outcome} without opening details`, async ({
     context,
     extensionId,
+    extensionDir,
     page,
   }) => {
     const fixture = createDrawingServer({ contextOutcome: outcome })
@@ -1647,7 +1829,9 @@ for (const outcome of ["timeout", "empty"] as const) {
         .getByRole("button", { name: "运行", exact: true })
         .click()
       await expect(
-        textProbe.locator('[data-slot="badge"]').filter({ hasText: "通过" }),
+        textProbe
+          .locator('[data-verification-summary] [data-slot="badge"]')
+          .filter({ hasText: "通过" }),
       ).toBeVisible()
       await textProbe.screenshot({
         path: test.info().outputPath("passed-badge.png"),
@@ -1661,9 +1845,11 @@ for (const outcome of ["timeout", "empty"] as const) {
         .getByRole("button", { name: "探测上下文", exact: true })
         .click()
       await expect(
-        panel.locator('[data-slot="badge"]').filter({
-          hasText: outcome === "timeout" ? "请求超时" : "未返回正文",
-        }),
+        panel
+          .locator('[data-verification-summary] [data-slot="badge"]')
+          .filter({
+            hasText: outcome === "timeout" ? "请求超时" : "未返回正文",
+          }),
       ).toBeVisible({ timeout: 30_000 })
       await panel
         .getByRole("button", { name: "模型上下文测试", exact: true })
@@ -1673,12 +1859,30 @@ for (const outcome of ["timeout", "empty"] as const) {
           ? "超时不能证明输入超过模型容量"
           : "接口正常结束但未返回正文",
       )
+      const resultHeading = panel.getByRole("button", {
+        name: "执行结果",
+        exact: true,
+      })
+      expect((await resultHeading.boundingBox())!.height).toBeLessThanOrEqual(
+        36,
+      )
       await expect(panel.getByRole("region", { name: "测试详情" })).toHaveCount(
         0,
       )
       await panel.screenshot({
         path: test.info().outputPath(`context-${outcome}.png`),
         animations: "disabled",
+      })
+      await captureVisualViews({
+        page,
+        ready: panel.getByRole("status"),
+        extensionDir,
+        id: `context-result-${outcome}`,
+        views: [
+          { id: "desktop", theme: "light", width: 1280, height: 1000 },
+          { id: "dark", theme: "dark", width: 1280, height: 1000 },
+          { id: "narrow", theme: "light", width: 380, height: 800 },
+        ],
       })
       await panel.getByRole("button", { name: "测试详情", exact: true }).click()
       await expect(
@@ -1798,10 +2002,14 @@ test("restores masked account context history without another key reveal", async
     .click()
   await expect(panel).toContainText("Saved measurement for this masked key")
   await expect(
-    panel.locator('[data-slot="badge"]').filter({ hasText: "Not tested" }),
+    panel
+      .locator('[data-verification-summary] [data-slot="badge"]')
+      .filter({ hasText: "Not tested" }),
   ).toBeVisible()
   await expect(
-    panel.locator('[data-slot="badge"]').filter({ hasText: /\bPass\b/ }),
+    panel
+      .locator('[data-verification-summary] [data-slot="badge"]')
+      .filter({ hasText: /\bPass\b/ }),
   ).toHaveCount(0)
   expect(reveals).toBe(1)
   expect(generations).toBe(1)

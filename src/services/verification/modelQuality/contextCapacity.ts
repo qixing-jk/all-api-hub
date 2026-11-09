@@ -6,6 +6,7 @@ import {
 } from "~/services/verification/modelQuality/contextCapacityConstants"
 
 import { CONTEXT_CAPACITY_DEFAULTS as defaults } from "./contextCapacityDefaults"
+import { exceedsContextBudget } from "./contextLimits"
 
 export type ContextAttemptOutcome =
   (typeof CONTEXT_ATTEMPT_OUTCOMES)[keyof typeof CONTEXT_ATTEMPT_OUTCOMES]
@@ -114,10 +115,14 @@ export async function probeContextCapacity(options: {
   }
   const previousCount = result.attempts.length
   const exceedsBudget = (targetTokens: number) =>
-    result.attempts.length - previousCount >=
-      (options.maxRequests ?? defaults.maxRequests) ||
-    total + targetTokens >
-      (options.maxTotalInputTokens ?? defaults.maxTotalInputTokens)
+    exceedsContextBudget({
+      requests: result.attempts.length - previousCount,
+      inputTokens: total,
+      nextInputTokens: targetTokens,
+      maxRequests: options.maxRequests ?? defaults.maxRequests,
+      maxInputTokens:
+        options.maxTotalInputTokens ?? defaults.maxTotalInputTokens,
+    })
   while (result.reason !== CONTEXT_CAPACITY_REASONS.Bracketed) {
     if (options.signal?.aborted) {
       result.reason = CONTEXT_CAPACITY_REASONS.Stopped

@@ -5,7 +5,8 @@ import { useVerificationWorkspaceHeight } from "~/features/Verification/api/useV
 
 /** Supply browser layout measurements while exercising the hook's DOM boundary. */
 function Workspace({ wide = true, limit = "800px" }) {
-  const { frameRef, isWide } = useVerificationWorkspaceHeight("selected")
+  const { frameRef, isWide, availableHeight } =
+    useVerificationWorkspaceHeight("selected")
   return (
     <div data-slot="modal-panel" style={{ maxHeight: limit }}>
       <div data-slot="modal-body">
@@ -15,6 +16,7 @@ function Workspace({ wide = true, limit = "800px" }) {
             style={{ position: wide ? "absolute" : "static" }}
           >
             <output>{isWide ? "wide" : "narrow"}</output>
+            <output data-testid="available-height">{availableHeight}</output>
           </div>
         </div>
       </div>
@@ -25,6 +27,36 @@ function Workspace({ wide = true, limit = "800px" }) {
 afterEach(() => vi.restoreAllMocks())
 
 describe("verification workspace height", () => {
+  it("keeps the narrow height budget stable when a prompt expands", () => {
+    let frameHeight = 300
+    let contentHeight = 650
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return this.getAttribute("data-slot") === "modal-panel"
+          ? 700
+          : frameHeight
+      },
+    )
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(600)
+    vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
+      () => contentHeight,
+    )
+    let pending: FrameRequestCallback | undefined
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      pending = callback
+      return 17
+    })
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {})
+    render(<Workspace wide={false} />)
+    expect(screen.getByTestId("available-height")).toHaveTextContent("349")
+    frameHeight += 200
+    contentHeight += 200
+    act(() => window.dispatchEvent(new Event("resize")))
+    act(() => pending!(0))
+    expect(screen.getByTestId("available-height")).toHaveTextContent("349")
+    expect(screen.getByTestId("frame").style.height).toBe("")
+  })
+
   it("reserves space for dialog controls and remeasures a changed viewport", () => {
     vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
       function (this: HTMLElement) {

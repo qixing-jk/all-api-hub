@@ -335,6 +335,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                 data-testid={`verify-probe-${probe.definition.id}`}
               >
                 <VerificationProbeRow
+                  historical={probe.historical}
                   isRunning={probe.isRunning}
                   controller={tools}
                   probeId={probe.definition.id}

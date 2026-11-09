@@ -1,5 +1,5 @@
 import { ChevronDown, RotateCcw } from "lucide-react"
-import { useId, useState } from "react"
+import { useContext, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Spinner, Textarea } from "~/components/ui"
@@ -9,6 +9,7 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
 import type { VerificationToolsController } from "~/features/Verification/api/useVerificationTools"
+import { VerificationSelectionContext } from "~/features/Verification/api/VerificationSelectionContext"
 import { cn } from "~/lib/utils"
 import { getApiVerificationProbeLabel } from "~/services/verification/aiApiVerification/i18n"
 import { PELICAN_TEST_PROMPT } from "~/services/verification/modelQuality/pelican"
@@ -17,17 +18,30 @@ import {
   type VerificationPromptId,
 } from "~/services/verification/promptOverrides"
 
+// Leave room for the settings, a readable editor and the test introduction.
+const MIN_AUTO_EXPAND_HEIGHT_PX = 480
+
 /** Edits the saved prompt beside the test that uses it. */
 export function VerificationPromptEditor({
   controller,
   probeId,
-  autoOpen = false,
+  autoOpen,
 }: {
-  controller: VerificationToolsController
+  controller: Pick<
+    VerificationToolsController,
+    | "getDefaultPrompt"
+    | "promptDraft"
+    | "setPromptDraftValue"
+    | "resetPrompt"
+    | "promptSaveError"
+    | "isSavingPrompts"
+    | "promptIds"
+  >
   probeId: VerificationPromptId
   autoOpen?: boolean
 }) {
   const { t } = useTranslation("aiApiVerification")
+  const workspace = useContext(VerificationSelectionContext)
   const editorId = useId()
   const editorLabel = t("verifyDialog.tools.prompts.editorLabel", {
     probe: getApiVerificationProbeLabel(t, probeId),
@@ -35,7 +49,10 @@ export function VerificationPromptEditor({
   // Automatic presentation is only a default. A deliberate choice or an active
   // edit survives result arrivals, selection changes and window resizing.
   const [manualOpen, setManualOpen] = useState<boolean>()
-  const isOpen = manualOpen ?? autoOpen
+  const isOpen =
+    manualOpen ??
+    autoOpen ??
+    (workspace?.availableHeight ?? 0) >= MIN_AUTO_EXPAND_HEIGHT_PX
   const defaultPrompt =
     controller.getDefaultPrompt(probeId) ??
     (probeId === PELICAN_PROMPT_ID ? PELICAN_TEST_PROMPT : "")
@@ -61,7 +78,7 @@ export function VerificationPromptEditor({
           <div className="flex items-center gap-1.5">
             <CollapsibleTrigger
               aria-label={editorLabel}
-              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm py-1 text-left text-xs focus-visible:ring-2 focus-visible:outline-none"
+              className="text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm py-1 text-left text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
             >
               <ChevronDown
                 aria-hidden="true"

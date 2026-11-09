@@ -1,48 +1,15 @@
 import type { ModelIdentityLookupResult } from "~/services/models/modelMetadata/types"
+import { CONTEXT_TOKEN_BATCH_SIZE } from "~/services/verification/modelQuality/contextTokenConstants"
 
 import { CONTEXT_CAPACITY_DEFAULTS as defaults } from "./contextCapacityDefaults"
+import { createContextTokens } from "./contextTokens"
 
-export type ContextCounterInfo = {
-  encoding: string
-  estimated: boolean
-  modelId?: string
-  identityMatch?: Extract<
-    ModelIdentityLookupResult,
-    { state: "resolved" }
-  >["match"]
-  declaredContext?: number
-  declaredInput?: number
-  declaredOutput?: number
-}
-
-/** Load only the selected vocabulary when a capacity test starts. */
+/** Build the capacity fixture with shared counting and cancellation. */
 export async function createContextCounter(
   identity: ModelIdentityLookupResult,
 ) {
-  const models = await import("gpt-tokenizer/modelsMap")
-  const metadata = identity.state === "resolved" ? identity.metadata : undefined
-  const bareId = metadata?.id.replace(/^[^/]+\//, "")
-  const encoding =
-    bareId && models.cl100k_base.includes(bareId) ? "cl100k_base" : "o200k_base"
-  const matched = Boolean(
-    bareId &&
-      (models.cl100k_base.includes(bareId) ||
-        models.o200k_base.includes(bareId)),
-  )
-  const api =
-    encoding === "cl100k_base"
-      ? await import("gpt-tokenizer/encoding/cl100k_base")
-      : await import("gpt-tokenizer/encoding/o200k_base")
-  const info: ContextCounterInfo = {
-    encoding,
-    estimated:
-      !matched || identity.state !== "resolved" || identity.match !== "exact",
-    modelId: metadata?.id,
-    identityMatch: identity.state === "resolved" ? identity.match : undefined,
-    declaredContext: metadata?.limits?.context,
-    declaredInput: metadata?.limits?.input,
-    declaredOutput: metadata?.limits?.output,
-  }
+  const api = await createContextTokens(identity)
+  const { info } = api
   const prefix = "Read the following reference text.\n"
   const suffix = "\nEnd of reference. Reply with OK only."
   const sentence =
@@ -65,25 +32,7 @@ export async function createContextCounter(
     if (target < api.countTokens(prefix + suffix))
       throw new Error("Test input is too small for the prompt wrapper")
   }
-  const yieldToCaller = async (signal: AbortSignal) => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 0))
-    signal.throwIfAborted()
-  }
-  const tokenBatchSize = 8192
-  const countAsync = async (text: string, signal: AbortSignal) => {
-    let count = 0
-    let batch = 0
-    for (const tokens of api.encodeGenerator(text)) {
-      count += tokens.length
-      batch += tokens.length
-      if (batch >= tokenBatchSize) {
-        await yieldToCaller(signal)
-        batch = 0
-      }
-    }
-    signal.throwIfAborted()
-    return count
-  }
+  const { countAsync, yieldToCaller } = api
   return {
     info,
     maxInputTokens,
@@ -102,7 +51,7 @@ export async function createContextCounter(
         const take = Math.min(tokens.length, remaining)
         for (let index = 0; index < take; index++) batch.push(tokens[index]!)
         remaining -= take
-        if (batch.length >= tokenBatchSize) {
+        if (batch.length >= CONTEXT_TOKEN_BATCH_SIZE) {
           parts.push(api.decode(batch))
           batch = []
           await yieldToCaller(signal)

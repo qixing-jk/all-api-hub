@@ -31,7 +31,14 @@
     "generatedVideoPreview": "生成された動画のプレビュー",
     "history": {
       "clear": "履歴をクリア",
-      "lastVerified": "最終テスト"
+      "lastVerified": "最終テスト",
+      "previousResult": "前回：{{result}}",
+      "storage": {
+        "context": "履歴には測定結果が保存され、各リクエストの詳細は保存されません。",
+        "drawing": "履歴には作品や実行の詳細は保存されません。",
+        "needle": "履歴には測定結果が保存されます。同じサンプル番号と設定でテスト用テキストを再生成できます。",
+        "probe": "履歴にはテスト概要のみ保存され、リクエストやレスポンスの内容は保存されません。"
+      }
     },
     "intro": {
       "flow": "テストの手順",
@@ -288,10 +295,111 @@
       "errors": {
         "unexpected": "リクエストに失敗しました：{{message}}"
       },
+      "needle": {
+        "automatic": "自動",
+        "automaticLimit": "自動（{{limit}}）",
+        "budget": "入力は約 {{tokens}} トークン、出力は別途消費します。テストには API の利用枠を使用します。",
+        "cancelledCell": "キャンセル済み",
+        "cancelledUnknown": "判定可能な結果は得られませんでした。",
+        "capacityRunning": "利用可能なコンテキストを確認中です。完了後にテストの長さを更新します。",
+        "capped": "各リクエストの入力は最大 1M tokens です。",
+        "cell": "ローカル入力 {{tokens}} tokens · 実際の位置 {{depth}}% · {{latency}} ms",
+        "cellDetails": "セルの詳細",
+        "cumulativeScore": "累計結果：判定可能な回答 {{graded}} 件中 {{hits}} 件が一致",
+        "custom": "カスタム",
+        "customLimit": "カスタム長（tokens）",
+        "description": "長いテキスト内の異なる位置から、指定した情報を見つけられるか確認します。",
+        "errors": {
+          "busy": "別のページでこの接続のテストが実行中です。",
+          "failed": "大海の針テストを完了できませんでした：{{detail}}",
+          "metadata": "コンテキスト情報を読み込めません。再試行してください。",
+          "request": "モデルと有効な認証情報を選択してください。"
+        },
+        "exactLengths": "正確な長さ：{{lengths}} トークン",
+        "exactTotal": "推定入力合計：{{tokens}} トークン",
+        "expected": "期待する回答：{{value}}",
+        "invalid": "テキスト長は 1,024～1,048,576、サンプル番号は 0～4,294,967,295 の整数を入力してください。",
+        "length": "Tokens",
+        "lengthRule": "8K から長さを倍増させ、最後に入力上限 {{limit}} を追加します。",
+        "limit": "テキストの最大長（トークン）",
+        "limitation": "一致はこのサンプルのみを検証します。不一致だけでは、入力の切り捨て、容量の縮小、モデルの相違を断定できません。",
+        "matrix": "入力長と位置ごとの検索結果",
+        "matrixHint": "状態をクリックすると詳細を表示し、そのセルを実行・再テストできます。行・列のボタンは結果があるセルも含めて範囲全体を実行します。停止は対応するセル・行・列だけに作用します。",
+        "notRun": "未実行",
+        "notScheduled": "今回は対象外",
+        "outcomes": {
+          "contextLimit": "上限超過",
+          "error": "エラー",
+          "hit": "一致",
+          "incomplete": "不完全",
+          "interrupted": "結果不明",
+          "miss": "不一致"
+        },
+        "planDetails": "長さの決め方",
+        "planned": "実行予定",
+        "plannedLengths": "テキストの長さ（トークン）",
+        "positionRule": "各長さの {{positions}} の位置で、前半・中央・後半の情報を取得できるか確認します。",
+        "preparing": "テスト計画を準備中…",
+        "preparingCellState": "準備中",
+        "previewPositions": "各長さの {{positions}} の位置を1回ずつテストします。",
+        "previewTitle": "今回のテストのプレビュー",
+        "previousResult": "前回の結果（今回の実行前）",
+        "probeFirst": "利用可能なコンテキストを確認",
+        "progress": "直近の実行：{{completed}}/{{total}} 件のリクエストを処理",
+        "quick": "最も長いテキストのみテスト",
+        "quickHint": "予定されている最長の入力の3か所のみ実行します。他の長さは今回の対象外ですが、行または列ごとに追加テストできます。",
+        "randomSample": "毎回ランダムに生成",
+        "reasons": {
+          "budget": "予算に到達",
+          "complete": "完了",
+          "error": "リクエスト失敗",
+          "interrupted": "中断、結果不明"
+        },
+        "reference": {
+          "context": "モデル情報のコンテキスト：{{tokens}}（未検証）",
+          "input": "モデル情報の入力上限：{{tokens}}（未検証）",
+          "measured": "以前受け付けた入力：{{tokens}}（最大容量は不明）",
+          "unknown": "コンテキスト上限が不明なため、自動モードは暫定的に {{tokens}} tokens を使用します。検査後に自動値を更新します。"
+        },
+        "reproduce": "サンプル {{seed}} · トークナイザー：{{encoding}}。",
+        "requestCount_other": "{{count}} 件のリクエスト",
+        "requestDetails": "リクエストと回答の詳細",
+        "resultDetails": "テスト設定と再現情報",
+        "retestCell": "このセルを再テスト",
+        "retestColumn": "{{depth}}% 列を再テスト（{{requests}}）",
+        "retestRow": "{{length}} 行を再テスト（{{requests}}）",
+        "retry": "再試行",
+        "run": "検索テストを開始",
+        "runCell": "このセルを実行",
+        "runColumn": "{{depth}}% 列を実行（{{requests}}）",
+        "runRow": "{{length}} 行を実行（{{requests}}）",
+        "savedResult": "保存済みの結果",
+        "scopeProgress": "{{completed}}/{{total}} 処理済み",
+        "score": "{{hits}}/{{total}} 一致",
+        "scoreStep": "返されたコードを照合",
+        "searchStep": "指定レコードを検索",
+        "seedHint": "空欄なら毎回新しいサンプルを生成します。同じ番号と設定で同じテキストを再テストできます。",
+        "seedInput": "テストサンプル番号（任意）",
+        "singleLengthRule": "今回は {{limit}} の長さだけをテストします。",
+        "sources": {
+          "custom": "指定した最大入力長 {{limit}} を基にテストします。",
+          "declaredContext": "モデル情報の総コンテキストは {{context}} です。返信用に {{reserve}} を確保し、入力上限を {{input}} とします。現在の API では未検証です。",
+          "declaredInput": "モデル情報に個別の入力上限 {{input}} があり、これを基に長さを選びます。現在の API では未検証です。",
+          "fallback": "利用可能なモデルの長さ情報や入力の受付記録がないため、既定の上限 {{limit}} を使用します。テスト設定で変更するか、先に利用可能なコンテキストを確認できます。",
+          "measured": "この接続が以前受け付けた入力を基に、今回は {{limit}} までテストします。モデルの最大容量を示すものではありません。"
+        },
+        "stopCapacity": "容量測定を停止",
+        "stopCell": "{{length}} · {{depth}}% を停止",
+        "stopColumn": "{{depth}}% 列を停止",
+        "stopFailed": "停止できませんでした。再試行してください。",
+        "stoppingCell": "停止中…",
+        "stopRow": "{{length}} 行を停止",
+        "title": "大海から針を探す",
+        "tokenUnits": "このテストでは 1K = 1,024 トークン、1M = 1,048,576 トークンです。"
+      },
       "pelican": {
         "analysis": "図形 {{shapes}} 個 · 円/楕円 {{wheels}} 個 · viewBox {{viewBox}}",
         "description": "自転車に乗ったペリカンの SVG を描かせ、見比べられるようにします。判定は目視で行います。",
-        "historyOnly": "実行概要のみ保存されています。作品と実行の詳細を確認するには再実行してください。",
         "noSvg": "モデルは SVG を返しませんでした。",
         "outcomes": {
           "error": "実行失敗",
@@ -312,6 +420,7 @@
         "saveFailed": "プロンプトを保存できませんでした：{{message}}",
         "sharedHint": "保存したプロンプトはすべてのテスト入口で共有されます。"
       },
+      "settingsTitle": "テスト設定",
       "stop": "停止",
       "stopped": "途中で停止したため、結果は保存していません。"
     },

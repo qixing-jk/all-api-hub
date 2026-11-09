@@ -55,6 +55,7 @@ const openFloatingLayerSelector = [
   '[data-slot="select-content"][data-state="open"]',
   '[data-slot="popover-content"][data-state="open"]',
   '[data-slot="combobox-content"][data-open]',
+  '[data-tooltip-open="true"]',
 ].join(",")
 
 type FocusSession = {
@@ -189,7 +190,7 @@ const scheduleDeferredFocusLeaseSettlement = (session: FocusSession) => {
 }
 
 /**
- * Detects nested select, popover, or combobox layers that should handle Escape
+ * Detects nested select, popover, combobox, or interactive tooltip layers that should handle Escape
  * before the legacy Modal treats it as a dialog dismissal request.
  */
 function hasOpenFloatingLayer() {

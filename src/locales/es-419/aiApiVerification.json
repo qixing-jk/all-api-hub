@@ -31,7 +31,14 @@
     "generatedVideoPreview": "Vista previa del video generado",
     "history": {
       "clear": "Borrar historial",
-      "lastVerified": "Última prueba"
+      "lastVerified": "Última prueba",
+      "previousResult": "Anterior: {{result}}",
+      "storage": {
+        "context": "El historial conserva las mediciones, sin detalles de cada solicitud.",
+        "drawing": "El historial no conserva el dibujo ni los detalles de ejecución.",
+        "needle": "El historial conserva las mediciones. El mismo número de muestra y configuración permiten generar de nuevo el texto de prueba.",
+        "probe": "El historial conserva el resumen, sin el contenido de las solicitudes ni las respuestas."
+      }
     },
     "intro": {
       "flow": "Pasos de la prueba",
@@ -290,10 +297,113 @@
       "errors": {
         "unexpected": "La solicitud falló: {{message}}"
       },
+      "needle": {
+        "automatic": "Automático",
+        "automaticLimit": "Automático ({{limit}})",
+        "budget": "Unos {{tokens}} tokens de entrada, más la salida. La prueba consume tu cuota de API.",
+        "cancelledCell": "Cancelado",
+        "cancelledUnknown": "No se obtuvo un resultado evaluable.",
+        "capacityRunning": "Comprobando el contexto disponible. Las longitudes se actualizarán al terminar.",
+        "capped": "Cada solicitud prueba hasta 1M tokens de entrada.",
+        "cell": "Entrada local: {{tokens}} tokens · Posición real: {{depth}}% · {{latency}} ms",
+        "cellDetails": "Detalles de la celda",
+        "cumulativeScore": "Resultados acumulados: {{hits}}/{{graded}} respuestas evaluables coinciden",
+        "custom": "Personalizado",
+        "customLimit": "Longitud personalizada (tokens)",
+        "description": "Comprueba si el modelo encuentra un registro específico en distintas posiciones de un texto largo.",
+        "errors": {
+          "busy": "Ya hay una prueba de esta conexión en otra página.",
+          "failed": "No se pudo completar la prueba de la aguja: {{detail}}",
+          "metadata": "No se pudo cargar la información de contexto. Intenta de nuevo.",
+          "request": "Selecciona un modelo y credenciales válidas antes de ejecutar."
+        },
+        "exactLengths": "Longitudes exactas: {{lengths}} tokens",
+        "exactTotal": "Entrada total estimada: {{tokens}} tokens",
+        "expected": "Respuesta esperada: {{value}}",
+        "invalid": "La longitud debe ser un entero entre 1,024 y 1,048,576; el número de muestra, un entero entre 0 y 4,294,967,295.",
+        "length": "Tokens",
+        "lengthRule": "Las longitudes se duplican desde 8K y terminan con el límite de entrada de {{limit}}.",
+        "limit": "Longitud máxima del texto (tokens)",
+        "limitation": "Una coincidencia solo verifica esta muestra. Un fallo no demuestra truncamiento, una ventana de contexto menor ni un modelo diferente.",
+        "matrix": "Resultados por longitud y posición",
+        "matrixHint": "Haz clic en un estado para ver los detalles y ejecutar o repetir esa celda. Los botones de fila y columna ejecutan todas sus celdas, incluidas las que ya tienen resultados. Detener solo afecta a la celda, fila o columna correspondiente.",
+        "notRun": "Sin ejecutar",
+        "notScheduled": "Fuera de esta ejecución",
+        "outcomes": {
+          "contextLimit": "Excede límite",
+          "error": "Error",
+          "hit": "Coincide",
+          "incomplete": "Incompleto",
+          "interrupted": "Desconocido",
+          "miss": "No coincide"
+        },
+        "planDetails": "¿Cómo se eligen las longitudes?",
+        "planned": "Programado",
+        "plannedLengths": "Longitudes de texto (tokens)",
+        "positionRule": "Cada longitud se prueba en {{positions}}, cubriendo el inicio, el centro y el final.",
+        "preparing": "Preparando el plan de prueba…",
+        "preparingCellState": "Preparando…",
+        "previewPositions": "Cada longitud se prueba en las posiciones {{positions}}.",
+        "previewTitle": "Vista previa de la prueba",
+        "previousResult": "Resultado anterior (antes de esta ejecución)",
+        "probeFirst": "Comprobar el contexto disponible",
+        "progress": "Última ejecución: {{completed}}/{{total}} solicitudes procesadas",
+        "quick": "Probar solo el texto más largo",
+        "quickHint": "Prueba solo las tres posiciones de la longitud máxima prevista. Las demás longitudes quedan fuera de esta ejecución y pueden probarse por fila o columna.",
+        "randomSample": "Nueva muestra aleatoria",
+        "reasons": {
+          "budget": "Presupuesto alcanzado",
+          "complete": "Finalizado",
+          "error": "Solicitud fallida",
+          "interrupted": "Interrumpido; resultado desconocido"
+        },
+        "reference": {
+          "context": "Datos del modelo: contexto de {{tokens}} (sin verificar)",
+          "input": "Datos del modelo: límite de entrada de {{tokens}} (sin verificar)",
+          "measured": "Entrada aceptada antes: {{tokens}} (máximo desconocido)",
+          "unknown": "No se conoce el límite de contexto. El modo automático usa {{tokens}} tokens por ahora; la comprobación actualizará ese valor."
+        },
+        "reproduce": "Muestra {{seed}} · Tokenizador: {{encoding}}.",
+        "requestCount_one": "{{count}} solicitud",
+        "requestCount_many": "{{count}} solicitudes",
+        "requestCount_other": "{{count}} solicitudes",
+        "requestDetails": "Detalles de la solicitud y la respuesta",
+        "resultDetails": "Parámetros de prueba y reproducción",
+        "retestCell": "Repetir esta celda",
+        "retestColumn": "Repetir columna {{depth}}% ({{requests}})",
+        "retestRow": "Repetir fila {{length}} ({{requests}})",
+        "retry": "Reintentar",
+        "run": "Iniciar prueba de búsqueda",
+        "runCell": "Ejecutar esta celda",
+        "runColumn": "Ejecutar columna {{depth}}% ({{requests}})",
+        "runRow": "Ejecutar fila {{length}} ({{requests}})",
+        "savedResult": "Resultado guardado",
+        "scopeProgress": "{{completed}}/{{total}} procesados",
+        "score": "{{hits}}/{{total}} aciertos",
+        "scoreStep": "Comparar el código devuelto",
+        "searchStep": "Buscar el registro solicitado",
+        "seedHint": "Deja vacío para generar una muestra nueva cada vez. Usa el mismo número y configuración para repetir el mismo texto.",
+        "seedInput": "Número de muestra (opcional)",
+        "singleLengthRule": "Este plan prueba una sola longitud: {{limit}}.",
+        "sources": {
+          "custom": "Configuraste una entrada máxima de {{limit}}. El plan usa ese límite.",
+          "declaredContext": "Los datos del modelo indican {{context}} de contexto total. Al reservar {{reserve}} para la respuesta, quedan {{input}} de entrada. Esto no se ha verificado en la API actual.",
+          "declaredInput": "Los datos del modelo indican un límite de entrada independiente de {{input}}, que determina las longitudes. Esto no se ha verificado en la API actual.",
+          "fallback": "No hay límites del modelo ni registros de entrada aceptada disponibles. Se usa el límite predeterminado de {{limit}}. Puedes ajustarlo en la configuración o comprobar primero el contexto disponible.",
+          "measured": "Según la entrada aceptada antes por esta conexión, el plan prueba hasta {{limit}}. Esto no establece la capacidad máxima del modelo."
+        },
+        "stopCapacity": "Detener medición de contexto",
+        "stopCell": "Detener {{length}} · {{depth}}%",
+        "stopColumn": "Detener columna {{depth}}%",
+        "stopFailed": "No se pudo detener. Intenta de nuevo.",
+        "stoppingCell": "Deteniendo…",
+        "stopRow": "Detener fila {{length}}",
+        "title": "Aguja en un pajar",
+        "tokenUnits": "En esta prueba, 1K = 1,024 tokens y 1M = 1,048,576 tokens."
+      },
       "pelican": {
         "analysis": "{{shapes}} formas · {{wheels}} círculos/elipses · viewBox {{viewBox}}",
         "description": "Pide al modelo un SVG de un pelícano en bicicleta para compararlo a simple vista. La valoración sigue siendo manual.",
-        "historyOnly": "Solo se guardó el resumen. Ejecuta de nuevo para ver el dibujo y los detalles.",
         "noSvg": "El modelo no devolvió ningún SVG.",
         "outcomes": {
           "error": "Error de ejecución",
@@ -314,6 +424,7 @@
         "saveFailed": "No se pudieron guardar los prompts: {{message}}",
         "sharedHint": "Los prompts guardados se comparten entre todos los accesos a las pruebas."
       },
+      "settingsTitle": "Configuración de la prueba",
       "stop": "Detener",
       "stopped": "Detenido antes de terminar; no se guardó nada."
     },

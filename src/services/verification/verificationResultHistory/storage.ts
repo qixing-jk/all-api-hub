@@ -13,6 +13,7 @@ import {
   coerceContextSummary,
   coerceDrawingSummary,
   coerceHistorySummary,
+  coerceNeedleSummary,
   coerceTrustedConfig,
   createDefaultConfig,
   sanitizeConfig,
@@ -34,6 +35,7 @@ import {
   type ApiVerificationHistoryTarget,
   type ContextCapacitySummary,
   type DrawingVerificationSummary,
+  type NeedleSummary,
 } from "~/services/verification/verificationResultHistory/types"
 import { serializeVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/utils"
 import { onStorageChanged } from "~/utils/browser/storage"
@@ -340,6 +342,55 @@ class VerificationResultHistoryStorageService {
     return null
   }
 
+  async getNeedleSummary(
+    scopeKey: string,
+    target?: ApiVerificationHistoryTarget,
+  ): Promise<NeedleSummary | null> {
+    const config = await this.readConfigForRead()
+    const key = target
+      ? serializeVerificationHistoryTarget(target)
+      : `connection:${scopeKey}`
+    const summary = config.needleSummaries?.find(
+      (item) => item.targetKey === key && item.scopeKey === scopeKey,
+    )
+    return summary &&
+      applyVerificationRetention([summary], { now: Date.now() }).summaries
+        .length
+      ? structuredClone(summary)
+      : null
+  }
+
+  async upsertNeedleSummary(summary: NeedleSummary): Promise<void> {
+    const incoming = coerceNeedleSummary(summary)
+    if (!incoming) throw new Error("Invalid needle summary")
+    await this.mutateConfig((config) => {
+      const current = config.needleSummaries?.find(
+        (item) => item.targetKey === incoming.targetKey,
+      )
+      if (current && current.verifiedAt > incoming.verifiedAt)
+        return { result: undefined, changed: false, next: config }
+      const retained = applyVerificationRetention(
+        [
+          incoming,
+          ...(config.needleSummaries ?? []).filter(
+            (item) => item.targetKey !== incoming.targetKey,
+          ),
+        ],
+        { now: Date.now() },
+      )
+      return {
+        result: undefined,
+        changed: true,
+        next: {
+          ...config,
+          needleSummaries: retained.summaries,
+          lastUpdated: Date.now(),
+        },
+      }
+    })
+    await this.sweepOrphans()
+  }
+
   async getContextSummary(
     scopeKey: string,
     target?: ApiVerificationHistoryTarget,
@@ -444,10 +495,14 @@ class VerificationResultHistoryStorageService {
       const drawingSummaries = config.drawingSummaries?.filter(
         (item) => item.targetKey !== targetKey,
       )
+      const needleSummaries = config.needleSummaries?.filter(
+        (item) => item.targetKey !== targetKey,
+      )
       const contextSummaries = config.contextSummaries?.filter(
         (item) => item.targetKey !== targetKey,
       )
       const changed =
+        needleSummaries?.length !== config.needleSummaries?.length ||
         contextSummaries?.length !== config.contextSummaries?.length ||
         summaries.length !== config.summaries.length ||
         drawingSummaries?.length !== config.drawingSummaries?.length
@@ -457,6 +512,7 @@ class VerificationResultHistoryStorageService {
           ...config,
           summaries,
           ...(contextSummaries ? { contextSummaries } : {}),
+          ...(needleSummaries ? { needleSummaries } : {}),
           ...(drawingSummaries ? { drawingSummaries } : {}),
           lastUpdated: Date.now(),
         },
@@ -486,6 +542,10 @@ class VerificationResultHistoryStorageService {
     }
 
     return this.mutateConfig((config) => {
+      const needles = applyOwnerReconcile(
+        config.needleSummaries ?? [],
+        normalized,
+      )
       const outcome = applyOwnerReconcile(config.summaries, normalized)
       const drawings = applyOwnerReconcile(
         config.drawingSummaries ?? [],
@@ -496,6 +556,8 @@ class VerificationResultHistoryStorageService {
         normalized,
       )
       const changed =
+        needles.removed > 0 ||
+        needles.remapped > 0 ||
         contexts.removed > 0 ||
         contexts.remapped > 0 ||
         outcome.removed > 0 ||
@@ -505,12 +567,23 @@ class VerificationResultHistoryStorageService {
 
       return {
         result: {
-          removed: outcome.removed + drawings.removed + contexts.removed,
-          remapped: outcome.remapped + drawings.remapped + contexts.remapped,
+          removed:
+            outcome.removed +
+            drawings.removed +
+            contexts.removed +
+            needles.removed,
+          remapped:
+            outcome.remapped +
+            drawings.remapped +
+            contexts.remapped +
+            needles.remapped,
         },
         next: {
           ...config,
           summaries: outcome.summaries,
+          ...(config.needleSummaries
+            ? { needleSummaries: needles.summaries }
+            : {}),
           ...(config.contextSummaries
             ? { contextSummaries: contexts.summaries }
             : {}),
@@ -593,6 +666,11 @@ class VerificationResultHistoryStorageService {
         { now, liveProfileIds, liveAccountIds },
       )
 
+      const needles = applyVerificationRetention(config.needleSummaries ?? [], {
+        now,
+        liveProfileIds,
+        liveAccountIds,
+      })
       const contexts = applyVerificationRetention(
         config.contextSummaries ?? [],
         { now, liveProfileIds, liveAccountIds },
@@ -600,6 +678,8 @@ class VerificationResultHistoryStorageService {
       return {
         result: {
           removed:
+            (config.needleSummaries?.length ?? 0) -
+            needles.summaries.length +
             (config.contextSummaries?.length ?? 0) -
             contexts.summaries.length +
             config.summaries.length -
@@ -611,6 +691,9 @@ class VerificationResultHistoryStorageService {
         next: {
           ...config,
           summaries: retention.summaries,
+          ...(config.needleSummaries
+            ? { needleSummaries: needles.summaries }
+            : {}),
           ...(config.contextSummaries
             ? { contextSummaries: contexts.summaries }
             : {}),
@@ -625,6 +708,7 @@ class VerificationResultHistoryStorageService {
           retention.changed ||
           drawings.changed ||
           contexts.changed ||
+          needles.changed ||
           completed,
       }
     })

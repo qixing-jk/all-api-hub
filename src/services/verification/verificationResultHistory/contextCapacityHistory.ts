@@ -1,7 +1,4 @@
-import {
-  API_VERIFICATION_MODES,
-  API_VERIFICATION_REQUEST_PROFILES,
-} from "~/services/verification/aiApiVerification/types"
+import { API_VERIFICATION_MODES } from "~/services/verification/aiApiVerification/types"
 import {
   CONTEXT_ATTEMPT_FAILURE_REASONS,
   CONTEXT_ATTEMPT_OUTCOMES,
@@ -13,6 +10,11 @@ import type {
 } from "~/services/verification/modelQuality/contextCapacityRun"
 import { CONTEXT_CAPACITY_INCONCLUSIVE_REASONS } from "~/services/verification/verificationResultHistory/types"
 
+import {
+  digestIdentity,
+  getVerificationScopeKey,
+  modelTarget,
+} from "./requestIdentity"
 import { verificationResultHistoryStorage } from "./storage"
 import type {
   ApiVerificationHistoryTarget,
@@ -50,64 +52,13 @@ export async function getAccountInventoryContextHistory(
   return summary ? { ...summary, requiresCredentialVerification: true } : null
 }
 
-/** Hash the complete request identity; neither credentials nor the URL are stored. */
-export async function getContextCapacityScopeKey(
-  request: ContextHistoryRequest,
-) {
-  return digestIdentity(getContextCapacityRequestIdentity(request))
-}
-
-/** In-memory equality only; never persist the unhashed request identity. */
-export function getContextCapacityRequestIdentity(
-  request: ContextHistoryRequest,
-) {
-  const headers = Object.entries(request.requestHeaders ?? {})
-    .map(([name, value]) => [name.toLowerCase(), value])
-    .sort()
-  return JSON.stringify([
-    request.apiType,
-    request.baseUrl.trim().replace(/\/+$/, ""),
-    request.apiKey,
-    request.modelId.trim(),
-    request.mode ?? API_VERIFICATION_MODES.Streaming,
-    request.requestProfile ?? API_VERIFICATION_REQUEST_PROFILES.Default,
-    request.requestProfileEnhanced ?? false,
-    headers,
-  ])
-}
-
-/** Only digests are persisted; the unhashed connection identity stays in memory. */
-async function digestIdentity(identity: string) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(identity),
-  )
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("")
-}
-
-/** Bind profile-level entry points to the model actually tested. */
-function modelTarget(
-  target: ApiVerificationHistoryTarget | undefined,
-  modelId: string,
-) {
-  return target?.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.Profile
-    ? ({
-        kind: API_VERIFICATION_HISTORY_TARGET_KINDS.ProfileModel,
-        profileId: target.profileId,
-        modelId,
-      } as const)
-    : target
-}
-
 export const contextCapacityHistory = {
   async get(
     request: ContextHistoryRequest,
     target?: ApiVerificationHistoryTarget,
   ) {
     return verificationResultHistoryStorage.getContextSummary(
-      await getContextCapacityScopeKey(request),
+      await getVerificationScopeKey(request),
       modelTarget(target, request.modelId),
     )
   },
@@ -122,7 +73,7 @@ export const contextCapacityHistory = {
     const summary: ContextCapacitySummary = {
       target: modelTarget(target, request.modelId),
       targetKey: "",
-      scopeKey: await getContextCapacityScopeKey(request),
+      scopeKey: await getVerificationScopeKey(request),
       ...(target?.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel &&
       inventoryIdentity
         ? { inventoryKey: await digestIdentity(inventoryIdentity) }
@@ -134,6 +85,14 @@ export const contextCapacityHistory = {
       mode: request.mode ?? API_VERIFICATION_MODES.Streaming,
       lowerBoundTokens: result?.lowerBoundTokens ?? 0,
       declaredContext: result?.counter.declaredContext,
+      ...(result
+        ? {
+            counter: {
+              encoding: result.counter.encoding,
+              estimated: result.counter.estimated,
+            },
+          }
+        : {}),
       upperBoundTokens: result?.upperBoundTokens,
       reason: result?.reason ?? CONTEXT_CAPACITY_REASONS.Error,
       ...(result?.reason === CONTEXT_CAPACITY_REASONS.Inconclusive

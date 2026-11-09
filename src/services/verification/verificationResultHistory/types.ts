@@ -11,6 +11,8 @@ import {
   type PelicanExecutionMode,
 } from "~/services/verification/modelQuality/constants"
 import type { ContextCapacityReason } from "~/services/verification/modelQuality/contextCapacityConstants"
+import type { ContextCounterInfo } from "~/services/verification/modelQuality/contextTokens"
+import type { NeedleResult } from "~/services/verification/modelQuality/needleRun"
 
 /**
  * Stored schema version.
@@ -109,6 +111,7 @@ export type ApiVerificationHistoryConfig = {
   summaries: ApiVerificationHistorySummary[]
   drawingSummaries?: DrawingVerificationSummary[]
   contextSummaries?: ContextCapacitySummary[]
+  needleSummaries?: NeedleSummary[]
   lastUpdated: number
   /**
    * When the last complete orphan sweep finished. `0` means "never swept", which
@@ -137,11 +140,22 @@ export type ContextCapacitySummary = {
   apiType: ApiVerificationApiType
   modelId: string
   lowerBoundTokens: number
-  /** Metadata expectation captured at test time; absent in older history. */
+  /** Counter evidence is absent only when no measurement was produced. */
+  counter?: Pick<ContextCounterInfo, "encoding" | "estimated">
+  /** Metadata expectation captured at test time. */
   declaredContext?: number
   upperBoundTokens?: number
   reason: ContextCapacityReason
   inconclusiveReason?: (typeof CONTEXT_CAPACITY_INCONCLUSIVE_REASONS)[keyof typeof CONTEXT_CAPACITY_INCONCLUSIVE_REASONS]
   requests: number
   outputLimited: boolean
+}
+
+/** Same request scope as capacity history, independent retrieval observations. */
+export type NeedleSummary = {
+  target?: ApiVerificationHistoryTarget
+  targetKey: string
+  scopeKey: string
+  verifiedAt: number
+  result: NeedleResult
 }

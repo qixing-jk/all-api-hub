@@ -3,9 +3,101 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import Tooltip from "~/components/Tooltip"
+import { Modal } from "~/components/ui"
 import { render as renderWithProviders } from "~~/tests/test-utils/render"
 
 describe("Tooltip", () => {
+  it.each([false, true])(
+    "keeps a clicked hint open after mouseout until an outside click (anchorAsChild: %s)",
+    async (anchorAsChild) => {
+      const user = userEvent.setup()
+      render(
+        <>
+          <Tooltip
+            content="Saved summary only"
+            anchorAsChild={anchorAsChild}
+            openOnClick
+          >
+            <button type="button">Previous result</button>
+          </Tooltip>
+          <button type="button">Elsewhere</button>
+        </>,
+      )
+      const anchor = screen.getByRole("button", { name: "Previous result" })
+      await user.click(anchor)
+      expect(await screen.findByRole("tooltip")).toBeVisible()
+      await user.unhover(anchor)
+      // Touch taps can synthesize mouseout without moving keyboard focus.
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 100)))
+      expect(screen.getByRole("tooltip")).toBeVisible()
+      await user.click(screen.getByRole("button", { name: "Elsewhere" }))
+      await waitFor(() =>
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+      )
+      await user.hover(anchor)
+      await waitFor(() => expect(screen.getByRole("tooltip")).toBeVisible())
+      await user.unhover(anchor)
+      await waitFor(() =>
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+      )
+    },
+  )
+
+  it("opens a click-enabled wrapper tooltip when a child receives keyboard focus", async () => {
+    const user = userEvent.setup()
+    render(
+      <Tooltip content="Saved summary only" openOnClick>
+        <button type="button">Previous result</button>
+      </Tooltip>,
+    )
+    await user.tab()
+    expect(await screen.findByRole("tooltip")).toBeVisible()
+  })
+  it("dismisses an interactive tooltip before the containing modal on Escape", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    renderWithProviders(
+      <Modal isOpen onClose={onClose} title="Verification">
+        <Tooltip content="Saved summary only" anchorAsChild openOnClick>
+          <button type="button">Previous result</button>
+        </Tooltip>
+      </Modal>,
+    )
+    await user.click(
+      await screen.findByRole("button", { name: "Previous result" }),
+    )
+    await waitFor(() => expect(screen.getByRole("tooltip")).toBeVisible())
+    await user.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    )
+    expect(onClose).not.toHaveBeenCalled()
+    await user.keyboard("{Escape}")
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+  it("reopens a click-enabled hint after Escape without requiring focus to move", async () => {
+    const user = userEvent.setup()
+    render(
+      <Tooltip content="Saved summary only" anchorAsChild openOnClick>
+        <button type="button">Previous result</button>
+      </Tooltip>,
+    )
+    const anchor = screen.getByRole("button", { name: "Previous result" })
+    await user.tab()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Saved summary only",
+    )
+    await user.hover(anchor)
+    await user.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    )
+    expect(anchor).toHaveFocus()
+    await user.click(anchor)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Saved summary only",
+    )
+  })
   it("places an opted-in rich tooltip outside its clipped container and keeps the action usable", async () => {
     const user = userEvent.setup()
     const onAction = vi.fn()

@@ -323,6 +323,7 @@ export function VerifyApiCredentialProfileDialog(
                   )}
                 >
                   <VerificationProbeRow
+                    historical={probe.historical}
                     isRunning={probe.isRunning}
                     controller={tools}
                     probeId={probe.definition.id}

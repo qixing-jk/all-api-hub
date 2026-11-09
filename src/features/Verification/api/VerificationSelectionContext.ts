@@ -4,6 +4,7 @@ import { createContext } from "react"
 export const VerificationSelectionContext = createContext<{
   selectedId: string | null
   isWide: boolean
+  availableHeight: number
   select: (id: string) => void
   register: (id: string) => () => void
 } | null>(null)

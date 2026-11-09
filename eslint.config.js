@@ -100,7 +100,7 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 const dynamicImportAllowlist = [
   // Capacity probes load only the selected tokenizer vocabulary after user initiation.
   {
-    file: "src/services/verification/modelQuality/contextCounter.ts",
+    file: "src/services/verification/modelQuality/contextTokens.ts",
     imports: [
       "gpt-tokenizer/modelsMap",
       "gpt-tokenizer/encoding/cl100k_base",

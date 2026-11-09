@@ -5,6 +5,8 @@ import { Alert, CollapsibleSection } from "~/components/ui"
 import { AgentTestResult } from "~/features/Verification/api/AgentTestResult"
 import type { PelicanTestResult as PelicanResult } from "~/services/verification/modelQuality/pelican"
 
+import { VerificationOutputText } from "./VerificationOutputText"
+
 /** Inline preview of a model-drawn SVG, rendered as an image so scripts never run. */
 function PelicanSvgPreview({ svg }: { svg: string }) {
   const { t } = useTranslation("aiApiVerification")
@@ -62,9 +64,7 @@ export function PelicanTestResult({ pelican }: { pelican: PelicanResult }) {
         title={t("verifyDialog.tools.pelican.raw")}
         buttonClassName="border-border-subtle rounded-md border px-3 py-2"
       >
-        <pre className="text-secondary-foreground max-h-64 overflow-auto text-xs break-words whitespace-pre-wrap">
-          {pelican.text}
-        </pre>
+        <VerificationOutputText text={pelican.text} />
       </CollapsibleSection>
     </div>
   )

@@ -71,6 +71,7 @@ it("retains the tested metadata expectation across history readback", async () =
   expect(await contextCapacityHistory.get(request)).toMatchObject({
     declaredContext: 131072,
     lowerBoundTokens: 4096,
+    counter: { encoding: "o200k_base", estimated: true },
   })
 })
 

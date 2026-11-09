@@ -166,6 +166,95 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("webAiApiCheck background handlers", () => {
+  it("keeps one background owner across native pages, protects its checkpoint and preserves request headers", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const needle = await import(
+      "~/services/verification/modelQuality/needleRun"
+    )
+    const { createNeedlePlan } = await import(
+      "~/services/verification/modelQuality/needlePlan"
+    )
+    const { needleHistory } = await import(
+      "~/services/verification/verificationResultHistory/needleHistory"
+    )
+    const { Storage } = await import("@plasmohq/storage")
+    const { WEB_AI_API_CHECK_STORAGE_KEYS } = await import(
+      "~/services/core/storageKeys"
+    )
+    const entered = createDeferred<void>()
+    const finish = createDeferred<void>()
+    const counter = { encoding: "o200k_base", estimated: true }
+    const snapshot: import("~/services/verification/modelQuality/needleRun").NeedleResult =
+      {
+        version: 1,
+        seed: 42,
+        counter,
+        plan: createNeedlePlan({ counter }),
+        reason: "running",
+        cells: [],
+      }
+    const run = vi
+      .spyOn(needle, "runNeedleTest")
+      .mockImplementationOnce(async (params) => {
+        await params.onCheckpoint?.(snapshot, { targetTokens: 8192, depth: 10 })
+        entered.resolve()
+        await finish.promise
+        return { ...snapshot, reason: "complete" }
+      })
+    const save = vi.spyOn(needleHistory, "save")
+    const target = {
+      kind: "profile-model",
+      profileId: "needle-owner",
+      modelId: "test",
+    } as const
+    const data = {
+      runId: "native-first",
+      apiType: "openai",
+      baseUrl: "https://native.example.invalid",
+      apiKey: "native-key",
+      modelId: "test",
+      requestHeaders: { "x-route": "private" },
+      seed: 42,
+      historyTarget: target,
+    }
+    background.setupWebAiApiCheckMessagingListeners()
+    const handler = webAiApiCheckMessageHandlers.get("webAiApiCheck:runNeedle")!
+    const first = handler({ data })
+    try {
+      await entered.promise
+      await expect(
+        handler({
+          data: { ...data, runId: "native-second", recoverOnly: true },
+        }),
+      ).resolves.toMatchObject({
+        success: false,
+        errorName: "LongContextBusyError",
+      })
+      await webAiApiCheckMessageHandlers.get(
+        "webAiApiCheck:discardNeedleCheckpoints",
+      )!({ data: {} })
+      const checkpoint = await new Storage({ area: "local" }).get(
+        WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS,
+      )
+      expect(JSON.stringify(checkpoint)).toContain("inFlight")
+      expect(run).toHaveBeenCalledOnce()
+      expect(run).toHaveBeenCalledWith(
+        expect.objectContaining({ requestHeaders: data.requestHeaders }),
+      )
+    } finally {
+      finish.resolve()
+      await expect(first).resolves.toMatchObject({ success: true })
+      run.mockRestore()
+    }
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ requestHeaders: data.requestHeaders }),
+      expect.objectContaining({ reason: "complete" }),
+      target,
+    )
+    save.mockRestore()
+  })
   it("recovers an interrupted in-flight request without sending it again", async () => {
     const background = await import(
       "~/services/verification/webAiApiCheck/background"
@@ -2421,7 +2510,6 @@ describe("webAiApiCheck background handlers", () => {
     background.setupWebAiApiCheckMessagingListeners()
     background.setupWebAiApiCheckMessagingListeners()
 
-    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(16)
     expect(
       onWebAiApiCheckMessageMock.mock.calls.map((call) => call[0]),
     ).toEqual([
@@ -2436,6 +2524,11 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.RenameTag,
       WebAiApiCheckMessageTypes.RunProbe,
       WebAiApiCheckMessageTypes.RunPelican,
+      WebAiApiCheckMessageTypes.ContextCounter,
+      WebAiApiCheckMessageTypes.NeedleHistory,
+      WebAiApiCheckMessageTypes.RunNeedle,
+      WebAiApiCheckMessageTypes.StopNeedleSelection,
+      WebAiApiCheckMessageTypes.DiscardNeedleCheckpoints,
       WebAiApiCheckMessageTypes.RunContextCapacity,
       WebAiApiCheckMessageTypes.ContextHistory,
       WebAiApiCheckMessageTypes.DiscardContextCheckpoints,
