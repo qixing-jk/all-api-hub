@@ -41,82 +41,19 @@
       }
     },
     "intro": {
-      "flow": "测试步骤",
       "probes": {
-        "decision": "发送测试请求，检查决策模型是否返回有效结果。",
+        "decision": "向决策接口提交示例状态，检查是否返回决策值或概率。",
         "embedding": "发送示例文本，检查是否返回有效向量及其维度。",
         "image-generation": "提交绘图提示词，检查图像响应并预览生成的图片。",
-        "models": "检查接口能否返回模型列表，查看模型数量与名称，并获取后续测试的建议模型。",
+        "models": "获取接口返回的模型名称与数量，供后续测试选择模型。",
         "rerank": "提交查询和候选文档，检查相关性排序结果。",
-        "structured-output": "要求模型按指定结构返回数据，检查结果是否符合约定格式。",
-        "text-generation": "发送提示词，检查是否能生成文本，并查看返回内容。",
-        "tool-calling": "让模型选择工具并提供调用参数，检查工具调用是否符合预期。",
+        "structured-output": "要求模型返回包含 ok: true 的 JSON，并校验该字段的值和结构。",
+        "text-generation": "检查模型能否按提示词回复。回复包含 OK（不区分大小写）时通过。",
+        "tool-calling": "要求模型调用内置的时间戳工具，检测到该工具的调用时通过。",
         "video-generation": "提交视频生成任务，等待任务状态并查看生成的视频。",
         "web-search": "检查接口能否使用联网搜索，并查看搜索结果与引用信息。"
       },
-      "startHint": "点击 <run>运行</run> 开始本项测试。",
-      "steps": {
-        "context-capacity": {
-          "input": "构造长文本",
-          "output": "记录边界",
-          "process": "多轮探测"
-        },
-        "decision": {
-          "input": "提交状态",
-          "output": "检查结果",
-          "process": "获取决策"
-        },
-        "embedding": {
-          "input": "示例文本",
-          "output": "检查维度",
-          "process": "接收向量"
-        },
-        "image-generation": {
-          "input": "发送提示词",
-          "output": "预览图片",
-          "process": "接收图像"
-        },
-        "models": {
-          "input": "获取列表",
-          "output": "建议模型",
-          "process": "检查模型"
-        },
-        "pelican": {
-          "input": "描述画面",
-          "output": "人工看图",
-          "process": "生成 SVG"
-        },
-        "rerank": {
-          "input": "查询与文档",
-          "output": "检查返回项",
-          "process": "请求重排"
-        },
-        "structured-output": {
-          "input": "指定结构",
-          "output": "校验格式",
-          "process": "生成 JSON"
-        },
-        "text-generation": {
-          "input": "发送提示词",
-          "output": "检查回复",
-          "process": "接收文本"
-        },
-        "tool-calling": {
-          "input": "定义工具",
-          "output": "检查参数",
-          "process": "请求调用"
-        },
-        "video-generation": {
-          "input": "提交视频任务",
-          "output": "预览视频",
-          "process": "查询任务状态"
-        },
-        "web-search": {
-          "input": "发起搜索",
-          "output": "查看引用",
-          "process": "检查搜索证据"
-        }
-      }
+      "startHint": "点击 <run>运行</run> 开始本项测试。"
     },
     "loadingRuntimeKeysHint": "正在加载密钥...",
     "mediaPreviewUnavailable": "无法加载预览。",
@@ -172,7 +109,6 @@
     "requiresModelId": "请输入模型 ID 后运行该测试。",
     "sections": {
       "onDemand": "按需测试",
-      "onDemandHint": "单独运行",
       "routine": "常规测试"
     },
     "selectedRuntimeKeyIncompatibleHint": "当前选择的密钥不适用于该模型分组。请先选择适用的密钥后再测试。",
@@ -375,8 +311,6 @@
         "savedResult": "历史结果",
         "scopeProgress": "已处理 {{completed}}/{{total}}",
         "score": "{{hits}}/{{total}} 命中",
-        "scoreStep": "核对返回代码",
-        "searchStep": "查找指定记录",
         "seedHint": "留空时每次生成新样本。使用相同编号和设置，可重复测试同一份文本。",
         "seedInput": "测试样本编号（选填）",
         "singleLengthRule": "本次只测试 {{limit}} 这一种长度。",
@@ -422,7 +356,7 @@
       "questionAnswer": {
         "comparison": "答案对照",
         "comparisonHint": "仅对照最终答案的文本是否一致，推理是否正确请结合完整回答判断。",
-        "description": "修改问题，可填写参考答案，运行后查看回答与对照结果。",
+        "description": "用自定义问题查看模型的回答与推理；可填写参考答案，对照最终答案。",
         "draftChanged": "问题或参考答案已修改。当前展示的是上次运行结果，请重新运行以对照修改后的内容。",
         "finalAnswer": "提取的最终答案",
         "loadFailed": "无法读取问答设置，请重试以加载已保存的草稿。",
@@ -453,11 +387,6 @@
         "runReference": "本次参考答案",
         "saveFailed": "设置保存失败，当前草稿仍可用于测试。",
         "saving": "正在保存…",
-        "steps": {
-          "question": "提交问题",
-          "response": "生成回答",
-          "result": "查看结果"
-        },
         "title": "问答测试"
       },
       "settingsTitle": "测试设置",

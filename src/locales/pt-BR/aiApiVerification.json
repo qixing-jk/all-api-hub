@@ -41,82 +41,19 @@
       }
     },
     "intro": {
-      "flow": "Etapas do teste",
       "probes": {
-        "decision": "Envie uma solicitação de teste e verifique se o modelo de decisão retorna um resultado válido.",
+        "decision": "Envie um estado de exemplo ao endpoint de decisões e verifique se ele retorna um valor de decisão ou probabilidades.",
         "embedding": "Envie um texto de exemplo e verifique o vetor retornado e suas dimensões.",
         "image-generation": "Envie uma instrução de imagem, verifique a resposta e visualize a imagem gerada.",
-        "models": "Verifique se a API retorna uma lista de modelos, confira os nomes e a quantidade e obtenha um modelo sugerido para os próximos testes.",
+        "models": "Obtenha os nomes e a quantidade de modelos do endpoint para escolher modelos nos próximos testes.",
         "rerank": "Envie uma consulta e documentos candidatos e verifique a classificação por relevância.",
-        "structured-output": "Solicite dados estruturados ao modelo e verifique se seguem o formato solicitado.",
-        "text-generation": "Envie uma instrução, verifique a geração de texto e confira o conteúdo retornado.",
-        "tool-calling": "Peça ao modelo que escolha uma ferramenta e forneça argumentos e verifique a chamada.",
+        "structured-output": "Peça ao modelo um JSON contendo ok: true e valide o valor do campo e a estrutura.",
+        "text-generation": "Verifique se o modelo responde a uma instrução. O teste passa se a resposta contiver OK, sem diferenciar maiúsculas de minúsculas.",
+        "tool-calling": "Peça ao modelo para chamar a ferramenta integrada de registro de data e hora. O teste passa quando essa chamada é detectada.",
         "video-generation": "Envie uma tarefa de geração de vídeo, aguarde seu status e confira o vídeo gerado.",
         "web-search": "Verifique se a API pode usar a pesquisa na web e confira os resultados e as citações."
       },
-      "startHint": "Selecione <run>Executar</run> para iniciar este teste.",
-      "steps": {
-        "context-capacity": {
-          "input": "Criar texto longo",
-          "output": "Registrar limites",
-          "process": "Repetir testes"
-        },
-        "decision": {
-          "input": "Enviar estado",
-          "output": "Verificar resultado",
-          "process": "Obter decisão"
-        },
-        "embedding": {
-          "input": "Texto de exemplo",
-          "output": "Verificar dimensões",
-          "process": "Receber vetor"
-        },
-        "image-generation": {
-          "input": "Enviar prompt",
-          "output": "Prévia da imagem",
-          "process": "Receber imagem"
-        },
-        "models": {
-          "input": "Obter lista",
-          "output": "Sugerir modelo",
-          "process": "Verificar modelos"
-        },
-        "pelican": {
-          "input": "Descrever cena",
-          "output": "Avaliar desenho",
-          "process": "Gerar SVG"
-        },
-        "rerank": {
-          "input": "Consulta e documentos",
-          "output": "Verificar itens",
-          "process": "Solicitar reordenação"
-        },
-        "structured-output": {
-          "input": "Definir estrutura",
-          "output": "Validar formato",
-          "process": "Gerar JSON"
-        },
-        "text-generation": {
-          "input": "Enviar prompt",
-          "output": "Verificar resposta",
-          "process": "Receber texto"
-        },
-        "tool-calling": {
-          "input": "Definir ferramenta",
-          "output": "Verificar argumentos",
-          "process": "Solicitar chamada"
-        },
-        "video-generation": {
-          "input": "Enviar tarefa de vídeo",
-          "output": "Prévia do vídeo",
-          "process": "Consultar status"
-        },
-        "web-search": {
-          "input": "Iniciar busca",
-          "output": "Ver citações",
-          "process": "Verificar evidências"
-        }
-      }
+      "startHint": "Selecione <run>Executar</run> para iniciar este teste."
     },
     "loadingRuntimeKeysHint": "Carregando chaves...",
     "mediaPreviewUnavailable": "Não foi possível carregar a prévia.",
@@ -172,7 +109,6 @@
     "requiresModelId": "Insira um ID de modelo para executar este teste.",
     "sections": {
       "onDemand": "Testes sob demanda",
-      "onDemandHint": "Executar individualmente",
       "routine": "Testes padrão"
     },
     "selectedRuntimeKeyIncompatibleHint": "A chave selecionada não está disponível para o grupo deste modelo. Escolha uma chave compatível antes de executar a verificação.",
@@ -379,8 +315,6 @@
         "savedResult": "Resultado salvo",
         "scopeProgress": "{{completed}}/{{total}} processados",
         "score": "{{hits}}/{{total}} acertos",
-        "scoreStep": "Comparar o código retornado",
-        "searchStep": "Buscar o registro solicitado",
         "seedHint": "Deixe em branco para gerar uma nova amostra a cada vez. Use o mesmo número e as mesmas configurações para repetir o texto.",
         "seedInput": "Número da amostra (opcional)",
         "singleLengthRule": "Este plano testa apenas um comprimento: {{limit}}.",
@@ -426,7 +360,7 @@
       "questionAnswer": {
         "comparison": "Comparação de respostas",
         "comparisonHint": "Apenas o texto da resposta final é comparado. Revise a resposta completa para avaliar o raciocínio.",
-        "description": "Edite a pergunta, adicione uma referência opcional e execute para ver a resposta.",
+        "description": "Use sua própria pergunta para analisar a resposta e o raciocínio do modelo. Adicione uma resposta de referência para comparar a resposta final.",
         "draftChanged": "A pergunta ou a resposta de referência mudou. Este resultado é da execução anterior; execute novamente para comparar as alterações.",
         "finalAnswer": "Resposta final extraída",
         "loadFailed": "Não foi possível carregar as configurações. Tente novamente para recuperar o rascunho salvo.",
@@ -457,11 +391,6 @@
         "runReference": "Resposta de referência desta execução",
         "saveFailed": "Não foi possível salvar as configurações. O rascunho atual ainda pode ser usado.",
         "saving": "Salvando…",
-        "steps": {
-          "question": "Enviar pergunta",
-          "response": "Gerar resposta",
-          "result": "Ver resultado"
-        },
         "title": "Teste de perguntas e respostas"
       },
       "settingsTitle": "Configurações do teste",

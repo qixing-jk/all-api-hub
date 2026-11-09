@@ -8,6 +8,8 @@ import {
   API_CREDENTIAL_PROFILES_TEST_IDS as IDS,
 } from "~/features/ApiCredentialProfiles/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import enVerification from "~/locales/en/aiApiVerification.json" with { type: "json" }
+import zhVerification from "~/locales/zh-CN/aiApiVerification.json" with { type: "json" }
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -320,9 +322,13 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
     ).not.toHaveAttribute("aria-describedby", /.+/)
     const rules = panel.getByRole("button", { name: "比对规则", exact: true })
     await expect(rules).toHaveAttribute("aria-expanded", "false")
-    await expect(panel.getByText("提交问题", { exact: true })).toBeVisible()
-    await expect(panel.getByText("生成回答", { exact: true })).toBeVisible()
-    await expect(panel.getByText("查看结果", { exact: true })).toBeVisible()
+    await expect(
+      panel.getByText(
+        zhVerification.verifyDialog.tools.questionAnswer.description,
+        { exact: true },
+      ),
+    ).toBeVisible()
+    await expect(panel.getByRole("list", { name: "测试步骤" })).toHaveCount(0)
     await expect(panel.getByRole("combobox")).toHaveCount(0)
     await page.locator('[data-slot="modal-panel"]').screenshot({
       path: test.info().outputPath("qa-zh-idle.png"),
@@ -582,6 +588,20 @@ test("verification tests run concurrently and cancel independently", async ({
     await expect(onDemand).toContainText("Drawing test")
     await expect(onDemand).toContainText("Model context test")
     await expect(
+      onDemand.getByText("Run individually", { exact: true }),
+    ).toHaveCount(0)
+    const pendingStatusEdges = await page
+      .locator(
+        "[data-verification-list] [data-verification-summary] [data-slot=badge]",
+      )
+      .evaluateAll((badges) =>
+        badges.map((badge) => badge.getBoundingClientRect().right),
+      )
+    expect(pendingStatusEdges).toHaveLength(9)
+    expect(
+      Math.max(...pendingStatusEdges) - Math.min(...pendingStatusEdges),
+    ).toBeLessThanOrEqual(1)
+    await expect(
       page.getByRole("button", { name: "Run routine tests", exact: true }),
     ).toBeEnabled()
     const toolBox = (await page
@@ -623,20 +643,23 @@ test("verification tests run concurrently and cancel independently", async ({
       views: [{ id: "dark", width: 1280, height: 900, theme: "dark" }],
     })
     const drawing = page.getByTestId("verification-tools-panel")
-    for (const [name, steps] of [
-      ["Model list", ["Fetch list", "Inspect models", "Suggest model"]],
-      ["Text generation", ["Send prompt", "Receive text", "Check reply"]],
+    for (const [name, description] of [
+      ["Model list", enVerification.verifyDialog.intro.probes.models],
+      [
+        "Text generation",
+        enVerification.verifyDialog.intro.probes["text-generation"],
+      ],
       [
         "Tool/function calling",
-        ["Define tool", "Request call", "Check arguments"],
+        enVerification.verifyDialog.intro.probes["tool-calling"],
       ],
-      ["Structured output", ["Set schema", "Generate JSON", "Validate format"]],
-      ["Web search", ["Run search", "Check search evidence", "View citations"]],
-      ["Drawing test", ["Describe scene", "Generate SVG", "Review drawing"]],
       [
-        "Model context test",
-        ["Build long input", "Run probes", "Record bounds"],
+        "Structured output",
+        enVerification.verifyDialog.intro.probes["structured-output"],
       ],
+      ["Web search", enVerification.verifyDialog.intro.probes["web-search"]],
+      ["Drawing test", enVerification.verifyDialog.tools.pelican.description],
+      ["Model context test", enVerification.verifyDialog.tools.context.hint],
     ] as const) {
       await page.getByRole("button", { name, exact: true }).click()
       await captureVisualViews({
@@ -648,23 +671,17 @@ test("verification tests run concurrently and cancel independently", async ({
       const selectedDetail = page.locator(
         "[data-verification-detail]:not([hidden])",
       )
-      const flow = selectedDetail.getByRole("list", { name: "Test steps" })
-      await expect(flow).toBeVisible()
-      await expect(flow.getByRole("listitem")).toHaveText([...steps])
-      const cardHeights = await flow
-        .getByRole("listitem")
-        .evaluateAll((items) =>
-          items.map((item) => item.getBoundingClientRect().height),
-        )
-      expect(
-        Math.max(...cardHeights) - Math.min(...cardHeights),
-      ).toBeLessThanOrEqual(1)
+      const explanation = selectedDetail.getByText(description, { exact: true })
+      await expect(explanation).toBeVisible()
+      await expect(
+        selectedDetail.getByRole("list", { name: "Test steps" }),
+      ).toHaveCount(0)
       const title = selectedDetail.getByRole("heading", { name, exact: true })
       await expect(title).toHaveCount(1)
       await expect(title).toHaveCSS("text-align", "center")
       const titleBox = (await title.boundingBox())!
-      const processBox = (await flow.boundingBox())!
-      expect(titleBox.y + titleBox.height).toBeLessThan(processBox.y)
+      const descriptionBox = (await explanation.boundingBox())!
+      expect(titleBox.y + titleBox.height).toBeLessThan(descriptionBox.y)
       const detailBox = (await selectedDetail.boundingBox())!
       expect(
         Math.abs(
@@ -1400,27 +1417,15 @@ test("an edited probe prompt persists and is used by the next run", async ({
       id: "prompt-auto-wide",
       extensionDir,
     })
-    const introFlow = textGenerationRow.getByRole("list", {
-      name: "Test steps",
-    })
-    const measureFlow = () =>
-      introFlow.evaluate((element) => {
-        const card = element.querySelector('[role="listitem"]')!
-        const icon = card.querySelector("svg")!.getBoundingClientRect()
-        const label = card.querySelector("span")!.getBoundingClientRect()
-        const box = card.getBoundingClientRect()
-        return {
-          width: element.getBoundingClientRect().width,
-          cardWidth: box.width,
-          cardHeight: box.height,
-          iconWidth: icon.width,
-          iconHeight: icon.height,
-          labelHeight: label.height,
-          gap: label.y - icon.bottom,
-        }
-      })
-    await expect.poll(async () => (await measureFlow()).width).toBeLessThan(460)
-    const compactFlow = await measureFlow()
+    const explanation = textGenerationRow.getByText(
+      enVerification.verifyDialog.intro.probes["text-generation"],
+      { exact: true },
+    )
+    await expect(explanation).toBeVisible()
+    await expect
+      .poll(async () => (await explanation.boundingBox())!.width)
+      .toBeLessThan(460)
+    const compactExplanation = (await explanation.boundingBox())!
     const title = textGenerationRow.getByRole("heading", {
       name: "Text generation",
       exact: true,
@@ -1431,7 +1436,7 @@ test("an edited probe prompt persists and is used by the next run", async ({
     expect(settingsBox.y + settingsBox.height).toBeLessThan(compactTitle.y)
     await page.setViewportSize({ width: 1280, height: 1280 })
     await expect
-      .poll(async () => (await measureFlow()).width)
+      .poll(async () => (await explanation.boundingBox())!.width)
       .toBeGreaterThanOrEqual(480)
     await captureVisualViews({
       page,
@@ -1439,12 +1444,15 @@ test("an edited probe prompt persists and is used by the next run", async ({
       id: "prompt-roomy-introduction",
       extensionDir,
     })
-    const scaledFlow = await measureFlow()
-    for (const key of Object.keys(
-      compactFlow,
-    ) as (keyof typeof compactFlow)[]) {
-      expect(scaledFlow[key]).toBeCloseTo(compactFlow[key] * 1.1, 0)
-    }
+    const scaledExplanation = (await explanation.boundingBox())!
+    expect(scaledExplanation.width).toBeCloseTo(
+      compactExplanation.width * 1.1,
+      0,
+    )
+    expect(scaledExplanation.height).toBeCloseTo(
+      compactExplanation.height * 1.1,
+      0,
+    )
     const introTitle = (await title.boundingBox())!
     expect(introTitle.height).toBeCloseTo(compactTitle.height * 1.1, 0)
     const hint = textGenerationRow.getByText("Select Run to start this test.", {
@@ -1456,7 +1464,7 @@ test("an edited probe prompt persists and is used by the next run", async ({
       .boundingBox())!
     // The small button stays within a single line of surrounding prose.
     expect(introHint.height).toBeGreaterThanOrEqual(hintButton.height)
-    expect(introHint.height).toBeLessThan(compactFlow.labelHeight * 1.1 * 2)
+    expect(introHint.height).toBeLessThan(40)
     expect(hintButton.y).toBeGreaterThanOrEqual(introHint.y)
     expect(hintButton.y + hintButton.height).toBeLessThanOrEqual(
       introHint.y + introHint.height + 1,
@@ -1500,7 +1508,7 @@ test("an edited probe prompt persists and is used by the next run", async ({
         expect(detail.y).toBeGreaterThanOrEqual(summary.y + summary.height)
         const introduction = (await textGenerationRow
           .getByText(
-            "Send a prompt, check text generation and inspect the returned content.",
+            enVerification.verifyDialog.intro.probes["text-generation"],
             { exact: true },
           )
           .boundingBox())!

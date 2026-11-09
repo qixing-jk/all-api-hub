@@ -591,7 +591,6 @@ it("offers a context probe for unknown capacity and updates the automatic plan a
   await user.click(
     screen.getByRole("switch", { name: "Test only the longest text" }),
   )
-  expect(screen.getByRole("list", { name: "Test steps" })).toBeInTheDocument()
   expect(
     screen.getByText(en.verifyDialog.tools.needle.description),
   ).toBeVisible()

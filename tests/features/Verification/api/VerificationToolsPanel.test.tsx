@@ -148,20 +148,16 @@ describe("VerificationToolsPanel", () => {
             pelicanStatus === VERIFICATION_TOOL_STATUSES.Running,
         }),
       )
-      const intro = screen.queryByRole("list", {
-        name: "aiApiVerification:verifyDialog.intro.flow",
-      })
+      const intro = screen.queryByText(
+        "aiApiVerification:verifyDialog.intro.startHint",
+      )
       if (pelicanStatus === VERIFICATION_TOOL_STATUSES.Idle) {
         expect(intro).toBeVisible()
         expect(
-          within(intro!)
-            .getAllByRole("listitem")
-            .map((item) => item.textContent),
-        ).toEqual([
-          "aiApiVerification:verifyDialog.intro.steps.pelican.input",
-          "aiApiVerification:verifyDialog.intro.steps.pelican.process",
-          "aiApiVerification:verifyDialog.intro.steps.pelican.output",
-        ])
+          screen.getByText(
+            "aiApiVerification:verifyDialog.tools.pelican.description",
+          ),
+        ).toBeVisible()
       } else expect(intro).not.toBeInTheDocument()
     },
   )

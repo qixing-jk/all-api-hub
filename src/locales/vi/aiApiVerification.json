@@ -41,82 +41,19 @@
       }
     },
     "intro": {
-      "flow": "Các bước kiểm tra",
       "probes": {
-        "decision": "Gửi yêu cầu thử và kiểm tra xem mô hình quyết định có trả về kết quả hợp lệ hay không.",
+        "decision": "Gửi trạng thái mẫu đến endpoint quyết định và kiểm tra xem có trả về giá trị quyết định hoặc xác suất hay không.",
         "embedding": "Gửi văn bản mẫu và kiểm tra vectơ trả về cùng số chiều của nó.",
         "image-generation": "Gửi lời nhắc tạo ảnh, kiểm tra phản hồi và xem trước ảnh được tạo.",
-        "models": "Kiểm tra xem API có trả về danh sách mô hình hay không, xem tên và số lượng mô hình, rồi lấy mô hình gợi ý cho các bài kiểm tra tiếp theo.",
+        "models": "Lấy tên và số lượng mô hình từ endpoint để chọn mô hình cho các bài kiểm tra tiếp theo.",
         "rerank": "Gửi truy vấn và các tài liệu ứng viên, rồi kiểm tra thứ tự mức độ liên quan.",
-        "structured-output": "Yêu cầu mô hình trả về dữ liệu có cấu trúc và kiểm tra định dạng của kết quả.",
-        "text-generation": "Gửi lời nhắc, kiểm tra khả năng tạo văn bản và xem nội dung trả về.",
-        "tool-calling": "Yêu cầu mô hình chọn công cụ và cung cấp tham số, rồi kiểm tra lệnh gọi công cụ.",
+        "structured-output": "Yêu cầu mô hình trả về JSON chứa ok: true, rồi kiểm tra giá trị trường và cấu trúc.",
+        "text-generation": "Kiểm tra mô hình có phản hồi theo lời nhắc hay không. Bài kiểm tra đạt nếu phản hồi chứa OK, không phân biệt chữ hoa và chữ thường.",
+        "tool-calling": "Yêu cầu mô hình gọi công cụ dấu thời gian tích hợp. Bài kiểm tra đạt khi phát hiện lệnh gọi công cụ đó.",
         "video-generation": "Gửi tác vụ tạo video, đợi trạng thái và xem video được tạo.",
         "web-search": "Kiểm tra xem API có thể tìm kiếm trên web hay không, rồi xem kết quả và trích dẫn."
       },
-      "startHint": "Chọn <run>Chạy</run> để bắt đầu kiểm tra này.",
-      "steps": {
-        "context-capacity": {
-          "input": "Tạo văn bản dài",
-          "output": "Ghi nhận giới hạn",
-          "process": "Thử nhiều lượt"
-        },
-        "decision": {
-          "input": "Gửi trạng thái",
-          "output": "Kiểm tra kết quả",
-          "process": "Nhận quyết định"
-        },
-        "embedding": {
-          "input": "Văn bản mẫu",
-          "output": "Kiểm tra số chiều",
-          "process": "Nhận vectơ"
-        },
-        "image-generation": {
-          "input": "Gửi lời nhắc",
-          "output": "Xem trước ảnh",
-          "process": "Nhận hình ảnh"
-        },
-        "models": {
-          "input": "Lấy danh sách",
-          "output": "Gợi ý mô hình",
-          "process": "Kiểm tra mô hình"
-        },
-        "pelican": {
-          "input": "Mô tả cảnh",
-          "output": "Đánh giá hình vẽ",
-          "process": "Tạo SVG"
-        },
-        "rerank": {
-          "input": "Truy vấn và tài liệu",
-          "output": "Kiểm tra mục trả về",
-          "process": "Yêu cầu xếp hạng lại"
-        },
-        "structured-output": {
-          "input": "Chỉ định cấu trúc",
-          "output": "Kiểm tra định dạng",
-          "process": "Tạo JSON"
-        },
-        "text-generation": {
-          "input": "Gửi lời nhắc",
-          "output": "Kiểm tra phản hồi",
-          "process": "Nhận văn bản"
-        },
-        "tool-calling": {
-          "input": "Định nghĩa công cụ",
-          "output": "Kiểm tra tham số",
-          "process": "Yêu cầu gọi"
-        },
-        "video-generation": {
-          "input": "Gửi tác vụ video",
-          "output": "Xem trước video",
-          "process": "Kiểm tra trạng thái"
-        },
-        "web-search": {
-          "input": "Bắt đầu tìm kiếm",
-          "output": "Xem trích dẫn",
-          "process": "Kiểm tra bằng chứng"
-        }
-      }
+      "startHint": "Chọn <run>Chạy</run> để bắt đầu kiểm tra này."
     },
     "loadingRuntimeKeysHint": "Đang tải khóa...",
     "mediaPreviewUnavailable": "Không thể tải bản xem trước.",
@@ -172,7 +109,6 @@
     "requiresModelId": "Vui lòng nhập ID mô hình trước khi chạy bài kiểm tra này.",
     "sections": {
       "onDemand": "Kiểm tra theo yêu cầu",
-      "onDemandHint": "Chạy riêng lẻ",
       "routine": "Kiểm tra thông thường"
     },
     "selectedRuntimeKeyIncompatibleHint": "Khóa đang chọn không dùng được cho nhóm của mô hình này. Hãy chọn khóa tương thích trước khi xác minh.",
@@ -376,8 +312,6 @@
         "savedResult": "Kết quả đã lưu",
         "scopeProgress": "Đã xử lý {{completed}}/{{total}}",
         "score": "{{hits}}/{{total}} khớp",
-        "scoreStep": "Đối chiếu mã trả về",
-        "searchStep": "Tìm bản ghi được yêu cầu",
         "seedHint": "Để trống để tạo mẫu mới mỗi lần. Dùng cùng mã và cài đặt để kiểm tra lại cùng văn bản.",
         "seedInput": "Mã mẫu kiểm tra (không bắt buộc)",
         "singleLengthRule": "Kế hoạch này chỉ kiểm tra một độ dài: {{limit}}.",
@@ -423,7 +357,7 @@
       "questionAnswer": {
         "comparison": "So sánh đáp án",
         "comparisonHint": "Chỉ so sánh văn bản của đáp án cuối cùng. Hãy xem toàn bộ câu trả lời để đánh giá lập luận.",
-        "description": "Chỉnh sửa câu hỏi, thêm đáp án tham khảo nếu cần rồi chạy để xem câu trả lời.",
+        "description": "Dùng câu hỏi của bạn để xem câu trả lời và lập luận của mô hình. Thêm đáp án tham chiếu để đối chiếu đáp án cuối cùng.",
         "draftChanged": "Câu hỏi hoặc đáp án tham chiếu đã thay đổi. Đây là kết quả lần chạy trước; hãy chạy lại để so sánh nội dung mới.",
         "finalAnswer": "Đáp án cuối cùng được trích xuất",
         "loadFailed": "Không thể tải cài đặt hỏi đáp. Hãy thử lại để tải bản nháp đã lưu.",
@@ -454,11 +388,6 @@
         "runReference": "Đáp án tham chiếu của lần chạy này",
         "saveFailed": "Không thể lưu cài đặt. Bạn vẫn có thể dùng bản nháp hiện tại.",
         "saving": "Đang lưu…",
-        "steps": {
-          "question": "Gửi câu hỏi",
-          "response": "Tạo câu trả lời",
-          "result": "Xem kết quả"
-        },
         "title": "Kiểm tra hỏi đáp"
       },
       "settingsTitle": "Cài đặt kiểm tra",

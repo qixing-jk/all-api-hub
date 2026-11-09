@@ -69,7 +69,7 @@ export function VerificationProbeDetails({
           selection && (selected ? "bg-primary/10" : "hover:bg-muted/60"),
         )}
       >
-        <div className="relative flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="relative flex min-w-0 flex-1 items-center gap-2">
           {heading ? (
             <SummaryControl
               type={selection ? "button" : undefined}
@@ -82,17 +82,19 @@ export function VerificationProbeDetails({
               }
               onClick={selection ? () => selection.select(id) : undefined}
               className={cn(
-                "focus-visible:ring-ring flex min-h-(--density-control-sm) min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none",
+                "focus-visible:ring-ring flex min-h-(--density-control-sm) min-w-0 items-center gap-2 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none",
                 separateStatus
                   ? selection && "after:absolute after:inset-0"
                   : "flex-1",
               )}
             >
-              <div id={`${id}-label`}>{heading}</div>
+              <div id={`${id}-label`} className="min-w-0">
+                {heading}
+              </div>
               {!separateStatus && status ? (
                 <div
                   id={`${id}-status`}
-                  className="flex flex-wrap items-center gap-2"
+                  className="ml-auto flex shrink-0 items-center gap-2"
                 >
                   {status}
                 </div>
@@ -111,7 +113,7 @@ export function VerificationProbeDetails({
                 <div
                   id={`${id}-status`}
                   className={cn(
-                    "flex flex-wrap items-center gap-2",
+                    "ml-auto flex shrink-0 items-center gap-2",
                     statusInteractive ? "relative z-10" : "pointer-events-none",
                   )}
                 >

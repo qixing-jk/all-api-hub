@@ -41,82 +41,19 @@
       }
     },
     "intro": {
-      "flow": "測試步驟",
       "probes": {
-        "decision": "傳送測試請求，檢查決策模型是否傳回有效結果。",
+        "decision": "向決策介面提交範例狀態，檢查是否傳回決策值或機率。",
         "embedding": "傳送範例文字，檢查是否傳回有效向量及其維度。",
         "image-generation": "提交繪圖提示詞，檢查圖像回應並預覽產生的圖片。",
-        "models": "檢查介面能否傳回模型清單，查看模型數量與名稱，並取得後續測試的建議模型。",
+        "models": "取得介面傳回的模型名稱與數量，供後續測試選擇模型。",
         "rerank": "提交查詢和候選文件，檢查相關性排序結果。",
-        "structured-output": "要求模型依指定結構傳回資料，檢查結果是否符合約定格式。",
-        "text-generation": "傳送提示詞，檢查是否能產生文字，並查看傳回內容。",
-        "tool-calling": "讓模型選擇工具並提供呼叫參數，檢查工具呼叫是否符合預期。",
+        "structured-output": "要求模型傳回包含 ok: true 的 JSON，並驗證該欄位的值與結構。",
+        "text-generation": "檢查模型能否依提示詞回覆。回覆包含 OK（不區分大小寫）時通過。",
+        "tool-calling": "要求模型呼叫內建的時間戳記工具，偵測到該工具的呼叫時通過。",
         "video-generation": "提交影片產生任務，等待任務狀態並查看產生的影片。",
         "web-search": "檢查介面能否使用網路搜尋，並查看搜尋結果與引用資訊。"
       },
-      "startHint": "點選 <run>執行</run> 開始此項測試。",
-      "steps": {
-        "context-capacity": {
-          "input": "建立長文字",
-          "output": "記錄邊界",
-          "process": "多輪探測"
-        },
-        "decision": {
-          "input": "提交狀態",
-          "output": "檢查結果",
-          "process": "取得決策"
-        },
-        "embedding": {
-          "input": "範例文字",
-          "output": "檢查維度",
-          "process": "接收向量"
-        },
-        "image-generation": {
-          "input": "傳送提示詞",
-          "output": "預覽圖片",
-          "process": "接收影像"
-        },
-        "models": {
-          "input": "取得清單",
-          "output": "建議模型",
-          "process": "檢查模型"
-        },
-        "pelican": {
-          "input": "描述畫面",
-          "output": "人工看圖",
-          "process": "產生 SVG"
-        },
-        "rerank": {
-          "input": "查詢與文件",
-          "output": "檢查回傳項目",
-          "process": "請求重新排序"
-        },
-        "structured-output": {
-          "input": "指定結構",
-          "output": "驗證格式",
-          "process": "產生 JSON"
-        },
-        "text-generation": {
-          "input": "傳送提示詞",
-          "output": "檢查回覆",
-          "process": "接收文字"
-        },
-        "tool-calling": {
-          "input": "定義工具",
-          "output": "檢查參數",
-          "process": "請求呼叫"
-        },
-        "video-generation": {
-          "input": "提交影片任務",
-          "output": "預覽影片",
-          "process": "查詢任務狀態"
-        },
-        "web-search": {
-          "input": "發起搜尋",
-          "output": "查看引用",
-          "process": "檢查搜尋證據"
-        }
-      }
+      "startHint": "點選 <run>執行</run> 開始此項測試。"
     },
     "loadingRuntimeKeysHint": "正在載入金鑰...",
     "mediaPreviewUnavailable": "無法載入預覽。",
@@ -172,7 +109,6 @@
     "requiresModelId": "請輸入模型 ID 後執行該測試。",
     "sections": {
       "onDemand": "按需測試",
-      "onDemandHint": "單獨執行",
       "routine": "常規測試"
     },
     "selectedRuntimeKeyIncompatibleHint": "目前選擇的金鑰不適用於此模型分組。請先選擇適用的金鑰後再測試。",
@@ -376,8 +312,6 @@
         "savedResult": "歷史結果",
         "scopeProgress": "已處理 {{completed}}/{{total}}",
         "score": "{{hits}}/{{total}} 命中",
-        "scoreStep": "核對回傳代碼",
-        "searchStep": "尋找指定記錄",
         "seedHint": "留空時每次產生新樣本。使用相同編號和設定，可重複測試同一份文字。",
         "seedInput": "測試樣本編號（選填）",
         "singleLengthRule": "本次只測試 {{limit}} 這一種長度。",
@@ -423,7 +357,7 @@
       "questionAnswer": {
         "comparison": "答案比對",
         "comparisonHint": "僅比對最終答案的文字是否一致，推理是否正確請搭配完整回答判斷。",
-        "description": "修改問題，可填寫參考答案，執行後查看回答與比對結果。",
+        "description": "用自訂問題查看模型的回答與推理；可填寫參考答案，比對最終答案。",
         "draftChanged": "問題或參考答案已修改。目前顯示的是上次執行結果，請重新執行以比對修改後的內容。",
         "finalAnswer": "擷取的最終答案",
         "loadFailed": "無法讀取問答設定，請重試以載入已儲存的草稿。",
@@ -454,11 +388,6 @@
         "runReference": "本次參考答案",
         "saveFailed": "設定儲存失敗，目前草稿仍可用於測試。",
         "saving": "正在儲存…",
-        "steps": {
-          "question": "提交問題",
-          "response": "產生回答",
-          "result": "查看結果"
-        },
         "title": "問答測試"
       },
       "settingsTitle": "測試設定",
