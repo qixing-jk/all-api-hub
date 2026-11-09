@@ -710,6 +710,79 @@ test("web needle test plans automatically, follows a context probe and restores 
     await expect(
       reopened.panel.getByRole("button", { name: /^Previously:/ }),
     ).toHaveAccessibleDescription(/History keeps measurements/)
+    const historyBadge = reopened.panel.getByRole("button", {
+      name: /^Previously:/,
+    })
+    await historyBadge.scrollIntoViewIfNeeded()
+    await reopened.panel.screenshot({
+      path: test.info().outputPath("web-history-before-hover.png"),
+      animations: "disabled",
+    })
+    const historyHint = page
+      .getByRole("tooltip")
+      .filter({ hasText: "History keeps measurements" })
+    await historyBadge.hover()
+    await expect(historyHint).toBeVisible()
+    await expect(historyHint).toHaveCSS("opacity", "0.9")
+    await expect(historyHint).toHaveCSS("font-size", "12px")
+    expect(
+      await historyHint.evaluate(
+        (element) => element.getRootNode() instanceof ShadowRoot,
+      ),
+    ).toBe(true)
+    await page.screenshot({
+      path: test.info().outputPath("web-history-tooltip.png"),
+      animations: "disabled",
+    })
+    await page.keyboard.press("Escape")
+    await expect(historyHint).toBeHidden()
+    await page.mouse.move(0, 0)
+    await historyBadge.focus()
+    await expect(historyHint).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(historyHint).toBeHidden()
+    await historyBadge.click()
+    await expect(historyHint).toBeVisible()
+    await page.mouse.move(0, 0)
+    await expect(historyHint).toBeVisible()
+    await reopened.panel
+      .getByRole("button", {
+        name: "Test parameters and reproduction",
+        exact: true,
+      })
+      .click()
+    await expect(historyHint).toBeHidden()
+    await expect(reopened.panel).toBeVisible()
+    await page.setViewportSize({ width: 380, height: 800 })
+    await historyBadge.scrollIntoViewIfNeeded()
+    const touch = await context.newCDPSession(page)
+    try {
+      await touch.send("Emulation.setTouchEmulationEnabled", { enabled: true })
+      const bounds = (await historyBadge.boundingBox())!
+      await touch.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [
+          { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+        ],
+      })
+      await touch.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      })
+      await expect(historyHint).toBeVisible()
+      const hintBounds = (await historyHint.boundingBox())!
+      expect(hintBounds.x).toBeGreaterThanOrEqual(0)
+      expect(hintBounds.x + hintBounds.width).toBeLessThanOrEqual(380)
+      await page.screenshot({
+        path: test.info().outputPath("web-history-touch.png"),
+        animations: "disabled",
+      })
+      await page.keyboard.press("Escape")
+      await expect(historyHint).toBeHidden()
+    } finally {
+      await touch.send("Emulation.setTouchEmulationEnabled", { enabled: false })
+      await touch.detach()
+    }
     expect(needleRequests).toBe(3)
     await reopened.panel.getByRole("button", { name: /50%: Match$/ }).click()
     const cellDetails = reopened.panel.getByRole("region", {

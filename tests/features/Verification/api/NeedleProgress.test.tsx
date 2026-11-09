@@ -1,6 +1,5 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
@@ -18,24 +17,6 @@ import * as needlePrompt from "~/services/verification/modelQuality/needlePrompt
 import { runNeedleTest } from "~/services/verification/modelQuality/needleRun"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
-
-// Positioning and transition behavior is covered by Tooltip and browser tests.
-// Keep the real wrapper's focus handling and changing cancellation hint content.
-vi.mock("react-tooltip", () => ({
-  Tooltip: ({
-    isOpen,
-    content,
-    children,
-    id,
-  }: Pick<import("react-tooltip").ITooltip, "isOpen" | "content" | "id"> & {
-    children?: ReactNode
-  }) =>
-    isOpen ? (
-      <div role="tooltip" id={id}>
-        {content ?? children}
-      </div>
-    ) : null,
-}))
 
 beforeEach(() => {
   // Exercise the real runner and request lifecycle with a small prepared prompt.

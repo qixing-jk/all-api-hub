@@ -2,7 +2,7 @@
 
 Status: implemented
 Date: 2026-11-09
-Scope: 大海捞针及共享上下文基础能力已实现；本地自动化验收通过的范围与未完成的网页历史提示框兼容性分别记录如下。
+Scope: 大海捞针及共享上下文基础能力已实现；网页历史提示框的 ShadowRoot 兼容性已在后续修复中通过本地自动化验收，详见独立工单。
 Retention: Preserve in Git，作为后续功能取舍的决策记录。
 
 ## 已确认的实现约定
@@ -140,3 +140,5 @@ RULER 的 [NIAH 参数与长度校验](https://github.com/NVIDIA/RULER/blob/db43
 网页历史徽标的可访问说明和历史读回通过验收，但 ShadowRoot 内的提示框无法打开；该问题在重构前的共享 Tooltip 锚点机制中已存在。其后续修复条件记录在 [01-shadow-root-history-hints.md](issues/01-shadow-root-history-hints.md)，本次纯重构不修改该兼容性行为。局部回归、入口检查、原有失败及断言修正的证据保留于本地 [重构验收记录](artifacts/scout-refactor-20261109/acceptance.md)，供审阅和后续兼容性修复使用；未验证真实付费模型或用户安装环境。
 
 后续组件拆分继续沿用上述语义边界：提示词设置与原始响应展示跨测试复用；绘图状态、针测试成绩、运行范围和上限编辑分别由小组件或纯选择器负责。容量的续跑与针测试的局部取消仍由各自控制器管理。第二轮完整分支清单和当前验收证据保留于 [组件复用验收记录](artifacts/scout-components-20261109/acceptance.md)；ShadowRoot 提示框问题仍按上述独立工单跟进。
+
+后续兼容性修复已完成：网页历史提示支持悬停、聚焦和触摸打开，并可通过 Escape 或外部点击关闭。上述提示框缺口是重构验收时的历史状态；修复范围、原生页面回归和环境限制见 [工单结果](issues/01-shadow-root-history-hints.md#follow-up-resolution)。

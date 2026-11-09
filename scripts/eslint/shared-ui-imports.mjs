@@ -49,7 +49,18 @@ export const sharedUiImportsRule = {
     const check = (node) => {
       const source = resolveSource(node)
       if (typeof source !== "string") return
-      if (/^react-tooltip(?:\/|$)/.test(source)) {
+      const importsBaseTooltip =
+        source === "@base-ui/react" &&
+        (node.specifiers ?? []).some(
+          (specifier) =>
+            (specifier.imported?.name ??
+              specifier.imported?.value ??
+              specifier.local?.name) === "Tooltip",
+        )
+      if (
+        /^(?:react-tooltip|@base-ui\/react\/tooltip)(?:\/|$)/.test(source) ||
+        importsBaseTooltip
+      ) {
         if (file !== "src/components/Tooltip.tsx") {
           context.report({ node, messageId: "tooltip" })
         }

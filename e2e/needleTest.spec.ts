@@ -237,7 +237,7 @@ for (const [stopScope, mode] of [
         .filter({ hasText: "History keeps measurements" })
       await expect(historyTooltip).toBeHidden()
       await historyBadge.click()
-      await expect(historyTooltip).toHaveClass(/react-tooltip__show/)
+      await expect(historyTooltip).toHaveCSS("opacity", "0.9")
       await expect
         .poll(() =>
           historyTooltip.evaluate((element) =>

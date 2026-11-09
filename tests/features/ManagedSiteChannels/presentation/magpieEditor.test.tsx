@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
-import { expect, it, vi } from "vitest"
+import { expect, it } from "vitest"
 
 import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/editor/ManagedResourceEditorBody"
 import { getManagedResourceFieldPolicy } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
@@ -13,9 +13,6 @@ import type { ResourceFieldIssue } from "~/services/apiAdapters/contracts/manage
 import { magpieEditor } from "~/services/apiAdapters/managedResources/magpie/editorProjection"
 import type { MagpieProvider } from "~/services/apiService/magpie/providers"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
-
-// Exercise form interactions without the floating tooltip layout work in jsdom.
-vi.mock("react-tooltip", () => ({ Tooltip: () => null }))
 
 it("switches API types with one address visible and retains each draft without copying URLs", async () => {
   const user = userEvent.setup()

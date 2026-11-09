@@ -1,6 +1,6 @@
 # History hint popups cannot resolve webpage shadow-root anchors
 
-Status: ready-for-agent
+Status: ready-for-human
 Scope: shared Tooltip shadow-root compatibility; follow-up to the behavior-preserving verification refactor.
 
 ## Evidence
@@ -19,3 +19,9 @@ The failing browser assertion clicked the restored needle history badge, then ex
 - Re-run the webpage needle history workflow and representative existing Tooltip/Modal consumers. The current refactor's passing request/history tests do not establish popup compatibility.
 
 This changes existing shared compatibility behavior and is intentionally not included in the pure refactor. No Tooltip production code was changed by that refactor.
+
+## Follow-up resolution
+
+Implemented in the follow-up tooltip fix: the shared component now uses the existing Base UI ref-based trigger and positioner, and the webpage modal supplies its styled shadow-root portal scope. Focus checks use the actual anchor/popup roots; Escape is captured before content UI contains keyboard events. Existing click persistence, nested hints, rich actions, and accessible descriptions remain covered. The obsolete dependency and test mocks were removed, and the shared-import lint guard covers the replacement.
+
+The original webpage history failure was reproduced in both a focused component test and the real built extension against a deterministic local API fixture before the change. The repaired webpage needle/history flow, native needle/history and drawing/history flows, native and webpage touch, and theme appearance checks passed. See the local [acceptance report](../artifacts/tooltip-shadow/acceptance.md) and [before/after comparison](../artifacts/tooltip-shadow/comparison/run-EFLvcj/report.md). Evidence remains local for review; this does not verify the user's installed extension or a paid model endpoint.

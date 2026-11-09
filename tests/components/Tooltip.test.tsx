@@ -9,11 +9,103 @@ import {
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import Tooltip from "~/components/Tooltip"
+import Tooltip, { TooltipPortalContext } from "~/components/Tooltip"
 import { Modal } from "~/components/ui"
 import { render as renderWithProviders } from "~~/tests/test-utils/render"
 
 describe("Tooltip", () => {
+  it.each([false, true])(
+    "keeps shadow-root focus and click interactions scoped (anchorAsChild: %s)",
+    async (anchorAsChild) => {
+      const user = userEvent.setup()
+      const host = document.createElement("div")
+      document.body.append(host)
+      const root = host.attachShadow({ mode: "open" })
+      const container = document.createElement("div")
+      const portal = document.createElement("div")
+      root.append(container, portal)
+      const view = render(
+        <TooltipPortalContext.Provider value={portal}>
+          <div onKeyDown={(event) => event.stopPropagation()}>
+            <Tooltip
+              content={<button type="button">Hint action</button>}
+              anchorAsChild={anchorAsChild}
+              openOnClick
+              portalContainer={document.body}
+            >
+              <button type="button">History</button>
+            </Tooltip>
+            <button type="button">Elsewhere</button>
+          </div>
+        </TooltipPortalContext.Provider>,
+        { container, baseElement: container },
+      )
+      try {
+        const anchor = view.getByRole("button", { name: "History" })
+        act(() => view.getByRole("button", { name: "Elsewhere" }).focus())
+        await user.hover(anchor)
+        expect(await within(portal).findByRole("tooltip")).toBeVisible()
+        await user.keyboard("{Escape}")
+        await waitFor(() =>
+          expect(within(portal).queryByRole("tooltip")).not.toBeInTheDocument(),
+        )
+        act(() => anchor.focus())
+        const action = within(portal).getByRole("button", {
+          name: "Hint action",
+        })
+        act(() => action.focus())
+        expect(await within(portal).findByRole("tooltip")).toBeVisible()
+        await user.click(view.getByRole("button", { name: "Elsewhere" }))
+        await waitFor(() =>
+          expect(within(portal).queryByRole("tooltip")).not.toBeInTheDocument(),
+        )
+        await user.click(anchor)
+        await user.unhover(anchor)
+        expect(await within(portal).findByRole("tooltip")).toBeVisible()
+        await user.keyboard("{Escape}")
+        await waitFor(() =>
+          expect(within(portal).queryByRole("tooltip")).not.toBeInTheDocument(),
+        )
+        await user.click(anchor)
+        expect(await within(portal).findByRole("tooltip")).toBeVisible()
+        act(() => anchor.blur())
+        await waitFor(() =>
+          expect(within(portal).queryByRole("tooltip")).not.toBeInTheDocument(),
+        )
+      } finally {
+        view.unmount()
+        host.remove()
+      }
+    },
+  )
+  it("opens a history hint from an anchor inside a webpage shadow root", async () => {
+    const user = userEvent.setup()
+    const host = document.createElement("div")
+    document.body.append(host)
+    const root = host.attachShadow({ mode: "open" })
+    const container = document.createElement("div")
+    root.append(container)
+    const view = render(
+      <Tooltip
+        content="History keeps measurements"
+        anchorAsChild
+        openOnClick
+        portalContainer={document.body}
+      >
+        <button type="button">Previously: passed</button>
+      </Tooltip>,
+      { container, baseElement: container },
+    )
+    try {
+      await user.hover(view.getByRole("button", { name: "Previously: passed" }))
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "History keeps measurements",
+      )
+    } finally {
+      view.unmount()
+      host.remove()
+    }
+  })
   it.each(["click", "focus", "hover"])(
     "preserves an immediate %s reopen when an earlier closing transition finishes",
     async (trigger) => {
@@ -31,30 +123,30 @@ describe("Tooltip", () => {
       })
       await user.click(anchor)
       const popup = await screen.findByRole("tooltip")
-      vi.useFakeTimers()
-      try {
-        fireEvent.keyDown(anchor, { key: "Escape" })
-        await act(() => vi.advanceTimersByTimeAsync(10))
-        await act(() => vi.advanceTimersByTimeAsync(10))
-        if (trigger === "click") fireEvent.click(anchor)
-        else if (trigger === "focus") fireEvent.focus(anchor)
-        else fireEvent.mouseOver(anchor)
-        await act(() => vi.advanceTimersByTimeAsync(10))
-        if (trigger !== "click") expect(popup).toBeInTheDocument()
-        fireEvent.transitionEnd(popup, { propertyName: "opacity" })
-        for (let step = 0; step < 5; step++)
-          await act(() => vi.advanceTimersByTimeAsync(10))
-        expect(screen.getByRole("tooltip")).toBeVisible()
-        expect(anchor).toHaveAttribute("data-tooltip-open", "true")
-        fireEvent.keyDown(anchor, { key: "Escape" })
-        await act(() => vi.advanceTimersByTimeAsync(50))
-        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
-        expect(onClose).not.toHaveBeenCalled()
-        fireEvent.keyDown(anchor, { key: "Escape" })
-        expect(onClose).toHaveBeenCalledOnce()
-      } finally {
-        vi.useRealTimers()
+      await user.keyboard("{Escape}")
+      await waitFor(() =>
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+      )
+      if (trigger === "click") await user.click(anchor)
+      else if (trigger === "focus") {
+        act(() => anchor.blur())
+        act(() => anchor.focus())
+      } else {
+        await user.unhover(anchor)
+        await user.hover(anchor)
       }
+      expect(await screen.findByRole("tooltip")).toBeVisible()
+      // A stale transition event must not dismiss the newer opening request.
+      fireEvent.transitionEnd(popup, { propertyName: "opacity" })
+      expect(screen.getByRole("tooltip")).toBeVisible()
+      expect(anchor).toHaveAttribute("data-tooltip-open", "true")
+      await user.keyboard("{Escape}")
+      await waitFor(() =>
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+      )
+      expect(onClose).not.toHaveBeenCalled()
+      await user.keyboard("{Escape}")
+      expect(onClose).toHaveBeenCalledOnce()
     },
   )
   it.each([false, true])(

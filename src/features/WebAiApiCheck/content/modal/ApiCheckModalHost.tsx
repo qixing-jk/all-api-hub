@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next"
 
+import { TooltipPortalContext } from "~/components/Tooltip"
 import { ApiCheckModal } from "~/features/WebAiApiCheck/content/modal/ApiCheckModal"
 import { useApiCheckModalViewModel } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalViewModel"
 
@@ -11,11 +12,13 @@ export function ApiCheckModalHost() {
   const modal = useApiCheckModalViewModel()
 
   return (
-    <ApiCheckModal
-      t={t}
-      view={modal.view}
-      actions={modal.actions}
-      refs={modal.refs}
-    />
+    <TooltipPortalContext.Provider value={modal.view.popoverPortalContainer}>
+      <ApiCheckModal
+        t={t}
+        view={modal.view}
+        actions={modal.actions}
+        refs={modal.refs}
+      />
+    </TooltipPortalContext.Provider>
   )
 }

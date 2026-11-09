@@ -130,6 +130,10 @@ describe("shared help and tooltip boundaries", () => {
     'const tooltips = import("react-tooltip")',
     "const tooltips = import(`react-tooltip`)",
     'import { Tooltip } from "react-tooltip/dist/react-tooltip"',
+    'import { Tooltip as Hint } from "@base-ui/react/tooltip"',
+    'import { Tooltip as Hint } from "@base-ui/react"',
+    'export { Tooltip as Hint } from "@base-ui/react"',
+    'const tooltips = import("@base-ui/react/tooltip")',
   ])("rejects direct third-party tooltip access: %s", async (code) => {
     const messages = await check(code)
     expect(messages).toHaveLength(1)

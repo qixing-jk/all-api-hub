@@ -545,7 +545,7 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         .getByRole("tooltip")
         .filter({ hasText: "History does not retain the drawing" })
       await expect(historyHint).toBeVisible()
-      await expect(historyHint).toHaveClass(/react-tooltip__show/)
+      await expect(historyHint).toHaveCSS("opacity", "0.9")
       await page.getByRole("dialog").screenshot({
         path: test.info().outputPath("drawing-history-tooltip.png"),
         animations: "disabled",
@@ -576,7 +576,7 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
           touchPoints: [],
         })
         await expect(historyHint).toBeVisible()
-        await expect(historyHint).toHaveClass(/react-tooltip__show/)
+        await expect(historyHint).toHaveCSS("opacity", "0.9")
         await expect(drawingSelection).toHaveAttribute("aria-expanded", "true")
         await page.getByRole("dialog").screenshot({
           path: test.info().outputPath("drawing-history-tooltip-narrow.png"),
