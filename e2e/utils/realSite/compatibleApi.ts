@@ -672,6 +672,7 @@ async function createAuthBundleLoginResult(
         const response = await page.request.get(
           resolveRealSiteUrl(config.baseUrl, "/api/user/access_tokens"),
           {
+            timeout: 10_000,
             headers: {
               Authorization: `Bearer ${authBundle.accessToken}`,
               Accept: "application/json",

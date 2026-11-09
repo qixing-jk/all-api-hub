@@ -136,6 +136,7 @@ describe("compatible real-site login", () => {
       expect(get).toHaveBeenCalledWith(
         `${ORIGIN}/api/user/access_tokens`,
         expect.objectContaining({
+          timeout: 10_000,
           headers: {
             Authorization: "Bearer access-token-placeholder",
             Accept: "application/json",
