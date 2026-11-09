@@ -12,6 +12,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const accountId = "layout-account"
 
@@ -22,12 +23,14 @@ for (const width of [1280, 390, 320]) {
   ]) {
     test(`keeps key batch actions above ${selectedAccount} results at ${width}px`, async ({
       context,
+      extensionDir,
       extensionId,
       page,
     }, testInfo) => {
       installExtensionPageGuards(page)
       await forceExtensionLanguage(page, "en")
       await page.setViewportSize({ width, height: 900 })
+      await page.emulateMedia({ reducedMotion: "reduce" })
       await stubLlmMetadataIndex(context)
       await stubNewApiSiteRoutes(context, {
         initialTokens: Array.from({ length: 4 }, (_, index) => ({
@@ -74,9 +77,54 @@ for (const width of [1280, 390, 320]) {
 
       const rows = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow)
       await expect(rows).toHaveCount(isAllAccounts ? 8 : 4)
+      if (isAllAccounts) {
+        await expect(rows.first()).toHaveCSS("border-bottom-width", "1px")
+        await expect(rows.nth(1)).toHaveCSS("border-top-width", "0px")
+        await expect(rows.nth(3)).toHaveCSS("border-bottom-width", "0px")
+      }
       await expect(
         page.getByRole("combobox", { name: "Select a scope" }),
       ).toHaveCount(0)
+      if (!isAllAccounts) {
+        await rows.first().screenshot({
+          path: testInfo.outputPath("runtime-action-separators.png"),
+        })
+        // Nested action groups use a wider gap than their enclosing header.
+        const toolbar = rows.first().getByRole("toolbar")
+        await expect(toolbar).toBeVisible()
+        const separators = toolbar.locator(
+          ":scope > div > span[aria-hidden='true']",
+        )
+        await expect(separators).toHaveCount(3)
+        for (const separator of await separators.all()) {
+          const geometry = await separator.evaluate((element) => {
+            const group = element.parentElement!
+            const previous =
+              group.previousElementSibling!.getBoundingClientRect()
+            const current = group.getBoundingClientRect()
+            const divider = element.getBoundingClientRect()
+            return {
+              startsRow:
+                Math.abs(
+                  previous.top +
+                    previous.height / 2 -
+                    (current.top + current.height / 2),
+                ) > 1,
+              dividerCenter: divider.x + divider.width / 2,
+              gapCenter: (previous.right + current.left) / 2,
+            }
+          })
+          if (geometry.startsRow) {
+            await expect(separator).toBeHidden()
+          } else {
+            await expect(separator).toBeVisible()
+            expect(
+              Math.abs(geometry.dividerCenter - geometry.gapCenter),
+            ).toBeLessThanOrEqual(1)
+          }
+        }
+      }
+
       await expect(
         page.getByRole("heading", { name: "Scope", exact: true }),
       ).toHaveCount(0)
@@ -112,6 +160,17 @@ for (const width of [1280, 390, 320]) {
       await expect(rows.first().getByRole("checkbox")).not.toBeChecked()
       await expect(rows.last().getByRole("checkbox")).not.toBeChecked()
       await expect(batchSave).toBeDisabled()
+
+      await captureVisualViews({
+        page,
+        ready: rows.first(),
+        id: `key-list-${isAllAccounts ? "grouped" : "single"}-${width}`,
+        extensionDir,
+        views: [
+          { id: "light", width, height: 900, theme: "light" },
+          { id: "dark", width, height: 900, theme: "dark" },
+        ],
+      })
 
       await visibleSelection.scrollIntoViewIfNeeded()
       const screenshotPath = testInfo.outputPath("key-management-layout.png")

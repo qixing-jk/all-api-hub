@@ -1,6 +1,9 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
-import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import {
+  API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialProfileRowTestId,
+} from "~/features/ApiCredentialProfiles/testIds"
 import {
   getManagedSiteBatchExportRowSelectTestId,
   getRepairAccountResultTestId,
@@ -617,9 +620,10 @@ test("opens the CC Switch model picker for an account API key", async ({
 
 test("exports a SharedChat service credential to CC Switch", async ({
   context,
+  extensionDir,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({
@@ -650,6 +654,17 @@ test("exports a SharedChat service credential to CC Switch", async ({
   await expect(
     serviceCredentialCard.getByRole("heading", { name: "Codex" }),
   ).toBeVisible()
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await captureVisualViews({
+    page,
+    ready: serviceCredentialCard,
+    id: "service-credential-single",
+    extensionDir,
+    views: [
+      { id: "desktop", width: 1280, height: 900, theme: "light" },
+      { id: "compact", width: 320, height: 900, theme: "dark" },
+    ],
+  })
 
   await serviceCredentialCard
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportMenuButton)
@@ -671,6 +686,54 @@ test("exports a SharedChat service credential to CC Switch", async ({
       apiKey: "sk-sharedchat-service-e2e",
     },
   })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=all`,
+  )
+  await waitForExtensionRoot(page)
+  await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.expandAllButton).click()
+  await expect(serviceCredentialCard).toBeVisible()
+  await captureVisualViews({
+    page,
+    ready: serviceCredentialCard,
+    id: "service-credential-grouped",
+    extensionDir,
+    views: [
+      { id: "desktop", width: 1280, height: 900, theme: "light" },
+      { id: "compact", width: 320, height: 900, theme: "dark" },
+    ],
+  })
+
+  const savedProfile =
+    await saveTokenToApiCredentialProfilesFromKeyManagementPage({
+      serviceWorker,
+      page,
+      row: serviceCredentialCard,
+      expectedProfile: {
+        name: "SharedChat Service - Codex",
+        baseUrl: "https://new.sharedchat.cc/codex",
+        apiKey: "sk-sharedchat-service-e2e",
+      },
+    })
+  await page
+    .getByTestId(getApiCredentialProfileRowTestId(savedProfile.id))
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.associationButton)
+    .click()
+  await page.getByRole("menuitem", { name: "View corresponding key" }).click()
+  await expect(serviceCredentialCard).toHaveAttribute(
+    "data-navigation-target",
+    "true",
+  )
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty("--theme-color-500", "#e05630")
+    document.documentElement.style.setProperty("--theme-color-400", "#e05630")
+  })
+  await serviceCredentialCard.screenshot({
+    path: testInfo.outputPath("service-credential-navigation-ring.png"),
+  })
+  await expect(serviceCredentialCard).toHaveCSS(
+    "box-shadow",
+    /rgb\(224, 86, 48\) 0px 0px 0px (?:[1-9]\d*(?:\.\d+)?|0\.\d*[1-9]\d*)px/,
+  )
 })
 
 test("updates an existing token from key management and reloads the visible list", async ({

@@ -13,14 +13,7 @@ import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  Heading6,
-  IconButton,
-} from "~/components/ui"
+import { Badge, Button, Heading6, IconButton } from "~/components/ui"
 import {
   Collapsible,
   CollapsibleContent,
@@ -278,7 +271,7 @@ export function ApiCredentialProfileListItem({
     useState(false)
   const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
   const [isTargetHighlighted, setIsTargetHighlighted] = useState(false)
-  const cardRef = useRef<HTMLDivElement>(null)
+  const rowRef = useRef<HTMLDivElement>(null)
   const rowTargetId = getApiCredentialProfileRowTargetId(profile.id)
   const rowHeadingId = `${rowTargetId}-name`
   const handleRefreshTelemetry = () => {
@@ -323,9 +316,9 @@ export function ApiCredentialProfileListItem({
       return
     }
 
-    const card = cardRef.current
-    if (!card) return
-    return revealNavigationTarget(card, {
+    const row = rowRef.current
+    if (!row) return
+    return revealNavigationTarget(row, {
       block: "center",
       inline: "nearest",
       focus: true,
@@ -371,20 +364,20 @@ export function ApiCredentialProfileListItem({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}
       surfaceId={rowActionsSurface}
     >
-      <Card
-        ref={cardRef}
+      <div
+        ref={rowRef}
         data-page-motion-ready-item
         id={rowTargetId}
         data-testid={getApiCredentialProfileRowTestId(profile.id)}
         tabIndex={-1}
         aria-labelledby={rowHeadingId}
         className={cn(
-          "focus-visible:ring-ring transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          "text-foreground focus-visible:ring-ring transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-inset",
           isTargetHighlighted &&
-            "ring-theme-500 dark:ring-theme-400 ring-2 ring-offset-2",
+            "ring-theme-500 dark:ring-theme-400 ring-2 ring-inset",
         )}
       >
-        <CardContent padding="md" spacing="sm">
+        <div className="py-density-4 px-3 sm:px-4">
           <div className="gap-density-5 flex min-w-0 flex-col">
             <div className="gap-density-2 flex min-w-0 flex-1 flex-col">
               <div className="gap-x-density-3 gap-y-density-2 flex min-w-0 flex-wrap items-start justify-between">
@@ -640,8 +633,8 @@ export function ApiCredentialProfileListItem({
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </ProductAnalyticsScope>
   )
 }

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import {
   Badge,
   Button,
+  CardList,
   IconButton,
   Select,
   SelectContent,
@@ -408,9 +409,9 @@ export function ApiCredentialProfilesList({
               baseUrl={group.baseUrl}
               credentialCount={group.profiles.length}
               onCopyBaseUrl={controller.handleCopyBaseUrl}
-              className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-2-5 border-b px-3"
+              className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-2-5 border-b px-3 sm:px-4"
             />
-            <div className="space-y-density-3 py-density-3 sm:py-density-4 px-3 sm:px-4">
+            <CardList className="dark:divide-border-subtle">
               <EndpointProfileList
                 profiles={group.profiles}
                 controller={controller}
@@ -422,7 +423,7 @@ export function ApiCredentialProfilesList({
                 onConfirmAssociatedKey={onConfirmAssociatedKey}
                 onUnlinkAssociatedKey={onUnlinkAssociatedKey}
               />
-            </div>
+            </CardList>
           </section>
         ))}
       </div>
@@ -459,7 +460,7 @@ export function ApiCredentialProfilesList({
           baseUrl: selectedGroup.baseUrl,
         })}
         className={cn(
-          "py-density-3 sm:py-density-4 min-w-0 px-3 sm:px-4",
+          "min-w-0",
           useViewportCap &&
             "max-h-(--api-credential-panel-max-height) overflow-y-auto overscroll-contain",
         )}
@@ -469,9 +470,9 @@ export function ApiCredentialProfilesList({
           credentialCount={selectedGroup.profiles.length}
           onAddCredential={handleAddCredential}
           onCopyBaseUrl={controller.handleCopyBaseUrl}
-          className="mb-density-3"
+          className="border-border dark:border-border-subtle py-density-3 border-b px-3 sm:px-4"
         />
-        <div className="space-y-density-3">
+        <CardList className="dark:divide-border-subtle">
           <EndpointProfileList
             profiles={selectedGroup.profiles}
             controller={controller}
@@ -483,7 +484,7 @@ export function ApiCredentialProfilesList({
             onConfirmAssociatedKey={onConfirmAssociatedKey}
             onUnlinkAssociatedKey={onUnlinkAssociatedKey}
           />
-        </div>
+        </CardList>
       </section>
     </div>
   )

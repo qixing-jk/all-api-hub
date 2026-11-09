@@ -211,14 +211,23 @@ test("RelayFor key lifecycle follows native operations and preserves editor sett
   expect(dividerBounds!.x + dividerBounds!.width).toBeLessThan(editBounds!.x)
   await row.screenshot({ path: testInfo.outputPath("rotation-actions.png") })
   await page.setViewportSize({ width: 380, height: 800 })
+  // A narrow viewport may still fit both groups. Force a new flex row in the
+  // actual action container so this assertion tests wrapping, not a breakpoint.
+  await management.evaluate((element) => {
+    element.parentElement!.parentElement!.style.width = `${element.getBoundingClientRect().width}px`
+  })
   await expect(divider).not.toBeVisible()
   await row.screenshot({ path: testInfo.outputPath("key-actions-narrow.png") })
+  await management.evaluate((element) => {
+    element.parentElement!.parentElement!.style.width = ""
+  })
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true)
   await page.setViewportSize({ width: 1280, height: 800 })
+  await expect(divider).toBeVisible()
   await row.getByRole("button", { name: "编辑密钥", exact: true }).click()
   await expect(editor.locator("#resource-editor-quota")).toHaveValue("-1")
   await expect(editor.locator("#resource-editor-ip_limits")).toHaveValue(

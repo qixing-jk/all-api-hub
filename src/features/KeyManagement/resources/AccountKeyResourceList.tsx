@@ -19,6 +19,7 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 /** Renders native account-key resources independently of legacy token presentation. */
 export function AccountKeyResourceList({
+  embedded = false,
   rows,
   accounts,
   ariaLabel,
@@ -37,6 +38,7 @@ export function AccountKeyResourceList({
   getNavigationTarget,
   getActions,
 }: {
+  embedded?: boolean
   rows: readonly NativeKeyManagementRow[]
   accounts: readonly DisplaySiteData[]
   ariaLabel: string
@@ -104,13 +106,17 @@ export function AccountKeyResourceList({
   )
   if (rows.length === 0) return null
   return (
-    <section aria-label={ariaLabel} className="space-y-density-3">
+    <section
+      aria-label={ariaLabel}
+      className={embedded ? "divide-border divide-y" : "space-y-density-3"}
+    >
       {rows.map((row) => {
         const account = accounts.find(
           (candidate) => candidate.id === row.accountId,
         )
         return account ? (
           <AccountKeyResourceListItem
+            embedded={embedded}
             key={row.rowKey}
             row={row}
             account={account}

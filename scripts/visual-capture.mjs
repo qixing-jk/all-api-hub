@@ -256,7 +256,16 @@ async function capture(scenario, baseline, diff) {
       }
     await writeFile(
       path.join(directory, "capture.md"),
-      `# ${scenario.id} capture\n\nWorkflow: ${scenario.spec}. Fixture: ${scenario.fixture} (caller-declared). Agents prioritize final results; baseline/comparison images are retained for developer review and need not be opened automatically.\n\n${checkpoints.map((state) => `[${state.id}](${state.image})`).join(" · ")}\n\n[Capture metadata](capture.json) · [Runner log](playwright.log)\n\n${comparisons.map((entry, index) => `[${checkpoints[index].id} comparison](${path.relative(directory, entry.report).split(path.sep).join("/")})`).join(" · ")}\n`,
+      `# ${scenario.id} capture\n\nWorkflow: ${scenario.spec}. Fixture: ${scenario.fixture} (caller-declared). Every checkpoint is displayed below for developer review. Embedding images does not imply that the agent inspected them or that visual acceptance passed.\n\n[Capture metadata](capture.json) · [Runner log](playwright.log)\n\n${checkpoints
+        .map((state, index) => {
+          const comparison = comparisons[index]
+          if (!comparison)
+            return `## ${state.id}\n\n![${state.id}](${state.image})\n\n[After original](${state.image})`
+          const relative = (file) =>
+            path.relative(directory, file).split(path.sep).join("/")
+          return `## ${state.id}\n\nStatus: ${comparison.status}\n\n![${state.id}: Before | After](${relative(path.join(comparison.directory, "comparison.png"))})\n\n[Comparison details](${relative(comparison.report)}) · [After original](${state.image})`
+        })
+        .join("\n\n")}\n`,
     )
     return {
       directory,

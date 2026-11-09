@@ -2,9 +2,11 @@ import userEvent from "@testing-library/user-event"
 import { useState, type ReactElement } from "react"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
+import Tooltip from "~/components/Tooltip"
 import {
   KEY_RESOURCE_CONTENT_LAYOUTS,
   KeyResourceActionGroup,
+  KeyResourceActionToolbar,
   KeyResourceCard,
   KeyResourceCardHeader,
   KeyResourceFactList,
@@ -15,7 +17,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import enCommon from "~/locales/en/common.json"
 import enKeyManagement from "~/locales/en/keyManagement.json"
 import { testI18n } from "~~/tests/test-utils/i18n"
-import { render, screen, within } from "~~/tests/test-utils/render"
+import { act, render, screen, within } from "~~/tests/test-utils/render"
 
 const presentation: KeyResourceCardPresentation = {
   id: "key-example",
@@ -64,6 +66,147 @@ describe("KeyResourceCard", () => {
   afterAll(() => {
     testI18n.removeResourceBundle("en", "keyManagement")
     testI18n.removeResourceBundle("en", "common")
+  })
+
+  it.each(["header", "toolbar"])(
+    "updates %s separators when actions wrap and recover after resizing",
+    (layout) => {
+      let wrapped = false
+      let resize!: () => void
+      const observe = vi.fn()
+      const disconnect = vi.fn()
+      const bounds = vi
+        .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+        .mockImplementation(function (this: HTMLElement) {
+          const isManagement = this.textContent === "Edit"
+          const isHidden = this.textContent === "Hidden"
+          return {
+            width: isHidden ? 0 : 40,
+            height: isManagement ? 40 : 24,
+            // Unequal tops still share center 20; hidden content is on another row.
+            top: isHidden ? 100 : isManagement ? (wrapped ? 40 : 0) : 8,
+          } as DOMRect
+        })
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(callback: () => void) {
+            resize = callback
+          }
+          observe = observe
+          disconnect = disconnect
+        },
+      )
+      const actions = (
+        <>
+          <KeyResourceActionGroup label="Hidden">
+            <span>Hidden</span>
+          </KeyResourceActionGroup>
+          <KeyResourceActionGroup label="Management" separated>
+            <button>Edit</button>
+          </KeyResourceActionGroup>
+        </>
+      )
+      try {
+        const { unmount } = renderKeyResourceCard(
+          layout === "header" ? (
+            <KeyResourceCardHeader
+              presentation={presentation}
+              detailsTrigger={<button>Details</button>}
+              actions={actions}
+            />
+          ) : (
+            <KeyResourceActionToolbar label="Actions">
+              <KeyResourceActionGroup label="Details">
+                <button>Details</button>
+              </KeyResourceActionGroup>
+              {actions}
+            </KeyResourceActionToolbar>
+          ),
+        )
+        const management = screen.getByRole("group", {
+          name: "Management",
+        }).parentElement!
+        expect(observe).toHaveBeenCalledWith(management.parentElement)
+        for (const group of Array.from(management.parentElement!.children)) {
+          expect(observe).toHaveBeenCalledWith(group)
+        }
+        expect(management).toHaveAttribute("data-row-start", "false")
+        wrapped = true
+        act(() => resize())
+        expect(management).toHaveAttribute("data-row-start", "true")
+        wrapped = false
+        act(() => resize())
+        expect(management).toHaveAttribute("data-row-start", "false")
+        unmount()
+        expect(disconnect).toHaveBeenCalledOnce()
+      } finally {
+        bounds.mockRestore()
+        vi.unstubAllGlobals()
+      }
+    },
+  )
+
+  it("measures the initial action row when resize observation is unavailable", () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const bounds = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ width: 40, height: 24, top: 0 } as DOMRect)
+    try {
+      renderKeyResourceCard(
+        <KeyResourceActionToolbar label="Actions">
+          <KeyResourceActionGroup label="Management" separated>
+            <button>Edit</button>
+          </KeyResourceActionGroup>
+        </KeyResourceActionToolbar>,
+      )
+      expect(
+        screen.getByRole("group", { name: "Management" }).parentElement,
+      ).toHaveAttribute("data-row-start", "true")
+    } finally {
+      bounds.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("keeps tooltip descriptions accessible without treating them as action rows", () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const bounds = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains("sr-only")
+          ? ({ width: 1, height: 1, top: 100 } as DOMRect)
+          : ({ width: 40, height: 24, top: 0 } as DOMRect)
+      })
+    try {
+      renderKeyResourceCard(
+        <>
+          <style>{".sr-only { position: absolute; }"}</style>
+          <KeyResourceCardHeader
+            presentation={presentation}
+            detailsTrigger={
+              <Tooltip content="More detail" anchorAsChild>
+                <button>Details</button>
+              </Tooltip>
+            }
+            actions={
+              <KeyResourceActionGroup label="Management" separated>
+                <button>Edit</button>
+              </KeyResourceActionGroup>
+            }
+          />
+        </>,
+      )
+      expect(
+        screen.getByRole("button", { name: "Details" }),
+      ).toHaveAccessibleDescription("More detail")
+      expect(
+        screen.getByRole("group", { name: "Management" }).parentElement,
+      ).toHaveAttribute("data-row-start", "false")
+    } finally {
+      bounds.mockRestore()
+      vi.unstubAllGlobals()
+    }
   })
 
   it("renders the common hierarchy and expands safe details", async () => {
