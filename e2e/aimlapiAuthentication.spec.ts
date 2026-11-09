@@ -68,15 +68,32 @@ test.beforeEach(async ({ context }) => {
       body: "<html><title>AI/ML API</title></html>",
     }),
   )
-  // Signed-out key acquisition preserves the destination through the login page.
+  // Use client navigation so Playwright intercepts both requests; an HTTP
+  // redirect would bypass the login page's route handler.
   await context.route("https://aimlapi.com/app/keys", (route) =>
     route.fulfill({
-      status: 302,
-      headers: {
-        location: "https://aimlapi.com/app/auth/login?returnTo=/keys",
-      },
+      contentType: "text/html",
+      body: "<html><script>location.replace('/app/auth/login?returnTo=/keys')</script></html>",
     }),
   )
+  await context.route(
+    "https://aimlapi.com/app/auth/login?returnTo=/keys",
+    (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<html><title>Mock AI/ML API sign-in</title></html>",
+      }),
+  )
+})
+
+test("keeps the signed-out key-page redirect inside the mocks", async ({
+  page,
+}) => {
+  await page.goto("https://aimlapi.com/app/keys")
+  await expect(page).toHaveURL(
+    "https://aimlapi.com/app/auth/login?returnTo=/keys",
+  )
+  await expect(page).toHaveTitle("Mock AI/ML API sign-in")
 })
 
 test("editing an AIMLAPI account offers one credential detection action", async ({
