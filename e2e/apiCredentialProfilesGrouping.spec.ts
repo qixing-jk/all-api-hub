@@ -87,6 +87,19 @@ test("groups credentials by Base URL while preserving each credential entry", as
   await expect(credentialRows).toHaveCount(2)
   await expect(credentialRows.first()).toHaveCSS("border-bottom-width", "1px")
   await expect(credentialRows.first()).toHaveCSS("border-bottom-style", "solid")
+  const dividerColor = await page.evaluate(() => {
+    const sample = document.createElement("span")
+    sample.style.color = "var(--border)"
+    document.body.append(sample)
+    const color = getComputedStyle(sample).color
+    sample.remove()
+    return color
+  })
+  expect(dividerColor).not.toBe("rgba(0, 0, 0, 0)")
+  await expect(credentialRows.first()).toHaveCSS(
+    "border-bottom-color",
+    dividerColor,
+  )
   await expect(credentialRows.last()).toHaveCSS("border-bottom-width", "0px")
 
   await captureVisualViews({
@@ -156,6 +169,13 @@ test("groups credentials by Base URL while preserving each credential entry", as
     ),
   ).toBe(true)
   await page.setViewportSize({ width: 420, height: 900 })
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true)
 
   const toolbar = page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)

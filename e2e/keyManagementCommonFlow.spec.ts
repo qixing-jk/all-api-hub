@@ -1,6 +1,9 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
-import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import {
+  API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialProfileRowTestId,
+} from "~/features/ApiCredentialProfiles/testIds"
 import {
   getManagedSiteBatchExportRowSelectTestId,
   getRepairAccountResultTestId,
@@ -700,17 +703,19 @@ test("exports a SharedChat service credential to CC Switch", async ({
     ],
   })
 
-  await saveTokenToApiCredentialProfilesFromKeyManagementPage({
-    serviceWorker,
-    page,
-    row: serviceCredentialCard,
-    expectedProfile: {
-      name: "SharedChat Service - Codex",
-      baseUrl: "https://new.sharedchat.cc/codex",
-      apiKey: "sk-sharedchat-service-e2e",
-    },
-  })
+  const savedProfile =
+    await saveTokenToApiCredentialProfilesFromKeyManagementPage({
+      serviceWorker,
+      page,
+      row: serviceCredentialCard,
+      expectedProfile: {
+        name: "SharedChat Service - Codex",
+        baseUrl: "https://new.sharedchat.cc/codex",
+        apiKey: "sk-sharedchat-service-e2e",
+      },
+    })
   await page
+    .getByTestId(getApiCredentialProfileRowTestId(savedProfile.id))
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.associationButton)
     .click()
   await page.getByRole("menuitem", { name: "View corresponding key" }).click()
@@ -727,7 +732,7 @@ test("exports a SharedChat service credential to CC Switch", async ({
   })
   await expect(serviceCredentialCard).toHaveCSS(
     "box-shadow",
-    /rgb\(224, 86, 48\)/,
+    /rgb\(224, 86, 48\) 0px 0px 0px (?:[1-9]\d*(?:\.\d+)?|0\.\d*[1-9]\d*)px/,
   )
 })
 
