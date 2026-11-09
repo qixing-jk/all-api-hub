@@ -106,6 +106,12 @@ guidanceTest.describe("real-site New API credential guidance", () => {
       try {
         const login = await loginToRealNewApiSite(sitePage, config)
         cleanupSession = login.cleanupOwnedSession
+        const scopedTokens = (await login.probeScopedAccessTokens?.()) === true
+        evidence.scopedTokenDialectConfirmed = scopedTokens
+        test.skip(
+          !scopedTokens,
+          "Read-only scoped-token dialect proof is required before credential guidance detection",
+        )
         await openAccountManagementPage({ page, extensionId })
         const runtime = await cdp.send("Runtime.evaluate", {
           expression: "chrome.runtime.id",

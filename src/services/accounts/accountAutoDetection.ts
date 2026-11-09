@@ -39,6 +39,7 @@ import {
   type AutoDetectError,
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import type { AccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/contracts"
 import {
   createAccountDetectionDiagnostics,
@@ -54,6 +55,7 @@ import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
+import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 const logger = createLogger("AccountOperations")
 
@@ -98,11 +100,13 @@ function getAutoDetectCompletionDetailedError(
       return {
         type: AutoDetectErrorType.COOKIE_SESSION_REJECTED,
         message: t("messages:operations.detection.cookieSessionRejected"),
+        helpDocUrl: getDocsAutoDetectUrl(),
       }
     case AUTO_DETECT_FAILURE_REASONS.CookieSessionUnavailable: {
       const result = classifyAccountCookieValidationError(cause)
       return {
         type: AutoDetectErrorType.UNKNOWN,
+        helpDocUrl: getDocsAutoDetectUrl(),
         message: getAccountCookieUnavailableMessage(
           result.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Unavailable
             ? result.reason
@@ -155,6 +159,11 @@ function getPrivateDetectionFailure(
     message,
     detailedError: {
       ...getAutoDetectCompletionDetailedError(message, reason),
+      ...(reason === AUTO_DETECT_FAILURE_REASONS.UserDataMissing &&
+      getAccountSiteDefinition(policy.siteType)?.onboarding
+        ?.accessTokenVerificationGuide
+        ? { recoveryAction: AUTO_DETECT_RECOVERY_ACTIONS.AccessToken }
+        : {}),
       message,
     },
   }

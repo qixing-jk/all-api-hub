@@ -8,6 +8,7 @@ import {
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -74,6 +75,36 @@ describe("accountAutoDetection", () => {
   beforeEach(() => {
     resetAccountAutoDetectionMocks()
   })
+
+  it.each([
+    [401, AUTO_DETECT_FAILURE_REASONS.CookieSessionRejected],
+    [403, AUTO_DETECT_FAILURE_REASONS.CookieSessionUnavailable],
+  ] as const)(
+    "preserves the help document for Cookie validation HTTP %s",
+    async (status, reason) => {
+      mockAutoDetectSmart.mockResolvedValueOnce({
+        success: true,
+        data: { userId: "42", siteType: SITE_TYPES.NEW_API },
+      })
+      mockFetchUserInfo.mockRejectedValueOnce(
+        new ApiError("Cookie validation failed", status, "/api/user/self"),
+      )
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ checkInSupported: false })
+
+      const result = await autoDetectAccount(
+        "https://cookie.example.invalid",
+        AuthTypeEnum.Cookie,
+      )
+
+      expect(result).toMatchObject({
+        success: false,
+        autoDetectFailureReason: reason,
+        detailedError: { helpDocUrl: getDocsAutoDetectUrl() },
+      })
+      expect(result.detailedError).not.toHaveProperty("recoveryAction")
+      expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([
     [

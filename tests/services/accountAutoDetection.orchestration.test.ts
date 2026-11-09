@@ -79,6 +79,27 @@ describe("accountAutoDetection", () => {
     resetAccountAutoDetectionMocks()
   })
 
+  it("retains Vercel token recovery without exposing private detection errors", async () => {
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "private-vercel-session",
+    })
+    const result = await autoDetectAccount(
+      "https://vercel.com",
+      AuthTypeEnum.AccessToken,
+    )
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+      detailedError: {
+        message: "messages:vercelAiGateway.accessTokenRequired",
+        recoveryAction: "access_token",
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain("private-vercel-session")
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+  })
+
   it("reports final detection failure with the same trace passed to site detection", async () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: false,

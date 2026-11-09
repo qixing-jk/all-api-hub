@@ -98,6 +98,83 @@ async function getNativeSidePanel(bridge: Page) {
   }, SIDEPANEL_PAGE_PATH)
 }
 
+for (const status of [401, 403]) {
+  test(`opens help after Cookie auto-detection HTTP ${status}`, async ({
+    context,
+    extensionId,
+    extensionDir,
+    page,
+  }) => {
+    const baseUrl = "https://cookie-help.example.invalid"
+    await forceExtensionLanguage(page, "en")
+    await stubLlmMetadataIndex(context)
+    await stubNewApiSiteRoutes(context, { baseUrl })
+    await context.route(
+      "https://all-api-hub.qixing1217.top/en/auto-detect",
+      (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: "<h1>Troubleshooting</h1>",
+        }),
+    )
+    const worker = await getServiceWorker(context)
+    await seedUserPreferences(worker, {
+      autoFillCurrentSiteUrlOnAccountAdd: false,
+      tempWindowFallback: { enabled: false },
+    })
+    const sitePage = await context.newPage()
+    await sitePage.goto(baseUrl)
+    await sitePage.evaluate(() => {
+      localStorage.setItem("user", JSON.stringify({ id: 1, username: "owner" }))
+    })
+    await context.route(`${baseUrl}/api/user/self`, (route) =>
+      route.fulfill({
+        status,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Sign in again" }),
+      }),
+    )
+    await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    await sitePage.bringToFront()
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+    const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+    await dialog
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+      .fill(baseUrl)
+    await dialog
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger)
+      .click()
+    await page.getByRole("option", { name: /Cookie/ }).click()
+    await dialog
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton)
+      .click()
+    await expect(
+      dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage),
+    ).toContainText(status === 401 ? "rejected" : "Unable to verify right now")
+    const help = dialog.getByRole("button", {
+      name: "Troubleshooting guide",
+      exact: true,
+    })
+    await captureVisualViews({
+      page,
+      ready: dialog,
+      id: `cookie-help-${status}`,
+      extensionDir,
+    })
+    await expect(help).toBeVisible()
+    const opened = context.waitForEvent("page")
+    await help.click()
+    const docs = await opened
+    // Extension-created tabs can navigate before Playwright attaches routes;
+    // the documentation host canonicalizes this page to its .html address.
+    await expect(docs).toHaveURL(
+      /^https:\/\/all-api-hub\.qixing1217\.top\/en\/auto-detect(?:\.html)?$/,
+    )
+  })
+}
+
 for (const scenario of [
   {
     siteType: SITE_TYPES.NEW_API,
@@ -342,6 +419,9 @@ for (const scenario of [
     await expect(
       popupDialog.getByText("Enter an Access Token manually"),
     ).toBeVisible()
+    const originalFailureMessage = await popupDialog
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage)
+      .innerText()
     await popupDialog
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
       .fill("Keep this site name")
@@ -410,6 +490,9 @@ for (const scenario of [
             siteName: value(ids.siteNameInput),
             username: value(ids.usernameInput),
             userId: value(ids.userIdInput),
+            failureMessage: dialog.querySelector(
+              `[data-testid="${ids.autoDetectErrorMessage}"]`,
+            )?.textContent,
           }
         }, ACCOUNT_MANAGEMENT_TEST_IDS),
       )
@@ -418,6 +501,7 @@ for (const scenario of [
         siteName: "Keep this site name",
         username: "e2e-user",
         userId: "1",
+        failureMessage: originalFailureMessage,
       })
 
     await recoveryView.evaluate((view, ids) => {

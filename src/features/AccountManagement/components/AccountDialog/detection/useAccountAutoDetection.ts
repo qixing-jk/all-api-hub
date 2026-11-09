@@ -130,7 +130,7 @@ export function useAccountAutoDetection({
   const [detectionErrorState, setDetectionError] = useState<
     AutoDetectError | typeof AUTO_DETECT_RECOVERY_ACTIONS.AccessToken | null
   >(null)
-  // A restored recovery prompt has no failure to translate or replace.
+  // Older handoffs without a failure still use localized generic guidance.
   const detectionError = useMemo<AutoDetectError | null>(
     () =>
       detectionErrorState === AUTO_DETECT_RECOVERY_ACTIONS.AccessToken
@@ -171,9 +171,20 @@ export function useAccountAutoDetection({
         : current,
     )
   }, [])
-  const requireAccessTokenRecovery = useCallback(() => {
-    setDetectionError(AUTO_DETECT_RECOVERY_ACTIONS.AccessToken)
-  }, [])
+  const requireAccessTokenRecovery = useCallback(
+    (error?: Pick<AutoDetectError, "type" | "message">) => {
+      setDetectionError(
+        error
+          ? {
+              ...error,
+              recoveryAction: AUTO_DETECT_RECOVERY_ACTIONS.AccessToken,
+              canUseApiCredentialFallback: false,
+            }
+          : AUTO_DETECT_RECOVERY_ACTIONS.AccessToken,
+      )
+    },
+    [],
+  )
   useEffect(
     () => () => {
       invalidate()

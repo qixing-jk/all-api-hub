@@ -769,6 +769,14 @@ export function useAccountDialog({
     )
       return null
     return {
+      ...(detectionError
+        ? {
+            detectionError: {
+              type: detectionError.type,
+              message: detectionError.message,
+            },
+          }
+        : {}),
       url,
       draft,
       ...(mode === DIALOG_MODES.EDIT && account

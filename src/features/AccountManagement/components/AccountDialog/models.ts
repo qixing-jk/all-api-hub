@@ -4,6 +4,7 @@ import {
   BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
   type AddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/types"
+import type { AutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
 import type { NovitaCredentialMode } from "~/services/apiService/novita/constants"
 import {
   createCompatibilityCheckInConfig,
@@ -77,6 +78,8 @@ export interface AccountDialogDraft {
 
 /** Form state carried from a popup into manual New API token recovery. */
 export interface AccountDialogRecoveryState {
+  /** Local failure feedback retained independently of the recovery action. */
+  detectionError?: Pick<AutoDetectError, "type" | "message">
   /** Resume the user-requested Cookie login only after the draft reaches a persistent view. */
   recoveryAction?: "cookie"
   url: string

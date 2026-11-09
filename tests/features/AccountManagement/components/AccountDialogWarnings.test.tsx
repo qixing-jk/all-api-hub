@@ -30,6 +30,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
 } from "~/services/productAnalytics/contracts"
+import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 import { server } from "~~/tests/msw/server"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -105,6 +106,38 @@ vi.mock("~/utils/navigation/feedbackPages", async (importOriginal) => {
 })
 
 describe("AccountDialog warnings", () => {
+  it.each([
+    AutoDetectErrorType.COOKIE_SESSION_REJECTED,
+    AutoDetectErrorType.UNKNOWN,
+  ])("opens the help document for Cookie failure %s", async (type) => {
+    const user = userEvent.setup()
+    const helpDocUrl = getDocsAutoDetectUrl()
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type,
+          message: "Cookie validation failed",
+          helpDocUrl,
+          canUseApiCredentialFallback: false,
+        }}
+        siteUrl="https://cookie.example.invalid"
+      />,
+    )
+
+    expect(screen.getByText("Cookie validation failed")).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "actions.helpDocument" }),
+    )
+
+    expect(browser.tabs.create).toHaveBeenCalledWith({
+      url: helpDocUrl,
+      active: true,
+    })
+    expect(
+      screen.queryByText("apiCredentialFallback.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows a busy token-page action and prevents duplicate clicks while discovery is pending", async () => {
     let finish!: (url: string) => void
     const pending = new Promise<string>((resolve) => {

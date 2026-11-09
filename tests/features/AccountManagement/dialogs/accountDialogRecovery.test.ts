@@ -12,6 +12,7 @@ import {
   prepareAccountDialogRecovery,
   receiveAccountDialogRecovery,
 } from "~/features/AccountManagement/dialogs/accountDialogRecovery"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
 import { setSessionStorageValues } from "~/utils/browser/storage"
@@ -79,6 +80,32 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it.each([
+    null,
+    { type: "invalid", message: "failure" },
+    { type: AutoDetectErrorType.UNKNOWN, message: 42 },
+  ])("rejects malformed carried failure %j", async (detectionError) => {
+    await expect(
+      prepareAccountDialogRecovery({
+        ...recoveryState(),
+        detectionError,
+      } as AccountDialogRecoveryState),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(sessionValues.size).toBe(0)
+  })
+  it("carries the original detection failure through the handoff", async () => {
+    const state = {
+      ...recoveryState(),
+      detectionError: {
+        type: AutoDetectErrorType.SERVER_ERROR,
+        message: "Server error. Please try again later",
+      },
+    }
+    const prepared = await prepareAccountDialogRecovery(state)
+    const accept = vi.fn(() => true)
+    await receiveAccountDialogRecovery(prepared.id, accept)
+    expect(accept).toHaveBeenCalledWith(state)
+  })
   it("rejects a Cookie recovery handoff for a provider that has not adopted recovery", async () => {
     const original = recoveryState(SITE_TYPES.NEW_API)
     await expect(

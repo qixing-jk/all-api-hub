@@ -79,7 +79,9 @@ type InitializationInput = {
     notifyCurrentTabUrlChanged: ReturnType<
       typeof useAccountCurrentTab
     >["notifyUrlChanged"]
-    requireAccessTokenRecovery: () => void
+    requireAccessTokenRecovery: (
+      error?: AccountDialogRecoveryState["detectionError"],
+    ) => void
     checkCurrentTab: ReturnType<typeof useAccountCurrentTab>["checkCurrentTab"]
   }
 }
@@ -399,7 +401,7 @@ export function useAccountDialogInitialization({
             : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
         )
         if (recoveryState.recoveryAction !== "cookie")
-          requireAccessTokenRecovery()
+          requireAccessTokenRecovery(recoveryState.detectionError)
       } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {

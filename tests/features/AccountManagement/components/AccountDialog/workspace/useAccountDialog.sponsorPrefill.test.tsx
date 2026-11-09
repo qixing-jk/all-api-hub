@@ -11,6 +11,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { isRecord } from "~/utils/core/object"
@@ -260,9 +261,40 @@ describe("useAccountDialog sponsor prefill", () => {
           ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
           : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
       )
-      expect(result.current.state.tokenRecoveryState).toEqual(recoveryState)
+      expect(result.current.state.tokenRecoveryState).toMatchObject(
+        recoveryState,
+      )
     },
   )
+
+  it("restores the original detection error with token recovery", async () => {
+    const detectionError = {
+      type: AutoDetectErrorType.SERVER_ERROR,
+      message: "Server error. Please try again later",
+    }
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      recoveryState: {
+        url: "https://original-site.example.com",
+        draft: createEmptyAccountDialogDraft(SITE_TYPES.NEW_API),
+        detectionError,
+        checkInSelectionChanged: false,
+        checkInDiscoveryBaseSelection: null,
+      },
+    })
+    await waitFor(() =>
+      expect(result.current.state.detectionError).toMatchObject({
+        ...detectionError,
+        recoveryAction: "access_token",
+      }),
+    )
+    expect(result.current.state.tokenRecoveryState).toMatchObject({
+      detectionError,
+    })
+  })
 
   it("keeps edits made after token recovery when the language changes", async () => {
     const originalLanguage = testI18n.language

@@ -78,6 +78,8 @@ export interface CompatibleApiRealSiteLoginResult {
   reusedSession: boolean
   user: Record<string, unknown>
   cleanupOwnedSession?: () => Promise<void>
+  /** Read-only proof that detection cannot fall back to rotating a legacy PAT. */
+  probeScopedAccessTokens?: () => Promise<boolean>
 }
 
 type CompatibleApiLoginApiPayload = {
@@ -665,6 +667,29 @@ async function createAuthBundleLoginResult(
   const result = {
     reusedSession,
     user: authBundle.user,
+    probeScopedAccessTokens: async () => {
+      try {
+        const response = await page.request.get(
+          resolveRealSiteUrl(config.baseUrl, "/api/user/access_tokens"),
+          {
+            headers: {
+              Authorization: `Bearer ${authBundle.accessToken}`,
+              Accept: "application/json",
+            },
+          },
+        )
+        if (!response.ok()) return false
+        const body = safeParseJson(await response.text())
+        return (
+          isRecord(body) &&
+          body.success === true &&
+          isRecord(body.data) &&
+          Array.isArray(body.data.items)
+        )
+      } catch {
+        return false
+      }
+    },
     ...(reusedSession
       ? {}
       : {

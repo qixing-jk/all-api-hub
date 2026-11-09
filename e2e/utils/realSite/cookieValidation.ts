@@ -179,10 +179,21 @@ export async function verifyRealSiteCookieThroughUi(params: {
       { timeout: 60_000 },
     )
     await expect
-      .poll(() => [...requests.values()].filter((row) => row.stage === stage), {
-        message:
-          "The hosted server must receive the supplied Cookie without a Token",
-      })
+      .poll(
+        () =>
+          [...requests.values()].filter(
+            (row) =>
+              row.stage === stage &&
+              (!valid ||
+                (row.status !== undefined &&
+                  row.status >= 200 &&
+                  row.status < 300)),
+          ),
+        {
+          message:
+            "The hosted server must receive the supplied Cookie without a Token",
+        },
+      )
       .toEqual(
         expect.arrayContaining([
           expect.objectContaining({
