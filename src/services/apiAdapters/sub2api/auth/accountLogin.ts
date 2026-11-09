@@ -1,5 +1,6 @@
 import {
   ACCOUNT_LOGIN_CONFIGURATION_KINDS,
+  ACCOUNT_LOGIN_CREDENTIAL_KINDS,
   ACCOUNT_LOGIN_METHODS,
 } from "~/constants/accountLogin"
 import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
@@ -22,6 +23,10 @@ import {
 import { createBrowserOAuthContext } from "~/services/browserOAuth/browserOAuth"
 import { AuthTypeEnum } from "~/types/auth"
 
+import {
+  captureSub2ApiLoginCredential,
+  sub2ApiLoginCredentialRecovery,
+} from "./loginCredential"
 import { loginSub2ApiWithPassword } from "./passwordLogin"
 
 /** Reads static method adoption and login navigation from the site definition. */
@@ -57,19 +62,24 @@ function supportsSub2ApiAccountLogin(account: AccountLoginTarget): boolean {
 }
 
 export const sub2ApiAccountLogin: AccountLoginCapability = {
+  credentialRecovery: sub2ApiLoginCredentialRecovery,
   get methods() {
     const policy = loginPolicy()
     return [
       ...policy.providers.map((id) => ({
         ...getSub2ApiOAuthMethod(id),
         configuration: { kind: ACCOUNT_LOGIN_CONFIGURATION_KINDS.None },
+        credentialRecovery: ACCOUNT_LOGIN_CREDENTIAL_KINDS.Sub2ApiToken,
       })),
       ...(policy.password
         ? [
-            passwordLoginMethod(
-              getAccountSiteDefinition(SITE_TYPES.SUB2API)?.accountLogin
-                ?.passwordIdentity,
-            ),
+            {
+              ...passwordLoginMethod(
+                getAccountSiteDefinition(SITE_TYPES.SUB2API)?.accountLogin
+                  ?.passwordIdentity,
+              ),
+              credentialRecovery: ACCOUNT_LOGIN_CREDENTIAL_KINDS.Sub2ApiToken,
+            },
           ]
         : []),
     ]
@@ -117,18 +127,21 @@ export const sub2ApiAccountLogin: AccountLoginCapability = {
         origin,
         requestId,
         loginPath: policy.loginPath,
+        captureCredential: captureSub2ApiLoginCredential,
       }),
     ).authenticate({
       origin,
       expectedIdentity,
       requestId,
       abortSignal: request.abortSignal,
+      captureCredential: request.captureCredential,
       ...(attended === undefined ? {} : { attended }),
     })
     return result.status === BROWSER_LOGIN_STATUS.Authenticated
       ? {
           status: BROWSER_LOGIN_STATUS.Authenticated,
           identity: result.identity,
+          ...(result.credential ? { credential: result.credential } : {}),
         }
       : result
   },

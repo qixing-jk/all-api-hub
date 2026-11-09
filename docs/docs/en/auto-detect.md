@@ -35,7 +35,7 @@ Different sites/modified versions handle interfaces and login states differently
 -   **Access Token authentication failed**: Switch to **Cookie authentication** and auto-identify again.
 -   **AnyRouter**: Configure **Cookie authentication**. Normal operations may succeed using a saved access token or website login session, so success does not establish the saved Cookie's validity.
 
-The compatibility explanation beside Cookie authentication applies across sites: normal operations may use an access token or the browser's current login session, so success does not establish that the entered Cookie is valid or renewed. The saved-token note appears only when the account actually stores a token. Browser-session-only sites retain their specific login-session guidance. Cookie verification is available for sites that support Cookie authentication and can independently read account identity. Login recovery requires separate integration and currently supports only AnyRouter.
+The compatibility explanation beside Cookie authentication applies across sites: normal operations may use an access token or the browser's current login session, so success does not establish that the entered Cookie is valid or renewed. The saved-token note appears only when the account actually stores a token. Browser-session-only sites retain their specific login-session guidance. Cookie verification is available for sites that support Cookie authentication and can independently read account identity. Login recovery requires separate integration and currently supports AnyRouter Cookies and Sub2API tokens.
 
 ## AnyRouter: automatically recover login
 
@@ -50,6 +50,14 @@ If verification reports a rejected Cookie or a different account, you can recove
 When refreshing balances, reading keys or checking in, the extension attempts the selected login method after the website explicitly requires authentication. It verifies the account identity, updates the saved Cookie and continues the operation. The existing check-in method stays the same. Network errors and website verification pages do not trigger login recovery. Site verification, an identity mismatch or an unconfirmed login result stops the recovery attempt.
 
 AnyRouter's website may check in automatically during login, so credential recovery may also trigger a website check-in. If that check-in has completed, the subsequent check-in request keeps the site's “already checked in” result.
+
+## Sub2API: login recovery and automatic token renewal
+
+Manual setup can start with a JWT Access Token alone; obtaining a Refresh Token first is unnecessary. In **Edit account → Account login**, choose a supported login method (email and password for password login), enable **Automatically recover login**, and save. Recovery is off by default and configured per account.
+
+The extension first tries the saved Refresh Token and saves the rotated Access Token, Refresh Token, and expiry together. If no Refresh Token is available, or renewal is rejected and the browser session cannot restore access, a confirmed authentication failure can trigger the configured login. The extension independently verifies the new Access Token's account identity, then saves the tokens and renewal information returned by the site. Future requests can renew automatically without asking you to enter a Refresh Token.
+
+Older or customized sites may omit the Refresh Token. In that case, only the verified Access Token is saved and obsolete renewal information is cleared. CAPTCHA, two-factor authentication, or OAuth authorization may still require your input. Identity mismatches, cancellation, or account edits prevent stale login results from overwriting the account. Deployments with separate console/API origins remain excluded when their existing login integration does not support them. Key mutations do not use the new login retry; supported check-in recovery retains its status and execution checks.
 
 ## The Identified Site Type Is Wrong
 

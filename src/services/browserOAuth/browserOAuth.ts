@@ -2,6 +2,7 @@ import {
   BROWSER_OAUTH_COMPLETION_STATUS,
   BROWSER_OAUTH_STATUS,
 } from "~/constants/browserOAuth"
+import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
 import {
   createBrowserLoginContext,
   type BrowserLoginContextOptions,
@@ -51,7 +52,7 @@ export interface BrowserOAuthFlow<Evidence> {
   captureCredential?: (
     tabId: number,
     origin: string,
-  ) => Promise<{ cookie: string } | null>
+  ) => Promise<AccountLoginCredential | null>
   authorizationInteraction?: {
     action: string
     isInteractionUrl(currentUrl: URL, requestedUrl: URL): boolean

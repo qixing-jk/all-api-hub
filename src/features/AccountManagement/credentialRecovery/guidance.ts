@@ -4,7 +4,7 @@ import {
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/AccountManagement/routeParams"
 import toast from "~/lib/notify"
-import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import { supportsAccountCredentialRecovery as supportsRecovery } from "~/services/accountCredentialRecovery/policy"
 import {
   ACCOUNT_AUTH_HEALTH_STATUS_CODES,
   SiteHealthStatus,
@@ -23,14 +23,14 @@ type RecoveryAccount = Pick<
 > &
   Partial<Pick<DisplaySiteData, "disabled" | "health">>
 
-/** Only adopted Cookie accounts can use account login to replace their saved credential. */
+/** Only adopted accounts can use account login to replace their saved credential. */
 export function supportsAccountCredentialRecovery(
   account: RecoveryAccount | null | undefined,
 ): boolean {
   return Boolean(
     account &&
       !account.disabled &&
-      supportsAccountCookieRecovery({
+      supportsRecovery({
         authType: account.authType,
         site_type: account.siteType,
         site_url: account.baseUrl,

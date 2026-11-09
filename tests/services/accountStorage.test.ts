@@ -11,6 +11,7 @@ import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/acco
 import { dayaCapabilities } from "~/services/apiAdapters/daya"
 import { pmApiCapabilities } from "~/services/apiAdapters/pmapi"
 import { refreshAccountData as refreshNewApiAccountData } from "~/services/apiService/newApiFamily/default/accountRefresh"
+import { getSub2ApiAuthSession } from "~/services/apiService/sub2api/auth/authSession"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import * as postSaveDiscovery from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
@@ -367,6 +368,158 @@ describe("accountStorage core behaviors", () => {
       )
     },
   )
+  it.each([false, true])(
+    "preserves recovered Sub2API credentials from an unchanged draft (renewable=%s)",
+    async (renewable) => {
+      const account = createAccount({
+        site_type: SITE_TYPES.SUB2API,
+        account_info: {
+          ...createAccount().account_info,
+          access_token: "recovered-access",
+        },
+        sub2apiAuth: {
+          refreshToken: "recovered-refresh",
+          tokenExpiresAt: 2000000000000,
+        },
+      })
+      seedStorage([account])
+      const loadedSub2ApiAuth = {
+        siteUrl: account.site_url,
+        userId: account.account_info.id,
+        accessToken: "loaded-access",
+        ...(renewable
+          ? { refreshToken: "loaded-refresh", tokenExpiresAt: 1000000000000 }
+          : {}),
+      }
+      expect(
+        await accountMutations.updateAccountWithCheckInDraft(
+          account.id,
+          {
+            notes: "edited note",
+            account_info: { access_token: "loaded-access" },
+            ...(renewable
+              ? {
+                  sub2apiAuth: {
+                    refreshToken: "loaded-refresh",
+                    tokenExpiresAt: 1000000000000,
+                  },
+                }
+              : {}),
+          },
+          account.checkIn,
+          {
+            loadedSub2ApiAuth,
+            userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+          },
+        ),
+      ).toBe(true)
+      const latest = await accountStorage.getAccountById(account.id)
+      expect(latest?.notes).toBe("edited note")
+      expect(latest?.account_info.access_token).toBe("recovered-access")
+      expect(latest?.sub2apiAuth).toEqual(account.sub2apiAuth)
+    },
+  )
+
+  it.each([
+    "access",
+    "refresh",
+    "expiry",
+    "url",
+    "identity",
+    "siteType",
+    "authType",
+  ])("retains explicit Sub2API draft changes (%s)", async (field) => {
+    const account = createAccount({
+      site_type: SITE_TYPES.SUB2API,
+      account_info: {
+        ...createAccount().account_info,
+        access_token: "recovered-access",
+      },
+      sub2apiAuth: {
+        refreshToken: "recovered-refresh",
+        tokenExpiresAt: 2000000000000,
+      },
+    })
+    seedStorage([account])
+    const submittedAuth = {
+      refreshToken:
+        field === "refresh" ? "replacement-refresh" : "loaded-refresh",
+      tokenExpiresAt: field === "expiry" ? 3000000000000 : 1000000000000,
+    }
+    const accessToken =
+      field === "access" ? "replacement-access" : "loaded-access"
+    await accountMutations.updateAccountWithCheckInDraft(
+      account.id,
+      {
+        account_info: {
+          access_token: accessToken,
+          id: field === "identity" ? "other-user" : account.account_info.id,
+        },
+        site_url: field === "url" ? "https://other.example" : account.site_url,
+        site_type:
+          field === "siteType" ? SITE_TYPES.NEW_API : SITE_TYPES.SUB2API,
+        authType:
+          field === "authType" ? AuthTypeEnum.Cookie : AuthTypeEnum.AccessToken,
+        sub2apiAuth: submittedAuth,
+      },
+      account.checkIn,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        loadedSub2ApiAuth: {
+          siteUrl: account.site_url,
+          userId: account.account_info.id,
+          accessToken: "loaded-access",
+          refreshToken: "loaded-refresh",
+          tokenExpiresAt: 1000000000000,
+        },
+      },
+    )
+    const latest = await accountStorage.getAccountById(account.id)
+    expect(latest?.account_info.access_token).toBe(accessToken)
+    if (field !== "siteType") expect(latest?.sub2apiAuth).toEqual(submittedAuth)
+  })
+
+  it.each([0, -1])(
+    "preserves rotated credentials when save drops loaded expiry %s",
+    async (tokenExpiresAt) => {
+      const account = createAccount({
+        site_type: SITE_TYPES.SUB2API,
+        account_info: {
+          ...createAccount().account_info,
+          access_token: "rotated-access",
+        },
+        sub2apiAuth: {
+          refreshToken: "rotated-refresh",
+          tokenExpiresAt: 2000000000000,
+        },
+      })
+      seedStorage([account])
+      await accountMutations.updateAccountWithCheckInDraft(
+        account.id,
+        {
+          notes: "edited note",
+          account_info: { access_token: "loaded-access" },
+          sub2apiAuth: { refreshToken: "loaded-refresh" },
+        },
+        account.checkIn,
+        {
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+          loadedSub2ApiAuth: {
+            siteUrl: account.site_url,
+            userId: account.account_info.id,
+            accessToken: "loaded-access",
+            refreshToken: "loaded-refresh",
+            tokenExpiresAt,
+          },
+        },
+      )
+      const latest = await accountStorage.getAccountById(account.id)
+      expect(latest?.notes).toBe("edited note")
+      expect(latest?.account_info.access_token).toBe("rotated-access")
+      expect(latest?.sub2apiAuth).toEqual(account.sub2apiAuth)
+    },
+  )
+
   beforeEach(() => {
     storageData.clear()
     storageHooks.beforeGet = async () => {}
@@ -4745,15 +4898,25 @@ describe("accountStorage core behaviors", () => {
       },
     })
     seedStorage([account])
-    mockRefreshAccountData.mockImplementationOnce(async (request) => ({
-      success: true,
-      data: { quota: 123, checkIn: request.checkIn },
-      authUpdate: {
+    mockRefreshAccountData.mockImplementationOnce(async (request) => {
+      // Native recovery persists its pair through the supplied session before
+      // returning account data; status readback must observe that same pair.
+      await getSub2ApiAuthSession(request)?.persistAuthUpdate(account.id, {
         accessToken: "recovered-token",
-        sub2apiAuth: { refreshToken: "recovered-refresh" },
-      },
-      healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
-    }))
+        refreshToken: "recovered-refresh",
+        expectedOrigin: account.site_url,
+        expectedUserId: account.account_info.id,
+      })
+      return {
+        success: true,
+        data: { quota: 123, checkIn: request.checkIn },
+        authUpdate: {
+          accessToken: "recovered-token",
+          sub2apiAuth: { refreshToken: "recovered-refresh" },
+        },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
+      }
+    })
     let authorization: string | null = null
     const readStatus = vi.fn(({ request }: { request: Request }) => {
       authorization = request.headers.get("authorization")

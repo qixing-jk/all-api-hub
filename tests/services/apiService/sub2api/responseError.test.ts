@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { fetchCurrentUser } from "~/services/apiService/sub2api/account/accountData"
 import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/auth/browserAuth"
 import { decodeSub2ApiResponseError } from "~/services/apiService/sub2api/responseError"
-import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
+import {
+  API_ERROR_CODES,
+  ApiError,
+  isAuthenticationRequiredError,
+} from "~/services/apiTransport/errors"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -23,6 +28,71 @@ describe("decodeSub2ApiResponseError", () => {
   beforeEach(() => {
     server.resetHandlers()
   })
+
+  it.each([
+    {
+      name: "expired token",
+      body: { code: 401, message: "JWT expired" },
+      contentType: "application/json",
+      expected: true,
+    },
+    {
+      name: "session binding without a message",
+      body: { code: SUB2API_SESSION_BINDING_MISMATCH_CODE },
+      contentType: "application/json",
+      expected: true,
+    },
+    {
+      name: "HTML protection",
+      body: "<html>Verify browser</html>",
+      contentType: "text/html",
+      expected: false,
+    },
+    {
+      name: "unknown proxy JSON",
+      body: { error: "proxy authorization required" },
+      contentType: "application/json",
+      expected: false,
+    },
+    {
+      name: "empty JSON",
+      body: {},
+      contentType: "application/json",
+      expected: false,
+    },
+    {
+      name: "plain text",
+      body: "Unauthorized",
+      contentType: "text/plain",
+      expected: false,
+    },
+  ])(
+    "only admits recognized authentication failures: $name",
+    ({ body, contentType, expected }) => {
+      let failure: unknown
+      try {
+        mapCompatibilityResponse(
+          {
+            ok: false,
+            status: 401,
+            headers: { "content-type": contentType },
+            body,
+          },
+          {
+            endpoint: "/api/v1/auth/me",
+            responseType: "json",
+            onlyData: true,
+            decodeApplicationError: true,
+            errorResponseDecoder: decodeSub2ApiResponseError,
+          },
+        )
+      } catch (error) {
+        failure = error
+      }
+      expect(failure).toBeInstanceOf(ApiError)
+      expect(isAuthenticationRequiredError(failure)).toBe(expected)
+    },
+  )
 
   it("uses only a valid failed Sub2API envelope message", () => {
     expect(
@@ -143,6 +213,7 @@ describe("decodeSub2ApiResponseError", () => {
     ).toEqual({
       kind: "http",
       message: "Sub2API request failed: 503",
+      unattributedMessage: true,
     })
   })
 

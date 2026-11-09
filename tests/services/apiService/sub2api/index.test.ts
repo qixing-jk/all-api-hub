@@ -1006,6 +1006,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result.healthStatus).toEqual({
       status: SiteHealthStatus.Warning,
       message: "messages:sub2api.refreshTokenInvalid",
+      code: "authentication_required",
     })
   })
 
@@ -1735,7 +1736,7 @@ describe("apiService sub2api refreshAccountData", () => {
     { accessToken: "", refreshToken: "stored-refresh" },
     { accessToken: "stored-jwt", refreshToken: "" },
   ])(
-    "persists refreshed credentials against the stored pair %j",
+    "uses the complete stored credential snapshot instead of stale caller credentials %j",
     async (storedPair) => {
       const now = 1_700_000_000_000
       const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
@@ -1794,26 +1795,35 @@ describe("apiService sub2api refreshAccountData", () => {
       )
 
       expect(mockGetLatestAuth).toHaveBeenCalledWith("account-1")
-      expect(
-        (vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth,
-      ).toMatchObject({
-        accessToken: "new-jwt",
-        refreshToken: "new-refresh",
-        tokenExpiresAt: now + 3600 * 1000,
-        userId: "9",
-      })
-      expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
-        accessToken: "new-jwt",
-        expectedAuth: {
-          accessToken: storedPair.accessToken,
-          refreshToken: storedPair.refreshToken || undefined,
-        },
-        refreshToken: "new-refresh",
-        tokenExpiresAt: now + 3600 * 1000,
-        expectedOrigin: "https://sub2.example.com",
-        expectedUserId: "9",
-        userId: "9",
-      })
+      const dispatchedAuth = vi.mocked(fetchApi).mock.calls[0]?.[0].auth
+      if (storedPair.refreshToken) {
+        expect(dispatchedAuth).toMatchObject({
+          accessToken: "new-jwt",
+          refreshToken: "new-refresh",
+          tokenExpiresAt: now + 3600 * 1000,
+          userId: "9",
+        })
+        expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
+          accessToken: "new-jwt",
+          expectedAuth: {
+            accessToken: storedPair.accessToken,
+            refreshToken: storedPair.refreshToken,
+          },
+          refreshToken: "new-refresh",
+          tokenExpiresAt: now + 3600 * 1000,
+          expectedOrigin: "https://sub2.example.com",
+          expectedUserId: "9",
+          userId: "9",
+        })
+      } else {
+        expect(dispatchedAuth).toMatchObject({
+          accessToken: "stored-jwt",
+          userId: "9",
+        })
+        expect(dispatchedAuth).not.toHaveProperty("refreshToken")
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
+      }
       expect(result.success).toBe(true)
       expect(result.authUpdate?.userId).toBe("9")
       expect(result.authUpdate?.username).toBe("stored-user")

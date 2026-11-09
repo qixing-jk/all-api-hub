@@ -272,6 +272,7 @@ export function useAccountDialogSaveWorkflow({
                   : {}),
                 selectionChanged: checkInSelectionChangedRef.current,
                 loadedKimiAuth: credentialEvidence.read().loadedKimiAuth,
+                loadedSub2ApiAuth: credentialEvidence.read().loadedSub2ApiAuth,
                 ...(checkInDiscoveryBaseSelectionRef.current
                   ? {
                       discoveryBaseSelection:

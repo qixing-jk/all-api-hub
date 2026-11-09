@@ -80,7 +80,10 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
-import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import {
+  supportsAccountCookieRecovery,
+  supportsAccountCredentialRecovery,
+} from "~/services/accountCredentialRecovery/policy"
 import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import { isAccountLoginConfigured } from "~/services/accountLogin/configCodec"
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
@@ -345,7 +348,8 @@ export default function AccountForm({
     account_info: { id: userId },
   }
   const supportsCookieRecovery = supportsAccountCookieRecovery(loginTarget)
-  const usesAccountLogin = usesLoginCheckIn || supportsCookieRecovery
+  const usesAccountLogin =
+    usesLoginCheckIn || supportsAccountCredentialRecovery(loginTarget)
   useEffect(() => {
     if (focusSection === "account-login" && usesAccountLogin) {
       setIsLoginSectionOpen(true)

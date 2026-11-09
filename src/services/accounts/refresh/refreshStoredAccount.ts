@@ -3,6 +3,7 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
+import { withAccountAuthSession } from "~/services/accounts/accountSiteProfile/authSession"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -274,7 +275,7 @@ function createAccountRefreshRequest(
     refreshToken: account.sub2apiAuth?.refreshToken,
     tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
   }
-  return {
+  return withAccountAuthSession(account.site_type, {
     baseUrl,
     accountId: account.id,
     allowAccountCredentialRecovery: true,
@@ -294,7 +295,7 @@ function createAccountRefreshRequest(
     ...(options?.protectionBypassExecution
       ? { protectionBypassExecution: options.protectionBypassExecution }
       : {}),
-  }
+  })
 }
 
 /** Runs optional discovery and schedules history after the refresh lock is released. */

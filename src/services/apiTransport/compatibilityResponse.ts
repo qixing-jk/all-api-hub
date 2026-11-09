@@ -128,7 +128,7 @@ function createCompatibilityHttpError(
   // site's protocol did not produce (an interceptor page, a proxy refusal, a
   // login redirect). Content type cannot tell the two apart — a proxy may well
   // answer in JSON — so attribution follows the source of the message.
-  if (!decoded?.message) {
+  if (!decoded?.message || decoded.unattributedMessage) {
     error.unattributedMessage = true
   }
 

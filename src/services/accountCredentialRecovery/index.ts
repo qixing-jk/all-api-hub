@@ -6,10 +6,8 @@ import {
   resolveAccountLogin,
 } from "~/services/accountLogin/configCodec"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
-import {
-  AccountUpdateUserTimestampMode,
-  applySiteAccountUpdates,
-} from "~/services/accounts/editing/accountDefaults"
+import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
+import { getAccountLoginCapability } from "~/services/apiAdapters/registry"
 import {
   composeAbortSignals,
   runAbortableTask,
@@ -26,10 +24,18 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
-import { supportsAccountCookieRecovery } from "./policy"
-import { AccountCredentialRecoveryError, verifyRecoveredCookie } from "./result"
+import {
+  applyRecoveredCredentialToAccount,
+  applyRecoveredCredentialToRequest,
+  savedCredential,
+} from "./credential"
+import { supportsAccountCredentialRecovery } from "./policy"
+import {
+  AccountCredentialRecoveryError,
+  verifyRecoveredCredential,
+} from "./result"
 
-/** Checks that recovery still targets the saved, enabled Cookie account. */
+/** Checks that recovery still targets the saved, enabled account. */
 function matchesRequest(
   account: SiteAccount,
   request: ApiServiceRequest,
@@ -39,7 +45,7 @@ function matchesRequest(
     account.site_type === request.siteType &&
     new URL(account.site_url).origin === new URL(request.baseUrl).origin &&
     String(account.account_info.id) === String(request.auth.userId) &&
-    account.authType === AuthTypeEnum.Cookie &&
+    account.authType === request.auth.authType &&
     account.disabled !== true
   )
 }
@@ -54,21 +60,14 @@ function assertActive(request: ApiServiceRequest): void {
 // This process-local order is used only by in-memory request observers.
 let recoveryGeneration = 0
 
-/** Replaces retry credentials and records their recovery order. */
-function withCookie(
+/** Assign recovery order under the lock, before concurrent retries complete. */
+function withCredential(
   request: ApiServiceRequest,
-  cookie: string,
-): { request: ApiServiceRequest; generation: number } {
+  credential: AccountLoginCredential,
+) {
   return {
     generation: ++recoveryGeneration,
-    request: {
-      ...request,
-      auth: { ...request.auth, cookie },
-      cookieAuthSessionCookie: cookie,
-      ...(request.cookieSession
-        ? { cookieSession: { ...request.cookieSession, cookieHeader: cookie } }
-        : {}),
-    },
+    request: applyRecoveredCredentialToRequest(request, credential),
   }
 }
 
@@ -83,20 +82,24 @@ export async function executeWithAccountCredentialRecovery<T>(
     if (
       !isAuthenticationRequiredError(error) ||
       request.allowAccountCredentialRecovery !== true ||
-      !request.accountId ||
-      !supportsAccountCookieRecovery({
-        site_type: request.siteType,
-        authType: request.auth.authType,
-        site_url: request.baseUrl,
-        account_info: { id: String(request.auth.userId ?? "") },
-      })
+      !request.accountId
     )
       throw error
+    const target = {
+      site_type: request.siteType,
+      authType: request.auth.authType,
+      site_url: request.baseUrl,
+      account_info: { id: String(request.auth.userId ?? "") },
+    }
+    if (!supportsAccountCredentialRecovery(target)) throw error
     assertActive(request)
     const recovered = await runAbortableTask(
       () =>
         withExtensionStorageWriteLock(
-          `${STORAGE_LOCKS.ACCOUNT_CREDENTIAL_RECOVERY}:${request.accountId}`,
+          `${
+            getAccountLoginCapability(target)?.credentialRecovery?.lock ??
+            STORAGE_LOCKS.ACCOUNT_CREDENTIAL_RECOVERY
+          }:${request.accountId}`,
           async () => {
             assertActive(request)
             const account = (await accountConfigStore.read()).accounts.find(
@@ -106,24 +109,30 @@ export async function executeWithAccountCredentialRecovery<T>(
             const login = resolveAccountLogin(account)
             if (
               login?.automaticRecovery !== true ||
-              !supportsAccountCookieRecovery(account, login.methodId) ||
+              !supportsAccountCredentialRecovery(account, login.methodId) ||
               !isAccountLoginConfigured(login, getAccountLoginMethods(account))
             )
               throw error
+            const credential = savedCredential(account)
             const cookie = account.cookieAuth?.sessionCookie
             const rejectedCookie =
               request.cookieSession?.cookieHeader ??
               request.auth.cookie ??
               request.cookieAuthSessionCookie
             // Another operation already rotated the saved credential while we waited.
-            if (cookie?.trim() && cookie !== rejectedCookie)
-              return withCookie(request, cookie)
+            if (
+              account.authType === AuthTypeEnum.Cookie
+                ? cookie?.trim() && cookie !== rejectedCookie
+                : account.account_info.access_token?.trim() &&
+                  account.account_info.access_token !== request.auth.accessToken
+            )
+              return withCredential(request, credential)
             const cancellation = composeAbortSignals([
               request.abortSignal,
               request.abortDeadline?.signal,
             ])
             try {
-              const result = await verifyRecoveredCookie(
+              const result = await verifyRecoveredCredential(
                 await loginAccount({
                   account: { ...account, login },
                   methodId: login.methodId,
@@ -143,14 +152,15 @@ export async function executeWithAccountCredentialRecovery<T>(
               assertActive(request)
               if (result.status !== BROWSER_LOGIN_STATUS.Authenticated)
                 throw new AccountCredentialRecoveryError(result, error)
-              const nextCookie = result.credential.cookie
+              const nextCredential = result.credential
               return await accountConfigStore.mutateAccount(
                 account.id,
                 (current) => {
                   assertActive(request)
                   if (
                     !matchesRequest(current, request) ||
-                    current.cookieAuth?.sessionCookie !== cookie ||
+                    JSON.stringify(savedCredential(current)) !==
+                      JSON.stringify(credential) ||
                     JSON.stringify(resolveAccountLogin(current)) !==
                       JSON.stringify(login)
                   )
@@ -160,16 +170,15 @@ export async function executeWithAccountCredentialRecovery<T>(
                       error.endpoint,
                       API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH,
                     )
-                  const nextAccount = applySiteAccountUpdates({
-                    account: current,
-                    updates: { cookieAuth: { sessionCookie: nextCookie } },
-                    now: Date.now(),
-                    userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
-                  })
+                  const nextAccount = applyRecoveredCredentialToAccount(
+                    current,
+                    nextCredential,
+                    Date.now(),
+                  )
                   return {
                     nextAccount,
                     changed: true,
-                    result: withCookie(request, nextCookie),
+                    result: withCredential(request, nextCredential),
                   }
                 },
               )
@@ -183,12 +192,13 @@ export async function executeWithAccountCredentialRecovery<T>(
     assertActive(request)
     // Exactly one retry: a second rejection never starts another login.
     const result = await runner(recovered.request)
-    notifyApiTransportObserver(
-      request.observer,
-      "onCookieRecovered",
-      recovered.request.auth.cookie!,
-      recovered.generation,
-    )
+    if (recovered.request.auth.authType === AuthTypeEnum.Cookie)
+      notifyApiTransportObserver(
+        request.observer,
+        "onCookieRecovered",
+        recovered.request.auth.cookie!,
+        recovered.generation,
+      )
     return result
   }
 }

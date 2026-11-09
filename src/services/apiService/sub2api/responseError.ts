@@ -65,6 +65,6 @@ export const decodeSub2ApiResponseError: ApiResponseErrorDecoder = (
     ),
     ...(failure
       ? { upstreamCode: failure.reason ?? failure.upstreamCode }
-      : {}),
+      : { unattributedMessage: true }),
   }
 }

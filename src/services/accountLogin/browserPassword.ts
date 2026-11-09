@@ -11,6 +11,7 @@ import {
   TURNSTILE_MANUAL_WAIT_MS,
 } from "~/constants/turnstile"
 import type {
+  AccountLoginCredential,
   AccountLoginEvidence,
   AccountLoginResult,
 } from "~/services/apiAdapters/contracts/accountLogin"
@@ -46,7 +47,7 @@ interface BrowserPasswordFlow {
   captureCredential?: (
     tabId: number,
     origin: string,
-  ) => Promise<{ cookie: string } | null>
+  ) => Promise<AccountLoginCredential | null>
 }
 
 /** One native submission's projected response, owned by its browser attempt. */

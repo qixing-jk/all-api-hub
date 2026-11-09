@@ -9,6 +9,7 @@ import type {
   LoginVerificationReason,
 } from "~/constants/browserLogin"
 import { TURNSTILE_MANUAL_WAIT_MS } from "~/constants/turnstile"
+import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { waitForTabComplete } from "~/services/browsingContext/tempPage/browserAdapter"
 import { resolveTempWindowSize } from "~/services/browsingContext/tempPage/windowSize"
@@ -96,7 +97,7 @@ export type BrowserLoginResult<Evidence> =
       status: typeof BROWSER_LOGIN_STATUS.Authenticated
       evidence: Evidence
       identity: string
-      credential?: { cookie: string }
+      credential?: AccountLoginCredential
     }
   | {
       status: BrowserLoginFailureStatus
@@ -149,7 +150,7 @@ export interface BrowserLoginProtocol<Evidence> {
   captureCredential?: (
     tabId: number,
     origin: string,
-  ) => Promise<{ cookie: string } | null>
+  ) => Promise<AccountLoginCredential | null>
   execute(session: BrowserLoginSession): Promise<BrowserLoginResult<Evidence>>
   failure?(error: unknown): BrowserLoginResult<Evidence>
 }

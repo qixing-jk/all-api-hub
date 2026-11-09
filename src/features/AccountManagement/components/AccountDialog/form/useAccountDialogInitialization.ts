@@ -235,6 +235,15 @@ export function useAccountDialogInitialization({
           credentialEvidence.acceptLoadedCredential({
             accessToken: siteAccount.account_info.access_token,
             scope: { url: siteAccount.site_url, siteType: normalizedSiteType },
+            loadedSub2ApiAuth:
+              normalizedSiteType === SITE_TYPES.SUB2API
+                ? {
+                    siteUrl: siteAccount.site_url,
+                    userId: siteAccount.account_info.id,
+                    accessToken: siteAccount.account_info.access_token,
+                    ...siteAccount.sub2apiAuth,
+                  }
+                : undefined,
             loadedKimiAuth: siteAccount.kimiOpenPlatformAuth
               ? {
                   accessToken: siteAccount.account_info.access_token,

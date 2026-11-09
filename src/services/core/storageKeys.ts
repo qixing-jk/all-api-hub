@@ -27,6 +27,8 @@ export const STORAGE_LOCKS = {
   /** Serializes explicit data cleanup operations in development builds. */
   DEV_DATA_CLEANUP: "all-api-hub:dev-data-cleanup",
   LOGIN_PROVIDER_EVIDENCE: "all-api-hub:login-provider-evidence",
+  /** Serializes Sub2API token rotation and login recovery across contexts. */
+  SUB2API_SESSION_AUTH: "all-api-hub:sub2api-session-auth",
   /** Serializes account login recovery across extension contexts. */
   ACCOUNT_CREDENTIAL_RECOVERY: "all-api-hub:account-credential-recovery",
   AIMLAPI_ONBOARDING: "all-api-hub:aimlapi-onboarding",

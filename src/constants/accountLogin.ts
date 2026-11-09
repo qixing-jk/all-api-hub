@@ -15,6 +15,7 @@ export const ACCOUNT_LOGIN_CONFIGURATION_KINDS = {
 /** Credentials that an implemented login method can export. */
 export const ACCOUNT_LOGIN_CREDENTIAL_KINDS = {
   Cookie: "cookie",
+  Sub2ApiToken: "sub2api-token",
 } as const
 
 /** Provider operations admitted to automatic credential recovery. */

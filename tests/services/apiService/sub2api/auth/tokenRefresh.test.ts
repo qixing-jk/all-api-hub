@@ -186,6 +186,30 @@ describe("Sub2API token refresh", () => {
     })
   })
 
+  it.each([
+    { name: "empty JSON", body: {} },
+    { name: "proxy JSON", body: { error: "proxy authorization required" } },
+    {
+      name: "malformed envelope",
+      body: { code: "401", message: "Unauthorized" },
+    },
+  ])("keeps a refresh HTTP 401 with $name uncertain", async ({ body }) => {
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      headers: {},
+      body,
+    })
+    const error = await captureRefreshError({
+      request: createRequest(),
+      refreshToken: "refresh-token",
+    })
+    expect(error).toMatchObject({
+      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    })
+    expect(mockFetchApiResponse).toHaveBeenCalledTimes(1)
+  })
+
   it("keeps a session-binding rejection distinct from an invalid refresh token", async () => {
     mockFetchApiResponse.mockResolvedValueOnce({
       ok: false,

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_COOKIE_VALIDATION_STATUS } from "~/constants/accountCookieValidation"
 import { executeWithAccountCredentialRecovery } from "~/services/accountCredentialRecovery"
+import { verifyRecoveredCredential } from "~/services/accountCredentialRecovery/result"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 
@@ -125,6 +126,41 @@ describe("account credential recovery", () => {
       },
     }
   }
+
+  it("recovers an account that has no saved Cookie", async () => {
+    const f = fixture()
+    f.get().cookieAuth = undefined
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(f.error)
+      .mockResolvedValueOnce("ok")
+    expect(await executeWithAccountCredentialRecovery(f.request, runner)).toBe(
+      "ok",
+    )
+    expect(f.get().cookieAuth?.sessionCookie).toBe("session=new")
+  })
+
+  it.each(["new-api", "anyrouter"] as const)(
+    "rejects unsupported bearer recovery for %s",
+    async (site_type) => {
+      expect(
+        await verifyRecoveredCredential(
+          {
+            status: "authenticated",
+            identity: "17",
+            credential: { accessToken: "token" },
+          },
+          {
+            site_type,
+            site_url: "https://example.com",
+            account_info: { id: "17" },
+            authType: AuthTypeEnum.AccessToken,
+          },
+        ),
+      ).toEqual({ status: "unsupported" })
+      expect(deps.verify).not.toHaveBeenCalled()
+    },
+  )
 
   it("does not recover a removed account", async () => {
     const f = fixture()

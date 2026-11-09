@@ -9,8 +9,12 @@ import type {
   AccountCookieValidationTarget,
   AccountLoginResult,
 } from "~/services/apiAdapters/contracts/accountLogin"
+import { getAccountLoginCapability } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { t } from "~/utils/i18n/core"
+
+import { supportsAccountCredentialRecovery } from "./policy"
 
 type LoginFailure = Exclude<
   AccountLoginResult,
@@ -23,10 +27,10 @@ export type AccountCookieRecoveryFailure = LoginFailure & {
 }
 
 export type AccountCookieRecoveryResult =
-  | Extract<
+  | (Extract<
       AccountLoginResult,
       { status: typeof BROWSER_LOGIN_STATUS.Authenticated }
-    >
+    > & { credential: { cookie: string } })
   | AccountCookieRecoveryFailure
 
 /** Reuse credential guidance without discarding the structured verification cause. */
@@ -45,25 +49,20 @@ export function getAccountCookieRecoveryMessage(
 function validateRecoveredCookie(
   result: AccountLoginResult,
   expectedIdentity: string,
-):
-  | LoginFailure
-  | (Extract<
-      AccountLoginResult,
-      { status: typeof BROWSER_LOGIN_STATUS.Authenticated }
-    > & { credential: { cookie: string } }) {
+): AccountCookieRecoveryResult {
   if (result.status !== BROWSER_LOGIN_STATUS.Authenticated) return result
   if (result.identity !== expectedIdentity)
     return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }
-  if (!result.credential?.cookie.trim())
+  if (!result.credential?.cookie?.trim())
     return { status: BROWSER_LOGIN_STATUS.Failed }
-  return { ...result, credential: result.credential }
+  return { ...result, credential: { cookie: result.credential.cookie } }
 }
 
 /** Verify the exported credential independently of the browser login's ambient auth. */
 export async function verifyRecoveredCookie(
   result: AccountLoginResult,
   target: AccountCookieValidationTarget,
-) {
+): Promise<AccountCookieRecoveryResult> {
   const captured = validateRecoveredCookie(
     result,
     String(target.account_info.id),
@@ -86,6 +85,19 @@ export async function verifyRecoveredCookie(
           ? BROWSER_LOGIN_STATUS.Failed
           : BROWSER_LOGIN_STATUS.Uncertain,
   }
+}
+
+/** Bearer recovery proves the exported token independently of the login tab. */
+export async function verifyRecoveredCredential(
+  result: AccountLoginResult,
+  target: AccountCookieValidationTarget & Pick<SiteAccount, "authType">,
+) {
+  if (target.authType === AuthTypeEnum.Cookie)
+    return verifyRecoveredCookie(result, target)
+  const recovery = getAccountLoginCapability(target)?.credentialRecovery
+  if (!supportsAccountCredentialRecovery(target) || !recovery)
+    return { status: BROWSER_LOGIN_STATUS.Unsupported } as const
+  return recovery.verify(result, target)
 }
 
 /** Keeps the login outcome separate from the initial request's 401. */
