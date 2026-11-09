@@ -1,6 +1,4 @@
 import { modelMetadataService } from "~/services/models/modelMetadata"
-import { runProbeGeneration } from "~/services/verification/aiApiVerification/probes/probeGeneration"
-import { createModel } from "~/services/verification/aiApiVerification/providers"
 import type {
   ApiVerificationApiType,
   ApiVerificationMode,
@@ -10,6 +8,7 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 
 import { CONTEXT_ATTEMPT_OUTCOMES } from "./contextCapacityConstants"
 import { classifyContextError } from "./contextErrors"
+import { runContextGeneration } from "./contextGeneration"
 import { exceedsContextBudget } from "./contextLimits"
 import { createContextTokens, type ContextCounterInfo } from "./contextTokens"
 import {
@@ -163,7 +162,6 @@ export async function runNeedleTest(
   const targets = selectNeedleCells(plan, params.selection, result.cells).cells
   result.scheduled = targets
   result.processed = 0
-  const model = createModel(params)
   // Every explicit run has its own budget; retained observations are not new requests.
   let totalInputTokens = 0
   let requests = 0
@@ -313,12 +311,11 @@ export async function runNeedleTest(
         ...Object.values(params.requestHeaders ?? {}),
       ]
       try {
-        const generated = await runProbeGeneration(
+        const generated = await runContextGeneration(
+          params,
           {
-            model,
             prompt: fixture.prompt,
             maxOutputTokens: defaults.maxOutputTokens,
-            maxRetries: 0,
             abortSignal: signal,
           },
           params.mode,

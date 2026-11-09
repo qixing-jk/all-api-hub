@@ -34,7 +34,11 @@ export async function runProbeGeneration<
 >(
   options: Parameters<
     typeof generateText<TOOLS, Record<string, unknown>, OUTPUT>
-  >[0],
+  >[0] &
+    Pick<
+      Parameters<typeof streamText<TOOLS, Record<string, unknown>, OUTPUT>>[0],
+      "include" | "onChunk"
+    >,
   mode: ApiVerificationMode = API_VERIFICATION_MODES.Streaming,
 ): Promise<ProbeGenerationResult<TOOLS, OUTPUT>> {
   options.abortSignal?.throwIfAborted()
