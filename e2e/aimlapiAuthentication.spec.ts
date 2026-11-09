@@ -1,4 +1,4 @@
-import type { BrowserContext } from "@playwright/test"
+import type { BrowserContext, Page } from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -51,6 +51,39 @@ test.beforeEach(async ({ context }) => {
     domain: /(^|\.)aimlapi\.com$/,
   })
 
+  // As with holdExtensionWindowNavigation, attach Playwright before the first
+  // navigation created through an extension API, so that routing can intercept it.
+  const openedTabs = new WeakMap<Page, Promise<Page>>()
+  await context.exposeBinding(
+    "__aimlapiTabNavigation",
+    async ({ page }, phase: "prepare" | "attached") => {
+      if (phase === "prepare") {
+        const opened = context.waitForEvent("page")
+        // Context teardown may reject this if tab creation itself fails.
+        void opened.catch(() => {})
+        openedTabs.set(page, opened)
+        return
+      }
+      const opened = openedTabs.get(page)
+      if (!opened) throw new Error("AIMLAPI tab navigation was not prepared")
+      await opened
+      openedTabs.delete(page)
+    },
+  )
+  await context.addInitScript(() => {
+    const scope = globalThis as any
+    const tabs = scope.chrome?.tabs
+    if (!tabs?.create) return
+    const create = tabs.create.bind(tabs)
+    tabs.create = async (options: Record<string, unknown>) => {
+      if (options.url !== "https://aimlapi.com/app/keys") return create(options)
+      await scope.__aimlapiTabNavigation("prepare")
+      const opened = await create({ ...options, url: "about:blank" })
+      await scope.__aimlapiTabNavigation("attached")
+      return tabs.update(opened.id, { url: options.url })
+    }
+  })
+
   // Scenario routes registered later take precedence. A missing provider mock
   // must fail here instead of depending on the live console or its assets.
   await context.route(
@@ -86,14 +119,42 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test("keeps the signed-out key-page redirect inside the mocks", async ({
-  page,
+test("shared authentication runner accepts the mocked sign-in redirect", async ({
+  context,
+  extensionId,
 }) => {
-  await page.goto("https://aimlapi.com/app/keys")
-  await expect(page).toHaveURL(
-    "https://aimlapi.com/app/auth/login?returnTo=/keys",
-  )
-  await expect(page).toHaveTitle("Mock AI/ML API sign-in")
+  await setupAuthenticationScenario({ context, extensionId })
+  // Deliver the real acquisition tab after navigation, so the runner cannot
+  // accept the intermediate /app/keys URL before checking the login destination.
+  const redirectedContext = new Proxy(context, {
+    get(target, property) {
+      if (property === "waitForEvent")
+        return async (event: "page") => {
+          const keysPage = await target.waitForEvent(event)
+          try {
+            await expect(keysPage).toHaveURL(
+              "https://aimlapi.com/app/auth/login?returnTo=/keys",
+            )
+            await expect(keysPage).toHaveTitle("Mock AI/ML API sign-in")
+            return keysPage
+          } catch (error) {
+            await keysPage.close()
+            throw error
+          }
+        }
+      const value = Reflect.get(target, property)
+      return typeof value === "function" ? value.bind(target) : value
+    },
+  })
+  const form = await openAimlapiAuthForm({
+    context: redirectedContext,
+    extensionId,
+  })
+  try {
+    await expect(form.dialog).toBeVisible()
+  } finally {
+    await form.page.close()
+  }
 })
 
 test("editing an AIMLAPI account offers one credential detection action", async ({
