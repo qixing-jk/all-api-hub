@@ -197,8 +197,13 @@ export function handlePasswordUi(
         current = await provider.readSession()
       } catch (error) {
         if (
-          !(error instanceof BrowserOAuthRequestError) ||
-          error.reason !== "request_failed"
+          !(
+            (error instanceof BrowserOAuthRequestError &&
+              error.reason === "request_failed") ||
+            (error instanceof PasswordLoginResponseError &&
+              !error.mutationRisk &&
+              error.reason === BROWSER_LOGIN_FAILURE_REASONS.InvalidResponse)
+          )
         )
           throw error
         // Navigation or a transient request failure can interrupt this read.
