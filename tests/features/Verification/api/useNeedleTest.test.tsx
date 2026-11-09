@@ -207,72 +207,78 @@ it("clears a previous history warning when failed-run readback succeeds", async 
   expect(result.current.error).toBeTruthy()
 })
 
-it("recovers retained measurements before a disjoint retry after failed history writes", async () => {
-  const observed = createNeedleResult({
-    ...saved,
-    cells: [
-      {
-        targetTokens: 8192,
-        depth: 50,
-        actualDepth: 50,
-        localInputTokens: 8000,
-        outcome: "miss",
-      },
-    ],
-  })
-  const next = {
-    targetTokens: 8192,
-    depth: 10,
-    actualDepth: 10,
-    localInputTokens: 8000,
-    outcome: "hit" as const,
-  }
-  await needleHistory.save(request, saved)
-  const save = vi
-    .spyOn(needleHistory, "save")
-    .mockRejectedValueOnce(new Error("Storage unavailable"))
-    .mockRejectedValueOnce(new Error("Storage unavailable"))
-  const run = vi
-    .spyOn(needleRun, "runNeedleTest")
-    .mockImplementationOnce(async (params) => {
-      params.onProgress?.(observed)
-      await params.onCheckpoint?.(observed)
-      return observed
+it.each([true, false])(
+  "recovers retained measurements before a disjoint retry after failed history writes (earlier summary: %s)",
+  async (hasSummary) => {
+    const observed = createNeedleResult({
+      ...saved,
+      cells: [
+        {
+          targetTokens: 8192,
+          depth: 50,
+          actualDepth: 50,
+          localInputTokens: 8000,
+          outcome: "miss",
+        },
+      ],
     })
-    .mockImplementationOnce(async (params) => ({
-      ...params.resumeFrom!,
-      cells: [...params.resumeFrom!.cells, next],
-    }))
-  try {
-    const { result } = await setup({
-      runner: (params, target) => runDurableNeedleTest(params, false, target),
-      historyAccess: needleHistory,
-    })
-    await waitFor(() => expect(result.current.historical).toBe(true))
-    await act(() => result.current.runSelection({ depth: 50 }))
-    expect(result.current.result).toEqual(observed)
-    expect(result.current.historical).toBe(false)
-    expect(result.current.error).toBeTruthy()
-    // Recovery persists the terminal checkpoint, then rejects the older UI baseline.
-    await act(() => result.current.runSelection({ depth: 10 }))
-    expect(run).toHaveBeenCalledOnce()
-    expect(result.current.error).toBeTruthy()
-    expect((await needleHistory.get(request))?.result.cells).toEqual(
-      observed.cells,
-    )
-    await act(() => result.current.runSelection({ depth: 10 }))
-    expect(run).toHaveBeenCalledTimes(2)
-    expect(run.mock.calls[1]![0]).toMatchObject({
-      selection: { depth: 10 },
-      resumeFrom: { cells: observed.cells },
-    })
-    expect(result.current.result?.cells).toEqual([...observed.cells, next])
-    expect(result.current.error).toBeNull()
-  } finally {
-    save.mockRestore()
-    run.mockRestore()
-  }
-})
+    const next = {
+      targetTokens: 8192,
+      depth: 10,
+      actualDepth: 10,
+      localInputTokens: 8000,
+      outcome: "hit" as const,
+    }
+    if (hasSummary) await needleHistory.save(request, saved)
+    const save = vi
+      .spyOn(needleHistory, "save")
+      .mockRejectedValueOnce(new Error("Storage unavailable"))
+      .mockRejectedValueOnce(new Error("Storage unavailable"))
+    const run = vi
+      .spyOn(needleRun, "runNeedleTest")
+      .mockImplementationOnce(async (params) => {
+        params.onProgress?.(observed)
+        await params.onCheckpoint?.(observed)
+        return observed
+      })
+      .mockImplementationOnce(async (params) => ({
+        ...params.resumeFrom!,
+        cells: [...params.resumeFrom!.cells, next],
+      }))
+    try {
+      const { result } = await setup({
+        runner: (params, target) => runDurableNeedleTest(params, false, target),
+        historyAccess: needleHistory,
+      })
+      await waitFor(() => expect(result.current.historical).toBe(hasSummary))
+      act(() => result.current.setSeedDraft("123"))
+      await act(() => result.current.runSelection({ depth: 50 }))
+      expect(result.current.result).toEqual(observed)
+      expect(result.current.historical).toBe(false)
+      expect(result.current.error).toBeTruthy()
+      // A saved baseline must be reconciled; without one, recover before any new request.
+      act(() => result.current.setSeedDraft("456"))
+      await act(() => result.current.runSelection({ depth: 10 }))
+      expect(run).toHaveBeenCalledOnce()
+      expect(Boolean(result.current.error)).toBe(hasSummary)
+      expect((await needleHistory.get(request))?.result.cells).toEqual(
+        observed.cells,
+      )
+      await act(() => result.current.runSelection({ depth: 10 }))
+      expect(run).toHaveBeenCalledTimes(2)
+      expect(run.mock.calls[1]![0]).toMatchObject({
+        selection: { depth: 10 },
+        seed: observed.seed,
+        resumeFrom: { cells: observed.cells },
+      })
+      expect(result.current.result?.cells).toEqual([...observed.cells, next])
+      expect(result.current.error).toBeNull()
+    } finally {
+      save.mockRestore()
+      run.mockRestore()
+    }
+  },
+)
 
 it("labels readback as historical when a failed run never produced progress", async () => {
   const { result } = await setup({

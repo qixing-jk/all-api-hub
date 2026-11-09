@@ -2,8 +2,8 @@ import { beforeEach, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 import { WEB_AI_API_CHECK_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import { CONTEXT_TOKEN_ENCODINGS } from "~/services/verification/modelQuality/contextTokenConstants"
 import {
   NEEDLE_OUTCOMES,
@@ -26,33 +26,81 @@ const counter = { encoding: CONTEXT_TOKEN_ENCODINGS.O200k, estimated: true }
 beforeEach(() => vi.restoreAllMocks())
 
 it.each(["google", "openai-compatible"] as const)(
-  "preserves consecutive protocol version segments through %s dispatch and history",
+  "preserves consecutive protocol version segments through real %s dispatch and history",
   async (apiType) => {
-    const needle = await import(
-      "~/services/verification/modelQuality/needleRun"
-    )
     const version = apiType === "google" ? "v1beta" : "v1"
     const mount = `https://example.invalid/relay/${version}/${version}`
     const operation =
       apiType === "google" ? "models/test:generateContent" : "chat/completions"
-    const result = createNeedleResult()
-    const run = vi
-      .spyOn(needle, "runNeedleTest")
-      .mockImplementation(async (params) => {
-        expect(toVersionedProtocolMount(apiType, params.baseUrl)).toBe(mount)
-        return result
+    const urls: string[] = []
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = input instanceof Request ? input.url : String(input)
+        if (url === MODEL_METADATA_URL) return Response.json({ models: [] })
+        urls.push(url)
+        return Response.json(
+          apiType === "google"
+            ? {
+                candidates: [
+                  {
+                    content: { role: "model", parts: [{ text: "wrong" }] },
+                    finishReason: "STOP",
+                  },
+                ],
+              }
+            : {
+                id: "needle",
+                object: "chat.completion",
+                created: 1,
+                model: "test",
+                choices: [
+                  {
+                    index: 0,
+                    message: { role: "assistant", content: "wrong" },
+                    finish_reason: "stop",
+                  },
+                ],
+              },
+        )
       })
-    await runDurableNeedleTest({
-      ...request,
-      apiType,
-      baseUrl: `${mount}/${operation}`,
-      abortSignal: new AbortController().signal,
-    })
-    expect(run).toHaveBeenCalledOnce()
-    expect(
-      (await needleHistory.get({ ...request, apiType, baseUrl: mount }))
-        ?.result,
-    ).toEqual(result)
+    try {
+      const result = await runDurableNeedleTest({
+        ...request,
+        apiType,
+        baseUrl: `${mount}/${operation}`,
+        mode: "non-streaming",
+        maxInputTokens: 1024,
+        quick: true,
+        abortSignal: new AbortController().signal,
+      })
+      expect(urls).toEqual(Array(3).fill(`${mount}/${operation}`))
+      expect(result.cells.map((cell) => cell.outcome)).toEqual([
+        "miss",
+        "miss",
+        "miss",
+      ])
+      expect(
+        (
+          await needleHistory.get({
+            ...request,
+            apiType,
+            baseUrl: mount,
+            mode: "non-streaming",
+          })
+        )?.result,
+      ).toMatchObject({
+        seed: result.seed,
+        plan: result.plan,
+        cells: result.cells.map(({ targetTokens, depth, outcome }) => ({
+          targetTokens,
+          depth,
+          outcome,
+        })),
+      })
+    } finally {
+      fetch.mockRestore()
+    }
   },
 )
 

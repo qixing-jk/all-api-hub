@@ -97,7 +97,14 @@ export async function runDurableNeedleTest(
       await checkpoints.update(scope)
       // Recovery-only calls read back the old result. An explicit new run can
       // proceed after a terminal checkpoint's deferred history write succeeds.
-      if (recoverOnly || interrupted) return result
+      // A selection without a durable UI baseline must first restore this
+      // result and its seed. Otherwise it would replace the recovered cells.
+      if (
+        recoverOnly ||
+        interrupted ||
+        (params.selection && !params.resumeFrom)
+      )
+        return result
     }
     if (recoverOnly) throw new Error("No needle checkpoint is available")
     if (params.resumeFrom) {
