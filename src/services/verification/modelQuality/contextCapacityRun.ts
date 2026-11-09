@@ -1,6 +1,4 @@
 import { modelMetadataService } from "~/services/models/modelMetadata"
-import { runProbeGeneration } from "~/services/verification/aiApiVerification/probes/probeGeneration"
-import { createModel } from "~/services/verification/aiApiVerification/providers"
 import { API_VERIFICATION_MODES } from "~/services/verification/aiApiVerification/types"
 import type {
   ApiVerificationApiType,
@@ -23,6 +21,7 @@ import {
 import { CONTEXT_CAPACITY_DEFAULTS as defaults } from "./contextCapacityDefaults"
 import { createContextCounter } from "./contextCounter"
 import { classifyContextError } from "./contextErrors"
+import { runContextGeneration } from "./contextGeneration"
 import { getDeclaredInputLimit } from "./contextLimits"
 import type { ContextCounterInfo } from "./contextTokens"
 
@@ -73,7 +72,6 @@ export async function runContextCapacity(
     modelMetadataService.resolveModelIdentity(params.modelId),
   )
   params.abortSignal.throwIfAborted()
-  const model = createModel(params)
   const maxOutputTokens = defaults.maxOutputTokens
   // Declarations guide the first request, never establish a measured boundary.
   const declaredInputLimit = getDeclaredInputLimit(
@@ -138,12 +136,11 @@ export async function runContextCapacity(
           message: "Test input exceeds the 32 MiB request limit",
         }
       try {
-        const generation = await runProbeGeneration(
+        const generation = await runContextGeneration(
+          params,
           {
-            model,
             prompt,
             maxOutputTokens,
-            maxRetries: 0,
             abortSignal: params.abortSignal,
           },
           params.mode,
