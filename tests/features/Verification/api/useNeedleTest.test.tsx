@@ -256,15 +256,18 @@ it.each([true, false])(
       expect(result.current.result).toEqual(observed)
       expect(result.current.historical).toBe(false)
       expect(result.current.error).toBeTruthy()
-      // A saved baseline must be reconciled; without one, recover before any new request.
+      // A stale saved baseline needs readback; an absent baseline can use the
+      // checkpoint recovered during this explicit selection request.
       act(() => result.current.setSeedDraft("456"))
       await act(() => result.current.runSelection({ depth: 10 }))
-      expect(run).toHaveBeenCalledOnce()
-      expect(Boolean(result.current.error)).toBe(hasSummary)
-      expect((await needleHistory.get(request))?.result.cells).toEqual(
-        observed.cells,
-      )
-      await act(() => result.current.runSelection({ depth: 10 }))
+      if (hasSummary) {
+        expect(run).toHaveBeenCalledOnce()
+        expect(result.current.error).toBeTruthy()
+        expect((await needleHistory.get(request))?.result.cells).toEqual(
+          observed.cells,
+        )
+        await act(() => result.current.runSelection({ depth: 10 }))
+      }
       expect(run).toHaveBeenCalledTimes(2)
       expect(run.mock.calls[1]![0]).toMatchObject({
         selection: { depth: 10 },

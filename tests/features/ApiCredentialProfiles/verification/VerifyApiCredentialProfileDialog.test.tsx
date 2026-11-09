@@ -454,6 +454,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
       name: /requestProfile/,
     })
     expect(selector).toHaveTextContent(/default/)
+    expect(
+      screen.queryByRole("switch", { name: /enhancedLabel/ }),
+    ).not.toBeInTheDocument()
     await user.click(selector)
     await user.click(screen.getByRole("option", { name: /codex/ }))
     expect(getApiTypeSelect()).toHaveValue(API_TYPES.OPENAI)
@@ -487,23 +490,22 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(selector).toHaveTextContent(/default/)
   })
 
-  it("keeps enhanced simulation opt-in and resets it when returning to ordinary requests", async () => {
+  it("sends enhanced simulation only after opting in", async () => {
     const user = userEvent.setup()
     mockFetchAnthropicModelIds.mockResolvedValue(["model"])
     mockProbeDefinitions.mockReturnValue([
       { id: "text-generation", requiresModelId: true },
     ])
     mockRunApiVerificationProbe.mockResolvedValue(acceptedProbe)
-    render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
-    expect(
-      screen.queryByRole("switch", { name: /enhancedLabel/ }),
-    ).not.toBeInTheDocument()
-    const selector = await screen.findByRole("combobox", {
-      name: /requestProfile/,
+    render(
+      <VerifyApiCredentialProfileDialog
+        {...sessionProps}
+        initialRequestProfile={API_VERIFICATION_REQUEST_PROFILES.Claude}
+      />,
+    )
+    const enhanced = await screen.findByRole("switch", {
+      name: /enhancedLabel/,
     })
-    await user.click(selector)
-    await user.click(screen.getByRole("option", { name: /claude/ }))
-    const enhanced = screen.getByRole("switch", { name: /enhancedLabel/ })
     expect(enhanced).not.toBeChecked()
     await user.click(enhanced)
     const probe = screen.getByTestId(
@@ -523,6 +525,27 @@ describe("VerifyApiCredentialProfileDialog", () => {
       ),
     )
     await waitFor(() => expect(enhanced).toBeEnabled())
+    expect(probe).toHaveTextContent("Accepted")
+  })
+
+  it("resets enhanced simulation when returning to ordinary requests", async () => {
+    const user = userEvent.setup()
+    mockFetchAnthropicModelIds.mockResolvedValue(["model"])
+    mockProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+    ])
+    render(
+      <VerifyApiCredentialProfileDialog
+        {...sessionProps}
+        initialRequestProfile={API_VERIFICATION_REQUEST_PROFILES.Claude}
+      />,
+    )
+    const enhanced = await screen.findByRole("switch", {
+      name: /enhancedLabel/,
+    })
+    await user.click(enhanced)
+    expect(enhanced).toBeChecked()
+    const selector = screen.getByRole("combobox", { name: /requestProfile/ })
     await user.click(selector)
     await user.click(screen.getByRole("option", { name: /default/ }))
     expect(

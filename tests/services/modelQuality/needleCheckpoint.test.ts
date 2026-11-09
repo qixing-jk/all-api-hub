@@ -104,6 +104,80 @@ it.each(["google", "openai-compatible"] as const)(
   },
 )
 
+it("executes the selected retry from a recovered recipe without replaying other cells", async () => {
+  const { modelMetadataService } = await import(
+    "~/services/models/modelMetadata"
+  )
+  modelMetadataService.clearCache()
+  let requests = 0
+  const fetch = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === MODEL_METADATA_URL) return Response.json({ models: [] })
+      requests++
+      return Response.json({
+        id: "needle",
+        object: "chat.completion",
+        created: 1,
+        model: "test",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "wrong" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    })
+  const save = vi
+    .spyOn(needleHistory, "save")
+    .mockRejectedValueOnce(new Error("Storage unavailable"))
+    .mockRejectedValueOnce(new Error("Storage unavailable"))
+  const params = {
+    ...request,
+    mode: "non-streaming" as const,
+    maxInputTokens: 1024,
+    quick: true,
+    abortSignal: new AbortController().signal,
+  }
+  try {
+    await expect(runDurableNeedleTest(params)).rejects.toThrow(
+      "Storage unavailable",
+    )
+    expect(requests).toBe(3)
+    expect(await needleHistory.get(params)).toBeNull()
+    const store = new Storage({ area: "local" })
+    const scope = await getVerificationScopeKey(params)
+    const checkpoints = await store.get<
+      Record<string, { result: { cells: unknown[] } }>
+    >(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS)
+    const previousCells = checkpoints![scope]!.result.cells
+    const result = await runDurableNeedleTest({
+      ...params,
+      seed: 456,
+      maxInputTokens: 8192,
+      selection: { depth: 10 },
+    })
+    expect(requests).toBe(4)
+    expect(result.seed).toBe(123)
+    expect(result.plan.limit).toBe(1024)
+    expect(result.scheduled).toEqual([{ targetTokens: 1024, depth: 10 }])
+    expect(result.cells.filter((cell) => cell.depth !== 10)).toEqual(
+      previousCells.slice(1),
+    )
+    expect(result.cells).toHaveLength(3)
+    expect((await needleHistory.get(params))?.result.seed).toBe(123)
+    expect(
+      await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),
+    ).toEqual({})
+  } finally {
+    save.mockRestore()
+    fetch.mockRestore()
+    modelMetadataService.clearCache()
+  }
+})
+
 it("finalizes a failed preparation with retained measurements before another explicit run", async () => {
   const needle = await import("~/services/verification/modelQuality/needleRun")
   const observed = createNeedleResult({

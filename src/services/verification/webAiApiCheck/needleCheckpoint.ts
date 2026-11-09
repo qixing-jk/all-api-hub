@@ -7,7 +7,10 @@ import {
   NEEDLE_OUTCOMES,
   NEEDLE_RUN_REASONS,
 } from "~/services/verification/modelQuality/needleConstants"
-import { isSameNeedleCoordinate } from "~/services/verification/modelQuality/needlePlan"
+import {
+  expandNeedlePlan,
+  isSameNeedleCoordinate,
+} from "~/services/verification/modelQuality/needlePlan"
 import { coerceNeedleResult } from "~/services/verification/modelQuality/needleResultCodec"
 import {
   runNeedleTest,
@@ -97,14 +100,18 @@ export async function runDurableNeedleTest(
       await checkpoints.update(scope)
       // Recovery-only calls read back the old result. An explicit new run can
       // proceed after a terminal checkpoint's deferred history write succeeds.
-      // A selection without a durable UI baseline must first restore this
-      // result and its seed. Otherwise it would replace the recovered cells.
-      if (
-        recoverOnly ||
-        interrupted ||
-        (params.selection && !params.resumeFrom)
-      )
-        return result
+      if (recoverOnly || interrupted) return result
+      // The user requested a selection. Resume it from the now-durable recipe,
+      // preserving measurements instead of treating recovery as a new test.
+      if (params.selection && !params.resumeFrom) {
+        params = {
+          ...params,
+          resumeFrom: result,
+          seed: result.seed,
+          approvedPlan: expandNeedlePlan(result.plan),
+          approvedCounter: result.counter,
+        }
+      }
     }
     if (recoverOnly) throw new Error("No needle checkpoint is available")
     if (params.resumeFrom) {
