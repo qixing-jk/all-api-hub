@@ -68,6 +68,15 @@ test.beforeEach(async ({ context }) => {
       body: "<html><title>AI/ML API</title></html>",
     }),
   )
+  // Signed-out key acquisition preserves the destination through the login page.
+  await context.route("https://aimlapi.com/app/keys", (route) =>
+    route.fulfill({
+      status: 302,
+      headers: {
+        location: "https://aimlapi.com/app/auth/login?returnTo=/keys",
+      },
+    }),
+  )
 })
 
 test("editing an AIMLAPI account offers one credential detection action", async ({
