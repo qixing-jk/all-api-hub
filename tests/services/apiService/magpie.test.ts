@@ -66,15 +66,92 @@ function installOriginRules() {
       rule = input.addRules?.[0]
     },
   )
+  const containsPermission = vi.fn().mockResolvedValue(true)
   vi.stubGlobal("chrome", {
     runtime: { id: "extension-id" },
-    permissions: { contains: vi.fn().mockResolvedValue(true) },
+    permissions: { contains: containsPermission },
     declarativeNetRequest: { updateSessionRules },
   })
-  return { updateSessionRules, current: () => rule }
+  return { updateSessionRules, containsPermission, current: () => rule }
 }
 
 describe("Magpie management transport", () => {
+  it.each(["permission", "install", "cleanup"])(
+    "settles the caller deadline during stalled native %s while retaining pending rule ownership",
+    async (phase) => {
+      const rules = installOriginRules()
+      const session = withMagpieRequestSession({
+        ...config,
+        baseUrl: "http://192.168.1.20:3430",
+      })
+      fetchMock.mockImplementation(async () => json({ providers: [provider] }))
+      await listMagpieProviders(session)
+      fetchMock.mockClear()
+      const native = createDeferred<void>()
+      const entered = createDeferred<void>()
+      const update = rules.updateSessionRules.getMockImplementation()!
+      if (phase === "permission") {
+        rules.containsPermission.mockImplementationOnce(async () => {
+          entered.resolve()
+          await native.promise
+          return true
+        })
+      } else {
+        let stalled = false
+        rules.updateSessionRules.mockImplementation(async (input) => {
+          if (!stalled && Boolean(input.addRules) === (phase === "install")) {
+            stalled = true
+            entered.resolve()
+            await native.promise
+          }
+          await update(input)
+        })
+      }
+      vi.useFakeTimers()
+      let outcome: unknown
+      const pending = saveMagpieProvider(session, { id: "relay" }).then(
+        (value) => {
+          outcome = value
+        },
+        (error) => {
+          outcome = error
+        },
+      )
+      let next: Promise<Response> | undefined
+      try {
+        await entered.promise
+        await vi.advanceTimersByTimeAsync(30_000)
+        await vi.waitFor(() =>
+          expect(outcome).toMatchObject({
+            dispatched: phase === "cleanup",
+            confirmedNonApplication: phase !== "cleanup",
+          }),
+        )
+        expect(fetchMock).toHaveBeenCalledTimes(phase === "cleanup" ? 1 : 0)
+        if (phase !== "permission") {
+          next = fetchWithHeaderOverrides("https://other.test/ordinary")
+          await vi.waitFor(async () => {
+            const locks = await navigator.locks.query()
+            expect(
+              locks.pending?.some((lock) =>
+                lock.name?.endsWith("request-header-overrides"),
+              ),
+            ).toBe(true)
+          })
+          expect(fetchMock).toHaveBeenCalledTimes(phase === "cleanup" ? 1 : 0)
+        }
+      } finally {
+        native.resolve()
+        await Promise.all([pending, next])
+      }
+      await expect(listMagpieProviders(session)).resolves.toEqual([provider])
+      expect(
+        fetchMock.mock.calls.filter(([, init]) => init?.method === "POST"),
+      ).toHaveLength(phase === "cleanup" ? 1 : 0)
+      expect(rules.current()).toBeUndefined()
+    },
+  )
+
   it.each(["standalone", "new-session", "authenticated-session"])(
     "bounds header-lock waiting before dispatch for %s",
     async (mode) => {

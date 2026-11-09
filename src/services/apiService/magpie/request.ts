@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   composeAbortSignals,
   createDeferredAbortDeadline,
+  runAbortableTask,
 } from "~/services/apiTransport/abortableTask"
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
@@ -254,13 +255,19 @@ export async function requestMagpie(
     // Web Locks coordinate Options, Popup and background callers using the
     // same deployment. They never retain the management key in the lock name.
     const locks = globalThis.navigator?.locks
-    return locks
-      ? await locks.request(
-          `all-api-hub:magpie:${baseUrl}`,
-          { signal: signal.signal },
-          execute,
-        )
-      : await execute()
+    // Settle the caller on cancellation without racing inside any lock callback.
+    // Pending native rule work retains its existing leases until actual cleanup.
+    return await runAbortableTask(
+      () =>
+        locks
+          ? locks.request(
+              `all-api-hub:magpie:${baseUrl}`,
+              { signal: signal.signal },
+              execute,
+            )
+          : execute(),
+      { signals: [signal.signal] },
+    )
   } catch (error) {
     if (error instanceof MagpieApiError) throw error
     if (!dispatched && options?.signal?.aborted) throw error

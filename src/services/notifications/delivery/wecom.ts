@@ -1,4 +1,4 @@
-import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
+import { fetchNotification } from "~/services/notifications/delivery/http"
 import { getNotificationParsedErrorMessage } from "~/services/notifications/delivery/httpErrors"
 import type { TaskNotificationContent } from "~/services/notifications/taskNotificationContracts"
 import {
@@ -30,7 +30,7 @@ export async function sendWecomNotification(
       ? webhookInput
       : `${WECOM_BOT_WEBHOOK_PREFIX}${encodeURIComponent(webhookInput)}`
 
-  const response = await fetchWithHeaderOverrides(webhookUrl, {
+  const response = await fetchNotification(webhookUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

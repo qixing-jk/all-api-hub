@@ -1,4 +1,4 @@
-import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
+import { fetchNotification } from "~/services/notifications/delivery/http"
 import { getNotificationHttpErrorMessage } from "~/services/notifications/delivery/httpErrors"
 import type { TaskNotificationContent } from "~/services/notifications/taskNotificationContracts"
 import {
@@ -70,7 +70,7 @@ export async function sendNtfyNotification(
     headers.Authorization = `Bearer ${accessToken}`
   }
 
-  const response = await fetchWithHeaderOverrides(parsedUrl.toString(), {
+  const response = await fetchNotification(parsedUrl.toString(), {
     method: "POST",
     headers,
     body: content.message,
