@@ -1,6 +1,7 @@
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
@@ -685,7 +686,7 @@ async function resolveNeedleRun(
     !isVerificationRequestProfile(requestProfile)
   )
     return { success: false, error: "Invalid request profile" }
-  const baseUrl = normalizeProbeBaseUrl(request)
+  const baseUrl = toVersionedProtocolMount(apiType, request.baseUrl)
   if (!baseUrl) return { success: false, error: "Invalid base URL" }
   if (
     request.requestHeaders !== undefined &&

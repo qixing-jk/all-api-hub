@@ -1,3 +1,7 @@
+import {
+  toProtocolRoot,
+  toVersionedProtocolMount,
+} from "~/services/aiApi/protocolAddress"
 import { WEB_AI_API_CHECK_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   NEEDLE_OUTCOMES,
@@ -11,12 +15,13 @@ import {
   type RunNeedleParams,
 } from "~/services/verification/modelQuality/needleRun"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
-import { needleHistory } from "~/services/verification/verificationResultHistory/needleHistory"
-import { getVerificationScopeKey } from "~/services/verification/verificationResultHistory/requestIdentity"
+import {
+  getNeedleScopeKey,
+  needleHistory,
+} from "~/services/verification/verificationResultHistory/needleHistory"
 import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
 import { LONG_CONTEXT_ERROR_NAMES } from "~/services/verification/webAiApiCheck/longContextConstants"
 
-import { normalizeProbeBaseUrl } from "./credentialExtraction/baseUrlCandidates"
 import { createLongContextCheckpoints } from "./longContextCheckpoints"
 
 type Checkpoint = {
@@ -43,10 +48,12 @@ export async function runDurableNeedleTest(
   recoverOnly = false,
   target?: ApiVerificationHistoryTarget,
 ): Promise<NeedleResult> {
-  const baseUrl = normalizeProbeBaseUrl(params)
+  // Keep the versioned mount through repeated execution boundaries. Reducing a
+  // root again would consume a provider prefix that happens to end in /v1beta.
+  const baseUrl = toVersionedProtocolMount(params.apiType, params.baseUrl)
   if (!baseUrl) throw new Error("Invalid base URL")
   params = { ...params, baseUrl }
-  const scope = await getVerificationScopeKey(params)
+  const scope = await getNeedleScopeKey(params)
   const release = checkpoints.claim(scope)
   let latestCheckpoint: Checkpoint | undefined
   try {
@@ -104,7 +111,10 @@ export async function runDurableNeedleTest(
           "Needle results changed or belong to a different connection; reload the saved result before continuing",
         )
     }
-    const capacity = await contextCapacityHistory.get(params, target)
+    const capacity = await contextCapacityHistory.get(
+      { ...params, baseUrl: toProtocolRoot(params.apiType, baseUrl)! },
+      target,
+    )
     const result = await runNeedleTest({
       ...params,
       capacity: capacity?.counter

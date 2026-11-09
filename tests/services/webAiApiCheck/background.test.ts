@@ -310,54 +310,56 @@ describe("webAiApiCheck background handlers", () => {
     }
   })
 
-  it("normalizes pasted needle endpoints and forwards the history owner on readback", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const durable = await import(
-      "~/services/verification/webAiApiCheck/needleCheckpoint"
-    )
-    const { needleHistory } = await import(
-      "~/services/verification/verificationResultHistory/needleHistory"
-    )
-    const { createNeedleResult } = await import("~~/tests/test-utils/needle")
-    const historyTarget = {
-      kind: "profile-model",
-      profileId: "owner",
-      modelId: "test",
-    } as const
-    const run = vi
-      .spyOn(durable, "runDurableNeedleTest")
-      .mockResolvedValue(createNeedleResult())
-    const get = vi.spyOn(needleHistory, "get").mockResolvedValue(null)
-    background.setupWebAiApiCheckMessagingListeners()
-    try {
-      const data = {
-        ...needleRequest,
-        apiType: "google",
-        baseUrl:
-          "https://example.invalid/v1beta/proxy/v1beta/models/test:generateContent",
-        historyTarget,
-      }
-      await webAiApiCheckMessageHandlers.get("webAiApiCheck:runNeedle")!({
-        data,
-      })
-      expect(run).toHaveBeenCalledWith(
-        expect.objectContaining({
-          baseUrl: "https://example.invalid/v1beta/proxy",
-        }),
-        false,
-        historyTarget,
+  it.each(["proxy", "proxy/v1beta"])(
+    "normalizes pasted needle endpoints through %s and forwards the history owner on readback",
+    async (prefix) => {
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
       )
-      await webAiApiCheckMessageHandlers.get("webAiApiCheck:needleHistory")!({
-        data,
-      })
-      expect(get).toHaveBeenCalledWith(data, historyTarget)
-    } finally {
-      run.mockRestore()
-      get.mockRestore()
-    }
-  })
+      const durable = await import(
+        "~/services/verification/webAiApiCheck/needleCheckpoint"
+      )
+      const { needleHistory } = await import(
+        "~/services/verification/verificationResultHistory/needleHistory"
+      )
+      const { createNeedleResult } = await import("~~/tests/test-utils/needle")
+      const historyTarget = {
+        kind: "profile-model",
+        profileId: "owner",
+        modelId: "test",
+      } as const
+      const run = vi
+        .spyOn(durable, "runDurableNeedleTest")
+        .mockResolvedValue(createNeedleResult())
+      const get = vi.spyOn(needleHistory, "get").mockResolvedValue(null)
+      background.setupWebAiApiCheckMessagingListeners()
+      try {
+        const data = {
+          ...needleRequest,
+          apiType: "google",
+          baseUrl: `https://example.invalid/v1beta/${prefix}/v1beta/models/test:generateContent`,
+          historyTarget,
+        }
+        await webAiApiCheckMessageHandlers.get("webAiApiCheck:runNeedle")!({
+          data,
+        })
+        expect(run).toHaveBeenCalledWith(
+          expect.objectContaining({
+            baseUrl: `https://example.invalid/v1beta/${prefix}/v1beta`,
+          }),
+          false,
+          historyTarget,
+        )
+        await webAiApiCheckMessageHandlers.get("webAiApiCheck:needleHistory")!({
+          data,
+        })
+        expect(get).toHaveBeenCalledWith(data, historyTarget)
+      } finally {
+        run.mockRestore()
+        get.mockRestore()
+      }
+    },
+  )
 
   it("reports metadata, history and discard failures without claiming success", async () => {
     const background = await import(

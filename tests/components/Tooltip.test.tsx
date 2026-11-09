@@ -14,43 +14,49 @@ import { Modal } from "~/components/ui"
 import { render as renderWithProviders } from "~~/tests/test-utils/render"
 
 describe("Tooltip", () => {
-  it("preserves an immediate reopen when an earlier closing transition finishes", async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
-    renderWithProviders(
-      <Modal isOpen onClose={onClose} title="Verification">
-        <Tooltip content="Saved summary only" anchorAsChild openOnClick>
-          <button type="button">Previous result</button>
-        </Tooltip>
-      </Modal>,
-    )
-    const anchor = await screen.findByRole("button", {
-      name: "Previous result",
-    })
-    await user.click(anchor)
-    const popup = await screen.findByRole("tooltip")
-    vi.useFakeTimers()
-    try {
-      fireEvent.keyDown(anchor, { key: "Escape" })
-      await act(() => vi.advanceTimersByTimeAsync(10))
-      await act(() => vi.advanceTimersByTimeAsync(10))
-      fireEvent.click(anchor)
-      await act(() => vi.advanceTimersByTimeAsync(10))
-      fireEvent.transitionEnd(popup, { propertyName: "opacity" })
-      for (let step = 0; step < 5; step++)
+  it.each(["click", "focus", "hover"])(
+    "preserves an immediate %s reopen when an earlier closing transition finishes",
+    async (trigger) => {
+      const user = userEvent.setup()
+      const onClose = vi.fn()
+      renderWithProviders(
+        <Modal isOpen onClose={onClose} title="Verification">
+          <Tooltip content="Saved summary only" anchorAsChild openOnClick>
+            <button type="button">Previous result</button>
+          </Tooltip>
+        </Modal>,
+      )
+      const anchor = await screen.findByRole("button", {
+        name: "Previous result",
+      })
+      await user.click(anchor)
+      const popup = await screen.findByRole("tooltip")
+      vi.useFakeTimers()
+      try {
+        fireEvent.keyDown(anchor, { key: "Escape" })
         await act(() => vi.advanceTimersByTimeAsync(10))
-      expect(screen.getByRole("tooltip")).toBeVisible()
-      expect(anchor).toHaveAttribute("data-tooltip-open", "true")
-      fireEvent.keyDown(anchor, { key: "Escape" })
-      await act(() => vi.advanceTimersByTimeAsync(50))
-      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
-      expect(onClose).not.toHaveBeenCalled()
-      fireEvent.keyDown(anchor, { key: "Escape" })
-      expect(onClose).toHaveBeenCalledOnce()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
+        await act(() => vi.advanceTimersByTimeAsync(10))
+        if (trigger === "click") fireEvent.click(anchor)
+        else if (trigger === "focus") fireEvent.focus(anchor)
+        else fireEvent.mouseOver(anchor)
+        await act(() => vi.advanceTimersByTimeAsync(10))
+        if (trigger !== "click") expect(popup).toBeInTheDocument()
+        fireEvent.transitionEnd(popup, { propertyName: "opacity" })
+        for (let step = 0; step < 5; step++)
+          await act(() => vi.advanceTimersByTimeAsync(10))
+        expect(screen.getByRole("tooltip")).toBeVisible()
+        expect(anchor).toHaveAttribute("data-tooltip-open", "true")
+        fireEvent.keyDown(anchor, { key: "Escape" })
+        await act(() => vi.advanceTimersByTimeAsync(50))
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+        expect(onClose).not.toHaveBeenCalled()
+        fireEvent.keyDown(anchor, { key: "Escape" })
+        expect(onClose).toHaveBeenCalledOnce()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
   it.each([false, true])(
     "keeps a clicked hint open after mouseout until an outside click (anchorAsChild: %s)",
     async (anchorAsChild) => {

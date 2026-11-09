@@ -2,7 +2,11 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { expect, it, vi } from "vitest"
 
 import { useNeedleTest } from "~/features/Verification/api/useNeedleTest"
+import { createNeedlePlan } from "~/services/verification/modelQuality/needlePlan"
+import * as needleRun from "~/services/verification/modelQuality/needleRun"
+import { needleHistory } from "~/services/verification/verificationResultHistory/needleHistory"
 import { LONG_CONTEXT_ERROR_NAMES } from "~/services/verification/webAiApiCheck/longContextConstants"
+import { runDurableNeedleTest } from "~/services/verification/webAiApiCheck/needleCheckpoint"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createNeedleResult } from "~~/tests/test-utils/needle"
 
@@ -23,6 +27,109 @@ const counter = {
   declaredInput: 16384,
 }
 const saved = createNeedleResult({ counter })
+
+it("restores saved measurements after a full run reports only empty progress", async () => {
+  const previous = createNeedleResult({
+    ...saved,
+    cells: [
+      {
+        targetTokens: 8192,
+        depth: 50,
+        actualDepth: 50,
+        localInputTokens: 8000,
+        outcome: "hit",
+      },
+    ],
+  })
+  const { result } = await setup({
+    historyAccess: {
+      get: async () => ({
+        result: previous,
+        targetKey: "test",
+        scopeKey: "test",
+        verifiedAt: 1,
+      }),
+      save: vi.fn(),
+    },
+    runner: async (params) => {
+      params.onProgress?.({ ...saved, reason: "running", cells: [] })
+      throw new Error("Storage unavailable")
+    },
+  })
+  await waitFor(() => expect(result.current.historical).toBe(true))
+  await act(() => result.current.run())
+  expect(result.current.result).toEqual(previous)
+  expect(result.current.historical).toBe(true)
+  expect(result.current.error).toBeTruthy()
+})
+
+it.each(["plan", "seed"])(
+  "disables retesting when the displayed %s differs from the durable baseline while allowing a fresh run",
+  async (difference) => {
+    const previous = createNeedleResult({
+      ...saved,
+      plan:
+        difference === "plan"
+          ? createNeedlePlan({ counter, maxInputTokens: 8192 })
+          : saved.plan,
+      seed: difference === "seed" ? 456 : saved.seed,
+    })
+    const observed = createNeedleResult({
+      ...saved,
+      cells: [
+        {
+          targetTokens: 16384,
+          depth: 50,
+          actualDepth: 50,
+          localInputTokens: 16000,
+          outcome: "miss",
+        },
+      ],
+    })
+    const runner = vi
+      .fn<NonNullable<Options["runner"]>>()
+      .mockImplementationOnce(async (params) => {
+        params.onProgress?.(observed)
+        throw new Error("Storage unavailable")
+      })
+      .mockResolvedValue(observed)
+    const { result } = await setup({
+      runner,
+      historyAccess: {
+        get: async () => ({
+          result: previous,
+          targetKey: "test",
+          scopeKey: "test",
+          verifiedAt: 1,
+        }),
+        save: vi.fn(),
+      },
+    })
+    await waitFor(() => expect(result.current.historical).toBe(true))
+    await act(() => result.current.run())
+    expect(result.current.result).toEqual(observed)
+    expect(result.current.canRunSelection).toBe(false)
+    expect(result.current.canRun).toBe(true)
+    await act(() =>
+      result.current.runSelection({ targetTokens: 16384, depth: 50 }),
+    )
+    expect(runner).toHaveBeenCalledOnce()
+    await act(() => result.current.run())
+    expect(runner).toHaveBeenCalledTimes(2)
+    expect(result.current.error).toBeNull()
+    expect(result.current.canRunSelection).toBe(true)
+  },
+)
+
+it("rejects an invalid selection without locking subsequent runs", async () => {
+  const runner = vi.fn().mockResolvedValue(saved)
+  const { result } = await setup({ runner })
+  await act(() => result.current.runSelection({ targetTokens: 1234 }))
+  expect(result.current.error).toBeTruthy()
+  expect(runner).not.toHaveBeenCalled()
+  await act(() => result.current.run())
+  expect(runner).toHaveBeenCalledOnce()
+})
 
 it("loads the new durable baseline after a late stop discards the completion response", async () => {
   const complete = createNeedleResult({
@@ -100,7 +207,7 @@ it("clears a previous history warning when failed-run readback succeeds", async 
   expect(result.current.error).toBeTruthy()
 })
 
-it("retains newer visible measurements when failed writes leave an older saved baseline", async () => {
+it("recovers retained measurements before a disjoint retry after failed history writes", async () => {
   const observed = createNeedleResult({
     ...saved,
     cells: [
@@ -113,31 +220,58 @@ it("retains newer visible measurements when failed writes leave an older saved b
       },
     ],
   })
-  const runner = vi
-    .fn<NonNullable<Options["runner"]>>()
+  const next = {
+    targetTokens: 8192,
+    depth: 10,
+    actualDepth: 10,
+    localInputTokens: 8000,
+    outcome: "hit" as const,
+  }
+  await needleHistory.save(request, saved)
+  const save = vi
+    .spyOn(needleHistory, "save")
+    .mockRejectedValueOnce(new Error("Storage unavailable"))
+    .mockRejectedValueOnce(new Error("Storage unavailable"))
+  const run = vi
+    .spyOn(needleRun, "runNeedleTest")
     .mockImplementationOnce(async (params) => {
       params.onProgress?.(observed)
-      throw new Error("Storage unavailable")
+      await params.onCheckpoint?.(observed)
+      return observed
     })
-    .mockResolvedValue(observed)
-  const { result } = await setup({
-    runner,
-    historyAccess: {
-      get: async () => ({
-        result: saved,
-        targetKey: "test",
-        scopeKey: "test",
-        verifiedAt: 1,
-      }),
-      save: vi.fn(),
-    },
-  })
-  await waitFor(() => expect(result.current.historical).toBe(true))
-  await act(() => result.current.runSelection({ depth: 50 }))
-  expect(result.current.result).toEqual(observed)
-  expect(result.current.historical).toBe(false)
-  await act(() => result.current.runSelection({ depth: 50 }))
-  expect(runner.mock.calls[1]![0].resumeFrom).toEqual(saved)
+    .mockImplementationOnce(async (params) => ({
+      ...params.resumeFrom!,
+      cells: [...params.resumeFrom!.cells, next],
+    }))
+  try {
+    const { result } = await setup({
+      runner: (params, target) => runDurableNeedleTest(params, false, target),
+      historyAccess: needleHistory,
+    })
+    await waitFor(() => expect(result.current.historical).toBe(true))
+    await act(() => result.current.runSelection({ depth: 50 }))
+    expect(result.current.result).toEqual(observed)
+    expect(result.current.historical).toBe(false)
+    expect(result.current.error).toBeTruthy()
+    // Recovery persists the terminal checkpoint, then rejects the older UI baseline.
+    await act(() => result.current.runSelection({ depth: 10 }))
+    expect(run).toHaveBeenCalledOnce()
+    expect(result.current.error).toBeTruthy()
+    expect((await needleHistory.get(request))?.result.cells).toEqual(
+      observed.cells,
+    )
+    await act(() => result.current.runSelection({ depth: 10 }))
+    expect(run).toHaveBeenCalledTimes(2)
+    expect(run.mock.calls[1]![0]).toMatchObject({
+      selection: { depth: 10 },
+      resumeFrom: { cells: observed.cells },
+    })
+    expect(result.current.result?.cells).toEqual([...observed.cells, next])
+    expect(result.current.error).toBeNull()
+  } finally {
+    save.mockRestore()
+    run.mockRestore()
+  }
 })
 
 it("labels readback as historical when a failed run never produced progress", async () => {

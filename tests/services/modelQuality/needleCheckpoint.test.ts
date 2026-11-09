@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
+import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 import { WEB_AI_API_CHECK_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CONTEXT_TOKEN_ENCODINGS } from "~/services/verification/modelQuality/contextTokenConstants"
 import {
@@ -23,6 +24,37 @@ const request = {
 }
 const counter = { encoding: CONTEXT_TOKEN_ENCODINGS.O200k, estimated: true }
 beforeEach(() => vi.restoreAllMocks())
+
+it.each(["google", "openai-compatible"] as const)(
+  "preserves consecutive protocol version segments through %s dispatch and history",
+  async (apiType) => {
+    const needle = await import(
+      "~/services/verification/modelQuality/needleRun"
+    )
+    const version = apiType === "google" ? "v1beta" : "v1"
+    const mount = `https://example.invalid/relay/${version}/${version}`
+    const operation =
+      apiType === "google" ? "models/test:generateContent" : "chat/completions"
+    const result = createNeedleResult()
+    const run = vi
+      .spyOn(needle, "runNeedleTest")
+      .mockImplementation(async (params) => {
+        expect(toVersionedProtocolMount(apiType, params.baseUrl)).toBe(mount)
+        return result
+      })
+    await runDurableNeedleTest({
+      ...request,
+      apiType,
+      baseUrl: `${mount}/${operation}`,
+      abortSignal: new AbortController().signal,
+    })
+    expect(run).toHaveBeenCalledOnce()
+    expect(
+      (await needleHistory.get({ ...request, apiType, baseUrl: mount }))
+        ?.result,
+    ).toEqual(result)
+  },
+)
 
 it("finalizes a failed preparation with retained measurements before another explicit run", async () => {
   const needle = await import("~/services/verification/modelQuality/needleRun")
@@ -125,7 +157,7 @@ it("shares execution and checkpoint identity between a Google endpoint and its r
   const run = vi
     .spyOn(needle, "runNeedleTest")
     .mockImplementation(async (params) => {
-      expect(params.baseUrl).toBe(root.baseUrl)
+      expect(params.baseUrl).toBe(`${root.baseUrl}/v1beta`)
       await params.onCheckpoint?.(result)
       expect(
         await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),

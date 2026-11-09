@@ -141,7 +141,7 @@ export function NeedlePanel({
             running={executing}
             matrixPlan={controller.matrixPlan}
             onRun={controller.runSelection}
-            canRun={controller.canRun}
+            canRun={controller.canRunSelection}
             plannedCells={plannedCells}
             onStop={controller.stopSelection}
             stopError={controller.stopError}

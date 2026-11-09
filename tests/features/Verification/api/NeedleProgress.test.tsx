@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
-import { afterEach, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { NeedlePanel } from "~/features/Verification/api/NeedlePanel"
 import { useNeedleTest } from "~/features/Verification/api/useNeedleTest"
@@ -13,11 +13,29 @@ import {
   NEEDLE_RUN_REASONS,
 } from "~/services/verification/modelQuality/needleConstants"
 import { createNeedlePlan } from "~/services/verification/modelQuality/needlePlan"
+import * as needlePrompt from "~/services/verification/modelQuality/needlePrompt"
 import { runNeedleTest } from "~/services/verification/modelQuality/needleRun"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
+beforeEach(() => {
+  // Exercise the real runner and request lifecycle with a small prepared prompt.
+  // Corpus construction/tokenization has its own tests and browser coverage.
+  vi.spyOn(needlePrompt, "prepareNeedlePrompt").mockImplementation(
+    async (_counter, target, depth, _seed, signal) => {
+      signal.throwIfAborted()
+      return {
+        prompt: "Return the archive code from these fixture notes.",
+        expected: "fixture-code",
+        localInputTokens: target - 4,
+        actualDepth: depth,
+      }
+    },
+  )
+})
+
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   modelMetadataService.clearCache()
 })
@@ -43,7 +61,8 @@ it.each([
     }
     const coordinate = { targetTokens: 8192, depth: 50 }
     const pending = createDeferred<void>()
-    const dispatched = [createDeferred<void>(), createDeferred<void>()]
+    const settled = [createDeferred<void>(), createDeferred<void>()]
+    let runs = 0
     let requests = 0
     vi.stubGlobal(
       "fetch",
@@ -51,7 +70,6 @@ it.each([
         if (String(url) === MODEL_METADATA_URL)
           return Response.json({ models: [] })
         requests++
-        dispatched[requests - 1]?.resolve()
         await pending.promise
         return Response.json({
           id: "needle",
@@ -127,7 +145,14 @@ it.each([
           }),
           save: async () => {},
         },
-        runner: runNeedleTest,
+        runner: async (params) => {
+          const completion = settled[runs++]!
+          try {
+            return await runNeedleTest(params)
+          } finally {
+            completion.resolve()
+          }
+        },
       })
       return (
         <NeedlePanel
@@ -142,9 +167,14 @@ it.each([
         <Harness />
       </I18nextProvider>,
     )
-    await screen.findByRole("button", { name: "16384 tokens · 90%: Match" })
+    // Wait for history before querying every control in the rendered matrix.
+    await screen.findByText("Saved result")
+    const matrix = within(screen.getByRole("table"))
+    expect(
+      matrix.getByRole("button", { name: "16384 tokens · 90%: Match" }),
+    ).toBeVisible()
     await user.click(
-      screen.getByRole("button", { name: /^8192 tokens · 50%:/ }),
+      matrix.getByRole("button", { name: /^8192 tokens · 50%:/ }),
     )
     const details = within(screen.getByRole("region", { name: "Cell details" }))
     expect(requests).toBe(0)
@@ -154,16 +184,19 @@ it.each([
           name: outcome === "untested" ? "Run this cell" : "Retest this cell",
         }),
       )
-      await act(async () => dispatched[0]!.promise)
+      await waitFor(() => expect(requests).toBe(1))
       expect(requests).toBe(1)
       expect(
         details.getByRole("button", { name: "Stop 8K · 50%" }),
       ).toBeEnabled()
       expect(
-        screen.getByRole("button", { name: "16384 tokens · 90%: Match" }),
+        matrix.getByRole("button", { name: "16384 tokens · 90%: Match" }),
       ).toBeVisible()
     } finally {
-      pending.resolve()
+      await act(async () => {
+        pending.resolve()
+        if (runs) await settled[0]!.promise
+      })
     }
     await waitFor(() =>
       expect(
@@ -171,10 +204,10 @@ it.each([
       ).toBeEnabled(),
     )
     expect(
-      screen.getByRole("button", { name: "8192 tokens · 50%: Miss" }),
+      matrix.getByRole("button", { name: "8192 tokens · 50%: Miss" }),
     ).toBeVisible()
     await user.click(details.getByRole("button", { name: "Retest this cell" }))
-    await act(async () => dispatched[1]!.promise)
+    await act(async () => settled[1]!.promise)
     expect(requests).toBe(2)
     await waitFor(() =>
       expect(
@@ -182,7 +215,7 @@ it.each([
       ).toBeEnabled(),
     )
     expect(
-      screen.getByRole("button", { name: "16384 tokens · 90%: Match" }),
+      matrix.getByRole("button", { name: "16384 tokens · 90%: Match" }),
     ).toBeVisible()
     expect(screen.getByText(/Processed 1\/1 requests/)).toBeVisible()
   },
@@ -196,7 +229,6 @@ it.each(["complete", "stop", "error", "cell", "retry"])(
     const pending = createDeferred<void>()
     const persisted = createDeferred<void>()
     const settled = createDeferred<void>()
-    const secondRequest = createDeferred<void>()
     let requests = 0
     let cancellationAttempts = 0
     vi.stubGlobal(
@@ -206,7 +238,6 @@ it.each(["complete", "stop", "error", "cell", "retry"])(
           return Response.json({ models: [] })
         requests++
         if (requests === 2) {
-          secondRequest.resolve()
           await Promise.race([
             pending.promise,
             new Promise((_, reject) =>
@@ -307,7 +338,7 @@ it.each(["complete", "stop", "error", "cell", "retry"])(
     )
     const result = () =>
       within(screen.getByRole("region", { name: "Execution result" }))
-    await act(async () => secondRequest.promise)
+    await waitFor(() => expect(requests).toBe(2))
     expect(requests).toBe(2)
     try {
       const matrix = screen.getByRole("table")

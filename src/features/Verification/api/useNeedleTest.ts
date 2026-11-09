@@ -184,22 +184,35 @@ export function useNeedleTest(options: Options) {
 
   const canRun =
     options.enabled && !options.blocked && !running && Boolean(planning.plan)
+  const canRunSelection =
+    canRun &&
+    (!result ||
+      !resumable.current ||
+      (result.plan.limit === resumable.current.plan.limit &&
+        result.seed === resumable.current.seed))
   const run = async (selection?: NeedleSelection) => {
     if (!canRun || active.current || !planning.plan) return
+    if (selection && !canRunSelection) return
+    const previous = selection ? resumable.current : null
+    const approvedPlan = selection
+      ? expandNeedlePlan(previous?.plan ?? planning.plan)
+      : planning.plan
+    let cells: NeedleCoordinate[]
+    try {
+      cells = selectNeedleCells(approvedPlan, selection, previous?.cells).cells
+    } catch (failure) {
+      setError(
+        t("verifyDialog.tools.needle.errors.failed", {
+          detail: toSanitizedErrorSummary(failure, []),
+        }),
+      )
+      return
+    }
     const controller = new AbortController()
     active.current = controller
     const version = ++generation.current
     const current = () => version === generation.current
     const configuration = latest.current
-    const previous = selection ? resumable.current : null
-    const approvedPlan = selection
-      ? expandNeedlePlan(previous?.plan ?? planning.plan)
-      : planning.plan
-    const cells = selectNeedleCells(
-      approvedPlan,
-      selection,
-      previous?.cells,
-    ).cells
     const seed =
       previous?.seed ??
       (seedDraft.trim()
@@ -353,7 +366,15 @@ export function useNeedleTest(options: Options) {
               resumable.current = saved?.result ?? null
               resultScope.current = saved ? scope : null
               setHistoryError(false)
-              if (!receivedProgress && saved) {
+              const hasMeasurements = Boolean(observed.current?.cells.length)
+              const hasCancellation = Boolean(
+                observed.current?.cancelled?.length,
+              )
+              if (
+                saved &&
+                (!receivedProgress ||
+                  (!selection && !hasMeasurements && !hasCancellation))
+              ) {
                 setResult(saved.result)
                 setHistorical(true)
               }
@@ -393,6 +414,7 @@ export function useNeedleTest(options: Options) {
     checkpointError,
     historyError,
     canRun,
+    canRunSelection,
     limitDraft,
     setLimitDraft,
     seedDraft,

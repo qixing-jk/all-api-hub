@@ -1,5 +1,8 @@
+import {
+  toProtocolRoot,
+  toVersionedProtocolMount,
+} from "~/services/aiApi/protocolAddress"
 import type { NeedleResult } from "~/services/verification/modelQuality/needleRun"
-import { normalizeProbeBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 
 import type { ContextHistoryRequest } from "./contextCapacityHistory"
 import { getVerificationScopeKey, modelTarget } from "./requestIdentity"
@@ -8,7 +11,8 @@ import type { ApiVerificationHistoryTarget, NeedleSummary } from "./types"
 
 /** Needle execution, checkpoints and history share the same protocol base address. */
 export function getNeedleScopeKey(request: ContextHistoryRequest) {
-  const baseUrl = normalizeProbeBaseUrl(request)
+  const mount = toVersionedProtocolMount(request.apiType, request.baseUrl)
+  const baseUrl = mount && toProtocolRoot(request.apiType, mount)
   if (!baseUrl) throw new Error("Invalid base URL")
   return getVerificationScopeKey({ ...request, baseUrl })
 }
