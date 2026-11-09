@@ -239,3 +239,194 @@ it("captures only the native login response and leaves the site's response reada
   expect(fetch).toBe(nativeFetch)
   await observer!.dispose()
 })
+
+it.each([
+  ["request-object", "authenticated"],
+  ["missing-checkin", "authenticated"],
+  ["failed-http", null],
+  ["malformed", null],
+  ["missing-data", null],
+  ["redirected", null],
+  ["unreadable", null],
+  ["network", null],
+])("leaves native Fetch behavior intact for %s", async (kind, status) => {
+  const url = `${location.origin}/api/user/login`
+  const response =
+    kind === "malformed"
+      ? new Response("not JSON")
+      : Response.json(
+          kind === "missing-data"
+            ? { success: true }
+            : { success: true, data: { id: 17 } },
+          { status: kind === "failed-http" ? 403 : 200 },
+        )
+  Object.defineProperty(response, "url", {
+    value: kind === "redirected" ? "https://other.example/api/user/login" : url,
+  })
+  if (kind === "unreadable")
+    vi.spyOn(response, "clone").mockImplementation(() => {
+      throw new Error("unreadable")
+    })
+  const original = vi.fn().mockImplementation(async () => {
+    if (kind === "network") throw new Error("offline")
+    return response
+  })
+  vi.stubGlobal("fetch", original)
+  const observer = await observeAgentRouterNativeLogin(1, location.origin, kind)
+  try {
+    const request =
+      kind === "request-object" ? new Request(url, { method: "POST" }) : url
+    const received = fetch(
+      request,
+      kind === "request-object" ? undefined : { method: "POST" },
+    )
+    if (kind === "network") await expect(received).rejects.toThrow("offline")
+    else await expect(received).resolves.toBe(response)
+    await expect(observer!.result).resolves.toEqual(
+      status ? { status, identity: "17", evidence: {} } : null,
+    )
+    expect(fetch).toBe(original)
+    expect(original).toHaveBeenCalledOnce()
+  } finally {
+    await observer!.dispose()
+  }
+})
+
+it.each([
+  "GET",
+  "bad-url",
+  "json-error",
+  "unreadable",
+  "other-origin",
+  "duplicate",
+])("cleans XHR observation without accepting %s evidence", async (kind) => {
+  class NativeXHR extends EventTarget {
+    status = 403
+    responseType = "json"
+    responseURL =
+      kind === "other-origin"
+        ? "https://other.example/api/user/login"
+        : `${location.origin}/api/user/login`
+    response = { success: true, data: { id: 17 } }
+    open() {}
+  }
+  vi.stubGlobal("XMLHttpRequest", NativeXHR)
+  const originalOpen = NativeXHR.prototype.open
+  const observer = await observeAgentRouterNativeLogin(
+    1,
+    location.origin,
+    `xhr-edge-${kind}`,
+  )
+  try {
+    const xhr = new XMLHttpRequest()
+    if (kind === "unreadable")
+      Object.defineProperty(xhr, "responseURL", {
+        get() {
+          throw new Error("unreadable")
+        },
+      })
+    xhr.open(
+      kind === "GET" ? "GET" : "POST",
+      kind === "bad-url" ? "http://[" : "/api/user/login",
+    )
+    if (kind === "duplicate")
+      new XMLHttpRequest().open("POST", "/api/user/login")
+    xhr.dispatchEvent(new Event("load"))
+    await observer!.dispose()
+    await expect(observer!.result).resolves.toBeNull()
+    expect(NativeXHR.prototype.open).toBe(originalOpen)
+  } finally {
+    await observer!.dispose()
+  }
+})
+
+it("ignores invalid Fetch URLs and leaves later page-installed transports intact", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("ignored")))
+  const originalOpen = XMLHttpRequest.prototype.open
+  const observer = await observeAgentRouterNativeLogin(
+    1,
+    location.origin,
+    "invalid-url",
+  )
+  await fetch("http://[", { method: "POST" })
+  const laterFetch = vi.fn()
+  const laterOpen = vi.fn()
+  window.fetch = laterFetch
+  XMLHttpRequest.prototype.open = laterOpen
+  try {
+    await observer!.dispose()
+    await expect(observer!.result).resolves.toBeNull()
+    expect(window.fetch).toBe(laterFetch)
+    expect(XMLHttpRequest.prototype.open).toBe(laterOpen)
+  } finally {
+    XMLHttpRequest.prototype.open = originalOpen
+  }
+})
+
+it("rejects invalid scope and duplicate observation, and bounds an idle observation", async () => {
+  vi.useFakeTimers()
+  try {
+    await expect(
+      observeAgentRouterNativeLogin(1, "https://other.example", "r"),
+    ).resolves.toBeNull()
+    await expect(
+      observeAgentRouterNativeLogin(1, location.origin, ""),
+    ).resolves.toBeNull()
+    await expect(
+      observeAgentRouterNativeLogin(1, "https://agentrouter.org:1234", "r"),
+    ).resolves.toBeNull()
+    const observer = await observeAgentRouterNativeLogin(
+      1,
+      location.origin,
+      "timeout",
+    )
+    await expect(
+      observeAgentRouterNativeLogin(1, location.origin, "timeout"),
+    ).resolves.toBeNull()
+    await vi.runAllTimersAsync()
+    await expect(observer!.result).resolves.toBeNull()
+    await observer!.dispose()
+    await observer!.dispose()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it("ignores an unrelated Fetch rejection and still captures the login", async () => {
+  const response = Response.json({
+    success: true,
+    data: { id: 17, checked_in: false },
+  })
+  Object.defineProperty(response, "url", {
+    value: `${location.origin}/api/user/login`,
+  })
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(response),
+  )
+  const observer = await observeAgentRouterNativeLogin(
+    1,
+    location.origin,
+    "unrelated-failure",
+  )
+  try {
+    await expect(fetch("/api/status")).rejects.toThrow("offline")
+    await fetch("/api/user/login", { method: "POST" })
+    await expect(observer!.result).resolves.toEqual({
+      status: "authenticated",
+      identity: "17",
+      evidence: { checkedIn: false },
+    })
+  } finally {
+    await observer!.dispose()
+  }
+})
+
+it("refuses observation when the document moved to a different supported origin", async () => {
+  await expect(
+    observeAgentRouterNativeLogin(1, "https://ps.air-outer.com", "moved"),
+  ).resolves.toBeNull()
+})

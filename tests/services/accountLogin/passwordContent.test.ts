@@ -10,6 +10,33 @@ import {
 
 afterEach(() => vi.unstubAllGlobals())
 it.each([
+  ["/api/user/login", {}, true],
+  ["/api/user/auth/logout", {}, true],
+  ["/api/status", undefined, false],
+] as const)(
+  "preserves WAF verification and mutation uncertainty for %s",
+  async (path, body, mutation) => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response('<meta name="aliyun_waf_aa" content="fixture">'),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+    const reply = vi.fn()
+    runPasswordLoginContentAction(reply, async () => {
+      await passwordLoginRequest(path, body)
+      return { status: "authenticated", identity: "17" }
+    })
+    await vi.waitFor(() =>
+      expect(reply).toHaveBeenCalledExactlyOnceWith({
+        status: mutation ? "uncertain" : "failed",
+        reason: "verification_required",
+      }),
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  },
+)
+it.each([
   { expectedIdentity: "" },
   { expectedIdentity: 17 },
   { credentials: {} },
@@ -54,5 +81,20 @@ it.each([false, true])(
       })
     }
     expect(fetchMock).toHaveBeenCalledTimes(3)
+  },
+)
+
+it.each([400, 503])(
+  "rejects HTTP %s JSON without exposing its body",
+  async (status) => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(Response.json({ error: "private" }, { status })),
+    )
+    await expect(passwordLoginRequest("/api/status")).rejects.toMatchObject({
+      reason: "request_failed",
+    })
   },
 )

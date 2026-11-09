@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   getTempContextTabSnapshot,
+  isTempContextContentReady,
   navigateTempContextToPage,
   prepareTempContextFetchOptions,
   removeInstalledDownloadBlockRules,
@@ -43,6 +44,48 @@ describe("browserAdapter", () => {
     vi.spyOn(protectionBypass, "isProtectionBypassFirefoxEnv").mockReturnValue(
       false,
     )
+  })
+
+  it.each(["cap", "cloudflare", "aliyun"] as const)(
+    "does not reuse a tab whose %s receiver is unavailable",
+    async (missing) => {
+      vi.mocked(checkTempContextProtectionGuards).mockResolvedValueOnce({
+        passed: true,
+        verificationRequired: false,
+        capPassed: true,
+        cloudflarePassed: true,
+        aliyunPassed: true,
+        cap: { success: true },
+        cloudflare: { success: true },
+        aliyun: { success: true },
+        [missing]: { success: false },
+      })
+      await expect(
+        isTempContextContentReady(1, {
+          requestId: "ready",
+          origin: "https://gateway.example",
+        }),
+      ).resolves.toBe(false)
+    },
+  )
+
+  it("reuses a tab when every protection receiver responds and passes", async () => {
+    vi.mocked(checkTempContextProtectionGuards).mockResolvedValueOnce({
+      passed: true,
+      verificationRequired: false,
+      capPassed: true,
+      cloudflarePassed: true,
+      aliyunPassed: true,
+      cap: { success: true },
+      cloudflare: { success: true },
+      aliyun: { success: true },
+    })
+    await expect(
+      isTempContextContentReady(1, {
+        requestId: "ready",
+        origin: "https://gateway.example",
+      }),
+    ).resolves.toBe(true)
   })
 
   it("holds page readiness until the Aliyun challenge clears", async () => {

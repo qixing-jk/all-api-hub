@@ -270,3 +270,34 @@ it("keeps the credential inspection reply port open and forwards its response", 
     expect(reply).toHaveBeenCalledWith({ success: true, state: "credential" }),
   )
 })
+
+it.each([false, true])(
+  "routes the live Aliyun guard without disclosing document content (challenge=%s)",
+  async (challenged) => {
+    const page = new (await import("jsdom")).JSDOM(
+      challenged
+        ? '<meta name="aliyun_waf_aa" content="private">'
+        : "<form>Login</form>",
+    )
+    vi.stubGlobal("document", page.window.document)
+    try {
+      setupContentMessageHandlers()
+      const reply = vi.fn()
+      expect(
+        mocks.register.mock.calls[0]![0](
+          { action: RuntimeActionIds.ContentCheckAliyunGuard },
+          {},
+          reply,
+        ),
+      ).toBe(true)
+      expect(reply).toHaveBeenCalledExactlyOnceWith({
+        success: true,
+        passed: !challenged,
+        detection: { isChallenge: challenged },
+      })
+    } finally {
+      vi.unstubAllGlobals()
+      page.window.close()
+    }
+  },
+)

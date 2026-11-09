@@ -576,3 +576,71 @@ it("does not proceed from invalid Sub2API public login settings", async () => {
   ).resolves.toEqual({ status: "uncertain" })
   expect(fetchMock).toHaveBeenCalledTimes(1)
 })
+
+it.each([
+  ["network", "failed", "network_error"],
+  ["json-error", "uncertain", undefined],
+  ["waf", "interaction_required", "verification_required"],
+])(
+  "classifies preflight %s without submitting credentials",
+  async (kind, status, reason) => {
+    if (kind === "network") fetchMock.mockRejectedValue(new Error("private"))
+    else
+      fetchMock.mockResolvedValue(
+        kind === "waf"
+          ? new Response('<meta name="aliyun_waf_aa">', { status: 403 })
+          : Response.json({ success: false }, { status: 503 }),
+      )
+    await expect(
+      invoke({ phase: PASSWORD_UI_PHASES.Prepare }),
+    ).resolves.toEqual({ status, ...(reason ? { reason } : {}) })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  },
+)
+
+it("keeps WAF uncertainty and verification when revoking a modern session", async () => {
+  vi.resetModules()
+  const { handleNewApiPasswordUi: handler } = await import(
+    "~/services/apiService/newApiFamily/passwordUi"
+  )
+  localStorage.setItem("user", JSON.stringify({ id: 17 }))
+  fetchMock.mockImplementation(async (path, init) => {
+    if (path === "/api/user/self")
+      return (init?.headers as Record<string, string>)?.Authorization
+        ? Response.json({ success: true, data: { id: 17 } })
+        : new Response(null, { status: 401 })
+    if (path === "/api/user/auth/refresh")
+      return Response.json({
+        success: true,
+        data: {
+          access_token: "native-bearer",
+          token_type: "Bearer",
+          access_expires_at: Date.now() / 1000 + 600,
+          session: { sid: "native-sid", current: true },
+          user: { id: 17 },
+        },
+      })
+    if (path === "/api/user/auth/logout")
+      return new Response('<meta name="aliyun_waf_bb" content="secret">')
+    throw new Error("Unexpected endpoint")
+  })
+  const result = await new Promise((resolve) =>
+    handler(
+      {
+        ...request,
+        phase: PASSWORD_UI_PHASES.Prepare,
+        sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+        canResetSession: true,
+      },
+      resolve,
+    ),
+  )
+  expect(result).toEqual({
+    status: "uncertain",
+    reason: "verification_required",
+  })
+  expect(localStorage.getItem("user")).toBe(JSON.stringify({ id: 17 }))
+  expect(
+    fetchMock.mock.calls.filter(([path]) => path === "/api/user/auth/logout"),
+  ).toHaveLength(1)
+})

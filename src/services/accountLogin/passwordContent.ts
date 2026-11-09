@@ -14,7 +14,10 @@ import { isRecord } from "~/utils/core/object"
 
 /** Never expose an HTML challenge or an authentication response as error text. */
 export class PasswordLoginResponseError extends Error {
-  constructor(readonly reason: BrowserLoginFailureReason) {
+  constructor(
+    readonly reason: BrowserLoginFailureReason,
+    readonly mutationRisk = false,
+  ) {
     super(reason)
   }
 }
@@ -87,10 +90,14 @@ export function runPasswordLoginContentAction(
       reply({
         status:
           hasEstablishedSession() ||
+          (error instanceof PasswordLoginResponseError && error.mutationRisk) ||
           (error instanceof BrowserOAuthRequestError &&
             error.reason === "uncertain")
             ? BROWSER_LOGIN_STATUS.Uncertain
             : BROWSER_LOGIN_STATUS.Failed,
+        ...(error instanceof PasswordLoginResponseError
+          ? { reason: error.reason }
+          : {}),
       }),
     )
   return true
@@ -120,8 +127,12 @@ export async function passwordLoginRequest(
   try {
     payload = await readPasswordLoginJson(response)
   } catch (error) {
-    if (!mutationRisk && error instanceof PasswordLoginResponseError)
-      throw error
+    if (
+      error instanceof PasswordLoginResponseError &&
+      (!mutationRisk ||
+        error.reason === BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired)
+    )
+      throw new PasswordLoginResponseError(error.reason, mutationRisk)
     throw new BrowserOAuthRequestError(
       mutationRisk ? "uncertain" : "request_failed",
     )

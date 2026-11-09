@@ -344,3 +344,122 @@ describe("native password browser orchestration", () => {
     ).toHaveLength(1)
   })
 })
+
+it("falls back to session verification after the native observer rejects", async () => {
+  session.send
+    .mockResolvedValueOnce({ kind: "ready" })
+    .mockResolvedValueOnce({ kind: "submitted" })
+    .mockResolvedValueOnce({ status: "authenticated", identity: "17" })
+  const dispose = vi.fn().mockRejectedValue(new Error("document gone"))
+  const login = authenticate(
+    {},
+    {
+      observeNativeLogin: async () => ({
+        result: Promise.reject(new Error("document gone")),
+        dispose,
+      }),
+    },
+  )
+  await vi.runAllTimersAsync()
+  await expect(login).resolves.toEqual({
+    status: "authenticated",
+    identity: "17",
+    evidence: {},
+  })
+  expect(session.send.mock.calls.map(([, details]) => details.phase)).toEqual([
+    "prepare",
+    "submit",
+    "observe",
+  ])
+  expect(dispose).toHaveBeenCalledOnce()
+})
+
+it("uses native evidence arriving during disposal without another session request", async () => {
+  let release!: (value: any) => void
+  const result = new Promise((resolve) => {
+    release = resolve
+  })
+  session.send.mockImplementation(async (_action, details) =>
+    details.phase === "prepare" ? { kind: "ready" } : { kind: "submitted" },
+  )
+  const dispose = vi.fn(async () =>
+    release({
+      status: "authenticated",
+      identity: "17",
+      evidence: { checkedIn: true },
+    }),
+  )
+  const login = authenticate(
+    {},
+    { observeNativeLogin: async () => ({ result, dispose }) },
+  )
+  await vi.runAllTimersAsync()
+  await expect(login).resolves.toEqual({
+    status: "authenticated",
+    identity: "17",
+    evidence: { checkedIn: true },
+  })
+  expect(session.send).toHaveBeenCalledTimes(2)
+})
+
+it("preserves uncertainty when arming observation loses its document", async () => {
+  session.send.mockResolvedValueOnce({ kind: "ready" })
+  await expect(
+    authenticate(
+      {},
+      {
+        observeNativeLogin: async () => {
+          throw new Error("document gone")
+        },
+      },
+    ),
+  ).resolves.toEqual({ status: "uncertain" })
+  expect(session.send).toHaveBeenCalledTimes(1)
+})
+
+it("accepts native evidence arriving in the final wait interval", async () => {
+  let release!: (value: any) => void
+  const result = new Promise((resolve) => {
+    release = resolve
+  })
+  setTimeout(
+    () =>
+      release({
+        status: "authenticated",
+        identity: "17",
+        evidence: { checkedIn: true },
+      }),
+    45_001,
+  )
+  session.send.mockImplementation(async (_action, details) =>
+    details.phase === "prepare" ? { kind: "ready" } : { kind: "submitted" },
+  )
+  const dispose = vi.fn().mockResolvedValue(undefined)
+  const login = authenticate(
+    {},
+    { observeNativeLogin: async () => ({ result, dispose }) },
+  )
+  await vi.runAllTimersAsync()
+  await expect(login).resolves.toEqual({
+    status: "authenticated",
+    identity: "17",
+    evidence: { checkedIn: true },
+  })
+  expect(session.send).toHaveBeenCalledTimes(2)
+  expect(dispose).toHaveBeenCalledOnce()
+})
+
+it("retains a protection timeout after submission as uncertain verification", async () => {
+  session.send
+    .mockResolvedValueOnce({ kind: "ready" })
+    .mockResolvedValueOnce({ kind: "submitted" })
+  session.assertOrigin
+    .mockResolvedValueOnce(undefined)
+    .mockRejectedValue(new ProtectionPageTimeoutError())
+  const login = authenticate()
+  await vi.runAllTimersAsync()
+  await expect(login).resolves.toEqual({
+    status: "uncertain",
+    reason: "verification_required",
+  })
+})
