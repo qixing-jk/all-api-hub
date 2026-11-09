@@ -10,6 +10,7 @@ import {
 import {
   expandNeedlePlan,
   isSameNeedleCoordinate,
+  selectNeedleCells,
 } from "~/services/verification/modelQuality/needlePlan"
 import { coerceNeedleResult } from "~/services/verification/modelQuality/needleResultCodec"
 import {
@@ -104,11 +105,26 @@ export async function runDurableNeedleTest(
       // The user requested a selection. Resume it from the now-durable recipe,
       // preserving measurements instead of treating recovery as a new test.
       if (params.selection && !params.resumeFrom) {
+        const recoveredPlan = expandNeedlePlan(result.plan)
+        const approvedCells = params.approvedPlan
+          ? selectNeedleCells(params.approvedPlan, params.selection).cells
+          : []
+        if (
+          selectNeedleCells(recoveredPlan, params.selection).cells.some(
+            (cell) =>
+              !approvedCells.some((approved) =>
+                isSameNeedleCoordinate(cell, approved),
+              ),
+          )
+        )
+          throw new Error(
+            "Recovered needle requests exceed the approved scope; review the saved result before retrying",
+          )
         params = {
           ...params,
           resumeFrom: result,
           seed: result.seed,
-          approvedPlan: expandNeedlePlan(result.plan),
+          approvedPlan: recoveredPlan,
           approvedCounter: result.counter,
         }
       }

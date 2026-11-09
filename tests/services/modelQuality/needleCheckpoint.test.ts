@@ -9,7 +9,10 @@ import {
   NEEDLE_OUTCOMES,
   NEEDLE_RUN_REASONS,
 } from "~/services/verification/modelQuality/needleConstants"
-import { createNeedlePlan } from "~/services/verification/modelQuality/needlePlan"
+import {
+  createNeedlePlan,
+  expandNeedlePlan,
+} from "~/services/verification/modelQuality/needlePlan"
 import { needleHistory } from "~/services/verification/verificationResultHistory/needleHistory"
 import { getVerificationScopeKey } from "~/services/verification/verificationResultHistory/requestIdentity"
 import { runDurableNeedleTest } from "~/services/verification/webAiApiCheck/needleCheckpoint"
@@ -121,6 +124,10 @@ it("executes the selected retry from a recovered recipe without replaying other 
         object: "chat.completion",
         created: 1,
         model: "test",
+        usage: {
+          prompt_tokens: requests === 4 ? 1001 : 1000,
+          completion_tokens: 1,
+        },
         choices: [
           {
             index: 0,
@@ -158,6 +165,8 @@ it("executes the selected retry from a recovered recipe without replaying other 
       seed: 456,
       maxInputTokens: 8192,
       selection: { depth: 10 },
+      approvedPlan: createNeedlePlan({ counter, maxInputTokens: 1024 }),
+      approvedCounter: counter,
     })
     expect(requests).toBe(4)
     expect(result.seed).toBe(123)
@@ -167,7 +176,13 @@ it("executes the selected retry from a recovered recipe without replaying other 
       previousCells.slice(1),
     )
     expect(result.cells).toHaveLength(3)
-    expect((await needleHistory.get(params))?.result.seed).toBe(123)
+    const retried = result.cells.find((cell) => cell.depth === 10)
+    expect(retried?.inputTokens).toBe(1001)
+    const history = await needleHistory.get(params)
+    expect(history?.result.seed).toBe(123)
+    expect(
+      history?.result.cells.find((cell) => cell.depth === 10)?.inputTokens,
+    ).toBe(1001)
     expect(
       await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),
     ).toEqual({})
@@ -176,6 +191,76 @@ it("executes the selected retry from a recovered recipe without replaying other 
     fetch.mockRestore()
     modelMetadataService.clearCache()
   }
+})
+
+it.each(["smaller", "missing"] as const)(
+  "restores a terminal checkpoint without dispatch when the approved scope is %s",
+  async (approval) => {
+    const store = new Storage({ area: "local" })
+    const scope = await getVerificationScopeKey(request)
+    const previous = createNeedleResult({
+      counter,
+      plan: createNeedlePlan({ counter, maxInputTokens: 16384 }),
+      cells: [
+        {
+          targetTokens: 16384,
+          depth: 50,
+          actualDepth: 50,
+          localInputTokens: 16000,
+          outcome: "hit",
+        },
+      ],
+    })
+    await store.set(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS, {
+      [scope]: { result: previous },
+    })
+    const fetch = vi.spyOn(globalThis, "fetch")
+    await expect(
+      runDurableNeedleTest({
+        ...request,
+        selection: { depth: 10 },
+        approvedPlan:
+          approval === "smaller"
+            ? createNeedlePlan({ counter, maxInputTokens: 8192 })
+            : undefined,
+        approvedCounter: counter,
+        abortSignal: new AbortController().signal,
+      }),
+    ).rejects.toThrow("review the saved result")
+    expect(fetch).not.toHaveBeenCalled()
+    expect((await needleHistory.get(request))?.result).toEqual(previous)
+    expect(
+      await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),
+    ).toEqual({})
+  },
+)
+
+it("allows a recovered cell retry within the approved scope of a smaller plan", async () => {
+  const store = new Storage({ area: "local" })
+  const scope = await getVerificationScopeKey(request)
+  const previous = createNeedleResult({
+    counter,
+    plan: createNeedlePlan({ counter, maxInputTokens: 16384 }),
+  })
+  await store.set(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS, {
+    [scope]: { result: previous },
+  })
+  const needle = await import("~/services/verification/modelQuality/needleRun")
+  const run = vi.spyOn(needle, "runNeedleTest").mockResolvedValue(previous)
+  await runDurableNeedleTest({
+    ...request,
+    selection: { targetTokens: 8192, depth: 10 },
+    approvedPlan: createNeedlePlan({ counter, maxInputTokens: 8192 }),
+    approvedCounter: counter,
+    abortSignal: new AbortController().signal,
+  })
+  expect(run).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      selection: { targetTokens: 8192, depth: 10 },
+      resumeFrom: previous,
+      approvedPlan: expandNeedlePlan(previous.plan),
+    }),
+  )
 })
 
 it("finalizes a failed preparation with retained measurements before another explicit run", async () => {

@@ -207,9 +207,13 @@ it("clears a previous history warning when failed-run readback succeeds", async 
   expect(result.current.error).toBeTruthy()
 })
 
-it.each([true, false])(
-  "recovers retained measurements before a disjoint retry after failed history writes (earlier summary: %s)",
-  async (hasSummary) => {
+it.each([
+  { hasSummary: true, narrowDraft: false },
+  { hasSummary: false, narrowDraft: false },
+  { hasSummary: false, narrowDraft: true },
+])(
+  "recovers retained measurements before a disjoint retry after failed history writes (earlier summary: $hasSummary, narrower draft: $narrowDraft)",
+  async ({ hasSummary, narrowDraft }) => {
     const observed = createNeedleResult({
       ...saved,
       cells: [
@@ -259,13 +263,16 @@ it.each([true, false])(
       // A stale saved baseline needs readback; an absent baseline can use the
       // checkpoint recovered during this explicit selection request.
       act(() => result.current.setSeedDraft("456"))
+      if (narrowDraft) act(() => result.current.setLimitDraft("1024"))
       await act(() => result.current.runSelection({ depth: 10 }))
-      if (hasSummary) {
+      if (hasSummary || narrowDraft) {
         expect(run).toHaveBeenCalledOnce()
         expect(result.current.error).toBeTruthy()
         expect((await needleHistory.get(request))?.result.cells).toEqual(
           observed.cells,
         )
+        expect(result.current.matrixPlan?.limit).toBe(observed.plan.limit)
+        expect(result.current.canRunSelection).toBe(true)
         await act(() => result.current.runSelection({ depth: 10 }))
       }
       expect(run).toHaveBeenCalledTimes(2)
