@@ -79,7 +79,9 @@ type InitializationInput = {
     notifyCurrentTabUrlChanged: ReturnType<
       typeof useAccountCurrentTab
     >["notifyUrlChanged"]
-    requireAccessTokenVerification: () => void
+    requireAccessTokenRecovery: (
+      error?: AccountDialogRecoveryState["detectionError"],
+    ) => void
     checkCurrentTab: ReturnType<typeof useAccountCurrentTab>["checkCurrentTab"]
   }
 }
@@ -129,7 +131,7 @@ export function useAccountDialogInitialization({
     resetCookieSession,
     clearPostSaveWorkflowState,
     notifyCurrentTabUrlChanged,
-    requireAccessTokenVerification,
+    requireAccessTokenRecovery,
     checkCurrentTab,
   } = sessions
   const resetForm = useCallback(
@@ -399,7 +401,7 @@ export function useAccountDialogInitialization({
             : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
         )
         if (recoveryState.recoveryAction !== "cookie")
-          requireAccessTokenVerification()
+          requireAccessTokenRecovery(recoveryState.detectionError)
       } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {
@@ -414,7 +416,7 @@ export function useAccountDialogInitialization({
     }
   }, [
     notifyCurrentTabUrlChanged,
-    requireAccessTokenVerification,
+    requireAccessTokenRecovery,
 
     isOpen,
     mode,

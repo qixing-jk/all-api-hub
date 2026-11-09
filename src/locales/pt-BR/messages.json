@@ -44,6 +44,7 @@
     "networkError": "Conexão de rede falhou. Verifique sua conexão de rede e tente novamente",
     "notFound": "Não foi possível detectar este site automaticamente. Verifique se o endereço está correto ou faça login no site de destino e tente novamente.",
     "notLoggedIn": "Você não está logado no site atual ou as informações de login expiraram. Não é possível adicionar automaticamente. Verifique a documentação de ajuda ou clique para fazer login primeiro",
+    "rateLimited": "Muitas solicitações. Tente novamente mais tarde.",
     "serverError": "Erro no servidor. Tente novamente mais tarde",
     "timeout": "Tempo limite da detecção automática esgotado. Tente adicionar manualmente",
     "unexpectedData": "Detecção automática falhou: o site retornou dados inesperados. Insira as informações manualmente ou certifique-se de estar logado no site de destino"
@@ -197,6 +198,7 @@
   },
   "operations": {
     "detection": {
+      "cookieSessionRejected": "O site rejeitou a sessão de cookies. Entre novamente.",
       "failed": "Detecção automática falhou. Insira as informações manualmente ou certifique-se de estar logado no site de destino",
       "getAccessTokenFailedDetailed": "A conta foi detectada, mas nenhum token de acesso pôde ser recuperado. Confirme se a conta pode criar ou visualizar tokens de API, ou insira o token manualmente.",
       "getInfoFailed": "Falha ao obter o nome de usuário ou token de acesso",

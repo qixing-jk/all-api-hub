@@ -39,7 +39,7 @@
     "openSecurity": "Open token page",
     "openSecurityFailed": "Could not open the page. Find Access Token in the site’s profile, account settings, or token management page, copy it, then return here to enter it.",
     "pasteStep": "Copy the full Access Token immediately, paste it into the Access Token field below, then check your account details and save.",
-    "popupHint": "Continue in the side panel to keep this form while you verify your identity and copy the token on the site. If the side panel cannot open, the form will open in a full page.",
+    "popupHint": "Continue in the side panel to keep this form while you copy the token on the site. If the side panel cannot open, the form will open in a full page.",
     "prepareFailed": "Unable to stage the current form. Copy any information you need to keep, then reopen the account form in the full page.",
     "restoreFailed": "Could not restore the unfinished form. It may have expired. Please reopen the account form.",
     "rotationWarning": "Only on legacy sites with Generate / Regenerate: regenerating invalidates the old token, so update other tools that use it. Creating a scoped access token does not invalidate existing tokens.",
@@ -353,6 +353,7 @@
   },
   "messages": {
     "addSuccess": "Account {{name}} added successfully!",
+    "authTypeChangedToAccessToken": "This site uses an access token for this account. The authentication method has been updated.",
     "autoDetectFailed": "Auto-detect failed: {{error}}",
     "autoDetectIdentityMismatch": "The detected account does not match the current account. Your existing data has been kept. Check the site URL and sign in to the intended account, then try again.",
     "autoDetectSuccess": "Auto-detect successful!",

@@ -54,7 +54,9 @@ export function supportsAccountCookieValidation(
 }
 
 /** Preserve inconclusive transport failures separately from credential rejection. */
-function classify(error: unknown): AccountCookieValidationResult {
+export function classifyAccountCookieValidationError(
+  error: unknown,
+): AccountCookieValidationResult {
   if (error instanceof ApiError) {
     if (error.code === API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH)
       return { status: ACCOUNT_COOKIE_VALIDATION_STATUS.IdentityMismatch }
@@ -172,7 +174,7 @@ export async function validateAccountCookie(
     try {
       user = await reader(request)
     } catch (error) {
-      const result = classify(error)
+      const result = classifyAccountCookieValidationError(error)
       // Read-only fallback retains the explicit Cookie; protection contexts may add WAF cookies.
       if (
         useFirefoxTransport ||
@@ -209,6 +211,6 @@ export async function validateAccountCookie(
           reason: ACCOUNT_COOKIE_VALIDATION_REASONS.InvalidResponse,
         }
   } catch (error) {
-    return classify(error)
+    return classifyAccountCookieValidationError(error)
   }
 }

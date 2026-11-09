@@ -95,6 +95,57 @@ function createPage(
 }
 
 describe("compatible real-site login", () => {
+  it("keeps a failed scoped-token probe inconclusive without another login", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValue(createResponse(200, createAuthBundle()))
+    const get = vi.fn().mockRejectedValue(new Error("probe unavailable"))
+    const { page } = createPage(post, { getRequest: get })
+    const result = await loginToCompatibleApiRealSite(page, config, {
+      label: "New API",
+      envPrefix: "NEW_API",
+      authBundle: true,
+    })
+    const postCount = post.mock.calls.length
+    await expect(result.probeScopedAccessTokens?.()).resolves.toBe(false)
+    expect(post).toHaveBeenCalledTimes(postCount)
+  })
+  it.each([
+    [200, { success: true, data: { items: [] } }, true],
+    [401, { success: false }, false],
+    [404, { success: false }, false],
+    [503, { success: true, data: { items: [] } }, false],
+    [200, { success: true, data: {} }, false],
+  ])(
+    "probes scoped tokens read-only after login: HTTP %s",
+    async (status, body, expected) => {
+      const post = vi
+        .fn()
+        .mockResolvedValue(createResponse(200, createAuthBundle()))
+      const get = vi
+        .fn()
+        .mockResolvedValue(createResponse(status as number, body))
+      const { page } = createPage(post, { getRequest: get })
+      const result = await loginToCompatibleApiRealSite(page, config, {
+        label: "New API",
+        envPrefix: "NEW_API",
+        authBundle: true,
+      })
+      const postCount = post.mock.calls.length
+      await expect(result.probeScopedAccessTokens?.()).resolves.toBe(expected)
+      expect(get).toHaveBeenCalledWith(
+        `${ORIGIN}/api/user/access_tokens`,
+        expect.objectContaining({
+          timeout: 10_000,
+          headers: {
+            Authorization: "Bearer access-token-placeholder",
+            Accept: "application/json",
+          },
+        }),
+      )
+      expect(post).toHaveBeenCalledTimes(postCount)
+    },
+  )
   it("keeps a fresh login cookie from being cleared by a late anonymous frontend refresh", async () => {
     let hasRefreshCookie = false
     let finishAnonymousBootstrap: (() => void) | undefined
@@ -437,6 +488,7 @@ describe("compatible real-site login", () => {
     expect(result).toEqual({
       reusedSession: true,
       user: { id: 42, username: "example-user" },
+      probeScopedAccessTokens: expect.any(Function),
     })
     expect(result.cleanupOwnedSession).toBeUndefined()
     expect(evaluate).not.toHaveBeenCalled()

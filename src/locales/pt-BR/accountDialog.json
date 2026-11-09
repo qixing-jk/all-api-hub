@@ -39,7 +39,7 @@
     "openSecurity": "Abrir página de tokens",
     "openSecurityFailed": "Não foi possível abrir a página. Encontre Access Token no perfil, nas configurações da conta ou no gerenciamento de tokens do site, copie e volte aqui para inserir.",
     "pasteStep": "Copie imediatamente o Access Token completo, cole no campo Access Token abaixo, confira os dados da conta e salve.",
-    "popupHint": "Continue no painel lateral para manter este formulário enquanto verifica sua identidade e copia o token no site. Se o painel lateral não puder ser aberto, o formulário será aberto em uma página completa.",
+    "popupHint": "Continue no painel lateral para manter este formulário enquanto copia o token no site. Se o painel lateral não puder ser aberto, o formulário será aberto em uma página completa.",
     "prepareFailed": "Não foi possível salvar o formulário temporariamente. Copie as informações que precisa manter e reabra o formulário na página completa.",
     "restoreFailed": "Não foi possível restaurar o formulário incompleto. Ele pode ter expirado. Reabra o formulário de conta.",
     "rotationWarning": "Somente em sites antigos com Generate / Regenerate: gerar novamente invalida o token anterior; atualize as ferramentas que o utilizam. Criar um token de acesso com permissões não invalida os tokens existentes.",
@@ -354,6 +354,7 @@
   },
   "messages": {
     "addSuccess": "Conta {{name}} adicionada com sucesso!",
+    "authTypeChangedToAccessToken": "Este site usa um token de acesso para esta conta. O método de autenticação foi atualizado.",
     "autoDetectFailed": "Falha na detecção automática: {{error}}",
     "autoDetectIdentityMismatch": "A conta detectada não corresponde à conta atual. Seus dados existentes foram mantidos. Verifique a URL do site, entre na conta correta e tente novamente.",
     "autoDetectSuccess": "Detecção automática bem-sucedida!",

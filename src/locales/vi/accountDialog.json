@@ -39,7 +39,7 @@
     "openSecurity": "Mở trang lấy token",
     "openSecurityFailed": "Không thể mở trang. Hãy tìm Access Token trong hồ sơ, cài đặt tài khoản hoặc trang quản lý token, sao chép rồi quay lại đây để nhập.",
     "pasteStep": "Sao chép ngay toàn bộ Access Token, dán vào trường Access Token bên dưới, kiểm tra thông tin tài khoản rồi lưu.",
-    "popupHint": "Tiếp tục trong thanh bên để giữ biểu mẫu này trong khi xác minh danh tính và sao chép mã trên trang web. Nếu không mở được thanh bên, biểu mẫu sẽ mở trong trang đầy đủ.",
+    "popupHint": "Tiếp tục trong thanh bên để giữ biểu mẫu này trong khi sao chép mã trên trang web. Nếu không mở được thanh bên, biểu mẫu sẽ mở trong trang đầy đủ.",
     "prepareFailed": "Không thể lưu tạm biểu mẫu. Sao chép thông tin cần giữ rồi mở lại biểu mẫu tài khoản ở trang đầy đủ.",
     "restoreFailed": "Không khôi phục được biểu mẫu chưa hoàn tất. Biểu mẫu có thể đã hết hạn. Hãy mở lại biểu mẫu tài khoản.",
     "rotationWarning": "Chỉ áp dụng cho trang cũ có Generate / Regenerate: tạo lại sẽ làm mã cũ mất hiệu lực; hãy cập nhật các công cụ đang dùng mã đó. Tạo mã truy cập có phạm vi quyền không làm các mã hiện có mất hiệu lực.",
@@ -352,6 +352,7 @@
   },
   "messages": {
     "addSuccess": "Thêm tài khoản {{name}} thành công!",
+    "authTypeChangedToAccessToken": "Trang web dùng token truy cập cho tài khoản này. Phương thức xác thực đã được cập nhật.",
     "autoDetectFailed": "Tự động nhận dạng thất bại: {{error}}",
     "autoDetectIdentityMismatch": "Tài khoản được phát hiện không khớp với tài khoản hiện tại. Dữ liệu hiện có của bạn đã được giữ lại. Hãy kiểm tra URL trang web, đăng nhập vào đúng tài khoản rồi thử lại.",
     "autoDetectSuccess": "Tự động nhận dạng thành công!",

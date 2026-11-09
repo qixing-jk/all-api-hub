@@ -12,6 +12,7 @@ import { ManualAddGuideButton } from "~/features/AccountManagement/components/Ac
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   AutoDetectErrorType,
+  isAccessTokenRecoveryError,
   openLoginTab,
   reloadCurrentTab,
   type AutoDetectErrorProps,
@@ -131,7 +132,7 @@ export default function AutoDetectErrorAlert({
     canRecoverWithApiCredentialProfile &&
     error.canUseApiCredentialFallback !== false
 
-  if (error.type === AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED) {
+  if (isAccessTokenRecoveryError(error)) {
     return (
       <AccessTokenVerificationGuide
         message={error.message}
@@ -153,6 +154,7 @@ export default function AutoDetectErrorAlert({
             AutoDetectErrorType.FORBIDDEN,
             AutoDetectErrorType.NOT_FOUND,
             AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+            AutoDetectErrorType.RATE_LIMITED,
           ].includes(error.type)
             ? "warning"
             : "destructive"

@@ -35,7 +35,7 @@ type IdentityChanges = {
     sub2api: Pick<ReturnType<typeof useSub2ApiAccountSession>, "invalidate">
     detection: Pick<
       ReturnType<typeof useAccountAutoDetection>,
-      "invalidate" | "clearVerificationError"
+      "invalidate" | "clearAccessTokenRecovery"
     >
     openRouter: Pick<
       ReturnType<typeof useOpenRouterAccountOnboarding>,
@@ -68,7 +68,10 @@ export function useAccountDialogIdentityChanges({
     duplicate: { invalidate: invalidateDuplicateConfirmation },
     cookie: { invalidate: invalidateCookieSession },
     sub2api: { invalidate: invalidateSub2ApiSession },
-    detection: { invalidate: invalidateAutoDetection, clearVerificationError },
+    detection: {
+      invalidate: invalidateAutoDetection,
+      clearAccessTokenRecovery,
+    },
     openRouter: {
       notifyUrlChange: notifyOpenRouterUrlChange,
       notifySiteChange: notifyOpenRouterSiteChange,
@@ -96,7 +99,7 @@ export function useAccountDialogIdentityChanges({
       notifyCurrentTabUrlChanged(value)
       invalidateAutoDetection()
       if (value !== selectedSiteUrlRef.current) {
-        clearVerificationError()
+        clearAccessTokenRecovery()
       }
       resetCheckInRedetection()
       notifyOpenRouterUrlChange(value)
@@ -113,7 +116,7 @@ export function useAccountDialogIdentityChanges({
     },
     [
       invalidateCredentialSessions,
-      clearVerificationError,
+      clearAccessTokenRecovery,
       invalidateAutoDetection,
       notifyCurrentTabUrlChanged,
       notifyOpenRouterUrlChange,
@@ -148,7 +151,7 @@ export function useAccountDialogIdentityChanges({
       invalidateCredentialSessions(nextSiteType === selectedSiteTypeRef.current)
       resetCheckInRedetection()
       if (nextSiteType !== selectedSiteTypeRef.current) {
-        clearVerificationError()
+        clearAccessTokenRecovery()
       }
       const nextPolicy = getAccountDialogSitePolicy(nextSiteType)
       selectedSiteTypeRef.current = nextSiteType
@@ -162,7 +165,7 @@ export function useAccountDialogIdentityChanges({
     },
     [
       invalidateCredentialSessions,
-      clearVerificationError,
+      clearAccessTokenRecovery,
       setDialogUrl,
       notifyOpenRouterSiteChange,
       resetCheckInRedetection,
@@ -177,11 +180,11 @@ export function useAccountDialogIdentityChanges({
       invalidateCredentialSessions(true)
 
       if (value !== AuthTypeEnum.AccessToken) {
-        clearVerificationError()
+        clearAccessTokenRecovery()
       }
       setAuthTypeDraft(value)
     },
-    [invalidateCredentialSessions, clearVerificationError, setAuthTypeDraft],
+    [invalidateCredentialSessions, clearAccessTokenRecovery, setAuthTypeDraft],
   )
   const setCookieAuthSessionCookie = useCallback(
     (value: string) => {

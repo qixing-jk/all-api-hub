@@ -40,7 +40,7 @@ import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
-import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { isAccessTokenRecoveryError } from "~/services/accounts/utils/autoDetectUtils"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import {
   isCanonicalAimlApiUrl,
@@ -604,8 +604,7 @@ export default function AccountDialog({
                 isDetected={state.isDetected}
                 showAccessTokenGuidance={
                   hasInlineCredentialError ||
-                  state.detectionError?.type !==
-                    AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED ||
+                  !isAccessTokenRecoveryError(state.detectionError) ||
                   !getAccountSiteDefinition(state.siteType)?.onboarding
                     ?.accessTokenVerificationGuide
                 }

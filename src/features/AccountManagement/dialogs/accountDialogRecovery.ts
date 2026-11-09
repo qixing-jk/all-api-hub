@@ -8,6 +8,7 @@ import {
 import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
 import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
 import { normalizeAccountLogin } from "~/services/accountLogin/configCodec"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS,
@@ -63,6 +64,22 @@ function normalizeRecoveryState(
   )
     return null
 
+  let detectionError: AccountDialogRecoveryState["detectionError"]
+  if (state.detectionError !== undefined) {
+    if (
+      !isRecord(state.detectionError) ||
+      !Object.values(AutoDetectErrorType).includes(
+        state.detectionError.type as AutoDetectErrorType,
+      ) ||
+      typeof state.detectionError.message !== "string"
+    )
+      return null
+    detectionError = {
+      type: state.detectionError.type as AutoDetectErrorType,
+      message: state.detectionError.message,
+    }
+  }
+
   const defaults = createEmptyAccountDialogDraft(state.draft.siteType)
   const rawDraft = state.draft
   for (const [key, defaultValue] of Object.entries(defaults)) {
@@ -112,6 +129,7 @@ function normalizeRecoveryState(
   draft.checkIn = normalizeCheckInConfigV7(rawDraft.checkIn)
 
   return {
+    ...(detectionError ? { detectionError } : {}),
     ...(state.recoveryAction === "cookie"
       ? { recoveryAction: "cookie" as const }
       : {}),

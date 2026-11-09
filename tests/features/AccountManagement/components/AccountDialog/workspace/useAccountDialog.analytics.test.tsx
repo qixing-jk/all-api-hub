@@ -527,6 +527,43 @@ describe("useAccountDialog analytics", () => {
     ).not.toContain(recoverySecret)
   })
 
+  it("records a rejected Cookie as an authentication failure with known identity", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      detailedError: {
+        type: AutoDetectErrorType.COOKIE_SESSION_REJECTED,
+        message: "Sign in again",
+      },
+      autoDetectFailureReason:
+        AUTO_DETECT_FAILURE_REASONS.CookieSessionRejected,
+      recoveryData: {
+        userId: "42",
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.Cookie,
+      },
+    })
+    const { result } = renderAddHook()
+    await waitFor(() => expect(result.current?.state).toBeTruthy())
+    await setUrlAndWait(result, "https://cookie.example.invalid")
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        diagnostics: {
+          failure: expect.objectContaining({
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          }),
+        },
+        insights: expect.objectContaining({
+          accountAutoDetectIdentityDetected: true,
+        }),
+      }),
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
   it("tracks completion failures with the final hinted site type", async () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: false,
@@ -680,6 +717,10 @@ describe("useAccountDialog analytics", () => {
     [
       AutoDetectErrorType.SERVER_ERROR,
       PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
+    ],
+    [
+      AutoDetectErrorType.RATE_LIMITED,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
     ],
   ])(
     "tracks %s account auto-detect failures with a specific safe error category",
