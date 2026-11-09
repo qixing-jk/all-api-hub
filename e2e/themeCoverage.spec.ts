@@ -8,6 +8,7 @@ import {
   THEME_PRESET,
   THEME_RADIUS,
 } from "~/constants/theme"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   finishColorTransitions,
@@ -20,6 +21,30 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+
+for (const themeMode of [THEME_MODE.DARK, THEME_MODE.LIGHT]) {
+  test(`account URL input keeps the group's background in ${themeMode} mode`, async ({
+    page,
+    extensionId,
+  }, testInfo) => {
+    await forceExtensionLanguage(page, "en")
+    await seedUserPreferences(await getServiceWorker(page.context()), {
+      themeMode,
+    })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+    )
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+    const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+    const input = dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+    await expect(input).toBeVisible()
+    await finishColorTransitions(input)
+    await dialog.screenshot({
+      path: testInfo.outputPath(`account-url-${themeMode}.png`),
+    })
+    await expect(input).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
+  })
+}
 
 test("gateway guidance follows the selected palette in light and dark modes", async ({
   context,

@@ -7,6 +7,8 @@ const config: KnipConfig = {
     "wxt.config.ts",
     "i18next.config.ts",
     "vitest.config.ts",
+    // Tailwind 4 loads its imports/plugins from the CSS linked by WXT HTML.
+    "src/styles/style.css",
     "scripts/diagnostics/collect-extension-memory.mjs",
     "scripts/diagnostics/compare-extension-memory.mjs",
     "scripts/diagnostics/compare-lazy-loading.mjs",
@@ -67,8 +69,6 @@ const config: KnipConfig = {
     "react-devtools",
     // On-demand UI generator configured by components.json.
     "shadcn",
-    // Imported as CSS from src/styles/style.css, outside the TS graph.
-    "tw-animate-css",
   ],
   // Exported props and signature types may be used only within their owning
   // module. Keep checking types that have no internal or external consumers.

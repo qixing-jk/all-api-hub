@@ -97,7 +97,13 @@ export async function runProbeGeneration<
     ])
 
     options.abortSignal?.throwIfAborted()
-    if (hasStreamError || finishReason === "error") {
+    // The SDK preserves partial output for interrupted streams without onError.
+    // A probe must receive a complete response before treating it as success.
+    if (
+      hasStreamError ||
+      finishReason === "error" ||
+      finishReason === "interrupted"
+    ) {
       throw streamError ?? new Error("AI generation stream failed")
     }
 
