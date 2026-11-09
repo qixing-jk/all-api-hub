@@ -77,10 +77,12 @@ describe("KeyResourceCard", () => {
         .spyOn(HTMLElement.prototype, "getBoundingClientRect")
         .mockImplementation(function (this: HTMLElement) {
           const isManagement = this.textContent === "Edit"
+          const isHidden = this.textContent === "Hidden"
           return {
-            width: this.textContent === "Hidden" ? 0 : 40,
-            height: 24,
-            top: isManagement && wrapped ? 40 : 0,
+            width: isHidden ? 0 : 40,
+            height: isManagement ? 40 : 24,
+            // Unequal tops still share center 20; hidden content is on another row.
+            top: isHidden ? 100 : isManagement ? (wrapped ? 40 : 0) : 8,
           } as DOMRect
         })
       vi.stubGlobal(

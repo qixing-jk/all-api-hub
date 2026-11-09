@@ -276,7 +276,7 @@ export function KeyResourceActionToolbar({
       role="toolbar"
       aria-label={label}
       data-testid={testId}
-      className="gap-y-density-1 flex w-full flex-wrap items-center justify-start gap-x-4 sm:w-auto sm:shrink-0 sm:justify-end"
+      className="gap-y-density-1 flex w-full flex-wrap items-center justify-start gap-x-4 [--key-action-separator-left:-0.5rem] sm:w-auto sm:shrink-0 sm:justify-end"
     >
       {children}
     </div>

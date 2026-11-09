@@ -85,6 +85,36 @@ for (const width of [1280, 390, 320]) {
       await expect(
         page.getByRole("combobox", { name: "Select a scope" }),
       ).toHaveCount(0)
+      if (width === 1280 && !isAllAccounts) {
+        await rows.first().screenshot({
+          path: testInfo.outputPath("runtime-action-separators.png"),
+        })
+        // Nested action groups use a wider gap than their enclosing header.
+        const toolbar = rows.first().getByRole("toolbar")
+        await expect(toolbar).toBeVisible()
+        const separators = toolbar.locator(
+          ":scope > div > span[aria-hidden='true']",
+        )
+        await expect(separators).toHaveCount(3)
+        for (const separator of await separators.all()) {
+          await expect(separator).toBeVisible()
+          const geometry = await separator.evaluate((element) => {
+            const group = element.parentElement!
+            const previous =
+              group.previousElementSibling!.getBoundingClientRect()
+            const current = group.getBoundingClientRect()
+            const divider = element.getBoundingClientRect()
+            return {
+              dividerCenter: divider.x + divider.width / 2,
+              gapCenter: (previous.right + current.left) / 2,
+            }
+          })
+          expect(
+            Math.abs(geometry.dividerCenter - geometry.gapCenter),
+          ).toBeLessThanOrEqual(1)
+        }
+      }
+
       await expect(
         page.getByRole("heading", { name: "Scope", exact: true }),
       ).toHaveCount(0)

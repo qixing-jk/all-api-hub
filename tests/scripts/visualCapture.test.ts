@@ -336,6 +336,11 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
     const comparisonPreview = readFileSync(after.report, "utf8")
     expect(comparisonPreview).not.toMatch(/<details\b/i)
     for (const [index, comparison] of after.comparisons.entries()) {
+      const checkpointId = capture.checkpoints[index].id
+      const section = comparisonPreview
+        .split(`## ${checkpointId}\n\n`)[1]
+        ?.split("\n\n## ")[0]
+      expect(section).toBeDefined()
       const imagePath = path
         .relative(
           after.directory,
@@ -343,10 +348,10 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
         )
         .split(path.sep)
         .join("/")
-      expect(comparisonPreview).toContain(
+      expect(section).toContain(
         `![${capture.checkpoints[index].id}: Before | After](${imagePath})`,
       )
-      expect(comparisonPreview).toContain(`Status: ${comparison.status}`)
+      expect(section).toContain(`Status: ${comparison.status}`)
     }
     for (const comparison of after.comparisons) {
       const report = JSON.parse(
