@@ -187,5 +187,8 @@ export function resolveResponseErrorDetails(
     ...(providerDetails.upstreamCode
       ? { upstreamCode: providerDetails.upstreamCode }
       : {}),
+    ...(providerDetails.unattributedMessage
+      ? { unattributedMessage: true }
+      : {}),
   }
 }

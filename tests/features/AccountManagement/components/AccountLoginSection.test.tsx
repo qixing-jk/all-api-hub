@@ -42,6 +42,25 @@ const props = {
 }
 
 describe("account password login guidance", () => {
+  it("lets a Sub2API token account enable recovery without a refresh token", async () => {
+    render(
+      <AccountLoginSection
+        {...props}
+        siteType={SITE_TYPES.SUB2API}
+        siteUrl="https://sub2api.example"
+        authType={AuthTypeEnum.AccessToken}
+      />,
+    )
+    const toggle = await screen.findByRole("switch", {
+      name: "accountDialog:login.automaticRecovery",
+    })
+    expect(toggle).not.toBeChecked()
+    await userEvent.click(toggle)
+    expect(props.onChange).toHaveBeenLastCalledWith({
+      ...props.login,
+      automaticRecovery: true,
+    })
+  })
   it("only offers Cookie recovery for Cookie authentication and preserves login settings across auth changes", async () => {
     const login = { ...props.login, automaticRecovery: true }
     const target = {

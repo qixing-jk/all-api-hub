@@ -21,7 +21,10 @@ import {
   normalizeSub2ApiTokenExpiresAt as normalizeTokenExpiresAt,
 } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { getSub2ApiAuthPersistenceStatus } from "~/services/apiService/sub2api/auth/authSession"
-import { Sub2ApiTokenRefreshError } from "~/services/apiService/sub2api/auth/tokenRefresh"
+import {
+  SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
+  Sub2ApiTokenRefreshError,
+} from "~/services/apiService/sub2api/auth/tokenRefresh"
 import {
   parseSub2ApiEnvelope,
   parseSub2ApiTodayUsage,
@@ -33,10 +36,14 @@ import {
   SUB2API_USAGE_STATS_ENDPOINT,
   type Sub2ApiUsageStatsData,
 } from "~/services/apiService/sub2api/type"
-import { ApiError } from "~/services/apiTransport/errors"
+import {
+  ApiError,
+  isAuthenticationRequiredError,
+} from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
+  ACCOUNT_AUTH_HEALTH_STATUS_CODES,
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
   SiteHealthStatus,
@@ -100,11 +107,13 @@ const createAccountData = (
 const createLoginRequiredHealthStatus = () => ({
   status: SiteHealthStatus.Warning,
   message: t("messages:sub2api.loginRequired"),
+  code: ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED,
 })
 
 const createRefreshTokenRestoreRequiredHealthStatus = () => ({
   status: SiteHealthStatus.Warning,
   message: t("messages:sub2api.refreshTokenInvalid"),
+  code: ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED,
 })
 
 const createAuthPersistenceFailureHealthStatus = () => ({
@@ -388,7 +397,7 @@ export async function refreshAccountData(
         healthStatus: createAuthPersistenceFailureHealthStatus(),
       }
     }
-    if (error instanceof ApiError && error.statusCode === 401) {
+    if (isAuthenticationRequiredError(error)) {
       return {
         success: false,
         healthStatus: isSub2ApiRefreshTokenInvalidError(error)
@@ -396,7 +405,11 @@ export async function refreshAccountData(
           : createLoginRequiredHealthStatus(),
       }
     }
-    if (error instanceof Sub2ApiTokenRefreshError) {
+    if (
+      error instanceof Sub2ApiTokenRefreshError &&
+      error.reason ===
+        SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN
+    ) {
       return {
         success: false,
         healthStatus: createRefreshTokenRestoreRequiredHealthStatus(),

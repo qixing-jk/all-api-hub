@@ -8,7 +8,10 @@ import {
   TURNSTILE_AUTO_ASSIST_MS,
   TURNSTILE_MANUAL_WAIT_MS,
 } from "~/constants/turnstile"
-import type { AccountLoginEvidence } from "~/services/apiAdapters/contracts/accountLogin"
+import type {
+  AccountLoginCredential,
+  AccountLoginEvidence,
+} from "~/services/apiAdapters/contracts/accountLogin"
 import {
   createBrowserLoginContext,
   type BrowserLoginContextOptions,
@@ -35,7 +38,7 @@ interface BrowserPasswordFlow {
   captureCredential?: (
     tabId: number,
     origin: string,
-  ) => Promise<{ cookie: string } | null>
+  ) => Promise<AccountLoginCredential | null>
 }
 
 /** Native execution shares session scheduling, while retaining its own result contract. */

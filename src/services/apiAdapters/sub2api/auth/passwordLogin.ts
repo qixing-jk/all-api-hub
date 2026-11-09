@@ -12,6 +12,8 @@ import type {
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { normalizeSub2ApiLoginIdentity } from "~/services/apiService/sub2api/oauth/protocol"
 
+import { captureSub2ApiLoginCredential } from "./loginCredential"
+
 /** Keeps native password and OAuth logins on the same Sub2API session queue. */
 export async function loginSub2ApiWithPassword(
   request: AccountLoginRequest,
@@ -36,12 +38,14 @@ export async function loginSub2ApiWithPassword(
     loginAction: RuntimeActionIds.ContentSub2ApiPasswordLogin,
     clearEvidenceAction: RuntimeActionIds.ContentClearSub2ApiPasswordLogin,
     credentials,
+    captureCredential: captureSub2ApiLoginCredential,
   }).authenticate({
     origin: new URL(request.account.site_url).origin,
     expectedIdentity,
     requestId: request.requestId,
     sessionMode: request.sessionMode,
     abortSignal: request.abortSignal,
+    captureCredential: request.captureCredential,
     ...(request.attended === undefined ? {} : { attended: request.attended }),
   })
 }

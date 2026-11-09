@@ -20,7 +20,7 @@ import { AccountFormSection } from "~/features/AccountManagement/components/Acco
 import { ACCOUNT_FORM_SECTION_ELEMENT_IDS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { IncognitoAccessNotice } from "~/features/Permissions/components/IncognitoAccessNotice"
-import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import { supportsAccountCredentialRecovery } from "~/services/accountCredentialRecovery/policy"
 import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
 import type { AccountSiteType } from "~/services/accountSiteDefinitions"
@@ -84,7 +84,7 @@ export function AccountLoginSection({
     ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password
       ? selectedMethod.configuration.identity
       : undefined
-  const supportsRecovery = supportsAccountCookieRecovery(target)
+  const supportsRecovery = supportsAccountCredentialRecovery(target)
   if (methods.length === 0) return null
   return (
     <AccountFormSection
@@ -179,7 +179,8 @@ export function AccountLoginSection({
               aria-label={t("login.automaticRecovery")}
               checked={login?.automaticRecovery === true}
               disabled={
-                !login || !supportsAccountCookieRecovery(target, login.methodId)
+                !login ||
+                !supportsAccountCredentialRecovery(target, login.methodId)
               }
               onChange={(automaticRecovery) => {
                 if (login) onChange({ ...login, automaticRecovery })

@@ -11,7 +11,12 @@ export const fetchSub2ApiDataWithRequest = async <T>(
   parserOptions?: { allowMissingData?: boolean },
 ): Promise<{ data: T; request: ApiServiceRequest }> => {
   return executeAuthenticatedSub2ApiRequest(
-    request,
+    {
+      ...request,
+      allowAccountCredentialRecovery:
+        request.allowAccountCredentialRecovery === true &&
+        (options?.method ?? "GET").toUpperCase() === "GET",
+    },
     endpoint,
     async (authRequest) => {
       const body = await fetchApi<unknown>(authRequest, {

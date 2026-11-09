@@ -1,8 +1,7 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import type { AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
-import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile/authSession"
-import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
+import { withAccountAuthSession } from "~/services/accounts/accountSiteProfile/authSession"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountKeyResourceRuntimeKeyFromFacts,
@@ -210,10 +209,7 @@ const createAccountApiContextFromSource = (
   return {
     accountId: source.id,
     siteType: source.siteType,
-    request: withDisplayAccountAuthSession(
-      { siteType: source.siteType },
-      request,
-    ),
+    request: withAccountAuthSession(source.siteType, request),
   }
 }
 
@@ -230,20 +226,6 @@ export const createAccountApiRequestFromStoredAccount = (
     cookie: account.cookieAuth?.sessionCookie,
     aimlApiKey: account.aimlApiAuth?.apiKey ?? "",
   })
-
-const withDisplayAccountAuthSession = (
-  account: Pick<DisplaySiteData, "siteType">,
-  request: ApiServiceRequest,
-): ApiServiceRequest | Sub2ApiAuthSessionRequest => {
-  if (!shouldDecorateAccountApiRequestWithAuthSession(account.siteType)) {
-    return request
-  }
-
-  return {
-    ...request,
-    sub2apiAuthSession: accountSub2ApiAuthSession,
-  } satisfies Sub2ApiAuthSessionRequest
-}
 
 /**
  * Build the request DTO for a display account snapshot.

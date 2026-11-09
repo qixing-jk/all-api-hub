@@ -30,12 +30,15 @@ export interface DecodedApiResponseError {
   kind: ApiResponseErrorKind
   message?: string
   upstreamCode?: string
+  /** True for local HTTP fallback copy that cannot establish a site rejection. */
+  unattributedMessage?: boolean
 }
 
 /**
  * Interprets one provider response without performing disclosure or redaction.
  * Implementations must be total for unknown bodies and return null when the
- * response does not match their protocol.
+ * response does not match their protocol, or mark a local HTTP fallback message
+ * as unattributed.
  */
 export type ApiResponseErrorDecoder = (
   response: ApiTransportResponse<unknown>,

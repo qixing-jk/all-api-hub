@@ -950,6 +950,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     legacyAccountTokenScope: "account",
     accountLogin: {
       passwordIdentity: ACCOUNT_PASSWORD_IDENTITIES.Email,
+      supportsCredentialRecovery: true,
       // Wei-Shaw/sub2api@881f320: public settings and native OAuth start routes.
       methods: [
         "github",

@@ -91,6 +91,11 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // Each entry also lists the allowed import targets as prefix matches, so a
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
+  {
+    // Recovery consults the adapter registry; defer it until Sub2API registration completes.
+    file: "src/services/apiService/sub2api/auth/authLifecycle.ts",
+    imports: ["~/services/accountCredentialRecovery"],
+  },
   // Capacity probes load only the selected tokenizer vocabulary after user initiation.
   {
     file: "src/services/verification/modelQuality/contextTokens.ts",

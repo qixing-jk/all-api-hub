@@ -59,6 +59,35 @@ describe("Sub2API adapter-owned OAuth login", () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it("exports the full renewable credential from the verified login context", async () => {
+    const credential = {
+      accessToken: "new-access",
+      sub2apiAuth: {
+        refreshToken: "new-refresh",
+        tokenExpiresAt: 2000000000000,
+      },
+    }
+    dependencies.authenticate.mockResolvedValue({
+      status: "authenticated",
+      identity: "17",
+      credential,
+    })
+    await expect(
+      loginAccount({
+        account,
+        methodId: "google",
+        requestId: "recover",
+        captureCredential: true,
+      }),
+    ).resolves.toMatchObject({ credential })
+    expect(dependencies.authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({ captureCredential: true }),
+    )
+    expect(dependencies.createBrowser).toHaveBeenCalledWith(
+      expect.objectContaining({ captureCredential: expect.any(Function) }),
+    )
+  })
+
   it("does not offer OAuth on a split-origin deployment whose content flow needs same-origin API routes", async () => {
     const target = { ...account, site_url: "https://ai-router.dev/dashboard" }
     expect(sub2ApiAccountLogin.supports(target)).toBe(false)
@@ -100,6 +129,7 @@ describe("Sub2API adapter-owned OAuth login", () => {
         ?.accountLogin,
     ).toEqual({
       passwordIdentity: ACCOUNT_PASSWORD_IDENTITIES.Email,
+      supportsCredentialRecovery: true,
       methods: [
         "github",
         "google",

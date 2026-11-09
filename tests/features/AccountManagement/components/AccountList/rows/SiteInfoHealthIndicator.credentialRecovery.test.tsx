@@ -31,53 +31,58 @@ vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => ({
 }))
 
 describe("account health credential recovery guidance", () => {
-  it("opens the rejected account's login settings without refreshing it", async () => {
-    const user = userEvent.setup()
-    const onRefresh = vi.fn()
-    const site = buildDisplaySiteData({
-      id: "expired-cookie-account",
-      siteType: SITE_TYPES.ANYROUTER,
-      authType: AuthTypeEnum.Cookie,
-      health: {
-        status: SiteHealthStatus.Warning,
-        code: "authentication_required",
-        reason: "HTTP 401",
-      },
-    })
-    render(
-      <SiteInfoHealthIndicator
-        site={site}
-        onRefresh={onRefresh}
-        isRefreshing={false}
-        isHealthRefreshing={false}
-        isRefreshLocked={false}
-      />,
-    )
+  it.each([
+    { siteType: SITE_TYPES.ANYROUTER, authType: AuthTypeEnum.Cookie },
+    { siteType: SITE_TYPES.SUB2API, authType: AuthTypeEnum.AccessToken },
+  ])(
+    "opens the rejected account's login settings without refreshing it (%j)",
+    async (target) => {
+      const user = userEvent.setup()
+      const onRefresh = vi.fn()
+      const site = buildDisplaySiteData({
+        id: "expired-cookie-account",
+        ...target,
+        health: {
+          status: SiteHealthStatus.Warning,
+          code: "authentication_required",
+          reason: "HTTP 401",
+        },
+      })
+      render(
+        <SiteInfoHealthIndicator
+          site={site}
+          onRefresh={onRefresh}
+          isRefreshing={false}
+          isHealthRefreshing={false}
+          isRefreshLocked={false}
+        />,
+      )
 
-    await screen.findByRole("button", {
-      name: "account:list.site.refreshHealthStatus",
-    })
-    expect(screen.getByText(/HTTP 401/)).toBeVisible()
-    await user.click(
-      screen.getByRole("button", {
-        name: "accountDialog:login.configureRecovery",
-      }),
-    )
-    expect(openTargetedOptionsPage).toHaveBeenCalledWith({
-      targetHash: "#account",
-      inPageSearchParams: {
-        action: "edit",
-        accountId: site.id,
-        focusSection: "account-login",
-      },
-      newTabSearchParams: {
-        action: "edit",
-        accountId: site.id,
-        focusSection: "account-login",
-      },
-    })
-    expect(onRefresh).not.toHaveBeenCalled()
-  })
+      await screen.findByRole("button", {
+        name: "account:list.site.refreshHealthStatus",
+      })
+      expect(screen.getByText(/HTTP 401/)).toBeVisible()
+      await user.click(
+        screen.getByRole("button", {
+          name: "accountDialog:login.configureRecovery",
+        }),
+      )
+      expect(openTargetedOptionsPage).toHaveBeenCalledWith({
+        targetHash: "#account",
+        inPageSearchParams: {
+          action: "edit",
+          accountId: site.id,
+          focusSection: "account-login",
+        },
+        newTabSearchParams: {
+          action: "edit",
+          accountId: site.id,
+          focusSection: "account-login",
+        },
+      })
+      expect(onRefresh).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([
     { siteType: SITE_TYPES.NEW_API, authType: AuthTypeEnum.Cookie },
@@ -91,6 +96,14 @@ describe("account health credential recovery guidance", () => {
       siteType: SITE_TYPES.ANYROUTER,
       authType: AuthTypeEnum.Cookie,
       health: { status: SiteHealthStatus.Warning, reason: "HTTP 401" },
+    },
+    {
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      health: {
+        status: SiteHealthStatus.Unknown,
+        reason: "Sub2API token refresh failed",
+      },
     },
   ])(
     "does not suggest recovery for an ineligible or unclassified failure (%j)",

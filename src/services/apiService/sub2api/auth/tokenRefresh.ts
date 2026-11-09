@@ -1,4 +1,5 @@
 import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/auth/browserAuth"
+import { readSub2ApiFailureEnvelope } from "~/services/apiService/sub2api/responseError"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
@@ -115,11 +116,11 @@ export async function refreshSub2ApiTokens(params: {
   }
 
   if (payload.code !== 0) {
-    // Upstream maps rejected refresh tokens to HTTP 401. Other failures may
-    // occur after rotation and cannot safely authorize replay of the old token.
+    // Only a recognized failure envelope can establish a rejected refresh token.
+    // Other failures may occur after rotation and cannot authorize replay.
     // Source: https://github.com/Wei-Shaw/sub2api/blob/67380eafd5ae2eaa8db910ae738199c3dac62e37/backend/internal/handler/auth_handler.go#L692-L704
     throw new Sub2ApiTokenRefreshError(
-      responseStatus === 401
+      responseStatus === 401 && readSub2ApiFailureEnvelope(payload)
         ? SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN
         : SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
     )

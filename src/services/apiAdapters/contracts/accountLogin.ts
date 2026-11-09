@@ -14,7 +14,7 @@ import type { BrowserLoginSessionMode } from "~/constants/browserLogin"
 import { type BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import type { ApiTransportFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { SiteAccount } from "~/types"
+import type { SiteAccount, Sub2ApiAuthConfig } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 /** Adapters select their identity fields; login does not require saved API credentials. */
@@ -27,6 +27,11 @@ export type AccountLoginTarget = Pick<SiteAccount, "site_url"> &
 export interface AccountLoginEvidence {
   checkedIn?: boolean
 }
+
+/** Captured console credentials retain their provider-owned renewal material. */
+export type AccountLoginCredential =
+  | { cookie: string; accessToken?: never; sub2apiAuth?: never }
+  | { cookie?: never; accessToken: string; sub2apiAuth?: Sub2ApiAuthConfig }
 
 export interface AccountLoginRequest {
   /** Stops queued/active login work; local only, never sent to a content script. */
@@ -60,7 +65,7 @@ export interface AccountLoginMethodDefinition extends AccountLoginMethod {
         identity: AccountPasswordIdentity
       }
   /** Credential this method can export after verifying the target identity. */
-  credentialRecovery?: typeof ACCOUNT_LOGIN_CREDENTIAL_KINDS.Cookie
+  credentialRecovery?: (typeof ACCOUNT_LOGIN_CREDENTIAL_KINDS)[keyof typeof ACCOUNT_LOGIN_CREDENTIAL_KINDS]
 }
 
 export type AccountCookieValidationTarget = AccountLoginTarget &
@@ -98,7 +103,7 @@ export type AccountLoginResult =
       status: typeof BROWSER_LOGIN_STATUS.Authenticated
       /** Verified identity normalized by the adapter, not necessarily a numeric user ID. */
       identity: string
-      credential?: { cookie: string }
+      credential?: AccountLoginCredential
       evidence?: AccountLoginEvidence
     }
   | {
@@ -116,8 +121,29 @@ export type AccountLoginResult =
 /** Each adapter owns discovery, authentication and identity verification for its protocol. */
 export interface AccountLoginCapability {
   readonly methods: readonly AccountLoginMethodDefinition[]
+  /** Non-Cookie credentials supply their native verification and rotation lock. */
+  readonly credentialRecovery?: {
+    readonly lock: string
+    verify(
+      result: AccountLoginResult,
+      target: AccountCookieValidationTarget & Pick<SiteAccount, "authType">,
+    ): Promise<AccountCredentialRecoveryResult>
+  }
   /** Read-only deployment discovery; never performs login or logs out. */
   discover(account: AccountLoginTarget): Promise<AccountLoginMethod[]>
   supports(account: AccountLoginTarget): boolean
   login(request: AccountLoginRequest): Promise<AccountLoginResult>
 }
+
+/** A successful recovery must include an independently verified credential. */
+export type AccountCredentialRecoveryResult =
+  | (Extract<
+      AccountLoginResult,
+      { status: typeof BROWSER_LOGIN_STATUS.Authenticated }
+    > & {
+      credential: AccountLoginCredential
+    })
+  | Exclude<
+      AccountLoginResult,
+      { status: typeof BROWSER_LOGIN_STATUS.Authenticated }
+    >

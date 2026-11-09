@@ -11,6 +11,7 @@ import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/acco
 import { dayaCapabilities } from "~/services/apiAdapters/daya"
 import { pmApiCapabilities } from "~/services/apiAdapters/pmapi"
 import { refreshAccountData as refreshNewApiAccountData } from "~/services/apiService/newApiFamily/default/accountRefresh"
+import { getSub2ApiAuthSession } from "~/services/apiService/sub2api/auth/authSession"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import * as postSaveDiscovery from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
@@ -4745,15 +4746,25 @@ describe("accountStorage core behaviors", () => {
       },
     })
     seedStorage([account])
-    mockRefreshAccountData.mockImplementationOnce(async (request) => ({
-      success: true,
-      data: { quota: 123, checkIn: request.checkIn },
-      authUpdate: {
+    mockRefreshAccountData.mockImplementationOnce(async (request) => {
+      // Native recovery persists its pair through the supplied session before
+      // returning account data; status readback must observe that same pair.
+      await getSub2ApiAuthSession(request)?.persistAuthUpdate(account.id, {
         accessToken: "recovered-token",
-        sub2apiAuth: { refreshToken: "recovered-refresh" },
-      },
-      healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
-    }))
+        refreshToken: "recovered-refresh",
+        expectedOrigin: account.site_url,
+        expectedUserId: account.account_info.id,
+      })
+      return {
+        success: true,
+        data: { quota: 123, checkIn: request.checkIn },
+        authUpdate: {
+          accessToken: "recovered-token",
+          sub2apiAuth: { refreshToken: "recovered-refresh" },
+        },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
+      }
+    })
     let authorization: string | null = null
     const readStatus = vi.fn(({ request }: { request: Request }) => {
       authorization = request.headers.get("authorization")

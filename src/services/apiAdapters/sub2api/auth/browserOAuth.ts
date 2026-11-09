@@ -16,12 +16,14 @@ export function createSub2ApiOAuthFlow(input: {
   origin: string
   requestId: string
   loginPath: string
+  captureCredential?: BrowserOAuthFlow<undefined>["captureCredential"]
 }): BrowserOAuthFlow<undefined> {
   return {
     id: "sub2api-" + input.provider,
     concurrencyKey: BROWSER_LOGIN_SESSION_KEYS.Sub2Api,
     displayName: "Sub2API",
     loginPath: input.loginPath,
+    captureCredential: input.captureCredential,
     prepareAction: RuntimeActionIds.ContentPrepareSub2ApiOAuth,
     prepareDetails: { loginProvider: input.provider },
     completeAction: RuntimeActionIds.ContentCompleteSub2ApiOAuth,
