@@ -15,6 +15,7 @@ import {
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
 import type { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
+import type { getModelContextInfo } from "~/services/verification/modelQuality/contextTokens"
 import {
   runPelicanTest,
   type PelicanExecutionMode,
@@ -28,13 +29,20 @@ import {
   type DrawingVerificationSummary,
 } from "~/services/verification/verificationResultHistory"
 import type { ContextCapacityHistoryAccess } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
+import type { NeedleHistoryAccess } from "~/services/verification/verificationResultHistory/needleHistory"
 import { API_VERIFICATION_HISTORY_TARGET_KINDS } from "~/services/verification/verificationResultHistory/types"
+import { discardNeedleCheckpointsInBackground } from "~/services/verification/webAiApiCheck/needleClient"
 
 import {
   useContextCapacity,
   type ContextCapacityController,
   type ContextCapacityHistoryRequestResolver,
 } from "./useContextCapacity"
+import {
+  useNeedleTest,
+  type NeedleController,
+  type NeedleRunner,
+} from "./useNeedleTest"
 import { useVerificationPrompts } from "./useVerificationPrompts"
 
 export const VERIFICATION_TOOL_STATUSES = {
@@ -63,6 +71,7 @@ export type VerificationToolRequestParams = {
 }
 
 export type VerificationToolsController = {
+  needle?: NeedleController
   contextCapacity?: ContextCapacityController
   /** At least one shared verification tool is in flight. */
   isRunning: boolean
@@ -90,6 +99,12 @@ export type PelicanRunner = (
 ) => Promise<PelicanTestResult>
 
 export type UseVerificationToolsOptions = {
+  modelId?: string
+  runNeedleRequest?: NeedleRunner
+  loadNeedleCounter?: typeof getModelContextInfo
+  needleHistoryAccess?: NeedleHistoryAccess
+  discardNeedleCheckpoints?: () => Promise<unknown>
+
   discardContextCheckpoints?: () => Promise<void>
   contextHistoryAccess?: ContextCapacityHistoryAccess
   resolveContextHistoryRequest?: ContextCapacityHistoryRequestResolver
@@ -162,6 +177,11 @@ export function useVerificationTools({
   contextHistoryAccess,
   resolveContextHistoryRequest,
   discardContextCheckpoints,
+  modelId = "",
+  runNeedleRequest,
+  loadNeedleCounter,
+  needleHistoryAccess,
+  discardNeedleCheckpoints = discardNeedleCheckpointsInBackground,
 }: UseVerificationToolsOptions): VerificationToolsController {
   const [pelicanSummary, setPelicanSummary] =
     useState<DrawingVerificationSummary | null>(null)
@@ -236,6 +256,29 @@ export function useVerificationTools({
     historyAccess: contextHistoryAccess,
     historyTarget,
     discardCheckpoints: discardContextCheckpoints,
+  })
+  const measurement = contextCapacity.result ?? contextCapacity.history
+  const needle = useNeedleTest({
+    enabled: enableContextCapacity && isSupported,
+    blocked: isBlocked || contextCapacity.running,
+    contextKey: `${historyKey}:${historyApiType}:${contextCapacityKey}`,
+    modelId,
+    resolveRequest,
+    resolveHistoryRequest: resolveContextHistoryRequest,
+    capacity: measurement?.counter
+      ? {
+          lowerBoundTokens: measurement.lowerBoundTokens,
+          counter: measurement.counter,
+          requiresCredentialVerification:
+            !contextCapacity.result &&
+            contextCapacity.history?.requiresCredentialVerification,
+        }
+      : undefined,
+    runner: runNeedleRequest,
+    loadCounter: loadNeedleCounter,
+    historyAccess: needleHistoryAccess,
+    historyTarget,
+    discardCheckpoints: discardNeedleCheckpoints,
   })
   const canRun = isSupported && !isBlocked && !isPelicanRunning
 
@@ -369,6 +412,7 @@ export function useVerificationTools({
         )
           return
         contextCapacity.clearHistory()
+        needle.clearHistory()
       },
       clearPelicanHistory: () => {
         runVersionRef.current += 1
@@ -377,8 +421,12 @@ export function useVerificationTools({
         setPelicanErrorMessage(null)
         setPelicanStatus(VERIFICATION_TOOL_STATUSES.Idle)
       },
-      isRunning: isPelicanRunning || contextCapacity.running,
-      contextCapacity,
+      isRunning: isPelicanRunning || contextCapacity.running || needle.running,
+      needle: enableContextCapacity && isSupported ? needle : undefined,
+      contextCapacity: {
+        ...contextCapacity,
+        canRun: contextCapacity.canRun && !needle.running,
+      },
       canRunPelican: canRun,
       isPelicanRunning,
       pelicanStatus,
@@ -404,6 +452,9 @@ export function useVerificationTools({
       stopPelican,
       prompts,
       contextCapacity,
+      needle,
+      enableContextCapacity,
+      isSupported,
       historyTarget,
     ],
   )

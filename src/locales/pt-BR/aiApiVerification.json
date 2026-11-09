@@ -31,7 +31,14 @@
     "generatedVideoPreview": "Prévia do vídeo gerado",
     "history": {
       "clear": "Limpar histórico",
-      "lastVerified": "Último teste"
+      "lastVerified": "Último teste",
+      "previousResult": "Anterior: {{result}}",
+      "storage": {
+        "context": "O histórico guarda as medições, sem os detalhes de cada solicitação.",
+        "drawing": "O histórico não guarda o desenho nem os detalhes da execução.",
+        "needle": "O histórico guarda as medições. O mesmo número de amostra e as mesmas configurações permitem gerar o texto de teste novamente.",
+        "probe": "O histórico guarda o resumo do teste, sem o conteúdo das solicitações ou respostas."
+      }
     },
     "intro": {
       "flow": "Etapas do teste",
@@ -289,10 +296,113 @@
       "errors": {
         "unexpected": "A solicitação falhou: {{message}}"
       },
+      "needle": {
+        "automatic": "Automático",
+        "automaticLimit": "Automático ({{limit}})",
+        "budget": "Cerca de {{tokens}} tokens de entrada, mais a saída. O teste consome sua cota de API.",
+        "cancelledCell": "Cancelado",
+        "cancelledUnknown": "Nenhum resultado avaliável foi obtido.",
+        "capacityRunning": "Verificando o contexto disponível. Os comprimentos serão atualizados ao terminar.",
+        "capped": "Cada solicitação testa até 1M tokens de entrada.",
+        "cell": "Entrada local: {{tokens}} tokens · Posição real: {{depth}}% · {{latency}} ms",
+        "cellDetails": "Detalhes da célula",
+        "cumulativeScore": "Resultados acumulados: {{hits}}/{{graded}} respostas avaliáveis correspondem",
+        "custom": "Personalizado",
+        "customLimit": "Comprimento personalizado (tokens)",
+        "description": "Verifica se o modelo encontra um registro específico em diferentes posições de um texto longo.",
+        "errors": {
+          "busy": "Já existe um teste desta conexão em outra página.",
+          "failed": "Não foi possível concluir o teste da agulha: {{detail}}",
+          "metadata": "Não foi possível carregar as informações de contexto. Tente novamente.",
+          "request": "Selecione um modelo e credenciais válidas antes de executar."
+        },
+        "exactLengths": "Comprimentos exatos: {{lengths}} tokens",
+        "exactTotal": "Entrada total estimada: {{tokens}} tokens",
+        "expected": "Resposta esperada: {{value}}",
+        "invalid": "O comprimento deve ser um inteiro entre 1.024 e 1.048.576; o número da amostra, um inteiro entre 0 e 4.294.967.295.",
+        "length": "Tokens",
+        "lengthRule": "Os comprimentos dobram a partir de 8K, com a última etapa no limite de entrada de {{limit}}.",
+        "limit": "Comprimento máximo do texto (tokens)",
+        "limitation": "Uma correspondência verifica apenas esta amostra. Uma falha não prova truncamento, uma janela de contexto menor ou um modelo diferente.",
+        "matrix": "Resultados por comprimento e posição",
+        "matrixHint": "Clique em um status para ver os detalhes e testar ou testar novamente essa célula. Os botões de linha e coluna testam todas as suas células, incluindo as que já têm resultados. Parar afeta apenas a célula, linha ou coluna correspondente.",
+        "notRun": "Não executado",
+        "notScheduled": "Fora desta execução",
+        "outcomes": {
+          "contextLimit": "Muito longo",
+          "error": "Erro",
+          "hit": "Encontrado",
+          "incomplete": "Incompleto",
+          "interrupted": "Desconhecido",
+          "miss": "Não encontrado"
+        },
+        "planDetails": "Como os comprimentos são escolhidos?",
+        "planned": "Planejado",
+        "plannedLengths": "Comprimentos de texto (tokens)",
+        "positionRule": "Cada comprimento é testado em {{positions}}, cobrindo o início, o meio e o fim.",
+        "preparing": "Preparando o plano de teste…",
+        "preparingCellState": "Preparando…",
+        "previewPositions": "Cada comprimento é testado nas posições {{positions}}.",
+        "previewTitle": "Prévia do teste",
+        "previousResult": "Resultado anterior (antes desta execução)",
+        "probeFirst": "Verificar contexto disponível",
+        "progress": "Última execução: {{completed}}/{{total}} solicitações processadas",
+        "quick": "Testar apenas o texto mais longo",
+        "quickHint": "Teste apenas as três posições do maior comprimento planejado. Os outros comprimentos ficam fora desta execução e podem ser testados por linha ou coluna.",
+        "randomSample": "Nova amostra aleatória",
+        "reasons": {
+          "budget": "Orçamento atingido",
+          "complete": "Concluído",
+          "error": "Falha na solicitação",
+          "interrupted": "Interrompido; resultado desconhecido"
+        },
+        "reference": {
+          "context": "Dados do modelo: contexto de {{tokens}} (não verificado)",
+          "input": "Dados do modelo: limite de entrada de {{tokens}} (não verificado)",
+          "measured": "Entrada aceita antes: {{tokens}} (máximo desconhecido)",
+          "unknown": "O limite de contexto é desconhecido. O modo automático usa {{tokens}} tokens por enquanto; a verificação atualizará esse valor."
+        },
+        "reproduce": "Amostra {{seed}} · Tokenizador: {{encoding}}.",
+        "requestCount_one": "{{count}} requisição",
+        "requestCount_many": "{{count}} requisições",
+        "requestCount_other": "{{count}} requisições",
+        "requestDetails": "Detalhes da solicitação e da resposta",
+        "resultDetails": "Parâmetros de teste e reprodução",
+        "retestCell": "Testar esta célula novamente",
+        "retestColumn": "Testar coluna {{depth}}% novamente ({{requests}})",
+        "retestRow": "Testar linha {{length}} novamente ({{requests}})",
+        "retry": "Tentar novamente",
+        "run": "Iniciar teste de busca",
+        "runCell": "Testar esta célula",
+        "runColumn": "Executar coluna {{depth}}% ({{requests}})",
+        "runRow": "Executar linha {{length}} ({{requests}})",
+        "savedResult": "Resultado salvo",
+        "scopeProgress": "{{completed}}/{{total}} processados",
+        "score": "{{hits}}/{{total}} acertos",
+        "scoreStep": "Comparar o código retornado",
+        "searchStep": "Buscar o registro solicitado",
+        "seedHint": "Deixe em branco para gerar uma nova amostra a cada vez. Use o mesmo número e as mesmas configurações para repetir o texto.",
+        "seedInput": "Número da amostra (opcional)",
+        "singleLengthRule": "Este plano testa apenas um comprimento: {{limit}}.",
+        "sources": {
+          "custom": "Você definiu a entrada máxima como {{limit}}. O plano usa esse limite.",
+          "declaredContext": "Os dados do modelo indicam {{context}} de contexto total. Reservando {{reserve}} para a resposta, restam {{input}} para a entrada. Isso ainda não foi verificado na API atual.",
+          "declaredInput": "Os dados do modelo indicam um limite de entrada separado de {{input}}, que define os comprimentos. Isso ainda não foi verificado na API atual.",
+          "fallback": "Não há limites do modelo ou registros de entradas aceitas disponíveis. O plano usa o limite padrão de {{limit}}. Ajuste-o nas configurações ou verifique o contexto disponível primeiro.",
+          "measured": "Com base na entrada aceita anteriormente por esta conexão, o plano testa até {{limit}}. Isso não determina a capacidade máxima do modelo."
+        },
+        "stopCapacity": "Parar medição de contexto",
+        "stopCell": "Parar {{length}} · {{depth}}%",
+        "stopColumn": "Parar coluna {{depth}}%",
+        "stopFailed": "Não foi possível parar. Tente novamente.",
+        "stoppingCell": "Parando…",
+        "stopRow": "Parar linha {{length}}",
+        "title": "Agulha no palheiro",
+        "tokenUnits": "Neste teste, 1K = 1.024 tokens e 1M = 1.048.576 tokens."
+      },
       "pelican": {
         "analysis": "{{shapes}} formas · {{wheels}} círculos/elipses · viewBox {{viewBox}}",
         "description": "Pede ao modelo um SVG de um pelicano numa bicicleta para comparar a olho. A avaliação continua manual.",
-        "historyOnly": "Apenas o resumo foi salvo. Execute novamente para ver o desenho e os detalhes.",
         "noSvg": "O modelo não retornou nenhum SVG.",
         "outcomes": {
           "error": "Falha na execução",
@@ -313,6 +423,7 @@
         "saveFailed": "Não foi possível salvar os prompts: {{message}}",
         "sharedHint": "Os prompts salvos são compartilhados por todas as entradas de teste."
       },
+      "settingsTitle": "Configurações do teste",
       "stop": "Parar",
       "stopped": "Interrompido antes de terminar; nada foi registrado."
     },

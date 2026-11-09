@@ -31,7 +31,14 @@
     "generatedVideoPreview": "生成的视频预览",
     "history": {
       "clear": "清除历史",
-      "lastVerified": "最近测试"
+      "lastVerified": "最近测试",
+      "previousResult": "上次{{result}}",
+      "storage": {
+        "context": "历史记录保留测量结果，未保存逐次请求明细。",
+        "drawing": "历史记录未保存作品和执行明细。",
+        "needle": "历史记录保留测量结果；可用相同样本编号和设置重新生成测试文本。",
+        "probe": "历史记录仅保留测试摘要，未保存请求和响应内容。"
+      }
     },
     "intro": {
       "flow": "测试步骤",
@@ -287,10 +294,111 @@
       "errors": {
         "unexpected": "请求失败：{{message}}"
       },
+      "needle": {
+        "automatic": "自动",
+        "automaticLimit": "自动（{{limit}}）",
+        "budget": "预计输入约 {{tokens}} tokens，输出另计。测试会使用你的接口额度。",
+        "cancelledCell": "已取消",
+        "cancelledUnknown": "未获得可判定结果。",
+        "capacityRunning": "正在检测可用上下文，完成后会更新测试长度。",
+        "capped": "本次每条请求最多测试 1M 输入 tokens。",
+        "cell": "本地输入 {{tokens}} tokens · 实际位置 {{depth}}% · {{latency}} 毫秒",
+        "cellDetails": "单元格详情",
+        "cumulativeScore": "累计结果：可判定答案中命中 {{hits}}/{{graded}}",
+        "custom": "自定义",
+        "customLimit": "自定义长度（tokens）",
+        "description": "在长文本的不同位置查找指定信息，检查模型的检索能力。",
+        "errors": {
+          "busy": "其他页面正在测试此连接，请等待完成或先停止。",
+          "failed": "大海捞针测试未能完成：{{detail}}",
+          "metadata": "无法加载上下文信息，请重试。",
+          "request": "请选择模型并配置可用凭据后再运行。"
+        },
+        "exactLengths": "准确长度：{{lengths}} tokens",
+        "exactTotal": "预计累计输入：{{tokens}} tokens",
+        "expected": "预期答案：{{value}}",
+        "invalid": "文本长度须为 1,024～1,048,576 的整数；样本编号须为 0～4,294,967,295 的整数。",
+        "length": "Tokens",
+        "lengthRule": "从 8K 起逐步翻倍，最后补至本次输入上限 {{limit}}。",
+        "limit": "最长测试文本（tokens）",
+        "limitation": "命中仅验证本次样本。未命中不能证明输入被截断、上下文窗口更小或模型身份不同。",
+        "matrix": "各输入长度和位置的检索结果",
+        "matrixHint": "点击状态可查看详情并运行或重测该项。行、列按钮会运行范围内的全部项目，包括已有结果。停止按钮只影响对应单元格、行或列。",
+        "notRun": "未运行",
+        "notScheduled": "本次不执行",
+        "outcomes": {
+          "contextLimit": "超限",
+          "error": "请求错误",
+          "hit": "命中",
+          "incomplete": "输出不完整",
+          "interrupted": "结果未知",
+          "miss": "未命中"
+        },
+        "planDetails": "长度如何确定",
+        "planned": "计划执行",
+        "plannedLengths": "测试文本长度（tokens）",
+        "positionRule": "在文本的 {{positions}} 位置分别测试，检查前、中、后部的信息检索。",
+        "preparing": "正在准备测试方案…",
+        "preparingCellState": "准备中",
+        "previewPositions": "每种长度在 {{positions}} 位置各测一次。",
+        "previewTitle": "本次测试预览",
+        "previousResult": "上次结果（本轮执行前）",
+        "probeFirst": "检测可用上下文",
+        "progress": "最近一次执行：已处理 {{completed}}/{{total}} 次请求",
+        "quick": "仅测试最长文本",
+        "quickHint": "仅运行计划最长长度的三个位置。其他长度不纳入本次执行，可按行或列单独补测。",
+        "randomSample": "每次随机生成",
+        "reasons": {
+          "budget": "已达预算",
+          "complete": "已完成",
+          "error": "请求失败",
+          "interrupted": "已中断，结果未知"
+        },
+        "reference": {
+          "context": "模型标注上下文：{{tokens}}（未验证）",
+          "input": "模型标注输入上限：{{tokens}}（未验证）",
+          "measured": "此前已接收 {{tokens}} 输入（最大容量未知）",
+          "unknown": "未获取到上下文上限，自动模式暂用 {{tokens}} tokens；检测后会更新自动值。"
+        },
+        "reproduce": "样本 {{seed}} · 分词器：{{encoding}}。",
+        "requestCount": "共 {{count}} 次请求",
+        "requestDetails": "请求与答案详情",
+        "resultDetails": "测试参数与复现信息",
+        "retestCell": "重测此项",
+        "retestColumn": "重测 {{depth}}% 列（{{requests}}）",
+        "retestRow": "重测 {{length}} 行（{{requests}}）",
+        "retry": "重试",
+        "run": "开始捞针测试",
+        "runCell": "运行此项",
+        "runColumn": "运行 {{depth}}% 列（{{requests}}）",
+        "runRow": "运行 {{length}} 行（{{requests}}）",
+        "savedResult": "历史结果",
+        "scopeProgress": "已处理 {{completed}}/{{total}}",
+        "score": "{{hits}}/{{total}} 命中",
+        "scoreStep": "核对返回代码",
+        "searchStep": "查找指定记录",
+        "seedHint": "留空时每次生成新样本。使用相同编号和设置，可重复测试同一份文本。",
+        "seedInput": "测试样本编号（选填）",
+        "singleLengthRule": "本次只测试 {{limit}} 这一种长度。",
+        "sources": {
+          "custom": "你将最长测试输入设为 {{limit}}，本次按此上限选择长度。",
+          "declaredContext": "模型资料中的总上下文为 {{context}}，预留 {{reserve}} 用于回复，输入上限为 {{input}}。这是资料值，尚未在当前接口验证。",
+          "declaredInput": "模型资料中的独立输入上限为 {{input}}，本次依据该限制选择长度。该值尚未在当前接口验证。",
+          "fallback": "暂无可用的模型长度资料或接收记录，本次使用默认上限 {{limit}}。你可以在测试设置中调整，或先检测可用上下文。",
+          "measured": "参考此连接此前成功接收的输入，本次以 {{limit}} 为测试上限。这不代表已测得模型的最大容量。"
+        },
+        "stopCapacity": "停止上下文探测",
+        "stopCell": "停止 {{length}} · {{depth}}%",
+        "stopColumn": "停止 {{depth}}% 整列",
+        "stopFailed": "未能停止，请重试。",
+        "stoppingCell": "正在停止…",
+        "stopRow": "停止 {{length}} 整行",
+        "title": "大海捞针",
+        "tokenUnits": "本测试中，1K = 1,024 tokens，1M = 1,048,576 tokens。"
+      },
       "pelican": {
         "analysis": "{{shapes}} 个形状 · {{wheels}} 个圆形/椭圆 · viewBox {{viewBox}}",
         "description": "让模型画一只骑自行车的鹈鹕 SVG，方便你直接比对画风与结构；结论由人工判断。",
-        "historyOnly": "仅保存了本次运行摘要。重新运行可查看作品和执行明细。",
         "noSvg": "模型没有返回 SVG。",
         "outcomes": {
           "error": "执行失败",
@@ -311,6 +419,7 @@
         "saveFailed": "保存提示词失败：{{message}}",
         "sharedHint": "已保存的提示词对所有测试入口生效。"
       },
+      "settingsTitle": "测试设置",
       "stop": "停止",
       "stopped": "已停止，本次结果未记录。"
     },

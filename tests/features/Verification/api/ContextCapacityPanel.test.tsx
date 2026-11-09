@@ -358,7 +358,17 @@ it.each([
       lower === 130990 ? "已验证约 127.9K tokens" : "已验证约 64K tokens",
     )
     expect(screen.getByText(`上下文 ≈${percent}%`)).toBeVisible()
-    expect(screen.getByText(`上下文 ≈${percent}%`)).toHaveClass(tone)
+    expect(screen.getByText(`上下文 ≈${percent}%`)).toHaveClass(
+      historical ? "bg-secondary" : tone,
+    )
+    if (historical) {
+      const user = userEvent.setup()
+      await user.click(screen.getByRole("button", { name: /^上次/ }))
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "历史记录保留测量结果，未保存逐次请求明细。",
+      )
+      await user.keyboard("{Escape}")
+    }
     expect(summary).toHaveTextContent("元数据声明 128K tokens")
     expect(summary).not.toHaveTextContent("%")
     expect(
@@ -1080,7 +1090,9 @@ it.each([
         />
       </I18nextProvider>,
     )
-    expect(screen.getByText(label).closest('[data-slot="badge"]')).toBeVisible()
+    expect(
+      screen.getByText(`上次${label}`).closest('[data-slot="badge"]'),
+    ).toBeVisible()
     if (
       inconclusiveReason === CONTEXT_CAPACITY_INCONCLUSIVE_REASONS.Interrupted
     )

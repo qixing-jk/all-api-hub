@@ -230,6 +230,7 @@ export function useProfileVerification({
       verificationMode,
     ])
   const tools = useVerificationTools({
+    modelId: requestedModelId,
     enableContextCapacity: isOpen,
     contextCapacityKey: JSON.stringify([
       isOpen,

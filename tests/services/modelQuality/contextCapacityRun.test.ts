@@ -3,10 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
-import {
-  classifyContextError,
-  runContextCapacity,
-} from "~/services/verification/modelQuality/contextCapacityRun"
+import { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
+import { classifyContextError } from "~/services/verification/modelQuality/contextErrors"
 
 describe("capacity request outcomes", () => {
   it("reports an upstream timeout without claiming a capacity rejection or retrying", async () => {

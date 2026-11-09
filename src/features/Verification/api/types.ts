@@ -27,6 +27,8 @@ export type ProbeItemState = {
   isRunning: boolean
   attempts: number
   result: ApiVerificationProbeResult | null
+  /** The displayed result was restored from a persisted summary. */
+  historical?: boolean
 }
 
 /** Source identity shown by the shared verification header. */

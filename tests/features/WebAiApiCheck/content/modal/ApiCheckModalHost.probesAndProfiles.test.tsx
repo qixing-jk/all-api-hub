@@ -2570,10 +2570,12 @@ describe("ApiCheckModalHost", () => {
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
     ).toHaveLength(0)
     expect(
-      within(probeCard).getByText(
-        "aiApiVerification:verifyDialog.modes.nonStreaming",
-      ),
-    ).toBeVisible()
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
+    ).toHaveAccessibleDescription(
+      /aiApiVerification:verifyDialog.modes.nonStreaming/,
+    )
   })
 
   it("skips model-required probes during run-all until a model is selected", async () => {
@@ -2641,8 +2643,12 @@ describe("ApiCheckModalHost", () => {
     expect(
       within(
         screen.getByTestId(getWebAiApiCheckProbeTestId("text-generation")),
-      ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
-    ).toBeVisible()
+      ).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
+    ).toHaveAccessibleDescription(
+      /aiApiVerification:verifyDialog.modes.nonStreaming/,
+    )
     expect(
       within(
         screen.getByTestId(getWebAiApiCheckProbeTestId("models")),

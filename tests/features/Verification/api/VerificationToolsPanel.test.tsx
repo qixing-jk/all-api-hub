@@ -249,7 +249,8 @@ describe("VerificationToolsPanel", () => {
     expect(toggle).toBeDisabled()
   })
 
-  it("shows restored drawing metadata without an empty execution-result panel", () => {
+  it("shows restored drawing metadata with storage details on demand", async () => {
+    const user = userEvent.setup()
     renderPanel(
       buildController({
         pelicanSummary: {
@@ -271,7 +272,7 @@ describe("VerificationToolsPanel", () => {
         },
       }),
     )
-    expect(screen.getByTestId("pelican-history-summary")).toHaveTextContent(
+    expect(screen.getByTestId("pelican-history-summary")).not.toHaveTextContent(
       "aiApiVerification:verifyDialog.tools.pelican.historyOnly",
     )
     expect(
@@ -280,9 +281,18 @@ describe("VerificationToolsPanel", () => {
     const summary = screen.getByTestId("pelican-history-summary")
     const latency = within(summary).getByText("500ms")
     expect(latency.closest('[data-slot="badge"]')).toHaveTextContent(
-      "aiApiVerification:verifyDialog.tools.pelican.outcomes.generated",
+      "aiApiVerification:verifyDialog.history.previousResult",
     )
     expect(summary.querySelector("time")).toHaveAttribute("title")
+    const historyBadge = within(summary).getByRole("button", {
+      name: /verifyDialog.history.previousResult/,
+    })
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+    await user.hover(historyBadge)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "aiApiVerification:verifyDialog.history.storage.drawing",
+    )
+    await user.keyboard("{Escape}")
     expect(screen.queryByTestId("pelican-svg-preview")).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
@@ -533,6 +543,15 @@ describe("VerificationToolsPanel", () => {
       }),
     )
 
+    const settings = screen.getByRole("group", {
+      name: "aiApiVerification:verifyDialog.tools.settingsTitle",
+    })
+    expect(
+      within(settings).getByRole("heading", {
+        name: "aiApiVerification:verifyDialog.tools.settingsTitle",
+      }),
+    ).toBeVisible()
+    expect(within(settings).getByRole("switch")).toBeVisible()
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
     await user.click(
       screen.getByRole("button", {
@@ -657,6 +676,15 @@ describe("VerificationPromptEditor", () => {
   it("starts collapsed with a visible prompt label and expands on request", async () => {
     const user = userEvent.setup()
     renderPrompt(buildController(), false)
+    expect(
+      within(
+        screen.getByRole("group", {
+          name: "aiApiVerification:verifyDialog.tools.settingsTitle",
+        }),
+      ).getByRole("heading", {
+        name: "aiApiVerification:verifyDialog.tools.settingsTitle",
+      }),
+    ).toBeVisible()
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
     const disclosure = screen.getByRole("button", {
       name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
@@ -881,7 +909,8 @@ describe("restored verification details", () => {
     expect(disclosure).toHaveAttribute("aria-expanded", "true")
     await user.click(disclosure)
     expect(disclosure).toHaveAttribute("aria-expanded", "false")
-    expect(screen.queryByRole("region")).not.toBeInTheDocument()
+    expect(screen.getByRole("region")).toHaveTextContent("Completed")
+    expect(screen.queryByText("OK")).not.toBeInTheDocument()
     await user.keyboard("{Enter}")
     expect(screen.getByRole("region")).toBeVisible()
   })
@@ -901,7 +930,7 @@ describe("restored verification details", () => {
         name: "aiApiVerification:verifyDialog.details.result",
       }),
     ).not.toBeInTheDocument()
-    expect(screen.queryByRole("region")).not.toBeInTheDocument()
+    expect(screen.getByRole("region")).toHaveTextContent("Previously passed")
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", {

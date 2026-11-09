@@ -276,6 +276,7 @@ export function useVerifyApiDialogViewModel({
   )
 
   const tools = useVerificationTools({
+    modelId: requestedModelId || tokenModelHint || "",
     enableContextCapacity: isOpen,
     contextCapacityKey: JSON.stringify([
       isOpen,

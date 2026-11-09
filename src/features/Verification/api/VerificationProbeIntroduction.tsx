@@ -37,6 +37,7 @@ import type { VerificationTestId } from "~/features/Verification/api/Verificatio
 import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification"
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
+import { NEEDLE_TEST_ID } from "~/services/verification/modelQuality/needleConstants"
 
 type IntroductionStep = { icon: LucideIcon; label: string }
 
@@ -54,6 +55,7 @@ export function VerificationProbeIntroduction({
 }) {
   const { t } = useTranslation("aiApiVerification")
   const descriptions: Record<VerificationTestId, string> = {
+    [NEEDLE_TEST_ID]: t("verifyDialog.tools.needle.description"),
     [PELICAN_PROMPT_ID]: t("verifyDialog.tools.pelican.description"),
     [CONTEXT_CAPACITY_TEST_ID]: t("verifyDialog.tools.context.hint"),
     [API_VERIFICATION_PROBE_IDS.Models]: t("verifyDialog.intro.probes.models"),
@@ -195,6 +197,14 @@ export function VerificationProbeIntroduction({
       },
       { icon: Code, label: t("verifyDialog.intro.steps.pelican.process") },
       { icon: Eye, label: t("verifyDialog.intro.steps.pelican.output") },
+    ],
+    [NEEDLE_TEST_ID]: [
+      {
+        icon: Files,
+        label: t("verifyDialog.intro.steps.context-capacity.input"),
+      },
+      { icon: Search, label: t("verifyDialog.tools.needle.searchStep") },
+      { icon: Check, label: t("verifyDialog.tools.needle.scoreStep") },
     ],
     [CONTEXT_CAPACITY_TEST_ID]: [
       {

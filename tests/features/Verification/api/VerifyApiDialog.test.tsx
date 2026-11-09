@@ -843,9 +843,11 @@ describe("VerifyApiDialog", () => {
 
     await act(async () => finishProbe())
     expect(
-      await within(probeCard).findByText(
-        "aiApiVerification:verifyDialog.modes.nonStreaming",
-      ),
+      await within(
+        within(probeCard).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
+      ).findByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
     await waitFor(() => expect(modeSelect).toBeEnabled())
     await user.click(modeSelect)
@@ -855,9 +857,11 @@ describe("VerifyApiDialog", () => {
       }),
     )
     expect(
-      within(probeCard).getByText(
-        "aiApiVerification:verifyDialog.modes.nonStreaming",
-      ),
+      within(
+        within(probeCard).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
+      ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
   })
 
@@ -1754,8 +1758,12 @@ describe("VerifyApiDialog", () => {
     ).toBeInTheDocument()
     expect(await screen.findByText("Stored history")).toBeInTheDocument()
     expect(
-      screen.getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
-    ).toBeInTheDocument()
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
+    ).toHaveAccessibleDescription(
+      /aiApiVerification:verifyDialog.modes.nonStreaming/,
+    )
     expect(
       screen.getByRole("combobox", {
         name: "aiApiVerification:verifyDialog.meta.mode",
@@ -2155,9 +2163,11 @@ describe("VerifyApiDialog", () => {
       }),
     ).toBeInTheDocument()
     expect(
-      within(probeCard).getByText(
-        "aiApiVerification:verifyDialog.modes.nonStreaming",
-      ),
+      within(
+        within(probeCard).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
+      ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
   })
 
@@ -2327,9 +2337,11 @@ describe("VerifyApiDialog", () => {
       )
     })
     expect(
-      within(screen.getByTestId("verify-probe-text-generation")).getByText(
-        "aiApiVerification:verifyDialog.modes.nonStreaming",
-      ),
+      within(
+        screen.getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
+      ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
     expect(
       within(screen.getByTestId("verify-probe-models")).queryByText(

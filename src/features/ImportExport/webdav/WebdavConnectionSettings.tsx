@@ -2,6 +2,7 @@ import { Plug } from "lucide-react"
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import { FieldHelpPopover } from "~/components/FieldHelpPopover"
 import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   BodySmall,
@@ -14,7 +15,6 @@ import {
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { CloudSyncEncryptionSettings } from "~/features/ImportExport/cloudSync/CloudSyncEncryptionSettings"
-import { FieldHelpPopover } from "~/features/ImportExport/components/FieldHelpPopover"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import type { WebdavConfigState } from "~/features/ImportExport/webdav/useWebdavConfig"
 import { webDavSettingsSurface } from "~/features/ImportExport/webdav/webDavAnalytics"
