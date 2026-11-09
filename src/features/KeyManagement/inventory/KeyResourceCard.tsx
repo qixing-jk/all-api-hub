@@ -127,6 +127,7 @@ export function KeyResourceCardHeader({
   detailsTrigger,
 }: KeyResourceCardHeaderProps) {
   const { t } = useTranslation(["keyManagement"])
+  const actionsRef = useKeyResourceActionRows()
 
   return (
     <div className="gap-y-density-2 flex min-w-0 flex-col gap-x-2 sm:flex-row sm:items-start sm:justify-between">
@@ -169,7 +170,10 @@ export function KeyResourceCardHeader({
         })}
         {providerBadges}
       </div>
-      <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5">
+      <div
+        ref={actionsRef}
+        className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5 [--key-action-separator-left:-0.1875rem]"
+      >
         {association ? (
           <KeyResourceActionGroup
             label={t("keyManagement:actionToolbar.apiCredential")}
@@ -227,20 +231,14 @@ type KeyResourceActionToolbarProps = {
   testId?: string
 }
 
-/** Groups dense row actions into a wrapping, accessible toolbar. */
-export function KeyResourceActionToolbar({
-  label,
-  children,
-  testId,
-}: KeyResourceActionToolbarProps) {
+/** Measures every flex item, including ungrouped header details controls. */
+function useKeyResourceActionRows() {
   const toolbarRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
     const toolbar = toolbarRef.current
     if (!toolbar) return
-    const groups = Array.from(
-      toolbar.querySelectorAll<HTMLElement>(":scope > [data-key-action-group]"),
-    )
+    const groups = Array.from(toolbar.children) as HTMLElement[]
     const measureRows = () => {
       let previousCenter: number | undefined
       for (const group of groups) {
@@ -259,7 +257,18 @@ export function KeyResourceActionToolbar({
     observer.observe(toolbar)
     groups.forEach((group) => observer.observe(group))
     return () => observer.disconnect()
-  }, [children])
+  })
+
+  return toolbarRef
+}
+
+/** Groups dense row actions into a wrapping, accessible toolbar. */
+export function KeyResourceActionToolbar({
+  label,
+  children,
+  testId,
+}: KeyResourceActionToolbarProps) {
+  const toolbarRef = useKeyResourceActionRows()
 
   return (
     <div
@@ -286,7 +295,7 @@ function KeyResourceActionSeparator() {
   return (
     <span
       aria-hidden="true"
-      className="bg-border absolute top-1/2 -left-2 h-4 w-px -translate-y-1/2 group-data-[row-start=true]/key-actions:invisible"
+      className="bg-border absolute top-1/2 left-[var(--key-action-separator-left,-0.5rem)] h-4 w-px -translate-y-1/2 group-data-[row-start=true]/key-actions:invisible"
     />
   )
 }

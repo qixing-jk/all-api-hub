@@ -2481,23 +2481,27 @@ describe("VerifyApiCredentialProfileDialog", () => {
     await verificationResultHistoryStorage.upsertLatestSummary(initialSummary)
     await verificationResultHistoryStorage.upsertLatestSummary(selectedSummary)
 
-    render(
-      <VerifyApiCredentialProfileDialog
-        isOpen={true}
-        onClose={() => {}}
-        profile={{
-          id: "p-1",
-          name: "Profile",
-          apiType: API_TYPES.OPENAI_COMPATIBLE,
-          baseUrl: "https://example.com",
-          apiKey: "sk-test",
-          tagIds: [],
-          notes: "",
-          createdAt: 1,
-          updatedAt: 1,
-        }}
-        initialModelId="m0"
-      />,
+    // Settle the opening effects and mocked storage reads before the text query's
+    // retry budget starts; CI can otherwise spend that budget on initial rendering.
+    await act(async () =>
+      render(
+        <VerifyApiCredentialProfileDialog
+          isOpen={true}
+          onClose={() => {}}
+          profile={{
+            id: "p-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-test",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+          initialModelId="m0"
+        />,
+      ),
     )
 
     expect(await screen.findByText("Stored m0 history")).toBeInTheDocument()

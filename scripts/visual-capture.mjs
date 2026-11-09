@@ -260,10 +260,10 @@ async function capture(scenario, baseline, diff) {
         .map((state, index) => {
           const comparison = comparisons[index]
           if (!comparison)
-            return `## ${state.id}\n\n![${state.id}](${state.image})`
+            return `## ${state.id}\n\n![${state.id}](${state.image})\n\n[After original](${state.image})`
           const relative = (file) =>
             path.relative(directory, file).split(path.sep).join("/")
-          return `## ${state.id}\n\n![${state.id}: Before | After](${relative(path.join(comparison.directory, "comparison.png"))})\n\n[Comparison details](${relative(comparison.report)}) · [After original](${state.image})`
+          return `## ${state.id}\n\nStatus: ${comparison.status}\n\n![${state.id}: Before | After](${relative(path.join(comparison.directory, "comparison.png"))})\n\n[Comparison details](${relative(comparison.report)}) · [After original](${state.image})`
         })
         .join("\n\n")}\n`,
     )

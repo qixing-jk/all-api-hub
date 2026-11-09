@@ -52,7 +52,7 @@ For live extension work, follow the project's `live-extension-ui-automation` ski
 
 ## Handoff
 
-Provide the complete behavior-change table inline for a small change, or link the task-local report and summarize it for a larger change. Include executed checks and results, commands to reproduce them, and inline previews of the affected surfaces in the final response.
+Provide the complete behavior-change table inline for a small change, or link the task-local report and summarize it for a larger change. Include executed checks and results and commands to reproduce them. When visual review applies, include inline previews of the affected surfaces in the final response.
 
 The main preview report must display every review-relevant screenshot checkpoint, including captured responsive, theme and interaction variants, as an expanded inline image. For before/after evidence, embed the labelled side-by-side composite ([BEFORE | AFTER], via `pnpm visual:compare`); this covers both source images without duplicating them. Group multiple surfaces in one report or gallery. A reviewer should be able to scroll through the evidence without opening image links, nested reports or collapsed sections. Keep original-resolution files, logs, metadata and optional pixel diffs as secondary links. Use readable focused captures; a contact sheet with illegible controls does not satisfy this requirement.
 

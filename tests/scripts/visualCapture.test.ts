@@ -291,8 +291,10 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
     })
     expect(capture.checkpoints).toHaveLength(2)
     const preview = readFileSync(result.report, "utf8")
+    expect(preview).not.toMatch(/<details\b/i)
     for (const state of capture.checkpoints) {
       expect(preview).toContain(`![${state.id}](${state.image})`)
+      expect(preview).toContain(`[After original](${state.image})`)
     }
     for (const state of capture.checkpoints) {
       expect(state.source.inputHash).toMatch(/^[a-f0-9]{64}$/)
@@ -332,6 +334,7 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
     )
     expect(after.comparisons).toHaveLength(2)
     const comparisonPreview = readFileSync(after.report, "utf8")
+    expect(comparisonPreview).not.toMatch(/<details\b/i)
     for (const [index, comparison] of after.comparisons.entries()) {
       const imagePath = path
         .relative(
@@ -343,6 +346,7 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
       expect(comparisonPreview).toContain(
         `![${capture.checkpoints[index].id}: Before | After](${imagePath})`,
       )
+      expect(comparisonPreview).toContain(`Status: ${comparison.status}`)
     }
     for (const comparison of after.comparisons) {
       const report = JSON.parse(

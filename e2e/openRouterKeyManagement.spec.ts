@@ -34,6 +34,69 @@ import {
 
 const CLIPBOARD_WRITES_KEY = "__aah_e2e_openrouter_key_clipboard_writes__"
 
+test("keeps unlinked key header separators between controls and hides wrapped boundaries", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  installExtensionPageGuards(page)
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await installOpenRouterKeyManagementRoutes(context)
+  await seedStoredAccounts(await getServiceWorker(context), [
+    createStoredAccount({
+      id: OPENROUTER_KEY_MANAGEMENT_E2E.accountId,
+      site_name: "Example OpenRouter account",
+      site_url: "https://openrouter.ai",
+      site_type: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        id: "user-example",
+        username: "Example user",
+        access_token: OPENROUTER_KEY_MANAGEMENT_E2E.managementKey,
+      },
+    }),
+  ])
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.KEYS}?accountId=${OPENROUTER_KEY_MANAGEMENT_E2E.accountId}&workspace=${OPENROUTER_KEY_MANAGEMENT_E2E.teamWorkspaceSlug}`,
+  )
+  await waitForExtensionRoot(page)
+  const row = page
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow)
+    .filter({ hasText: "Paged active key 1" })
+    .first()
+  const management = row.getByRole("group", { name: "Management", exact: true })
+  const divider = management.locator(
+    "xpath=preceding-sibling::span[@aria-hidden='true']",
+  )
+  const details = row.getByRole("button", {
+    name: "View details for Paged active key 1",
+    exact: true,
+  })
+  await expect(divider).toBeVisible()
+  await row.screenshot({
+    path: testInfo.outputPath("unlinked-header-wide.png"),
+  })
+  const dividerBounds = (await divider.boundingBox())!
+  const detailsBounds = (await details.boundingBox())!
+  expect(dividerBounds.x).toBeGreaterThan(detailsBounds.x + detailsBounds.width)
+  expect(dividerBounds.x + dividerBounds.width).toBeLessThan(
+    (await management.boundingBox())!.x,
+  )
+  // Constrain the actual container without crossing a viewport breakpoint.
+  await management.evaluate((element) => {
+    element.parentElement!.parentElement!.style.width = `${element.getBoundingClientRect().width}px`
+  })
+  await expect(divider).not.toBeVisible()
+  await row.screenshot({
+    path: testInfo.outputPath("unlinked-header-wrapped.png"),
+  })
+  await management.evaluate((element) => {
+    element.parentElement!.parentElement!.style.width = ""
+  })
+  await expect(divider).toBeVisible()
+})
+
 async function installClipboardRecorder(page: Page) {
   await page.addInitScript((storageKey) => {
     window.sessionStorage.setItem(storageKey, JSON.stringify([]))
