@@ -36,9 +36,18 @@ describe.each([
       fetchSpy.mockRestore()
     }
   })
-  it.each([401, 403])(
-    "rejects an expired or forbidden cookie session (%s)",
-    async (status) => {
+  it.each([
+    {
+      status: 401,
+      reason: AUTO_DETECT_FAILURE_REASONS.CookieSessionRejected,
+    },
+    {
+      status: 403,
+      reason: AUTO_DETECT_FAILURE_REASONS.CookieSessionUnavailable,
+    },
+  ])(
+    "reports $reason when Cookie validation returns $status",
+    async ({ status, reason }) => {
       server.use(
         http.get(`${baseUrl}/api/user/self`, () =>
           HttpResponse.json(
@@ -58,7 +67,8 @@ describe.each([
           requestedAuthType: AuthTypeEnum.Cookie,
         }),
       ).rejects.toMatchObject({
-        reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+        reason,
+        cause: { statusCode: status, endpoint: "/api/user/self" },
       })
     },
   )
