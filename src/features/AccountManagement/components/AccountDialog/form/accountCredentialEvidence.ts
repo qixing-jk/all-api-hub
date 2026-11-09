@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { LoadedSub2ApiAuth } from "~/services/accounts/accountPersistence/request"
 
 type CredentialScope = Readonly<{ url: string; siteType: AccountSiteType }>
 type LoadedKimiAuth = Readonly<{
@@ -13,6 +14,7 @@ export function createAccountCredentialEvidence() {
     scope: CredentialScope | null
     hasAccessToken: boolean
     loadedKimiAuth: LoadedKimiAuth | undefined
+    loadedSub2ApiAuth?: LoadedSub2ApiAuth
   }> = { scope: null, hasAccessToken: false, loadedKimiAuth: undefined }
 
   return {
@@ -35,15 +37,20 @@ export function createAccountCredentialEvidence() {
       accessToken,
       scope,
       loadedKimiAuth,
+      loadedSub2ApiAuth,
     }: {
       accessToken: string
       scope: CredentialScope
       loadedKimiAuth: LoadedKimiAuth | undefined
+      loadedSub2ApiAuth?: LoadedSub2ApiAuth
     }) {
       evidence = {
         scope: { ...scope },
         hasAccessToken: Boolean(accessToken.trim()),
         loadedKimiAuth: loadedKimiAuth ? { ...loadedKimiAuth } : undefined,
+        loadedSub2ApiAuth: loadedSub2ApiAuth
+          ? { ...loadedSub2ApiAuth }
+          : undefined,
       }
     },
     reset() {

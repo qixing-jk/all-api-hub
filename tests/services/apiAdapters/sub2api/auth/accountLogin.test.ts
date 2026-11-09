@@ -19,6 +19,11 @@ const dependencies = vi.hoisted(() => ({
   request: vi.fn(),
   createBrowser: vi.fn(),
   authenticate: vi.fn(),
+  readSession: vi.fn(),
+}))
+vi.mock("~/services/accountBrowserSession", async (original) => ({
+  ...(await original<typeof import("~/services/accountBrowserSession")>()),
+  readAccountBrowserSessionFromTab: dependencies.readSession,
 }))
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
@@ -87,6 +92,46 @@ describe("Sub2API adapter-owned OAuth login", () => {
       expect.objectContaining({ captureCredential: expect.any(Function) }),
     )
   })
+
+  it.each(["renewable", "access-only", "absent"])(
+    "captures %s credentials from the verified OAuth tab",
+    async (kind) => {
+      const sub2apiAuth = {
+        refreshToken: "refresh",
+        tokenExpiresAt: 2000000000000,
+      }
+      dependencies.readSession.mockResolvedValue(
+        kind === "absent"
+          ? null
+          : {
+              accessToken: "captured",
+              ...(kind === "renewable" ? { sub2apiAuth } : {}),
+            },
+      )
+      await loginAccount({
+        account,
+        methodId: "google",
+        requestId: "capture",
+        captureCredential: true,
+      })
+      const flow = dependencies.createBrowser.mock.calls[0]![0]
+      expect(await flow.captureCredential(42, origin)).toEqual(
+        kind === "absent"
+          ? null
+          : {
+              accessToken: "captured",
+              ...(kind === "renewable" ? { sub2apiAuth } : {}),
+            },
+      )
+      expect(dependencies.readSession).toHaveBeenCalledWith({
+        tabId: 42,
+        baseUrl: origin,
+        expectedOrigin: origin,
+        siteType: SITE_TYPES.SUB2API,
+        source: "current_tab",
+      })
+    },
+  )
 
   it("does not offer OAuth on a split-origin deployment whose content flow needs same-origin API routes", async () => {
     const target = { ...account, site_url: "https://ai-router.dev/dashboard" }

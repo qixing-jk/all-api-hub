@@ -217,6 +217,7 @@ export async function validateAndUpdateAccount(
       discoveryBaseSelection: options.discoveryBaseSelection,
       guard: loginProviderGuard,
       loadedKimiAuth: options.loadedKimiAuth,
+      loadedSub2ApiAuth: options.loadedSub2ApiAuth,
     })
     if (!save.ok) {
       return { success: false, message: save.message }
@@ -321,6 +322,7 @@ export async function validateAndUpdateAccount(
       refreshed: freshAccountData.checkIn,
       guard: loginProviderGuard,
       loadedKimiAuth: options.loadedKimiAuth,
+      loadedSub2ApiAuth: options.loadedSub2ApiAuth,
     })
     if (!save.ok) {
       return { success: false, message: save.message }
@@ -389,6 +391,7 @@ export async function validateAndUpdateAccount(
         discoveryBaseSelection: options.discoveryBaseSelection,
         guard: loginProviderGuard,
         loadedKimiAuth: options.loadedKimiAuth,
+        loadedSub2ApiAuth: options.loadedSub2ApiAuth,
       },
     )
     if (!save.ok) {

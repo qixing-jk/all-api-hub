@@ -368,6 +368,117 @@ describe("accountStorage core behaviors", () => {
       )
     },
   )
+  it.each([false, true])(
+    "preserves recovered Sub2API credentials from an unchanged draft (renewable=%s)",
+    async (renewable) => {
+      const account = createAccount({
+        site_type: SITE_TYPES.SUB2API,
+        account_info: {
+          ...createAccount().account_info,
+          access_token: "recovered-access",
+        },
+        sub2apiAuth: {
+          refreshToken: "recovered-refresh",
+          tokenExpiresAt: 2000000000000,
+        },
+      })
+      seedStorage([account])
+      const loadedSub2ApiAuth = {
+        siteUrl: account.site_url,
+        userId: account.account_info.id,
+        accessToken: "loaded-access",
+        ...(renewable
+          ? { refreshToken: "loaded-refresh", tokenExpiresAt: 1000000000000 }
+          : {}),
+      }
+      expect(
+        await accountMutations.updateAccountWithCheckInDraft(
+          account.id,
+          {
+            notes: "edited note",
+            account_info: { access_token: "loaded-access" },
+            ...(renewable
+              ? {
+                  sub2apiAuth: {
+                    refreshToken: "loaded-refresh",
+                    tokenExpiresAt: 1000000000000,
+                  },
+                }
+              : {}),
+          },
+          account.checkIn,
+          {
+            loadedSub2ApiAuth,
+            userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+          },
+        ),
+      ).toBe(true)
+      const latest = await accountStorage.getAccountById(account.id)
+      expect(latest?.notes).toBe("edited note")
+      expect(latest?.account_info.access_token).toBe("recovered-access")
+      expect(latest?.sub2apiAuth).toEqual(account.sub2apiAuth)
+    },
+  )
+
+  it.each([
+    "access",
+    "refresh",
+    "expiry",
+    "url",
+    "identity",
+    "siteType",
+    "authType",
+  ])("retains explicit Sub2API draft changes (%s)", async (field) => {
+    const account = createAccount({
+      site_type: SITE_TYPES.SUB2API,
+      account_info: {
+        ...createAccount().account_info,
+        access_token: "recovered-access",
+      },
+      sub2apiAuth: {
+        refreshToken: "recovered-refresh",
+        tokenExpiresAt: 2000000000000,
+      },
+    })
+    seedStorage([account])
+    const submittedAuth = {
+      refreshToken:
+        field === "refresh" ? "replacement-refresh" : "loaded-refresh",
+      tokenExpiresAt: field === "expiry" ? 3000000000000 : 1000000000000,
+    }
+    const accessToken =
+      field === "access" ? "replacement-access" : "loaded-access"
+    await accountMutations.updateAccountWithCheckInDraft(
+      account.id,
+      {
+        account_info: {
+          access_token: accessToken,
+          id: field === "identity" ? "other-user" : account.account_info.id,
+        },
+        site_url: field === "url" ? "https://other.example" : account.site_url,
+        site_type:
+          field === "siteType" ? SITE_TYPES.NEW_API : SITE_TYPES.SUB2API,
+        authType:
+          field === "authType" ? AuthTypeEnum.Cookie : AuthTypeEnum.AccessToken,
+        sub2apiAuth: submittedAuth,
+      },
+      account.checkIn,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        loadedSub2ApiAuth: {
+          siteUrl: account.site_url,
+          userId: account.account_info.id,
+          accessToken: "loaded-access",
+          refreshToken: "loaded-refresh",
+          tokenExpiresAt: 1000000000000,
+        },
+      },
+    )
+    const latest = await accountStorage.getAccountById(account.id)
+    expect(latest?.account_info.access_token).toBe(accessToken)
+    if (field !== "siteType") expect(latest?.sub2apiAuth).toEqual(submittedAuth)
+  })
+
   beforeEach(() => {
     storageData.clear()
     storageHooks.beforeGet = async () => {}

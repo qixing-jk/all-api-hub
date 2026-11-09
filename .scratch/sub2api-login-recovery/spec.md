@@ -21,3 +21,5 @@ Maintained tests cover recovery ordering, complete credential persistence and cl
 Hosted deployment and hosted OAuth remain unverified; closing those gaps requires a supplied deployment/account and authorized OAuth interaction. OAuth export, older deployments without refresh tokens and failure paths have automated fixture coverage only. Existing method/host boundaries remain unchanged.
 
 Local review evidence is retained outside delivery in `browser-run4/`, `browser-run3/`, `browser-final/`, `upstream-auth.ts`, and the ignored `test-results/sub2api-*` and `test-results/scout-sub2api-20261110/` output groups. These preserve browser captures and failure/success evidence for review; they are not public attachments.
+
+PR #1852 follow-up evidence is retained locally in `test-results/pr-1852/`: the editor-save regression, source CI failure, coverage reports and merge/browser validation. An unchanged Sub2API editor now retains the latest stored credential pair under the account write lock; explicit credential or identity edits remain effective. Loaded credential evidence includes access-only accounts. Hosted validation gaps above remain unchanged.

@@ -355,6 +355,45 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   }
 
+  it.each([false, true])(
+    "passes the loaded Sub2API credentials to the edit transaction (renewable=%s)",
+    async (renewable) => {
+      const savedAccount = buildSiteAccount({
+        id: "sub2api-edit",
+        site_type: SITE_TYPES.SUB2API,
+        site_url: "https://sub2api.example",
+        ...(renewable
+          ? {
+              sub2apiAuth: {
+                refreshToken: "loaded-refresh",
+                tokenExpiresAt: 2000000000000,
+              },
+            }
+          : {}),
+      })
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(savedAccount)
+      const { result } = renderEditHook({
+        account: accountStorage.convertToDisplayData(savedAccount),
+      })
+      await waitFor(() =>
+        expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API),
+      )
+      await act(async () => {
+        await result.current.handlers.handleSaveAccount()
+      })
+      expect(
+        mockValidateAndUpdateAccount.mock.calls[0]?.[0]?.options,
+      ).toMatchObject({
+        loadedSub2ApiAuth: {
+          siteUrl: savedAccount.site_url,
+          userId: savedAccount.account_info.id,
+          accessToken: savedAccount.account_info.access_token,
+          ...savedAccount.sub2apiAuth,
+        },
+      })
+    },
+  )
+
   it("passes the loaded Kimi pair to the edit transaction", async () => {
     const savedAccount = buildSiteAccount({
       id: "kimi-edit",

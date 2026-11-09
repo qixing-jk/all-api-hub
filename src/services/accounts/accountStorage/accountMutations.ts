@@ -1,6 +1,11 @@
 import { isAccountSiteType } from "~/constants/siteType"
 import type { AccountData } from "~/services/accounts/accountDataModel"
 import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
+import type { LoadedSub2ApiAuth } from "~/services/accounts/accountPersistence/request"
+import {
+  ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
+  getAccountSiteProductProfile,
+} from "~/services/accounts/accountSiteProfile"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
@@ -26,7 +31,11 @@ import {
   type AccountWriteGuard,
 } from "~/services/core/accountWriteGuard"
 import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
-import type { AccountStorageConfig, SiteAccount } from "~/types"
+import {
+  AuthTypeEnum,
+  type AccountStorageConfig,
+  type SiteAccount,
+} from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { DeepPartial } from "~/types/utils"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
@@ -111,6 +120,7 @@ class AccountMutations {
       refreshed?: SiteAccount["checkIn"]
       /** Runs inside the account storage lock; throwing aborts the update. */
       guard?: AccountWriteGuard
+      loadedSub2ApiAuth?: LoadedSub2ApiAuth
       /** Credential pair loaded by the editor, before any background rotation. */
       loadedKimiAuth?: {
         accessToken: string
@@ -126,6 +136,34 @@ class AccountMutations {
         (account) => {
           const loaded = mutationOptions.loadedKimiAuth
           const effectiveUpdates = { ...updates }
+          const loadedSub2ApiAuth = mutationOptions.loadedSub2ApiAuth
+          if (
+            loadedSub2ApiAuth &&
+            getAccountSiteProductProfile(account.site_type).authSession.kind ===
+              ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken &&
+            (updates.site_type ?? account.site_type) === account.site_type &&
+            account.authType === AuthTypeEnum.AccessToken &&
+            (updates.authType ?? account.authType) ===
+              AuthTypeEnum.AccessToken &&
+            account.site_url === loadedSub2ApiAuth.siteUrl &&
+            (updates.site_url ?? account.site_url) ===
+              loadedSub2ApiAuth.siteUrl &&
+            account.account_info.id === loadedSub2ApiAuth.userId &&
+            (updates.account_info?.id ?? account.account_info.id) ===
+              loadedSub2ApiAuth.userId &&
+            updates.account_info?.access_token ===
+              loadedSub2ApiAuth.accessToken &&
+            updates.sub2apiAuth?.refreshToken ===
+              loadedSub2ApiAuth.refreshToken &&
+            updates.sub2apiAuth?.tokenExpiresAt ===
+              loadedSub2ApiAuth.tokenExpiresAt
+          ) {
+            // Unchanged drafts do not own credentials recovered or rotated while
+            // the editor was open. Preserve the latest complete pair under lock.
+            delete effectiveUpdates.sub2apiAuth
+            effectiveUpdates.account_info = { ...effectiveUpdates.account_info }
+            delete effectiveUpdates.account_info.access_token
+          }
           // An unchanged editor does not own session credentials. Preserve the
           // latest pair atomically with the unrelated form edit.
           if (

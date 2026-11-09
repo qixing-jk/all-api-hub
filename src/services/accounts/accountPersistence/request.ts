@@ -40,6 +40,15 @@ interface AccountSaveOptions {
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
+/** Original Sub2API session and identity loaded before background renewal. */
+export type LoadedSub2ApiAuth = Readonly<{
+  siteUrl: string
+  userId: string
+  accessToken: string
+  refreshToken?: string
+  tokenExpiresAt?: number
+}>
+
 export interface AccountCreateRequest extends AccountSaveInput {
   options?: AccountSaveOptions & { skipAutoProvisionKeyOnAccountAdd?: boolean }
 }
@@ -49,6 +58,7 @@ export interface AccountUpdateRequest extends AccountSaveInput {
   options?: AccountSaveOptions & {
     selectionChanged?: boolean
     discoveryBaseSelection?: CheckInMethodSelection
+    loadedSub2ApiAuth?: LoadedSub2ApiAuth
     loadedKimiAuth?: {
       accessToken: string
       refreshToken?: string

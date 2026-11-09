@@ -6,6 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
 import { refreshStoredAccount } from "~/services/accounts/refresh/refreshStoredAccount"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -123,6 +124,7 @@ describe("stored Sub2API account login recovery", () => {
   })
 
   it("logs in after the recovered browser token is rejected, then retains the new pair through refresh persistence", async () => {
+    const loaded = (await accountQueries.getAccountById("saved"))!
     const result = await refreshStoredAccount("saved", true, {
       includeTodayCashflow: false,
     })
@@ -131,6 +133,39 @@ describe("stored Sub2API account login recovery", () => {
     expect(result?.account?.health.status).toBe(SiteHealthStatus.Healthy)
     expect(await accountQueries.getAccountById("saved")).toMatchObject({
       account_info: { access_token: "login-access", quota: 1250000 },
+      sub2apiAuth: {
+        refreshToken: "login-refresh",
+        tokenExpiresAt: 2000000000000,
+      },
+    })
+
+    const saved = await validateAndUpdateAccount({
+      accountId: loaded.id,
+      url: loaded.site_url,
+      siteName: "Sub2API",
+      username: "member",
+      userId: "17",
+      accessToken: "expired",
+      exchangeRate: "7",
+      notes: "unrelated edit",
+      tagIds: [],
+      checkInConfig: loaded.checkIn,
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      options: {
+        deferDataRefresh: true,
+        loadedSub2ApiAuth: {
+          siteUrl: loaded.site_url,
+          userId: "17",
+          accessToken: "expired",
+        },
+      },
+    })
+    expect(saved.success).toBe(true)
+    expect(await accountQueries.getAccountById("saved")).toMatchObject({
+      notes: "unrelated edit",
+      account_info: { access_token: "login-access" },
       sub2apiAuth: {
         refreshToken: "login-refresh",
         tokenExpiresAt: 2000000000000,

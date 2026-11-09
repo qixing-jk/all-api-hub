@@ -806,6 +806,23 @@ describe("Sub2API configured login recovery", () => {
     expect(beforeUnauthorizedRetry).toHaveBeenCalledTimes(1)
   })
 
+  it.each([undefined, "GET", "get"])(
+    "admits read requests using method %s to configured login recovery",
+    async (method) => {
+      deps.fetch
+        .mockRejectedValueOnce(unauthorized())
+        .mockResolvedValueOnce({ code: 0, message: "success", data: [] })
+      await expect(
+        fetchSub2ApiData(
+          request,
+          "/api/v1/keys",
+          method ? { method } : undefined,
+        ),
+      ).resolves.toEqual([])
+      expect(deps.login).toHaveBeenCalledOnce()
+    },
+  )
+
   it("does not admit key mutations to automatic login recovery", async () => {
     deps.fetch.mockRejectedValue(unauthorized())
     await expect(
