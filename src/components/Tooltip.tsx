@@ -9,7 +9,6 @@ import {
   useRef,
   useState,
   type FocusEventHandler,
-  type KeyboardEventHandler,
   type MouseEventHandler,
   type ReactElement,
   type ReactNode,
@@ -107,7 +106,7 @@ export default function Tooltip({
         childProps["aria-describedby"],
         shouldRenderDescription
           ? descriptionId
-          : anchorAsChild
+          : anchorAsChild && !isString
             ? popupId
             : undefined,
       ]
@@ -198,6 +197,20 @@ export default function Tooltip({
     const document = anchorRef.current?.ownerDocument
     const dismiss = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
+      // An expanded focused control owns Escape before a merely hovered hint.
+      // composedPath also reaches controls inside a webpage's shadow root.
+      if (
+        event
+          .composedPath()
+          .some(
+            (target) =>
+              target instanceof Element &&
+              target.matches(
+                '[role="combobox"][aria-expanded="true"], [aria-haspopup]:not([aria-haspopup="false"])[aria-expanded="true"]',
+              ),
+          )
+      )
+        return
       event.preventDefault()
       event.stopPropagation()
       setIsOpen(false)
@@ -230,7 +243,7 @@ export default function Tooltip({
       id: anchorId,
       "data-tooltip-anchor-id": anchorId,
       "data-tooltip-open": isOpen ? "true" : undefined,
-      ...(describedBy ? { "aria-describedby": describedBy } : {}),
+      "aria-describedby": describedBy || undefined,
       onFocusCapture: handleFocusCapture,
       onBlurCapture: handleBlurCapture,
       onClickCapture: handleClickCapture,
@@ -251,13 +264,6 @@ export default function Tooltip({
     </div>
   )
 
-  const handleKeyDownCapture: KeyboardEventHandler<HTMLElement> = (event) => {
-    if (event.key === "Escape" && isOpen) {
-      event.preventDefault()
-      event.stopPropagation()
-      setIsOpen(false)
-    }
-  }
   const [side, align = "center"] = position.split("-") as [
     "top" | "right" | "bottom" | "left",
     "start" | "center" | "end",
@@ -274,7 +280,6 @@ export default function Tooltip({
         ref={popupRef}
         id={tooltipId}
         role={isOpen ? "tooltip" : "presentation"}
-        onKeyDownCapture={handleKeyDownCapture}
         className={cn(
           "bg-surface-inverse py-density-2 text-inverse-foreground dark:bg-secondary dark:text-foreground w-max max-w-[90vw] rounded-sm px-3 text-xs opacity-90 shadow-lg",
           className,
@@ -318,7 +323,6 @@ export default function Tooltip({
           id={anchorId}
           delay={delay}
           render={anchor}
-          onKeyDownCapture={handleKeyDownCapture}
         />
         {shouldRenderDescription ? (
           <span id={descriptionId} className="sr-only">
@@ -329,7 +333,10 @@ export default function Tooltip({
           <span ref={setInlineContainer} className="contents" />
         ) : null}
         {resolvedPortalContainer ? (
-          <TooltipPrimitive.Portal container={resolvedPortalContainer}>
+          <TooltipPrimitive.Portal
+            container={resolvedPortalContainer}
+            className="contents"
+          >
             {popup}
           </TooltipPrimitive.Portal>
         ) : null}

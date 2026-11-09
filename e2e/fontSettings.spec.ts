@@ -73,7 +73,17 @@ for (const width of [390, 320]) {
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true)
-    await font.getByRole("button", { name: "Reset font", exact: true }).click()
+    const resetFont = font.getByRole("button", {
+      name: "Reset font",
+      exact: true,
+    })
+    const resetBounds = await resetFont.boundingBox()
+    await resetFont.hover()
+    await expect(
+      page.getByRole("tooltip", { name: "Reset font" }),
+    ).toBeVisible()
+    await expect.poll(() => resetFont.boundingBox()).toEqual(resetBounds)
+    await resetFont.click()
     await expect(sample).toHaveCSS("font-family", initialFont)
     for (const view of views)
       await expect(view.locator("body")).toHaveCSS("font-family", initialFont)

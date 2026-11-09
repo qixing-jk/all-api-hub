@@ -618,6 +618,7 @@ describe("DevPanel", () => {
   })
 
   it("reports the build's directories when the ball is hovered", async () => {
+    const user = userEvent.setup()
     const outputPath = `${DEV_IDENTITY_FIXTURE_PATH}\\.output\\chrome-mv3-dev`
     getDevIdentityMock.mockReturnValue(buildDevIdentity({ outputPath }))
 
@@ -633,7 +634,7 @@ describe("DevPanel", () => {
     )
 
     const trigger = await screen.findByTestId("dev-panel-trigger")
-    fireEvent.mouseOver(trigger)
+    await user.hover(trigger)
 
     await waitFor(() =>
       expect(screen.getByText(DEV_IDENTITY_FIXTURE_PATH)).toBeInTheDocument(),

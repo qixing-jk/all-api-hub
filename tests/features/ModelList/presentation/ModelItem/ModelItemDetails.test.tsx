@@ -36,34 +36,6 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
-vi.mock("~/components/ui", () => ({
-  Badge: ({
-    children,
-    asChild = false,
-    variant,
-    size: _size,
-    ...props
-  }: React.PropsWithChildren<{
-    asChild?: boolean
-    variant?: string
-    size?: string
-  }> &
-    React.HTMLAttributes<HTMLElement>) => {
-    if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(
-        children as React.ReactElement<Record<string, unknown>>,
-        { ...props, "data-variant": variant },
-      )
-    }
-
-    return (
-      <span data-variant={variant} {...props}>
-        {children}
-      </span>
-    )
-  },
-}))
-
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   UserPreferencesProvider: ({ children }: { children: React.ReactNode }) =>
     children,
@@ -178,7 +150,7 @@ describe("ModelItemDetails", () => {
     const usableGroup = screen.getByRole("button", {
       name: "clickSwitchGroup:default (1x)",
     })
-    expect(usableGroup).toHaveAttribute("data-variant", "secondary")
+    expect(usableGroup).toHaveClass("bg-secondary")
     expect(usableGroup).toHaveTextContent("default (1x)")
     expect(usableGroup).toHaveAccessibleDescription(
       /groupRatioTooltip:default:1\s+clickSwitchGroup:default \(1x\)/,
@@ -198,10 +170,7 @@ describe("ModelItemDetails", () => {
   it("keeps the selected usable group read-only", () => {
     renderDetails({ effectiveGroup: "default", onGroupClick: vi.fn() })
 
-    expect(screen.getByText("default (1x)")).toHaveAttribute(
-      "data-variant",
-      "default",
-    )
+    expect(screen.getByText("default (1x)")).toHaveClass("bg-primary-soft")
     expect(
       screen.queryByRole("button", { name: "default (1x)" }),
     ).not.toBeInTheDocument()

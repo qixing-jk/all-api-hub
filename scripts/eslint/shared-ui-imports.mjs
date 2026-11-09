@@ -51,12 +51,16 @@ export const sharedUiImportsRule = {
       if (typeof source !== "string") return
       const importsBaseTooltip =
         source === "@base-ui/react" &&
-        (node.specifiers ?? []).some(
-          (specifier) =>
-            (specifier.imported?.name ??
-              specifier.imported?.value ??
-              specifier.local?.name) === "Tooltip",
-        )
+        (node.type === "ExportAllDeclaration" ||
+          node.type === "ImportExpression" ||
+          (node.specifiers ?? []).some(
+            (specifier) =>
+              specifier.type === "ImportNamespaceSpecifier" ||
+              specifier.type === "ExportNamespaceSpecifier" ||
+              (specifier.imported?.name ??
+                specifier.imported?.value ??
+                specifier.local?.name) === "Tooltip",
+          ))
       if (
         /^(?:react-tooltip|@base-ui\/react\/tooltip)(?:\/|$)/.test(source) ||
         importsBaseTooltip

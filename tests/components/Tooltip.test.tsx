@@ -11,9 +11,99 @@ import { describe, expect, it, vi } from "vitest"
 
 import Tooltip, { TooltipPortalContext } from "~/components/Tooltip"
 import { Modal } from "~/components/ui"
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "~/components/ui/combobox"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render as renderWithProviders } from "~~/tests/test-utils/render"
 
 describe("Tooltip", () => {
+  it("keeps rich content open when focus enters its nested shadow root", async () => {
+    let nestedAction: HTMLButtonElement | undefined
+    render(
+      <>
+        <Tooltip
+          content={
+            <span
+              ref={(host) => {
+                if (!host || host.shadowRoot) return
+                const root = host.attachShadow({ mode: "open" })
+                nestedAction = document.createElement("button")
+                nestedAction.textContent = "Nested action"
+                root.append(nestedAction)
+              }}
+            />
+          }
+        >
+          <button type="button">Details</button>
+        </Tooltip>
+        <button type="button">Outside</button>
+      </>,
+    )
+    act(() => screen.getByRole("button", { name: "Details" }).focus())
+    const popup = await screen.findByRole("tooltip")
+    expect(nestedAction).toBeDefined()
+    await act(async () => {
+      nestedAction!.focus()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(popup).toBeVisible()
+    act(() => screen.getByRole("button", { name: "Outside" }).focus())
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    )
+  })
+  it("omits the description relationship when string descriptions are disabled", async () => {
+    const user = userEvent.setup()
+    render(
+      <Tooltip
+        content="Settings"
+        anchorAsChild
+        includeAccessibleDescription={false}
+      >
+        <button type="button">Settings</button>
+      </Tooltip>,
+    )
+    const anchor = screen.getByRole("button", { name: "Settings" })
+    expect(anchor).not.toHaveAttribute("aria-describedby")
+    await user.hover(anchor)
+    await screen.findByRole("tooltip")
+    expect(anchor).not.toHaveAttribute("aria-describedby")
+  })
+  it("lets a focused open combobox handle Escape before a hovered sibling hint", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    renderWithProviders(
+      <Modal isOpen onClose={onClose} title="Settings">
+        <Combobox items={["Alpha", "Beta"]} defaultOpen>
+          <ComboboxInput aria-label="Model" />
+          <ComboboxContent>
+            <ComboboxList>
+              {(item) => (
+                <ComboboxItem key={item} value={item}>
+                  {item}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+        <Tooltip content="Model help">
+          <button type="button">Help</button>
+        </Tooltip>
+      </Modal>,
+    )
+    const input = await screen.findByRole("combobox", { name: "Model" })
+    act(() => input.focus())
+    await user.hover(screen.getByText("Help"))
+    await screen.findByRole("tooltip", { hidden: true })
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "false"))
+    expect(onClose).not.toHaveBeenCalled()
+  })
   it.each([false, true])(
     "keeps shadow-root focus and click interactions scoped (anchorAsChild: %s)",
     async (anchorAsChild) => {
@@ -35,7 +125,9 @@ describe("Tooltip", () => {
             >
               <button type="button">History</button>
             </Tooltip>
-            <button type="button">Elsewhere</button>
+            <button type="button" aria-expanded="true">
+              Elsewhere
+            </button>
           </div>
         </TooltipPortalContext.Provider>,
         { container, baseElement: container },
@@ -123,10 +215,24 @@ describe("Tooltip", () => {
       })
       await user.click(anchor)
       const popup = await screen.findByRole("tooltip")
+      const closeAnimation = createDeferred<Animation>()
+      const readFinished = vi.fn(() => closeAnimation.promise)
+      const animation = {
+        get finished() {
+          return readFinished()
+        },
+      } as Animation
+      const getAnimations = vi
+        .spyOn(popup, "getAnimations")
+        .mockImplementation(() =>
+          popup.getAttribute("role") === "presentation" ? [animation] : [],
+        )
       await user.keyboard("{Escape}")
       await waitFor(() =>
         expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
       )
+      await waitFor(() => expect(readFinished).toHaveBeenCalled())
+      expect(popup).toBeInTheDocument()
       if (trigger === "click") await user.click(anchor)
       else if (trigger === "focus") {
         act(() => anchor.blur())
@@ -136,8 +242,9 @@ describe("Tooltip", () => {
         await user.hover(anchor)
       }
       expect(await screen.findByRole("tooltip")).toBeVisible()
-      // A stale transition event must not dismiss the newer opening request.
-      fireEvent.transitionEnd(popup, { propertyName: "opacity" })
+      // Finish the earlier close only after the same popup has reopened.
+      await act(async () => closeAnimation.resolve(animation))
+      getAnimations.mockRestore()
       expect(screen.getByRole("tooltip")).toBeVisible()
       expect(anchor).toHaveAttribute("data-tooltip-open", "true")
       await user.keyboard("{Escape}")
