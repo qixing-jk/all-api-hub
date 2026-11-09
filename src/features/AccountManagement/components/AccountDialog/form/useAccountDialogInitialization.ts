@@ -92,6 +92,8 @@ export function useAccountDialogInitialization({
   sessions,
 }: InitializationInput) {
   const { i18n } = useTranslation(["accountDialog", "settings", "messages"])
+  // The bound translator stays stable when react-i18next replaces its language wrapper.
+  const i18nT = i18n.t
   const { mode, account, prefill, recoveryState, isOpen } = context
   const [isLoadingAccount, setIsLoadingAccount] = useState(
     mode === DIALOG_MODES.EDIT && Boolean(account) && !recoveryState,
@@ -311,7 +313,7 @@ export function useAccountDialogInitialization({
         if (!isAccountLoadCurrent(loadGeneration)) return
         logger.error("Failed to load account data", { error, accountId })
         setAccountLoadError(true)
-        toast.error(i18n.t("accountDialog:messages.loadFailed"))
+        toast.error(i18nT("accountDialog:messages.loadFailed"))
       } finally {
         if (isAccountLoadCurrent(loadGeneration)) {
           setIsLoadingAccount(false)
@@ -320,7 +322,7 @@ export function useAccountDialogInitialization({
     },
     [
       enterForm,
-      i18n,
+      i18nT,
       credentialEvidence,
       checkInDiscoveryBaseSelectionRef,
       checkInSelectionChangedRef,
@@ -423,7 +425,6 @@ export function useAccountDialogInitialization({
     loadAccountData,
     invalidateAccountLoad,
     checkCurrentTab,
-    i18n,
     credentialEvidence,
     automaticExecutionPreferenceChangedRef,
     checkInDiscoveryBaseSelectionRef,

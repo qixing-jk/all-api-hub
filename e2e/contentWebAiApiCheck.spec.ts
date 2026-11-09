@@ -504,6 +504,8 @@ test("web needle test plans automatically, follows a context probe and restores 
   page,
   extensionDir,
 }) => {
+  // This scenario starts without metadata, even if a real catalog loaded at startup.
+  const modelId = "e2e-needle-no-metadata"
   let capacityRequests = 0
   let needleRequests = 0
   let releaseRequest!: () => void
@@ -519,7 +521,7 @@ test("web needle test plans automatically, follows a context probe and restores 
     }
     response.setHeader("Content-Type", "application/json")
     if (request.method === "GET") {
-      response.end(JSON.stringify({ data: [{ id: "gpt-4o-mini" }] }))
+      response.end(JSON.stringify({ data: [{ id: modelId }] }))
       return
     }
     const chunks: Buffer[] = []
@@ -556,7 +558,7 @@ test("web needle test plans automatically, follows a context probe and restores 
         id: "needle",
         object: "chat.completion",
         created: 1,
-        model: "gpt-4o-mini",
+        model: modelId,
         choices: [
           {
             index: 0,
@@ -594,7 +596,7 @@ test("web needle test plans automatically, follows a context probe and restores 
         .getByRole("combobox", { name: "Model ID", exact: true })
         .click()
       await contentHost
-        .getByRole("option", { name: "gpt-4o-mini", exact: true })
+        .getByRole("option", { name: modelId, exact: true })
         .click()
       const panel = modal.getByRole("region", {
         name: "Needle in a haystack",
