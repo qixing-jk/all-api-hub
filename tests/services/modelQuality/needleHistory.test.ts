@@ -43,6 +43,15 @@ beforeEach(async () => {
   await verificationResultHistoryStorage.clearAllData()
 })
 
+it("rejects an invalid connection before reading or writing history", async () => {
+  const invalid = { ...request, baseUrl: "not a URL" }
+  await expect(needleHistory.get(invalid)).rejects.toThrow("Invalid base URL")
+  await expect(needleHistory.save(invalid, result)).rejects.toThrow(
+    "Invalid base URL",
+  )
+  expect(await needleHistory.get(request)).toBeNull()
+})
+
 it("restores bounded retrieval facts only for the same request identity", async () => {
   await needleHistory.save(request, result)
   const saved = await needleHistory.get(request)

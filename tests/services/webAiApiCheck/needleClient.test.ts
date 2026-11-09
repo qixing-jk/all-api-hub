@@ -190,6 +190,14 @@ it("routes scoped stops to the current background run without aborting its progr
   }
   expect(remove).toHaveBeenCalledOnce()
   expect(await controls!.stopSelection({ depth: 90 })).toBe(false)
+  progress!({
+    id: 1,
+    timestamp: 0,
+    sender: {},
+    type: WebAiApiCheckMessageTypes.NeedleProgress,
+    data: { runId: runId!, result: stopped },
+  })
+  expect(onProgress).toHaveBeenCalledTimes(2)
 })
 
 it("preserves the final interrupted cell when stopped during the first request", async () => {

@@ -28,6 +28,18 @@ const request = {
 const counter = { encoding: CONTEXT_TOKEN_ENCODINGS.O200k, estimated: true }
 beforeEach(() => vi.restoreAllMocks())
 
+it("rejects an invalid connection without dispatching a provider request", async () => {
+  const fetch = vi.spyOn(globalThis, "fetch")
+  await expect(
+    runDurableNeedleTest({
+      ...request,
+      baseUrl: "not a URL",
+      abortSignal: new AbortController().signal,
+    }),
+  ).rejects.toThrow("Invalid base URL")
+  expect(fetch).not.toHaveBeenCalled()
+})
+
 it.each(["google", "openai-compatible"] as const)(
   "preserves consecutive protocol version segments through real %s dispatch and history",
   async (apiType) => {
@@ -236,31 +248,97 @@ it.each(["smaller", "missing"] as const)(
 )
 
 it("allows a recovered cell retry within the approved scope of a smaller plan", async () => {
+  const { modelMetadataService } = await import(
+    "~/services/models/modelMetadata"
+  )
+  modelMetadataService.clearCache()
+  const params = { ...request, mode: "non-streaming" as const }
   const store = new Storage({ area: "local" })
-  const scope = await getVerificationScopeKey(request)
+  const scope = await getVerificationScopeKey(params)
   const previous = createNeedleResult({
     counter,
     plan: createNeedlePlan({ counter, maxInputTokens: 16384 }),
+    cells: [
+      {
+        targetTokens: 8192,
+        depth: 10,
+        actualDepth: 10,
+        localInputTokens: 8000,
+        inputTokens: 8000,
+        outcome: "hit",
+      },
+      ...([50, 90] as const).map((depth) => ({
+        targetTokens: 16384,
+        depth,
+        actualDepth: depth,
+        localInputTokens: 16000,
+        inputTokens: 16000,
+        outcome: "hit" as const,
+      })),
+    ],
   })
   await store.set(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS, {
     [scope]: { result: previous },
   })
-  const needle = await import("~/services/verification/modelQuality/needleRun")
-  const run = vi.spyOn(needle, "runNeedleTest").mockResolvedValue(previous)
-  await runDurableNeedleTest({
-    ...request,
-    selection: { targetTokens: 8192, depth: 10 },
-    approvedPlan: createNeedlePlan({ counter, maxInputTokens: 8192 }),
-    approvedCounter: counter,
-    abortSignal: new AbortController().signal,
-  })
-  expect(run).toHaveBeenCalledExactlyOnceWith(
-    expect.objectContaining({
+  const urls: string[] = []
+  const fetch = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === MODEL_METADATA_URL) return Response.json({ models: [] })
+      urls.push(url)
+      return Response.json({
+        id: "needle",
+        object: "chat.completion",
+        created: 1,
+        model: "test",
+        usage: { prompt_tokens: 8001, completion_tokens: 1 },
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "wrong" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    })
+  try {
+    const result = await runDurableNeedleTest({
+      ...params,
+      seed: 456,
       selection: { targetTokens: 8192, depth: 10 },
-      resumeFrom: previous,
-      approvedPlan: expandNeedlePlan(previous.plan),
-    }),
-  )
+      approvedPlan: createNeedlePlan({ counter, maxInputTokens: 8192 }),
+      approvedCounter: counter,
+      abortSignal: new AbortController().signal,
+    })
+    expect(urls).toEqual(["https://example.invalid/v1/chat/completions"])
+    expect(result.seed).toBe(previous.seed)
+    expect(result.plan).toEqual(expandNeedlePlan(previous.plan))
+    expect(result.scheduled).toEqual([{ targetTokens: 8192, depth: 10 }])
+    expect(result.cells).toHaveLength(3)
+    expect(result.cells[0]).toMatchObject({
+      targetTokens: 8192,
+      depth: 10,
+      inputTokens: 8001,
+      outcome: "miss",
+    })
+    expect(result.cells.slice(1)).toEqual(previous.cells.slice(1))
+    const history = await needleHistory.get(params)
+    expect(history?.result.cells).toHaveLength(3)
+    expect(history?.result.cells[0]).toMatchObject({
+      targetTokens: 8192,
+      depth: 10,
+      inputTokens: 8001,
+      outcome: "miss",
+    })
+    expect(history?.result.cells.slice(1)).toEqual(previous.cells.slice(1))
+    expect(
+      await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),
+    ).toEqual({})
+  } finally {
+    fetch.mockRestore()
+    modelMetadataService.clearCache()
+  }
 })
 
 it("finalizes a failed preparation with retained measurements before another explicit run", async () => {
