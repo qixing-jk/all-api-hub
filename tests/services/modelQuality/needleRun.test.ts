@@ -4,6 +4,8 @@ import { modelMetadataService } from "~/services/models/modelMetadata"
 import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import * as probeGeneration from "~/services/verification/aiApiVerification/probes/probeGeneration"
 import { NEEDLE_OUTCOMES } from "~/services/verification/modelQuality/needleConstants"
+import { createNeedlePlan } from "~/services/verification/modelQuality/needlePlan"
+import * as needlePrompt from "~/services/verification/modelQuality/needlePrompt"
 import { coerceNeedleResult } from "~/services/verification/modelQuality/needleResultCodec"
 import {
   runNeedleTest,
@@ -11,6 +13,7 @@ import {
   type NeedleRunControls,
 } from "~/services/verification/modelQuality/needleRun"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { createNeedleResult } from "~~/tests/test-utils/needle"
 
 const params = {
   baseUrl: "https://example.invalid",
@@ -22,6 +25,147 @@ const params = {
   quick: true,
   seed: 123,
 }
+
+it.each([
+  { seed: -1 },
+  { seed: 0.5 },
+  {
+    approvedPlan: {
+      ...createNeedlePlan({
+        counter: { encoding: "o200k_base", estimated: true },
+        maxInputTokens: 1024,
+      }),
+      requests: 5,
+    },
+  },
+  {
+    approvedPlan: createNeedlePlan({
+      counter: { encoding: "o200k_base", estimated: true },
+      maxInputTokens: 1024,
+    }),
+    approvedCounter: { encoding: "cl100k_base", estimated: true },
+  },
+  { resumeFrom: createNeedleResult({ seed: 456 }) },
+  { cancelledCells: [{ targetTokens: 999, depth: 50 }] },
+])(
+  "rejects invalid or incompatible approved runs before any inference request %#",
+  async (override) => {
+    const fetch = vi.fn(async (_url: unknown) => Response.json({ models: [] }))
+    vi.stubGlobal("fetch", fetch)
+    await expect(
+      runNeedleTest({
+        ...params,
+        ...override,
+        abortSignal: new AbortController().signal,
+      }),
+    ).rejects.toThrow()
+    expect(
+      fetch.mock.calls.every(([url]) => String(url) === MODEL_METADATA_URL),
+    ).toBe(true)
+  },
+)
+
+it.each(["preparation", "checkpoint"])(
+  "stops the whole run during %s without recording unsent measurements",
+  async (phase) => {
+    const controller = new AbortController()
+    let requests = 0
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: unknown) => {
+        if (String(url) === MODEL_METADATA_URL)
+          return Response.json({ models: [] })
+        requests++
+        return completion("wrong")
+      }),
+    )
+    const result = await runNeedleTest({
+      ...params,
+      abortSignal: controller.signal,
+      onProgress: (value) => {
+        if (phase === "preparation" && value.preparing) controller.abort()
+      },
+      onCheckpoint: async (_value, inFlight) => {
+        if (phase === "checkpoint" && inFlight) controller.abort()
+      },
+    })
+    expect(requests).toBe(0)
+    expect(result).toMatchObject({ reason: "stopped", cells: [], processed: 0 })
+  },
+)
+
+it("honors a cell stop during checkpoint persistence and sends the remaining cells", async () => {
+  let controls: NeedleRunControls | undefined
+  let requests = 0
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      requests++
+      return completion("wrong")
+    }),
+  )
+  const result = await runNeedleTest({
+    ...params,
+    abortSignal: new AbortController().signal,
+    onControls: (value) => {
+      controls = value
+    },
+    onCheckpoint: async (_value, inFlight) => {
+      if (inFlight?.depth === 10) await controls!.stopSelection(inFlight)
+    },
+  })
+  expect(requests).toBe(2)
+  expect(result.cells.map(({ depth }) => depth)).toEqual([50, 90])
+  expect(result.cancelled).toEqual([{ targetTokens: 1024, depth: 10 }])
+  expect(result.processed).toBe(2)
+})
+
+it.each(["run", "cell"])(
+  "honors a %s stop when preparation has just settled",
+  async (scope) => {
+    const controller = new AbortController()
+    let controls: NeedleRunControls | undefined
+    let requests = 0
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: unknown) => {
+        if (String(url) === MODEL_METADATA_URL)
+          return Response.json({ models: [] })
+        requests++
+        return completion("wrong")
+      }),
+    )
+    const prepare = needlePrompt.prepareNeedlePrompt
+    const prepared = vi
+      .spyOn(needlePrompt, "prepareNeedlePrompt")
+      .mockImplementation(async (...args) => {
+        const value = await prepare(...args)
+        if (args[2] === 10) {
+          if (scope === "run") controller.abort()
+          else await controls!.stopSelection({ depth: 10 })
+        }
+        return value
+      })
+    try {
+      const result = await runNeedleTest({
+        ...params,
+        abortSignal: controller.signal,
+        onControls: (value) => {
+          controls = value
+        },
+      })
+      expect(requests).toBe(scope === "run" ? 0 : 2)
+      expect(result.cells.map(({ depth }) => depth)).toEqual(
+        scope === "run" ? [] : [50, 90],
+      )
+      expect(result.reason).toBe("stopped")
+    } finally {
+      prepared.mockRestore()
+    }
+  },
+)
 
 it("honors cells cancelled before the background starts without sending those requests", async () => {
   let requests = 0
@@ -417,6 +561,30 @@ function completion(text: string, finish = "stop", input = 990) {
     },
   })
 }
+
+it("honors a whole-run stop after publishing a completed cell", async () => {
+  const controller = new AbortController()
+  let requests = 0
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      requests++
+      return completion("wrong")
+    }),
+  )
+  const result = await runNeedleTest({
+    ...params,
+    abortSignal: controller.signal,
+    onProgress: (progress) => {
+      if (progress.processed === 1) controller.abort()
+    },
+  })
+  expect(requests).toBe(1)
+  expect(result).toMatchObject({ reason: "stopped", processed: 1 })
+  expect(result.cells).toHaveLength(1)
+})
 
 it.each([
   {

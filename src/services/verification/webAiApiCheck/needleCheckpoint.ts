@@ -16,6 +16,7 @@ import { getVerificationScopeKey } from "~/services/verification/verificationRes
 import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
 import { LONG_CONTEXT_ERROR_NAMES } from "~/services/verification/webAiApiCheck/longContextConstants"
 
+import { normalizeProbeBaseUrl } from "./credentialExtraction/baseUrlCandidates"
 import { createLongContextCheckpoints } from "./longContextCheckpoints"
 
 type Checkpoint = {
@@ -42,8 +43,12 @@ export async function runDurableNeedleTest(
   recoverOnly = false,
   target?: ApiVerificationHistoryTarget,
 ): Promise<NeedleResult> {
+  const baseUrl = normalizeProbeBaseUrl(params)
+  if (!baseUrl) throw new Error("Invalid base URL")
+  params = { ...params, baseUrl }
   const scope = await getVerificationScopeKey(params)
   const release = checkpoints.claim(scope)
+  let latestCheckpoint: Checkpoint | undefined
   try {
     const checkpoint = await checkpoints.get(scope)
     if (checkpoint) {
@@ -78,11 +83,14 @@ export async function runDurableNeedleTest(
         else result.cells[index] = interrupted
         if (result.processed !== undefined) result.processed++
       }
-      if (checkpoint.inFlight || result.reason === NEEDLE_RUN_REASONS.Running)
-        result.reason = NEEDLE_RUN_REASONS.Interrupted
+      const interrupted =
+        checkpoint.inFlight || result.reason === NEEDLE_RUN_REASONS.Running
+      if (interrupted) result.reason = NEEDLE_RUN_REASONS.Interrupted
       await needleHistory.save(params, result, target)
       await checkpoints.update(scope)
-      return result
+      // Recovery-only calls read back the old result. An explicit new run can
+      // proceed after a terminal checkpoint's deferred history write succeeds.
+      if (recoverOnly || interrupted) return result
     }
     if (recoverOnly) throw new Error("No needle checkpoint is available")
     if (params.resumeFrom) {
@@ -106,12 +114,33 @@ export async function runDurableNeedleTest(
           }
         : undefined,
       onCheckpoint: async (result, inFlight) => {
+        latestCheckpoint = { result, inFlight }
         await checkpoints.update(scope, { result, inFlight })
       },
     })
     await needleHistory.save(params, result, target)
     await checkpoints.update(scope)
     return result
+  } catch (error) {
+    if (latestCheckpoint && !latestCheckpoint.inFlight) {
+      const result = {
+        ...latestCheckpoint.result,
+        reason:
+          latestCheckpoint.result.reason === NEEDLE_RUN_REASONS.Running
+            ? NEEDLE_RUN_REASONS.Error
+            : latestCheckpoint.result.reason,
+      }
+      try {
+        // Persist the terminal state before history so a failed history write
+        // remains recoverable without inventing an interrupted provider call.
+        await checkpoints.update(scope, { result })
+        await needleHistory.save(params, result, target)
+        await checkpoints.update(scope)
+      } catch {
+        // Retain checkpoint evidence and the original failure for recovery.
+      }
+    }
+    throw error
   } finally {
     release()
   }

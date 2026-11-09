@@ -2483,6 +2483,20 @@ describe("VerifyApiCredentialProfileDialog", () => {
     await verificationResultHistoryStorage.upsertLatestSummary(initialSummary)
     await verificationResultHistoryStorage.upsertLatestSummary(selectedSummary)
 
+    const initialHistoryRead = createDeferred<void>()
+    const initialHistoryLoaded = createDeferred<void>()
+    const readSummary = verificationResultHistoryStorage.getLatestSummary.bind(
+      verificationResultHistoryStorage,
+    )
+    const historyRead = vi
+      .spyOn(verificationResultHistoryStorage, "getLatestSummary")
+      .mockImplementation(async (...args) => {
+        await initialHistoryRead.promise
+        const summary = await readSummary(...args)
+        initialHistoryLoaded.resolve()
+        return summary
+      })
+
     render(
       <VerifyApiCredentialProfileDialog
         isOpen={true}
@@ -2502,7 +2516,21 @@ describe("VerifyApiCredentialProfileDialog", () => {
       />,
     )
 
-    expect(await screen.findByText("Stored m0 history")).toBeInTheDocument()
+    try {
+      await waitFor(() => expect(historyRead).toHaveBeenCalled())
+      expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
+      await act(async () => {
+        initialHistoryRead.resolve()
+        await initialHistoryLoaded.promise
+      })
+    } finally {
+      initialHistoryRead.resolve()
+      historyRead.mockRestore()
+    }
+    const modelProbe = within(
+      screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
+    )
+    expect(await modelProbe.findByText("Stored m0 history")).toBeInTheDocument()
 
     await user.click(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
@@ -2514,7 +2542,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
         screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
       ).toHaveTextContent("m1")
     })
-    expect(await screen.findByText("Stored m1 history")).toBeInTheDocument()
+    expect(await modelProbe.findByText("Stored m1 history")).toBeInTheDocument()
     expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
 
     await selectApiTypeOption(user)
@@ -2528,7 +2556,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await selectOpenAICompatibleApiTypeOption(user)
 
-    expect(await screen.findByText("Stored m1 history")).toBeInTheDocument()
+    expect(await modelProbe.findByText("Stored m1 history")).toBeInTheDocument()
   })
 
   it.each([false, true])(

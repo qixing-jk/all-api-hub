@@ -14,7 +14,6 @@ import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
-  type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -44,11 +43,7 @@ import {
   discardInactiveContextCheckpoints,
   runDurableContextCapacity,
 } from "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
-import {
-  normalizeApiCheckBaseUrl,
-  normalizeGoogleFamilyBaseUrl,
-  normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
+import { normalizeProbeBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import { createApiCheckProbeRunRegistry } from "~/services/verification/webAiApiCheck/probeRunRegistry"
 import { onTabRemoved, onTabUpdated } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
@@ -167,28 +162,6 @@ function getWebAiApiCheckPreferences(
       },
     }
   )
-}
-
-/**
- * Normalize a base URL for probe execution, keeping behavior consistent across api types.
- */
-function normalizeProbeBaseUrl(params: {
-  apiType: ApiVerificationApiType
-  baseUrl: string
-}): string | null {
-  if (
-    params.apiType === API_TYPES.OPENAI_COMPATIBLE ||
-    params.apiType === API_TYPES.OPENAI ||
-    params.apiType === API_TYPES.ANTHROPIC
-  ) {
-    return normalizeOpenAiFamilyBaseUrl(params.baseUrl)
-  }
-
-  if (params.apiType === API_TYPES.GOOGLE) {
-    return normalizeGoogleFamilyBaseUrl(params.baseUrl)
-  }
-
-  return normalizeApiCheckBaseUrl(params.baseUrl)
 }
 
 /**
@@ -735,7 +708,7 @@ async function resolveNeedleRun(
         return runDurableNeedleTest(
           {
             ...request,
-            baseUrl: request.baseUrl,
+            baseUrl,
             modelId: modelId.trim(),
             abortSignal: signal!,
             onControls: (value) => {
@@ -1067,7 +1040,7 @@ export function setupWebAiApiCheckMessagingListeners() {
         try {
           return {
             success: true as const,
-            summary: await needleHistory.get(data),
+            summary: await needleHistory.get(data, data.historyTarget),
           }
         } catch {
           return { success: false as const }

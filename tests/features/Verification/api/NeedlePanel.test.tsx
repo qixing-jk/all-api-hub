@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { expect, it, vi } from "vitest"
@@ -106,94 +106,105 @@ it("defaults to the longest length and preserves the user's mode across models",
   expect(runner).not.toHaveBeenCalled()
 })
 
-it("allows cell and column cancellation before any request is ready", async () => {
-  const user = userEvent.setup()
-  const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
-  const request = createDeferred<void>()
-  const runner = vi.fn()
-  function Harness() {
-    const controller = useNeedleTest({
-      enabled: true,
-      blocked: false,
-      contextKey: "preparing",
-      modelId: "test",
-      resolveHistoryRequest: async () => null,
-      resolveRequest: async () => {
-        await request.promise
-        return {
-          baseUrl: "https://example.invalid",
-          apiKey: "test",
-          apiType: "openai-compatible",
-          modelId: "test",
-          mode: "non-streaming",
-          requestProfile: "default",
-          requestProfileEnhanced: false,
-          secrets: [],
-        }
-      },
-      loadCounter: async () => ({
-        encoding: "o200k_base",
-        estimated: true,
-        declaredInput: 16384,
-      }),
-      runner,
-    })
-    return (
-      <NeedlePanel
-        controller={controller}
-        runCapacity={() => {}}
-        canRunCapacity={false}
-      />
+it.each(["details", "matrix"])(
+  "allows cell and column cancellation from %s before any request is ready",
+  async (surface) => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
+    const request = createDeferred<void>()
+    const runner = vi.fn()
+    function Harness() {
+      const controller = useNeedleTest({
+        enabled: true,
+        blocked: false,
+        contextKey: "preparing",
+        modelId: "test",
+        resolveHistoryRequest: async () => null,
+        resolveRequest: async () => {
+          await request.promise
+          return {
+            baseUrl: "https://example.invalid",
+            apiKey: "test",
+            apiType: "openai-compatible",
+            modelId: "test",
+            mode: "non-streaming",
+            requestProfile: "default",
+            requestProfileEnhanced: false,
+            secrets: [],
+          }
+        },
+        loadCounter: async () => ({
+          encoding: "o200k_base",
+          estimated: true,
+          declaredInput: 16384,
+        }),
+        runner,
+      })
+      return (
+        <NeedlePanel
+          controller={controller}
+          runCapacity={() => {}}
+          canRunCapacity={false}
+        />
+      )
+    }
+    render(
+      <I18nextProvider i18n={i18n}>
+        <Harness />
+      </I18nextProvider>,
     )
-  }
-  render(
-    <I18nextProvider i18n={i18n}>
-      <Harness />
-    </I18nextProvider>,
-  )
-  await user.click(
-    await screen.findByRole("button", { name: "Run 50% column (2 requests)" }),
-  )
-  try {
-    const result = within(
-      screen.getByRole("region", { name: "Execution result" }),
-    )
-    expect(
-      screen.queryByRole("region", { name: "Test preview" }),
-    ).not.toBeInTheDocument()
-    expect(result.getByRole("table")).toBeVisible()
-    expect(result.getByRole("button", { name: "Stop" })).toBeEnabled()
-    expect(result.getByText("2 requests")).toBeVisible()
-    expect(result.getByText("Each length is tested at 50%.")).toBeVisible()
-    const matrix = within(screen.getByRole("table"))
-    expect(matrix.getAllByText("Pending")).toHaveLength(2)
-    expect(matrix.getAllByText("Not in this run")).toHaveLength(4)
-    expect(runner).not.toHaveBeenCalled()
     await user.click(
-      matrix.getByRole("button", { name: "8192 tokens · 50%: Pending" }),
+      await screen.findByRole("button", {
+        name: "Run 50% column (2 requests)",
+      }),
     )
-    const stopCell = within(
-      screen.getByRole("region", { name: "Cell details" }),
-    ).getByRole("button", { name: "Stop 8K · 50%" })
-    expect(stopCell).toBeEnabled()
-    await user.click(stopCell)
-    expect(
-      matrix.getByRole("button", { name: "8192 tokens · 50%: Cancelled" }),
-    ).toBeVisible()
-    expect(matrix.getAllByText("Pending")).toHaveLength(1)
-    await user.click(matrix.getByRole("button", { name: "Stop 50% column" }))
-    expect(matrix.getAllByText("Cancelled")).toHaveLength(2)
-  } finally {
-    request.resolve()
-    await waitFor(() =>
+    try {
+      const result = within(
+        screen.getByRole("region", { name: "Execution result" }),
+      )
       expect(
-        screen.getByRole("button", { name: "Run needle test" }),
-      ).toBeEnabled(),
-    )
-  }
-  expect(runner).not.toHaveBeenCalled()
-  expect(screen.queryByText("Preparing test requests…")).not.toBeInTheDocument()
-})
+        screen.queryByRole("region", { name: "Test preview" }),
+      ).not.toBeInTheDocument()
+      expect(result.getByRole("table")).toBeVisible()
+      expect(result.getByRole("button", { name: "Stop" })).toBeEnabled()
+      expect(result.getByText("2 requests")).toBeVisible()
+      expect(result.getByText("Each length is tested at 50%.")).toBeVisible()
+      const matrix = within(screen.getByRole("table"))
+      expect(matrix.getAllByText("Pending")).toHaveLength(2)
+      expect(matrix.getAllByText("Not in this run")).toHaveLength(4)
+      expect(runner).not.toHaveBeenCalled()
+      await user.click(
+        matrix.getByRole("button", { name: "8192 tokens · 50%: Pending" }),
+      )
+      const stopCell = within(
+        screen.getByRole("region", { name: "Cell details" }),
+      ).getByRole("button", { name: "Stop 8K · 50%" })
+      expect(stopCell).toBeEnabled()
+      await user.click(
+        surface === "details"
+          ? stopCell
+          : matrix.getByRole("button", { name: "Stop 8K · 50%" }),
+      )
+      expect(
+        matrix.getByRole("button", { name: "8192 tokens · 50%: Cancelled" }),
+      ).toBeVisible()
+      expect(matrix.getAllByText("Pending")).toHaveLength(1)
+      await user.click(matrix.getByRole("button", { name: "Stop 50% column" }))
+      expect(matrix.getAllByText("Cancelled")).toHaveLength(2)
+    } finally {
+      await act(async () => request.resolve())
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Run needle test" }),
+        ).toBeEnabled(),
+      )
+    }
+    expect(runner).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText("Preparing test requests…"),
+    ).not.toBeInTheDocument()
+  },
+)
 
 it("starts preparation at zero when retesting a column with partial saved results", async () => {
   const user = userEvent.setup()
@@ -286,7 +297,7 @@ it("starts preparation at zero when retesting a column with partial saved result
     expect(matrix.getAllByText("Pending")).toHaveLength(2)
     expect(matrix.getAllByText("Not in this run")).toHaveLength(2)
   } finally {
-    pending.resolve()
+    await act(async () => pending.resolve())
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Run needle test" }),
@@ -464,7 +475,7 @@ it("explains a compact plan with keyboard-accessible exact numbers without runni
   expect(runner).not.toHaveBeenCalled()
 })
 
-it("offers a context probe for unknown capacity and updates the automatic plan after it completes", async () => {
+async function renderCapacityPanel(measured = 0) {
   const user = userEvent.setup()
   const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
   const probe = vi.fn()
@@ -508,7 +519,17 @@ it("offers a context probe for unknown capacity and updates the automatic plan a
       </I18nextProvider>
     )
   }
-  const view = render(<Harness />)
+  const view = render(<Harness measured={measured} />)
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Run needle test" }),
+    ).toBeEnabled(),
+  )
+  return { user, probe, runner, view, Harness }
+}
+
+it("offers a context probe for unknown capacity and updates the automatic plan after it completes", async () => {
+  const { user, probe, runner, view, Harness } = await renderCapacityPanel()
   await user.click(
     screen.getByRole("switch", { name: "Test only the longest text" }),
   )
@@ -587,6 +608,17 @@ it("offers a context probe for unknown capacity and updates the automatic plan a
   expect(screen.getByRole("button", { name: "Run needle test" })).toBeEnabled()
   expect(initialLimit).toHaveAccessibleDescription(
     "Previously accepted: 32K input (maximum unknown)",
+  )
+})
+
+it("validates edited needle parameters and preserves them when an interrupted result arrives", async () => {
+  const { user, runner } = await renderCapacityPanel(32768)
+  const initialLimit = screen.getByRole("combobox", {
+    name: "Maximum text length (tokens)",
+  })
+  await waitFor(() => expect(initialLimit).toHaveTextContent("Automatic (32K)"))
+  await user.click(
+    screen.getByRole("switch", { name: "Test only the longest text" }),
   )
   const quick = screen.getByRole("switch", {
     name: "Test only the longest text",

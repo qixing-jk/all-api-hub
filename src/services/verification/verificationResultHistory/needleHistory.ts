@@ -1,9 +1,17 @@
 import type { NeedleResult } from "~/services/verification/modelQuality/needleRun"
+import { normalizeProbeBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 
 import type { ContextHistoryRequest } from "./contextCapacityHistory"
 import { getVerificationScopeKey, modelTarget } from "./requestIdentity"
 import { verificationResultHistoryStorage } from "./storage"
 import type { ApiVerificationHistoryTarget, NeedleSummary } from "./types"
+
+/** Needle execution, checkpoints and history share the same protocol base address. */
+export function getNeedleScopeKey(request: ContextHistoryRequest) {
+  const baseUrl = normalizeProbeBaseUrl(request)
+  if (!baseUrl) throw new Error("Invalid base URL")
+  return getVerificationScopeKey({ ...request, baseUrl })
+}
 
 export const needleHistory = {
   async get(
@@ -11,7 +19,7 @@ export const needleHistory = {
     target?: ApiVerificationHistoryTarget,
   ) {
     return verificationResultHistoryStorage.getNeedleSummary(
-      await getVerificationScopeKey(request),
+      await getNeedleScopeKey(request),
       modelTarget(target, request.modelId),
     )
   },
@@ -24,7 +32,7 @@ export const needleHistory = {
     const summary: NeedleSummary = {
       target: modelTarget(target, request.modelId),
       targetKey: "",
-      scopeKey: await getVerificationScopeKey(request),
+      scopeKey: await getNeedleScopeKey(request),
       verifiedAt,
       result,
     }

@@ -166,6 +166,249 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("webAiApiCheck background handlers", () => {
+  const needleRequest = {
+    runId: "needle-validation",
+    apiType: "openai",
+    baseUrl: "https://example.invalid",
+    apiKey: "needle-secret",
+    modelId: "test",
+    seed: 42,
+  }
+
+  it.each([
+    { runId: "" },
+    { apiKey: " " },
+    { modelId: "" },
+    { apiType: "invalid" },
+    { mode: "invalid" },
+    { requestProfile: "invalid" },
+    { baseUrl: "not a URL" },
+    { requestHeaders: null },
+    { requestHeaders: [] },
+    { requestHeaders: "headers" },
+    { requestHeaders: { "": "value" } },
+    { requestHeaders: { route: 1 } },
+    { requestHeaders: { route: "value\r\nInjected: yes" } },
+  ])(
+    "rejects invalid needle configuration before dispatch %#",
+    async (override) => {
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+      const durable = await import(
+        "~/services/verification/webAiApiCheck/needleCheckpoint"
+      )
+      const run = vi.spyOn(durable, "runDurableNeedleTest")
+      background.setupWebAiApiCheckMessagingListeners()
+      try {
+        await expect(
+          webAiApiCheckMessageHandlers.get("webAiApiCheck:runNeedle")!({
+            data: { ...needleRequest, ...override },
+          }),
+        ).resolves.toMatchObject({ success: false })
+        expect(run).not.toHaveBeenCalled()
+      } finally {
+        run.mockRestore()
+      }
+    },
+  )
+
+  it.each([undefined, { tab: { id: 8 }, frameId: 2 }])(
+    "routes needle progress and scoped cancellation to its active owner: %j",
+    async (sender) => {
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+      const durable = await import(
+        "~/services/verification/webAiApiCheck/needleCheckpoint"
+      )
+      const messaging = await import(
+        "~/services/verification/webAiApiCheck/messaging"
+      )
+      const { createNeedleResult } = await import("~~/tests/test-utils/needle")
+      const entered = createDeferred<void>()
+      const finish = createDeferred<void>()
+      const stopSelection = vi.fn().mockResolvedValue(true)
+      const send = vi
+        .spyOn(messaging, "sendWebAiApiCheckMessage")
+        .mockResolvedValue(undefined)
+      const run = vi
+        .spyOn(durable, "runDurableNeedleTest")
+        .mockImplementation(async (params) => {
+          params.onControls?.({ stopSelection })
+          params.onProgress?.(createNeedleResult({ reason: "running" }))
+          entered.resolve()
+          await finish.promise
+          return createNeedleResult()
+        })
+      background.setupWebAiApiCheckMessagingListeners()
+      const execution = webAiApiCheckMessageHandlers.get(
+        "webAiApiCheck:runNeedle",
+      )!({ data: needleRequest, sender })
+      try {
+        await entered.promise
+        expect(send).toHaveBeenCalledWith(
+          "webAiApiCheck:needleProgress",
+          expect.objectContaining({ runId: needleRequest.runId }),
+          sender ? { tabId: 8, frameId: 2 } : undefined,
+        )
+        await expect(
+          webAiApiCheckMessageHandlers.get(
+            "webAiApiCheck:stopNeedleSelection",
+          )!({
+            data: { runId: needleRequest.runId, selection: { depth: 50 } },
+          }),
+        ).resolves.toEqual({ success: true, cancelled: true })
+        expect(stopSelection).toHaveBeenCalledWith({ depth: 50 })
+      } finally {
+        finish.resolve()
+        await expect(execution).resolves.toMatchObject({ success: true })
+        run.mockRestore()
+        send.mockRestore()
+      }
+      await expect(
+        webAiApiCheckMessageHandlers.get("webAiApiCheck:stopNeedleSelection")!({
+          data: { runId: needleRequest.runId, selection: { depth: 50 } },
+        }),
+      ).resolves.toEqual({ success: true, cancelled: false })
+      expect(stopSelection).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("redacts failed needle requests and preserves checkpoint recovery classification", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const durable = await import(
+      "~/services/verification/webAiApiCheck/needleCheckpoint"
+    )
+    const { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } = await import(
+      "~/services/verification/modelQuality/contextCapacityConstants"
+    )
+    const run = vi.spyOn(durable, "runDurableNeedleTest").mockRejectedValue(
+      Object.assign(new Error("needle-secret private-header unavailable"), {
+        name: CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
+      }),
+    )
+    background.setupWebAiApiCheckMessagingListeners()
+    try {
+      const response = await webAiApiCheckMessageHandlers.get(
+        "webAiApiCheck:runNeedle",
+      )!({
+        data: { ...needleRequest, requestHeaders: { route: "private-header" } },
+      })
+      expect(response).toMatchObject({
+        success: false,
+        errorName: CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
+        checkpointLimitReached: true,
+      })
+      expect(JSON.stringify(response)).not.toContain("needle-secret")
+      expect(JSON.stringify(response)).not.toContain("private-header")
+    } finally {
+      run.mockRestore()
+    }
+  })
+
+  it("normalizes pasted needle endpoints and forwards the history owner on readback", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const durable = await import(
+      "~/services/verification/webAiApiCheck/needleCheckpoint"
+    )
+    const { needleHistory } = await import(
+      "~/services/verification/verificationResultHistory/needleHistory"
+    )
+    const { createNeedleResult } = await import("~~/tests/test-utils/needle")
+    const historyTarget = {
+      kind: "profile-model",
+      profileId: "owner",
+      modelId: "test",
+    } as const
+    const run = vi
+      .spyOn(durable, "runDurableNeedleTest")
+      .mockResolvedValue(createNeedleResult())
+    const get = vi.spyOn(needleHistory, "get").mockResolvedValue(null)
+    background.setupWebAiApiCheckMessagingListeners()
+    try {
+      const data = {
+        ...needleRequest,
+        apiType: "google",
+        baseUrl: "https://example.invalid/v1beta/models/test:generateContent",
+        historyTarget,
+      }
+      await webAiApiCheckMessageHandlers.get("webAiApiCheck:runNeedle")!({
+        data,
+      })
+      expect(run).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl: "https://example.invalid" }),
+        false,
+        historyTarget,
+      )
+      await webAiApiCheckMessageHandlers.get("webAiApiCheck:needleHistory")!({
+        data,
+      })
+      expect(get).toHaveBeenCalledWith(data, historyTarget)
+    } finally {
+      run.mockRestore()
+      get.mockRestore()
+    }
+  })
+
+  it("reports metadata, history and discard failures without claiming success", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const tokens = await import(
+      "~/services/verification/modelQuality/contextTokens"
+    )
+    const { needleHistory } = await import(
+      "~/services/verification/verificationResultHistory/needleHistory"
+    )
+    const durable = await import(
+      "~/services/verification/webAiApiCheck/needleCheckpoint"
+    )
+    const info = { encoding: "o200k_base", estimated: true }
+    const metadata = vi
+      .spyOn(tokens, "getModelContextInfo")
+      .mockResolvedValueOnce(info)
+      .mockRejectedValue(new Error("Unavailable"))
+    const get = vi
+      .spyOn(needleHistory, "get")
+      .mockResolvedValueOnce(null)
+      .mockRejectedValue(new Error("Unavailable"))
+    const discard = vi
+      .spyOn(durable, "discardInactiveNeedleCheckpoints")
+      .mockRejectedValue(new Error("Unavailable"))
+    background.setupWebAiApiCheckMessagingListeners()
+    const invoke = (type: string, data: unknown) =>
+      webAiApiCheckMessageHandlers.get(type)!({ data })
+    try {
+      await expect(
+        invoke("webAiApiCheck:contextCounter", { modelId: " " }),
+      ).resolves.toEqual({ success: false })
+      await expect(
+        invoke("webAiApiCheck:contextCounter", { modelId: "test" }),
+      ).resolves.toEqual({ success: true, counter: info })
+      await expect(
+        invoke("webAiApiCheck:contextCounter", { modelId: "test" }),
+      ).resolves.toEqual({ success: false })
+      await expect(
+        invoke("webAiApiCheck:needleHistory", needleRequest),
+      ).resolves.toEqual({ success: true, summary: null })
+      await expect(
+        invoke("webAiApiCheck:needleHistory", needleRequest),
+      ).resolves.toEqual({ success: false })
+      await expect(
+        invoke("webAiApiCheck:discardNeedleCheckpoints", {}),
+      ).resolves.toEqual({ success: false })
+    } finally {
+      metadata.mockRestore()
+      get.mockRestore()
+      discard.mockRestore()
+    }
+  })
+
   it("keeps one background owner across native pages, protects its checkpoint and preserves request headers", async () => {
     const background = await import(
       "~/services/verification/webAiApiCheck/background"

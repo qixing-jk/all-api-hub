@@ -6,7 +6,10 @@ import type { ContextCounterInfo } from "~/services/verification/modelQuality/co
 import type { NeedleSelection } from "~/services/verification/modelQuality/needlePlan"
 import type { NeedleResult } from "~/services/verification/modelQuality/needleRun"
 import type { ContextHistoryRequest } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
-import type { NeedleSummary } from "~/services/verification/verificationResultHistory/types"
+import type {
+  ApiVerificationHistoryTarget,
+  NeedleSummary,
+} from "~/services/verification/verificationResultHistory/types"
 import { createLogger } from "~/utils/core/logger"
 
 import type {
@@ -92,7 +95,9 @@ interface WebAiApiCheckProtocolMap {
     modelId: string
   }): { success: true; counter: ContextCounterInfo } | { success: false }
   [WebAiApiCheckMessageTypes.NeedleHistory](
-    data: ContextHistoryRequest,
+    data: ContextHistoryRequest & {
+      historyTarget?: ApiVerificationHistoryTarget
+    },
   ): { success: true; summary: NeedleSummary | null } | { success: false }
   [WebAiApiCheckMessageTypes.RunNeedle](
     data: ApiCheckRunNeedleRequest,

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, expect, it, vi } from "vitest"
@@ -43,6 +43,7 @@ it.each([
     }
     const coordinate = { targetTokens: 8192, depth: 50 }
     const pending = createDeferred<void>()
+    const dispatched = [createDeferred<void>(), createDeferred<void>()]
     let requests = 0
     vi.stubGlobal(
       "fetch",
@@ -50,6 +51,7 @@ it.each([
         if (String(url) === MODEL_METADATA_URL)
           return Response.json({ models: [] })
         requests++
+        dispatched[requests - 1]?.resolve()
         await pending.promise
         return Response.json({
           id: "needle",
@@ -152,7 +154,8 @@ it.each([
           name: outcome === "untested" ? "Run this cell" : "Retest this cell",
         }),
       )
-      await waitFor(() => expect(requests).toBe(1))
+      await act(async () => dispatched[0]!.promise)
+      expect(requests).toBe(1)
       expect(
         details.getByRole("button", { name: "Stop 8K · 50%" }),
       ).toBeEnabled()
@@ -171,7 +174,8 @@ it.each([
       screen.getByRole("button", { name: "8192 tokens · 50%: Miss" }),
     ).toBeVisible()
     await user.click(details.getByRole("button", { name: "Retest this cell" }))
-    await waitFor(() => expect(requests).toBe(2))
+    await act(async () => dispatched[1]!.promise)
+    expect(requests).toBe(2)
     await waitFor(() =>
       expect(
         details.getByRole("button", { name: "Retest this cell" }),
@@ -192,6 +196,7 @@ it.each(["complete", "stop", "error", "cell", "retry"])(
     const pending = createDeferred<void>()
     const persisted = createDeferred<void>()
     const settled = createDeferred<void>()
+    const secondRequest = createDeferred<void>()
     let requests = 0
     let cancellationAttempts = 0
     vi.stubGlobal(
@@ -201,6 +206,7 @@ it.each(["complete", "stop", "error", "cell", "retry"])(
           return Response.json({ models: [] })
         requests++
         if (requests === 2) {
+          secondRequest.resolve()
           await Promise.race([
             pending.promise,
             new Promise((_, reject) =>
@@ -301,7 +307,8 @@ it.each(["complete", "stop", "error", "cell", "retry"])(
     )
     const result = () =>
       within(screen.getByRole("region", { name: "Execution result" }))
-    await waitFor(() => expect(requests).toBe(2))
+    await act(async () => secondRequest.promise)
+    expect(requests).toBe(2)
     try {
       const matrix = screen.getByRole("table")
       const cells = within(matrix).getAllByRole("cell")
@@ -362,8 +369,11 @@ it.each(["complete", "stop", "error", "cell", "retry"])(
         ).not.toBeInTheDocument()
       }
     } finally {
-      pending.resolve()
-      persisted.resolve()
+      await act(async () => {
+        pending.resolve()
+        persisted.resolve()
+        await settled.promise
+      })
       await waitFor(() =>
         expect(
           screen.getByRole("button", { name: "Run needle test" }),

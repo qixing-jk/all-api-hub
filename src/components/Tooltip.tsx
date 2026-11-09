@@ -229,6 +229,9 @@ export default function Tooltip({
     className: defaultClassName,
     isOpen,
     setIsOpen,
+    // A closing transition can unmount the popup during a queued reopen.
+    // Keep the modal's nested-layer marker tied to the actual popup lifecycle.
+    afterHide: () => setIsOpen(false),
     role: isOpen ? "tooltip" : "presentation",
     openEvents: openOnClick
       ? { mouseover: true, focus: true, click: true }

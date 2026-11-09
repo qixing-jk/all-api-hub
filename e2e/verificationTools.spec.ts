@@ -546,12 +546,10 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         .filter({ hasText: "History does not retain the drawing" })
       await expect(historyHint).toBeVisible()
       await expect(historyHint).toHaveClass(/react-tooltip__show/)
-      await page
-        .getByRole("dialog")
-        .screenshot({
-          path: test.info().outputPath("drawing-history-tooltip.png"),
-          animations: "disabled",
-        })
+      await page.getByRole("dialog").screenshot({
+        path: test.info().outputPath("drawing-history-tooltip.png"),
+        animations: "disabled",
+      })
       await page.keyboard.press("Escape")
       await expect(historyHint).toBeHidden()
       await historyBadge.focus()
@@ -580,12 +578,10 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         await expect(historyHint).toBeVisible()
         await expect(historyHint).toHaveClass(/react-tooltip__show/)
         await expect(drawingSelection).toHaveAttribute("aria-expanded", "true")
-        await page
-          .getByRole("dialog")
-          .screenshot({
-            path: test.info().outputPath("drawing-history-tooltip-narrow.png"),
-            animations: "disabled",
-          })
+        await page.getByRole("dialog").screenshot({
+          path: test.info().outputPath("drawing-history-tooltip-narrow.png"),
+          animations: "disabled",
+        })
         await page.keyboard.press("Escape")
         await expect(historyHint).toBeHidden()
       } finally {
@@ -1256,7 +1252,11 @@ test("an edited probe prompt persists and is used by the next run", async ({
       getApiCredentialProfileVerifyProbeTestId("text-generation"),
     )
     await expect(probeCard).toBeVisible()
+    const heightBeforeResize = (await workspaceFrame.boundingBox())!.height
     await page.setViewportSize({ width: 1280, height: 1280 })
+    await expect
+      .poll(async () => (await workspaceFrame.boundingBox())!.height)
+      .toBeGreaterThan(heightBeforeResize)
     const inlineRun = probeCard
       .getByText("Select Run to start this test.", { exact: true })
       .getByRole("button", { name: "Run", exact: true })
@@ -1373,12 +1373,10 @@ test("an edited probe prompt persists and is used by the next run", async ({
         .getByRole("tooltip")
         .filter({ hasText: "History keeps the test summary" }),
     ).toBeVisible()
-    await page
-      .getByRole("dialog")
-      .screenshot({
-        path: test.info().outputPath("probe-history-tooltip.png"),
-        animations: "disabled",
-      })
+    await page.getByRole("dialog").screenshot({
+      path: test.info().outputPath("probe-history-tooltip.png"),
+      animations: "disabled",
+    })
     await page.keyboard.press("Escape")
     const header = page.getByTestId("verification-header")
     const titleBounds = await header.getByRole("heading").boundingBox()

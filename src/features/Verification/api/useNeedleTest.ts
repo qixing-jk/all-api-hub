@@ -25,10 +25,10 @@ import type {
   RunNeedleParams,
 } from "~/services/verification/modelQuality/needleRun"
 import {
+  getNeedleScopeKey,
   needleHistory,
   type NeedleHistoryAccess,
 } from "~/services/verification/verificationResultHistory/needleHistory"
-import { getVerificationScopeKey } from "~/services/verification/verificationResultHistory/requestIdentity"
 import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
 import { LONG_CONTEXT_ERROR_NAMES } from "~/services/verification/webAiApiCheck/longContextConstants"
 import { runNeedleInBackground } from "~/services/verification/webAiApiCheck/needleClient"
@@ -88,6 +88,8 @@ export function useNeedleTest(options: Options) {
   const latest = useRef(options)
   latest.current = options
   const observed = useRef<NeedleResult | null>(null)
+  // Local cancellation/progress snapshots are not accepted persistence baselines.
+  const resumable = useRef<NeedleResult | null>(null)
   const resultScope = useRef<string | null>(null)
   useEffect(() => {
     const version = ++generation.current
@@ -98,6 +100,7 @@ export function useNeedleTest(options: Options) {
     active.current?.abort()
     active.current = null
     observed.current = null
+    resumable.current = null
     resultScope.current = null
     setCounter(null)
     setResult(null)
@@ -136,8 +139,9 @@ export function useNeedleTest(options: Options) {
           const saved = await (
             configuration.historyAccess ?? needleHistory
           ).get(request, configuration.historyTarget ?? undefined)
-          const scope = await getVerificationScopeKey(request)
+          const scope = await getNeedleScopeKey(request)
           if (current() && saved) {
+            resumable.current = saved.result
             resultScope.current = scope
             setResult(saved.result)
             setHistorical(true)
@@ -187,7 +191,7 @@ export function useNeedleTest(options: Options) {
     const version = ++generation.current
     const current = () => version === generation.current
     const configuration = latest.current
-    const previous = selection ? result : null
+    const previous = selection ? resumable.current : null
     const approvedPlan = selection
       ? expandNeedlePlan(previous?.plan ?? planning.plan)
       : planning.plan
@@ -251,6 +255,7 @@ export function useNeedleTest(options: Options) {
     if (!previous) setResult(null)
     observed.current = previous
     let secrets: string[] = []
+    let resolvedRequest: VerificationToolRequestParams | null = null
     try {
       const request = await configuration.resolveRequest(controller.signal)
       controller.signal.throwIfAborted()
@@ -259,7 +264,8 @@ export function useNeedleTest(options: Options) {
         return
       }
       secrets = request.secrets
-      const scope = await getVerificationScopeKey(request)
+      resolvedRequest = request
+      const scope = await getNeedleScopeKey(request)
       if (!current()) return
       controller.signal.throwIfAborted()
       if (previous && scope !== resultScope.current)
@@ -300,6 +306,7 @@ export function useNeedleTest(options: Options) {
       )
       if (current()) {
         observed.current = finished
+        resumable.current = finished
         setResult(finished)
       }
     } catch (failure) {
@@ -332,6 +339,21 @@ export function useNeedleTest(options: Options) {
                     detail: toSanitizedErrorSummary(failure, secrets),
                   }),
           )
+          if (resolvedRequest) {
+            try {
+              const saved = await (
+                configuration.historyAccess ?? needleHistory
+              ).get(resolvedRequest, configuration.historyTarget ?? undefined)
+              const scope = await getNeedleScopeKey(resolvedRequest)
+              if (current()) {
+                resumable.current = saved?.result ?? null
+                resultScope.current = saved ? scope : null
+                if (saved) setResult(saved.result)
+              }
+            } catch {
+              if (current()) setHistoryError(true)
+            }
+          }
         }
       }
     } finally {
@@ -399,6 +421,7 @@ export function useNeedleTest(options: Options) {
       setStopError(null)
       setExecution(null)
       setResult(null)
+      resumable.current = null
       resultScope.current = null
       setHistorical(false)
     },

@@ -1,3 +1,7 @@
+import {
+  API_TYPES,
+  type ApiVerificationApiType,
+} from "~/services/verification/aiApiVerification/types"
 import { normalizeHttpUrl } from "~/utils/core/url"
 import {
   normalizeUrlForBasePath,
@@ -99,6 +103,28 @@ export function normalizeOpenAiFamilyBaseUrl(baseUrl: string): string | null {
  */
 export function normalizeGoogleFamilyBaseUrl(baseUrl: string): string | null {
   return normalizeBaseUrlByStrippingPathSegment(baseUrl, "v1beta")
+}
+
+/**
+ * Normalize a base URL for probe execution, keeping behavior consistent across api types.
+ */
+export function normalizeProbeBaseUrl(params: {
+  apiType: ApiVerificationApiType
+  baseUrl: string
+}): string | null {
+  if (
+    params.apiType === API_TYPES.OPENAI_COMPATIBLE ||
+    params.apiType === API_TYPES.OPENAI ||
+    params.apiType === API_TYPES.ANTHROPIC
+  ) {
+    return normalizeOpenAiFamilyBaseUrl(params.baseUrl)
+  }
+
+  if (params.apiType === API_TYPES.GOOGLE) {
+    return normalizeGoogleFamilyBaseUrl(params.baseUrl)
+  }
+
+  return normalizeApiCheckBaseUrl(params.baseUrl)
 }
 
 /**

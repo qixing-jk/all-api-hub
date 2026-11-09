@@ -21,7 +21,7 @@ export const loadNeedleCounterInBackground: typeof getModelContextInfo = async (
   return response.counter
 }
 export const needleHistoryInBackground: NeedleHistoryAccess = {
-  async get(request) {
+  async get(request, historyTarget) {
     const {
       baseUrl,
       apiKey,
@@ -43,6 +43,7 @@ export const needleHistoryInBackground: NeedleHistoryAccess = {
         requestProfile,
         requestProfileEnhanced,
         requestHeaders,
+        historyTarget,
       },
     )
     if (!response.success) throw new Error("Needle history unavailable")

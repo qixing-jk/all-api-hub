@@ -11,6 +11,8 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import {
+  discardNeedleCheckpointsInBackground,
+  loadNeedleCounterInBackground,
   needleHistoryInBackground,
   runNeedleInBackground,
 } from "~/services/verification/webAiApiCheck/needleClient"
@@ -37,6 +39,80 @@ const request = {
   requestHeaders: { "x-route": "private-route" },
 }
 beforeEach(() => vi.clearAllMocks())
+
+it("reports unavailable history without presenting an empty successful result", async () => {
+  vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({ success: false })
+  await expect(needleHistoryInBackground.get(request)).rejects.toThrow(
+    "Needle history unavailable",
+  )
+  await expect(loadNeedleCounterInBackground("test")).rejects.toThrow(
+    "Unable to load context information",
+  )
+})
+
+it("only confirms checkpoint discard after the background accepts it", async () => {
+  vi.mocked(sendWebAiApiCheckMessage).mockResolvedValueOnce({ success: false })
+  await expect(discardNeedleCheckpointsInBackground()).rejects.toThrow(
+    "Could not discard",
+  )
+  vi.mocked(sendWebAiApiCheckMessage).mockResolvedValueOnce({ success: true })
+  await expect(discardNeedleCheckpointsInBackground()).resolves.toBeUndefined()
+  expect(sendWebAiApiCheckMessage).toHaveBeenLastCalledWith(
+    WebAiApiCheckMessageTypes.DiscardNeedleCheckpoints,
+    {},
+  )
+})
+
+it("rejects writes from the page because the durable runner owns result persistence", async () => {
+  await expect(
+    needleHistoryInBackground.save(request, createNeedleResult()),
+  ).rejects.toThrow("saved by the background runner")
+  expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
+})
+
+it("recovers a lost background response through readback without replaying the run", async () => {
+  const recovered = createNeedleResult({
+    reason: NEEDLE_RUN_REASONS.Interrupted,
+  })
+  vi.mocked(sendWebAiApiCheckMessage)
+    .mockRejectedValueOnce(new Error("Port closed"))
+    .mockResolvedValueOnce({ success: true, result: recovered })
+  await expect(
+    runNeedleInBackground({
+      ...request,
+      abortSignal: new AbortController().signal,
+    }),
+  ).resolves.toEqual(recovered)
+  expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(2)
+  const first = vi.mocked(sendWebAiApiCheckMessage).mock.calls[0]![1] as {
+    runId: string
+  }
+  expect(sendWebAiApiCheckMessage).toHaveBeenNthCalledWith(
+    2,
+    WebAiApiCheckMessageTypes.RunNeedle,
+    expect.objectContaining({ runId: first.runId, recoverOnly: true }),
+  )
+})
+
+it.each([false, true])(
+  "preserves background rejection and checkpoint classification: %s",
+  async (checkpointLimitReached) => {
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValueOnce({
+      success: false,
+      checkpointLimitReached,
+    })
+    await expect(
+      runNeedleInBackground({
+        ...request,
+        abortSignal: new AbortController().signal,
+      }),
+    ).rejects.toMatchObject({
+      message: "Long-context test failed",
+      name: checkpointLimitReached ? "ContextCheckpointLimitError" : "Error",
+    })
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce()
+  },
+)
 
 it("routes scoped stops to the current background run without aborting its progress subscription", async () => {
   const finished = createDeferred<ApiCheckRunNeedleResponse>()
@@ -165,4 +241,21 @@ it("keeps custom headers in both history identity and provider dispatch", async 
       type,
       expect.objectContaining({ requestHeaders: request.requestHeaders }),
     )
+})
+
+it("passes the model owner through background history lookup", async () => {
+  const target = {
+    kind: "profile-model" as const,
+    profileId: "owner",
+    modelId: "test",
+  }
+  vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+    success: true,
+    summary: null,
+  })
+  await needleHistoryInBackground.get(request, target)
+  expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+    WebAiApiCheckMessageTypes.NeedleHistory,
+    expect.objectContaining({ historyTarget: target }),
+  )
 })

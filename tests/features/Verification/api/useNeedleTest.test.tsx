@@ -1,0 +1,356 @@
+import { act, renderHook, waitFor } from "@testing-library/react"
+import { expect, it, vi } from "vitest"
+
+import { useNeedleTest } from "~/features/Verification/api/useNeedleTest"
+import { LONG_CONTEXT_ERROR_NAMES } from "~/services/verification/webAiApiCheck/longContextConstants"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import { createNeedleResult } from "~~/tests/test-utils/needle"
+
+const request = {
+  baseUrl: "https://example.invalid",
+  apiKey: "secret",
+  modelId: "test",
+  apiType: "openai-compatible" as const,
+  mode: "non-streaming" as const,
+  requestProfile: "default" as const,
+  requestProfileEnhanced: false,
+  secrets: ["secret"],
+}
+type Options = Parameters<typeof useNeedleTest>[0]
+const counter = {
+  encoding: "o200k_base",
+  estimated: true,
+  declaredInput: 16384,
+}
+const saved = createNeedleResult({ counter })
+
+async function setup(overrides: Partial<Options> = {}) {
+  const options: Options = {
+    enabled: true,
+    blocked: false,
+    contextKey: "test",
+    modelId: "test",
+    resolveRequest: async () => request,
+    resolveHistoryRequest: async () => request,
+    loadCounter: async () => counter,
+    historyAccess: { get: async () => null, save: vi.fn() },
+    runner: vi.fn().mockResolvedValue(saved),
+    ...overrides,
+  }
+  const hook = renderHook((props: Options) => useNeedleTest(props), {
+    initialProps: options,
+  })
+  await waitFor(() => expect(hook.result.current.counter).toEqual(counter))
+  return { ...hook, options }
+}
+
+it("retries failed metadata and history loads without dispatching a provider request", async () => {
+  const loadCounter = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Unavailable"))
+    .mockResolvedValue(counter)
+  const get = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Unavailable"))
+    .mockResolvedValue(null)
+  const runner = vi.fn()
+  const { result } = renderHook(() =>
+    useNeedleTest({
+      enabled: true,
+      blocked: false,
+      contextKey: "retry",
+      modelId: "test",
+      resolveRequest: async () => request,
+      loadCounter,
+      runner,
+      historyAccess: { get, save: vi.fn() },
+    }),
+  )
+  await waitFor(() => expect(result.current.historyError).toBe(true))
+  expect(result.current.error).toBeTruthy()
+  expect(result.current.canRun).toBe(false)
+  act(() => result.current.retry())
+  await waitFor(() => expect(result.current.canRun).toBe(true))
+  expect(result.current.historyError).toBe(false)
+  expect(result.current.error).toBeNull()
+  expect(runner).not.toHaveBeenCalled()
+})
+
+it("rejects invalid sample IDs without dispatch and recovers when corrected", async () => {
+  const runner = vi.fn().mockResolvedValue(saved)
+  const { result } = await setup({ runner })
+  for (const value of ["-1", "1.5", "4294967296", "not-a-number"]) {
+    act(() => result.current.setSeedDraft(value))
+    expect(result.current.invalid).toBe(true)
+    await act(() => result.current.run())
+    expect(runner).not.toHaveBeenCalled()
+  }
+  act(() => result.current.setSeedDraft("42"))
+  await act(() => result.current.run())
+  expect(runner).toHaveBeenCalledWith(
+    expect.objectContaining({ seed: 42 }),
+    undefined,
+  )
+})
+
+it("refuses to reuse measurements after the resolved connection changes", async () => {
+  const runner = vi.fn().mockResolvedValue(saved)
+  const { result } = await setup({
+    runner,
+    resolveRequest: async () => ({ ...request, apiKey: "different" }),
+    historyAccess: {
+      get: async () => ({
+        result: saved,
+        targetKey: "test",
+        scopeKey: "test",
+        verifiedAt: 1,
+      }),
+      save: vi.fn(),
+    },
+  })
+  await waitFor(() => expect(result.current.historical).toBe(true))
+  await act(() => result.current.runSelection({ depth: 50 }))
+  expect(runner).not.toHaveBeenCalled()
+  expect(result.current.error).toBeTruthy()
+  expect(result.current.result).toEqual(saved)
+  // Readback has now loaded the selected connection's own saved baseline.
+  await act(() => result.current.runSelection({ depth: 50 }))
+  expect(runner).toHaveBeenCalledOnce()
+})
+
+it.each([
+  LONG_CONTEXT_ERROR_NAMES.Busy,
+  LONG_CONTEXT_ERROR_NAMES.NeedleCheckpoint,
+  "Error",
+])(
+  "finishes a failed run with its observed measurements and exposes %s recovery",
+  async (name) => {
+    const failure = Object.assign(new Error("secret unavailable"), { name })
+    const discard = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(undefined)
+    const { result } = await setup({
+      discardCheckpoints: discard,
+      runner: async (params) => {
+        params.onProgress?.({
+          ...saved,
+          reason: "running",
+          inFlight: { targetTokens: 8192, depth: 10 },
+        })
+        throw failure
+      },
+    })
+    await act(() => result.current.run())
+    expect(result.current.running).toBe(false)
+    expect(result.current.result).toMatchObject({
+      reason: "error",
+      inFlight: undefined,
+      pending: undefined,
+    })
+    expect(result.current.error).toBeTruthy()
+    expect(result.current.error).not.toContain("secret")
+    expect(Boolean(result.current.discard)).toBe(
+      name === LONG_CONTEXT_ERROR_NAMES.NeedleCheckpoint,
+    )
+    if (result.current.discard) {
+      await act(() => result.current.discard!())
+      expect(result.current.checkpointError).toBe(true)
+      expect(result.current.error).toBeTruthy()
+      await act(() => result.current.discard!())
+      expect(result.current.checkpointError).toBe(false)
+      expect(result.current.error).toBeNull()
+    }
+  },
+)
+
+it("ignores late history and run completion after the workspace is cleared", async () => {
+  const history =
+    createDeferred<
+      Awaited<ReturnType<NonNullable<Options["historyAccess"]>["get"]>>
+    >()
+  const finish = createDeferred<typeof saved>()
+  const entered = createDeferred<void>()
+  const { result } = await setup({
+    historyAccess: { get: () => history.promise, save: vi.fn() },
+    runner: async () => {
+      entered.resolve()
+      return finish.promise
+    },
+  })
+  let running!: Promise<void>
+  act(() => {
+    running = result.current.run()
+  })
+  await act(async () => entered.promise)
+  act(() => result.current.clearHistory())
+  await act(async () => {
+    history.resolve({
+      result: saved,
+      targetKey: "test",
+      scopeKey: "test",
+      verifiedAt: 1,
+    })
+    finish.resolve(saved)
+    await running
+  })
+  expect(result.current.result).toBeNull()
+  expect(result.current.historical).toBe(false)
+  expect(result.current.running).toBe(false)
+})
+
+it("does not dispatch a pending request after its workspace is replaced", async () => {
+  const pending = createDeferred<typeof request>()
+  const runner = vi.fn()
+  const { result, rerender, options } = await setup({
+    resolveRequest: () => pending.promise,
+    runner,
+  })
+  let running!: Promise<void>
+  act(() => {
+    running = result.current.run()
+  })
+  const oldStop = result.current.stopSelection!
+  rerender({ ...options, contextKey: "replacement" })
+  await act(async () => {
+    await oldStop({ depth: 50 })
+    pending.resolve(request)
+    await running
+  })
+  expect(runner).not.toHaveBeenCalled()
+  expect(result.current.result).toBeNull()
+  expect(result.current.error).toBeNull()
+})
+
+it.each([false, true])(
+  "retests after cancelling all cells before credentials resolve, with saved history: %s",
+  async (hasHistory) => {
+    const pending = createDeferred<typeof request>()
+    const runner = vi.fn().mockResolvedValue(saved)
+    const { result } = await setup({
+      resolveRequest: () => pending.promise,
+      runner,
+      historyAccess: {
+        get: async () =>
+          hasHistory
+            ? {
+                result: saved,
+                targetKey: "test",
+                scopeKey: "test",
+                verifiedAt: 1,
+              }
+            : null,
+        save: vi.fn(),
+      },
+    })
+    if (hasHistory)
+      await waitFor(() => expect(result.current.historical).toBe(true))
+    let first!: Promise<void>
+    act(() => {
+      first = result.current.runSelection({ depth: 50 })
+    })
+    await act(() => result.current.stopSelection!({ depth: 50 }))
+    expect(result.current.result?.reason).toBe("stopped")
+    await act(async () => {
+      pending.resolve(request)
+      await first
+    })
+    expect(runner).not.toHaveBeenCalled()
+    await act(() => result.current.runSelection({ depth: 50 }))
+    expect(runner).toHaveBeenCalledOnce()
+    expect(runner.mock.calls[0]![0].resumeFrom).toEqual(
+      hasHistory ? saved : undefined,
+    )
+    expect(result.current.error).toBeNull()
+  },
+)
+
+it("uses finalized saved measurements when retrying cells after a runner failure", async () => {
+  const finalized = createNeedleResult({
+    ...saved,
+    reason: "error",
+    cells: [
+      {
+        targetTokens: 8192,
+        depth: 10,
+        actualDepth: 10,
+        localInputTokens: 8000,
+        outcome: "hit",
+      },
+    ],
+  })
+  let persisted = saved
+  const runner = vi
+    .fn()
+    .mockImplementationOnce(async () => {
+      persisted = finalized
+      throw new Error("Preparation failed")
+    })
+    .mockResolvedValue(finalized)
+  const { result } = await setup({
+    runner,
+    historyAccess: {
+      get: async () => ({
+        result: persisted,
+        targetKey: "test",
+        scopeKey: "test",
+        verifiedAt: 1,
+      }),
+      save: vi.fn(),
+    },
+  })
+  await waitFor(() => expect(result.current.historical).toBe(true))
+  await act(() => result.current.runSelection({ depth: 10 }))
+  expect(result.current.error).toBeTruthy()
+  await act(() => result.current.runSelection({ depth: 50 }))
+  expect(runner.mock.calls[1]![0].resumeFrom).toEqual(finalized)
+})
+
+it("reports failed history readback after a run fails without hiding the run error", async () => {
+  const get = vi
+    .fn()
+    .mockResolvedValueOnce(null)
+    .mockRejectedValue(new Error("History unavailable"))
+  const { result } = await setup({
+    historyAccess: { get, save: vi.fn() },
+    runner: async () => {
+      throw new Error("Run failed")
+    },
+  })
+  await act(() => result.current.run())
+  expect(result.current.historyError).toBe(true)
+  expect(result.current.error).toBeTruthy()
+  expect(result.current.running).toBe(false)
+})
+
+it("forwards a queued stop when background controls arrive and exposes a failed stop for retry", async () => {
+  const resolveRequest = createDeferred<typeof request>()
+  const finish = createDeferred<typeof saved>()
+  const entered = createDeferred<void>()
+  const stopSelection = vi.fn().mockRejectedValue(new Error("Stop failed"))
+  const { result } = await setup({
+    resolveRequest: () => resolveRequest.promise,
+    runner: async (params) => {
+      params.onControls?.({ stopSelection })
+      entered.resolve()
+      return finish.promise
+    },
+  })
+  let running!: Promise<void>
+  act(() => {
+    running = result.current.runSelection({ depth: 50 })
+  })
+  await act(() =>
+    result.current.stopSelection!({ targetTokens: 8192, depth: 50 }),
+  )
+  await act(async () => {
+    resolveRequest.resolve(request)
+    await entered.promise
+  })
+  expect(stopSelection).toHaveBeenCalledWith({ targetTokens: 8192, depth: 50 })
+  expect(result.current.stopError).toEqual({ targetTokens: 8192, depth: 50 })
+  await act(async () => {
+    finish.resolve(saved)
+    await running
+  })
+})

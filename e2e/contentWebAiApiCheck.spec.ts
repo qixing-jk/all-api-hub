@@ -834,7 +834,10 @@ test("keeps web probe rows compact when execution results expand", async ({
       .toBe(requestsBeforeEditedPrompt + 1)
     expect(fixture.prompts.at(-1)).toBe("LongPrompt".repeat(80))
     await expect(
-      textProbe.locator('[data-slot="badge"]').filter({ hasText: "Fail" }),
+      textProbe
+        .locator("[data-verification-summary]")
+        .locator('[data-slot="badge"]')
+        .filter({ hasText: "Fail" }),
     ).toBeVisible()
     await expect(textProbe).toContainText("Unexpected response text.")
     await textProbe.getByRole("button", { name: "Input", exact: true }).click()
@@ -883,7 +886,10 @@ test("keeps web probe rows compact when execution results expand", async ({
       .toBeUndefined()
     await textProbe.getByRole("button", { name: "Retry", exact: true }).click()
     await expect(
-      textProbe.locator('[data-slot="badge"]').filter({ hasText: "Pass" }),
+      textProbe
+        .locator("[data-verification-summary]")
+        .locator('[data-slot="badge"]')
+        .filter({ hasText: "Pass" }),
     ).toBeVisible()
     await expect(
       textProbe.getByRole("region", { name: "Execution result", exact: true }),
@@ -1335,10 +1341,11 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
     path: test.info().outputPath("page-models-expanded-grid.png"),
     animations: "disabled",
   })
-  const duration = modelsProbe.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)
+  const modelsSummary = modelsProbe.locator("[data-verification-summary]")
+  const duration = modelsSummary.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)
   await expect(duration).toHaveCount(1)
   await expect(
-    modelsProbe
+    modelsSummary
       .locator('[data-slot="badge"]')
       .getByText(/^\d+(?:\.\d+)?(?:ms|s)$/),
   ).toHaveCount(1)
@@ -1419,6 +1426,7 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
       .getByRole("button", { name: /^(Run|Retry)$/ })
       .click()
     const badge = textProbe
+      .locator("[data-verification-summary]")
       .locator('[data-slot="badge"]')
       .filter({ hasText: mode })
     await expect(badge).toContainText("Pass")
@@ -1461,7 +1469,9 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
     .getByRole("button", { name: "Run", exact: true })
     .click()
   await expect(
-    searchProbe.getByText("Unsupported", { exact: true }),
+    searchProbe
+      .locator("[data-verification-summary]")
+      .getByText("Unsupported", { exact: true }),
   ).toBeVisible()
   await searchProbe.screenshot({
     path: test.info().outputPath("page-unsupported-result.png"),

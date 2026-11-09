@@ -24,6 +24,221 @@ const request = {
 const counter = { encoding: CONTEXT_TOKEN_ENCODINGS.O200k, estimated: true }
 beforeEach(() => vi.restoreAllMocks())
 
+it("finalizes a failed preparation with retained measurements before another explicit run", async () => {
+  const needle = await import("~/services/verification/modelQuality/needleRun")
+  const observed = createNeedleResult({
+    reason: "running",
+    cells: [
+      {
+        targetTokens: 8192,
+        depth: 10,
+        actualDepth: 10,
+        localInputTokens: 8000,
+        outcome: "hit",
+      },
+    ],
+  })
+  const failure = new Error("Preparation failed")
+  const run = vi
+    .spyOn(needle, "runNeedleTest")
+    .mockImplementationOnce(async (params) => {
+      await params.onCheckpoint?.(observed)
+      throw failure
+    })
+    .mockResolvedValue(createNeedleResult({ seed: 456 }))
+  await expect(
+    runDurableNeedleTest({
+      ...request,
+      abortSignal: new AbortController().signal,
+    }),
+  ).rejects.toBe(failure)
+  expect((await needleHistory.get(request))?.result).toEqual({
+    ...observed,
+    reason: "error",
+  })
+  expect(
+    await new Storage({ area: "local" }).get(
+      WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS,
+    ),
+  ).toEqual({})
+  const next = await runDurableNeedleTest({
+    ...request,
+    seed: 456,
+    abortSignal: new AbortController().signal,
+  })
+  expect(next.seed).toBe(456)
+  expect(run).toHaveBeenCalledTimes(2)
+})
+
+it.each([false, true])(
+  "retains completed measurements after history save failure; recoverOnly=%s",
+  async (recoverOnly) => {
+    const needle = await import(
+      "~/services/verification/modelQuality/needleRun"
+    )
+    const completed = createNeedleResult()
+    const run = vi
+      .spyOn(needle, "runNeedleTest")
+      .mockImplementationOnce(async (params) => {
+        await params.onCheckpoint?.(completed)
+        return completed
+      })
+      .mockResolvedValue(createNeedleResult({ seed: 456 }))
+    const save = vi
+      .spyOn(needleHistory, "save")
+      .mockRejectedValue(new Error("History unavailable"))
+    await expect(
+      runDurableNeedleTest({
+        ...request,
+        abortSignal: new AbortController().signal,
+      }),
+    ).rejects.toThrow("History unavailable")
+    expect(
+      await new Storage({ area: "local" }).get(
+        WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS,
+      ),
+    ).toHaveProperty(await getVerificationScopeKey(request))
+    save.mockRestore()
+    const next = await runDurableNeedleTest(
+      { ...request, seed: 456, abortSignal: new AbortController().signal },
+      recoverOnly,
+    )
+    expect(next.seed).toBe(recoverOnly ? completed.seed : 456)
+    expect(run).toHaveBeenCalledTimes(recoverOnly ? 1 : 2)
+  },
+)
+
+it("shares execution and checkpoint identity between a Google endpoint and its root", async () => {
+  const needle = await import("~/services/verification/modelQuality/needleRun")
+  const root = { ...request, apiType: "google" as const }
+  const alias = {
+    ...root,
+    baseUrl: `${root.baseUrl}/v1beta/models/test:generateContent`,
+  }
+  const scope = await getVerificationScopeKey(root)
+  const store = new Storage({ area: "local" })
+  const result = createNeedleResult()
+  const run = vi
+    .spyOn(needle, "runNeedleTest")
+    .mockImplementation(async (params) => {
+      expect(params.baseUrl).toBe(root.baseUrl)
+      await params.onCheckpoint?.(result)
+      expect(
+        await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),
+      ).toHaveProperty(scope)
+      return result
+    })
+  await runDurableNeedleTest({
+    ...alias,
+    abortSignal: new AbortController().signal,
+  })
+  expect(run).toHaveBeenCalledOnce()
+  expect((await needleHistory.get(root))?.result).toEqual(result)
+})
+
+it.each([
+  { result: { version: 999 } },
+  { result: createNeedleResult(), inFlight: { targetTokens: 4096, depth: 10 } },
+  { result: createNeedleResult(), inFlight: { targetTokens: 8192, depth: 25 } },
+])(
+  "retains invalid checkpoints for explicit discard without replaying requests %#",
+  async (checkpoint) => {
+    const scope = await getVerificationScopeKey(request)
+    const store = new Storage({ area: "local" })
+    await store.set(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS, {
+      [scope]: checkpoint,
+    })
+    const fetch = vi.spyOn(globalThis, "fetch")
+    await expect(
+      runDurableNeedleTest(
+        { ...request, abortSignal: new AbortController().signal },
+        true,
+      ),
+    ).rejects.toThrow(/Invalid needle checkpoint/)
+    expect(fetch).not.toHaveBeenCalled()
+    expect(
+      await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),
+    ).toEqual({ [scope]: checkpoint })
+  },
+)
+
+it("does not start a new run when recovery has no saved checkpoint", async () => {
+  const fetch = vi.spyOn(globalThis, "fetch")
+  await expect(
+    runDurableNeedleTest(
+      { ...request, abortSignal: new AbortController().signal },
+      true,
+    ),
+  ).rejects.toThrow("No needle checkpoint")
+  expect(fetch).not.toHaveBeenCalled()
+})
+
+it("continues matching saved measurements with the compatible capacity observation", async () => {
+  const needle = await import("~/services/verification/modelQuality/needleRun")
+  const { contextCapacityHistory } = await import(
+    "~/services/verification/verificationResultHistory/contextCapacityHistory"
+  )
+  const previous = createNeedleResult()
+  await needleHistory.save(request, previous)
+  const run = vi.spyOn(needle, "runNeedleTest").mockResolvedValue(previous)
+  const capacity = vi.spyOn(contextCapacityHistory, "get").mockResolvedValue({
+    scopeKey: "test",
+    targetKey: "test",
+    verifiedAt: Date.now(),
+    apiType: "openai-compatible",
+    modelId: "test",
+    lowerBoundTokens: 32768,
+    reason: "test-limit",
+    requests: 1,
+    outputLimited: false,
+    counter,
+  })
+  try {
+    await runDurableNeedleTest({
+      ...request,
+      resumeFrom: previous,
+      selection: { depth: 50 },
+      abortSignal: new AbortController().signal,
+    })
+    expect(run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resumeFrom: previous,
+        capacity: { lowerBoundTokens: 32768, counter },
+      }),
+    )
+  } finally {
+    run.mockRestore()
+    capacity.mockRestore()
+  }
+})
+
+it("keeps recoverable evidence when saving restored history fails and releases ownership for retry", async () => {
+  const scope = await getVerificationScopeKey(request)
+  const store = new Storage({ area: "local" })
+  await store.set(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS, {
+    [scope]: { result: createNeedleResult({ reason: "running" }) },
+  })
+  const save = vi
+    .spyOn(needleHistory, "save")
+    .mockRejectedValueOnce(new Error("Storage unavailable"))
+  await expect(
+    runDurableNeedleTest(
+      { ...request, abortSignal: new AbortController().signal },
+      true,
+    ),
+  ).rejects.toThrow("Storage unavailable")
+  expect(
+    await store.get(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS),
+  ).toHaveProperty(scope)
+  save.mockRestore()
+  await expect(
+    runDurableNeedleTest(
+      { ...request, abortSignal: new AbortController().signal },
+      true,
+    ),
+  ).resolves.toMatchObject({ reason: "interrupted" })
+})
+
 it("recovers an interrupted dispatched cell without issuing another provider request", async () => {
   const scope = await getVerificationScopeKey(request)
   const store = new Storage({ area: "local" })
