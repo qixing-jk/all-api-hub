@@ -14,8 +14,6 @@ const autoImportsConfigUrl = new URL(
   "./.wxt/eslint-auto-imports.mjs",
   import.meta.url,
 )
-const wxtTsconfigUrl = new URL("./.wxt/tsconfig.json", import.meta.url)
-const wxtPrepared = existsSync(wxtTsconfigUrl)
 const autoImports = existsSync(autoImportsConfigUrl)
   ? (await import(autoImportsConfigUrl.href)).default
   : {
@@ -25,14 +23,9 @@ const autoImports = existsSync(autoImportsConfigUrl)
         sourceType: "module",
       },
     }
-const typescriptParserOptions = wxtPrepared
-  ? {
-      projectService: true,
-      tsconfigRootDir: import.meta.dirname,
-    }
-  : {
-      tsconfigRootDir: import.meta.dirname,
-    }
+// Current rules use syntax only. Avoid constructing the whole TypeScript
+// project for every lint run; pnpm compile owns semantic type checking.
+const typescriptParserOptions = { tsconfigRootDir: import.meta.dirname }
 
 const rules = {
   "@typescript-eslint/consistent-type-imports": [
