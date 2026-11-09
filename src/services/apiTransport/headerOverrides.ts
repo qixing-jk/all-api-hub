@@ -3,6 +3,7 @@ import {
   fetchSafariNativeCookie,
   isSafariNativeCookieEnabled,
 } from "~/services/apiTransport/safariNativeCookie"
+import { isChromium } from "~/utils/browser"
 import { getChromiumRequestHeaderApi } from "~/utils/browser/requestHeaderApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -22,12 +23,35 @@ export interface CookieRequestSession {
 
 interface HeaderFetchExecution {
   cookieSession?: CookieRequestSession
+  /** Apply runtime compatibility for servers requiring a matching Origin. */
+  matchRequestOrigin?: boolean
   onDispatch?: () => void
 }
 
 const HEADER_FETCH_LOCK = "all-api-hub:request-header-overrides"
 // Separate from the per-tab Cookie and download rules (1M and 2M).
 const HEADER_OVERRIDE_RULE_ID = 3_000_000
+
+/**
+ * Chromium extension fetches omit Fetch Metadata on non-trustworthy HTTP URLs.
+ * Runtime scheme identifies that behavior without a browser-brand allowlist;
+ * the existing DNR capability checks still decide whether it can be applied.
+ * https://www.w3.org/TR/secure-contexts/#is-origin-trustworthy
+ * https://www.w3.org/TR/fetch-metadata/
+ */
+function shouldOverrideRequestOrigin(url: URL): boolean {
+  if (url.protocol !== "http:") return false
+  const hostname = url.hostname.replace(/\.$/, "")
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "[::1]" ||
+    /^127(?:\.\d{1,3}){3}$/.test(hostname)
+  )
+    return false
+  return isChromium()
+}
+
 const forbiddenHeaders = new Set([
   "accept-charset",
   "accept-encoding",
@@ -112,7 +136,7 @@ export function sanitizeHeaderOverrideError(
 
 /**
  * Chromium-controlled headers require DNR. Ordinary API/SDK fetches take a
- * shared Web Lock; UA and private Cookie fetches take it exclusively, so
+ * shared Web Lock; UA, Origin and private Cookie fetches take it exclusively, so
  * other extension requests cannot inherit a concurrent account's headers.
  * The lock is released after response headers and rule cleanup, so SSE
  * bodies remain native streams. Web Locks also coordinate MV3/UI contexts.
@@ -157,6 +181,19 @@ export async function fetchWithHeaderOverrides(
         API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
       )
   }
+  let requestOrigin = session?.origin
+  if (execution?.matchRequestOrigin) {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new ApiError(
+        "Request origin override requires an HTTP URL",
+        undefined,
+        undefined,
+        API_ERROR_CODES.FEATURE_UNSUPPORTED,
+      )
+    }
+    if (shouldOverrideRequestOrigin(url)) requestOrigin = url.origin
+  }
   const options = session
     ? {
         ...init,
@@ -164,7 +201,7 @@ export async function fetchWithHeaderOverrides(
         credentials: "omit" as const,
         redirect: "error" as const,
       }
-    : hasOverrides
+    : hasOverrides || requestOrigin
       ? { ...init, headers, redirect: "error" as const }
       : init
   const userAgent = custom["user-agent"]
@@ -172,7 +209,7 @@ export async function fetchWithHeaderOverrides(
   const dnr = chromeApi?.declarativeNetRequest
   const locks = globalThis.navigator?.locks
   const needsRule =
-    Boolean(session) ||
+    Boolean(requestOrigin) ||
     (userAgent !== undefined && import.meta.env.BROWSER !== "firefox")
   const canCoordinate = Boolean(locks && chromeApi?.runtime?.id)
   const hasDnrApi = typeof dnr?.updateSessionRules === "function"
@@ -200,6 +237,13 @@ export async function fetchWithHeaderOverrides(
         undefined,
         undefined,
         API_ERROR_CODES.COOKIE_PERMISSION_REQUIRED,
+      )
+    if (requestOrigin)
+      throw new ApiError(
+        "Request origin override is unavailable",
+        undefined,
+        undefined,
+        API_ERROR_CODES.FEATURE_UNSUPPORTED,
       )
     throw new Error(
       t("apiCredentialProfiles:dialog.errors.userAgentPermission"),
@@ -261,10 +305,14 @@ export async function fetchWithHeaderOverrides(
                           operation: "set" as const,
                           value: session.cookieHeader,
                         },
+                      ]
+                    : []),
+                  ...(requestOrigin
+                    ? [
                         {
                           header: "origin",
                           operation: "set" as const,
-                          value: session.origin,
+                          value: requestOrigin,
                         },
                       ]
                     : []),
@@ -274,7 +322,7 @@ export async function fetchWithHeaderOverrides(
                 regexFilter,
                 isUrlFilterCaseSensitive: true,
                 initiatorDomains: [chromeApi!.runtime.id!],
-                ...(session
+                ...(requestOrigin
                   ? {
                       requestMethods: [
                         (
@@ -298,6 +346,13 @@ export async function fetchWithHeaderOverrides(
             undefined,
             undefined,
             API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
+          )
+        if (requestOrigin)
+          throw new ApiError(
+            "Request origin override is unavailable",
+            undefined,
+            undefined,
+            API_ERROR_CODES.FEATURE_UNSUPPORTED,
           )
         throw new Error(
           t("apiCredentialProfiles:dialog.errors.userAgentPermission"),

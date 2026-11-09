@@ -2,7 +2,9 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   composeAbortSignals,
   createDeferredAbortDeadline,
+  runAbortableTask,
 } from "~/services/apiTransport/abortableTask"
+import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
   createOperationScopedValue,
   type ApiOperationContext,
@@ -39,7 +41,7 @@ interface MagpieRequestSession {
   authenticated: boolean
   pendingLogin?: {
     read: SharedRead<void>
-    dispatched: boolean
+    started: boolean
     listeners: Set<() => void>
   }
 }
@@ -102,13 +104,14 @@ export async function requestMagpie(
     const session = requestSessions.get(config)
     const loginWithSignal = async (
       loginSignal?: AbortSignal,
-      onDispatch = deadline.start,
+      onStart = deadline.start,
     ) => {
       return await withSiteApiRequestTask(
         baseUrl,
         async () => {
-          onDispatch()
-          const login = await fetch(
+          // Bound header-lock waiting after the site scheduler admits the task.
+          onStart()
+          const login = await fetchWithHeaderOverrides(
             `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
             {
               method: "GET",
@@ -136,12 +139,12 @@ export async function requestMagpie(
       if (!session) return loginWithSignal(signal.signal)
       if (!session.pendingLogin || session.pendingLogin.read.signal.aborted) {
         const pending = {
-          dispatched: false,
+          started: false,
           listeners: new Set<() => void>(),
           read: new SharedRead<void>(async (sharedOptions) => {
             try {
               await loginWithSignal(sharedOptions.signal, () => {
-                pending.dispatched = true
+                pending.started = true
                 for (const listener of pending.listeners) listener()
               })
               sharedOptions.signal.throwIfAborted()
@@ -155,7 +158,7 @@ export async function requestMagpie(
         session.pendingLogin = pending
       }
       const pending = session.pendingLogin
-      if (pending.dispatched) deadline.start()
+      if (pending.started) deadline.start()
       pending.listeners.add(deadline.start)
       try {
         await pending.read.read({ signal: signal.signal })
@@ -170,19 +173,32 @@ export async function requestMagpie(
         baseUrl,
         async () => {
           deadline.start()
-          dispatched = true
-          const response = await fetch(`${baseUrl}${path}`, {
-            method: body === undefined ? "GET" : "POST",
-            credentials: "include",
-            redirect: "error",
-            signal: signal.signal,
-            ...(body === undefined
-              ? {}
-              : {
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(body),
-                }),
-          })
+          const response = await fetchWithHeaderOverrides(
+            `${baseUrl}${path}`,
+            {
+              method: body === undefined ? "GET" : "POST",
+              credentials: "include",
+              redirect: "error",
+              signal: signal.signal,
+              ...(body === undefined
+                ? {}
+                : {
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                  }),
+            },
+            undefined,
+            {
+              // Magpie validates Origin for every /api/ POST, including reads.
+              // Runtime compatibility belongs to the shared header transport.
+              // https://github.com/yetone/magpie/commit/361da10ee90ad48496af116f9d5261c5257ee1e1
+              matchRequestOrigin:
+                body !== undefined && path.startsWith("/api/"),
+              onDispatch: () => {
+                dispatched = true
+              },
+            },
+          )
           status = response.status
           reportSiteRateLimitResponse(baseUrl, response)
           if (
@@ -239,13 +255,19 @@ export async function requestMagpie(
     // Web Locks coordinate Options, Popup and background callers using the
     // same deployment. They never retain the management key in the lock name.
     const locks = globalThis.navigator?.locks
-    return locks
-      ? await locks.request(
-          `all-api-hub:magpie:${baseUrl}`,
-          { signal: signal.signal },
-          execute,
-        )
-      : await execute()
+    // Settle the caller on cancellation without racing inside any lock callback.
+    // Pending native rule work retains its existing leases until actual cleanup.
+    return await runAbortableTask(
+      () =>
+        locks
+          ? locks.request(
+              `all-api-hub:magpie:${baseUrl}`,
+              { signal: signal.signal },
+              execute,
+            )
+          : execute(),
+      { signals: [signal.signal] },
+    )
   } catch (error) {
     if (error instanceof MagpieApiError) throw error
     if (!dispatched && options?.signal?.aborted) throw error

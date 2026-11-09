@@ -1,3 +1,4 @@
+import { fetchNotification } from "~/services/notifications/delivery/http"
 import { getNotificationHttpErrorMessage } from "~/services/notifications/delivery/httpErrors"
 import type {
   TaskNotificationContent,
@@ -70,7 +71,7 @@ export async function sendWebhookNotification(
     throw new Error(t("settings:taskNotifications.test.webhookInvalidUrl"))
   }
 
-  const response = await fetch(parsedUrl.toString(), {
+  const response = await fetchNotification(parsedUrl.toString(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

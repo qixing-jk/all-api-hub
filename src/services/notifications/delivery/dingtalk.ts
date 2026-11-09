@@ -1,3 +1,4 @@
+import { fetchNotification } from "~/services/notifications/delivery/http"
 import { getNotificationParsedErrorMessage } from "~/services/notifications/delivery/httpErrors"
 import type { TaskNotificationContent } from "~/services/notifications/taskNotificationContracts"
 import {
@@ -86,7 +87,7 @@ export async function sendDingtalkNotification(
     },
   }
 
-  const response = await fetch(webhookUrl.toString(), {
+  const response = await fetchNotification(webhookUrl.toString(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json;charset=utf-8",

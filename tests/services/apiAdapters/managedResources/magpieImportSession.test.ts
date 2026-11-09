@@ -1,7 +1,8 @@
-import { afterEach, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { magpieManagedResourceRegistration } from "~/services/apiAdapters/managedResources/magpie"
 import { magpieKeyFingerprint } from "~/services/apiService/magpie/keyIdentity"
+import { isolateWebLocks } from "~~/tests/test-utils/webLocks"
 
 vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   getManagedSiteRuntimeConfigForType: vi.fn(async () => ({
@@ -10,7 +11,24 @@ vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   })),
 }))
 
-afterEach(() => vi.unstubAllGlobals())
+beforeEach(() => {
+  isolateWebLocks()
+  vi.spyOn(browser.runtime, "getURL").mockReturnValue(
+    "chrome-extension://extension-id/",
+  )
+  vi.stubGlobal("chrome", {
+    runtime: { id: "extension-id" },
+    permissions: { contains: vi.fn().mockResolvedValue(true) },
+    declarativeNetRequest: {
+      updateSessionRules: vi.fn().mockResolvedValue(undefined),
+    },
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 it.each([
   ["https://other.test/v1", "https://relay.test/v1", "chat"],

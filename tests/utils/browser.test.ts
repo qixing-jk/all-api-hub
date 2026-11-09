@@ -4,17 +4,49 @@ import {
   detectBrowserFamily,
   detectExtensionStore,
   getDeviceTypeInfo,
+  isChromium,
   isEdgeByUA,
   isExtensionBackground,
   isExtensionOptions,
   isExtensionPopup,
   isExtensionSidePanel,
+  isFirefox,
 } from "~/utils/browser"
 
 describe("browser", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+  })
+
+  describe("isChromium", () => {
+    it.each([
+      ["chrome-extension://abc/", true],
+      ["moz-extension://abc/", false],
+      ["safari-web-extension://abc/", false],
+      ["unknown-extension://abc/", false],
+      ["https://example.com/", false],
+    ] as const)(
+      "uses the runtime URL %s instead of the user agent",
+      (runtimeUrl, expected) => {
+        vi.spyOn(browser.runtime, "getURL").mockReturnValue(runtimeUrl)
+        vi.stubGlobal("navigator", {
+          userAgent: "Mozilla/5.0 Chrome/130.0 Edg/130.0",
+        })
+        expect(isChromium()).toBe(expected)
+      },
+    )
+
+    it("preserves runtime lookup errors so transport can stop before dispatch", () => {
+      vi.spyOn(browser.runtime, "getURL").mockImplementation(() => {
+        throw new Error("Extension context invalidated")
+      })
+      expect(() => isChromium()).toThrow("Extension context invalidated")
+      expect(isFirefox()).toBe(false)
+      expect(
+        detectExtensionStore({ userAgent: "Mozilla/5.0 Chrome/130.0" }),
+      ).toBe("chrome")
+    })
   })
 
   describe("detectBrowserFamily", () => {
