@@ -2,6 +2,18 @@
 
 Status: ready-for-human
 
+2026-11-10 审查修复：实际 SDK 请求路径验证了两个适配缺口：compatible schema 会过滤嵌套 SSE code，原生 Responses 会为未识别的流内 code 推断 500。容量探测与大海捞针现在共用 `contextGeneration.ts`，按单次请求保留 SDK 原始错误事件，并在观测到成功的 HTTP event-stream 响应后区分推断状态与明确状态。保留 `APICallError` / `StreamProviderError` 来源检查和 OpenCode 分类，不增加本地超限正则；真实 HTTP 500、流内明确 500 与普通服务故障继续不确定。回归覆盖输出前后、`response.failed`、嵌套 code、降档及 needle 单次请求停止；样本均标明为协议回放，不作为线上事故证据。执行记录见 [流错误适配验收](acceptance-stream-adaptation-20261110.md)。
+
+2026-11-10 合并后适配：#1845 大海捞针已合入 `main`，temp16 从 `92f015453` rebase 到包含该功能的 `2593b399a2`；旧提交保留于 `recovery/temp16-before-needle-refresh-20261109`。保留主线的 token 类型、输入限制、预算及检查点公共实现，继续由 `contextErrors.ts` 为容量探测和大海捞针提供 OpenCode 分类。容量探测按原策略缩小输入；大海捞针将超限标记为当前格的 `context-limit`，停止剩余计划且不自动重试。新增真实请求边界回归验证无状态 SSE code 在主线分类器上返回普通错误、接入后返回上下文限制；fixture 是派生模拟样本。联合验证及保留的红测、日志和浏览器证据见 [合并后验收](acceptance-needle-refresh-20261110.md)。原接入报告与研究材料继续保留，未修改 temp14 或调用真实模型。
+
+2026-11-09 OpenCode 接入：用户在移交后明确要求使用 OpenCode 优化 context 测试。已保留 AI SDK 请求层，并在 `contextErrors.ts` 使用固定版本 `@opencode/ai@2.2.6` 的公开 `route.classifyProviderFailure`，替换旧 400/422 gate 和本地正则。适配保留 HTTP 原文/解析数据、SSE 原始 payload 与 code/type，只有 SDK 提供方错误参与分类。OpenCode 的 `context-overflow` 映射到既有降档流程，其他类别维持 inconclusive；没有增加本地状态否决逻辑。预算、取消、检查点与历史契约不变。`request_too_large` 沿用上游的可恢复分类，它可能来自请求字节限制，因此结果仍是当前连接与测试输入的观察，不能独立证明模型的 token 窗口。迁入的人工冲突预期已替换为普通失败与有来源的提供方样本，没有把构造 fixture 当成真实服务捕获。研究阶段的历史结论与执行记录保留在下方；本次 [验收与本地证据](acceptance-opencode-integration-20261109.md) 包含 151 项 Vitest、7 个 Chromium 场景和构建、Knip、TypeScript 检查，以及默认 4 GiB 编译堆耗尽后以 8 GiB 通过的限制说明。没有调用真实模型，也没有改动 temp14。
+
+2026-11-09 工作区移交：本轮上下文错误识别、SDK 选型和实验资料已从 temp14 转入 temp16。旧移交说明的下一步范围已被后续接入取代，仅在本地 `artifacts/finish-20261110/handoff-temp16-20261109.md` 保留历史迁移记录；当前实现与选型依据见本节和下方研究入口。
+
+2026-11-09 追加研究：[上下文超限识别、降档探测与 LiteLLM 接入取舍](overflow-project-research.md)。包含官方协议、固定版本源码与验证边界；建议尚未改变应用行为，未迁移 SDK 或部署代理。
+
+同日追加 [AI SDK、Pi、OpenCode 选型与浏览器实测](sdk-comparison.md)：现有消费者清单、整包迁移缺口、esbuild / Vite 打包及错误行为。按用户“排除体积”的标准，建议保留 AI SDK、优先复用 OpenCode 的公开分类器。26 个定向样本的来源另作校正：人工状态/code 冲突没有真实出现证据，不能称为已证实误判或据此要求状态否决规则；恢复动作与模型窗口测量的含义仍需区分。可复现脚本与报告保存在 Git；隔离包、构建和浏览器证据保留在 `artifacts/sdk-comparison-20261109/`，完整应用迁移及真实模型验证尚未进行。
+
 研究日期：2026-11-04。仓库基线：`c8adaecf7f`。最大输入探测已实现，其余有效上下文部分仍为后续设计；未调用付费模型测量容量。下方按日期保留设计与验收过程；当前交付行为以本节及维护的代码、测试为准。
 
 ## 当前实施范围

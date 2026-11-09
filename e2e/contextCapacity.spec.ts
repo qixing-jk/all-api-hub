@@ -14,11 +14,21 @@ import {
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
-for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
+for (const scenario of [
+  "bracket",
+  "budget",
+  "output-limit",
+  "inconclusive",
+  "streaming-overflow",
+  "responses-overflow",
+]) {
   const pauseForBudget = scenario === "budget"
   const outputLimited = scenario === "output-limit"
   const inconclusive = scenario === "inconclusive"
-  test(`capacity probe reports a boundary using the selected credential${pauseForBudget ? " after continuing a budget pause" : outputLimited ? " with truncated output" : inconclusive ? " with an unconfirmed result" : ""}`, async ({
+  const responsesOverflow = scenario === "responses-overflow"
+  const streamingOverflow =
+    scenario === "streaming-overflow" || responsesOverflow
+  test(`capacity probe reports a boundary using the selected credential${pauseForBudget ? " after continuing a budget pause" : outputLimited ? " with truncated output" : inconclusive ? " with an unconfirmed result" : responsesOverflow ? " after a Responses overflow without status" : streamingOverflow ? " after a nested SSE overflow without status" : ""}`, async ({
     context,
     page,
     extensionId,
@@ -47,6 +57,82 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       requests.push(body)
       if (requests.length === 1) await firstRequestGate
       expect(request.headers.authorization).toBe("Bearer synthetic-key")
+      if (streamingOverflow) {
+        response.setHeader("Content-Type", "text/event-stream")
+        if (responsesOverflow) {
+          const tooLong = JSON.stringify(body.input).length > 16000
+          const item = {
+            id: "msg_1",
+            type: "message",
+            role: "assistant",
+            status: "completed",
+            content: [{ type: "output_text", text: "OK", annotations: [] }],
+          }
+          const events = tooLong
+            ? [
+                {
+                  type: "error",
+                  sequence_number: 1,
+                  code: "model_context_window_exceeded",
+                  message: "Input rejected",
+                  param: null,
+                },
+              ]
+            : [
+                {
+                  type: "response.output_item.added",
+                  output_index: 0,
+                  item: { ...item, content: [] },
+                },
+                {
+                  type: "response.output_text.delta",
+                  item_id: "msg_1",
+                  output_index: 0,
+                  content_index: 0,
+                  delta: "OK",
+                },
+                { type: "response.output_item.done", output_index: 0, item },
+                {
+                  type: "response.completed",
+                  response: {
+                    id: "capacity",
+                    object: "response",
+                    created_at: 1,
+                    model: "gpt-quality",
+                    status: "completed",
+                    output: [item],
+                    usage: {
+                      input_tokens: 1000,
+                      output_tokens: 1,
+                      total_tokens: 1001,
+                    },
+                  },
+                },
+              ]
+          response.end(
+            `: PING\n\n${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}`,
+          )
+          return
+        }
+        const event =
+          JSON.stringify(body.messages).length > 16000
+            ? {
+                error: {
+                  code: "upstream_error",
+                  innererror: { code: "context_length_exceeded" },
+                  message: "Input rejected",
+                },
+              }
+            : {
+                choices: [
+                  { index: 0, delta: { content: "OK" }, finish_reason: "stop" },
+                ],
+              }
+        response.end(
+          `: PING\n\ndata: ${JSON.stringify(event)}\n\ndata: [DONE]\n\n`,
+        )
+        return
+      }
       response.setHeader("Content-Type", "application/json")
       if (
         !outputLimited &&
@@ -98,7 +184,7 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
     try {
       const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
       await stubLlmMetadataIndex(context)
-      if (outputLimited || scenario === "bracket")
+      if (outputLimited || scenario === "bracket" || streamingOverflow)
         await context.route("https://models.dev/models.json", (route) =>
           route.fulfill({
             status: 200,
@@ -120,7 +206,7 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
         createStoredApiCredentialProfile({
           id: "capacity",
           name: "Capacity target",
-          apiType: "openai-compatible",
+          apiType: responsesOverflow ? "openai" : "openai-compatible",
           baseUrl,
           apiKey: "synthetic-key",
           telemetryConfig: { mode: "disabled" },
@@ -134,7 +220,10 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       await page.getByTestId(IDS.verifyButton).click()
       await page.getByRole("combobox", { name: "Test mode" }).click()
       await page
-        .getByRole("option", { name: "Non-streaming", exact: true })
+        .getByRole("option", {
+          name: streamingOverflow ? "Streaming" : "Non-streaming",
+          exact: true,
+        })
         .click()
       const panel = page.getByRole("region", {
         name: "Model context test",
@@ -357,7 +446,7 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       }
       await expect(panel).toContainText("Model context:", { timeout: 30000 })
       await expect(panel).not.toContainText("Result saved")
-      if (scenario === "bracket")
+      if (scenario === "bracket" || streamingOverflow)
         await expect(summary.getByText(/^Context ≈/)).toHaveClass(
           /bg-warning-soft/,
         )
@@ -379,9 +468,10 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       expect(
         requests.every(
           (body) =>
-            !body.stream &&
+            (streamingOverflow ? body.stream === true : !body.stream) &&
             body.model === "gpt-quality" &&
-            body.max_tokens === 128,
+            (responsesOverflow ? body.max_output_tokens : body.max_tokens) ===
+              128,
         ),
       ).toBe(true)
       await panel.scrollIntoViewIfNeeded()
