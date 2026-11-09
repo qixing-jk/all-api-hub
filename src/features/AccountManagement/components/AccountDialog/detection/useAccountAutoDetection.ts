@@ -122,6 +122,8 @@ export function useAccountAutoDetection({
   accountId?: string
 }) {
   const { t, i18n } = useTranslation("accountDialog")
+  // Keep session callbacks stable while translating in the current language.
+  const i18nT = i18n.t
   const [isDetecting, setIsDetecting] = useState(false)
   const [isDetectingSlow, setIsDetectingSlow] = useState(false)
   const [detectionError, setDetectionError] = useState<AutoDetectError | null>(
@@ -158,9 +160,9 @@ export function useAccountAutoDetection({
   const requireAccessTokenVerification = useCallback(() => {
     setDetectionError({
       type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
-      message: i18n.t("accountDialog:accessTokenVerification.description"),
+      message: i18nT("accountDialog:accessTokenVerification.description"),
     })
-  }, [i18n])
+  }, [i18nT])
   useEffect(() => {
     const message = t("accessTokenVerification.description")
     setDetectionError((current) =>

@@ -60,7 +60,7 @@ export const relayForAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    let bootstrapFacts = null
+    let bootstrapFacts
     try {
       bootstrapFacts =
         await relayForAccountBootstrap.loadBootstrapFacts(serviceRequest)

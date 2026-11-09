@@ -15,7 +15,8 @@ export default defineConfig({
     defaultNS: "common",
     keySeparator: ".",
     nsSeparator: ":",
-    functions: ["t", "*.t", "i18next.t"],
+    // i18nT is the bound instance translator used by language-independent callbacks.
+    functions: ["t", "*.t", "i18next.t", "i18nT"],
     transComponents: ["Trans"],
     useTranslationNames: ["useTranslation"],
     preservePatterns: [

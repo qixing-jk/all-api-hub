@@ -39,24 +39,14 @@ export async function openAimlapiAuthForm({
     await acquisition.click()
     const keysPage = await opened
     try {
-      await expect
-        .poll(
-          () => {
-            try {
-              const url = new URL(keysPage.url())
-              return (
-                url.origin === "https://aimlapi.com" &&
-                (url.pathname === "/app/keys" ||
-                  (url.pathname === "/app/auth" &&
-                    url.searchParams.get("returnTo") === "/keys"))
-              )
-            } catch {
-              return false
-            }
-          },
-          { timeout: 30000 },
-        )
-        .toBe(true)
+      await expect(keysPage).toHaveURL(
+        (url) =>
+          url.origin === "https://aimlapi.com" &&
+          (url.pathname === "/app/keys" ||
+            (["/app/auth", "/app/auth/login"].includes(url.pathname) &&
+              url.searchParams.get("returnTo") === "/keys")),
+        { timeout: 30000 },
+      )
     } finally {
       await keysPage.close()
     }

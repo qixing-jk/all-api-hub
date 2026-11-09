@@ -184,7 +184,7 @@ export function handleCompleteAgentRouterOAuth(
       return { success: false, reason: "unexpected_page" }
     }
 
-    let callbackUser: Record<string, unknown> | null = null
+    let callbackUser: Record<string, unknown> | null
     try {
       callbackUser = asRecord(
         JSON.parse(globalThis.localStorage.getItem("user") || "null"),

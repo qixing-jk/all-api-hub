@@ -147,6 +147,7 @@ export async function prepareSameSite({
       throw new AggregateError(
         [error, cleanupError],
         "Fixture preparation and cleanup failed",
+        // eslint-disable-next-line preserve-caught-error -- The errors array retains cleanupError; the preparation failure remains the primary cause.
         { cause: error },
       )
     }

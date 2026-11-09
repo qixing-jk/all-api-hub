@@ -95,7 +95,7 @@ export async function trackCookieInterceptorUrl(
 ): Promise<void> {
   if (!url) return
 
-  let pattern: string | null = null
+  let pattern: string | null
   try {
     const parsed = new URL(url)
     pattern = `${parsed.origin}/*`

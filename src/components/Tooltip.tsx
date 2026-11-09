@@ -1,19 +1,18 @@
+import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 import {
   cloneElement,
   createContext,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
   useState,
-  type ComponentProps,
   type FocusEventHandler,
   type MouseEventHandler,
   type ReactElement,
   type ReactNode,
 } from "react"
-import { createPortal } from "react-dom"
-import { Tooltip as ReactTooltip } from "react-tooltip"
 
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
@@ -58,6 +57,9 @@ interface TooltipChildProps {
 /** Identifies the anchor managed by the nearest explicit Tooltip instance. */
 export const TooltipContext = createContext<string | null>(null)
 
+/** Keeps floating hints within a content UI's styled, unclipped portal scope. */
+export const TooltipPortalContext = createContext<HTMLElement | null>(null)
+
 /**
  * Tooltip renders rich or text content from a wrapper anchor by default, or from the child itself when requested.
  */
@@ -82,9 +84,13 @@ export default function Tooltip({
     null,
   )
   const [isOpen, setIsOpen] = useState(false)
-  const requestedOpen = useRef(isOpen)
-  requestedOpen.current = isOpen
-  const [popupGeneration, setPopupGeneration] = useState(0)
+  const anchorRef = useRef<HTMLElement | null>(null)
+  const popupRef = useRef<HTMLDivElement | null>(null)
+  const scopedPortalContainer = useContext(TooltipPortalContext)
+  const [inlineContainer, setInlineContainer] =
+    useState<HTMLSpanElement | null>(null)
+  const resolvedPortalContainer =
+    scopedPortalContainer ?? portalContainer ?? inlineContainer
   const [isClickOpen, setIsClickOpen] = useState(false)
 
   const isString = typeof content === "string"
@@ -100,7 +106,7 @@ export default function Tooltip({
         childProps["aria-describedby"],
         shouldRenderDescription
           ? descriptionId
-          : anchorAsChild
+          : anchorAsChild && !isString
             ? popupId
             : undefined,
       ]
@@ -120,30 +126,40 @@ export default function Tooltip({
     // The popup is rendered outside the anchor; wait for focus to settle before checking both nodes.
     focusCheckTimeoutRef.current = setTimeout(() => {
       focusCheckTimeoutRef.current = null
-      const activeElement = document.activeElement
-      const anchor = document.getElementById(anchorId)
-      const popup = document.getElementById(popupId)
-      if (!anchor?.contains(activeElement) && !popup?.contains(activeElement)) {
+      const anchor = anchorRef.current
+      const popup = popupRef.current
+      const root = anchor?.getRootNode() as Document | ShadowRoot | undefined
+      let activeElement = root?.activeElement ?? document.activeElement
+      while (activeElement?.shadowRoot?.activeElement) {
+        activeElement = activeElement.shadowRoot.activeElement
+      }
+      const popupRoot = popup?.getRootNode() as
+        | Document
+        | ShadowRoot
+        | undefined
+      const popupActive = popupRoot?.activeElement
+      if (
+        !anchor?.contains(activeElement) &&
+        !popup?.contains(popupActive ?? activeElement)
+      ) {
         setIsOpen(false)
       }
     }, 0)
-  }, [anchorId, cancelFocusCheck, popupId])
+  }, [cancelFocusCheck])
   const handleFocusCapture = useCallback<FocusEventHandler<HTMLElement>>(
     (event) => {
       if (anchorAsChild) childProps.onFocusCapture?.(event)
       cancelFocusCheck()
-      // Interactive hints use the library's event queue for focus and click,
-      // so a pending Escape dismissal cannot overtake an immediate reopen.
-      if (!openOnClick || !anchorAsChild) setIsOpen(true)
+      setIsOpen(true)
     },
-    [anchorAsChild, cancelFocusCheck, childProps, openOnClick],
+    [anchorAsChild, cancelFocusCheck, childProps],
   )
   const handleBlurCapture = useCallback<FocusEventHandler<HTMLElement>>(
     (event) => {
       if (anchorAsChild) childProps.onBlurCapture?.(event)
 
       const nextTarget = event.relatedTarget
-      const popup = document.getElementById(popupId)
+      const popup = popupRef.current
       if (nextTarget instanceof Node) {
         if (
           !event.currentTarget.contains(nextTarget) &&
@@ -157,7 +173,7 @@ export default function Tooltip({
 
       scheduleFocusCheck()
     },
-    [anchorAsChild, cancelFocusCheck, childProps, popupId, scheduleFocusCheck],
+    [anchorAsChild, cancelFocusCheck, childProps, scheduleFocusCheck],
   )
   const handleClickCapture: MouseEventHandler<HTMLElement> = (event) => {
     if (anchorAsChild) childProps.onClickCapture?.(event)
@@ -166,9 +182,6 @@ export default function Tooltip({
     if (openOnClick) {
       setIsClickOpen(true)
       setIsOpen(true)
-      // Discard pending library hide timers so this newer click wins even
-      // while the old popup is still transitioning out.
-      setPopupGeneration((value) => value + 1)
     }
   }
 
@@ -179,12 +192,41 @@ export default function Tooltip({
   useEffect(() => cancelFocusCheck, [cancelFocusCheck])
   useEffect(() => {
     if (!isOpen) return
+    // Content UI contains bubbling keyboard events before they reach document.
+    // Capture Escape even when a hovered hint's anchor does not own focus.
+    const document = anchorRef.current?.ownerDocument
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      // An expanded focused control owns Escape before a merely hovered hint.
+      // composedPath also reaches controls inside a webpage's shadow root.
+      if (
+        event
+          .composedPath()
+          .some(
+            (target) =>
+              target instanceof Element &&
+              target.matches(
+                '[role="combobox"][aria-expanded="true"], [aria-haspopup]:not([aria-haspopup="false"])[aria-expanded="true"]',
+              ),
+          )
+      )
+        return
+      event.preventDefault()
+      event.stopPropagation()
+      setIsOpen(false)
+    }
+    document?.addEventListener("keydown", dismiss, true)
+    return () => document?.removeEventListener("keydown", dismiss, true)
+  }, [isOpen])
+  useEffect(() => {
+    if (!isOpen) return
 
-    document.addEventListener("focusin", scheduleFocusCheck)
-    document.addEventListener("focusout", scheduleFocusCheck)
+    const root = anchorRef.current?.getRootNode() ?? document
+    root.addEventListener("focusin", scheduleFocusCheck)
+    root.addEventListener("focusout", scheduleFocusCheck)
     return () => {
-      document.removeEventListener("focusin", scheduleFocusCheck)
-      document.removeEventListener("focusout", scheduleFocusCheck)
+      root.removeEventListener("focusin", scheduleFocusCheck)
+      root.removeEventListener("focusout", scheduleFocusCheck)
       cancelFocusCheck()
     }
   }, [cancelFocusCheck, isOpen, scheduleFocusCheck])
@@ -193,15 +235,15 @@ export default function Tooltip({
     children as ReactElement<Record<string, unknown>>,
     {
       "data-tooltip-anchor-id": anchorId,
-      "data-tooltip-open": openOnClick && isOpen ? "true" : undefined,
+      "data-tooltip-open": isOpen ? "true" : undefined,
     },
   )
   const anchor = anchorAsChild ? (
     cloneElement(children as ReactElement<Record<string, unknown>>, {
       id: anchorId,
       "data-tooltip-anchor-id": anchorId,
-      "data-tooltip-open": openOnClick && isOpen ? "true" : undefined,
-      ...(describedBy ? { "aria-describedby": describedBy } : {}),
+      "data-tooltip-open": isOpen ? "true" : undefined,
+      "aria-describedby": describedBy || undefined,
       onFocusCapture: handleFocusCapture,
       onBlurCapture: handleBlurCapture,
       onClickCapture: handleClickCapture,
@@ -209,7 +251,7 @@ export default function Tooltip({
   ) : (
     <div
       id={anchorId}
-      data-tooltip-open={openOnClick && isOpen ? "true" : undefined}
+      data-tooltip-open={isOpen ? "true" : undefined}
       className={cn(
         "gap-y-density-2 flex items-center justify-center gap-x-2",
         wrapperClassName,
@@ -222,60 +264,83 @@ export default function Tooltip({
     </div>
   )
 
-  // Keep library positioning styles; project tokens own all visual styling.
-  const defaultClassName = cn(
-    Z_INDEX.tooltip,
-    "w-max max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground",
-    className,
-  )
-  const popupProps = {
-    anchorId,
-    place: position,
-    positionStrategy,
-    delayShow: delay,
-    disableStyleInjection: true,
-    classNameArrow: "size-[var(--rt-arrow-size)] rotate-45",
-    className: defaultClassName,
-    isOpen,
-    setIsOpen,
-    // The library can unmount a closing popup before its queued reopen effect.
-    // Remount with the current opening request instead of cancelling that click.
-    afterHide: () => {
-      if (requestedOpen.current) setPopupGeneration((value) => value + 1)
-    },
-    role: isOpen ? "tooltip" : "presentation",
-    openEvents: openOnClick
-      ? { mouseover: true, focus: true, click: true }
-      : undefined,
-    closeEvents: { mouseout: !isClickOpen, blur: false },
-    globalCloseEvents: {
-      escape: true,
-      ...(openOnClick ? { clickOutsideAnchor: true } : {}),
-    },
-  } satisfies ComponentProps<typeof ReactTooltip>
-  const popup = isString ? (
-    <ReactTooltip
-      key={popupGeneration}
-      {...popupProps}
-      id={tooltipId}
-      content={content}
-    />
-  ) : (
-    <ReactTooltip key={popupGeneration} {...popupProps} id={popupId} clickable>
-      {content}
-    </ReactTooltip>
+  const [side, align = "center"] = position.split("-") as [
+    "top" | "right" | "bottom" | "left",
+    "start" | "center" | "end",
+  ]
+  const popup = (
+    <TooltipPrimitive.Positioner
+      positionMethod={positionStrategy}
+      side={side}
+      align={align}
+      sideOffset={10}
+      className={cn(Z_INDEX.tooltip, "pointer-events-auto")}
+    >
+      <TooltipPrimitive.Popup
+        ref={popupRef}
+        id={tooltipId}
+        role={isOpen ? "tooltip" : "presentation"}
+        className={cn(
+          "bg-surface-inverse py-density-2 text-inverse-foreground dark:bg-secondary dark:text-foreground w-max max-w-[90vw] rounded-sm px-3 text-xs opacity-90 shadow-lg",
+          className,
+        )}
+      >
+        {content}
+        <TooltipPrimitive.Arrow className="size-2 rotate-45 bg-inherit data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=right]:-left-1 data-[side=top]:-bottom-1" />
+      </TooltipPrimitive.Popup>
+    </TooltipPrimitive.Positioner>
   )
   return (
     <TooltipContext.Provider value={anchorId}>
-      {anchor}
-
-      {shouldRenderDescription ? (
-        <span id={descriptionId} className="sr-only">
-          {content}
-        </span>
-      ) : null}
-
-      {portalContainer ? createPortal(popup, portalContainer) : popup}
+      <TooltipPrimitive.Root
+        open={isOpen}
+        triggerId={anchorId}
+        disableHoverablePopup={isString}
+        onOpenChange={(open, details) => {
+          if (
+            !open &&
+            (details.reason === "trigger-press" ||
+              (isClickOpen && details.reason === "trigger-hover"))
+          ) {
+            details.cancel()
+            return
+          }
+          if (
+            !open &&
+            (details.reason === "trigger-focus" || details.reason === "none")
+          ) {
+            details.cancel()
+            scheduleFocusCheck()
+            return
+          }
+          setIsOpen(open)
+        }}
+      >
+        <TooltipPrimitive.Trigger
+          ref={(element: HTMLElement | null) => {
+            anchorRef.current = element
+          }}
+          id={anchorId}
+          delay={delay}
+          render={anchor}
+        />
+        {shouldRenderDescription ? (
+          <span id={descriptionId} className="sr-only">
+            {content}
+          </span>
+        ) : null}
+        {!scopedPortalContainer && !portalContainer ? (
+          <span ref={setInlineContainer} className="contents" />
+        ) : null}
+        {resolvedPortalContainer ? (
+          <TooltipPrimitive.Portal
+            container={resolvedPortalContainer}
+            className="contents"
+          >
+            {popup}
+          </TooltipPrimitive.Portal>
+        ) : null}
+      </TooltipPrimitive.Root>
     </TooltipContext.Provider>
   )
 }

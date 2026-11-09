@@ -32,7 +32,7 @@ async function getJson({ path, key, timeoutMs }) {
     signal: AbortSignal.timeout(timeoutMs ?? REQUEST_TIMEOUT_MS),
   })
   const text = await response.text()
-  let payload = null
+  let payload
   try {
     payload = text ? JSON.parse(text) : null
   } catch {

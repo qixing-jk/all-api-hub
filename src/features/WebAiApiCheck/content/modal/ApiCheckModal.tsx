@@ -155,7 +155,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 <ApiCheckSiteAccessControl pageUrl={view.pageUrl} />
               </PopoverContent>
             </Popover>
-            {/* Focus-opened react-tooltip can consume the first dismiss click in Edge's content ShadowRoot. */}
+            {/* Dismiss on pointer press so an open floating hint cannot consume the close click. */}
             <IconButton
               className="absolute top-4 right-4"
               data-testid={WEB_AI_API_CHECK_TEST_IDS.closeButton}

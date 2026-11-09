@@ -188,7 +188,7 @@ export async function fetchKimiAccountData(
   const accessToken = request.auth.accessToken?.trim() ?? ""
   const usingApiKey =
     accessToken.startsWith("sk-") && !readKimiAuthState(request)
-  let available = 0
+  let available: number
   let today = 0
   if (usingApiKey) {
     available = parseKimiInferenceBalance(

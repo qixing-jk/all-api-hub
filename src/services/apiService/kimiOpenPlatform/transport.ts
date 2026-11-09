@@ -367,7 +367,7 @@ export async function fetchKimiPlatformText(
     },
     async ({ dispatch }) => {
       const response = await dispatch()
-      let text = ""
+      let text: string
       try {
         text = await response.text()
       } catch {

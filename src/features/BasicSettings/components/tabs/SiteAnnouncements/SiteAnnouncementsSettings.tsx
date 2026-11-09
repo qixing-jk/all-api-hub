@@ -112,7 +112,7 @@ export default function SiteAnnouncementsSettings() {
         return { ok: true, value: String(intervalMinutes) }
       }
 
-      let response = { success: false }
+      let response: { success: boolean }
       try {
         response = await updateSiteAnnouncementNotifications({
           intervalMinutes,
@@ -149,7 +149,7 @@ export default function SiteAnnouncementsSettings() {
         return { ok: true, value: String(notificationMaxAgeDays) }
       }
 
-      let response = { success: false }
+      let response: { success: boolean }
       try {
         response = await updateSiteAnnouncementNotifications({
           notificationMaxAgeDays,

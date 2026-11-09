@@ -416,7 +416,7 @@ for (const scenario of [
             "History keeps measurements, without individual request details",
         })
         await expect(historyTooltip).toBeVisible()
-        await expect(historyTooltip).toHaveClass(/react-tooltip__show/)
+        await expect(historyTooltip).toHaveCSS("opacity", "0.9")
         await expect
           .poll(() =>
             historyTooltip.evaluate((element) =>

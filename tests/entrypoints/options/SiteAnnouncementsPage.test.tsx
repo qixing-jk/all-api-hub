@@ -221,7 +221,7 @@ describe("SiteAnnouncementsPage", () => {
         ).default,
       },
     })
-    render(
+    const { rerender } = render(
       <I18nextProvider i18n={i18n}>
         <SiteAnnouncementsPage />
       </I18nextProvider>,
@@ -239,6 +239,21 @@ describe("SiteAnnouncementsPage", () => {
     ).toBeVisible()
     expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(requests)
     expect(showResultToast).toHaveBeenCalledTimes(notifications)
+
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <SiteAnnouncementsPage refreshKey={1} />
+      </I18nextProvider>,
+    )
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledTimes(notifications + 1)
+    })
+    expect(showResultToast).toHaveBeenLastCalledWith({
+      success: false,
+      message: "offline",
+      errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
+    })
+    expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(requests + 2)
   })
 
   const expectCheckNowAnalyticsStarted = (surfaceId: string) => {

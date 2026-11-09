@@ -100,7 +100,7 @@ export async function executeTempWindowFetch(
   const ruleIds = new Set<number>()
 
   const rawOptions = (fetchOptions ?? {}) as RequestInit
-  let effectiveFetchOptions: RequestInit = rawOptions
+  let effectiveFetchOptions: RequestInit
 
   const resolvedAuthType = resolveAuthTypeEnum(authType)
 
@@ -294,7 +294,7 @@ export async function executeTempWindowTurnstileFetch(
   const ruleIds = new Set<number>()
 
   const rawOptions = (fetchOptions ?? {}) as RequestInit
-  let effectiveFetchOptions: RequestInit = rawOptions
+  let effectiveFetchOptions: RequestInit
 
   const resolvedAuthType = resolveAuthTypeEnum(authType)
 

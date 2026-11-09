@@ -442,8 +442,8 @@ export const PRESET_PROBES: ApiProbe[] = [
         throw new Error("chrome.tabs.query is unavailable")
       }
 
-      let supportedCurrentWindow = false
-      let tabs: any[] = []
+      let supportedCurrentWindow: boolean
+      let tabs: any[]
       try {
         tabs = await chromeApi.tabs.query({ active: true, currentWindow: true })
         supportedCurrentWindow = true
@@ -573,7 +573,7 @@ export const PRESET_PROBES: ApiProbe[] = [
       }
 
       const manifest = runtime.getManifest?.() || {}
-      let platformInfo: any = null
+      let platformInfo: any
       try {
         platformInfo = await runtime.getPlatformInfo?.()
       } catch {

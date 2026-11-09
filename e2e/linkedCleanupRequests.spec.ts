@@ -194,7 +194,7 @@ for (const scenario of cases) {
       const path = new URL(request.url()).pathname
       const method = request.method()
       seenPaths.push(`${method} ${path}`)
-      let data: unknown = []
+      let data: unknown
       if (scenario.site === SITE_TYPES.AXON_HUB) {
         if (path !== "/admin/graphql") {
           await route.fulfill({ json: { token: "fixture-session" } })

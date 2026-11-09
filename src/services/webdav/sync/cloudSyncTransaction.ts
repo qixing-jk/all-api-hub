@@ -244,7 +244,9 @@ export async function executeCloudSyncTransaction({
     if (provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST) {
       throw error
     }
-    throw new Error(t("messages:webdav.connectionFailed", { status: "N/A" }))
+    throw new Error(t("messages:webdav.connectionFailed", { status: "N/A" }), {
+      cause: error,
+    })
   }
 
   // 下载远程数据

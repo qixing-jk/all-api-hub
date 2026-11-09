@@ -173,7 +173,7 @@ export function useOptionalPermissionControls({
         action: shouldEnable ? "request" : "revoke",
         label,
       })
-      let success = false
+      let success: boolean
       const wasGrantedBefore = state.statuses[id] === true
 
       try {
@@ -234,7 +234,6 @@ export function useOptionalPermissionControls({
           }))
         }
       } catch (error) {
-        success = false
         if (shouldEnable) {
           trackOptionalPermissionRequestResult(id, {
             success: false,

@@ -95,7 +95,7 @@ export async function sendDingtalkNotification(
     body: JSON.stringify(requestBody),
   })
 
-  let responseBody: DingtalkWebhookResponseBody | null = null
+  let responseBody: DingtalkWebhookResponseBody | null
 
   try {
     responseBody = (await response.json()) as DingtalkWebhookResponseBody

@@ -152,7 +152,7 @@ function autoDiscoverSourceExtensionData(preferredProfileName, preferredExtId) {
   const results = []
 
   for (const { browser, path: rootPath } of browserRoots) {
-    let entries = []
+    let entries
     try {
       entries = fs.readdirSync(rootPath, { withFileTypes: true })
     } catch {
@@ -182,7 +182,7 @@ function autoDiscoverSourceExtensionData(preferredProfileName, preferredExtId) {
       )
       if (!fs.existsSync(settingsDir)) continue
 
-      let extDirs = []
+      let extDirs
       try {
         extDirs = fs
           .readdirSync(settingsDir, { withFileTypes: true })

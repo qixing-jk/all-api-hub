@@ -65,7 +65,7 @@ export async function importFromBackupObject(
   } catch (error) {
     const message = getImportExportErrorMessage(error)
     if (message) {
-      throw new Error(message)
+      throw new Error(message, { cause: error })
     }
 
     throw error
