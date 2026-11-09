@@ -1,11 +1,42 @@
-import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
+import {
+  BROWSER_LOGIN_FAILURE_REASONS,
+  BROWSER_LOGIN_STATUS,
+  type BrowserLoginFailureReason,
+} from "~/constants/browserLogin"
 import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
 import type { AccountLoginResult } from "~/services/apiAdapters/contracts/accountLogin"
 import {
   BrowserOAuthRequestError,
   fetchBrowserOAuthRequest,
 } from "~/services/browserOAuth/contentRequest"
+import { detectAliyunWafChallenge } from "~/services/protectionBypass/aliyunWaf"
 import { isRecord } from "~/utils/core/object"
+
+/** Never expose an HTML challenge or an authentication response as error text. */
+export class PasswordLoginResponseError extends Error {
+  constructor(
+    readonly reason: BrowserLoginFailureReason,
+    readonly mutationRisk = false,
+  ) {
+    super(reason)
+  }
+}
+
+/** Classify HTML challenges independently of the HTTP status. */
+export async function readPasswordLoginJson(response: Response) {
+  const text = await response.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    const document = new DOMParser().parseFromString(text, "text/html")
+    const challenge = detectAliyunWafChallenge(document).isChallenge
+    throw new PasswordLoginResponseError(
+      challenge
+        ? BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
+        : BROWSER_LOGIN_FAILURE_REASONS.InvalidResponse,
+    )
+  }
+}
 
 export type PasswordLoginContentRequest = {
   origin?: unknown
@@ -59,10 +90,14 @@ export function runPasswordLoginContentAction(
       reply({
         status:
           hasEstablishedSession() ||
+          (error instanceof PasswordLoginResponseError && error.mutationRisk) ||
           (error instanceof BrowserOAuthRequestError &&
             error.reason === "uncertain")
             ? BROWSER_LOGIN_STATUS.Uncertain
             : BROWSER_LOGIN_STATUS.Failed,
+        ...(error instanceof PasswordLoginResponseError
+          ? { reason: error.reason }
+          : {}),
       }),
     )
   return true
@@ -88,18 +123,24 @@ export async function passwordLoginRequest(
     },
     { mutationRisk },
   )
-  if (!response.ok)
-    throw new BrowserOAuthRequestError(
-      response.status >= 500 && mutationRisk ? "uncertain" : "request_failed",
-    )
   let payload: unknown
   try {
-    payload = await response.json()
-  } catch {
+    payload = await readPasswordLoginJson(response)
+  } catch (error) {
+    if (
+      error instanceof PasswordLoginResponseError &&
+      (!mutationRisk ||
+        error.reason === BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired)
+    )
+      throw new PasswordLoginResponseError(error.reason, mutationRisk)
     throw new BrowserOAuthRequestError(
       mutationRisk ? "uncertain" : "request_failed",
     )
   }
+  if (!response.ok)
+    throw new BrowserOAuthRequestError(
+      response.status >= 500 && mutationRisk ? "uncertain" : "request_failed",
+    )
   if (!isRecord(payload))
     throw new BrowserOAuthRequestError(
       mutationRisk ? "uncertain" : "request_failed",

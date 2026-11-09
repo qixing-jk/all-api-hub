@@ -501,7 +501,8 @@ async function installMockedTempWindowCookieAuthBridge(serviceWorker: Worker) {
 
       if (
         message?.action === "checkCapGuard" ||
-        message?.action === "checkCloudflareGuard"
+        message?.action === "checkCloudflareGuard" ||
+        message?.action === "checkAliyunGuard"
       ) {
         return respond({
           success: true,

@@ -35,6 +35,7 @@ describe("OpenRouter Management Key background action", () => {
     sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
       if (
         message.action === RuntimeActionIds.ContentCheckCapGuard ||
+        message.action === RuntimeActionIds.ContentCheckAliyunGuard ||
         message.action === RuntimeActionIds.ContentCheckCloudflareGuard
       ) {
         return { success: true, passed: true }

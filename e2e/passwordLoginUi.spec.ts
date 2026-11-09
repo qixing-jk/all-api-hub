@@ -29,6 +29,15 @@ for (const mode of [
   "password-choice",
   "legacy-agreement",
   "modern-agreement",
+  "waf-preflight",
+  "waf-page",
+  "waf-clears",
+  "waf-after-submit",
+  "waf-after-incomplete-login",
+  "waf-login-fetch",
+  "waf-login-xhr",
+  "xhr-response-lost",
+  "uncaptured-native-login",
 ] as const) {
   test(`password UI login handles ${mode}`, async ({
     context,
@@ -36,6 +45,7 @@ for (const mode of [
     extensionId,
     extensionDir,
   }) => {
+    if (mode === "uncaptured-native-login") test.setTimeout(90_000)
     installExtensionPageGuards(page)
     await forceExtensionLanguage(page, "zh-CN")
     await stubLlmMetadataIndex(context)
@@ -51,7 +61,23 @@ for (const mode of [
     let agreementAcceptances = 0
     let logouts = 0
     let interruptedObservation = false
+    let loginPageLoads = 0
+    let signedInSessionReads = 0
     await context.route("https://agentrouter.org/api/user/self", (route) => {
+      // The check-in also refreshes account data through the stored bearer.
+      // Count the native page's Cookie/session verification separately.
+      if (signedIn && !route.request().headers().authorization)
+        signedInSessionReads++
+      if (
+        mode === "waf-preflight" ||
+        ((mode === "waf-after-submit" ||
+          mode === "waf-after-incomplete-login") &&
+          signedIn)
+      )
+        return route.fulfill({
+          contentType: "text/html",
+          body: '<!doctype html><meta name="aliyun_waf_aa" content="fixture"><p>Verify your browser</p>',
+        })
       if (
         mode === "second-factor" &&
         signedIn &&
@@ -96,9 +122,22 @@ for (const mode of [
         return route.fulfill({
           json: { success: true, data: { require_2fa: true } },
         })
+      if (mode === "waf-login-fetch" || mode === "waf-login-xhr")
+        return route.fulfill({
+          status: mode === "waf-login-xhr" ? 403 : 200,
+          contentType: "text/html",
+          body: '<!doctype html><meta name="aliyun_waf_aa" content="fixture">',
+        })
       signedIn = 17
+      if (mode === "xhr-response-lost") return route.abort("failed")
       return route.fulfill({
-        json: { success: true, data: { id: 17, checked_in: true } },
+        json: {
+          success: true,
+          data: {
+            ...(mode === "waf-after-incomplete-login" ? {} : { id: 17 }),
+            checked_in: true,
+          },
+        },
       })
     })
     await context.route(
@@ -117,15 +156,31 @@ for (const mode of [
         })
       },
     )
-    await context.route("https://agentrouter.org/login", (route) =>
-      route.fulfill({
+    await context.route("https://agentrouter.org/login", (route) => {
+      loginPageLoads++
+      if (mode === "waf-page")
+        return route.fulfill({
+          contentType: "text/html",
+          body: '<!doctype html><meta name="aliyun_waf_aa" content="fixture"><p>Verify your browser</p>',
+        })
+      return route.fulfill({
         contentType: "text/html",
         body: `<!doctype html><meta charset="utf-8"><title>Native login fixture</title>
       <style>body{font:16px system-ui;max-width:440px;margin:48px auto;padding:20px}input,button{display:block;box-sizing:border-box;width:100%;margin:16px 0;padding:12px}h1{font-size:24px}</style>
       <h1>站点原生登录表单</h1><main></main>
       <script>
       const mode=${JSON.stringify(mode)};
-      function done(data){localStorage.setItem('user',JSON.stringify(data));location.assign('/console');}
+      const originalFetch=window.fetch.bind(window);
+      if(mode==='waf-clears') {const marker=document.createElement('meta');marker.name='aliyun_waf_aa';document.head.appendChild(marker);setTimeout(()=>marker.remove(),1500);}
+      function done(data){localStorage.setItem('user',JSON.stringify(data));if(mode!=='uncaptured-native-login')location.assign('/console');}
+      async function nativeLogin(body){
+        if(mode==='waf-login-xhr'||mode==='xhr-response-lost')return new Promise((resolve,reject)=>{
+          const xhr=new XMLHttpRequest();xhr.open('POST','/api/user/login');xhr.setRequestHeader('Content-Type','application/json');xhr.setRequestHeader('X-Fixture-Native-Submit','1');
+          xhr.onload=()=>{try{resolve(JSON.parse(xhr.responseText));}catch(error){reject(error);}};xhr.onerror=()=>reject(new Error('Native response lost'));xhr.send(JSON.stringify(body));
+        });
+        const send=mode==='uncaptured-native-login'?originalFetch:fetch;
+        return send('/api/user/login',{method:'POST',headers:{'Content-Type':'application/json','X-Fixture-Native-Submit':'1'},body:JSON.stringify(body)}).then(r=>r.json());
+      }
       function showForm(){document.querySelector('main').innerHTML='<form><label>用户名<input name="username" autocomplete="username"></label><label>密码<input type="password" autocomplete="current-password"></label>'+(['turnstile','password-choice','legacy-agreement','modern-agreement'].includes(mode)?'<div class="cf-turnstile"><iframe title="Verification" srcdoc="Complete verification"></iframe><button type="button" id="verify">完成人机验证</button></div>':'')+(mode==='legacy-agreement'?'<label><input id="terms" type="checkbox">我已阅读并同意<a href="/user-agreement">用户协议</a></label>':mode==='modern-agreement'?'<button id="legal-consent" type="button" role="checkbox" aria-checked="false">同意用户协议</button>':'')+(mode.endsWith('-agreement')?'<label><input id="marketing" type="checkbox">接收促销邮件</label>':'')+'<button type="submit">登录</button></form>';
         const consent=document.querySelector('#terms, #legal-consent');
         if(consent){
@@ -136,7 +191,8 @@ for (const mode of [
         document.querySelector('form').addEventListener('submit',async event=>{event.preventDefault();
           if(document.querySelector('.cf-turnstile'))return;
           const body={username:document.querySelector('[name=username]').value,password:document.querySelector('[type=password]').value};
-          const result=await fetch('/api/user/login',{method:'POST',headers:{'Content-Type':'application/json','X-Fixture-Native-Submit':'1'},body:JSON.stringify(body)}).then(r=>r.json());
+          const result=await nativeLogin(body).catch(()=>({success:false}));
+          if(!result.success)return;
           if(result.data.require_2fa){document.querySelector('main').innerHTML='<form><label>二次验证码<input name="otp" autocomplete="one-time-code"></label><button type="submit">完成二次验证</button></form>';document.querySelector('form').addEventListener('submit',async event=>{event.preventDefault();const result=await fetch('/api/fixture/verify',{method:'POST'}).then(r=>r.json());done(result.data);});}else done(result.data);
         });
       }
@@ -147,8 +203,8 @@ for (const mode of [
       }
       else if(mode!=='api-fallback')showForm();
       </script>`,
-      }),
-    )
+      })
+    })
     const worker = await getServiceWorker(context)
     await seedUserPreferences(worker, {
       preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
@@ -209,7 +265,12 @@ for (const mode of [
     )
     await page.getByRole("button", { name: "立即执行", exact: true }).click()
     await releaseNavigation()
-    if (mode !== "api-fallback") {
+    if (
+      mode !== "api-fallback" &&
+      mode !== "xhr-response-lost" &&
+      mode !== "uncaptured-native-login" &&
+      !mode.startsWith("waf-")
+    ) {
       let login: typeof page | undefined
       await expect
         .poll(async () => {
@@ -299,6 +360,46 @@ for (const mode of [
         await login.getByRole("button", { name: "确认并退出当前会话" }).click()
       }
     }
+    if (
+      mode === "waf-page" ||
+      mode === "waf-preflight" ||
+      mode === "waf-after-incomplete-login" ||
+      mode === "waf-login-fetch" ||
+      mode === "waf-login-xhr"
+    ) {
+      const expectedStatus =
+        mode === "waf-page" || mode === "waf-preflight" ? "failed" : "uncertain"
+      await expect
+        .poll(
+          async () =>
+            (
+              await getPlasmoStorageJsonValue<AutoCheckinStatus>(
+                worker,
+                "autoCheckin_status",
+              )
+            )?.perAccount?.["ui-login"],
+          { timeout: 45_000 },
+        )
+        .toMatchObject({
+          status: expectedStatus,
+          messageKey: "autoCheckin:skipReasons.manual_verification_required",
+          reasonCode: "manual_verification_required",
+          retryable: false,
+        })
+      expect(logins).toHaveLength(expectedStatus === "uncertain" ? 1 : 0)
+      expect(nativeSubmissions).toEqual(
+        expectedStatus === "uncertain" ? [true] : [],
+      )
+      expect(logouts).toBe(0)
+      expect(loginPageLoads).toBe(mode === "waf-preflight" ? 2 : 1)
+      await captureVisualViews({
+        page,
+        ready: page.getByRole("button", { name: "立即执行", exact: true }),
+        id: mode,
+        extensionDir,
+      })
+      return
+    }
     await expect
       .poll(
         async () =>
@@ -308,7 +409,7 @@ for (const mode of [
               "autoCheckin_status",
             )
           )?.perAccount?.["ui-login"]?.status,
-        { timeout: 45_000 },
+        { timeout: mode === "uncaptured-native-login" ? 70_000 : 45_000 },
       )
       .toBe("success")
     expect(logins).toEqual([
@@ -319,6 +420,7 @@ for (const mode of [
     expect(agreementAcceptances).toBe(mode.endsWith("-agreement") ? 1 : 0)
     expect(logouts).toBe(mode === "shared-session" ? 1 : 0)
     expect(interruptedObservation).toBe(mode === "second-factor")
+    if (mode === "uncaptured-native-login") expect(signedInSessionReads).toBe(1)
     await expect
       .poll(
         () =>

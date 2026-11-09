@@ -261,6 +261,7 @@ describe("tempWindowPool Turnstile assist turns", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken: {
@@ -586,6 +587,7 @@ describe("tempWindowPool Turnstile assist turns", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken: {

@@ -3,7 +3,10 @@ import {
   isAccountLoginProvider,
 } from "~/constants/accountLogin"
 import type { AccountLoginProvider } from "~/constants/accountLogin"
-import { BROWSER_LOGIN_SESSION_MODES } from "~/constants/browserLogin"
+import {
+  BROWSER_LOGIN_FAILURE_REASONS,
+  BROWSER_LOGIN_SESSION_MODES,
+} from "~/constants/browserLogin"
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
@@ -30,6 +33,7 @@ import { AuthTypeEnum } from "~/types/auth"
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
+  getAutoCheckinSkipReasonTranslationKey,
 } from "~/types/autoCheckin"
 import {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
@@ -182,11 +186,28 @@ export function createAgentRouterProvider(
           outcome,
         })
       }
+      const failureReason =
+        result.status === BROWSER_OAUTH_STATUS.Authenticated
+          ? undefined
+          : result.reason === BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
+            ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
+            : result.reason === BROWSER_LOGIN_FAILURE_REASONS.NetworkError
+              ? AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR
+              : result.reason ===
+                    BROWSER_LOGIN_FAILURE_REASONS.InvalidResponse ||
+                  result.reason ===
+                    BROWSER_LOGIN_FAILURE_REASONS.PageUnavailable
+                ? AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE
+                : undefined
       if (result.status === BROWSER_OAUTH_STATUS.Uncertain) {
+        // Uncertainty describes the mutation outcome; the cause still decides
+        // whether unattended retries can help. A WAF challenge requires action.
+        const reasonCode =
+          failureReason ?? AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED
         return {
           status: CHECKIN_RESULT_STATUS.UNCERTAIN,
-          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-          messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
+          reasonCode,
+          messageKey: getAutoCheckinSkipReasonTranslationKey(reasonCode),
         }
       }
       if (result.status === BROWSER_OAUTH_STATUS.Authenticated) {
@@ -199,8 +220,9 @@ export function createAgentRouterProvider(
           : {
               status: CHECKIN_RESULT_STATUS.UNCERTAIN,
               reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-              messageKey:
-                AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
+              messageKey: getAutoCheckinSkipReasonTranslationKey(
+                AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+              ),
             }
       }
 
@@ -215,6 +237,8 @@ export function createAgentRouterProvider(
         }
       }
 
+      if (failureReason)
+        return createTerminalFailureResult({ reasonCode: failureReason })
       if (result.status === BROWSER_OAUTH_STATUS.InteractionRequired) {
         return createTerminalFailureResult({
           reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
