@@ -43,7 +43,7 @@ export async function sendWecomNotification(
     }),
   })
 
-  let body: WecomWebhookResponseBody | null = null
+  let body: WecomWebhookResponseBody | null
 
   try {
     body = (await response.json()) as WecomWebhookResponseBody

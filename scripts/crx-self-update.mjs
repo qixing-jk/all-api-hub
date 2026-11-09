@@ -105,6 +105,7 @@ function getPublicKeyDer(privateKeyPem) {
   } catch (error) {
     throw new Error(
       `Could not read the CRX private key: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     )
   }
 }

@@ -195,7 +195,7 @@ export function useChannelFilterEditor(idPrefix: string) {
       try {
         parsed = JSON.parse(trimmed)
       } catch (error) {
-        throw new Error(getErrorMessage(error))
+        throw new Error(getErrorMessage(error), { cause: error })
       }
 
       if (!Array.isArray(parsed)) {

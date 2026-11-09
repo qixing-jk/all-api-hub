@@ -114,6 +114,31 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
+  it("retains the connection cause and stops before WebDAV reads or writes", async () => {
+    const service = createService()
+    const connectionError = new Error("offline")
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        ...DEFAULT_WEBDAV_SETTINGS,
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+    mockTestConnection.mockRejectedValueOnce(connectionError)
+
+    await expect(service.syncWithWebdav()).rejects.toMatchObject({
+      message: "messages:webdav.connectionFailed",
+      cause: connectionError,
+    })
+    expect(mockDownloadBackup).not.toHaveBeenCalled()
+    expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+    expect(mockUploadBackup).not.toHaveBeenCalled()
+  })
+
   it("rethrows the provider error for a GitHub Gist connection failure", async () => {
     const service = createService()
     mockGetPreferences.mockResolvedValue({

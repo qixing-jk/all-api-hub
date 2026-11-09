@@ -66,7 +66,7 @@ export const rightCodeAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    let bootstrapFacts = null
+    let bootstrapFacts
     try {
       bootstrapFacts =
         await rightCodeAccountBootstrap.loadBootstrapFacts(serviceRequest)

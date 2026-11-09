@@ -355,7 +355,7 @@ export async function completeAutoDetectedAccount(
   let completedWithDiscovery: AccountCompletionAdapterResult
 
   if (credentialsMatch && earlyDiscoveryPromise) {
-    let discoveryResult: Awaited<typeof earlyDiscoveryPromise> = null
+    let discoveryResult: Awaited<typeof earlyDiscoveryPromise>
     if (remainingGraceMs > 0) {
       let graceTimer: ReturnType<typeof setTimeout> | undefined
       try {

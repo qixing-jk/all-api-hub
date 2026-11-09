@@ -70,6 +70,8 @@ export function useSiteAnnouncementsWorkspace({
   pollingEnabled: boolean
 }) {
   const { t, i18n } = useTranslation(["siteAnnouncements", "common"])
+  // Language changes update rendered text without restarting data loads.
+  const i18nT = i18n.t
   const [records, setRecords] = useState<SiteAnnouncementRecordView[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -107,9 +109,9 @@ export function useSiteAnnouncementsWorkspace({
           success: false,
           message: getRuntimeMessageFailureMessage(
             recordsResponse,
-            i18n.t("siteAnnouncements:messages.loadFailed"),
+            i18nT("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
+          errorFallback: i18nT("siteAnnouncements:messages.loadFailed"),
         })
         setHasLoadError(true)
         return
@@ -120,9 +122,9 @@ export function useSiteAnnouncementsWorkspace({
           success: false,
           message: getRuntimeMessageFailureMessage(
             statusResponse,
-            i18n.t("siteAnnouncements:messages.loadFailed"),
+            i18nT("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
+          errorFallback: i18nT("siteAnnouncements:messages.loadFailed"),
         })
         setHasLoadError(true)
         return
@@ -135,12 +137,12 @@ export function useSiteAnnouncementsWorkspace({
       showResultToast({
         success: false,
         message: getErrorMessage(error),
-        errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
+        errorFallback: i18nT("siteAnnouncements:messages.loadFailed"),
       })
     } finally {
       setIsLoading(false)
     }
-  }, [i18n])
+  }, [i18nT])
 
   useEffect(() => {
     void loadData()

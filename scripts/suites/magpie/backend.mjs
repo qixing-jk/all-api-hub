@@ -131,6 +131,7 @@ export async function startMagpieBackend(binary, expectedHash) {
       throw new AggregateError(
         [error, cleanupError],
         "Magpie startup and cleanup failed",
+        { cause: cleanupError },
       )
     }
     throw error

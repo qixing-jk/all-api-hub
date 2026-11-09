@@ -492,6 +492,17 @@ pnpm compile
 
 `noUncheckedIndexedAccess` is enabled for `src/**`, `tests/**`, and `e2e/**`.
 
+`pnpm compile` invokes the stable TypeScript 7 native compiler through the
+`@typescript/native` package alias. It uses one checker to limit parallel memory use,
+retains incremental results in `tsconfig.tsbuildinfo`, and explicitly keeps the
+previous automatic ambient-type discovery with `--types "*"`. The `typescript`
+dependency aliases the official TypeScript 6 compatibility package for the
+JavaScript compiler API used by ESLint and source-analysis scripts. Use
+`pnpm compile` for the native checker; `tsc6` remains available for API compatibility
+diagnostics. This follows the [official side-by-side setup](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-60).
+ESLint's current rules need syntax only, so its parser does not construct a second
+semantic TypeScript project.
+
 ### Permission warning validation
 
 Run `pnpm e2e:permissions` when changing required/optional permissions, host access, or other manifest inputs. The pre-commit hook selects this check for manifest configuration, entrypoints, plugins, dependencies, and its own tooling. The independent `Permission warnings` PR workflow uses the existing cached build producer and does not honor `skip-e2e` or `e2e-optional`; only a verified release-only diff skips it, like every other pull-request workflow. The test also runs in the default E2E suite and existing browser compatibility matrix. The command checks build freshness and uses the default manifest, without extra permissions from test-only build variants.

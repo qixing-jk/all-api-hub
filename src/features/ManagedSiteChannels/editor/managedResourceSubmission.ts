@@ -73,7 +73,7 @@ export function acceptManagedResourceSubmission(
       switch (mutationResult.outcome) {
         case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded: {
           onMutationConfirmed?.(submittedMode)
-          let mutationAccepted = false
+          let mutationAccepted: boolean
           try {
             mutationAccepted =
               mutationResult.data !== undefined &&

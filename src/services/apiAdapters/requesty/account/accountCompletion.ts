@@ -60,7 +60,7 @@ export const requestyAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    let bootstrapFacts = null
+    let bootstrapFacts
     try {
       bootstrapFacts =
         await requestyAccountBootstrap.loadBootstrapFacts(serviceRequest)

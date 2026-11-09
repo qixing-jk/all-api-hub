@@ -42,7 +42,7 @@ export const nanoGptAccountCompletion: AccountCompletionCapability = {
 
     // Static provider facts must also reach the incomplete draft: otherwise
     // pasting the missing key leaves the required exchange rate empty.
-    let bootstrapFacts = null
+    let bootstrapFacts
     try {
       bootstrapFacts =
         await nanoGptAccountBootstrap.loadBootstrapFacts(serviceRequest)

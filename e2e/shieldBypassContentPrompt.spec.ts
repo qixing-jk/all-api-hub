@@ -110,6 +110,7 @@ async function sendShieldBypassUiMessage(
       `Timed out waiting for shield bypass content message; last result: ${JSON.stringify(
         lastResult,
       )}\n${message}`,
+      { cause: error },
     )
   }
 

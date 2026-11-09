@@ -276,7 +276,7 @@ async function ensureDevServerRunning(root, customPort) {
     wxtArgs.push("--port", String(customPort))
   }
 
-  let spawnedPid = null
+  let spawnedPid
   if (os.platform() === "win32") {
     const helperScript = path.join(__dirname, "spawn-browser-windows.ps1")
     const payload = JSON.stringify({

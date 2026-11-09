@@ -237,7 +237,6 @@ export const AccountActionsProvider = ({
               )
             } catch (error) {
               if (!analyticsCompleted) {
-                analyticsCompleted = true
                 tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
                   errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
                   diagnostics: buildAccountRefreshDiagnostics({

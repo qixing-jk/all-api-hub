@@ -80,6 +80,7 @@ export async function launchExtensionContextWithStartupRetry<
         throw new AggregateError(
           [startupError, closeError],
           "Failed to close an extension context after service-worker startup failed",
+          { cause: closeError },
         )
       }
 

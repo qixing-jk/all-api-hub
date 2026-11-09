@@ -221,7 +221,7 @@ export function detectTurnstileWidget(): TurnstileWidgetDetection {
  * Read the `cf-turnstile-response` token value from DOM fields.
  */
 function readTurnstileTokenFromDom(): string | null {
-  let fields: NodeListOf<Element> | null = null
+  let fields: NodeListOf<Element> | null
 
   try {
     fields = document.querySelectorAll(TURNSTILE_RESPONSE_FIELD_SELECTOR)

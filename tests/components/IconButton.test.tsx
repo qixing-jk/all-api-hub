@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -167,11 +167,10 @@ describe("IconButton", () => {
     await user.tab()
 
     expect(screen.getByRole("button", { name: "Nested action" })).toHaveFocus()
-    const tooltipText = (await screen.findAllByRole("tooltip")).map(
-      (tooltip) => tooltip.textContent,
-    )
-    expect(tooltipText).toEqual(
-      expect.arrayContaining(["Nested action", "Outer description"]),
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("tooltip").map((tooltip) => tooltip.textContent),
+      ).toEqual(expect.arrayContaining(["Nested action", "Outer description"])),
     )
   })
 

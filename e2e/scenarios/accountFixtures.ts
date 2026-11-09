@@ -52,6 +52,10 @@ export function toAccountFixtureFromSavedAccount(
   })
 }
 
+/**
+ * Runs fixture cleanup after the scenario, retaining the scenario error when
+ * cleanup also fails so both failures remain available to the test report.
+ */
 export async function withAccountFixtureCleanup(
   fixture: AccountFixture,
   runScenario: (fixture: AccountFixture) => Promise<void>,
@@ -71,6 +75,7 @@ export async function withAccountFixtureCleanup(
       throw new AggregateError(
         [scenarioError, cleanupError],
         "Account fixture scenario failed and cleanup also failed",
+        { cause: cleanupError },
       )
     }
 

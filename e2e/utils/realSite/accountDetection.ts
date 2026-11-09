@@ -33,7 +33,7 @@ const test = extensionTest.extend<{ detectionCleanup: DetectionCleanup }>({
   trace: "off",
   video: "off",
   detectionCleanup: [
-    async ({ context }, use) => {
+    async ({ context }, useFixture) => {
       // Depend on context so cleanup runs before browser teardown, including
       // after the test body times out. Never revoke another run's login.
       void context
@@ -53,7 +53,7 @@ const test = extensionTest.extend<{ detectionCleanup: DetectionCleanup }>({
         if (failure) throw failure
       }
       try {
-        await use(owned)
+        await useFixture(owned)
       } finally {
         await cleanup()
       }
@@ -224,7 +224,7 @@ export function registerRealSiteAccountDetectionTests<
           (url) => window.startAccountDetectionUiObservation(url),
           config.baseUrl,
         )
-        let contexts: { windowType: string | undefined }[] = []
+        let contexts: { windowType: string | undefined }[]
         try {
           const dialog = await autoDetectAccountFromAddDialog(
             uiPage,

@@ -198,6 +198,7 @@ async function saveOneTimeApiKeyToProfile({
       message: sanitizedMessage,
     })
     toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
+    // eslint-disable-next-line preserve-caught-error -- The raw cause can retain the one-time key; only the redacted message may escape.
     throw new Error(sanitizedMessage)
   }
 }

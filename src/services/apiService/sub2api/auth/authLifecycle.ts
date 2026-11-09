@@ -602,7 +602,7 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
   let tokenExpiresAt = normalizeSub2ApiTokenExpiresAt(
     effectiveRequest.auth?.tokenExpiresAt,
   )
-  let accessToken = normalizeSub2ApiAccessToken(
+  const accessToken = normalizeSub2ApiAccessToken(
     effectiveRequest.auth?.accessToken,
   )
 
@@ -644,9 +644,6 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
         effectiveRequest.auth?.tokenExpiresAt,
       )
     }
-    accessToken = normalizeSub2ApiAccessToken(
-      effectiveRequest.auth?.accessToken,
-    )
   }
 
   effectiveRequest = normalizeSub2ApiJwtRequest(effectiveRequest)

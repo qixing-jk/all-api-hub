@@ -17,7 +17,7 @@ test("tooltip follows theme radius, density and colors", async ({
   const tooltip = page.getByRole("tooltip", { name: "Settings", exact: true })
   await expect(tooltip).toBeVisible()
   await expect(tooltip).toHaveCSS("opacity", "0.9")
-  const arrow = tooltip.locator(".react-tooltip-arrow")
+  const arrow = tooltip.locator('[aria-hidden="true"]')
   await expect(arrow).toHaveCSS("width", "8px")
   await expect(arrow).toHaveCSS("height", "8px")
   await page.screenshot({

@@ -58,7 +58,7 @@ export const pmApiContentSessionExtractor: ContentSessionExtractor = {
       if (error instanceof ContentSessionProtocolError) throw error
       // A transport/body failure does not establish that another protocol owns
       // the page, and must not be hidden by a cached generic user fallback.
-      throw new Error("PM-API session probe request failed")
+      throw new Error("PM-API session probe request failed", { cause: error })
     }
     if (!isRecord(body) || body.success !== true) return null
     let user

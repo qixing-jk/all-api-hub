@@ -174,7 +174,7 @@ export async function fetchPreparedJsonResponse(
     prepared,
     async ({ dispatch }) => {
       const response = await dispatch()
-      let body: unknown = null
+      let body: unknown
       try {
         body = await response.json()
       } catch {
