@@ -54,6 +54,9 @@ const browserApi = vi.hoisted(() => ({
 }))
 const hasCookieReadPermissionForUrl = vi.hoisted(() => vi.fn())
 const getPreferences = vi.hoisted(() => vi.fn())
+vi.mock("~/services/browsingContext/tempPage/browserAdapter", () => ({
+  waitForTabComplete: vi.fn().mockResolvedValue(undefined),
+}))
 const cookieCapture = vi.hoisted(() => ({ stores: vi.fn(), header: vi.fn() }))
 vi.mock("~/utils/browser/cookies", () => ({
   getAllCookieStores: cookieCapture.stores,

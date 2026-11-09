@@ -419,6 +419,8 @@ it.each([
     const result = await invoke({ phase: PASSWORD_UI_PHASES.Prepare })
     if (response.ok && cached && body?.success === true && body?.data?.id)
       expect(result).toMatchObject({ status: "authenticated", identity: "17" })
+    else if (!response.ok)
+      expect(result).toEqual({ status: "failed", reason: "invalid_response" })
     else expect(result).toEqual({ status: "uncertain" })
     expect(
       fetchMock.mock.calls.some(([path]) => path === "/api/user/login"),

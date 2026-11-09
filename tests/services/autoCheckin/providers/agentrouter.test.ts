@@ -68,6 +68,41 @@ function setup() {
 }
 
 describe("AgentRouter login check-in", () => {
+  it.each([
+    [
+      "interaction_required",
+      "verification_required",
+      "failed",
+      "manual_verification_required",
+    ],
+    ["failed", "invalid_response", "failed", "source_unavailable"],
+    ["failed", "network_error", "failed", "network_error"],
+    [
+      "uncertain",
+      "verification_required",
+      "uncertain",
+      "manual_verification_required",
+    ],
+  ] as const)(
+    "keeps the %s / %s cause in the final check-in result",
+    async (status, reason, expectedStatus, reasonCode) => {
+      const { provider, authenticate } = setup()
+      authenticate.mockResolvedValue({ status, reason })
+      const result = await provider.checkIn(account(), context)
+      expect(result).toMatchObject({
+        status: expectedStatus,
+        reasonCode,
+        messageKey: `autoCheckin:skipReasons.${reason === "verification_required" ? "manual_verification_required" : reasonCode}`,
+      })
+      if (reason === "verification_required")
+        expect(
+          canAutomaticallyRetryCheckinResult(
+            result,
+            AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+          ),
+        ).toBe(false)
+    },
+  )
   it("requires complete saved password credentials before starting login check-in", async () => {
     const { provider, authenticate } = setup()
     const saved = account()

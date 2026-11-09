@@ -31,6 +31,7 @@ describe("cleanupTempContextsOnSuspend", () => {
               case RuntimeActionIds.ContentShowShieldBypassUi:
                 return undefined
               case RuntimeActionIds.ContentCheckCapGuard:
+              case RuntimeActionIds.ContentCheckAliyunGuard:
               case RuntimeActionIds.ContentCheckCloudflareGuard:
                 return { success: true, passed: true }
               case RuntimeActionIds.ContentGetRenderedTitle:

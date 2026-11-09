@@ -1,9 +1,11 @@
 import {
+  BROWSER_LOGIN_FAILURE_REASONS,
   BROWSER_LOGIN_SESSION_MODES,
   BROWSER_LOGIN_STATUS,
 } from "~/constants/browserLogin"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  PasswordLoginResponseError,
   validatePasswordLoginContext,
   validatePasswordLoginRequest,
 } from "~/services/accountLogin/passwordContent"
@@ -34,7 +36,9 @@ export type { PasswordUiReply, PasswordUiRequest } from "./passwordUiProtocol"
 
 export type PasswordUiSession = { identity: string; checkedIn?: boolean }
 export interface PasswordUiProvider {
-  readSession(): Promise<PasswordUiSession | null>
+  readSession(options?: {
+    canResetSession: boolean
+  }): Promise<PasswordUiSession | null>
   logout(): Promise<void>
   settings(): Promise<{ enabled: boolean; verification: boolean }>
   enterPasswordLogin?(): boolean
@@ -55,6 +59,7 @@ export function handlePasswordUi(
   reply: (result: PasswordUiReply) => void,
   provider: PasswordUiProvider,
 ): true {
+  let mutationStarted = request.phase !== PASSWORD_UI_PHASES.Prepare
   void (async (): Promise<PasswordUiReply> => {
     const requestId = validatePasswordLoginContext(request)
     const expectedIdentity =
@@ -63,7 +68,9 @@ export function handlePasswordUi(
         : ""
     if (!expectedIdentity) throw new Error("Invalid identity")
     if (request.phase === PASSWORD_UI_PHASES.Prepare) {
-      const current = await provider.readSession()
+      const current = await provider.readSession({
+        canResetSession: request.canResetSession === true,
+      })
       if (current) {
         if (
           current.identity === expectedIdentity &&
@@ -78,6 +85,7 @@ export function handlePasswordUi(
             kind: PASSWORD_UI_KINDS.Manual,
             reason: PASSWORD_UI_REASONS.Session,
           }
+        mutationStarted = true
         await provider.logout()
         if (await provider.readSession())
           return { status: BROWSER_LOGIN_STATUS.Uncertain }
@@ -210,6 +218,26 @@ export function handlePasswordUi(
       }
     }
     return { status: BROWSER_LOGIN_STATUS.Failed }
-  })().then(reply, () => reply({ status: BROWSER_LOGIN_STATUS.Uncertain }))
+  })().then(reply, (error) => {
+    if (error instanceof PasswordLoginResponseError) {
+      reply({
+        status: mutationStarted
+          ? BROWSER_LOGIN_STATUS.Uncertain
+          : error.reason === BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
+            ? BROWSER_LOGIN_STATUS.InteractionRequired
+            : BROWSER_LOGIN_STATUS.Failed,
+        reason: error.reason,
+      })
+    } else if (
+      !mutationStarted &&
+      error instanceof BrowserOAuthRequestError &&
+      error.reason === "request_failed"
+    ) {
+      reply({
+        status: BROWSER_LOGIN_STATUS.Failed,
+        reason: BROWSER_LOGIN_FAILURE_REASONS.NetworkError,
+      })
+    } else reply({ status: BROWSER_LOGIN_STATUS.Uncertain })
+  })
   return true
 }

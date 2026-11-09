@@ -41,16 +41,16 @@ it.each([false, true])(
   async (mutation) => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
-    for (const response of [
-      new Response(null, { status: 503 }),
-      new Response("not json", { status: 200 }),
-      Response.json([]),
-    ]) {
+    for (const [response, reason] of [
+      [new Response(null, { status: 503 }), "invalid_response"],
+      [new Response("not json", { status: 200 }), "invalid_response"],
+      [Response.json([]), "request_failed"],
+    ] as const) {
       fetchMock.mockResolvedValueOnce(response)
       await expect(
         passwordLoginRequest("/api/status", mutation ? {} : undefined),
       ).rejects.toMatchObject({
-        reason: mutation ? "uncertain" : "request_failed",
+        reason: mutation ? "uncertain" : reason,
       })
     }
     expect(fetchMock).toHaveBeenCalledTimes(3)

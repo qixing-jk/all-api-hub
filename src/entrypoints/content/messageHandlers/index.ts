@@ -41,6 +41,7 @@ import {
 import { showGitHubFeedbackHint } from "~/services/checkin/feedback/githubHint"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
+import { handleCheckAliyunGuard } from "./handlers/aliyunGuard"
 import { handleInspectCredentialPage } from "./handlers/credentialPage"
 
 /**
@@ -158,6 +159,9 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentCheckCloudflareGuard) {
       return handleCheckCloudflareGuard(request, sendResponse)
+    }
+    if (request.action === RuntimeActionIds.ContentCheckAliyunGuard) {
+      return handleCheckAliyunGuard(sendResponse)
     }
 
     if (request.action === RuntimeActionIds.ContentWaitForTurnstileToken) {

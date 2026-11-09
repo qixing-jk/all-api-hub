@@ -4,11 +4,13 @@ import {
   LOGIN_VERIFICATION_REASONS,
 } from "~/constants/browserLogin"
 import type {
+  BrowserLoginFailureReason,
   BrowserLoginSessionMode,
   LoginVerificationReason,
 } from "~/constants/browserLogin"
 import { TURNSTILE_MANUAL_WAIT_MS } from "~/constants/turnstile"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
+import { waitForTabComplete } from "~/services/browsingContext/tempPage/browserAdapter"
 import { resolveTempWindowSize } from "~/services/browsingContext/tempPage/windowSize"
 import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
@@ -99,6 +101,7 @@ export type BrowserLoginResult<Evidence> =
   | {
       status: BrowserLoginFailureStatus
       message?: string
+      reason?: BrowserLoginFailureReason
     }
 
 export interface BrowserLoginContext<Evidence> {
@@ -115,12 +118,14 @@ export interface BrowserLoginContextOptions {
 }
 
 export interface BrowserLoginSession {
+  tabId: number
   input: BrowserLoginInput
   send<T = unknown>(
     action: string,
     details?: Record<string, unknown>,
   ): Promise<T>
   navigate(url: string): Promise<unknown>
+  waitForPageReady(): Promise<void>
   assertOrigin(): Promise<void>
   canResetSession(): Promise<boolean>
   requestAssist(reason?: LoginVerificationReason): Promise<boolean>
@@ -363,6 +368,7 @@ async function authenticateBrowserLogin<Evidence>(
     }
     const result = await active(() =>
       flow.execute({
+        tabId: opened.tabId,
         input,
         send: (action, details) =>
           active(() =>
@@ -376,6 +382,14 @@ async function authenticateBrowserLogin<Evidence>(
           ),
         navigate: (url) =>
           active(() => updateTab(opened.tabId, { url, active: true })),
+        waitForPageReady: () =>
+          active(() =>
+            waitForTabComplete(opened.tabId, {
+              requestId: input.requestId,
+              origin: input.origin,
+              signal: input.abortSignal,
+            }),
+          ),
         assertOrigin: () => active(() => assertTabOrigin(opened, input.origin)),
         async canResetSession() {
           input.abortSignal?.throwIfAborted()

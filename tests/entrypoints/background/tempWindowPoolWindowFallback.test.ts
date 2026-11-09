@@ -159,6 +159,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentGetRenderedTitle:
@@ -2657,6 +2658,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
@@ -3244,6 +3246,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentGetUserFromLocalStorage:
@@ -3292,6 +3295,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentGetUserFromLocalStorage:
@@ -3337,6 +3341,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentGetRenderedTitle:
@@ -4027,6 +4032,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
@@ -4076,6 +4082,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
@@ -4136,6 +4143,7 @@ describe("tempWindowPool window fallback", () => {
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
             return { success: true, passed: true }
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             cloudflareAttempts += 1
             return {
@@ -4215,6 +4223,7 @@ describe("tempWindowPool window fallback", () => {
               throw new Error("content script not ready")
             }
             return { success: true, passed: true }
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
@@ -4348,6 +4357,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentGetRenderedTitle:
@@ -4442,6 +4452,7 @@ describe("tempWindowPool window fallback", () => {
         }
         if (
           message.action === RuntimeActionIds.ContentCheckCapGuard ||
+          message.action === RuntimeActionIds.ContentCheckAliyunGuard ||
           message.action === RuntimeActionIds.ContentCheckCloudflareGuard
         ) {
           return { success: true, passed: true }
@@ -4594,6 +4605,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
@@ -4704,6 +4716,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
@@ -4813,6 +4826,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
@@ -5434,6 +5448,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken:
@@ -5533,6 +5548,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken:
@@ -5629,6 +5645,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken:
@@ -5731,6 +5748,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken:
@@ -5822,6 +5840,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken:
@@ -5901,6 +5920,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken:
@@ -5986,6 +6006,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentShowShieldBypassUi:
             return undefined
           case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentWaitForTurnstileToken:

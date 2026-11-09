@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   getTempContextTabSnapshot,
@@ -9,6 +9,7 @@ import {
   showShieldBypassUiInTab,
   waitForTabComplete,
 } from "~/services/browsingContext/tempPage/browserAdapter"
+import { checkTempContextProtectionGuards } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 import { resolveTempWindowSize } from "~/services/browsingContext/tempPage/windowSize"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
@@ -21,20 +22,74 @@ import * as browserApi_tabs from "~/utils/browser/tabs"
 
 vi.mock(
   "~/services/browsingContext/tempPage/tempContextProtectionGuards",
-  () => ({
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/browsingContext/tempPage/tempContextProtectionGuards")
+    >()),
     checkTempContextProtectionGuards: vi.fn().mockResolvedValue({
+      passed: true,
+      verificationRequired: false,
       capPassed: true,
       cloudflarePassed: true,
+      aliyunPassed: true,
     }),
   }),
 )
 
 describe("browserAdapter", () => {
+  afterEach(() => vi.useRealTimers())
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(protectionBypass, "isProtectionBypassFirefoxEnv").mockReturnValue(
       false,
     )
+  })
+
+  it("holds page readiness until the Aliyun challenge clears", async () => {
+    vi.useFakeTimers()
+    vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
+      status: "complete",
+    } as any)
+    vi.mocked(checkTempContextProtectionGuards).mockResolvedValueOnce({
+      passed: false,
+      verificationRequired: true,
+      capPassed: true,
+      cloudflarePassed: true,
+      aliyunPassed: false,
+    })
+    const ready = vi.fn()
+    const waiting = waitForTabComplete(1).then(ready)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(ready).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(500)
+    await waiting
+    expect(ready).toHaveBeenCalledOnce()
+  })
+
+  it("reports a bounded protection timeout separately from page loading", async () => {
+    vi.useFakeTimers()
+    vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
+      status: "complete",
+    } as any)
+    vi.mocked(checkTempContextProtectionGuards).mockResolvedValue({
+      passed: false,
+      verificationRequired: true,
+      capPassed: true,
+      cloudflarePassed: true,
+      aliyunPassed: false,
+    })
+    const result = expect(waitForTabComplete(1)).rejects.toMatchObject({
+      name: "ProtectionPageTimeoutError",
+    })
+    await vi.advanceTimersByTimeAsync(20_000)
+    await result
+    vi.mocked(checkTempContextProtectionGuards).mockResolvedValue({
+      passed: true,
+      verificationRequired: false,
+      capPassed: true,
+      cloudflarePassed: true,
+      aliyunPassed: true,
+    })
   })
 
   describe("removeInstalledDownloadBlockRules", () => {

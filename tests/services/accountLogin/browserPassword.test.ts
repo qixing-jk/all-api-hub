@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createBrowserPasswordContext } from "~/services/accountLogin/browserPassword"
+import { ProtectionPageTimeoutError } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 
 const session = vi.hoisted(() => ({
   send: vi.fn(),
   navigate: vi.fn(),
   waitForTab: vi.fn(),
+  waitForPageReady: vi.fn(),
   assertOrigin: vi.fn(),
   canResetSession: vi.fn(),
   requestAssist: vi.fn(),
@@ -23,7 +25,7 @@ const input = {
   expectedIdentity: "17",
   requestId: "native",
 }
-function authenticate(details = {}) {
+function authenticate(details = {}, overrides = {}) {
   return createBrowserPasswordContext({
     id: "password",
     concurrencyKey: "password",
@@ -33,6 +35,7 @@ function authenticate(details = {}) {
     loginAction: "api",
     clearEvidenceAction: "clear",
     credentials: { username: "alice", password: "secret" },
+    ...overrides,
   }).authenticate({ ...input, ...details })
 }
 beforeEach(() => {
@@ -44,6 +47,221 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("native password browser orchestration", () => {
+  it.each(["pending", "settled during the final sleep"])(
+    "verifies the session after an uncaptured response exhausts its wait (%s)",
+    async (state) => {
+      let release!: (value: null) => void
+      const result = new Promise<null>((resolve) => {
+        release = resolve
+      })
+      if (state !== "pending") setTimeout(() => release(null), 45_001)
+      const dispose = vi.fn(async () => release(null))
+      session.send.mockImplementation(async (_action, details) => {
+        if (details.phase === "prepare") return { kind: "ready" }
+        if (details.phase === "submit") return { kind: "submitted" }
+        expect(dispose).toHaveBeenCalledOnce()
+        return {
+          status: "authenticated",
+          identity: "17",
+          evidence: { checkedIn: true },
+        }
+      })
+      const login = authenticate(
+        {},
+        {
+          observeNativeLogin: async () => ({ result, dispose }),
+        },
+      )
+      await vi.runAllTimersAsync()
+      await expect(login).resolves.toEqual({
+        status: "authenticated",
+        identity: "17",
+        evidence: { checkedIn: true },
+      })
+      expect(
+        session.send.mock.calls.map(([, details]) => details.phase),
+      ).toEqual(["prepare", "submit", "observe"])
+      expect(dispose).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("still verifies a usable session when a caller needs to capture its Cookie", async () => {
+    const observeNativeLogin = vi.fn().mockResolvedValue({
+      result: Promise.resolve({
+        status: "authenticated",
+        identity: "17",
+        evidence: { checkedIn: true },
+      }),
+      dispose: async () => {},
+    })
+    session.send
+      .mockResolvedValueOnce({ kind: "ready" })
+      .mockResolvedValueOnce({ kind: "submitted" })
+      .mockResolvedValueOnce({
+        status: "uncertain",
+        reason: "verification_required",
+      })
+    const login = authenticate(
+      { captureCredential: true },
+      { observeNativeLogin },
+    )
+    await vi.runAllTimersAsync()
+    await expect(login).resolves.toEqual({
+      status: "uncertain",
+      reason: "verification_required",
+    })
+    expect(observeNativeLogin).not.toHaveBeenCalled()
+  })
+  it("rejects a captured login for another identity without borrowing page cache", async () => {
+    session.send
+      .mockResolvedValueOnce({ kind: "ready" })
+      .mockResolvedValueOnce({ kind: "submitted" })
+    const login = authenticate(
+      {},
+      {
+        observeNativeLogin: async () => ({
+          result: Promise.resolve({
+            status: "authenticated",
+            identity: "18",
+            evidence: { checkedIn: true },
+          }),
+          dispose: async () => {},
+        }),
+      },
+    )
+    await vi.runAllTimersAsync()
+    await expect(login).resolves.toEqual({ status: "identity_mismatch" })
+    expect(session.send).toHaveBeenCalledTimes(2)
+  })
+  it("keeps the existing session verifier when the native response is unavailable", async () => {
+    session.send
+      .mockResolvedValueOnce({ kind: "ready" })
+      .mockResolvedValueOnce({ kind: "submitted" })
+      .mockResolvedValueOnce({
+        status: "uncertain",
+        reason: "verification_required",
+      })
+    const login = authenticate(
+      {},
+      {
+        observeNativeLogin: async () => ({
+          result: Promise.resolve(null),
+          dispose: async () => {},
+        }),
+      },
+    )
+    await vi.runAllTimersAsync()
+    await expect(login).resolves.toEqual({
+      status: "uncertain",
+      reason: "verification_required",
+    })
+    expect(session.send.mock.calls.map(([, details]) => details.phase)).toEqual(
+      ["prepare", "submit", "observe"],
+    )
+  })
+  it("uses this submission's observed login response without an extra session request", async () => {
+    let confirm!: (result: unknown) => void
+    const result = new Promise((resolve) => {
+      confirm = resolve
+    })
+    const dispose = vi.fn().mockResolvedValue(undefined)
+    const observeNativeLogin = vi.fn().mockResolvedValue({ result, dispose })
+    session.send.mockImplementation(async (_action, details) => {
+      if (details.phase === "prepare") return { kind: "ready" }
+      if (details.phase === "submit") {
+        expect(observeNativeLogin).toHaveBeenCalledOnce()
+        confirm({
+          status: "authenticated",
+          identity: "17",
+          evidence: { checkedIn: true },
+        })
+        return { kind: "submitted" }
+      }
+      return { status: "uncertain", reason: "verification_required" }
+    })
+    const login = authenticate({}, { observeNativeLogin })
+    await vi.runAllTimersAsync()
+    await expect(login).resolves.toEqual({
+      status: "authenticated",
+      identity: "17",
+      evidence: { checkedIn: true },
+    })
+    expect(session.send.mock.calls.map(([, details]) => details.phase)).toEqual(
+      ["prepare", "submit"],
+    )
+    expect(dispose).toHaveBeenCalledOnce()
+  })
+  it.each([false, true])(
+    "reports a persistent page challenge before dispatch (recovery: %s)",
+    async (recovery) => {
+      if (recovery) session.waitForPageReady.mockResolvedValueOnce(undefined)
+      session.waitForPageReady.mockRejectedValue(
+        new ProtectionPageTimeoutError(),
+      )
+      session.send.mockResolvedValue({
+        status: "interaction_required",
+        reason: "verification_required",
+      })
+      await expect(authenticate()).resolves.toEqual({
+        status: "interaction_required",
+        reason: "verification_required",
+      })
+      expect(
+        session.send.mock.calls.every(([, data]) => data.phase === "prepare"),
+      ).toBe(true)
+    },
+  )
+  it("reports page recovery failure before login without claiming an uncertain submission", async () => {
+    session.waitForPageReady
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("guard timeout"))
+    session.send.mockResolvedValue({
+      status: "interaction_required",
+      reason: "verification_required",
+    })
+    await expect(authenticate()).resolves.toEqual({
+      status: "failed",
+      reason: "page_unavailable",
+    })
+    expect(session.send).toHaveBeenCalledTimes(1)
+  })
+  it("does not reload or resubmit when verification blocks a dispatched login", async () => {
+    session.send
+      .mockResolvedValueOnce({ kind: "ready" })
+      .mockResolvedValueOnce({ kind: "submitted" })
+      .mockResolvedValueOnce({
+        status: "uncertain",
+        reason: "verification_required",
+      })
+    const result = authenticate()
+    await vi.runAllTimersAsync()
+    await expect(result).resolves.toEqual({
+      status: "uncertain",
+      reason: "verification_required",
+    })
+    expect(session.navigate).not.toHaveBeenCalled()
+    expect(
+      session.send.mock.calls.filter(([, data]) => data.phase === "submit"),
+    ).toHaveLength(1)
+  })
+  it("waits for existing protection guards and reloads a challenged preflight only once", async () => {
+    session.send.mockImplementation(async () => {
+      expect(session.waitForPageReady).toHaveBeenCalled()
+      return { status: "interaction_required", reason: "verification_required" }
+    })
+    await expect(authenticate()).resolves.toEqual({
+      status: "interaction_required",
+      reason: "verification_required",
+    })
+    expect(session.navigate).toHaveBeenCalledExactlyOnceWith(
+      input.origin + "/login",
+    )
+    expect(session.waitForPageReady).toHaveBeenCalledTimes(2)
+    expect(session.send).toHaveBeenCalledTimes(2)
+    expect(
+      session.send.mock.calls.every(([, data]) => data.phase === "prepare"),
+    ).toBe(true)
+  })
   it("rejects missing identity without opening the content protocol", async () => {
     await expect(
       authenticate({ expectedIdentity: undefined }),
