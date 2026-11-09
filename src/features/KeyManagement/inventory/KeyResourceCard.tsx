@@ -242,6 +242,9 @@ function useKeyResourceActionRows() {
     const measureRows = () => {
       let previousCenter: number | undefined
       for (const group of groups) {
+        const position = getComputedStyle(group).position
+        // Tooltip descriptions remain accessible but do not occupy a flex row.
+        if (position === "absolute" || position === "fixed") continue
         const bounds = group.getBoundingClientRect()
         if (bounds.width === 0) continue
         const center = bounds.top + bounds.height / 2

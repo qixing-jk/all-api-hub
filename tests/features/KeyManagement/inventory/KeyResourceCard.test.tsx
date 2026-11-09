@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { useState, type ReactElement } from "react"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
+import Tooltip from "~/components/Tooltip"
 import {
   KEY_RESOURCE_CONTENT_LAYOUTS,
   KeyResourceActionGroup,
@@ -162,6 +163,46 @@ describe("KeyResourceCard", () => {
       expect(
         screen.getByRole("group", { name: "Management" }).parentElement,
       ).toHaveAttribute("data-row-start", "true")
+    } finally {
+      bounds.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("keeps tooltip descriptions accessible without treating them as action rows", () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const bounds = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains("sr-only")
+          ? ({ width: 1, height: 1, top: 100 } as DOMRect)
+          : ({ width: 40, height: 24, top: 0 } as DOMRect)
+      })
+    try {
+      renderKeyResourceCard(
+        <>
+          <style>{".sr-only { position: absolute; }"}</style>
+          <KeyResourceCardHeader
+            presentation={presentation}
+            detailsTrigger={
+              <Tooltip content="More detail" anchorAsChild>
+                <button>Details</button>
+              </Tooltip>
+            }
+            actions={
+              <KeyResourceActionGroup label="Management" separated>
+                <button>Edit</button>
+              </KeyResourceActionGroup>
+            }
+          />
+        </>,
+      )
+      expect(
+        screen.getByRole("button", { name: "Details" }),
+      ).toHaveAccessibleDescription("More detail")
+      expect(
+        screen.getByRole("group", { name: "Management" }).parentElement,
+      ).toHaveAttribute("data-row-start", "false")
     } finally {
       bounds.mockRestore()
       vi.unstubAllGlobals()

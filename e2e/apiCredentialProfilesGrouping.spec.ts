@@ -80,6 +80,15 @@ test("groups credentials by Base URL while preserving each credential entry", as
     page.getByText("Backup endpoint key", { exact: true }),
   ).toHaveCount(0)
 
+  const credentialRows = page
+    .locator("[data-slot='card-list']")
+    .filter({ has: page.getByText("Team primary", { exact: true }) })
+    .locator(":scope > div")
+  await expect(credentialRows).toHaveCount(2)
+  await expect(credentialRows.first()).toHaveCSS("border-bottom-width", "1px")
+  await expect(credentialRows.first()).toHaveCSS("border-bottom-style", "solid")
+  await expect(credentialRows.last()).toHaveCSS("border-bottom-width", "0px")
+
   await captureVisualViews({
     page,
     ready: page.getByText("Team primary", { exact: true }),
@@ -138,6 +147,7 @@ test("groups credentials by Base URL while preserving each credential entry", as
       { id: "dark", width: 320, height: 1100, theme: "dark" },
     ],
   })
+  await page.setViewportSize({ width: 320, height: 1100 })
   expect(
     await page.evaluate(
       () =>
@@ -145,15 +155,30 @@ test("groups credentials by Base URL while preserving each credential entry", as
         document.documentElement.clientWidth,
     ),
   ).toBe(true)
+  await page.setViewportSize({ width: 420, height: 900 })
 
   const toolbar = page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)
     .first()
   const separators = toolbar.locator(":scope > div > span[aria-hidden='true']")
   await expect(separators).toHaveCount(3)
-  for (const separator of await separators.all()) {
-    await expect(separator).toBeVisible()
+  const expectSeparatorRows = async () => {
+    for (const separator of await separators.all()) {
+      const startsRow = await separator.evaluate((element) => {
+        const group = element.parentElement!.getBoundingClientRect()
+        const previous =
+          element.parentElement!.previousElementSibling!.getBoundingClientRect()
+        return (
+          Math.abs(
+            group.top + group.height / 2 - (previous.top + previous.height / 2),
+          ) > 1
+        )
+      })
+      if (startsRow) await expect(separator).toBeHidden()
+      else await expect(separator).toBeVisible()
+    }
   }
+  await expectSeparatorRows()
 
   // A narrow parent can wrap actions even when the viewport stays unchanged.
   await toolbar.evaluate((element) => {
@@ -169,24 +194,9 @@ test("groups credentials by Base URL while preserving each credential entry", as
       ),
     )
     .toBeGreaterThan(0)
-  for (const separator of await separators.all()) {
-    const startsRow = await separator.evaluate((element) => {
-      const group = element.parentElement!
-      const previous = group.previousElementSibling!
-      return (
-        Math.abs(
-          group.getBoundingClientRect().top -
-            previous.getBoundingClientRect().top,
-        ) > 1
-      )
-    })
-    if (startsRow) await expect(separator).toBeHidden()
-    else await expect(separator).toBeVisible()
-  }
+  await expectSeparatorRows()
   await toolbar.evaluate((element) => {
     element.style.removeProperty("max-width")
   })
-  for (const separator of await separators.all()) {
-    await expect(separator).toBeVisible()
-  }
+  await expectSeparatorRows()
 })

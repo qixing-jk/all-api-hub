@@ -620,7 +620,7 @@ test("exports a SharedChat service credential to CC Switch", async ({
   extensionDir,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({
@@ -699,6 +699,36 @@ test("exports a SharedChat service credential to CC Switch", async ({
       { id: "compact", width: 320, height: 900, theme: "dark" },
     ],
   })
+
+  await saveTokenToApiCredentialProfilesFromKeyManagementPage({
+    serviceWorker,
+    page,
+    row: serviceCredentialCard,
+    expectedProfile: {
+      name: "SharedChat Service - Codex",
+      baseUrl: "https://new.sharedchat.cc/codex",
+      apiKey: "sk-sharedchat-service-e2e",
+    },
+  })
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.associationButton)
+    .click()
+  await page.getByRole("menuitem", { name: "View corresponding key" }).click()
+  await expect(serviceCredentialCard).toHaveAttribute(
+    "data-navigation-target",
+    "true",
+  )
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty("--theme-color-500", "#e05630")
+    document.documentElement.style.setProperty("--theme-color-400", "#e05630")
+  })
+  await serviceCredentialCard.screenshot({
+    path: testInfo.outputPath("service-credential-navigation-ring.png"),
+  })
+  await expect(serviceCredentialCard).toHaveCSS(
+    "box-shadow",
+    /rgb\(224, 86, 48\)/,
+  )
 })
 
 test("updates an existing token from key management and reloads the visible list", async ({

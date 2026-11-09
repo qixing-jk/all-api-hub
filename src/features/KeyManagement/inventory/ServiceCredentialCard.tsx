@@ -331,7 +331,7 @@ export function ServiceCredentialCard({
         tabIndex={targetId ? -1 : undefined}
         className={cn(
           isNavigationTarget &&
-            "ring-primary-500 dark:ring-primary-400 ring-2 ring-offset-2 outline-none",
+            "ring-theme-500 dark:ring-theme-400 ring-2 ring-offset-2 outline-none",
           embedded && "ring-offset-0 ring-inset",
         )}
       >
