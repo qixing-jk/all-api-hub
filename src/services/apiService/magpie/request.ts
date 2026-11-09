@@ -3,6 +3,7 @@ import {
   composeAbortSignals,
   createDeferredAbortDeadline,
 } from "~/services/apiTransport/abortableTask"
+import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
   createOperationScopedValue,
   type ApiOperationContext,
@@ -46,6 +47,33 @@ interface MagpieRequestSession {
 const requestSessions = new WeakMap<MagpieConfig, MagpieRequestSession>()
 const sessionBinding = (config: MagpieConfig) =>
   JSON.stringify([normalizeMagpieBaseUrl(config.baseUrl), config.webKey.trim()])
+
+/**
+ * Chromium omits Fetch Metadata on non-trustworthy HTTP destinations. Magpie's
+ * webOwnPage then compares every /api/ POST's Origin with its own host, including
+ * read-only POSTs such as provider/key and provider/list. HTTPS and loopback
+ * requests already carry Sec-Fetch-Site: none and need no header rule.
+ * https://github.com/yetone/magpie/commit/361da10ee90ad48496af116f9d5261c5257ee1e1
+ */
+function needsRequestOrigin(baseUrl: string, path: string, body: unknown) {
+  if (
+    import.meta.env.BROWSER !== "chrome" ||
+    body === undefined ||
+    !path.startsWith("/api/")
+  )
+    return false
+  const url = new URL(baseUrl)
+  const hostname = url.hostname.replace(/\.$/, "")
+  return (
+    url.protocol === "http:" &&
+    !(
+      hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      hostname === "[::1]" ||
+      /^127(?:\.\d{1,3}){3}$/.test(hostname)
+    )
+  )
+}
 
 /** Shares authentication only within a caller-owned operation or native workspace. */
 export const withMagpieRequestSession = createOperationScopedValue(
@@ -107,8 +135,7 @@ export async function requestMagpie(
       return await withSiteApiRequestTask(
         baseUrl,
         async () => {
-          onDispatch()
-          const login = await fetch(
+          const login = await fetchWithHeaderOverrides(
             `${baseUrl}/?${new URLSearchParams({ k: config.webKey.trim() })}`,
             {
               method: "GET",
@@ -116,6 +143,8 @@ export async function requestMagpie(
               redirect: "follow",
               signal: loginSignal,
             },
+            undefined,
+            { onDispatch },
           )
           reportSiteRateLimitResponse(baseUrl, login)
           if (!login.ok)
@@ -169,20 +198,29 @@ export async function requestMagpie(
       withSiteApiRequestTask(
         baseUrl,
         async () => {
-          deadline.start()
-          dispatched = true
-          const response = await fetch(`${baseUrl}${path}`, {
-            method: body === undefined ? "GET" : "POST",
-            credentials: "include",
-            redirect: "error",
-            signal: signal.signal,
-            ...(body === undefined
-              ? {}
-              : {
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(body),
-                }),
-          })
+          const response = await fetchWithHeaderOverrides(
+            `${baseUrl}${path}`,
+            {
+              method: body === undefined ? "GET" : "POST",
+              credentials: "include",
+              redirect: "error",
+              signal: signal.signal,
+              ...(body === undefined
+                ? {}
+                : {
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                  }),
+            },
+            undefined,
+            {
+              matchRequestOrigin: needsRequestOrigin(baseUrl, path, body),
+              onDispatch: () => {
+                deadline.start()
+                dispatched = true
+              },
+            },
+          )
           status = response.status
           reportSiteRateLimitResponse(baseUrl, response)
           if (

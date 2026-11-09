@@ -110,6 +110,155 @@ describe("credential request header overrides", () => {
     return updateSessionRules
   }
 
+  it("matches the request origin without replacing the browser Cookie session", async () => {
+    const updateSessionRules = installDnr()
+    const onDispatch = vi.fn()
+    await fetchWithHeaderOverrides(
+      "http://192.168.1.20:3430/api/provider/save?mode=new",
+      { method: "POST", credentials: "include", body: "{}" },
+      undefined,
+      { matchRequestOrigin: true, onDispatch },
+    )
+    const rule = updateSessionRules.mock.calls.find(
+      ([input]) => input.addRules,
+    )?.[0].addRules[0]
+    expect(rule?.action.requestHeaders).toEqual([
+      { header: "origin", operation: "set", value: "http://192.168.1.20:3430" },
+    ])
+    expect(rule?.condition).toMatchObject({
+      initiatorDomains: ["extension-id"],
+      requestMethods: ["post"],
+    })
+    expect(
+      new RegExp(rule.condition.regexFilter).test(
+        "http://192.168.1.20:3430/api/provider/save?mode=new",
+      ),
+    ).toBe(true)
+    expect(
+      new RegExp(rule.condition.regexFilter).test(
+        "http://192.168.1.20:3430/api/provider/save?mode=newer",
+      ),
+    ).toBe(false)
+    expect(nativeFetch.mock.calls[0]![1]).toMatchObject({
+      credentials: "include",
+      redirect: "error",
+      body: "{}",
+    })
+    expect(onDispatch).toHaveBeenCalledOnce()
+    expect(updateSessionRules).toHaveBeenLastCalledWith({
+      removeRuleIds: [rule.id],
+    })
+  })
+
+  it.each([
+    "data:text/plain,test",
+    "file:///tmp/test",
+    "chrome-extension://extension-id/page",
+  ])(
+    "rejects a non-HTTP request Origin policy before dispatch: %s",
+    async (url) => {
+      const updateSessionRules = installDnr()
+      await expect(
+        fetchWithHeaderOverrides(url, undefined, undefined, {
+          matchRequestOrigin: true,
+        }),
+      ).rejects.toThrow()
+      expect(updateSessionRules).not.toHaveBeenCalled()
+      expect(nativeFetch).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not let an ordinary request inherit a concurrent Origin rule", async () => {
+    const updateSessionRules = installDnr()
+    let activeOrigin: string | undefined
+    updateSessionRules.mockImplementation(async ({ addRules }) => {
+      activeOrigin = addRules?.[0].action.requestHeaders.find(
+        (header: { header: string }) => header.header === "origin",
+      )?.value
+    })
+    const sentOrigins: (string | undefined)[] = []
+    let release!: (response: Response) => void
+    nativeFetch.mockImplementation(() => {
+      sentOrigins.push(activeOrigin)
+      return sentOrigins.length === 1
+        ? new Promise<Response>((resolve) => {
+            release = resolve
+          })
+        : Promise.resolve(new Response("ok"))
+    })
+    const first = fetchWithHeaderOverrides(
+      "http://first.test/api",
+      { method: "POST" },
+      undefined,
+      { matchRequestOrigin: true },
+    )
+    await vi.waitFor(() => expect(nativeFetch).toHaveBeenCalledOnce())
+    const ordinary = fetchWithHeaderOverrides("http://first.test/api", {
+      method: "POST",
+    })
+    const second = fetchWithHeaderOverrides(
+      "http://second.test/api",
+      { method: "POST" },
+      undefined,
+      { matchRequestOrigin: true },
+    )
+    expect(sentOrigins).toEqual(["http://first.test"])
+    release(new Response("ok"))
+    await Promise.all([first, ordinary, second])
+    expect(sentOrigins).toEqual([
+      "http://first.test",
+      undefined,
+      "http://second.test",
+    ])
+  })
+
+  it("finishes Origin rule cleanup after cancellation during installation without sending the request", async () => {
+    const updateSessionRules = installDnr()
+    let finishInstall!: () => void
+    updateSessionRules.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishInstall = resolve
+        }),
+    )
+    const controller = new AbortController()
+    const onDispatch = vi.fn()
+    const pending = fetchWithHeaderOverrides(
+      "http://console.test/api",
+      { method: "POST", signal: controller.signal },
+      undefined,
+      { matchRequestOrigin: true, onDispatch },
+    )
+    const rejected = expect(pending).rejects.toMatchObject({
+      name: "AbortError",
+    })
+    await vi.waitFor(() => expect(updateSessionRules).toHaveBeenCalledOnce())
+    const ruleId = updateSessionRules.mock.calls[0]![0].addRules[0].id
+    controller.abort()
+    finishInstall()
+    await rejected
+    expect(nativeFetch).not.toHaveBeenCalled()
+    expect(onDispatch).not.toHaveBeenCalled()
+    expect(updateSessionRules).toHaveBeenLastCalledWith({
+      removeRuleIds: [ruleId],
+    })
+  })
+
+  it("does not send an Origin-controlled request when its required browser capability is unavailable", async () => {
+    vi.stubGlobal("chrome", {})
+    const onDispatch = vi.fn()
+    await expect(
+      fetchWithHeaderOverrides(
+        "http://console.test/api",
+        { method: "POST" },
+        undefined,
+        { matchRequestOrigin: true, onDispatch },
+      ),
+    ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+    expect(nativeFetch).not.toHaveBeenCalled()
+    expect(onDispatch).not.toHaveBeenCalled()
+  })
+
   it("rejects Safari private Cookie requests without native permissions before changing rules or sending credentials", async () => {
     vi.stubEnv("BROWSER", "safari")
     const updateSessionRules = installDnr()
