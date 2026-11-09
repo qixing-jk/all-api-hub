@@ -55,10 +55,10 @@ describe("browserAdapter", () => {
         capPassed: true,
         cloudflarePassed: true,
         aliyunPassed: true,
-        cap: { success: true },
-        cloudflare: { success: true },
-        aliyun: { success: true },
-        [missing]: { success: false },
+        cap: { success: true, passed: true },
+        cloudflare: { success: true, passed: true },
+        aliyun: { success: true, passed: true },
+        [missing]: { success: false, passed: false },
       })
       await expect(
         isTempContextContentReady(1, {
@@ -76,9 +76,9 @@ describe("browserAdapter", () => {
       capPassed: true,
       cloudflarePassed: true,
       aliyunPassed: true,
-      cap: { success: true },
-      cloudflare: { success: true },
-      aliyun: { success: true },
+      cap: { success: true, passed: true },
+      cloudflare: { success: true, passed: true },
+      aliyun: { success: true, passed: true },
     })
     await expect(
       isTempContextContentReady(1, {

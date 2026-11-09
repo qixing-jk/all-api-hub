@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -273,13 +274,12 @@ it("keeps the credential inspection reply port open and forwards its response", 
 
 it.each([false, true])(
   "routes the live Aliyun guard without disclosing document content (challenge=%s)",
-  async (challenged) => {
-    const page = new (await import("jsdom")).JSDOM(
-      challenged
-        ? '<meta name="aliyun_waf_aa" content="private">'
-        : "<form>Login</form>",
-    )
-    vi.stubGlobal("document", page.window.document)
+  (challenged) => {
+    const page = document.implementation.createHTMLDocument()
+    page.documentElement.innerHTML = challenged
+      ? '<meta name="aliyun_waf_aa" content="private">'
+      : "<form>Login</form>"
+    vi.stubGlobal("document", page)
     try {
       setupContentMessageHandlers()
       const reply = vi.fn()
@@ -297,7 +297,6 @@ it.each([false, true])(
       })
     } finally {
       vi.unstubAllGlobals()
-      page.window.close()
     }
   },
 )
