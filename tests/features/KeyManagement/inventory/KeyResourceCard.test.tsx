@@ -72,6 +72,7 @@ describe("KeyResourceCard", () => {
     (layout) => {
       let wrapped = false
       let resize!: () => void
+      const observe = vi.fn()
       const disconnect = vi.fn()
       const bounds = vi
         .spyOn(HTMLElement.prototype, "getBoundingClientRect")
@@ -91,7 +92,7 @@ describe("KeyResourceCard", () => {
           constructor(callback: () => void) {
             resize = callback
           }
-          observe() {}
+          observe = observe
           disconnect = disconnect
         },
       )
@@ -125,6 +126,10 @@ describe("KeyResourceCard", () => {
         const management = screen.getByRole("group", {
           name: "Management",
         }).parentElement!
+        expect(observe).toHaveBeenCalledWith(management.parentElement)
+        for (const group of Array.from(management.parentElement!.children)) {
+          expect(observe).toHaveBeenCalledWith(group)
+        }
         expect(management).toHaveAttribute("data-row-start", "false")
         wrapped = true
         act(() => resize())

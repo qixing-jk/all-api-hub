@@ -85,7 +85,7 @@ for (const width of [1280, 390, 320]) {
       await expect(
         page.getByRole("combobox", { name: "Select a scope" }),
       ).toHaveCount(0)
-      if (width === 1280 && !isAllAccounts) {
+      if (!isAllAccounts) {
         await rows.first().screenshot({
           path: testInfo.outputPath("runtime-action-separators.png"),
         })
@@ -97,7 +97,6 @@ for (const width of [1280, 390, 320]) {
         )
         await expect(separators).toHaveCount(3)
         for (const separator of await separators.all()) {
-          await expect(separator).toBeVisible()
           const geometry = await separator.evaluate((element) => {
             const group = element.parentElement!
             const previous =
@@ -105,13 +104,24 @@ for (const width of [1280, 390, 320]) {
             const current = group.getBoundingClientRect()
             const divider = element.getBoundingClientRect()
             return {
+              startsRow:
+                Math.abs(
+                  previous.top +
+                    previous.height / 2 -
+                    (current.top + current.height / 2),
+                ) > 1,
               dividerCenter: divider.x + divider.width / 2,
               gapCenter: (previous.right + current.left) / 2,
             }
           })
-          expect(
-            Math.abs(geometry.dividerCenter - geometry.gapCenter),
-          ).toBeLessThanOrEqual(1)
+          if (geometry.startsRow) {
+            await expect(separator).toBeHidden()
+          } else {
+            await expect(separator).toBeVisible()
+            expect(
+              Math.abs(geometry.dividerCenter - geometry.gapCenter),
+            ).toBeLessThanOrEqual(1)
+          }
         }
       }
 

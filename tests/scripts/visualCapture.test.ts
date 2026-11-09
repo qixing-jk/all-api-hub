@@ -352,6 +352,11 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
         `![${capture.checkpoints[index].id}: Before | After](${imagePath})`,
       )
       expect(section).toContain(`Status: ${comparison.status}`)
+      const comparisonImage = PNG.sync.read(
+        readFileSync(path.join(after.directory, imagePath)),
+      )
+      expect(comparisonImage.width).toBeGreaterThan(0)
+      expect(comparisonImage.height).toBeGreaterThan(0)
     }
     for (const comparison of after.comparisons) {
       const report = JSON.parse(
