@@ -84,17 +84,24 @@ it.each([false, true])(
   },
 )
 
-it.each([400, 503])(
-  "rejects HTTP %s JSON without exposing its body",
-  async (status) => {
+it.each([
+  [400, false],
+  [503, false],
+  [400, true],
+  [503, true],
+] as const)(
+  "rejects HTTP %s JSON without exposing its body (mutation=%s)",
+  async (status, mutation) => {
     vi.stubGlobal(
       "fetch",
       vi
         .fn()
         .mockResolvedValue(Response.json({ error: "private" }, { status })),
     )
-    await expect(passwordLoginRequest("/api/status")).rejects.toMatchObject({
-      reason: "request_failed",
+    await expect(
+      passwordLoginRequest("/api/user/login", mutation ? {} : undefined),
+    ).rejects.toMatchObject({
+      reason: status === 503 && mutation ? "uncertain" : "request_failed",
     })
   },
 )
