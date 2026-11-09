@@ -10,7 +10,10 @@ import type {
   AccountLoginMethodId,
   AccountPasswordIdentity,
 } from "~/constants/accountLogin"
-import type { BrowserLoginSessionMode } from "~/constants/browserLogin"
+import type {
+  BrowserLoginFailureReason,
+  BrowserLoginSessionMode,
+} from "~/constants/browserLogin"
 import { type BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import type { ApiTransportFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -116,6 +119,7 @@ export type AccountLoginResult =
         | typeof BROWSER_LOGIN_STATUS.SessionBusy
         | typeof BROWSER_LOGIN_STATUS.Uncertain
       message?: string
+      reason?: BrowserLoginFailureReason
     }
 
 /** Each adapter owns discovery, authentication and identity verification for its protocol. */

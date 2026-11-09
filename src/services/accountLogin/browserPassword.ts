@@ -1,8 +1,10 @@
 import {
+  BROWSER_LOGIN_FAILURE_REASONS,
   BROWSER_LOGIN_PAGE_TIMEOUT_MS,
   BROWSER_LOGIN_SESSION_MODES,
   BROWSER_LOGIN_STATUS,
   LOGIN_VERIFICATION_REASONS,
+  type BrowserLoginFailureReason,
 } from "~/constants/browserLogin"
 import {
   TURNSTILE_AUTO_ASSIST_MS,
@@ -11,11 +13,13 @@ import {
 import type {
   AccountLoginCredential,
   AccountLoginEvidence,
+  AccountLoginResult,
 } from "~/services/apiAdapters/contracts/accountLogin"
 import {
   createBrowserLoginContext,
   type BrowserLoginContextOptions,
 } from "~/services/browserLogin/browserLogin"
+import { ProtectionPageTimeoutError } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 import type { AccountPasswordCredentials } from "~/types/accountLogin"
 import { isRecord } from "~/utils/core/object"
 
@@ -35,10 +39,34 @@ interface BrowserPasswordFlow {
   loginAction: string
   clearEvidenceAction: string
   credentials: AccountPasswordCredentials
+  observeNativeLogin?: (
+    tabId: number,
+    origin: string,
+    requestId: string,
+  ) => Promise<NativeLoginObservation | null>
   captureCredential?: (
     tabId: number,
     origin: string,
   ) => Promise<AccountLoginCredential | null>
+}
+
+/** One native submission's projected response, owned by its browser attempt. */
+export interface NativeLoginObservation {
+  result: Promise<AccountLoginResult | null>
+  dispose(): Promise<void>
+}
+
+/** Page preparation has not dispatched authentication. */
+function pagePreparationFailure(error: unknown) {
+  return error instanceof ProtectionPageTimeoutError
+    ? {
+        status: BROWSER_LOGIN_STATUS.InteractionRequired,
+        reason: BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired,
+      }
+    : {
+        status: BROWSER_LOGIN_STATUS.Failed,
+        reason: BROWSER_LOGIN_FAILURE_REASONS.PageUnavailable,
+      }
 }
 
 /** Native execution shares session scheduling, while retaining its own result contract. */
@@ -54,8 +82,16 @@ export function createBrowserPasswordContext(
       failure: () => ({ status: BROWSER_LOGIN_STATUS.Failed }),
       async execute(session) {
         const { input } = session
+        let nativeObservation: NativeLoginObservation | null = null
+        let nativeSettled = false
+        let nativeResult: AccountLoginResult | null = null
         if (!input.expectedIdentity)
           return { status: BROWSER_LOGIN_STATUS.Failed }
+        try {
+          await session.waitForPageReady()
+        } catch (error) {
+          return pagePreparationFailure(error)
+        }
         try {
           const context = {
             origin: input.origin,
@@ -69,6 +105,26 @@ export function createBrowserPasswordContext(
           })
           if (
             isRecord(response) &&
+            response.status === BROWSER_LOGIN_STATUS.InteractionRequired &&
+            response.reason ===
+              BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
+          ) {
+            // A rejected preflight has not submitted credentials. Give the real
+            // login page one chance to refresh its browser protection state.
+            try {
+              await session.navigate(new URL(flow.loginPath, input.origin).href)
+              await session.waitForPageReady()
+            } catch (error) {
+              return pagePreparationFailure(error)
+            }
+            response = await session.send(flow.uiAction, {
+              ...context,
+              phase: PASSWORD_UI_PHASES.Prepare,
+              canResetSession: await session.canResetSession(),
+            })
+          }
+          if (
+            isRecord(response) &&
             response.kind === PASSWORD_UI_KINDS.Reload
           ) {
             await session.navigate(new URL(flow.loginPath, input.origin).href)
@@ -78,6 +134,7 @@ export function createBrowserPasswordContext(
                 tab.url?.startsWith(input.origin + "/") === true,
               BROWSER_LOGIN_PAGE_TIMEOUT_MS,
             )
+            await session.waitForPageReady()
             response = await session.send(flow.uiAction, {
               ...context,
               phase: PASSWORD_UI_PHASES.Prepare,
@@ -122,7 +179,33 @@ export function createBrowserPasswordContext(
               Date.now() <= Math.max(deadline, session.interactionDeadline())
             ) {
               await session.assertOrigin()
+              if (nativeResult) {
+                response = nativeResult
+                break
+              }
               if (phase === PASSWORD_UI_PHASES.Submit) {
+                // Login evidence proves this check-in, but does not replace
+                // verification that a captured Cookie authenticates requests.
+                if (
+                  !input.captureCredential &&
+                  !nativeObservation &&
+                  flow.observeNativeLogin
+                ) {
+                  nativeObservation = await flow.observeNativeLogin(
+                    session.tabId,
+                    input.origin,
+                    input.requestId,
+                  )
+                  void nativeObservation?.result.then(
+                    (result) => {
+                      nativeResult = result
+                      nativeSettled = true
+                    },
+                    () => {
+                      nativeSettled = true
+                    },
+                  )
+                }
                 // Never send a second submit, even if navigation destroys its reply.
                 submitted = true
                 try {
@@ -136,6 +219,10 @@ export function createBrowserPasswordContext(
                 }
                 phase = PASSWORD_UI_PHASES.Observe
                 deadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
+              } else if (nativeObservation && !nativeSettled) {
+                // The native request owns its response. Do not race it with
+                // another session API call while it is still in flight.
+                response = { kind: PASSWORD_UI_KINDS.Pending }
               } else {
                 try {
                   response = await session.send(flow.uiAction, {
@@ -173,6 +260,27 @@ export function createBrowserPasswordContext(
               }
               await new Promise((resolve) => setTimeout(resolve, 750))
             }
+            if (
+              (!isRecord(response) || !("status" in response)) &&
+              nativeObservation
+            ) {
+              if (nativeResult) response = nativeResult
+              else {
+                // A page may retain its transport before observation was armed.
+                // End capture before one final read-only session verification;
+                // never replay submission or poll alongside the native request.
+                await nativeObservation.dispose()
+                nativeObservation = null
+                await session.assertOrigin()
+                response =
+                  nativeResult ??
+                  (await session.send(flow.uiAction, {
+                    ...context,
+                    phase: PASSWORD_UI_PHASES.Observe,
+                    canResetSession: false,
+                  }))
+              }
+            }
             if (!isRecord(response) || !("status" in response))
               return {
                 status: submitted
@@ -202,13 +310,27 @@ export function createBrowserPasswordContext(
             case BROWSER_LOGIN_STATUS.IdentityMismatch:
             case BROWSER_LOGIN_STATUS.InteractionRequired:
             case BROWSER_LOGIN_STATUS.Uncertain:
-              return { status: response.status }
+              return {
+                status: response.status,
+                ...(Object.values(BROWSER_LOGIN_FAILURE_REASONS).includes(
+                  response.reason as BrowserLoginFailureReason,
+                )
+                  ? { reason: response.reason as BrowserLoginFailureReason }
+                  : {}),
+              }
             default:
               return { status: BROWSER_LOGIN_STATUS.Uncertain }
           }
-        } catch {
+        } catch (error) {
           // A dispatched authentication mutation may have succeeded. Never replay it.
-          return { status: BROWSER_LOGIN_STATUS.Uncertain }
+          return {
+            status: BROWSER_LOGIN_STATUS.Uncertain,
+            ...(error instanceof ProtectionPageTimeoutError
+              ? { reason: BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired }
+              : {}),
+          }
+        } finally {
+          await nativeObservation?.dispose().catch(() => {})
         }
       },
     },

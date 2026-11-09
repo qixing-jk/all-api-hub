@@ -2,7 +2,10 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { startAbortableTask } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { checkTempContextProtectionGuards } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
+import {
+  checkTempContextProtectionGuards,
+  ProtectionPageTimeoutError,
+} from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
   type TempWindowFallbackPreferences,
@@ -306,7 +309,12 @@ export async function isTempContextContentReady(
         checkTempContextProtectionGuards({ tabId, requestId: meta.requestId }),
       { timeoutMs: 2000, signals: [meta.signal] },
     ).result
-    if (!guards.cap?.success || !guards.cloudflare?.success) return false
+    if (
+      !guards.cap?.success ||
+      !guards.cloudflare?.success ||
+      !guards.aliyun?.success
+    )
+      return false
     if (!guards.passed) await waitForTabComplete(tabId, meta)
     return true
   } catch {
@@ -317,7 +325,7 @@ export async function isTempContextContentReady(
 
 /**
  * Wait for the temp-context tab to finish loading and clear any protection pages
- * (Cloudflare and/or CAP checkpoint). Rejects on timeout or errors.
+ * (Cloudflare, CAP or Aliyun). Rejects on timeout or errors.
  */
 export function waitForTabComplete(
   tabId: number,
@@ -325,6 +333,7 @@ export function waitForTabComplete(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false
+    let verificationRequired = false
     let retry: ReturnType<typeof setTimeout> | undefined
     const finish = (error?: unknown) => {
       if (settled) return
@@ -342,7 +351,13 @@ export function waitForTabComplete(
         requestId: meta?.requestId ?? null,
         origin: meta?.origin ?? null,
       })
-      finish(new Error(t("messages:background.pageLoadTimeout")))
+      finish(
+        verificationRequired
+          ? new ProtectionPageTimeoutError(
+              t("messages:background.pageLoadTimeout"),
+            )
+          : new Error(t("messages:background.pageLoadTimeout")),
+      )
     }, 20000) // 20秒超时
 
     meta?.signal?.addEventListener("abort", cancel, { once: true })
@@ -355,6 +370,7 @@ export function waitForTabComplete(
     let lastPassed: boolean | null = null
     let lastCapPassed: boolean | null = null
     let lastCloudflarePassed: boolean | null = null
+    let lastAliyunPassed: boolean | null = null
     let lastTabStatus: string | undefined
 
     logTempWindow("waitForTabCompleteStart", {
@@ -384,6 +400,8 @@ export function waitForTabComplete(
         if (tab.status === "complete") {
           let capPassed = false
           let cloudflarePassed = false
+          let aliyunPassed = false
+          let passed = false
 
           try {
             const result = await checkTempContextProtectionGuards({
@@ -392,21 +410,25 @@ export function waitForTabComplete(
             })
             capPassed = result.capPassed
             cloudflarePassed = result.cloudflarePassed
+            aliyunPassed = result.aliyunPassed
+            passed = result.passed
+            verificationRequired = result.verificationRequired
           } catch (error) {
             logger.warn("Guard checks via content script failed", error)
           }
 
           if (settled) return
-          const passed = capPassed && cloudflarePassed
 
           if (
             lastPassed !== passed ||
             lastCapPassed !== capPassed ||
-            lastCloudflarePassed !== cloudflarePassed
+            lastCloudflarePassed !== cloudflarePassed ||
+            lastAliyunPassed !== aliyunPassed
           ) {
             lastPassed = passed
             lastCapPassed = capPassed
             lastCloudflarePassed = cloudflarePassed
+            lastAliyunPassed = aliyunPassed
             logTempWindow("protectionGuardCheck", {
               tabId,
               requestId: meta?.requestId ?? null,
@@ -414,6 +436,7 @@ export function waitForTabComplete(
               passed,
               capPassed,
               cloudflarePassed,
+              aliyunPassed,
               attempt: attempts,
             })
           }

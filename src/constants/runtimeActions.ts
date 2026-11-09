@@ -204,6 +204,7 @@ export const RuntimeActionIds = {
   // Content-side protection guard checks used by temp-window fallback readiness gating.
   ContentCheckCapGuard: "checkCapGuard",
   ContentCheckCloudflareGuard: "checkCloudflareGuard",
+  ContentCheckAliyunGuard: "checkAliyunGuard",
   ContentWaitForTurnstileToken: "waitForTurnstileToken",
   TurnstileRequestUserAssist: "turnstileRequestUserAssist",
   TurnstileReadPageApi: "turnstileReadPageApi",

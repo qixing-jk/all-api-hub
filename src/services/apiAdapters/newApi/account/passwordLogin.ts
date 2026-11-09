@@ -6,6 +6,8 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { createBrowserPasswordContext } from "~/services/accountLogin/browserPassword"
 import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
+import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
+import { observeAgentRouterNativeLogin } from "~/services/accountLogin/providers/agentrouter/nativeLogin"
 import type {
   AccountLoginRequest,
   AccountLoginResult,
@@ -35,6 +37,9 @@ export async function loginNewApiWithPassword(
     clearEvidenceAction: RuntimeActionIds.ContentClearNewApiPasswordLogin,
     credentials,
     captureCredential: captureNewApiLoginCookieCredential,
+    ...(isAgentRouterLoginUrl(request.account.site_url)
+      ? { observeNativeLogin: observeAgentRouterNativeLogin }
+      : {}),
   }).authenticate({
     origin: new URL(request.account.site_url).origin,
     expectedIdentity,

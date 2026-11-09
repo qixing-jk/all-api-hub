@@ -10,9 +10,11 @@ describe("checkTempContextProtectionGuards", () => {
     browserAny.tabs.sendMessage = vi.fn()
   })
 
-  it("returns passed when both CAP and Cloudflare guards pass", async () => {
+  it("returns passed when all protection guards pass", async () => {
     browserAny.tabs.sendMessage.mockImplementation(
       (_tabId: number, msg: any) => {
+        if (msg.action === RuntimeActionIds.ContentCheckAliyunGuard)
+          return Promise.resolve({ success: true, passed: true })
         if (msg.action === RuntimeActionIds.ContentCheckCapGuard) {
           return Promise.resolve({ success: true, passed: true })
         }
@@ -36,6 +38,8 @@ describe("checkTempContextProtectionGuards", () => {
   it("returns not passed when Cloudflare guard fails", async () => {
     browserAny.tabs.sendMessage.mockImplementation(
       (_tabId: number, msg: any) => {
+        if (msg.action === RuntimeActionIds.ContentCheckAliyunGuard)
+          return Promise.resolve({ success: true, passed: true })
         if (msg.action === RuntimeActionIds.ContentCheckCapGuard) {
           return Promise.resolve({ success: true, passed: true })
         }
@@ -59,6 +63,8 @@ describe("checkTempContextProtectionGuards", () => {
   it("treats rejected guard checks as not passed", async () => {
     browserAny.tabs.sendMessage.mockImplementation(
       (_tabId: number, msg: any) => {
+        if (msg.action === RuntimeActionIds.ContentCheckAliyunGuard)
+          return Promise.resolve({ success: true, passed: true })
         if (msg.action === RuntimeActionIds.ContentCheckCapGuard) {
           return Promise.reject(new Error("cap failed"))
         }
@@ -82,6 +88,8 @@ describe("checkTempContextProtectionGuards", () => {
   it("treats invalid guard responses as not passed", async () => {
     browserAny.tabs.sendMessage.mockImplementation(
       (_tabId: number, msg: any) => {
+        if (msg.action === RuntimeActionIds.ContentCheckAliyunGuard)
+          return Promise.resolve({ success: true, passed: true })
         if (msg.action === RuntimeActionIds.ContentCheckCapGuard) {
           return Promise.resolve(null)
         }

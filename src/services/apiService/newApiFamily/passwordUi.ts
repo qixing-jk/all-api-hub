@@ -1,4 +1,7 @@
-import { passwordLoginRequest } from "~/services/accountLogin/passwordContent"
+import {
+  passwordLoginRequest,
+  readPasswordLoginJson,
+} from "~/services/accountLogin/passwordContent"
 import {
   enterPasswordLogin,
   handlePasswordUi,
@@ -16,8 +19,21 @@ import { isRecord } from "~/utils/core/object"
 
 let bundle: { token: string; sid: string; identity: string } | undefined
 /** Verify the current website session; auth material stays in this document. */
-async function readSession(): Promise<PasswordUiSession | null> {
+async function readSession(options?: {
+  canResetSession: boolean
+}): Promise<PasswordUiSession | null> {
   const cached = JSON.parse(localStorage.getItem("user") || "null")
+  // AgentRouter persists native login identity in localStorage. Only an owned
+  // private login context may skip probing an empty session; shared sessions
+  // and post-submission identity verification still require the server.
+  if (
+    options?.canResetSession &&
+    !bundle &&
+    cached?.id == null &&
+    isAgentRouterLoginUrl(location.href) &&
+    location.pathname === "/login"
+  )
+    return null
   const headers: Record<string, string> = bundle
     ? { Authorization: `Bearer ${bundle.token}` }
     : cached?.id != null
@@ -25,7 +41,7 @@ async function readSession(): Promise<PasswordUiSession | null> {
       : {}
   const response = await fetchBrowserOAuthRequest("/api/user/self", { headers })
   if (response.ok) {
-    const self = await response.json()
+    const self = await readPasswordLoginJson(response)
     if (self.success === true && isRecord(self.data) && self.data.id != null)
       return {
         identity: String(self.data.id),
@@ -39,7 +55,11 @@ async function readSession(): Promise<PasswordUiSession | null> {
     if (self.success === false && !cached?.id) return null
     throw new Error("Invalid session")
   }
-  if (response.status !== 401) throw new Error("Session unavailable")
+  if (response.status !== 401) {
+    // WAF responses can use either a successful or rejected HTTP status.
+    await readPasswordLoginJson(response)
+    throw new Error("Session unavailable")
+  }
   if (bundle) return null
   // Modern New API holds the bearer in the page's memory. Adopt its cookie
   // session once per document and keep all auth material inside this context.

@@ -2,6 +2,7 @@
 // @vitest-environment-options {"url":"https://gateway.example/login"}
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
+import { PasswordLoginResponseError } from "~/services/accountLogin/passwordContent"
 import { handlePasswordUi } from "~/services/accountLogin/passwordUi"
 import { BrowserOAuthRequestError } from "~/services/browserOAuth/contentRequest"
 
@@ -88,25 +89,48 @@ it("recognizes a user's native submission during verification and does not click
   expect(submit).toHaveBeenCalledTimes(1)
 })
 
-it("keeps observing after an interrupted session read without resubmitting", async () => {
-  document.body.innerHTML =
-    '<form><input name="username"><input type="password"><button>Login</button></form>'
-  const submit = vi.fn((event: Event) => event.preventDefault())
-  document.querySelector("form")!.addEventListener("submit", submit)
-  await invoke("prepare")
-  await expect(invoke("submit")).resolves.toEqual({ kind: "submitted" })
-  provider.readSession
-    .mockRejectedValueOnce(new BrowserOAuthRequestError("request_failed"))
-    .mockResolvedValueOnce({ identity: "17", checkedIn: true })
+it.each([
+  new BrowserOAuthRequestError("request_failed"),
+  new PasswordLoginResponseError("invalid_response"),
+])(
+  "keeps observing after an interrupted session read without resubmitting (%#)",
+  async (error) => {
+    document.body.innerHTML =
+      '<form><input name="username"><input type="password"><button>Login</button></form>'
+    const submit = vi.fn((event: Event) => event.preventDefault())
+    document.querySelector("form")!.addEventListener("submit", submit)
+    await invoke("prepare")
+    await expect(invoke("submit")).resolves.toEqual({ kind: "submitted" })
+    provider.readSession
+      .mockRejectedValueOnce(error)
+      .mockResolvedValueOnce({ identity: "17", checkedIn: true })
 
-  await expect(invoke("observe")).resolves.toEqual({ kind: "pending" })
-  await expect(invoke("observe")).resolves.toEqual({
-    status: "authenticated",
-    identity: "17",
-    evidence: { checkedIn: true },
-  })
-  expect(submit).toHaveBeenCalledTimes(1)
-})
+    await expect(invoke("observe")).resolves.toEqual({ kind: "pending" })
+    await expect(invoke("observe")).resolves.toEqual({
+      status: "authenticated",
+      identity: "17",
+      evidence: { checkedIn: true },
+    })
+    expect(submit).toHaveBeenCalledTimes(1)
+  },
+)
+
+it.each([
+  new PasswordLoginResponseError("verification_required"),
+  new PasswordLoginResponseError("invalid_response", true),
+])(
+  "does not retry a challenged read or uncertain mutation (%#)",
+  async (error) => {
+    document.body.innerHTML =
+      '<form><input name="username"><input type="password"><button>Login</button></form>'
+    await invoke("prepare")
+    provider.readSession.mockRejectedValueOnce(error)
+    await expect(invoke("observe")).resolves.toEqual({
+      status: "uncertain",
+      reason: error.reason,
+    })
+  },
+)
 
 it.each([
   new BrowserOAuthRequestError("uncertain"),

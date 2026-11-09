@@ -10,6 +10,16 @@ export const BROWSER_LOGIN_STATUS = {
   Uncertain: "uncertain",
 } as const
 
+/** Safe failure facts carried from native pages to the final task result. */
+export const BROWSER_LOGIN_FAILURE_REASONS = {
+  VerificationRequired: "verification_required",
+  InvalidResponse: "invalid_response",
+  NetworkError: "network_error",
+  PageUnavailable: "page_unavailable",
+} as const
+export type BrowserLoginFailureReason =
+  (typeof BROWSER_LOGIN_FAILURE_REASONS)[keyof typeof BROWSER_LOGIN_FAILURE_REASONS]
+
 /** Password and OAuth flows must serialize against the same website session. */
 export const BROWSER_LOGIN_SESSION_KEYS = {
   NewApi: "new-api-session",
