@@ -662,13 +662,27 @@ for (const [stopScope, mode] of [
           .getByRole("tooltip")
           .filter({ hasText: "History keeps measurements" }),
       ).toBeVisible()
-      await page
-        .getByRole("dialog")
-        .screenshot({
-          path: test.info().outputPath("needle-history-tooltip.png"),
-          animations: "disabled",
-        })
+      await page.getByRole("dialog").screenshot({
+        path: test.info().outputPath("needle-history-tooltip.png"),
+        animations: "disabled",
+      })
       await page.keyboard.press("Escape")
+      const historyTooltip = page
+        .getByRole("tooltip")
+        .filter({ hasText: "History keeps measurements" })
+      await expect(historyTooltip).toBeHidden()
+      await historyBadge.click()
+      await expect(historyTooltip).toHaveClass(/react-tooltip__show/)
+      await expect
+        .poll(() =>
+          historyTooltip.evaluate((element) =>
+            Number(getComputedStyle(element).opacity),
+          ),
+        )
+        .toBeGreaterThan(0)
+      await page.keyboard.press("Escape")
+      await expect(historyTooltip).toBeHidden()
+      await expect(page.getByRole("dialog")).toBeVisible()
       await page.getByRole("dialog").screenshot({
         path: test.info().outputPath("native-needle-history-restored.png"),
         animations: "disabled",

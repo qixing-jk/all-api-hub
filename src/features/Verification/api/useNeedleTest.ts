@@ -205,6 +205,7 @@ export function useNeedleTest(options: Options) {
       (seedDraft.trim()
         ? Number(seedDraft)
         : crypto.getRandomValues(new Uint32Array(1))[0]!)
+    let receivedProgress = false
     let remoteControls: NeedleRunControls | undefined
     const cancelledCells: NeedleCoordinate[] = []
     const queuedSelections: NeedleSelection[] = []
@@ -239,6 +240,7 @@ export function useNeedleTest(options: Options) {
           cancelled: [...cancelledCells],
           pending: cells.filter((cell) => !cancelledCells.includes(cell)),
         }
+        receivedProgress = true
         observed.current = snapshot
         setResult(snapshot)
         if (snapshot.reason === NEEDLE_RUN_REASONS.Stopped) {
@@ -297,6 +299,7 @@ export function useNeedleTest(options: Options) {
                 )
                 setControls(null)
               }
+              receivedProgress = true
               observed.current = progress
               setResult(progress)
             }
@@ -339,20 +342,24 @@ export function useNeedleTest(options: Options) {
                     detail: toSanitizedErrorSummary(failure, secrets),
                   }),
           )
-          if (resolvedRequest) {
-            try {
-              const saved = await (
-                configuration.historyAccess ?? needleHistory
-              ).get(resolvedRequest, configuration.historyTarget ?? undefined)
-              const scope = await getNeedleScopeKey(resolvedRequest)
-              if (current()) {
-                resumable.current = saved?.result ?? null
-                resultScope.current = saved ? scope : null
-                if (saved) setResult(saved.result)
+        }
+        if (resolvedRequest) {
+          try {
+            const saved = await (
+              configuration.historyAccess ?? needleHistory
+            ).get(resolvedRequest, configuration.historyTarget ?? undefined)
+            const scope = await getNeedleScopeKey(resolvedRequest)
+            if (current()) {
+              resumable.current = saved?.result ?? null
+              resultScope.current = saved ? scope : null
+              setHistoryError(false)
+              if (!receivedProgress && saved) {
+                setResult(saved.result)
+                setHistorical(true)
               }
-            } catch {
-              if (current()) setHistoryError(true)
             }
+          } catch {
+            if (current()) setHistoryError(true)
           }
         }
       }

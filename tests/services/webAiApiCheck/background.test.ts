@@ -232,6 +232,7 @@ describe("webAiApiCheck background handlers", () => {
       const send = vi
         .spyOn(messaging, "sendWebAiApiCheckMessage")
         .mockResolvedValue(undefined)
+      if (sender) send.mockRejectedValue(new Error("Page disconnected"))
       const run = vi
         .spyOn(durable, "runDurableNeedleTest")
         .mockImplementation(async (params) => {
@@ -334,14 +335,17 @@ describe("webAiApiCheck background handlers", () => {
       const data = {
         ...needleRequest,
         apiType: "google",
-        baseUrl: "https://example.invalid/v1beta/models/test:generateContent",
+        baseUrl:
+          "https://example.invalid/v1beta/proxy/v1beta/models/test:generateContent",
         historyTarget,
       }
       await webAiApiCheckMessageHandlers.get("webAiApiCheck:runNeedle")!({
         data,
       })
       expect(run).toHaveBeenCalledWith(
-        expect.objectContaining({ baseUrl: "https://example.invalid" }),
+        expect.objectContaining({
+          baseUrl: "https://example.invalid/v1beta/proxy",
+        }),
         false,
         historyTarget,
       )

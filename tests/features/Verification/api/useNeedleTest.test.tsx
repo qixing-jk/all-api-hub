@@ -24,6 +24,144 @@ const counter = {
 }
 const saved = createNeedleResult({ counter })
 
+it("loads the new durable baseline after a late stop discards the completion response", async () => {
+  const complete = createNeedleResult({
+    ...saved,
+    cells: [
+      {
+        targetTokens: 8192,
+        depth: 50,
+        actualDepth: 50,
+        localInputTokens: 8000,
+        outcome: "miss",
+      },
+    ],
+  })
+  const response = createDeferred<void>()
+  const persisted = createDeferred<void>()
+  let history = saved
+  const runner = vi
+    .fn<NonNullable<Options["runner"]>>()
+    .mockImplementationOnce(async (params) => {
+      history = complete
+      params.onProgress?.(complete)
+      persisted.resolve()
+      await response.promise
+      params.abortSignal.throwIfAborted()
+      return complete
+    })
+    .mockResolvedValue(complete)
+  const { result } = await setup({
+    runner,
+    historyAccess: {
+      get: async () => ({
+        result: history,
+        targetKey: "test",
+        scopeKey: "test",
+        verifiedAt: 1,
+      }),
+      save: vi.fn(),
+    },
+  })
+  await waitFor(() => expect(result.current.historical).toBe(true))
+  let running!: Promise<void>
+  act(() => {
+    running = result.current.runSelection({ depth: 50 })
+  })
+  await act(async () => persisted.promise)
+  act(() => result.current.stop())
+  await act(async () => {
+    response.resolve()
+    await running
+  })
+  await act(() => result.current.runSelection({ depth: 50 }))
+  expect(runner.mock.calls[1]![0].resumeFrom).toEqual(complete)
+})
+
+it("clears a previous history warning when failed-run readback succeeds", async () => {
+  const get = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Offline"))
+    .mockResolvedValue({
+      result: saved,
+      targetKey: "test",
+      scopeKey: "test",
+      verifiedAt: 1,
+    })
+  const { result } = await setup({
+    historyAccess: { get, save: vi.fn() },
+    runner: async () => {
+      throw new Error("Run failed")
+    },
+  })
+  await waitFor(() => expect(result.current.historyError).toBe(true))
+  await act(() => result.current.run())
+  expect(result.current.historyError).toBe(false)
+  expect(result.current.error).toBeTruthy()
+})
+
+it("retains newer visible measurements when failed writes leave an older saved baseline", async () => {
+  const observed = createNeedleResult({
+    ...saved,
+    cells: [
+      {
+        targetTokens: 8192,
+        depth: 50,
+        actualDepth: 50,
+        localInputTokens: 8000,
+        outcome: "miss",
+      },
+    ],
+  })
+  const runner = vi
+    .fn<NonNullable<Options["runner"]>>()
+    .mockImplementationOnce(async (params) => {
+      params.onProgress?.(observed)
+      throw new Error("Storage unavailable")
+    })
+    .mockResolvedValue(observed)
+  const { result } = await setup({
+    runner,
+    historyAccess: {
+      get: async () => ({
+        result: saved,
+        targetKey: "test",
+        scopeKey: "test",
+        verifiedAt: 1,
+      }),
+      save: vi.fn(),
+    },
+  })
+  await waitFor(() => expect(result.current.historical).toBe(true))
+  await act(() => result.current.runSelection({ depth: 50 }))
+  expect(result.current.result).toEqual(observed)
+  expect(result.current.historical).toBe(false)
+  await act(() => result.current.runSelection({ depth: 50 }))
+  expect(runner.mock.calls[1]![0].resumeFrom).toEqual(saved)
+})
+
+it("labels readback as historical when a failed run never produced progress", async () => {
+  const { result } = await setup({
+    historyAccess: {
+      get: async () => ({
+        result: saved,
+        targetKey: "test",
+        scopeKey: "test",
+        verifiedAt: 1,
+      }),
+      save: vi.fn(),
+    },
+    runner: async () => {
+      throw new Error("Run failed")
+    },
+  })
+  await waitFor(() => expect(result.current.historical).toBe(true))
+  await act(() => result.current.run())
+  expect(result.current.result).toEqual(saved)
+  expect(result.current.historical).toBe(true)
+  expect(result.current.error).toBeTruthy()
+})
+
 async function setup(overrides: Partial<Options> = {}) {
   const options: Options = {
     enabled: true,

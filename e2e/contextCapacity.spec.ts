@@ -322,17 +322,25 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
           .getByRole("button", { name: /^Previously:/ })
           .first()
         await historyBadge.hover()
-        await expect(
-          page.getByRole("tooltip").filter({
-            hasText:
-              "History keeps measurements, without individual request details",
-          }),
-        ).toBeVisible()
+        const historyTooltip = page.getByRole("tooltip").filter({
+          hasText:
+            "History keeps measurements, without individual request details",
+        })
+        await expect(historyTooltip).toBeVisible()
+        await expect(historyTooltip).toHaveClass(/react-tooltip__show/)
+        await expect
+          .poll(() =>
+            historyTooltip.evaluate((element) =>
+              Number(getComputedStyle(element).opacity),
+            ),
+          )
+          .toBeGreaterThan(0)
         await page.getByRole("dialog").screenshot({
           path: test.info().outputPath("context-history-tooltip.png"),
           animations: "disabled",
         })
         await page.keyboard.press("Escape")
+        await expect(historyTooltip).toBeHidden()
         return
       }
       if (inconclusive) {

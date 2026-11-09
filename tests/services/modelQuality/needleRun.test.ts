@@ -26,6 +26,26 @@ const params = {
   seed: 123,
 }
 
+it("propagates a preparation failure before dispatch without retrying it", async () => {
+  const failure = new Error("Preparation failed")
+  const prepare = vi
+    .spyOn(needlePrompt, "prepareNeedlePrompt")
+    .mockRejectedValue(failure)
+  const fetch = vi.fn(async (_url: unknown) => Response.json({ models: [] }))
+  vi.stubGlobal("fetch", fetch)
+  try {
+    await expect(
+      runNeedleTest({ ...params, abortSignal: new AbortController().signal }),
+    ).rejects.toBe(failure)
+    expect(prepare).toHaveBeenCalledOnce()
+    expect(
+      fetch.mock.calls.every(([url]) => String(url) === MODEL_METADATA_URL),
+    ).toBe(true)
+  } finally {
+    prepare.mockRestore()
+  }
+})
+
 it.each([
   { seed: -1 },
   { seed: 0.5 },

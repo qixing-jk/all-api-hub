@@ -14,7 +14,7 @@ import { Modal } from "~/components/ui"
 import { render as renderWithProviders } from "~~/tests/test-utils/render"
 
 describe("Tooltip", () => {
-  it("releases modal Escape when a closing transition overtakes an immediate reopen", async () => {
+  it("preserves an immediate reopen when an earlier closing transition finishes", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     renderWithProviders(
@@ -37,9 +37,14 @@ describe("Tooltip", () => {
       fireEvent.click(anchor)
       await act(() => vi.advanceTimersByTimeAsync(10))
       fireEvent.transitionEnd(popup, { propertyName: "opacity" })
+      for (let step = 0; step < 5; step++)
+        await act(() => vi.advanceTimersByTimeAsync(10))
+      expect(screen.getByRole("tooltip")).toBeVisible()
+      expect(anchor).toHaveAttribute("data-tooltip-open", "true")
+      fireEvent.keyDown(anchor, { key: "Escape" })
       await act(() => vi.advanceTimersByTimeAsync(50))
       expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
-      expect(anchor).not.toHaveAttribute("data-tooltip-open", "true")
+      expect(onClose).not.toHaveBeenCalled()
       fireEvent.keyDown(anchor, { key: "Escape" })
       expect(onClose).toHaveBeenCalledOnce()
     } finally {

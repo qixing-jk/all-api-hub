@@ -110,7 +110,11 @@ it.each([false, true])(
 
 it("shares execution and checkpoint identity between a Google endpoint and its root", async () => {
   const needle = await import("~/services/verification/modelQuality/needleRun")
-  const root = { ...request, apiType: "google" as const }
+  const root = {
+    ...request,
+    apiType: "google" as const,
+    baseUrl: "https://example.invalid/v1beta/proxy",
+  }
   const alias = {
     ...root,
     baseUrl: `${root.baseUrl}/v1beta/models/test:generateContent`,

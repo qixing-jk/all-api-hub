@@ -82,6 +82,9 @@ export default function Tooltip({
     null,
   )
   const [isOpen, setIsOpen] = useState(false)
+  const requestedOpen = useRef(isOpen)
+  requestedOpen.current = isOpen
+  const [popupGeneration, setPopupGeneration] = useState(0)
   const [isClickOpen, setIsClickOpen] = useState(false)
 
   const isString = typeof content === "string"
@@ -160,7 +163,13 @@ export default function Tooltip({
     if (anchorAsChild) childProps.onClickCapture?.(event)
     // Touch taps synthesize mouseout; keep an explicitly opened hint until
     // blur, Escape, or an outside click dismisses it.
-    if (openOnClick) setIsClickOpen(true)
+    if (openOnClick) {
+      setIsClickOpen(true)
+      setIsOpen(true)
+      // Discard pending library hide timers so this newer click wins even
+      // while the old popup is still transitioning out.
+      setPopupGeneration((value) => value + 1)
+    }
   }
 
   useEffect(() => {
@@ -229,9 +238,11 @@ export default function Tooltip({
     className: defaultClassName,
     isOpen,
     setIsOpen,
-    // A closing transition can unmount the popup during a queued reopen.
-    // Keep the modal's nested-layer marker tied to the actual popup lifecycle.
-    afterHide: () => setIsOpen(false),
+    // The library can unmount a closing popup before its queued reopen effect.
+    // Remount with the current opening request instead of cancelling that click.
+    afterHide: () => {
+      if (requestedOpen.current) setPopupGeneration((value) => value + 1)
+    },
     role: isOpen ? "tooltip" : "presentation",
     openEvents: openOnClick
       ? { mouseover: true, focus: true, click: true }
@@ -243,9 +254,14 @@ export default function Tooltip({
     },
   } satisfies ComponentProps<typeof ReactTooltip>
   const popup = isString ? (
-    <ReactTooltip {...popupProps} id={tooltipId} content={content} />
+    <ReactTooltip
+      key={popupGeneration}
+      {...popupProps}
+      id={tooltipId}
+      content={content}
+    />
   ) : (
-    <ReactTooltip {...popupProps} id={popupId} clickable>
+    <ReactTooltip key={popupGeneration} {...popupProps} id={popupId} clickable>
       {content}
     </ReactTooltip>
   )

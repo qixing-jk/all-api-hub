@@ -176,13 +176,13 @@ it("preserves other model results when clearing or remapping an owner", async ()
 it.each([
   [
     "google",
-    "https://example.invalid/gemini/v1beta/models/gemini-test:generateContent",
-    "https://example.invalid/gemini",
+    "https://example.invalid/v1beta/gemini/v1beta/models/gemini-test:generateContent",
+    "https://example.invalid/v1beta/gemini",
   ],
   [
     "openai-compatible",
-    "https://example.invalid/proxy/v1/chat/completions",
-    "https://example.invalid/proxy",
+    "https://example.invalid/v1/proxy/v1/chat/completions",
+    "https://example.invalid/v1/proxy",
   ],
 ] as const)(
   "shares %s retrieval history across endpoint and base URL forms",

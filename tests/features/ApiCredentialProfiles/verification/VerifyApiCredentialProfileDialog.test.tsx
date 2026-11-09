@@ -2436,128 +2436,151 @@ describe("VerifyApiCredentialProfileDialog", () => {
     })
   })
 
-  it("reloads persisted history for the active model and api type", async () => {
-    const user = userEvent.setup()
+  it.each([false, true])(
+    "reloads history for the active model and api type (late first read: %s)",
+    async (lateFirstRead) => {
+      const user = userEvent.setup()
 
-    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["m0", "m1"])
-    mockFetchAnthropicModelIds.mockResolvedValue(["claude-3-5-sonnet"])
+      mockFetchOpenAICompatibleModelIds.mockResolvedValue(["m0", "m1"])
+      mockFetchAnthropicModelIds.mockResolvedValue(["claude-3-5-sonnet"])
 
-    const initialTarget = requireHistoryTarget(
-      createProfileModelVerificationHistoryTarget("p-1", "m0"),
-    )
-    const selectedTarget = requireHistoryTarget(
-      createProfileModelVerificationHistoryTarget("p-1", "m1"),
-    )
+      const initialTarget = requireHistoryTarget(
+        createProfileModelVerificationHistoryTarget("p-1", "m0"),
+      )
+      const selectedTarget = requireHistoryTarget(
+        createProfileModelVerificationHistoryTarget("p-1", "m1"),
+      )
 
-    const initialSummary = createVerificationHistorySummary({
-      target: initialTarget,
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      preferredModelId: "m0",
-      results: [
-        {
-          id: "models",
-          status: "pass",
-          latencyMs: 3,
-          summary: "Stored m0 history",
-        },
-      ],
-    })
-    const selectedSummary = createVerificationHistorySummary({
-      target: selectedTarget,
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      preferredModelId: "m1",
-      results: [
-        {
-          id: "models",
-          status: "pass",
-          latencyMs: 4,
-          summary: "Stored m1 history",
-        },
-      ],
-    })
-
-    if (!initialSummary || !selectedSummary) {
-      throw new Error("Expected history summaries")
-    }
-
-    await verificationResultHistoryStorage.upsertLatestSummary(initialSummary)
-    await verificationResultHistoryStorage.upsertLatestSummary(selectedSummary)
-
-    const initialHistoryRead = createDeferred<void>()
-    const initialHistoryLoaded = createDeferred<void>()
-    const readSummary = verificationResultHistoryStorage.getLatestSummary.bind(
-      verificationResultHistoryStorage,
-    )
-    const historyRead = vi
-      .spyOn(verificationResultHistoryStorage, "getLatestSummary")
-      .mockImplementation(async (...args) => {
-        await initialHistoryRead.promise
-        const summary = await readSummary(...args)
-        initialHistoryLoaded.resolve()
-        return summary
+      const initialSummary = createVerificationHistorySummary({
+        target: initialTarget,
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        preferredModelId: "m0",
+        results: [
+          {
+            id: "models",
+            status: "pass",
+            latencyMs: 3,
+            summary: "Stored m0 history",
+          },
+        ],
+      })
+      const selectedSummary = createVerificationHistorySummary({
+        target: selectedTarget,
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        preferredModelId: "m1",
+        results: [
+          {
+            id: "models",
+            status: "pass",
+            latencyMs: 4,
+            summary: "Stored m1 history",
+          },
+        ],
       })
 
-    render(
-      <VerifyApiCredentialProfileDialog
-        isOpen={true}
-        onClose={() => {}}
-        profile={{
-          id: "p-1",
-          name: "Profile",
-          apiType: API_TYPES.OPENAI_COMPATIBLE,
-          baseUrl: "https://example.com",
-          apiKey: "sk-test",
-          tagIds: [],
-          notes: "",
-          createdAt: 1,
-          updatedAt: 1,
-        }}
-        initialModelId="m0"
-      />,
-    )
+      if (!initialSummary || !selectedSummary) {
+        throw new Error("Expected history summaries")
+      }
 
-    try {
-      await waitFor(() => expect(historyRead).toHaveBeenCalled())
-      expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
-      await act(async () => {
+      await verificationResultHistoryStorage.upsertLatestSummary(initialSummary)
+      await verificationResultHistoryStorage.upsertLatestSummary(
+        selectedSummary,
+      )
+
+      const initialHistoryRead = createDeferred<void>()
+      const initialHistoryLoaded = createDeferred<void>()
+      const readSummary =
+        verificationResultHistoryStorage.getLatestSummary.bind(
+          verificationResultHistoryStorage,
+        )
+      const historyRead = vi
+        .spyOn(verificationResultHistoryStorage, "getLatestSummary")
+        .mockImplementation(async (...args) => {
+          const initial =
+            args[0].kind === "profile-model" && args[0].modelId === "m0"
+          if (initial) await initialHistoryRead.promise
+          const summary = await readSummary(...args)
+          if (initial) initialHistoryLoaded.resolve()
+          return summary
+        })
+
+      render(
+        <VerifyApiCredentialProfileDialog
+          isOpen={true}
+          onClose={() => {}}
+          profile={{
+            id: "p-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-test",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+          initialModelId="m0"
+        />,
+      )
+
+      const modelProbe = within(
+        await screen.findByTestId(
+          getApiCredentialProfileVerifyProbeTestId("models"),
+        ),
+      )
+      try {
+        await waitFor(() => expect(historyRead).toHaveBeenCalled())
+        expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
+        if (!lateFirstRead) {
+          await act(async () => {
+            initialHistoryRead.resolve()
+            await initialHistoryLoaded.promise
+          })
+          expect(
+            await modelProbe.findByText("Stored m0 history"),
+          ).toBeInTheDocument()
+        }
+        await user.click(
+          screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
+        )
+        await user.click(await screen.findByText("m1"))
+        await waitFor(() =>
+          expect(
+            screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
+          ).toHaveTextContent("m1"),
+        )
+        expect(
+          await modelProbe.findByText("Stored m1 history"),
+        ).toBeInTheDocument()
+        if (lateFirstRead) {
+          await act(async () => {
+            initialHistoryRead.resolve()
+            await initialHistoryLoaded.promise
+          })
+          expect(modelProbe.getByText("Stored m1 history")).toBeInTheDocument()
+        }
+        expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
+      } finally {
         initialHistoryRead.resolve()
-        await initialHistoryLoaded.promise
-      })
-    } finally {
-      initialHistoryRead.resolve()
-      historyRead.mockRestore()
-    }
-    const modelProbe = within(
-      screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
-    )
-    expect(await modelProbe.findByText("Stored m0 history")).toBeInTheDocument()
+        historyRead.mockRestore()
+      }
 
-    await user.click(
-      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-    )
-    await user.click(await screen.findByText("m1"))
+      await selectApiTypeOption(user)
 
-    await waitFor(() => {
+      await waitFor(() =>
+        expect(
+          screen.getAllByText("aiApiVerification:verifyDialog.status.pending"),
+        ).not.toHaveLength(0),
+      )
+      expect(screen.queryByText("Stored m1 history")).not.toBeInTheDocument()
+
+      await selectOpenAICompatibleApiTypeOption(user)
+
       expect(
-        screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-      ).toHaveTextContent("m1")
-    })
-    expect(await modelProbe.findByText("Stored m1 history")).toBeInTheDocument()
-    expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
-
-    await selectApiTypeOption(user)
-
-    await waitFor(() =>
-      expect(
-        screen.getAllByText("aiApiVerification:verifyDialog.status.pending"),
-      ).not.toHaveLength(0),
-    )
-    expect(screen.queryByText("Stored m1 history")).not.toBeInTheDocument()
-
-    await selectOpenAICompatibleApiTypeOption(user)
-
-    expect(await modelProbe.findByText("Stored m1 history")).toBeInTheDocument()
-  })
+        await modelProbe.findByText("Stored m1 history"),
+      ).toBeInTheDocument()
+    },
+  )
 
   it.each([false, true])(
     "persists model-target history and handles clear failure: %s",

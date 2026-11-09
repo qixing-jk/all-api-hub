@@ -1,7 +1,5 @@
-import {
-  API_TYPES,
-  type ApiVerificationApiType,
-} from "~/services/verification/aiApiVerification/types"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification/types"
 import { normalizeHttpUrl } from "~/utils/core/url"
 import {
   normalizeUrlForBasePath,
@@ -112,19 +110,8 @@ export function normalizeProbeBaseUrl(params: {
   apiType: ApiVerificationApiType
   baseUrl: string
 }): string | null {
-  if (
-    params.apiType === API_TYPES.OPENAI_COMPATIBLE ||
-    params.apiType === API_TYPES.OPENAI ||
-    params.apiType === API_TYPES.ANTHROPIC
-  ) {
-    return normalizeOpenAiFamilyBaseUrl(params.baseUrl)
-  }
-
-  if (params.apiType === API_TYPES.GOOGLE) {
-    return normalizeGoogleFamilyBaseUrl(params.baseUrl)
-  }
-
-  return normalizeApiCheckBaseUrl(params.baseUrl)
+  const normalized = normalizeApiCheckBaseUrl(params.baseUrl)
+  return normalized ? toProtocolRoot(params.apiType, normalized) : null
 }
 
 /**
