@@ -479,6 +479,47 @@ describe("accountStorage core behaviors", () => {
     if (field !== "siteType") expect(latest?.sub2apiAuth).toEqual(submittedAuth)
   })
 
+  it.each([0, -1])(
+    "preserves rotated credentials when save drops loaded expiry %s",
+    async (tokenExpiresAt) => {
+      const account = createAccount({
+        site_type: SITE_TYPES.SUB2API,
+        account_info: {
+          ...createAccount().account_info,
+          access_token: "rotated-access",
+        },
+        sub2apiAuth: {
+          refreshToken: "rotated-refresh",
+          tokenExpiresAt: 2000000000000,
+        },
+      })
+      seedStorage([account])
+      await accountMutations.updateAccountWithCheckInDraft(
+        account.id,
+        {
+          notes: "edited note",
+          account_info: { access_token: "loaded-access" },
+          sub2apiAuth: { refreshToken: "loaded-refresh" },
+        },
+        account.checkIn,
+        {
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+          loadedSub2ApiAuth: {
+            siteUrl: account.site_url,
+            userId: account.account_info.id,
+            accessToken: "loaded-access",
+            refreshToken: "loaded-refresh",
+            tokenExpiresAt,
+          },
+        },
+      )
+      const latest = await accountStorage.getAccountById(account.id)
+      expect(latest?.notes).toBe("edited note")
+      expect(latest?.account_info.access_token).toBe("rotated-access")
+      expect(latest?.sub2apiAuth).toEqual(account.sub2apiAuth)
+    },
+  )
+
   beforeEach(() => {
     storageData.clear()
     storageHooks.beforeGet = async () => {}

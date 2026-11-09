@@ -6,6 +6,7 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   getAccountSiteProductProfile,
 } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
@@ -137,6 +138,16 @@ class AccountMutations {
           const loaded = mutationOptions.loadedKimiAuth
           const effectiveUpdates = { ...updates }
           const loadedSub2ApiAuth = mutationOptions.loadedSub2ApiAuth
+          // Compare the same canonical auth shape produced by form persistence.
+          const loadedSession = loadedSub2ApiAuth
+            ? normalizeAccountSiteSupplementalAuth({
+                siteType: account.site_type,
+                sub2apiAuth: {
+                  refreshToken: loadedSub2ApiAuth.refreshToken ?? "",
+                  tokenExpiresAt: loadedSub2ApiAuth.tokenExpiresAt,
+                },
+              }).sub2apiAuth
+            : undefined
           if (
             loadedSub2ApiAuth &&
             getAccountSiteProductProfile(account.site_type).authSession.kind ===
@@ -153,10 +164,9 @@ class AccountMutations {
               loadedSub2ApiAuth.userId &&
             updates.account_info?.access_token ===
               loadedSub2ApiAuth.accessToken &&
-            updates.sub2apiAuth?.refreshToken ===
-              loadedSub2ApiAuth.refreshToken &&
+            updates.sub2apiAuth?.refreshToken === loadedSession?.refreshToken &&
             updates.sub2apiAuth?.tokenExpiresAt ===
-              loadedSub2ApiAuth.tokenExpiresAt
+              loadedSession?.tokenExpiresAt
           ) {
             // Unchanged drafts do not own credentials recovered or rotated while
             // the editor was open. Preserve the latest complete pair under lock.
