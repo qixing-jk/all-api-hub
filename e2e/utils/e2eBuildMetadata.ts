@@ -189,6 +189,7 @@ async function readE2eBuildMetadata(
     const message = error instanceof Error ? error.message : String(error)
     throw new Error(
       `Invalid E2E build metadata at '${metadataPath}': ${message}`,
+      { cause: error },
     )
   }
 }

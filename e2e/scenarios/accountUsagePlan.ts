@@ -49,6 +49,7 @@ export async function runAccountFixtureUsagePlan<
       throw new AggregateError(
         [runError, cleanupError],
         "Account usage plan failed and account cleanup also failed",
+        { cause: cleanupError },
       )
     }
 

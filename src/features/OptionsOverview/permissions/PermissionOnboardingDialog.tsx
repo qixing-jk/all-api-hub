@@ -85,7 +85,7 @@ export function PermissionOnboardingDialog({
   const handleGrantAll = useCallback(async () => {
     if (!hasOptionalPermissions) return
     setIsRequesting(true)
-    let success = false
+    let success: boolean
 
     try {
       const result = await ensurePermissionsDetailed(OPTIONAL_PERMISSIONS)
@@ -117,7 +117,6 @@ export function PermissionOnboardingDialog({
         })
       }
       logger.error("Failed to grant all optional permissions", error)
-      success = false
       showResultToast({
         success: false,
         message: t("permissionsOnboarding.toasts.error"),

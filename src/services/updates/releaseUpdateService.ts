@@ -364,7 +364,7 @@ async function detectInstallEligibility(): Promise<DetectInstallEligibilityResul
     return { eligible: false, reason: RELEASE_UPDATE_REASONS.SafariUnsupported }
   }
 
-  let info: Awaited<ReturnType<typeof getManagementSelf>> = null
+  let info: Awaited<ReturnType<typeof getManagementSelf>>
   try {
     info = await getManagementSelf()
   } catch (error) {

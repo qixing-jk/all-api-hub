@@ -26,7 +26,7 @@ async function connectRequestyExtension({ cdpUrl }) {
     return await connectDevExtension({ cdpUrl })
   } catch (discoveryError) {
     const dev = await connectDevBrowser({ cdpUrl })
-    let extensionId = null
+    let extensionId
     try {
       extensionId = await findInstalledDevExtension(
         dev.browser,

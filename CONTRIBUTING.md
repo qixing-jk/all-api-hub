@@ -493,13 +493,15 @@ pnpm compile
 `noUncheckedIndexedAccess` is enabled for `src/**`, `tests/**`, and `e2e/**`.
 
 `pnpm compile` invokes the stable TypeScript 7 native compiler through the
-`@typescript/native` package alias. It uses one checker to bound CI memory,
+`@typescript/native` package alias. It uses one checker to limit parallel memory use,
 retains incremental results in `tsconfig.tsbuildinfo`, and explicitly keeps the
 previous automatic ambient-type discovery with `--types "*"`. The `typescript`
-dependency remains the JavaScript compiler API used by ESLint and source-analysis
-scripts; invoke `pnpm compile` instead of relying on which package supplies `tsc`
-in a particular installation. ESLint's current rules need syntax only, so its
-parser does not construct a second semantic TypeScript project.
+dependency aliases the official TypeScript 6 compatibility package for the
+JavaScript compiler API used by ESLint and source-analysis scripts. Use
+`pnpm compile` for the native checker; `tsc6` remains available for API compatibility
+diagnostics. This follows the [official side-by-side setup](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-60).
+ESLint's current rules need syntax only, so its parser does not construct a second
+semantic TypeScript project.
 
 ### Permission warning validation
 

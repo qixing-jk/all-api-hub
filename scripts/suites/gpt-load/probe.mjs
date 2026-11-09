@@ -104,8 +104,8 @@ export async function runGptLoadProbe({
     return { ok: false, channelCount, groupCount }
   }
 
-  let verified = false
-  let cleanedUp = false
+  let verified
+  let cleanedUp
   try {
     const readBack = await call(
       root,

@@ -216,7 +216,7 @@ describe("compatible real-site login", () => {
     )
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
     const { page } = createPage(post, { getRequest })
-    let messages = ""
+    let messages: string
 
     try {
       await loginToRealNewApiSite(page, config)
@@ -249,7 +249,7 @@ describe("compatible real-site login", () => {
       .mockRejectedValue(new Error("must-not-leak-transport-details"))
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
     const { page } = createPage(post, { getRequest })
-    let messages = ""
+    let messages: string
 
     try {
       await loginToRealNewApiSite(page, config)
@@ -312,7 +312,7 @@ describe("compatible real-site login", () => {
     const deleteRequest = vi.fn().mockResolvedValue(createResponse(200, {}))
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
     const { page } = createPage(post, { getRequest, deleteRequest })
-    let messages = ""
+    let messages: string
 
     try {
       await expect(loginToRealNewApiSite(page, config)).resolves.toMatchObject({
@@ -368,7 +368,7 @@ describe("compatible real-site login", () => {
     const deleteRequest = vi.fn().mockResolvedValue(createResponse(405, {}))
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
     const { page } = createPage(post, { getRequest, deleteRequest })
-    let messages = ""
+    let messages: string
 
     try {
       await expect(loginToRealNewApiSite(page, config)).resolves.toMatchObject({
@@ -407,7 +407,7 @@ describe("compatible real-site login", () => {
       .mockRejectedValue(new Error("must-not-leak-transport-details"))
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
     const { page } = createPage(post, { getRequest, deleteRequest })
-    let messages = ""
+    let messages: string
 
     try {
       await expect(loginToRealNewApiSite(page, config)).resolves.toMatchObject({

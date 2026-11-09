@@ -114,7 +114,7 @@ async function consoleFetch(
     ...(init?.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     credentials: "omit",
   })
-  let payload: unknown = null
+  let payload: unknown
   try {
     payload = await response.json()
   } catch {
@@ -136,7 +136,7 @@ export async function createRequestyManagementKeyInPage(
     }
   }
 
-  let groupId: string | null = null
+  let groupId: string | null
   try {
     const organization = await consoleFetch(
       REQUESTY_CONSOLE_ORGANIZATION_PATH,

@@ -108,13 +108,12 @@ export function buildWebdavSyncPlan(
     lastUpdated: 0,
   }
 
-  let accountsToSave: SiteAccount[] = localAccountsConfig.accounts
-  let bookmarksToSave: SiteBookmark[] = localBookmarks
-  let tagStoreToSave = localTagStore
-  let preferencesToSave: UserPreferences = localPreferences
-  let channelConfigsToSave: ChannelConfigSnapshot = localChannelConfigs
-  let apiCredentialProfilesToSave: ApiCredentialProfilesConfig =
-    localApiCredentialProfiles
+  let accountsToSave: SiteAccount[]
+  let bookmarksToSave: SiteBookmark[]
+  let tagStoreToSave: typeof localTagStore
+  let preferencesToSave: UserPreferences
+  let channelConfigsToSave: ChannelConfigSnapshot
+  let apiCredentialProfilesToSave: ApiCredentialProfilesConfig
   let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
   let orderedAccountIdsToSave: string[] = localOrderedAccountIds
   let deletedEntryRecordsToSave = localAccountsConfig.deletedEntryRecords

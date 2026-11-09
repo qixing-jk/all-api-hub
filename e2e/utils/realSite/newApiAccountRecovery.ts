@@ -68,6 +68,7 @@ export function createNewApiAccountRecovery(params: {
 
         throw new Error(
           await describeDetectedDialogFailure(dialog, error, refreshObserver),
+          { cause: error },
         )
       }
 

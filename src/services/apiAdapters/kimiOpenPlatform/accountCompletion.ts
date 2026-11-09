@@ -100,7 +100,7 @@ export const kimiOpenPlatformAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    let bootstrapFacts = null
+    let bootstrapFacts
     try {
       bootstrapFacts =
         await kimiOpenPlatformAccountBootstrap.loadBootstrapFacts(

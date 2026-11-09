@@ -109,7 +109,7 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
         ).toString()
       : "/api/v1/auth/refresh"
 
-  let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null = null
+  let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
   try {
     const response = await fetch(endpoint, {
       method: "POST",

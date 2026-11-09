@@ -120,7 +120,7 @@ export function OneTimeSecretDialog({
       operationGenerationRef.current === operationGeneration &&
       copyInvocationRef.current === invocation
 
-    let outcome: OperationResult | null = null
+    let outcome: OperationResult | null
 
     try {
       await navigator.clipboard.writeText(result.secret)
@@ -206,7 +206,7 @@ export function OneTimeSecretDialog({
       operationGenerationRef.current === operationGeneration &&
       saveInvocationRef.current === invocation
 
-    let outcome: OperationResult | null = null
+    let outcome: OperationResult | null
 
     try {
       await saveAction.onSave()

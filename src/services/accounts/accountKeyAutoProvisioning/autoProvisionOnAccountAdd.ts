@@ -99,7 +99,7 @@ export async function autoProvisionKeyOnAccountAdd(
 ): Promise<void> {
   if (!enabled) return
 
-  let accountName = ""
+  let accountName: string
   try {
     const account = await accountQueries.getAccountById(accountId)
     if (!account) {

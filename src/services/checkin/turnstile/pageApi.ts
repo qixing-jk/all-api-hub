@@ -37,7 +37,7 @@ export function probeTurnstilePageApi(
     return { hasApi: false, token: null, executed: false }
   }
 
-  let token: string | null = null
+  let token: string | null
   try {
     const value = api.getResponse()
     token =

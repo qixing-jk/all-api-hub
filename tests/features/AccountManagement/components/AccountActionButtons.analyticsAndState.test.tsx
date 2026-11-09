@@ -200,11 +200,11 @@ describe("AccountActionButtons", () => {
       screen.getByRole("button", { name: "common:actions.more" }),
     )
 
-    let menu = await screen.findByRole("menu")
+    await screen.findByRole("menu")
     await user.click(
       screen.getByRole("menuitem", { name: "account:actions.relatedPages" }),
     )
-    menu = await screen.findByRole("menu", {
+    let menu = await screen.findByRole("menu", {
       name: "account:actions.relatedPages",
     })
     const redeemButton = await within(menu).findByRole("menuitem", {

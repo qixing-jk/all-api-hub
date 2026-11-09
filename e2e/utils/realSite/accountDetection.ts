@@ -224,7 +224,7 @@ export function registerRealSiteAccountDetectionTests<
           (url) => window.startAccountDetectionUiObservation(url),
           config.baseUrl,
         )
-        let contexts: { windowType: string | undefined }[] = []
+        let contexts: { windowType: string | undefined }[]
         try {
           const dialog = await autoDetectAccountFromAddDialog(
             uiPage,

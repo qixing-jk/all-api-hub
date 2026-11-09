@@ -45,7 +45,7 @@ export async function sendFeishuNotification(
     }),
   })
 
-  let body: FeishuWebhookResponseBody | null = null
+  let body: FeishuWebhookResponseBody | null
 
   try {
     body = (await response.json()) as FeishuWebhookResponseBody

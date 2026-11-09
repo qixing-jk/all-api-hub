@@ -233,7 +233,7 @@ async function tryLoginToRealSub2ApiSiteViaApi(
   let lastErrorMessage = ""
 
   for (const loginApiUrl of loginApiUrls) {
-    let responseText = ""
+    let responseText: string
 
     try {
       const response = await page.request.post(loginApiUrl, {

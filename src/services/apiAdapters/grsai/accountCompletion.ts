@@ -68,7 +68,7 @@ export const grsaiAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    let bootstrapFacts = null
+    let bootstrapFacts
     try {
       bootstrapFacts =
         await grsaiAccountBootstrap.loadBootstrapFacts(serviceRequest)

@@ -64,7 +64,9 @@ async function withSafeCatalogErrors<T>(
         error.code,
         error.upstreamCode,
       )
+    // eslint-disable-next-line preserve-caught-error -- Raw causes can retain credentials in this deliberately sanitized boundary.
     if (error instanceof TypeError) throw new TypeError(message)
+    // eslint-disable-next-line preserve-caught-error -- Raw causes can retain credentials in this deliberately sanitized boundary.
     throw new Error(message)
   }
 }

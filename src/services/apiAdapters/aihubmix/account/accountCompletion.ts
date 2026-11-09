@@ -52,7 +52,7 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       authType: AuthTypeEnum.AccessToken,
     })
 
-    let bootstrapFacts = null
+    let bootstrapFacts
     try {
       bootstrapFacts = await aihubmixAccountBootstrap.loadBootstrapFacts(
         helpers.createServiceRequest({

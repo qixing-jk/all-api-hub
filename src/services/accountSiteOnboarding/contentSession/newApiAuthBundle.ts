@@ -68,7 +68,7 @@ async function extractNewApiAuthBundle(
       reason: "network_error",
       error: getErrorMessage(error),
     })
-    throw new Error(AUTH_REFRESH_REQUEST_ERROR)
+    throw new Error(AUTH_REFRESH_REQUEST_ERROR, { cause: error })
   }
   diagnostics?.record("refresh_response", { status: response.status })
 

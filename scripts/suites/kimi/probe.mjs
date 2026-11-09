@@ -56,7 +56,7 @@ export async function runKimiProbe({
   )
 
   // 2. 组织账户余额与代金券
-  let balanceData = {}
+  let balanceData
   let balanceOk = false
   if (primaryOrgId) {
     console.log(

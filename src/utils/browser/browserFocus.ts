@@ -270,7 +270,7 @@ export function createBrowserFocusObservation(
     if (!finalObservation) {
       finalObservation = Promise.resolve().then(async () => {
         removeListener()
-        let end: BrowserFocusState = BROWSER_FOCUS_STATES.Unknown
+        let end: BrowserFocusState
         try {
           end = await readBrowserFocusState()
         } finally {

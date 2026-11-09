@@ -163,6 +163,7 @@ function readJson(file, label) {
     const detail = error instanceof Error ? error.message : String(error)
     throw new Error(
       `Cannot derive E2E variants: missing or invalid ${label} at ${file} (${detail})`,
+      { cause: error },
     )
   }
 }

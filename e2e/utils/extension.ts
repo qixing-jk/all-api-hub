@@ -243,6 +243,7 @@ async function getBuiltManifest(
     const errorMessage = error instanceof Error ? error.message : String(error)
     throw new Error(
       `Failed to parse manifest.json at '${manifestPath}': ${errorMessage}`,
+      { cause: error },
     )
   }
 }

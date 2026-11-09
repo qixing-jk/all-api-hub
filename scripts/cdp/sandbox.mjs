@@ -42,6 +42,7 @@ export async function withUiCreatedAccount(
       throw new AggregateError(
         [creationError, error].filter(Boolean),
         "UI account save outcome is uncertain; do not replay the save",
+        { cause: error },
       )
     }
     confirmedIds.add(found[0].id)

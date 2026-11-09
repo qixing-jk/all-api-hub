@@ -160,7 +160,7 @@ export async function saveExistingAccountTokenToApiProfileScenario(
   const serviceWorker = await env.getServiceWorker()
   await env.prepareExtensionState?.(serviceWorker)
   const account = await env.resolveAccountFixture(serviceWorker)
-  let keyManagementPage = env.extensionPage
+  let keyManagementPage: typeof env.extensionPage
   let savedProfile: ApiCredentialProfile | null = null
   let primaryError: unknown
 

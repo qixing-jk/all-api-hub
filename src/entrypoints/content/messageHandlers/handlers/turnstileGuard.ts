@@ -73,7 +73,7 @@ function createTurnstileUserAssist(requestId?: string): TurnstileUserAssist {
     manualTimeoutMs: TURNSTILE_MANUAL_WAIT_MS,
     pageTokenIntervalMs: TURNSTILE_PAGE_API_POLL_MS,
     requestAssist: async () => {
-      let presented = false
+      let presented: boolean
       try {
         const response = await sendRuntimeMessage<{ presented?: boolean }>({
           action: RuntimeActionIds.TurnstileRequestUserAssist,

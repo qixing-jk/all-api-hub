@@ -71,6 +71,7 @@ export async function withAccountFixtureCleanup(
       throw new AggregateError(
         [scenarioError, cleanupError],
         "Account fixture scenario failed and cleanup also failed",
+        { cause: cleanupError },
       )
     }
 

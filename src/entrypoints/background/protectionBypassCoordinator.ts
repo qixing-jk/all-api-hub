@@ -285,7 +285,7 @@ export function createProtectionBypassCoordinator({
           }
         }
 
-        let resourceIsCurrent = false
+        let resourceIsCurrent: boolean
         try {
           resourceIsCurrent = await validateTaskResource(
             authorizedTask,

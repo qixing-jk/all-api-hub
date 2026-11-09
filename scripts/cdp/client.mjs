@@ -47,6 +47,7 @@ export async function connectDevBrowser({
     await browser?.close().catch(() => {})
     throw new Error(
       `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
+      { cause: err },
     )
   }
 
