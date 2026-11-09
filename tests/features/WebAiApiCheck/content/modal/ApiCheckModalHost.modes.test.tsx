@@ -291,10 +291,12 @@ describe("web API verification modes", () => {
         ),
       ).toBeVisible()
       expect(
-        within(textProbe).getByText(
-          "aiApiVerification:verifyDialog.modes.nonStreaming",
-        ),
-      ).toBeVisible()
+        within(textProbe).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
+      ).toHaveAccessibleDescription(
+        /aiApiVerification:verifyDialog.modes.nonStreaming/,
+      )
       expect(
         within(
           screen.getByTestId(getWebAiApiCheckProbeTestId("models")),
@@ -435,10 +437,12 @@ describe("web API verification modes", () => {
         }),
       )
       expect(
-        within(textProbe).getByText(
-          "aiApiVerification:verifyDialog.modes.nonStreaming",
-        ),
-      ).toBeVisible()
+        within(textProbe).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.probes.text-generation",
+        }),
+      ).toHaveAccessibleDescription(
+        /aiApiVerification:verifyDialog.modes.nonStreaming/,
+      )
       expect(
         within(
           screen.getByTestId(getWebAiApiCheckProbeTestId("models")),

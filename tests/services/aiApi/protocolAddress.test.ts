@@ -6,6 +6,18 @@ import {
 } from "~/services/aiApi/protocolAddress"
 
 describe("protocol addresses", () => {
+  it.each(["generateContent", "streamGenerateContent"])(
+    "preserves a Google routing prefix when resolving a pasted %s endpoint",
+    (operation) => {
+      const endpoint = `https://relay.example/v1beta/proxy/v1beta/models/gemini:${operation}`
+      const root = "https://relay.example/v1beta/proxy"
+      expect(toProtocolRoot("google", endpoint)).toBe(root)
+      expect(toProtocolRoot("google", root)).toBe(root)
+      expect(toVersionedProtocolMount("google", endpoint)).toBe(
+        `${root}/v1beta`,
+      )
+    },
+  )
   describe("toProtocolRoot", () => {
     it.each([
       [

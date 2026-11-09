@@ -139,6 +139,7 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       const panel = page.getByRole("region", {
         name: "Model context test",
       })
+      const summary = panel.locator("[data-verification-summary]")
       const selection = panel.getByRole("button", {
         name: "Model context test",
         exact: true,
@@ -196,7 +197,9 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
         await expect(
           panel.getByRole("button", { name: "Continue probe", exact: true }),
         ).toBeVisible({ timeout: 30000 })
-        await expect(panel.getByText(/^Accepted ≈/)).toHaveClass(/bg-secondary/)
+        await expect(summary.getByText(/^Accepted ≈/)).toHaveClass(
+          /bg-secondary/,
+        )
         const sentBeforeContinue = requests.map((body) =>
           JSON.stringify(body.messages),
         )
@@ -217,18 +220,22 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       if (outputLimited) {
         await expect(panel).toContainText("Model context:", { timeout: 30000 })
         await expect(
-          panel.getByText("Context ≈99.9%", { exact: true }),
+          panel
+            .locator("[data-verification-summary]")
+            .getByText("Context ≈99.9%", { exact: true }),
         ).toBeVisible()
         await expect(
           panel.getByRole("status", { name: "Context capacity result" }),
         ).toContainText("metadata declares 128K tokens")
         await expect(
-          panel.getByText("Context ≈99.9%", { exact: true }),
+          panel
+            .locator("[data-verification-summary]")
+            .getByText("Context ≈99.9%", { exact: true }),
         ).toHaveClass(/bg-success-soft/)
         await expect(panel).toContainText("Non-streaming")
         await expect(
           panel.getByRole("button", { name: "Execution result", exact: true }),
-        ).toHaveCount(0)
+        ).toBeVisible()
         const disclosure = panel.getByRole("button", {
           name: "Test details",
           exact: true,
@@ -300,7 +307,9 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
         ).toContainText("Model context:")
         expect(requests.length).toBe(completedRequests)
         await expect(
-          panel.getByText("Context ≈99.9%", { exact: true }),
+          panel
+            .locator("[data-verification-summary]")
+            .getByText("Context ≈99.9%", { exact: true }),
         ).toBeVisible()
         await expect(
           panel.getByRole("status", { name: "Context capacity result" }),
@@ -309,6 +318,29 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
           path: test.info().outputPath("context-history.png"),
           animations: "disabled",
         })
+        const historyBadge = panel
+          .getByRole("button", { name: /^Previously:/ })
+          .first()
+        await historyBadge.hover()
+        const historyTooltip = page.getByRole("tooltip").filter({
+          hasText:
+            "History keeps measurements, without individual request details",
+        })
+        await expect(historyTooltip).toBeVisible()
+        await expect(historyTooltip).toHaveClass(/react-tooltip__show/)
+        await expect
+          .poll(() =>
+            historyTooltip.evaluate((element) =>
+              Number(getComputedStyle(element).opacity),
+            ),
+          )
+          .toBeGreaterThan(0)
+        await page.getByRole("dialog").screenshot({
+          path: test.info().outputPath("context-history-tooltip.png"),
+          animations: "disabled",
+        })
+        await page.keyboard.press("Escape")
+        await expect(historyTooltip).toBeHidden()
         return
       }
       if (inconclusive) {
@@ -326,11 +358,13 @@ for (const scenario of ["bracket", "budget", "output-limit", "inconclusive"]) {
       await expect(panel).toContainText("Model context:", { timeout: 30000 })
       await expect(panel).not.toContainText("Result saved")
       if (scenario === "bracket")
-        await expect(panel.getByText(/^Context ≈/)).toHaveClass(
+        await expect(summary.getByText(/^Context ≈/)).toHaveClass(
           /bg-warning-soft/,
         )
       else
-        await expect(panel.getByText(/^Accepted ≈/)).toHaveClass(/bg-secondary/)
+        await expect(summary.getByText(/^Accepted ≈/)).toHaveClass(
+          /bg-secondary/,
+        )
       await panel.screenshot({
         path: test.info().outputPath("context-summary.png"),
         animations: "disabled",

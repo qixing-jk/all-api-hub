@@ -31,7 +31,14 @@
     "generatedVideoPreview": "Xem trước video đã tạo",
     "history": {
       "clear": "Xóa lịch sử",
-      "lastVerified": "Lần kiểm tra gần nhất"
+      "lastVerified": "Lần kiểm tra gần nhất",
+      "previousResult": "Lần trước: {{result}}",
+      "storage": {
+        "context": "Lịch sử giữ kết quả đo, không giữ chi tiết từng yêu cầu.",
+        "drawing": "Lịch sử không giữ bản vẽ hoặc chi tiết thực thi.",
+        "needle": "Lịch sử giữ kết quả đo. Có thể dùng cùng mã mẫu và cài đặt để tạo lại văn bản kiểm tra.",
+        "probe": "Lịch sử chỉ giữ bản tóm tắt kiểm tra, không giữ nội dung yêu cầu và phản hồi."
+      }
     },
     "intro": {
       "flow": "Các bước kiểm tra",
@@ -288,10 +295,111 @@
       "errors": {
         "unexpected": "Yêu cầu thất bại: {{message}}"
       },
+      "needle": {
+        "automatic": "Tự động",
+        "automaticLimit": "Tự động ({{limit}})",
+        "budget": "Khoảng {{tokens}} token đầu vào, chưa tính đầu ra. Kiểm tra sẽ dùng hạn mức API của bạn.",
+        "cancelledCell": "Đã hủy",
+        "cancelledUnknown": "Không thu được kết quả có thể đánh giá.",
+        "capacityRunning": "Đang kiểm tra ngữ cảnh khả dụng. Độ dài kiểm tra sẽ cập nhật khi hoàn tất.",
+        "capped": "Mỗi yêu cầu kiểm tra tối đa 1M token đầu vào.",
+        "cell": "Đầu vào cục bộ: {{tokens}} token · Vị trí thực: {{depth}}% · {{latency}} ms",
+        "cellDetails": "Chi tiết ô",
+        "cumulativeScore": "Kết quả tích lũy: {{hits}}/{{graded}} câu trả lời có thể đánh giá khớp",
+        "custom": "Tùy chỉnh",
+        "customLimit": "Độ dài tùy chỉnh (tokens)",
+        "description": "Kiểm tra mô hình có tìm được thông tin cụ thể ở các vị trí khác nhau trong văn bản dài hay không.",
+        "errors": {
+          "busy": "Một trang khác đang chạy kiểm tra kết nối này.",
+          "failed": "Không thể hoàn tất kiểm tra mò kim: {{detail}}",
+          "metadata": "Không thể tải thông tin ngữ cảnh. Vui lòng thử lại.",
+          "request": "Chọn mô hình và thông tin xác thực hợp lệ trước khi chạy."
+        },
+        "exactLengths": "Độ dài chính xác: {{lengths}} token",
+        "exactTotal": "Tổng đầu vào ước tính: {{tokens}} token",
+        "expected": "Câu trả lời mong đợi: {{value}}",
+        "invalid": "Độ dài phải là số nguyên từ 1.024 đến 1.048.576; mã mẫu phải là số nguyên từ 0 đến 4.294.967.295.",
+        "length": "Token",
+        "lengthRule": "Độ dài tăng gấp đôi từ 8K, với mức cuối bằng giới hạn đầu vào {{limit}}.",
+        "limit": "Độ dài văn bản tối đa (token)",
+        "limitation": "Kết quả khớp chỉ xác minh mẫu này. Không khớp không chứng minh đầu vào bị cắt, cửa sổ ngữ cảnh nhỏ hơn hay mô hình khác.",
+        "matrix": "Kết quả theo độ dài và vị trí đầu vào",
+        "matrixHint": "Nhấp vào trạng thái để xem chi tiết và chạy hoặc kiểm tra lại ô đó. Nút hàng và cột chạy tất cả các ô trong phạm vi, kể cả ô đã có kết quả. Nút dừng chỉ tác động đến ô, hàng hoặc cột tương ứng.",
+        "notRun": "Chưa chạy",
+        "notScheduled": "Không chạy lần này",
+        "outcomes": {
+          "contextLimit": "Quá dài",
+          "error": "Lỗi",
+          "hit": "Khớp",
+          "incomplete": "Chưa đầy đủ",
+          "interrupted": "Chưa rõ",
+          "miss": "Không khớp"
+        },
+        "planDetails": "Độ dài được chọn như thế nào?",
+        "planned": "Đã lên kế hoạch",
+        "plannedLengths": "Độ dài văn bản (token)",
+        "positionRule": "Mỗi độ dài được kiểm tra tại {{positions}}, tương ứng đầu, giữa và cuối văn bản.",
+        "preparing": "Đang chuẩn bị kế hoạch kiểm tra…",
+        "preparingCellState": "Đang chuẩn bị…",
+        "previewPositions": "Mỗi độ dài được kiểm tra tại các vị trí {{positions}}.",
+        "previewTitle": "Xem trước lượt kiểm tra",
+        "previousResult": "Kết quả trước (trước lần chạy này)",
+        "probeFirst": "Kiểm tra ngữ cảnh khả dụng",
+        "progress": "Lần chạy gần nhất: Đã xử lý {{completed}}/{{total}} yêu cầu",
+        "quick": "Chỉ kiểm tra văn bản dài nhất",
+        "quickHint": "Chỉ kiểm tra ba vị trí ở độ dài lớn nhất trong kế hoạch. Các độ dài khác không chạy lần này và có thể được kiểm tra riêng theo hàng hoặc cột.",
+        "randomSample": "Mẫu ngẫu nhiên mới",
+        "reasons": {
+          "budget": "Đã đạt ngân sách",
+          "complete": "Hoàn tất",
+          "error": "Yêu cầu thất bại",
+          "interrupted": "Bị gián đoạn; chưa rõ kết quả"
+        },
+        "reference": {
+          "context": "Thông tin mô hình: ngữ cảnh {{tokens}} (chưa xác minh)",
+          "input": "Thông tin mô hình: giới hạn đầu vào {{tokens}} (chưa xác minh)",
+          "measured": "Đầu vào từng được chấp nhận: {{tokens}} (chưa rõ mức tối đa)",
+          "unknown": "Chưa có giới hạn ngữ cảnh. Chế độ tự động tạm dùng {{tokens}} tokens; giá trị sẽ cập nhật sau khi kiểm tra ngữ cảnh."
+        },
+        "reproduce": "Mẫu {{seed}} · Bộ tách token: {{encoding}}.",
+        "requestCount_other": "{{count}} yêu cầu",
+        "requestDetails": "Chi tiết yêu cầu và câu trả lời",
+        "resultDetails": "Tham số kiểm tra và thông tin tái tạo",
+        "retestCell": "Kiểm tra lại ô này",
+        "retestColumn": "Kiểm tra lại cột {{depth}}% ({{requests}})",
+        "retestRow": "Kiểm tra lại hàng {{length}} ({{requests}})",
+        "retry": "Thử lại",
+        "run": "Bắt đầu kiểm tra tìm kiếm",
+        "runCell": "Chạy ô này",
+        "runColumn": "Chạy cột {{depth}}% ({{requests}})",
+        "runRow": "Chạy hàng {{length}} ({{requests}})",
+        "savedResult": "Kết quả đã lưu",
+        "scopeProgress": "Đã xử lý {{completed}}/{{total}}",
+        "score": "{{hits}}/{{total}} khớp",
+        "scoreStep": "Đối chiếu mã trả về",
+        "searchStep": "Tìm bản ghi được yêu cầu",
+        "seedHint": "Để trống để tạo mẫu mới mỗi lần. Dùng cùng mã và cài đặt để kiểm tra lại cùng văn bản.",
+        "seedInput": "Mã mẫu kiểm tra (không bắt buộc)",
+        "singleLengthRule": "Kế hoạch này chỉ kiểm tra một độ dài: {{limit}}.",
+        "sources": {
+          "custom": "Bạn đặt đầu vào tối đa là {{limit}}. Kế hoạch dùng giới hạn đó.",
+          "declaredContext": "Thông tin mô hình ghi tổng ngữ cảnh là {{context}}. Dành {{reserve}} cho câu trả lời, còn {{input}} cho đầu vào. Giá trị này chưa được xác minh trên API hiện tại.",
+          "declaredInput": "Thông tin mô hình ghi giới hạn đầu vào riêng là {{input}}, được dùng để chọn độ dài. Giá trị này chưa được xác minh trên API hiện tại.",
+          "fallback": "Chưa có giới hạn mô hình hoặc bản ghi đầu vào được chấp nhận. Kế hoạch dùng giới hạn mặc định {{limit}}. Bạn có thể chỉnh trong cài đặt hoặc kiểm tra ngữ cảnh khả dụng trước.",
+          "measured": "Dựa trên đầu vào mà kết nối này từng chấp nhận, kế hoạch kiểm tra đến {{limit}}. Điều này không xác định dung lượng tối đa của mô hình."
+        },
+        "stopCapacity": "Dừng đo ngữ cảnh",
+        "stopCell": "Dừng {{length}} · {{depth}}%",
+        "stopColumn": "Dừng cột {{depth}}%",
+        "stopFailed": "Không thể dừng. Hãy thử lại.",
+        "stoppingCell": "Đang dừng…",
+        "stopRow": "Dừng hàng {{length}}",
+        "title": "Mò kim đáy bể",
+        "tokenUnits": "Trong kiểm tra này, 1K = 1.024 token và 1M = 1.048.576 token."
+      },
       "pelican": {
         "analysis": "{{shapes}} hình · {{wheels}} hình tròn/elip · viewBox {{viewBox}}",
         "description": "Yêu cầu mô hình vẽ SVG một con bồ nông đi xe đạp để bạn so sánh trực tiếp. Việc đánh giá vẫn do người xem.",
-        "historyOnly": "Chỉ lưu bản tóm tắt. Chạy lại để xem bản vẽ và chi tiết thực thi.",
         "noSvg": "Mô hình không trả về SVG.",
         "outcomes": {
           "error": "Thực thi thất bại",
@@ -312,6 +420,7 @@
         "saveFailed": "Không lưu được lời nhắc: {{message}}",
         "sharedHint": "Lời nhắc đã lưu dùng chung cho mọi lối vào kiểm tra."
       },
+      "settingsTitle": "Cài đặt kiểm tra",
       "stop": "Dừng",
       "stopped": "Đã dừng trước khi hoàn tất; không lưu kết quả."
     },

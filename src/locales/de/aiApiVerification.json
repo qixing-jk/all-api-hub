@@ -31,7 +31,14 @@
     "generatedVideoPreview": "Vorschau des generierten Videos",
     "history": {
       "clear": "Verlauf löschen",
-      "lastVerified": "Zuletzt getestet"
+      "lastVerified": "Zuletzt getestet",
+      "previousResult": "Zuvor: {{result}}",
+      "storage": {
+        "context": "Der Verlauf enthält Messwerte, ohne Details zu einzelnen Anfragen.",
+        "drawing": "Der Verlauf enthält weder die Zeichnung noch Ausführungsdetails.",
+        "needle": "Der Verlauf enthält Messwerte. Mit derselben Beispielnummer und denselben Einstellungen lässt sich der Testtext erneut erzeugen.",
+        "probe": "Der Verlauf enthält die Testübersicht, ohne Anfrage- oder Antwortinhalte."
+      }
     },
     "intro": {
       "flow": "Testschritte",
@@ -289,10 +296,112 @@
       "errors": {
         "unexpected": "Anfrage fehlgeschlagen: {{message}}"
       },
+      "needle": {
+        "automatic": "Automatisch",
+        "automaticLimit": "Automatisch ({{limit}})",
+        "budget": "Etwa {{tokens}} Eingabe-Tokens, zuzüglich Ausgabe. Der Test verbraucht Ihr API-Kontingent.",
+        "cancelledCell": "Abgebrochen",
+        "cancelledUnknown": "Es wurde kein auswertbares Ergebnis erzielt.",
+        "capacityRunning": "Der verfügbare Kontext wird geprüft. Danach werden die Testlängen aktualisiert.",
+        "capped": "Pro Anfrage werden höchstens 1M Eingabe-Tokens getestet.",
+        "cell": "Lokale Eingabe: {{tokens}} Tokens · Tatsächliche Position: {{depth}}% · {{latency}} ms",
+        "cellDetails": "Zelldetails",
+        "cumulativeScore": "Gesamtergebnisse: {{hits}}/{{graded}} auswertbare Antworten stimmen überein",
+        "custom": "Benutzerdefiniert",
+        "customLimit": "Eigene Länge (Tokens)",
+        "description": "Prüft, ob das Modell einen bestimmten Eintrag an verschiedenen Stellen eines langen Textes findet.",
+        "errors": {
+          "busy": "Für diese Verbindung läuft bereits ein Test auf einer anderen Seite.",
+          "failed": "Der Nadeltest konnte nicht abgeschlossen werden: {{detail}}",
+          "metadata": "Kontextinformationen konnten nicht geladen werden. Bitte erneut versuchen.",
+          "request": "Wähle ein Modell und gültige Zugangsdaten aus."
+        },
+        "exactLengths": "Genaue Längen: {{lengths}} Tokens",
+        "exactTotal": "Geschätzte Gesamteingabe: {{tokens}} Tokens",
+        "expected": "Erwartet: {{value}}",
+        "invalid": "Die Textlänge muss eine ganze Zahl von 1.024 bis 1.048.576 sein, die Beispielnummer eine ganze Zahl von 0 bis 4.294.967.295.",
+        "length": "Tokens",
+        "lengthRule": "Die Längen verdoppeln sich ab 8K. Die letzte Stufe entspricht dem Eingabelimit von {{limit}}.",
+        "limit": "Maximale Textlänge (Tokens)",
+        "limitation": "Ein Treffer bestätigt nur diese Stichprobe. Ein Fehlschlag beweist weder eine Kürzung noch ein kleineres Kontextfenster oder ein anderes Modell.",
+        "matrix": "Suchergebnisse nach Eingabelänge und Position",
+        "matrixHint": "Klicken Sie auf einen Status, um Details zu sehen und die Zelle zu testen oder erneut zu testen. Zeilen- und Spaltenschaltflächen testen alle zugehörigen Zellen, auch solche mit vorhandenen Ergebnissen. Stopp gilt nur für die jeweilige Zelle, Zeile oder Spalte.",
+        "notRun": "Nicht getestet",
+        "notScheduled": "Nicht in diesem Lauf",
+        "outcomes": {
+          "contextLimit": "Zu lang",
+          "error": "Fehler",
+          "hit": "Treffer",
+          "incomplete": "Unvollständig",
+          "interrupted": "Unbekannt",
+          "miss": "Verfehlt"
+        },
+        "planDetails": "Wie werden die Längen gewählt?",
+        "planned": "Geplant",
+        "plannedLengths": "Textlängen (Tokens)",
+        "positionRule": "Jede Länge wird bei {{positions}} getestet, also am Anfang, in der Mitte und am Ende.",
+        "preparing": "Testplan wird vorbereitet…",
+        "preparingCellState": "Vorbereitung…",
+        "previewPositions": "Jede Länge wird an den Positionen {{positions}} getestet.",
+        "previewTitle": "Testvorschau",
+        "previousResult": "Vorheriges Ergebnis (vor diesem Durchlauf)",
+        "probeFirst": "Verfügbaren Kontext prüfen",
+        "progress": "Letzter Durchlauf: {{completed}}/{{total}} Anfragen verarbeitet",
+        "quick": "Nur den längsten Text testen",
+        "quickHint": "Nur die drei Positionen der längsten geplanten Eingabe testen. Andere Längen sind ausgeschlossen und können separat zeilen- oder spaltenweise getestet werden.",
+        "randomSample": "Neues Zufallsbeispiel",
+        "reasons": {
+          "budget": "Budget erreicht",
+          "complete": "Abgeschlossen",
+          "error": "Anfrage fehlgeschlagen",
+          "interrupted": "Unterbrochen; Ergebnis unbekannt"
+        },
+        "reference": {
+          "context": "Modellangabe: {{tokens}} Kontext (ungeprüft)",
+          "input": "Modellangabe: {{tokens}} Eingabelimit (ungeprüft)",
+          "measured": "Zuvor akzeptiert: {{tokens}} Eingabe (Maximum unbekannt)",
+          "unknown": "Kontextlimit unbekannt. Automatisch werden vorläufig {{tokens}} Tokens verwendet; eine Kontextprüfung aktualisiert den Wert."
+        },
+        "reproduce": "Stichprobe {{seed}} · Tokenizer: {{encoding}}.",
+        "requestCount_one": "{{count}} Anfrage",
+        "requestCount_other": "{{count}} Anfragen",
+        "requestDetails": "Anfrage- und Antwortdetails",
+        "resultDetails": "Testparameter und Reproduktion",
+        "retestCell": "Diese Zelle erneut testen",
+        "retestColumn": "Spalte {{depth}}% erneut testen ({{requests}})",
+        "retestRow": "Zeile {{length}} erneut testen ({{requests}})",
+        "retry": "Erneut versuchen",
+        "run": "Suchtest starten",
+        "runCell": "Diese Zelle testen",
+        "runColumn": "Spalte {{depth}}% ausführen ({{requests}})",
+        "runRow": "Zeile {{length}} ausführen ({{requests}})",
+        "savedResult": "Gespeichertes Ergebnis",
+        "scopeProgress": "{{completed}}/{{total}} verarbeitet",
+        "score": "{{hits}}/{{total}} Treffer",
+        "scoreStep": "Zurückgegebenen Code vergleichen",
+        "searchStep": "Angeforderten Datensatz finden",
+        "seedHint": "Leer lassen für ein neues Beispiel bei jedem Test. Dieselbe Nummer und dieselben Einstellungen erzeugen denselben Text.",
+        "seedInput": "Testbeispielnummer (optional)",
+        "singleLengthRule": "Dieser Plan testet nur eine Länge: {{limit}}.",
+        "sources": {
+          "custom": "Sie haben die maximale Testeingabe auf {{limit}} gesetzt. Der Plan verwendet dieses Limit.",
+          "declaredContext": "Die Modelldaten nennen {{context}} Gesamtkontext. Nach {{reserve}} Reserve für die Antwort bleiben {{input}} für die Eingabe. Dies wurde mit der aktuellen API noch nicht verifiziert.",
+          "declaredInput": "Die Modelldaten nennen ein separates Eingabelimit von {{input}}, das die Testlängen bestimmt. Dies wurde mit der aktuellen API noch nicht verifiziert.",
+          "fallback": "Es liegen keine nutzbaren Modelllimits oder akzeptierten Eingaben vor. Der Plan verwendet das Standardlimit {{limit}}. Ändern Sie es in den Testeinstellungen oder prüfen Sie zuerst den verfügbaren Kontext.",
+          "measured": "Ausgehend von zuvor durch diese Verbindung akzeptierten Eingaben testet dieser Plan bis {{limit}}. Das belegt keine maximale Modellkapazität."
+        },
+        "stopCapacity": "Kontextprüfung stoppen",
+        "stopCell": "{{length}} · {{depth}}% stoppen",
+        "stopColumn": "Spalte {{depth}}% stoppen",
+        "stopFailed": "Stoppen fehlgeschlagen. Erneut versuchen.",
+        "stoppingCell": "Wird gestoppt…",
+        "stopRow": "Zeile {{length}} stoppen",
+        "title": "Nadel im Heuhaufen",
+        "tokenUnits": "In diesem Test gilt: 1K = 1.024 Tokens und 1M = 1.048.576 Tokens."
+      },
       "pelican": {
         "analysis": "{{shapes}} Formen · {{wheels}} Kreise/Ellipsen · viewBox {{viewBox}}",
         "description": "Lässt das Modell einen Pelikan auf einem Fahrrad als SVG zeichnen, um das Ergebnis direkt zu vergleichen. Die Bewertung bleibt manuell.",
-        "historyOnly": "Nur die Ausführungsübersicht wurde gespeichert. Erneut ausführen, um Zeichnung und Details anzuzeigen.",
         "noSvg": "Das Modell hat kein SVG zurückgegeben.",
         "outcomes": {
           "error": "Ausführung fehlgeschlagen",
@@ -313,6 +422,7 @@
         "saveFailed": "Prompts konnten nicht gespeichert werden: {{message}}",
         "sharedHint": "Gespeicherte Prompts gelten für alle Testzugänge."
       },
+      "settingsTitle": "Testeinstellungen",
       "stop": "Stop",
       "stopped": "Vor dem Abschluss gestoppt; nichts wurde gespeichert."
     },

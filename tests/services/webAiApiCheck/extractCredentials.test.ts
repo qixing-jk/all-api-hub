@@ -8,12 +8,36 @@ import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
+  normalizeProbeBaseUrl,
 } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import { encodeUnpaddedBase64 } from "~~/tests/test-utils/encoding"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const OPENAI_KEY_PREFIX = ["s", "k", "-"].join("")
+
+it.each([
+  {
+    normalize: (baseUrl: string) =>
+      normalizeProbeBaseUrl({ apiType: "openai-compatible", baseUrl }),
+    endpoint: "https://proxy.example/v1/proxy/v1/chat/completions",
+    root: "https://proxy.example/v1/proxy",
+  },
+  {
+    normalize: (baseUrl: string) =>
+      normalizeProbeBaseUrl({ apiType: "google", baseUrl }),
+    endpoint:
+      "https://proxy.example/v1beta/proxy/v1beta/models/gemini:generateContent",
+    root: "https://proxy.example/v1beta/proxy",
+  },
+])(
+  "preserves routing prefixes when a protocol address is normalized repeatedly: $endpoint",
+  ({ normalize, endpoint, root }) => {
+    expect(normalize(endpoint)).toBe(root)
+    expect(normalize(root)).toBe(root)
+    expect(normalize(normalize(endpoint)!)).toBe(root)
+  },
+)
 const ANTHROPIC_KEY_PREFIX = ["s", "k", "-", "ant", "-"].join("")
 const OPENROUTER_KEY_PREFIX = ["s", "k", "-", "or", "-"].join("")
 const GOOGLE_KEY_PREFIX = ["A", "I", "z", "a"].join("")

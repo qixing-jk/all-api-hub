@@ -9,6 +9,7 @@ import {
 
 import { HelpHintIcon } from "~/components/icons/productIcons"
 import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover"
+import { cn } from "~/lib/utils"
 
 /**
  * A compact field-level help affordance that supports hover, focus, click,
@@ -17,9 +18,11 @@ import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover"
 export function FieldHelpPopover({
   label,
   content,
+  contentClassName,
 }: {
   label: string
   content: ReactNode
+  contentClassName?: string
 }) {
   const contentId = useId()
   const [open, setOpen] = useState(false)
@@ -96,9 +99,13 @@ export function FieldHelpPopover({
       </PopoverAnchor>
       <PopoverContent
         id={contentId}
+        aria-label={label}
         side="top"
         align="start"
-        className="w-80 max-w-[calc(100vw-2rem)] text-sm leading-5"
+        className={cn(
+          "w-80 max-w-[calc(100vw-2rem)] text-sm leading-5",
+          contentClassName,
+        )}
         onPointerEnter={keepOpen}
         onPointerLeave={releasePointer}
         onOpenAutoFocus={(event) => event.preventDefault()}

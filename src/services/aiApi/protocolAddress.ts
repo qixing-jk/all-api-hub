@@ -39,7 +39,7 @@ const OPERATION_SUFFIXES: Record<ApiVerificationApiType, RegExp> = {
   openai: /\/(?:models|chat\/completions|responses)$/i,
   "openai-compatible": /\/(?:models|chat\/completions|responses)$/i,
   anthropic: /\/(?:models|messages)$/i,
-  google: /\/models$/i,
+  google: /\/models(?:\/[^/]+:(?:generateContent|streamGenerateContent))?$/i,
 }
 
 /** Parse an http(s) address, dropping anything that is not part of it. */

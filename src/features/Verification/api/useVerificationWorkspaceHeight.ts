@@ -7,6 +7,7 @@ const WORKSPACE_HEIGHT_ROUNDING_GUARD_PX = 1
 export function useVerificationWorkspaceHeight(selectedId: string | null) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [isWide, setIsWide] = useState(false)
+  const [availableHeight, setAvailableHeight] = useState(0)
 
   useLayoutEffect(() => {
     const frame = frameRef.current
@@ -26,10 +27,11 @@ export function useVerificationWorkspaceHeight(selectedId: string | null) {
       const detailStyle = view.getComputedStyle(detail)
       const wide = detailStyle.position === "absolute"
       setIsWide(wide)
-      // Narrow layouts stay in normal document flow and keep a single scroll.
-      if (!wide) return
       const limit = Number.parseFloat(view.getComputedStyle(shell).maxHeight)
-      if (!Number.isFinite(limit)) return
+      if (!Number.isFinite(limit)) {
+        setAvailableHeight(0)
+        return
+      }
       const chrome = shell.offsetHeight - body.clientHeight
       const otherContent = body.scrollHeight - frame.offsetHeight
       const bodyLimit = Math.max(0, limit - chrome)
@@ -44,6 +46,9 @@ export function useVerificationWorkspaceHeight(selectedId: string | null) {
           ),
         ) - WORKSPACE_HEIGHT_ROUNDING_GUARD_PX,
       )
+      setAvailableHeight(available)
+      // Narrow layouts share the budget but retain natural height and one scroll.
+      if (!wide) return
       const height = `${available}px`
       if (
         frame.style.getPropertyValue("--verification-workspace-height") !==
@@ -72,5 +77,5 @@ export function useVerificationWorkspaceHeight(selectedId: string | null) {
     }
   }, [selectedId])
 
-  return { frameRef, isWide }
+  return { frameRef, isWide, availableHeight }
 }

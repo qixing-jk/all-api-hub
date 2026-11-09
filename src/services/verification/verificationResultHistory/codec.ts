@@ -12,6 +12,8 @@ import {
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_REASONS } from "~/services/verification/modelQuality/contextCapacityConstants"
+import { CONTEXT_TOKEN_ENCODINGS } from "~/services/verification/modelQuality/contextTokenConstants"
+import { coerceNeedleResult } from "~/services/verification/modelQuality/needleResultCodec"
 import {
   API_VERIFICATION_HISTORY_STATUSES,
   API_VERIFICATION_HISTORY_TARGET_KINDS,
@@ -22,6 +24,7 @@ import {
   type ApiVerificationHistoryTarget,
   type ContextCapacitySummary,
   type DrawingVerificationSummary,
+  type NeedleSummary,
   type PersistedApiVerificationProbeSummary,
 } from "~/services/verification/verificationResultHistory/types"
 import {
@@ -329,6 +332,13 @@ export function sanitizeConfig(
     ...(value.drawingSummaries
       ? { drawingSummaries: coerceDrawings(value.drawingSummaries) }
       : {}),
+    ...(Array.isArray(value.needleSummaries)
+      ? {
+          needleSummaries: value.needleSummaries
+            .map(coerceNeedleSummary)
+            .filter((item): item is NeedleSummary => item !== null),
+        }
+      : {}),
     ...(Array.isArray(value.contextSummaries)
       ? {
           contextSummaries: value.contextSummaries
@@ -377,6 +387,13 @@ export function coerceTrustedConfig(
             value.drawingSummaries as DrawingVerificationSummary[],
         }
       : {}),
+    ...(Array.isArray(value.needleSummaries)
+      ? {
+          needleSummaries: value.needleSummaries
+            .map(coerceNeedleSummary)
+            .filter((item): item is NeedleSummary => item !== null),
+        }
+      : {}),
     ...(Array.isArray(value.contextSummaries)
       ? {
           contextSummaries: value.contextSummaries
@@ -401,6 +418,18 @@ export function coerceContextSummary(
     typeof value.scopeKey === "string" && /^[a-f0-9]{64}$/.test(value.scopeKey)
       ? value.scopeKey
       : null
+  const rawCounter = value.counter as Record<string, unknown> | undefined
+  const counter =
+    rawCounter &&
+    Object.values(CONTEXT_TOKEN_ENCODINGS).some(
+      (encoding) => encoding === String(rawCounter.encoding),
+    ) &&
+    typeof rawCounter.estimated === "boolean"
+      ? {
+          encoding: String(rawCounter.encoding),
+          estimated: rawCounter.estimated,
+        }
+      : undefined
   const count = (input: unknown): input is number =>
     typeof input === "number" && Number.isSafeInteger(input) && input >= 0
   if (
@@ -412,6 +441,7 @@ export function coerceContextSummary(
       (reason) => reason === value.reason,
     ) ||
     !count(value.lowerBoundTokens) ||
+    (value.lowerBoundTokens > 0 && !counter) ||
     !count(value.requests) ||
     (value.upperBoundTokens !== undefined && !count(value.upperBoundTokens))
   )
@@ -430,6 +460,7 @@ export function coerceContextSummary(
     apiType: value.apiType,
     modelId: sanitizeText(value.modelId),
     lowerBoundTokens: value.lowerBoundTokens,
+    ...(counter ? { counter } : {}),
     ...(count(value.declaredContext) && value.declaredContext > 0
       ? { declaredContext: value.declaredContext }
       : {}),
@@ -457,5 +488,30 @@ export function coerceContextSummary(
     value.mode === API_VERIFICATION_MODES.NonStreaming
       ? { mode: value.mode }
       : {}),
+  }
+}
+
+/** Validate and retain only the compact retrieval measurements. */
+export function coerceNeedleSummary(raw: unknown): NeedleSummary | null {
+  if (!raw || typeof raw !== "object") return null
+  const value = raw as Record<string, unknown>
+  const result = coerceNeedleResult(value.result)
+  const target =
+    value.target === undefined ? undefined : coerceTarget(value.target)
+  if (
+    !result ||
+    (value.target !== undefined && !target) ||
+    typeof value.scopeKey !== "string" ||
+    !/^[a-f0-9]{64}$/.test(value.scopeKey)
+  )
+    return null
+  return {
+    result,
+    ...(target ? { target } : {}),
+    scopeKey: value.scopeKey,
+    verifiedAt: normalizeTimestamp(value.verifiedAt),
+    targetKey: target
+      ? serializeVerificationHistoryTarget(target)
+      : `connection:${value.scopeKey}`,
   }
 }

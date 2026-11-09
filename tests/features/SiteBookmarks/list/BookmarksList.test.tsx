@@ -572,7 +572,7 @@ describe("BookmarksList", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("supports pin and delete actions", async () => {
+  it("pins a bookmark from its actions menu", async () => {
     const user = userEvent.setup()
     const bookmark: SiteBookmark = {
       id: "b1",
@@ -591,7 +591,6 @@ describe("BookmarksList", () => {
 
     render(<BookmarksList />)
 
-    // Pin
     await user.click(
       await screen.findByRole("button", { name: "common:actions.more" }),
     )
@@ -609,8 +608,27 @@ describe("BookmarksList", () => {
         "messages:toast.success.bookmarkPinned",
       )
     })
+  })
 
-    // Delete
+  it("deletes a bookmark after confirmation", async () => {
+    const user = userEvent.setup()
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Docs",
+      url: "https://example.com/docs",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+
+    bookmarksMock = [bookmark]
+    togglePinAccountMock.mockResolvedValue(true)
+    loadAccountDataMock.mockResolvedValue(undefined)
+    mockDeleteBookmark.mockResolvedValue(true)
+
+    render(<BookmarksList />)
+
     await user.click(
       await screen.findByRole("button", { name: "common:actions.more" }),
     )

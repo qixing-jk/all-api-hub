@@ -1,6 +1,7 @@
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
@@ -14,7 +15,6 @@ import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
-  type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -30,8 +30,11 @@ import {
 import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } from "~/services/verification/modelQuality/contextCapacityConstants"
 import { CONTEXT_CAPACITY_DEFAULTS } from "~/services/verification/modelQuality/contextCapacityDefaults"
+import { getModelContextInfo } from "~/services/verification/modelQuality/contextTokens"
+import type { NeedleRunControls } from "~/services/verification/modelQuality/needleRun"
 import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
+import { needleHistory } from "~/services/verification/verificationResultHistory/needleHistory"
 import { webAiApiCheckBaseUrlHistoryStorage } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 import {
   CONTEXT_HISTORY_ACTIONS,
@@ -41,11 +44,7 @@ import {
   discardInactiveContextCheckpoints,
   runDurableContextCapacity,
 } from "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
-import {
-  normalizeApiCheckBaseUrl,
-  normalizeGoogleFamilyBaseUrl,
-  normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
+import { normalizeProbeBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import { createApiCheckProbeRunRegistry } from "~/services/verification/webAiApiCheck/probeRunRegistry"
 import { onTabRemoved, onTabUpdated } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
@@ -56,6 +55,10 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "./messaging"
+import {
+  discardInactiveNeedleCheckpoints,
+  runDurableNeedleTest,
+} from "./needleCheckpoint"
 import { isWebAiApiCheckPageAllowed } from "./siteAccess"
 import type {
   ApiCheckCancelRunProbeRequest,
@@ -78,6 +81,8 @@ import type {
   ApiCheckRenameTagResponse,
   ApiCheckRunContextCapacityRequest,
   ApiCheckRunContextCapacityResponse,
+  ApiCheckRunNeedleRequest,
+  ApiCheckRunNeedleResponse,
   ApiCheckRunPelicanRequest,
   ApiCheckRunPelicanResponse,
   ApiCheckRunProbeRequest,
@@ -94,6 +99,7 @@ import type {
 const logger = createLogger("WebAiApiCheck")
 
 const probeRuns = createApiCheckProbeRunRegistry()
+const needleRunControls = new Map<string, NeedleRunControls>()
 
 /** Keep request fingerprinting and persistence in the secure extension context. */
 async function resolveContextHistory({
@@ -157,28 +163,6 @@ function getWebAiApiCheckPreferences(
       },
     }
   )
-}
-
-/**
- * Normalize a base URL for probe execution, keeping behavior consistent across api types.
- */
-function normalizeProbeBaseUrl(params: {
-  apiType: ApiVerificationApiType
-  baseUrl: string
-}): string | null {
-  if (
-    params.apiType === API_TYPES.OPENAI_COMPATIBLE ||
-    params.apiType === API_TYPES.OPENAI ||
-    params.apiType === API_TYPES.ANTHROPIC
-  ) {
-    return normalizeOpenAiFamilyBaseUrl(params.baseUrl)
-  }
-
-  if (params.apiType === API_TYPES.GOOGLE) {
-    return normalizeGoogleFamilyBaseUrl(params.baseUrl)
-  }
-
-  return normalizeApiCheckBaseUrl(params.baseUrl)
 }
 
 /**
@@ -676,6 +660,98 @@ async function resolveWebAiApiCheckRunPelicanMessage(
   }
 }
 
+/** Run a validated retrieval plan in the background, sharing the existing run registry. */
+async function resolveNeedleRun(
+  request: ApiCheckRunNeedleRequest,
+  sender?: browser.runtime.MessageSender,
+): Promise<ApiCheckRunNeedleResponse> {
+  const { runId, apiKey, modelId, apiType, mode, requestProfile } = request
+  if (
+    typeof runId !== "string" ||
+    !runId.trim() ||
+    typeof apiKey !== "string" ||
+    !apiKey.trim() ||
+    typeof modelId !== "string" ||
+    !modelId.trim() ||
+    !Object.values(API_TYPES).includes(apiType)
+  )
+    return { success: false, error: "Missing or invalid needle configuration" }
+  if (
+    mode !== undefined &&
+    !Object.values(API_VERIFICATION_MODES).includes(mode)
+  )
+    return { success: false, error: "Invalid verification mode" }
+  if (
+    requestProfile !== undefined &&
+    !isVerificationRequestProfile(requestProfile)
+  )
+    return { success: false, error: "Invalid request profile" }
+  const baseUrl = toVersionedProtocolMount(apiType, request.baseUrl)
+  if (!baseUrl) return { success: false, error: "Invalid base URL" }
+  if (
+    request.requestHeaders !== undefined &&
+    (!request.requestHeaders ||
+      typeof request.requestHeaders !== "object" ||
+      Array.isArray(request.requestHeaders) ||
+      Object.entries(request.requestHeaders).some(
+        ([name, value]) =>
+          typeof value !== "string" ||
+          !name.trim() ||
+          /[\r\n]/.test(name + value),
+      ))
+  )
+    return { success: false, error: "Invalid request headers" }
+  let controls: NeedleRunControls | undefined
+  try {
+    const result = await probeRuns.run(
+      runId,
+      async (signal) => {
+        return runDurableNeedleTest(
+          {
+            ...request,
+            baseUrl,
+            modelId: modelId.trim(),
+            abortSignal: signal!,
+            onControls: (value) => {
+              controls = value
+              needleRunControls.set(runId, value)
+            },
+            onProgress: (result) => {
+              if (signal?.aborted) return
+              void sendWebAiApiCheckMessage(
+                WebAiApiCheckMessageTypes.NeedleProgress,
+                { runId, result },
+                sender?.tab?.id === undefined
+                  ? undefined
+                  : { tabId: sender.tab.id, frameId: sender.frameId },
+              ).catch(() => undefined)
+            },
+          },
+          request.recoverOnly === true,
+          request.historyTarget,
+        )
+      },
+      sender?.tab?.id,
+    )
+    return { success: true, result }
+  } catch (error) {
+    return {
+      success: false,
+      error: toSanitizedErrorSummary(error, [
+        apiKey,
+        ...Object.values(request.requestHeaders ?? {}),
+      ]),
+      errorName: error instanceof Error ? error.name : undefined,
+      checkpointLimitReached:
+        error instanceof Error &&
+        error.name === CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
+    }
+  } finally {
+    if (controls && needleRunControls.get(runId) === controls)
+      needleRunControls.delete(runId)
+  }
+}
+
 /** Keep generated long prompts in background; return only compact measurements. */
 async function resolveWebAiApiCheckRunContextCapacityMessage(
   request: ApiCheckRunContextCapacityRequest,
@@ -943,6 +1019,60 @@ export function setupWebAiApiCheckMessagingListeners() {
       WebAiApiCheckMessageTypes.RunPelican,
       async ({ data, sender }) =>
         resolveWebAiApiCheckRunPelicanMessage(data, sender?.tab?.id),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.ContextCounter,
+      async ({ data }) => {
+        if (typeof data.modelId !== "string" || !data.modelId.trim())
+          return { success: false as const }
+        try {
+          return {
+            success: true as const,
+            counter: await getModelContextInfo(data.modelId),
+          }
+        } catch {
+          return { success: false as const }
+        }
+      },
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.NeedleHistory,
+      async ({ data }) => {
+        try {
+          return {
+            success: true as const,
+            summary: await needleHistory.get(data, data.historyTarget),
+          }
+        } catch {
+          return { success: false as const }
+        }
+      },
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RunNeedle,
+      async ({ data, sender }) => resolveNeedleRun(data, sender),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.StopNeedleSelection,
+      async ({ data }) => ({
+        success: true as const,
+        cancelled: Boolean(
+          await needleRunControls
+            .get(data.runId)
+            ?.stopSelection(data.selection),
+        ),
+      }),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.DiscardNeedleCheckpoints,
+      async () => {
+        try {
+          await discardInactiveNeedleCheckpoints()
+          return { success: true as const }
+        } catch {
+          return { success: false as const }
+        }
+      },
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunContextCapacity,

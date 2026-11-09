@@ -12,6 +12,10 @@ import type {
   RunContextCapacityParams,
 } from "~/services/verification/modelQuality/contextCapacityRun"
 import type {
+  NeedleResult,
+  RunNeedleParams,
+} from "~/services/verification/modelQuality/needleRun"
+import type {
   PelicanExecutionMode,
   PelicanTestResult,
 } from "~/services/verification/modelQuality/pelican"
@@ -287,3 +291,20 @@ export type ApiCheckContextHistoryResponse =
       summary: ContextCapacitySummary | null
     }
   | { success: false }
+
+export type ApiCheckRunNeedleRequest = Omit<
+  RunNeedleParams,
+  "abortSignal" | "onProgress" | "onCheckpoint" | "capacity" | "onControls"
+> & {
+  runId: string
+  recoverOnly?: boolean
+  historyTarget?: import("~/services/verification/verificationResultHistory/types").ApiVerificationHistoryTarget
+}
+export type ApiCheckRunNeedleResponse =
+  | { success: true; result: NeedleResult }
+  | {
+      success: false
+      error?: string
+      errorName?: string
+      checkpointLimitReached?: boolean
+    }

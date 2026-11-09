@@ -34,6 +34,37 @@ function createExecution() {
 }
 
 describe("dialog probe execution", () => {
+  it.each(["pass", "fail", "stopped"] as const)(
+    "replaces only the rerun probe's historical state on %s",
+    async (outcome) => {
+      const { options } = createExecution()
+      options.replaceProbes(
+        options.readProbes().map((probe) => ({ ...probe, historical: true })),
+      )
+      await executeDialogProbe({
+        ...options,
+        isStopped: () => outcome === "stopped",
+        execute: async () => {
+          expect(options.readProbes()[0]).toMatchObject({
+            historical: false,
+            isRunning: true,
+          })
+          if (outcome === "fail") throw new Error("Test failure")
+          return {
+            id: options.probeId,
+            status: "pass",
+            latencyMs: 1,
+            summary: "Current result",
+          }
+        },
+      })
+      expect(options.readProbes()[0]).toMatchObject({
+        historical: false,
+        isRunning: false,
+      })
+      expect(options.readProbes()[1]?.historical).toBe(true)
+    },
+  )
   it("does not classify result acceptance failure as a failed API request", async () => {
     const { options, acceptResult, report } = createExecution()
     const persistenceError = new Error("History storage unavailable")

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next"
 
+import { FieldHelpPopover } from "~/components/FieldHelpPopover"
 import {
   Badge,
   BodySmall,
@@ -8,7 +9,6 @@ import {
   Input,
   Switch,
 } from "~/components/ui"
-import { FieldHelpPopover } from "~/features/ImportExport/components/FieldHelpPopover"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import type { WebdavConfigState } from "~/features/ImportExport/webdav/useWebdavConfig"
 import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"

@@ -77,7 +77,8 @@ export function VerificationTestSection({
 }) {
   const { t } = useTranslation("aiApiVerification")
   const [selectedId, select] = useState<string | null>(null)
-  const { frameRef, isWide } = useVerificationWorkspaceHeight(selectedId)
+  const { frameRef, isWide, availableHeight } =
+    useVerificationWorkspaceHeight(selectedId)
   const items = useRef(new Set<string>())
   const register = useCallback((id: string) => {
     items.current.add(id)
@@ -90,8 +91,8 @@ export function VerificationTestSection({
     }
   }, [])
   const selection = useMemo(
-    () => ({ selectedId, select, register, isWide }),
-    [selectedId, register, isWide],
+    () => ({ selectedId, select, register, isWide, availableHeight }),
+    [selectedId, register, isWide, availableHeight],
   )
   return (
     <VerificationSelectionContext.Provider value={selection}>

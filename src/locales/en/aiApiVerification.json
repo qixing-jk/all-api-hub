@@ -31,7 +31,14 @@
     "generatedVideoPreview": "Generated video preview",
     "history": {
       "clear": "Clear history",
-      "lastVerified": "Last tested"
+      "lastVerified": "Last tested",
+      "previousResult": "Previously: {{result}}",
+      "storage": {
+        "context": "History keeps measurements, without individual request details.",
+        "drawing": "History does not retain the drawing or execution details.",
+        "needle": "History keeps measurements. The same sample ID and settings can recreate the test text.",
+        "probe": "History keeps the test summary, without request or response content."
+      }
     },
     "intro": {
       "flow": "Test steps",
@@ -289,10 +296,112 @@
       "errors": {
         "unexpected": "Request failed: {{message}}"
       },
+      "needle": {
+        "automatic": "Automatic",
+        "automaticLimit": "Automatic ({{limit}})",
+        "budget": "About {{tokens}} input tokens, plus output. This test uses your API quota.",
+        "cancelledCell": "Cancelled",
+        "cancelledUnknown": "No gradable result was obtained.",
+        "capacityRunning": "Checking available context. Test lengths will update when it finishes.",
+        "capped": "This run is capped at 1M input tokens per request.",
+        "cell": "Local input: {{tokens}} tokens · Actual position: {{depth}}% · {{latency}} ms",
+        "cellDetails": "Cell details",
+        "cumulativeScore": "Cumulative results: {{hits}}/{{graded}} graded answers matched",
+        "custom": "Custom",
+        "customLimit": "Custom length (tokens)",
+        "description": "Check whether the model can find a specific record at different positions in a long text.",
+        "errors": {
+          "busy": "A test for this connection is already running in another page.",
+          "failed": "The needle test could not finish: {{detail}}",
+          "metadata": "Unable to load context information. Try again.",
+          "request": "Select a model and a usable credential before running."
+        },
+        "exactLengths": "Exact lengths: {{lengths}} tokens",
+        "exactTotal": "Estimated total input: {{tokens}} tokens",
+        "expected": "Expected: {{value}}",
+        "invalid": "Text length must be an integer from 1,024 to 1,048,576; sample ID must be an integer from 0 to 4,294,967,295.",
+        "length": "Tokens",
+        "lengthRule": "Lengths double from 8K, with a final step at the input limit of {{limit}}.",
+        "limit": "Maximum text length (tokens)",
+        "limitation": "A match verifies this sample only. A miss does not prove truncation, a smaller context window or a different model.",
+        "matrix": "Retrieval by input length and position",
+        "matrixHint": "Click a status to view details and run or retest that cell. Row and column buttons run every cell in their scope, including previous results. Stop buttons affect only their cell, row or column.",
+        "notRun": "Not run",
+        "notScheduled": "Not in this run",
+        "outcomes": {
+          "contextLimit": "Too long",
+          "error": "Error",
+          "hit": "Match",
+          "incomplete": "Incomplete",
+          "interrupted": "Unknown",
+          "miss": "Miss"
+        },
+        "planDetails": "How are lengths chosen?",
+        "planned": "Planned",
+        "plannedLengths": "Text lengths (tokens)",
+        "positionRule": "Each length is tested at {{positions}}, covering the beginning, middle and end.",
+        "preparing": "Preparing the test plan…",
+        "preparingCellState": "Preparing…",
+        "previewPositions": "Each length is tested at {{positions}}.",
+        "previewTitle": "Test preview",
+        "previousResult": "Previous result (before this run)",
+        "probeFirst": "Check available context",
+        "progress": "Latest run: Processed {{completed}}/{{total}} requests",
+        "quick": "Test only the longest text",
+        "quickHint": "Run only the three positions at the longest planned length. Other lengths are excluded from this run and can be tested separately by row or column.",
+        "randomSample": "New random sample",
+        "reasons": {
+          "budget": "Budget reached",
+          "complete": "Finished",
+          "error": "Request failed",
+          "interrupted": "Interrupted; outcome unknown"
+        },
+        "reference": {
+          "context": "Model metadata: {{tokens}} context (unverified)",
+          "input": "Model metadata: {{tokens}} input limit (unverified)",
+          "measured": "Previously accepted: {{tokens}} input (maximum unknown)",
+          "unknown": "Context limit unavailable. Automatic uses {{tokens}} tokens until a context check provides a new value."
+        },
+        "reproduce": "Sample {{seed}} · Tokenizer: {{encoding}}.",
+        "requestCount_one": "{{count}} request",
+        "requestCount_other": "{{count}} requests",
+        "requestDetails": "Request and answer details",
+        "resultDetails": "Test parameters and reproduction",
+        "retestCell": "Retest this cell",
+        "retestColumn": "Retest {{depth}}% column ({{requests}})",
+        "retestRow": "Retest {{length}} row ({{requests}})",
+        "retry": "Retry",
+        "run": "Run needle test",
+        "runCell": "Run this cell",
+        "runColumn": "Run {{depth}}% column ({{requests}})",
+        "runRow": "Run {{length}} row ({{requests}})",
+        "savedResult": "Saved result",
+        "scopeProgress": "Processed {{completed}}/{{total}}",
+        "score": "{{hits}}/{{total}} matched",
+        "scoreStep": "Compare the returned code",
+        "searchStep": "Find the requested record",
+        "seedHint": "Leave blank for a new sample each time. Use the same ID and settings to repeat a sample.",
+        "seedInput": "Test sample ID (optional)",
+        "singleLengthRule": "This plan tests just one length: {{limit}}.",
+        "sources": {
+          "custom": "You set the maximum test input to {{limit}}. This plan uses that limit.",
+          "declaredContext": "Model metadata lists a {{context}} total context. Reserving {{reserve}} for the reply leaves an input limit of {{input}}. This has not been verified on the current API.",
+          "declaredInput": "Model metadata lists a separate input limit of {{input}}, which sets the test lengths. This has not been verified on the current API.",
+          "fallback": "No usable model limits or accepted-input records are available. This plan uses a default limit of {{limit}}. Adjust it in test settings or check available context first.",
+          "measured": "Based on input previously accepted by this connection, this plan tests up to {{limit}}. This does not establish the model's maximum capacity."
+        },
+        "stopCapacity": "Stop context probe",
+        "stopCell": "Stop {{length}} · {{depth}}%",
+        "stopColumn": "Stop {{depth}}% column",
+        "stopFailed": "Could not stop. Try again.",
+        "stoppingCell": "Stopping…",
+        "stopRow": "Stop {{length}} row",
+        "title": "Needle in a haystack",
+        "tokenUnits": "In this test, 1K = 1,024 tokens and 1M = 1,048,576 tokens."
+      },
       "pelican": {
         "analysis": "{{shapes}} shapes · {{wheels}} circles/ellipses · viewBox {{viewBox}}",
         "description": "Asks the model to draw a pelican riding a bicycle as SVG for a side-by-side look. Judgement stays manual.",
-        "historyOnly": "Only the run summary was saved. Run again to view the drawing and execution details.",
         "noSvg": "The model returned no SVG markup.",
         "outcomes": {
           "error": "Execution failed",
@@ -313,6 +422,7 @@
         "saveFailed": "Could not save prompts: {{message}}",
         "sharedHint": "Saved prompts are shared by every test entry point."
       },
+      "settingsTitle": "Test settings",
       "stop": "Stop",
       "stopped": "Stopped before finishing; nothing was recorded."
     },

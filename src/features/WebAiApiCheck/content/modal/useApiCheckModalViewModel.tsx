@@ -50,6 +50,12 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
+import {
+  discardNeedleCheckpointsInBackground,
+  loadNeedleCounterInBackground,
+  needleHistoryInBackground,
+  runNeedleInBackground,
+} from "~/services/verification/webAiApiCheck/needleClient"
 import type { Tag } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
@@ -272,6 +278,11 @@ export function useApiCheckModalViewModel() {
     ])
 
   const verificationTools = useVerificationTools({
+    modelId: modelId,
+    runNeedleRequest: runNeedleInBackground,
+    loadNeedleCounter: loadNeedleCounterInBackground,
+    needleHistoryAccess: needleHistoryInBackground,
+    discardNeedleCheckpoints: discardNeedleCheckpointsInBackground,
     contextHistoryAccess: contextHistoryInBackground,
     discardContextCheckpoints: discardContextCheckpointsInBackground,
     enableContextCapacity: true,

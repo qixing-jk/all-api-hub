@@ -22,6 +22,7 @@ export function VerificationProbeRow({
   summary,
   runButtonProps,
   isRunning = false,
+  historical = false,
 }: {
   controller?: VerificationToolsController
   probeId: ApiVerificationProbeId
@@ -31,6 +32,7 @@ export function VerificationProbeRow({
     "data-testid"?: string
   }
   isRunning?: boolean
+  historical?: boolean
 }) {
   const { t } = useTranslation("aiApiVerification")
   const idle = !result && !isRunning
@@ -58,13 +60,7 @@ export function VerificationProbeRow({
           </VerificationTestLabel>
         </div>
       }
-      description={
-        summary && !isRunning ? (
-          <div className="text-muted-foreground mt-density-1 text-xs break-words">
-            {summary}
-          </div>
-        ) : null
-      }
+      resultSummary={!isRunning ? summary ?? result?.summary : undefined}
       action={<VerificationRunButton {...runButtonProps} />}
       status={
         isRunning ? (
@@ -72,13 +68,14 @@ export function VerificationProbeRow({
             {t("verifyDialog.actions.running")}
           </Badge>
         ) : result ? (
-          <ProbeStatusBadge result={result} />
+          <ProbeStatusBadge result={result} historical={historical} />
         ) : (
           <Badge variant="outline" size="sm">
             {t("verifyDialog.status.pending")}
           </Badge>
         )
       }
+      statusInteractive={!isRunning && Boolean(result) && historical}
     />
   )
 }

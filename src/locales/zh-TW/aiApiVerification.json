@@ -31,7 +31,14 @@
     "generatedVideoPreview": "生成的影片預覽",
     "history": {
       "clear": "清除歷史",
-      "lastVerified": "最近測試"
+      "lastVerified": "最近測試",
+      "previousResult": "上次{{result}}",
+      "storage": {
+        "context": "歷史記錄保留測量結果，未儲存逐次請求明細。",
+        "drawing": "歷史記錄未儲存作品與執行明細。",
+        "needle": "歷史記錄保留測量結果；可用相同樣本編號與設定重新產生測試文字。",
+        "probe": "歷史記錄僅保留測試摘要，未儲存請求與回應內容。"
+      }
     },
     "intro": {
       "flow": "測試步驟",
@@ -288,10 +295,111 @@
       "errors": {
         "unexpected": "請求失敗：{{message}}"
       },
+      "needle": {
+        "automatic": "自動",
+        "automaticLimit": "自動（{{limit}}）",
+        "budget": "預計輸入約 {{tokens}} tokens，輸出另計。測試會使用你的 API 額度。",
+        "cancelledCell": "已取消",
+        "cancelledUnknown": "未取得可判定結果。",
+        "capacityRunning": "正在檢測可用上下文，完成後會更新測試長度。",
+        "capped": "本次每條請求最多測試 1M 輸入 tokens。",
+        "cell": "本機輸入 {{tokens}} tokens · 實際位置 {{depth}}% · {{latency}} 毫秒",
+        "cellDetails": "儲存格詳情",
+        "cumulativeScore": "累計結果：可判定答案中命中 {{hits}}/{{graded}}",
+        "custom": "自訂",
+        "customLimit": "自訂長度（tokens）",
+        "description": "在長文本的不同位置查找指定資訊，檢查模型的檢索能力。",
+        "errors": {
+          "busy": "其他頁面正在測試此連線，請等待完成或先停止。",
+          "failed": "大海撈針測試未能完成：{{detail}}",
+          "metadata": "無法載入上下文資訊，請重試。",
+          "request": "請選擇模型並設定可用憑證後再執行。"
+        },
+        "exactLengths": "準確長度：{{lengths}} tokens",
+        "exactTotal": "預計累計輸入：{{tokens}} tokens",
+        "expected": "預期答案：{{value}}",
+        "invalid": "文字長度須為 1,024～1,048,576 的整數；樣本編號須為 0～4,294,967,295 的整數。",
+        "length": "Tokens",
+        "lengthRule": "從 8K 起逐步加倍，最後補至本次輸入上限 {{limit}}。",
+        "limit": "最長測試文字（tokens）",
+        "limitation": "命中僅驗證本次樣本。未命中不能證明輸入被截斷、上下文視窗更小或模型身分不同。",
+        "matrix": "各輸入長度與位置的檢索結果",
+        "matrixHint": "點擊狀態可查看詳情並執行或重測該項。列、欄按鈕會執行範圍內的全部項目，包括已有結果。停止按鈕只影響對應儲存格、列或欄。",
+        "notRun": "未執行",
+        "notScheduled": "本次不執行",
+        "outcomes": {
+          "contextLimit": "超限",
+          "error": "請求錯誤",
+          "hit": "命中",
+          "incomplete": "輸出不完整",
+          "interrupted": "結果未知",
+          "miss": "未命中"
+        },
+        "planDetails": "長度如何決定",
+        "planned": "計畫執行",
+        "plannedLengths": "測試文字長度（tokens）",
+        "positionRule": "在文字的 {{positions}} 位置分別測試，檢查前、中、後段的資訊檢索。",
+        "preparing": "正在準備測試方案…",
+        "preparingCellState": "準備中",
+        "previewPositions": "每種長度在 {{positions}} 位置各測一次。",
+        "previewTitle": "本次測試預覽",
+        "previousResult": "上次結果（本輪執行前）",
+        "probeFirst": "檢測可用上下文",
+        "progress": "最近一次執行：已處理 {{completed}}/{{total}} 次請求",
+        "quick": "僅測試最長文字",
+        "quickHint": "僅執行計畫最長長度的三個位置。其他長度不納入本次執行，可按列或欄單獨補測。",
+        "randomSample": "每次隨機產生",
+        "reasons": {
+          "budget": "已達預算",
+          "complete": "已完成",
+          "error": "請求失敗",
+          "interrupted": "已中斷，結果未知"
+        },
+        "reference": {
+          "context": "模型標示上下文：{{tokens}}（未驗證）",
+          "input": "模型標示輸入上限：{{tokens}}（未驗證）",
+          "measured": "先前已接收 {{tokens}} 輸入（最大容量未知）",
+          "unknown": "未取得上下文上限，自動模式暫用 {{tokens}} tokens；檢測後會更新自動值。"
+        },
+        "reproduce": "樣本 {{seed}} · 分詞器：{{encoding}}。",
+        "requestCount_other": "共 {{count}} 次請求",
+        "requestDetails": "請求與答案詳情",
+        "resultDetails": "測試參數與重現資訊",
+        "retestCell": "重測此項",
+        "retestColumn": "重測 {{depth}}% 欄（{{requests}}）",
+        "retestRow": "重測 {{length}} 列（{{requests}}）",
+        "retry": "重試",
+        "run": "開始撈針測試",
+        "runCell": "執行此項",
+        "runColumn": "執行 {{depth}}% 欄（{{requests}}）",
+        "runRow": "執行 {{length}} 列（{{requests}}）",
+        "savedResult": "歷史結果",
+        "scopeProgress": "已處理 {{completed}}/{{total}}",
+        "score": "{{hits}}/{{total}} 命中",
+        "scoreStep": "核對回傳代碼",
+        "searchStep": "尋找指定記錄",
+        "seedHint": "留空時每次產生新樣本。使用相同編號和設定，可重複測試同一份文字。",
+        "seedInput": "測試樣本編號（選填）",
+        "singleLengthRule": "本次只測試 {{limit}} 這一種長度。",
+        "sources": {
+          "custom": "你將最長測試輸入設為 {{limit}}，本次依此上限選擇長度。",
+          "declaredContext": "模型資料中的總上下文為 {{context}}，預留 {{reserve}} 用於回覆，輸入上限為 {{input}}。這是資料值，尚未在目前的 API 驗證。",
+          "declaredInput": "模型資料中的獨立輸入上限為 {{input}}，本次依此限制選擇長度。此值尚未在目前的 API 驗證。",
+          "fallback": "尚無可用的模型長度資料或接收記錄，本次使用預設上限 {{limit}}。你可以在測試設定中調整，或先檢測可用上下文。",
+          "measured": "參考此連線先前成功接收的輸入，本次以 {{limit}} 為測試上限。這不代表已測得模型的最大容量。"
+        },
+        "stopCapacity": "停止上下文探測",
+        "stopCell": "停止 {{length}} · {{depth}}%",
+        "stopColumn": "停止 {{depth}}% 整欄",
+        "stopFailed": "無法停止，請重試。",
+        "stoppingCell": "正在停止…",
+        "stopRow": "停止 {{length}} 整列",
+        "title": "大海撈針",
+        "tokenUnits": "本測試中，1K = 1,024 tokens，1M = 1,048,576 tokens。"
+      },
       "pelican": {
         "analysis": "{{shapes}} 個形狀 · {{wheels}} 個圓形/橢圓 · viewBox {{viewBox}}",
         "description": "讓模型畫一隻騎腳踏車的鵜鶘 SVG，方便你直接比對畫風與結構；結論由人工判斷。",
-        "historyOnly": "僅儲存了本次執行摘要。重新執行可查看作品與執行明細。",
         "noSvg": "模型沒有回傳 SVG。",
         "outcomes": {
           "error": "執行失敗",
@@ -312,6 +420,7 @@
         "saveFailed": "儲存提示詞失敗：{{message}}",
         "sharedHint": "已儲存的提示詞對所有測試入口生效。"
       },
+      "settingsTitle": "測試設定",
       "stop": "停止",
       "stopped": "已停止，本次結果未記錄。"
     },

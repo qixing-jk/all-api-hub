@@ -57,7 +57,12 @@ export async function executeDialogProbe({
   replaceProbes(
     readProbes().map((probe) =>
       probe.definition.id === probeId
-        ? { ...probe, isRunning: true, attempts: probe.attempts + 1 }
+        ? {
+            ...probe,
+            isRunning: true,
+            historical: false,
+            attempts: probe.attempts + 1,
+          }
         : probe,
     ),
   )

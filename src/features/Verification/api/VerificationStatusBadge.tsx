@@ -15,12 +15,18 @@ import {
   type ApiVerificationHistoryDisplayStatus,
 } from "~/services/verification/verificationResultHistory"
 
+import {
+  VerificationHistoryBadge,
+  type VerificationHistoryKind,
+} from "./VerificationHistoryBadge"
+
 export type VerificationStatusBadgeProps = {
   status: ApiVerificationProbeStatus | ApiVerificationHistoryDisplayStatus
   latencyMs?: number | null
   mode?: ApiVerificationMode
   className?: string
   label?: string
+  historyKind?: VerificationHistoryKind
 }
 
 /**
@@ -34,8 +40,29 @@ export function VerificationStatusBadge({
   mode,
   className,
   label,
+  historyKind,
 }: VerificationStatusBadgeProps) {
   const { t } = useTranslation("aiApiVerification")
+  if (historyKind) {
+    const historyLabel =
+      label ??
+      (status === API_VERIFICATION_PROBE_STATUSES.Pass
+        ? t("verifyDialog.status.pass")
+        : status === API_VERIFICATION_PROBE_STATUSES.Unsupported
+          ? t("verifyDialog.status.unsupported")
+          : status === API_VERIFICATION_HISTORY_STATUSES.Unverified
+            ? t("verifyDialog.status.unverified")
+            : t("verifyDialog.status.fail"))
+    return (
+      <VerificationHistoryBadge
+        kind={historyKind}
+        label={historyLabel}
+        latencyMs={latencyMs}
+        mode={mode}
+        className={className}
+      />
+    )
+  }
   const modeLabel = mode ? getApiVerificationModeLabel(t, mode) : null
   const modeContent = modeLabel ? (
     <>
