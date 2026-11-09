@@ -18,6 +18,7 @@ import {
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import { createApiOperationContext } from "~/services/apiTransport/operationContext"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { isolateWebLocks } from "~~/tests/test-utils/webLocks"
 
 const config = {
@@ -87,8 +88,8 @@ describe("Magpie management transport", () => {
       if (mode === "authenticated-session")
         await listMagpieProviders(sessionConfig)
 
-      const locked = Promise.withResolvers<void>()
-      const response = Promise.withResolvers<Response>()
+      const locked = createDeferred<void>()
+      const response = createDeferred<Response>()
       fetchMock.mockImplementation(() => {
         locked.resolve()
         return response.promise

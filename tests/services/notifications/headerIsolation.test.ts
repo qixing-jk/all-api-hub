@@ -10,6 +10,7 @@ import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { isolateWebLocks } from "~~/tests/test-utils/webLocks"
 
 const url = "http://192.168.1.20:3430/api/provider/save"
@@ -72,7 +73,7 @@ it.each(deliveries)(
           }: {
             addRules?: browser.declarativeNetRequest.Rule[]
           }) => {
-            activeOrigin = addRules?.[0].action.requestHeaders?.find(
+            activeOrigin = addRules?.[0]?.action.requestHeaders?.find(
               (header) => header.header === "origin",
             )?.value
           },
@@ -80,8 +81,8 @@ it.each(deliveries)(
       },
     })
     const sentOrigins: (string | undefined)[] = []
-    const dispatched = Promise.withResolvers<void>()
-    const response = Promise.withResolvers<Response>()
+    const dispatched = createDeferred<void>()
+    const response = createDeferred<Response>()
     vi.stubGlobal(
       "fetch",
       vi.fn((input: string, init: RequestInit) => {
