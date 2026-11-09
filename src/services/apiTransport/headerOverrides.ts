@@ -3,8 +3,8 @@ import {
   fetchSafariNativeCookie,
   isSafariNativeCookieEnabled,
 } from "~/services/apiTransport/safariNativeCookie"
+import { isChromium } from "~/utils/browser"
 import { getChromiumRequestHeaderApi } from "~/utils/browser/requestHeaderApi"
-import { getExtensionURL } from "~/utils/browser/runtime"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
@@ -49,7 +49,7 @@ function shouldOverrideRequestOrigin(url: URL): boolean {
     /^127(?:\.\d{1,3}){3}$/.test(hostname)
   )
     return false
-  return getExtensionURL("").startsWith("chrome-extension://")
+  return isChromium()
 }
 
 const forbiddenHeaders = new Set([

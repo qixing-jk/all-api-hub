@@ -116,6 +116,7 @@ describe("credential request header overrides", () => {
   it.each([
     "moz-extension://extension-id/",
     "safari-web-extension://extension-id/",
+    "unknown-extension://extension-id/",
   ])(
     "preserves native Origin behavior for runtime %s even when DNR is exposed",
     async (runtimeUrl) => {
@@ -139,6 +140,25 @@ describe("credential request header overrides", () => {
       )
     },
   )
+
+  it("does not dispatch an Origin request when extension runtime detection fails", async () => {
+    const rules = installDnr()
+    vi.mocked(browser.runtime.getURL).mockImplementation(() => {
+      throw new Error("Extension context invalidated")
+    })
+    const onDispatch = vi.fn()
+    await expect(
+      fetchWithHeaderOverrides(
+        "http://console.test/api",
+        { method: "POST" },
+        undefined,
+        { matchRequestOrigin: true, onDispatch },
+      ),
+    ).rejects.toThrow("Extension context invalidated")
+    expect(onDispatch).not.toHaveBeenCalled()
+    expect(nativeFetch).not.toHaveBeenCalled()
+    expect(rules).not.toHaveBeenCalled()
+  })
 
   it("matches the request origin without replacing the browser Cookie session", async () => {
     const updateSessionRules = installDnr()

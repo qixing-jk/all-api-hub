@@ -22,6 +22,18 @@ export function isFirefox(): boolean {
 }
 
 /**
+ * Identifies Chromium's extension runtime independently of brand, UA or build
+ * target. This is not a DNR capability/permission check. Runtime lookup errors
+ * propagate so transport callers cannot silently bypass required preparation.
+ * https://github.com/chromium/chromium/blob/main/extensions/common/constants.h
+ */
+export function isChromium(): boolean {
+  return getRuntimeBaseUrl({ throwOnError: true }).startsWith(
+    "chrome-extension://",
+  )
+}
+
+/**
  * Detects Microsoft Edge browsers by inspecting the user-agent string.
  * @param userAgent Optional user-agent string to check. Defaults to navigator.userAgent.
  * @returns True when the UA indicates Microsoft Edge.
@@ -34,12 +46,14 @@ export function isEdgeByUA(userAgent?: string): boolean {
 
 /**
  * Retrieves the base URL of the extension runtime.
+ * @param options Whether callers require runtime lookup errors to propagate.
  * @returns The runtime base URL or an empty string if unavailable.
  */
-function getRuntimeBaseUrl(): string {
+function getRuntimeBaseUrl(options?: { throwOnError?: boolean }): string {
   try {
     return getExtensionURL("")
-  } catch {
+  } catch (error) {
+    if (options?.throwOnError) throw error
     return ""
   }
 }
