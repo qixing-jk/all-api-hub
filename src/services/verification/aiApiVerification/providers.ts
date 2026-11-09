@@ -42,6 +42,21 @@ type CreateModelParams = {
   requestProfileEnhanced?: boolean
   apiType: ApiVerificationApiType
   modelId: string
+  /** Observe transport status without consuming or changing the SDK response. */
+  onResponse?: (response: Response) => void
+}
+
+/** Keep response observation outside credential and client-profile handling. */
+function observeResponse(
+  fetch: typeof globalThis.fetch,
+  onResponse?: (response: Response) => void,
+): typeof globalThis.fetch {
+  if (!onResponse) return fetch
+  return async (input, init) => {
+    const response = await fetch(input, init)
+    onResponse(response)
+    return response
+  }
 }
 
 /** Share compatible transport configuration across supported modalities. */
@@ -56,13 +71,13 @@ function createCompatibleProvider(params: CreateModelParams) {
     apiKey: params.apiKey,
     // SDK image downloads may target a CDN. The SDK scopes its own credentials;
     // custom overrides must respect the same boundary instead of restoring them.
-    fetch: (input, init) => {
+    fetch: observeResponse((input, init) => {
       const url = input instanceof Request ? input.url : String(input)
       return (new URL(url).origin === apiOrigin ? apiFetch : publicFetch)(
         input,
         init,
       )
-    },
+    }, params.onResponse),
   })
 }
 
@@ -98,7 +113,10 @@ export function createModel(params: CreateModelParams) {
     return createAnthropic({
       baseURL: requireProtocolApiBaseUrl(params.apiType, params.baseUrl),
       ...auth,
-      fetch: createVerificationProfileFetch(auth.fetch, params),
+      fetch: observeResponse(
+        createVerificationProfileFetch(auth.fetch, params),
+        params.onResponse,
+      ),
     })(params.modelId)
   }
 
@@ -133,13 +151,17 @@ export function createOpenAIProvider(params: {
   requestHeaders?: Record<string, string>
   requestProfile?: ApiVerificationRequestProfile
   requestProfileEnhanced?: boolean
+  onResponse?: (response: Response) => void
 }) {
   return createOpenAI({
     baseURL: requireProtocolApiBaseUrl(API_TYPES.OPENAI, params.baseUrl),
     apiKey: params.apiKey,
-    fetch: createVerificationProfileFetch(
-      createHeaderOverrideFetch(params.requestHeaders),
-      params,
+    fetch: observeResponse(
+      createVerificationProfileFetch(
+        createHeaderOverrideFetch(params.requestHeaders),
+        params,
+      ),
+      params.onResponse,
     ),
   })
 }
@@ -150,6 +172,7 @@ export function createOpenAIProvider(params: {
 export function createGoogleProvider(params: {
   requestProfile?: ApiVerificationRequestProfile
   requestProfileEnhanced?: boolean
+  onResponse?: (response: Response) => void
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
@@ -162,6 +185,9 @@ export function createGoogleProvider(params: {
   return createGoogle({
     baseURL: requireProtocolApiBaseUrl(API_TYPES.GOOGLE, params.baseUrl),
     ...auth,
-    fetch: createVerificationProfileFetch(auth.fetch, params),
+    fetch: observeResponse(
+      createVerificationProfileFetch(auth.fetch, params),
+      params.onResponse,
+    ),
   })
 }

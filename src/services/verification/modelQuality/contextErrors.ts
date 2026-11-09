@@ -1,21 +1,27 @@
+import { classifyProviderFailure } from "@opencode/ai/route"
 import { APICallError, StreamProviderError } from "ai"
 
 import type { ContextAttemptOutcome } from "./contextCapacity"
 import { CONTEXT_ATTEMPT_OUTCOMES } from "./contextCapacityConstants"
 
-/** Only structured input validation errors with explicit capacity evidence qualify. */
+/** Adapt provider failures without treating arbitrary runtime errors as capacity evidence. */
 export function classifyContextError(error: unknown): ContextAttemptOutcome {
-  if (
-    (!APICallError.isInstance(error) &&
-      !StreamProviderError.isInstance(error)) ||
-    ![400, 422].includes(error.statusCode ?? 0)
-  )
+  if (!APICallError.isInstance(error) && !StreamProviderError.isInstance(error))
     return CONTEXT_ATTEMPT_OUTCOMES.Inconclusive
-  // Errors sent after streaming starts use a different SDK error class.
-  const evidence = `${error.message} ${APICallError.isInstance(error) ? error.responseBody ?? "" : error.code ?? ""}`
-  return /context_length_exceeded|maximum context length.{0,160}(?:exceed|resulted in|requested)|context window.{0,60}exceed|exceed.{0,40}context (?:window|limit)|(?:input length|input tokens|input token count).{0,80}exceed.{0,40}(?:context|token limit|maximum number of tokens)|prompt is too long/i.test(
-    evidence,
-  )
+
+  const reason = classifyProviderFailure({
+    message: error.message,
+    status: error.statusCode,
+    ...(APICallError.isInstance(error)
+      ? { rawBody: error.responseBody, data: error.data }
+      : {
+          // The SDK retains the parsed provider payload after SSE has started.
+          rawBody: JSON.stringify(error.data),
+          data: { error: { code: error.code, type: error.type } },
+        }),
+  })
+  return reason._tag === "InvalidRequest" &&
+    reason.classification === "context-overflow"
     ? CONTEXT_ATTEMPT_OUTCOMES.ContextLimit
     : CONTEXT_ATTEMPT_OUTCOMES.Inconclusive
 }

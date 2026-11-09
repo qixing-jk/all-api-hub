@@ -608,6 +608,77 @@ it("honors a whole-run stop after publishing a completed cell", async () => {
 
 it.each([
   {
+    apiType: "openai" as const,
+    outcome: NEEDLE_OUTCOMES.Error,
+    error: {
+      type: "error",
+      sequence_number: 1,
+      code: "server_error",
+      message: "prompt is too long",
+      param: null,
+    },
+  },
+  {
+    apiType: "openai-compatible" as const,
+    error: {
+      error: { message: "Input rejected", code: "context_length_exceeded" },
+    },
+  },
+  {
+    apiType: "openai-compatible" as const,
+    error: {
+      error: {
+        message: "Input rejected",
+        code: "upstream_error",
+        innererror: { code: "context_length_exceeded" },
+      },
+    },
+  },
+  {
+    apiType: "openai" as const,
+    error: {
+      type: "error",
+      sequence_number: 1,
+      code: "model_context_window_exceeded",
+      message: "Input rejected",
+      param: null,
+    },
+  },
+])(
+  "classifies SSE evidence and stops the needle plan without retrying: $apiType $error",
+  async ({ apiType, error, outcome = NEEDLE_OUTCOMES.ContextLimit }) => {
+    let requests = 0
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: unknown) => {
+        if (String(url) === MODEL_METADATA_URL)
+          return Response.json({ models: [] })
+        requests++
+        return new Response(
+          `: PING\n\ndata: ${JSON.stringify(error)}\n\ndata: [DONE]\n\n`,
+          { headers: { "Content-Type": "text/event-stream" } },
+        )
+      }),
+    )
+    const result = await runNeedleTest({
+      ...params,
+      apiType,
+      mode: "streaming",
+      abortSignal: new AbortController().signal,
+    })
+    expect(result).toMatchObject({ reason: "error", processed: 1 })
+    expect(result.cells).toHaveLength(1)
+    expect(result.cells[0]).toMatchObject({
+      targetTokens: 1024,
+      depth: 10,
+      outcome,
+    })
+    expect(requests).toBe(1)
+  },
+)
+
+it.each([
+  {
     response: () => completion("wrong"),
     outcome: NEEDLE_OUTCOMES.Miss,
     count: 3,
