@@ -25,6 +25,10 @@ export async function runAccountUsagePlan<TContext>(
   }
 }
 
+/**
+ * Runs the account checks in order and cleans up even when a check fails.
+ * A cleanup failure preserves the earlier check failure in an aggregate error.
+ */
 export async function runAccountFixtureUsagePlan<
   TContext extends { account: AccountFixture },
 >(

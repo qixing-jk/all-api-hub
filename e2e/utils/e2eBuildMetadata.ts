@@ -154,6 +154,10 @@ function getE2eBuildMetadataPath(extensionDir: string) {
   return path.join(extensionDir, E2E_BUILD_METADATA_FILE)
 }
 
+/**
+ * Reads and validates the build stamp before comparing it with current inputs.
+ * Missing stamps request a rebuild; malformed stamps retain their parse cause.
+ */
 async function readE2eBuildMetadata(
   metadataPath: string,
 ): Promise<E2eBuildMetadata> {
