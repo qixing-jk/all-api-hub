@@ -244,7 +244,7 @@ describe("accountAutoDetection", () => {
       message: "accountDialog:messages.autoDetectFailed",
       detailedError: {
         type: AutoDetectErrorType.UNKNOWN,
-        message: "messages:autodetect.failed",
+        message: "accountDialog:messages.autoDetectFailed",
       },
       autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
     })

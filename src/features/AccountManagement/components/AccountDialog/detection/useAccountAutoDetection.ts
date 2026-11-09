@@ -2,11 +2,13 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import { AUTO_DETECT_RECOVERY_ACTIONS } from "~/constants/autoDetect"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import {
@@ -24,6 +26,7 @@ import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDete
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
+  isAccessTokenRecoveryError,
   isIdentityKnownAutoDetectFailureReason,
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
@@ -121,13 +124,23 @@ export function useAccountAutoDetection({
   mode: DialogMode
   accountId?: string
 }) {
-  const { t, i18n } = useTranslation("accountDialog")
-  // Keep session callbacks stable while translating in the current language.
-  const i18nT = i18n.t
+  const { t } = useTranslation("accountDialog")
   const [isDetecting, setIsDetecting] = useState(false)
   const [isDetectingSlow, setIsDetectingSlow] = useState(false)
-  const [detectionError, setDetectionError] = useState<AutoDetectError | null>(
-    null,
+  const [detectionErrorState, setDetectionError] = useState<
+    AutoDetectError | typeof AUTO_DETECT_RECOVERY_ACTIONS.AccessToken | null
+  >(null)
+  // A restored recovery prompt has no failure to translate or replace.
+  const detectionError = useMemo<AutoDetectError | null>(
+    () =>
+      detectionErrorState === AUTO_DETECT_RECOVERY_ACTIONS.AccessToken
+        ? {
+            type: AutoDetectErrorType.UNKNOWN,
+            recoveryAction: AUTO_DETECT_RECOVERY_ACTIONS.AccessToken,
+            message: t("accessTokenVerification.description"),
+          }
+        : detectionErrorState,
+    [detectionErrorState, t],
   )
   const [attempts] = useState(() => new AccountDetectionAttempts())
   const [credentialVerification, setCredentialVerification] =
@@ -150,29 +163,17 @@ export function useAccountAutoDetection({
     invalidate()
     setDetectionError(null)
   }, [invalidate])
-  const clearVerificationError = useCallback(() => {
+  const clearAccessTokenRecovery = useCallback(() => {
     setDetectionError((current) =>
-      current?.type === AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+      current === AUTO_DETECT_RECOVERY_ACTIONS.AccessToken ||
+      isAccessTokenRecoveryError(current)
         ? null
         : current,
     )
   }, [])
-  const requireAccessTokenVerification = useCallback(() => {
-    setDetectionError({
-      type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
-      message: i18nT("accountDialog:accessTokenVerification.description"),
-    })
-  }, [i18nT])
-  useEffect(() => {
-    const message = t("accessTokenVerification.description")
-    setDetectionError((current) =>
-      current?.type ===
-        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED &&
-      current.message !== message
-        ? { ...current, message }
-        : current,
-    )
-  }, [t])
+  const requireAccessTokenRecovery = useCallback(() => {
+    setDetectionError(AUTO_DETECT_RECOVERY_ACTIONS.AccessToken)
+  }, [])
   useEffect(
     () => () => {
       invalidate()
@@ -528,10 +529,7 @@ export function useAccountAutoDetection({
                 result.recoveryData,
                 result.autoDetectContext?.siteType,
               )
-              if (
-                result.detailedError?.type ===
-                AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
-              ) {
+              if (isAccessTokenRecoveryError(result.detailedError)) {
                 setAuthType(AuthTypeEnum.AccessToken)
               }
               form.enterManual()
@@ -586,6 +584,12 @@ export function useAccountAutoDetection({
                   insights: createAutoDetectAnalyticsInsights(result, false),
                 })
                 return
+              }
+              if (
+                draft.authType === AuthTypeEnum.Cookie &&
+                resultData.authType === AuthTypeEnum.AccessToken
+              ) {
+                notify.info(t("messages.authTypeChangedToAccessToken"))
               }
               setNovitaCredentialOperation(
                 input.novitaVerifyCredential
@@ -715,8 +719,8 @@ export function useAccountAutoDetection({
     run,
     invalidate,
     reset,
-    clearVerificationError,
-    requireAccessTokenVerification,
+    clearAccessTokenRecovery,
+    requireAccessTokenRecovery,
   }
 }
 /** Maps detection errors onto safe analytics categories. */
@@ -726,9 +730,12 @@ function getAutoDetectAnalyticsErrorCategory(
 ): ProductAnalyticsErrorCategory {
   switch (errorType) {
     case AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED:
+    case AutoDetectErrorType.COOKIE_SESSION_REJECTED:
     case AutoDetectErrorType.UNAUTHORIZED:
     case AutoDetectErrorType.FORBIDDEN:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+    case AutoDetectErrorType.RATE_LIMITED:
+      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit
     case AutoDetectErrorType.TIMEOUT:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout
     case AutoDetectErrorType.NETWORK_ERROR:

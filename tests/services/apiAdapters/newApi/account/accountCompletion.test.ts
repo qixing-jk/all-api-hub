@@ -758,7 +758,7 @@ describe("newApiAccountCompletion", () => {
       authType: AuthTypeEnum.Cookie,
       endpoint: "/api/user/self",
       upstreamCode: undefined,
-      expected: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      expected: AUTO_DETECT_FAILURE_REASONS.CookieSessionUnavailable,
     },
   ])(
     "scopes credential recovery to $siteType $authType $endpoint $upstreamCode",
@@ -897,6 +897,35 @@ describe("newApiAccountCompletion", () => {
       AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
       expect.any(Error),
     )
+  })
+
+  it("classifies a rejected cookie session without reporting a token failure", async () => {
+    mockFetchUserInfo.mockRejectedValueOnce(
+      new ApiError(
+        "reflected-private-cookie",
+        401,
+        "/api/user/self",
+        API_ERROR_CODES.HTTP_401,
+      ),
+    )
+    mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "Portal" })
+
+    const completion = newApiAccountCompletion.complete(
+      {
+        url: "https://cookie.example.invalid",
+        requestedAuthType: AuthTypeEnum.Cookie,
+        detected: { userId: "42", siteType: SITE_TYPES.NEW_API },
+        context: {},
+      },
+      helpers,
+    )
+
+    await expect(completion).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.CookieSessionRejected,
+    })
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    const cause = createCompletionError.mock.calls.at(-1)?.[1] as Error
+    expect(cause.message).not.toContain("reflected-private-cookie")
   })
 
   it("classifies missing username for cookie completion", async () => {

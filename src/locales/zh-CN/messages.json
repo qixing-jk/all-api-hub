@@ -40,6 +40,7 @@
     "networkError": "网络连接失败，请检查网络连接后重试。",
     "notFound": "未能自动识别该站点。请检查地址是否正确，或登录目标站点后重试。",
     "notLoggedIn": "您尚未登录当前站点，或登录信息已过期，无法自动添加。请先登录，或查看帮助文档。",
+    "rateLimited": "请求过于频繁，请稍后重试。",
     "serverError": "服务器错误，请稍后重试。",
     "timeout": "自动识别超时，请尝试手动添加。",
     "unexpectedData": "自动识别失败，站点返回的数据不符合预期。请手动输入信息，或确保已登录目标站点。"
@@ -193,6 +194,7 @@
   },
   "operations": {
     "detection": {
+      "cookieSessionRejected": "站点拒绝了 Cookie 会话，请重新登录站点后重试。",
       "failed": "自动检测失败，请手动输入信息或确保已在目标站点登录",
       "getAccessTokenFailedDetailed": "已识别到账号，但未能获取访问令牌。请确认账号有创建或查看 API 令牌的权限，或改用手动输入。",
       "getInfoFailed": "未能获取到用户名或访问令牌",

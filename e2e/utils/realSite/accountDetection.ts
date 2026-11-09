@@ -19,6 +19,7 @@ import {
   autoDetectAccountFromAddDialog,
   openAccountManagementPage,
 } from "~~/e2e/utils/realSite/accountAdd"
+import { verifyRealSiteCookieThroughUi } from "~~/e2e/utils/realSite/cookieValidation"
 import { collectCleanupError } from "~~/e2e/utils/scenarioErrors"
 
 type DetectionCleanup = {
@@ -86,6 +87,46 @@ export function registerRealSiteAccountDetectionTests<
 >(target: RealSiteAccountDetectionTarget<C>) {
   test.describe(`${target.label} real detection sources`, () => {
     test.describe.configure({ retries: 0 })
+    if (target.cookieBootstrap) {
+      test("verifies and restores a real Cookie without borrowing browser authentication", async ({
+        context,
+        page,
+        extensionId,
+        detectionCleanup,
+      }, testInfo) => {
+        test.setTimeout(180_000)
+        const resolution = target.resolve()
+        test.skip(
+          !resolution.config,
+          `Missing real-site configuration: ${resolution.missingEnvKeys.join(", ")}`,
+        )
+        const config = resolution.config!
+        const worker = await getServiceWorker(context)
+        await forceExtensionLanguage(page, "en")
+        await stubLlmMetadataIndex(context)
+        await seedUserPreferences(worker, {
+          autoFillCurrentSiteUrlOnAccountAdd: false,
+          autoProvisionKeyOnAccountAdd: false,
+          openChangelogOnUpdate: false,
+        })
+        const sitePage = await context.newPage()
+        detectionCleanup.pages.push(sitePage)
+        const login = await target.login(sitePage, config)
+        detectionCleanup.finish = login.cleanup
+        await verifyRealSiteCookieThroughUi({
+          context,
+          page,
+          sitePage,
+          worker,
+          extensionId,
+          baseUrl: config.baseUrl,
+          siteType: target.siteType,
+          userId: login.userId,
+          cookieIdentityHeader: target.cookieIdentityHeader,
+          testInfo,
+        })
+      })
+    }
     test("identifies the same real user through each applicable detection source", async ({
       context,
       page,

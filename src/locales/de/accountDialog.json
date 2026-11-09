@@ -39,7 +39,7 @@
     "openSecurity": "Token-Seite öffnen",
     "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Suche Access Token im Profil, in den Kontoeinstellungen oder in der Token-Verwaltung der Website, kopiere ihn und trage ihn hier ein.",
     "pasteStep": "Kopiere das vollständige Access Token sofort, füge es unten im Feld „Access Token“ ein, prüfe die Kontodaten und speichere sie.",
-    "popupHint": "In der Seitenleiste bleibt dieses Formular erhalten, während du dich auf der Website verifizierst und das Token kopierst. Lässt sich die Seitenleiste nicht öffnen, wird das Formular auf einer vollständigen Seite geöffnet.",
+    "popupHint": "In der Seitenleiste bleibt dieses Formular erhalten, während du das Token auf der Website kopierst. Lässt sich die Seitenleiste nicht öffnen, wird das Formular auf einer vollständigen Seite geöffnet.",
     "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopieren Sie wichtige Angaben und öffnen Sie das Kontoformular auf der vollständigen Seite erneut.",
     "restoreFailed": "Das unvollständige Formular konnte nicht wiederhergestellt werden. Es ist möglicherweise abgelaufen. Öffne das Kontoformular erneut.",
     "rotationWarning": "Nur auf älteren Sites mit Generate / Regenerate: Die Neugenerierung macht das alte Token ungültig. Aktualisiere andere Tools, die es nutzen. Ein neues Zugriffstoken mit Berechtigungen macht vorhandene Tokens nicht ungültig.",
@@ -353,6 +353,7 @@
   },
   "messages": {
     "addSuccess": "Konto {{name}} erfolgreich hinzugefügt!",
+    "authTypeChangedToAccessToken": "Die Website verwendet einen Zugriffstoken für dieses Konto. Die Authentifizierung wurde entsprechend umgestellt.",
     "autoDetectFailed": "Automatische Erkennung fehlgeschlagen: {{error}}",
     "autoDetectIdentityMismatch": "Das erkannte Konto stimmt nicht mit dem aktuellen Konto überein. Deine vorhandenen Daten wurden beibehalten. Prüfe die Website-URL, melde dich beim gewünschten Konto an und versuche es erneut.",
     "autoDetectSuccess": "Automatische Erkennung erfolgreich!",

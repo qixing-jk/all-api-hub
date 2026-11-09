@@ -9,6 +9,14 @@ export const AUTO_DETECT_ERROR_CODES = {
 export type AutoDetectErrorCode =
   (typeof AUTO_DETECT_ERROR_CODES)[keyof typeof AUTO_DETECT_ERROR_CODES]
 
+/** Recovery options are independent of the failure that made them useful. */
+export const AUTO_DETECT_RECOVERY_ACTIONS = {
+  AccessToken: "access_token",
+} as const
+
+export type AutoDetectRecoveryAction =
+  (typeof AUTO_DETECT_RECOVERY_ACTIONS)[keyof typeof AUTO_DETECT_RECOVERY_ACTIONS]
+
 export const AUTO_DETECT_FAILURE_REASONS = {
   CurrentTabContentScriptUnavailable: "current_tab_content_script_unavailable",
   UserDataMissing: "user_data_missing",
@@ -16,6 +24,8 @@ export const AUTO_DETECT_FAILURE_REASONS = {
   UsernameMissing: "username_missing",
   AccessTokenMissing: "access_token_missing",
   AccessTokenVerificationRequired: "access_token_verification_required",
+  CookieSessionRejected: "cookie_session_rejected",
+  CookieSessionUnavailable: "cookie_session_unavailable",
   AccountIdentityMismatch: "account_identity_mismatch",
   TokenFetchFailed: "token_fetch_failed",
   SiteStatusFetchFailed: "site_status_fetch_failed",

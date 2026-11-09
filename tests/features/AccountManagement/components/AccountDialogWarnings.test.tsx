@@ -294,6 +294,28 @@ describe("AccountDialog warnings", () => {
       resolve.mockRestore()
     }
   })
+  it("shows rate limiting without login or unsupported-site suggestions", () => {
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.RATE_LIMITED,
+          message: "Please try again later",
+        }}
+        siteUrl="https://panel.example.invalid"
+        siteType={SITE_TYPES.NEW_API}
+      />,
+    )
+    expect(screen.getByText("Please try again later")).toBeVisible()
+    expect(
+      screen.queryByText("apiCredentialFallback.title"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "messages:autodetect.loginThisSite",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps supported account credential recovery separate from unsupported-site suggestions", () => {
     render(
       <AutoDetectErrorAlert
@@ -471,6 +493,56 @@ describe("AccountDialog warnings", () => {
     trackProductAnalyticsEventMock.mockResolvedValue(true)
     ;(browser.tabs as any).create = vi.fn()
   })
+
+  it.each([false, true])(
+    "offers manual token recovery without a verification error (popup: %s)",
+    async (popup) => {
+      const user = userEvent.setup()
+      const onContinue = vi.fn()
+      const onPrepareAccessTokenInput = vi.fn()
+      render(
+        <AutoDetectErrorAlert
+          error={{
+            type: AutoDetectErrorType.UNKNOWN,
+            message: "Copy an account token to continue",
+            recoveryAction: "access_token",
+          }}
+          siteUrl="https://api.apiyi.com"
+          siteType={SITE_TYPES.APIYI}
+          onPrepareAccessTokenInput={onPrepareAccessTokenInput}
+          accessTokenContinuation={
+            popup
+              ? { onContinue, isPending: false, sidePanelSupported: true }
+              : undefined
+          }
+        />,
+      )
+      expect(
+        screen.getByText("Copy an account token to continue"),
+      ).toBeVisible()
+      expect(screen.getByText("accessTokenVerification.title")).toBeVisible()
+      expect(
+        screen.queryByText("apiCredentialFallback.title"),
+      ).not.toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", {
+          name: popup
+            ? "accessTokenVerification.continueInSidePanel"
+            : "accessTokenVerification.apiyi.openProfile",
+        }),
+      )
+      if (popup) {
+        expect(onContinue).toHaveBeenCalledOnce()
+        expect(browser.tabs.create).not.toHaveBeenCalled()
+      } else {
+        expect(onPrepareAccessTokenInput).toHaveBeenCalledOnce()
+        expect(browser.tabs.create).toHaveBeenCalledWith({
+          url: "https://api.apiyi.com/account/profile",
+          active: true,
+        })
+      }
+    },
+  )
 
   it("keeps access-token recovery in the popup until the user continues in a persistent view", async () => {
     const user = userEvent.setup()

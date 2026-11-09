@@ -47,7 +47,7 @@ import {
   isValidAccount,
   parseManualQuotaFromUsd,
 } from "~/services/accounts/editing/accountFormValidation"
-import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { isAccessTokenRecoveryError } from "~/services/accounts/utils/autoDetectUtils"
 import { parseNovitaCredentials } from "~/services/apiService/novita/constants"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
@@ -123,7 +123,7 @@ export function useAccountDialog({
   const {
     invalidate: invalidateAutoDetection,
     reset: resetAutoDetection,
-    requireAccessTokenVerification,
+    requireAccessTokenRecovery,
   } = autoDetection
   const draftModel = useAccountDialogDraft({ mode, url })
   const {
@@ -464,7 +464,7 @@ export function useAccountDialog({
       resetCheckInRedetection,
       resetCookieSession,
       clearPostSaveWorkflowState,
-      requireAccessTokenVerification,
+      requireAccessTokenRecovery,
       checkCurrentTab,
     },
   })
@@ -764,8 +764,7 @@ export function useAccountDialog({
 
   const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
     if (
-      detectionError?.type !==
-        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED &&
+      !isAccessTokenRecoveryError(detectionError) &&
       draft.siteType !== SITE_TYPES.NOVITA
     )
       return null
@@ -778,7 +777,7 @@ export function useAccountDialog({
       checkInSelectionChanged: checkInSelectionChangedRef.current,
       checkInDiscoveryBaseSelection: checkInDiscoveryBaseSelectionRef.current,
     }
-  }, [account, detectionError?.type, draft, mode, url])
+  }, [account, detectionError, draft, mode, url])
 
   return {
     state: {

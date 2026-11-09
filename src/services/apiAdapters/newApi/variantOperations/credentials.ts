@@ -53,6 +53,7 @@ export function createSafeCredentialError(
     error.upstreamCode,
   )
   safeError.originalCode = error.originalCode
+  safeError.unattributedMessage = error.unattributedMessage
   return safeError
 }
 

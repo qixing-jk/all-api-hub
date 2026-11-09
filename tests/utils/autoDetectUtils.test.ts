@@ -13,6 +13,8 @@ import {
 } from "~/services/accounts/utils/autoDetectUtils"
 import { getBestEffortLoginUrl } from "~/services/accounts/utils/siteRouteResolver"
 import { clearSiteRouteFactsCacheForTests } from "~/services/apiAdapters/newApi/account/accountRoutes"
+import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 const { tMock } = vi.hoisted(() => ({
@@ -48,6 +50,167 @@ describe("autoDetectUtils", () => {
   })
 
   describe("analyzeAutoDetectError", () => {
+    it.each([
+      [408, AutoDetectErrorType.TIMEOUT],
+      [429, AutoDetectErrorType.RATE_LIMITED],
+      [503, AutoDetectErrorType.SERVER_ERROR],
+      [504, AutoDetectErrorType.TIMEOUT],
+    ] as const)(
+      "retains HTTP %s facts when the response has no site-owned message",
+      (status, type) => {
+        let error: unknown
+        try {
+          mapCompatibilityResponse(
+            {
+              ok: false,
+              status,
+              headers: { "content-type": "text/html", "retry-after": "60" },
+              body: "",
+            },
+            {
+              endpoint: "/api/user/token",
+              responseType: "json",
+              onlyData: true,
+              decodeApplicationError: true,
+            },
+          )
+        } catch (caught) {
+          error = caught
+        }
+        expect(error).toMatchObject({
+          statusCode: status,
+          unattributedMessage: true,
+        })
+        const result = analyzeAutoDetectError(error)
+        expect(result.type).toBe(type)
+        expect(result.actionText).toBeUndefined()
+      },
+    )
+
+    it("keeps legacy message classification when an API error has no transport facts", () => {
+      expect(
+        analyzeAutoDetectError(new ApiError("Network connection lost")),
+      ).toMatchObject({
+        type: AutoDetectErrorType.NETWORK_ERROR,
+        message: "messages:autodetect.networkError",
+      })
+    })
+
+    it("preserves interception attribution after an error crosses a message boundary", () => {
+      const error = { message: "401 Unauthorized", unattributedMessage: true }
+      expect(analyzeAutoDetectError(error)).toMatchObject({
+        type: AutoDetectErrorType.UNKNOWN,
+      })
+      expect(analyzeAutoDetectError(error).actionText).toBeUndefined()
+    })
+
+    it("reports rate limiting without suggesting a login or unsupported-site fallback", () => {
+      expect(
+        analyzeAutoDetectError(
+          new ApiError(
+            "private response",
+            429,
+            "/api/user/token",
+            API_ERROR_CODES.HTTP_429,
+          ),
+        ),
+      ).toMatchObject({
+        type: "rate_limited",
+        message: "messages:autodetect.rateLimited",
+      })
+    })
+    it.each([
+      [
+        401,
+        API_ERROR_CODES.HTTP_401,
+        AutoDetectErrorType.UNAUTHORIZED,
+        "notLoggedIn",
+      ],
+      [
+        403,
+        API_ERROR_CODES.HTTP_403,
+        AutoDetectErrorType.FORBIDDEN,
+        "forbidden",
+      ],
+      [
+        404,
+        API_ERROR_CODES.HTTP_OTHER,
+        AutoDetectErrorType.NOT_FOUND,
+        "notFound",
+      ],
+      [408, API_ERROR_CODES.HTTP_OTHER, AutoDetectErrorType.TIMEOUT, "timeout"],
+      [
+        500,
+        API_ERROR_CODES.HTTP_OTHER,
+        AutoDetectErrorType.SERVER_ERROR,
+        "serverError",
+      ],
+      [
+        503,
+        API_ERROR_CODES.HTTP_OTHER,
+        AutoDetectErrorType.SERVER_ERROR,
+        "serverError",
+      ],
+      [504, API_ERROR_CODES.HTTP_OTHER, AutoDetectErrorType.TIMEOUT, "timeout"],
+      [
+        401,
+        API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
+        AutoDetectErrorType.INVALID_RESPONSE,
+        "unexpectedData",
+      ],
+    ] as const)(
+      "uses structured status %s / %s before message keywords",
+      (status, code, type, messageKey) => {
+        const result = analyzeAutoDetectError(
+          new ApiError(
+            "401 unauthorized network timeout in reflected text",
+            status,
+            "/api/user/token",
+            code,
+          ),
+        )
+        expect(result).toMatchObject({
+          type,
+          message: `messages:autodetect.${messageKey}`,
+        })
+        expect(Boolean(result.actionText)).toBe(
+          type === AutoDetectErrorType.UNAUTHORIZED,
+        )
+      },
+    )
+
+    it.each([
+      new ApiError(
+        "401 Unauthorized",
+        401,
+        "/api/user/self",
+        API_ERROR_CODES.ROBOT_CHALLENGE,
+      ),
+      Object.assign(
+        new ApiError(
+          "403 Forbidden",
+          403,
+          "/api/user/self",
+          API_ERROR_CODES.HTTP_403,
+        ),
+        { unattributedMessage: true },
+      ),
+      Object.assign(
+        new ApiError(
+          "401 Unauthorized",
+          401,
+          "/api/user/self",
+          API_ERROR_CODES.HTTP_401,
+        ),
+        { unattributedMessage: true },
+      ),
+    ])("does not infer authentication from an interception page", (error) => {
+      expect(analyzeAutoDetectError(error)).toMatchObject({
+        type: AutoDetectErrorType.UNKNOWN,
+      })
+      expect(analyzeAutoDetectError(error).actionText).toBeUndefined()
+    })
+
     describe("Timeout errors", () => {
       it("should detect timeout error with Chinese text", () => {
         const error = new Error("请求超时")

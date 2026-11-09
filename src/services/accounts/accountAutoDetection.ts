@@ -1,5 +1,12 @@
+import {
+  ACCOUNT_COOKIE_VALIDATION_REASONS,
+  ACCOUNT_COOKIE_VALIDATION_STATUS,
+} from "~/constants/accountCookieValidation"
 import type { AutoDetectErrorCode } from "~/constants/autoDetect"
-import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
+import {
+  AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_RECOVERY_ACTIONS,
+} from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import {
@@ -17,6 +24,10 @@ import {
   getAutoDetectCompletionFailureReason,
 } from "~/services/accounts/autoDetectCompletion/completion"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
+import {
+  classifyAccountCookieValidationError,
+  getAccountCookieUnavailableMessage,
+} from "~/services/accounts/cookieValidation"
 import { getAccountOnboardingCapability } from "~/services/accounts/onboarding/registry"
 import { runAccountOnboarding } from "~/services/accounts/onboarding/run"
 import {
@@ -25,16 +36,16 @@ import {
   AutoDetectErrorType,
   getAutoDetectErrorByCode,
   type AutoDetectAnalyticsContext,
+  type AutoDetectError,
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import type { AccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/contracts"
 import {
   createAccountDetectionDiagnostics,
   type AccountDetectionDiagnostics,
 } from "~/services/accountSiteOnboarding/diagnostics"
 import { getAccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/registry"
-import { ApiError } from "~/services/apiTransport/errors"
+import { isAuthenticationRequiredError } from "~/services/apiTransport/errors"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
@@ -71,51 +82,66 @@ function getAutoDetectFailureReasonByErrorCode(
   }
 }
 
-/** Returns local user-facing guidance for known completion failures. */
-function getAutoDetectCompletionFailureMessage(
-  reason: AutoDetectFailureReason,
-  fallbackErrorMessage: string,
-) {
-  switch (reason) {
-    case AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired:
-      return t("accountDialog:accessTokenVerification.description")
-    case AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch:
-      return t("accountDialog:messages.autoDetectIdentityMismatch")
-    case AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed:
-    case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
-      return t("messages:operations.detection.getAccessTokenFailedDetailed")
-    case AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed:
-      return t("messages:operations.detection.getSiteStatusFailedDetailed")
-    case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
-      return t("messages:operations.detection.getUsernameFailedDetailed")
-    default:
-      return t("accountDialog:messages.autoDetectFailed", {
-        error: fallbackErrorMessage,
-      })
-  }
-}
-
-/** Preserves invalid-response details for completion validation failures. */
+/** Keep completion policy, local feedback and structured failure facts together. */
 function getAutoDetectCompletionDetailedError(
   error: unknown,
   reason: AutoDetectFailureReason,
-  message: string,
-) {
+): AutoDetectError {
+  const cause = error instanceof AutoDetectCompletionError ? error.cause : error
   switch (reason) {
     case AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired:
       return {
         type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
-        message,
+        message: t("accountDialog:accessTokenVerification.description"),
       }
-    case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
-    case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
+    case AUTO_DETECT_FAILURE_REASONS.CookieSessionRejected:
+      return {
+        type: AutoDetectErrorType.COOKIE_SESSION_REJECTED,
+        message: t("messages:operations.detection.cookieSessionRejected"),
+      }
+    case AUTO_DETECT_FAILURE_REASONS.CookieSessionUnavailable: {
+      const result = classifyAccountCookieValidationError(cause)
+      return {
+        type: AutoDetectErrorType.UNKNOWN,
+        message: getAccountCookieUnavailableMessage(
+          result.status === ACCOUNT_COOKIE_VALIDATION_STATUS.Unavailable
+            ? result.reason
+            : ACCOUNT_COOKIE_VALIDATION_REASONS.InvalidResponse,
+        ),
+        canUseApiCredentialFallback: false,
+      }
+    }
     case AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch:
       return {
         type: AutoDetectErrorType.INVALID_RESPONSE,
-        message,
+        message: t("accountDialog:messages.autoDetectIdentityMismatch"),
       }
-    default:
-      return analyzeAutoDetectError(error)
+    case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
+      return {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: t(
+          "messages:operations.detection.getAccessTokenFailedDetailed",
+        ),
+      }
+    case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
+      return {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: t("messages:operations.detection.getUsernameFailedDetailed"),
+      }
+  }
+
+  const detailedError = analyzeAutoDetectError(cause)
+  if (detailedError.type !== AutoDetectErrorType.UNKNOWN) return detailedError
+  return {
+    ...detailedError,
+    message:
+      reason === AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed
+        ? t("messages:operations.detection.getAccessTokenFailedDetailed")
+        : reason === AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed
+          ? t("messages:operations.detection.getSiteStatusFailedDetailed")
+          : t("accountDialog:messages.autoDetectFailed", {
+              error: getErrorMessage(error),
+            }),
   }
 }
 
@@ -128,12 +154,7 @@ function getPrivateDetectionFailure(
   return {
     message,
     detailedError: {
-      ...getAutoDetectCompletionDetailedError(message, reason, message),
-      ...(getAccountSiteDefinition(policy.siteType)?.onboarding
-        ?.accessTokenVerificationGuide &&
-      reason === AUTO_DETECT_FAILURE_REASONS.UserDataMissing
-        ? { type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED }
-        : {}),
+      ...getAutoDetectCompletionDetailedError(message, reason),
       message,
     },
   }
@@ -331,41 +352,33 @@ async function runAutoDetectAccount(
       }
     }
 
-    // Keep the diagnostic reason intact; this is a recovery presentation choice,
-    // not evidence that the deployment requires a security check.
-    const tokenAcquisitionFailed =
-      (autoDetectFailureReason ===
-        AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed ||
-        autoDetectFailureReason ===
-          AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing) &&
-      recoveryData?.authType === AuthTypeEnum.AccessToken &&
-      Boolean(recoveryData.userId) &&
-      !(
-        error instanceof AutoDetectCompletionError &&
-        error.cause instanceof ApiError &&
-        error.cause.statusCode === 401
-      )
-    const presentationReason = tokenAcquisitionFailed
-      ? AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired
-      : autoDetectFailureReason
     const errorMessage = getErrorMessage(error)
-    const message = getAutoDetectCompletionFailureMessage(
-      presentationReason,
-      errorMessage,
-    )
     logger.error(
       t("messages:autodetect.failed", { error: errorMessage }),
       error,
     )
     const detailedError = getAutoDetectCompletionDetailedError(
       error,
-      presentationReason,
-      message,
+      autoDetectFailureReason,
     )
+    if (
+      (autoDetectFailureReason ===
+        AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed ||
+        autoDetectFailureReason ===
+          AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing) &&
+      recoveryData?.authType === AuthTypeEnum.AccessToken &&
+      recoveryData.userId &&
+      !isAuthenticationRequiredError(
+        error instanceof AutoDetectCompletionError ? error.cause : error,
+      )
+    ) {
+      detailedError.recoveryAction = AUTO_DETECT_RECOVERY_ACTIONS.AccessToken
+      detailedError.canUseApiCredentialFallback = false
+    }
     return {
       kind: "detected",
       success: false,
-      message,
+      message: detailedError.message,
       detailedError,
       autoDetectContext,
       autoDetectFailureReason,

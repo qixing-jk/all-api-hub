@@ -58,6 +58,7 @@ const {
 vi.mock("~/lib/notify", () => ({
   default: Object.assign(vi.fn(), {
     success: vi.fn(),
+    info: vi.fn(),
     error: vi.fn(),
     loading: vi.fn(),
   }),
@@ -1973,22 +1974,32 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it.each([
-    [SITE_TYPES.NEW_API, "url"],
-    [SITE_TYPES.NEW_API, "site type"],
-    [SITE_TYPES.NEW_API, "auth type"],
-    [SITE_TYPES.APIYI, "url"],
-    [SITE_TYPES.APIYI, "site type"],
-    [SITE_TYPES.APIYI, "auth type"],
-    [SITE_TYPES.LAOZHANG, "url"],
-    [SITE_TYPES.LAOZHANG, "site type"],
-    [SITE_TYPES.LAOZHANG, "auth type"],
+    [SITE_TYPES.NEW_API, "url", "verification"],
+    [SITE_TYPES.NEW_API, "site type", "verification"],
+    [SITE_TYPES.NEW_API, "auth type", "verification"],
+    [SITE_TYPES.APIYI, "url", "verification"],
+    [SITE_TYPES.APIYI, "site type", "verification"],
+    [SITE_TYPES.APIYI, "auth type", "verification"],
+    [SITE_TYPES.LAOZHANG, "url", "verification"],
+    [SITE_TYPES.LAOZHANG, "site type", "verification"],
+    [SITE_TYPES.LAOZHANG, "auth type", "verification"],
+    [SITE_TYPES.NEW_API, "url", "manual"],
+    [SITE_TYPES.NEW_API, "site type", "manual"],
+    [SITE_TYPES.NEW_API, "auth type", "manual"],
   ] as const)(
-    "keeps %s manual token recovery until the %s changes",
-    async (siteType, changedField) => {
-      const detailedError = {
-        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
-        message: "Security verification required",
-      }
+    "keeps %s manual token recovery until the %s changes (%s)",
+    async (siteType, changedField, recoveryMode) => {
+      const detailedError =
+        recoveryMode === "manual"
+          ? {
+              type: AutoDetectErrorType.UNKNOWN,
+              message: "Copy an account token to continue",
+              recoveryAction: "access_token" as const,
+            }
+          : {
+              type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+              message: "Security verification required",
+            }
       mockAutoDetectAccount.mockResolvedValueOnce({
         success: false,
         detailedError,
@@ -2053,6 +2064,122 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state.tokenRecoveryState).toBeNull()
     },
   )
+
+  it("preserves the concrete credential failure when the language changes", async () => {
+    const originalLanguage = testI18n.language
+    const detailedError = {
+      type: AutoDetectErrorType.UNKNOWN,
+      message: "messages:operations.detection.getAccessTokenFailedDetailed",
+      recoveryAction: "access_token" as const,
+    }
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      detailedError,
+      autoDetectFailureReason: "token_fetch_failed",
+      autoDetectContext: { siteType: SITE_TYPES.NEW_API },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        username: "owner",
+        authType: AuthTypeEnum.AccessToken,
+      },
+    })
+    const { result, unmount } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+    act(() => result.current.setters.setUrl("https://new-api.example.invalid"))
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+    expect(result.current.state.detectionError).toEqual(detailedError)
+
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage(originalLanguage === "ja" ? "en" : "ja")
+      })
+      expect(result.current.state.detectionError).toEqual(detailedError)
+    } finally {
+      unmount()
+      await testI18n.changeLanguage(originalLanguage)
+    }
+  })
+
+  it("explains when successful cookie detection switches to an access token", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        username: "user",
+        siteName: "Portal",
+        exchangeRate: 7,
+        checkIn: buildCheckInConfig(),
+        accessToken: "token",
+        authType: AuthTypeEnum.AccessToken,
+      },
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setUrl("https://cookie.example.invalid")
+      result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+    })
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+    expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
+    expect(toast.info).toHaveBeenCalledWith(
+      "accountDialog:messages.authTypeChangedToAccessToken",
+    )
+  })
+
+  it("keeps the cookie session choice when detection reports a rejected cookie", async () => {
+    const detailedError = {
+      type: AutoDetectErrorType.COOKIE_SESSION_REJECTED,
+      message: "messages:operations.detection.cookieSessionRejected",
+    }
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      detailedError,
+      autoDetectFailureReason: "cookie_session_rejected",
+      autoDetectContext: { siteType: SITE_TYPES.NEW_API },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        username: "detected-user",
+        authType: AuthTypeEnum.Cookie,
+      },
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setUrl("https://cookie.example.invalid")
+      result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+    })
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+    expect(result.current.state.detectionError).toEqual(detailedError)
+  })
 
   it("uses a detected site type to prepare manual completion after auto-detect fails", async () => {
     const detailedError = {

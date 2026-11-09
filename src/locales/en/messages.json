@@ -42,6 +42,7 @@
     "networkError": "Network connection failed, please check your network connection and try again",
     "notFound": "Could not auto-detect this site. Check that the address is correct, or log in to the target site and try again.",
     "notLoggedIn": "You are not logged in to the current site, or the login information has expired. Cannot auto-add. Please check the help documentation or click to login first",
+    "rateLimited": "Too many requests. Please try again later.",
     "serverError": "Server error. Please try again later",
     "timeout": "Auto-detection timeout, please try adding manually",
     "unexpectedData": "Auto-detection failed, site returned unexpected data. Please enter information manually or ensure you are logged in to the target site"
@@ -195,6 +196,7 @@
   },
   "operations": {
     "detection": {
+      "cookieSessionRejected": "The site rejected the cookie session. Sign in again and retry.",
       "failed": "Auto-detection failed, please enter information manually or ensure you are logged in to the target site",
       "getAccessTokenFailedDetailed": "The account was detected, but no access token could be retrieved. Confirm the account can create or view API tokens, or enter the token manually.",
       "getInfoFailed": "Failure to get username or access token",

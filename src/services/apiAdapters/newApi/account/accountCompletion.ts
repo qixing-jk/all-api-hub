@@ -9,7 +9,11 @@ import {
   createSafeCredentialError,
   resolveNewApiAccountCredentialVariant,
 } from "~/services/apiAdapters/newApi/account/accountCredentialVariant"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  API_ERROR_CODES,
+  ApiError,
+  isAuthenticationRequiredError,
+} from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
 const MODERN_AUTH_FRESHNESS_MARGIN_SECONDS = 30
@@ -17,6 +21,8 @@ const MODERN_AUTH_INVALID_MESSAGE =
   "New API dashboard authentication is invalid"
 const EXISTING_TOKEN_VERIFICATION_FAILED_MESSAGE =
   "Existing account access token could not be verified"
+const COOKIE_SESSION_REJECTED_MESSAGE =
+  "The deployment rejected the cookie session"
 
 export const createNewApiAccountCompletion = (
   siteType: AccountSiteType,
@@ -156,12 +162,34 @@ export const createNewApiAccountCompletion = (
       }
 
       if (requestedAuthType === AuthTypeEnum.Cookie) {
-        return accountBootstrap.fetchUserInfo(
-          createRequest({
-            authType: AuthTypeEnum.Cookie,
-            userId: detected.userId,
-          }),
-        )
+        try {
+          return await accountBootstrap.fetchUserInfo(
+            createRequest({
+              authType: AuthTypeEnum.Cookie,
+              userId: detected.userId,
+            }),
+          )
+        } catch (error) {
+          // Transport/protection failures do not establish credential rejection.
+          if (
+            error instanceof ApiError &&
+            error.code === API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH
+          ) {
+            throw error
+          }
+          const sessionRejected = isAuthenticationRequiredError(error)
+          throw helpers.createCompletionError(
+            sessionRejected
+              ? AUTO_DETECT_FAILURE_REASONS.CookieSessionRejected
+              : AUTO_DETECT_FAILURE_REASONS.CookieSessionUnavailable,
+            createSafeCredentialError(
+              error,
+              sessionRejected
+                ? COOKIE_SESSION_REJECTED_MESSAGE
+                : "The cookie session could not be checked",
+            ),
+          )
+        }
       }
 
       if (requestedAuthType === AuthTypeEnum.AccessToken) {

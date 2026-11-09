@@ -40,6 +40,7 @@
     "networkError": "Kết nối mạng thất bại, vui lòng kiểm tra lại kết nối mạng và thử lại.",
     "notFound": "Không thể tự động nhận dạng trang web này. Hãy kiểm tra địa chỉ có đúng không, hoặc đăng nhập vào trang web đích rồi thử lại.",
     "notLoggedIn": "Bạn chưa đăng nhập vào trang web hiện tại hoặc thông tin đăng nhập đã hết hạn, không thể thêm tự động. Vui lòng đăng nhập trước hoặc xem tài liệu hướng dẫn.",
+    "rateLimited": "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
     "serverError": "Lỗi máy chủ, vui lòng thử lại sau.",
     "timeout": "Nhận dạng tự động quá thời gian, vui lòng thử thêm thủ công.",
     "unexpectedData": "Nhận dạng tự động thất bại, dữ liệu trang web trả về không như mong đợi. Vui lòng nhập thông tin thủ công hoặc đảm bảo đã đăng nhập vào trang web mục tiêu."
@@ -193,6 +194,7 @@
   },
   "operations": {
     "detection": {
+      "cookieSessionRejected": "Trang web đã từ chối phiên cookie. Hãy đăng nhập lại.",
       "failed": "Phát hiện tự động thất bại, vui lòng nhập thông tin thủ công hoặc đảm bảo đã đăng nhập vào trang web mục tiêu",
       "getAccessTokenFailedDetailed": "Đã phát hiện tài khoản, nhưng không thể lấy token truy cập. Hãy xác nhận tài khoản có quyền tạo hoặc xem API token, hoặc nhập thủ công.",
       "getInfoFailed": "Không thể lấy tên người dùng hoặc token truy cập",

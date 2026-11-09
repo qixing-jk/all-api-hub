@@ -32,6 +32,7 @@ import {
   openAccountManagementPage,
   waitForSavedAccount,
 } from "~~/e2e/utils/realSite/accountAdd"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const manualToken = "e2e-manually-copied-management-pat"
 const tokenPageHtml = `<h1>Token page</h1><h2 id="security-access">Sessions &amp; Access</h2><label>Access Token<input readonly value="${manualToken}"></label>`
@@ -105,7 +106,51 @@ for (const scenario of [
     tokenPagePath: "/security#security-access",
     openTokenSettingsLabel: "Open token page",
     tokenRequests: 1,
+    tokenFailureCode: "SECURITY_PROOF_REQUIRED",
   },
+  {
+    siteType: SITE_TYPES.NEW_API,
+    name: "New API manual completion",
+    baseUrl: "https://new-api-manual.example.invalid",
+    tokenPagePath: "/security#security-access",
+    openTokenSettingsLabel: "Open token page",
+    tokenRequests: 1,
+    tokenFailureCode: null,
+  },
+  {
+    siteType: SITE_TYPES.NEW_API,
+    name: "New API server failure",
+    baseUrl: "https://new-api-server.example.invalid",
+    tokenPagePath: "/security#security-access",
+    openTokenSettingsLabel: "Open token page",
+    tokenRequests: 1,
+    tokenFailureCode: null,
+    tokenFailureStatus: 503,
+    expectedFailureMessage: "Server error. Please try again later",
+  },
+  ...[
+    {
+      status: 408,
+      message: "Auto-detection timeout, please try adding manually",
+    },
+    { status: 429, message: "Too many requests. Please try again later." },
+    { status: 503, message: "Server error. Please try again later" },
+    {
+      status: 504,
+      message: "Auto-detection timeout, please try adding manually",
+    },
+  ].map(({ status, message }) => ({
+    siteType: SITE_TYPES.NEW_API,
+    name: `New API empty HTTP ${status}`,
+    baseUrl: `https://new-api-empty-${status}.example.invalid`,
+    tokenPagePath: "/security#security-access",
+    openTokenSettingsLabel: "Open token page",
+    tokenRequests: 1,
+    tokenFailureCode: null,
+    tokenFailureStatus: status,
+    tokenFailureEmpty: true,
+    expectedFailureMessage: message,
+  })),
   {
     siteType: SITE_TYPES.NEW_API,
     name: "Gemai profile",
@@ -113,6 +158,7 @@ for (const scenario of [
     tokenPagePath: "/profile",
     openTokenSettingsLabel: "Open token page",
     tokenRequests: 1,
+    tokenFailureCode: "SECURITY_PROOF_REQUIRED",
   },
   {
     siteType: SITE_TYPES.APIYI,
@@ -121,23 +167,29 @@ for (const scenario of [
     tokenPagePath: "/account/profile",
     openTokenSettingsLabel: "Open APIyi profile",
     tokenRequests: 0,
+    tokenFailureCode: "SECURITY_PROOF_REQUIRED",
   },
 ] as const) {
-  test(`continues ${scenario.name} security verification after closing the popup`, async ({
+  test(`continues ${scenario.name} token recovery after closing the popup`, async ({
     context,
     extensionId,
+    extensionDir,
     page,
     profileSite,
   }) => {
     const { tokenPagePath, openTokenSettingsLabel, siteType } = scenario
     const baseUrl = scenario.baseUrl ?? profileSite
+    const tokenFailureStatus =
+      "tokenFailureStatus" in scenario ? scenario.tokenFailureStatus : 403
     const initialQuota = 1000
     const refreshedQuota = 2500
     let tokenRequests = 0
 
     installExtensionPageGuards(page, {
       ignoreConsoleErrorPatterns: [
-        /403/,
+        new RegExp(
+          `Failed to load resource: the server responded with a status of ${tokenFailureStatus}\\b`,
+        ),
         /New API dashboard authentication could not be exchanged/,
         /Access token is missing/,
       ],
@@ -210,13 +262,21 @@ for (const scenario of [
     await context.route(`${baseUrl}/api/user/token`, async (route) => {
       tokenRequests += 1
       await route.fulfill({
-        status: 403,
+        status: tokenFailureStatus,
         contentType: "application/json",
-        body: JSON.stringify({
-          success: false,
-          code: "SECURITY_PROOF_REQUIRED",
-          message: "Security verification required",
-        }),
+        headers: tokenFailureStatus === 429 ? { "retry-after": "60" } : {},
+        body:
+          "tokenFailureEmpty" in scenario && scenario.tokenFailureEmpty
+            ? ""
+            : JSON.stringify({
+                success: false,
+                ...(scenario.tokenFailureCode
+                  ? { code: scenario.tokenFailureCode }
+                  : {}),
+                message: scenario.tokenFailureCode
+                  ? "Security verification required"
+                  : "Token creation unavailable",
+              }),
       })
     })
     await context.route(
@@ -256,11 +316,32 @@ for (const scenario of [
       .click()
 
     await expect(
-      popupDialog.getByText("Enter an Access Token manually"),
-    ).toBeVisible()
-    await expect(
       popupDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
     ).toHaveValue("1")
+    await expect(
+      popupDialog.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+      ),
+    ).toBeVisible()
+    await captureVisualViews({
+      page,
+      ready: popupDialog,
+      id: "token-recovery-popup",
+      extensionDir,
+    })
+    if (
+      "expectedFailureMessage" in scenario &&
+      scenario.expectedFailureMessage
+    ) {
+      await expect(
+        popupDialog.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+        ),
+      ).toHaveText(scenario.expectedFailureMessage)
+    }
+    await expect(
+      popupDialog.getByText("Enter an Access Token manually"),
+    ).toBeVisible()
     await popupDialog
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
       .fill("Keep this site name")
@@ -349,7 +430,21 @@ for (const scenario of [
       if (toggle?.getAttribute("aria-expanded") === "true") toggle.click()
     }, ACCOUNT_MANAGEMENT_TEST_IDS)
 
-    const securityPagePromise = context.waitForEvent("page")
+    // Route discovery can open a temporary page at the same time. Only use the
+    // requested native destination; a probe page is owned and closed by the worker.
+    const securityPagePromise = context.waitForEvent("page", {
+      predicate: async (candidate) => {
+        try {
+          await candidate.waitForURL(`${baseUrl}${tokenPagePath}`, {
+            timeout: 10_000,
+            waitUntil: "commit",
+          })
+          return true
+        } catch {
+          return false
+        }
+      },
+    })
     await recoveryView.evaluate((view, label) => {
       const button = Array.from(view.document.querySelectorAll("button")).find(
         (candidate) => candidate.textContent?.trim() === label,

@@ -249,9 +249,10 @@ describe("useAccountDialog sponsor prefill", () => {
         )
         expect(result.current.state.url).toBe(recoveryState.url)
         expect(result.current.state.draft).toEqual(recoveryState.draft)
-        expect(result.current.state.detectionError?.type).toBe(
-          "access_token_verification_required",
-        )
+        expect(result.current.state.detectionError).toMatchObject({
+          type: "unknown",
+          recoveryAction: "access_token",
+        })
       })
       expect(result.current.state.showAccessToken).toBe(false)
       expect(result.current.state.formSource).toBe(

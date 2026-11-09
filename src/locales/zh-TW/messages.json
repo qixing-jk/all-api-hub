@@ -40,6 +40,7 @@
     "networkError": "網路連線失敗，請檢查網路連線後重試。",
     "notFound": "未能自動識別該站點。請檢查地址是否正確，或登入目標站點後重試。",
     "notLoggedIn": "您尚未登入當前站點，或登入資訊已過期，無法自動新增。請先登入，或檢視幫助文件。",
+    "rateLimited": "請求過於頻繁，請稍後再試。",
     "serverError": "伺服器錯誤，請稍後重試。",
     "timeout": "自動識別超時，請嘗試手動新增。",
     "unexpectedData": "自動識別失敗，站點返回的資料不符合預期。請手動輸入資訊，或確保已登入目標站點。"
@@ -193,6 +194,7 @@
   },
   "operations": {
     "detection": {
+      "cookieSessionRejected": "站點拒絕了 Cookie 工作階段，請重新登入後重試。",
       "failed": "自動檢測失敗，請手動輸入資訊或確保已在目標站點登入",
       "getAccessTokenFailedDetailed": "已識別到帳號，但未能取得存取權杖。請確認帳號有建立或查看 API 權杖的權限，或改用手動輸入。",
       "getInfoFailed": "未能獲取到使用者名稱或訪問令牌",

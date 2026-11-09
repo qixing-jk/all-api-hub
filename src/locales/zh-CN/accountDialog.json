@@ -39,7 +39,7 @@
     "openSecurity": "打开令牌获取页面",
     "openSecurityFailed": "无法打开页面。请在站点的个人资料、账号设置或令牌管理页面找到 Access Token，复制后回到这里填写。",
     "pasteStep": "立即复制完整的 Access Token，粘贴到下方「访问令牌」字段，核对账号信息后保存。",
-    "popupHint": "转到侧边栏后，当前表单会保留；你可以在站点完成验证、复制令牌，同时继续填写。侧边栏无法打开时，会在完整页面继续。",
+    "popupHint": "转到侧边栏后，当前表单会保留；你可以在站点复制令牌，同时继续填写。侧边栏无法打开时，会在完整页面继续。",
     "prepareFailed": "无法暂存当前表单。请先复制需要保留的信息，再从完整页面重新打开账号表单。",
     "restoreFailed": "无法恢复未完成的表单，可能已过期。请重新打开账号表单。",
     "rotationWarning": "仅适用于显示 Generate / Regenerate 的旧版站点：重新生成会使旧令牌失效，其他使用旧令牌的工具也需要更新。创建带权限的访问令牌不会使已有令牌失效。",
@@ -352,6 +352,7 @@
   },
   "messages": {
     "addSuccess": "账号 {{name}} 添加成功!",
+    "authTypeChangedToAccessToken": "此站点使用访问令牌管理该账号，认证方式已相应切换。",
     "autoDetectFailed": "自动识别失败: {{error}}",
     "autoDetectIdentityMismatch": "识别到的账号与当前账号不一致，已保留原有数据。请检查站点地址，并登录对应账号后重试。",
     "autoDetectSuccess": "自动识别成功！",

@@ -42,6 +42,7 @@
     "networkError": "Netzwerkverbindung fehlgeschlagen, bitte überprüfen Sie Ihre Netzwerkverbindung und versuchen Sie es erneut",
     "notFound": "Diese Website konnte nicht automatisch erkannt werden. Überprüfen Sie, ob die Adresse korrekt ist, oder melden Sie sich bei der Zielsite an und versuchen Sie es erneut.",
     "notLoggedIn": "Sie sind nicht auf der aktuellen Website angemeldet oder die Anmeldeinformationen sind abgelaufen. Automatisches Hinzufügen nicht möglich. Bitte überprüfen Sie die Hilfedokumentation oder klicken Sie, um sich zuerst anzumelden",
+    "rateLimited": "Zu viele Anfragen. Bitte versuche es später erneut.",
     "serverError": "Serverfehler. Bitte versuchen Sie es später noch einmal",
     "timeout": "Zeitüberschreitung bei der automatischen Erkennung, bitte versuchen Sie es manuell hinzuzufügen",
     "unexpectedData": "Automatische Erkennung fehlgeschlagen, die Website hat unerwartete Daten zurückgegeben. Bitte geben Sie die Informationen manuell ein oder stellen Sie sicher, dass Sie auf der Zielseite angemeldet sind"
@@ -195,6 +196,7 @@
   },
   "operations": {
     "detection": {
+      "cookieSessionRejected": "Die Website hat die Cookie-Sitzung abgelehnt. Melden Sie sich erneut an.",
       "failed": "Automatische Erkennung fehlgeschlagen, bitte geben Sie die Informationen manuell ein oder stellen Sie sicher, dass Sie auf der Zielseite angemeldet sind",
       "getAccessTokenFailedDetailed": "Das Konto wurde erkannt, aber es konnte kein Zugriffstoken abgerufen werden. Bestätigen Sie, dass das Konto API-Token erstellen oder anzeigen kann, oder geben Sie das Token manuell ein.",
       "getInfoFailed": "Benutzername oder Zugriffstoken konnten nicht abgerufen werden",

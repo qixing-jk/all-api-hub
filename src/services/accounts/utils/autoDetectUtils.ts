@@ -17,12 +17,20 @@
 import {
   AUTO_DETECT_ERROR_CODES,
   AUTO_DETECT_FAILURE_REASONS,
+  AUTO_DETECT_RECOVERY_ACTIONS,
   type AutoDetectAnalyticsContext,
   type AutoDetectErrorCode,
   type AutoDetectFailureReason,
+  type AutoDetectRecoveryAction,
 } from "~/constants/autoDetect"
 import { type AccountSiteType } from "~/constants/siteType"
 import { resolveAccountSiteLoginUrl } from "~/services/accounts/utils/siteRouteResolver"
+import {
+  API_ERROR_CODES,
+  ApiError,
+  hasUnattributedMessage,
+  isAuthenticationRequiredError,
+} from "~/services/apiTransport/errors"
 import { createTab, queryTabs, reloadTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
@@ -33,6 +41,7 @@ export enum AutoDetectErrorType {
   TIMEOUT = "timeout",
   UNAUTHORIZED = "unauthorized",
   ACCESS_TOKEN_VERIFICATION_REQUIRED = "access_token_verification_required",
+  COOKIE_SESSION_REJECTED = "cookie_session_rejected",
   CURRENT_TAB_RELOAD_REQUIRED = "current_tab_reload_required",
   INVALID_RESPONSE = "invalid_response",
   NETWORK_ERROR = "network_error",
@@ -40,6 +49,7 @@ export enum AutoDetectErrorType {
   FORBIDDEN = "forbidden",
   NOT_FOUND = "notFound",
   SERVER_ERROR = "serverError",
+  RATE_LIMITED = "rate_limited",
 }
 
 export {
@@ -51,12 +61,13 @@ export {
 /**
  * Failure reasons raised only after the account identity (userId) was resolved.
  * These come from the completion/credential stage, so a failure carrying one of
- * them means the user was identified but the access token could not be
- * provisioned automatically — a guided detour, not a detection miss.
+ * them establishes identity discovery independently of credential completion.
  */
 const IDENTITY_KNOWN_AUTO_DETECT_FAILURE_REASONS =
   new Set<AutoDetectFailureReason>([
     AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+    AUTO_DETECT_FAILURE_REASONS.CookieSessionRejected,
+    AUTO_DETECT_FAILURE_REASONS.CookieSessionUnavailable,
     AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
     AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
   ])
@@ -78,6 +89,8 @@ export function isIdentityKnownAutoDetectFailureReason(
 export interface AutoDetectError {
   type: AutoDetectErrorType
   message: string
+  /** A supported next step, independent of what caused detection to fail. */
+  recoveryAction?: AutoDetectRecoveryAction
   /** False when a supported account workflow already owns credential recovery. */
   canUseApiCredentialFallback?: boolean
   actionText?: string
@@ -85,38 +98,66 @@ export interface AutoDetectError {
   helpDocUrl?: string
 }
 
-const ERROR_KEYWORDS: Record<string, string[]> = {
-  TIMEOUT: ["超时", "timeout", "请求超时", "request timeout", "timed out"],
-  UNAUTHORIZED: ["401", "未授权", "Unauthorized", "未登录", "login required"],
-  CURRENT_TAB_RELOAD_REQUIRED: [
-    "receiving end does not exist",
-    "could not establish connection",
-    "刷新当前页面",
-    "refresh the current page",
-    "reload the current page",
-  ],
-  INVALID_RESPONSE: [
-    "格式",
-    "解析",
-    "JSON",
-    "数据不符合",
-    "无法获取",
-    "invalid response",
-    "parse error",
-    "malformed",
-  ],
-  NETWORK_ERROR: [
-    "网络",
-    "连接",
-    "Network",
-    "网络中断",
-    "connection lost",
-    "offline",
-  ],
-  FORBIDDEN: ["403", "禁止访问", "Forbidden"],
-  NOT_FOUND: ["404", "未找到", "Not Found"],
-  SERVER_ERROR: ["500", "服务器错误", "Internal Server Error", "server crash"],
+/** Recovery capability is independent of a confirmed security-verification failure. */
+export function isAccessTokenRecoveryError(
+  error: AutoDetectError | null | undefined,
+): boolean {
+  return (
+    error?.recoveryAction === AUTO_DETECT_RECOVERY_ACTIONS.AccessToken ||
+    error?.type === AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+  )
 }
+
+const ERROR_KEYWORDS: Partial<Record<AutoDetectErrorType, readonly string[]>> =
+  {
+    [AutoDetectErrorType.TIMEOUT]: [
+      "超时",
+      "timeout",
+      "请求超时",
+      "request timeout",
+      "timed out",
+    ],
+    [AutoDetectErrorType.UNAUTHORIZED]: [
+      "401",
+      "未授权",
+      "Unauthorized",
+      "未登录",
+      "login required",
+    ],
+    [AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED]: [
+      "receiving end does not exist",
+      "could not establish connection",
+      "刷新当前页面",
+      "refresh the current page",
+      "reload the current page",
+    ],
+    [AutoDetectErrorType.INVALID_RESPONSE]: [
+      "格式",
+      "解析",
+      "JSON",
+      "数据不符合",
+      "无法获取",
+      "invalid response",
+      "parse error",
+      "malformed",
+    ],
+    [AutoDetectErrorType.NETWORK_ERROR]: [
+      "网络",
+      "连接",
+      "Network",
+      "网络中断",
+      "connection lost",
+      "offline",
+    ],
+    [AutoDetectErrorType.FORBIDDEN]: ["403", "禁止访问", "Forbidden"],
+    [AutoDetectErrorType.NOT_FOUND]: ["404", "未找到", "Not Found"],
+    [AutoDetectErrorType.SERVER_ERROR]: [
+      "500",
+      "服务器错误",
+      "Internal Server Error",
+      "server crash",
+    ],
+  }
 
 /**
  * Builds the structured UI error shown when the active tab likely needs a
@@ -154,27 +195,109 @@ export function getAutoDetectErrorByCode(
   }
 }
 
+/** Interpret transport facts before considering any message text. */
+function classifyApiAutoDetectError(error: ApiError): AutoDetectErrorType {
+  switch (error.code) {
+    case API_ERROR_CODES.NETWORK_ERROR:
+      return AutoDetectErrorType.NETWORK_ERROR
+    case API_ERROR_CODES.CONTENT_TYPE_MISMATCH:
+    case API_ERROR_CODES.JSON_PARSE_ERROR:
+      return AutoDetectErrorType.INVALID_RESPONSE
+    case API_ERROR_CODES.ROBOT_CHALLENGE:
+      return AutoDetectErrorType.UNKNOWN
+  }
+  // A proxy's message cannot establish site permissions or a missing site.
+  // Timeout, throttling and server failure remain observable HTTP facts.
+  if (
+    error.unattributedMessage &&
+    (error.statusCode === 403 || error.statusCode === 404)
+  )
+    return AutoDetectErrorType.UNKNOWN
+  if (isAuthenticationRequiredError(error))
+    return AutoDetectErrorType.UNAUTHORIZED
+  switch (error.statusCode) {
+    case 403:
+      return AutoDetectErrorType.FORBIDDEN
+    case 404:
+      return AutoDetectErrorType.NOT_FOUND
+    case 429:
+      return AutoDetectErrorType.RATE_LIMITED
+    case 408:
+    case 504:
+      return AutoDetectErrorType.TIMEOUT
+  }
+  if (error.statusCode && error.statusCode >= 500 && error.statusCode < 600)
+    return AutoDetectErrorType.SERVER_ERROR
+  return AutoDetectErrorType.UNKNOWN
+}
+
+/** Own the local copy and available action for each generic detection failure. */
+function createAutoDetectError(
+  type: AutoDetectErrorType,
+  errorMessage: string,
+): AutoDetectError {
+  const helpDocUrl = getDocsAutoDetectUrl()
+  switch (type) {
+    case AutoDetectErrorType.TIMEOUT:
+      return { type, message: t("messages:autodetect.timeout"), helpDocUrl }
+    case AutoDetectErrorType.UNAUTHORIZED:
+      return {
+        type,
+        message: t("messages:autodetect.notLoggedIn"),
+        actionText: t("messages:autodetect.loginThisSite"),
+        helpDocUrl,
+      }
+    case AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED:
+      return createCurrentTabReloadRequiredError()
+    case AutoDetectErrorType.INVALID_RESPONSE:
+      return {
+        type,
+        message: t("messages:autodetect.unexpectedData"),
+        helpDocUrl,
+      }
+    case AutoDetectErrorType.NETWORK_ERROR:
+      return {
+        type,
+        message: t("messages:autodetect.networkError"),
+        helpDocUrl,
+      }
+    case AutoDetectErrorType.FORBIDDEN:
+      return { type, message: t("messages:autodetect.forbidden"), helpDocUrl }
+    case AutoDetectErrorType.NOT_FOUND:
+      return { type, message: t("messages:autodetect.notFound"), helpDocUrl }
+    case AutoDetectErrorType.SERVER_ERROR:
+      return { type, message: t("messages:autodetect.serverError"), helpDocUrl }
+    case AutoDetectErrorType.RATE_LIMITED:
+      return { type, message: t("messages:autodetect.rateLimited"), helpDocUrl }
+    default:
+      return {
+        type: AutoDetectErrorType.UNKNOWN,
+        message: t("messages:autodetect.failed", { error: errorMessage }),
+        helpDocUrl,
+      }
+  }
+}
+
 /**
- * Convert a raw error into a structured {@link AutoDetectError}.
- *
- * Scans known keyword buckets to infer the most likely failure type and
- * returns localized UI copy plus optional next-action metadata.
- * @param error Unknown error object thrown during auto-detection.
- * @returns Structured error info for UI display and guidance.
+ * Interpret structured transport failures, falling back to legacy message patterns
+ * only when no API error facts are available.
  */
-export function analyzeAutoDetectError(error: any): AutoDetectError {
-  const errorMessage = getErrorMessage(error) || ""
-
-  const msg = errorMessage.toLowerCase()
-  const docsUrl = getDocsAutoDetectUrl()
-  const currentTabReloadMessage = t("messages:autodetect.currentTabNeedsReload")
-
-  if (errorMessage === currentTabReloadMessage) {
-    return createCurrentTabReloadRequiredError()
+export function analyzeAutoDetectError(error: unknown): AutoDetectError {
+  const errorMessage = getErrorMessage(error)
+  if (error instanceof ApiError && (error.code || error.statusCode != null)) {
+    return createAutoDetectError(
+      classifyApiAutoDetectError(error),
+      errorMessage,
+    )
+  }
+  if (hasUnattributedMessage(error)) {
+    return createAutoDetectError(AutoDetectErrorType.UNKNOWN, errorMessage)
   }
 
-  // Recognize our localized identity failure before broad keyword buckets;
-  // the guidance may mention login or connectivity without proving either.
+  if (errorMessage === t("messages:autodetect.currentTabNeedsReload")) {
+    return createCurrentTabReloadRequiredError()
+  }
+  // Local identity guidance may mention login or connectivity without proving either.
   if (
     errorMessage === t("messages:operations.detection.getUserIdFailed") ||
     errorMessage === t("messages:operations.detection.getUserIdFailedDetailed")
@@ -182,69 +305,21 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
     return {
       type: AutoDetectErrorType.INVALID_RESPONSE,
       message: t("messages:operations.detection.getUserIdFailedDetailed"),
-      helpDocUrl: docsUrl,
+      helpDocUrl: getDocsAutoDetectUrl(),
     }
   }
 
-  // Iterate known keyword buckets and return the first matching structured error
-  for (const [type, keywords] of Object.entries(ERROR_KEYWORDS)) {
-    if (keywords.some((k) => msg.includes(k.toLowerCase()))) {
-      switch (type) {
-        case "TIMEOUT":
-          return {
-            type: AutoDetectErrorType.TIMEOUT,
-            message: t("messages:autodetect.timeout"),
-            helpDocUrl: docsUrl,
-          }
-        case "UNAUTHORIZED":
-          return {
-            type: AutoDetectErrorType.UNAUTHORIZED,
-            message: t("messages:autodetect.notLoggedIn"),
-            actionText: t("messages:autodetect.loginThisSite"),
-            helpDocUrl: docsUrl,
-          }
-        case "CURRENT_TAB_RELOAD_REQUIRED":
-          return createCurrentTabReloadRequiredError()
-        case "INVALID_RESPONSE":
-          return {
-            type: AutoDetectErrorType.INVALID_RESPONSE,
-            message: t("messages:autodetect.unexpectedData"),
-            helpDocUrl: docsUrl,
-          }
-        case "NETWORK_ERROR":
-          return {
-            type: AutoDetectErrorType.NETWORK_ERROR,
-            message: t("messages:autodetect.networkError"),
-            helpDocUrl: docsUrl,
-          }
-        case "FORBIDDEN":
-          return {
-            type: AutoDetectErrorType.FORBIDDEN,
-            message: t("messages:autodetect.forbidden"),
-            helpDocUrl: docsUrl,
-          }
-        case "NOT_FOUND":
-          return {
-            type: AutoDetectErrorType.NOT_FOUND,
-            message: t("messages:autodetect.notFound"),
-            helpDocUrl: docsUrl,
-          }
-        case "SERVER_ERROR":
-          return {
-            type: AutoDetectErrorType.SERVER_ERROR,
-            message: t("messages:autodetect.serverError"),
-            helpDocUrl: docsUrl,
-          }
-      }
-    }
-  }
-
-  // 默认未知错误
-  return {
-    type: AutoDetectErrorType.UNKNOWN,
-    message: t("messages:autodetect.failed", { error: errorMessage }),
-    helpDocUrl: docsUrl,
-  }
+  const message = errorMessage.toLowerCase()
+  const type = (Object.keys(ERROR_KEYWORDS) as AutoDetectErrorType[]).find(
+    (type) =>
+      ERROR_KEYWORDS[type]?.some((keyword) =>
+        message.includes(keyword.toLowerCase()),
+      ),
+  )
+  return createAutoDetectError(
+    type ?? AutoDetectErrorType.UNKNOWN,
+    errorMessage,
+  )
 }
 
 // 创建错误消息组件的props
