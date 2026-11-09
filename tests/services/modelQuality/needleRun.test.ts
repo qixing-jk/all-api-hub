@@ -608,6 +608,17 @@ it("honors a whole-run stop after publishing a completed cell", async () => {
 
 it.each([
   {
+    apiType: "openai" as const,
+    outcome: NEEDLE_OUTCOMES.Error,
+    error: {
+      type: "error",
+      sequence_number: 1,
+      code: "server_error",
+      message: "prompt is too long",
+      param: null,
+    },
+  },
+  {
     apiType: "openai-compatible" as const,
     error: {
       error: { message: "Input rejected", code: "context_length_exceeded" },
@@ -634,8 +645,8 @@ it.each([
     },
   },
 ])(
-  "records a statusless SSE overflow as a context limit and stops the needle plan without retrying: $apiType $error",
-  async ({ apiType, error }) => {
+  "classifies SSE evidence and stops the needle plan without retrying: $apiType $error",
+  async ({ apiType, error, outcome = NEEDLE_OUTCOMES.ContextLimit }) => {
     let requests = 0
     vi.stubGlobal(
       "fetch",
@@ -660,7 +671,7 @@ it.each([
     expect(result.cells[0]).toMatchObject({
       targetTokens: 1024,
       depth: 10,
-      outcome: NEEDLE_OUTCOMES.ContextLimit,
+      outcome,
     })
     expect(requests).toBe(1)
   },

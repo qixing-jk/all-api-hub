@@ -43,6 +43,7 @@ describe("capacity request outcomes", () => {
     },
     {
       name: "an explicit streamed 500",
+      message: "prompt is too long",
       status: 200,
       code: "500",
       outcome: "inconclusive",
@@ -50,6 +51,7 @@ describe("capacity request outcomes", () => {
     },
     {
       name: "an unrelated server error",
+      message: "prompt is too long",
       status: 200,
       code: "server_error",
       outcome: "inconclusive",
@@ -57,7 +59,14 @@ describe("capacity request outcomes", () => {
     },
   ])(
     "classifies Responses errors with transport evidence: $name",
-    async ({ name, status, code, outcome, prefix }) => {
+    async ({
+      name,
+      status,
+      code,
+      outcome,
+      prefix,
+      message = "Input rejected",
+    }) => {
       vi.stubGlobal(
         "fetch",
         vi.fn(async (url: unknown) =>
@@ -65,7 +74,7 @@ describe("capacity request outcomes", () => {
             ? Response.json({ models: [] })
             : new Response(
                 prefix +
-                  `data: ${JSON.stringify(name === "response.failed" ? { type: "response.failed", sequence_number: 1, response: { error: { code, message: "Input rejected" } } } : { type: "error", sequence_number: 1, code, message: "Input rejected", param: null })}\n\n`,
+                  `data: ${JSON.stringify(name === "response.failed" ? { type: "response.failed", sequence_number: 1, response: { error: { code, message } } } : { type: "error", sequence_number: 1, code, message, param: null })}\n\n`,
                 { status, headers: { "Content-Type": "text/event-stream" } },
               ),
         ),

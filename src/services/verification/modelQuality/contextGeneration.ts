@@ -73,7 +73,11 @@ export async function runContextGeneration(
       statusCode === 500
     ) {
       const details = streamErrorDetails(data)
-      if (details) {
+      if (
+        details &&
+        details.code !== "server_error" &&
+        details.type !== "server_error"
+      ) {
         statusCode = [
           details.statusCode,
           details.status_code,
