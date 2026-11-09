@@ -56,6 +56,7 @@ import {
   needleHistoryInBackground,
   runNeedleInBackground,
 } from "~/services/verification/webAiApiCheck/needleClient"
+import { runQuestionAnswerInBackground } from "~/services/verification/webAiApiCheck/questionAnswerClient"
 import type { Tag } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
@@ -278,6 +279,7 @@ export function useApiCheckModalViewModel() {
     ])
 
   const verificationTools = useVerificationTools({
+    runQuestionAnswerRequest: runQuestionAnswerInBackground,
     modelId: modelId,
     runNeedleRequest: runNeedleInBackground,
     loadNeedleCounter: loadNeedleCounterInBackground,

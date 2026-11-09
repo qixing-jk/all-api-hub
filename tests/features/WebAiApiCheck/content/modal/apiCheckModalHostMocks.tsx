@@ -45,6 +45,13 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
     ...actual,
     userPreferences: {
       ...actual.userPreferences,
+      getPreferencesStrict: actual.userPreferences.getPreferencesStrict.bind(
+        actual.userPreferences,
+      ),
+      updateQuestionAnswerTest:
+        actual.userPreferences.updateQuestionAnswerTest.bind(
+          actual.userPreferences,
+        ),
       updateWebAiApiCheck: updateWebAiApiCheckMock,
     },
   }

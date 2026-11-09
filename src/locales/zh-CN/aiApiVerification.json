@@ -6,7 +6,7 @@
       "manageModelKey": "打开模型对应密钥",
       "retry": "重试",
       "runAll": "运行常规测试",
-      "runAllHint": "仅运行常规测试；绘图和模型上下文测试需单独启动。",
+      "runAllHint": "仅运行常规测试；按需测试需单独启动。",
       "running": "运行中...",
       "runOne": "运行",
       "stop": "停止",
@@ -418,6 +418,47 @@
         "resetOne": "恢复此项默认",
         "saveFailed": "保存提示词失败：{{message}}",
         "sharedHint": "已保存的提示词对所有测试入口生效。"
+      },
+      "questionAnswer": {
+        "comparison": "答案对照",
+        "comparisonHint": "仅对照最终答案的文本是否一致，推理是否正确请结合完整回答判断。",
+        "description": "修改问题，可填写参考答案，运行后查看回答与对照结果。",
+        "draftChanged": "问题或参考答案已修改。当前展示的是上次运行结果，请重新运行以对照修改后的内容。",
+        "finalAnswer": "提取的最终答案",
+        "loadFailed": "无法读取问答设置，请重试以加载已保存的草稿。",
+        "notIdentified": "未提取到",
+        "outcomes": {
+          "empty": "未返回回答",
+          "incomplete": "输出不完整",
+          "manual": "已返回回答",
+          "matched": "与参考答案一致",
+          "mismatched": "与参考答案不一致",
+          "ungraded": "最终答案未明确"
+        },
+        "question": "问题",
+        "questionRequired": "请填写问题后再运行测试。",
+        "reference": "参考答案（选填）",
+        "requestFailed": "请求失败",
+        "reset": "重置题目与参考答案",
+        "response": "模型回答",
+        "rules": {
+          "extraction": "填写参考答案后，会要求模型在最后一行以 FINAL_ANSWER: 开头给出最终答案，并提取冒号后的内容。 留空只查看回答，不判定对错。",
+          "matching": "去掉首尾空白、统一全半角等兼容字符后，文本须完全一致。例如：２１ 能匹配 21，21个 不能匹配 21；大小写、标点和中间空格仍会影响结果。",
+          "privacy": "参考答案仅在本地使用，不发送给模型。",
+          "title": "比对规则",
+          "unavailable": "未按格式给出最终答案时，仅当整段回答与参考答案一致才算匹配，否则显示“最终答案未明确”。空回答或输出不完整会单独提示。"
+        },
+        "run": "运行问答测试",
+        "runQuestion": "本次使用的问题",
+        "runReference": "本次参考答案",
+        "saveFailed": "设置保存失败，当前草稿仍可用于测试。",
+        "saving": "正在保存…",
+        "steps": {
+          "question": "提交问题",
+          "response": "生成回答",
+          "result": "查看结果"
+        },
+        "title": "问答测试"
       },
       "settingsTitle": "测试设置",
       "stop": "停止",

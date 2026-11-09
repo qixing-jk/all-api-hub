@@ -6,7 +6,7 @@
       "manageModelKey": "開啟模型對應金鑰",
       "retry": "重試",
       "runAll": "執行常規測試",
-      "runAllHint": "僅執行常規測試；繪圖與模型上下文測試需單獨啟動。",
+      "runAllHint": "僅執行常規測試；按需測試須單獨啟動。",
       "running": "執行中...",
       "runOne": "執行",
       "stop": "停止",
@@ -419,6 +419,47 @@
         "resetOne": "回復此項預設",
         "saveFailed": "儲存提示詞失敗：{{message}}",
         "sharedHint": "已儲存的提示詞對所有測試入口生效。"
+      },
+      "questionAnswer": {
+        "comparison": "答案比對",
+        "comparisonHint": "僅比對最終答案的文字是否一致，推理是否正確請搭配完整回答判斷。",
+        "description": "修改問題，可填寫參考答案，執行後查看回答與比對結果。",
+        "draftChanged": "問題或參考答案已修改。目前顯示的是上次執行結果，請重新執行以比對修改後的內容。",
+        "finalAnswer": "擷取的最終答案",
+        "loadFailed": "無法讀取問答設定，請重試以載入已儲存的草稿。",
+        "notIdentified": "未擷取到",
+        "outcomes": {
+          "empty": "未回傳回答",
+          "incomplete": "輸出不完整",
+          "manual": "已傳回回答",
+          "matched": "與參考答案一致",
+          "mismatched": "與參考答案不一致",
+          "ungraded": "最終答案未明確"
+        },
+        "question": "問題",
+        "questionRequired": "請填寫問題後再執行測試。",
+        "reference": "參考答案（選填）",
+        "requestFailed": "請求失敗",
+        "reset": "重設題目與參考答案",
+        "response": "模型回答",
+        "rules": {
+          "extraction": "填寫參考答案後，會要求模型在最後一行以 FINAL_ANSWER: 開頭給出最終答案，並擷取冒號後的內容。 留空只查看回答，不判定對錯。",
+          "matching": "去除前後空白、統一全半形等相容字元後，文字須完全一致。例如：２１ 能比對為 21，21個 不能比對為 21；大小寫、標點和中間空格仍會影響結果。",
+          "privacy": "參考答案僅在本機使用，不傳送給模型。",
+          "title": "比對規則",
+          "unavailable": "未按格式給出最終答案時，僅當整段回答與參考答案一致才算符合，否則顯示「最終答案未明確」。空回答或輸出不完整會另行提示。"
+        },
+        "run": "執行問答測試",
+        "runQuestion": "本次使用的問題",
+        "runReference": "本次參考答案",
+        "saveFailed": "設定儲存失敗，目前草稿仍可用於測試。",
+        "saving": "正在儲存…",
+        "steps": {
+          "question": "提交問題",
+          "response": "產生回答",
+          "result": "查看結果"
+        },
+        "title": "問答測試"
       },
       "settingsTitle": "測試設定",
       "stop": "停止",

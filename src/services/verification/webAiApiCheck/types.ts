@@ -19,6 +19,10 @@ import type {
   PelicanExecutionMode,
   PelicanTestResult,
 } from "~/services/verification/modelQuality/pelican"
+import type {
+  QuestionAnswerRequest,
+  QuestionAnswerResult,
+} from "~/services/verification/modelQuality/questionAnswer"
 import type { ContextHistoryRequest } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import type { ContextCapacitySummary } from "~/services/verification/verificationResultHistory/types"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
@@ -308,3 +312,11 @@ export type ApiCheckRunNeedleResponse =
       errorName?: string
       checkpointLimitReached?: boolean
     }
+
+export type ApiCheckQuestionAnswerRequest = Omit<
+  QuestionAnswerRequest,
+  "abortSignal"
+> & { runId: string }
+export type ApiCheckQuestionAnswerResponse =
+  | { success: true; result: QuestionAnswerResult }
+  | { success: false; error: string }

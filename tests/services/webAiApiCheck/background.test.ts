@@ -2773,6 +2773,7 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.RenameTag,
       WebAiApiCheckMessageTypes.RunProbe,
       WebAiApiCheckMessageTypes.RunPelican,
+      WebAiApiCheckMessageTypes.RunQuestionAnswer,
       WebAiApiCheckMessageTypes.ContextCounter,
       WebAiApiCheckMessageTypes.NeedleHistory,
       WebAiApiCheckMessageTypes.RunNeedle,

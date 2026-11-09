@@ -278,6 +278,70 @@ test.beforeEach(async ({ context, page }) => {
   })
 })
 
+test("webpage Q&A runs in background and can be stopped independently", async ({
+  context,
+  page,
+}) => {
+  let release!: () => void
+  let hold = false
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const fixture = createDrawingServer({
+    textResponse: () => "FINAL_ANSWER: 21",
+    beforeRespond: async () => {
+      if (hold) await gate
+    },
+  })
+  await new Promise<void>((resolve) =>
+    fixture.server.listen(0, "127.0.0.1", resolve),
+  )
+  const baseUrl = `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`
+  try {
+    await stubLlmMetadataIndex(context)
+    await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.setViewportSize({ width: 1280, height: 960 })
+    const { modal, contentHost } =
+      await openApiCheckModalFromCopiedCredentials(page)
+    await modal
+      .getByRole("textbox", { name: "Base URL", exact: true })
+      .fill(baseUrl)
+    await modal.getByRole("combobox", { name: "Model ID", exact: true }).click()
+    await contentHost
+      .getByRole("option", { name: "gpt-quality", exact: true })
+      .click()
+    const panel = modal.getByRole("region", { name: "Q&A test", exact: true })
+    await panel.getByRole("button", { name: "Q&A test", exact: true }).click()
+    await panel
+      .getByRole("button", { name: "Run Q&A test", exact: true })
+      .click()
+    await expect(
+      panel.getByText("Matches reference", { exact: true }).first(),
+    ).toBeVisible()
+    expect(fixture.requests).toHaveLength(1)
+    hold = true
+    await panel
+      .getByRole("button", { name: "Run Q&A test", exact: true })
+      .click()
+    await expect.poll(() => fixture.requests.length).toBe(2)
+    await panel.getByRole("button", { name: "Stop", exact: true }).click()
+    await expect(panel.getByText("Stopped", { exact: true })).toBeVisible()
+    await expect(
+      panel.getByRole("button", { name: "Run Q&A test", exact: true }),
+    ).toBeEnabled()
+    release()
+    await modal.screenshot({
+      path: test.info().outputPath("qa-web-stopped.png"),
+      animations: "disabled",
+    })
+  } finally {
+    release()
+    fixture.server.closeAllConnections()
+    await new Promise<void>((resolve) => fixture.server.close(() => resolve()))
+  }
+})
+
 test("web context probe shows progress, measured bounds and cancellation", async ({
   context,
   page,

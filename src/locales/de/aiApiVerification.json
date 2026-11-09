@@ -6,7 +6,7 @@
       "manageModelKey": "Modellschlüssel-Setup öffnen",
       "retry": "Wiederholen",
       "runAll": "Standardtests ausführen",
-      "runAllHint": "Führt nur Standardtests aus. Zeichen- und Modellkontexttests müssen separat gestartet werden.",
+      "runAllHint": "Führt nur Routinetests aus. Starten Sie Tests auf Abruf separat.",
       "running": "Läuft...",
       "runOne": "Ausführen",
       "stop": "Stopp",
@@ -421,6 +421,47 @@
         "resetOne": "Diesen Prompt zurücksetzen",
         "saveFailed": "Prompts konnten nicht gespeichert werden: {{message}}",
         "sharedHint": "Gespeicherte Prompts gelten für alle Testzugänge."
+      },
+      "questionAnswer": {
+        "comparison": "Antwortvergleich",
+        "comparisonHint": "Nur der Text der endgültigen Antwort wird verglichen. Prüfe die vollständige Antwort, um die Begründung zu beurteilen.",
+        "description": "Frage bearbeiten, optional eine Referenzantwort angeben und die Antwort prüfen.",
+        "draftChanged": "Frage oder Referenzantwort wurde geändert. Dieses Ergebnis stammt vom vorherigen Durchlauf. Starte den Test erneut, um die Änderungen zu vergleichen.",
+        "finalAnswer": "Extrahierte endgültige Antwort",
+        "loadFailed": "Frageneinstellungen konnten nicht geladen werden. Versuchen Sie es erneut, um den gespeicherten Entwurf zu laden.",
+        "notIdentified": "Nicht erkannt",
+        "outcomes": {
+          "empty": "Keine Antwort erhalten",
+          "incomplete": "Unvollständige Antwort",
+          "manual": "Antwort erhalten",
+          "matched": "Stimmt mit Referenz überein",
+          "mismatched": "Weicht von Referenz ab",
+          "ungraded": "Schlussantwort unklar"
+        },
+        "question": "Frage",
+        "questionRequired": "Gib eine Frage ein, um den Test zu starten.",
+        "reference": "Referenzantwort (optional)",
+        "requestFailed": "Anfrage fehlgeschlagen",
+        "reset": "Frage und Referenzantwort zurücksetzen",
+        "response": "Modellantwort",
+        "rules": {
+          "extraction": "Bei einer Referenz wird das Modell aufgefordert, seine Endantwort in der letzten Zeile mit FINAL_ANSWER: einzuleiten. Der Text nach dem Doppelpunkt wird extrahiert. Ohne Referenz wird die Antwort ohne Bewertung angezeigt.",
+          "matching": "Äußere Leerzeichen werden entfernt und Kompatibilitätszeichen, etwa vollbreite Zeichen, normalisiert. Danach muss der Text exakt übereinstimmen. Beispiel: ２１ entspricht 21, aber 21 Stück entspricht nicht 21. Großschreibung, Satzzeichen und innere Leerzeichen bleiben relevant.",
+          "privacy": "Die Referenz wird nur lokal verwendet und nicht an das Modell gesendet.",
+          "title": "Vergleichsregeln",
+          "unavailable": "Ohne formatierte Endantwort gilt nur eine vollständig mit der Referenz übereinstimmende Antwort als Treffer. Andernfalls wird die Endantwort als unklar angezeigt. Leere oder unvollständige Antworten werden separat gemeldet."
+        },
+        "run": "Fragentest starten",
+        "runQuestion": "Frage dieses Testlaufs",
+        "runReference": "Referenzantwort dieses Durchlaufs",
+        "saveFailed": "Einstellungen konnten nicht gespeichert werden. Der aktuelle Entwurf bleibt nutzbar.",
+        "saving": "Wird gespeichert…",
+        "steps": {
+          "question": "Frage senden",
+          "response": "Antwort erzeugen",
+          "result": "Ergebnis ansehen"
+        },
+        "title": "Fragen und Antworten"
       },
       "settingsTitle": "Testeinstellungen",
       "stop": "Stop",

@@ -6,7 +6,7 @@
       "manageModelKey": "Abrir configuração da chave de modelo",
       "retry": "Tentar novamente",
       "runAll": "Executar testes padrão",
-      "runAllHint": "Executa apenas os testes padrão. Inicie os testes de desenho e contexto do modelo separadamente.",
+      "runAllHint": "Executa apenas testes de rotina. Inicie os testes sob demanda separadamente.",
       "running": "Executando...",
       "runOne": "Executar",
       "stop": "Parar",
@@ -422,6 +422,47 @@
         "resetOne": "Restaurar este prompt",
         "saveFailed": "Não foi possível salvar os prompts: {{message}}",
         "sharedHint": "Os prompts salvos são compartilhados por todas as entradas de teste."
+      },
+      "questionAnswer": {
+        "comparison": "Comparação de respostas",
+        "comparisonHint": "Apenas o texto da resposta final é comparado. Revise a resposta completa para avaliar o raciocínio.",
+        "description": "Edite a pergunta, adicione uma referência opcional e execute para ver a resposta.",
+        "draftChanged": "A pergunta ou a resposta de referência mudou. Este resultado é da execução anterior; execute novamente para comparar as alterações.",
+        "finalAnswer": "Resposta final extraída",
+        "loadFailed": "Não foi possível carregar as configurações. Tente novamente para recuperar o rascunho salvo.",
+        "notIdentified": "Não identificada",
+        "outcomes": {
+          "empty": "Nenhuma resposta",
+          "incomplete": "Resposta incompleta",
+          "manual": "Resposta recebida",
+          "matched": "Corresponde à referência",
+          "mismatched": "Não corresponde à referência",
+          "ungraded": "Resposta final pouco clara"
+        },
+        "question": "Pergunta",
+        "questionRequired": "Digite uma pergunta para executar o teste.",
+        "reference": "Resposta de referência (opcional)",
+        "requestFailed": "Falha na solicitação",
+        "reset": "Redefinir pergunta e resposta de referência",
+        "response": "Resposta do modelo",
+        "rules": {
+          "extraction": "Quando há uma referência, o modelo deve escrever a resposta final na última linha começando com FINAL_ANSWER:. O texto após os dois-pontos é extraído. Sem uma referência, a resposta é exibida sem avaliação.",
+          "matching": "Espaços no início e no fim são removidos e caracteres de compatibilidade, como os de largura completa, são normalizados. Depois, o texto deve coincidir exatamente: ２１ corresponde a 21, mas 21 itens não corresponde a 21. Maiúsculas, pontuação e espaços internos continuam relevantes.",
+          "privacy": "A referência é usada apenas localmente e não é enviada ao modelo.",
+          "title": "Regras de comparação",
+          "unavailable": "Sem uma resposta final no formato solicitado, só há correspondência se toda a resposta coincidir com a referência. Caso contrário, a resposta final é indicada como indefinida. Respostas vazias ou incompletas são informadas separadamente."
+        },
+        "run": "Executar teste de perguntas",
+        "runQuestion": "Pergunta usada nesta execução",
+        "runReference": "Resposta de referência desta execução",
+        "saveFailed": "Não foi possível salvar as configurações. O rascunho atual ainda pode ser usado.",
+        "saving": "Salvando…",
+        "steps": {
+          "question": "Enviar pergunta",
+          "response": "Gerar resposta",
+          "result": "Ver resultado"
+        },
+        "title": "Teste de perguntas e respostas"
       },
       "settingsTitle": "Configurações do teste",
       "stop": "Parar",

@@ -6,7 +6,7 @@
       "manageModelKey": "Mở thiết lập khóa cho mô hình",
       "retry": "Thử lại",
       "runAll": "Chạy kiểm tra thông thường",
-      "runAllHint": "Chỉ chạy các kiểm tra thông thường. Hãy bắt đầu kiểm tra vẽ và ngữ cảnh mô hình riêng.",
+      "runAllHint": "Chỉ chạy các kiểm tra thông thường. Khởi chạy riêng các kiểm tra theo yêu cầu.",
       "running": "Đang chạy...",
       "runOne": "Chạy",
       "stop": "Dừng",
@@ -419,6 +419,47 @@
         "resetOne": "Khôi phục mục này",
         "saveFailed": "Không lưu được lời nhắc: {{message}}",
         "sharedHint": "Lời nhắc đã lưu dùng chung cho mọi lối vào kiểm tra."
+      },
+      "questionAnswer": {
+        "comparison": "So sánh đáp án",
+        "comparisonHint": "Chỉ so sánh văn bản của đáp án cuối cùng. Hãy xem toàn bộ câu trả lời để đánh giá lập luận.",
+        "description": "Chỉnh sửa câu hỏi, thêm đáp án tham khảo nếu cần rồi chạy để xem câu trả lời.",
+        "draftChanged": "Câu hỏi hoặc đáp án tham chiếu đã thay đổi. Đây là kết quả lần chạy trước; hãy chạy lại để so sánh nội dung mới.",
+        "finalAnswer": "Đáp án cuối cùng được trích xuất",
+        "loadFailed": "Không thể tải cài đặt hỏi đáp. Hãy thử lại để tải bản nháp đã lưu.",
+        "notIdentified": "Không xác định được",
+        "outcomes": {
+          "empty": "Không có phản hồi",
+          "incomplete": "Phản hồi chưa hoàn chỉnh",
+          "manual": "Đã nhận câu trả lời",
+          "matched": "Khớp đáp án tham khảo",
+          "mismatched": "Không khớp đáp án tham khảo",
+          "ungraded": "Đáp án cuối chưa rõ"
+        },
+        "question": "Câu hỏi",
+        "questionRequired": "Nhập câu hỏi để chạy bài kiểm tra.",
+        "reference": "Đáp án tham khảo (tùy chọn)",
+        "requestFailed": "Yêu cầu thất bại",
+        "reset": "Đặt lại câu hỏi và đáp án tham khảo",
+        "response": "Phản hồi của mô hình",
+        "rules": {
+          "extraction": "Khi có đáp án tham chiếu, mô hình được yêu cầu viết đáp án cuối cùng ở dòng cuối, bắt đầu bằng FINAL_ANSWER:. Nội dung sau dấu hai chấm sẽ được trích xuất. Nếu không có đáp án tham chiếu, chỉ hiển thị câu trả lời mà không chấm đúng sai.",
+          "matching": "Loại bỏ khoảng trắng ở hai đầu và chuẩn hóa ký tự tương thích, như ký tự toàn chiều rộng, rồi so khớp văn bản chính xác. Ví dụ: ２１ khớp với 21, nhưng 21 cái không khớp với 21. Chữ hoa, chữ thường, dấu câu và khoảng trắng ở giữa vẫn được phân biệt.",
+          "privacy": "Đáp án tham chiếu chỉ được dùng trên máy và không gửi đến mô hình.",
+          "title": "Quy tắc so sánh",
+          "unavailable": "Nếu không có đáp án cuối cùng đúng định dạng, chỉ công nhận khớp khi toàn bộ câu trả lời khớp với đáp án tham chiếu. Nếu không, kết quả cho biết đáp án cuối cùng chưa rõ. Câu trả lời trống hoặc chưa hoàn chỉnh được báo riêng."
+        },
+        "run": "Chạy kiểm tra hỏi đáp",
+        "runQuestion": "Câu hỏi dùng trong lần chạy này",
+        "runReference": "Đáp án tham chiếu của lần chạy này",
+        "saveFailed": "Không thể lưu cài đặt. Bạn vẫn có thể dùng bản nháp hiện tại.",
+        "saving": "Đang lưu…",
+        "steps": {
+          "question": "Gửi câu hỏi",
+          "response": "Tạo câu trả lời",
+          "result": "Xem kết quả"
+        },
+        "title": "Kiểm tra hỏi đáp"
       },
       "settingsTitle": "Cài đặt kiểm tra",
       "stop": "Dừng",

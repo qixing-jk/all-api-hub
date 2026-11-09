@@ -2,6 +2,7 @@ import { type ManagedSiteType } from "~/constants/siteType"
 import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification/types"
 import type { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
+import type { QuestionAnswerSettings } from "~/services/verification/modelQuality/questionAnswer"
 import type {
   WEB_AI_API_CHECK_RULE_LIST,
   WEB_AI_API_CHECK_RULE_SYNTAX,
@@ -375,6 +376,9 @@ export interface UserPreferences {
    * Missing or blank entries fall back to the built-in prompt.
    */
   verificationProbePrompts?: VerificationProbePromptPreferences
+
+  /** Shared on-demand question draft; never included in analytics. */
+  questionAnswerTest?: Partial<QuestionAnswerSettings>
 
   /**
    * 临时窗口过盾相关设置

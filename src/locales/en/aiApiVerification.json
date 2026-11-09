@@ -6,7 +6,7 @@
       "manageModelKey": "Open model key setup",
       "retry": "Retry",
       "runAll": "Run routine tests",
-      "runAllHint": "Runs routine tests only. Start drawing and context tests separately.",
+      "runAllHint": "Runs routine tests only. Start on-demand tests separately.",
       "running": "Running...",
       "runOne": "Run",
       "stop": "Stop",
@@ -421,6 +421,47 @@
         "resetOne": "Reset this prompt",
         "saveFailed": "Could not save prompts: {{message}}",
         "sharedHint": "Saved prompts are shared by every test entry point."
+      },
+      "questionAnswer": {
+        "comparison": "Answer comparison",
+        "comparisonHint": "Only final-answer text is compared. Review the full response to assess the reasoning.",
+        "description": "Edit a question, optionally add a reference, and run to inspect the response.",
+        "draftChanged": "The question or reference has changed. This result is from the previous run; run again to compare your changes.",
+        "finalAnswer": "Extracted final answer",
+        "loadFailed": "Could not load question settings. Retry to keep your saved draft.",
+        "notIdentified": "Not identified",
+        "outcomes": {
+          "empty": "No answer returned",
+          "incomplete": "Incomplete response",
+          "manual": "Response received",
+          "matched": "Matches reference",
+          "mismatched": "Does not match reference",
+          "ungraded": "Final answer unclear"
+        },
+        "question": "Question",
+        "questionRequired": "Enter a question to run the test.",
+        "reference": "Reference answer (optional)",
+        "requestFailed": "Request failed",
+        "reset": "Reset question and answer",
+        "response": "Model response",
+        "rules": {
+          "extraction": "When a reference is provided, the model is asked to put its final answer on the last line starting with FINAL_ANSWER:. The text after the colon is extracted. Without a reference, the response is shown without grading.",
+          "matching": "Leading and trailing whitespace is removed and compatibility characters, such as full-width characters, are normalized before an exact text match. For example, ２１ matches 21, but 21 items does not match 21. Case, punctuation and internal spaces still matter.",
+          "privacy": "The reference is used locally and is never sent to the model.",
+          "title": "Comparison rules",
+          "unavailable": "Without a formatted final answer, a match is accepted only when the entire response matches the reference. Otherwise, the result is “Final answer unclear”. Empty or incomplete responses are reported separately."
+        },
+        "run": "Run Q&A test",
+        "runQuestion": "Question used for this run",
+        "runReference": "Reference answer for this run",
+        "saveFailed": "Could not save settings. Your current draft can still be used.",
+        "saving": "Saving…",
+        "steps": {
+          "question": "Submit question",
+          "response": "Generate response",
+          "result": "View result"
+        },
+        "title": "Q&A test"
       },
       "settingsTitle": "Test settings",
       "stop": "Stop",

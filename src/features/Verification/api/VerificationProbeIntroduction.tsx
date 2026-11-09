@@ -38,6 +38,7 @@ import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerific
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
 import { NEEDLE_TEST_ID } from "~/services/verification/modelQuality/needleConstants"
+import { QUESTION_ANSWER_TEST_ID } from "~/services/verification/modelQuality/questionAnswer"
 
 type IntroductionStep = { icon: LucideIcon; label: string }
 
@@ -55,6 +56,9 @@ export function VerificationProbeIntroduction({
 }) {
   const { t } = useTranslation("aiApiVerification")
   const descriptions: Record<VerificationTestId, string> = {
+    [QUESTION_ANSWER_TEST_ID]: t(
+      "verifyDialog.tools.questionAnswer.description",
+    ),
     [NEEDLE_TEST_ID]: t("verifyDialog.tools.needle.description"),
     [PELICAN_PROMPT_ID]: t("verifyDialog.tools.pelican.description"),
     [CONTEXT_CAPACITY_TEST_ID]: t("verifyDialog.tools.context.hint"),
@@ -89,6 +93,20 @@ export function VerificationProbeIntroduction({
     VerificationTestId,
     readonly [IntroductionStep, IntroductionStep, IntroductionStep]
   > = {
+    [QUESTION_ANSWER_TEST_ID]: [
+      {
+        icon: Send,
+        label: t("verifyDialog.tools.questionAnswer.steps.question"),
+      },
+      {
+        icon: MessageSquareText,
+        label: t("verifyDialog.tools.questionAnswer.steps.response"),
+      },
+      {
+        icon: Check,
+        label: t("verifyDialog.tools.questionAnswer.steps.result"),
+      },
+    ],
     [API_VERIFICATION_PROBE_IDS.Models]: [
       { icon: List, label: t("verifyDialog.intro.steps.models.input") },
       { icon: ScanSearch, label: t("verifyDialog.intro.steps.models.process") },
