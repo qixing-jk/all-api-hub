@@ -81,7 +81,7 @@
 | @playwright/test | 1.64.1 | 1.64.1 | 1.65.0 | [e2e/accountActionShortcuts.spec.ts](../../e2e/accountActionShortcuts.spec.ts) |
 | @tailwindcss/forms | ^0.5.10 | 0.5.10 | 0.5.11 | 仅旧 tailwind.config.js 引用；当前 CSS 未加载 |
 | @tailwindcss/postcss | ^4.1.17 | 4.1.17 | 4.3.5 | [postcss.config.js](../../postcss.config.js) |
-| @tailwindcss/typography | ^0.5.16 | 0.5.16 | 0.5.20 | [tailwind.config.js](../../tailwind.config.js) |
+| @tailwindcss/typography | ^0.5.16 | 0.5.16 | 0.5.20 | [tailwind.config.js](https://github.com/qixing-jk/all-api-hub/blob/adbd21980a0941128ea9b9985515698cd2f6b7e6/tailwind.config.js) |
 | @testing-library/jest-dom | ^6.9.1 | 6.9.1 | 7.0.1 | [tests/setup.ts](../../tests/setup.ts) |
 | @testing-library/react | ^16.3.0 | 16.3.0 | 16.3.3 | [tests/components/AccountLinkButton.test.tsx](../../tests/components/AccountLinkButton.test.tsx) |
 | @testing-library/user-event | ^14.6.1 | 14.6.1 | 14.6.8 | [tests/components/ActionMenu.test.tsx](../../tests/components/ActionMenu.test.tsx) |

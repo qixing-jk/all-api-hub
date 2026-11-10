@@ -1,9 +1,27 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { describe, expect, it, vi } from "vitest"
 
 import { Alert } from "~/components/ui/Alert"
 
 describe("Alert", () => {
+  it("makes an iconless alert action available beside its message", async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn()
+    render(
+      <Alert
+        showIcon={false}
+        description="Connection failed"
+        action={<button onClick={onRetry}>Retry</button>}
+      />,
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent("Connection failed")
+    await user.click(screen.getByRole("button", { name: "Retry" }))
+    expect(onRetry).toHaveBeenCalledOnce()
+    expect(screen.getByRole("alert")).not.toHaveClass(
+      "grid-cols-[auto_minmax(0,1fr)]",
+    )
+  })
   it("renders compact alerts with a stable icon and content grid", () => {
     render(
       <Alert
