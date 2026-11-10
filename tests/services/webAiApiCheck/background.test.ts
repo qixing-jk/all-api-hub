@@ -2773,6 +2773,7 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.RenameTag,
       WebAiApiCheckMessageTypes.RunProbe,
       WebAiApiCheckMessageTypes.RunPelican,
+      WebAiApiCheckMessageTypes.RunQuestionAnswer,
       WebAiApiCheckMessageTypes.ContextCounter,
       WebAiApiCheckMessageTypes.NeedleHistory,
       WebAiApiCheckMessageTypes.RunNeedle,
@@ -2784,6 +2785,18 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.CancelRunProbe,
       WebAiApiCheckMessageTypes.SaveProfile,
     ])
+
+    await expect(
+      webAiApiCheckMessageHandlers.get(
+        WebAiApiCheckMessageTypes.RunQuestionAnswer,
+      )?.({
+        data: { runId: "invalid-question", apiType: "invalid" },
+        sender: { tab: { id: 5 } },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid question test request",
+    })
 
     const cancelHandler = webAiApiCheckMessageHandlers.get(
       WebAiApiCheckMessageTypes.CancelRunProbe,

@@ -6,6 +6,7 @@ import {
   Globe,
   Image,
   List,
+  MessageCircleQuestionMark,
   MessageSquareText,
   Palette,
   ScanText,
@@ -23,12 +24,14 @@ import {
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
 import { NEEDLE_TEST_ID } from "~/services/verification/modelQuality/needleConstants"
+import { QUESTION_ANSWER_TEST_ID } from "~/services/verification/modelQuality/questionAnswer"
 
 export type VerificationTestId =
   | ApiVerificationProbeId
   | typeof PELICAN_PROMPT_ID
   | typeof CONTEXT_CAPACITY_TEST_ID
   | typeof NEEDLE_TEST_ID
+  | typeof QUESTION_ANSWER_TEST_ID
 
 const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
   [API_VERIFICATION_PROBE_IDS.Models]: List,
@@ -44,6 +47,7 @@ const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
   [PELICAN_PROMPT_ID]: Palette,
   [CONTEXT_CAPACITY_TEST_ID]: ScanText,
   [NEEDLE_TEST_ID]: Search,
+  [QUESTION_ANSWER_TEST_ID]: MessageCircleQuestionMark,
 }
 
 /** Consistent decorative test icons without changing translated labels. */

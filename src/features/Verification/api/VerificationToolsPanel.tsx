@@ -1,6 +1,7 @@
 import { ContextCapacityPanel } from "./ContextCapacityPanel"
 import { NeedlePanel } from "./NeedlePanel"
 import { PelicanPanel } from "./PelicanPanel"
+import { QuestionAnswerPanel } from "./QuestionAnswerPanel"
 import type { VerificationToolsController } from "./useVerificationTools"
 
 export type VerificationToolsPanelProps = {
@@ -13,6 +14,9 @@ export function VerificationToolsPanel({
 }: VerificationToolsPanelProps) {
   return (
     <>
+      {controller.questionAnswer ? (
+        <QuestionAnswerPanel controller={controller.questionAnswer} />
+      ) : null}
       <PelicanPanel controller={controller} />
       {controller.needle && controller.contextCapacity ? (
         <NeedlePanel

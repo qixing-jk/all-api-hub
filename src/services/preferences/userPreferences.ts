@@ -4,6 +4,7 @@ import {
   createDefaultSortingPriorityConfig,
   DEFAULT_SORTING_PRIORITY_CONFIG,
 } from "~/services/preferences/utils/sortingPriority"
+import type { QuestionAnswerSettings } from "~/services/verification/modelQuality/questionAnswer"
 import {
   matchesSitePattern,
   resolveWebAiApiCheckSiteAccess,
@@ -60,6 +61,13 @@ import {
 
 /** Domain preference commands share store-owned transaction and metadata rules. */
 class UserPreferencesService extends PreferencesStore {
+  /** Patch only edited question fields under the existing preference write lock. */
+  async updateQuestionAnswerTest(
+    updates: Partial<QuestionAnswerSettings>,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferencesWithResult({ questionAnswerTest: updates })
+  }
+
   /**
    * Update active tab preference.
    */

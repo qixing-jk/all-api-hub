@@ -16,6 +16,7 @@ type DrawingRequest = {
 export function createDrawingServer(options?: {
   contextOutcome?: "timeout" | "empty"
   beforeRespond?: (request: DrawingRequest) => Promise<void>
+  textResponse?: (request: DrawingRequest) => string | undefined
 }) {
   const prompts: string[] = []
   const requests: DrawingRequest[] = []
@@ -61,7 +62,8 @@ export function createDrawingServer(options?: {
           }
         : null
     const text =
-      options && prompts.at(-1) === "Reply with exactly: OK"
+      options?.textResponse?.(body) ??
+      (options && prompts.at(-1) === "Reply with exactly: OK"
         ? "OK"
         : contextTest && options?.contextOutcome === "empty"
           ? ""
@@ -69,7 +71,7 @@ export function createDrawingServer(options?: {
             ? null
             : agent
               ? "Created pelican.svg."
-              : PELICAN_SVG
+              : PELICAN_SVG)
     const finish = call ? "tool_calls" : "stop"
     if (body.stream) {
       const chunk = (

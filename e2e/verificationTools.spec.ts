@@ -8,6 +8,8 @@ import {
   API_CREDENTIAL_PROFILES_TEST_IDS as IDS,
 } from "~/features/ApiCredentialProfiles/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import enVerification from "~/locales/en/aiApiVerification.json" with { type: "json" }
+import zhVerification from "~/locales/zh-CN/aiApiVerification.json" with { type: "json" }
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -28,6 +30,462 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { createDrawingServer } from "~~/e2e/utils/verificationDrawingServer"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
+
+for (const source of ["profile", "account"] as const) {
+  test(`on-demand Q&A uses the ${source} connection without changing routine results`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const fixture = createDrawingServer({
+      textResponse: () => "FINAL_ANSWER: 21",
+    })
+    await new Promise<void>((resolve) =>
+      fixture.server.listen(0, "127.0.0.1", resolve),
+    )
+    const baseUrl = `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`
+    try {
+      await stubLlmMetadataIndex(context)
+      await forceExtensionLanguage(page, "en")
+      const worker = await getServiceWorker(context)
+      if (source === "profile") {
+        await seedApiCredentialProfiles(worker, [
+          createStoredApiCredentialProfile({
+            id: "qa-profile",
+            name: "Q&A fixture",
+            apiType: "openai-compatible",
+            baseUrl,
+            apiKey: "synthetic-key",
+            telemetryConfig: { mode: "disabled" },
+          }),
+        ])
+      } else {
+        await stubNewApiSiteRoutes(context, {
+          baseUrl,
+          models: ["gpt-quality"],
+          initialTokens: [buildNewApiToken({ key: "synthetic-key" })],
+        })
+        await seedStoredAccounts(worker, [
+          createStoredAccount({ site_url: baseUrl }),
+        ])
+        await context.route(`${baseUrl}/v1/chat/completions`, (route) =>
+          route.continue(),
+        )
+      }
+      await page.emulateMedia({ reducedMotion: "reduce" })
+      await page.setViewportSize({ width: 1280, height: 960 })
+      await page.goto(
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}${source === "account" ? "?accountId=e2e-account-1" : ""}#${source === "profile" ? MENU_ITEM_IDS.API_CREDENTIAL_PROFILES : MENU_ITEM_IDS.MODELS}`,
+      )
+      await waitForExtensionRoot(page)
+      await page
+        .getByTestId(
+          source === "profile"
+            ? IDS.verifyButton
+            : MODEL_LIST_TEST_IDS.verifyApiButton,
+        )
+        .first()
+        .click()
+      const panel = page.getByRole("region", { name: "Q&A test", exact: true })
+      await panel.getByRole("button", { name: "Q&A test", exact: true }).click()
+      await expect(
+        page.getByRole("region", { name: "Routine tests", exact: true }),
+      ).not.toContainText("Q&A test")
+      const questionInput = panel.getByRole("textbox", {
+        name: "Question",
+        exact: true,
+      })
+      await expect(questionInput).toBeVisible()
+      // Explicit line breaks keep overflow independent of platform font metrics.
+      const defaultQuestion = await questionInput.inputValue()
+      await questionInput.fill(
+        Array.from(
+          { length: 20 },
+          (_, index) => `Question line ${index + 1}`,
+        ).join("\n"),
+      )
+      expect(
+        await questionInput.evaluate((element) => element.clientHeight),
+      ).toBeLessThanOrEqual(128)
+      expect(
+        await questionInput.evaluate((element) => element.scrollHeight),
+      ).toBeGreaterThan(128)
+      await questionInput.fill(defaultQuestion)
+      await expect(
+        panel.getByRole("button", { name: "Question", exact: true }),
+      ).toHaveCount(0)
+      await expect(panel.getByRole("combobox")).toHaveCount(0)
+      if (source === "profile") {
+        const drawing = page.getByRole("region", {
+          name: "Drawing test",
+          exact: true,
+        })
+        await drawing
+          .getByRole("button", { name: "Drawing test", exact: true })
+          .click()
+        const drawingSettings = await drawing
+          .getByRole("group", { name: "Test settings", exact: true })
+          .boundingBox()
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("drawing-settings-reference.png"),
+          animations: "disabled",
+        })
+        await panel
+          .getByRole("button", { name: "Q&A test", exact: true })
+          .click()
+        const settings = panel.getByRole("group", {
+          name: "Test settings",
+          exact: true,
+        })
+        const questionSettings = await settings.boundingBox()
+        const reference = await settings
+          .getByRole("textbox", { name: "Reference answer (optional)" })
+          .boundingBox()
+        const question = await questionInput.boundingBox()
+        expect(Math.abs(questionSettings!.x - drawingSettings!.x)).toBeLessThan(
+          2,
+        )
+        expect(
+          Math.abs(questionSettings!.width - drawingSettings!.width),
+        ).toBeLessThan(2)
+        expect(Math.abs(reference!.x - question!.x)).toBeLessThan(2)
+        expect(reference!.height).toBeLessThanOrEqual(40)
+        await writeFile(
+          test.info().outputPath("settings-geometry.json"),
+          JSON.stringify(
+            { drawingSettings, questionSettings, reference, question },
+            null,
+            2,
+          ),
+        )
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("qa-profile-idle.png"),
+          animations: "disabled",
+        })
+      }
+      await expect(
+        panel.getByRole("textbox", { name: "Question", exact: true }),
+      ).toContainText("黑色")
+      await panel
+        .getByRole("button", { name: "Run Q&A test", exact: true })
+        .click()
+      await expect(
+        panel.getByText("Matches reference", { exact: true }).first(),
+      ).toBeVisible()
+      expect(fixture.requests).toHaveLength(1)
+      expect(fixture.requests[0]!.stream).toBe(true)
+      const comparison = panel.getByRole("group", { name: "Answer comparison" })
+      await expect(comparison.getByRole("definition")).toHaveText(["21", "21"])
+      expect(JSON.stringify(fixture.requests[0])).not.toContain('"21"')
+      await expect(
+        page
+          .getByTestId("verification-header")
+          .getByText("Not tested", { exact: true }),
+      ).toBeVisible()
+      if (source === "profile") {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("qa-profile-result.png"),
+          animations: "disabled",
+        })
+        await page.evaluate(() =>
+          document.documentElement.classList.add("dark"),
+        )
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("qa-profile-dark.png"),
+          animations: "disabled",
+        })
+        await page.evaluate(() =>
+          document.documentElement.classList.remove("dark"),
+        )
+        await page.setViewportSize({ width: 420, height: 900 })
+        await comparison.scrollIntoViewIfNeeded()
+        expect(
+          await comparison.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth,
+          ),
+        ).toBe(true)
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("qa-profile-comparison-narrow.png"),
+          animations: "disabled",
+        })
+        await page.setViewportSize({ width: 1280, height: 960 })
+        await panel
+          .getByRole("textbox", { name: "Question", exact: true })
+          .fill("Explain a rainbow.")
+        await panel
+          .getByRole("textbox", { name: "Reference answer (optional)" })
+          .fill("Private reference for the reviewer")
+        await expect(
+          panel
+            .getByRole("status")
+            .filter({ hasText: "The question or reference has changed." }),
+        ).toBeVisible()
+        await expect(comparison.getByRole("definition")).toHaveText([
+          "21",
+          "21",
+        ])
+        await panel
+          .getByRole("button", { name: "Run Q&A test", exact: true })
+          .click()
+        await expect(
+          panel.getByText("Does not match reference", { exact: true }).first(),
+        ).toBeVisible()
+        expect(JSON.stringify(fixture.requests.at(-1))).not.toContain(
+          "Private reference",
+        )
+        await panel
+          .getByRole("textbox", { name: "Reference answer (optional)" })
+          .fill("")
+        await panel
+          .getByRole("button", { name: "Run Q&A test", exact: true })
+          .click()
+        await expect(
+          panel.getByText("Response received", { exact: true }).first(),
+        ).toBeVisible()
+        expect(fixture.requests.at(-1)!.messages).toEqual([
+          { role: "user", content: "Explain a rainbow." },
+        ])
+        await expect
+          .poll(
+            async () =>
+              (await getStoredUserPreferences(worker)).questionAnswerTest,
+          )
+          .toMatchObject({ question: "Explain a rainbow." })
+        await page.setViewportSize({ width: 420, height: 900 })
+        await panel.scrollIntoViewIfNeeded()
+        expect(
+          await panel.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth,
+          ),
+        ).toBe(true)
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("qa-profile-narrow.png"),
+          animations: "disabled",
+        })
+        await panel
+          .getByRole("button", {
+            name: "Reset question and answer",
+            exact: true,
+          })
+          .click()
+        await expect(questionInput).toContainText("黑色")
+        await expect(
+          panel.getByRole("textbox", { name: "Reference answer (optional)" }),
+        ).toHaveValue("21")
+        await expect
+          .poll(
+            async () =>
+              (await getStoredUserPreferences(worker)).questionAnswerTest,
+          )
+          .toMatchObject({
+            referenceAnswer: "21",
+            question: expect.stringContaining("黑色"),
+          })
+      }
+    } finally {
+      fixture.server.closeAllConnections()
+      await new Promise<void>((resolve) =>
+        fixture.server.close(() => resolve()),
+      )
+    }
+  })
+}
+
+test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const fixture = createDrawingServer({
+    textResponse: () =>
+      "计算九乘九，可以将九个九相加。\n\n9 × 9 = 81，因此最终答案是 81。\n\nFINAL_ANSWER: 81",
+  })
+  await new Promise<void>((resolve) =>
+    fixture.server.listen(0, "127.0.0.1", resolve),
+  )
+  const baseUrl = `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`
+  try {
+    await stubLlmMetadataIndex(context)
+    await forceExtensionLanguage(page, "zh-CN")
+    await seedApiCredentialProfiles(await getServiceWorker(context), [
+      createStoredApiCredentialProfile({
+        id: "qa-zh",
+        name: "问答测试",
+        apiType: "openai-compatible",
+        baseUrl,
+        apiKey: "synthetic-key",
+        telemetryConfig: { mode: "disabled" },
+      }),
+    ])
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+    )
+    await waitForExtensionRoot(page)
+    await page.getByTestId(IDS.verifyButton).first().click()
+    const panel = page.getByRole("region", { name: "问答测试", exact: true })
+    await panel.getByRole("button", { name: "问答测试", exact: true }).click()
+    await expect(
+      panel.getByRole("textbox", { name: "问题", exact: true }),
+    ).not.toHaveAttribute("aria-describedby", /.+/)
+    const rules = panel.getByRole("button", { name: "比对规则", exact: true })
+    await expect(rules).toHaveAttribute("aria-expanded", "false")
+    await expect(
+      panel.getByText(
+        zhVerification.verifyDialog.tools.questionAnswer.description,
+        { exact: true },
+      ),
+    ).toBeVisible()
+    await expect(panel.getByRole("list", { name: "测试步骤" })).toHaveCount(0)
+    await expect(panel.getByRole("combobox")).toHaveCount(0)
+    await page.locator('[data-slot="modal-panel"]').screenshot({
+      path: test.info().outputPath("qa-zh-idle.png"),
+      animations: "disabled",
+    })
+    await panel
+      .getByRole("group", { name: "测试设置", exact: true })
+      .screenshot({
+        path: test.info().outputPath("qa-zh-settings.png"),
+        animations: "disabled",
+      })
+    for (const width of [1280, 420]) {
+      await page.setViewportSize({ width, height: 1000 })
+      const settings = panel.getByRole("group", {
+        name: "测试设置",
+        exact: true,
+      })
+      const input = settings.getByRole("textbox", {
+        name: "参考答案（选填）",
+        exact: true,
+      })
+      await expect(input).not.toHaveAttribute("aria-describedby", /.+/)
+      const fieldBox = await input.boundingBox()
+      const rulesBox = await rules.boundingBox()
+      expect(rulesBox!.y).toBeGreaterThanOrEqual(fieldBox!.y + fieldBox!.height)
+      expect(Math.abs(rulesBox!.x - fieldBox!.x)).toBeLessThan(2)
+      await rules.click()
+      await expect(rules).toHaveAttribute("aria-expanded", "true")
+      await expect(
+        settings.getByText(/２１ 能匹配 21，21个 不能匹配 21/),
+      ).toBeVisible()
+      await expect(
+        settings.getByText("参考答案仅在本地使用，不发送给模型。", {
+          exact: true,
+        }),
+      ).toBeVisible()
+      await settings.scrollIntoViewIfNeeded()
+      await settings.screenshot({
+        path: test.info().outputPath(`qa-zh-rules-${width}.png`),
+        animations: "disabled",
+      })
+      expect(
+        await settings.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true)
+      await rules.click()
+      if (width === 420) {
+        await settings.scrollIntoViewIfNeeded()
+        await settings.screenshot({
+          path: test.info().outputPath("qa-zh-settings-narrow.png"),
+          animations: "disabled",
+        })
+      }
+    }
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await panel
+      .getByRole("textbox", { name: "问题", exact: true })
+      .fill("九乘九等于多少？")
+    await panel
+      .getByRole("textbox", { name: "参考答案（选填）", exact: true })
+      .fill("81")
+    await expect(
+      panel.getByRole("button", { name: "重置题目与参考答案", exact: true }),
+    ).toBeVisible()
+    await page.locator('[data-slot="modal-panel"]').screenshot({
+      path: test.info().outputPath("qa-zh-edit.png"),
+      animations: "disabled",
+    })
+    await panel
+      .getByRole("button", { name: "运行问答测试", exact: true })
+      .click()
+    await expect(
+      panel.getByText("与参考答案一致", { exact: true }).first(),
+    ).toBeVisible()
+    expect(fixture.requests).toHaveLength(1)
+    await page.locator('[data-slot="modal-panel"]').screenshot({
+      path: test.info().outputPath("qa-zh-result.png"),
+      animations: "disabled",
+    })
+    await panel
+      .getByRole("button", { name: "本次使用的问题", exact: true })
+      .click()
+    const result = panel.getByRole("region", { name: "执行结果", exact: true })
+    const response = result.locator("pre")
+    const runQuestion = result.getByText("九乘九等于多少？", { exact: true })
+    await expect(runQuestion).toBeVisible()
+    const typography = []
+    for (const font of ["sans", "serif"] as const) {
+      await page.evaluate((value) => {
+        document.documentElement.dataset.themeFont = value
+      }, font)
+      const styles = []
+      for (const text of [response, runQuestion]) {
+        styles.push(
+          await text.evaluate((element) => {
+            const style = getComputedStyle(element)
+            return {
+              fontFamily: style.fontFamily,
+              fontSize: style.fontSize,
+              fontWeight: style.fontWeight,
+              lineHeight: style.lineHeight,
+              letterSpacing: style.letterSpacing,
+            }
+          }),
+        )
+      }
+      typography.push({ font, response: styles[0], question: styles[1] })
+      await result.screenshot({
+        path: test.info().outputPath(`qa-zh-typography-${font}.png`),
+        animations: "disabled",
+      })
+    }
+    await writeFile(
+      test.info().outputPath("qa-typography.json"),
+      JSON.stringify(typography, null, 2),
+    )
+    for (const measured of typography) {
+      expect(
+        measured.response,
+        `Q&A typography with ${measured.font} appearance`,
+      ).toEqual(measured.question)
+    }
+    await panel.getByRole("textbox", { name: "问题", exact: true }).fill(" ")
+    await expect(
+      panel.getByRole("textbox", { name: "问题", exact: true }),
+    ).toHaveAttribute("aria-invalid", "true")
+    await expect(
+      panel.getByText("请填写问题后再运行测试。", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      panel.getByRole("button", { name: "运行问答测试", exact: true }),
+    ).toBeDisabled()
+    await expect(
+      panel.getByRole("status").filter({ hasText: "问题或参考答案已修改。" }),
+    ).toBeVisible()
+    await expect(
+      panel.getByRole("group", { name: "答案对照" }).getByRole("definition"),
+    ).toHaveText(["81", "81"])
+    await page.locator('[data-slot="modal-panel"]').screenshot({
+      path: test.info().outputPath("qa-zh-stale-and-empty.png"),
+      animations: "disabled",
+    })
+  } finally {
+    fixture.server.closeAllConnections()
+    await new Promise<void>((resolve) => fixture.server.close(() => resolve()))
+  }
+})
 
 test("verification tests run concurrently and cancel independently", async ({
   context,
@@ -139,6 +597,20 @@ test("verification tests run concurrently and cancel independently", async ({
     await expect(onDemand).toContainText("Drawing test")
     await expect(onDemand).toContainText("Model context test")
     await expect(
+      onDemand.getByText("Run individually", { exact: true }),
+    ).toHaveCount(0)
+    const pendingStatusEdges = await page
+      .locator(
+        "[data-verification-list] [data-verification-summary] [data-slot=badge]",
+      )
+      .evaluateAll((badges) =>
+        badges.map((badge) => badge.getBoundingClientRect().right),
+      )
+    expect(pendingStatusEdges).toHaveLength(9)
+    expect(
+      Math.max(...pendingStatusEdges) - Math.min(...pendingStatusEdges),
+    ).toBeLessThanOrEqual(1)
+    await expect(
       page.getByRole("button", { name: "Run routine tests", exact: true }),
     ).toBeEnabled()
     const toolBox = (await page
@@ -180,20 +652,23 @@ test("verification tests run concurrently and cancel independently", async ({
       views: [{ id: "dark", width: 1280, height: 900, theme: "dark" }],
     })
     const drawing = page.getByTestId("verification-tools-panel")
-    for (const [name, steps] of [
-      ["Model list", ["Fetch list", "Inspect models", "Suggest model"]],
-      ["Text generation", ["Send prompt", "Receive text", "Check reply"]],
+    for (const [name, description] of [
+      ["Model list", enVerification.verifyDialog.intro.probes.models],
+      [
+        "Text generation",
+        enVerification.verifyDialog.intro.probes["text-generation"],
+      ],
       [
         "Tool/function calling",
-        ["Define tool", "Request call", "Check arguments"],
+        enVerification.verifyDialog.intro.probes["tool-calling"],
       ],
-      ["Structured output", ["Set schema", "Generate JSON", "Validate format"]],
-      ["Web search", ["Run search", "Check search evidence", "View citations"]],
-      ["Drawing test", ["Describe scene", "Generate SVG", "Review drawing"]],
       [
-        "Model context test",
-        ["Build long input", "Run probes", "Record bounds"],
+        "Structured output",
+        enVerification.verifyDialog.intro.probes["structured-output"],
       ],
+      ["Web search", enVerification.verifyDialog.intro.probes["web-search"]],
+      ["Drawing test", enVerification.verifyDialog.tools.pelican.description],
+      ["Model context test", enVerification.verifyDialog.tools.context.hint],
     ] as const) {
       await page.getByRole("button", { name, exact: true }).click()
       await captureVisualViews({
@@ -205,23 +680,17 @@ test("verification tests run concurrently and cancel independently", async ({
       const selectedDetail = page.locator(
         "[data-verification-detail]:not([hidden])",
       )
-      const flow = selectedDetail.getByRole("list", { name: "Test steps" })
-      await expect(flow).toBeVisible()
-      await expect(flow.getByRole("listitem")).toHaveText([...steps])
-      const cardHeights = await flow
-        .getByRole("listitem")
-        .evaluateAll((items) =>
-          items.map((item) => item.getBoundingClientRect().height),
-        )
-      expect(
-        Math.max(...cardHeights) - Math.min(...cardHeights),
-      ).toBeLessThanOrEqual(1)
+      const explanation = selectedDetail.getByText(description, { exact: true })
+      await expect(explanation).toBeVisible()
+      await expect(
+        selectedDetail.getByRole("list", { name: "Test steps" }),
+      ).toHaveCount(0)
       const title = selectedDetail.getByRole("heading", { name, exact: true })
       await expect(title).toHaveCount(1)
       await expect(title).toHaveCSS("text-align", "center")
       const titleBox = (await title.boundingBox())!
-      const processBox = (await flow.boundingBox())!
-      expect(titleBox.y + titleBox.height).toBeLessThan(processBox.y)
+      const descriptionBox = (await explanation.boundingBox())!
+      expect(titleBox.y + titleBox.height).toBeLessThan(descriptionBox.y)
       const detailBox = (await selectedDetail.boundingBox())!
       expect(
         Math.abs(
@@ -957,27 +1426,15 @@ test("an edited probe prompt persists and is used by the next run", async ({
       id: "prompt-auto-wide",
       extensionDir,
     })
-    const introFlow = textGenerationRow.getByRole("list", {
-      name: "Test steps",
-    })
-    const measureFlow = () =>
-      introFlow.evaluate((element) => {
-        const card = element.querySelector('[role="listitem"]')!
-        const icon = card.querySelector("svg")!.getBoundingClientRect()
-        const label = card.querySelector("span")!.getBoundingClientRect()
-        const box = card.getBoundingClientRect()
-        return {
-          width: element.getBoundingClientRect().width,
-          cardWidth: box.width,
-          cardHeight: box.height,
-          iconWidth: icon.width,
-          iconHeight: icon.height,
-          labelHeight: label.height,
-          gap: label.y - icon.bottom,
-        }
-      })
-    await expect.poll(async () => (await measureFlow()).width).toBeLessThan(460)
-    const compactFlow = await measureFlow()
+    const explanation = textGenerationRow.getByText(
+      enVerification.verifyDialog.intro.probes["text-generation"],
+      { exact: true },
+    )
+    await expect(explanation).toBeVisible()
+    await expect
+      .poll(async () => (await explanation.boundingBox())!.width)
+      .toBeLessThan(460)
+    const compactExplanation = (await explanation.boundingBox())!
     const title = textGenerationRow.getByRole("heading", {
       name: "Text generation",
       exact: true,
@@ -988,7 +1445,7 @@ test("an edited probe prompt persists and is used by the next run", async ({
     expect(settingsBox.y + settingsBox.height).toBeLessThan(compactTitle.y)
     await page.setViewportSize({ width: 1280, height: 1280 })
     await expect
-      .poll(async () => (await measureFlow()).width)
+      .poll(async () => (await explanation.boundingBox())!.width)
       .toBeGreaterThanOrEqual(480)
     await captureVisualViews({
       page,
@@ -996,12 +1453,15 @@ test("an edited probe prompt persists and is used by the next run", async ({
       id: "prompt-roomy-introduction",
       extensionDir,
     })
-    const scaledFlow = await measureFlow()
-    for (const key of Object.keys(
-      compactFlow,
-    ) as (keyof typeof compactFlow)[]) {
-      expect(scaledFlow[key]).toBeCloseTo(compactFlow[key] * 1.1, 0)
-    }
+    const scaledExplanation = (await explanation.boundingBox())!
+    expect(scaledExplanation.width).toBeCloseTo(
+      compactExplanation.width * 1.1,
+      0,
+    )
+    expect(scaledExplanation.height).toBeCloseTo(
+      compactExplanation.height * 1.1,
+      0,
+    )
     const introTitle = (await title.boundingBox())!
     expect(introTitle.height).toBeCloseTo(compactTitle.height * 1.1, 0)
     const hint = textGenerationRow.getByText("Select Run to start this test.", {
@@ -1013,7 +1473,7 @@ test("an edited probe prompt persists and is used by the next run", async ({
       .boundingBox())!
     // The small button stays within a single line of surrounding prose.
     expect(introHint.height).toBeGreaterThanOrEqual(hintButton.height)
-    expect(introHint.height).toBeLessThan(compactFlow.labelHeight * 1.1 * 2)
+    expect(introHint.height).toBeLessThan(40)
     expect(hintButton.y).toBeGreaterThanOrEqual(introHint.y)
     expect(hintButton.y + hintButton.height).toBeLessThanOrEqual(
       introHint.y + introHint.height + 1,
@@ -1057,7 +1517,7 @@ test("an edited probe prompt persists and is used by the next run", async ({
         expect(detail.y).toBeGreaterThanOrEqual(summary.y + summary.height)
         const introduction = (await textGenerationRow
           .getByText(
-            "Send a prompt, check text generation and inspect the returned content.",
+            enVerification.verifyDialog.intro.probes["text-generation"],
             { exact: true },
           )
           .boundingBox())!

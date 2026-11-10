@@ -33,6 +33,7 @@ import { CONTEXT_CAPACITY_DEFAULTS } from "~/services/verification/modelQuality/
 import { getModelContextInfo } from "~/services/verification/modelQuality/contextTokens"
 import type { NeedleRunControls } from "~/services/verification/modelQuality/needleRun"
 import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
+import { runQuestionAnswerTest } from "~/services/verification/modelQuality/questionAnswer"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import { needleHistory } from "~/services/verification/verificationResultHistory/needleHistory"
 import { webAiApiCheckBaseUrlHistoryStorage } from "~/services/verification/webAiApiCheck/baseUrlHistory"
@@ -73,6 +74,8 @@ import type {
   ApiCheckGetBaseUrlHistorySuggestionsResponse,
   ApiCheckListTagsRequest,
   ApiCheckListTagsResponse,
+  ApiCheckQuestionAnswerRequest,
+  ApiCheckQuestionAnswerResponse,
   ApiCheckRecordBaseUrlHistoryRequest,
   ApiCheckRecordBaseUrlHistoryResponse,
   ApiCheckRemoveBaseUrlHistoryRequest,
@@ -100,6 +103,71 @@ const logger = createLogger("WebAiApiCheck")
 
 const probeRuns = createApiCheckProbeRunRegistry()
 const needleRunControls = new Map<string, NeedleRunControls>()
+
+/** Validate optional custom headers consistently for webpage verification tools. */
+function hasValidRequestHeaders(headers: unknown): boolean {
+  return (
+    headers === undefined ||
+    Boolean(
+      headers &&
+        typeof headers === "object" &&
+        !Array.isArray(headers) &&
+        Object.entries(headers).every(
+          ([name, value]) =>
+            typeof value === "string" &&
+            Boolean(name.trim()) &&
+            !/[\r\n]/.test(name + value),
+        ),
+    )
+  )
+}
+
+/** Run on-demand questions for webpage callers using the existing cancellation registry. */
+export async function resolveWebAiApiCheckQuestionAnswerMessage(
+  request: ApiCheckQuestionAnswerRequest,
+  ownerTabId?: number,
+): Promise<ApiCheckQuestionAnswerResponse> {
+  if (
+    !Object.values(API_TYPES).includes(request.apiType) ||
+    typeof request.runId !== "string" ||
+    !request.runId.trim() ||
+    typeof request.apiKey !== "string" ||
+    !request.apiKey.trim() ||
+    typeof request.modelId !== "string" ||
+    !request.modelId.trim() ||
+    typeof request.baseUrl !== "string" ||
+    typeof request.question !== "string" ||
+    !request.question.trim() ||
+    typeof request.referenceAnswer !== "string" ||
+    (request.mode !== undefined &&
+      !Object.values(API_VERIFICATION_MODES).includes(request.mode)) ||
+    (request.requestProfile !== undefined &&
+      !isVerificationRequestProfile(request.requestProfile))
+  ) {
+    return { success: false, error: "Invalid question test request" }
+  }
+  const baseUrl = normalizeProbeBaseUrl(request)
+  if (!baseUrl) return { success: false, error: "Invalid baseUrl" }
+  if (!hasValidRequestHeaders(request.requestHeaders))
+    return { success: false, error: "Invalid request headers" }
+  try {
+    const result = await probeRuns.run(
+      request.runId,
+      (abortSignal) =>
+        runQuestionAnswerTest({ ...request, baseUrl, abortSignal }),
+      ownerTabId,
+    )
+    return { success: true, result }
+  } catch (error) {
+    return {
+      success: false,
+      error: toSanitizedErrorSummary(error, [
+        request.apiKey,
+        ...Object.values(request.requestHeaders ?? {}),
+      ]),
+    }
+  }
+}
 
 /** Keep request fingerprinting and persistence in the secure extension context. */
 async function resolveContextHistory({
@@ -688,18 +756,7 @@ async function resolveNeedleRun(
     return { success: false, error: "Invalid request profile" }
   const baseUrl = toVersionedProtocolMount(apiType, request.baseUrl)
   if (!baseUrl) return { success: false, error: "Invalid base URL" }
-  if (
-    request.requestHeaders !== undefined &&
-    (!request.requestHeaders ||
-      typeof request.requestHeaders !== "object" ||
-      Array.isArray(request.requestHeaders) ||
-      Object.entries(request.requestHeaders).some(
-        ([name, value]) =>
-          typeof value !== "string" ||
-          !name.trim() ||
-          /[\r\n]/.test(name + value),
-      ))
-  )
+  if (!hasValidRequestHeaders(request.requestHeaders))
     return { success: false, error: "Invalid request headers" }
   let controls: NeedleRunControls | undefined
   try {
@@ -1019,6 +1076,11 @@ export function setupWebAiApiCheckMessagingListeners() {
       WebAiApiCheckMessageTypes.RunPelican,
       async ({ data, sender }) =>
         resolveWebAiApiCheckRunPelicanMessage(data, sender?.tab?.id),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RunQuestionAnswer,
+      async ({ data, sender }) =>
+        resolveWebAiApiCheckQuestionAnswerMessage(data, sender?.tab?.id),
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.ContextCounter,

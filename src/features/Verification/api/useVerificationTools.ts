@@ -21,6 +21,7 @@ import {
   type PelicanExecutionMode,
   type PelicanTestResult,
 } from "~/services/verification/modelQuality/pelican"
+import type { runQuestionAnswerTest } from "~/services/verification/modelQuality/questionAnswer"
 import { PELICAN_PROMPT_ID } from "~/services/verification/promptOverrides"
 import {
   serializeVerificationHistoryTarget,
@@ -43,6 +44,10 @@ import {
   type NeedleController,
   type NeedleRunner,
 } from "./useNeedleTest"
+import {
+  useQuestionAnswerTest,
+  type QuestionAnswerController,
+} from "./useQuestionAnswerTest"
 import { useVerificationPrompts } from "./useVerificationPrompts"
 
 export const VERIFICATION_TOOL_STATUSES = {
@@ -71,6 +76,7 @@ export type VerificationToolRequestParams = {
 }
 
 export type VerificationToolsController = {
+  questionAnswer?: QuestionAnswerController
   needle?: NeedleController
   contextCapacity?: ContextCapacityController
   /** At least one shared verification tool is in flight. */
@@ -99,6 +105,7 @@ export type PelicanRunner = (
 ) => Promise<PelicanTestResult>
 
 export type UseVerificationToolsOptions = {
+  runQuestionAnswerRequest?: typeof runQuestionAnswerTest
   modelId?: string
   runNeedleRequest?: NeedleRunner
   loadNeedleCounter?: typeof getModelContextInfo
@@ -182,6 +189,7 @@ export function useVerificationTools({
   loadNeedleCounter,
   needleHistoryAccess,
   discardNeedleCheckpoints = discardNeedleCheckpointsInBackground,
+  runQuestionAnswerRequest,
 }: UseVerificationToolsOptions): VerificationToolsController {
   const [pelicanSummary, setPelicanSummary] =
     useState<DrawingVerificationSummary | null>(null)
@@ -246,6 +254,13 @@ export function useVerificationTools({
   )
 
   const isPelicanRunning = pelicanStatus === VERIFICATION_TOOL_STATUSES.Running
+  const questionAnswer = useQuestionAnswerTest({
+    contextKey: `${historyKey}:${historyApiType}:${contextCapacityKey}`,
+    enabled: isSupported,
+    blocked: isBlocked,
+    resolveRequest,
+    runner: runQuestionAnswerRequest,
+  })
   const contextCapacity = useContextCapacity({
     enabled: enableContextCapacity && isSupported,
     blocked: isBlocked,
@@ -421,7 +436,12 @@ export function useVerificationTools({
         setPelicanErrorMessage(null)
         setPelicanStatus(VERIFICATION_TOOL_STATUSES.Idle)
       },
-      isRunning: isPelicanRunning || contextCapacity.running || needle.running,
+      questionAnswer: isSupported ? questionAnswer : undefined,
+      isRunning:
+        isPelicanRunning ||
+        contextCapacity.running ||
+        needle.running ||
+        questionAnswer.running,
       needle: enableContextCapacity && isSupported ? needle : undefined,
       contextCapacity: {
         ...contextCapacity,
@@ -456,6 +476,7 @@ export function useVerificationTools({
       enableContextCapacity,
       isSupported,
       historyTarget,
+      questionAnswer,
     ],
   )
 }

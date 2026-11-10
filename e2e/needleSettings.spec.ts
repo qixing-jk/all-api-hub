@@ -195,12 +195,14 @@ for (const [language, resource] of [
           Math.abs(previewBox.width - settingsBox.width),
         ).toBeLessThanOrEqual(1)
         if (view === "tall") {
-          const flow = panel.getByRole("list", {
-            name: resource.verifyDialog.intro.flow,
+          const description = panel.getByText(labels.description, {
+            exact: true,
           })
-          await expect(flow).toBeVisible()
-          const flowBox = (await flow.boundingBox())!
-          expect(flowBox.y).toBeGreaterThan(previewBox.y + previewBox.height)
+          await expect(description).toBeVisible()
+          const descriptionBox = (await description.boundingBox())!
+          expect(descriptionBox.y).toBeGreaterThan(
+            previewBox.y + previewBox.height,
+          )
         } else if (view === "narrow") {
           const description = panel.getByText(labels.description, {
             exact: true,
@@ -404,17 +406,23 @@ for (const [language, resource] of [
         await page.evaluate(() =>
           document.documentElement.classList.remove("dark"),
         )
-        for (const [name, id] of [
-          [resource.verifyDialog.tools.context.title, "context"],
-          [resource.verifyDialog.tools.pelican.title, "drawing"],
-          [labels.title, "needle"],
+        for (const [name, id, description] of [
+          [
+            resource.verifyDialog.tools.context.title,
+            "context",
+            resource.verifyDialog.tools.context.hint,
+          ],
+          [
+            resource.verifyDialog.tools.pelican.title,
+            "drawing",
+            resource.verifyDialog.tools.pelican.description,
+          ],
+          [labels.title, "needle", labels.description],
         ] as const) {
           const sibling = page.getByRole("region", { name, exact: true })
           await sibling.getByRole("button", { name, exact: true }).click()
           await expect(
-            sibling.getByRole("list", {
-              name: resource.verifyDialog.intro.flow,
-            }),
+            sibling.getByText(description, { exact: true }),
           ).toBeVisible()
           if (id === "drawing") {
             const settings = sibling.getByRole("group", {

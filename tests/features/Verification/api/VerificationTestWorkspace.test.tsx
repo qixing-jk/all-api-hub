@@ -105,62 +105,28 @@ describe("Verification test workspace", () => {
     },
   )
 
-  it.each([
-    [API_VERIFICATION_PROBE_IDS.Models, ["获取列表", "检查模型", "建议模型"]],
-    [
-      API_VERIFICATION_PROBE_IDS.TextGeneration,
-      ["发送提示词", "接收文本", "检查回复"],
-    ],
-    [
-      API_VERIFICATION_PROBE_IDS.ToolCalling,
-      ["定义工具", "请求调用", "检查参数"],
-    ],
-    [
-      API_VERIFICATION_PROBE_IDS.StructuredOutput,
-      ["指定结构", "生成 JSON", "校验格式"],
-    ],
-    [
-      API_VERIFICATION_PROBE_IDS.WebSearch,
-      ["发起搜索", "检查搜索证据", "查看引用"],
-    ],
-    [
-      API_VERIFICATION_PROBE_IDS.Embedding,
-      ["示例文本", "接收向量", "检查维度"],
-    ],
-    [
-      API_VERIFICATION_PROBE_IDS.Rerank,
-      ["查询与文档", "请求重排", "检查返回项"],
-    ],
-    [
-      API_VERIFICATION_PROBE_IDS.ImageGeneration,
-      ["发送提示词", "接收图像", "预览图片"],
-    ],
-    [
-      API_VERIFICATION_PROBE_IDS.VideoGeneration,
-      ["提交视频任务", "查询任务状态", "预览视频"],
-    ],
-    [API_VERIFICATION_PROBE_IDS.Decision, ["提交状态", "获取决策", "检查结果"]],
-  ] as const)("explains the actual %s steps", async (probeId, steps) => {
-    const i18n = await createResourceTestI18n(
-      { "zh-CN": { aiApiVerification: zhCN } },
-      "zh-CN",
-    )
-    render(
-      <I18nextProvider i18n={i18n}>
-        <VerificationProbeRow
-          probeId={probeId}
-          result={null}
-          runButtonProps={{ children: "运行" }}
-        />
-      </I18nextProvider>,
-    )
-    const flow = screen.getByRole("list", { name: "测试步骤" })
-    expect(
-      within(flow)
-        .getAllByRole("listitem")
-        .map((item) => item.textContent),
-    ).toEqual(steps)
-  })
+  it.each(Object.values(API_VERIFICATION_PROBE_IDS))(
+    "explains %s with its purpose instead of a generic step diagram",
+    async (probeId) => {
+      const i18n = await createResourceTestI18n(
+        { "zh-CN": { aiApiVerification: zhCN } },
+        "zh-CN",
+      )
+      render(
+        <I18nextProvider i18n={i18n}>
+          <VerificationProbeRow
+            probeId={probeId}
+            result={null}
+            runButtonProps={{ children: "运行" }}
+          />
+        </I18nextProvider>,
+      )
+      expect(screen.queryByRole("list")).not.toBeInTheDocument()
+      expect(
+        screen.getByText(zhCN.verifyDialog.intro.probes[probeId]),
+      ).toBeVisible()
+    },
+  )
 
   it("explains an idle model-list test and replaces the introduction with its result", async () => {
     const user = userEvent.setup()

@@ -112,15 +112,12 @@ export function VerificationTestSection({
             data-verification-list
             className="overscroll-y-contain [@container(min-width:52rem)]:h-full [@container(min-width:52rem)]:w-(--verification-list-width) [@container(min-width:52rem)]:overflow-y-auto"
           >
-            <div
-              data-verification-list-content
-              className="space-y-3 [@container(min-width:52rem)]:space-y-5"
-            >
+            <div data-verification-list-content className="space-y-4">
               <section
                 aria-label={t("verifyDialog.sections.routine")}
                 className="min-w-0 space-y-2"
               >
-                <Heading6 className="text-muted-foreground px-2 text-xs font-medium [@container(min-width:52rem)]:px-3">
+                <Heading6 className="text-foreground/80 px-2 text-xs font-semibold [@container(min-width:52rem)]:px-3">
                   {t("verifyDialog.sections.routine")}
                 </Heading6>
                 <div className="[@container(min-width:52rem)]:space-y-1">
@@ -129,16 +126,11 @@ export function VerificationTestSection({
               </section>
               <section
                 aria-label={t("verifyDialog.sections.onDemand")}
-                className="min-w-0 space-y-2"
+                className="border-border min-w-0 space-y-2 border-t pt-4"
               >
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-2 [@container(min-width:52rem)]:px-3">
-                  <Heading6 className="text-muted-foreground text-xs font-medium">
-                    {t("verifyDialog.sections.onDemand")}
-                  </Heading6>
-                  <span className="text-muted-foreground text-xs">
-                    {t("verifyDialog.sections.onDemandHint")}
-                  </span>
-                </div>
+                <Heading6 className="text-foreground/80 px-2 text-xs font-semibold [@container(min-width:52rem)]:px-3">
+                  {t("verifyDialog.sections.onDemand")}
+                </Heading6>
                 <div className="[@container(min-width:52rem)]:space-y-1">
                   {tools}
                 </div>

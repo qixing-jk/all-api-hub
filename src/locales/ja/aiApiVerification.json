@@ -6,7 +6,7 @@
       "manageModelKey": "モデル対応キーを開く",
       "retry": "再試行",
       "runAll": "通常テストを実行",
-      "runAllHint": "通常テストのみ実行します。描画とモデルコンテキストのテストは個別に開始してください。",
+      "runAllHint": "通常テストのみ実行します。オンデマンドテストは個別に開始してください。",
       "running": "実行中...",
       "runOne": "実行",
       "stop": "停止",
@@ -41,82 +41,19 @@
       }
     },
     "intro": {
-      "flow": "テストの手順",
       "probes": {
-        "decision": "テストリクエストを送信し、判断モデルが有効な結果を返すか確認します。",
+        "decision": "サンプルの状態を決定 API に送信し、決定値または確率が返されるか確認します。",
         "embedding": "サンプルテキストを送信し、返されたベクトルとその次元を確認します。",
         "image-generation": "画像用のプロンプトを送信し、応答を確認して生成画像をプレビューします。",
-        "models": "APIがモデル一覧を返せるか確認し、モデルの名前と件数、後続のテストで使う推奨モデルを取得します。",
+        "models": "API からモデル名と件数を取得し、以降のテストで使うモデルを選べます。",
         "rerank": "クエリと候補文書を送信し、関連度による順位を確認します。",
-        "structured-output": "指定した構造のデータをモデルに要求し、結果が形式に従っているか確認します。",
-        "text-generation": "プロンプトを送信し、テキスト生成と返された内容を確認します。",
-        "tool-calling": "モデルにツールと引数を選ばせ、ツール呼び出しを確認します。",
+        "structured-output": "ok: true を含む JSON をモデルに要求し、フィールドの値と構造を検証します。",
+        "text-generation": "モデルがプロンプトに応答できるか確認します。大文字・小文字を問わず、応答に OK が含まれれば合格です。",
+        "tool-calling": "組み込みのタイムスタンプツールの呼び出しをモデルに要求します。その呼び出しを検出すると合格です。",
         "video-generation": "動画生成タスクを送信し、状態を待って生成された動画を確認します。",
         "web-search": "APIがウェブ検索を利用できるか確認し、検索結果と引用を確認します。"
       },
-      "startHint": "<run>実行</run> を選択して、このテストを開始します。",
-      "steps": {
-        "context-capacity": {
-          "input": "長文を作成",
-          "output": "境界を記録",
-          "process": "繰り返しテスト"
-        },
-        "decision": {
-          "input": "状態を送信",
-          "output": "結果を確認",
-          "process": "判断を取得"
-        },
-        "embedding": {
-          "input": "サンプル文",
-          "output": "次元を確認",
-          "process": "ベクトル受信"
-        },
-        "image-generation": {
-          "input": "プロンプト送信",
-          "output": "画像をプレビュー",
-          "process": "画像を受信"
-        },
-        "models": {
-          "input": "一覧を取得",
-          "output": "候補を選択",
-          "process": "モデルを確認"
-        },
-        "pelican": {
-          "input": "場面を記述",
-          "output": "目視で確認",
-          "process": "SVG を生成"
-        },
-        "rerank": {
-          "input": "クエリと文書",
-          "output": "返却項目を確認",
-          "process": "再順位付け要求"
-        },
-        "structured-output": {
-          "input": "構造を指定",
-          "output": "形式を検証",
-          "process": "JSON を生成"
-        },
-        "text-generation": {
-          "input": "プロンプト送信",
-          "output": "応答を確認",
-          "process": "テキスト受信"
-        },
-        "tool-calling": {
-          "input": "ツールを定義",
-          "output": "引数を確認",
-          "process": "呼び出し要求"
-        },
-        "video-generation": {
-          "input": "動画タスク送信",
-          "output": "動画をプレビュー",
-          "process": "状態を照会"
-        },
-        "web-search": {
-          "input": "検索を実行",
-          "output": "引用を表示",
-          "process": "検索の証拠を確認"
-        }
-      }
+      "startHint": "<run>実行</run> を選択して、このテストを開始します。"
     },
     "loadingRuntimeKeysHint": "キーを読み込み中...",
     "mediaPreviewUnavailable": "プレビューを読み込めませんでした。",
@@ -172,7 +109,6 @@
     "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
     "sections": {
       "onDemand": "個別テスト",
-      "onDemandHint": "個別に実行",
       "routine": "通常テスト"
     },
     "selectedRuntimeKeyIncompatibleHint": "選択中のキーはこのモデルのグループでは使用できません。互換性のあるキーを選択してから検証してください。",
@@ -376,8 +312,6 @@
         "savedResult": "保存済みの結果",
         "scopeProgress": "{{completed}}/{{total}} 処理済み",
         "score": "{{hits}}/{{total}} 一致",
-        "scoreStep": "返されたコードを照合",
-        "searchStep": "指定レコードを検索",
         "seedHint": "空欄なら毎回新しいサンプルを生成します。同じ番号と設定で同じテキストを再テストできます。",
         "seedInput": "テストサンプル番号（任意）",
         "singleLengthRule": "今回は {{limit}} の長さだけをテストします。",
@@ -419,6 +353,42 @@
         "resetOne": "この項目を既定に戻す",
         "saveFailed": "プロンプトを保存できませんでした：{{message}}",
         "sharedHint": "保存したプロンプトはすべてのテスト入口で共有されます。"
+      },
+      "questionAnswer": {
+        "comparison": "回答の比較",
+        "comparisonHint": "最終回答のテキストのみを比較します。推論の妥当性は回答全文で確認してください。",
+        "description": "独自の質問でモデルの回答や推論を確認できます。参照回答を入力すると、最終回答を比較できます。",
+        "draftChanged": "質問または参考回答が変更されています。前回の実行結果を表示しています。変更後の内容を比較するには再実行してください。",
+        "finalAnswer": "抽出された最終回答",
+        "loadFailed": "問答設定を読み込めませんでした。保存済みの下書きを読み込むには再試行してください。",
+        "notIdentified": "抽出できませんでした",
+        "outcomes": {
+          "empty": "回答なし",
+          "incomplete": "回答が不完全",
+          "manual": "回答を受信",
+          "matched": "参考回答と一致",
+          "mismatched": "参考回答と不一致",
+          "ungraded": "最終回答が不明確"
+        },
+        "question": "質問",
+        "questionRequired": "テストを実行するには質問を入力してください。",
+        "reference": "参考回答（任意）",
+        "requestFailed": "リクエスト失敗",
+        "reset": "質問と参考回答をリセット",
+        "response": "モデルの回答",
+        "rules": {
+          "extraction": "参考回答を入力すると、モデルに最終行を FINAL_ANSWER: で始めるよう要求し、コロン以降を最終回答として抽出します。 参考回答が空欄の場合は、判定せずに回答のみを表示します。",
+          "matching": "前後の空白を除去し、全角文字などの互換文字を正規化してから完全一致を判定します。例：２１ は 21 と一致しますが、21個 は 21 と一致しません。大文字・小文字、句読点、途中の空白は区別します。",
+          "privacy": "参考回答はローカルでのみ使用し、モデルには送信しません。",
+          "title": "比較ルール",
+          "unavailable": "指定形式の最終回答がない場合、回答全文が参考回答と一致するときのみ一致と判定します。それ以外は最終回答が不明確であると表示します。空の回答や不完全な出力は別途表示します。"
+        },
+        "run": "問答テストを実行",
+        "runQuestion": "今回使用した質問",
+        "runReference": "今回の参考回答",
+        "saveFailed": "設定を保存できませんでした。現在の下書きでテストできます。",
+        "saving": "保存中…",
+        "title": "問答テスト"
       },
       "settingsTitle": "テスト設定",
       "stop": "停止",

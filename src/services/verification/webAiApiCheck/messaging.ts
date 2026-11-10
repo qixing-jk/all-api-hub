@@ -26,6 +26,8 @@ import type {
   ApiCheckGetBaseUrlHistorySuggestionsResponse,
   ApiCheckListTagsRequest,
   ApiCheckListTagsResponse,
+  ApiCheckQuestionAnswerRequest,
+  ApiCheckQuestionAnswerResponse,
   ApiCheckRecordBaseUrlHistoryRequest,
   ApiCheckRecordBaseUrlHistoryResponse,
   ApiCheckRemoveBaseUrlHistoryRequest,
@@ -47,6 +49,7 @@ import type {
 } from "./types"
 
 export const WebAiApiCheckMessageTypes = {
+  RunQuestionAnswer: "webAiApiCheck:runQuestionAnswer",
   ContextCounter: "webAiApiCheck:contextCounter",
   NeedleHistory: "webAiApiCheck:needleHistory",
   RunNeedle: "webAiApiCheck:runNeedle",
@@ -91,6 +94,9 @@ function createWebAiApiCheckMessagingLogger(): Logger {
 }
 
 interface WebAiApiCheckProtocolMap {
+  [WebAiApiCheckMessageTypes.RunQuestionAnswer](
+    data: ApiCheckQuestionAnswerRequest,
+  ): ApiCheckQuestionAnswerResponse
   [WebAiApiCheckMessageTypes.ContextCounter](data: {
     modelId: string
   }): { success: true; counter: ContextCounterInfo } | { success: false }

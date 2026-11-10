@@ -6,7 +6,7 @@
       "manageModelKey": "Modellschlüssel-Setup öffnen",
       "retry": "Wiederholen",
       "runAll": "Standardtests ausführen",
-      "runAllHint": "Führt nur Standardtests aus. Zeichen- und Modellkontexttests müssen separat gestartet werden.",
+      "runAllHint": "Führt nur Routinetests aus. Starten Sie Tests auf Abruf separat.",
       "running": "Läuft...",
       "runOne": "Ausführen",
       "stop": "Stopp",
@@ -41,82 +41,19 @@
       }
     },
     "intro": {
-      "flow": "Testschritte",
       "probes": {
-        "decision": "Sende eine Testanfrage und prüfe, ob das Entscheidungsmodell ein gültiges Ergebnis liefert.",
+        "decision": "Einen Beispielzustand an den Entscheidungsendpunkt senden und prüfen, ob ein Entscheidungswert oder Wahrscheinlichkeiten zurückgegeben werden.",
         "embedding": "Sende einen Beispieltext und prüfe den zurückgegebenen Vektor und seine Dimensionen.",
         "image-generation": "Sende einen Bildprompt, prüfe die Antwort und sieh dir das erzeugte Bild an.",
-        "models": "Prüfe, ob die API eine Modellliste liefert. Sieh dir Namen und Anzahl an und erhalte einen Modellvorschlag für weitere Tests.",
+        "models": "Modellnamen und Anzahl vom Endpunkt abrufen, um Modelle für weitere Tests auszuwählen.",
         "rerank": "Sende eine Anfrage und Kandidatendokumente und prüfe deren Relevanzreihenfolge.",
-        "structured-output": "Fordere strukturierte Daten an und prüfe, ob sie dem gewünschten Format entsprechen.",
-        "text-generation": "Sende einen Prompt, prüfe die Textgenerierung und sieh dir die Antwort an.",
-        "tool-calling": "Lass das Modell ein Werkzeug und Argumente wählen und prüfe den Werkzeugaufruf.",
+        "structured-output": "JSON mit ok: true vom Modell anfordern und den Feldwert sowie die Struktur prüfen.",
+        "text-generation": "Prüfen, ob das Modell auf eine Anweisung antwortet. Enthält die Antwort OK, gilt der Test als bestanden; Groß- und Kleinschreibung spielt keine Rolle.",
+        "tool-calling": "Das Modell soll das integrierte Zeitstempel-Werkzeug aufrufen. Wird dieser Aufruf erkannt, ist der Test bestanden.",
         "video-generation": "Starte eine Videoerzeugung, warte auf den Status und prüfe das erzeugte Video.",
         "web-search": "Prüfe, ob die API die Websuche nutzen kann, und sieh dir Ergebnisse und Quellen an."
       },
-      "startHint": "Wähle <run>Ausführen</run>, um diesen Test zu starten.",
-      "steps": {
-        "context-capacity": {
-          "input": "Langen Text erstellen",
-          "output": "Grenzen erfassen",
-          "process": "Mehrfach testen"
-        },
-        "decision": {
-          "input": "Zustand senden",
-          "output": "Ergebnis prüfen",
-          "process": "Entscheidung abrufen"
-        },
-        "embedding": {
-          "input": "Beispieltext",
-          "output": "Dimensionen prüfen",
-          "process": "Vektor empfangen"
-        },
-        "image-generation": {
-          "input": "Prompt senden",
-          "output": "Bildvorschau",
-          "process": "Bild empfangen"
-        },
-        "models": {
-          "input": "Liste abrufen",
-          "output": "Modell vorschlagen",
-          "process": "Modelle prüfen"
-        },
-        "pelican": {
-          "input": "Szene beschreiben",
-          "output": "Zeichnung beurteilen",
-          "process": "SVG erzeugen"
-        },
-        "rerank": {
-          "input": "Anfrage und Dokumente",
-          "output": "Einträge prüfen",
-          "process": "Neusortierung anfordern"
-        },
-        "structured-output": {
-          "input": "Schema festlegen",
-          "output": "Format prüfen",
-          "process": "JSON erzeugen"
-        },
-        "text-generation": {
-          "input": "Prompt senden",
-          "output": "Antwort prüfen",
-          "process": "Text empfangen"
-        },
-        "tool-calling": {
-          "input": "Tool definieren",
-          "output": "Argumente prüfen",
-          "process": "Aufruf anfordern"
-        },
-        "video-generation": {
-          "input": "Videoauftrag senden",
-          "output": "Videovorschau",
-          "process": "Status abfragen"
-        },
-        "web-search": {
-          "input": "Suche starten",
-          "output": "Quellen anzeigen",
-          "process": "Suchnachweise prüfen"
-        }
-      }
+      "startHint": "Wähle <run>Ausführen</run>, um diesen Test zu starten."
     },
     "loadingRuntimeKeysHint": "Schlüssel werden geladen...",
     "mediaPreviewUnavailable": "Die Vorschau konnte nicht geladen werden.",
@@ -172,7 +109,6 @@
     "requiresModelId": "Geben Sie eine Modell-ID ein, um diesen Test auszuführen.",
     "sections": {
       "onDemand": "Optionale Tests",
-      "onDemandHint": "Einzeln ausführen",
       "routine": "Standardtests"
     },
     "selectedRuntimeKeyIncompatibleHint": "Der ausgewählte Schlüssel ist für die Gruppe dieses Modells nicht verfügbar. Wählen Sie einen kompatiblen Schlüssel, bevor Sie die Überprüfung durchführen.",
@@ -378,8 +314,6 @@
         "savedResult": "Gespeichertes Ergebnis",
         "scopeProgress": "{{completed}}/{{total}} verarbeitet",
         "score": "{{hits}}/{{total}} Treffer",
-        "scoreStep": "Zurückgegebenen Code vergleichen",
-        "searchStep": "Angeforderten Datensatz finden",
         "seedHint": "Leer lassen für ein neues Beispiel bei jedem Test. Dieselbe Nummer und dieselben Einstellungen erzeugen denselben Text.",
         "seedInput": "Testbeispielnummer (optional)",
         "singleLengthRule": "Dieser Plan testet nur eine Länge: {{limit}}.",
@@ -421,6 +355,42 @@
         "resetOne": "Diesen Prompt zurücksetzen",
         "saveFailed": "Prompts konnten nicht gespeichert werden: {{message}}",
         "sharedHint": "Gespeicherte Prompts gelten für alle Testzugänge."
+      },
+      "questionAnswer": {
+        "comparison": "Antwortvergleich",
+        "comparisonHint": "Nur der Text der endgültigen Antwort wird verglichen. Prüfe die vollständige Antwort, um die Begründung zu beurteilen.",
+        "description": "Mit einer eigenen Frage die Antwort und Begründung des Modells ansehen. Eine Referenzantwort ermöglicht den Vergleich der endgültigen Antwort.",
+        "draftChanged": "Frage oder Referenzantwort wurde geändert. Dieses Ergebnis stammt vom vorherigen Durchlauf. Starte den Test erneut, um die Änderungen zu vergleichen.",
+        "finalAnswer": "Extrahierte endgültige Antwort",
+        "loadFailed": "Frageneinstellungen konnten nicht geladen werden. Versuchen Sie es erneut, um den gespeicherten Entwurf zu laden.",
+        "notIdentified": "Nicht erkannt",
+        "outcomes": {
+          "empty": "Keine Antwort erhalten",
+          "incomplete": "Unvollständige Antwort",
+          "manual": "Antwort erhalten",
+          "matched": "Stimmt mit Referenz überein",
+          "mismatched": "Weicht von Referenz ab",
+          "ungraded": "Schlussantwort unklar"
+        },
+        "question": "Frage",
+        "questionRequired": "Gib eine Frage ein, um den Test zu starten.",
+        "reference": "Referenzantwort (optional)",
+        "requestFailed": "Anfrage fehlgeschlagen",
+        "reset": "Frage und Referenzantwort zurücksetzen",
+        "response": "Modellantwort",
+        "rules": {
+          "extraction": "Bei einer Referenz wird das Modell aufgefordert, seine Endantwort in der letzten Zeile mit FINAL_ANSWER: einzuleiten. Der Text nach dem Doppelpunkt wird extrahiert. Ohne Referenz wird die Antwort ohne Bewertung angezeigt.",
+          "matching": "Äußere Leerzeichen werden entfernt und Kompatibilitätszeichen, etwa vollbreite Zeichen, normalisiert. Danach muss der Text exakt übereinstimmen. Beispiel: ２１ entspricht 21, aber 21 Stück entspricht nicht 21. Großschreibung, Satzzeichen und innere Leerzeichen bleiben relevant.",
+          "privacy": "Die Referenz wird nur lokal verwendet und nicht an das Modell gesendet.",
+          "title": "Vergleichsregeln",
+          "unavailable": "Ohne formatierte Endantwort gilt nur eine vollständig mit der Referenz übereinstimmende Antwort als Treffer. Andernfalls wird die Endantwort als unklar angezeigt. Leere oder unvollständige Antworten werden separat gemeldet."
+        },
+        "run": "Fragentest starten",
+        "runQuestion": "Frage dieses Testlaufs",
+        "runReference": "Referenzantwort dieses Durchlaufs",
+        "saveFailed": "Einstellungen konnten nicht gespeichert werden. Der aktuelle Entwurf bleibt nutzbar.",
+        "saving": "Wird gespeichert…",
+        "title": "Fragen und Antworten"
       },
       "settingsTitle": "Testeinstellungen",
       "stop": "Stop",

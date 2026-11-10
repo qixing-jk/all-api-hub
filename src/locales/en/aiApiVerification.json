@@ -6,7 +6,7 @@
       "manageModelKey": "Open model key setup",
       "retry": "Retry",
       "runAll": "Run routine tests",
-      "runAllHint": "Runs routine tests only. Start drawing and context tests separately.",
+      "runAllHint": "Runs routine tests only. Start on-demand tests separately.",
       "running": "Running...",
       "runOne": "Run",
       "stop": "Stop",
@@ -41,82 +41,19 @@
       }
     },
     "intro": {
-      "flow": "Test steps",
       "probes": {
-        "decision": "Send a test request and check whether the decision model returns a valid result.",
+        "decision": "Send a sample state to the decision endpoint and check for a decision value or probabilities.",
         "embedding": "Send sample text and check the returned vector and its dimensions.",
         "image-generation": "Send an image prompt, check the response and preview the generated image.",
-        "models": "Check whether the API returns a model list, inspect model names and counts, and obtain a suggested model for later tests.",
+        "models": "Fetch model names and counts from the endpoint to choose models for further tests.",
         "rerank": "Submit a query and candidate documents, then check their relevance ranking.",
-        "structured-output": "Ask the model for structured data and check whether it matches the requested format.",
-        "text-generation": "Send a prompt, check text generation and inspect the returned content.",
-        "tool-calling": "Ask the model to select a tool and provide arguments, then check the tool call.",
+        "structured-output": "Ask the model for JSON containing ok: true, then validate the field value and structure.",
+        "text-generation": "Check whether the model follows a prompt. A reply containing OK passes, regardless of letter case.",
+        "tool-calling": "Ask the model to call the built-in timestamp tool. The test passes when that tool call is detected.",
         "video-generation": "Submit a video generation task, wait for its status and inspect the generated video.",
         "web-search": "Check whether the API can use web search and inspect the results and citations."
       },
-      "startHint": "Select <run>Run</run> to start this test.",
-      "steps": {
-        "context-capacity": {
-          "input": "Build long input",
-          "output": "Record bounds",
-          "process": "Run probes"
-        },
-        "decision": {
-          "input": "Submit state",
-          "output": "Check result",
-          "process": "Get decision"
-        },
-        "embedding": {
-          "input": "Sample text",
-          "output": "Check dimensions",
-          "process": "Receive vector"
-        },
-        "image-generation": {
-          "input": "Send prompt",
-          "output": "Preview image",
-          "process": "Receive image"
-        },
-        "models": {
-          "input": "Fetch list",
-          "output": "Suggest model",
-          "process": "Inspect models"
-        },
-        "pelican": {
-          "input": "Describe scene",
-          "output": "Review drawing",
-          "process": "Generate SVG"
-        },
-        "rerank": {
-          "input": "Query and documents",
-          "output": "Inspect entries",
-          "process": "Request reranking"
-        },
-        "structured-output": {
-          "input": "Set schema",
-          "output": "Validate format",
-          "process": "Generate JSON"
-        },
-        "text-generation": {
-          "input": "Send prompt",
-          "output": "Check reply",
-          "process": "Receive text"
-        },
-        "tool-calling": {
-          "input": "Define tool",
-          "output": "Check arguments",
-          "process": "Request call"
-        },
-        "video-generation": {
-          "input": "Submit video task",
-          "output": "Preview video",
-          "process": "Poll status"
-        },
-        "web-search": {
-          "input": "Run search",
-          "output": "View citations",
-          "process": "Check search evidence"
-        }
-      }
+      "startHint": "Select <run>Run</run> to start this test."
     },
     "loadingRuntimeKeysHint": "Loading keys...",
     "mediaPreviewUnavailable": "The preview could not be loaded.",
@@ -172,7 +109,6 @@
     "requiresModelId": "Enter a model id to run this test.",
     "sections": {
       "onDemand": "On-demand tests",
-      "onDemandHint": "Run individually",
       "routine": "Routine tests"
     },
     "selectedRuntimeKeyIncompatibleHint": "The selected key is not available for this model's group. Choose a compatible key before running verification.",
@@ -378,8 +314,6 @@
         "savedResult": "Saved result",
         "scopeProgress": "Processed {{completed}}/{{total}}",
         "score": "{{hits}}/{{total}} matched",
-        "scoreStep": "Compare the returned code",
-        "searchStep": "Find the requested record",
         "seedHint": "Leave blank for a new sample each time. Use the same ID and settings to repeat a sample.",
         "seedInput": "Test sample ID (optional)",
         "singleLengthRule": "This plan tests just one length: {{limit}}.",
@@ -421,6 +355,42 @@
         "resetOne": "Reset this prompt",
         "saveFailed": "Could not save prompts: {{message}}",
         "sharedHint": "Saved prompts are shared by every test entry point."
+      },
+      "questionAnswer": {
+        "comparison": "Answer comparison",
+        "comparisonHint": "Only final-answer text is compared. Review the full response to assess the reasoning.",
+        "description": "Use your own question to inspect the model’s answer and reasoning. Add a reference answer to compare the final answer.",
+        "draftChanged": "The question or reference has changed. This result is from the previous run; run again to compare your changes.",
+        "finalAnswer": "Extracted final answer",
+        "loadFailed": "Could not load question settings. Retry to keep your saved draft.",
+        "notIdentified": "Not identified",
+        "outcomes": {
+          "empty": "No answer returned",
+          "incomplete": "Incomplete response",
+          "manual": "Response received",
+          "matched": "Matches reference",
+          "mismatched": "Does not match reference",
+          "ungraded": "Final answer unclear"
+        },
+        "question": "Question",
+        "questionRequired": "Enter a question to run the test.",
+        "reference": "Reference answer (optional)",
+        "requestFailed": "Request failed",
+        "reset": "Reset question and answer",
+        "response": "Model response",
+        "rules": {
+          "extraction": "When a reference is provided, the model is asked to put its final answer on the last line starting with FINAL_ANSWER:. The text after the colon is extracted. Without a reference, the response is shown without grading.",
+          "matching": "Leading and trailing whitespace is removed and compatibility characters, such as full-width characters, are normalized before an exact text match. For example, ２１ matches 21, but 21 items does not match 21. Case, punctuation and internal spaces still matter.",
+          "privacy": "The reference is used locally and is never sent to the model.",
+          "title": "Comparison rules",
+          "unavailable": "Without a formatted final answer, a match is accepted only when the entire response matches the reference. Otherwise, the result is “Final answer unclear”. Empty or incomplete responses are reported separately."
+        },
+        "run": "Run Q&A test",
+        "runQuestion": "Question used for this run",
+        "runReference": "Reference answer for this run",
+        "saveFailed": "Could not save settings. Your current draft can still be used.",
+        "saving": "Saving…",
+        "title": "Q&A test"
       },
       "settingsTitle": "Test settings",
       "stop": "Stop",

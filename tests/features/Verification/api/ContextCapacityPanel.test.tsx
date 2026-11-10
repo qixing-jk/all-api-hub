@@ -173,20 +173,14 @@ it.each([
         />
       </I18nextProvider>,
     )
-    const intro = screen.queryByRole("list", {
-      name: "aiApiVerification:verifyDialog.intro.flow",
-    })
+    const intro = screen.queryByText(
+      "aiApiVerification:verifyDialog.intro.startHint",
+    )
     if (idle) {
       expect(intro).toBeVisible()
       expect(
-        within(intro!)
-          .getAllByRole("listitem")
-          .map((item) => item.textContent),
-      ).toEqual([
-        "aiApiVerification:verifyDialog.intro.steps.context-capacity.input",
-        "aiApiVerification:verifyDialog.intro.steps.context-capacity.process",
-        "aiApiVerification:verifyDialog.intro.steps.context-capacity.output",
-      ])
+        screen.getByText("aiApiVerification:verifyDialog.tools.context.hint"),
+      ).toBeVisible()
     } else expect(intro).not.toBeInTheDocument()
   },
 )
