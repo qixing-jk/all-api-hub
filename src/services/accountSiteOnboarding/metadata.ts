@@ -26,6 +26,15 @@ const getAccountSiteOnboardingMetadata =
       routes: definition.routes,
     }))
 
+// Definitions are static. Keep the route-only projection private and return a
+// fresh copy per lookup, without cloning detection or login policy per model.
+const routesBySiteType = new Map<string, AccountSiteRouteConfig>(
+  getAccountSiteOnboardingDefinitions().map(({ siteType, routes }) => [
+    siteType,
+    routes,
+  ]),
+)
+
 /**
  * Projects title-detection metadata into the legacy rule shape.
  */
@@ -61,16 +70,15 @@ export function getAccountSiteDomainRuleMetadata(): readonly AccountSiteDomainRu
 export function getAccountSiteRouteMetadata(
   siteType: unknown,
 ): AccountSiteRouteConfig {
-  // The registry already returns defensive copies, so resolve against one snapshot.
-  const definitions = getAccountSiteOnboardingDefinitions()
-  const metadata =
-    definitions.find((definition) => definition.siteType === siteType) ??
-    definitions.find((definition) => definition.siteType === SITE_TYPES.UNKNOWN)
-  if (!metadata?.routes)
+  const routes =
+    (typeof siteType === "string"
+      ? routesBySiteType.get(siteType)
+      : undefined) ?? routesBySiteType.get(SITE_TYPES.UNKNOWN)
+  if (!routes)
     throw new Error(
       "Account site registration is missing its route declaration",
     )
-  return metadata.routes
+  return { ...routes }
 }
 
 /**

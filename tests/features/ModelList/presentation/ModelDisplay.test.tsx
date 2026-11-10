@@ -45,6 +45,7 @@ const {
   modelItemSpy,
   virtualWindow,
   scrollIntoViewSpy,
+  pendingModelRender,
 } = vi.hoisted(() => ({
   mockTotalListHeightChanged: {
     current: undefined as undefined | ((height: number) => void),
@@ -52,6 +53,7 @@ const {
   modelItemSpy: vi.fn(),
   virtualWindow: { enabled: false },
   scrollIntoViewSpy: vi.fn(),
+  pendingModelRender: { current: null as Promise<void> | null },
 }))
 
 const TEST_IDS = vi.hoisted(() => ({
@@ -156,6 +158,11 @@ vi.mock("react-virtuoso", () => ({
 
 vi.mock("~/features/ModelList/presentation/ModelItem", () => ({
   default: (props: any) => {
+    if (
+      props.model.model_name === "incoming-model" &&
+      pendingModelRender.current
+    )
+      throw pendingModelRender.current
     modelItemSpy(props)
 
     return (
@@ -446,6 +453,42 @@ describe("ModelDisplay", () => {
     vi.clearAllMocks()
     mockTotalListHeightChanged.current = undefined
     virtualWindow.enabled = false
+    pendingModelRender.current = null
+  })
+
+  it("keeps the current offers visible while rendering an incoming catalog update", async () => {
+    const current = createCalculatedModel({})
+    const incoming = createCalculatedModel({
+      model: { model_name: "incoming-model" },
+    })
+    const props = {
+      verificationSummariesByKey: {},
+      showRealPrice: true,
+      showEndpointTypes: true,
+      handleGroupClick: vi.fn(),
+    }
+    const view = (models: CalculatedModelItem[]) => (
+      <React.Suspense fallback={<div>Replacing offers</div>}>
+        <ModelDisplay {...props} models={models} />
+      </React.Suspense>
+    )
+    const { rerender } = render(view([current]))
+    let finishRendering!: () => void
+    pendingModelRender.current = new Promise<void>((resolve) => {
+      finishRendering = resolve
+    })
+
+    rerender(view([current, incoming]))
+
+    expect(getRenderedModelItem(current.model.model_name)).toBeVisible()
+    expect(screen.queryByText("Replacing offers")).not.toBeInTheDocument()
+
+    await act(async () => {
+      pendingModelRender.current = null
+      finishRendering()
+    })
+    expect(getRenderedModelItem(incoming.model.model_name)).toBeVisible()
+    expect(screen.getAllByTestId(TEST_IDS.modelItem)).toHaveLength(2)
   })
 
   it("passes each calculated row's resolved vendor to ModelItem unchanged", () => {

@@ -382,6 +382,125 @@ describe("useFilteredModels", () => {
     }
   })
 
+  it("only evaluates new or changed offers as account catalogs arrive", async () => {
+    const quote = vi.spyOn(pricingQuotes, "quoteCanonicalModelPrice")
+    try {
+      const first = {
+        account: createDisplayAccount({
+          id: "first",
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://first.example",
+        }),
+        pricing: createPricingResponse([{ model_ratio: 1 }]),
+      }
+      const second = {
+        account: createDisplayAccount({
+          id: "second",
+          siteType: SITE_TYPES.NEW_API,
+        }),
+        pricing: createPricingResponse([{ model_ratio: 2 }]),
+      }
+      const inputs = {
+        selectedSource: createAllAccountsSource(),
+        pricingContexts: [first],
+        isPriceComparisonActive: true,
+      }
+      const { result, rerender } = renderUseFilteredModels(inputs)
+      await waitFor(() =>
+        expect(
+          atIndex(result.current.filteredModels, 0).calculatedPrice.quote
+            ?.amount,
+        ).toBe(2),
+      )
+      quote.mockClear()
+      rerender({ ...inputs, pricingContexts: [first, second] })
+      await waitFor(() =>
+        expect(
+          result.current.filteredModels.map(
+            (item) => item.calculatedPrice.quote?.amount,
+          ),
+        ).toEqual([2, 4]),
+      )
+      expect(quote).toHaveBeenCalledTimes(1)
+
+      quote.mockClear()
+      const updated = {
+        ...first,
+        account: { ...first.account, baseUrl: "https://updated.example" },
+        pricing: createPricingResponse([
+          { model_ratio: 3, completion_ratio: 2 },
+        ]),
+      }
+      rerender({ ...inputs, pricingContexts: [updated, second] })
+      await waitFor(() =>
+        expect(
+          result.current.filteredModels.some(
+            (item) => item.calculatedPrice.quote?.amount === 6,
+          ),
+        ).toBe(true),
+      )
+      const updatedOffer = result.current.filteredModels.find(
+        (item) =>
+          item.source.kind === "account" && item.source.account.id === "first",
+      )!
+      expect(updatedOffer.calculatedPrice.quote?.amount).toBe(6)
+      expect(
+        updatedOffer.calculatedPrice.publishedPricing?.source.url,
+      ).toContain("https://updated.example/pricing")
+      expect(quote).toHaveBeenCalledTimes(1)
+
+      // Discarded catalogs must not remain retained in the calculator.
+      rerender({ ...inputs, pricingContexts: [second] })
+      await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+      quote.mockClear()
+      rerender({ ...inputs, pricingContexts: [updated, second] })
+      await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+      expect(quote).toHaveBeenCalledTimes(1)
+
+      const converted = {
+        ...updated,
+        account: { ...updated.account, exchangeRate: 4 },
+      }
+      const convertedInputs = {
+        ...inputs,
+        pricingContexts: [converted, second],
+        showRealPrice: true,
+      }
+      const firstAmount = () =>
+        result.current.filteredModels.find(
+          (item) =>
+            item.source.kind === "account" &&
+            item.source.account.id === "first",
+        )?.calculatedPrice.quote?.amount
+      rerender(convertedInputs)
+      await waitFor(() => expect(firstAmount()).toBe(24))
+      const outputOnly = {
+        ...convertedInputs,
+        priceComparisonWeights: {
+          input: 0,
+          output: 1,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+      }
+      rerender(outputOnly)
+      await waitFor(() => expect(firstAmount()).toBe(48))
+      rerender({
+        ...outputOnly,
+        pricingContexts: [
+          {
+            ...converted,
+            pricing: { ...converted.pricing, groupRatios: { default: 2 } },
+          },
+          second,
+        ],
+      })
+      await waitFor(() => expect(firstAmount()).toBe(96))
+    } finally {
+      quote.mockRestore()
+    }
+  })
+
   it("retains all published length tiers while browsing regardless of reference conditions", async () => {
     const pricingPlan: PricingPlan = {
       rates: {},

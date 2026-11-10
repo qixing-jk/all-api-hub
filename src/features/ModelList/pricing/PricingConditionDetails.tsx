@@ -28,21 +28,7 @@ export function PricingConditionDetails({
   actions?: boolean
 }) {
   const { t } = useTranslation("modelList")
-  const options = pricingScenarioOptions(t)
   const navigation = usePricingScenarioNavigation()
-  const targets = getPricingConditionTargets({
-    conditionDetails: details,
-    requirementDetails: requirements,
-    issues,
-  })
-  const labels: Record<string, string> = {
-    ...pricingMeterLabels(t),
-    ...options.labels,
-    inputTokens: t("scenario.input"),
-    outputTokens: t("scenario.output"),
-    totalTokens: t("scenario.totalTokens"),
-    at: t("scenario.pricingTime"),
-  }
   const priceMessages = [
     ...(issues?.some(
       (issue) => issue.code === PRICING_ISSUE_CODES.SOURCE_UNAVAILABLE,
@@ -62,8 +48,25 @@ export function PricingConditionDetails({
   ]
   if (!details?.length && !requirements?.length && !priceMessages.length)
     return null
+
+  // Most account quotes have no missing conditions. Resolve their labels only
+  // when there is content to render, rather than for every loading update.
+  const options = pricingScenarioOptions(t)
+  const targets = getPricingConditionTargets({
+    conditionDetails: details,
+    requirementDetails: requirements,
+    issues,
+  })
+  const labels: Record<string, string> = {
+    ...pricingMeterLabels(t),
+    ...options.labels,
+    inputTokens: t("scenario.input"),
+    outputTokens: t("scenario.output"),
+    totalTokens: t("scenario.totalTokens"),
+    at: t("scenario.pricingTime"),
+  }
   return (
-    <ul className="text-muted-foreground space-y-density-1 text-xs">
+    <ul className="space-y-density-1 text-xs text-muted-foreground">
       {priceMessages.map((message) => (
         <li key={message}>{message}</li>
       ))}
@@ -135,7 +138,7 @@ export function PricingConditionDetails({
         <li>
           <button
             type="button"
-            className="text-link cursor-pointer underline underline-offset-2"
+            className="cursor-pointer text-link underline underline-offset-2"
             onClick={() => navigation.configure(targets)}
           >
             {t("scenario.configure")}

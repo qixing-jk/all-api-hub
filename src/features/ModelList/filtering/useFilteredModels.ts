@@ -26,7 +26,7 @@ import {
 import { type ModelListBillingMode } from "~/features/ModelList/pricing/billingModes"
 import { type ModelPriceComparisonWeights } from "~/features/ModelList/pricing/priceComparison"
 import {
-  calculateModelListPrices,
+  createModelListPriceCalculator,
   rankModelListPrices,
 } from "~/features/ModelList/pricing/priceEvaluation"
 import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
@@ -330,9 +330,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     ],
   )
 
+  const calculatePrices = useMemo(createModelListPriceCalculator, [])
   const baseFilteredModels = useMemo(
     () =>
-      calculateModelListPrices({
+      calculatePrices({
         expandGroups: expandGroups && isAllAccounts,
         rawItems: accountFilteredBaseRawModels,
         getGroupCandidates: getPricingGroupCandidates,
@@ -342,6 +343,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         isPriceComparisonActive,
       }),
     [
+      calculatePrices,
       expandGroups,
       isAllAccounts,
       accountFilteredBaseRawModels,

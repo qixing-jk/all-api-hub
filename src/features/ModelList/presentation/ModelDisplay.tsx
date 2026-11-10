@@ -2,7 +2,9 @@ import { Cpu, Info } from "lucide-react"
 import type { HTMLAttributes } from "react"
 import {
   forwardRef,
+  memo,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -103,7 +105,7 @@ const ModelRowsItem = forwardRef<
   HTMLAttributes<HTMLDivElement>
 >(function ModelRowsItem({ children, className, ...props }, ref) {
   return (
-    <div ref={ref} className={cn("pb-density-3 min-w-0", className)} {...props}>
+    <div ref={ref} className={cn("min-w-0 pb-density-3", className)} {...props}>
       {children}
     </div>
   )
@@ -124,6 +126,16 @@ function getDisplayEntryKey(_: number, entry: ModelDisplayEntry) {
  * @returns Virtualized model list or empty state when no matches.
  */
 export function ModelDisplay(props: ModelDisplayProps) {
+  // Account queries publish progressively. Let requests and interactions
+  // interrupt a large comparison group's render while its previous rows stay
+  // usable. Defer the complete props so rows and their handlers stay in sync.
+  const deferredProps = useDeferredValue(props)
+  return <ModelDisplayContent {...deferredProps} />
+}
+
+const ModelDisplayContent = memo(function ModelDisplayContent(
+  props: ModelDisplayProps,
+) {
   const {
     models,
     modelGroupOverrides,
@@ -238,15 +250,15 @@ export function ModelDisplay(props: ModelDisplayProps) {
       // History is account/model scoped and cannot establish a group's result.
       const verificationSummary =
         historyTarget && item.comparisonGroup === undefined
-          ? verificationSummariesByKey[
+          ? (verificationSummariesByKey[
               serializeVerificationHistoryTarget(historyTarget)
-            ] ?? null
+            ] ?? null)
           : null
 
       return (
         <div
           data-model-row-key={itemKey}
-          className="data-[group-change-highlight]:bg-primary-soft data-[group-change-highlight]:ring-theme-500 rounded-lg transition-colors duration-700 data-[group-change-highlight]:ring-2 data-[group-change-highlight]:ring-inset motion-reduce:transition-none"
+          className="rounded-lg transition-colors duration-700 data-[group-change-highlight]:bg-primary-soft data-[group-change-highlight]:ring-2 data-[group-change-highlight]:ring-theme-500 data-[group-change-highlight]:ring-inset motion-reduce:transition-none"
           ref={(element) => {
             const pending = pendingGroupChange.current
             if (
@@ -341,13 +353,13 @@ export function ModelDisplay(props: ModelDisplayProps) {
       return (
         <section
           aria-labelledby={`${headingId} ${billingModeId}`}
-          className="border-border bg-card overflow-hidden rounded-lg border shadow-sm"
+          className="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
         >
-          <header className="dark:bg-background/45 border-border bg-surface-subtle/80 gap-y-density-2 py-density-2-5 flex min-w-0 flex-wrap items-center gap-x-3 border-b px-3 sm:px-4">
-            <div className="gap-y-density-2 flex w-full min-w-0 flex-wrap items-center gap-x-2 lg:w-auto lg:flex-1">
+          <header className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-density-2 border-b border-border bg-surface-subtle/80 px-3 py-density-2-5 sm:px-4 dark:bg-background/45">
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-density-2 lg:w-auto lg:flex-1">
               <h2
                 id={headingId}
-                className="text-foreground max-w-full min-w-0 font-mono text-sm font-semibold break-all"
+                className="max-w-full min-w-0 font-mono text-sm font-semibold break-all text-foreground"
               >
                 {group.modelName}
               </h2>
@@ -375,17 +387,17 @@ export function ModelDisplay(props: ModelDisplayProps) {
                 </span>
               </Badge>
             </div>
-            <div className="gap-y-density-1-5 flex w-full flex-wrap items-center gap-x-1.5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
-              <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
+            <div className="flex w-full flex-wrap items-center gap-x-1.5 gap-y-density-1-5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
+              <span className="rounded-full border border-border bg-card/80 px-2.5 py-density-1 text-muted-foreground dark:bg-card dark:text-secondary-foreground">
                 {t("priceComparison.results.comparable")}:{" "}
-                <strong className="text-success-text font-semibold">
+                <strong className="font-semibold text-success-text">
                   {group.comparableItems.length}
                 </strong>
               </span>
               {group.notComparedItems.length > 0 && (
-                <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
+                <span className="rounded-full border border-border bg-card/80 px-2.5 py-density-1 text-muted-foreground dark:bg-card dark:text-secondary-foreground">
                   {t("priceComparison.results.notCompared")}:{" "}
-                  <strong className="text-foreground font-semibold">
+                  <strong className="font-semibold text-foreground">
                     {group.notComparedItems.length}
                   </strong>
                 </span>
@@ -396,7 +408,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
           {group.comparableItems.length > 0 && (
             <ul
               aria-label={t("priceComparison.results.comparable")}
-              className="dark:divide-border divide-border/80 divide-y"
+              className="divide-y divide-border/80 dark:divide-border"
             >
               {group.comparableItems.map((item) => (
                 <li key={getModelItemKey(item)}>
@@ -411,29 +423,29 @@ export function ModelDisplay(props: ModelDisplayProps) {
               className={cn(
                 "bg-surface-subtle/55 dark:bg-foreground/[0.018]",
                 group.comparableItems.length > 0 &&
-                  "dark:border-border border-border-strong border-t border-dashed",
+                  "border-t border-dashed border-border-strong dark:border-border",
               )}
             >
               <div
                 role="note"
-                className="dark:border-border border-border/80 gap-y-density-2 py-density-2-5 flex min-w-0 gap-x-2 border-b px-3 sm:px-4"
+                className="flex min-w-0 gap-x-2 gap-y-density-2 border-b border-border/80 px-3 py-density-2-5 sm:px-4 dark:border-border"
               >
                 <Info
                   aria-hidden="true"
-                  className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
+                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
                 />
                 <div className="min-w-0">
-                  <p className="text-foreground text-xs font-medium">
+                  <p className="text-xs font-medium text-foreground">
                     {t("priceComparison.results.notCompared")}
                   </p>
-                  <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+                  <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
                     {t("priceComparison.results.notComparedHint")}
                   </p>
                 </div>
               </div>
               <ul
                 aria-label={t("priceComparison.results.notCompared")}
-                className="dark:divide-border divide-border/80 divide-y"
+                className="divide-y divide-border/80 dark:divide-border"
               >
                 {group.notComparedItems.map((item) => (
                   <li key={getModelItemKey(item)}>
@@ -496,4 +508,4 @@ export function ModelDisplay(props: ModelDisplayProps) {
       />
     </div>
   )
-}
+})

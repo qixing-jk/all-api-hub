@@ -33,8 +33,9 @@ import { createTab } from "~/utils/browser/tabs"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 
-const { loggerWarnSpy } = vi.hoisted(() => ({
+const { loggerWarnSpy, descriptionRenderSpy } = vi.hoisted(() => ({
   loggerWarnSpy: vi.fn(),
+  descriptionRenderSpy: vi.fn(),
 }))
 
 const { trackProductAnalyticsActionStartedMock } = vi.hoisted(() => ({
@@ -159,7 +160,10 @@ vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemHeader", () => ({
 vi.mock(
   "~/features/ModelList/presentation/ModelItem/ModelItemDescription",
   () => ({
-    ModelItemDescription: () => <div data-testid="model-description" />,
+    ModelItemDescription: () => {
+      descriptionRenderSpy()
+      return <div data-testid="model-description" />
+    },
   }),
 )
 
@@ -167,11 +171,21 @@ vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemPricing", () => ({
   ModelItemPricing: ({
     showPricing,
     onShowDetails,
+    calculatedPrice,
   }: {
     showPricing: boolean
     onShowDetails?: () => void
+    calculatedPrice: CalculatedPrice
   }) => (
-    <div data-testid="model-pricing" data-show-pricing={String(showPricing)}>
+    <div
+      data-testid="model-pricing"
+      data-show-pricing={String(showPricing)}
+      data-input-price={
+        calculatedPrice.kind === "token"
+          ? calculatedPrice.usdPerMillionTokens.input
+          : undefined
+      }
+    >
       {onShowDetails && (
         <button onClick={onShowDetails}>Calculation details</button>
       )}
@@ -265,6 +279,83 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("reuses an unchanged offer while calling its latest actions and updating changed data", async () => {
+    const user = userEvent.setup()
+    const props = createDefaultProps()
+    props.source.capabilities.supportsCredentialVerification = true
+    const previousVerify = vi.fn()
+    const nextVerify = vi.fn()
+    const previousExpand = vi.fn()
+    const nextExpand = vi.fn()
+    const { rerender } = render(
+      <ModelItem
+        {...props}
+        onVerifyModel={previousVerify}
+        isExpanded={false}
+        onToggleExpand={previousExpand}
+      />,
+    )
+    descriptionRenderSpy.mockClear()
+    const sameOffer = structuredClone(props)
+
+    rerender(
+      <ModelItem
+        {...sameOffer}
+        onVerifyModel={nextVerify}
+        isExpanded={false}
+        onToggleExpand={nextExpand}
+      />,
+    )
+    expect(descriptionRenderSpy).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: "verify-api" }))
+    await user.click(screen.getByTestId("expand-button"))
+    expect(previousVerify).not.toHaveBeenCalled()
+    expect(previousExpand).not.toHaveBeenCalled()
+    expect(nextVerify).toHaveBeenCalledWith(sameOffer.source, "gpt-4o-mini", [
+      "vip",
+    ])
+    expect(nextExpand).toHaveBeenCalledOnce()
+
+    rerender(
+      <ModelItem
+        {...sameOffer}
+        model={{ ...sameOffer.model, model_name: "updated-model" }}
+        onVerifyModel={nextVerify}
+        isExpanded={true}
+        onToggleExpand={nextExpand}
+      />,
+    )
+    expect(screen.getByText("updated-model")).toBeVisible()
+    expect(screen.getByTestId("model-details")).toBeVisible()
+    expect(descriptionRenderSpy).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole("button", { name: "verify-api" }))
+    expect(nextVerify).toHaveBeenLastCalledWith(
+      sameOffer.source,
+      "updated-model",
+      ["vip"],
+    )
+
+    rerender(
+      <ModelItem
+        {...sameOffer}
+        calculatedPrice={{
+          kind: "token",
+          usdPerMillionTokens: { input: 3, output: 4 },
+        }}
+        onVerifyModel={nextVerify}
+        isExpanded={false}
+        onToggleExpand={nextExpand}
+      />,
+    )
+    expect(screen.getByTestId("model-pricing")).toHaveAttribute(
+      "data-input-price",
+      "3",
+    )
+
+    rerender(<ModelItem {...sameOffer} />)
+    expect(screen.queryByRole("button", { name: "verify-api" })).toBeNull()
+  })
+
   it("shows the model group control and labels only the expanded offer's group", () => {
     const props = createDefaultProps()
     props.model.enable_groups = ["default", "vip"]

@@ -1,5 +1,13 @@
+import { isEqual } from "lodash-es"
 import { Copy } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -120,6 +128,70 @@ interface ModelItemProps {
  * Renders a single model row with pricing, availability, and expandable details.
  */
 export default function ModelItem(props: ModelItemProps) {
+  const committedProps = useRef(props)
+  useLayoutEffect(() => {
+    committedProps.current = props
+  }, [props])
+  // Catalog projections recreate equal row data and callbacks as other accounts
+  // load. Keep action delegates stable, but read their latest committed target.
+  // The memoized content still compares every data prop and action's presence.
+  const actions = useMemo<
+    Required<
+      Pick<
+        ModelItemProps,
+        | "onModelGroupChange"
+        | "onCatalogChanged"
+        | "onGroupClick"
+        | "onFilterAccount"
+        | "onVerifyModel"
+        | "onVerifyCliSupport"
+        | "onOpenModelKeyDialog"
+        | "onToggleExpand"
+      >
+    >
+  >(
+    () => ({
+      onModelGroupChange: (...args) =>
+        committedProps.current.onModelGroupChange?.(...args),
+      onCatalogChanged: async () => {
+        await committedProps.current.onCatalogChanged?.()
+      },
+      onGroupClick: (...args) => committedProps.current.onGroupClick?.(...args),
+      onFilterAccount: (...args) =>
+        committedProps.current.onFilterAccount?.(...args),
+      onVerifyModel: (...args) =>
+        committedProps.current.onVerifyModel?.(...args),
+      onVerifyCliSupport: (...args) =>
+        committedProps.current.onVerifyCliSupport?.(...args),
+      onOpenModelKeyDialog: (...args) =>
+        committedProps.current.onOpenModelKeyDialog?.(...args),
+      onToggleExpand: () => committedProps.current.onToggleExpand?.(),
+    }),
+    [],
+  )
+
+  return (
+    <ModelItemContent
+      {...props}
+      onModelGroupChange={
+        props.onModelGroupChange && actions.onModelGroupChange
+      }
+      onCatalogChanged={props.onCatalogChanged && actions.onCatalogChanged}
+      onGroupClick={props.onGroupClick && actions.onGroupClick}
+      onFilterAccount={props.onFilterAccount && actions.onFilterAccount}
+      onVerifyModel={props.onVerifyModel && actions.onVerifyModel}
+      onVerifyCliSupport={
+        props.onVerifyCliSupport && actions.onVerifyCliSupport
+      }
+      onOpenModelKeyDialog={
+        props.onOpenModelKeyDialog && actions.onOpenModelKeyDialog
+      }
+      onToggleExpand={props.onToggleExpand && actions.onToggleExpand}
+    />
+  )
+}
+
+const ModelItemContent = memo(function ModelItemContent(props: ModelItemProps) {
   const {
     model,
     onCatalogChanged,
@@ -347,7 +419,7 @@ export default function ModelItem(props: ModelItemProps) {
           onClick={handleFilterAccount}
           title={sourceLabel.title ?? sourceLabel.label}
           aria-label={sourceLabel.label}
-          className="hover:border-theme-300 hover:text-theme-700 dark:hover:border-theme-400 dark:hover:text-theme-300 max-w-full min-w-0 cursor-pointer"
+          className="max-w-full min-w-0 cursor-pointer hover:border-theme-300 hover:text-theme-700 dark:hover:border-theme-400 dark:hover:text-theme-300"
         >
           <span className="min-w-0 truncate">{sourceLabel.label}</span>
         </button>
@@ -378,7 +450,7 @@ export default function ModelItem(props: ModelItemProps) {
             : PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl
         }
       >
-        <Copy className="text-muted-foreground dark:text-secondary-foreground h-3 w-3 sm:h-3.5 sm:w-3.5" />
+        <Copy className="h-3 w-3 text-muted-foreground sm:h-3.5 sm:w-3.5 dark:text-secondary-foreground" />
       </IconButton>
       {canOpenSourceUrl ? (
         <IconButton
@@ -394,7 +466,7 @@ export default function ModelItem(props: ModelItemProps) {
               : undefined
           }
         >
-          <WorkflowTransitionIcon className="text-muted-foreground dark:text-secondary-foreground h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          <WorkflowTransitionIcon className="h-3 w-3 text-muted-foreground sm:h-3.5 sm:w-3.5 dark:text-secondary-foreground" />
         </IconButton>
       ) : null}
     </>
@@ -405,14 +477,14 @@ export default function ModelItem(props: ModelItemProps) {
       variant={isComparisonOffer ? "ghost" : "interactive"}
       className={cn(
         isComparisonOffer
-          ? "hover:bg-surface-subtle/80 dark:hover:bg-foreground/[0.025] rounded-none border-0 bg-transparent shadow-none transition-colors hover:shadow-none"
+          ? "rounded-none border-0 bg-transparent shadow-none transition-colors hover:bg-surface-subtle/80 hover:shadow-none dark:hover:bg-foreground/[0.025]"
           : isAvailableForUser &&
               "hover:border-theme-300 dark:hover:border-theme-500/50",
         !isAvailableForUser && "bg-surface-subtle dark:bg-card/50",
       )}
     >
       <CardContent padding="default" spacing="default">
-        <div className="gap-y-density-2 flex min-w-0 flex-wrap items-start gap-x-2">
+        <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-density-2">
           <ModelItemHeader
             model={model}
             resolvedVendor={resolvedVendor}
@@ -571,7 +643,7 @@ export default function ModelItem(props: ModelItemProps) {
             />
           )}
 
-        <div className="gap-y-density-2 flex min-w-0 flex-col gap-x-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-x-2 gap-y-density-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
             <ModelItemPricing
               sourceLabel={sourceLabel.label}
@@ -608,7 +680,7 @@ export default function ModelItem(props: ModelItemProps) {
             <div
               ref={detailsRef}
               tabIndex={-1}
-              className="dark:border-border pt-density-4 border-t"
+              className="border-t pt-density-4 dark:border-border"
             >
               <div className="space-y-density-4">
                 {hasLegacyDetails && (
@@ -635,4 +707,4 @@ export default function ModelItem(props: ModelItemProps) {
       </CardContent>
     </Card>
   )
-}
+}, isEqual)

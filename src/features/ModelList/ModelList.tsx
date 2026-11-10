@@ -230,6 +230,11 @@ export default function ModelList(props: {
     setIsSourceSelectorOpen(true)
   }, [])
 
+  const handleConfigurePricing = useCallback(() => {
+    if (!isModelListPriceSortMode(sortMode))
+      setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
+  }, [sortMode, setSortMode])
+
   const renderModelDisplay = () => (
     <ModelDisplay
       modelGroupOverrides={modelGroupOverrides}
@@ -272,7 +277,7 @@ export default function ModelList(props: {
 
   const page = (
     <div
-      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      className="px-4 py-density-4 sm:px-6 sm:py-density-6"
       data-testid={MODEL_LIST_TEST_IDS.page}
       data-model-source={selectedSourceValue}
       data-options-page-pending={
@@ -649,12 +654,7 @@ export default function ModelList(props: {
     </div>
   )
   return (
-    <PricingScenarioNavigation
-      onConfigure={() => {
-        if (!isModelListPriceSortMode(sortMode))
-          setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
-      }}
-    >
+    <PricingScenarioNavigation onConfigure={handleConfigurePricing}>
       {page}
     </PricingScenarioNavigation>
   )
