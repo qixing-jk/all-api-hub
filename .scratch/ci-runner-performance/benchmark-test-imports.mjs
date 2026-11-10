@@ -31,7 +31,7 @@ const { values } = parseArgs({
   },
 })
 assert.match(values.label, /^[a-zA-Z0-9_-]+$/)
-assert.ok(["heavy", "pure"].includes(values.suite))
+assert.ok(["heavy", "pure", "dom"].includes(values.suite))
 const rounds = Number(values.rounds)
 assert.ok(Number.isInteger(rounds) && rounds > 0)
 const variants = values.variants.split(",")
@@ -50,6 +50,7 @@ assert.ok(
       "json-report",
       "light-setup",
       "light-module-cache",
+      "happy-dom",
     ].includes(variant),
   ),
 )
@@ -78,6 +79,20 @@ const pureTargets = [
 ]
 if (values.suite === "pure")
   files.splice(0, files.length, ...pureTargets.map(([test]) => test))
+if (values.suite === "dom")
+  files.splice(
+    0,
+    files.length,
+    "tests/components/ui/Modal.test.tsx",
+    "tests/components/ui/select.test.tsx",
+    "tests/components/ui/DatePicker.test.tsx",
+    "tests/components/ui/checkbox.test.tsx",
+    "tests/components/ui/Switch.test.tsx",
+    "tests/components/ui/modernPrimitives.test.tsx",
+    "tests/components/ui/compositionSlots.test.tsx",
+    "tests/features/AccountManagement/components/AccountDialogForm.test.tsx",
+    "tests/features/ModelList/presentation/ModelVendorMark.test.tsx",
+  )
 
 function git(...args) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" })
@@ -165,7 +180,15 @@ for (const variant of variants) {
   const config = `import { mergeConfig } from "vitest/config"\nimport base from "../../../../vitest.config"\nconst config = mergeConfig(base, { cacheDir: ${viteCache}, test: { ${cacheOptions}, deps: { optimizer: { client: { enabled: ${variant === "optimizer"}, include: ["lucide-react"] } } } } })\n${variant.startsWith("light-") ? 'for (const project of config.test.projects) if (project.test.name === "node") project.test.setupFiles = []\n' : ""}export default config\n`
 
   configs[variant] = path.join(output, variant + ".config.ts")
-  writeFileSync(configs[variant], config)
+  writeFileSync(
+    configs[variant],
+    variant === "happy-dom"
+      ? config.replace(
+          "export default config",
+          'for (const project of config.test.projects) if (project.test.name === "dom") project.test.environment = "happy-dom"\nexport default config',
+        )
+      : config,
+  )
 }
 
 const version = JSON.parse(
