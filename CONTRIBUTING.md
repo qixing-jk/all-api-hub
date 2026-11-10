@@ -436,6 +436,13 @@ If you add resource bundles to the shared `testI18n`, prefer cleaning them up in
 
 ### Test Infrastructure
 
+Vitest 5 shares the Vite server between the Node and DOM projects and caches
+transformed modules in `node_modules/.vitest-cache`. Set
+`VITEST_FS_MODULE_CACHE=0` to disable the module cache for a diagnostic run.
+Tests and coverage collection still execute when transforms are cached. Shard
+blob reports use `.vitest/blob`; the report checker supports the known 4.0,
+4.1, 5.0 and 5.1 layouts and rejects unknown versions.
+
 #### Mocks
 
 The shared setup (`tests/setup.shared.ts`, loaded by both test environments) provides browser/storage and i18n support. The DOM setup adds browser-specific behavior; consult the applicable setup when a test needs a particular mock:

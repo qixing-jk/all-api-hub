@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SiteAnnouncementsOverviewCard } from "~/features/SiteAnnouncements/components/SiteAnnouncementsOverviewCard"
 import type { SiteAnnouncementSiteOption } from "~/features/SiteAnnouncements/utils"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const siteOptions: SiteAnnouncementSiteOption[] = [
   { value: "site-1", label: "Alpha API", announcementCount: 4 },
@@ -125,5 +125,15 @@ describe("SiteAnnouncementsOverviewCard", () => {
         name: /siteAnnouncements:filters\.allSites/,
       }),
     ).toHaveTextContent("4")
+
+    // Let the select restore focus before the test's DOM environment is torn down.
+    await user.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("combobox", {
+          name: "siteAnnouncements:filters.site",
+        }),
+      ).toHaveFocus(),
+    )
   })
 })

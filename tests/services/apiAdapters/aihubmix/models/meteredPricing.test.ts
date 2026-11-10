@@ -99,6 +99,10 @@ describe("public task billing compiled into shared pricing", () => {
       { ...config, enabled_billing_items: ["image_generation", "image_input"] },
       { kind: PRICING_SOURCE_KINDS.CATALOG },
     )!
+    expect(missingReference.issues).toContainEqual({
+      code: "unsupported-rule",
+      meters: ["referenceImage"],
+    })
     expect(
       quoteModelPrice(missingReference, {
         purpose: PRICING_PURPOSES.REQUEST,
@@ -109,7 +113,8 @@ describe("public task billing compiled into shared pricing", () => {
       status: "partial",
       amount: 0.1,
       issues: expect.arrayContaining([
-        { code: "unsupported-rule", meters: ["referenceImage"] },
+        { code: "unsupported-rule" },
+        { code: "price-missing", meter: "referenceImage" },
       ]),
     })
     expect(

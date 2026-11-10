@@ -65,8 +65,6 @@ const config: KnipConfig = {
     "@types/chrome",
     "@types/firefox-webext-browser",
     "@types/webextension-polyfill",
-    // Loaded by Vitest's configured V8 coverage provider.
-    "@vitest/coverage-v8",
     // Loaded by string from wxt.config.ts modules.
     "@wxt-dev/auto-icons",
     // Spawned by plugins/react-devtools-auto.ts during development.

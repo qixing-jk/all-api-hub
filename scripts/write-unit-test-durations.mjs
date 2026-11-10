@@ -97,7 +97,7 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const reportsDir = path.resolve(rootDir, process.argv[2] ?? ".vitest-reports")
+  const reportsDir = path.resolve(rootDir, process.argv[2] ?? ".vitest/blob")
   const outputPath = path.resolve(
     rootDir,
     process.argv[3] ?? ".vitest-durations/shard-durations.json",
