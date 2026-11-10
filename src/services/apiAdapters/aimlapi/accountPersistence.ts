@@ -20,6 +20,8 @@ function getAimlApiSafeErrorMessage(
   unknownFallback: string,
 ): string {
   if (error instanceof ApiError) {
+    if (error.code === API_ERROR_CODES.ROBOT_CHALLENGE)
+      return t("messages:errors.api.verificationRequired")
     if (error.code === API_ERROR_CODES.HTTP_401)
       return t("messages:aimlapi.credentialInvalid")
     if (error.code === API_ERROR_CODES.HTTP_403)

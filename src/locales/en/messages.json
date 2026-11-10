@@ -108,6 +108,7 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "Invalid response format",
+      "missingRecoveryPolicy": "The extension could not prepare this request. Update the extension or report the issue.",
       "nonJsonContent": "returned {{contentType}} instead of JSON (HTTP {{status}})",
       "onlyJsonSupported": "Only JSON responses are supported",
       "requestFailed": "Request failed: {{status}}",

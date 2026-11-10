@@ -99,6 +99,21 @@ it("completion retains credential-verification failure rather than accepting bro
   ).rejects.toMatchObject({ reason: "token_fetch_failed" })
 })
 
+it("reports verification guidance without exposing a challenge response", () => {
+  const error = new ApiError(
+    "<html>private credential details</html>",
+    403,
+    "/v1/key",
+    API_ERROR_CODES.ROBOT_CHALLENGE,
+  )
+  expect(aimlApiAccountPersistence.getValidationFailureMessage(error)).toBe(
+    "messages:errors.api.verificationRequired",
+  )
+  expect(aimlApiAccountPersistence.getHealthFailureReason(error)).toBe(
+    "messages:errors.api.verificationRequired",
+  )
+})
+
 it("retains an untouched saved identity without sending requests", async () => {
   const existingAccount = {
     site_type: "aimlapi",

@@ -375,10 +375,10 @@ const _fetchApiWithMapper = async <T, TResult>(
 ): Promise<TResult> => {
   if (!request.protectionBypassExecution && !request.directRequestReason) {
     throw new ApiError(
-      t("messages:background.tempWindowPolicyContextInvalid"),
+      t("messages:errors.api.missingRecoveryPolicy"),
       undefined,
       options.endpoint,
-      API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+      API_ERROR_CODES.REQUEST_RECOVERY_POLICY_MISSING,
     )
   }
   request = withSafariNativeCookieSession(request)

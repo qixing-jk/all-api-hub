@@ -51,6 +51,21 @@ const policy = {
 }
 
 describe("Novita boundary validation", () => {
+  it("reports verification guidance without exposing a challenge response", () => {
+    const error = new ApiError(
+      "<html>private credential details</html>",
+      403,
+      "/openapi/v1/user/info",
+      API_ERROR_CODES.ROBOT_CHALLENGE,
+    )
+    expect(novitaAccountPersistence.getValidationFailureMessage(error)).toBe(
+      "messages:errors.api.verificationRequired",
+    )
+    expect(novitaAccountPersistence.getHealthFailureReason(error)).toBe(
+      "messages:errors.api.verificationRequired",
+    )
+  })
+
   it("keeps completion identity failures in controlled local copy", () => {
     expect(
       getNovitaSafeErrorMessage(

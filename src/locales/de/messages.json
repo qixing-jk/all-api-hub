@@ -108,6 +108,7 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "Ungültiges Antwortformat",
+      "missingRecoveryPolicy": "Die Erweiterung konnte diese Anfrage nicht vorbereiten. Aktualisieren Sie die Erweiterung oder melden Sie das Problem.",
       "nonJsonContent": "{{contentType}} statt JSON zurückgegeben (HTTP {{status}})",
       "onlyJsonSupported": "Nur JSON-Antworten werden unterstützt",
       "requestFailed": "Anfrage fehlgeschlagen: {{status}}",

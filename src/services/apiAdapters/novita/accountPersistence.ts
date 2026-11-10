@@ -22,6 +22,8 @@ export function getNovitaSafeErrorMessage(
     return t("accountDialog:messages.autoDetectIdentityMismatch")
   }
   if (error instanceof ApiError) {
+    if (error.code === API_ERROR_CODES.ROBOT_CHALLENGE)
+      return t("messages:errors.api.verificationRequired")
     if (error.code === API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH)
       return t("accountDialog:messages.autoDetectIdentityMismatch")
     if (error.code === API_ERROR_CODES.HTTP_401) {

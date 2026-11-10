@@ -229,7 +229,8 @@ describe("apiTransport request helpers", () => {
         { endpoint: ENDPOINT },
       ),
     ).rejects.toMatchObject({
-      code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+      code: "REQUEST_RECOVERY_POLICY_MISSING",
+      message: "messages:errors.api.missingRecoveryPolicy",
     })
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
