@@ -8,6 +8,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs"
+import { createRequire } from "node:module"
 import { cpus, platform } from "node:os"
 import path from "node:path"
 import { performance } from "node:perf_hooks"
@@ -54,6 +55,20 @@ assert.ok(
     ].includes(variant),
   ),
 )
+if (variants.includes("happy-dom")) {
+  const require = createRequire(import.meta.url)
+  const vitestRequire = createRequire(require.resolve("vitest/package.json"))
+  try {
+    vitestRequire.resolve("happy-dom")
+  } catch (cause) {
+    throw new Error(
+      "The happy-dom benchmark requires happy-dom to be resolvable from Vitest. " +
+        "In a disposable checkout, run pnpm add -D happy-dom (pin the version under comparison), then rerun. " +
+        "Installing only the isolated animation probe does not satisfy this prerequisite.",
+      { cause },
+    )
+  }
+}
 const output = path.join(
   root,
   ".scratch/ci-runner-performance/artifacts/imports-" + values.label,

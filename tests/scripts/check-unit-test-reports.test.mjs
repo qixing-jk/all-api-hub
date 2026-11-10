@@ -27,6 +27,11 @@ function reportGuardCommand() {
   return command.replaceAll("scripts/check-unit-test-reports.mjs", quotedScript)
 }
 
+/**
+ * Run the report guard against isolated blob fixtures, directly or through its CI command.
+ * Expose the process result and published outputs so failed-test coverage can be
+ * distinguished from incomplete reports that must not publish coverage or timings.
+ */
 function check(context, reports, total = "2", options = {}) {
   const directory = mkdtempSync(join(tmpdir(), "unit-test-reports-"))
   context.after(() => {

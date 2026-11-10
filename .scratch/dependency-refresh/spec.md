@@ -46,6 +46,8 @@ The direct Krill adapter suite passed 37 tests under v5 with 48/49 statements an
 
 ## Happy DOM decision
 
+The optional `--suite dom --variants baseline,happy-dom` benchmark requires the chosen Happy DOM version to be installed in a disposable checkout where Vitest can resolve it (`pnpm add -D happy-dom@<version>`). The runner checks this before starting even the baseline or writing result artifacts. Installing only the isolated animation probe below does not satisfy the benchmark's prerequisite.
+
 The DOM experiment uses nine real component suites: modal, select, date picker, checkbox, switch, modern primitives, composition slots, account form and vendor marks. It preserves test identities, worker count, isolation and coverage settings; it does not include Markdown sanitization tests. DOMPurify's [supported DOM guidance](https://github.com/cure53/DOMPurify#running-dompurify-on-the-server) remains another reason to preserve jsdom for those tests.
 
 jsdom 31.0.0 passed all 197 cases in both rounds (46.157 and 36.802 seconds). happy-dom 21.0.4 passed the assertions but failed the process with two unhandled `AbortError: The animation was canceled` errors from account-form cleanup. A failing candidate's elapsed time is not accepted as a speedup. Raw logs: `../ci-runner-performance/artifacts/imports-dependency-dom-20261110/`.

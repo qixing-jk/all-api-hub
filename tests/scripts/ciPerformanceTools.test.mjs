@@ -2,9 +2,12 @@ import assert from "node:assert/strict"
 import { execFileSync, spawn, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import {
+  cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs"
@@ -28,6 +31,119 @@ function temporaryDirectory(context) {
     rmSync(directory, { recursive: true, force: true })
   })
   return directory
+}
+
+/** Run the actual benchmark CLI with a controlled dependency tree and a runner sentinel. */
+function benchmarkFixture(context) {
+  const directory = temporaryDirectory(context)
+  execFileSync("git", ["init", "--quiet", directory])
+  execFileSync("git", [
+    "-C",
+    directory,
+    "-c",
+    "user.name=Benchmark fixture",
+    "-c",
+    "user.email=fixture@example.test",
+    "-c",
+    "commit.gpgsign=false",
+    "-c",
+    `core.hooksPath=${path.join(directory, "no-hooks")}`,
+    "commit",
+    "--quiet",
+    "--allow-empty",
+    "-m",
+    "Fixture",
+  ])
+  const write = (name, contents) => {
+    const filename = path.join(directory, name)
+    mkdirSync(path.dirname(filename), { recursive: true })
+    writeFileSync(filename, contents)
+  }
+  for (const name of [
+    ".scratch/ci-runner-performance/benchmark-test-imports.mjs",
+    "scripts/utils/unitTestDurations.mjs",
+    "scripts/utils/vitestBlob.mjs",
+  ]) {
+    write(name, readFileSync(path.join(root, name)))
+  }
+  write(".gitignore", "node_modules/\n.wxt/\n")
+  write(".wxt/tsconfig.json", "{}")
+  write("node_modules/vitest/package.json", '{"version":"5.1.0"}')
+  write(
+    "node_modules/vitest/vitest.mjs",
+    'import { writeFileSync } from "node:fs"; writeFileSync("runner-started", ""); process.exit(23)\n',
+  )
+  cpSync(
+    realpathSync(path.join(root, "node_modules/flatted")),
+    path.join(directory, "node_modules/flatted"),
+    { recursive: true },
+  )
+  return {
+    directory,
+    write,
+    run: (variants) =>
+      spawnSync(
+        process.execPath,
+        [
+          path.join(
+            directory,
+            ".scratch/ci-runner-performance/benchmark-test-imports.mjs",
+          ),
+          "--suite=dom",
+          `--variants=${variants}`,
+          "--rounds=1",
+          "--label=prerequisite",
+        ],
+        { cwd: directory, encoding: "utf8" },
+      ),
+  }
+}
+
+test("Happy DOM benchmarks stop before any run when only the isolated probe has the dependency", (context) => {
+  const fixture = benchmarkFixture(context)
+  fixture.write(
+    ".scratch/dependency-refresh/artifacts/happy-probe/node_modules/happy-dom/package.json",
+    '{"main":"index.js"}',
+  )
+  fixture.write(
+    ".scratch/dependency-refresh/artifacts/happy-probe/node_modules/happy-dom/index.js",
+    "module.exports = {}",
+  )
+  const run = fixture.run("baseline,happy-dom")
+  assert.notEqual(run.status, 0)
+  assert.match(run.stderr, /happy-dom[\s\S]*pnpm add -D happy-dom/)
+  assert.equal(
+    existsSync(path.join(fixture.directory, "runner-started")),
+    false,
+  )
+  assert.equal(
+    existsSync(
+      path.join(
+        fixture.directory,
+        ".scratch/ci-runner-performance/artifacts/imports-prerequisite",
+      ),
+    ),
+    false,
+  )
+})
+
+for (const variants of ["baseline", "baseline,happy-dom"]) {
+  test(`benchmark starts ${variants} with its required dependencies available`, (context) => {
+    const fixture = benchmarkFixture(context)
+    if (variants.includes("happy-dom")) {
+      fixture.write(
+        "node_modules/happy-dom/package.json",
+        '{"main":"index.js"}',
+      )
+      fixture.write("node_modules/happy-dom/index.js", "module.exports = {}")
+    }
+    const run = fixture.run(variants)
+    assert.equal(
+      existsSync(path.join(fixture.directory, "runner-started")),
+      true,
+      run.stdout + run.stderr,
+    )
+  })
 }
 
 function fingerprintFixture(context) {
