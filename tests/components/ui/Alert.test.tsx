@@ -1,8 +1,8 @@
-import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { Alert } from "~/components/ui/Alert"
+import { render, screen } from "~~/tests/test-utils/render"
 
 describe("Alert", () => {
   it("makes an iconless alert action available beside its message", async () => {
@@ -15,14 +15,16 @@ describe("Alert", () => {
         action={<button onClick={onRetry}>Retry</button>}
       />,
     )
-    expect(screen.getByRole("alert")).toHaveTextContent("Connection failed")
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Connection failed",
+    )
     await user.click(screen.getByRole("button", { name: "Retry" }))
     expect(onRetry).toHaveBeenCalledOnce()
     expect(screen.getByRole("alert")).not.toHaveClass(
       "grid-cols-[auto_minmax(0,1fr)]",
     )
   })
-  it("renders compact alerts with a stable icon and content grid", () => {
+  it("renders compact alerts with a stable icon and content grid", async () => {
     render(
       <Alert
         compact
@@ -31,7 +33,7 @@ describe("Alert", () => {
       />,
     )
 
-    const alert = screen.getByRole("alert")
+    const alert = await screen.findByRole("alert")
     const icon = alert.querySelector("svg")
 
     expect(alert).toHaveClass("grid")
@@ -45,10 +47,10 @@ describe("Alert", () => {
     )
   })
 
-  it("aligns the default alert icon and content in the same flow", () => {
+  it("aligns the default alert icon and content in the same flow", async () => {
     render(<Alert variant="info" description="Standard notice" />)
 
-    const alert = screen.getByRole("alert")
+    const alert = await screen.findByRole("alert")
 
     expect(alert).toHaveClass(
       "grid",
@@ -60,12 +62,12 @@ describe("Alert", () => {
     expect(alert).not.toHaveClass("[&>svg+div]:translate-y-[-3px]")
   })
 
-  it("keeps iconless alerts as a full-width block", () => {
+  it("keeps iconless alerts as a full-width block", async () => {
     render(
       <Alert showIcon={false} variant="info" description="Text only notice" />,
     )
 
-    const alert = screen.getByRole("alert")
+    const alert = await screen.findByRole("alert")
 
     expect(alert).toHaveClass("block")
     expect(alert).not.toHaveClass("grid")
