@@ -36,6 +36,115 @@ const options = {
 
 describe("question answer workspace", () => {
   afterEach(() => vi.restoreAllMocks())
+  it.each([false, true])(
+    "ignores a superseded settings load, rejected: %s",
+    async (rejected) => {
+      const current = await userPreferences.getPreferencesStrict()
+      let resolve!: (value: typeof current) => void
+      let reject!: (cause: Error) => void
+      vi.spyOn(userPreferences, "getPreferencesStrict")
+        .mockImplementationOnce(
+          () =>
+            new Promise((done, fail) => {
+              resolve = done
+              reject = fail
+            }),
+        )
+        .mockResolvedValueOnce({
+          ...current,
+          questionAnswerTest: { question: "Newest", referenceAnswer: "" },
+        })
+      const view = renderHook(() => useQuestionAnswerTest(options))
+      await act(() => view.result.current.loadSettings())
+      await act(async () => {
+        if (rejected) reject(new Error("Old failure"))
+        else resolve(current)
+      })
+      expect(view.result.current.settings.question).toBe("Newest")
+      expect(view.result.current.saveError).toBeNull()
+    },
+  )
+  it("returns to idle when no usable credentials are available", async () => {
+    const runner = vi.fn()
+    const view = renderHook(() =>
+      useQuestionAnswerTest({
+        ...options,
+        resolveRequest: async () => null,
+        runner,
+      }),
+    )
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    await act(async () => view.result.current.run())
+    expect(view.result.current.status).toBe("idle")
+    expect(view.result.current.canRun).toBe(true)
+    expect(runner).not.toHaveBeenCalled()
+  })
+  it("reports a sanitized request error and permits retry", async () => {
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Failed with secret-key"))
+      .mockResolvedValueOnce(resultValue)
+    const view = renderHook(() => useQuestionAnswerTest({ ...options, runner }))
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    await act(async () => view.result.current.run())
+    expect(view.result.current.status).toBe("error")
+    expect(view.result.current.error).toContain("Failed with")
+    expect(view.result.current.error).not.toContain("secret-key")
+    await act(async () => view.result.current.run())
+    expect(view.result.current.status).toBe("done")
+    expect(view.result.current.error).toBeNull()
+  })
+  it("ignores a stopped runner's late rejection and locks edits and duplicate starts while active", async () => {
+    let reject!: (cause: Error) => void
+    const runner = vi.fn(
+      () =>
+        new Promise<QuestionAnswerResult>((_, fail) => {
+          reject = fail
+        }),
+    )
+    const view = renderHook(() => useQuestionAnswerTest({ ...options, runner }))
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    const question = view.result.current.settings.question
+    act(() => {
+      view.result.current.run()
+      view.result.current.run()
+    })
+    await waitFor(() => expect(runner).toHaveBeenCalledOnce())
+    act(() => view.result.current.updateSettings({ question: "Ignored" }))
+    expect(view.result.current.settings.question).toBe(question)
+    act(() => view.result.current.stop())
+    await act(async () => reject(new Error("Late error")))
+    expect(view.result.current.status).toBe("stopped")
+    expect(view.result.current.error).toBeNull()
+  })
+  it("debounces the newest edit and coalesces queued saves", async () => {
+    const save = vi.spyOn(userPreferences, "updateQuestionAnswerTest")
+    const view = renderHook(() => useQuestionAnswerTest(options))
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    act(() => {
+      view.result.current.updateSettings({ question: "First" })
+      view.result.current.updateSettings({ question: "Latest" })
+    })
+    await waitFor(async () =>
+      expect(
+        (await userPreferences.getPreferencesStrict()).questionAnswerTest
+          ?.question,
+      ).toBe("Latest"),
+    )
+    expect(save).toHaveBeenCalledOnce()
+    act(() => view.result.current.updateSettings({ question: "Queued" }))
+    await act(async () => {
+      await Promise.all([
+        view.result.current.saveSettings(),
+        view.result.current.saveSettings(),
+      ])
+    })
+    expect(save).toHaveBeenCalledTimes(2)
+    expect(
+      (await userPreferences.getPreferencesStrict()).questionAnswerTest
+        ?.question,
+    ).toBe("Queued")
+  })
   it("restores legacy questions without retaining a hidden grading mode", async () => {
     const legacy = {
       question: "Saved question",

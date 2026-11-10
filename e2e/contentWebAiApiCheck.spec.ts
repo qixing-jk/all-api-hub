@@ -544,6 +544,17 @@ test("web context probe shows progress, measured bounds and cancellation", async
     const restoredPanel = reopened.modal.getByRole("region", {
       name: "Model context test",
     })
+    await restoredPanel.scrollIntoViewIfNeeded()
+    await restoredPanel.screenshot({
+      path: test.info().outputPath("web-context-history-row.png"),
+      animations: "disabled",
+    })
+    // Restored status badges must leave the title visible and clickable.
+    expect(
+      (await restoredPanel
+        .getByRole("button", { name: "Model context test", exact: true })
+        .boundingBox())!.width,
+    ).toBeGreaterThan(40)
     await restoredPanel
       .getByRole("button", { name: "Model context test", exact: true })
       .click()

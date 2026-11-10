@@ -96,12 +96,21 @@ for (const source of ["profile", "account"] as const) {
         exact: true,
       })
       await expect(questionInput).toBeVisible()
+      // Explicit line breaks keep overflow independent of platform font metrics.
+      const defaultQuestion = await questionInput.inputValue()
+      await questionInput.fill(
+        Array.from(
+          { length: 20 },
+          (_, index) => `Question line ${index + 1}`,
+        ).join("\n"),
+      )
       expect(
         await questionInput.evaluate((element) => element.clientHeight),
       ).toBeLessThanOrEqual(128)
       expect(
         await questionInput.evaluate((element) => element.scrollHeight),
       ).toBeGreaterThan(128)
+      await questionInput.fill(defaultQuestion)
       await expect(
         panel.getByRole("button", { name: "Question", exact: true }),
       ).toHaveCount(0)

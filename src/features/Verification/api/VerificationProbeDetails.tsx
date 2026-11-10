@@ -69,7 +69,7 @@ export function VerificationProbeDetails({
           selection && (selected ? "bg-primary/10" : "hover:bg-muted/60"),
         )}
       >
-        <div className="relative flex min-w-0 flex-1 items-center gap-2">
+        <div className="relative flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {heading ? (
             <SummaryControl
               type={selection ? "button" : undefined}
@@ -113,7 +113,7 @@ export function VerificationProbeDetails({
                 <div
                   id={`${id}-status`}
                   className={cn(
-                    "ml-auto flex shrink-0 items-center gap-2",
+                    "ml-auto flex max-w-full flex-wrap items-center gap-2",
                     statusInteractive ? "relative z-10" : "pointer-events-none",
                   )}
                 >

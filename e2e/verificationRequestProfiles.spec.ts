@@ -112,12 +112,10 @@ test("CLI enhancement stays below the fields and temporary protocol is a field n
       exact: true,
     })
     await expect(runAll).toHaveAccessibleDescription(
-      "仅运行常规测试；绘图和模型上下文测试需单独启动。",
+      "仅运行常规测试；按需测试需单独启动。",
     )
     await runAll.focus()
-    await expect(page.getByRole("tooltip")).toContainText(
-      "绘图和模型上下文测试需单独启动",
-    )
+    await expect(page.getByRole("tooltip")).toContainText("按需测试需单独启动")
     await selector.focus()
     const mode = (await page
       .getByRole("combobox", { name: "测试方式", exact: true })

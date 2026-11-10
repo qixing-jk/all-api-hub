@@ -1,11 +1,13 @@
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { QuestionAnswerPanel } from "~/features/Verification/api/QuestionAnswerPanel"
 import { useQuestionAnswerTest } from "~/features/Verification/api/useQuestionAnswerTest"
 import en from "~/locales/en/aiApiVerification.json"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { server } from "~~/tests/msw/server"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
@@ -32,6 +34,94 @@ function Workspace() {
 }
 
 describe("question answer panel", () => {
+  afterEach(() => vi.restoreAllMocks())
+  it.each(["load", "save"])(
+    "retries a failed preference %s from the warning",
+    async (failure) => {
+      const user = userEvent.setup()
+      if (failure === "load")
+        vi.spyOn(userPreferences, "getPreferencesStrict").mockRejectedValueOnce(
+          new Error("Unavailable"),
+        )
+      render(<Workspace />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      if (failure === "save") {
+        const question = await screen.findByRole("textbox", {
+          name: "Question",
+        })
+        await waitFor(() => expect(question).toBeEnabled())
+        vi.spyOn(fakeBrowser.storage.local, "set").mockRejectedValue(
+          new Error("Unavailable"),
+        )
+        await user.type(question, " Edited")
+        await user.tab()
+      }
+      const retry = await screen.findByRole("button", { name: "Retry" })
+      expect(screen.getByRole("alert")).toBeVisible()
+      if (failure === "save") {
+        const attempts = vi.mocked(fakeBrowser.storage.local.set).mock.calls
+          .length
+        await user.click(retry)
+        await waitFor(() =>
+          expect(fakeBrowser.storage.local.set).toHaveBeenCalledTimes(
+            attempts + 1,
+          ),
+        )
+        expect(screen.getByRole("alert")).toBeVisible()
+        vi.mocked(fakeBrowser.storage.local.set).mockRestore()
+      }
+      await user.click(screen.getByRole("button", { name: "Retry" }))
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", { name: "Retry" }),
+        ).not.toBeInTheDocument(),
+      )
+      expect(screen.getByRole("button", { name: "Run Q&A test" })).toBeEnabled()
+    },
+  )
+  it("shows a failed request and allows the user to run again", async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post("https://qa-ui.invalid/v1/chat/completions", () =>
+        HttpResponse.error(),
+      ),
+    )
+    render(<Workspace />)
+    const run = await screen.findByRole("button", { name: "Run Q&A test" })
+    await waitFor(() => expect(run).toBeEnabled())
+    await user.click(run)
+    expect(
+      await screen.findByText("Request failed", { exact: true }),
+    ).toBeVisible()
+    expect(screen.getByRole("alert")).toBeVisible()
+    expect(run).toBeEnabled()
+  })
+  it("shows a stopped request while its late response remains pending", async () => {
+    const user = userEvent.setup()
+    let release!: () => void
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.post("https://qa-ui.invalid/v1/chat/completions", async () => {
+        await pending
+        return HttpResponse.json({ choices: [] })
+      }),
+    )
+    render(<Workspace />)
+    const run = await screen.findByRole("button", { name: "Run Q&A test" })
+    await waitFor(() => expect(run).toBeEnabled())
+    try {
+      await user.click(run)
+      await user.click(await screen.findByRole("button", { name: "Stop" }))
+      expect(await screen.findByText("Stopped", { exact: true })).toBeVisible()
+      expect(screen.getByRole("button", { name: "Run Q&A test" })).toBeEnabled()
+    } finally {
+      release()
+    }
+  })
   it("explains exact answer matching on demand without redundant question hints", async () => {
     const user = userEvent.setup()
     render(<Workspace />)
