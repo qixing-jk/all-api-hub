@@ -62,6 +62,7 @@ describe("voApiV2AccountCompletion", () => {
     )
 
     expect(fetchVoApiV2UserInfo).toHaveBeenCalledWith({
+      directRequestReason: "passive" as const,
       baseUrl: "https://voapi.example.invalid",
       fetchContext: currentTabFetchContext,
       auth: {

@@ -70,6 +70,7 @@ const stats = {
   trend: [],
 }
 const request = {
+  directRequestReason: "caller_managed" as const,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: user.id },
 }
@@ -397,7 +398,10 @@ describe("Krill AI account console", () => {
         context: {},
       } as never,
       {
-        createServiceRequest: (input: unknown) => input,
+        createServiceRequest: (input: Record<string, unknown>) => ({
+          ...input,
+          directRequestReason: "caller_managed",
+        }),
         captureRecoveryData,
         createInitialCheckInConfig: () => ({ enableDetection: false }),
       } as never,

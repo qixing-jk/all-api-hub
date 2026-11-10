@@ -286,6 +286,7 @@ describe("auto-detect completion", () => {
         context: adapterRequest.context,
       }),
     ).toEqual({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.invalid",
       auth: { authType: AuthTypeEnum.Cookie, userId: "7" },
       cookieAuthSessionCookie: "session=example",
@@ -329,6 +330,7 @@ describe("auto-detect completion", () => {
         context: {},
       }),
     ).toEqual({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://malformed.example.com",
       auth: { authType: AuthTypeEnum.Cookie, userId: "8" },
     })

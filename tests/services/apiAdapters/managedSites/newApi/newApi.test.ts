@@ -167,9 +167,8 @@ describe("newApi managed-site channel capability", () => {
       successData: { id: 17 },
       arrange: arrangeRestMutation(channelManagement.createChannel, { id: 17 }),
       invoke: async () => {
-        const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApi/operations"
-        )
+        const { newApiChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/newApi/operations")
         return await newApiChannelOperations.create(config, createPayload)
       },
       assertRequestPayload: () =>
@@ -189,9 +188,8 @@ describe("newApi managed-site channel capability", () => {
         id: 7,
       }),
       invoke: async () => {
-        const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApi/operations"
-        )
+        const { newApiChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/newApi/operations")
         return await newApiChannelOperations.update(config, updatePayload)
       },
       assertRequestPayload: () =>
@@ -209,9 +207,8 @@ describe("newApi managed-site channel capability", () => {
       successData: null,
       arrange: arrangeRestMutation(channelManagement.manageChannelKey, null),
       invoke: async () => {
-        const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApi/operations"
-        )
+        const { newApiChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/newApi/operations")
         return await newApiChannelOperations.deleteKey(config, 7, 1)
       },
       assertRequestPayload: () =>
@@ -229,9 +226,8 @@ describe("newApi managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(channelManagement.deleteChannel, null),
       invoke: async () => {
-        const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApi/operations"
-        )
+        const { newApiChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/newApi/operations")
         return await newApiChannelOperations.delete(config, 7)
       },
       assertRequestPayload: () =>
@@ -299,9 +295,8 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
 
     await expect(
       newApiChannelOperations.create(config, createPayload),
@@ -315,9 +310,8 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       return rejectionResponse
     })
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
 
     await expect(
       newApiChannelOperations.create(config, createPayload),
@@ -336,9 +330,8 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       return { success: true, data: { id: 17 }, message: "created" }
     })
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
     const payload = {
       mode: "single",
       channel: { name: "channel", status: 1 },
@@ -372,9 +365,8 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       return { success: false, message: "key action rejected", data: null }
     })
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
     const result = await newApiChannelOperations.update(
       config,
       { id: 7, key: "first\nsecond" },
@@ -414,9 +406,8 @@ describe("newApi managed-site channel capability", () => {
           },
         }
       })
-      const { newApiChannelOperations } = await import(
-        "~/services/apiAdapters/managedResources/newApi/operations"
-      )
+      const { newApiChannelOperations } =
+        await import("~/services/apiAdapters/managedResources/newApi/operations")
       const result = await newApiChannelOperations.update(
         config,
         { id: 7, key: "replacement", key_mode: "append" },
@@ -453,9 +444,8 @@ describe("newApi managed-site channel capability", () => {
       // Simulate an older server acknowledging but ignoring disable_key.
       return { success: true, data: null }
     })
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
     const result = await newApiChannelOperations.update(
       config,
       { id: 7, key: "replacement", key_mode: "append" },
@@ -496,9 +486,8 @@ describe("newApi managed-site channel capability", () => {
         return statusResponse
       },
     )
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
 
     await expect(
       newApiChannelOperations.update(config, {
@@ -535,9 +524,8 @@ describe("newApi managed-site channel capability", () => {
         throw raw
       },
     )
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
 
     await expect(
       newApiChannelOperations.update(config, {
@@ -571,9 +559,8 @@ describe("newApi managed-site channel capability", () => {
         return fieldResponse
       },
     )
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
 
     await expect(
       newApiChannelOperations.update(config, {
@@ -602,9 +589,8 @@ describe("newApi managed-site channel capability", () => {
         return { success: true, data: true, message: "success" }
       },
     )
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
 
     await expect(
       newApiChannelOperations.update(config, {
@@ -630,10 +616,10 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("delegates channel operations to direct New API family helpers", async () => {
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "new-api",
       auth: {
@@ -738,10 +724,10 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("delegates managed-site query helpers to direct New API family helpers", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
+    const { newApiManagedSiteCapabilities } =
+      await import("~/services/apiAdapters/managedSites/newApi")
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "new-api",
       auth: {
@@ -771,6 +757,7 @@ describe("newApi managed-site channel capability", () => {
   it("propagates model-sync request options to direct New API helpers", async () => {
     const signal = new AbortController().signal
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "new-api",
       auth: {
@@ -798,9 +785,8 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("propagates channel operation signals to the API transport request", async () => {
-    const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApi/operations"
-    )
+    const { newApiChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/newApi/operations")
     const signal = new AbortController().signal
 
     channelManagement.searchChannel.mockResolvedValue({ items: [], total: 0 })
@@ -844,9 +830,8 @@ describe("newApi managed-site channel capability", () => {
       newApi: config,
     })
 
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
+    const { newApiManagedSiteCapabilities } =
+      await import("~/services/apiAdapters/managedSites/newApi")
 
     await expect(newApiManagedSiteCapabilities.config.get()).resolves.toBe(
       config,
@@ -854,9 +839,8 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("exposes provider config and draft functions", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
+    const { newApiManagedSiteCapabilities } =
+      await import("~/services/apiAdapters/managedSites/newApi")
 
     expect(newApiManagedSiteCapabilities.config.checkValid).toBe(
       newApiProvider.checkValidNewApiConfig,

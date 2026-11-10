@@ -125,6 +125,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
 
     expect(fetchRuntimeModelsMock).toHaveBeenCalledWith(
       {
+        directRequestReason: "passive" as const,
         baseUrl: "https://sub2api.example.invalid",
         accountId: "account-1",
         auth: {
@@ -134,6 +135,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
       },
       {
         accountRequest: expect.objectContaining({
+          directRequestReason: "caller_managed" as const,
           baseUrl: "https://sub2api.example.invalid",
           accountId: "account-1",
           auth: expect.objectContaining({

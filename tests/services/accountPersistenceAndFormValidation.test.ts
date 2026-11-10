@@ -287,9 +287,8 @@ describe("account persistence and form validation", () => {
       })
 
       expect(result.success).toBe(true)
-      const { getSiteTypeCapabilities } = await import(
-        "~/services/apiAdapters/registry"
-      )
+      const { getSiteTypeCapabilities } =
+        await import("~/services/apiAdapters/registry")
       expect(vi.mocked(getSiteTypeCapabilities)).toHaveBeenCalledWith(
         SITE_TYPES.UNKNOWN,
       )
@@ -754,13 +753,13 @@ describe("account persistence and form validation", () => {
       )
 
       expect(result).toBe("Sub2 Portal")
-      const { getSiteTypeCapabilities } = await import(
-        "~/services/apiAdapters/registry"
-      )
+      const { getSiteTypeCapabilities } =
+        await import("~/services/apiAdapters/registry")
       expect(vi.mocked(getSiteTypeCapabilities)).toHaveBeenCalledWith(
         SITE_TYPES.SUB2API,
       )
       expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+        directRequestReason: "passive" as const,
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.None },
       })
@@ -796,6 +795,7 @@ describe("account persistence and form validation", () => {
 
       expect(result).toBe("Billing Center")
       expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+        directRequestReason: "passive" as const,
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.None },
       })

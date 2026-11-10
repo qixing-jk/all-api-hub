@@ -60,6 +60,7 @@ const config = {
 }
 
 const request = {
+  directRequestReason: "credential_isolation" as const,
   baseUrl: "https://managed.example",
   auth: {
     authType: AuthTypeEnum.AccessToken,

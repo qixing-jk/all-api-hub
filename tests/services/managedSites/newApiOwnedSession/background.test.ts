@@ -12,8 +12,7 @@ import { AuthTypeEnum } from "~/types"
 
 const mocks = vi.hoisted(() => ({
   alarmListener: undefined as
-    | ((alarm: { name: string }) => void | Promise<void>)
-    | undefined,
+    ((alarm: { name: string }) => void | Promise<void>) | undefined,
   clearAlarm: vi.fn(async () => true),
   createAlarm: vi.fn(async () => {}),
   getSessionStorageValues: vi.fn(async () => ({})),
@@ -79,6 +78,7 @@ describe("revokeNewApiOwnedSession", () => {
     })
     expect(fetchApiResponse).toHaveBeenCalledWith(
       {
+        directRequestReason: "passive" as const,
         baseUrl: receipt.origin,
         accountId: `managed-site:new-api-owned-session:${receipt.origin}`,
         auth: {

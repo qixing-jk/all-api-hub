@@ -37,6 +37,7 @@ const revoked = {
   ip_whitelist: "203.0.113.4, 198.51.100.0/24",
 }
 const request = {
+  directRequestReason: "caller_managed" as const,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: "47044" },
 }

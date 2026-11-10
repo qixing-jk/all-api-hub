@@ -4830,6 +4830,29 @@ describe("apiTransport request helpers", () => {
     ).resolves.toBe("hello world")
   })
 
+  it("retains challenge HTML when a caller explicitly requests text through a temporary context", async () => {
+    const html = '<html><meta name="aliyun_waf_aa"></html>'
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      headers: { "content-type": "text/html" },
+      data: html,
+    })
+
+    await expect(
+      fetchApi<string>(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.None },
+          forceTempWindow: true,
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        { endpoint: "/", responseType: "text" },
+      ),
+    ).resolves.toBe(html)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledOnce()
+  })
+
   it("fetchApi supports arrayBuffer responses", async () => {
     server.use(
       http.get("https://example.com/base/api/buffer", () => {

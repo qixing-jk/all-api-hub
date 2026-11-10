@@ -15,6 +15,7 @@ import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 
 const origin = "https://www.krill-code.com"
 const request = {
+  directRequestReason: "caller_managed" as const,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: "47044" },
 }

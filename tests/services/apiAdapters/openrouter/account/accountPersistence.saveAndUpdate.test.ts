@@ -2034,6 +2034,7 @@ describe("accountPersistence save and update", () => {
       },
     })
     expect(fetchAccountDataMock).toHaveBeenCalledWith({
+      directRequestReason: "passive" as const,
       baseUrl: "https://cookie.example.com/console",
       siteType: SITE_TYPES.UNKNOWN,
       checkIn: CHECK_IN_DISABLED,
@@ -2560,9 +2561,8 @@ describe("accountPersistence save and update", () => {
   })
 
   it("normalizes unsupported site types before saving", async () => {
-    const { getSiteTypeCapabilities } = await import(
-      "~/services/apiAdapters/registry"
-    )
+    const { getSiteTypeCapabilities } =
+      await import("~/services/apiAdapters/registry")
     fetchAccountDataMock.mockResolvedValueOnce({
       quota: 12,
       today_prompt_tokens: 0,

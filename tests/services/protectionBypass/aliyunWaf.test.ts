@@ -19,6 +19,7 @@ it.each(["aa", "bb"])(
 )
 
 it.each([
+  "<meta name>",
   '<script src="https://o.alicdn.com/captcha/AliyunCaptcha.js"></script><div id="aliyunCaptcha-sliding-slider"></div>',
   '<script>const example = "<meta name=aliyun_waf_aa>"</script>',
   '<form><input name="password" type="password"></form>',
@@ -33,6 +34,13 @@ it.each([
     const page = new DOMParser().parseFromString(html, "text/html")
     expect(detectAliyunWafChallenge(page)).toEqual({ isChallenge: false })
     expect(isAliyunWafChallengeHtml(html)).toBe(false)
+  },
+)
+
+it.each(["<meta name='aliyun_waf_aa'>", "<meta name=aliyun_waf_bb>"])(
+  "recognizes alternative HTML attribute quoting: %s",
+  (html) => {
+    expect(isAliyunWafChallengeHtml(html)).toBe(true)
   },
 )
 

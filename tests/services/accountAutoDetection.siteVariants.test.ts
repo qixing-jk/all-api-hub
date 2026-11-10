@@ -275,6 +275,7 @@ describe("accountAutoDetection", () => {
       }),
     })
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -322,6 +323,7 @@ describe("accountAutoDetection", () => {
       }),
     })
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://anyrouter.example.com",
       fetchContext: currentTabFetchContext("https://anyrouter.example.com"),
       auth: {
@@ -331,6 +333,7 @@ describe("accountAutoDetection", () => {
     })
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
       {
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://anyrouter.example.com",
         fetchContext: currentTabFetchContext("https://anyrouter.example.com"),
         auth: {
@@ -379,6 +382,7 @@ describe("accountAutoDetection", () => {
     })
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
       {
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://wong.example.com",
         fetchContext: currentTabFetchContext("https://wong.example.com"),
         auth: {
@@ -422,6 +426,7 @@ describe("accountAutoDetection", () => {
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://aihubmix.com",
       fetchContext: currentTabFetchContext("https://aihubmix.com"),
       auth: {

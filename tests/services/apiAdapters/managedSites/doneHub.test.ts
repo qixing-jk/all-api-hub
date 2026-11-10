@@ -99,9 +99,8 @@ describe("DoneHub managed-site channel capability", () => {
       successData: { id: 17 },
       arrange: arrangeRestMutation(doneHubApi.createChannel, { id: 17 }),
       invoke: async () => {
-        const { doneHubChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/doneHub/operations"
-        )
+        const { doneHubChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/doneHub/operations")
         return await doneHubChannelOperations.create(config, createPayload)
       },
       assertRequestPayload: () =>
@@ -119,9 +118,8 @@ describe("DoneHub managed-site channel capability", () => {
       successData: { id: 7 },
       arrange: arrangeRestMutation(doneHubApi.updateChannel, { id: 7 }),
       invoke: async () => {
-        const { doneHubChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/doneHub/operations"
-        )
+        const { doneHubChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/doneHub/operations")
         return await doneHubChannelOperations.update(config, updatePayload)
       },
       assertRequestPayload: () =>
@@ -139,9 +137,8 @@ describe("DoneHub managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(doneHubApi.deleteChannel, null),
       invoke: async () => {
-        const { doneHubChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/doneHub/operations"
-        )
+        const { doneHubChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/doneHub/operations")
         return await doneHubChannelOperations.delete(config, 7)
       },
       assertRequestPayload: () =>
@@ -222,9 +219,8 @@ describe("DoneHub managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHub/operations"
-    )
+    const { doneHubChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/doneHub/operations")
 
     await expect(
       doneHubChannelOperations.create(config, createPayload),
@@ -238,9 +234,8 @@ describe("DoneHub managed-site channel capability", () => {
       request.observer?.onResponse()
       return rejectionResponse
     })
-    const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHub/operations"
-    )
+    const { doneHubChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/doneHub/operations")
 
     await expect(
       doneHubChannelOperations.create(config, createPayload),
@@ -325,6 +320,7 @@ describe("DoneHub managed-site channel capability", () => {
       }
 
       const expectedRequest = {
+        directRequestReason: "credential_isolation" as const,
         baseUrl: config.baseUrl,
         siteType: "done-hub",
         auth: {
@@ -372,10 +368,10 @@ describe("DoneHub managed-site channel capability", () => {
         return { success: true, data: null, message: "success" }
       },
     )
-    const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHub/operations"
-    )
+    const { doneHubChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/doneHub/operations")
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "done-hub",
       auth: {
@@ -469,10 +465,10 @@ describe("DoneHub managed-site channel capability", () => {
   })
 
   it("delegates managed-site query helpers to direct DoneHub-compatible helpers", async () => {
-    const { doneHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/doneHub"
-    )
+    const { doneHubManagedSiteCapabilities } =
+      await import("~/services/apiAdapters/managedSites/doneHub")
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "done-hub",
       auth: {
@@ -504,9 +500,8 @@ describe("DoneHub managed-site channel capability", () => {
   it.each(["fetch", "hydrate"])(
     "cancels DoneHub matching %s reads without reading more keys",
     async (mode) => {
-      const { doneHubManagedSiteCapabilities } = await import(
-        "~/services/apiAdapters/managedSites/doneHub"
-      )
+      const { doneHubManagedSiteCapabilities } =
+        await import("~/services/apiAdapters/managedSites/doneHub")
       const controller = new AbortController()
       const options = {
         signal: controller.signal,
@@ -548,9 +543,8 @@ describe("DoneHub managed-site channel capability", () => {
   )
 
   it("preserves complete DoneHub matching references when hydrating native channel secrets", async () => {
-    const { doneHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/doneHub"
-    )
+    const { doneHubManagedSiteCapabilities } =
+      await import("~/services/apiAdapters/managedSites/doneHub")
     const candidates = [
       buildManagedResourceMatchCandidate({
         ref: matchingResourceRef(1, {
@@ -586,6 +580,7 @@ describe("DoneHub managed-site channel capability", () => {
     expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledOnce()
     expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(
       {
+        directRequestReason: "credential_isolation" as const,
         baseUrl: config.baseUrl,
         siteType: "done-hub",
         auth: {
@@ -600,10 +595,10 @@ describe("DoneHub managed-site channel capability", () => {
   })
 
   it("fetches and hydrates DoneHub secret keys for masked comparable channels", async () => {
-    const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHub/operations"
-    )
+    const { doneHubChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/doneHub/operations")
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "done-hub",
       auth: {

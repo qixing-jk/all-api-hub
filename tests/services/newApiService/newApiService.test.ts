@@ -279,9 +279,8 @@ describe("newApiService", () => {
 
   describe("searchChannel", () => {
     it("should return channel list data on success", async () => {
-      const { searchChannel } = await import(
-        "~/services/apiService/newApiFamily/channelManagement"
-      )
+      const { searchChannel } =
+        await import("~/services/apiService/newApiFamily/channelManagement")
       const mockChannelData = createMockNewApiChannelListData([
         createMockNewApiChannel({ id: 1, name: "Channel 1" }),
         createMockNewApiChannel({ id: 2, name: "Channel 2" }),
@@ -311,9 +310,8 @@ describe("newApiService", () => {
     })
 
     it("should return null when ApiError is thrown", async () => {
-      const { searchChannel } = await import(
-        "~/services/apiService/newApiFamily/channelManagement"
-      )
+      const { searchChannel } =
+        await import("~/services/apiService/newApiFamily/channelManagement")
       const error = new MockApiError("API request failed")
 
       mockFetchApiData.mockRejectedValueOnce(error)
@@ -332,9 +330,8 @@ describe("newApiService", () => {
     })
 
     it("should return null when other error is thrown", async () => {
-      const { searchChannel } = await import(
-        "~/services/apiService/newApiFamily/channelManagement"
-      )
+      const { searchChannel } =
+        await import("~/services/apiService/newApiFamily/channelManagement")
       const error = new Error("Network error")
 
       mockFetchApiData.mockRejectedValueOnce(error)
@@ -359,9 +356,8 @@ describe("newApiService", () => {
 
   describe("createChannel", () => {
     it("should create channel successfully", async () => {
-      const { createChannel } = await import(
-        "~/services/apiService/newApiFamily/channelManagement"
-      )
+      const { createChannel } =
+        await import("~/services/apiService/newApiFamily/channelManagement")
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -404,9 +400,8 @@ describe("newApiService", () => {
     })
 
     it("should throw error when creation fails", async () => {
-      const { createChannel } = await import(
-        "~/services/apiService/newApiFamily/channelManagement"
-      )
+      const { createChannel } =
+        await import("~/services/apiService/newApiFamily/channelManagement")
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -438,9 +433,8 @@ describe("newApiService", () => {
     })
 
     it("should join groups in payload", async () => {
-      const { createChannel } = await import(
-        "~/services/apiService/newApiFamily/channelManagement"
-      )
+      const { createChannel } =
+        await import("~/services/apiService/newApiFamily/channelManagement")
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -481,26 +475,23 @@ describe("newApiService", () => {
 
   describe("hasValidNewApiConfig", () => {
     it("should return true with valid config", async () => {
-      const { hasValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { hasValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       const prefs = createMockUserPreferencesWithNewApi()
 
       expect(hasValidNewApiConfig(prefs)).toBe(true)
     })
 
     it("should return false when prefs is null", async () => {
-      const { hasValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { hasValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
 
       expect(hasValidNewApiConfig(null)).toBe(false)
     })
 
     it("should return false when managedSite is missing", async () => {
-      const { hasValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { hasValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       const prefs = createMockUserPreferencesWithNewApi()
       delete prefs.newApi
 
@@ -508,9 +499,8 @@ describe("newApiService", () => {
     })
 
     it("should return false when required fields are missing", async () => {
-      const { hasValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { hasValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
 
       const cases = [
         { newApi: { adminToken: "token", userId: "123" } },
@@ -530,9 +520,8 @@ describe("newApiService", () => {
     })
 
     it("should return false when the admin user ID is not numeric", async () => {
-      const { hasValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { hasValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
 
       expect(
         hasValidNewApiConfig(
@@ -554,9 +543,8 @@ describe("newApiService", () => {
 
   describe("checkValidNewApiConfig", () => {
     it("should return true with valid config", async () => {
-      const { checkValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { checkValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi(),
       )
@@ -567,9 +555,8 @@ describe("newApiService", () => {
     })
 
     it("should return false with invalid config", async () => {
-      const { checkValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { checkValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
           newApi: { baseUrl: "", adminToken: "", userId: "" },
@@ -582,9 +569,8 @@ describe("newApiService", () => {
     })
 
     it("should return false when the stored admin user ID is not numeric", async () => {
-      const { checkValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { checkValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
           newApi: {
@@ -601,9 +587,8 @@ describe("newApiService", () => {
     })
 
     it("should return false when getPreferences throws error", async () => {
-      const { checkValidNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { checkValidNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       mockGetPreferences.mockRejectedValueOnce(new Error("Storage error"))
 
       const result = await checkValidNewApiConfig()
@@ -618,9 +603,8 @@ describe("newApiService", () => {
 
   describe("getNewApiConfig", () => {
     it("should return config when valid", async () => {
-      const { getNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { getNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi(),
       )
@@ -635,9 +619,8 @@ describe("newApiService", () => {
     })
 
     it("should return null when config is invalid", async () => {
-      const { getNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { getNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       mockGetPreferences.mockResolvedValueOnce(null)
 
       const result = await getNewApiConfig()
@@ -646,9 +629,8 @@ describe("newApiService", () => {
     })
 
     it("should return null when getPreferences throws error", async () => {
-      const { getNewApiConfig } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { getNewApiConfig } =
+        await import("~/services/managedSites/providers/newApi")
       mockGetPreferences.mockRejectedValueOnce(new Error("Storage error"))
 
       const result = await getNewApiConfig()
@@ -663,9 +645,8 @@ describe("newApiService", () => {
 
   describe("getNewApiLoginAssistConfig", () => {
     it("should return login-assist fields and default blank optional values", async () => {
-      const { getNewApiLoginAssistConfig } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { getNewApiLoginAssistConfig } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
@@ -686,9 +667,8 @@ describe("newApiService", () => {
     })
 
     it("should return null when the configured base URL is missing", async () => {
-      const { getNewApiLoginAssistConfig } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { getNewApiLoginAssistConfig } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
@@ -707,9 +687,8 @@ describe("newApiService", () => {
     })
 
     it("should return null when reading login-assist config fails", async () => {
-      const { getNewApiLoginAssistConfig } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { getNewApiLoginAssistConfig } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
 
       mockGetPreferences.mockRejectedValueOnce(new Error("Storage error"))
 
@@ -723,9 +702,8 @@ describe("newApiService", () => {
 
   describe("fetchChannelSecretKey", () => {
     it("should reuse login-assist credentials when the managed site shares the configured origin", async () => {
-      const { fetchChannelSecretKey } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { fetchChannelSecretKey } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
       const config = {
         baseUrl: "https://new-api.example.com/api/v1",
         adminToken: "ignored-admin-token",
@@ -767,9 +745,8 @@ describe("newApiService", () => {
     })
 
     it("should avoid reusing login-assist credentials when the managed site origin differs", async () => {
-      const { fetchChannelSecretKey } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { fetchChannelSecretKey } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
       const config = {
         baseUrl: "https://other.example.com/api/v1",
         adminToken: "ignored-admin-token",
@@ -806,9 +783,8 @@ describe("newApiService", () => {
     })
 
     it("does not reuse login-assist credentials when both configured URLs are blank", async () => {
-      const { fetchChannelSecretKey } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { fetchChannelSecretKey } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
           newApi: {
@@ -845,9 +821,8 @@ describe("newApiService", () => {
 
   describe("hydrateComparableChannelKeys", () => {
     it("should preserve visible New API candidate keys without fetching", async () => {
-      const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { hydrateComparableChannelKeys } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
       const config = {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",
@@ -879,9 +854,8 @@ describe("newApiService", () => {
     })
 
     it("should hydrate hidden New API candidate keys for comparison", async () => {
-      const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { hydrateComparableChannelKeys } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
       const config = {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",
@@ -919,18 +893,15 @@ describe("newApiService", () => {
     })
 
     it("should map New API verification requirements during hydration", async () => {
-      const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
-      const { MatchResolutionUnresolvedError } = await import(
-        "~/services/managedSites/matching/channelMatch"
-      )
+      const { hydrateComparableChannelKeys } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
+      const { MatchResolutionUnresolvedError } =
+        await import("~/services/managedSites/matching/channelMatch")
       const {
         NEW_API_CHANNEL_KEY_ERROR_KINDS,
         NewApiChannelKeyRequirementError,
-      } = await import(
-        "~/services/managedSites/providers/newApi/newApiSessionContracts"
-      )
+      } =
+        await import("~/services/managedSites/providers/newApi/newApiSessionContracts")
       const config = {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",
@@ -960,12 +931,10 @@ describe("newApiService", () => {
     })
 
     it("should map unexpected New API hydration failures to unresolved key resolution", async () => {
-      const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
-      const { MatchResolutionUnresolvedError } = await import(
-        "~/services/managedSites/matching/channelMatch"
-      )
+      const { hydrateComparableChannelKeys } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
+      const { MatchResolutionUnresolvedError } =
+        await import("~/services/managedSites/matching/channelMatch")
       const config = {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",
@@ -993,9 +962,8 @@ describe("newApiService", () => {
     })
 
     it("preserves cancellation and stops reading the remaining hidden keys", async () => {
-      const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
-      )
+      const { hydrateComparableChannelKeys } =
+        await import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
       const controller = new AbortController()
       const failure = new DOMException("Cancelled", "AbortError")
       mockGetPreferences.mockResolvedValueOnce(
@@ -1078,9 +1046,8 @@ describe("newApiService", () => {
     })
 
     it("skips destination group requests when preparing a status check", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
       const result = await prepareChannelFormData(
         {
@@ -1097,9 +1064,8 @@ describe("newApiService", () => {
     })
 
     it("should prefer the target site's default group", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData()
       const token = createMockApiToken({ group: "custom-group" })
 
@@ -1127,9 +1093,8 @@ describe("newApiService", () => {
     })
 
     it("should use adminToken for default group lookup", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData()
       const token = createMockApiToken()
       const prefs = createMockUserPreferencesWithNewApi()
@@ -1145,6 +1110,7 @@ describe("newApiService", () => {
       )
 
       expect(mockFetchSiteUserGroups).toHaveBeenCalledWith({
+        directRequestReason: "credential_isolation" as const,
         baseUrl: prefs.newApi.baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -1155,9 +1121,8 @@ describe("newApiService", () => {
     })
 
     it("should keep models empty when only token metadata exists and upstream loading fails", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData()
       const token = createMockApiToken({ models: "gpt-4o-mini,gpt-4o" })
 
@@ -1180,9 +1145,8 @@ describe("newApiService", () => {
     })
 
     it("should use the AIHubMix API origin when preparing managed-site channel data", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData({
         siteType: SITE_TYPES.AIHUBMIX,
         baseUrl: "https://console.aihubmix.com",
@@ -1213,9 +1177,8 @@ describe("newApiService", () => {
     })
 
     it("should keep models empty when only account-level fallback models exist", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData()
       const token = createMockApiToken({ models: "" })
 
@@ -1238,9 +1201,8 @@ describe("newApiService", () => {
     })
 
     it("should use the first target group when default is unavailable", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData()
       const token = createMockApiToken({ group: "custom-group" })
 
@@ -1260,9 +1222,8 @@ describe("newApiService", () => {
     })
 
     it("should fall back to default groups when site config is unavailable", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData()
       const token = createMockApiToken({ group: "custom-group" })
 
@@ -1283,9 +1244,8 @@ describe("newApiService", () => {
     })
 
     it("should set default values", async () => {
-      const { prepareChannelFormData } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { prepareChannelFormData } =
+        await import("~/services/managedSites/providers/newApi")
       const account = createMockDisplaySiteData()
       const token = createMockApiToken()
 
@@ -1315,9 +1275,8 @@ describe("newApiService", () => {
 
   describe("buildChannelPayload", () => {
     it("should build payload with trimmed values", async () => {
-      const { buildChannelPayload } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { buildChannelPayload } =
+        await import("~/services/managedSites/providers/newApi")
       const formData: NewApiFamilyChannelCommand = {
         name: "  Test Channel  ",
         type: 1,
@@ -1338,9 +1297,8 @@ describe("newApiService", () => {
     })
 
     it("should join models as comma-separated string", async () => {
-      const { buildChannelPayload } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { buildChannelPayload } =
+        await import("~/services/managedSites/providers/newApi")
       const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,
@@ -1362,9 +1320,8 @@ describe("newApiService", () => {
     })
 
     it("should use default groups when empty", async () => {
-      const { buildChannelPayload } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { buildChannelPayload } =
+        await import("~/services/managedSites/providers/newApi")
       const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,
@@ -1385,9 +1342,8 @@ describe("newApiService", () => {
     })
 
     it("should normalize and deduplicate groups", async () => {
-      const { buildChannelPayload } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { buildChannelPayload } =
+        await import("~/services/managedSites/providers/newApi")
       const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,
@@ -1410,9 +1366,8 @@ describe("newApiService", () => {
     })
 
     it("should use specified mode or default", async () => {
-      const { buildChannelPayload } = await import(
-        "~/services/managedSites/providers/newApi"
-      )
+      const { buildChannelPayload } =
+        await import("~/services/managedSites/providers/newApi")
       const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,

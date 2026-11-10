@@ -236,40 +236,44 @@ describe("anyrouterProvider", () => {
       })
     })
 
-    it("passes lightweight AnyRouter account context to the provider request", async () => {
-      mockEnvelope.mockResolvedValueOnce({
-        code: 1,
-        ret: 1,
-        success: true,
-        message: "Success",
-      })
+    it.each(["stored-account-id", undefined])(
+      "passes lightweight AnyRouter account context with optional saved id (%s)",
+      async (id) => {
+        mockEnvelope.mockResolvedValueOnce({
+          code: 1,
+          ret: 1,
+          success: true,
+          message: "Success",
+        })
 
-      const account: AnyrouterCheckInParams = {
-        id: "stored-account-id",
-        site_url: "https://anyrouter.top",
-        cookieAuthSessionCookie: "session=stored-cookie",
-        account_info: {
-          id: 12345,
-        },
-      }
+        const account: AnyrouterCheckInParams = {
+          id,
+          site_url: "https://anyrouter.top",
+          cookieAuthSessionCookie: "session=stored-cookie",
+          account_info: {
+            id: 12345,
+          },
+        }
 
-      const result = await checkInForTest(account)
+        const result = await checkInForTest(account)
 
-      const latestRequest =
-        mockEnvelope.mock.calls[mockEnvelope.mock.calls.length - 1]?.[0]
-      expect(result.status).toBe("success")
-      expect(latestRequest).toMatchObject({
-        baseUrl: "https://anyrouter.top",
-        accountId: "stored-account-id",
-        cookieAuthSessionCookie: "session=stored-cookie",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        forceTempWindow: true,
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId: 12345,
-        },
-      })
-    })
+        const latestRequest =
+          mockEnvelope.mock.calls[mockEnvelope.mock.calls.length - 1]?.[0]
+        expect(result.status).toBe("success")
+        expect(latestRequest).toMatchObject({
+          baseUrl: "https://anyrouter.top",
+          cookieAuthSessionCookie: "session=stored-cookie",
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          forceTempWindow: true,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            userId: 12345,
+          },
+        })
+        expect(latestRequest?.accountId).toBe(id)
+        if (!id) expect(latestRequest).not.toHaveProperty("accountId")
+      },
+    )
 
     it("returns success for English success messages", async () => {
       mockEnvelope.mockResolvedValueOnce({
@@ -426,9 +430,8 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns failed when response indicates failure", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(
         newApiFamilyRequests.envelope as unknown as (
           ...args: any[]
