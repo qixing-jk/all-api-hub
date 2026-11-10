@@ -19,6 +19,22 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 }))
 
 describe("Button", () => {
+  it("offers an extra-small text action that can wrap instead of clipping", async () => {
+    render(
+      <Button size="xs" variant="ghost">
+        Copy a localized result
+      </Button>,
+    )
+    const action = await screen.findByRole("button", {
+      name: "Copy a localized result",
+    })
+    expect(action).toHaveClass(
+      "min-h-(--density-control-xs)",
+      "h-auto",
+      "whitespace-normal",
+    )
+    expect(action).toHaveAttribute("data-variant", "ghost")
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     trackStartedMock.mockResolvedValue(undefined)

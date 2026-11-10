@@ -21,6 +21,7 @@ export {
 } from "./input-otp"
 export {
   Card,
+  CardAction,
   CardHeader,
   CardFooter,
   CardTitle,
@@ -34,7 +35,7 @@ export {
 export { CardItem, cardItemVariants } from "./CardItem"
 export { CardList } from "./CardList"
 export { Label, labelVariants } from "./label"
-export { Alert, AlertTitle, AlertDescription } from "./Alert"
+export { AlertAction, Alert, AlertTitle, AlertDescription } from "./Alert"
 export { Notice, type NoticeProps } from "./Notice"
 export { NoticeActionButton } from "./NoticeActionButton"
 export { Badge, BadgeAdornment, badgeVariants } from "./badge"

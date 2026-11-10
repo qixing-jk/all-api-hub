@@ -1,8 +1,8 @@
-import type { HTMLAttributes } from "react"
+import type { ComponentProps } from "react"
 
 import { cn } from "~/lib/utils"
 
-interface SeparatorProps extends HTMLAttributes<HTMLDivElement> {
+interface SeparatorProps extends ComponentProps<"div"> {
   orientation?: "horizontal" | "vertical"
   decorative?: boolean
 }
@@ -23,9 +23,11 @@ export function Separator({
 
   return (
     <div
+      data-slot="separator"
+      data-orientation={orientation}
       {...ariaProps}
       className={cn(
-        "dark:bg-secondary bg-muted shrink-0",
+        "shrink-0 bg-muted dark:bg-secondary",
         orientation === "horizontal" ? "h-px w-full" : "h-full w-px",
         className,
       )}

@@ -479,7 +479,7 @@ export default function AccountForm({
         <button
           type="button"
           aria-label={t("form.cookieAuthSessionCookieHelp")}
-          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring mr-auto inline-flex size-6 shrink-0 items-center justify-center rounded-sm outline-none focus-visible:ring-2"
+          className="mr-auto inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         >
           <HelpHintIcon className="size-4" aria-hidden="true" />
         </button>
@@ -619,10 +619,10 @@ export default function AccountForm({
           aria-atomic="true"
           className={
             verificationStatus === "error"
-              ? "text-destructive-text text-xs"
+              ? "text-xs text-destructive-text"
               : verificationStatus === "success"
-                ? "text-success-text text-xs"
-                : "text-muted-foreground text-xs"
+                ? "text-xs text-success-text"
+                : "text-xs text-muted-foreground"
           }
         >
           {credentialFeedback}
@@ -649,7 +649,7 @@ export default function AccountForm({
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionSiteInfo}
       >
         {siteInfoInput && (
-          <div className="space-y-density-2 col-span-full">{siteInfoInput}</div>
+          <div className="col-span-full space-y-density-2">{siteInfoInput}</div>
         )}
         <FormField label={t("form.siteName")} required>
           <Input
@@ -675,9 +675,9 @@ export default function AccountForm({
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger}
               data-site-type={siteType ?? SITE_TYPES.UNKNOWN}
             >
-              <div className="gap-y-density-2 flex items-center gap-x-2">
+              <div className="flex items-center gap-x-2 gap-y-density-2">
                 <AccountSiteTypeIcon
-                  className="text-muted-foreground h-5 w-5"
+                  className="h-5 w-5 text-muted-foreground"
                   aria-hidden="true"
                 />
                 <SelectValue placeholder={t("form.siteType")} />
@@ -733,7 +733,7 @@ export default function AccountForm({
                   <button
                     type="button"
                     aria-label={t("siteInfo.cookieWarning")}
-                    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-4 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                    className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <HelpHintIcon className="size-4" aria-hidden="true" />
                   </button>
@@ -777,14 +777,14 @@ export default function AccountForm({
             </SelectTrigger>
             <SelectContent align="end" className="min-w-48">
               <SelectItem value={AuthTypeEnum.AccessToken}>
-                <div className="gap-y-density-2 flex items-center gap-x-2">
+                <div className="flex items-center gap-x-2 gap-y-density-2">
                   <KeyRound className="h-4 w-4" />
                   <span>{t("siteInfo.authType.accessToken")}</span>
                 </div>
               </SelectItem>
               {canUseCookieAuth && (
                 <SelectItem value={AuthTypeEnum.Cookie}>
-                  <div className="gap-y-density-2 flex items-center gap-x-2">
+                  <div className="flex items-center gap-x-2 gap-y-density-2">
                     <Cookie className="h-4 w-4" />
                     <span>{t("siteInfo.authType.cookieAuth")}</span>
                   </div>
@@ -820,7 +820,7 @@ export default function AccountForm({
 
             {autoCreateAccessToken?.enabled &&
               accessToken.trim().length === 0 && (
-                <div className="gap-y-density-2 flex flex-col">
+                <div className="flex flex-col gap-y-density-2">
                   <Button
                     type="button"
                     variant="secondary"
@@ -843,7 +843,7 @@ export default function AccountForm({
                     AUTO_CREATE_ACCESS_TOKEN_STATUSES.Failed &&
                     autoCreateAccessToken.message && (
                       <p
-                        className="text-muted-foreground text-xs"
+                        className="text-xs text-muted-foreground"
                         data-testid={
                           ACCOUNT_MANAGEMENT_TEST_IDS.autoCreateAccessTokenError
                         }
@@ -888,7 +888,7 @@ export default function AccountForm({
                 leftIcon={<KeyRound className="h-5 w-5" />}
                 data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.aimlApiKeyInput}
               />
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 {t("form.aimlApiKeyHelp")}
               </p>
             </div>
@@ -896,16 +896,16 @@ export default function AccountForm({
         )}
 
         {canUseSub2ApiRefreshToken && (
-          <div className="space-y-density-4 col-span-full">
-            <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
+          <div className="col-span-full space-y-density-4">
+            <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
               <div className="flex-1">
                 <label
                   htmlFor="sub2api-refresh-token-mode"
-                  className="text-secondary-foreground text-sm font-medium"
+                  className="text-sm font-medium text-secondary-foreground"
                 >
                   {t("form.sub2apiRefreshTokenMode")}
                 </label>
-                <p className="text-muted-foreground mt-density-1 text-xs">
+                <p className="mt-density-1 text-xs text-muted-foreground">
                   {t("form.sub2apiRefreshTokenModeDesc")}
                 </p>
               </div>
@@ -1028,7 +1028,7 @@ export default function AccountForm({
                 aria-label={t("form.cookieAuthSessionCookie")}
                 className={
                   sitePolicy.supportsCookieValidation
-                    ? "border-input bg-card focus-within:ring-ring overflow-hidden rounded-md border focus-within:ring-2"
+                    ? "overflow-hidden rounded-md border border-input bg-card focus-within:ring-2 focus-within:ring-ring"
                     : undefined
                 }
               >
@@ -1180,27 +1180,32 @@ export default function AccountForm({
           }
           required
         >
-          <Input
-            type="number"
-            step="any"
-            min="0"
-            value={exchangeRate}
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.exchangeRateInput}
-            onChange={(e) => onExchangeRateChange(e.target.value)}
-            placeholder={t("form.exchangeRatePlaceholder")}
-            leftIcon={<ArrowLeftRight className="h-5 w-5" aria-hidden="true" />}
-            rightIcon={
-              <span className="dark:text-secondary-foreground text-muted-foreground text-sm">
-                CNY
-              </span>
-            }
-            variant={
-              !isValidExchangeRate(exchangeRate) && exchangeRate
-                ? "error"
-                : "default"
-            }
-            required
-          />
+          {(control) => (
+            <Input
+              {...control}
+              type="number"
+              step="any"
+              min="0"
+              value={exchangeRate}
+              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.exchangeRateInput}
+              onChange={(e) => onExchangeRateChange(e.target.value)}
+              placeholder={t("form.exchangeRatePlaceholder")}
+              leftIcon={
+                <ArrowLeftRight className="h-5 w-5" aria-hidden="true" />
+              }
+              rightIcon={
+                <span className="text-sm text-muted-foreground dark:text-secondary-foreground">
+                  CNY
+                </span>
+              }
+              variant={
+                !isValidExchangeRate(exchangeRate) && exchangeRate
+                  ? "error"
+                  : "default"
+              }
+              required
+            />
+          )}
         </FormField>
 
         <FormField
@@ -1221,7 +1226,7 @@ export default function AccountForm({
             placeholder={t("form.manualBalanceUsdPlaceholder")}
             leftIcon={<DollarSign className="h-5 w-5" />}
             rightIcon={
-              <span className="dark:text-secondary-foreground text-muted-foreground text-sm">
+              <span className="text-sm text-muted-foreground dark:text-secondary-foreground">
                 USD
               </span>
             }
@@ -1229,15 +1234,15 @@ export default function AccountForm({
           />
         </FormField>
 
-        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
+        <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
           <div className="flex-1">
             <label
               htmlFor="exclude-from-total-balance"
-              className="text-secondary-foreground text-sm font-medium"
+              className="text-sm font-medium text-secondary-foreground"
             >
               {t("form.excludeFromTotalBalance")}
             </label>
-            <p className="text-muted-foreground mt-density-1 text-xs">
+            <p className="mt-density-1 text-xs text-muted-foreground">
               {t("form.excludeFromTotalBalanceDesc")}
             </p>
           </div>
@@ -1248,15 +1253,15 @@ export default function AccountForm({
           />
         </div>
 
-        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
+        <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
           <div className="flex-1">
             <label
               htmlFor="exclude-from-today-income"
-              className="text-secondary-foreground text-sm font-medium"
+              className="text-sm font-medium text-secondary-foreground"
             >
               {t("form.excludeFromTodayIncome")}
             </label>
-            <p className="text-muted-foreground mt-density-1 text-xs">
+            <p className="mt-density-1 text-xs text-muted-foreground">
               {t("form.excludeFromTodayIncomeDesc")}
             </p>
           </div>

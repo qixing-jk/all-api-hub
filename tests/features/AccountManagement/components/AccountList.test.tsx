@@ -1852,8 +1852,12 @@ describe("AccountList", () => {
     expect(sortableWrapper).toHaveClass("relative", "z-10")
     expect(sortableWrapper).toHaveStyle({
       transform: CSS.Transform.toString(sortableReturnState.current.transform),
-      transition: sortableReturnState.current.transition,
     })
+    // Computed CSS normalizes time values to seconds and omits shorthand defaults.
+    const style = getComputedStyle(sortableWrapper!)
+    expect(style.transitionProperty).toBe("transform")
+    expect(style.transitionDuration).toBe("0.15s")
+    expect(style.transitionTimingFunction).toBe("ease")
   })
 
   it("filters accounts by enabled state and combines with tag filters", async () => {

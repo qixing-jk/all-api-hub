@@ -51,7 +51,7 @@ test("lets first-use users defer recommended permissions and continue into overv
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
 
   await page.goto(
@@ -70,6 +70,21 @@ test("lets first-use users defer recommended permissions and continue into overv
   await expect(
     page.getByRole("button", { name: "Allow all recommended permissions" }),
   ).toBeVisible()
+
+  for (const width of [1280, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    const projectNotice = dialog.locator('[data-slot="alert"]').filter({
+      has: page.getByRole("link", {
+        name: "Open getting started",
+        exact: true,
+      }),
+    })
+    await projectNotice.scrollIntoViewIfNeeded()
+    await projectNotice.screenshot({
+      path: testInfo.outputPath(`permission-actions-${width}.png`),
+      animations: "disabled",
+    })
+  }
 
   await page
     .getByTestId(OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDeferButton)

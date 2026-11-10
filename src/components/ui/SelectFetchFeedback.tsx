@@ -44,12 +44,12 @@ export function SelectFetchIndicator({
     <span
       aria-label={label}
       title={label}
-      className="text-muted-foreground shrink-0 text-xs"
+      className="shrink-0 text-xs text-muted-foreground"
     >
       {result.status === SELECT_FETCH_STATUSES.Error ? (
         <CircleAlert
           aria-hidden="true"
-          className="text-warning-indicator size-4"
+          className="size-4 text-warning-indicator"
         />
       ) : result.count === 0 ? (
         t("searchableSelect.fetchEmptyLabel")
@@ -87,14 +87,14 @@ export function SelectFetchFeedback({
       : undefined
   const showDiagnosticDetails = Boolean(
     message &&
-      (message.length > MAX_INLINE_DIAGNOSTIC_LENGTH || message.includes("\n")),
+    (message.length > MAX_INLINE_DIAGNOSTIC_LENGTH || message.includes("\n")),
   )
   return (
-    <div className="border-border-subtle shrink-0 border-t px-3 py-1 text-xs leading-relaxed">
+    <div className="shrink-0 border-t border-border-subtle px-3 py-1 text-xs leading-relaxed">
       <p
         role={failed ? "alert" : "status"}
         className={
-          failed ? "text-destructive-text break-words" : "text-muted-foreground"
+          failed ? "break-words text-destructive-text" : "text-muted-foreground"
         }
       >
         {loading
@@ -108,7 +108,7 @@ export function SelectFetchFeedback({
               : t("ui:searchableSelect.fetchSuccess", { count: result?.count })}
       </p>
       {failed && showDiagnosticDetails ? (
-        <details className="text-muted-foreground mt-1">
+        <details className="mt-1 text-muted-foreground">
           <summary className="cursor-pointer">
             {t("ui:searchableSelect.fetchDetails")}
           </summary>
@@ -120,7 +120,7 @@ export function SelectFetchFeedback({
       {needsRecovery && (onRetry || allowCustomValue) ? (
         <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           {allowCustomValue ? (
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               {t("ui:searchableSelect.manualInputHint")}
             </p>
           ) : null}
@@ -128,8 +128,8 @@ export function SelectFetchFeedback({
             <Button
               type="button"
               variant="link"
-              size="sm"
-              className="min-h-6 gap-x-1 px-0 py-0 text-xs font-normal"
+              size="xs"
+              className="px-0 py-0 font-normal"
               disabled={retryDisabled}
               onClick={onRetry}
               leftIcon={<RefreshCw className="size-3" aria-hidden="true" />}

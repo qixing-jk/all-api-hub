@@ -1,7 +1,6 @@
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
 import {
   Dialog,
   DialogContent,
@@ -61,11 +60,7 @@ export function InviteLinkManualCopyDialog({
           />
         </div>
 
-        <DialogFooter>
-          <Button type="button" onClick={onClose}>
-            {t("common:actions.close")}
-          </Button>
-        </DialogFooter>
+        <DialogFooter showCloseButton closeLabel={t("common:actions.close")} />
       </DialogContent>
     </Dialog>
   )

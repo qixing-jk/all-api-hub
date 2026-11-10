@@ -197,6 +197,9 @@ describe("ProductAnnouncementButton", () => {
     )
 
     expect(await screen.findByText("Critical risk")).toBeInTheDocument()
+    expect(
+      screen.getByRole("dialog", { name: "productAnnouncements:title" }),
+    ).not.toHaveAccessibleDescription("productAnnouncements:empty.active")
     await waitFor(() => {
       expect(sendMessageMock).toHaveBeenCalledWith(
         ProductAnnouncementsMessageTypes.MarkSeen,

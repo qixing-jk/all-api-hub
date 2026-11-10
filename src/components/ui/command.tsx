@@ -1,7 +1,7 @@
 "use client"
 
 import { Command as CommandPrimitive } from "cmdk"
-import { SearchIcon, XIcon } from "lucide-react"
+import { CheckIcon, SearchIcon, XIcon } from "lucide-react"
 import * as React from "react"
 
 import {
@@ -25,7 +25,7 @@ function Command({
     <CommandPrimitive
       data-slot="command"
       className={cn(
-        "bg-popover text-popover-foreground corners-concentric flex h-full w-full flex-col overflow-hidden rounded-md [--corner-inset:4px]",
+        "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground [--corner-inset:4px] corners-concentric",
         className,
       )}
       {...props}
@@ -71,7 +71,7 @@ function CommandDialog({
         <Command
           shouldFilter={shouldFilter}
           className={cn(
-            "[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-item]]:py-density-3 rounded-[inherit] [--corner-inset:8px] **:data-[slot=command-input-wrapper]:h-(--density-control-xl) [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-(--density-control-xl) [&_[cmdk-item]]:px-2 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
+            "rounded-[inherit] [--corner-inset:8px] **:data-[slot=command-input-wrapper]:h-(--density-control-xl) [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-(--density-control-xl) [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-density-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
             // The dialog close control and the optional input clear action
             // occupy separate slots, including when density increases.
             showCloseButton &&
@@ -115,14 +115,14 @@ function CommandInput({
   return (
     <div
       data-slot="command-input-wrapper"
-      className="gap-density-2 flex h-(--density-control) items-center border-b px-3"
+      className="flex h-(--density-control) items-center gap-density-2 border-b px-3"
     >
       <SearchIcon className="size-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input
         ref={inputRef}
         data-slot="command-input"
         className={cn(
-          "placeholder:text-muted-foreground flex h-full w-full min-w-0 rounded-md bg-transparent py-0 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-full w-full min-w-0 rounded-md bg-transparent py-0 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         onKeyDown={(event) => {
@@ -140,7 +140,7 @@ function CommandInput({
             onClear?.()
             requestAnimationFrame(() => inputRef.current?.focus())
           }}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background py-density-1 inline-flex min-h-(--density-control-xs) items-center justify-center rounded-sm px-1 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="inline-flex min-h-(--density-control-xs) items-center justify-center rounded-sm px-1 py-density-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
           aria-label={clearButtonLabel}
           title={clearButtonLabel}
         >
@@ -149,7 +149,7 @@ function CommandInput({
       )}
       {trailingContent ? (
         <div
-          className="gap-density-1 flex shrink-0 items-center"
+          className="flex shrink-0 items-center gap-density-1"
           onKeyDown={(event) => event.stopPropagation()}
         >
           {trailingContent}
@@ -204,7 +204,7 @@ function CommandGroup({
     <CommandPrimitive.Group
       data-slot="command-group"
       className={cn(
-        "text-foreground [&_[cmdk-group-heading]]:text-muted-foreground py-density-1 [&_[cmdk-group-heading]]:py-density-1-5 overflow-hidden px-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium",
+        "overflow-hidden px-1 py-density-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-density-1-5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground",
         className,
       )}
       {...props}
@@ -222,7 +222,7 @@ function CommandSeparator({
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"
-      className={cn("bg-border -mx-1 h-px", className)}
+      className={cn("-mx-1 h-px bg-border", className)}
       {...props}
     />
   )
@@ -233,17 +233,29 @@ function CommandSeparator({
  */
 function CommandItem({
   className,
+  children,
+  checked,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Item>) {
+}: React.ComponentProps<typeof CommandPrimitive.Item> & { checked?: boolean }) {
   return (
     <CommandPrimitive.Item
       data-slot="command-item"
+      data-checked={checked}
       className={cn(
-        `data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground gap-density-2 relative flex cursor-default items-center ${CORNERS.item} py-density-1-5 px-2 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        `relative flex cursor-default items-center gap-density-2 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground ${CORNERS.item} px-2 py-density-1-5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className,
       )}
       {...props}
-    />
+    >
+      {checked !== undefined && (
+        <CheckIcon
+          aria-hidden="true"
+          data-slot="command-check"
+          className={cn("size-4", !checked && "opacity-0")}
+        />
+      )}
+      {children}
+    </CommandPrimitive.Item>
   )
 }
 
@@ -258,7 +270,7 @@ function CommandShortcut({
     <span
       data-slot="command-shortcut"
       className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
+        "ml-auto text-xs tracking-widest text-muted-foreground",
         className,
       )}
       {...props}

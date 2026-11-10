@@ -114,7 +114,7 @@ test("updates usage-history sync settings and syncs only the selected account", 
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   const selectedAccountId = "usage-sync-account-a"
   const unselectedAccountId = "usage-sync-account-b"
@@ -198,6 +198,26 @@ test("updates usage-history sync settings and syncs only the selected account", 
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
   await expect(page.locator("#usage-history-sync")).toBeVisible()
+
+  const sourceRow = page.locator("tr").filter({ hasText: "Usage Sync Hub A" })
+  const actionCell = sourceRow.locator("td").last()
+  const idleRow = await sourceRow.evaluate(
+    (el) => getComputedStyle(el).backgroundColor,
+  )
+  const idleCell = await actionCell.evaluate(
+    (el) => getComputedStyle(el).backgroundColor,
+  )
+  await sourceRow.locator('button[aria-haspopup="menu"]').click()
+  await page.getByRole("menuitem").hover()
+  await expect(sourceRow).not.toHaveCSS("background-color", idleRow)
+  await expect(actionCell).not.toHaveCSS("background-color", idleCell)
+  await page.screenshot({
+    path: testInfo.outputPath("expanded-sync-row.png"),
+    animations: "disabled",
+  })
+  await page.keyboard.press("Escape")
+  await page.mouse.move(0, 0)
+  await expect(sourceRow).toHaveCSS("background-color", idleRow)
 
   await page.locator("#usage-history-sync").getByRole("switch").click()
   await page.locator("#usage-history-sync-retention-days input").fill("14")

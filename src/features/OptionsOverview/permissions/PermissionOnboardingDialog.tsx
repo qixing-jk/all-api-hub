@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Modal } from "~/components/ui"
-import { Alert, AlertDescription } from "~/components/ui/Alert"
+import { Alert, AlertAction, AlertDescription } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
 import { BodySmall, Heading3, Heading6, Link } from "~/components/ui/Typography"
@@ -144,21 +144,21 @@ export function PermissionOnboardingDialog({
   }
 
   const header = (
-    <div className="gap-y-density-1 flex flex-col gap-x-1">
+    <div className="flex flex-col gap-x-1 gap-y-density-1">
       <Heading3>{t("permissionsOnboarding.title")}</Heading3>
-      <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
+      <BodySmall className="text-muted-foreground dark:text-secondary-foreground">
         {t("permissionsOnboarding.subtitle")}
       </BodySmall>
     </div>
   )
 
   const footer = (
-    <div className="gap-y-density-2 grid w-full gap-x-2 sm:grid-cols-2">
+    <div className="grid w-full gap-x-2 gap-y-density-2 sm:grid-cols-2">
       <Button
         onClick={handleGrantAll}
         loading={isRequesting}
         disabled={isAnyPending}
-        className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal"
+        className="h-auto min-h-(--density-control) w-full py-density-2 text-center whitespace-normal"
       >
         {isRequesting
           ? t("common:status.applying")
@@ -176,10 +176,10 @@ export function PermissionOnboardingDialog({
       {starCtaVisible ? (
         <Button
           variant="secondary"
-          className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:col-span-2"
+          className="h-auto min-h-(--density-control) w-full py-density-2 text-center whitespace-normal sm:col-span-2"
           onClick={handleOpenGithub}
           disabled={isRequesting}
-          leftIcon={<Star className="text-link h-4 w-4" />}
+          leftIcon={<Star className="h-4 w-4 text-link" />}
         >
           {t("permissionsOnboarding.project.starCta")}
         </Button>
@@ -203,20 +203,20 @@ export function PermissionOnboardingDialog({
           <CardHeader
             bordered
             padding="sm"
-            className="dark:bg-secondary/40 bg-primary-soft"
+            className="bg-primary-soft dark:bg-secondary/40"
           >
-            <CardTitle className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
-              <Languages className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+            <CardTitle className="flex items-center gap-x-2 gap-y-density-2 text-base font-semibold">
+              <Languages className="h-5 w-5 text-theme-600 dark:text-theme-400" />
               {t("appearanceLanguage.onboardingLabel")}
             </CardTitle>
-            <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
+            <BodySmall className="text-muted-foreground dark:text-secondary-foreground">
               {t("appearanceLanguage.onboardingHelper")}
             </BodySmall>
           </CardHeader>
           <CardContent
             padding="sm"
             spacing="none"
-            className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-x-2 gap-y-density-2 sm:flex-row sm:items-center sm:justify-between"
           >
             <LanguageSwitcher
               variant="select"
@@ -239,7 +239,7 @@ export function PermissionOnboardingDialog({
         {reason === "new-permissions" && (
           <Alert variant="warning">
             <AlertDescription>
-              <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
+              <BodySmall className="text-muted-foreground dark:text-secondary-foreground">
                 {t("permissionsOnboarding.reason.newPermissions")}
               </BodySmall>
             </AlertDescription>
@@ -254,50 +254,56 @@ export function PermissionOnboardingDialog({
           }
         >
           <CardHeader bordered padding="sm">
-            <CardTitle className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
-              <Github className="text-secondary-foreground h-5 w-5" />
+            <CardTitle className="flex items-center gap-x-2 gap-y-density-2 text-base font-semibold">
+              <Github className="h-5 w-5 text-secondary-foreground" />
               {t("permissionsOnboarding.openSourceBadge")}
             </CardTitle>
-            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-density-1">
+            <BodySmall className="mt-density-1 text-muted-foreground dark:text-secondary-foreground">
               {t("permissionsOnboarding.intro")}
             </BodySmall>
           </CardHeader>
           <CardContent padding="sm" spacing="sm" className="space-y-density-3">
-            <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
+            <BodySmall className="text-muted-foreground dark:text-secondary-foreground">
               {t("permissionsOnboarding.analyticsDisclosure")}
             </BodySmall>
-            <Alert variant="primary" compact className="py-density-2-5">
-              <div className="gap-y-density-3 md:gap-y-density-4 grid gap-x-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-x-4">
-                <div className="space-y-density-1-5 min-w-0">
-                  <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
-                    <Heading6 className="shrink-0 tracking-tight">
-                      {t("permissionsOnboarding.project.label")}
-                    </Heading6>
-                    <Link
-                      href={REPO_URL}
-                      target="_blank"
-                      rel="noreferrer"
-                      size="sm"
-                      className="gap-y-density-1 inline-flex max-w-full items-center gap-x-1"
-                    >
-                      <span className="break-all">{REPO_URL}</span>
-                      <Github className="h-4 w-4 shrink-0" />
-                    </Link>
-                  </div>
-                  <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
-                    {t("permissionsOnboarding.project.cta")}
-                  </BodySmall>
+            <Alert
+              variant="primary"
+              compact
+              className="py-density-2-5"
+              action={
+                <AlertAction>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full md:w-auto"
+                  >
+                    <a href={getStartedUrl} target="_blank" rel="noreferrer">
+                      {t("permissionsOnboarding.project.getStartedCta")}
+                    </a>
+                  </Button>
+                </AlertAction>
+              }
+            >
+              <div className="min-w-0 space-y-density-1-5">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-density-1">
+                  <Heading6 className="shrink-0 tracking-tight">
+                    {t("permissionsOnboarding.project.label")}
+                  </Heading6>
+                  <Link
+                    href={REPO_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    size="sm"
+                    className="inline-flex max-w-full items-center gap-x-1 gap-y-density-1"
+                  >
+                    <span className="break-all">{REPO_URL}</span>
+                    <Github className="h-4 w-4 shrink-0" />
+                  </Link>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="w-full md:w-auto"
-                >
-                  <a href={getStartedUrl} target="_blank" rel="noreferrer">
-                    {t("permissionsOnboarding.project.getStartedCta")}
-                  </a>
-                </Button>
+                <BodySmall className="text-muted-foreground dark:text-secondary-foreground">
+                  {t("permissionsOnboarding.project.cta")}
+                </BodySmall>
               </div>
             </Alert>
           </CardContent>
@@ -311,11 +317,11 @@ export function PermissionOnboardingDialog({
           }
         >
           <CardHeader bordered padding="sm">
-            <CardTitle className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
-              <Sparkles className="text-link h-5 w-5" />
+            <CardTitle className="flex items-center gap-x-2 gap-y-density-2 text-base font-semibold">
+              <Sparkles className="h-5 w-5 text-link" />
               {t("permissionsOnboarding.permissionListTitle")}
             </CardTitle>
-            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-density-1">
+            <BodySmall className="mt-density-1 text-muted-foreground dark:text-secondary-foreground">
               {t("permissionsOnboarding.permissionListDescription")}
             </BodySmall>
           </CardHeader>
@@ -328,7 +334,7 @@ export function PermissionOnboardingDialog({
                 status: permission.granted,
                 statusLabel: permission.statusLabel,
                 rightContent: (
-                  <div className="gap-y-density-3 flex flex-col items-start gap-x-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
+                  <div className="flex flex-col items-start gap-x-3 gap-y-density-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
                     <Button
                       size="sm"
                       variant={permission.granted ? "outline" : "default"}

@@ -5,7 +5,7 @@ import React from "react"
 import { cn } from "~/lib/utils"
 
 const switchVariants = cva(
-  "relative inline-flex items-center rounded-full overflow-hidden p-0 border-0 box-border shrink-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "relative inline-flex items-center rounded-full after:absolute after:-inset-1 p-0 border-0 box-border shrink-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       checked: {
@@ -84,10 +84,8 @@ const thumbVariants = cva(
 )
 
 export interface SwitchProps
-  extends Omit<
-      React.ButtonHTMLAttributes<HTMLButtonElement>,
-      "onChange" | "value"
-    >,
+  extends
+    Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange" | "value">,
     Omit<VariantProps<typeof switchVariants>, "disabled"> {
   checked: boolean
   onChange: (checked: boolean) => void

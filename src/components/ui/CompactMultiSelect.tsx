@@ -1,5 +1,4 @@
 import {
-  CheckIcon,
   ChevronsUpDownIcon,
   ListChecksIcon,
   ListXIcon,
@@ -44,8 +43,10 @@ import {
 
 const logger = createLogger("CompactMultiSelect")
 
-export interface CompactMultiSelectProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
+export interface CompactMultiSelectProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "onChange"
+> {
   options: CompactMultiSelectOption[]
   selected: string[]
   onChange: (values: string[]) => void
@@ -355,7 +356,7 @@ export function CompactMultiSelect({
         selectableOptionValues.length === 0 ||
         allSelectableOptionsSelected
       }
-      className="dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 shrink-0"
+      className="shrink-0 dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80"
     >
       <ListChecksIcon className="size-4" />
     </Button>
@@ -363,7 +364,7 @@ export function CompactMultiSelect({
 
   if (displayMode === "chips") {
     const chipsControl = (
-      <div className="gap-density-2 flex w-full items-center">
+      <div className="flex w-full items-center gap-density-2">
         <Combobox
           multiple
           autoHighlight
@@ -388,7 +389,7 @@ export function CompactMultiSelect({
               className,
             )}
           >
-            <div className="gap-y-density-1-5 flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 overflow-x-hidden overflow-y-auto">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-density-1-5 overflow-x-hidden overflow-y-auto">
               <ComboboxValue>
                 {(values) => (
                   <React.Fragment>
@@ -459,10 +460,10 @@ export function CompactMultiSelect({
               <div
                 role="group"
                 aria-label={t("multiSelect.filteredResultsScope")}
-                className="border-border bg-muted/40 gap-x-density-2 gap-y-density-1 py-density-1-5 pointer-coarse:gap-y-density-2 pointer-coarse:py-density-2 flex flex-wrap items-center justify-between border-b px-2 pointer-coarse:px-3"
+                className="flex flex-wrap items-center justify-between gap-x-density-2 gap-y-density-1 border-b border-border bg-muted/40 px-2 py-density-1-5 pointer-coarse:gap-y-density-2 pointer-coarse:px-3 pointer-coarse:py-density-2"
               >
                 <p
-                  className="text-muted-foreground mr-auto text-xs tabular-nums"
+                  className="mr-auto text-xs text-muted-foreground tabular-nums"
                   aria-live="polite"
                 >
                   {t("multiSelect.filteredMatchCount", {
@@ -529,7 +530,7 @@ export function CompactMultiSelect({
                     <span className="block truncate">{item.label}</span>
                     {item.secondaryLabel && (
                       <span
-                        className="text-muted-foreground block truncate text-xs"
+                        className="block truncate text-xs text-muted-foreground"
                         title={item.secondaryLabel}
                       >
                         {item.secondaryLabel}
@@ -560,8 +561,8 @@ export function CompactMultiSelect({
             className={cn(
               "shrink-0",
               actionsOrientation === "vertical"
-                ? "gap-density-2 flex flex-col items-start self-stretch"
-                : "gap-density-2 flex flex-row items-center",
+                ? "flex flex-col items-start gap-density-2 self-stretch"
+                : "flex flex-row items-center gap-density-2",
             )}
           >
             {selectAllButton}
@@ -587,7 +588,7 @@ export function CompactMultiSelect({
         {label && (
           <label
             id={labelId}
-            className="dark:text-foreground text-secondary-foreground mb-density-1 block text-sm font-medium"
+            className="mb-density-1 block text-sm font-medium text-secondary-foreground dark:text-foreground"
           >
             {label}
           </label>
@@ -615,12 +616,12 @@ export function CompactMultiSelect({
       {label && (
         <label
           id={labelId}
-          className="dark:text-foreground text-secondary-foreground mb-density-1 block text-sm font-medium"
+          className="mb-density-1 block text-sm font-medium text-secondary-foreground dark:text-foreground"
         >
           {label}
         </label>
       )}
-      <div className="gap-density-2 flex w-full items-center">
+      <div className="flex w-full items-center gap-density-2">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -631,7 +632,7 @@ export function CompactMultiSelect({
               aria-expanded={open}
               aria-labelledby={triggerAriaLabelledBy}
               className={cn(
-                "dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 gap-density-2 flex min-w-0 flex-1 items-center justify-between overflow-hidden text-left",
+                "flex min-w-0 flex-1 items-center justify-between gap-density-2 overflow-hidden text-left dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80",
                 "whitespace-nowrap",
                 !hasSelection && "text-muted-foreground",
                 className,
@@ -641,7 +642,7 @@ export function CompactMultiSelect({
               aria-busy={loading || buttonProps["aria-busy"]}
             >
               <span className="min-w-0 flex-1 truncate">{summaryText}</span>
-              <span className="gap-density-2 flex shrink-0 items-center">
+              <span className="flex shrink-0 items-center gap-density-2">
                 {hasSelection && (
                   <Badge variant="secondary" size="sm">
                     {selected.length}
@@ -675,12 +676,12 @@ export function CompactMultiSelect({
                 <CommandGroup>
                   {allowCustom && searchTerm.trim().length > 0 && (
                     <CommandItem
+                      checked={false}
                       key={`__custom__${searchTerm}`}
                       value={searchTerm}
                       disabled={disabled}
                       onSelect={() => commitCustomValues(searchTerm)}
                     >
-                      <CheckIcon className="size-4 opacity-0" />
                       <span className="truncate">{searchTerm}</span>
                     </CommandItem>
                   )}
@@ -691,6 +692,7 @@ export function CompactMultiSelect({
 
                     return (
                       <CommandItem
+                        checked={isSelected}
                         key={option.value}
                         value={option.value}
                         keywords={[option.label]}
@@ -698,12 +700,6 @@ export function CompactMultiSelect({
                         aria-label={getOptionAccessibleLabel(option)}
                         onSelect={() => toggleValue(option.value)}
                       >
-                        <CheckIcon
-                          className={cn(
-                            "size-4",
-                            isSelected ? "opacity-100" : "opacity-0",
-                          )}
-                        />
                         <span className="min-w-0 flex-1 truncate">
                           {option.label}
                         </span>
@@ -728,7 +724,7 @@ export function CompactMultiSelect({
             onClick={clearSelection}
             aria-label={t("multiSelect.clearSelected")}
             title={t("multiSelect.clearSelected")}
-            className="dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 shrink-0"
+            className="shrink-0 dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80"
           >
             <XIcon className="size-4" />
           </Button>

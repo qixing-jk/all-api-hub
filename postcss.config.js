@@ -1,5 +1,4 @@
 import tailwindcss from "@tailwindcss/postcss"
-import autoprefixer from "autoprefixer"
 
 import { contentRemIsolation } from "./plugins/content-rem-isolation.mjs"
 
@@ -56,8 +55,5 @@ export default {
     allApiHubRewriteTwProperties(),
 
     contentRemIsolation(),
-
-    // Vendor prefixes last
-    autoprefixer(),
   ],
 }

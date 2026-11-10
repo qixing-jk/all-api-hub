@@ -7,6 +7,8 @@ const config: KnipConfig = {
     "wxt.config.ts",
     "i18next.config.ts",
     "vitest.config.ts",
+    // Tailwind 4 loads its imports/plugins from the CSS linked by WXT HTML.
+    "src/styles/style.css",
     "scripts/diagnostics/collect-extension-memory.mjs",
     "scripts/diagnostics/compare-extension-memory.mjs",
     "scripts/diagnostics/compare-lazy-loading.mjs",
@@ -32,6 +34,10 @@ const config: KnipConfig = {
     // Playwright runs this through the build dependency project in
     // playwright.config.ts, which Knip does not discover as a static import.
     "e2e/setup/build.setup.ts",
+    // Vite serves the browser primitive fixture and resolves its analytics alias.
+    "e2e/fixtures/uiPrimitives/fixture.tsx",
+    "e2e/fixtures/uiPrimitives/analytics.ts",
+    "e2e/fixtures/uiPrimitives/channelFilters.ts",
     // Invoked by the native Safari runner; Vite loads this config by CLI path.
     "e2e/safariNativeCookie/probe.config.ts",
     "e2e/safariNativeCookie/probe.ts",
@@ -67,8 +73,6 @@ const config: KnipConfig = {
     "react-devtools",
     // On-demand UI generator configured by components.json.
     "shadcn",
-    // Imported as CSS from src/styles/style.css, outside the TS graph.
-    "tw-animate-css",
   ],
   // Exported props and signature types may be used only within their owning
   // module. Keep checking types that have no internal or external consumers.

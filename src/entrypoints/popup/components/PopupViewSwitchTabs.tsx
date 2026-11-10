@@ -71,9 +71,8 @@ function PopupViewSwitchTab({
       onClick={trackingProps.onClick}
       className={cn(
         baseClassName,
-        "gap-y-density-1 flex min-w-0 items-center justify-center gap-x-1.5 truncate",
-        "data-[state=active]:dark:bg-card data-[state=active]:dark:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-        "dark:text-secondary-foreground dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground",
+        "min-h-0 gap-x-1.5 gap-y-density-1 truncate",
+        "text-muted-foreground hover:text-secondary-foreground dark:text-secondary-foreground dark:hover:text-foreground",
       )}
     >
       {Icon ? <Icon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
@@ -131,8 +130,9 @@ export default function PopupViewSwitchTabs({
       onValueChange={(nextValue) => onChange(nextValue as PopupViewType)}
     >
       <TabsList
+        variant="default"
         className={cn(
-          "corners-concentric gap-y-density-1 py-density-1 min-w-0 gap-x-1 rounded-md px-1 [--corner-inset:4px]",
+          "rounded-md",
           fullWidth ? "grid w-full grid-cols-3" : "inline-flex max-w-full",
           COLORS.background.tertiary,
         )}

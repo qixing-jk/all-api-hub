@@ -257,7 +257,12 @@ describe("WebDAVAutoSyncSettings", () => {
   it("saves an interval on blur and clamps it to the provider minimum", async () => {
     const user = userEvent.setup()
     render(<WebDAVAutoSyncSettings />)
-    const interval = await screen.findByDisplayValue("1800")
+    const interval = await screen.findByRole("spinbutton", {
+      name: "importExport:webdav.autoSync.interval",
+    })
+    expect(interval).toHaveAccessibleDescription(
+      "importExport:webdav.autoSync.intervalDesc",
+    )
     await user.clear(interval)
     await user.type(interval, "10")
     expect(

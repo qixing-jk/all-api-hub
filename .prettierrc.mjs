@@ -14,6 +14,7 @@ export default {
     "@ianvs/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss",
   ],
+  tailwindStylesheet: "./src/styles/style.css",
   importOrder: [
     "<BUILTIN_MODULES>", // Node.js built-in modules
     "<THIRD_PARTY_MODULES>", // Imports not matched by other special words or groups.

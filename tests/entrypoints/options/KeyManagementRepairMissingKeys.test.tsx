@@ -30,6 +30,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "~~/tests/test-utils/render"
 
 const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
@@ -1181,8 +1182,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     ).toBeInTheDocument()
     const resultCount = screen.getByTestId("repair-missing-keys-result-count")
     expect(
-      screen.getByTestId("repair-missing-keys-results-header"),
-    ).toHaveClass("space-y-0")
+      within(
+        screen.getByTestId("repair-missing-keys-results-header"),
+      ).getByRole("textbox", {
+        name: "keyManagement:repairMissingKeys.searchLabel",
+      }),
+    ).toBeVisible()
     expect(
       screen.getByTestId("repair-missing-keys-result-heading-row"),
     ).toHaveClass("min-h-(--density-control)", "items-center")

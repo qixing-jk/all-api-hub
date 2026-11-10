@@ -505,9 +505,12 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await expect(startMigration).toHaveCount(1)
   await expect(startMigration).toBeEnabled()
   await expect(migrationDialog.getByText("Migration limitations")).toBeVisible()
-  await migrationDialog
-    .getByRole("button", { name: /Example primary edited/ })
-    .click()
+  const previewRow = migrationDialog.getByRole("button", {
+    name: /Example primary edited/,
+  })
+  const warnings = previewRow.getByText("2 warnings", { exact: true })
+  await warnings.click()
+  await expect(previewRow).toHaveAttribute("aria-expanded", "true")
   await expect(
     migrationDialog.getByText("Base URL", { exact: true }),
   ).toBeVisible()

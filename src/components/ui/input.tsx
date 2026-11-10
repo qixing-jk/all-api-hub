@@ -34,7 +34,8 @@ const inputVariants = cva(
 )
 
 export interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
+  extends
+    Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
     Omit<VariantProps<typeof inputVariants>, "size"> {
   /**
    * Controls both the visual size variant and the native `<input size>` attribute.
@@ -167,6 +168,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </div>
         )}
         <input
+          data-slot="input"
           className={cn(
             inputVariants({
               variant: inputVariant,
@@ -182,14 +184,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={inputType}
         />
         {showRightContent && (
-          <div className="gap-y-density-1 pointer-events-none absolute inset-y-0 right-0 flex items-center gap-x-1 pr-2">
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-x-1 gap-y-density-1 pr-2">
             {rightIcon && (
-              <span className="text-faint-foreground pointer-events-auto">
+              <span className="pointer-events-auto text-faint-foreground">
                 {rightIcon}
               </span>
             )}
             {showRevealButton && (
-              <span className="text-faint-foreground pointer-events-auto">
+              <span className="pointer-events-auto text-faint-foreground">
                 <IconButton
                   type="button"
                   variant="ghost"

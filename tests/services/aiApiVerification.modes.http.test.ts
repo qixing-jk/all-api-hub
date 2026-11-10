@@ -243,6 +243,31 @@ describe.each(fixtures)("$apiType verification mode", (fixture) => {
 })
 
 describe("verification mode boundaries", () => {
+  it("fails an OpenAI stream that ends with partial text but no completion event", async () => {
+    const fixture = atIndex(
+      fixtures.filter(({ apiType }) => apiType === "openai"),
+      0,
+    )
+    const requests = mockGeneration({
+      ...fixture,
+      events: fixture.events.slice(0, -1),
+    })
+
+    const result = await runApiVerificationProbe({
+      baseUrl,
+      apiKey: "sk-synthetic",
+      apiType: "openai",
+      modelId: "mode-test",
+      probeId: "text-generation",
+    })
+
+    expect(requests).toEqual([{ path: fixture.path, streaming: true }])
+    expect(result, result.summary).toMatchObject({
+      status: "fail",
+      mode: "streaming",
+    })
+  })
+
   it.each([
     {
       mode: "non-streaming" as const,

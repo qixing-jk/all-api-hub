@@ -33,8 +33,7 @@ const spinnerVariants = cva("animate-spin", {
 })
 
 export interface SpinnerProps
-  extends React.SVGProps<SVGSVGElement>,
-    VariantProps<typeof spinnerVariants> {
+  extends React.SVGProps<SVGSVGElement>, VariantProps<typeof spinnerVariants> {
   "aria-label"?: string
 }
 
@@ -50,6 +49,7 @@ function Spinner({
 }: SpinnerProps) {
   return (
     <Loader2Icon
+      data-slot="spinner"
       role="status"
       aria-label={ariaLabel ?? t("common:status.loading")}
       className={cn(spinnerVariants({ size, variant, className }))}

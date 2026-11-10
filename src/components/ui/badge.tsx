@@ -10,19 +10,23 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary-soft text-primary-soft-foreground hover:bg-primary-soft-hover",
+          "border-transparent bg-primary-soft text-primary-soft-foreground [&:is(a[href],button,[role=button])]:hover:bg-primary-soft-hover",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-transparent bg-secondary text-secondary-foreground [&:is(a[href],button,[role=button])]:hover:bg-secondary/80",
         destructive:
-          "border-transparent bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft-hover",
-        outline: "text-foreground hover:bg-accent hover:text-accent-foreground",
+          "border-transparent bg-destructive-soft text-destructive-soft-foreground [&:is(a[href],button,[role=button])]:hover:bg-destructive-soft-hover",
+        ghost:
+          "border-transparent [&:is(a[href],button,[role=button])]:hover:bg-accent [&:is(a[href],button,[role=button])]:hover:text-accent-foreground",
+        link: "border-transparent text-link underline-offset-4 [&:is(a[href],button,[role=button])]:hover:underline",
+        outline:
+          "text-foreground [&:is(a[href],button,[role=button])]:hover:bg-accent [&:is(a[href],button,[role=button])]:hover:text-accent-foreground",
         success:
-          "border-transparent bg-success-soft text-success-soft-foreground hover:bg-success-soft-hover",
+          "border-transparent bg-success-soft text-success-soft-foreground [&:is(a[href],button,[role=button])]:hover:bg-success-soft-hover",
         warning:
-          "border-transparent bg-warning-soft text-warning-soft-foreground hover:bg-warning-soft-hover",
-        info: "border-transparent bg-info-soft text-info-soft-foreground hover:bg-info-soft-hover",
+          "border-transparent bg-warning-soft text-warning-soft-foreground [&:is(a[href],button,[role=button])]:hover:bg-warning-soft-hover",
+        info: "border-transparent bg-info-soft text-info-soft-foreground [&:is(a[href],button,[role=button])]:hover:bg-info-soft-hover",
         danger:
-          "border-transparent bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft-hover",
+          "border-transparent bg-destructive-soft text-destructive-soft-foreground [&:is(a[href],button,[role=button])]:hover:bg-destructive-soft-hover",
       },
       size: {
         default: "text-xs px-2.5 py-0.5",
@@ -52,6 +56,7 @@ function Badge({
   return (
     <Comp
       data-slot="badge"
+      data-variant={variant ?? "default"}
       className={cn(badgeVariants({ variant, size }), className)}
       {...props}
     />

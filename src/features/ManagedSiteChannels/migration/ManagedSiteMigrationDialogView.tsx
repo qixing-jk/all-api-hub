@@ -42,7 +42,7 @@ type ManagedSiteMigrationDialogViewProps = {
 /** Renders controlled migration warnings inside the shared tooltip. */
 function WarningTooltipContent({ items }: { items: string[] }) {
   return (
-    <ul className="space-y-density-1 max-w-sm list-disc pl-4 text-left">
+    <ul className="max-w-sm list-disc space-y-density-1 pl-4 text-left">
       {items.map((item) => (
         <li key={item}>{item}</li>
       ))}
@@ -65,16 +65,16 @@ function PreviewComparisonRow({
   missingValue: string
 }) {
   return (
-    <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="bg-muted/50 py-density-2 text-2xs px-3 font-medium uppercase">
+    <div className="grid gap-px bg-border md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="bg-muted/50 px-3 py-density-2 text-2xs font-medium uppercase">
         {label}
       </div>
-      <div className="bg-background py-density-2 px-3 text-sm break-words">
+      <div className="bg-background px-3 py-density-2 text-sm break-words">
         {sourceValue || missingValue}
       </div>
       <div
         data-testid={getManagedSiteMigrationComparisonTargetTestId(fieldId)}
-        className="bg-background py-density-2 px-3 text-sm break-words"
+        className="bg-background px-3 py-density-2 text-sm break-words"
       >
         {targetValue || missingValue}
       </div>
@@ -109,8 +109,8 @@ export function ManagedSiteMigrationDialogView({
   )
 
   const footer = result ? (
-    <div className="gap-y-density-3 flex flex-col items-stretch gap-x-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-muted-foreground text-sm">
+    <div className="flex flex-col items-stretch gap-x-3 gap-y-density-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm text-muted-foreground">
         {labels.footerSummary}
       </div>
       <ActionGroup className="w-full sm:w-auto">
@@ -135,8 +135,8 @@ export function ManagedSiteMigrationDialogView({
       </ActionGroup>
     </div>
   ) : (
-    <div className="gap-y-density-3 flex flex-col items-stretch gap-x-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-muted-foreground text-sm">
+    <div className="flex flex-col items-stretch gap-x-3 gap-y-density-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm text-muted-foreground">
         {labels.footerSummary}
       </div>
       <ActionGroup className="w-full sm:w-auto">
@@ -174,13 +174,13 @@ export function ManagedSiteMigrationDialogView({
         size="lg"
         header={
           <div className="space-y-density-1">
-            <div className="gap-y-density-2 flex items-center gap-x-2">
+            <div className="flex items-center gap-x-2 gap-y-density-2">
               <div className="text-base font-semibold">{labels.title}</div>
               <Badge variant="warning" size="sm" className="shrink-0">
                 {labels.beta}
               </Badge>
             </div>
-            <div className="text-muted-foreground text-sm">
+            <div className="text-sm text-muted-foreground">
               {labels.description}
             </div>
           </div>
@@ -190,7 +190,7 @@ export function ManagedSiteMigrationDialogView({
         <div className="space-y-density-4">
           <div
             data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.migrationControls}
-            className="gap-y-density-3 grid gap-x-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+            className="grid gap-x-3 gap-y-density-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
           >
             <div className="space-y-density-2">
               <div className="text-sm font-medium">{labels.targetLabel}</div>
@@ -235,9 +235,9 @@ export function ManagedSiteMigrationDialogView({
             </Button>
           </div>
 
-          <div className="gap-y-density-3 py-density-3 grid gap-x-3 rounded-md border px-3 text-sm md:grid-cols-2">
+          <div className="grid gap-x-3 gap-y-density-3 rounded-md border px-3 py-density-3 text-sm md:grid-cols-2">
             <div>
-              <div className="text-muted-foreground text-xs uppercase">
+              <div className="text-xs text-muted-foreground uppercase">
                 {labels.sourceLabel}
               </div>
               <div className="font-medium">
@@ -245,7 +245,7 @@ export function ManagedSiteMigrationDialogView({
               </div>
             </div>
             <div>
-              <div className="text-muted-foreground text-xs uppercase">
+              <div className="text-xs text-muted-foreground uppercase">
                 {labels.destinationLabel}
               </div>
               <div className="font-medium">
@@ -257,7 +257,7 @@ export function ManagedSiteMigrationDialogView({
           {requiresRefresh && labels.refreshRequired ? (
             <div
               role="alert"
-              className="py-density-3 rounded-md border px-3 text-sm"
+              className="rounded-md border px-3 py-density-3 text-sm"
             >
               {labels.refreshRequired}
             </div>
@@ -265,14 +265,14 @@ export function ManagedSiteMigrationDialogView({
           {preview?.error ? (
             <div
               role="alert"
-              className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm"
+              className="rounded-md border border-destructive-border bg-destructive-soft px-3 py-density-3 text-sm text-destructive-soft-foreground"
             >
               {preview.error}
             </div>
           ) : null}
           {!preview?.error && preview?.isLoading && !preview.isManualLoading ? (
-            <div className="text-muted-foreground py-density-3 rounded-md border px-3 text-sm">
-              <div className="gap-y-density-2 flex items-center gap-x-2">
+            <div className="rounded-md border px-3 py-density-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-x-2 gap-y-density-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 {labels.loadingPreview}
               </div>
@@ -282,8 +282,8 @@ export function ManagedSiteMigrationDialogView({
           {!result && preview ? (
             <>
               {preview.generalWarnings.length ? (
-                <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-3 rounded-md border px-3 text-sm">
-                  <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
+                <div className="rounded-md border border-warning-border bg-warning-soft px-3 py-density-3 text-sm text-warning-soft-foreground">
+                  <div className="flex items-center justify-between gap-x-3 gap-y-density-3">
                     <div className="min-w-0">
                       <div className="font-medium">
                         {labels.generalWarningsTitle}
@@ -317,22 +317,22 @@ export function ManagedSiteMigrationDialogView({
                 {preview.rows.map((row) => (
                   <div
                     key={row.rowKey}
-                    className="space-y-density-2 py-density-3 rounded-md border px-3"
+                    className="space-y-density-2 rounded-md border px-3 py-density-3"
                   >
                     <CollapsibleSection
                       title={
-                        <div className="gap-y-density-3 flex min-w-0 items-start justify-between gap-x-3">
+                        <div className="flex min-w-0 items-start justify-between gap-x-3 gap-y-density-3">
                           <div className="min-w-0">
                             <div className="truncate text-sm font-medium">
                               {row.name}
                             </div>
-                            <div className="text-muted-foreground gap-y-density-2 mt-0.5 flex flex-wrap gap-x-2 text-xs">
+                            <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-density-2 text-xs text-muted-foreground">
                               <span className="truncate">
                                 {row.baseURL || labels.missingValue}
                               </span>
                             </div>
                           </div>
-                          <div className="gap-y-density-2 flex shrink-0 items-center gap-x-2">
+                          <div className="flex shrink-0 items-center gap-x-2 gap-y-density-2">
                             {row.warningText.length ? (
                               <Tooltip
                                 content={
@@ -341,6 +341,9 @@ export function ManagedSiteMigrationDialogView({
                                   />
                                 }
                                 position="left"
+                                // Keep the first hover placement in the same coordinate
+                                // system so the popup cannot cover the pending row click.
+                                positionStrategy="fixed"
                                 wrapperClassName="inline-flex"
                               >
                                 <Badge
@@ -377,14 +380,14 @@ export function ManagedSiteMigrationDialogView({
                           }
                           className="overflow-hidden rounded-md border"
                         >
-                          <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-                            <div className="bg-muted/50 py-density-2 text-2xs px-3 font-medium uppercase">
+                          <div className="grid gap-px bg-border md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
+                            <div className="bg-muted/50 px-3 py-density-2 text-2xs font-medium uppercase">
                               {labels.fieldLabel}
                             </div>
-                            <div className="bg-muted/50 py-density-2 px-3 text-xs font-medium">
+                            <div className="bg-muted/50 px-3 py-density-2 text-xs font-medium">
                               {labels.sourceLabel}
                             </div>
-                            <div className="bg-muted/50 py-density-2 px-3 text-xs font-medium">
+                            <div className="bg-muted/50 px-3 py-density-2 text-xs font-medium">
                               {labels.destinationLabel}
                             </div>
                           </div>
@@ -400,7 +403,7 @@ export function ManagedSiteMigrationDialogView({
                           ))}
                         </div>
                         {row.blockedReason ? (
-                          <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-md border px-2 text-xs">
+                          <div className="rounded-md border border-warning-border bg-warning-soft px-2 py-density-2 text-xs text-warning-soft-foreground">
                             <div className="font-medium">
                               {row.blockedReason}
                             </div>
@@ -412,7 +415,7 @@ export function ManagedSiteMigrationDialogView({
                           </div>
                         ) : null}
                         {row.warningText.length ? (
-                          <ul className="text-muted-foreground space-y-density-1 list-disc pl-5 text-xs">
+                          <ul className="list-disc space-y-density-1 pl-5 text-xs text-muted-foreground">
                             {row.warningText.map((warning) => (
                               <li key={warning}>{warning}</li>
                             ))}
@@ -428,7 +431,7 @@ export function ManagedSiteMigrationDialogView({
 
           {result ? (
             <div className="space-y-density-3">
-              <div className="border-info-border bg-info-soft text-info-soft-foreground py-density-3 rounded-md border px-3 text-sm">
+              <div className="rounded-md border border-info-border bg-info-soft px-3 py-density-3 text-sm text-info-soft-foreground">
                 <div className="font-medium">{labels.resultsTitle}</div>
                 <div className="mt-density-1">{result.summary}</div>
               </div>
@@ -436,9 +439,9 @@ export function ManagedSiteMigrationDialogView({
                 {result.items.map((item) => (
                   <div
                     key={item.rowKey}
-                    className="space-y-density-2 py-density-3 rounded-md border px-3"
+                    className="space-y-density-2 rounded-md border px-3 py-density-3"
                   >
-                    <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
+                    <div className="flex items-start justify-between gap-x-3 gap-y-density-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">
                           {item.name}
@@ -458,7 +461,7 @@ export function ManagedSiteMigrationDialogView({
                       </Badge>
                     </div>
                     {item.message ? (
-                      <div className="text-muted-foreground text-xs">
+                      <div className="text-xs text-muted-foreground">
                         {item.message}
                       </div>
                     ) : null}

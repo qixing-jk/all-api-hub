@@ -389,7 +389,6 @@ export default defineConfig([
       "coverage/**",
       "playwright-report/**",
       "test-results/**",
-      "tailwind.config.js",
       "src/public/react-devtools-backend.js",
       ".scratch/**",
     ],

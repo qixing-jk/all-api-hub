@@ -604,7 +604,8 @@ it("selects multiple open websites without overwriting another row's edited scop
       name: "webAiApiCheck:settings.siteRules.currentPage",
     }),
   )
-  fireEvent.change(picker, { target: { value: "Second" } })
+  await user.clear(picker)
+  await user.type(picker, "Second")
   await user.click(
     await screen.findByRole("option", { name: "Second — https://two.example" }),
   )
