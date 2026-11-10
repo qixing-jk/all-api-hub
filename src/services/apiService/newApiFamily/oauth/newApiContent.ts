@@ -1,3 +1,4 @@
+import { BROWSER_OAUTH_CONTENT_FAILURE_REASONS } from "~/constants/browserOAuth"
 import {
   NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
   parseNewApiDashboardAuthBundleResponse,
@@ -115,7 +116,11 @@ export function handlePrepareNewApiOAuth(request: Request, reply: Reply): true {
       status as Record<string, unknown>,
       Object.values(NEW_API_OAUTH_PROVIDERS),
     ).find((item) => item.provider === request.loginProvider)
-    if (!method) return { success: false, reason: "unsupported" }
+    if (!method)
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.Unsupported,
+      }
 
     const logout = await requestApi("/api/user/auth/logout", "POST")
     const modern = logout.status !== 404 && logout.status !== 405
@@ -176,9 +181,15 @@ export function handleCompleteNewApiOAuth(
     const requestId = validate(request)
     const flow = JSON.parse(sessionStorage.getItem(FLOW_KEY) || "null")
     if (flow?.requestId !== requestId)
-      return { success: false, reason: "unexpected_page" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedPage,
+      }
     if (!parseCompletionPaths(flow.completionPaths).includes(location.pathname))
-      return { success: false, reason: "unexpected_page" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedPage,
+      }
     let userId: unknown
     let headers: Record<string, string>
     if (flow.modern === true) {
@@ -222,14 +233,20 @@ export function handleCompleteNewApiOAuth(
       (typeof userId !== "number" && typeof userId !== "string") ||
       !String(userId).trim()
     )
-      return { success: false, reason: "identity_mismatch" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
+      }
     const self = (
       await envelope(
         await requestApi("/api/user/self", "GET", undefined, headers),
       )
     ).data as Record<string, unknown> | undefined
     if (String(self?.id) !== String(userId))
-      return { success: false, reason: "identity_mismatch" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
+      }
     return { success: true, userId: String(userId) }
   })
 }

@@ -1,7 +1,4 @@
-import {
-  passwordLoginRequest,
-  readPasswordLoginJson,
-} from "~/services/accountLogin/passwordContent"
+import { passwordLoginRequest } from "~/services/accountLogin/passwordContent"
 import {
   enterPasswordLogin,
   handlePasswordUi,
@@ -14,6 +11,7 @@ import {
   isAgentRouterSystemName,
 } from "~/services/accountLogin/providers/agentrouter/config"
 import { parseNewApiDashboardAuthBundleResponse } from "~/services/apiService/newApi/dashboardAuth"
+import { readBrowserLoginJson } from "~/services/browserLogin/contentResponse"
 import { fetchBrowserOAuthRequest } from "~/services/browserOAuth/contentRequest"
 import { isRecord } from "~/utils/core/object"
 
@@ -41,7 +39,8 @@ async function readSession(options?: {
       : {}
   const response = await fetchBrowserOAuthRequest("/api/user/self", { headers })
   if (response.ok) {
-    const self = await readPasswordLoginJson(response)
+    const self = await readBrowserLoginJson(response)
+    if (!isRecord(self)) throw new Error("Invalid session")
     if (self.success === true && isRecord(self.data) && self.data.id != null)
       return {
         identity: String(self.data.id),
@@ -57,7 +56,7 @@ async function readSession(options?: {
   }
   if (response.status !== 401) {
     // WAF responses can use either a successful or rejected HTTP status.
-    await readPasswordLoginJson(response)
+    await readBrowserLoginJson(response)
     throw new Error("Session unavailable")
   }
   if (bundle) return null

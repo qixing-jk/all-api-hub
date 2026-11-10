@@ -2,8 +2,12 @@
 // @vitest-environment-options {"url":"https://gateway.example/login"}
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
-import { PasswordLoginResponseError } from "~/services/accountLogin/passwordContent"
+import { BROWSER_LOGIN_FAILURE_REASONS } from "~/constants/browserLogin"
+import { BROWSER_OAUTH_REQUEST_FAILURE_REASONS } from "~/constants/browserOAuth"
 import { handlePasswordUi } from "~/services/accountLogin/passwordUi"
+import { PASSWORD_UI_PHASES } from "~/services/accountLogin/passwordUiProtocol"
+import { handleNewApiPasswordUi } from "~/services/apiService/newApiFamily/passwordUi"
+import { BrowserLoginResponseError } from "~/services/browserLogin/contentResponse"
 import { BrowserOAuthRequestError } from "~/services/browserOAuth/contentRequest"
 
 const deps = vi.hoisted(() => ({ verification: vi.fn(), send: vi.fn() }))
@@ -35,6 +39,31 @@ beforeEach(() => {
   deps.verification.mockResolvedValue({ status: "not-required" })
 })
 afterEach(() => vi.useRealTimers())
+
+it.each([null, [], "unexpected", 17, true])(
+  "keeps malformed native session JSON unconfirmed without submitting login: %j",
+  async (payload) => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json(payload))
+    try {
+      const result = await new Promise((resolve) =>
+        handleNewApiPasswordUi(
+          { ...request, phase: PASSWORD_UI_PHASES.Prepare },
+          resolve,
+        ),
+      )
+      expect(result).toEqual({ status: "uncertain" })
+      expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+        "/api/user/self",
+        expect.objectContaining({ credentials: "include" }),
+      )
+    } finally {
+      fetchMock.mockRestore()
+    }
+  },
+)
+
 it("only permits API fallback before submission on a page with no recognized native UI", async () => {
   vi.useFakeTimers()
   const result = invoke("prepare")
@@ -90,8 +119,10 @@ it("recognizes a user's native submission during verification and does not click
 })
 
 it.each([
-  new BrowserOAuthRequestError("request_failed"),
-  new PasswordLoginResponseError("invalid_response"),
+  new BrowserOAuthRequestError(
+    BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed,
+  ),
+  new BrowserLoginResponseError(BROWSER_LOGIN_FAILURE_REASONS.InvalidResponse),
 ])(
   "keeps observing after an interrupted session read without resubmitting (%#)",
   async (error) => {
@@ -115,9 +146,28 @@ it.each([
   },
 )
 
+it("does not offer preflight replay after a challenged session-refresh mutation", async () => {
+  provider.readSession.mockRejectedValueOnce(
+    new BrowserLoginResponseError(
+      BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired,
+      true,
+    ),
+  )
+  await expect(invoke("prepare")).resolves.toEqual({
+    status: "uncertain",
+    reason: "verification_required",
+  })
+  expect(provider.readSession).toHaveBeenCalledTimes(1)
+})
+
 it.each([
-  new PasswordLoginResponseError("verification_required"),
-  new PasswordLoginResponseError("invalid_response", true),
+  new BrowserLoginResponseError(
+    BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired,
+  ),
+  new BrowserLoginResponseError(
+    BROWSER_LOGIN_FAILURE_REASONS.InvalidResponse,
+    true,
+  ),
 ])(
   "does not retry a challenged read or uncertain mutation (%#)",
   async (error) => {
@@ -133,7 +183,7 @@ it.each([
 )
 
 it.each([
-  new BrowserOAuthRequestError("uncertain"),
+  new BrowserOAuthRequestError(BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain),
   new Error("Invalid session"),
 ])(
   "preserves uncertainty for a lost refresh mutation or invalid session (%#)",

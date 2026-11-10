@@ -46,6 +46,9 @@ for (const mode of [
     extensionDir,
   }) => {
     if (mode === "uncaptured-native-login") test.setTimeout(90_000)
+    // Persistent protection includes the automatic guard and a bounded manual
+    // continuation before the attempt can publish its terminal failure.
+    if (mode === "waf-page") test.setTimeout(100_000)
     installExtensionPageGuards(page)
     await forceExtensionLanguage(page, "zh-CN")
     await stubLlmMetadataIndex(context)
@@ -378,7 +381,7 @@ for (const mode of [
                 "autoCheckin_status",
               )
             )?.perAccount?.["ui-login"],
-          { timeout: 45_000 },
+          { timeout: mode === "waf-page" ? 80_000 : 45_000 },
         )
         .toMatchObject({
           status: expectedStatus,

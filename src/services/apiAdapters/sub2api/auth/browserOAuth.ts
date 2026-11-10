@@ -1,5 +1,12 @@
-import { BROWSER_LOGIN_SESSION_KEYS } from "~/constants/browserLogin"
-import { BROWSER_OAUTH_COMPLETION_STATUS } from "~/constants/browserOAuth"
+import {
+  BROWSER_LOGIN_SESSION_KEYS,
+  BROWSER_LOGIN_STATUS,
+} from "~/constants/browserLogin"
+import {
+  BROWSER_OAUTH_COMPLETION_STATUS,
+  BROWSER_OAUTH_CONTENT_FAILURE_REASONS,
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
+} from "~/constants/browserOAuth"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   buildSub2ApiOAuthStartUrl,
@@ -35,16 +42,20 @@ export function createSub2ApiOAuthFlow(input: {
           ? { authorizationUrl: response.authorizationUrl }
           : null
       }
-      if (response.reason === "interaction_required") {
+      if (
+        response.reason ===
+        BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired
+      ) {
         return {
-          status: "interaction_required",
+          status: BROWSER_LOGIN_STATUS.InteractionRequired,
           message: "Sub2API requires interactive verification before OAuth.",
         }
       }
-      if (response.reason === "unsupported") return { status: "unsupported" }
-      if (response.reason === "uncertain") {
+      if (response.reason === BROWSER_OAUTH_CONTENT_FAILURE_REASONS.Unsupported)
+        return { status: BROWSER_LOGIN_STATUS.Unsupported }
+      if (response.reason === BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain) {
         return {
-          status: "uncertain",
+          status: BROWSER_LOGIN_STATUS.Uncertain,
           message: "The Sub2API logout response could not be confirmed.",
         }
       }
@@ -53,11 +64,17 @@ export function createSub2ApiOAuthFlow(input: {
     parseCompletion(response) {
       if (!isRecord(response))
         return { status: BROWSER_OAUTH_COMPLETION_STATUS.Invalid }
-      if (response.reason === "identity_mismatch") {
-        return { status: "identity_mismatch" }
+      if (
+        response.reason ===
+        BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch
+      ) {
+        return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }
       }
-      if (response.reason === "interaction_required") {
-        return { status: "interaction_required" }
+      if (
+        response.reason ===
+        BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired
+      ) {
+        return { status: BROWSER_LOGIN_STATUS.InteractionRequired }
       }
       const identity = normalizeSub2ApiLoginIdentity(response.identity)
       return response.success === true && identity

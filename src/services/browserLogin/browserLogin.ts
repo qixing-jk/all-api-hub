@@ -1,4 +1,5 @@
 import {
+  BROWSER_LOGIN_FAILURE_REASONS,
   BROWSER_LOGIN_PAGE_TIMEOUT_MS,
   BROWSER_LOGIN_STATUS,
   LOGIN_VERIFICATION_REASONS,
@@ -10,12 +11,17 @@ import type {
 } from "~/constants/browserLogin"
 import { TURNSTILE_MANUAL_WAIT_MS } from "~/constants/turnstile"
 import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
-import { runAbortableTask } from "~/services/apiTransport/abortableTask"
-import { waitForTabComplete } from "~/services/browsingContext/tempPage/browserAdapter"
+import {
+  composeAbortSignals,
+  runAbortableTask,
+} from "~/services/apiTransport/abortableTask"
 import { resolveTempWindowSize } from "~/services/browsingContext/tempPage/windowSize"
 import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
-import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
+import {
+  isMessageReceiverUnavailableError,
+  sendTabMessageWithRetry,
+} from "~/utils/browser/runtimeMessages"
 import {
   getTab,
   onTabRemoved,
@@ -32,6 +38,8 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
+import { BrowserLoginResponseError } from "./contentResponse"
+import { waitForBrowserLoginPageProtection } from "./pageProtection"
 import {
   getLoginVerificationContext,
   registerLoginVerificationContext,
@@ -44,11 +52,14 @@ const CLEANUP_TIMEOUT_MS = 3_000
 /**
  * How long a queued login waits for the shared session. Its clock starts
  * together with the flow ahead of it, so it only has to outlive that flow's own
- * bound - page load plus one interactive login - with room for the
- * content-script round trips.
+ * bound: initial loading, protection before and after authorization, one
+ * reminder deadline extension, and the content-script round trips.
  */
 const SESSION_WAIT_TIMEOUT_MS =
-  BROWSER_LOGIN_PAGE_TIMEOUT_MS + 2 * 60 * 1000 + 30 * 1000
+  3 * BROWSER_LOGIN_PAGE_TIMEOUT_MS +
+  2 * 60 * 1000 +
+  3 * TURNSTILE_MANUAL_WAIT_MS +
+  30 * 1000
 
 // Browser flows that share a concurrency key act on the same site session, so
 // they cannot run at the same time. Queue the later request instead of rejecting
@@ -89,8 +100,7 @@ type BrowserLoginProtocolFailureStatus =
   | typeof BROWSER_LOGIN_STATUS.Uncertain
 
 export type BrowserLoginFailureStatus =
-  | BrowserLoginProtocolFailureStatus
-  | typeof BROWSER_LOGIN_STATUS.SessionBusy
+  BrowserLoginProtocolFailureStatus | typeof BROWSER_LOGIN_STATUS.SessionBusy
 
 export type BrowserLoginResult<Evidence> =
   | {
@@ -121,12 +131,23 @@ export interface BrowserLoginContextOptions {
 export interface BrowserLoginSession {
   tabId: number
   input: BrowserLoginInput
-  send<T = unknown>(
+  sendSiteAction<T = unknown>(
+    action: string,
+    details?:
+      Record<string, unknown> | (() => Promise<Record<string, unknown>>),
+  ): Promise<T>
+  navigate(url: string): Promise<unknown>
+  /** Reads native post-submission evidence without blocking on page protection. */
+  observeSubmittedAction<T = unknown>(
     action: string,
     details?: Record<string, unknown>,
   ): Promise<T>
-  navigate(url: string): Promise<unknown>
-  waitForPageReady(): Promise<void>
+  /** Provider interaction is outside the account origin and is explicitly scoped. */
+  sendAuthorizationAction<T = unknown>(
+    action: string,
+    authorizationUrl: string,
+    details?: Record<string, unknown>,
+  ): Promise<T>
   assertOrigin(): Promise<void>
   canResetSession(): Promise<boolean>
   requestAssist(reason?: LoginVerificationReason): Promise<boolean>
@@ -310,17 +331,27 @@ async function sendContentMessage<T>(
   details: Record<string, unknown> = {},
   abortSignal?: AbortSignal,
 ): Promise<T> {
-  return await sendTabMessageWithRetry<T>(
-    tabId,
-    { ...details, action, requestId },
-    {
-      // Retry only when the receiver is unavailable, before the action can run.
-      // The shared helper never replays a dispatched action after a lost response.
-      maxAttempts: 8,
-      delayMs: 400,
-      ...(abortSignal ? { abortSignal } : {}),
-    },
-  )
+  try {
+    return await sendTabMessageWithRetry<T>(
+      tabId,
+      { ...details, action, requestId },
+      {
+        // Retry only when the receiver is unavailable, before the action can run.
+        // The shared helper never replays a dispatched action after a lost response.
+        maxAttempts: 8,
+        delayMs: 400,
+        ...(abortSignal ? { abortSignal } : {}),
+      },
+    )
+  } catch (error) {
+    abortSignal?.throwIfAborted()
+    if (isMessageReceiverUnavailableError(error)) throw error
+    // Once delivery is possible, losing the reply cannot prove the site action failed.
+    throw new BrowserLoginResponseError(
+      BROWSER_LOGIN_FAILURE_REASONS.NetworkError,
+      true,
+    )
+  }
 }
 
 /** Owns browser lifetime and cleanup; protocols own execution and evidence. */
@@ -328,15 +359,23 @@ async function authenticateBrowserLogin<Evidence>(
   flow: BrowserLoginProtocol<Evidence>,
   input: BrowserLoginInput,
 ): Promise<BrowserLoginResult<Evidence>> {
+  const ownerClosed = new AbortController()
+  const cancellation = composeAbortSignals([
+    input.abortSignal,
+    ownerClosed.signal,
+  ])
+  const signal = cancellation.signal
+  let disposeTabClosed: (() => void) | undefined
+  let disposeWindowClosed: (() => void) | undefined
   let context: OpenedAuthContext | null = null
   let authenticated = false
   let disposeVerification: (() => void) | undefined
   let interactionDeadline = 0
   let openedReminder = false
   const active = <T>(task: () => Promise<T>) =>
-    runAbortableTask(task, { signals: [input.abortSignal] })
+    runAbortableTask(task, { signals: [signal] })
   try {
-    input.abortSignal?.throwIfAborted()
+    signal?.throwIfAborted()
     context = await openVisibleAuthContext(
       input.origin,
       flow.loginPath,
@@ -350,50 +389,90 @@ async function authenticateBrowserLogin<Evidence>(
         Boolean(tab.url?.startsWith(`${input.origin}/`)),
       BROWSER_LOGIN_PAGE_TIMEOUT_MS,
       undefined,
-      input.abortSignal,
+      signal,
     )
     await assertTabOrigin(context, input.origin)
     const opened = context
-    if (flow.preferIncognito) {
-      disposeVerification = registerLoginVerificationContext(input.requestId, {
-        reason: LOGIN_VERIFICATION_REASONS.Login,
-        tabId: opened.tabId,
-        ownerWindowId: opened.windowId,
-        onOpened: () => {
-          if (!openedReminder) {
-            openedReminder = true
-            interactionDeadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
-          }
-        },
-      })
+    disposeTabClosed = onTabRemoved((id) => {
+      if (id === opened.tabId) ownerClosed.abort()
+    })
+    disposeWindowClosed = onWindowRemoved((id) => {
+      if (id === opened.windowId) ownerClosed.abort()
+    })
+    disposeVerification = registerLoginVerificationContext(input.requestId, {
+      reason: LOGIN_VERIFICATION_REASONS.Login,
+      tabId: opened.tabId,
+      ownerWindowId: opened.windowId,
+      onOpened: () => {
+        if (!openedReminder) {
+          openedReminder = true
+          interactionDeadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
+        }
+      },
+    })
+    const sendSiteMessage = async <T>(
+      action: string,
+      details?: Record<string, unknown>,
+    ): Promise<T> => {
+      await active(() => assertTabOrigin(opened, input.origin))
+      return await active(() =>
+        sendContentMessage<T>(
+          opened.tabId,
+          action,
+          input.requestId,
+          details,
+          signal,
+        ),
+      )
     }
     const result = await active(() =>
       flow.execute({
         tabId: opened.tabId,
         input,
-        send: (action, details) =>
-          active(() =>
-            sendContentMessage(
+        async sendSiteAction<T>(
+          action: string,
+          details?:
+            Record<string, unknown> | (() => Promise<Record<string, unknown>>),
+        ) {
+          await waitForBrowserLoginPageProtection({
+            tabId: opened.tabId,
+            origin: input.origin,
+            requestId: input.requestId,
+            signal,
+            assertOrigin: () =>
+              active(() => assertTabOrigin(opened, input.origin)),
+            interactionDeadline: () => interactionDeadline,
+          })
+          // Ownership and document-bound observation must use the page that
+          // survived clearance, which can navigate or take manual interaction.
+          const preparedDetails =
+            typeof details === "function" ? await details() : details
+          return await sendSiteMessage<T>(action, preparedDetails)
+        },
+        observeSubmittedAction: sendSiteMessage,
+        async sendAuthorizationAction<T>(
+          action: string,
+          authorizationUrl: string,
+          details?: Record<string, unknown>,
+        ) {
+          await active(() =>
+            assertTabOrigin(opened, new URL(authorizationUrl).origin),
+          )
+          return await active(() =>
+            sendContentMessage<T>(
               opened.tabId,
               action,
               input.requestId,
               details,
-              input.abortSignal,
+              signal,
             ),
-          ),
+          )
+        },
         navigate: (url) =>
           active(() => updateTab(opened.tabId, { url, active: true })),
-        waitForPageReady: () =>
-          active(() =>
-            waitForTabComplete(opened.tabId, {
-              requestId: input.requestId,
-              origin: input.origin,
-              signal: input.abortSignal,
-            }),
-          ),
         assertOrigin: () => active(() => assertTabOrigin(opened, input.origin)),
         async canResetSession() {
-          input.abortSignal?.throwIfAborted()
+          signal?.throwIfAborted()
           const tab = await getTab(opened.tabId)
           if (!tab.incognito) return false
           const others = await queryTabs({})
@@ -406,23 +485,17 @@ async function authenticateBrowserLogin<Evidence>(
           )
         },
         async requestAssist(reason) {
-          input.abortSignal?.throwIfAborted()
+          signal?.throwIfAborted()
           const registered = getLoginVerificationContext(input.requestId)
           if (registered) registered.reason = reason
           return requestLoginVerificationAssist(input.requestId)
         },
         interactionDeadline: () => interactionDeadline,
         waitForTab: (predicate, timeoutMs, onPending) =>
-          waitForTab(
-            opened,
-            predicate,
-            timeoutMs,
-            onPending,
-            input.abortSignal,
-          ),
+          waitForTab(opened, predicate, timeoutMs, onPending, signal),
       }),
     )
-    input.abortSignal?.throwIfAborted()
+    signal?.throwIfAborted()
     if (
       result.status === BROWSER_LOGIN_STATUS.Authenticated &&
       input.captureCredential
@@ -431,7 +504,7 @@ async function authenticateBrowserLogin<Evidence>(
       const credential = await active(async () =>
         flow.captureCredential?.(opened.tabId, input.origin),
       )
-      input.abortSignal?.throwIfAborted()
+      signal?.throwIfAborted()
       if (!credential) return { status: BROWSER_LOGIN_STATUS.Uncertain }
       authenticated = true
       return { ...result, credential }
@@ -439,7 +512,7 @@ async function authenticateBrowserLogin<Evidence>(
     authenticated = result.status === BROWSER_LOGIN_STATUS.Authenticated
     return result
   } catch (error) {
-    if (input.abortSignal?.aborted || error instanceof AuthCancelledError)
+    if (signal?.aborted || error instanceof AuthCancelledError)
       return { status: BROWSER_LOGIN_STATUS.Cancelled }
     if (error instanceof AuthTimeoutError)
       return {
@@ -479,6 +552,10 @@ async function authenticateBrowserLogin<Evidence>(
       }
     }
     disposeVerification?.()
+    disposeTabClosed?.()
+    disposeWindowClosed?.()
+    ownerClosed.abort()
+    cancellation.dispose()
 
     if (context) await closeAuthContext(context)
   }

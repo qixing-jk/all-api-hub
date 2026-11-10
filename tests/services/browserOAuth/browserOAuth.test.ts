@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { BROWSER_LOGIN_SESSION_MODES } from "~/constants/browserLogin"
 import {
   BROWSER_OAUTH_COMPLETION_STATUS,
+  BROWSER_OAUTH_CONTENT_FAILURE_REASONS,
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
   BROWSER_OAUTH_STATUS,
 } from "~/constants/browserOAuth"
 import { createBrowserPasswordContext } from "~/services/accountLogin/browserPassword"
@@ -11,14 +13,21 @@ import {
   PASSWORD_UI_PHASES,
   PASSWORD_UI_REASONS,
 } from "~/services/accountLogin/passwordUiProtocol"
+import type { AccountLoginResult } from "~/services/apiAdapters/contracts/accountLogin"
+import { createAgentRouterOAuthFlow } from "~/services/apiAdapters/newApi/account/agentRouterAccountLogin"
 import { captureNewApiLoginCookieCredential } from "~/services/apiAdapters/newApi/account/cookieCredential"
 import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/browserOAuth"
 import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
-import { getLoginVerificationContext } from "~/services/browserLogin/verificationContexts"
+import {
+  getLoginVerificationContext,
+  setLoginVerificationPresenter,
+} from "~/services/browserLogin/verificationContexts"
 import {
   createBrowserOAuthContext,
   type BrowserOAuthFlow,
 } from "~/services/browserOAuth/browserOAuth"
+import { waitForTabComplete } from "~/services/browsingContext/tempPage/browserAdapter"
+import { ProtectionPageTimeoutError } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 
 const tabUpdatedListeners = vi.hoisted(
   () => [] as Array<(tabId: number, changeInfo: unknown, tab: any) => void>,
@@ -68,7 +77,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 vi.mock("~/utils/browser/tabs", () => browserApi)
 vi.mock("~/utils/browser/windows", () => browserApi)
-vi.mock("~/utils/browser/runtime", () => browserApi)
+vi.mock("~/utils/browser/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtime")>()),
+  ...browserApi,
+}))
 vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
@@ -148,6 +160,571 @@ const completedTab = {
 }
 
 describe("browser OAuth context", () => {
+  it.each(["reply", "message"] as const)(
+    "preserves uncertainty when OAuth completion loses its %s",
+    async (loss) => {
+      browserApi.sendTabMessageWithRetry
+        .mockReset()
+        .mockImplementation(async (_tab, message) => {
+          if (message.action === actions.prepare)
+            return { success: true, authorizationUrl }
+          if (message.action === actions.complete) {
+            if (loss === "message")
+              throw new Error(
+                "The message port closed before a response was received.",
+              )
+            return {
+              success: false,
+              reason: BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed,
+            }
+          }
+          return { success: true }
+        })
+      await expect(
+        browserOAuthContext.authenticate({
+          origin,
+          requestId: `completion-${loss}`,
+        }),
+      ).resolves.toEqual({ status: "uncertain" })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.map(
+          ([, message]) => message.action,
+        ),
+      ).toEqual([actions.prepare, actions.complete, actions.clear])
+      expect(browserApi.updateTab).toHaveBeenCalledOnce()
+    },
+  )
+  it.each([
+    [
+      new ProtectionPageTimeoutError(),
+      "interaction_required",
+      "verification_required",
+    ],
+    [new Error("guard receiver unavailable"), "failed", "page_unavailable"],
+  ])(
+    "preserves page failures while waiting for manual session sign-out: %s",
+    async (failure, status, reason) => {
+      vi.useFakeTimers()
+      vi.mocked(waitForTabComplete)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValue(failure)
+      browserApi.sendTabMessageWithRetry.mockReset().mockResolvedValue({
+        kind: PASSWORD_UI_KINDS.Manual,
+        reason: PASSWORD_UI_REASONS.Session,
+      })
+      const login = createBrowserPasswordContext({
+        id: "manual-session-failure",
+        concurrencyKey: "manual-session-failure",
+        displayName: "Password",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-api",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      }).authenticate({
+        origin,
+        requestId: "manual-session-failure",
+        expectedIdentity: "user-1",
+      })
+      await vi.advanceTimersByTimeAsync(80_000)
+      await expect(login).resolves.toEqual({ status, reason })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) =>
+            message.action === "password-api" ||
+            message.phase === PASSWORD_UI_PHASES.Submit,
+        ),
+      ).toHaveLength(0)
+    },
+  )
+  it.each([false, true])(
+    "classifies an unavailable OAuth page before dispatch (callback=%s)",
+    async (callback) => {
+      if (callback)
+        vi.mocked(waitForTabComplete).mockResolvedValueOnce(undefined)
+      vi.mocked(waitForTabComplete).mockRejectedValue(
+        new Error("guard receiver unavailable"),
+      )
+      await expect(
+        browserOAuthContext.authenticate({
+          origin,
+          requestId: "unavailable-oauth",
+        }),
+      ).resolves.toEqual({
+        status: callback ? "uncertain" : "failed",
+        reason: "page_unavailable",
+      })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) =>
+            message.action === (callback ? actions.complete : actions.prepare),
+        ),
+      ).toHaveLength(0)
+    },
+  )
+  it.each(["prepare", "submit"] as const)(
+    "reports an unavailable password page before %s without claiming a dispatched login",
+    async (phase) => {
+      if (phase === "submit")
+        vi.mocked(waitForTabComplete).mockResolvedValueOnce(undefined)
+      vi.mocked(waitForTabComplete).mockRejectedValue(
+        new Error("guard receiver unavailable"),
+      )
+      browserApi.sendTabMessageWithRetry
+        .mockReset()
+        .mockResolvedValue({ kind: PASSWORD_UI_KINDS.Ready })
+      await expect(
+        createBrowserPasswordContext({
+          id: "unavailable-password",
+          concurrencyKey: "unavailable-password",
+          displayName: "Password",
+          loginPath: "/login",
+          uiAction: "password-ui",
+          loginAction: "password-api",
+          clearEvidenceAction: "password-clear",
+          credentials: { username: "alice", password: "secret" },
+        }).authenticate({
+          origin,
+          requestId: "unavailable-password",
+          expectedIdentity: "user-1",
+        }),
+      ).resolves.toEqual({
+        status: "failed",
+        reason: "page_unavailable",
+      })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) =>
+            message.action === "password-api" ||
+            message.phase === PASSWORD_UI_PHASES.Submit,
+        ),
+      ).toHaveLength(0)
+    },
+  )
+  it.each(["github", "linuxdo"] as const)(
+    "preserves a lost AgentRouter %s preparation mutation response without replay",
+    async (provider) => {
+      const flow = createAgentRouterOAuthFlow(provider)
+      browserApi.sendTabMessageWithRetry.mockReset().mockResolvedValue({
+        success: false,
+        reason: BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain,
+      })
+      await expect(
+        createBrowserOAuthContext(flow).authenticate({
+          origin,
+          requestId: `uncertain-preparation-${provider}`,
+          expectedIdentity: "user-1",
+        }),
+      ).resolves.toEqual({ status: "uncertain" })
+      expect(browserApi.updateTab).not.toHaveBeenCalled()
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) => message.action === flow.prepareAction,
+        ),
+      ).toHaveLength(1)
+      expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    },
+  )
+  it("keeps queued logins admitted while the holder uses both protection and authorization budgets", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    const guard = vi.mocked(waitForTabComplete)
+    guard
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new ProtectionPageTimeoutError()), 20_000),
+          ),
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => setTimeout(resolve, 40_000)),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new ProtectionPageTimeoutError()), 20_000),
+          ),
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => setTimeout(resolve, 40_000)),
+      )
+    browserApi.getTab.mockImplementation(async () =>
+      browserApi.updateTab.mock.calls.length
+        ? Date.now() >= 165_000
+          ? completedTab
+          : { ...loginTab, url: authorizationUrl }
+        : loginTab,
+    )
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(async (_tab, message) =>
+        message.action === actions.prepare
+          ? { success: true, authorizationUrl }
+          : { success: true, identity: "user-1", completed: true },
+      )
+    const first = browserOAuthContext.authenticate({
+      origin,
+      requestId: "protection-holder",
+    })
+    const second = browserOAuthContext.authenticate({
+      origin,
+      requestId: "protection-queued",
+    })
+    setTimeout(
+      () =>
+        tabUpdatedListeners.forEach((listener) =>
+          listener(11, {}, completedTab),
+        ),
+      165_000,
+    )
+    await vi.advanceTimersByTimeAsync(260_000)
+    await expect(first).resolves.toMatchObject({ status: "authenticated" })
+    await expect(second).resolves.toMatchObject({ status: "authenticated" })
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+  })
+  it("does not block clearance or cancellation on delayed reminder delivery", async () => {
+    vi.useFakeTimers()
+    let release!: () => void
+    setLoginVerificationPresenter(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ presented: false })
+        }),
+    )
+    vi.mocked(waitForTabComplete).mockRejectedValueOnce(
+      new ProtectionPageTimeoutError(),
+    )
+    const result = browserOAuthContext.authenticate({
+      origin,
+      requestId: "delayed-reminder",
+    })
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    release()
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+  })
+  it("honors the existing reminder's manual deadline when it opens during a pending protection check", async () => {
+    vi.useFakeTimers()
+    let release!: () => void
+    const clearing = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    vi.mocked(waitForTabComplete)
+      .mockRejectedValueOnce(new ProtectionPageTimeoutError())
+      .mockImplementation(() => clearing)
+    const result = browserOAuthContext.authenticate({
+      origin,
+      requestId: "late-manual-open",
+    })
+    await vi.advanceTimersByTimeAsync(40_000)
+    getLoginVerificationContext("late-manual-open")?.onOpened?.()
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(browserApi.removeWindow).not.toHaveBeenCalled()
+    release()
+    await vi.advanceTimersByTimeAsync(1_000)
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+  })
+  it.each(["initial", "api-fallback"])(
+    "does not report an uncertain password submission when %s protection never clears",
+    async (phase) => {
+      vi.useFakeTimers()
+      if (phase === "api-fallback") {
+        vi.mocked(waitForTabComplete).mockResolvedValueOnce(undefined)
+        browserApi.sendTabMessageWithRetry
+          .mockReset()
+          .mockResolvedValue({ kind: PASSWORD_UI_KINDS.Fallback })
+      }
+      vi.mocked(waitForTabComplete).mockRejectedValue(
+        new ProtectionPageTimeoutError(),
+      )
+      const result = createBrowserPasswordContext({
+        id: "blocked-password",
+        concurrencyKey: "blocked-password",
+        displayName: "Password",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-api",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      }).authenticate({
+        origin,
+        requestId: "blocked-password",
+        expectedIdentity: "user-1",
+      })
+      await vi.advanceTimersByTimeAsync(60_000)
+      await expect(result).resolves.toEqual({
+        status: "interaction_required",
+        reason: "verification_required",
+      })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.every(
+          ([, message]) =>
+            message.action === "password-clear" ||
+            (phase === "api-fallback" &&
+              message.phase === PASSWORD_UI_PHASES.Prepare),
+        ),
+      ).toBe(true)
+    },
+  )
+  it("waits for protection again before password submission and still submits only once", async () => {
+    vi.useFakeTimers()
+    let blocked = true
+    vi.mocked(waitForTabComplete)
+      .mockResolvedValueOnce(undefined)
+      .mockImplementation(async () => {
+        if (blocked) throw new ProtectionPageTimeoutError()
+      })
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(async (_tab, message) => {
+        if (message.phase === PASSWORD_UI_PHASES.Prepare)
+          return { kind: PASSWORD_UI_KINDS.Ready }
+        return { status: "authenticated", identity: "user-1" }
+      })
+    const result = createBrowserPasswordContext({
+      id: "protected-password",
+      concurrencyKey: "protected-password",
+      displayName: "Password",
+      loginPath: "/login",
+      uiAction: "password-ui",
+      loginAction: "password-api",
+      clearEvidenceAction: "password-clear",
+      credentials: { username: "alice", password: "secret" },
+    }).authenticate({
+      origin,
+      requestId: "protected-password",
+      expectedIdentity: "user-1",
+    })
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.filter(
+        ([, message]) => message.phase === PASSWORD_UI_PHASES.Submit,
+      ),
+    ).toHaveLength(0)
+    expect(getLoginVerificationContext("protected-password")).toBeDefined()
+    blocked = false
+    await vi.advanceTimersByTimeAsync(1_000)
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.filter(
+        ([, message]) => message.phase === PASSWORD_UI_PHASES.Submit,
+      ),
+    ).toHaveLength(1)
+  })
+  it("captures native login evidence in the document loaded by protection clearance", async () => {
+    vi.useFakeTimers()
+    let documentGeneration = 0
+    let observedDocument: number | undefined
+    let completeObservation:
+      ((value: AccountLoginResult | null) => void) | undefined
+    const dispose = vi.fn(async () => completeObservation?.(null))
+    vi.mocked(waitForTabComplete)
+      .mockResolvedValueOnce(undefined)
+      .mockImplementationOnce(async () => {
+        // Page-world observers settle on pagehide when clearance reloads.
+        completeObservation?.(null)
+        documentGeneration++
+      })
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(async (_tab, message) => {
+        if (message.phase === PASSWORD_UI_PHASES.Prepare)
+          return { kind: PASSWORD_UI_KINDS.Ready }
+        if (message.phase === PASSWORD_UI_PHASES.Submit) {
+          if (observedDocument === documentGeneration)
+            completeObservation?.({
+              status: "authenticated",
+              identity: "user-1",
+              evidence: { checkedIn: true },
+            })
+          return { kind: PASSWORD_UI_KINDS.Submitted }
+        }
+        return { status: "uncertain", reason: "verification_required" }
+      })
+    const login = createBrowserPasswordContext({
+      id: "reloaded-password",
+      concurrencyKey: "reloaded-password",
+      displayName: "Password",
+      loginPath: "/login",
+      uiAction: "password-ui",
+      loginAction: "password-api",
+      clearEvidenceAction: "password-clear",
+      credentials: { username: "alice", password: "secret" },
+      observeNativeLogin: async () => {
+        observedDocument = documentGeneration
+        const result = new Promise<AccountLoginResult | null>((resolve) => {
+          completeObservation = resolve
+        })
+        return { result, dispose }
+      },
+    }).authenticate({
+      origin,
+      requestId: "reloaded-password",
+      expectedIdentity: "user-1",
+    })
+    await vi.advanceTimersByTimeAsync(1_000)
+    await expect(login).resolves.toEqual({
+      status: "authenticated",
+      identity: "user-1",
+      evidence: { checkedIn: true },
+    })
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.map(
+        ([, message]) => message.phase,
+      ),
+    ).toEqual([PASSWORD_UI_PHASES.Prepare, PASSWORD_UI_PHASES.Submit])
+    expect(dispose).toHaveBeenCalledOnce()
+  })
+  it.each(["abort", "window"])(
+    "cancels a protection continuation when its owner closes (%s)",
+    async (cause) => {
+      vi.useFakeTimers()
+      vi.mocked(waitForTabComplete).mockRejectedValue(
+        new ProtectionPageTimeoutError(),
+      )
+      const controller = new AbortController()
+      const requestId = `cancel-protection-${cause}`
+      const result = browserOAuthContext.authenticate({
+        origin,
+        requestId,
+        abortSignal: controller.signal,
+      })
+      await vi.advanceTimersByTimeAsync(1_000)
+      if (cause === "abort") controller.abort()
+      else removalListeners.window?.(7)
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(result).resolves.toMatchObject({ status: "cancelled" })
+      expect(getLoginVerificationContext(requestId)).toBeUndefined()
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.some(
+          ([, message]) => message.action === actions.prepare,
+        ),
+      ).toBe(false)
+    },
+  )
+  it.each([false, true])(
+    "continues the same OAuth session after manual protection clearance (callback=%s)",
+    async (afterCallback) => {
+      vi.useFakeTimers()
+      let blocked = true
+      const guard = vi.mocked(waitForTabComplete)
+      if (afterCallback) guard.mockResolvedValueOnce(undefined)
+      guard.mockImplementation(async () => {
+        if (blocked) throw new ProtectionPageTimeoutError()
+      })
+      const requestId = `manual-protection-${afterCallback}`
+      const presenter = vi.fn(async () => ({ presented: true }))
+      setLoginVerificationPresenter(presenter)
+      const result = browserOAuthContext.authenticate({
+        origin,
+        requestId,
+        expectedIdentity: "user-1",
+        attended: false,
+      })
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(presenter).toHaveBeenCalledWith(requestId)
+      expect(getLoginVerificationContext(requestId)?.tabId).toBe(11)
+      expect(browserApi.removeWindow).not.toHaveBeenCalled()
+      blocked = false
+      await vi.advanceTimersByTimeAsync(1_000)
+      await expect(result).resolves.toMatchObject({ status: "authenticated" })
+      expect(browserApi.createWindow).toHaveBeenCalledOnce()
+      expect(browserApi.createWindow).toHaveBeenCalledWith(
+        expect.objectContaining({ focused: false }),
+      )
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) => message.action === actions.prepare,
+        ),
+      ).toHaveLength(1)
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) => message.action === actions.complete,
+        ),
+      ).toHaveLength(1)
+      expect(getLoginVerificationContext(requestId)).toBeUndefined()
+    },
+  )
+  it("waits for the shared page protection guard before starting OAuth", async () => {
+    let release!: () => void
+    vi.mocked(waitForTabComplete).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+    const result = browserOAuthContext.authenticate({
+      origin,
+      expectedIdentity: "user-1",
+      requestId: "wait-protection",
+    })
+    await vi.waitFor(() => expect(waitForTabComplete).toHaveBeenCalled())
+    expect(browserApi.sendTabMessageWithRetry).not.toHaveBeenCalled()
+    release()
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+  })
+  it.each([false, true])(
+    "preserves protection timeout before/after callback (after=%s)",
+    async (afterCallback) => {
+      vi.useFakeTimers()
+      const guard = vi.mocked(waitForTabComplete)
+      if (afterCallback) guard.mockResolvedValueOnce(undefined)
+      guard.mockRejectedValue(new ProtectionPageTimeoutError())
+      const result = browserOAuthContext.authenticate({
+        origin,
+        expectedIdentity: "user-1",
+        requestId: `guard-${afterCallback}`,
+      })
+      await vi.advanceTimersByTimeAsync(60_000)
+      await expect(result).resolves.toMatchObject({
+        status: afterCallback ? "uncertain" : "interaction_required",
+        reason: "verification_required",
+      })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) => message.action === actions.complete,
+        ),
+      ).toHaveLength(0)
+    },
+  )
+  it.each([
+    ["prepare", false, "interaction_required"],
+    ["prepare", true, "uncertain"],
+    ["complete", false, "uncertain"],
+  ] as const)(
+    "handles protection centrally at %s with mutationRisk=%s",
+    async (phase, mutationRisk, expectedStatus) => {
+      browserApi.sendTabMessageWithRetry
+        .mockReset()
+        .mockImplementation(async (_tab, message) => {
+          if (message.action === actions[phase])
+            return {
+              success: false,
+              reason: "verification_required",
+              mutationRisk,
+            }
+          if (message.action === actions.prepare)
+            return { success: true, authorizationUrl }
+          return { success: true }
+        })
+      await expect(
+        browserOAuthContext.authenticate({
+          origin,
+          expectedIdentity: "user-1",
+          requestId: `protected-${phase}-${mutationRisk}`,
+        }),
+      ).resolves.toMatchObject({
+        status: expectedStatus,
+        reason: "verification_required",
+      })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) => message.action === actions[phase],
+        ),
+      ).toHaveLength(1)
+      expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    },
+  )
   it.each(["page", "content", "capture"] as const)(
     "closes an active login cancelled during %s wait without accepting late work",
     async (phase) => {
@@ -408,6 +985,8 @@ describe("browser OAuth context", () => {
   })
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(waitForTabComplete).mockReset().mockResolvedValue(undefined)
+    setLoginVerificationPresenter(async () => ({ presented: false }))
     cookieCapture.stores.mockReset()
     cookieCapture.header.mockReset()
     getPreferences.mockReset()
@@ -690,6 +1269,50 @@ describe("browser OAuth context", () => {
     },
   )
 
+  it("preserves a private session that becomes shared during protection clearance", async () => {
+    browserApi.getTab.mockResolvedValue({ ...loginTab, incognito: true })
+    browserApi.queryTabs.mockResolvedValue([])
+    vi.mocked(waitForTabComplete).mockImplementationOnce(async () => {
+      browserApi.queryTabs.mockResolvedValue([
+        { id: 99, incognito: true, url: origin + "/console" },
+      ])
+    })
+    let loggedOut = false
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(async (_tab, message) => {
+        if (message.phase === PASSWORD_UI_PHASES.Prepare) {
+          loggedOut = message.canResetSession
+          return { status: "cancelled" }
+        }
+        return { success: true }
+      })
+    await createBrowserPasswordContext({
+      id: "shared-during-clearance",
+      concurrencyKey: "shared-during-clearance",
+      displayName: "Password",
+      loginPath: "/login",
+      uiAction: "password-ui",
+      loginAction: "password-api",
+      clearEvidenceAction: "password-clear",
+      credentials: { username: "alice", password: "secret" },
+    }).authenticate({
+      origin,
+      requestId: "shared-during-clearance",
+      expectedIdentity: "user-1",
+      sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+    })
+    expect(loggedOut).toBe(false)
+    expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledWith(
+      11,
+      expect.objectContaining({
+        phase: PASSWORD_UI_PHASES.Prepare,
+        canResetSession: false,
+      }),
+      expect.anything(),
+    )
+  })
+
   it("observes a native login after navigation loses its submit reply without API fallback", async () => {
     browserApi.sendTabMessageWithRetry.mockReset()
     browserApi.sendTabMessageWithRetry.mockImplementation(
@@ -963,7 +1586,7 @@ describe("browser OAuth context", () => {
     expect(sendMessage).toHaveBeenCalledTimes(3)
   })
 
-  it("does not replay preparation after a dispatched message loses its response", async () => {
+  it("preserves uncertainty without replaying preparation after a dispatched message loses its response", async () => {
     const actual = await vi.importActual<
       typeof import("~/utils/browser/runtimeMessages")
     >("~/utils/browser/runtimeMessages")
@@ -978,7 +1601,7 @@ describe("browser OAuth context", () => {
       .mockReset()
       .mockImplementation(actual.sendTabMessageWithRetry)
 
-    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    await expect(authenticate()).resolves.toMatchObject({ status: "uncertain" })
     expect(
       sendMessage.mock.calls.filter(
         ([, message]) => message.action === actions.prepare,
@@ -1586,7 +2209,10 @@ describe("browser OAuth context", () => {
   })
 
   it.each([
-    [{ reason: "identity_mismatch" }, "identity_mismatch"],
+    [
+      { reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch },
+      "identity_mismatch",
+    ],
     [{ success: false }, "failed"],
   ])("rejects unverified callback %#", async (completion, status) => {
     browserApi.sendTabMessageWithRetry

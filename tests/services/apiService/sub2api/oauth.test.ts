@@ -68,6 +68,21 @@ async function reachCompletion() {
 }
 
 describe("Sub2API OAuth protocol", () => {
+  it("preserves a challenge during a logout mutation without repeating it", async () => {
+    fetchMock
+      .mockReset()
+      .mockResolvedValueOnce(json(enabledSettings))
+      .mockResolvedValueOnce(new Response('<meta name="aliyun_waf_bb">'))
+    expect(await invoke(handlePrepareSub2ApiOAuth)).toEqual({
+      success: false,
+      reason: "verification_required",
+      mutationRisk: true,
+    })
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      settingsPath,
+      logoutPath,
+    ])
+  })
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock)
     fetchMock.mockReset()

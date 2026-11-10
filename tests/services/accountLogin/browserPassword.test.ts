@@ -7,7 +7,6 @@ const session = vi.hoisted(() => ({
   send: vi.fn(),
   navigate: vi.fn(),
   waitForTab: vi.fn(),
-  waitForPageReady: vi.fn(),
   assertOrigin: vi.fn(),
   canResetSession: vi.fn(),
   requestAssist: vi.fn(),
@@ -17,7 +16,17 @@ vi.mock("~/services/browserLogin/browserLogin", () => ({
   createBrowserLoginContext: (flow: {
     execute: (value: unknown) => unknown
   }) => ({
-    authenticate: (input: unknown) => flow.execute({ ...session, input }),
+    authenticate: (input: unknown) =>
+      flow.execute({
+        ...session,
+        input,
+        sendSiteAction: async (action: string, details: unknown) =>
+          session.send(
+            action,
+            typeof details === "function" ? await details() : details,
+          ),
+        observeSubmittedAction: session.send,
+      }),
   }),
 }))
 const input = {
@@ -194,14 +203,12 @@ describe("native password browser orchestration", () => {
   it.each([false, true])(
     "reports a persistent page challenge before dispatch (recovery: %s)",
     async (recovery) => {
-      if (recovery) session.waitForPageReady.mockResolvedValueOnce(undefined)
-      session.waitForPageReady.mockRejectedValue(
-        new ProtectionPageTimeoutError(),
-      )
-      session.send.mockResolvedValue({
-        status: "interaction_required",
-        reason: "verification_required",
-      })
+      if (recovery)
+        session.send.mockResolvedValueOnce({
+          status: "interaction_required",
+          reason: "verification_required",
+        })
+      session.send.mockRejectedValue(new ProtectionPageTimeoutError())
       await expect(authenticate()).resolves.toEqual({
         status: "interaction_required",
         reason: "verification_required",
@@ -212,9 +219,7 @@ describe("native password browser orchestration", () => {
     },
   )
   it("reports page recovery failure before login without claiming an uncertain submission", async () => {
-    session.waitForPageReady
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("guard timeout"))
+    session.navigate.mockRejectedValueOnce(new Error("guard timeout"))
     session.send.mockResolvedValue({
       status: "interaction_required",
       reason: "verification_required",
@@ -244,9 +249,8 @@ describe("native password browser orchestration", () => {
       session.send.mock.calls.filter(([, data]) => data.phase === "submit"),
     ).toHaveLength(1)
   })
-  it("waits for existing protection guards and reloads a challenged preflight only once", async () => {
+  it("reloads a challenged preflight only once through protected site actions", async () => {
     session.send.mockImplementation(async () => {
-      expect(session.waitForPageReady).toHaveBeenCalled()
       return { status: "interaction_required", reason: "verification_required" }
     })
     await expect(authenticate()).resolves.toEqual({
@@ -256,7 +260,6 @@ describe("native password browser orchestration", () => {
     expect(session.navigate).toHaveBeenCalledExactlyOnceWith(
       input.origin + "/login",
     )
-    expect(session.waitForPageReady).toHaveBeenCalledTimes(2)
     expect(session.send).toHaveBeenCalledTimes(2)
     expect(
       session.send.mock.calls.every(([, data]) => data.phase === "prepare"),

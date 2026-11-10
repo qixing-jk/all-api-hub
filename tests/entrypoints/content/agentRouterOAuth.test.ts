@@ -38,6 +38,80 @@ async function runRequestHandler(
 }
 
 describe("AgentRouter OAuth content seam", () => {
+  it.each([
+    ["/api/user/logout", '{"success":'],
+    ["/api/oauth/state?mode=login", '{"success":'],
+    ["/api/user/logout", "{}"],
+    ["/api/oauth/state?mode=login", "{}"],
+    ["/api/user/logout", "null"],
+    ["/api/oauth/state?mode=login", "null"],
+  ])(
+    "preserves uncertainty for an unusable mutation response from %s: %s",
+    async (endpoint, body) => {
+      const requests: string[] = []
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+        const path = String(input)
+        requests.push(path)
+        if (path === endpoint)
+          return new Response(body, {
+            headers: { "content-type": "application/json" },
+          })
+        return jsonResponse({
+          success: true,
+          data:
+            path === "/api/status"
+              ? {
+                  github_client_id: "client123",
+                  github_oauth: true,
+                  system_name: "Agent Router",
+                }
+              : "signed-state",
+        })
+      })
+      await expect(
+        runRequestHandler(handlePrepareAgentRouterOAuth, {
+          loginProvider: ACCOUNT_LOGIN_PROVIDERS.Github,
+        }),
+      ).resolves.toEqual({ success: false, reason: "uncertain" })
+      expect(requests).toEqual(
+        endpoint === "/api/user/logout"
+          ? ["/api/status", "/api/user/logout"]
+          : ["/api/status", "/api/user/logout", "/api/oauth/state?mode=login"],
+      )
+    },
+  )
+  it.each([200, 403])(
+    "preserves verification required when OAuth preparation receives WAF HTML (HTTP %s)",
+    async (status) => {
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(
+          new Response(
+            '<meta name="aliyun_waf_aa" content="private-challenge">',
+            { status },
+          ),
+        )
+      await expect(
+        runRequestHandler(handlePrepareAgentRouterOAuth, {
+          loginProvider: ACCOUNT_LOGIN_PROVIDERS.Github,
+        }),
+      ).resolves.toEqual({ success: false, reason: "verification_required" })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("preserves verification required after an OAuth callback without repeating login", async () => {
+    window.history.replaceState({}, "", "/console/token")
+    localStorage.setItem("user", JSON.stringify({ id: 17, checked_in: true }))
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response('<meta name="aliyun_waf_bb">'))
+    await expect(runHandler(handleCompleteAgentRouterOAuth)).resolves.toEqual({
+      success: false,
+      reason: "verification_required",
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
   beforeEach(() => {
     vi.restoreAllMocks()
     localStorage.clear()
@@ -296,7 +370,7 @@ describe("AgentRouter OAuth content seam", () => {
       runRequestHandler(handlePrepareAgentRouterOAuth, {
         loginProvider: ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
       }),
-    ).resolves.toMatchObject({ success: false, message: "logout failed" })
+    ).resolves.toEqual({ success: false, reason: "request_failed" })
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
       "/api/status",
       "/api/user/logout",
@@ -435,29 +509,32 @@ describe("AgentRouter OAuth content seam", () => {
     },
   )
 
-  it("rejects an empty server-signed OAuth state", async () => {
-    vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        jsonResponse({
-          success: true,
-          data: {
-            system_name: "Agent Router",
-            github_oauth: true,
-            github_client_id: "client",
-          },
+  it.each([undefined, null, " ", 17, {}])(
+    "preserves uncertainty for an unusable server-signed OAuth state: %s",
+    async (state) => {
+      vi.spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          jsonResponse({
+            success: true,
+            data: {
+              system_name: "Agent Router",
+              github_oauth: true,
+              github_client_id: "client",
+            },
+          }),
+        )
+        .mockResolvedValueOnce(jsonResponse({ success: true }))
+        .mockResolvedValueOnce(jsonResponse({ success: true, data: state }))
+      await expect(
+        runRequestHandler(handlePrepareAgentRouterOAuth, {
+          loginProvider: "github",
         }),
-      )
-      .mockResolvedValueOnce(jsonResponse({ success: true }))
-      .mockResolvedValueOnce(jsonResponse({ success: true, data: " " }))
-    await expect(
-      runRequestHandler(handlePrepareAgentRouterOAuth, {
-        loginProvider: "github",
-      }),
-    ).resolves.toMatchObject({
-      success: false,
-      message: "AgentRouter returned an invalid OAuth state.",
-    })
-  })
+      ).resolves.toMatchObject({
+        success: false,
+        reason: "uncertain",
+      })
+    },
+  )
 
   it("reports HTTP failure even when the response claims success", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -469,7 +546,7 @@ describe("AgentRouter OAuth content seam", () => {
       }),
     ).resolves.toMatchObject({
       success: false,
-      message: "AgentRouter request failed (503)",
+      reason: "request_failed",
     })
   })
 
@@ -538,7 +615,7 @@ describe("AgentRouter OAuth content seam", () => {
       }),
     ).resolves.toMatchObject({
       success: false,
-      message: "AgentRouter GitHub login is unavailable.",
+      reason: "request_failed",
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith("/api/status", expect.any(Object))

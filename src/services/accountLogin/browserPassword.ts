@@ -19,7 +19,7 @@ import {
   createBrowserLoginContext,
   type BrowserLoginContextOptions,
 } from "~/services/browserLogin/browserLogin"
-import { ProtectionPageTimeoutError } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
+import { getBrowserLoginPageFailureReason } from "~/services/browserLogin/pageProtection"
 import type { AccountPasswordCredentials } from "~/types/accountLogin"
 import { isRecord } from "~/utils/core/object"
 
@@ -29,6 +29,8 @@ import {
   PASSWORD_UI_REASONS,
   type PasswordUiPhase,
 } from "./passwordUiProtocol"
+
+const PASSWORD_OBSERVATION_INTERVAL_MS = 750
 
 interface BrowserPasswordFlow {
   id: string
@@ -56,9 +58,36 @@ export interface NativeLoginObservation {
   dispose(): Promise<void>
 }
 
+/** Tracks the native reply while orchestration decides when to arm or stop it. */
+function createNativeLoginState() {
+  const state = {
+    observation: null as NativeLoginObservation | null,
+    settled: false,
+    result: null as AccountLoginResult | null,
+    observe(observation: NativeLoginObservation | null) {
+      state.observation = observation
+      void observation?.result.then(
+        (result) => {
+          state.result = result
+          state.settled = true
+        },
+        () => {
+          state.settled = true
+        },
+      )
+    },
+    async dispose() {
+      await state.observation?.dispose()
+      state.observation = null
+    },
+  }
+  return state
+}
+
 /** Page preparation has not dispatched authentication. */
 function pagePreparationFailure(error: unknown) {
-  return error instanceof ProtectionPageTimeoutError
+  return getBrowserLoginPageFailureReason(error) ===
+    BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
     ? {
         status: BROWSER_LOGIN_STATUS.InteractionRequired,
         reason: BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired,
@@ -82,27 +111,23 @@ export function createBrowserPasswordContext(
       failure: () => ({ status: BROWSER_LOGIN_STATUS.Failed }),
       async execute(session) {
         const { input } = session
-        let nativeObservation: NativeLoginObservation | null = null
-        let nativeSettled = false
-        let nativeResult: AccountLoginResult | null = null
+        const native = createNativeLoginState()
+        let mutationStarted = false
         if (!input.expectedIdentity)
           return { status: BROWSER_LOGIN_STATUS.Failed }
-        try {
-          await session.waitForPageReady()
-        } catch (error) {
-          return pagePreparationFailure(error)
-        }
         try {
           const context = {
             origin: input.origin,
             expectedIdentity: input.expectedIdentity,
             sessionMode: input.sessionMode ?? BROWSER_LOGIN_SESSION_MODES.Reuse,
           }
-          let response = await session.send(flow.uiAction, {
-            ...context,
-            phase: PASSWORD_UI_PHASES.Prepare,
-            canResetSession: await session.canResetSession(),
-          })
+          const prepare = () =>
+            session.sendSiteAction(flow.uiAction, async () => ({
+              ...context,
+              phase: PASSWORD_UI_PHASES.Prepare,
+              canResetSession: await session.canResetSession(),
+            }))
+          let response = await prepare()
           if (
             isRecord(response) &&
             response.status === BROWSER_LOGIN_STATUS.InteractionRequired &&
@@ -113,15 +138,10 @@ export function createBrowserPasswordContext(
             // login page one chance to refresh its browser protection state.
             try {
               await session.navigate(new URL(flow.loginPath, input.origin).href)
-              await session.waitForPageReady()
             } catch (error) {
               return pagePreparationFailure(error)
             }
-            response = await session.send(flow.uiAction, {
-              ...context,
-              phase: PASSWORD_UI_PHASES.Prepare,
-              canResetSession: await session.canResetSession(),
-            })
+            response = await prepare()
           }
           if (
             isRecord(response) &&
@@ -134,8 +154,7 @@ export function createBrowserPasswordContext(
                 tab.url?.startsWith(input.origin + "/") === true,
               BROWSER_LOGIN_PAGE_TIMEOUT_MS,
             )
-            await session.waitForPageReady()
-            response = await session.send(flow.uiAction, {
+            response = await session.sendSiteAction(flow.uiAction, {
               ...context,
               phase: PASSWORD_UI_PHASES.Prepare,
               canResetSession: false,
@@ -146,10 +165,17 @@ export function createBrowserPasswordContext(
             response.kind === PASSWORD_UI_KINDS.Fallback
           ) {
             // Only a pre-submission, verification-free native preparation may opt in.
-            response = await session.send(flow.loginAction, {
-              ...context,
-              credentials: flow.credentials,
-            })
+            mutationStarted = true
+            try {
+              response = await session.sendSiteAction(flow.loginAction, {
+                ...context,
+                credentials: flow.credentials,
+              })
+            } catch (error) {
+              if (getBrowserLoginPageFailureReason(error))
+                return pagePreparationFailure(error)
+              throw error
+            }
             if (
               isRecord(response) &&
               response.status === BROWSER_LOGIN_STATUS.InteractionRequired
@@ -179,58 +205,65 @@ export function createBrowserPasswordContext(
               Date.now() <= Math.max(deadline, session.interactionDeadline())
             ) {
               await session.assertOrigin()
-              if (nativeResult) {
-                response = nativeResult
+              if (native.result) {
+                response = native.result
                 break
               }
               if (phase === PASSWORD_UI_PHASES.Submit) {
-                // Login evidence proves this check-in, but does not replace
-                // verification that a captured Cookie authenticates requests.
-                if (
-                  !input.captureCredential &&
-                  !nativeObservation &&
-                  flow.observeNativeLogin
-                ) {
-                  nativeObservation = await flow.observeNativeLogin(
-                    session.tabId,
-                    input.origin,
-                    input.requestId,
-                  )
-                  void nativeObservation?.result.then(
-                    (result) => {
-                      nativeResult = result
-                      nativeSettled = true
-                    },
-                    () => {
-                      nativeSettled = true
-                    },
-                  )
-                }
-                // Never send a second submit, even if navigation destroys its reply.
-                submitted = true
                 try {
-                  response = await session.send(flow.uiAction, {
-                    ...context,
-                    phase,
-                    credentials: flow.credentials,
-                  })
-                } catch {
+                  response = await session.sendSiteAction(
+                    flow.uiAction,
+                    async () => {
+                      // Arm in the document that survived page protection. Native
+                      // evidence does not replace verifying a captured Cookie.
+                      if (
+                        !input.captureCredential &&
+                        !native.observation &&
+                        flow.observeNativeLogin
+                      ) {
+                        native.observe(
+                          await flow.observeNativeLogin(
+                            session.tabId,
+                            input.origin,
+                            input.requestId,
+                          ),
+                        )
+                      }
+                      // Never send a second submit if navigation destroys its reply.
+                      submitted = true
+                      mutationStarted = true
+                      return {
+                        ...context,
+                        phase,
+                        credentials: flow.credentials,
+                      }
+                    },
+                  )
+                } catch (error) {
+                  if (getBrowserLoginPageFailureReason(error))
+                    return pagePreparationFailure(error)
+                  if (!submitted) throw error
                   response = { kind: PASSWORD_UI_KINDS.Submitted }
                 }
                 phase = PASSWORD_UI_PHASES.Observe
                 deadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
-              } else if (nativeObservation && !nativeSettled) {
+              } else if (native.observation && !native.settled) {
                 // The native request owns its response. Do not race it with
                 // another session API call while it is still in flight.
                 response = { kind: PASSWORD_UI_KINDS.Pending }
               } else {
                 try {
-                  response = await session.send(flow.uiAction, {
+                  response = await (
+                    phase === PASSWORD_UI_PHASES.Observe
+                      ? session.observeSubmittedAction
+                      : session.sendSiteAction
+                  )(flow.uiAction, {
                     ...context,
                     phase,
                     canResetSession: false,
                   })
-                } catch {
+                } catch (error) {
+                  if (getBrowserLoginPageFailureReason(error)) throw error
                   response = { kind: PASSWORD_UI_KINDS.Pending }
                 }
               }
@@ -258,23 +291,24 @@ export function createBrowserPasswordContext(
                     : LOGIN_VERIFICATION_REASONS.Login,
                 )
               }
-              await new Promise((resolve) => setTimeout(resolve, 750))
+              await new Promise((resolve) =>
+                setTimeout(resolve, PASSWORD_OBSERVATION_INTERVAL_MS),
+              )
             }
             if (
               (!isRecord(response) || !("status" in response)) &&
-              nativeObservation
+              native.observation
             ) {
-              if (nativeResult) response = nativeResult
+              if (native.result) response = native.result
               else {
                 // A page may retain its transport before observation was armed.
                 // End capture before one final read-only session verification;
                 // never replay submission or poll alongside the native request.
-                await nativeObservation.dispose()
-                nativeObservation = null
+                await native.dispose()
                 await session.assertOrigin()
                 response =
-                  nativeResult ??
-                  (await session.send(flow.uiAction, {
+                  native.result ??
+                  (await session.observeSubmittedAction(flow.uiAction, {
                     ...context,
                     phase: PASSWORD_UI_PHASES.Observe,
                     canResetSession: false,
@@ -322,15 +356,15 @@ export function createBrowserPasswordContext(
               return { status: BROWSER_LOGIN_STATUS.Uncertain }
           }
         } catch (error) {
+          const reason = getBrowserLoginPageFailureReason(error)
+          if (!mutationStarted && reason) return pagePreparationFailure(error)
           // A dispatched authentication mutation may have succeeded. Never replay it.
           return {
             status: BROWSER_LOGIN_STATUS.Uncertain,
-            ...(error instanceof ProtectionPageTimeoutError
-              ? { reason: BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired }
-              : {}),
+            ...(reason ? { reason } : {}),
           }
         } finally {
-          await nativeObservation?.dispose().catch(() => {})
+          await native.dispose().catch(() => {})
         }
       },
     },

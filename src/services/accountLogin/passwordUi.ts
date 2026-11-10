@@ -3,12 +3,13 @@ import {
   BROWSER_LOGIN_SESSION_MODES,
   BROWSER_LOGIN_STATUS,
 } from "~/constants/browserLogin"
+import { BROWSER_OAUTH_REQUEST_FAILURE_REASONS } from "~/constants/browserOAuth"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
-  PasswordLoginResponseError,
   validatePasswordLoginContext,
   validatePasswordLoginRequest,
 } from "~/services/accountLogin/passwordContent"
+import { BrowserLoginResponseError } from "~/services/browserLogin/contentResponse"
 import { BrowserOAuthRequestError } from "~/services/browserOAuth/contentRequest"
 import {
   hasPageVerification,
@@ -196,15 +197,14 @@ export function handlePasswordUi(
       try {
         current = await provider.readSession()
       } catch (error) {
-        if (
-          !(
-            (error instanceof BrowserOAuthRequestError &&
-              error.reason === "request_failed") ||
-            (error instanceof PasswordLoginResponseError &&
-              !error.mutationRisk &&
-              error.reason === BROWSER_LOGIN_FAILURE_REASONS.InvalidResponse)
-          )
-        )
+        if (!(
+          (error instanceof BrowserOAuthRequestError &&
+            error.reason ===
+              BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed) ||
+          (error instanceof BrowserLoginResponseError &&
+            !error.mutationRisk &&
+            error.reason === BROWSER_LOGIN_FAILURE_REASONS.InvalidResponse)
+        ))
           throw error
         // Navigation or a transient request failure can interrupt this read.
         // Keep the bounded browser observation loop running without replaying
@@ -224,19 +224,21 @@ export function handlePasswordUi(
     }
     return { status: BROWSER_LOGIN_STATUS.Failed }
   })().then(reply, (error) => {
-    if (error instanceof PasswordLoginResponseError) {
+    if (error instanceof BrowserLoginResponseError) {
       reply({
-        status: mutationStarted
-          ? BROWSER_LOGIN_STATUS.Uncertain
-          : error.reason === BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
-            ? BROWSER_LOGIN_STATUS.InteractionRequired
-            : BROWSER_LOGIN_STATUS.Failed,
+        status:
+          mutationStarted || error.mutationRisk
+            ? BROWSER_LOGIN_STATUS.Uncertain
+            : error.reason ===
+                BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
+              ? BROWSER_LOGIN_STATUS.InteractionRequired
+              : BROWSER_LOGIN_STATUS.Failed,
         reason: error.reason,
       })
     } else if (
       !mutationStarted &&
       error instanceof BrowserOAuthRequestError &&
-      error.reason === "request_failed"
+      error.reason === BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed
     ) {
       reply({
         status: BROWSER_LOGIN_STATUS.Failed,
