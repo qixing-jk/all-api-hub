@@ -1,9 +1,13 @@
 import { Archive, Bell, X } from "lucide-react"
-import { useState } from "react"
+import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, IconButton, Spinner } from "~/components/ui"
-import { PopoverContent } from "~/components/ui/popover"
+import {
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+} from "~/components/ui/popover"
 import { SheetDescription, SheetTitle } from "~/components/ui/sheet"
 import { CORNERS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
@@ -39,8 +43,11 @@ export function getVisibleActiveProductAnnouncements(
   return state.view.notices.filter((notice) => !notice.dismissed)
 }
 
-interface ProductAnnouncementPanelProps
-  extends Omit<ProductAnnouncementPopoverProps, "onOpenAutoFocus"> {
+interface ProductAnnouncementPanelProps extends Omit<
+  ProductAnnouncementPopoverProps,
+  "onOpenAutoFocus"
+> {
+  titleId?: string
   surface: ProductAnnouncementPanelSurface
 }
 
@@ -49,6 +56,7 @@ interface ProductAnnouncementPanelProps
  */
 function ProductAnnouncementPanel({
   surface,
+  titleId,
   state,
   isLoading,
   onDismiss,
@@ -66,17 +74,20 @@ function ProductAnnouncementPanel({
   }
 
   return (
-    <div className="gap-y-density-4 flex min-h-0 flex-1 flex-col gap-x-4 overflow-hidden">
-      <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
-        <div className="gap-density-2 flex min-w-0 items-center">
+    <div className="flex min-h-0 flex-1 flex-col gap-x-4 gap-y-density-4 overflow-hidden">
+      <PopoverHeader className="flex-row items-center justify-between gap-x-3 gap-y-density-3">
+        <div className="flex min-w-0 items-center gap-density-2">
           {surface === "sheet" ? (
-            <SheetTitle className="text-foreground truncate text-base">
+            <SheetTitle className="truncate text-base text-foreground">
               {t("title")}
             </SheetTitle>
           ) : (
-            <h2 className="text-foreground truncate text-base font-semibold">
+            <PopoverTitle
+              id={titleId}
+              className="truncate text-base font-semibold text-foreground"
+            >
               {t("title")}
-            </h2>
+            </PopoverTitle>
           )}
           {isLoading && visibleNotices.length > 0 && (
             <Spinner size="sm" className="shrink-0" aria-label={t("loading")} />
@@ -93,22 +104,22 @@ function ProductAnnouncementPanel({
           size="xs"
           aria-label={t("actions.close")}
           data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.closeButton}
-          className="text-muted-foreground hover:text-foreground shrink-0"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
           onClick={onClose}
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </IconButton>
-      </div>
+      </PopoverHeader>
       <div
-        className={`dark:bg-secondary corners-concentric bg-muted gap-y-density-1 py-density-1 grid grid-cols-2 gap-x-1 rounded-md px-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+        className={`grid grid-cols-2 gap-x-1 gap-y-density-1 rounded-md bg-muted px-1 py-density-1 [--corner-inset:--spacing(1)] corners-concentric dark:bg-secondary ${CORNERS.buttonItems}`}
       >
         <Button
           type="button"
           variant={filter === "active" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "gap-y-density-1-5 min-h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
-            filter === "active" && "dark:bg-background bg-card shadow-sm",
+            "min-h-(--density-control-sm) min-w-0 gap-x-1.5 gap-y-density-1-5 px-3 text-xs",
+            filter === "active" && "bg-card shadow-sm dark:bg-background",
           )}
           aria-pressed={filter === "active"}
           onClick={() => setFilter("active")}
@@ -122,8 +133,8 @@ function ProductAnnouncementPanel({
           variant={filter === "dismissed" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "gap-y-density-1-5 min-h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
-            filter === "dismissed" && "dark:bg-background bg-card shadow-sm",
+            "min-h-(--density-control-sm) min-w-0 gap-x-1.5 gap-y-density-1-5 px-3 text-xs",
+            filter === "dismissed" && "bg-card shadow-sm dark:bg-background",
           )}
           aria-pressed={filter === "dismissed"}
           onClick={() => setFilter("dismissed")}
@@ -164,14 +175,18 @@ export function ProductAnnouncementPopover({
   onClose,
   onOpenAutoFocus,
 }: ProductAnnouncementPopoverProps) {
+  const titleId = useId()
   return (
     <PopoverContent
+      aria-labelledby={titleId}
+      aria-describedby={undefined}
       align="end"
-      className="py-density-4 flex max-h-[min(var(--radix-popover-content-available-height,32rem),70vh,32rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] flex-col px-4"
+      className="flex max-h-[min(var(--radix-popover-content-available-height,32rem),70vh,32rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] flex-col px-4 py-density-4"
       data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.popover}
       onOpenAutoFocus={onOpenAutoFocus}
     >
       <ProductAnnouncementPanel
+        titleId={titleId}
         surface="popover"
         state={state}
         isLoading={isLoading}

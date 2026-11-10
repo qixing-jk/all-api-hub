@@ -6,6 +6,7 @@ import {
   BodySmall,
   Button,
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -114,25 +115,23 @@ export default function WebDAVAutoSyncSettings({
       aria-label={t("webdav.syncSettings.title")}
     >
       <CardHeader>
-        <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
-          <div className="gap-y-density-2 flex items-center gap-x-2">
-            <RefreshCw
-              className="text-theme-600 dark:text-theme-400 size-5"
-              aria-hidden="true"
-            />
-            <CardTitle className="m-0 text-base">
-              {t("webdav.syncSettings.title")}
-            </CardTitle>
-          </div>
-          <div className="gap-y-density-2 flex max-w-full flex-wrap gap-x-2">
-            <Badge variant={providerChangePending ? "warning" : "outline"}>
-              {t("webdav.autoSync.currentProvider", {
-                provider: displayedProviderLabel,
-              })}
-            </Badge>
-            {getStatusBadge()}
-          </div>
+        <div className="flex items-center gap-x-2 gap-y-density-2">
+          <RefreshCw
+            className="size-5 text-theme-600 dark:text-theme-400"
+            aria-hidden="true"
+          />
+          <CardTitle className="m-0 text-base">
+            {t("webdav.syncSettings.title")}
+          </CardTitle>
         </div>
+        <CardAction className="flex max-w-full flex-wrap gap-x-2 gap-y-density-2">
+          <Badge variant={providerChangePending ? "warning" : "outline"}>
+            {t("webdav.autoSync.currentProvider", {
+              provider: displayedProviderLabel,
+            })}
+          </Badge>
+          {getStatusBadge()}
+        </CardAction>
       </CardHeader>
       <CardContent padding="md" className="space-y-density-4">
         <section className="space-y-density-3">
@@ -172,8 +171,8 @@ export default function WebDAVAutoSyncSettings({
         </section>
 
         <section className="space-y-density-3">
-          <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
-            <div className="space-y-density-1 min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-density-3">
+            <div className="min-w-0 flex-1 space-y-density-1">
               <Heading4 className="m-0 text-sm">
                 {t("webdav.autoSync.title")}
               </Heading4>
@@ -181,7 +180,7 @@ export default function WebDAVAutoSyncSettings({
             </div>
             <div
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.enable}
-              className="gap-y-density-2 flex shrink-0 items-center gap-x-2"
+              className="flex shrink-0 items-center gap-x-2 gap-y-density-2"
             >
               <Switch
                 aria-label={t("webdav.autoSync.enable")}
@@ -189,7 +188,7 @@ export default function WebDAVAutoSyncSettings({
                 disabled={providerChangePending}
                 onChange={(checked) => saveSetting({ autoSync: checked })}
               />
-              <span className="text-secondary-foreground text-sm">
+              <span className="text-sm text-secondary-foreground">
                 {autoSyncEnabled
                   ? t("common:status.enabled")
                   : t("common:status.disabled")}
@@ -199,46 +198,51 @@ export default function WebDAVAutoSyncSettings({
 
           {autoSyncEnabled && (
             <FormField
+              htmlFor={WEBDAV_AUTO_SYNC_TARGET_IDS.interval}
+              disabled={providerChangePending}
               label={t("webdav.autoSync.interval")}
               description={t("webdav.autoSync.intervalDesc")}
             >
-              <Input
-                id={WEBDAV_AUTO_SYNC_TARGET_IDS.interval}
-                type="number"
-                min={minimumIntervalSeconds}
-                max={86400}
-                step={60}
-                value={syncInterval}
-                disabled={providerChangePending}
-                onChange={(e) =>
-                  setLocalConfig((prev) => ({
-                    ...prev,
-                    syncInterval: Number(e.target.value),
-                  }))
-                }
-                onBlur={saveInterval}
-                placeholder="3600"
-              />
-              <p className="text-muted-foreground mt-density-1 text-xs">
-                {t("webdav.autoSync.intervalHint", {
-                  minutes: Math.floor(syncInterval / 60),
-                })}
-              </p>
+              {(control) => (
+                <>
+                  <Input
+                    {...control}
+                    type="number"
+                    min={minimumIntervalSeconds}
+                    max={86400}
+                    step={60}
+                    value={syncInterval}
+                    onChange={(e) =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        syncInterval: Number(e.target.value),
+                      }))
+                    }
+                    onBlur={saveInterval}
+                    placeholder="3600"
+                  />
+                  <p className="mt-density-1 text-xs text-muted-foreground">
+                    {t("webdav.autoSync.intervalHint", {
+                      minutes: Math.floor(syncInterval / 60),
+                    })}
+                  </p>
+                </>
+              )}
             </FormField>
           )}
         </section>
 
         {/* Status information */}
         {lastSyncTime > 0 && (
-          <div className="bg-surface-subtle dark:bg-card space-y-density-1 py-density-3 rounded-md px-3">
-            <p className="text-secondary-foreground text-sm">
+          <div className="space-y-density-1 rounded-md bg-surface-subtle px-3 py-density-3 dark:bg-card">
+            <p className="text-sm text-secondary-foreground">
               <span className="font-medium">
                 {t("webdav.autoSync.lastSync")}:{" "}
               </span>
               {formatTimestamp(lastSyncTime)}
             </p>
             {lastSyncError && (
-              <p className="text-destructive-text mt-density-1 text-sm">
+              <p className="mt-density-1 text-sm text-destructive-text">
                 <span className="font-medium">
                   {t("common:status.error")}:{" "}
                 </span>
@@ -254,7 +258,7 @@ export default function WebDAVAutoSyncSettings({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
           surfaceId={autoSyncSurface}
         >
-          <div className="border-border gap-y-density-3 pt-density-4 flex flex-wrap items-center gap-x-3 border-t">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-density-3 border-t border-border pt-density-4">
             <BodySmall
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}
               role="status"

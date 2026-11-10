@@ -215,7 +215,7 @@ export default function BrowserApiLab() {
   }
 
   return (
-    <div className="py-density-4 sm:py-density-6 space-y-density-6 mx-auto max-w-6xl px-4 sm:px-6">
+    <div className="mx-auto max-w-6xl space-y-density-6 px-4 py-density-4 sm:px-6 sm:py-density-6">
       <PageHeader
         icon={Terminal}
         title="Browser API Lab (Dev)"
@@ -223,9 +223,9 @@ export default function BrowserApiLab() {
       />
 
       {/* Top Context & Tab Controls */}
-      <div className="bg-muted/40 flex flex-col items-stretch justify-between gap-3 rounded-xl border p-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-xl border bg-muted/40 p-3 sm:flex-row sm:items-center">
         {/* Tab Switcher */}
-        <div className="bg-background flex items-center gap-1.5 rounded-lg border p-1">
+        <div className="flex items-center gap-1.5 rounded-lg border bg-background p-1">
           <Button
             size="sm"
             variant={activeTab === "probes" ? "default" : "ghost"}
@@ -257,10 +257,10 @@ export default function BrowserApiLab() {
 
         {/* Execution Context Toggle */}
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs whitespace-nowrap">
+          <span className="text-xs whitespace-nowrap text-muted-foreground">
             Execution Context:
           </span>
-          <div className="bg-background flex items-center rounded-lg border p-0.5 text-xs">
+          <div className="flex items-center rounded-lg border bg-background p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setContext("ui")}
@@ -297,7 +297,7 @@ export default function BrowserApiLab() {
               <h3 className="text-sm font-semibold">
                 Core Capabilities & Probes
               </h3>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 Run browser capability probes to inspect host environment API
                 support across desktop and mobile.
               </p>
@@ -334,20 +334,20 @@ export default function BrowserApiLab() {
                       <div className="min-w-0 flex-1">
                         <CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
                           {state?.status === "success" && (
-                            <CircleCheck className="text-success h-4 w-4 shrink-0" />
+                            <CircleCheck className="h-4 w-4 shrink-0 text-success" />
                           )}
                           {state?.status === "error" && (
-                            <CircleX className="text-destructive h-4 w-4 shrink-0" />
+                            <CircleX className="h-4 w-4 shrink-0 text-destructive" />
                           )}
                           {state?.status === "running" && (
-                            <Loader2 className="text-theme-500 h-4 w-4 shrink-0 animate-spin" />
+                            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-theme-500" />
                           )}
                           {!state && (
-                            <CircleAlert className="text-muted-foreground/50 h-4 w-4 shrink-0" />
+                            <CircleAlert className="h-4 w-4 shrink-0 text-muted-foreground/50" />
                           )}
                           <span className="truncate">{probe.title}</span>
                         </CardTitle>
-                        <Body className="text-muted-foreground mt-1 text-xs md:min-h-[2.5rem]">
+                        <Body className="mt-1 text-xs text-muted-foreground md:min-h-[2.5rem]">
                           {probe.description}
                         </Body>
                       </div>
@@ -370,22 +370,22 @@ export default function BrowserApiLab() {
 
                   <CardContent className="flex flex-1 flex-col pt-3">
                     {!isSupportedInContext && (
-                      <p className="text-muted-foreground text-xs italic">
+                      <p className="text-xs text-muted-foreground italic">
                         ⚠️ This probe is only supported in UI thread context
                       </p>
                     )}
 
                     {state ? (
-                      <div className="bg-muted/50 flex flex-1 flex-col space-y-1 rounded-lg p-2.5 font-mono text-xs">
-                        <div className="text-muted-foreground flex items-center justify-between border-b pb-1 text-xs">
+                      <div className="flex flex-1 flex-col space-y-1 rounded-lg bg-muted/50 p-2.5 font-mono text-xs">
+                        <div className="flex items-center justify-between border-b pb-1 text-xs text-muted-foreground">
                           <span>
                             Status:{" "}
                             {state.status === "success" ? (
-                              <span className="text-success font-semibold">
+                              <span className="font-semibold text-success">
                                 Passed
                               </span>
                             ) : state.status === "error" ? (
-                              <span className="text-destructive font-semibold">
+                              <span className="font-semibold text-destructive">
                                 Failed
                               </span>
                             ) : (
@@ -398,7 +398,7 @@ export default function BrowserApiLab() {
                         </div>
 
                         {state.error && (
-                          <div className="text-destructive text-xs break-all">
+                          <div className="text-xs break-all text-destructive">
                             {state.error}
                           </div>
                         )}
@@ -415,7 +415,7 @@ export default function BrowserApiLab() {
                                   JSON.stringify(state.result, null, 2),
                                 )
                               }
-                              className="bg-background/80 absolute top-1 right-1 rounded p-1 opacity-60 hover:opacity-100"
+                              className="absolute top-1 right-1 rounded bg-background/80 p-1 opacity-60 hover:opacity-100"
                               title="Copy result"
                             >
                               <Copy className="h-3 w-3" />
@@ -424,7 +424,7 @@ export default function BrowserApiLab() {
                         )}
                       </div>
                     ) : (
-                      <div className="text-muted-foreground/40 flex flex-1 items-center justify-center py-6 text-xs select-none">
+                      <div className="flex flex-1 items-center justify-center py-6 text-xs text-muted-foreground/40 select-none">
                         Not probed yet
                       </div>
                     )}
@@ -441,7 +441,7 @@ export default function BrowserApiLab() {
         <div className="space-y-4">
           {/* Quick Snippets */}
           <div>
-            <div className="text-muted-foreground mb-1.5 text-xs font-medium">
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">
               Quick Snippets (click to populate editor):
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -450,7 +450,7 @@ export default function BrowserApiLab() {
                   key={snippet.id}
                   type="button"
                   onClick={() => setCode(snippet.code)}
-                  className="bg-muted/60 hover:bg-muted text-foreground rounded-md border px-2.5 py-1 text-xs transition-colors"
+                  className="rounded-md border bg-muted/60 px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted"
                 >
                   {snippet.name}
                 </button>
@@ -460,7 +460,7 @@ export default function BrowserApiLab() {
 
           {/* Code Editor */}
           <Card>
-            <CardHeader className="bg-muted/20 flex flex-row items-center justify-between border-b px-4 py-2.5">
+            <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20 px-4 py-2.5">
               <span className="flex items-center gap-1.5 text-xs font-semibold">
                 <Code2 className="h-4 w-4" /> JavaScript Editor (async / await
                 supported)
@@ -491,7 +491,7 @@ export default function BrowserApiLab() {
                 onChange={(e) => setCode(e.target.value)}
                 rows={7}
                 placeholder="// Write JavaScript code here. Return any value..."
-                className="bg-muted/30 focus:ring-primary w-full resize-y rounded-lg border p-3 font-mono text-xs leading-relaxed outline-hidden focus:ring-1 sm:text-sm"
+                className="w-full resize-y rounded-lg border bg-muted/30 p-3 font-mono text-xs leading-relaxed outline-hidden focus:ring-1 focus:ring-primary sm:text-sm"
               />
             </CardContent>
           </Card>
@@ -506,30 +506,29 @@ export default function BrowserApiLab() {
                   : "border-destructive/40",
               )}
             >
-              <CardHeader className="bg-muted/20 flex flex-row items-center justify-between border-b px-4 py-2">
+              <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20 px-4 py-2">
                 <div className="flex items-center gap-2">
                   {consoleResult.success ? (
-                    <CircleCheck className="text-success h-4 w-4" />
+                    <CircleCheck className="h-4 w-4 text-success" />
                   ) : (
-                    <CircleX className="text-destructive h-4 w-4" />
+                    <CircleX className="h-4 w-4 text-destructive" />
                   )}
                   <span className="text-xs font-semibold">
                     {consoleResult.success ? "Success" : "Failed"}
                   </span>
-                  <span className="text-muted-foreground font-mono text-xs">
+                  <span className="font-mono text-xs text-muted-foreground">
                     ({consoleResult.durationMs}ms)
                   </span>
                 </div>
                 {consoleResult.data !== undefined && (
                   <Button
-                    size="sm"
+                    size="xs"
                     variant="ghost"
                     onClick={() =>
                       copyToClipboard(
                         JSON.stringify(consoleResult.data, null, 2),
                       )
                     }
-                    className="h-6 gap-1 px-2 text-xs"
                   >
                     <Copy className="h-3 w-3" />
                     Copy Result
@@ -538,11 +537,11 @@ export default function BrowserApiLab() {
               </CardHeader>
               <CardContent className="p-3">
                 {consoleResult.error ? (
-                  <div className="text-destructive font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                  <div className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-destructive">
                     {consoleResult.error}
                   </div>
                 ) : (
-                  <pre className="bg-muted/40 max-h-80 overflow-x-auto rounded-lg p-2 font-mono text-xs">
+                  <pre className="max-h-80 overflow-x-auto rounded-lg bg-muted/40 p-2 font-mono text-xs">
                     {JSON.stringify(consoleResult.data, null, 2)}
                   </pre>
                 )}
@@ -560,7 +559,7 @@ export default function BrowserApiLab() {
               <CardTitle className="text-sm font-semibold">
                 Structured Browser API Invoker
               </CardTitle>
-              <Body className="text-muted-foreground text-xs">
+              <Body className="text-xs text-muted-foreground">
                 Invokes chrome.* or browser.* APIs directly via reflection
                 without eval, fully immune to CSP restrictions, and supports
                 both UI and Background contexts.
@@ -609,7 +608,7 @@ export default function BrowserApiLab() {
                       setInvokerPath(item.path)
                       setInvokerArgs(item.args)
                     }}
-                    className="bg-muted/60 hover:bg-muted text-foreground rounded border px-2 py-0.5 font-mono text-xs transition-colors"
+                    className="rounded border bg-muted/60 px-2 py-0.5 font-mono text-xs text-foreground transition-colors hover:bg-muted"
                   >
                     {item.label}
                   </button>
@@ -618,7 +617,7 @@ export default function BrowserApiLab() {
 
               {/* Path input */}
               <div className="space-y-1">
-                <label className="text-muted-foreground text-xs font-medium">
+                <label className="text-xs font-medium text-muted-foreground">
                   API Path (omit leading chrome. or browser.):
                 </label>
                 <input
@@ -626,13 +625,13 @@ export default function BrowserApiLab() {
                   value={invokerPath}
                   onChange={(e) => setInvokerPath(e.target.value)}
                   placeholder="e.g. storage.local.get or tabs.query"
-                  className="bg-muted/30 focus:ring-primary w-full rounded-lg border px-3 py-2 font-mono text-xs outline-hidden focus:ring-1"
+                  className="w-full rounded-lg border bg-muted/30 px-3 py-2 font-mono text-xs outline-hidden focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               {/* Arguments input */}
               <div className="space-y-1">
-                <label className="text-muted-foreground text-xs font-medium">
+                <label className="text-xs font-medium text-muted-foreground">
                   {
                     'Arguments (JSON array format, e.g. [null] or [{"active": true}]):'
                   }
@@ -642,7 +641,7 @@ export default function BrowserApiLab() {
                   value={invokerArgs}
                   onChange={(e) => setInvokerArgs(e.target.value)}
                   placeholder="[]"
-                  className="bg-muted/30 focus:ring-primary w-full rounded-lg border px-3 py-2 font-mono text-xs outline-hidden focus:ring-1"
+                  className="w-full rounded-lg border bg-muted/30 px-3 py-2 font-mono text-xs outline-hidden focus:ring-1 focus:ring-primary"
                 />
               </div>
 
@@ -668,31 +667,30 @@ export default function BrowserApiLab() {
                   : "border-destructive/40",
               )}
             >
-              <CardHeader className="bg-muted/20 flex flex-row items-center justify-between border-b px-4 py-2">
+              <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20 px-4 py-2">
                 <div className="flex items-center gap-2">
                   {invokerResult.success ? (
-                    <CircleCheck className="text-success h-4 w-4" />
+                    <CircleCheck className="h-4 w-4 text-success" />
                   ) : (
-                    <CircleX className="text-destructive h-4 w-4" />
+                    <CircleX className="h-4 w-4 text-destructive" />
                   )}
                   <span className="text-xs font-semibold">
                     {invokerResult.path} -{" "}
                     {invokerResult.success ? "Success" : "Failed"}
                   </span>
-                  <span className="text-muted-foreground font-mono text-xs">
+                  <span className="font-mono text-xs text-muted-foreground">
                     ({invokerResult.durationMs}ms - {invokerResult.context})
                   </span>
                 </div>
                 {invokerResult.data !== undefined && (
                   <Button
-                    size="sm"
+                    size="xs"
                     variant="ghost"
                     onClick={() =>
                       copyToClipboard(
                         JSON.stringify(invokerResult.data, null, 2),
                       )
                     }
-                    className="h-6 gap-1 px-2 text-xs"
                   >
                     <Copy className="h-3 w-3" />
                     Copy Result
@@ -701,11 +699,11 @@ export default function BrowserApiLab() {
               </CardHeader>
               <CardContent className="p-3">
                 {invokerResult.error ? (
-                  <div className="text-destructive font-mono text-xs whitespace-pre-wrap">
+                  <div className="font-mono text-xs whitespace-pre-wrap text-destructive">
                     {invokerResult.error}
                   </div>
                 ) : (
-                  <pre className="bg-muted/40 max-h-80 overflow-x-auto rounded-lg p-2 font-mono text-xs">
+                  <pre className="max-h-80 overflow-x-auto rounded-lg bg-muted/40 p-2 font-mono text-xs">
                     {JSON.stringify(invokerResult.data, null, 2)}
                   </pre>
                 )}

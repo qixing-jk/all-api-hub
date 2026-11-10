@@ -53,7 +53,7 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 py-density-4 w-(--radix-popper-anchor-width) origin-(--radix-popover-content-transform-origin) rounded-lg border px-4 shadow-md outline-hidden [--popover-inner-radius:max(0px,calc(var(--corner-radius)-1px))]",
+          "w-(--radix-popper-anchor-width) origin-(--radix-popover-content-transform-origin) rounded-lg border bg-popover px-4 py-density-4 text-popover-foreground shadow-md outline-hidden [--popover-inner-radius:max(0px,calc(var(--corner-radius)-1px))] data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           floatingLayerClass,
           className,
         )}
@@ -72,4 +72,48 @@ function PopoverAnchor({
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />
 }
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor }
+/** Groups a popover heading and supporting description. */
+function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="popover-header"
+      className={cn("flex flex-col gap-density-1", className)}
+      {...props}
+    />
+  )
+}
+
+/** A semantic heading; the caller connects its id to PopoverContent. */
+function PopoverTitle({ className, ...props }: React.ComponentProps<"h2">) {
+  return (
+    <h2
+      data-slot="popover-title"
+      className={cn("text-sm font-medium", className)}
+      {...props}
+    />
+  )
+}
+
+/** Supporting text; the caller connects its id through aria-describedby. */
+function PopoverDescription({
+  className,
+  ...props
+}: React.ComponentProps<"p">) {
+  return (
+    <p
+      data-slot="popover-description"
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  PopoverHeader,
+  PopoverTitle,
+  PopoverDescription,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverAnchor,
+}

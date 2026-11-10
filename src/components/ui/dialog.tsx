@@ -8,6 +8,7 @@ import { t } from "~/utils/i18n/core"
 
 import { ToasterPortalHost } from "../toast/ToasterPortal"
 import { ActionGroup } from "./ActionGroup"
+import { Button } from "./button"
 import { FloatingLayerProvider } from "./floating-layer"
 
 /**
@@ -57,7 +58,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "dialog-fade bg-overlay/50 fixed inset-0",
+        "dialog-fade fixed inset-0 bg-overlay/50",
         Z_INDEX.modal,
         className,
       )}
@@ -84,7 +85,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-popover text-popover-foreground dialog-fade gap-density-4 py-density-6 fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-2xl border px-6 shadow-lg outline-none sm:max-w-lg",
+          "dialog-fade fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-density-4 rounded-2xl border bg-popover px-6 py-density-6 text-popover-foreground shadow-lg outline-none sm:max-w-lg",
           Z_INDEX.modal,
           className,
         )}
@@ -95,7 +96,7 @@ function DialogContent({
           {showCloseButton && (
             <DialogPrimitive.Close
               data-slot="dialog-close"
-              className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+              className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
             >
               <XIcon />
               <span className="sr-only">{t("common:actions.close")}</span>
@@ -115,7 +116,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-header"
       className={cn(
-        "gap-density-2 flex flex-col text-center sm:text-left",
+        "flex flex-col gap-density-2 text-center sm:text-left",
         className,
       )}
       {...props}
@@ -126,14 +127,32 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * DialogFooter arranges action buttons at the bottom of dialog content.
  */
-function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
+function DialogFooter({
+  className,
+  children,
+  showCloseButton = false,
+  closeLabel,
+  ...props
+}: React.ComponentProps<"div"> & {
+  showCloseButton?: boolean
+  closeLabel?: React.ReactNode
+}) {
   return (
     <ActionGroup
       data-slot="dialog-footer"
       layout="stack-on-narrow"
       className={cn("gap-density-2", className)}
       {...props}
-    />
+    >
+      {children}
+      {showCloseButton && (
+        <DialogPrimitive.Close asChild>
+          <Button type="button">
+            {closeLabel ?? t("common:actions.close")}
+          </Button>
+        </DialogPrimitive.Close>
+      )}
+    </ActionGroup>
   )
 }
 
@@ -163,7 +182,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   )

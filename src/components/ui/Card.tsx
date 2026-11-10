@@ -40,7 +40,8 @@ const cardVariants = cva(
 )
 
 export interface CardProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardVariants> {}
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -66,10 +67,11 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
   ({ className, bordered = true, padding = "default", ...props }, ref) => {
     return (
       <div
+        data-slot="card-header"
         ref={ref}
         className={cn(
-          "space-y-density-1-5 flex flex-col rounded-t-[var(--corner-inner-radius,0px)]",
-          bordered && "border-border border-b",
+          "flex flex-col space-y-density-1-5 rounded-t-[var(--corner-inner-radius,0px)] has-[>[data-slot=card-action]]:grid has-[>[data-slot=card-action]]:gap-density-3 has-[>[data-slot=card-action]]:space-y-0 sm:has-[>[data-slot=card-action]]:grid-cols-[minmax(0,1fr)_auto]",
+          bordered && "border-b border-border",
           cardEdgePaddingClasses[padding],
           className,
         )}
@@ -85,6 +87,7 @@ const CardTitle = React.forwardRef<
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, children, ...props }, ref) => (
   <Heading3
+    data-slot="card-title"
     ref={ref}
     className={cn("leading-none tracking-tight", className)}
     {...props}
@@ -99,9 +102,10 @@ const CardDescription = React.forwardRef<
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => (
   <BodySmall
+    data-slot="card-description"
     ref={ref}
     className={cn(
-      "dark:text-secondary-foreground text-muted-foreground",
+      "text-muted-foreground dark:text-secondary-foreground",
       className,
     )}
     {...props}
@@ -135,13 +139,15 @@ const cardContentVariants = cva("", {
 })
 
 export interface CardContentProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardContentVariants> {}
 
 const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
   ({ className, padding, spacing, ...props }, ref) => {
     return (
       <div
+        data-slot="card-content"
         ref={ref}
         className={cn(cardContentVariants({ padding, spacing }), className)}
         {...props}
@@ -163,10 +169,11 @@ const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
   ({ className, bordered = true, padding = "default", ...props }, ref) => {
     return (
       <div
+        data-slot="card-footer"
         ref={ref}
         className={cn(
           "flex items-center justify-end space-x-3 rounded-b-[var(--corner-inner-radius,0px)]",
-          bordered && "border-border border-t",
+          bordered && "border-t border-border",
           cardEdgePaddingClasses[padding],
           className,
         )}
@@ -177,4 +184,26 @@ const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
 )
 CardFooter.displayName = "CardFooter"
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+/** Places a header action beside the title when space permits. */
+function CardAction({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-action"
+      className={cn(
+        "max-w-full min-w-0 self-center sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end",
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+export {
+  CardAction,
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+}

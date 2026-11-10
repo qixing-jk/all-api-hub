@@ -80,7 +80,7 @@ node --max-old-space-size=8192 node_modules/typescript/bin/tsc6 --types "*" --no
 
 ## 已实施的依赖升级（含 shadcn）
 
-后续补充：用户追问后，已将 shadcn 审查从六类抽样扩大到 25 个对应原语及相关封装，列出更多值得采用的能力；补跑 Tooltip / IconButton 39 项发现 2 项受旧 jsdom Shadow DOM 样式缓存影响的失败，尚未修复。见 [完整组件建议与验证边界](shadcn-review.md#补充审查其他组件有哪些值得跟进的更新)。以下保留上一批实际已完成的升级与验证，不能解读为覆盖了全部组件。
+后续已将 shadcn 审查从六类抽样扩大到 25 个对应原语及相关封装，并完成有实际消费者的组件跟进及 jsdom 31 / Node 环境升级。补跑曾发现的 2 项 Tooltip / IconButton Shadow DOM 样式缓存失败已通过升级解决；最终定向验证和未重跑全量的边界见 [组件跟进结论](shadcn-review.md#全量建议跟进2026-11-10)。以下保留前一批依赖升级的实际记录，不代替后续组件验收。
 
 实施基线：`ae931e9955`；本轮再次 fetch 后为相对 `origin/main` ahead 3 / behind 0，无需再次刷新。Node 24.14.1、pnpm 12.6.0，Windows。以下是已经落地的选择，不表示所有依赖都必须追到最新版本。
 

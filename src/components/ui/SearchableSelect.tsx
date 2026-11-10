@@ -1,5 +1,5 @@
 import { defaultFilter } from "cmdk"
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
+import { ChevronsUpDownIcon } from "lucide-react"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -42,8 +42,10 @@ export interface SearchableSelectOption {
  * It is intended as a drop‑in replacement for simple `Select`
  * usages where search is required.
  */
-export interface SearchableSelectProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
+export interface SearchableSelectProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "onChange"
+> {
   /**
    * Available options to choose from.
    */
@@ -227,7 +229,7 @@ export const SearchableSelect = React.forwardRef<
           aria-expanded={resolvedOpen}
           data-slot="searchable-select-trigger"
           className={cn(
-            "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-density-2 flex w-full items-center justify-between rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
+            "flex w-full items-center justify-between gap-density-2 rounded-md border border-border-strong bg-card px-3 text-sm whitespace-nowrap text-foreground shadow-xs transition-colors outline-none hover:bg-surface-subtle focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 data-placeholder:text-faint-foreground dark:border-border dark:hover:bg-card/80",
             !selectedOption && "text-muted-foreground",
             className,
           )}
@@ -307,7 +309,7 @@ export const SearchableSelect = React.forwardRef<
                   option.label,
                 ]) > 0,
             ) ? (
-              <div className="text-muted-foreground px-3 py-2 text-xs">
+              <div className="px-3 py-2 text-xs text-muted-foreground">
                 {t("searchableSelect.empty")}
               </div>
             ) : null}
@@ -331,6 +333,7 @@ export const SearchableSelect = React.forwardRef<
                 ) : null}
                 {options.map((option) => (
                   <CommandItem
+                    checked={value === option.value}
                     key={option.value}
                     value={option.value}
                     keywords={[option.label]}
@@ -341,12 +344,6 @@ export const SearchableSelect = React.forwardRef<
                       setResolvedOpen(false)
                     }}
                   >
-                    <CheckIcon
-                      className={cn(
-                        "size-4",
-                        value === option.value ? "opacity-100" : "opacity-0",
-                      )}
-                    />
                     <span className="min-w-0 flex-1 truncate">
                       {option.label}
                     </span>
@@ -374,7 +371,7 @@ export const SearchableSelect = React.forwardRef<
               (options.length > 0 ||
                 canUseCustomValue ||
                 emptyMessage !== null) &&
-                "border-border-subtle border-t",
+                "border-t border-border-subtle",
             )}
           >
             {footer}

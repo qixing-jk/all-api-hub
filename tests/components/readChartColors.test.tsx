@@ -1,15 +1,20 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CHART_COLORS, readChartColors } from "~/components/charts/chartColors"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("browser chart colors", () => {
+  let element: HTMLDivElement
+  beforeEach(() => {
+    // Computed styles are only defined for elements connected to a document.
+    element = document.body.appendChild(document.createElement("div"))
+  })
   afterEach(() => {
+    element.remove()
     vi.restoreAllMocks()
   })
 
   it("converts browser color pixels to sRGB while preserving alpha and falling back to foreground", () => {
-    const element = document.createElement("div")
     const axisColor = "oklch(0.6 0.1 200)"
     const shadowColor = "rgba(0, 0, 0, 0.25)"
     const foreground = "rgb(90, 80, 70)"
@@ -46,7 +51,6 @@ describe("browser chart colors", () => {
   })
 
   it("keeps resolved CSS colors usable when a canvas context is unavailable", () => {
-    const element = document.createElement("div")
     element.style.setProperty("--chart-axis", "rgb(10, 20, 30)")
     element.style.color = "rgb(90, 80, 70)"
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)

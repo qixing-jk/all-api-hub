@@ -973,9 +973,11 @@ describe("KiloCodeExportDialog", () => {
       "sm:flex-row",
     )
 
-    const modelSelector = within(provider).getByRole("combobox", {
-      name: "Site B - Default ui:dialog.kiloCode.labels.modelId",
-    }).parentElement
+    const modelSelector = within(provider)
+      .getByRole("combobox", {
+        name: "Site B - Default ui:dialog.kiloCode.labels.modelId",
+      })
+      .closest('[data-slot="field"]')
     expect(modelSelector).toHaveClass("min-w-0", "w-full", "sm:w-[280px]")
     expect(modelSelector).not.toHaveClass("min-w-[220px]")
   })

@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 
 const labelVariants = cva(
-  "inline-flex items-center gap-x-1 gap-y-density-1 text-sm font-medium leading-none select-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+  "inline-flex items-center gap-x-1 gap-y-density-1 text-sm font-medium leading-none select-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70 group-data-[disabled=true]/field:cursor-not-allowed group-data-[disabled=true]/field:opacity-70",
   {
     variants: {
       variant: {
@@ -45,7 +45,7 @@ const Label = React.forwardRef<
       {children}
       {required && <span className="text-destructive-text">*</span>}
       {hint && (
-        <span className="text-muted-foreground text-xs font-normal">
+        <span className="text-xs font-normal text-muted-foreground">
           {hint}
         </span>
       )}

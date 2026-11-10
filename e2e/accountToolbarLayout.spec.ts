@@ -135,7 +135,16 @@ test("keeps bulk selection review and actions usable across widths and themes", 
   await expect(
     toolbar.getByRole("button", { name: "Delete selected 2" }),
   ).toBeVisible()
-  await toolbar.getByRole("button", { name: "Clear selection" }).click()
+  await toolbar.getByRole("button", { name: "Review selection" }).click()
+  await review.getByRole("button", { name: "Clear selection" }).click()
+  await expect(
+    review.getByRole("button", { name: "Close", exact: true }),
+  ).toBeFocused()
+  await page.keyboard.press("Escape")
+  await expect(review).toBeHidden()
+  await expect(
+    toolbar.getByRole("button", { name: "Exit", exact: true }),
+  ).toBeFocused()
   await expect(
     toolbar.getByRole("button", { name: "Disable 0" }),
   ).toBeDisabled()
@@ -213,14 +222,14 @@ test("bounds tag shortcuts across sizes and keeps hidden selections accessible",
         )
         return Boolean(
           row &&
-            row.height <= 40 &&
-            buttons.every(
-              (r) =>
-                r.left >= row.x &&
-                r.right <= row.x + row.width &&
-                r.top >= row.y &&
-                r.bottom <= row.y + row.height,
-            ),
+          row.height <= 40 &&
+          buttons.every(
+            (r) =>
+              r.left >= row.x &&
+              r.right <= row.x + row.width &&
+              r.top >= row.y &&
+              r.bottom <= row.y + row.height,
+          ),
         )
       })
       .toBe(true)

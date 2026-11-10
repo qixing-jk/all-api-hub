@@ -135,9 +135,9 @@ export default function ChannelFilterDialog({
   }
   const probeRulesSupported = Boolean(
     channel.resourceRef &&
-      getSiteTypeCapabilities(
-        channel.resourceRef.managedSiteType,
-      ).managedSites?.models?.resolveVerificationProtocol?.(channel.type),
+    getSiteTypeCapabilities(
+      channel.resourceRef.managedSiteType,
+    ).managedSites?.models?.resolveVerificationProtocol?.(channel.type),
   )
 
   const handleSave = async () => {
@@ -247,12 +247,13 @@ export default function ChannelFilterDialog({
       showCloseButton={!isSaving}
       closeOnEsc={!isSaving}
       closeOnBackdropClick={!isSaving}
+      focusFallbackKey={isSaving ? "saving" : "editing"}
       size="lg"
       panelClassName="max-h-[85vh]"
       header={
         <div>
           <p className="text-base font-semibold">{t("filters.title")}</p>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {t("filters.subtitle", { channel: channel.name })}
           </p>
         </div>
@@ -283,16 +284,16 @@ export default function ChannelFilterDialog({
       <fieldset
         disabled={isLoading || isSaving}
         aria-busy={isLoading || isSaving}
-        className="space-y-density-4 min-w-0"
+        className="min-w-0 space-y-density-4"
       >
-        <div className="gap-y-density-2 flex items-start justify-between gap-x-4">
+        <div className="flex items-start justify-between gap-x-4 gap-y-density-2">
           <div className="space-y-density-1">
             <label htmlFor={exclusionId} className="text-sm font-medium">
               {t("managedSiteModelSync:execution.exclusions.title")}
             </label>
             <p
               id={`${exclusionId}-help`}
-              className="text-muted-foreground text-sm"
+              className="text-sm text-muted-foreground"
             >
               {t("filters.modelSyncExclusionHelp")}
             </p>

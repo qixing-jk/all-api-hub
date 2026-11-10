@@ -318,7 +318,15 @@ export function Modal({
   useLayoutEffect(() => {
     if (focusFallbackKey === null || focusFallbackKey === undefined) return
     const content = contentRef.current
-    if (!isOpen || !content || content.contains(document.activeElement)) return
+    if (!isOpen || !content) return
+    const activeElement = document.activeElement
+    // Disabling a focused control can blur it after this layout effect runs.
+    if (
+      content.contains(activeElement) &&
+      !activeElement?.matches(":disabled")
+    ) {
+      return
+    }
     const fallback = content.querySelector<HTMLElement>(
       'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
     )
@@ -370,7 +378,7 @@ export function Modal({
           data-slot="modal-overlay"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "dialog-fade bg-overlay/30 fixed inset-0 backdrop-blur-sm",
+            "dialog-fade fixed inset-0 bg-overlay/30 backdrop-blur-sm",
             Z_INDEX.modal,
           )}
           onPointerDown={handleBackdropPointerDown}
@@ -407,8 +415,8 @@ export function Modal({
             event.preventDefault()
             const focusSession =
               event.currentTarget instanceof HTMLElement
-                ? focusSessionsByContentRef.current.get(event.currentTarget) ??
-                  activeFocusSessionRef.current
+                ? (focusSessionsByContentRef.current.get(event.currentTarget) ??
+                  activeFocusSessionRef.current)
                 : null
             if (!focusSession) return
             try {
@@ -433,7 +441,7 @@ export function Modal({
               <span className="sr-only" aria-label={title} />
             </DialogPrimitive.Title>
             <div
-              className="sm:py-density-4 flex items-center justify-center px-2 py-2 sm:px-4"
+              className="flex items-center justify-center px-2 py-2 sm:px-4 sm:py-density-4"
               data-slot="modal-positioner"
               onPointerDown={handleBackdropPointerDown}
               onPointerCancel={handleBackdropPointerCancel}
@@ -450,7 +458,7 @@ export function Modal({
                     type="button"
                     onClick={requestClose}
                     aria-label={t("common:actions.close")}
-                    className="dark:hover:bg-secondary dark:hover:text-secondary-foreground text-faint-foreground hover:bg-muted hover:text-muted-foreground py-density-1-5 absolute top-3 right-3 z-10 min-h-(--density-control-xs) rounded-sm px-1.5 transition-colors sm:top-4 sm:right-4"
+                    className="absolute top-3 right-3 z-10 min-h-(--density-control-xs) rounded-sm px-1.5 py-density-1-5 text-faint-foreground transition-colors hover:bg-muted hover:text-muted-foreground sm:top-4 sm:right-4 dark:hover:bg-secondary dark:hover:text-secondary-foreground"
                   >
                     <XIcon className="h-5 w-5" />
                   </button>
@@ -459,7 +467,7 @@ export function Modal({
                 {header && (
                   <div
                     data-testid={headerTestId}
-                    className="dark:border-border border-border-subtle py-density-3 sm:py-density-4 shrink-0 border-b px-4 sm:px-6"
+                    className="shrink-0 border-b border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
                   >
                     <div className="flex items-start justify-between">
                       {header}
@@ -469,7 +477,7 @@ export function Modal({
 
                 <div
                   data-slot="modal-body"
-                  className="space-y-density-3 py-density-4 sm:space-y-density-4 sm:py-density-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6"
+                  className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
                 >
                   {children}
                 </div>
@@ -477,7 +485,7 @@ export function Modal({
                 {footer && (
                   <div
                     data-testid={footerTestId}
-                    className="dark:border-border border-border-subtle py-density-3 sm:py-density-4 shrink-0 border-t px-4 sm:px-6"
+                    className="shrink-0 border-t border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
                   >
                     {footer}
                   </div>

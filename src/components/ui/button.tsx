@@ -37,6 +37,7 @@ const buttonVariants = cva(
         link: "text-(--button-link-foreground) underline-offset-4 hover:text-(--button-link-hover-foreground) hover:underline focus-visible:ring-(--button-link-ring)",
       },
       size: {
+        xs: "h-auto min-h-(--density-control-xs) gap-1 rounded-sm px-2 py-0.5 text-xs [&_svg:not([class*='size-'])]:size-3",
         // Intrinsic min-height does not grow a fixed-height button in older
         // Chromium. Let content determine height and use the size as a floor.
         default:
@@ -108,7 +109,7 @@ function Button({
   const Comp = asChild ? Slot.Root : "button"
   const isDisabled = Boolean(
     disabled ||
-      (loading && loadingBehavior === BUTTON_LOADING_BEHAVIORS.Disabled),
+    (loading && loadingBehavior === BUTTON_LOADING_BEHAVIORS.Disabled),
   )
   const resolvedSize = size ?? "default"
   const analytics = useProductAnalyticsActionTracking({
@@ -174,6 +175,7 @@ function Button({
       onClick={handleClick}
       {...props}
       data-size={resolvedSize}
+      data-variant={variant ?? "default"}
       aria-busy={loading ? true : ariaBusy}
     >
       {resolvedLeftIcon && <span>{resolvedLeftIcon}</span>}

@@ -27,10 +27,7 @@ import { cn } from "~/lib/utils"
 import UsageHistorySyncRowActions from "./UsageHistorySyncRowActions"
 
 export type UsageHistorySyncState =
-  | "never"
-  | "success"
-  | "error"
-  | "unsupported"
+  "never" | "success" | "error" | "unsupported"
 
 export type UsageHistoryAccountRow = {
   id: string
@@ -161,7 +158,7 @@ export default function UsageHistorySyncStateTable({
         header: t("syncTab.table.columns.lastSyncAt"),
         accessorFn: (row) => row.lastSyncAtMs ?? 0,
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
-          <div className="text-muted-foreground text-xs">
+          <div className="text-xs text-muted-foreground">
             {row.original.lastSyncAtMs
               ? row.original.lastSyncAtLabel
               : t("status.never")}
@@ -174,17 +171,17 @@ export default function UsageHistorySyncStateTable({
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
           <div className="space-y-density-1">
             {row.original.lastError && (
-              <div className="text-destructive-text text-xs">
+              <div className="text-xs text-destructive-text">
                 {row.original.lastError}
               </div>
             )}
             {row.original.lastWarning && (
-              <div className="text-warning-text text-xs">
+              <div className="text-xs text-warning-text">
                 {row.original.lastWarning}
               </div>
             )}
             {!row.original.lastError && !row.original.lastWarning && (
-              <div className="text-muted-foreground text-xs">
+              <div className="text-xs text-muted-foreground">
                 {t("syncTab.table.noMessage")}
               </div>
             )}
@@ -248,13 +245,13 @@ export default function UsageHistorySyncStateTable({
 
   return (
     <div className="space-y-density-3">
-      <div className="gap-density-2 flex flex-wrap items-center justify-between">
-        <div className="text-muted-foreground text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-density-2">
+        <div className="text-xs text-muted-foreground">
           {t("syncTab.table.selectedCount", {
             count: selectedAccountIds.length,
           })}
         </div>
-        <div className="gap-density-2 flex flex-wrap">
+        <div className="flex flex-wrap gap-density-2">
           <Button
             variant="default"
             size="sm"
@@ -284,7 +281,7 @@ export default function UsageHistorySyncStateTable({
         </div>
       </div>
 
-      <div className="border-border overflow-auto rounded-lg border">
+      <div className="overflow-auto rounded-lg border border-border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -295,7 +292,7 @@ export default function UsageHistorySyncStateTable({
                     className={cn(
                       header.column.id === "actions" &&
                         cn(
-                          "bg-background sticky right-0 border-l",
+                          "sticky right-0 border-l bg-background",
                           Z_INDEX.tableStickyHeader,
                         ),
                     )}
@@ -315,7 +312,7 @@ export default function UsageHistorySyncStateTable({
             {isInitialLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32">
-                  <div className="text-muted-foreground text-sm">
+                  <div className="text-sm text-muted-foreground">
                     {t("syncTab.table.loading")}
                   </div>
                 </TableCell>
@@ -333,7 +330,7 @@ export default function UsageHistorySyncStateTable({
                         "py-density-3",
                         cell.column.id === "actions" &&
                           cn(
-                            "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
+                            "sticky right-0 border-l bg-background group-hover/row:bg-muted group-has-aria-expanded/row:bg-muted group-data-[state=selected]/row:bg-muted",
                             Z_INDEX.tableStickyCell,
                           ),
                       )}
@@ -352,7 +349,7 @@ export default function UsageHistorySyncStateTable({
                   colSpan={columns.length}
                   className="h-32 text-center"
                 >
-                  <div className="text-muted-foreground text-sm">
+                  <div className="text-sm text-muted-foreground">
                     {hasAnyAccounts
                       ? t("syncTab.table.empty")
                       : t("syncTab.noAccounts")}

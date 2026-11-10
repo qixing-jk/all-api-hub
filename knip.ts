@@ -34,6 +34,10 @@ const config: KnipConfig = {
     // Playwright runs this through the build dependency project in
     // playwright.config.ts, which Knip does not discover as a static import.
     "e2e/setup/build.setup.ts",
+    // Vite serves the browser primitive fixture and resolves its analytics alias.
+    "e2e/fixtures/uiPrimitives/fixture.tsx",
+    "e2e/fixtures/uiPrimitives/analytics.ts",
+    "e2e/fixtures/uiPrimitives/channelFilters.ts",
     // Invoked by the native Safari runner; Vite loads this config by CLI path.
     "e2e/safariNativeCookie/probe.config.ts",
     "e2e/safariNativeCookie/probe.ts",

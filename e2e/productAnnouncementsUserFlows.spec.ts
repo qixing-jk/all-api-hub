@@ -140,7 +140,7 @@ test("persists product announcement seen, dismiss, and restore state across opti
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   const optionsUrl = `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`
 
@@ -175,6 +175,11 @@ test("persists product announcement seen, dismiss, and restore state across opti
   await expect(
     page.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.activeList),
   ).toContainText(INFO_ANNOUNCEMENT_TITLE)
+
+  await page.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.popover).screenshot({
+    path: testInfo.outputPath("announcement-popover.png"),
+    animations: "disabled",
+  })
 
   await expect
     .poll(async () => {
@@ -218,6 +223,11 @@ test("persists product announcement seen, dismiss, and restore state across opti
   await expect(
     popupPage.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.button),
   ).toHaveCount(0)
+  await popupPage.setViewportSize({ width: 400, height: 700 })
+  await popupPage.screenshot({
+    path: testInfo.outputPath("popup-tabs.png"),
+    animations: "disabled",
+  })
   await popupPage.close()
 
   await page.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.dismissedTab).click()

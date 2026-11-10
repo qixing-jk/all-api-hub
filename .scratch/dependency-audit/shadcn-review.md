@@ -2,6 +2,8 @@
 
 Outcome: CLI upgrade and selective migration verified; retained decisions below.
 
+Current implementation and validation: [component follow-up](#全量建议跟进2026-11-10). Earlier recommendation and failure sections record investigation stages and are superseded by that section.
+
 Investigated 2026-11-10 against local baseline commit `ae931e9955b7d849597b57a3774d4b726f9dd24d` and target `shadcn@4.23.0` (upstream commit `96da9cc7f1aa10580a3741664e2a77c721206c00`). The main task subsequently installed CLI `4.23.0`; its actual read-only results are recorded below. Application/dependency changes are owned by the main dependency-upgrade task. Retain this note with that task until the migration decisions and remaining acceptance evidence are incorporated.
 
 ## Required configuration correction
@@ -142,3 +144,46 @@ The main task ran the existing InputGroup, SearchableSelect, MultiSelect, UI and
 这使 **jsdom 成为新增的、有具体收益证据的升级候选**。当前 latest 31.0.0 明确重做样式计算与 Shadow DOM 支持，但也有 canvas 后端、解析/加载时序等重大变化，需要单独做测试环境迁移；本次没有安装或验证该新版，不能承诺它已解决本仓两个失败。[官方发布记录](https://github.com/jsdom/jsdom/releases/tag/v31.0.0)。
 
 本轮交付为补充审查与证据；未将表格中的建议擅自实施为新界面行为。建议下一批先处理 Textarea、Combobox、TableRow、Button xs 和 Tabs，再推进点击区及 Card/Popover/Alert/FormField 的组合能力。
+
+
+## 全量建议跟进（2026-11-10）
+
+用户授权“都考虑跟进”后，以 rebase 后的 `ae782a89c8` 为实现基线逐项处理。保留 `new-york`、现有主题/密度及 Radix/Base UI 边界。以下状态取代上文“尚未实施”的阶段性结论；判断仍按现有消费者的具体收益，而非性能或包体积指标。
+
+| 组件 / 建议 | 本轮处理 |
+| --- | --- |
+| Textarea | 已采用 aria-invalid 边框与聚焦反馈，补 textarea slot；保留既有 error/success、清空和高度能力。浏览器红绿验证覆盖明暗主题。 |
+| Combobox | 已加入 overscroll-contain，并用真实长列表滚轮验证边界不带动外页。 |
+| Table | 已加入展开菜单时的行高亮与统一 slots；用量同步固定操作列同步响应行状态，使用不透明背景避免横向滚动时穿透。实际扩展菜单用例覆盖行和固定列。 |
+| Button | 已加入随密度变化且可换行的 xs、data-variant；BrowserApiLab 两处重复覆写和 SelectFetchFeedback 重试按钮已迁移。 |
+| Tabs | 已加入可选 default/line 样式及纵向布局，方向继续传给 Radix；自动签到和弹窗页签采用共享样式。默认保留 unstyled 兼容已有专门布局。计数、统计和响应式处理仍由消费者拥有。 |
+| Checkbox / Switch | 已以 4px 伪元素向外扩展点击区；Switch 移除会裁掉该区域的 overflow-hidden。视觉尺寸不变；浏览器检查邻近边缘点击、mixed 与 disabled。没有照搬上游更大的外扩距离。 |
+| Card | 已加入 CardAction、子槽位及仅在有 action 时生效的响应式排版；密钥修复标题/搜索和 WebDAV 标题/状态已迁移，保留 h3 及本地 padding/border。 |
+| Popover | 已加入 Header/Title/Description；社区支持和公告面板使用组合组件，由消费者明确建立标题/说明关联。保留 portal container 和浮层规则。 |
+| Alert | 已加入 action / AlertAction 和子槽位；权限引导去掉手写内层操作网格，保留图标、状态色、紧凑模式与窄屏堆叠。 |
+| FormField / Label | 已参考 Field 结构加入去重的多错误提示、alert、可选方向和显式 control render props；不克隆未知组合子项。账号汇率和 WebDAV 同步间隔已关联标签/说明/错误，后者采用字段 disabled 协议。说明可与错误同时保留。 |
+| Command | 已集中 checked 指示并迁移 SearchableSelect / CompactMultiSelect；保持左侧位置，data-checked 与键盘高亮的 aria-selected 分开。 |
+| Calendar | 月份下拉按调用方 locale.code 格式化，保留自定义 formatter 优先级。现有日期消费者默认 caption 行为不变；没有新增范围选择产品流程。 |
+| Badge | 已加入 ghost/link 与 data-variant，悬停反馈只用于链接/按钮等交互标签；业务状态色和 adornment 保留。 |
+| Dialog | Footer 可选关闭按钮已加入并迁移邀请链接手动复制弹窗；关闭继续走 Radix Root 的既有策略与翻译。 |
+| Input / InputOTP / Spinner / Separator / Sheet | 补默认 slots、OTP spellCheck=false、Separator ref/方向属性、Sheet data-side；InputGroup 的 slot 覆盖仍有效。Sheet 现有关闭控制有本地密度与布局约束，继续保留。 |
+| Select | 已核对 small、popper、滚动和 resize 规则，核心能力已覆盖；不更换当前定位默认值。 |
+| DropdownMenu | 已核对 checkbox/radio 与 label 的现有 pl-8 对齐；现有筛选菜单没有需要新增 inset 的具体差距。关闭时额外裁切尚无可见问题证据，保持当前动画/滚动边界。没有新增无人使用的参数或强制 trigger-width。 |
+| Progress / Collapsible | 保留正确的 value/max 传递、可访问语义和现有折叠能力；上游省略 value 的写法没有采用。 |
+| DatePicker / EmptyState / ActionGroup / CardItem | 已评估月份/年份导航、Empty 媒体槽、ButtonGroup 和 Item；当前分别已有日期输入/预设、状态反馈、响应式动作和交互列表。没有对应产品需求时不新增范围模式、插图槽或连体按钮组；新能力需要有实际消费场景再接入。 |
+
+### jsdom 与 Node 的升级决策
+
+旧 jsdom 27 的 ShadowRoot 样式缓存问题有本地独立复现、Tooltip 红测试及 Chromium 对照。30.1.0 解决该缓存问题，但扩大验证又复现了 [#4347](https://github.com/jsdom/jsdom/issues/4347)：移除焦点元素后的下一次 focus 会错误触发 window blur，导致 Radix Select 开后即关。保留现有断言，没有添加全局 blur 拦截或产品补丁。30.1.0 的 DOM 全量尝试因此终止，不计为通过。
+
+后续核实此问题已回补到 [30.1.1](https://github.com/jsdom/jsdom/releases/tag/v30.1.1)，[30.1.3](https://github.com/jsdom/jsdom/releases/tag/v30.1.3) 还修复焦点/样式读取退化。30.1.3 是可用的较窄升级候选，不能再把它与有缺陷的 30.1.0 混为一谈。最终采用 [31.0.0](https://github.com/jsdom/jsdom/releases/tag/v31.0.0)，其额外收益是重做 Shadow DOM / CSS 级联、伪元素和可更新的 computed style 支持。项目没有安装可选的 native canvas 后端，现有 canvas mocks 保留；默认 HTML 解析和资源配置经过下述 DOM 验证。
+
+31.0.0 的全量 DOM 运行覆盖 620 个文件、8,087 项测试，首次结果为 8,080 通过、7 失败。逐项处理 CSS transition 规范化、连接到文档后读取 computed style、按真实输入触发组合框，以及 FormField/Card 结构断言的适配。另一个失败暴露了实际浏览器中的焦点丢失：保存时按钮禁用，失败后焦点停在 body，使 Escape 不能关闭弹窗。ChannelFilterDialog 已接入现有 focusFallbackKey；后续批量选择回归又确认共享 Modal 需要将“仍是 activeElement、但已 disabled”的按钮视为需要恢复焦点。两处均有失败测试和修复后的浏览器验证，保存期间仍禁止关闭。
+
+最终包含全部失败文件及其他 Modal 焦点消费者的定向回归为 **22 个文件、378 项通过**；Tooltip/浮层等相关检查 **153 项通过**。全量命令没有在适配后重跑，不将首次全量失败描述为全量通过。最终 Chromium 两批 **12 项通过（含一次扩展构建）**，覆盖 9 个原语场景及实际批量选择、排序；此前密度、自动签到、公告、权限和用量同步的有效证据一并保留。详细执行记录与局限见验收报告。
+
+运行环境要求已跟随 jsdom 提升为 Node `^24.15.0 || >=26.0.0`，`.nvmrc` 固定当前 24 LTS 的 24.22.2。测试使用经官方 SHA256 核对的本地 portable Node，不修改全局 Node 安装。依赖、组件和环境的最终验收记录见 [本地验证报告](artifacts/component-acceptance.md)；[完整视觉画廊](artifacts/component-visual-review.md) 展开所有保留检查点，部分新组合是明确标注的 after-only 证据。
+
+### 材料保留
+
+本文件保留升级理由、未采用项和候选版本取舍。维护性的行为测试进入 tests/ 与 e2e/。artifacts/ 中上游源码摘录、Node 便携运行时、原始失败日志、通过日志及比较图片仅保留本地，用于本轮开发者验收和复现；不进入提交。旧阶段日志保持原样，避免掩盖失败或将历史通过覆盖成当前结论。没有删除其他任务材料。
