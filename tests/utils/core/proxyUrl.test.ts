@@ -37,6 +37,9 @@ describe("isValidProxyUrl", () => {
   it.each([
     "",
     "not a URL",
+    "%68ttp://proxy.example:8080",
+    "%u0068ttp://proxy.example:8080",
+    "%73ocks5h://proxy.example:1080",
     "//proxy.example:1080",
     "file:///tmp/proxy",
     "ftp://proxy.example",

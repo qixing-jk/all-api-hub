@@ -66,6 +66,9 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences,
 }))
 
+vi.mock("~/services/apiService/octopus/channels", () => ({ ...octopusApi }))
+vi.mock("~/services/apiService/octopus/models", () => ({ ...octopusApi }))
+
 describe("Octopus managed-site channel capability", () => {
   const config = {
     baseUrl: "https://octopus.example.invalid",
@@ -79,9 +82,6 @@ describe("Octopus managed-site channel capability", () => {
       octopus: config,
     })
   })
-
-  vi.mock("~/services/apiService/octopus/channels", () => ({ ...octopusApi }))
-  vi.mock("~/services/apiService/octopus/models", () => ({ ...octopusApi }))
 
   const channel: OctopusChannel = {
     id: 7,

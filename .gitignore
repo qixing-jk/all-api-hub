@@ -115,3 +115,4 @@ src/public/react-devtools*
 # browser bridge connector token, so only the spec is tracked.
 .scratch/nanogpt-adaptation/evidence/
 .scratch/nanogpt-adaptation/scripts/
+/.vitest/

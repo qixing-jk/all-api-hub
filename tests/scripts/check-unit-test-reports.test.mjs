@@ -27,6 +27,11 @@ function reportGuardCommand() {
   return command.replaceAll("scripts/check-unit-test-reports.mjs", quotedScript)
 }
 
+/**
+ * Run the report guard against isolated blob fixtures, directly or through its CI command.
+ * Expose the process result and published outputs so failed-test coverage can be
+ * distinguished from incomplete reports that must not publish coverage or timings.
+ */
 function check(context, reports, total = "2", options = {}) {
   const directory = mkdtempSync(join(tmpdir(), "unit-test-reports-"))
   context.after(() => {
@@ -34,7 +39,7 @@ function check(context, reports, total = "2", options = {}) {
     rmSync(directory, { recursive: true, force: true })
   })
   const reportsDirectory = options.workflowEvent
-    ? join(directory, ".vitest-reports")
+    ? join(directory, ".vitest/blob")
     : directory
   mkdirSync(reportsDirectory, { recursive: true })
   for (const [name, blob] of Object.entries(reports)) {
@@ -95,6 +100,15 @@ const blob = (state = "pass") => [
   100,
 ]
 
+const currentBlob = (state = "pass") => [
+  "4.1.12",
+  [{ name: "example.test.ts", result: { state, duration: 25 } }],
+  [],
+  { "src/example.ts": { s: { 0: 1 } } },
+  100,
+  [],
+]
+
 test("complete reports remain usable when an assertion failed", (context) => {
   const result = check(context, {
     "blob-1-2.json": blob("fail"),
@@ -103,6 +117,77 @@ test("complete reports remain usable when an assertion failed", (context) => {
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.output(), "complete=true\n")
 })
+
+test("Vitest 4.1 reports retain failed-test coverage and publish timings", (context) => {
+  const result = check(
+    context,
+    {
+      "blob-1-2.json": currentBlob("fail"),
+      "blob-2-2.json": currentBlob("pass"),
+    },
+    "2",
+    { publishDurations: true },
+  )
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.output(), "complete=true\n")
+  assert.deepEqual(result.durations().durations, { "example.test.ts": 50 })
+})
+
+test("Vitest 5 reports retain failed-test coverage and publish timings", (context) => {
+  const first = currentBlob("fail")
+  const second = currentBlob()
+  first[0] = second[0] = "5.1.0"
+  const result = check(
+    context,
+    {
+      "blob-1-2.json": first,
+      "blob-2-2.json": second,
+    },
+    "2",
+    { publishDurations: true },
+  )
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.output(), "complete=true\n")
+  assert.deepEqual(result.durations().durations, { "example.test.ts": 50 })
+})
+
+for (const [name, corrupt] of Object.entries({
+  "missing coverage": (report) => {
+    report[3] = null
+  },
+  "empty coverage": (report) => {
+    report[3] = {}
+  },
+  "array coverage": (report) => {
+    report[3] = []
+  },
+  "empty tests": (report) => {
+    report[1] = []
+  },
+  "worker error": (report) => {
+    report[2] = [{ message: "Worker stopped" }]
+  },
+  "mixed versions": (report) => {
+    report[0] = "4.1.11"
+  },
+  "unsupported version": (report) => {
+    report[0] = "6.0.0"
+  },
+})) {
+  test(`Vitest 4.1 ${name} blocks coverage and timing publication`, (context) => {
+    const second = currentBlob()
+    corrupt(second)
+    const result = check(
+      context,
+      { "blob-1-2.json": currentBlob(), "blob-2-2.json": second },
+      "2",
+      { publishDurations: true },
+    )
+    assert.equal(result.status, 1)
+    assert.equal(result.output(), "complete=false\n")
+    assert.equal(result.hasDurations(), false)
+  })
+}
 
 test("complete reports can also publish balanced file durations", (context) => {
   const first = blob()
@@ -338,7 +423,7 @@ test("real failed Vitest shards merge into coverage and JUnit while retaining fa
   assert.deepEqual(statuses.sort(), [0, 1], diagnostics.join("\n"))
   const gate = spawnSync(
     process.execPath,
-    [script, join(directory, ".vitest-reports"), "2"],
+    [script, join(directory, ".vitest/blob"), "2"],
     {
       encoding: "utf8",
       env: {
@@ -350,7 +435,7 @@ test("real failed Vitest shards merge into coverage and JUnit while retaining fa
   )
   assert.equal(gate.status, 0, gate.stderr)
   const merged = run([
-    "--merge-reports=.vitest-reports",
+    "--merge-reports=.vitest/blob",
     "--coverage",
     "--reporter=junit",
     "--outputFile.junit=test-report.junit.xml",

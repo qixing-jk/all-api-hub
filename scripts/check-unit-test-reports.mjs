@@ -3,7 +3,7 @@ import { appendFileSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { parseArgs } from "node:util"
 
-import { parseVitestBlob } from "./utils/vitestBlob.mjs"
+import { getVitestBlobCoverage, parseVitestBlob } from "./utils/vitestBlob.mjs"
 import {
   extractFileTimings,
   writeUnitTestDurationsFromReports,
@@ -20,7 +20,7 @@ try {
     },
   })
   const [
-    directory = ".vitest-reports",
+    directory = ".vitest/blob",
     totalValue = process.env.UNIT_TEST_SHARD_TOTAL,
   ] = positionals
   total = Number(totalValue)
@@ -37,6 +37,7 @@ try {
     const blob = parseVitestBlob(
       readFileSync(path.join(directory, name), "utf8"),
     )
+    const coverage = getVitestBlobCoverage(blob)
     if (
       !Array.isArray(blob) ||
       typeof blob[0] !== "string" ||
@@ -44,10 +45,10 @@ try {
       blob[1].length === 0 ||
       !Array.isArray(blob[2]) ||
       blob[2].length !== 0 ||
-      !blob[4] ||
-      typeof blob[4] !== "object" ||
-      Array.isArray(blob[4]) ||
-      Object.keys(blob[4]).length === 0
+      !coverage ||
+      typeof coverage !== "object" ||
+      Array.isArray(coverage) ||
+      Object.keys(coverage).length === 0
     ) {
       throw new Error(`Unusable test or coverage data: ${name}`)
     }

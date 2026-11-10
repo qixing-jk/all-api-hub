@@ -146,7 +146,7 @@ jobs:
         continue-on-error: true
         uses: actions/cache/restore@v5
         with:
-          path: node_modules/.experimental-vitest-cache
+          path: node_modules/.vitest-cache
           key: unit-test-modules-${{ runner.os }}-${{ runner.arch }}-${{ steps.runtime.outputs.node }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'vitest*.ts', 'tsconfig*.json') }}-${{ matrix.shard }}-${{ hashFiles('src/**', 'tests/**', 'scripts/**', 'plugins/**') }}
           restore-keys: |
             unit-test-modules-${{ runner.os }}-${{ runner.arch }}-${{ steps.runtime.outputs.node }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'vitest*.ts', 'tsconfig*.json') }}-${{ matrix.shard }}-
@@ -176,7 +176,7 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: vitest-blob-report-${{ matrix.shard }}
-          path: .vitest-reports/*.json
+          path: .vitest/blob/*.json
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -190,7 +190,7 @@ jobs:
         continue-on-error: true
         uses: actions/cache/save@v5
         with:
-          path: node_modules/.experimental-vitest-cache
+          path: node_modules/.vitest-cache
           key: ${{ steps.modules.outputs.cache-primary-key }}
 
   unit-tests-merge:
@@ -212,7 +212,7 @@ jobs:
       - name: Download Vitest blob reports
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          path: .vitest-reports
+          path: .vitest/blob
           pattern: vitest-blob-report-*
           merge-multiple: true
 
@@ -227,9 +227,9 @@ jobs:
 
       - name: Merge test and coverage reports
         # Keep partial reports available as artifacts when the completeness gate fails.
-        if: ${{ !cancelled() && hashFiles('.vitest-reports/*.json') != '' }}
+        if: ${{ !cancelled() && hashFiles('.vitest/blob/*.json') != '' }}
         run: |
-          pnpm exec vitest --merge-reports=.vitest-reports --coverage \
+          pnpm exec vitest --merge-reports=.vitest/blob --coverage \
             --reporter=default \
             --reporter=junit \
             --outputFile.junit=test-report.junit.xml

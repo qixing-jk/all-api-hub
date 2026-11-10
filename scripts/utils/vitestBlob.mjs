@@ -3,6 +3,20 @@ import { parse } from "flatted"
 const canonicalReference = /^(0|[1-9]\d*)$/
 
 /**
+ * Read coverage from the explicitly supported Vitest blob layouts.
+ * 4.1 removed moduleGraph, moving coverage from index 4 to index 3; 5.0/5.1 retain it.
+ * Unknown versions must not publish apparently complete coverage.
+ * @param blob Decoded report.
+ * @returns Coverage payload, or undefined for an unsupported layout.
+ */
+export function getVitestBlobCoverage(blob) {
+  if (!Array.isArray(blob) || typeof blob[0] !== "string") return undefined
+  if (/^4\.0\.\d+$/.test(blob[0])) return blob[4]
+  if (/^(?:4\.1|5\.[01])\.\d+$/.test(blob[0])) return blob[3]
+  return undefined
+}
+
+/**
  * Decode Vitest's flatted blob format without changing its report contents.
  *
  * Canonical flatted output stores objects and strings in a table; string values
