@@ -228,28 +228,87 @@ describe("kimiOpenPlatform service index", () => {
     )
   })
 
-  it("fetchKimiAccountData passes oid to organizationAccountInfo", async () => {
-    vi.mocked(transport.ensureKimiAuthState).mockResolvedValueOnce(
-      consoleSession,
-    )
-    vi.mocked(transport.fetchKimiConsole).mockResolvedValueOnce({
-      code: 0,
-      data: { cur: 100, today_consume: 5 },
-    })
-
-    const request = {
-      ...accountRequest(),
+  it.each([
+    {
+      baseUrl: "https://platform.kimi.com",
       exchangeRate: 7.2,
-    } as unknown as import("~/services/accounts/accountDataModel").ApiServiceAccountRequest
+      quota: 5_318_264,
+      todayQuota: 1_596,
+    },
+    {
+      baseUrl: "https://platform.kimi.com",
+      exchangeRate: undefined,
+      quota: 5_318_264,
+      todayQuota: 1_596,
+    },
+    {
+      baseUrl: "https://platform.kimi.com",
+      exchangeRate: 8,
+      quota: 4_786_438,
+      todayQuota: 1_436,
+    },
+    {
+      baseUrl: "https://platform.kimi.ai",
+      exchangeRate: 8,
+      quota: 38_291_500,
+      todayQuota: 11_490,
+    },
+  ])(
+    "normalizes console balance and today's consumption for $baseUrl with exchange rate $exchangeRate",
+    async ({ baseUrl, exchangeRate, quota, todayQuota }) => {
+      vi.mocked(transport.ensureKimiAuthState).mockResolvedValueOnce(
+        consoleSession,
+      )
+      vi.mocked(transport.fetchKimiConsole).mockResolvedValueOnce({
+        code: 0,
+        // The console shows 76.58300 and 0.02298 in its deployment currency.
+        data: { cur: 7_658_300, today_consume: 2_298 },
+      })
 
-    const data = await fetchKimiAccountData(request)
-    expect(transport.fetchKimiConsole).toHaveBeenCalledWith(
-      request,
-      "organizationAccountInfo",
-      { query: { oid: "org-xyz" } },
-    )
-    expect(data.quota).toBeGreaterThan(0)
-  })
+      const request = {
+        ...accountRequest(),
+        baseUrl,
+        exchangeRate,
+        checkIn: buildCheckInConfig(),
+      }
+
+      const data = await fetchKimiAccountData(request)
+      expect(transport.fetchKimiConsole).toHaveBeenCalledWith(
+        request,
+        "organizationAccountInfo",
+        { query: { oid: "org-xyz" } },
+      )
+      expect(data).toMatchObject({
+        quota,
+        today_quota_consumption: todayQuota,
+      })
+    },
+  )
+
+  it.each([
+    { cur: 0, todayConsume: 0, quota: 0, todayQuota: 0 },
+    { cur: -150_000, todayConsume: 1, quota: -750_000, todayQuota: 5 },
+  ])(
+    "preserves zero, debt and fractional console amounts: $cur / $todayConsume",
+    async ({ cur, todayConsume, quota, todayQuota }) => {
+      vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)
+      vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
+        code: 0,
+        data: { cur, today_consume: todayConsume },
+      })
+
+      await expect(
+        fetchKimiAccountData({
+          ...accountRequest(),
+          baseUrl: "https://platform.kimi.ai",
+          checkIn: buildCheckInConfig(),
+        }),
+      ).resolves.toMatchObject({
+        quota,
+        today_quota_consumption: todayQuota,
+      })
+    },
+  )
 
   it("fetchKimiAccountModelCatalog reads the default project's open gateway", async () => {
     vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)

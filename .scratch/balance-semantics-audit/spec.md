@@ -6,6 +6,8 @@ Status: needs-info
 
 证据级别：**官方对照**表示本次读取官方公开资料并对照代码，不等于登录态实测；**代码核查**表示只确认本地实现及已有注释，站点结论仍待验证。记录的是本次工作树快照，不是永久支持矩阵。
 
+下表保留 2026-10-28 的审计快照；Kimi 控制台分支的后续证据和语义边界见文末 2026-11-10 补充。
+
 ## 逐类型核查
 
 金额统一尺度来自 `src/constants/money.ts`：500,000 product quota/USD。它不证明上游 quota 单位，也不证明资产可当作通用余额。代码路径相对 `src/services/apiService/`，除非另有说明。
@@ -58,3 +60,33 @@ Status: needs-info
 复用 add-site-integration，新增 balance-semantics 引用，从入口、账户工作流和签到奖励路由到同一规则；不维护另一份永久站点单位清单。规则要求原生合同、来源/有效期/身份、双重计数检查、明确换算例子及消费者追踪。三个代表决策：Token 有价格仍需估值标注；USD nativeBalance 仍会触发统计排除；剩余订阅额度不自动成为现金余额。文档变更不修改用户行为，无运行时/截图验收项。
 
 保留本 spec 及 skills 变更于 Git。无新生成原始响应或登录态凭据；没有待删除输出。后续应补真实部署证据与 red/green 回归，再修复经确认的问题。
+
+## 2026-11-10：Kimi 控制台金额构成补充
+
+来源：[issue #1859](https://github.com/qixing-jk/all-api-hub/issues/1859)。调查基线为 `526b0953bf`；对应单位修复将控制台 `cur` 和 `today_consume` 除以 100,000，再进入现有 CNY/USD quota 换算，未新增代金券构成或变更推理余额接口语义。
+
+### 当前官网前端证据
+
+国内和国际控制台均加载相同版本的账户页面与金额常量模块：
+
+- 账户页面：[CN](https://platform.kimi.com/_next/static/chunks/app/console/account/page-4df6a91c7bbbf387.js)、[Global](https://platform.kimi.ai/_next/static/chunks/app/console/account/page-4df6a91c7bbbf387.js)。页面先将 `cur`、`voucher_cur`、`today_consume` 转为 BigInt，可用余额调用 `z.OI(e.voucherCur + e.cur)`，今日消费调用 `z.OI(e.todayConsume)`。
+- 金额格式化函数 `OI` 为 `new c.O(e).dividedBy(a.WK).toFixed(t)`，默认精度为 5。
+- 常量模块：[CN](https://platform.kimi.com/_next/static/chunks/9867-3dc32e9428542dc8.js)、[Global](https://platform.kimi.ai/_next/static/chunks/9867-3dc32e9428542dc8.js)。`WK` 导出 `g`，且 `g = 1e5`。
+
+因此，当前官网**控制台展示**的可用余额为 `(cur + voucher_cur) / 100000`，今日消费为 `today_consume / 100000`。当前扩展控制台分支只投影 `cur`，未保留 `voucher_cur`；存在非零代金券时，不能声称其金额完整对应官网可用余额。
+
+### 与推理余额接口的区别
+
+同日复核的[中国版余额 API 文档](https://platform.moonshot.cn/docs/api/balance)明确：`available_balance`、`cash_balance`、`voucher_balance` 已按人民币元返回；现金余额可负，现金为负时 `available_balance` 等于 `voucher_balance`。应保留服务端权威 available，不将控制台相加公式套到此接口。这条负现金规则的文档证据仅覆盖中国版。
+
+构造用例可以显示两条来源的区别：控制台 `cur=-200000, voucher_cur=1000000` 按当前前端公式显示 8；推理接口 `cash_balance=-2, voucher_balance=10, available_balance=10` 应保留 10。它们是区分契约的测试输入，并非本次捕获的真实负债响应；控制台字段与推理字段的逐项对应、负债时两页面/接口为何不同，仍需同一身份的真实样本确认。
+
+### 后续余额语义验证
+
+后续余额模型应区分 console 与 inference 来源，保留原币、金额单位、可用值及可证明的构成，再决定卡片、预付合计、历史和净流入估算的投影。不得将官网“可用余额”直接改称“现金”，或将代金券假定为永久、无使用限制；父总额与组成部分也不能重复汇总。
+
+建议回归包括：纯现金、纯代金券、混合构成、零值、缺失/无效构成、负现金与可用值不同，以及同钱包经 console/API key 两种来源读取得到的事实边界。迁移时须保留单位修复，避免再次缩放已归一化的值。
+
+实测限制：同日对国内和国际站各一个已登录组织执行只读身份/余额查询，均为 HTTP 200、code 0；`cur`、`voucher_cur`、`today_consume` 全为 0。真实非零代金券及负债场景仍未验证；关闭此缺口需要同一身份的非零构成、负债响应与原生页面对照。单位修复的构造数据回归不能替代这些真实样本。
+
+保留处置：本补充作为可移植协议证据入 Git；现场截图、测试日志和会话交接信息仅供本地复核，不作为协议来源。

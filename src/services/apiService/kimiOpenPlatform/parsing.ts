@@ -1,6 +1,9 @@
 import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import type { KimiOpenPlatformCurrency } from "~/services/kimiOpenPlatform/deployments"
 
+// Console amounts use 1e-5 currency units; inference balances are already CNY/USD.
+const KIMI_CONSOLE_AMOUNT_SCALE = 100_000
+
 export type KimiUserInfo = {
   uid: string
   name: string
@@ -148,7 +151,7 @@ export function parseKimiCreatedKey(payload: unknown): KimiApiKey {
   }
 }
 
-/** Parses available balance and today's consumption. */
+/** Parses console balance and today's consumption into CNY or USD amounts. */
 export function parseKimiAccountInfo(payload: unknown): KimiAccountInfo {
   const data = readEnvelopeData(payload)
   if (
@@ -158,7 +161,10 @@ export function parseKimiAccountInfo(payload: unknown): KimiAccountInfo {
   ) {
     throw new Error("invalid_kimi_account_info")
   }
-  return { cur: data.cur, today_consume: data.today_consume }
+  return {
+    cur: data.cur / KIMI_CONSOLE_AMOUNT_SCALE,
+    today_consume: data.today_consume / KIMI_CONSOLE_AMOUNT_SCALE,
+  }
 }
 
 /** Parses the inference balance endpoint. */
