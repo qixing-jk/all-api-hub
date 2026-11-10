@@ -7,6 +7,7 @@ import {
 } from "~/constants/browserOAuth"
 import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
 import {
+  BrowserLoginOriginMismatchError,
   createBrowserLoginContext,
   type BrowserLoginContextOptions,
   type BrowserLoginResult,
@@ -184,7 +185,10 @@ async function executeOAuth<Evidence>(
             authorizationUrl: authorizationUrl.href,
           })
           .catch((error) => {
-            if (isMessageReceiverUnavailableError(error)) {
+            if (
+              error instanceof BrowserLoginOriginMismatchError ||
+              isMessageReceiverUnavailableError(error)
+            ) {
               handledInteractionUrls.delete(currentUrl.href)
             }
             logger.warn(

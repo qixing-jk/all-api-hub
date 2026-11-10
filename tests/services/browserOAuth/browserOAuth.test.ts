@@ -470,6 +470,42 @@ describe("browser OAuth context", () => {
     await vi.advanceTimersByTimeAsync(1_000)
     await expect(result).resolves.toMatchObject({ status: "authenticated" })
   })
+  it.each([false, true])(
+    "checks the current verification deadline after a slow origin assertion (extended=%s)",
+    async (extended) => {
+      vi.useFakeTimers()
+      vi.mocked(waitForTabComplete)
+        .mockRejectedValueOnce(new ProtectionPageTimeoutError())
+        .mockImplementationOnce(async () => {
+          browserApi.getTab.mockImplementationOnce(
+            () =>
+              new Promise((resolve) =>
+                setTimeout(() => resolve(loginTab), 45_000),
+              ),
+          )
+        })
+      const requestId = "slow-final-origin"
+      const result = browserOAuthContext.authenticate({ origin, requestId })
+      await vi.advanceTimersByTimeAsync(40_000)
+      if (extended) getLoginVerificationContext(requestId)?.onOpened?.()
+      await vi.advanceTimersByTimeAsync(6_000)
+
+      if (extended) {
+        await expect(result).resolves.toMatchObject({ status: "authenticated" })
+      } else {
+        await expect(result).resolves.toEqual({
+          status: "interaction_required",
+          reason: "verification_required",
+        })
+        expect(
+          browserApi.sendTabMessageWithRetry.mock.calls.map(
+            ([, message]) => message.action,
+          ),
+        ).toEqual([actions.clear])
+      }
+      expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    },
+  )
   it.each(["initial", "api-fallback"])(
     "does not report an uncertain password submission when %s protection never clears",
     async (phase) => {
@@ -2389,6 +2425,65 @@ describe("browser OAuth context", () => {
       status: BROWSER_OAUTH_STATUS.Authenticated,
     })
   })
+
+  it.each([undefined, "https://other.example/redirect"])(
+    "resumes authorization after a pre-dispatch origin change to %s",
+    async (intermediateUrl) => {
+      vi.useFakeTimers()
+      let redirected = false
+      let authorized = false
+      const context = createBrowserOAuthContext({
+        ...testFlow,
+        authorizationInteraction: {
+          action: actions.authorize,
+          isInteractionUrl(current, requested) {
+            if (current.href !== requested.href) return false
+            if (!redirected) {
+              redirected = true
+              // Navigation wins the race between the tab observation and
+              // the origin check immediately before sending authorization.
+              browserApi.getTab.mockResolvedValueOnce({
+                ...loginTab,
+                url: intermediateUrl,
+              })
+            }
+            return true
+          },
+        },
+      })
+      browserApi.getTab.mockImplementation(async () =>
+        authorized
+          ? completedTab
+          : browserApi.updateTab.mock.calls.length
+            ? { ...loginTab, url: authorizationUrl }
+            : loginTab,
+      )
+      browserApi.sendTabMessageWithRetry
+        .mockReset()
+        .mockImplementation(async (_tab, message) => {
+          if (message.action === actions.prepare)
+            return { success: true, authorizationUrl }
+          if (message.action === actions.authorize) {
+            authorized = true
+            return { success: true }
+          }
+          return { success: true, identity: "user-1", completed: true }
+        })
+
+      const result = context.authenticate({
+        origin,
+        requestId: "origin-change",
+      })
+      await vi.advanceTimersByTimeAsync(125_000)
+
+      await expect(result).resolves.toMatchObject({ status: "authenticated" })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.map(
+          ([, message]) => message.action,
+        ),
+      ).toEqual([actions.prepare, actions.authorize, actions.complete])
+    },
+  )
 
   it("does not click authorization again after losing its response", async () => {
     vi.useFakeTimers()

@@ -179,6 +179,13 @@ export interface BrowserLoginProtocol<Evidence> {
 class AuthCancelledError extends Error {}
 class AuthTimeoutError extends Error {}
 
+/** The page left the required origin before a content action was dispatched. */
+export class BrowserLoginOriginMismatchError extends Error {
+  constructor() {
+    super("The authentication tab left the account origin.")
+  }
+}
+
 /** Opens the user-visible popup used for the configured account login flow. */
 async function openVisibleAuthContext(
   origin: string,
@@ -319,7 +326,7 @@ async function assertTabOrigin(
 ): Promise<void> {
   const tab = await getTab(context.tabId)
   if (!tab.url || new URL(tab.url).origin !== origin) {
-    throw new Error("The authentication tab left the account origin.")
+    throw new BrowserLoginOriginMismatchError()
   }
 }
 

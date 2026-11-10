@@ -50,6 +50,8 @@ export async function waitForBrowserLoginPageProtection(context: {
         },
       )
       await context.assertOrigin()
+      if (manualDeadline && Date.now() >= deadline())
+        throw new ProtectionPageTimeoutError()
       return
     } catch (error) {
       signal?.throwIfAborted()
