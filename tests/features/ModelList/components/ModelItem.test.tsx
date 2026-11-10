@@ -279,6 +279,45 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("selects and clears the quote group through the latest callback without rerendering the offer", async () => {
+    const props = createDefaultProps()
+    props.model.enable_groups = ["default", "vip"]
+    props.groupContext.supportedGroups = ["default", "vip"]
+    props.groupContext.usableGroups = ["default", "vip"]
+    props.activeGroupContext.activeUsableGroups = ["default", "vip"]
+    const previousChange = vi.fn()
+    const nextChange = vi.fn()
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <ModelItem {...props} onModelGroupChange={previousChange} />,
+    )
+    descriptionRenderSpy.mockClear()
+    rerender(<ModelItem {...props} onModelGroupChange={nextChange} />)
+    expect(descriptionRenderSpy).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole("combobox", { name: "modelGroupQuickSelect" }),
+    )
+    await user.click(screen.getByRole("option", { name: "vip" }))
+    expect(nextChange).toHaveBeenLastCalledWith("vip")
+    expect(previousChange).not.toHaveBeenCalled()
+
+    rerender(
+      <ModelItem
+        {...props}
+        onModelGroupChange={nextChange}
+        selectedModelGroup="vip"
+      />,
+    )
+    await user.click(
+      screen.getByRole("combobox", { name: "modelGroupQuickSelect" }),
+    )
+    await user.click(
+      screen.getByRole("option", { name: "allAccountGroups (2)" }),
+    )
+    expect(nextChange).toHaveBeenLastCalledWith(undefined)
+  })
+
   it("reuses an unchanged offer while calling its latest actions and updating changed data", async () => {
     const user = userEvent.setup()
     const props = createDefaultProps()

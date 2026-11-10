@@ -235,20 +235,23 @@ export default function ModelList(props: {
       setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
   }, [sortMode, setSortMode])
 
+  const handleModelGroupChange = useCallback(
+    (itemKey: string, group: string | undefined) => {
+      setModelGroupOverrides((previous) => {
+        const next = { ...previous }
+        if (group === undefined) delete next[itemKey]
+        else next[itemKey] = group
+        return next
+      })
+    },
+    [setModelGroupOverrides],
+  )
+
   const renderModelDisplay = () => (
     <ModelDisplay
       modelGroupOverrides={modelGroupOverrides}
       onModelGroupChange={
-        isAllAccountsScope && !expandGroups
-          ? (itemKey, group) => {
-              setModelGroupOverrides((previous) => {
-                const next = { ...previous }
-                if (group === undefined) delete next[itemKey]
-                else next[itemKey] = group
-                return next
-              })
-            }
-          : undefined
+        isAllAccountsScope && !expandGroups ? handleModelGroupChange : undefined
       }
       excludedGroupsByAccountId={allAccountsExcludedGroupsByAccountId}
       onCatalogChanged={loadPricingData}

@@ -112,9 +112,12 @@ export function useModelListSourcePresentation({
     [accounts, profiles, setSelectedSourceValue],
   )
 
-  const handleGroupClick = (group: string) => {
-    setSelectedGroups([group])
-  }
+  const handleGroupClick = useCallback(
+    (group: string) => {
+      setSelectedGroups([group])
+    },
+    [setSelectedGroups],
+  )
 
   const isAllAccountsScope =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS

@@ -195,7 +195,7 @@ export function AllAccountsGroupFilterMenu({
   )
 }
 
-/** Builds account sections only while the popover mounts its content. */
+/** Renders account sections only while the popover mounts its content. */
 function AccountGroupFilterContent({
   accountSections,
   excludedGroupsByAccountId,
