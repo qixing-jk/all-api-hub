@@ -7,6 +7,7 @@ import {
 } from "~/services/apiAdapters/newApi/announcements/siteNotice"
 import { newApiSiteStructuredAnnouncements } from "~/services/apiAdapters/newApi/announcements/siteStructuredAnnouncements"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -41,6 +42,7 @@ describe("newApiSiteNotice", () => {
     const notice = "Notice"
     laoZhangFetchSiteNoticeMock.mockResolvedValueOnce(notice)
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://api2.laozhang.ai",
       auth: { authType: AuthTypeEnum.None },
     }
@@ -55,6 +57,7 @@ describe("newApiSiteNotice", () => {
     newApiFamilyFetchSiteNoticeMock.mockResolvedValueOnce(notice)
 
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       accountId: "account-1",
       auth: {
@@ -82,6 +85,7 @@ describe("newApiSiteStructuredAnnouncements", () => {
     ])
     await expect(
       newApiSiteStructuredAnnouncements.fetch({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.invalid",
         auth: { authType: AuthTypeEnum.None },
       }),
@@ -103,6 +107,7 @@ describe("newApiSiteStructuredAnnouncements", () => {
         { content: "Notice", publishDate },
       ])
       const [item] = await newApiSiteStructuredAnnouncements.fetch({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.invalid",
         auth: { authType: AuthTypeEnum.None },
       })
@@ -123,6 +128,7 @@ describe("newApiSiteStructuredAnnouncements", () => {
     ])
 
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
       auth: {

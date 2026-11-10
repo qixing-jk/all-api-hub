@@ -244,9 +244,8 @@ describe("Veloera managed-site channel capability", () => {
       successData: { id: 17 },
       arrange: arrangeRestMutation(veloeraApi.createChannel, { id: 17 }),
       invoke: async () => {
-        const { veloeraChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/veloera/operations"
-        )
+        const { veloeraChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/veloera/operations")
         return await veloeraChannelOperations.create(config, createPayload)
       },
       assertRequestPayload: () =>
@@ -264,9 +263,8 @@ describe("Veloera managed-site channel capability", () => {
       successData: { id: 7 },
       arrange: arrangeRestMutation(veloeraApi.updateChannel, { id: 7 }),
       invoke: async () => {
-        const { veloeraChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/veloera/operations"
-        )
+        const { veloeraChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/veloera/operations")
         return await veloeraChannelOperations.update(config, updatePayload)
       },
       assertRequestPayload: () =>
@@ -284,9 +282,8 @@ describe("Veloera managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(veloeraApi.deleteChannel, null),
       invoke: async () => {
-        const { veloeraChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/veloera/operations"
-        )
+        const { veloeraChannelOperations } =
+          await import("~/services/apiAdapters/managedResources/veloera/operations")
         return await veloeraChannelOperations.delete(config, 7)
       },
       assertRequestPayload: () =>
@@ -404,9 +401,8 @@ describe("Veloera managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloera/operations"
-    )
+    const { veloeraChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/veloera/operations")
 
     await expect(
       veloeraChannelOperations.create(config, createPayload),
@@ -428,9 +424,8 @@ describe("Veloera managed-site channel capability", () => {
       request.observer?.onResponse()
       return rejectionResponse
     })
-    const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloera/operations"
-    )
+    const { veloeraChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/veloera/operations")
 
     await expect(
       veloeraChannelOperations.create(config, createPayload),
@@ -444,10 +439,10 @@ describe("Veloera managed-site channel capability", () => {
   })
 
   it("delegates channel operations to direct Veloera helpers", async () => {
-    const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloera/operations"
-    )
+    const { veloeraChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/veloera/operations")
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "Veloera",
       auth: {
@@ -529,9 +524,8 @@ describe("Veloera managed-site channel capability", () => {
   })
 
   it("exposes native detail and draft-model reads with request cancellation", async () => {
-    const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloera/operations"
-    )
+    const { veloeraChannelOperations } =
+      await import("~/services/apiAdapters/managedResources/veloera/operations")
     const detailSignal = new AbortController().signal
     const draftSignal = new AbortController().signal
     const detail = buildManagedSiteChannel({ id: 23 })
@@ -580,10 +574,10 @@ describe("Veloera managed-site channel capability", () => {
   })
 
   it("delegates Veloera queries and comparable-key hydration helpers", async () => {
-    const { veloeraManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/veloera"
-    )
+    const { veloeraManagedSiteCapabilities } =
+      await import("~/services/apiAdapters/managedSites/veloera")
     const request = {
+      directRequestReason: "credential_isolation" as const,
       baseUrl: config.baseUrl,
       siteType: "Veloera",
       auth: {

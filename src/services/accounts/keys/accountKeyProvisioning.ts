@@ -17,6 +17,8 @@ import {
   type EditableResourceProjection,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
 import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
@@ -132,10 +134,13 @@ export async function prepareAccountKeyProvisioning(
   const session = await accountKeyResources.open(
     {
       account,
-      request: {
-        ...request,
-        protectionBypassExecution: options.protectionBypassExecution,
-      },
+      request: bindApiTransportRequest(
+        {
+          ...request,
+          protectionBypassExecution: options.protectionBypassExecution,
+        },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      ),
     },
     options,
   )

@@ -19,6 +19,7 @@ import {
   type ResourceFailure,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 type Detail = { id: string; name: string; secret?: string }
@@ -54,6 +55,7 @@ const OPEN_INPUT: AccountKeyResourceOpenInput = {
     siteType: SITE_TYPES.OPENROUTER,
   },
   request: {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     accountId: "account-example",
     baseUrl: "https://example.invalid",
     auth: {

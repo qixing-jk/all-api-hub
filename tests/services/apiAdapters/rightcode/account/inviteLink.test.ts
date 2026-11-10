@@ -2,12 +2,14 @@ import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
 import { rightCodeInviteLink } from "~/services/apiAdapters/rightcode/account/inviteLink"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://right-code.example.invalid"
 
 const createRequest = () => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   accountId: "account-example",
   auth: {

@@ -29,10 +29,12 @@ import {
   fetchNovitaModelPolicy,
 } from "~/services/apiService/novita/keyManagement"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://novita.ai",
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -49,6 +51,21 @@ const policy = {
 }
 
 describe("Novita boundary validation", () => {
+  it("reports verification guidance without exposing a challenge response", () => {
+    const error = new ApiError(
+      "<html>private credential details</html>",
+      403,
+      "/openapi/v1/user/info",
+      API_ERROR_CODES.ROBOT_CHALLENGE,
+    )
+    expect(novitaAccountPersistence.getValidationFailureMessage(error)).toBe(
+      "messages:errors.api.verificationRequired",
+    )
+    expect(novitaAccountPersistence.getHealthFailureReason(error)).toBe(
+      "messages:errors.api.verificationRequired",
+    )
+  })
+
   it("keeps completion identity failures in controlled local copy", () => {
     expect(
       getNovitaSafeErrorMessage(

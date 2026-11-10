@@ -30,6 +30,7 @@ describe("OpenAI-compatible model fetchers", () => {
     apiKey: "synthetic-openai-compatible-key",
   }
   const expectedRequest = {
+    directRequestReason: "caller_managed" as const,
     baseUrl: `${params.baseUrl}/v1`,
     auth: {
       authType: AuthTypeEnum.AccessToken,
@@ -71,6 +72,7 @@ describe("OpenAI-compatible model fetchers", () => {
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
     expect(mockFetchApiData).toHaveBeenCalledWith(
       {
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://openai-compatible.example.com/v1",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -304,6 +306,7 @@ describe("OpenAI-compatible model fetchers", () => {
 
     expect(mockFetchApiData).toHaveBeenCalledWith(
       {
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://openai-compatible.example.com/v1",
         auth: {
           authType: AuthTypeEnum.AccessToken,

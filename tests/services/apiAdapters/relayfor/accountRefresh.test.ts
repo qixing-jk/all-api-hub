@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { fetchRelayForAccountData } from "~/services/apiAdapters/relayfor/accountData"
 import { relayForAccountRefresh } from "~/services/apiAdapters/relayfor/accountRefresh"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -11,6 +12,7 @@ vi.mock("~/services/apiAdapters/relayfor/accountData", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relayfor.xyz",
   accountId: "acc-1",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token-123" },

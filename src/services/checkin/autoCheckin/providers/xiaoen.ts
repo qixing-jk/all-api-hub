@@ -16,6 +16,7 @@ import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
+import { createAccountCheckInRequest } from "./accountRequest"
 import type { AutoCheckinProvider } from "./contracts"
 import { detectWithStatusReadback } from "./detection"
 import {
@@ -74,13 +75,9 @@ export const xiaoenProvider: AutoCheckinProvider = {
   getStatus,
   async checkIn(account, context) {
     try {
-      const result = await performCheckIn({
-        ...createAccountApiRequestFromStoredAccount(account as SiteAccount)
-          .request,
-        tempWindowRequestSource: context.tempWindowRequestSource,
-        protectionBypassExecution: context.protectionBypassExecution,
-        observer: context.mutationLifecycle,
-      })
+      const result = await performCheckIn(
+        createAccountCheckInRequest(account as SiteAccount, context),
+      )
       return {
         status: result.alreadyChecked
           ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED

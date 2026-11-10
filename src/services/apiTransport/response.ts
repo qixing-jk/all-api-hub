@@ -1,7 +1,26 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiResponse } from "~/services/apiTransport/type"
+import { isProtectionResponse } from "~/services/protectionBypass/response"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
+
+/** Keep a known challenge distinct from malformed JSON or account rejection. */
+export function assertNotProtectionResponse(
+  body: unknown,
+  status: number,
+  endpoint?: string,
+  headers?: HeadersInit,
+): void {
+  if (!isProtectionResponse(body, headers)) return
+  const error = new ApiError(
+    t("messages:errors.api.verificationRequired"),
+    status,
+    endpoint,
+    API_ERROR_CODES.ROBOT_CHALLENGE,
+  )
+  error.unattributedMessage = true
+  throw error
+}
 
 /** Returns whether a value is the shared API response envelope. */
 export function isApiResponseBody(

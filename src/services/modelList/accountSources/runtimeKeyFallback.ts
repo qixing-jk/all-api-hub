@@ -9,6 +9,7 @@ import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createAccountModelPricingRequest } from "~/services/modelCatalog/accountRequest"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
@@ -55,6 +56,7 @@ const createRuntimeCatalogRequest = (
   apiKey: string,
   abortSignal?: AbortSignal,
 ): ModelCatalogRequest => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: runtimeKey.baseUrl || account.baseUrl,
   accountId: account.id,
   abortSignal,

@@ -14,6 +14,7 @@ import {
 } from "~/services/apiService/grsai"
 import { GRSAI_ENDPOINTS } from "~/services/apiService/grsai/constants"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -39,6 +40,7 @@ const ACCOUNT_ID = "6aba891720c8e541cff9d0e3"
 const ACCOUNT_EMAIL = "example@example.invalid"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://grsai.com",
   accountId: "account-example",
   auth: {

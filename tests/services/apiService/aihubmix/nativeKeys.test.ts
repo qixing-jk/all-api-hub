@@ -8,10 +8,12 @@ import {
   fetchAIHubMixKeys,
   updateAIHubMixKey,
 } from "~/services/apiService/aihubmix"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://console.aihubmix.com",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "saved-token" },
 }

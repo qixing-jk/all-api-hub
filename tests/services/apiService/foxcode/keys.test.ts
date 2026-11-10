@@ -16,6 +16,7 @@ import {
   updateKey,
 } from "~/services/apiService/foxcode/keys"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -24,6 +25,7 @@ import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 const origin = "https://foxcode.rjj.cc"
 const userId = "sample-account"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId },
 }
@@ -272,6 +274,7 @@ it.each([
     const capabilities = getSiteTypeCapabilities("foxcode").account!
     const catalog = capabilities.modelCatalog!
     const modelRequest = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://code1.newcli.com",
       auth: { authType: AuthTypeEnum.None, apiKey: key.key },
     }
@@ -324,6 +327,7 @@ it.each([false, true])(
     )
     const catalog = getSiteTypeCapabilities("foxcode").account!.modelCatalog!
     const modelRequest = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://code1.newcli.com",
       auth: {
         authType: AuthTypeEnum.None,

@@ -4,12 +4,14 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/keys/accountKeyResource"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://api2.laozhang.ai"
 const siteType = SITE_TYPES.LAOZHANG
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   accountId: "account-1",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test", userId: 42 },
@@ -85,7 +87,10 @@ function fixture() {
     http.put(`${baseUrl}/api/token/`, async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>
       writes.push(body)
-      Object.assign(rows.find((row) => row.id === body.id)!, body)
+      Object.assign(
+        rows.find((row) => row.id === body.id)!,
+        body,
+      )
       return HttpResponse.json({ success: true })
     }),
     http.post(`${baseUrl}/api/token/`, async ({ request }) => {

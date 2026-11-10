@@ -6,6 +6,7 @@ import {
   type AccountBootstrapRouteTarget,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/account/accountBootstrap"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -63,6 +64,7 @@ vi.mock(
 )
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://bootstrap.example.invalid",
   accountId: "account-1",
   auth: {

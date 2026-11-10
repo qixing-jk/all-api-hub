@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest"
 
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://new-api.example.invalid"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
 }

@@ -18,11 +18,13 @@ import {
   updateRequestyApiKeyLimit,
 } from "~/services/apiService/requesty"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const request: ApiServiceAccountRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://app.requesty.ai",
   accountId: "account-1",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "manage-key" },

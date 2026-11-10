@@ -1,4 +1,5 @@
 import { ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS } from "~/constants/accountLogin"
+import { isReplaySafeRemoteFetch } from "~/services/apiTransport/remoteLifecycle"
 import {
   fetchApi as fetchTransportApi,
   fetchApiData as fetchTransportApiData,
@@ -64,12 +65,12 @@ export function createProviderJsonRequests(
       request.allowAccountCredentialRecovery === true &&
       options.credentialRecovery ===
         ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read &&
+      isReplaySafeRemoteFetch(options.options, options.operationSemantics) &&
       (options.options?.method ?? "GET").toUpperCase() === "GET"
     ) {
       // Recovery depends on the adapter registry; load it after registration.
-      const { executeWithAccountCredentialRecovery } = await import(
-        "~/services/accountCredentialRecovery"
-      )
+      const { executeWithAccountCredentialRecovery } =
+        await import("~/services/accountCredentialRecovery")
       return executeWithAccountCredentialRecovery(request, runner)
     }
     return runner(request)

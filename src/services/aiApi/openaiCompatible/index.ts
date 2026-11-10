@@ -1,6 +1,8 @@
 import { ApiError } from "~/services/apiTransport/errors"
 import { sanitizeHeaderOverrideError } from "~/services/apiTransport/headerOverrides"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { fetchApiData } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   OpenAIAuthParams,
   UpstreamModelItem,
@@ -67,7 +69,10 @@ export const discoverOpenAICompatibleModels = async (
   for (const [index, candidateBaseUrl] of candidateBaseUrls.entries()) {
     try {
       const models = await fetchApiData<unknown>(
-        { ...request, baseUrl: candidateBaseUrl },
+        bindApiTransportRequest(
+          { ...request, baseUrl: candidateBaseUrl },
+          API_DIRECT_REQUEST_REASONS.CallerManaged,
+        ),
         {
           endpoint: "models",
           errorResponseDecoder: decodeOpenAICompatibleResponseError,

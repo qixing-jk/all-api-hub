@@ -6,7 +6,11 @@ import {
 } from "~/constants/autoDetect"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import {
+  API_DIRECT_REQUEST_REASONS,
+  summarizeApiServiceFetchContext,
+} from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -55,15 +59,20 @@ export async function getUserDataViaAPI({
       return null
     }
 
-    const userInfo = await accountBootstrap.fetchUserInfo({
-      baseUrl: url,
-      auth: {
-        authType: AuthTypeEnum.Cookie,
-      },
-      ...(fetchContext ? { fetchContext } : {}),
-      ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-    })
+    const userInfo = await accountBootstrap.fetchUserInfo(
+      bindApiTransportRequest(
+        {
+          baseUrl: url,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+          },
+          ...(fetchContext ? { fetchContext } : {}),
+          ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+          ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+        },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      ),
+    )
     const userId = normalizeAccountIdentity(userInfo?.id)
     if (!userInfo || !userId) {
       diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.SessionInvalid, {

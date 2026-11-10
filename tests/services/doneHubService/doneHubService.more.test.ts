@@ -64,9 +64,8 @@ describe("doneHubService additional flows", () => {
   })
 
   it("prepares channel form data from token-scoped models and resolved default groups", async () => {
-    const { prepareChannelFormData } = await import(
-      "~/services/managedSites/providers/doneHubService"
-    )
+    const { prepareChannelFormData } =
+      await import("~/services/managedSites/providers/doneHubService")
     const account = buildDisplaySiteData({
       name: "Done Hub Account",
       baseUrl: "https://proxy.example.com",
@@ -101,9 +100,8 @@ describe("doneHubService additional flows", () => {
   })
 
   it("passes Done Hub group lookup wiring to the default-group resolver", async () => {
-    const { prepareChannelFormData } = await import(
-      "~/services/managedSites/providers/doneHubService"
-    )
+    const { prepareChannelFormData } =
+      await import("~/services/managedSites/providers/doneHubService")
     const groupError = new Error("groups unavailable")
     mockResolveDefaultChannelGroups.mockImplementationOnce(async (options) => {
       const groups = await options.fetchSiteUserGroups({
@@ -134,6 +132,7 @@ describe("doneHubService additional flows", () => {
       onError: expect.any(Function),
     })
     expect(mockFetchSiteUserGroups).toHaveBeenCalledWith({
+      directRequestReason: "passive" as const,
       baseUrl: "https://done-hub.example.com",
       auth: {
         authType: "access_token",
@@ -145,9 +144,8 @@ describe("doneHubService additional flows", () => {
   })
 
   it("uses the AIHubMix API origin for managed-site channel imports", async () => {
-    const { prepareChannelFormData } = await import(
-      "~/services/managedSites/providers/doneHubService"
-    )
+    const { prepareChannelFormData } =
+      await import("~/services/managedSites/providers/doneHubService")
     const account = buildDisplaySiteData({
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://console.aihubmix.com",
@@ -172,9 +170,8 @@ describe("doneHubService additional flows", () => {
   })
 
   it("marks model prefill failure and trims payload fields when building a channel payload", async () => {
-    const { buildChannelPayload, prepareChannelFormData } = await import(
-      "~/services/managedSites/providers/doneHubService"
-    )
+    const { buildChannelPayload, prepareChannelFormData } =
+      await import("~/services/managedSites/providers/doneHubService")
 
     mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: ["gpt-4o"],
@@ -212,9 +209,8 @@ describe("doneHubService additional flows", () => {
   })
 
   it("returns config helper fallbacks when preferences are missing or reading fails", async () => {
-    const { checkValidDoneHubConfig, getDoneHubConfig } = await import(
-      "~/services/managedSites/providers/doneHubService"
-    )
+    const { checkValidDoneHubConfig, getDoneHubConfig } =
+      await import("~/services/managedSites/providers/doneHubService")
 
     mockGetPreferences.mockResolvedValueOnce(null)
     await expect(checkValidDoneHubConfig()).resolves.toBe(false)

@@ -20,6 +20,7 @@ import {
 } from "~/services/apiService/openrouter"
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   AuthTypeEnum,
@@ -29,6 +30,7 @@ import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://mirror.example.invalid",
   managementApiBaseUrl: "https://openrouter.ai",
   accountId: "openrouter-account",

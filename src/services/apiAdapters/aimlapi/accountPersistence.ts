@@ -3,6 +3,7 @@ import { AIMLAPI_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifier
 import { fetchAimlApiUserInfo } from "~/services/apiAdapters/aimlapi/accountIdentity"
 import type { AccountPersistenceCapability } from "~/services/apiAdapters/contracts/accountPersistence"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { t } from "~/utils/i18n/core"
 
@@ -19,6 +20,8 @@ function getAimlApiSafeErrorMessage(
   unknownFallback: string,
 ): string {
   if (error instanceof ApiError) {
+    if (error.code === API_ERROR_CODES.ROBOT_CHALLENGE)
+      return t("messages:errors.api.verificationRequired")
     if (error.code === API_ERROR_CODES.HTTP_401)
       return t("messages:aimlapi.credentialInvalid")
     if (error.code === API_ERROR_CODES.HTTP_403)
@@ -55,6 +58,8 @@ export const aimlApiAccountPersistence: AccountPersistenceCapability = {
     // `GET /v1/key` proves the management key; with a regular key present the
     // billing detail also names the account, which is the better identity.
     const info = await fetchAimlApiUserInfo({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+      protectionBypassExecution: undefined,
       baseUrl: AIMLAPI_WEB_ORIGIN,
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: credential },
       ...(regularKey ? { aimlApiKey: regularKey } : {}),

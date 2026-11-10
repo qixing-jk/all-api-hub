@@ -1,3 +1,5 @@
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+
 // Initialize provider registrations before measuring the shared snapshot queries.
 import "~/services/checkin/autoCheckin/providers"
 
@@ -40,6 +42,7 @@ const identity = {
 
 const accountRequest = (): ApiServiceAccountRequest =>
   ({
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: origin,
     auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
     includeTodayCashflow: true,
@@ -487,6 +490,7 @@ describe("Daya API keys", () => {
       }),
     ])
     const keys = await fetchDayaKeys({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: origin,
       auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
     })
@@ -518,6 +522,7 @@ describe("Daya API keys", () => {
       ),
     ])
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: origin,
       auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
     }
@@ -551,6 +556,7 @@ describe("Daya API keys", () => {
     ])
     const result = await createDayaKey(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: origin,
         auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
       },
@@ -584,6 +590,7 @@ describe("Daya API keys", () => {
     ])
     const updated = await updateDayaKey(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: origin,
         auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
       },
@@ -613,6 +620,7 @@ describe("Daya API keys", () => {
     await expect(
       deleteDayaKey(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: origin,
           auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
         },
@@ -640,6 +648,7 @@ describe("Daya API keys", () => {
     ])
     await expect(
       fetchDayaGroups({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: origin,
         auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
       }),
@@ -680,6 +689,7 @@ describe("Daya API daily check-in", () => {
       ),
     ])
     const overview = await fetchDayaCheckInOverview({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: origin,
       auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
     })
@@ -734,6 +744,7 @@ describe("Daya API daily check-in", () => {
       }),
     )
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: origin,
       auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
     }
@@ -780,6 +791,7 @@ describe("Daya API daily check-in", () => {
     ])
     await expect(
       performDayaCheckIn({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: origin,
         auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
       }),

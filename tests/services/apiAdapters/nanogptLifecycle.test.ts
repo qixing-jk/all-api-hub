@@ -9,6 +9,7 @@ import {
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -60,6 +61,7 @@ it("returns the saved inference credential while the balance endpoint is offline
     getSiteTypeCapabilities(
       SITE_TYPES.NANOGPT,
     ).account!.serviceCredential!.fetch({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: CONSOLE_ORIGIN,
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -132,6 +134,7 @@ it("rejects empty persistence credentials and has no check-in refresh", async ()
   ).toBeUndefined()
   await expect(
     account.refresh!.fetchCheckInSupport!({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: CONSOLE_ORIGIN,
       auth: { authType: AuthTypeEnum.AccessToken },
     }),
@@ -218,6 +221,7 @@ describe("NanoGPT bootstrap", () => {
 
     await expect(
       bootstrap.loadBootstrapFacts({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: CONSOLE_ORIGIN,
         auth: { authType: AuthTypeEnum.AccessToken },
       }),
@@ -255,6 +259,7 @@ describe("NanoGPT bootstrap", () => {
 
     await expect(
       bootstrap.getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: CONSOLE_ORIGIN,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -379,6 +384,7 @@ describe("NanoGPT refresh identity", () => {
     const refresh = getSiteTypeCapabilities(SITE_TYPES.NANOGPT).account!
       .refresh!
     const result = await refresh.refreshAccount({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: CONSOLE_ORIGIN,
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -511,6 +517,7 @@ it("exposes only the saved inference secret as a runtime credential from a dual 
   const credential = await getSiteTypeCapabilities(
     SITE_TYPES.NANOGPT,
   ).account!.serviceCredential!.fetch({
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: CONSOLE_ORIGIN,
     auth: {
       authType: AuthTypeEnum.AccessToken,
@@ -526,6 +533,7 @@ it("does not export management-only credentials as inference keys", async () => 
   const credential = await getSiteTypeCapabilities(
     SITE_TYPES.NANOGPT,
   ).account!.serviceCredential!.fetch({
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: CONSOLE_ORIGIN,
     auth: {
       authType: AuthTypeEnum.AccessToken,

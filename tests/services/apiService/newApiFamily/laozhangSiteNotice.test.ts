@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { fetchLaoZhangSiteNotice } from "~/services/apiService/newApiFamily/variants/laozhangSiteNotice"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { fetchApiMock, loggerWarnMock } = vi.hoisted(() => ({
@@ -21,6 +22,7 @@ vi.mock("~/utils/core/logger", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://notice.example.invalid",
   accountId: "account-1",
   auth: {

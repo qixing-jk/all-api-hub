@@ -14,6 +14,8 @@ import {
 } from "~/services/apiService/sub2api/keys"
 import { parseSub2ApiNativeKey } from "~/services/apiService/sub2api/parsing"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -50,20 +52,24 @@ vi.mock(
 
 const createRequest = (
   overrides: Partial<Sub2ApiAuthSessionRequest<ApiServiceRequest>> = {},
-): Sub2ApiAuthSessionRequest<ApiServiceRequest> => ({
-  baseUrl: "https://sub2.example.com",
-  accountId: "acc-1",
-  sub2apiAuthSession: {
-    getLatestAuth: (...args: any[]) => getLatestAuthMock(...args),
-    persistAuthUpdate: (...args: any[]) => persistAuthUpdateMock(...args),
-  },
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    userId: "1",
-    accessToken: "old-jwt",
-  },
-  ...overrides,
-})
+): Sub2ApiAuthSessionRequest<ApiServiceRequest> =>
+  bindApiTransportRequest(
+    {
+      baseUrl: "https://sub2.example.com",
+      accountId: "acc-1",
+      sub2apiAuthSession: {
+        getLatestAuth: (...args: any[]) => getLatestAuthMock(...args),
+        persistAuthUpdate: (...args: any[]) => persistAuthUpdateMock(...args),
+      },
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: "1",
+        accessToken: "old-jwt",
+      },
+      ...overrides,
+    },
+    overrides.directRequestReason ?? API_DIRECT_REQUEST_REASONS.Passive,
+  )
 
 describe("apiService sub2api key management service", () => {
   beforeEach(() => {

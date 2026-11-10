@@ -5,6 +5,7 @@ import {
   fetchUserGroups,
 } from "~/services/apiService/newApiFamily/variants/vApi"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { fetchApiDataMock, fetchLegacyAccountAvailableModelsMock } = vi.hoisted(
@@ -25,6 +26,7 @@ vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://v-api.example.invalid",
   accountId: "account-1",
   auth: {

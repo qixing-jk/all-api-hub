@@ -11,6 +11,7 @@ import {
   type GrsaiConsoleSession,
 } from "~/services/apiService/grsai/transport"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
@@ -19,6 +20,7 @@ import { GRSAI_SIGNATURE_MATERIAL } from "./signatureFixture"
 const CONSOLE_ORIGIN = "https://eb.grsaiapi.com"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://grsai.com",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "session-token" },
 }
@@ -185,6 +187,7 @@ describe("grsai console transport", () => {
     await expect(
       fetchGrsaiConsole(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://grsai.com",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "  " },
         },

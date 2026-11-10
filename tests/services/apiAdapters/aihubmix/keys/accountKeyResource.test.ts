@@ -5,6 +5,7 @@ import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accoun
 import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/keys/accountKeyResource"
 import type { AIHubMixKey } from "~/services/apiService/aihubmix/keyTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -27,6 +28,7 @@ vi.mock("~/services/apiService/aihubmix", async (importOriginal) => ({
 const input = {
   account: { id: "a1", name: "AIHubMix", siteType: SITE_TYPES.AIHUBMIX },
   request: {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: "https://console.aihubmix.com",
     accountId: "a1",
     auth: {

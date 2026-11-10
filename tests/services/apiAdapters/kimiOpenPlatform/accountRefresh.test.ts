@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { kimiOpenPlatformAccountRefresh } from "~/services/apiAdapters/kimiOpenPlatform/accountRefresh"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 import { createCheckInConfig } from "../checkInFixtures"
@@ -20,6 +21,7 @@ vi.mock("~/services/apiService/kimiOpenPlatform/transport", () => ({
 }))
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://platform.kimi.com",
   accountId: "kimi-acc-1",
   siteType: SITE_TYPES.KIMI,

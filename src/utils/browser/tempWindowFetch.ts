@@ -75,8 +75,8 @@ function hasAffirmativeTempWindowPreDispatchEvidence(
 
   return Boolean(
     response.code &&
-      (TEMP_WINDOW_POLICY_BLOCK_CODES.has(response.code) ||
-        isTempWindowUnsupportedErrorCode(response.code)),
+    (TEMP_WINDOW_POLICY_BLOCK_CODES.has(response.code) ||
+      isTempWindowUnsupportedErrorCode(response.code)),
   )
 }
 
@@ -103,9 +103,8 @@ export async function executeProtectionBypassTask<
   request: ProtectionBypassExecuteRequest<TTask>,
 ): Promise<TempContextTaskResult<TTask>> {
   if (isExtensionBackground()) {
-    const { protectionBypassCoordinator } = await import(
-      "~/entrypoints/background/protectionBypassCoordinator"
-    )
+    const { protectionBypassCoordinator } =
+      await import("~/entrypoints/background/protectionBypassCoordinator")
     return await protectionBypassCoordinator.execute(request)
   }
   return await sendRuntimeMessage({
@@ -344,6 +343,7 @@ const TEMP_WINDOW_FALLBACK_STATUS = new Set([403])
 const TEMP_WINDOW_FALLBACK_CODES = new Set<ApiErrorCode>([
   API_ERROR_CODES.HTTP_403,
   API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
+  API_ERROR_CODES.ROBOT_CHALLENGE,
 ])
 
 /**
@@ -448,7 +448,9 @@ export async function executeWithTempWindowFallback<TResult>(
   try {
     return await primaryRequest()
   } catch (primaryError) {
-    if (!isReplaySafeRemoteFetch(context.fetchOptions)) {
+    if (
+      !isReplaySafeRemoteFetch(context.fetchOptions, context.operationSemantics)
+    ) {
       throw primaryError
     }
     if (!(await shouldUseTempWindowFallback(primaryError, context))) {
@@ -618,7 +620,10 @@ async function fetchViaTempWindow<TResult>(
   const lifecycle = context.transportLifecycleObserver
     ? observeRemoteFetchLifecycle(requestId, context.transportLifecycleObserver)
     : null
-  const replaySafe = isReplaySafeRemoteFetch(fetchOptions)
+  const replaySafe = isReplaySafeRemoteFetch(
+    fetchOptions,
+    context.operationSemantics,
+  )
   const abortSignal = fetchOptions.signal
   let hasAffirmativePreDispatchEvidence = false
   const disposeLifecycle = () => lifecycle?.dispose()

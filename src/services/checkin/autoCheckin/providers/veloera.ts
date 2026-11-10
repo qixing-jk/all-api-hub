@@ -13,6 +13,8 @@ import {
 } from "~/constants/checkIn"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
@@ -64,19 +66,23 @@ const createRequest = (
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: AutoCheckinProviderContext["protectionBypassExecution"],
   mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
-): ApiServiceRequest => ({
-  baseUrl: account.site_url,
-  accountId: account.id,
-  cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-  auth: {
-    authType: getEffectiveAuthType(account),
-    userId: account.account_info.id,
-    accessToken: account.account_info.access_token,
-  },
-  ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-  ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-  ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
-})
+): ApiServiceRequest =>
+  bindApiTransportRequest(
+    {
+      baseUrl: account.site_url,
+      accountId: account.id,
+      cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+      auth: {
+        authType: getEffectiveAuthType(account),
+        userId: account.account_info.id,
+        accessToken: account.account_info.access_token,
+      },
+      ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+      ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
+    },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
 
 type VeloeraCheckInObservation = {
   enabled?: boolean
@@ -219,6 +225,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
     request ??
     (account
       ? {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: account.site_url,
           accountId: account.id,
           cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,

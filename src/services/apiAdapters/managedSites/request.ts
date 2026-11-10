@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   ApiServiceRequest,
   ApiTransportRequestObserver,
@@ -37,6 +38,7 @@ export function toManagedSiteApiServiceRequest(
   options?: ManagedSiteApiServiceRequestOptions,
 ) {
   return {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.CredentialIsolation,
     siteType: options?.siteType,
     baseUrl: config.baseUrl,
     auth: {

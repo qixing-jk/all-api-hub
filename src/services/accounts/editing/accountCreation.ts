@@ -30,6 +30,7 @@ import { withManualAccountDataFetchTimeout } from "~/services/accounts/editing/a
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
 import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteHealthStatus, type SiteAccount } from "~/types"
@@ -269,6 +270,7 @@ export async function validateAndSaveAccount(
           ),
       },
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: requestBaseUrl,
         siteType: normalizedSiteType,
         checkIn: checkInConfig,

@@ -8,6 +8,7 @@ import {
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
 import { createKimiOpenPlatformKeyResources } from "~/services/apiAdapters/kimiOpenPlatform/accountKeyResource"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
@@ -53,6 +54,7 @@ const openInput = {
     siteType: SITE_TYPES.KIMI_GLOBAL,
   },
   request: {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     accountId: "kimi-acc",
     baseUrl: "https://platform.kimi.ai",
     auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },

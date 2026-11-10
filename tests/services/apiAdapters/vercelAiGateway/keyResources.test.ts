@@ -20,6 +20,7 @@ import {
 import { vercelAiGatewayKeyResources } from "~/services/apiAdapters/vercelAiGateway/keyResources"
 import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/links"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
@@ -28,6 +29,7 @@ import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const TEAM_ID = "team_test"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://vercel.com",
   accountId: "acc-vercel",
   auth: {

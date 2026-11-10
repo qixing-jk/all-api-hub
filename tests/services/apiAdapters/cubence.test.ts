@@ -7,6 +7,7 @@ import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor
 import { cubenceKeyResources } from "~/services/apiAdapters/cubence/keyResources"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import * as cubenceKeys from "~/services/apiService/cubence/keys"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 describe("Cubence registration and editor", () => {
@@ -169,6 +170,7 @@ describe("Cubence registration and editor", () => {
       const session = await cubenceKeyResources.open({
         account: { id: "test", name: "Cubence", siteType: "cubence" },
         request: {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           accountId: "test",
           baseUrl: "https://cubence.com",
           auth: { authType: AuthTypeEnum.Cookie, userId: "7" },

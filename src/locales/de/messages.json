@@ -108,9 +108,11 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "Ungültiges Antwortformat",
+      "missingRecoveryPolicy": "Die Erweiterung konnte diese Anfrage nicht vorbereiten. Aktualisieren Sie die Erweiterung oder melden Sie das Problem.",
       "nonJsonContent": "{{contentType}} statt JSON zurückgegeben (HTTP {{status}})",
       "onlyJsonSupported": "Nur JSON-Antworten werden unterstützt",
-      "requestFailed": "Anfrage fehlgeschlagen: {{status}}"
+      "requestFailed": "Anfrage fehlgeschlagen: {{status}}",
+      "verificationRequired": "Die Website hat eine Verifizierungsseite zurückgegeben. Schließen Sie die Verifizierung auf der Website ab und versuchen Sie es erneut."
     },
     "dayaRedemptionUnconfirmed": "Prüfen Sie das Ergebnis in der offiziellen Konsole. Kontrollieren Sie die Bereitstellung oder schließen Sie die Anwendung des Rabattcodes ab, bevor Sie es erneut versuchen.",
     "operation": {

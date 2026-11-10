@@ -106,9 +106,11 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "響應資料格式錯誤",
+      "missingRecoveryPolicy": "擴充功能無法準備此請求，請更新擴充功能或回報此問題。",
       "nonJsonContent": "回傳了 {{contentType}} 而不是 JSON（HTTP {{status}}）",
       "onlyJsonSupported": "僅支援 JSON 響應資料",
-      "requestFailed": "請求失敗：{{status}}"
+      "requestFailed": "請求失敗：{{status}}",
+      "verificationRequired": "站點傳回了人機驗證頁面，請到站點完成驗證後重試。"
     },
     "dayaRedemptionUnconfirmed": "請到官方控制台核對兌換結果，確認權益發放狀態或完成優惠碼套用後再重試。",
     "operation": {

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { fetchSafariNativeCookie } from "~/services/apiTransport/safariNativeCookie"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const api = vi.hoisted(() => ({
@@ -80,6 +81,7 @@ describe("Safari native Cookie transport boundaries", () => {
   it("keeps refresh-style Cookie DTOs on private Safari transport without a stored-account factory", async () => {
     const result = await fetchApiResponse(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: session.origin,
         accountId: "owned-refresh-fixture",
         auth: {

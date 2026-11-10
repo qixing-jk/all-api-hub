@@ -332,6 +332,7 @@ describe("siteRouteResolver", () => {
       ),
     ).resolves.toBe("https://new-api.example/sign-in")
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "provider_protocol" as const,
       baseUrl: "https://new-api.example",
       auth: { authType: AuthTypeEnum.None },
     })

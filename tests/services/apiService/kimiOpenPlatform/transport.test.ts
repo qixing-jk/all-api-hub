@@ -11,6 +11,7 @@ import {
   persistKimiAuthState,
 } from "~/services/apiService/kimiOpenPlatform/transport"
 import * as requestExecution from "~/services/apiTransport/requestExecution"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -26,6 +27,7 @@ vi.mock("~/services/accounts/accountStorage/kimiAuthPersistence", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://platform.kimi.ai/console/api-keys",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "expired-access" },
   kimiOpenPlatformAuth: {
@@ -169,6 +171,7 @@ describe("kimi console transport", () => {
     await expect(
       fetchKimiConsole(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: request.baseUrl,
           auth: { authType: AuthTypeEnum.AccessToken },
         },

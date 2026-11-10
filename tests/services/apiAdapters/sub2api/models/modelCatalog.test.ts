@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/models/modelCatalog"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { fetchSub2ApiRuntimeModelsMock } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ describe("sub2ApiModelCatalog", () => {
     ])
 
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://sub2.example.com",
       accountId: "account-1",
       auth: {

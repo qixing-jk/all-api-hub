@@ -6,6 +6,7 @@ import {
   fetchChannels,
   fetchInferenceOrigin,
 } from "~/services/apiService/foxcode/catalog"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -13,6 +14,7 @@ import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 
 const origin = "https://foxcode.rjj.cc"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: "user" },
 }

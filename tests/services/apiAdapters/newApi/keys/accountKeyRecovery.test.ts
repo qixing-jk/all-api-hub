@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/keys/accountKeyResource"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   ApiServiceRequest,
   FetchApiOptions,
@@ -99,6 +100,7 @@ it.each([false, true])(
       return { success: true }
     })
     const request: ApiServiceRequest = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CredentialIsolation,
       baseUrl: account.site_url,
       accountId: account.id,
       siteType: SITE_TYPES.ANYROUTER,

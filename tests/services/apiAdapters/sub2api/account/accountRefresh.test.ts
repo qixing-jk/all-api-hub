@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { sub2ApiAccountRefresh } from "~/services/apiAdapters/sub2api/account/accountRefresh"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { createCheckInConfig } from "~~/tests/services/apiAdapters/checkInFixtures"
 
@@ -16,6 +17,7 @@ vi.mock("~/services/apiService/sub2api/account/accountData", () => ({
 }))
 
 const supportRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://sub2.example.invalid",
   auth: {
     authType: AuthTypeEnum.AccessToken,

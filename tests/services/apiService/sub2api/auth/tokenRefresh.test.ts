@@ -7,6 +7,8 @@ import {
   SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
   Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/auth/tokenRefresh"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -20,15 +22,19 @@ vi.mock("~/services/apiTransport/request", () => ({
 
 const createRequest = (
   overrides: Partial<ApiServiceRequest> = {},
-): ApiServiceRequest => ({
-  baseUrl: "https://auth.example.invalid",
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    userId: "42",
-    accessToken: "current-access",
-  },
-  ...overrides,
-})
+): ApiServiceRequest =>
+  bindApiTransportRequest(
+    {
+      baseUrl: "https://auth.example.invalid",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: "42",
+        accessToken: "current-access",
+      },
+      ...overrides,
+    },
+    overrides.directRequestReason ?? API_DIRECT_REQUEST_REASONS.Passive,
+  )
 
 const captureRefreshError = async (
   params: Parameters<typeof refreshSub2ApiTokens>[0],

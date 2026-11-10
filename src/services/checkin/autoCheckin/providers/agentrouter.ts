@@ -25,6 +25,7 @@ import {
   fetchAgentRouterPublicStatus,
   type AgentRouterPublicStatusEnvelope,
 } from "~/services/apiService/agentrouter/status"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createTerminalFailureResult,
@@ -259,6 +260,7 @@ export const agentRouterProvider = createAgentRouterProvider({
   fetchStatus: async (context) =>
     await fetchAgentRouterPublicStatus(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: context.account?.site_url ?? context.request!.baseUrl,
         auth: { authType: AuthTypeEnum.None },
       },

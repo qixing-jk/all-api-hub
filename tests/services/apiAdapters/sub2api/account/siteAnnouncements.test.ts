@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { sub2ApiSiteAnnouncements } from "~/services/apiAdapters/sub2api/account/siteAnnouncements"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { fetchSub2ApiAnnouncementsMock, markSub2ApiAnnouncementReadMock } =
@@ -15,6 +16,7 @@ vi.mock("~/services/apiService/sub2api/account/announcements", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://sub2.example.com",
   accountId: "account-1",
   auth: {

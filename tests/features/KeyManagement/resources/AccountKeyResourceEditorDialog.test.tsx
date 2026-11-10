@@ -37,6 +37,7 @@ import { createPmApiKeyEditor } from "~/services/apiAdapters/pmapi/keyEditor"
 import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keys/keyResourceEditor"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -155,6 +156,7 @@ it("lets AI/ML API users search and select models without typing IDs", async () 
 
 it("keeps Novita model entry enabled when console options fall back to an empty list", async () => {
   const definition = novitaKeyEditor({
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: "https://novita.ai",
     auth: {
       authType: AuthTypeEnum.AccessToken,
@@ -336,6 +338,7 @@ it("keeps the native RightCode command valid after changing the model dependency
   expect(definition.validate(submit.mock.calls[0]![1]).valid).toBe(true)
 })
 const nativeRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://example.invalid",
   auth: {
     authType: AuthTypeEnum.AccessToken,

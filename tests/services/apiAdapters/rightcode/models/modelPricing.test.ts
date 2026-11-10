@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import { rightCodeModelPricing } from "~/services/apiAdapters/rightcode/models/modelPricing"
 import * as rightCodeApi from "~/services/apiService/rightcode"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -45,6 +46,7 @@ describe("rightCodeModelPricing", () => {
     ])
 
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://www.right.codes",
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
     }

@@ -8,6 +8,7 @@ import { fetchAccountData } from "~/services/apiService/daya"
 import { fetchDayaUserInfo } from "~/services/apiService/daya/identity"
 import { performDayaCheckIn } from "~/services/apiService/daya/rewards"
 import { fetchDayaData } from "~/services/apiService/daya/transport"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -19,6 +20,7 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const origin = "https://api.dayaai.com"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
 }
@@ -139,7 +141,11 @@ describe("Daya account workflows", () => {
         context: {},
       },
       {
-        createServiceRequest: ({ baseUrl, auth }) => ({ baseUrl, auth }),
+        createServiceRequest: ({ baseUrl, auth }) => ({
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+          baseUrl,
+          auth,
+        }),
         captureRecoveryData,
         createInitialCheckInConfig: () => checkIn,
         fetchSiteName: async () => "Daya API",

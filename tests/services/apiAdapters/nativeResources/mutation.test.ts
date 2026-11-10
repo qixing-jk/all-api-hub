@@ -6,10 +6,12 @@ import {
   runNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/mutation"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiTransportRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const createRequest = (): ApiTransportRequest => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   auth: { authType: AuthTypeEnum.None },
   baseUrl: "https://api.example.invalid",
 })

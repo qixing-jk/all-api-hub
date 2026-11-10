@@ -7,6 +7,7 @@ import {
   performHiyoDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckIn"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -34,6 +35,7 @@ vi.mock(
 )
 
 const request: ApiServiceRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://free.hiyo.top",
   auth: {
     authType: AuthTypeEnum.AccessToken,

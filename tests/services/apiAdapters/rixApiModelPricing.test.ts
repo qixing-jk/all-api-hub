@@ -9,6 +9,7 @@ import {
 import { clearRixApiDialectChoicesForTests } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
 import { ApiError } from "~/services/apiTransport/errors"
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
@@ -36,6 +37,7 @@ vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
 }))
 
 const accountRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://rix.example.invalid",
   auth: {
     authType: AuthTypeEnum.AccessToken,

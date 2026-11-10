@@ -287,9 +287,8 @@ describe("account persistence and form validation", () => {
       })
 
       expect(result.success).toBe(true)
-      const { getSiteTypeCapabilities } = await import(
-        "~/services/apiAdapters/registry"
-      )
+      const { getSiteTypeCapabilities } =
+        await import("~/services/apiAdapters/registry")
       expect(vi.mocked(getSiteTypeCapabilities)).toHaveBeenCalledWith(
         SITE_TYPES.UNKNOWN,
       )
@@ -653,6 +652,20 @@ describe("account persistence and form validation", () => {
   })
 
   describe("getSiteName", () => {
+    it.each([
+      ["My API portal", "My API portal"],
+      ["New API", ""],
+      [undefined, ""],
+    ])(
+      "handles a browser tab without a URL and title %s",
+      async (title, expected) => {
+        await expect(getSiteName({ title } as browser.tabs.Tab)).resolves.toBe(
+          expected,
+        )
+        expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+      },
+    )
+
     it("preserves a deployment title on registered adapter-family hosts", async () => {
       expect(
         await getSiteName({
@@ -754,13 +767,13 @@ describe("account persistence and form validation", () => {
       )
 
       expect(result).toBe("Sub2 Portal")
-      const { getSiteTypeCapabilities } = await import(
-        "~/services/apiAdapters/registry"
-      )
+      const { getSiteTypeCapabilities } =
+        await import("~/services/apiAdapters/registry")
       expect(vi.mocked(getSiteTypeCapabilities)).toHaveBeenCalledWith(
         SITE_TYPES.SUB2API,
       )
       expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+        directRequestReason: "passive" as const,
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.None },
       })
@@ -796,6 +809,7 @@ describe("account persistence and form validation", () => {
 
       expect(result).toBe("Billing Center")
       expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+        directRequestReason: "passive" as const,
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.None },
       })

@@ -10,6 +10,7 @@ import { useFilteredModels } from "~/features/ModelList/filtering/useFilteredMod
 import ModelItem from "~/features/ModelList/presentation/ModelItem"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
 import type { PricingScenario } from "~/services/modelPricing/pricingPlan"
@@ -88,6 +89,7 @@ describe("APIyi model groups and prices", () => {
     pricing = await getSiteTypeCapabilities(
       SITE_TYPES.APIYI,
     ).account!.modelPricing!.fetchPricing({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: account.baseUrl,
       auth: { authType: AuthTypeEnum.Cookie, userId: account.userId },
     })

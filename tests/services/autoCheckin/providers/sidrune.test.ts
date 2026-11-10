@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { fetchSidruneDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/sidruneCheckIn"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -20,6 +21,7 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
 
 const methodId = AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://global.sidrune.ai",
   auth: {
     authType: AuthTypeEnum.AccessToken,

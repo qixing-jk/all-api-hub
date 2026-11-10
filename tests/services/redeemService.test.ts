@@ -106,6 +106,7 @@ describe("redeemService.redeemCodeForAccount", () => {
     expect(getSiteTypeCapabilities).toHaveBeenCalledWith("new-api")
     expect(redeem).toHaveBeenCalledWith({
       request: {
+        directRequestReason: "caller_managed" as const,
         allowAccountCredentialRecovery: true,
         baseUrl: "https://example.com",
         managementApiBaseUrl: "https://example.com",
@@ -196,6 +197,7 @@ describe("redeemService.redeemCodeForAccount", () => {
 
     expect(redeem).toHaveBeenCalledWith({
       request: {
+        directRequestReason: "caller_managed" as const,
         allowAccountCredentialRecovery: true,
         baseUrl: "https://one-api.example.com",
         managementApiBaseUrl: "https://one-api.example.com",

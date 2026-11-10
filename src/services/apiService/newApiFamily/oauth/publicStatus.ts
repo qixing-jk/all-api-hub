@@ -1,5 +1,6 @@
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types/auth"
 
 import type { NewApiOAuthProvider } from "./contracts"
@@ -9,13 +10,16 @@ import { discoverNewApiLoginMethods } from "./discovery"
 export async function fetchNewApiLoginMethods(
   baseUrl: string,
   providers: readonly (
-    | NewApiOAuthProvider
-    | typeof ACCOUNT_LOGIN_METHODS.Password
+    NewApiOAuthProvider | typeof ACCOUNT_LOGIN_METHODS.Password
   )[],
   matchesSystemName?: (value: unknown) => boolean,
 ) {
   const response = await newApiFamilyRequests.envelope<Record<string, unknown>>(
-    { baseUrl, auth: { authType: AuthTypeEnum.None } },
+    {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
+      baseUrl,
+      auth: { authType: AuthTypeEnum.None },
+    },
     { endpoint: "/api/status" },
   )
   if (response.success !== true || !response.data)

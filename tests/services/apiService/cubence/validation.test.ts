@@ -10,6 +10,7 @@ import { fetchCubenceModels } from "~/services/apiService/cubence/catalog"
 import { fetchUserInfo } from "~/services/apiService/cubence/identity"
 import { fetchGroups, fetchKeys } from "~/services/apiService/cubence/keys"
 import { readCubenceResponse } from "~/services/apiService/cubence/transport"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { getCookiesForDomain } from "~/utils/browser/cookies"
 import i18n from "~/utils/i18n/core"
@@ -20,6 +21,7 @@ import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const origin = "https://cubence.com"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
 }

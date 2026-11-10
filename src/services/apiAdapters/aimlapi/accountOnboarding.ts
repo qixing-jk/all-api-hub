@@ -17,6 +17,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountOnboarding"
 import { createAimlApiConsoleClient } from "~/services/apiService/aimlapi/console"
 import { AIMLAPI_ONBOARDING_ERRORS as errors } from "~/services/apiService/aimlapi/constants"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { CrossContextStorageLockUnavailableError } from "~/services/core/storageWriteLock"
 import type { AutoDetectData } from "~/services/siteDetection/autoDetectContracts"
@@ -62,6 +63,8 @@ function createAimlApiOnboardingSession(
   /** Resolve credential-owned identity and cross-check it when acquired through a session. */
   async function verifyAccount(): Promise<AccountAutoDetectResponse> {
     const info = await fetchAimlApiUserInfo({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+      protectionBypassExecution: undefined,
       baseUrl: AIMLAPI_WEB_ORIGIN,
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: primary },
       ...(regular ? { aimlApiKey: regular } : {}),

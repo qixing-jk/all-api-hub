@@ -14,6 +14,7 @@ import {
   readRequestyRecord,
 } from "~/services/apiService/requesty/transport"
 import { ApiError } from "~/services/apiTransport/errors"
+import type { ApiTransportRecovery } from "~/services/apiTransport/type"
 import { isRecord } from "~/utils/core/object"
 
 export type { RequestyApiKey } from "./keyManagement"
@@ -24,6 +25,7 @@ export type RequestyManageRequest = Pick<
   ApiServiceAccountRequest,
   "auth" | "baseUrl" | "abortSignal" | "accountId" | "siteType"
 > &
+  ApiTransportRecovery &
   Partial<Pick<ApiServiceAccountRequest, "checkIn">>
 
 export interface RequestyOrg {

@@ -41,9 +41,8 @@ describe("AI API model fetchers", () => {
           last_id: "cursor-2",
         })
 
-      const { fetchAnthropicModelIds } = await import(
-        "~/services/aiApi/anthropic"
-      )
+      const { fetchAnthropicModelIds } =
+        await import("~/services/aiApi/anthropic")
 
       await expect(
         fetchAnthropicModelIds({
@@ -55,6 +54,7 @@ describe("AI API model fetchers", () => {
       expect(mocks.fetchApi).toHaveBeenNthCalledWith(
         1,
         {
+          directRequestReason: "credential_isolation" as const,
           baseUrl: "https://anthropic.example.test/v1",
           auth: { authType: "none" },
         },
@@ -87,9 +87,8 @@ describe("AI API model fetchers", () => {
         last_id: "",
       })
 
-      const { fetchAnthropicModelIds } = await import(
-        "~/services/aiApi/anthropic"
-      )
+      const { fetchAnthropicModelIds } =
+        await import("~/services/aiApi/anthropic")
 
       await expect(
         fetchAnthropicModelIds({
@@ -110,9 +109,8 @@ describe("AI API model fetchers", () => {
       )
       mocks.fetchApi.mockRejectedValueOnce(failure)
 
-      const { fetchAnthropicModelIds } = await import(
-        "~/services/aiApi/anthropic"
-      )
+      const { fetchAnthropicModelIds } =
+        await import("~/services/aiApi/anthropic")
 
       await expect(
         fetchAnthropicModelIds({
@@ -149,9 +147,8 @@ describe("AI API model fetchers", () => {
           has_more: false,
         })
 
-      const { fetchAnthropicModelIds } = await import(
-        "~/services/aiApi/anthropic"
-      )
+      const { fetchAnthropicModelIds } =
+        await import("~/services/aiApi/anthropic")
 
       await expect(
         fetchAnthropicModelIds({
@@ -211,9 +208,8 @@ describe("AI API model fetchers", () => {
         last_id: "cursor-2000",
       })
 
-      const { fetchAnthropicModelIds } = await import(
-        "~/services/aiApi/anthropic"
-      )
+      const { fetchAnthropicModelIds } =
+        await import("~/services/aiApi/anthropic")
 
       const result = await fetchAnthropicModelIds({
         baseUrl: "https://anthropic.example.test",
@@ -259,6 +255,7 @@ describe("AI API model fetchers", () => {
       expect(mocks.fetchApi).toHaveBeenNthCalledWith(
         1,
         {
+          directRequestReason: "credential_isolation" as const,
           baseUrl: "https://google.example.test/v1beta",
           auth: { authType: "none" },
         },

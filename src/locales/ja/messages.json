@@ -106,9 +106,11 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "無効な応答形式です",
+      "missingRecoveryPolicy": "拡張機能がこのリクエストを準備できませんでした。拡張機能を更新するか、問題を報告してください。",
       "nonJsonContent": "JSON ではなく {{contentType}} が返されました（HTTP {{status}}）",
       "onlyJsonSupported": "JSON 応答のみサポートしています",
-      "requestFailed": "リクエストに失敗しました: {{status}}"
+      "requestFailed": "リクエストに失敗しました: {{status}}",
+      "verificationRequired": "サイトから確認ページが返されました。サイトで確認を完了してから再試行してください。"
     },
     "dayaRedemptionUnconfirmed": "公式コンソールで交換結果を確認し、特典の付与状況の確認または割引コードの適用を完了してから再試行してください。",
     "operation": {

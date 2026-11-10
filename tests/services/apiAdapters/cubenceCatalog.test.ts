@@ -6,6 +6,7 @@ import {
   cubenceModelCatalog,
 } from "~/services/apiAdapters/cubence/modelCatalog"
 import { fetchAnnouncements } from "~/services/apiService/cubence/announcements"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -77,10 +78,12 @@ describe("Cubence catalog and announcements", () => {
       }),
     )
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://api.cubence.com",
       auth: { authType: AuthTypeEnum.AccessToken, apiKey: "sk-example" },
     }
     const accountRequest = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://cubence.com",
       auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
     }
@@ -175,6 +178,7 @@ describe("Cubence catalog and announcements", () => {
       }),
     )
     const result = await fetchAnnouncements({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://cubence.com",
       auth: { authType: AuthTypeEnum.Cookie },
     })

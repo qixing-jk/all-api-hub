@@ -3,6 +3,7 @@ import { REQUESTY_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifie
 import type { AccountPersistenceCapability } from "~/services/apiAdapters/contracts/accountPersistence"
 import { resolveRequestyAccountUserId } from "~/services/apiAdapters/requesty/account/accountIdentity"
 import { fetchRequestyAccountIdentity } from "~/services/apiService/requesty"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -21,6 +22,8 @@ export const requestyAccountPersistence: AccountPersistenceCapability = {
     }
 
     const info = await fetchRequestyAccountIdentity({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+      protectionBypassExecution: undefined,
       baseUrl: REQUESTY_WEB_ORIGIN,
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: credential },
     })

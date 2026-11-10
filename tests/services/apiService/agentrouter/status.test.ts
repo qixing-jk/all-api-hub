@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { fetchAgentRouterPublicStatus } from "~/services/apiService/agentrouter/status"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchEnvelope } = vi.hoisted(() => ({
@@ -29,6 +30,7 @@ describe("AgentRouter public status", () => {
       },
     }
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://agentrouter.example.invalid",
       accountId: "account-1",
       auth: {

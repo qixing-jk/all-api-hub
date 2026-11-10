@@ -10,6 +10,7 @@ import {
   ApiError,
   isAuthenticationRequiredError,
 } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -233,6 +234,7 @@ describe("decodeSub2ApiResponseError", () => {
 
     await expect(
       fetchCurrentUser({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.invalid",
         auth: {
           authType: AuthTypeEnum.AccessToken,

@@ -27,6 +27,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keys/keyResourceEditor"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 
@@ -244,6 +245,7 @@ const fixtures = {
 }
 
 const previewRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://key-preview.example.invalid",
   auth: { authType: AuthTypeEnum.None },
 }
@@ -422,7 +424,7 @@ export async function createKeyProvisioningFixtureSession(
           if (fieldId === fixture.fieldOptions?.fieldId)
             return fixture.fieldOptions.values
           return fixture.useNativeOptionLoader
-            ? (await definition.loadOptions?.(fieldId, values)) ?? []
+            ? ((await definition.loadOptions?.(fieldId, values)) ?? [])
             : [{ value: "preview-model", displayLabel: "Preview model" }]
         },
       }

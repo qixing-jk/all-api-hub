@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createNewApiRedemption } from "~/services/apiAdapters/newApi/account/redemption"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { mockRedeemCode } = vi.hoisted(() => ({
@@ -14,6 +15,7 @@ vi.mock("~/services/apiService/newApiFamily/default/redemption", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://redeem.example.invalid",
   accountId: "account-1",
   auth: {

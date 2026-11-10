@@ -9,6 +9,7 @@ import {
   type RequestyProvisioningFailureReason,
 } from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
 import { fetchRequestySelfKeyInfo } from "~/services/apiService/requesty"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_SURFACES,
@@ -112,6 +113,8 @@ export async function provisionRequestyManagementKey(params: {
   )
   try {
     const info = await fetchRequestySelfKeyInfo({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+      protectionBypassExecution: undefined,
       baseUrl: REQUESTY_WEB_ORIGIN,
       auth: {
         authType: AuthTypeEnum.AccessToken,

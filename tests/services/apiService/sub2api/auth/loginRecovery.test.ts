@@ -15,6 +15,7 @@ import {
   Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { createCheckInConfig } from "~~/tests/services/apiAdapters/checkInFixtures"
@@ -99,6 +100,7 @@ describe("Sub2API configured login recovery", () => {
       },
     } as SiteAccount
     request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       accountId: account.id,
       siteType: account.site_type,
       baseUrl: account.site_url,

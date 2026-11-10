@@ -17,6 +17,7 @@ import {
   type RequestyProvisioningFailureReason,
 } from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
 import { fetchRequestySelfKeyInfo } from "~/services/apiService/requesty"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
@@ -63,6 +64,8 @@ async function findStoredRequestyManageKey(): Promise<string | null> {
     }
     try {
       await fetchRequestySelfKeyInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+        protectionBypassExecution: undefined,
         baseUrl: REQUESTY_WEB_ORIGIN,
         auth: {
           authType: AuthTypeEnum.AccessToken,

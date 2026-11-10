@@ -9,6 +9,7 @@ import {
   verifyNanoGptManagementCredential,
 } from "~/services/apiService/nanogpt/managementIdentity"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum } from "~/types"
 import { t } from "~/utils/i18n/core"
@@ -37,6 +38,7 @@ export const nanoGptAccountPersistence: AccountPersistenceCapability = {
       return previous.id
     const pair = parseNanoGptCredentials(credential)
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       baseUrl: NANOGPT_WEB_ORIGIN,
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: credential },
     }
@@ -52,6 +54,7 @@ export const nanoGptAccountPersistence: AccountPersistenceCapability = {
       return nanoGptManagementIdentity(request)
     }
     const identity = await fetchUserInfo({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       baseUrl: NANOGPT_WEB_ORIGIN,
       auth: {
         authType: AuthTypeEnum.AccessToken,

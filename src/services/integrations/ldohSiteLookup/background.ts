@@ -60,7 +60,7 @@ const LDOH_SITE_LIST_REQUEST = {
   accountId: "__ldoh_site_lookup__",
   // LDOH is session-cookie based; we do not have per-account auth here.
   auth: { authType: AuthTypeEnum.None },
-} satisfies ApiServiceRequest
+} satisfies Pick<ApiServiceRequest, "baseUrl" | "accountId" | "auth">
 
 /**
  * Fetches the raw LDOH success body while retaining the existing protected

@@ -25,6 +25,7 @@ import {
   fetchRightCodeData,
   isRightCodeAuthFailureError,
 } from "~/services/apiService/rightcode/transport"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -43,6 +44,7 @@ vi.mock("~/services/apiService/rightcode/tokenResync", () => ({
 }))
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://www.right.codes",
   auth: {
     authType: AuthTypeEnum.AccessToken,

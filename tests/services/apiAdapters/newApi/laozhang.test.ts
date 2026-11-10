@@ -6,6 +6,7 @@ import { toNewApiTokenWrite } from "~/services/apiAdapters/newApi/keys/keyResour
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -13,6 +14,7 @@ import { server } from "~~/tests/msw/server"
 const baseUrl = "https://api2.laozhang.ai"
 const siteType = SITE_TYPES.LAOZHANG
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
 }

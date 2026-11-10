@@ -1,6 +1,7 @@
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 import {
@@ -70,6 +71,7 @@ async function fetchOpenRouterPublicModelCatalogPage(
 ) {
   const response = await fetchApiResponse<unknown>(
     {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       baseUrl: OPENROUTER_API_BASE_URL,
       auth: { authType: AuthTypeEnum.None },
       abortSignal,

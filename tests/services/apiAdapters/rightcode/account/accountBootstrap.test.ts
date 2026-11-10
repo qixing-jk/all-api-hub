@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { RIGHTCODE_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { rightCodeAccountBootstrap } from "~/services/apiAdapters/rightcode/account/accountBootstrap"
 import * as rightcodeApiService from "~/services/apiService/rightcode"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiService/rightcode", () => ({
@@ -14,6 +15,7 @@ vi.mock("~/services/apiService/rightcode", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://www.right.codes",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
 }

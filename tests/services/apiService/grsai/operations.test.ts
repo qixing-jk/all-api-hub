@@ -16,6 +16,7 @@ import {
 } from "~/services/apiService/grsai"
 import { GRSAI_ENDPOINTS } from "~/services/apiService/grsai/constants"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -24,6 +25,7 @@ import { GRSAI_SIGNATURE_MATERIAL } from "./signatureFixture"
 
 const origin = "https://eb.grsaiapi.com"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://grsai.com",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "stored" },
   checkIn: buildCheckInConfig(),

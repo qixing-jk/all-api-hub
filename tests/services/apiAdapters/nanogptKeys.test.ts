@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { nanoGptKeyResources } from "~/services/apiAdapters/nanogpt/keyResources"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { nativeKey } from "~~/tests/test-utils/nanogpt"
 
 const origin = "https://nano-gpt.com/api/management/v1"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://nano-gpt.com",
   accountId: "nano",
   auth: {

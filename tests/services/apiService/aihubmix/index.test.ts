@@ -12,6 +12,7 @@ import {
 } from "~/services/apiService/aihubmix"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -41,6 +42,7 @@ vi.mock(
 )
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://aihubmix.com",
   managementApiBaseUrl: "https://console.aihubmix.com",
   auth: {
@@ -138,12 +140,13 @@ describe("apiService AIHubMix", () => {
       }),
     )
 
-    const apiService = (await import(
-      "~/services/apiService/aihubmix"
-    )) as Record<string, unknown>
+    const apiService =
+      (await import("~/services/apiService/aihubmix")) as Record<
+        string,
+        unknown
+      >
     const fetchInviteLink = apiService.fetchInviteLink as
-      | ((request: typeof baseRequest) => Promise<string>)
-      | undefined
+      ((request: typeof baseRequest) => Promise<string>) | undefined
 
     expect(fetchInviteLink).toEqual(expect.any(Function))
     await expect(fetchInviteLink!(baseRequest)).resolves.toBe(
@@ -379,9 +382,11 @@ describe("apiService AIHubMix", () => {
       })
 
     try {
-      const apiService = (await import(
-        "~/services/apiService/aihubmix"
-      )) as Record<string, unknown>
+      const apiService =
+        (await import("~/services/apiService/aihubmix")) as Record<
+          string,
+          unknown
+        >
       const fetchInviteLink = apiService.fetchInviteLink as
         | ((
             request: typeof baseRequest & { abortSignal: AbortSignal },
@@ -436,12 +441,13 @@ describe("apiService AIHubMix", () => {
         ),
       )
 
-      const apiService = (await import(
-        "~/services/apiService/aihubmix"
-      )) as Record<string, unknown>
+      const apiService =
+        (await import("~/services/apiService/aihubmix")) as Record<
+          string,
+          unknown
+        >
       const fetchInviteLink = apiService.fetchInviteLink as
-        | ((request: typeof baseRequest) => Promise<string>)
-        | undefined
+        ((request: typeof baseRequest) => Promise<string>) | undefined
 
       expect(fetchInviteLink).toEqual(expect.any(Function))
       await expect(fetchInviteLink!(baseRequest)).rejects.toMatchObject({
@@ -485,6 +491,7 @@ describe("apiService AIHubMix", () => {
     )
 
     const userInfo = await fetchUserInfo({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://aihubmix.com",
       auth: { authType: AuthTypeEnum.Cookie },
     })
@@ -513,6 +520,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       fetchUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
       }),
@@ -534,6 +542,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       fetchUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
       }),
@@ -560,6 +569,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       fetchUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
       }),
@@ -602,6 +612,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       fetchUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://console.aihubmix.com",
         managementApiBaseUrl: "https://console.aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
@@ -657,6 +668,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       fetchUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://console.aihubmix.com",
         managementApiBaseUrl: "https://console.aihubmix.com",
         auth: {
@@ -699,6 +711,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
       }),
@@ -738,6 +751,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
       }),
@@ -821,6 +835,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://console.aihubmix.com",
         managementApiBaseUrl: "https://console.aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },

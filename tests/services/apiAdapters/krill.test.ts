@@ -134,6 +134,7 @@ const openSession = () =>
   krillKeyResources.open({
     account: { id: "acc-1", name: "Krill", siteType: "krill" },
     request: {
+      directRequestReason: "caller_managed" as const,
       baseUrl: origin,
       accountId: "acc-1",
       auth: { authType: AuthTypeEnum.Cookie, userId: "47044" },

@@ -15,6 +15,7 @@ import {
 } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
@@ -58,6 +59,7 @@ const response = (
 })
 
 const request: ApiServiceRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relay.example",
   auth: {
     authType: AuthTypeEnum.AccessToken,

@@ -14,7 +14,11 @@ import type {
   AccountCompletionRuntimeContext,
 } from "~/services/apiAdapters/contracts/accountCompletion"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import {
+  API_DIRECT_REQUEST_REASONS,
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+} from "~/services/apiTransport/type"
 import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
@@ -94,17 +98,20 @@ function createAutoDetectApiRequest(params: {
   fetchContext?: ApiServiceFetchContext
   protectionBypassExecution?: ProtectionBypassExecution
 }): ApiServiceRequest {
-  return {
-    baseUrl: params.baseUrl,
-    auth: params.auth,
-    ...(params.cookieAuthSessionCookie
-      ? { cookieAuthSessionCookie: params.cookieAuthSessionCookie }
-      : {}),
-    ...(params.fetchContext ? { fetchContext: params.fetchContext } : {}),
-    ...(params.protectionBypassExecution
-      ? { protectionBypassExecution: params.protectionBypassExecution }
-      : {}),
-  }
+  return bindApiTransportRequest(
+    {
+      baseUrl: params.baseUrl,
+      auth: params.auth,
+      ...(params.cookieAuthSessionCookie
+        ? { cookieAuthSessionCookie: params.cookieAuthSessionCookie }
+        : {}),
+      ...(params.fetchContext ? { fetchContext: params.fetchContext } : {}),
+      ...(params.protectionBypassExecution
+        ? { protectionBypassExecution: params.protectionBypassExecution }
+        : {}),
+    },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
 }
 
 /**
@@ -228,9 +235,9 @@ export async function completeAutoDetectedAccount(
   )
   const earlyHasAuth = Boolean(
     earlyAccessToken ||
-      cookieAuthSessionCookie ||
-      requestedAuthType === AuthTypeEnum.Cookie ||
-      requestedAuthType === AuthTypeEnum.None,
+    cookieAuthSessionCookie ||
+    requestedAuthType === AuthTypeEnum.Cookie ||
+    requestedAuthType === AuthTypeEnum.None,
   )
   const registry = options?.registry ?? autoCheckinMethodRegistry
   const candidateMethodIds = registry

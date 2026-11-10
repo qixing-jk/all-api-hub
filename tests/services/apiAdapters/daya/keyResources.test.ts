@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { RESOURCE_SECRET_EDIT_INTENT_KINDS } from "~/services/apiAdapters/contracts/resourceNative"
 import { dayaKeyResources } from "~/services/apiAdapters/daya/keyResources"
 import { DAYA_KEY_STATUSES } from "~/services/apiService/daya/constants"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -39,6 +40,7 @@ const openSession = async () =>
   await dayaKeyResources.open({
     account: { id: "daya-account", name: "Daya", siteType: SITE_TYPES.DAYA },
     request: {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       accountId: "daya-account",
       baseUrl: origin,
       auth: { authType: AuthTypeEnum.Cookie, userId: "615" },

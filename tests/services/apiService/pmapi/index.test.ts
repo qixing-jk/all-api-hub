@@ -1,3 +1,5 @@
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+
 // Initialize provider registrations before measuring the shared snapshot queries.
 import "~/services/checkin/autoCheckin/providers"
 
@@ -62,6 +64,7 @@ const identity = {
 }
 
 const accountRequest = (): ApiServiceAccountRequest => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: {
     authType: AuthTypeEnum.AccessToken,

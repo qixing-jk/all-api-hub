@@ -83,6 +83,7 @@ describe("sub2ApiAccountCompletion", () => {
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://sub2.example.com",
       fetchContext: currentTabFetchContext,
       auth: {

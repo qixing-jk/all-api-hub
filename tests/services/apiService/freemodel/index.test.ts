@@ -20,6 +20,7 @@ import {
   fetchUserInfo,
 } from "~/services/apiService/freemodel"
 import { fetchFreeModelNodes } from "~/services/apiService/freemodel/nodes"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
@@ -37,6 +38,7 @@ vi.mock("~/services/apiCredentialProfiles/links", () => ({
 
 const origin = "https://freemodel.dev"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
 }
@@ -358,6 +360,7 @@ describe("FreeModel integration", () => {
           SITE_TYPES.FREEMODEL,
         ).account!.modelCatalog!.fetchModels(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: "https://cc-hq.freemodel.dev",
             auth: { authType: AuthTypeEnum.AccessToken, apiKey: "sk-private" },
           },
@@ -383,6 +386,7 @@ describe("FreeModel integration", () => {
       getSiteTypeCapabilities(
         SITE_TYPES.FREEMODEL,
       ).account!.modelCatalog!.fetchModels({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: origin,
         auth: { authType: AuthTypeEnum.AccessToken, apiKey: "sk-private" },
       }),
@@ -407,6 +411,7 @@ describe("FreeModel integration", () => {
         SITE_TYPES.FREEMODEL,
       ).account!.modelCatalog!.fetchModels(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://cc-hq.freemodel.dev",
           auth: { authType: AuthTypeEnum.AccessToken, apiKey: "sk-private" },
           abortSignal: controller.signal,
@@ -445,6 +450,7 @@ describe("FreeModel integration", () => {
       SITE_TYPES.FREEMODEL,
     ).account!.modelCatalog!.fetchModels(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://new-route.freemodel.dev/gateway",
         auth: { authType: AuthTypeEnum.AccessToken, apiKey: "sk-new-route" },
       },
@@ -499,6 +505,7 @@ describe("FreeModel integration", () => {
         SITE_TYPES.FREEMODEL,
       ).account!.modelCatalog!.fetchModels(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://unknown.freemodel.dev",
           auth: { authType: AuthTypeEnum.AccessToken, apiKey: "sk-private" },
         },
@@ -534,6 +541,7 @@ describe("FreeModel integration", () => {
       SITE_TYPES.FREEMODEL,
     ).account!.modelCatalog!.fetchModels(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://cc-hq.freemodel.dev",
         auth: { authType: AuthTypeEnum.AccessToken, apiKey: "sk-hq-probe" },
       },

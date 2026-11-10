@@ -1,6 +1,7 @@
 import { TelemetryEndpointError } from "~/services/apiCredentialProfiles/telemetry/attempts"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiAuthTokenMode } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -28,6 +29,7 @@ export async function fetchTelemetryJson(params: {
   try {
     const response = await fetchApiResponse<unknown>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: params.baseUrl,
         requestHeaders: params.requestHeaders,
         auth: {

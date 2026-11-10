@@ -14,6 +14,7 @@ import {
   updateChannelStatus,
 } from "~/services/apiService/newApiFamily/channelManagement"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -40,6 +41,7 @@ vi.mock("~/services/apiService/newApiFamily/request", () => ({
 }))
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://example.com",
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -311,6 +313,7 @@ describe("newApiFamily channel management APIs", () => {
     const userId = 1
     const beforeRequest = vi.fn().mockResolvedValue(undefined)
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl,
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -376,6 +379,7 @@ describe("newApiFamily channel management APIs", () => {
 
   it("listAllChannels rejects invalid upstream page envelopes", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -399,6 +403,7 @@ describe("newApiFamily channel management APIs", () => {
     const token = "token"
     const userId = 1
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl,
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -479,6 +484,7 @@ describe("newApiFamily channel management APIs", () => {
 
   it("fetchChannelModels rejects malformed model payloads", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,

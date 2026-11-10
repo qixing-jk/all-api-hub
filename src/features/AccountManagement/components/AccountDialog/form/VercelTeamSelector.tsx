@@ -15,6 +15,7 @@ import {
   fetchVercelTeams,
   type VercelTeam,
 } from "~/services/apiService/vercelAiGateway/identity"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 /** Team selection stays bound to the token that proved membership. */
@@ -40,6 +41,7 @@ export function VercelTeamSelector({
     const controller = new AbortController()
     if (!accessToken.trim()) return
     void fetchVercelTeams({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: VERCEL_WEB_ORIGIN,
       abortSignal: controller.signal,
       auth: { authType: AuthTypeEnum.AccessToken, accessToken },
@@ -84,7 +86,7 @@ export function VercelTeamSelector({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         {t("form.vercelTeamHelp")}
       </p>
       {loaded?.error && (

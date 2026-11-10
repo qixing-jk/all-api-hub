@@ -15,6 +15,7 @@ import {
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/account/accountBootstrap"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/account/accountBootstrap"
 import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -94,6 +95,7 @@ vi.mock("~/services/apiService/voapiV2/accountData", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://example.invalid",
   auth: { authType: AuthTypeEnum.Cookie },
 }

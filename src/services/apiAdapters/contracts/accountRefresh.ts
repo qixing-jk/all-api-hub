@@ -2,7 +2,10 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type {
+  ApiServiceRequest,
+  ApiTransportRecovery,
+} from "~/services/apiTransport/type"
 
 export type AccountRefreshSupportRequest = Pick<
   ApiServiceRequest,
@@ -11,8 +14,8 @@ export type AccountRefreshSupportRequest = Pick<
   | "accountId"
   | "cookieAuthSessionCookie"
   | "tempWindowRequestSource"
-  | "protectionBypassExecution"
->
+> &
+  ApiTransportRecovery
 
 export type AccountRefreshRequest = ApiServiceAccountRequest
 

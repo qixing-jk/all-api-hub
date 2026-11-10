@@ -12,6 +12,7 @@ import {
   fetchAccountAvailableModels,
   fetchUserGroups,
 } from "~/services/apiService/newApiFamily/variants/apiyi"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
@@ -215,6 +216,7 @@ describe("APIyi account capabilities", () => {
 
       const account = getSiteTypeCapabilities(SITE_TYPES.APIYI).account!
       const result = await account.refresh!.refreshAccount({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl,
         siteType: SITE_TYPES.APIYI,
         auth: {
@@ -292,6 +294,7 @@ describe("APIyi account capabilities", () => {
     const account = getSiteTypeCapabilities(SITE_TYPES.APIYI).account!
     await expect(
       account.modelPricing!.fetchPricing({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -358,6 +361,7 @@ describe("APIyi account capabilities", () => {
 
     await expect(
       fetchAccountAvailableModels({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl,
         auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
       }),
@@ -405,6 +409,7 @@ describe("APIyi account capabilities", () => {
     )
 
     const groups = await fetchUserGroups({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl,
       auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
     })
@@ -437,6 +442,7 @@ describe("APIyi account capabilities", () => {
 
       await expect(
         fetchUserGroups({
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl,
           auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
         }),
@@ -458,6 +464,7 @@ describe("APIyi account capabilities", () => {
 
       await expect(
         fetchUserGroups({
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl,
           auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
         }),
@@ -480,6 +487,7 @@ describe("APIyi account capabilities", () => {
     const pricing = await getSiteTypeCapabilities(
       SITE_TYPES.APIYI,
     ).account!.modelPricing!.fetchPricing({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl,
       auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
     })
@@ -524,6 +532,7 @@ describe("APIyi account capabilities", () => {
     const pricing = await getSiteTypeCapabilities(
       SITE_TYPES.APIYI,
     ).account!.modelPricing!.fetchPricing({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl,
       auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
     })
@@ -582,6 +591,7 @@ describe("APIyi account capabilities", () => {
       const pricing = await getSiteTypeCapabilities(
         SITE_TYPES.APIYI,
       ).account!.modelPricing!.fetchPricing({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl,
         auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
       })
@@ -616,6 +626,7 @@ describe("APIyi account capabilities", () => {
       getSiteTypeCapabilities(
         SITE_TYPES.APIYI,
       ).account!.modelPricing!.fetchPricing({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl,
         auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
       }),

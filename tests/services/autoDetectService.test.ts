@@ -1547,6 +1547,7 @@ describe("autoDetectSmart", () => {
       }),
     )
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://sub2.example.com/console",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -1896,6 +1897,7 @@ describe("autoDetectSmart", () => {
       })
       expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
       expect(mockFetchUserInfo).toHaveBeenCalledWith({
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://example.invalid",
         auth: {
           authType: AuthTypeEnum.Cookie,
@@ -2403,6 +2405,7 @@ describe("autoDetectSmart", () => {
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
     expect(mockFetchUserInfo).toHaveBeenCalledTimes(1)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://example.invalid/console",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -2489,6 +2492,7 @@ describe("autoDetectSmart", () => {
     })
     expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://example.com/console",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -2811,6 +2815,7 @@ describe("autoDetectSmart", () => {
     })
     expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "not a url",
       auth: {
         authType: AuthTypeEnum.Cookie,

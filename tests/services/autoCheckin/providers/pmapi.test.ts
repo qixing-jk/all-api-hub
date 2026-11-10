@@ -10,6 +10,7 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import autoCheckin from "~/locales/en/autoCheckin.json"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
 import { clickNativeCheckInPage } from "~/services/checkin/autoCheckin/providers/pmapiNativePageClick"
@@ -58,6 +59,7 @@ const account = buildSiteAccount({
 
 const readContext = () => ({
   request: {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: origin,
     auth: {
       authType: AuthTypeEnum.AccessToken,

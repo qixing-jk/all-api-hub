@@ -17,6 +17,8 @@ import type {
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { readCheckInRoutePath } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
 import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/providers/contracts"
@@ -69,19 +71,22 @@ export function createCheckInRequest(
   protectionBypassExecution?: ProtectionBypassExecution,
   mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
 ): ApiServiceRequest {
-  return {
-    baseUrl: account.site_url,
-    accountId: account.id,
-    cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-    auth: {
-      authType: getEffectiveAuthType(account),
-      userId: account.account_info.id,
-      accessToken: account.account_info.access_token,
+  return bindApiTransportRequest(
+    {
+      baseUrl: account.site_url,
+      accountId: account.id,
+      cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+      auth: {
+        authType: getEffectiveAuthType(account),
+        userId: account.account_info.id,
+        accessToken: account.account_info.access_token,
+      },
+      tempWindowRequestSource,
+      protectionBypassExecution,
+      ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
     },
-    tempWindowRequestSource,
-    protectionBypassExecution,
-    ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
-  }
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
 }
 
 /**

@@ -7,6 +7,8 @@ import { createAccessToken } from "~/services/apiService/newApiFamily/default/ac
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
+  API_DIRECT_REQUEST_REASONS,
+  API_OPERATION_SEMANTICS,
   type ApiTransportRequest,
   type FetchApiOptions,
 } from "~/services/apiTransport/type"
@@ -31,6 +33,48 @@ vi.mock("~/services/accountLogin", () => ({ loginAccount: deps.login }))
 describe("AnyRouter account request recovery", () => {
   beforeEach(() => vi.resetAllMocks())
 
+  it.each(["data", "envelope", "payload"] as const)(
+    "%s does not admit a declared GET mutation to credential recovery even with the read hint",
+    async (mode) => {
+      const error = new ApiError(
+        "rejected",
+        401,
+        "/api/user/token",
+        API_ERROR_CODES.HTTP_401,
+      )
+      const transport = mode === "data" ? deps.data : deps.api
+      transport.mockRejectedValue(error)
+      deps.read.mockResolvedValue({ accounts: [] })
+      const requests = createProviderJsonRequests(() => null)
+      await expect(
+        requests[mode](
+          {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+            baseUrl: "https://anyrouter.top",
+            accountId: "saved",
+            siteType: SITE_TYPES.ANYROUTER,
+            allowAccountCredentialRecovery: true,
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              userId: "17",
+              cookie: "session=old",
+            },
+          },
+          {
+            endpoint: "/api/user/token",
+            credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
+            operationSemantics: API_OPERATION_SEMANTICS.Mutation,
+            options: { method: "GET" },
+          },
+        ),
+      ).rejects.toBe(error)
+      expect(transport).toHaveBeenCalledOnce()
+      expect(deps.read).not.toHaveBeenCalled()
+      expect(deps.login).not.toHaveBeenCalled()
+      expect(deps.mutate).not.toHaveBeenCalled()
+    },
+  )
+
   it("does not recover or replay credential issuance just because it uses GET", async () => {
     const error = new ApiError(
       "rejected",
@@ -41,6 +85,7 @@ describe("AnyRouter account request recovery", () => {
     deps.data.mockRejectedValue(error)
     await expect(
       createAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://anyrouter.top",
         accountId: "saved",
         siteType: SITE_TYPES.ANYROUTER,
@@ -82,6 +127,7 @@ describe("AnyRouter account request recovery", () => {
     await expect(
       newApiFamilyRequests.data(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://anyrouter.top",
           accountId: "saved",
           siteType: scenario.siteType,
@@ -174,6 +220,7 @@ describe("AnyRouter account request recovery", () => {
       expect(
         await requests[mode](
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: account.site_url,
             accountId: account.id,
             siteType: "anyrouter",

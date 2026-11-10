@@ -1,5 +1,7 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isSafeHttpMethod } from "~/services/apiTransport/httpMethods"
+import { API_OPERATION_SEMANTICS } from "~/services/apiTransport/type"
+import type { ApiOperationSemantics } from "~/services/apiTransport/type"
 import type { ApiTransportRemoteLifecycleObserver } from "~/types/tempWindowFetch"
 import {
   onRuntimeMessage,
@@ -36,7 +38,11 @@ const INVALID_REMOTE_LIFECYCLE_ASSESSMENT = Object.freeze({
 }) satisfies RemoteFetchLifecycleAssessment
 
 /** Returns whether repeating a remotely handed-off request is side-effect safe. */
-export function isReplaySafeRemoteFetch(options?: RequestInit): boolean {
+export function isReplaySafeRemoteFetch(
+  options?: RequestInit,
+  operationSemantics?: ApiOperationSemantics,
+): boolean {
+  if (operationSemantics === API_OPERATION_SEMANTICS.Mutation) return false
   const method = options?.method?.trim().toUpperCase() || "GET"
   return isSafeHttpMethod(method)
 }

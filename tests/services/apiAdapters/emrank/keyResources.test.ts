@@ -13,6 +13,7 @@ import {
   EMRANK_TOKEN_ASSET,
 } from "~/services/apiService/emrank/constants"
 import { EMRANK_KEY_STATUS } from "~/services/apiService/emrank/keys"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -20,6 +21,7 @@ import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 
 const origin = "https://emrank.tech"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   accountId: "acc-emrank",
   auth: { authType: AuthTypeEnum.Cookie, userId: "6088" },

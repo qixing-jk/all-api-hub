@@ -1,3 +1,5 @@
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+
 // Initialize provider registrations before measuring the shared snapshot queries.
 import "~/services/checkin/autoCheckin/providers"
 
@@ -88,6 +90,7 @@ vi.mock("~/utils/core/logger", () => ({
 }))
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://data.example.invalid",
   accountId: "account-1",
   siteType: SITE_TYPES.NEW_API,

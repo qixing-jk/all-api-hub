@@ -6,6 +6,7 @@ import type { AccountPersistenceCapability } from "~/services/apiAdapters/contra
 import { verifyNovitaCredentials } from "~/services/apiService/novita"
 import { parseNovitaCredentials } from "~/services/apiService/novita/constants"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { t } from "~/utils/i18n/core"
 
@@ -21,6 +22,8 @@ export function getNovitaSafeErrorMessage(
     return t("accountDialog:messages.autoDetectIdentityMismatch")
   }
   if (error instanceof ApiError) {
+    if (error.code === API_ERROR_CODES.ROBOT_CHALLENGE)
+      return t("messages:errors.api.verificationRequired")
     if (error.code === API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH)
       return t("accountDialog:messages.autoDetectIdentityMismatch")
     if (error.code === API_ERROR_CODES.HTTP_401) {
@@ -48,6 +51,7 @@ export const novitaAccountPersistence: AccountPersistenceCapability = {
       return userId.trim() || existingAccount?.account_info.id?.trim() || ""
     }
     const user = await verifyNovitaCredentials({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       baseUrl: NOVITA_WEB_ORIGIN,
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: credential },
     })

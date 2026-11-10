@@ -11,6 +11,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_OPERATION_SEMANTICS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -221,7 +222,7 @@ export async function createAccessToken(
   const accessToken = await newApiFamilyRequests.data<string>(request, {
     endpoint: "/api/user/token",
     currentTabTransport: "disabled",
-    tempWindowFallback: { statusCodes: [], codes: [] },
+    operationSemantics: API_OPERATION_SEMANTICS.Mutation,
   })
 
   const normalizedAccessToken =

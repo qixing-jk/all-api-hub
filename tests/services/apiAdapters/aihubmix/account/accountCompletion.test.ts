@@ -84,6 +84,7 @@ describe("aihubmixAccountCompletion", () => {
 
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://aihubmix.com",
       fetchContext: currentTabFetchContext,
       auth: {
@@ -139,6 +140,7 @@ describe("aihubmixAccountCompletion", () => {
     )
 
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://aihubmix.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -146,6 +148,7 @@ describe("aihubmixAccountCompletion", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://aihubmix.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -153,6 +156,7 @@ describe("aihubmixAccountCompletion", () => {
     })
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
       {
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://aihubmix.com",
         auth: {
           authType: AuthTypeEnum.None,

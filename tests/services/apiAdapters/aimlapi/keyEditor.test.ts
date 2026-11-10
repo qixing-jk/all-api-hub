@@ -3,10 +3,12 @@ import { expect, it } from "vitest"
 
 import { createAimlApiKeyEditor } from "~/services/apiAdapters/aimlapi/keyEditor"
 import { AIMLAPI_KEY_EDITOR_FIELDS as fields } from "~/services/apiAdapters/aimlapi/keyResourceFields"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://aimlapi.com",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "management" },
 }

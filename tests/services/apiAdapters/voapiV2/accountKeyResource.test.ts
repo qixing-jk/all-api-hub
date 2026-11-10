@@ -13,6 +13,7 @@ import { voApiV2Capabilities } from "~/services/apiAdapters/voapiV2"
 import { voApiV2AccountKeyResources } from "~/services/apiAdapters/voapiV2/accountKeyResource"
 import type { VoApiV2Key } from "~/services/apiService/voapiV2/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -54,6 +55,7 @@ vi.mock("~/services/apiService/voapiV2/keyGroups", async (importOriginal) => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api.example.invalid",
   accountId: "account-example",
   auth: {

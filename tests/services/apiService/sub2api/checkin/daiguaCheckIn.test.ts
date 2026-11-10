@@ -7,6 +7,7 @@ import {
   performDaiguaDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
@@ -33,6 +34,7 @@ vi.mock(
 )
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api.daigua.icu",
   auth: {
     authType: AuthTypeEnum.AccessToken,

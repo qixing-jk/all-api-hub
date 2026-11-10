@@ -6,6 +6,7 @@ import {
 import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
 import type { AccountBootstrapFacts } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { getRegistrableDomain } from "~/utils/core/domain"
 
@@ -18,7 +19,7 @@ export function extractDomainPrefix(hostname: string): string {
   if (!hostname) return ""
 
   const domain = getRegistrableDomain(hostname)
-  const name = domain ? domain.split(".")[0] ?? domain : hostname
+  const name = domain ? (domain.split(".")[0] ?? domain) : hostname
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
 
@@ -46,7 +47,7 @@ export async function getSiteName(
   siteTypeHint?: string,
   bootstrapFacts?: AccountBootstrapFacts | null,
 ): Promise<string> {
-  const urlString = typeof input === "string" ? input : input.url ?? ""
+  const urlString = typeof input === "string" ? input : (input.url ?? "")
   const tabTitle = typeof input === "string" ? null : input.title
 
   let urlObj: URL
@@ -72,6 +73,7 @@ export async function getSiteName(
           getSiteTypeCapabilities(siteTypeHint).account?.bootstrap
         resolvedFacts = accountBootstrap
           ? await accountBootstrap.loadBootstrapFacts({
+              directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
               baseUrl: hostWithProtocol,
               auth: {
                 authType: AuthTypeEnum.None,

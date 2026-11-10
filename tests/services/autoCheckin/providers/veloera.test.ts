@@ -8,6 +8,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const { mockFetchVeloeraCheckInSupport } = vi.hoisted(() => ({
@@ -181,9 +182,9 @@ describe("veloeraProvider", () => {
 
   describe("checkIn", () => {
     it("propagates the popup source when the backend omits a message", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const mutationLifecycle = createAutoCheckinMutationLifecycle()
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         data: { quota_awarded: 2 },
@@ -191,6 +192,7 @@ describe("veloeraProvider", () => {
       })
 
       const result = await checkInForTest(mockAccount, {
+        mutationLifecycle,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         protectionBypassExecution: userCommandExecution(
           PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
@@ -208,13 +210,13 @@ describe("veloeraProvider", () => {
       ).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        observer: mutationLifecycle,
       })
     })
 
     it("reports the awarded quota as the check-in reward", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         message: "签到成功",
@@ -228,9 +230,8 @@ describe("veloeraProvider", () => {
     })
 
     it("returns success on successful check-in", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -247,9 +248,8 @@ describe("veloeraProvider", () => {
     })
 
     it("returns already_checked when already checked in", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -261,9 +261,8 @@ describe("veloeraProvider", () => {
     })
 
     it("returns the fallback failure key when the backend fails without a message", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         data: { code: 500 },
@@ -330,9 +329,8 @@ describe("veloeraProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("Network error"),
       )

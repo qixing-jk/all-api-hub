@@ -2,6 +2,7 @@ import { DoneHubChannelType } from "~/constants/doneHub"
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/doneHub"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -42,8 +43,8 @@ function hasValidDoneHubConfig(
 
   return Boolean(
     doneHub.baseUrl &&
-      doneHub.adminToken &&
-      isManagedSiteAdminUserId(doneHub.userId),
+    doneHub.adminToken &&
+    isManagedSiteAdminUserId(doneHub.userId),
   )
 }
 
@@ -99,6 +100,7 @@ export async function prepareChannelFormData(
     getConfig: getDoneHubConfig,
     fetchSiteUserGroups: async (config) =>
       await fetchSiteUserGroups({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: config.baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,

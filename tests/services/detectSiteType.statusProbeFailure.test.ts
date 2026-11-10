@@ -85,9 +85,10 @@ describe("public site status name probe", () => {
     ).resolves.toBe(SITE_TYPES.RIX_API)
 
     expect(fetchSiteStatusMock).toHaveBeenCalledTimes(2)
-    expect(fetchSiteStatusMock.mock.calls[1]?.[0]).not.toHaveProperty(
-      "protectionBypassExecution",
-    )
+    expect(fetchSiteStatusMock.mock.calls[1]?.[0]).toMatchObject({
+      protectionBypassExecution: undefined,
+      directRequestReason: "caller_managed",
+    })
   })
 
   it("reports no signals when neither status probe attempt answers", async () => {

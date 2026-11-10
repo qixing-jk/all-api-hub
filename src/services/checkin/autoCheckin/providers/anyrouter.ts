@@ -4,6 +4,8 @@ import { executeWithAccountCredentialRecovery } from "~/services/accountCredenti
 import { resolveAccountLogin } from "~/services/accountLogin/configCodec"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createTerminalFailureResult,
@@ -102,24 +104,27 @@ const checkinAnyRouter = async (
       }
     }
     const response = (await newApiFamilyRequests.envelope(
-      {
-        baseUrl: site_url,
-        ...(account.id ? { accountId: account.id } : {}),
-        ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId: account_info.id,
+      bindApiTransportRequest(
+        {
+          baseUrl: site_url,
+          ...(account.id ? { accountId: account.id } : {}),
+          ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            userId: account_info.id,
+          },
+          tempWindowRequestSource,
+          // AnyRouter's sign-in POST relies on browser-established WAF cookies;
+          // see https://github.com/millylee/anyrouter-check-in.
+          // Keep it in one protected context instead of replaying a mutating request.
+          forceTempWindow: true,
+          ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+          ...(context.mutationLifecycle
+            ? { observer: context.mutationLifecycle }
+            : {}),
         },
-        tempWindowRequestSource,
-        // AnyRouter's sign-in POST relies on browser-established WAF cookies;
-        // see https://github.com/millylee/anyrouter-check-in.
-        // Keep it in one protected context instead of replaying a mutating request.
-        forceTempWindow: true,
-        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-        ...(context.mutationLifecycle
-          ? { observer: context.mutationLifecycle }
-          : {}),
-      },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      ),
       {
         endpoint: "/api/user/sign_in",
         options: {

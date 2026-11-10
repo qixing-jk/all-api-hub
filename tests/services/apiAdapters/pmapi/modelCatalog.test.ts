@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
 import { pmApiModelPricing } from "~/services/apiAdapters/pmapi/modelCatalog"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -10,6 +11,7 @@ const origin = "https://pmcat.top"
 const envelope = (data: unknown) => ({ data, message: "", success: true })
 
 const request: ApiServiceRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: {
     authType: AuthTypeEnum.AccessToken,

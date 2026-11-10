@@ -5,6 +5,7 @@ import { QUOTA_PER_USD } from "~/constants/money"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { fetchAccountData, fetchUserInfo } from "~/services/apiService/foxcode"
 import { fetchRecentUsage } from "~/services/apiService/foxcode/usage"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import * as permissions from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -18,6 +19,7 @@ import {
 const origin = "https://foxcode.rjj.cc"
 const userId = "sample-cuid-account"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId },
 }

@@ -5,6 +5,8 @@ import {
 } from "~/constants/checkIn"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { getDevCheckInFixtureScenario } from "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtureIdentity"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
@@ -48,19 +50,22 @@ function runCheckInDiscovery(
     signal: context.signal,
     deadlineMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
     perAdapterTimeoutMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
-    request: {
-      siteType: account.site_type,
-      accountId: account.id,
-      baseUrl: account.site_url,
-      auth: {
-        authType: getEffectiveAuthType(account),
-        userId: account.account_info.id,
-        accessToken: account.account_info.access_token,
+    request: bindApiTransportRequest(
+      {
+        siteType: account.site_type,
+        accountId: account.id,
+        baseUrl: account.site_url,
+        auth: {
+          authType: getEffectiveAuthType(account),
+          userId: account.account_info.id,
+          accessToken: account.account_info.access_token,
+        },
+        cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+        tempWindowRequestSource: context.tempWindowRequestSource,
+        protectionBypassExecution: context.protectionBypassExecution,
       },
-      cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-      tempWindowRequestSource: context.tempWindowRequestSource,
-      protectionBypassExecution: context.protectionBypassExecution,
-    },
+      API_DIRECT_REQUEST_REASONS.CallerManaged,
+    ),
   })
 }
 
@@ -73,9 +78,7 @@ export async function discoverAccountCheckInMethods(
   const registry =
     import.meta.env.DEV && getDevCheckInFixtureScenario(account)
       ? await (
-          await import(
-            "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"
-          )
+          await import("~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures")
         ).resolveDevCheckInDiscoveryRegistry(account)
       : undefined
   const discovery = await runCheckInDiscovery(

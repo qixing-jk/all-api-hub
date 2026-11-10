@@ -177,6 +177,7 @@ describe("accountAutoDetection", () => {
       }),
     })
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://status.example.com",
       fetchContext: currentTabFetchContext("https://status.example.com"),
       auth: {
@@ -185,6 +186,7 @@ describe("accountAutoDetection", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://status.example.com",
       fetchContext: currentTabFetchContext("https://status.example.com"),
       auth: {
@@ -221,6 +223,7 @@ describe("accountAutoDetection", () => {
     expect(result.success).toBe(true)
     expect(result.data?.fetchContext).toEqual(fetchContext)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://browser-context.example.com",
       fetchContext,
       auth: {
@@ -229,6 +232,7 @@ describe("accountAutoDetection", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://browser-context.example.com",
       fetchContext,
       auth: {
@@ -270,6 +274,7 @@ describe("accountAutoDetection", () => {
     expect(result.success).toBe(true)
     expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://malformed.example.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -277,6 +282,7 @@ describe("accountAutoDetection", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://malformed.example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -315,6 +321,7 @@ describe("accountAutoDetection", () => {
     expect(result.success).toBe(true)
     expect(result.data?.fetchContext).toEqual(legacyFetchContext)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://legacy-context.example.com",
       fetchContext: legacyFetchContext,
       auth: {
@@ -392,6 +399,7 @@ describe("accountAutoDetection", () => {
       }),
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://status.example.com",
       fetchContext: currentTabFetchContext("https://status.example.com"),
       auth: {
@@ -400,6 +408,7 @@ describe("accountAutoDetection", () => {
     })
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
       {
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://status.example.com",
         fetchContext: currentTabFetchContext("https://status.example.com"),
         auth: {
@@ -443,6 +452,7 @@ describe("accountAutoDetection", () => {
       authType: AuthTypeEnum.Cookie,
     })
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
@@ -451,6 +461,7 @@ describe("accountAutoDetection", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
@@ -492,6 +503,7 @@ describe("accountAutoDetection", () => {
       authType: AuthTypeEnum.AccessToken,
     })
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
@@ -500,6 +512,7 @@ describe("accountAutoDetection", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
@@ -538,6 +551,7 @@ describe("accountAutoDetection", () => {
       accessToken: "fallback-token",
     })
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
@@ -578,6 +592,7 @@ describe("accountAutoDetection", () => {
       siteType: SITE_TYPES.VELOERA,
     })
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://veloera.example.com",
       fetchContext: currentTabFetchContext("https://veloera.example.com"),
       auth: {
@@ -586,6 +601,7 @@ describe("accountAutoDetection", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://veloera.example.com",
       fetchContext: currentTabFetchContext("https://veloera.example.com"),
       auth: {

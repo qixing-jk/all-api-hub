@@ -7,6 +7,7 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLimiter"
 import { executePreparedRequest } from "~/services/apiTransport/requestExecution"
 import {
+  assertNotProtectionResponse,
   extractDataFromApiResponseBody,
   isApiResponseBody,
 } from "~/services/apiTransport/response"
@@ -273,7 +274,18 @@ const readApiResponse = async <T>(
   const contentType = response.headers.get("content-type") || ""
 
   if (responseType === "json") {
+    assertNotProtectionResponse(
+      undefined,
+      response.status,
+      endpoint,
+      response.headers,
+    )
     if (response.ok && contentType && !/\bjson\b/i.test(contentType)) {
+      assertNotProtectionResponse(
+        await response.text(),
+        response.status,
+        endpoint,
+      )
       throw new ApiError(
         `响应 content type mismatch: expected JSON but got ${contentType}`,
         response.status,
@@ -313,6 +325,8 @@ const readApiResponse = async <T>(
     throw error
   }
 
+  if (responseType === "json")
+    assertNotProtectionResponse(body, response.status, endpoint)
   return {
     ok: response.ok,
     status: response.status,
@@ -359,6 +373,14 @@ const _fetchApiWithMapper = async <T, TResult>(
   mapResponse: TransportResponseMapper<T, TResult>,
   mapTempWindowResponse: MessageResponseMapper<TResult>,
 ): Promise<TResult> => {
+  if (!request.protectionBypassExecution && !request.directRequestReason) {
+    throw new ApiError(
+      t("messages:errors.api.missingRecoveryPolicy"),
+      undefined,
+      options.endpoint,
+      API_ERROR_CODES.REQUEST_RECOVERY_POLICY_MISSING,
+    )
+  }
   request = withSafariNativeCookieSession(request)
   const responseType = options.responseType ?? "json"
   const { baseUrl, accountId } = request
@@ -400,6 +422,7 @@ const _fetchApiWithMapper = async <T, TResult>(
     responseType,
     tempWindowRequestSource: request.tempWindowRequestSource,
     tempWindowFallback: options.tempWindowFallback,
+    operationSemantics: options.operationSemantics,
     accountId,
     authType: resolvedAuth.authType,
     cookieAuthSessionCookie:
@@ -437,6 +460,13 @@ const _fetchApiWithMapper = async <T, TResult>(
       const mapObservedResponse: typeof mapResponse = (response) => {
         if (response.status === 429)
           onRateLimit(response.headers["retry-after"])
+        if (responseType === "json")
+          assertNotProtectionResponse(
+            response.body,
+            response.status,
+            options.endpoint,
+            response.headers,
+          )
         return mapResponse(response)
       }
       const primaryRequest = async () => {
@@ -477,6 +507,13 @@ const _fetchApiWithMapper = async <T, TResult>(
             )
             if (normalized.status === 429)
               onRateLimit(normalized.headers["retry-after"])
+            if (responseType === "json")
+              assertNotProtectionResponse(
+                normalized.body,
+                normalized.status,
+                options.endpoint,
+                normalized.headers,
+              )
             return mapTempWindowResponse(response)
           },
         )
@@ -668,10 +705,12 @@ async function parseResponseByType<T>(
     case "blob":
       return (await response.blob()) as T
     case "json":
-    default:
+    default: {
+      const text = await response.text()
       try {
-        return (await response.json()) as ApiResponse<T>
+        return JSON.parse(text) as ApiResponse<T>
       } catch {
+        assertNotProtectionResponse(text, response.status, endpoint)
         throw new ApiError(
           t("messages:errors.api.invalidResponseFormat"),
           response.status,
@@ -679,5 +718,6 @@ async function parseResponseByType<T>(
           API_ERROR_CODES.JSON_PARSE_ERROR,
         )
       }
+    }
   }
 }

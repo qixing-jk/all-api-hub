@@ -14,6 +14,7 @@ import {
   updateRelayForToken,
 } from "~/services/apiService/relayfor"
 import * as transport from "~/services/apiService/relayfor/transport"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiService/relayfor/transport", () => ({
@@ -22,6 +23,7 @@ vi.mock("~/services/apiService/relayfor/transport", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relayfor.xyz",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token-abc" },
 }

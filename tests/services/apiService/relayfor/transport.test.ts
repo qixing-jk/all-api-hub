@@ -12,6 +12,7 @@ import {
 } from "~/services/apiService/relayfor/transport"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import * as requestExecution from "~/services/apiTransport/requestExecution"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiTransport/requestExecution", () => ({
@@ -19,6 +20,7 @@ vi.mock("~/services/apiTransport/requestExecution", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relayfor.xyz",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test-token" },
 }
@@ -32,6 +34,7 @@ describe("relayfor transport and constants", () => {
     await expect(
       fetchRelayForData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: request.baseUrl,
           auth: { authType: AuthTypeEnum.AccessToken },
         },
@@ -88,6 +91,7 @@ describe("relayfor transport and constants", () => {
     await expect(
       fetchRelayForData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://relayfor.xyz",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "  " },
         },

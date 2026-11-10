@@ -8,6 +8,7 @@ import {
   recordRixApiMajorVersion,
   reportsRixApiV6TokenColumns,
 } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 /** Columns Rix API 6.x added next to the New API token projection. */
@@ -21,6 +22,7 @@ const DEPLOYMENT_FIELD_IDS = [
 
 const baseUrl = "https://rix.example.invalid"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "admin-key" },
 }

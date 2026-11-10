@@ -20,6 +20,8 @@ import type {
   WongCheckinApiResponse,
   WongCheckinStatusData,
 } from "~/services/apiService/wong"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
@@ -68,19 +70,22 @@ async function performCheckin(
   const { site_url, account_info } = account
 
   return await newApiFamilyRequests.envelope<WongCheckinStatusData | undefined>(
-    {
-      baseUrl: site_url,
-      accountId: account.id,
-      cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-      auth: {
-        authType: getEffectiveAuthType(account),
-        userId: account_info.id,
-        accessToken: account_info.access_token,
+    bindApiTransportRequest(
+      {
+        baseUrl: site_url,
+        accountId: account.id,
+        cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+        auth: {
+          authType: getEffectiveAuthType(account),
+          userId: account_info.id,
+          accessToken: account_info.access_token,
+        },
+        tempWindowRequestSource,
+        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+        ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
       },
-      tempWindowRequestSource,
-      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-      ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
-    },
+      API_DIRECT_REQUEST_REASONS.CallerManaged,
+    ),
     {
       endpoint: ENDPOINT,
       options: {
@@ -203,6 +208,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
     request ??
     (account
       ? {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: account.site_url,
           accountId: account.id,
           cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
