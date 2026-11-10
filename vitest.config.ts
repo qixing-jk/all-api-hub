@@ -36,10 +36,6 @@ export default defineConfig({
 
     // Persist transforms for CI iterations; every test and coverage probe still runs.
     fsModuleCache: process.env.VITEST_FS_MODULE_CACHE !== "0",
-    fsModuleCachePath: path.resolve(rootDir, "node_modules/.vitest-cache"),
-
-    // Retain the existing suite's mock-history semantics across the v5 upgrade.
-    clearMocks: false,
 
     // Shard by measured file cost instead of by file count; see vitest.shardSequencer.ts.
     // Only consulted when `--shard` is passed, so unsharded runs are unaffected.

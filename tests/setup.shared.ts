@@ -117,7 +117,6 @@ beforeEach(async () => {
 
 afterEach(() => {
   server.resetHandlers()
-  vi.clearAllMocks()
 })
 
 afterAll(() => {

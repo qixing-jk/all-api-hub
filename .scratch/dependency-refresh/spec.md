@@ -21,7 +21,7 @@ Generated logs and experiment outputs remain local under `artifacts/`. Preserve 
 
 The user asked specifically about a major upgrade and whether earlier evidence was CI-level. The November 4 experiments were local four-file samples, not Ubuntu full CI. This run likewise does not establish remote CI performance.
 
-Vitest and coverage-v8 are now 5.1.0. Preserve `clearMocks: false`, threads and isolation. Stable filesystem caching defaults on, with `VITEST_FS_MODULE_CACHE=0` as an opt-out. The two inline projects can share the Vite server. The lockfile now has only Vite 8.3.6 rather than a separate Vite 7 dependency for Vitest. CI cache/report paths and both report CLIs moved together; production coverage thresholds were not weakened.
+Vitest and coverage-v8 are now 5.1.0. Threads and isolation are preserved. The final configuration uses Vitest 5's default mock-history clearing before each test; the migration initially retained `clearMocks: false`, but that compatibility override and the shared after-test clearing were removed in the follow-up cleanup below. Stable filesystem caching defaults on, with `VITEST_FS_MODULE_CACHE=0` as an opt-out and the default `node_modules/.vitest-cache` directory. The two inline projects can share the Vite server. The lockfile now has only Vite 8.3.6 rather than a separate Vite 7 dependency for Vitest. CI cache/report paths and both report CLIs moved together; production coverage thresholds were not weakened.
 
 Primary references: [Vitest 5 release](https://vitest.dev/blog/vitest-5.html), [migration guide](https://vitest.dev/guide/migration.html), [Vitest security advisory](https://github.com/advisories/GHSA-5xrq-8626-4rwp). The advisory has UI/API/Browser Mode preconditions; it does not imply ordinary CLI runs are directly exploitable.
 
@@ -105,3 +105,18 @@ The official audit fell from 243 to 173 reported findings for the resolved depen
 Remaining dependency candidates were checked again against the official registry/advisories on 2026-11-10. ECharts 6.1.0 fixes [the Lines tooltip issue](https://github.com/advisories/GHSA-fgmj-fm8m-jvvx), but this checkout registers Bar, Heatmap, Line and Pie rather than Lines (`src/components/charts/echarts.ts`). A later ECharts update should validate its zrender 6.1 rendering changes. The two critical audit entries are indirect development-tool dependencies: [shell-quote](https://github.com/advisories/GHSA-w7jw-789q-3m8p), pinned to 1.7.3 by fx-runner (fixed from 1.8.4; current latest 1.12.0), and [proxy-addr](https://github.com/advisories/GHSA-jqcg-44mw-7w3h) 2.0.7 under addons-linter/Express (fixed in 2.0.8). Their advisory preconditions are narrower than their severity label alone implies. These are explicit follow-up candidates, not upgrades included in this change; package overrides and broader tooling refreshes were not introduced to clear audit counts.
 
 Preserve this spec, the bounded animation reproducer and the extended benchmark driver in Git. Keep all generated before/after reports, failed candidate logs, archive and isolated probe installation local for review. No cleanup or unrelated scratch deletion is performed.
+
+## Vitest 5 default cleanup
+
+The follow-up removes the temporary `clearMocks: false` compatibility override and the shared `afterEach` call to `vi.clearAllMocks()`. Vitest now owns call-history clearing before each test in both projects; mock implementations remain intact. MSW handler reset and fake-browser state reset retain their existing lifecycle hooks. Per-suite resets are outside this bounded cleanup.
+
+The explicit `fsModuleCachePath` was identical to Vitest's default and is removed. The environment-variable opt-out, Actions cache persistence, duration-balanced sharding and report-integrity checks remain. This change introduces no additional cache mechanism and makes no CI performance claim.
+
+| Outcome | Before | After / evidence |
+| --- | --- | --- |
+| Test initialization and mock assertions | Shared after-test history clearing plus the v4-compatible override | All 18 files containing `beforeAll`, plus the Octopus migration suite, passed 314 tests; `artifacts/mock-cleanup-focused.json`. |
+| Previously adjusted DOM and matcher cases | The dependency upgrade already repaired teardown and pricing assertions | SiteAnnouncements overview and AIHubMix pricing passed another 28 tests; `artifacts/mock-cleanup-migration.json`. No assertions were weakened or tests skipped. |
+| Default clearing and isolation | `clearMocks: false`, isolated Node and jsdom projects | Resolved config confirms `clearMocks: true` and isolation in both projects; `artifacts/mock-cleanup-resolved-config.json`. |
+| Cache directory compatibility | Explicit `node_modules/.vitest-cache` | The default resolves to the same directory, and `DEBUG=vitest:cache:fs` recorded cache reads there; `artifacts/mock-cleanup-migration.log`. |
+
+These local checks used Node 24.22.2 and two workers. Full-suite CI and Codecov evidence must be collected for the cleanup commit; the earlier `3fba08caa9` workflow results do not validate its changed mock lifecycle. The prepared PR text is updated to describe default clearing instead of retained mock history.
