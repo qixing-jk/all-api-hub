@@ -17,6 +17,7 @@ import {
   resolveVercelAccountScope,
 } from "~/services/apiService/vercelAiGateway"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -47,6 +48,7 @@ export const vercelAiGatewayCapabilities: SiteTypeCapabilities = {
     persistence: {
       async prepareIdentity({ accessToken, userId }) {
         const teams = await fetchVercelTeams({
+          directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
           baseUrl: VERCEL_WEB_ORIGIN,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken },
         })
@@ -99,6 +101,7 @@ export const vercelAiGatewayCapabilities: SiteTypeCapabilities = {
         if (route === "usage" || route === "adminCredentials") {
           if (!target.token || typeof target.userId !== "string") return null
           const teams = await fetchVercelTeams({
+            directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
             baseUrl: target.baseUrl,
             auth: {
               authType: AuthTypeEnum.AccessToken,

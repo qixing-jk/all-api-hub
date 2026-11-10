@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiErrorCode } from "~/services/apiTransport/errors"
+import type { ApiOperationSemantics } from "~/services/apiTransport/type"
 import type {
   ProtectionBypassExecution,
   TempWindowFetchTaskKind,
@@ -212,6 +213,8 @@ export interface TempWindowFallbackContext {
   url: string
   endpoint: string
   fetchOptions: RequestInit
+  /** Explicit effects may forbid replay even when the HTTP method is GET. */
+  operationSemantics?: ApiOperationSemantics
   onlyData: boolean
   responseType: TempWindowResponseType
   tempWindowRequestSource?: TempWindowRequestSource

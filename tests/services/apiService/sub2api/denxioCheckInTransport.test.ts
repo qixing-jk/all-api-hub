@@ -17,6 +17,7 @@ import {
   fetchApiResponse,
   notifyApiTransportObserver,
 } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -78,6 +79,7 @@ const claimBody = {
 }
 
 const createRequest = (): Sub2ApiAuthSessionRequest => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://checkin.example.invalid",
   accountId: "account-1",
   auth: {

@@ -15,6 +15,7 @@ import {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
 import {
@@ -60,6 +61,7 @@ function setup() {
   }
   const submit = vi.fn().mockResolvedValue(creation)
   const definition = createNewApiKeyEditor(resolveNewApiKeyVariant("new-api"), {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: account.baseUrl,
     auth: { authType: AuthTypeEnum.AccessToken },
   })

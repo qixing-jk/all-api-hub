@@ -10,6 +10,7 @@ import {
   refreshAccountData as refreshRixApiAccountData,
 } from "~/services/apiService/newApiFamily/variants/rixApi"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -45,6 +46,7 @@ vi.mock("~/services/checkin/autoCheckin/scheduling/refresh", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://rix.example.invalid",
   accountId: "account-1",
   auth: {

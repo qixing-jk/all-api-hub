@@ -22,6 +22,7 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
+import { createAccountCheckInRequest } from "./accountRequest"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
@@ -147,13 +148,9 @@ export const pmApiProvider: AutoCheckinProvider = {
   getStatus,
   async checkIn(account, context) {
     try {
-      const result = await performPmApiCheckIn({
-        ...createAccountApiRequestFromStoredAccount(account as SiteAccount)
-          .request,
-        tempWindowRequestSource: context.tempWindowRequestSource,
-        protectionBypassExecution: context.protectionBypassExecution,
-        observer: context.mutationLifecycle,
-      })
+      const result = await performPmApiCheckIn(
+        createAccountCheckInRequest(account as SiteAccount, context),
+      )
       return {
         status: result.alreadyChecked
           ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED

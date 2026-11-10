@@ -14,6 +14,7 @@ import {
   parseNanoGptSubscription,
   parseNanoGptUsageAggregate,
 } from "~/services/apiService/nanogpt/parsing"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -23,6 +24,7 @@ const CONSOLE_ORIGIN = "https://nano-gpt.com"
 const DEPOSIT_ADDRESS = "nano_fixture_deposit_address"
 
 const tokenRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: CONSOLE_ORIGIN,
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -366,6 +368,7 @@ describe("NanoGPT account reads", () => {
   it("requires an inference key rather than the console session", async () => {
     await expect(
       fetchUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: CONSOLE_ORIGIN,
         auth: { authType: AuthTypeEnum.Cookie },
       }),

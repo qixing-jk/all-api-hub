@@ -13,6 +13,7 @@ import {
   TOOLCODE_DAILY_CHECK_IN_RESULT_KINDS,
 } from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { toolcodeProvider } from "~/services/checkin/autoCheckin/providers/toolcode"
@@ -137,6 +138,7 @@ describe("ToolCode check-in integration", () => {
     const originalSignal = new AbortController().signal
     const signal = new AbortController().signal
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://provided.example",
       auth: {
         authType: AuthTypeEnum.AccessToken,

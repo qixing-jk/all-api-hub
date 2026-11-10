@@ -6,9 +6,11 @@ import {
 } from "~/services/apiAdapters/dahl/keyNames"
 import { syncDahlKeyNames } from "~/services/apiAdapters/dahl/keyNameSync"
 import { dahlKeyNameOwner } from "~/services/apiAdapters/dahl/keyNameValue"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://inference.dahl.global",
   auth: {
     authType: AuthTypeEnum.Cookie,

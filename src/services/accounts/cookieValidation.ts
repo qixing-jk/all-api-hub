@@ -14,7 +14,9 @@ import {
   ApiError,
   isAuthenticationRequiredError,
 } from "~/services/apiTransport/errors"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import {
+  API_DIRECT_REQUEST_REASONS,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
   type ApiServiceRequest,
 } from "~/services/apiTransport/type"
@@ -138,24 +140,27 @@ export async function validateAccountCookie(
       reason: ACCOUNT_COOKIE_VALIDATION_REASONS.Unsupported,
     }
   const useFirefoxTransport = isProtectionBypassFirefoxEnv()
-  const request: ApiServiceRequest = {
-    baseUrl: account.site_url,
-    siteType: account.site_type,
-    auth: { authType: AuthTypeEnum.Cookie, userId: identity, cookie },
-    cookieSession: useFirefoxTransport
-      ? undefined
-      : { origin, cookieHeader: cookie },
-    forceTempWindow: useFirefoxTransport,
-    protectionBypassExecution: account.protectionBypassExecution,
-    tempWindowRequestSource: account.tempWindowRequestSource,
-    fetchContext: {
-      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
-      incognito: account.fetchContext?.incognito,
-      cookieStoreId: account.fetchContext?.cookieStoreId,
+  const request: ApiServiceRequest = bindApiTransportRequest(
+    {
+      baseUrl: account.site_url,
+      siteType: account.site_type,
+      auth: { authType: AuthTypeEnum.Cookie, userId: identity, cookie },
+      cookieSession: useFirefoxTransport
+        ? undefined
+        : { origin, cookieHeader: cookie },
+      forceTempWindow: useFirefoxTransport,
+      protectionBypassExecution: account.protectionBypassExecution,
+      tempWindowRequestSource: account.tempWindowRequestSource,
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        incognito: account.fetchContext?.incognito,
+        cookieStoreId: account.fetchContext?.cookieStoreId,
+      },
+      abortSignal: account.abortSignal,
+      requestTimeoutMs: COOKIE_VALIDATION_TIMEOUT_MS,
     },
-    abortSignal: account.abortSignal,
-    requestTimeoutMs: COOKIE_VALIDATION_TIMEOUT_MS,
-  }
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
   try {
     // Firefox isolates the supplied Cookie through its existing webRequest channel.
     if (useFirefoxTransport) {

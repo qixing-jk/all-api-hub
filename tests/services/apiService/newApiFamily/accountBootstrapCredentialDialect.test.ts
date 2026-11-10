@@ -6,6 +6,10 @@ import {
 } from "~/services/apiService/newApiFamily/default/accessTokenDialect"
 import { getOrCreateAccessToken } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  API_DIRECT_REQUEST_REASONS,
+  API_OPERATION_SEMANTICS,
+} from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
@@ -34,6 +38,7 @@ vi.mock("~/utils/i18n/core", () => ({
 const baseUrl = "https://credential.example.invalid"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   accountId: "account-1",
   auth: {
@@ -99,7 +104,7 @@ describe("New API account credential dialect", () => {
     expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
       endpoint: "/api/user/token",
       currentTabTransport: "disabled",
-      tempWindowFallback: { statusCodes: [], codes: [] },
+      operationSemantics: API_OPERATION_SEMANTICS.Mutation,
     })
   })
 

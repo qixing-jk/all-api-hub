@@ -37,9 +37,11 @@ import {
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVercelKeyEditor } from "~/services/apiAdapters/vercelAiGateway/keyEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://example.invalid",
   auth: {
     authType: AuthTypeEnum.AccessToken,

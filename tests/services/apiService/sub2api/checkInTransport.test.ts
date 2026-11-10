@@ -14,6 +14,7 @@ import {
   performSub2ApiProDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/proCheckInExecution"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -76,6 +77,7 @@ const mutationBody = {
 }
 
 const createRequest = (): Sub2ApiAuthSessionRequest => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://checkin.example.invalid",
   accountId: "account-1",
   auth: {

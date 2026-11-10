@@ -16,6 +16,8 @@ import {
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { convertUsdBalanceToQuota } from "~/services/apiService/sub2api/parsing"
 import { ApiError } from "~/services/apiTransport/errors"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
@@ -63,14 +65,20 @@ export const createSub2ApiCheckInReadRequest = (
 export const createSub2ApiCheckInMutationRequest = (
   account: SiteAccount,
   context: AutoCheckinProviderContext,
-): ApiServiceRequest => ({
-  ...createAccountApiRequestFromStoredAccount(account).request,
-  tempWindowRequestSource: normalizeTempWindowRequestSource(
-    context.tempWindowRequestSource,
-  ),
-  protectionBypassExecution: context.protectionBypassExecution,
-  ...(context.mutationLifecycle ? { observer: context.mutationLifecycle } : {}),
-})
+): ApiServiceRequest =>
+  bindApiTransportRequest(
+    {
+      ...createAccountApiRequestFromStoredAccount(account).request,
+      tempWindowRequestSource: normalizeTempWindowRequestSource(
+        context.tempWindowRequestSource,
+      ),
+      protectionBypassExecution: context.protectionBypassExecution,
+      ...(context.mutationLifecycle
+        ? { observer: context.mutationLifecycle }
+        : {}),
+    },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
 
 export const toSub2ApiCheckInStatus = (
   status: { enabled: boolean; checkedInToday: boolean },

@@ -15,6 +15,7 @@ import {
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { PaginationLimitError } from "~/services/apiTransport/pagination"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -58,6 +59,7 @@ vi.mock("~/utils/core/logger", () => ({
 
 describe("newApiFamily keyManagement", () => {
   const request = {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: "https://api.example.invalid",
     accountId: "account-1",
     auth: {

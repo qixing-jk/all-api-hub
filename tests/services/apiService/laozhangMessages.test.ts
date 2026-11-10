@@ -4,6 +4,7 @@ import {
   fetchLaoZhangMessages,
   markLaoZhangMessageRead,
 } from "~/services/apiService/newApiFamily/variants/laozhangMessages"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { data, envelope } = vi.hoisted(() => ({
@@ -15,6 +16,7 @@ vi.mock("~/services/apiService/newApiFamily/request", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api2.laozhang.ai",
   accountId: "lz",
   auth: {

@@ -23,11 +23,13 @@ import {
   openRouterWorkspaceSchema,
 } from "~/services/apiService/openrouter/keyManagementSchemas"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://mirror.example.invalid",
   managementApiBaseUrl: "https://openrouter.ai",
   auth: {

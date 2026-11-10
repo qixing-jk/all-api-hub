@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { rightCodeAccountRefresh } from "~/services/apiAdapters/rightcode/account/accountRefresh"
 import { RIGHTCODE_ENDPOINTS } from "~/services/apiService/rightcode/constants"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -20,6 +21,7 @@ const createRequest = (
   accessToken = "stale-token",
   userId: string | number = "7",
 ) => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   accountId: "account-example",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken, userId },

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/models/modelPricing"
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
@@ -40,6 +41,7 @@ vi.mock(
 )
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api.example.invalid",
   accountId: "account-1",
   auth: {

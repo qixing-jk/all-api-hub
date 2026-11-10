@@ -6,6 +6,7 @@ import { aihubmixAccountData } from "~/services/apiAdapters/aihubmix/account/acc
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/account/accountData"
 import { sub2ApiAccountData } from "~/services/apiAdapters/sub2api/account/accountData"
 import { voApiV2AccountData } from "~/services/apiAdapters/voapiV2/accountData"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 import { createCheckInConfig } from "./checkInFixtures"
@@ -52,6 +53,7 @@ vi.mock("~/services/apiService/voapiV2/accountData", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api.example.invalid",
   accountId: "account-1",
   siteType: SITE_TYPES.NEW_API,

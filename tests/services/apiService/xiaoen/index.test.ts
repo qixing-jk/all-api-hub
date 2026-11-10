@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { performCheckIn } from "~/services/apiService/xiaoen/checkIn"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { xiaoenProvider } from "~/services/checkin/autoCheckin/providers/xiaoen"
 import { loadAccountCatalogSource } from "~/services/modelCatalog/loader"
 import { AuthTypeEnum } from "~/types"
@@ -27,6 +28,7 @@ const user = {
   inviteCode: "CODE",
 }
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: user.id },
 }

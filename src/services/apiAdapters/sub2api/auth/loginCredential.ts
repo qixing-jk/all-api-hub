@@ -9,6 +9,8 @@ import type {
   AccountLoginCredential,
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { fetchSub2ApiAuthIdentity } from "~/services/apiService/sub2api/auth/authIdentity"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
 
@@ -26,18 +28,23 @@ export const sub2ApiLoginCredentialRecovery: NonNullable<
     const credential = result.credential
     target.abortSignal?.throwIfAborted()
     try {
-      const verified = await fetchSub2ApiAuthIdentity({
-        baseUrl: target.site_url,
-        siteType: target.site_type,
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          accessToken: credential.accessToken,
-        },
-        forceTempWindow: true,
-        abortSignal: target.abortSignal,
-        protectionBypassExecution: target.protectionBypassExecution,
-        tempWindowRequestSource: target.tempWindowRequestSource,
-      })
+      const verified = await fetchSub2ApiAuthIdentity(
+        bindApiTransportRequest(
+          {
+            baseUrl: target.site_url,
+            siteType: target.site_type,
+            auth: {
+              authType: AuthTypeEnum.AccessToken,
+              accessToken: credential.accessToken,
+            },
+            forceTempWindow: true,
+            abortSignal: target.abortSignal,
+            protectionBypassExecution: target.protectionBypassExecution,
+            tempWindowRequestSource: target.tempWindowRequestSource,
+          },
+          API_DIRECT_REQUEST_REASONS.CallerManaged,
+        ),
+      )
       target.abortSignal?.throwIfAborted()
       if (String(verified.identity.userId) !== String(target.account_info.id))
         return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }

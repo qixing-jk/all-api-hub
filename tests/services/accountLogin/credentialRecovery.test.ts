@@ -4,6 +4,7 @@ import { ACCOUNT_COOKIE_VALIDATION_STATUS } from "~/constants/accountCookieValid
 import { executeWithAccountCredentialRecovery } from "~/services/accountCredentialRecovery"
 import { verifyRecoveredCredential } from "~/services/accountCredentialRecovery/result"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 
 const deps = vi.hoisted(() => ({
@@ -101,6 +102,7 @@ describe("account credential recovery", () => {
       credential: { cookie: "session=new" },
     })
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       allowAccountCredentialRecovery: true,
       accountId: "saved",
       siteType: "anyrouter" as const,
@@ -638,6 +640,7 @@ describe("account credential recovery", () => {
       API_ERROR_CODES.ROBOT_CHALLENGE,
     )
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       allowAccountCredentialRecovery: true,
       accountId: "saved",
       siteType: "anyrouter" as const,
@@ -694,6 +697,7 @@ describe("account credential recovery", () => {
         return request.auth.cookie
       })
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       allowAccountCredentialRecovery: true,
       accountId: "saved",
       siteType: "anyrouter" as const,

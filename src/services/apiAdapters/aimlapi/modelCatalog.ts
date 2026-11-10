@@ -6,6 +6,7 @@ import { AIMLAPI_CATALOG_PRICING_URL } from "~/services/apiService/aimlapi/apiPr
 import { AIMLAPI_MODEL_ENDPOINT_TYPES as endpointTypes } from "~/services/apiService/aimlapi/constants"
 import { fetchAimlApiModelCatalog } from "~/services/apiService/aimlapi/models"
 import { fetchAimlApiPrices } from "~/services/apiService/aimlapi/pricing"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   MODEL_CATALOG_SCOPES,
@@ -219,6 +220,7 @@ export const aimlApiProviderModelCatalog: ProviderModelCatalogCapability = {
     abortSignal,
   }): Promise<ProviderModelCatalogPricingResponse> {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://aimlapi.com",
       auth: { authType: AuthTypeEnum.None },
       ...(abortSignal ? { abortSignal } : {}),

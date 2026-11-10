@@ -2,7 +2,9 @@ import {
   AIMLAPI_CONSOLE_ENDPOINTS,
   AIMLAPI_CONSOLE_ORIGIN,
 } from "~/services/accountSiteDefinitions/identifiers"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { isRecord } from "~/utils/core/object"
@@ -14,11 +16,14 @@ export function createAimlApiConsoleClient(
   token: string,
   options: Pick<ApiServiceRequest, "protectionBypassExecution">,
 ) {
-  const request: ApiServiceRequest = {
-    baseUrl: AIMLAPI_CONSOLE_ORIGIN,
-    auth: { authType: AuthTypeEnum.AccessToken, accessToken: token },
-    protectionBypassExecution: options.protectionBypassExecution,
-  }
+  const request: ApiServiceRequest = bindApiTransportRequest(
+    {
+      baseUrl: AIMLAPI_CONSOLE_ORIGIN,
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: token },
+      protectionBypassExecution: options.protectionBypassExecution,
+    },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
   const consoleJson = async (endpoint: string, body?: unknown) => {
     const response = await fetchApiResponse<unknown>(request, {
       endpoint,

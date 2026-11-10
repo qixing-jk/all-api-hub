@@ -16,9 +16,11 @@ import {
 } from "~/services/apiAdapters/newApi/keys/laozhangKeyResourceFields"
 import { defaultKeyManagementImplementation } from "~/services/apiService/newApiFamily/default/keyManagement"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api2.laozhang.ai",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test" },
 }

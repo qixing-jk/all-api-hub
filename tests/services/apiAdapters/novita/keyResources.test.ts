@@ -8,6 +8,7 @@ import type { EditableResourceProjection } from "~/services/apiAdapters/contract
 import { novitaKeyEditor } from "~/services/apiAdapters/novita/keyEditor"
 import { novitaAccountKeyResources } from "~/services/apiAdapters/novita/keyResources"
 import { encodeNovitaCredentials } from "~/services/apiService/novita/constants"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
@@ -39,6 +40,7 @@ const openSession = async (accessToken = "sk_key") =>
       siteType: SITE_TYPES.NOVITA,
     },
     request: {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       accountId: "novita-account",
       baseUrl: "https://novita.ai",
       auth: {
@@ -82,6 +84,7 @@ describe("Novita key resources", () => {
     )
     const editor = novitaKeyEditor(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://novita.ai",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "sk_key" },
       },
@@ -136,6 +139,7 @@ describe("Novita key resources", () => {
     )
     const editor = novitaKeyEditor(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://novita.ai",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -182,6 +186,7 @@ describe("Novita key resources", () => {
         ),
       )
       const editor = novitaKeyEditor({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://novita.ai",
         auth: {
           authType: AuthTypeEnum.AccessToken,

@@ -5,6 +5,7 @@ import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS as routes } from "~/services/apiAdapters/
 import { dahlCapabilities } from "~/services/apiAdapters/dahl"
 import { fetchAccountData, fetchUserInfo } from "~/services/apiService/dahl"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 import {
@@ -18,6 +19,7 @@ vi.mock("~/services/apiService/dahl", async (original) => ({
   fetchAccountData: vi.fn(),
 }))
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://inference.dahl.global",
   auth: { authType: AuthTypeEnum.Cookie, userId: "uuid-example" },
 }

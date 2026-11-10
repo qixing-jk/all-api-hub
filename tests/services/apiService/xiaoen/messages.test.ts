@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import announcementLocale from "~/locales/en/siteAnnouncements.json"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import i18n from "~/utils/i18n/core"
 import { server } from "~~/tests/msw/server"
@@ -10,6 +11,7 @@ import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 
 const origin = "https://free.supxh.xin"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: "account-a" },
 }

@@ -3,6 +3,7 @@ import {
   startAbortableTask,
 } from "~/services/apiTransport/abortableTask"
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
+import { assertNotProtectionResponse } from "~/services/apiTransport/response"
 import {
   reportSiteRateLimit,
   resolveSiteRequestLimitKey,
@@ -174,12 +175,26 @@ export async function fetchPreparedJsonResponse(
     prepared,
     async ({ dispatch }) => {
       const response = await dispatch()
+      assertNotProtectionResponse(
+        undefined,
+        response.status,
+        prepared.url,
+        response.headers,
+      )
       let body: unknown
+      let text: string | undefined
       try {
-        body = await response.json()
+        text = await response.text()
+        body = JSON.parse(text)
       } catch {
         body = null
       }
+      assertNotProtectionResponse(
+        text,
+        response.status,
+        prepared.url,
+        response.headers,
+      )
 
       return {
         ok: response.ok,

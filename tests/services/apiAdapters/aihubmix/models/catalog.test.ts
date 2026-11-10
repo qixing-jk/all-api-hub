@@ -9,6 +9,7 @@ import {
   invalidateAIHubMixPublicCatalogs,
 } from "~/services/apiAdapters/aihubmix/models/catalog"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import {
   PRICE_RATE_UNITS,
@@ -50,6 +51,7 @@ vi.mock(
 )
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://aihubmix.com",
   auth: {
     authType: AuthTypeEnum.AccessToken,

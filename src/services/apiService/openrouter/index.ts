@@ -8,6 +8,7 @@ import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus, type AccountIdentity } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -62,6 +63,7 @@ const createCredentialRequest = (
   input: OpenRouterManagementKeyValidationInput,
 ): ApiServiceRequest =>
   createOpenRouterManagementRequest({
+    directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
     baseUrl: OPENROUTER_API_BASE_URL,
     auth: {
       authType: AuthTypeEnum.AccessToken,

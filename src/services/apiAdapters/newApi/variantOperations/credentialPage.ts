@@ -1,5 +1,6 @@
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { fetchApi } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   createDeploymentProbeMemory,
   normalizeDeploymentScope,
@@ -26,6 +27,7 @@ async function probeNetworkCredentialPage(
     const url = new URL(path, `${baseUrl.replace(/\/+$/, "")}/`)
     return fetchApi<string>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
         baseUrl: url.origin,
         auth: { authType: AuthTypeEnum.None },
         abortDeadline: probeDeadline,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { sub2ApiInviteLink } from "~/services/apiAdapters/sub2api/account/inviteLink"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { fetchInviteLinkMock } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ describe("sub2ApiInviteLink", () => {
       "https://sub2.example.invalid/register?aff=invite-code",
     )
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://sub2.example.invalid",
       accountId: "account-1",
       auth: {

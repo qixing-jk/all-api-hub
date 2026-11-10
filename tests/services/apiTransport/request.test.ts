@@ -15,8 +15,11 @@ import {
   fetchApiData,
   fetchApiResponse,
 } from "~/services/apiTransport/request"
+import { fetchPreparedJsonResponse } from "~/services/apiTransport/requestExecution"
 import {
   API_AUTH_TOKEN_MODES,
+  API_DIRECT_REQUEST_REASONS,
+  API_OPERATION_SEMANTICS,
   API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
@@ -123,9 +126,8 @@ vi.mock("~/services/permissions/permissionManager", () => ({
 }))
 
 vi.mock("~/services/preferences/userPreferences", async () => {
-  const { DEFAULT_AUTOMATIC_FEATURE_BYPASS } = await import(
-    "~/services/preferences/tempWindowFallbackPreferences"
-  )
+  const { DEFAULT_AUTOMATIC_FEATURE_BYPASS } =
+    await import("~/services/preferences/tempWindowFallbackPreferences")
 
   return {
     DEFAULT_PREFERENCES: {
@@ -216,6 +218,226 @@ async function expectTempWindowDisabledFallback(
 }
 
 describe("apiTransport request helpers", () => {
+  it("rejects an unbound recovery policy before dispatching a site request", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json({ success: true }))
+    await expect(
+      fetchApiResponse(
+        // @ts-expect-error Exercise an untyped caller that omitted the required policy.
+        { baseUrl: BASE_URL, auth: { authType: AuthTypeEnum.None } },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+  it("recognizes Cloudflare's explicit challenge header before HTTP authentication handling", async () => {
+    server.use(
+      http.get(
+        API_URL,
+        () =>
+          new HttpResponse("challenge", {
+            status: 401,
+            headers: { "cf-mitigated": "challenge" },
+          }),
+      ),
+    )
+    await expect(
+      fetchApiData(
+        {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.None },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      code: ApiErrorCodes.ROBOT_CHALLENGE,
+      unattributedMessage: true,
+    })
+  })
+  it("recognizes WAF before direct prepared JSON consumers lose the response body", async () => {
+    server.use(
+      http.get(API_URL, () => new HttpResponse('<meta name="aliyun_waf_aa">')),
+    )
+    await expect(
+      fetchPreparedJsonResponse(
+        { baseUrl: BASE_URL },
+        { url: API_URL, options: {} },
+      ),
+    ).rejects.toMatchObject({ code: ApiErrorCodes.ROBOT_CHALLENGE })
+  })
+  it("recognizes WAF for raw JSON consumers using a temporary page", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: '<meta name="aliyun_waf_aa">',
+    })
+    await expect(
+      fetchApiResponse(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.None },
+          forceTempWindow: true,
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({ code: ApiErrorCodes.ROBOT_CHALLENGE })
+  })
+  it.each(["application/json", ""])(
+    "identifies WAF HTML even with content-type %s",
+    async (contentType) => {
+      server.use(
+        http.get(
+          API_URL,
+          () =>
+            new HttpResponse('<meta name="aliyun_waf_aa">', {
+              headers: { "content-type": contentType },
+            }),
+        ),
+      )
+      await expect(
+        fetchApiData(
+          {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          },
+          { endpoint: ENDPOINT },
+        ),
+      ).rejects.toMatchObject({ code: ApiErrorCodes.ROBOT_CHALLENGE })
+    },
+  )
+
+  it.each(["current-tab", "temp-window"])(
+    "identifies WAF returned through %s",
+    async (route) => {
+      const response = {
+        success: true,
+        status: 200,
+        headers: { "content-type": "text/html" },
+        data: '<meta name="aliyun_waf_bb">',
+      }
+      mockSendTabMessageWithRetry.mockResolvedValue(response)
+      mockSendRuntimeMessage.mockResolvedValue(response)
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+            currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+            protectionBypassExecution: backgroundProtectionBypassExecution,
+            ...(route === "current-tab"
+              ? {
+                  fetchContext: {
+                    kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+                    tabId: 456,
+                    origin: "https://example.com",
+                  },
+                }
+              : { forceTempWindow: true }),
+          },
+          { endpoint: ENDPOINT },
+        ),
+      ).rejects.toMatchObject({
+        code: ApiErrorCodes.ROBOT_CHALLENGE,
+        unattributedMessage: true,
+      })
+    },
+  )
+
+  it("recovers a challenged read through the configured temporary page", async () => {
+    server.use(
+      http.get(
+        API_URL,
+        () =>
+          new HttpResponse('<meta name="aliyun_waf_aa">', {
+            headers: { "content-type": "text/html" },
+          }),
+      ),
+    )
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { success: true, data: { ok: true } },
+    })
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["POST", "GET"] as const)(
+    "does not replay a %s mutation after a WAF response",
+    async (method) => {
+      let count = 0
+      server.use(
+        http.all(API_URL, () => {
+          count += 1
+          return new HttpResponse('<meta name="aliyun_waf_aa">', {
+            headers: { "content-type": "text/html" },
+          })
+        }),
+      )
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+            protectionBypassExecution: backgroundProtectionBypassExecution,
+          },
+          {
+            endpoint: ENDPOINT,
+            options: { method },
+            operationSemantics: API_OPERATION_SEMANTICS.Mutation,
+          },
+        ),
+      ).rejects.toMatchObject({ code: ApiErrorCodes.ROBOT_CHALLENGE })
+      expect(count).toBe(1)
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    },
+  )
+  it.each([200, 403])(
+    "identifies an Aliyun WAF response before JSON decoding (HTTP %s)",
+    async (status) => {
+      server.use(
+        http.get(
+          API_URL,
+          () =>
+            new HttpResponse(
+              '<!doctype html><html><head><meta name="aliyun_waf_aa" content="private-challenge"></head></html>',
+              { status, headers: { "content-type": "text/html" } },
+            ),
+        ),
+      )
+      await expect(
+        fetchApiData(
+          {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          },
+          { endpoint: ENDPOINT },
+        ),
+      ).rejects.toMatchObject({
+        code: ApiErrorCodes.ROBOT_CHALLENGE,
+        statusCode: status,
+        unattributedMessage: true,
+      })
+    },
+  )
+
   beforeEach(() => {
     vi.restoreAllMocks()
     server.resetHandlers()
@@ -267,6 +489,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApiData<{ foo: string }>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -307,6 +530,7 @@ describe("apiTransport request helpers", () => {
     )
 
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
       baseUrl: accountUrl,
       fetchContext: {
         kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -350,6 +574,7 @@ describe("apiTransport request helpers", () => {
 
     await fetchApiData<{ ok: boolean }>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://other.example.com/base/",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },
@@ -378,6 +603,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -412,6 +638,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -454,6 +681,7 @@ describe("apiTransport request helpers", () => {
 
     await fetchApi(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -483,6 +711,7 @@ describe("apiTransport request helpers", () => {
 
     await fetchApi(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -515,6 +744,7 @@ describe("apiTransport request helpers", () => {
 
     await fetchApi(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -547,6 +777,7 @@ describe("apiTransport request helpers", () => {
     }
     await fetchApiData(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://priority.example",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         requestScheduling,
@@ -572,6 +803,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://console.example.com",
           managementApiBaseUrl: "https://api.example.com",
           siteType: SITE_TYPES.SUB2API,
@@ -601,6 +833,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -637,6 +870,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "HTTPS://Example.com/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -694,6 +928,7 @@ describe("apiTransport request helpers", () => {
 
       await fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.invalid/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           abortSignal: requestSignal,
@@ -781,6 +1016,7 @@ describe("apiTransport request helpers", () => {
     try {
       const request = fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.invalid/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           abortSignal: abortController.signal,
@@ -851,6 +1087,7 @@ describe("apiTransport request helpers", () => {
 
     const request = fetchApiData(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.invalid/base/",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         observer: {
@@ -884,6 +1121,7 @@ describe("apiTransport request helpers", () => {
 
     await fetchApiData(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.invalid/base/",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         abortSignal: abortController.signal,
@@ -921,6 +1159,7 @@ describe("apiTransport request helpers", () => {
     try {
       const request = fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.invalid/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           abortDeadline,
@@ -962,6 +1201,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.invalid/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           abortSignal: abortController.signal,
@@ -986,9 +1226,13 @@ describe("apiTransport request helpers", () => {
     const response = new Response(null, {
       headers: { "content-type": "application/json" },
     })
-    vi.spyOn(response, "json").mockImplementation(async () => {
+    vi.spyOn(response, "text").mockImplementation(async () => {
       lifecycle.push("parse")
-      return { success: true, data: { ok: true }, message: "ok" }
+      return JSON.stringify({
+        success: true,
+        data: { ok: true },
+        message: "ok",
+      })
     })
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
       lifecycle.push("fetch")
@@ -998,6 +1242,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.invalid/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           observer: {
@@ -1023,6 +1268,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.invalid/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           observer,
@@ -1049,6 +1295,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.invalid/base/",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           observer: {
@@ -1078,6 +1325,7 @@ describe("apiTransport request helpers", () => {
 
     await fetchApiData(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.com/base/",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },
@@ -1085,6 +1333,7 @@ describe("apiTransport request helpers", () => {
     )
     await fetchApiData(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.com/admin/",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },
@@ -1124,6 +1373,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -1157,6 +1407,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -1238,6 +1489,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -1291,6 +1543,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1330,6 +1583,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1372,6 +1626,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1406,6 +1661,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1462,6 +1718,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1501,6 +1758,7 @@ describe("apiTransport request helpers", () => {
       await expect(
         fetchApiData<{ ok: boolean }>(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
             baseUrl: BASE_URL,
             auth: {
               authType: AuthTypeEnum.AccessToken,
@@ -1542,6 +1800,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1584,6 +1843,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1629,6 +1889,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1678,6 +1939,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1731,6 +1993,7 @@ describe("apiTransport request helpers", () => {
     try {
       const request = fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1800,6 +2063,7 @@ describe("apiTransport request helpers", () => {
     try {
       const request = fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1867,6 +2131,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           fetchContext: {
@@ -1899,6 +2164,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -1935,6 +2201,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -1980,6 +2247,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -2023,6 +2291,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.Cookie,
@@ -2079,6 +2348,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -2111,6 +2381,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -2143,6 +2414,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -2181,6 +2453,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -2217,6 +2490,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -2374,6 +2648,7 @@ describe("apiTransport request helpers", () => {
       await expect(
         fetchApiData<{ ok: boolean }>(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.CredentialIsolation,
             baseUrl: BASE_URL,
             requestHeaders,
             auth: {
@@ -3247,6 +3522,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData<{ ok: boolean }>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: {
             authType: AuthTypeEnum.AccessToken,
@@ -3279,6 +3555,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApi<ArrayBuffer>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
         baseUrl: BASE_URL,
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -3311,6 +3588,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApi<{ nested: string }>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.Cookie, cookie: "session=abc123" },
         fetchContext: {
@@ -3335,6 +3613,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApi<string>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.Cookie, cookie: "session=abc123" },
           fetchContext: {
@@ -3370,6 +3649,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApi<{ models: Array<{ name: string }> }>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },
@@ -3395,6 +3675,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApi<typeof pricingLikeResponse>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },
@@ -3419,6 +3700,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApi<{ nested: string }>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },
@@ -3438,6 +3720,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApi<string>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3450,6 +3733,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3471,6 +3755,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3494,6 +3779,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3521,6 +3807,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiResponse(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3551,6 +3838,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiResponse<typeof body>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3579,6 +3867,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiResponse<typeof body>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.Cookie },
           fetchContext: {
@@ -3646,6 +3935,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.Cookie },
         },
@@ -3672,6 +3962,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.Cookie },
         },
@@ -3702,6 +3993,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.Cookie },
         },
@@ -3737,6 +4029,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.Cookie },
         },
@@ -3769,6 +4062,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3802,6 +4096,7 @@ describe("apiTransport request helpers", () => {
       await expect(
         fetchApiData(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: BASE_URL,
             auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           },
@@ -3835,6 +4130,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://openrouter.ai/api/v1",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3864,6 +4160,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3893,6 +4190,7 @@ describe("apiTransport request helpers", () => {
       await expect(
         fetchApiData(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: BASE_URL,
             auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           },
@@ -3918,6 +4216,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3945,6 +4244,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -3974,6 +4274,7 @@ describe("apiTransport request helpers", () => {
       await expect(
         fetchApiData(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: BASE_URL,
             auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           },
@@ -4002,6 +4303,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4028,6 +4330,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4054,6 +4357,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4084,6 +4388,7 @@ describe("apiTransport request helpers", () => {
       await expect(
         fetchApiData(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: BASE_URL,
             auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
           },
@@ -4113,6 +4418,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4131,6 +4437,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4154,6 +4461,7 @@ describe("apiTransport request helpers", () => {
     )
 
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: BASE_URL,
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
     }
@@ -4186,6 +4494,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApi(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4210,6 +4519,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4243,6 +4553,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4283,6 +4594,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4322,6 +4634,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4447,6 +4760,7 @@ describe("apiTransport request helpers", () => {
 
       await fetchApiData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4485,6 +4799,7 @@ describe("apiTransport request helpers", () => {
 
     await fetchApiData(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         bypassSiteRequestLimit: true,
@@ -4505,6 +4820,7 @@ describe("apiTransport request helpers", () => {
     await expect(
       fetchApi<string>(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
@@ -4525,6 +4841,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApi<ArrayBuffer>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },
@@ -4546,6 +4863,7 @@ describe("apiTransport request helpers", () => {
 
     const result = await fetchApi<Blob>(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       },

@@ -2,12 +2,14 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { dayaCapabilities } from "~/services/apiAdapters/daya"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 
 const origin = "https://api.dayaai.com"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: "123" },
 }

@@ -6,6 +6,8 @@ import {
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
 import { fetchPmApiIdentity } from "~/services/apiService/pmapi/identity"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -85,11 +87,14 @@ export async function clickNativeCheckInPage(
   }
   if (!action.success || action.reason !== "clicked")
     return resolveNativePageFailureResult({ action, checkInUrl })
-  const request = {
-    ...createAccountApiRequestFromStoredAccount(account).request,
-    tempWindowRequestSource: context.tempWindowRequestSource,
-    protectionBypassExecution: context.protectionBypassExecution,
-  }
+  const request = bindApiTransportRequest(
+    {
+      ...createAccountApiRequestFromStoredAccount(account).request,
+      tempWindowRequestSource: context.tempWindowRequestSource,
+      protectionBypassExecution: context.protectionBypassExecution,
+    },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
   const deadline = Date.now() + STATUS_READBACK_TIMEOUT_MS
   do {
     try {

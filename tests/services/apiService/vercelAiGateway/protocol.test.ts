@@ -19,6 +19,7 @@ import {
   fetchVercelModelCatalog,
   parseVercelCatalogModel,
 } from "~/services/apiService/vercelAiGateway/models"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -27,6 +28,7 @@ const TEAM_ID = "team_test"
 
 /** Saved account: console URL, team as the identity, Vercel access token. */
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://vercel.com",
   accountId: "acc-vercel",
   auth: {

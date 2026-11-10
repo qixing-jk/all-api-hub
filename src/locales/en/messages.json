@@ -110,7 +110,8 @@
       "invalidResponseFormat": "Invalid response format",
       "nonJsonContent": "returned {{contentType}} instead of JSON (HTTP {{status}})",
       "onlyJsonSupported": "Only JSON responses are supported",
-      "requestFailed": "Request failed: {{status}}"
+      "requestFailed": "Request failed: {{status}}",
+      "verificationRequired": "The site returned a verification page. Open the site to complete verification, then retry."
     },
     "dayaRedemptionUnconfirmed": "The redemption result needs review in the official console. Check delivery or finish applying the discount there before trying again.",
     "operation": {

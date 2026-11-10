@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { getContentSessionExtractors } from "~/services/accountSiteOnboarding/registry"
 import { dayaBrowserIdentity } from "~/services/apiAdapters/daya/browserIdentity"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -123,6 +124,7 @@ describe("Daya API Cookie transport", () => {
     const { fetchDayaKeys } = await import("~/services/apiService/daya/keys")
     await expect(
       fetchDayaKeys({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: origin,
         auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
       }),
@@ -137,11 +139,11 @@ describe("Daya API Cookie transport", () => {
         () => new HttpResponse(null, { status: 401 }),
       ),
     )
-    const { fetchDayaIdentity } = await import(
-      "~/services/apiService/daya/identity"
-    )
+    const { fetchDayaIdentity } =
+      await import("~/services/apiService/daya/identity")
     await expect(
       fetchDayaIdentity({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: origin,
         auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
       }),

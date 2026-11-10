@@ -16,6 +16,7 @@ import {
   updateChannel,
 } from "~/services/apiService/doneHub"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -84,6 +85,7 @@ describe("apiService doneHub channel APIs", () => {
     async (protocol) => {
       mockFetchApiData.mockResolvedValue(["model-a"])
       const request = {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: `${protocol}://donehub.example`,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "admin" },
       }
@@ -134,6 +136,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("listAllChannels should paginate with page/size and normalize DataResult payload", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -185,6 +188,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("searchChannel should call list endpoint with base_url filter", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -219,6 +223,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("searchChannel should coerce missing channel type to 0", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -243,6 +248,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("searchChannel should return null when the backend does not return a channel array", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -263,6 +269,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("searchChannel normalizes product fields and preserves native metadata", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -334,6 +341,7 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     const result = await listAllChannels({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "http://managed.internal",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -366,6 +374,7 @@ describe("apiService doneHub channel APIs", () => {
 
     await createChannel(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "http://managed.internal",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -386,6 +395,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("createChannel should post flat payload with group string", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -431,6 +441,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("createChannel should default empty groups and model_mapping for DoneHub", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -462,6 +473,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("createChannel should prefer an explicit group over derived groups", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -494,6 +506,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("createChannel should wrap request failures in a user-facing error", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -521,6 +534,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("updateChannel should put flat payload with group string", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -555,6 +569,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("updateChannel preserves an exact minimal patch without inventing group", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -574,6 +589,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("updateChannel preserves fields from a latest-detail full update", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -604,6 +620,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("updateChannel preserves the explicit native group", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -629,6 +646,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("updateChannel should wrap request failures in a user-facing error", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -651,6 +669,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("deleteChannel should issue a DELETE request and wrap failures", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -702,6 +721,7 @@ describe("apiService doneHub channel APIs", () => {
     "$operation mutation preserves ApiError details as cause without logging it",
     async ({ invoke }) => {
       const request = {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -755,6 +775,7 @@ describe("apiService doneHub channel APIs", () => {
     "$operation mutation uses fixed copy when the thrown message is blank",
     async ({ invoke, message }) => {
       const request = {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -772,6 +793,7 @@ describe("apiService doneHub channel APIs", () => {
     "probes DoneHub models with normalized type %s and native settings",
     async (type) => {
       const request = {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -828,6 +850,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchDraftChannelModels should probe an unsaved DoneHub channel without a detail read", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -866,6 +889,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchChannelModels should trim and filter blank model names", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -893,6 +917,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchChannelModels should throw when the provider payload is not an array", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -919,6 +944,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchSiteUserGroups should read DoneHub's bare group array", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -948,6 +974,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchSiteUserGroups should trim blank symbols and dedupe duplicates", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -971,6 +998,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchSiteUserGroups should return an empty list for a non-array payload", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -986,6 +1014,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchTodayUsage should delegate to the New API-family helper with DoneHub log query overrides", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -1030,6 +1059,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("fetchTodayIncome should delegate to the New API-family helper with DoneHub log query overrides", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -1064,6 +1094,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("refreshAccountData should use the DoneHub today-usage override", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -1096,6 +1127,7 @@ describe("apiService doneHub channel APIs", () => {
 
   it("refreshAccountData should map refresh failures to health status", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,

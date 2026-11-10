@@ -10,6 +10,7 @@ import {
 } from "~/services/apiService/rightcode/transport"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import * as requestExecution from "~/services/apiTransport/requestExecution"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -18,6 +19,7 @@ vi.mock("~/services/apiTransport/requestExecution", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://www.right.codes",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "valid-token" },
 }
@@ -54,6 +56,7 @@ describe("rightcode transport and constants", () => {
     await expect(
       fetchRightCodeData(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://www.right.codes",
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "  " },
         },

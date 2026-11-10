@@ -1,4 +1,5 @@
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { DisplaySiteData } from "~/types"
 
 /** Preserves account authentication when requesting catalog facts or enrichment. */
@@ -15,6 +16,8 @@ export function createAccountModelPricingRequest(
   abortSignal?: AbortSignal,
 ): ModelPricingRequest {
   return {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+    protectionBypassExecution: undefined,
     baseUrl: account.baseUrl,
     accountId: account.id,
     abortSignal,

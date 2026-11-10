@@ -12,6 +12,7 @@ import {
   resolveKimiOrganizationId,
 } from "~/services/apiService/kimiOpenPlatform"
 import * as transport from "~/services/apiService/kimiOpenPlatform/transport"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -31,6 +32,7 @@ const consoleSession = {
 }
 
 const accountRequest = () => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   accountId: "acc-1",
   baseUrl: "https://platform.kimi.com",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token-1" },

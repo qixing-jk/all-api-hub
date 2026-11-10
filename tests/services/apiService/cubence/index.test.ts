@@ -7,6 +7,7 @@ import {
   fetchInviteLink,
 } from "~/services/apiService/cubence"
 import { fetchUserInfo } from "~/services/apiService/cubence/identity"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -15,6 +16,7 @@ import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const origin = "https://cubence.com"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
 }

@@ -14,6 +14,8 @@ import {
 import { isVoApiV2AuthExpiredError } from "~/services/apiService/voapiV2/parsing"
 import { resyncVoApiV2AuthToken } from "~/services/apiService/voapiV2/tokenResync"
 import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   AutoCheckinProvider,
@@ -36,18 +38,22 @@ const createRequest = (
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: AutoCheckinProviderContext["protectionBypassExecution"],
   mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
-): ApiServiceRequest => ({
-  baseUrl: account.site_url,
-  accountId: account.id,
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    accessToken: account.account_info.access_token,
-    userId: account.account_info.id,
-  },
-  ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-  ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-  ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
-})
+): ApiServiceRequest =>
+  bindApiTransportRequest(
+    {
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: account.account_info.access_token,
+        userId: account.account_info.id,
+      },
+      ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+      ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
+    },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
 
 const isVoApiV2Account = (account: SiteAccount): boolean =>
   account.site_type === SITE_TYPES.VO_API_V2

@@ -7,6 +7,7 @@ import messages from "~/locales/en/messages.json"
 import redemptionAssist from "~/locales/en/redemptionAssist.json"
 import { relayForCapabilities } from "~/services/apiAdapters/relayfor"
 import { fetchPreparedJsonResponse } from "~/services/apiTransport/requestExecution"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -15,6 +16,7 @@ vi.mock("~/services/apiTransport/requestExecution", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relayfor.xyz",
   accountId: "relayfor-parity",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "fixture" },

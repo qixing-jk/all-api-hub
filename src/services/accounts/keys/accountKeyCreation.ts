@@ -26,6 +26,8 @@ import {
   INVENTORY_SECRET_AVAILABILITIES,
 } from "~/services/apiAdapters/contracts/inventorySecret"
 import { awaitAbortableAccountKeyResourceOperation } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
 
@@ -71,10 +73,13 @@ export async function prepareDefaultAccountKeyCreation(
   const session = await accountKeyResources.open(
     {
       account,
-      request: {
-        ...request,
-        protectionBypassExecution: options.protectionBypassExecution,
-      },
+      request: bindApiTransportRequest(
+        {
+          ...request,
+          protectionBypassExecution: options.protectionBypassExecution,
+        },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      ),
     },
     options,
   )

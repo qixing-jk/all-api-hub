@@ -9,9 +9,11 @@ import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyR
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import * as sub2api from "~/services/apiService/sub2api/account/groups"
 import * as voapi from "~/services/apiService/voapiV2/keyGroups"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://example.invalid",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test" },
 }

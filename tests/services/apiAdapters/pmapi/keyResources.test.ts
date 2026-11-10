@@ -7,6 +7,7 @@ import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/api
 import { PMAPI_KEY_EDITOR_FIELDS as pmFields } from "~/services/apiAdapters/pmapi/keyResourceFields"
 import { pmApiKeyResources } from "~/services/apiAdapters/pmapi/keyResources"
 import { PMAPI_KEY_STATUSES } from "~/services/apiService/pmapi/constants"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
@@ -58,6 +59,7 @@ const openSession = async () =>
       siteType: SITE_TYPES.PMAPI,
     },
     request: {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       accountId: "pmapi-account",
       baseUrl: origin,
       auth: {

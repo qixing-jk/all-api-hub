@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { aihubmixInviteLink } from "~/services/apiAdapters/aihubmix/account/inviteLink"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchInviteLink } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ describe("aihubmixInviteLink", () => {
   it("delegates invite-link loading to the AIHubMix service", async () => {
     const abortController = new AbortController()
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://account.example.invalid",
       accountId: "account-1",
       auth: {

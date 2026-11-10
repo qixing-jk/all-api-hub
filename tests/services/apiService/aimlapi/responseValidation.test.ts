@@ -25,12 +25,14 @@ import {
   fetchAimlApiJson,
 } from "~/services/apiService/aimlapi/transport"
 import { fetchAimlApiKeyUsagePage } from "~/services/apiService/aimlapi/usage"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const origin = "https://api.aimlapi.com"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://aimlapi.com",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "management" },
   aimlApiKey: "regular",

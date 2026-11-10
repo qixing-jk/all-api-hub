@@ -29,6 +29,7 @@ import {
 } from "~/services/apiService/emrank/surfaces"
 import { readEmRank } from "~/services/apiService/emrank/transport"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { emRankProvider } from "~/services/checkin/autoCheckin/providers/emrank"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
@@ -45,6 +46,7 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 const origin = "https://emrank.tech"
 const userId = "6088"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId },
 } satisfies ApiServiceRequest
@@ -1196,9 +1198,8 @@ describe("EMRank console contract", () => {
 
   it("completes Cookie onboarding with the verified identity and no invented token", async () => {
     handlers()
-    const { createAccountCompletionHelpersMock } = await import(
-      "~~/tests/services/apiAdapters/checkInFixtures"
-    )
+    const { createAccountCompletionHelpersMock } =
+      await import("~~/tests/services/apiAdapters/checkInFixtures")
     const completion = getSiteTypeCapabilities(SITE_TYPES.EMRANK).account!
       .completion!
     const result = await completion.complete(

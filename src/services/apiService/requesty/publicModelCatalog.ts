@@ -3,6 +3,7 @@ import { REQUESTY_RESPONSE_ERRORS } from "~/services/apiService/requesty/constan
 import { readDecimal } from "~/services/apiService/requesty/parsing"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types/auth"
 import { isRecord } from "~/utils/core/object"
 
@@ -70,6 +71,7 @@ export async function fetchRequestyPublicModelCatalog(): Promise<
   // request is unauthenticated, so it needs no console binding.
   const response = await fetchApiResponse<unknown>(
     {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       baseUrl: REQUESTY_API_BASE_URL,
       auth: { authType: AuthTypeEnum.None },
     },

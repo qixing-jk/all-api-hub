@@ -12,6 +12,8 @@ import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metr
 import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRefreshUpdate"
 import { ACCOUNT_REFRESH_SKIP_REASONS } from "~/services/accounts/refresh/constants"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
@@ -275,27 +277,33 @@ function createAccountRefreshRequest(
     refreshToken: account.sub2apiAuth?.refreshToken,
     tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
   }
-  return withAccountAuthSession(account.site_type, {
-    baseUrl,
-    accountId: account.id,
-    allowAccountCredentialRecovery: true,
-    checkIn: account.checkIn,
-    siteType: account.site_type,
-    exchangeRate: account.exchange_rate,
-    auth,
-    includeTodayCashflow,
-    // Background refresh carries the second static credential too, so billing
-    // reads do not depend on an open console tab.
-    ...(account.aimlApiAuth?.apiKey
-      ? { aimlApiKey: account.aimlApiAuth.apiKey }
-      : {}),
-    ...(options?.tempWindowRequestSource
-      ? { tempWindowRequestSource: options.tempWindowRequestSource }
-      : {}),
-    ...(options?.protectionBypassExecution
-      ? { protectionBypassExecution: options.protectionBypassExecution }
-      : {}),
-  })
+  return withAccountAuthSession(
+    account.site_type,
+    bindApiTransportRequest(
+      {
+        baseUrl,
+        accountId: account.id,
+        allowAccountCredentialRecovery: true,
+        checkIn: account.checkIn,
+        siteType: account.site_type,
+        exchangeRate: account.exchange_rate,
+        auth,
+        includeTodayCashflow,
+        // Background refresh carries the second static credential too, so billing
+        // reads do not depend on an open console tab.
+        ...(account.aimlApiAuth?.apiKey
+          ? { aimlApiKey: account.aimlApiAuth.apiKey }
+          : {}),
+        ...(options?.tempWindowRequestSource
+          ? { tempWindowRequestSource: options.tempWindowRequestSource }
+          : {}),
+        ...(options?.protectionBypassExecution
+          ? { protectionBypassExecution: options.protectionBypassExecution }
+          : {}),
+      },
+      API_DIRECT_REQUEST_REASONS.CallerManaged,
+    ),
+  )
 }
 
 /** Runs optional discovery and schedules history after the refresh lock is released. */

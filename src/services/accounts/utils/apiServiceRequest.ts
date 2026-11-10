@@ -40,8 +40,10 @@ import {
   createDeferredAbortDeadline,
   runAbortableTask,
 } from "~/services/apiTransport/abortableTask"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import { isSafariNativeCookieEnabled } from "~/services/apiTransport/safariNativeCookie"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { normalizeInviteLinkError } from "~/services/inviteLinks/errors"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -182,6 +184,8 @@ const createAccountApiContextFromSource = (
   const aimlApiKey =
     typeof source.aimlApiKey === "string" ? source.aimlApiKey.trim() : ""
   const request: ApiServiceRequest = {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+    protectionBypassExecution: undefined,
     siteType: source.siteType,
     baseUrl: source.siteUrl,
     ...(aimlApiKey ? { aimlApiKey } : {}),
@@ -338,16 +342,20 @@ class AccountRuntimeKeySecretUnavailableError extends Error {
 const buildSecretResolutionRequest = (
   request: ApiServiceRequest,
   options: ResolveAccountRuntimeKeySecretOptions,
-): ApiServiceRequest => ({
-  ...request,
-  ...(options.requestScheduling
-    ? { requestScheduling: options.requestScheduling }
-    : {}),
-  ...(options.abortSignal ? { abortSignal: options.abortSignal } : {}),
-  ...(options.protectionBypassExecution
-    ? { protectionBypassExecution: options.protectionBypassExecution }
-    : {}),
-})
+): ApiServiceRequest =>
+  bindApiTransportRequest(
+    {
+      ...request,
+      ...(options.requestScheduling
+        ? { requestScheduling: options.requestScheduling }
+        : {}),
+      ...(options.abortSignal ? { abortSignal: options.abortSignal } : {}),
+      ...(options.protectionBypassExecution
+        ? { protectionBypassExecution: options.protectionBypassExecution }
+        : {}),
+    },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
 
 const resolveRequiredAssociatedProfileSecret = async (
   locator: ReturnType<typeof getAccountRuntimeKeyLocator>,

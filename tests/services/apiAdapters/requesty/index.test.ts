@@ -15,6 +15,7 @@ import {
   editRequestyKeyEditor,
 } from "~/services/apiAdapters/requesty/keys/keyEditor"
 import { requestyProviderModelCatalog } from "~/services/apiAdapters/requesty/models/providerModelCatalog"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { isValidProviderModelCatalogPricing } from "~/services/modelList/providerCatalogAdmission"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -23,6 +24,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const request: ApiServiceAccountRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://app.requesty.ai",
   accountId: "account-1",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "manage-key" },

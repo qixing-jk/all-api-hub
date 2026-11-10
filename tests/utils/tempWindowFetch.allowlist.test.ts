@@ -4,6 +4,20 @@ import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { matchesTempWindowFallbackAllowlist } from "~/utils/browser/tempWindowFetch"
 
 describe("matchesTempWindowFallbackAllowlist", () => {
+  it("keeps a recognized HTTP 200 challenge eligible for browser recovery", () => {
+    expect(
+      matchesTempWindowFallbackAllowlist({
+        statusCode: 200,
+        code: API_ERROR_CODES.ROBOT_CHALLENGE,
+      }),
+    ).toBe(true)
+    expect(
+      matchesTempWindowFallbackAllowlist(
+        { statusCode: 200, code: API_ERROR_CODES.ROBOT_CHALLENGE },
+        { codes: [] },
+      ),
+    ).toBe(false)
+  })
   it("uses global defaults when no allowlist is provided", () => {
     expect(matchesTempWindowFallbackAllowlist({ statusCode: 401 })).toBe(false)
     expect(matchesTempWindowFallbackAllowlist({ statusCode: 403 })).toBe(true)

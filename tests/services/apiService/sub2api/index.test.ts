@@ -45,6 +45,7 @@ import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTa
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import {
+  API_DIRECT_REQUEST_REASONS,
   API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
@@ -274,6 +275,7 @@ describe("apiService sub2api parsing", () => {
     await expect(
       fetchSub2ApiAnnouncements(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.com",
           accountId: "account-1",
           auth: {
@@ -310,6 +312,7 @@ describe("apiService sub2api parsing", () => {
     await expect(
       markSub2ApiAnnouncementRead(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://example.com",
           accountId: "account-1",
           auth: {
@@ -332,6 +335,7 @@ describe("apiService sub2api parsing", () => {
     "reads all announcement list response shapes: %j",
     async ({ data, expected }) => {
       const request = {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       }
@@ -352,6 +356,7 @@ describe("apiService sub2api parsing", () => {
 
   it("propagates announcement fetch failures and acknowledges encoded read ids", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
     }
@@ -377,6 +382,7 @@ describe("apiService sub2api parsing", () => {
 
   it("returns the fixed unsupported check-in and parses today usage", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.com",
       accountId: "account-1",
       auth: {
@@ -412,6 +418,7 @@ describe("apiService sub2api parsing", () => {
 
   it("returns independent income availability snapshots", async () => {
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://sub2api.example.invalid",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -458,6 +465,7 @@ describe("apiService sub2api parsing", () => {
 
     await expect(
       fetchTodayUsage({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.invalid",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       } as any),
@@ -494,6 +502,7 @@ describe("apiService sub2api parsing", () => {
 
     await expect(
       fetchTodayUsage({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.invalid",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
       } as any),
@@ -543,6 +552,7 @@ describe("apiService sub2api refreshAccountData", () => {
     > = {},
   ): Sub2ApiAuthSessionRequest<ApiServiceAccountRequest> =>
     ({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://sub2.example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -755,6 +765,7 @@ describe("apiService sub2api refreshAccountData", () => {
   it("skips the public today-usage request when cashflow collection is disabled", async () => {
     await expect(
       fetchTodayUsage({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.invalid",
         includeTodayCashflow: false,
         auth: {
@@ -1847,6 +1858,7 @@ describe("apiService sub2api exported operations", () => {
   })
 
   const baseRequest = {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: "https://sub2.example.com",
     auth: {
       authType: AuthTypeEnum.AccessToken,
@@ -2196,6 +2208,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       fetchUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2247,6 +2260,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2295,6 +2309,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2333,6 +2348,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.invalid",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2374,6 +2390,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2438,6 +2455,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2485,6 +2503,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2528,6 +2547,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2551,6 +2571,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2580,6 +2601,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2601,6 +2623,7 @@ describe("apiService sub2api exported operations", () => {
 
     await expect(
       getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -2716,6 +2739,7 @@ describe("apiService sub2api exported operations", () => {
       overrides: Partial<ApiServiceAccountRequest> = {},
     ): ApiServiceAccountRequest =>
       ({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,

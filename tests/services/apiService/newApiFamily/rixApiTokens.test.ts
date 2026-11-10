@@ -10,6 +10,7 @@ import {
   fetchUserGroups,
   resolveApiTokenKey,
 } from "~/services/apiService/newApiFamily/variants/rixApiTokens"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -44,6 +45,7 @@ vi.mock("~/services/apiService/newApiFamily/request", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://rix.example.invalid",
   auth: { authType: AuthTypeEnum.Cookie },
 }

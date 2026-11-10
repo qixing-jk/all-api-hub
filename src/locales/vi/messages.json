@@ -108,7 +108,8 @@
       "invalidResponseFormat": "Định dạng dữ liệu phản hồi không hợp lệ",
       "nonJsonContent": "trả về {{contentType}} thay vì JSON (HTTP {{status}})",
       "onlyJsonSupported": "Chỉ hỗ trợ dữ liệu phản hồi JSON",
-      "requestFailed": "Yêu cầu thất bại: {{status}}"
+      "requestFailed": "Yêu cầu thất bại: {{status}}",
+      "verificationRequired": "Trang web trả về trang xác minh. Hãy hoàn tất xác minh trên trang web rồi thử lại."
     },
     "dayaRedemptionUnconfirmed": "Kiểm tra kết quả trong bảng điều khiển chính thức. Xác nhận việc cấp quyền lợi hoặc hoàn tất áp dụng mã giảm giá trước khi thử lại.",
     "operation": {

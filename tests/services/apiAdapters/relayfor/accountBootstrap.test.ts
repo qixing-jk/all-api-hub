@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { relayForAccountBootstrap } from "~/services/apiAdapters/relayfor/accountBootstrap"
 import { fetchRelayForUserInfo } from "~/services/apiService/relayfor"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiService/relayfor", () => ({
@@ -11,6 +12,7 @@ vi.mock("~/services/apiService/relayfor", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relayfor.xyz",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test-token" },
 }

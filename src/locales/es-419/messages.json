@@ -112,7 +112,8 @@
       "invalidResponseFormat": "Formato de respuesta no válido",
       "nonJsonContent": "devolvió {{contentType}} en lugar de JSON (HTTP {{status}})",
       "onlyJsonSupported": "Solo se admiten respuestas JSON",
-      "requestFailed": "La solicitud falló: {{status}}"
+      "requestFailed": "La solicitud falló: {{status}}",
+      "verificationRequired": "El sitio devolvió una página de verificación. Completa la verificación en el sitio y vuelve a intentarlo."
     },
     "dayaRedemptionUnconfirmed": "Revisa el resultado en la consola oficial. Comprueba la entrega o termina de aplicar el descuento antes de volver a intentarlo.",
     "operation": {

@@ -5,6 +5,7 @@ import {
   fetchKimiPricingDoc,
 } from "~/services/apiService/kimiOpenPlatform"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   getKimiOpenPlatformDeployment,
@@ -257,6 +258,7 @@ export function createKimiOpenPlatformProviderModelCatalog(
         return withSafeCatalogErrors(
           async () => {
             const accountRequest: ApiServiceRequest = {
+              directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
               baseUrl: deployment.consoleOrigin,
               accountId: request.accountId,
               abortSignal: request.abortSignal,

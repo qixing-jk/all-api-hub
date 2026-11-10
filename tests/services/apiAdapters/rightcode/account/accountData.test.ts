@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
 import { rightCodeAccountData } from "~/services/apiAdapters/rightcode/account/accountData"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -18,6 +19,7 @@ const baseUrl = "https://right-code.example.invalid"
 const createRequest = (
   overrides: Partial<{ includeTodayCashflow: boolean }> = {},
 ) => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   accountId: "account-example",
   auth: {

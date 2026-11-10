@@ -8,6 +8,7 @@ import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/acc
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/account/accountBootstrap"
 import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 import { createAccountCompletionHelpersMock } from "./checkInFixtures"
@@ -28,6 +29,7 @@ vi.mock("~/services/apiService/newApiFamily/request", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://bootstrap.example.com",
   auth: { authType: AuthTypeEnum.None },
 }
@@ -100,6 +102,7 @@ describe("provider-neutral bootstrap facts", () => {
       const bootstrapRequest =
         siteType === SITE_TYPES.XIAOEN
           ? {
+              directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
               baseUrl: "https://free.supxh.xin",
               auth: {
                 authType: AuthTypeEnum.Cookie,

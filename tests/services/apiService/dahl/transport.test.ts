@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createKey, fetchKeys } from "~/services/apiService/dahl"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -9,6 +10,7 @@ import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 const origin = "https://inference.dahl.global"
 const userId = "00000000-0000-4000-8000-000000000001"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: origin,
   auth: { authType: AuthTypeEnum.Cookie, userId },
 }

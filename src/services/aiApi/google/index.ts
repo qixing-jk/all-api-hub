@@ -1,6 +1,7 @@
 import { executeWithUnauthorizedFallback } from "~/services/aiApi/authFallback"
 import { sanitizeHeaderOverrideError } from "~/services/apiTransport/headerOverrides"
 import { fetchApi } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -43,6 +44,7 @@ export async function fetchGoogleModelIds(
   const baseUrl = toVersionedProtocolMount("google", params.baseUrl)
   if (!baseUrl) throw new Error("Invalid Google API base URL")
   const request = {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.CredentialIsolation,
     requestHeaders: params.requestHeaders,
     baseUrl,
     auth: { authType: AuthTypeEnum.None },

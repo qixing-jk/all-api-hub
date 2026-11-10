@@ -15,6 +15,7 @@ import {
 } from "~/services/apiAdapters/newApi"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -89,6 +90,7 @@ vi.mock(
 )
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api.example.invalid",
   accountId: "account-1",
   auth: {

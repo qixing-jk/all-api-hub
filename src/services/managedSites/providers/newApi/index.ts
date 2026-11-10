@@ -2,6 +2,7 @@ import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { ChannelType } from "~/constants/newApi"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { resolveDefaultChannelGroups } from "~/services/managedSites/providers/defaultChannelGroups"
 import { isManagedSiteAdminUserId } from "~/services/managedSites/utils/adminUserId"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
@@ -29,6 +30,7 @@ import { normalizeList } from "~/utils/core/string"
 const logger = createLogger("NewApiService")
 
 const toNewApiRequestConfig = (config: NewApiConfig) => ({
+  directRequestReason: API_DIRECT_REQUEST_REASONS.CredentialIsolation,
   baseUrl: config.baseUrl,
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -56,8 +58,8 @@ export function hasValidNewApiConfig(prefs: UserPreferences | null): boolean {
 
   return Boolean(
     newApi.baseUrl &&
-      newApi.adminToken &&
-      isManagedSiteAdminUserId(newApi.userId),
+    newApi.adminToken &&
+    isManagedSiteAdminUserId(newApi.userId),
   )
 }
 

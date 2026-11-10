@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { voApiV2InviteLink } from "~/services/apiAdapters/voapiV2/inviteLink"
 import { fetchInviteLink } from "~/services/apiService/voapiV2/inviteLink"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiService/voapiV2/inviteLink", () => ({
@@ -14,6 +15,7 @@ describe("voApiV2InviteLink", () => {
       "https://invite.example.invalid/join?code=canonical",
     )
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
       auth: {

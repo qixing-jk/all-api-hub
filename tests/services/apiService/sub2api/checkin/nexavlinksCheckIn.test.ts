@@ -11,6 +11,7 @@ import {
   resolveNexaVlinksCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/nexavlinksCheckInProtocol"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
@@ -53,6 +54,7 @@ const response = (
 })
 
 const request: ApiServiceRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://asia.nexavlinks.com",
   auth: {
     authType: AuthTypeEnum.AccessToken,

@@ -13,6 +13,7 @@ import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metr
 import type { SiteBackendFamily } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { EMRANK_SESSION_COOKIE_NAME } from "~/services/apiService/emrank/constants"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -1015,6 +1016,7 @@ const resolveConformanceBaseUrl = (siteType: AccountSiteType): string =>
 const createRequest = (siteType: AccountSiteType) => {
   const fixture = getProducerFixture(siteType)
   return {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: resolveConformanceBaseUrl(siteType),
     accountId: `account-${siteType}`,
     auth: {

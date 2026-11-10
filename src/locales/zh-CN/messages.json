@@ -108,7 +108,8 @@
       "invalidResponseFormat": "响应数据格式错误",
       "nonJsonContent": "返回了 {{contentType}} 而不是 JSON（HTTP {{status}}）",
       "onlyJsonSupported": "仅支持 JSON 响应数据",
-      "requestFailed": "请求失败：{{status}}"
+      "requestFailed": "请求失败：{{status}}",
+      "verificationRequired": "站点返回了人机验证页面，请到站点完成验证后重试。"
     },
     "dayaRedemptionUnconfirmed": "请到官方控制台核对兑换结果，确认权益发放状态或完成优惠码应用后再重试。",
     "operation": {

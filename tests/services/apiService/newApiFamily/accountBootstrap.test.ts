@@ -11,6 +11,10 @@ import {
   getOrCreateAccessToken,
 } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { ApiError } from "~/services/apiTransport/errors"
+import {
+  API_DIRECT_REQUEST_REASONS,
+  API_OPERATION_SEMANTICS,
+} from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
@@ -38,6 +42,7 @@ vi.mock("~/utils/i18n/core", () => ({
 
 describe("newApiFamily accountBootstrap", () => {
   const request = {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: "https://bootstrap.example.invalid",
     accountId: "account-1",
     auth: {
@@ -148,14 +153,14 @@ describe("newApiFamily accountBootstrap", () => {
     })
   })
 
-  it("createAccessToken prevents transport replay for every token generation", async () => {
+  it("createAccessToken declares the GET token generation as a mutation", async () => {
     mockFetchApiData.mockResolvedValueOnce("new-token")
 
     await expect(createAccessToken(request)).resolves.toBe("new-token")
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
       endpoint: "/api/user/token",
       currentTabTransport: "disabled",
-      tempWindowFallback: { statusCodes: [], codes: [] },
+      operationSemantics: API_OPERATION_SEMANTICS.Mutation,
     })
   })
 
@@ -195,7 +200,7 @@ describe("newApiFamily accountBootstrap", () => {
     expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
       endpoint: "/api/user/token",
       currentTabTransport: "disabled",
-      tempWindowFallback: { statusCodes: [], codes: [] },
+      operationSemantics: API_OPERATION_SEMANTICS.Mutation,
     })
   })
 

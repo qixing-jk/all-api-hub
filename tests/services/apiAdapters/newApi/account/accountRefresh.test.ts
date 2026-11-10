@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountRefresh } from "~/services/apiAdapters/newApi/account/accountRefresh"
 import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { createCheckInConfig } from "~~/tests/services/apiAdapters/checkInFixtures"
 
@@ -103,6 +104,7 @@ vi.mock(
 )
 
 const supportRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://one.example.invalid",
   auth: {
     authType: AuthTypeEnum.AccessToken,

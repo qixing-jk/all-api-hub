@@ -13,6 +13,7 @@ import {
 import type { AccountSiteType } from "~/constants/siteType"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { getLegacyAutoCheckinMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types/checkIn"
 
@@ -125,6 +126,7 @@ export function createAccountCompletionHelpersMock(
       auth,
       context,
     }: Parameters<AccountCompletionHelpers["createServiceRequest"]>[0]) => ({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl,
       auth,
       ...(context.fetchContext ? { fetchContext: context.fetchContext } : {}),

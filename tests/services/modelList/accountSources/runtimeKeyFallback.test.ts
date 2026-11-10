@@ -8,6 +8,7 @@ import {
 import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/models/modelCatalog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
@@ -428,6 +429,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       SITE_TYPES.AIHUBMIX,
     )
     expect(fetchPricingMock).toHaveBeenCalledWith({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
       baseUrl: "https://aihubmix.com",
       accountId: "account-1",
       auth: {
@@ -663,6 +665,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     })
     const result = await sub2ApiModelCatalog.enrichPricing!({
       accountRequest: {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: ACCOUNT.baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,

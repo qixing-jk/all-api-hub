@@ -28,12 +28,14 @@ import {
   fetchVercelModelCatalog,
   parseVercelCatalogModel,
 } from "~/services/apiService/vercelAiGateway/models"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { t } from "~/utils/i18n/core"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   checkIn: buildCheckInConfig(),
   baseUrl: "https://vercel.com",
   auth: {

@@ -8,9 +8,11 @@ import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyV
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { defaultKeyManagementImplementation } from "~/services/apiService/newApiFamily/default/keyManagement"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://example.invalid",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test" },
 }

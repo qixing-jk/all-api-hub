@@ -7,6 +7,7 @@ import {
   fetchXiaoenEnvelope,
   readXiaoen,
 } from "~/services/apiService/xiaoen/transport"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { xiaoenProvider } from "~/services/checkin/autoCheckin/providers/xiaoen"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -39,6 +40,7 @@ const user = {
   inviteCode: "CODE",
 }
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://free.supxh.xin",
   auth: {
     authType: AuthTypeEnum.Cookie,

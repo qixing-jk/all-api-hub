@@ -9,6 +9,7 @@ import {
   fetchAccountData,
   refreshAccountData,
 } from "~/services/apiService/vercelAiGateway"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -16,6 +17,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const TEAM_ID = "team_test"
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://vercel.com",
   accountId: "acc-vercel",
   auth: {
@@ -440,7 +442,11 @@ describe("Vercel AI Gateway account data", () => {
           context: {},
         },
         {
-          createServiceRequest: ({ baseUrl, auth }) => ({ baseUrl, auth }),
+          createServiceRequest: ({ baseUrl, auth }) => ({
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+            baseUrl,
+            auth,
+          }),
           captureRecoveryData: (data) => captured.push(data),
           createInitialCheckInConfig: () => buildCheckInConfig(),
           fetchSiteName: async () => "Vercel AI Gateway",
@@ -481,7 +487,11 @@ describe("Vercel AI Gateway account data", () => {
           context: {},
         },
         {
-          createServiceRequest: ({ baseUrl, auth }) => ({ baseUrl, auth }),
+          createServiceRequest: ({ baseUrl, auth }) => ({
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+            baseUrl,
+            auth,
+          }),
           captureRecoveryData: () => {},
           createInitialCheckInConfig: () => buildCheckInConfig(),
           fetchSiteName: async () => "Vercel AI Gateway",

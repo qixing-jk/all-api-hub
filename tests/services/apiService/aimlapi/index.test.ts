@@ -16,6 +16,8 @@ import {
 import { AIMLAPI_KEY_PREFIX } from "~/services/apiService/aimlapi/keys"
 import { fetchAimlApiModels } from "~/services/apiService/aimlapi/models"
 import { fetchAimlApiKeyUsagePage } from "~/services/apiService/aimlapi/usage"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -30,18 +32,21 @@ const createRequest = (
   } = {},
 ): ApiServiceAccountRequest => {
   const { aimlApiKey: regularKey, ...rest } = overrides
-  return {
-    baseUrl: "https://aimlapi.com",
-    accountId: "acc-aimlapi",
-    checkIn: buildCheckInConfig(),
-    auth: {
-      authType: AuthTypeEnum.AccessToken,
-      accessToken: managementKey,
-      userId: "test-user-id",
+  return bindApiTransportRequest(
+    {
+      baseUrl: "https://aimlapi.com",
+      accountId: "acc-aimlapi",
+      checkIn: buildCheckInConfig(),
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: managementKey,
+        userId: "test-user-id",
+      },
+      ...(regularKey ? { aimlApiKey: regularKey } : {}),
+      ...rest,
     },
-    ...(regularKey ? { aimlApiKey: regularKey } : {}),
-    ...rest,
-  }
+    rest.directRequestReason ?? API_DIRECT_REQUEST_REASONS.Passive,
+  )
 }
 
 const apiOrigin = AIMLAPI_API_BASE_URL

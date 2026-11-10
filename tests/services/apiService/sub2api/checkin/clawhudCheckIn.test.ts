@@ -13,6 +13,7 @@ import {
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
@@ -55,6 +56,7 @@ const response = (
   body: { code: 0, message: "success", data },
 })
 const request: ApiServiceRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api.clawhud.com",
   auth: {
     authType: AuthTypeEnum.AccessToken,

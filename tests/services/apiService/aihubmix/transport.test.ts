@@ -248,9 +248,15 @@ describe("AIHubMix saved-account transport", () => {
   it("retains a timed-out read's slot until its response body actually finishes", async () => {
     vi.useFakeTimers()
     useSerialSiteLimiter()
-    const body = createDeferred<unknown>()
-    const response = new Response()
-    vi.spyOn(response, "json").mockReturnValueOnce(body.promise)
+    const body = createDeferred<string>()
+    const response = new Response(
+      new ReadableStream({
+        async start(controller) {
+          controller.enqueue(new TextEncoder().encode(await body.promise))
+          controller.close()
+        },
+      }),
+    )
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(response)
@@ -271,17 +277,17 @@ describe("AIHubMix saved-account transport", () => {
       await vi.advanceTimersByTimeAsync(0)
       expect(observer.onDispatch).toHaveBeenCalledTimes(1)
       expect(observer.onResponse).toHaveBeenCalledTimes(1)
-      expect(response.json).toHaveBeenCalledTimes(1)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
 
       await vi.advanceTimersByTimeAsync(5_000)
       expect(await firstFailure).toMatchObject({ name: "TimeoutError" })
       expect(fetchSpy).toHaveBeenCalledTimes(1)
 
-      body.resolve({ data: [] })
+      body.resolve(JSON.stringify({ data: [] }))
       await expect(second).resolves.toEqual([])
       expect(fetchSpy).toHaveBeenCalledTimes(2)
     } finally {
-      body.resolve({ data: [] })
+      body.resolve(JSON.stringify({ data: [] }))
       await Promise.allSettled([first, second])
     }
   })

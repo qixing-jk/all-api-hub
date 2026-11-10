@@ -13,6 +13,7 @@ import { getAccountLoginCapability } from "~/services/apiAdapters/registry"
 import { sub2ApiAccountLogin } from "~/services/apiAdapters/sub2api/auth/accountLogin"
 import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/browserOAuth"
 import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types/auth"
 
 const dependencies = vi.hoisted(() => ({
@@ -195,7 +196,11 @@ describe("Sub2API adapter-owned OAuth login", () => {
       { id: "password", label: "Password" },
     ])
     expect(dependencies.request).toHaveBeenCalledExactlyOnceWith(
-      { baseUrl: origin, auth: { authType: AuthTypeEnum.None } },
+      {
+        baseUrl: origin,
+        auth: { authType: AuthTypeEnum.None },
+        directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
+      },
       expect.objectContaining({
         endpoint: "/api/v1/settings/public",
         options: { method: "GET", cache: "no-store" },

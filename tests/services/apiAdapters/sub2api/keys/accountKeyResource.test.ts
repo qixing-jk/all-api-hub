@@ -12,6 +12,7 @@ import { sub2ApiCapabilities } from "~/services/apiAdapters/sub2api"
 import { sub2ApiAccountKeyResources } from "~/services/apiAdapters/sub2api/keys/accountKeyResource"
 import type { Sub2ApiNativeKey } from "~/services/apiService/sub2api/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -53,6 +54,7 @@ vi.mock(
 )
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://api.example.invalid",
   accountId: "account-example",
   auth: {

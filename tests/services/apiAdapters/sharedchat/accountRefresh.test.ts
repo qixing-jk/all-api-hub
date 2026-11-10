@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { sharedChatAccountRefresh } from "~/services/apiAdapters/sharedchat/accountRefresh"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 import { createCheckInConfig } from "../checkInFixtures"
@@ -15,6 +16,7 @@ vi.mock("~/services/apiService/sharedchat", () => ({
 }))
 
 const refreshRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://new.sharedchat.cc",
   accountId: "sharedchat-account",
   siteType: SITE_TYPES.SHAREDCHAT,

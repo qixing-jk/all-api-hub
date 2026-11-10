@@ -1,5 +1,7 @@
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import type { ResourceOperationOptions } from "~/services/apiAdapters/contracts/resourceNative"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
 
@@ -18,7 +20,10 @@ export async function openAccountKeyResourceSession(
         name: account.name,
         siteType: account.siteType,
       },
-      request: { ...context.request, protectionBypassExecution },
+      request: bindApiTransportRequest(
+        { ...context.request, protectionBypassExecution },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      ),
     },
     options,
   )

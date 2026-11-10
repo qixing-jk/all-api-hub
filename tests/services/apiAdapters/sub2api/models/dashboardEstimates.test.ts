@@ -10,6 +10,7 @@ import {
 } from "~/services/apiService/sub2api/account/groups"
 import { fetchSub2ApiKeys } from "~/services/apiService/sub2api/keys"
 import type { Sub2ApiNativeKey } from "~/services/apiService/sub2api/type"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -24,6 +25,7 @@ vi.mock("~/services/apiService/sub2api/models/pricingCatalog", () => ({
   fetchSub2ApiPricingCatalogs: vi.fn().mockResolvedValue(undefined),
 }))
 const request: ApiServiceRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://sub2api.example.invalid",
   accountId: "account-1",
   auth: {

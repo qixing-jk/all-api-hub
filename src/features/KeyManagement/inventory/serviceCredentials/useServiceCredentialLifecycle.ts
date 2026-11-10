@@ -8,6 +8,8 @@ import {
 } from "~/features/KeyManagement/types"
 import toast from "~/lib/notify"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -108,11 +110,16 @@ export function useServiceCredentialLifecycle(
                 createDisplayAccountApiContext(account)
               if (!serviceCredential)
                 throw new Error(t("keyManagement:messages.loadFailed"))
-              const credential = await serviceCredential.fetch({
-                ...request,
-                abortSignal: boundary.controller.signal,
-                protectionBypassExecution: execution,
-              })
+              const credential = await serviceCredential.fetch(
+                bindApiTransportRequest(
+                  {
+                    ...request,
+                    abortSignal: boundary.controller.signal,
+                    protectionBypassExecution: execution,
+                  },
+                  API_DIRECT_REQUEST_REASONS.CallerManaged,
+                ),
+              )
               if (!current()) return null
               update({
                 ...statesRef.current,

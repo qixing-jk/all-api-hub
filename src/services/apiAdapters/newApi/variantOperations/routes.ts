@@ -2,6 +2,7 @@ import {
   resolveRixApiMajorVersion,
   RIX_API_V6_MIN_MAJOR_VERSION,
 } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   createDeploymentProbeMemory,
   normalizeDeploymentScope,
@@ -87,6 +88,7 @@ async function fetchCachedBootstrapRouteFacts(
 
   try {
     const facts = await accountBootstrap.loadBootstrapFacts({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       baseUrl: normalizeDeploymentScope(baseUrl),
       auth: { authType: AuthTypeEnum.None },
     })
@@ -135,7 +137,7 @@ export const resolveNewApiThemeRoute: DynamicAccountRouteResolver = async (
     accountBootstrap,
   )
   return facts.theme === NEW_API_FRONTEND_THEMES.Default
-    ? NEW_API_DEFAULT_THEME_ROUTE_PATHS[route] ?? staticPath
+    ? (NEW_API_DEFAULT_THEME_ROUTE_PATHS[route] ?? staticPath)
     : staticPath
 }
 
@@ -152,7 +154,7 @@ export const resolveRixApiConsoleRoute: DynamicAccountRouteResolver = async (
     majorVersion = resolveRixApiMajorVersion(target.baseUrl)
   }
   return (majorVersion ?? 0) >= RIX_API_V6_MIN_MAJOR_VERSION
-    ? RIX_API_V6_ROUTE_PATHS[route] ?? staticPath
+    ? (RIX_API_V6_ROUTE_PATHS[route] ?? staticPath)
     : staticPath
 }
 

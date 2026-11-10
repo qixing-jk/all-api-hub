@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { getAnnouncementSourceHandlers } from "~/services/siteAnnouncements/sourceHandlers"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -24,6 +25,7 @@ const request: AnnouncementSourceHandlerRequest = {
   baseUrl: "https://Example.com/",
   sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
   apiRequest: {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: "https://Example.com/",
     accountId: "a",
     auth: { authType: AuthTypeEnum.None },

@@ -10,6 +10,8 @@ import {
   claimRelayForCheckIn,
   fetchRelayForCheckInCampaigns,
 } from "~/services/apiService/relayfor"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   AnyrouterCheckInParams,
@@ -43,6 +45,8 @@ const createServiceRequest = (
       : ""
 
   return {
+    directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+    protectionBypassExecution: undefined,
     baseUrl: account.site_url,
     accountId: account.id,
     auth: {
@@ -167,11 +171,14 @@ export const relayForProvider: AutoCheckinProvider = {
             context.mutationLifecycle.responseReceived = false
           }
           const claimResult = await claimRelayForCheckIn(
-            {
-              ...request,
-              protectionBypassExecution: context.protectionBypassExecution,
-              observer: context.mutationLifecycle,
-            },
+            bindApiTransportRequest(
+              {
+                ...request,
+                protectionBypassExecution: context.protectionBypassExecution,
+                observer: context.mutationLifecycle,
+              },
+              API_DIRECT_REQUEST_REASONS.CallerManaged,
+            ),
             campaign.id,
             day.date,
           )

@@ -10,6 +10,7 @@ import {
 import { withCubenceSession } from "~/services/apiService/cubence/session"
 import { readCubenceResponse } from "~/services/apiService/cubence/transport"
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -33,6 +34,7 @@ describe("Cubence direct Cookie transport", () => {
     await expect(
       readCubenceResponse(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://cubence.com",
           auth: { authType: AuthTypeEnum.Cookie },
         },
@@ -54,6 +56,7 @@ describe("Cubence direct Cookie transport", () => {
       await expect(
         readCubenceResponse(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: "https://cubence.com",
             auth: { authType: AuthTypeEnum.Cookie },
           },
@@ -71,6 +74,7 @@ describe("Cubence direct Cookie transport", () => {
     try {
       const pending = withCubenceSession(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://cubence.com",
           auth: { authType: AuthTypeEnum.Cookie, cookie: "token=A" },
         },
@@ -118,6 +122,7 @@ describe("Cubence direct Cookie transport", () => {
     )
     await readCubenceResponse(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
         baseUrl: "https://cubence.com",
         auth: { authType: AuthTypeEnum.Cookie },
         fetchContext: {
@@ -137,6 +142,7 @@ describe("Cubence direct Cookie transport", () => {
     await expect(
       readCubenceResponse(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
           baseUrl: "https://cubence.com",
           auth: { authType: AuthTypeEnum.Cookie },
           fetchContext: { kind: "browser-context", incognito: true },
@@ -154,6 +160,7 @@ describe("Cubence direct Cookie transport", () => {
     await expect(
       readCubenceResponse(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://cubence.com",
           auth: { authType: AuthTypeEnum.Cookie, cookie: "session=A" },
           observer: { onDispatch, onResponse: vi.fn() },
@@ -176,6 +183,7 @@ describe("Cubence direct Cookie transport", () => {
     await expect(
       readCubenceResponse(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://cubence.com",
           auth: { authType: AuthTypeEnum.Cookie, cookie: "session=expired" },
         },
@@ -195,6 +203,7 @@ describe("Cubence direct Cookie transport", () => {
     )
     await readCubenceResponse(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://cubence.com",
         auth: { authType: AuthTypeEnum.Cookie, cookie: "  " },
         cookieAuthSessionCookie: "Cookie: session=saved-A",
@@ -216,6 +225,7 @@ describe("Cubence direct Cookie transport", () => {
     await expect(
       readCubenceResponse(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://cubence.com",
           auth: { authType: AuthTypeEnum.Cookie, cookie: "session=account-A" },
           observer: { onDispatch, onResponse: vi.fn() },
@@ -244,6 +254,7 @@ describe("Cubence direct Cookie transport", () => {
     )
     await expect(
       fetchKeys({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://cubence.com",
         auth: {
           authType: AuthTypeEnum.Cookie,
@@ -294,6 +305,7 @@ describe("Cubence direct Cookie transport", () => {
     )
     const outcome = await createKey(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://cubence.com",
         auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
         observer: { onDispatch, onResponse: vi.fn() },
@@ -335,6 +347,7 @@ describe("Cubence direct Cookie transport", () => {
       await expect(
         createKey(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: "https://cubence.com",
             auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
           },
@@ -373,6 +386,7 @@ describe("Cubence direct Cookie transport", () => {
     )
     await expect(
       fetchKeys({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://cubence.com",
         auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
       }),
@@ -402,6 +416,7 @@ describe("Cubence direct Cookie transport", () => {
       await expect(
         createKey(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             baseUrl: "https://cubence.com",
             auth: {
               authType: AuthTypeEnum.Cookie,
@@ -450,6 +465,7 @@ describe("Cubence direct Cookie transport", () => {
       }),
     )
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://cubence.com",
       auth: { authType: AuthTypeEnum.Cookie, userId: 7 },
     }
@@ -485,6 +501,7 @@ describe("Cubence direct Cookie transport", () => {
       }),
     )
     const request = {
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://cubence.com",
       auth: { authType: AuthTypeEnum.Cookie, cookie: "session=A" },
       abortSignal: controller.signal,
@@ -529,6 +546,7 @@ describe("Cubence direct Cookie transport", () => {
     })
     await readCubenceResponse(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://cubence.com",
         auth: { authType: AuthTypeEnum.Cookie, cookie: "session=A" },
       },
@@ -553,6 +571,7 @@ describe("Cubence direct Cookie transport", () => {
     )
     const request = readCubenceResponse(
       {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://cubence.com",
         auth: { authType: AuthTypeEnum.Cookie },
         requestTimeoutMs: 20,

@@ -9,7 +9,10 @@ import {
 } from "~/services/accountSiteDefinitions/identifiers"
 import { kimiOpenPlatformAccountCompletion } from "~/services/apiAdapters/kimiOpenPlatform/accountCompletion"
 import { readKimiAuthState } from "~/services/apiService/kimiOpenPlatform/transport"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import {
+  API_DIRECT_REQUEST_REASONS,
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+} from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 import { createAccountCompletionHelpersMock } from "../checkInFixtures"
@@ -56,12 +59,14 @@ describe("kimiOpenPlatformAccountBootstrap", () => {
       >("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
     await expect(
       bootstrap.getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://platform.kimi.ai",
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: " token " },
       }),
     ).resolves.toEqual({ username: "", access_token: "token" })
     await expect(
       bootstrap.getOrCreateAccessToken({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: "https://platform.kimi.ai",
         auth: { authType: AuthTypeEnum.AccessToken },
       }),
@@ -69,6 +74,7 @@ describe("kimiOpenPlatformAccountBootstrap", () => {
     await expect(
       bootstrap.fetchCheckInSupport(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           baseUrl: "https://platform.kimi.ai",
           auth: { authType: AuthTypeEnum.AccessToken },
         },
@@ -87,6 +93,7 @@ describe("kimiOpenPlatformAccountBootstrap", () => {
           typeof import("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
         >("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
       const facts = await actualBootstrap.loadBootstrapFacts({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl,
         auth: { authType: AuthTypeEnum.AccessToken },
       })
@@ -100,6 +107,7 @@ describe("kimiOpenPlatformAccountBootstrap", () => {
       >("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
 
     const factsCn = await actualBootstrap.loadBootstrapFacts({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://platform.kimi.com/console",
       auth: { authType: AuthTypeEnum.AccessToken },
     })
@@ -107,6 +115,7 @@ describe("kimiOpenPlatformAccountBootstrap", () => {
     expect(factsCn.displayName).toBe(KIMI_DISPLAY_NAME)
 
     const factsGlobal = await actualBootstrap.loadBootstrapFacts({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
       baseUrl: "https://platform.kimi.ai/console",
       auth: { authType: AuthTypeEnum.AccessToken },
     })

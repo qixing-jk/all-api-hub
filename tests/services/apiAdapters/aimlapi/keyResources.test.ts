@@ -12,6 +12,7 @@ import {
   AIMLAPI_KEY_PREFIX,
   type AimlApiKey,
 } from "~/services/apiService/aimlapi/keys"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -20,6 +21,7 @@ const origin = "https://api.aimlapi.com"
 const managementKey = "management-key-value"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://aimlapi.com",
   accountId: "acc-aimlapi",
   auth: {

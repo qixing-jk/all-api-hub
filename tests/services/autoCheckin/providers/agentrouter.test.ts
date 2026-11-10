@@ -8,6 +8,7 @@ import {
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import {
   agentRouterProvider,
@@ -442,7 +443,11 @@ describe("AgentRouter login check-in", () => {
       agentRouterProvider.detect!({ account: saved, observedAt: 123 }),
     ).resolves.toMatchObject({ outcome: "matched" })
     expect(liveDependencies.status).toHaveBeenCalledWith(
-      { baseUrl: saved.site_url, auth: { authType: AuthTypeEnum.None } },
+      {
+        baseUrl: saved.site_url,
+        auth: { authType: AuthTypeEnum.None },
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+      },
       undefined,
     )
     liveDependencies.login.mockResolvedValue({

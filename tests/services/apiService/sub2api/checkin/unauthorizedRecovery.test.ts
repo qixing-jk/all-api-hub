@@ -27,6 +27,7 @@ import {
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { performXiaobaiCodeDailyCheckIn } from "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
@@ -75,6 +76,7 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
 }))
 
 const request: ApiServiceRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relay.example",
   auth: {
     authType: AuthTypeEnum.AccessToken,

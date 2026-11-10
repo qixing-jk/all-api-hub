@@ -3,7 +3,10 @@ import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
 import { API_ERROR_CODES, ApiError, type ApiErrorCode } from "./errors"
-import { extractDataFromApiResponseBody } from "./response"
+import {
+  assertNotProtectionResponse,
+  extractDataFromApiResponseBody,
+} from "./response"
 import {
   extractHeuristicResponseErrorMessage,
   resolveResponseErrorDetails,
@@ -140,6 +143,13 @@ export function mapCompatibilityResponse<T>(
   response: CompatibilityTransportResponse<T>,
   context: CompatibilityResponseContext,
 ): T | ApiResponse<T> {
+  if (context.responseType === "json")
+    assertNotProtectionResponse(
+      response.body,
+      response.status,
+      context.endpoint,
+      response.headers,
+    )
   if (!response.ok) {
     throw createCompatibilityHttpError(response, context)
   }

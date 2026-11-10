@@ -6,6 +6,7 @@ import {
   fetchRelayForModels,
   updateRelayForModelGroup,
 } from "~/services/apiService/relayfor"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
 import { AuthTypeEnum } from "~/types"
 
@@ -15,6 +16,7 @@ vi.mock("~/services/apiService/relayfor", () => ({
 }))
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://relayfor.xyz",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token-abc" },
 }

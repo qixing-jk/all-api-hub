@@ -5,6 +5,7 @@ import {
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { cleanupNewApiOwnedSession } from "~/services/managedSites/newApiOwnedSession/client"
 import { createNewApiDashboardAuthAcceptance } from "~/services/managedSites/providers/newApi/newApiDashboardAuthAcceptance"
@@ -75,6 +76,7 @@ export function createNewApiSessionProtocol(
     baseUrl: string,
     userId?: number | string,
   ): ApiServiceRequest => ({
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: baseUrl.trim(),
     accountId: `managed-site:new-api-session:${normalizeSessionScopeKey(baseUrl)}`,
     auth: {
@@ -89,6 +91,7 @@ export function createNewApiSessionProtocol(
       ReturnType<NewApiTransientSessionRuntime["getActiveDashboardAuth"]>
     >,
   ): ApiServiceRequest => ({
+    directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
     baseUrl: baseUrl.trim(),
     accountId: `managed-site:new-api-session:${normalizeSessionScopeKey(baseUrl)}`,
     auth: {

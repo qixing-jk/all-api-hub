@@ -7,11 +7,13 @@ import { aimlApiAccountBootstrap } from "~/services/apiAdapters/aimlapi/accountB
 import { aimlApiAccountPersistence } from "~/services/apiAdapters/aimlapi/accountPersistence"
 import { aimlApiAccountRefresh } from "~/services/apiAdapters/aimlapi/accountRefresh"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://aimlapi.com",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "management" },
   checkIn: buildCheckInConfig(),

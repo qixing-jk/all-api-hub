@@ -13,6 +13,7 @@ import {
 } from "~/services/apiService/novita/constants"
 import { ApiError } from "~/services/apiTransport/errors"
 import * as requestExecution from "~/services/apiTransport/requestExecution"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiTransport/requestExecution", () => ({
@@ -61,6 +62,7 @@ const KEYS_FIXTURE = {
 } as Record<string, unknown>
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://novita.ai",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "sk_test-key" },
 }
@@ -184,6 +186,7 @@ describe("novita api service", () => {
   it("rejects requests without an access token before dispatch", async () => {
     await expect(
       fetchNovitaUserInfo({
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
         baseUrl: request.baseUrl,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: " " },
       }),
@@ -206,9 +209,8 @@ describe("novita api service", () => {
       },
     }
     await fetchNovitaUserInfo(paired)
-    const { fetchNovitaData } = await import(
-      "~/services/apiService/novita/transport"
-    )
+    const { fetchNovitaData } =
+      await import("~/services/apiService/novita/transport")
     await fetchNovitaData(paired, "/v2/user/key", {
       method: "POST",
       body: { name: "test" },
@@ -231,9 +233,8 @@ describe("novita api service", () => {
       status: 401,
       body: { message: "expired" },
     } as never)
-    const { fetchNovitaData } = await import(
-      "~/services/apiService/novita/transport"
-    )
+    const { fetchNovitaData } =
+      await import("~/services/apiService/novita/transport")
     await expect(
       fetchNovitaData(
         {
@@ -266,9 +267,8 @@ describe("novita api service", () => {
       vi.mocked(
         requestExecution.fetchPreparedJsonResponse,
       ).mockResolvedValueOnce({ ok: true, status: 200, body: {} } as never)
-      const { fetchNovitaData } = await import(
-        "~/services/apiService/novita/transport"
-      )
+      const { fetchNovitaData } =
+        await import("~/services/apiService/novita/transport")
       await fetchNovitaData(
         {
           ...request,

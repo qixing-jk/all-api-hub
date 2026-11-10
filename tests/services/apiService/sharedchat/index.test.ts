@@ -11,6 +11,7 @@ import {
   rotateCodexServiceCredential,
 } from "~/services/apiService/sharedchat"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -23,6 +24,7 @@ import { server } from "~~/tests/msw/server"
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const baseRequest = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl: "https://new.sharedchat.cc",
   auth: {
     authType: AuthTypeEnum.Cookie,
@@ -92,12 +94,13 @@ describe("apiService SharedChat", () => {
       ),
     )
 
-    const apiService = (await import(
-      "~/services/apiService/sharedchat"
-    )) as Record<string, unknown>
+    const apiService =
+      (await import("~/services/apiService/sharedchat")) as Record<
+        string,
+        unknown
+      >
     const fetchInviteLink = apiService.fetchInviteLink as
-      | ((request: typeof baseRequest) => Promise<string>)
-      | undefined
+      ((request: typeof baseRequest) => Promise<string>) | undefined
 
     expect(fetchInviteLink).toEqual(expect.any(Function))
     await expect(fetchInviteLink!(baseRequest)).resolves.toBe(
@@ -121,12 +124,13 @@ describe("apiService SharedChat", () => {
       ),
     )
 
-    const apiService = (await import(
-      "~/services/apiService/sharedchat"
-    )) as Record<string, unknown>
+    const apiService =
+      (await import("~/services/apiService/sharedchat")) as Record<
+        string,
+        unknown
+      >
     const fetchInviteLink = apiService.fetchInviteLink as
-      | ((request: typeof baseRequest) => Promise<string>)
-      | undefined
+      ((request: typeof baseRequest) => Promise<string>) | undefined
 
     expect(fetchInviteLink).toEqual(expect.any(Function))
     const result = await fetchInviteLink!(baseRequest)
@@ -154,12 +158,13 @@ describe("apiService SharedChat", () => {
       ),
     )
 
-    const apiService = (await import(
-      "~/services/apiService/sharedchat"
-    )) as Record<string, unknown>
+    const apiService =
+      (await import("~/services/apiService/sharedchat")) as Record<
+        string,
+        unknown
+      >
     const fetchInviteLink = apiService.fetchInviteLink as
-      | ((request: typeof baseRequest) => Promise<string>)
-      | undefined
+      ((request: typeof baseRequest) => Promise<string>) | undefined
 
     expect(fetchInviteLink).toEqual(expect.any(Function))
     await expect(fetchInviteLink!(baseRequest)).rejects.toMatchObject({

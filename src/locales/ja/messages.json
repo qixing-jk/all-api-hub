@@ -108,7 +108,8 @@
       "invalidResponseFormat": "無効な応答形式です",
       "nonJsonContent": "JSON ではなく {{contentType}} が返されました（HTTP {{status}}）",
       "onlyJsonSupported": "JSON 応答のみサポートしています",
-      "requestFailed": "リクエストに失敗しました: {{status}}"
+      "requestFailed": "リクエストに失敗しました: {{status}}",
+      "verificationRequired": "サイトから本人確認ページが返されました。サイトで確認を完了してから再試行してください。"
     },
     "dayaRedemptionUnconfirmed": "公式コンソールで交換結果を確認し、特典の付与状況の確認または割引コードの適用を完了してから再試行してください。",
     "operation": {

@@ -8,6 +8,7 @@ import {
   resolveNewApiAccessTokenDialect,
 } from "~/services/apiService/newApiFamily/default/accessTokenDialect"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
@@ -34,6 +35,7 @@ const { SCOPED_ACCESS_TOKENS, DASHBOARD_PAT } = NEW_API_ACCESS_TOKEN_DIALECTS
 const baseUrl = "https://dialect.example.invalid"
 
 const request = {
+  directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
   baseUrl,
   accountId: "account-1",
   auth: {

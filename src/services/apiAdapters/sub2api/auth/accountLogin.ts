@@ -20,6 +20,7 @@ import {
   isSub2ApiOAuthProvider,
   normalizeSub2ApiLoginIdentity,
 } from "~/services/apiService/sub2api/oauth/protocol"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createBrowserOAuthContext } from "~/services/browserOAuth/browserOAuth"
 import { AuthTypeEnum } from "~/types/auth"
 
@@ -88,6 +89,7 @@ export const sub2ApiAccountLogin: AccountLoginCapability = {
   async discover(account) {
     if (!supportsSub2ApiAccountLogin(account)) return []
     const settings = await fetchSub2ApiPublicSettings({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       baseUrl: new URL(account.site_url).origin,
       auth: { authType: AuthTypeEnum.None },
     })

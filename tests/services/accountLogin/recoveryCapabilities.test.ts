@@ -13,6 +13,7 @@ import { isValidAccount } from "~/services/accounts/editing/accountFormValidatio
 import * as definitions from "~/services/accountSiteDefinitions"
 import type { AccountLoginMethodDefinition } from "~/services/apiAdapters/contracts/accountLogin"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 
 const deps = vi.hoisted(() => ({
@@ -149,6 +150,7 @@ describe("recovery through the actual login capability", () => {
     await expect(
       executeWithAccountCredentialRecovery(
         {
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
           accountId: account.id,
           siteType: account.site_type,
           baseUrl: account.site_url,
@@ -259,6 +261,7 @@ describe("recovery through the actual login capability", () => {
       await expect(
         executeWithAccountCredentialRecovery(
           {
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             accountId: account.id,
             siteType: account.site_type,
             baseUrl: account.site_url,

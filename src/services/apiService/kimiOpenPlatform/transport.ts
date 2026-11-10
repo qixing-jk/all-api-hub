@@ -1,10 +1,12 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { persistKimiOpenPlatformAuth } from "~/services/accounts/accountStorage/kimiAuthPersistence"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import {
   executePreparedRequest,
   fetchPreparedJsonResponse,
 } from "~/services/apiTransport/requestExecution"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
@@ -44,7 +46,10 @@ export function withKimiOpenPlatformAuth(
   request: ApiServiceRequest,
   auth: KimiAuthState,
 ): ApiServiceRequest {
-  return { ...request, kimiOpenPlatformAuth: { ...auth } } as ApiServiceRequest
+  return bindApiTransportRequest(
+    { ...request, kimiOpenPlatformAuth: { ...auth } },
+    API_DIRECT_REQUEST_REASONS.CallerManaged,
+  )
 }
 
 /** Reads a complete mutable console session from the request. */

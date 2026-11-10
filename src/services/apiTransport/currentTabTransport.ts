@@ -103,6 +103,7 @@ async function fetchViaCurrentTabContent<T>(context: {
   url: string
   endpoint: string
   fetchOptions: RequestInit
+  operationSemantics?: FetchApiOptions["operationSemantics"]
   responseType: TempWindowResponseType
   onDispatch: () => void
   onResponse: () => void
@@ -113,7 +114,10 @@ async function fetchViaCurrentTabContent<T>(context: {
     onDispatch: context.onDispatch,
     onResponse: context.onResponse,
   })
-  const replaySafe = isReplaySafeRemoteFetch(context.fetchOptions)
+  const replaySafe = isReplaySafeRemoteFetch(
+    context.fetchOptions,
+    context.operationSemantics,
+  )
   const abortSignal = context.fetchOptions.signal
   let hasAffirmativePreDispatchEvidence = false
   const disposeLifecycle = () => lifecycle.dispose()
@@ -239,6 +243,7 @@ export async function executeWithCurrentTabContentPreference<T, TResult>(
       url: context.url,
       endpoint: context.endpoint,
       fetchOptions: context.fetchOptions,
+      operationSemantics: context.options.operationSemantics,
       responseType: context.responseType,
       onDispatch: () => {
         dispatched = true
@@ -250,7 +255,10 @@ export async function executeWithCurrentTabContentPreference<T, TResult>(
       },
     })
   } catch (error) {
-    const replaySafe = isReplaySafeRemoteFetch(context.fetchOptions)
+    const replaySafe = isReplaySafeRemoteFetch(
+      context.fetchOptions,
+      context.options.operationSemantics,
+    )
     const mustNotFallback =
       context.request.currentTabFallback ===
         API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid ||

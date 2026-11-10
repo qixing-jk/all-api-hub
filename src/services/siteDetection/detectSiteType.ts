@@ -8,7 +8,9 @@ import { fetchSiteStatus } from "~/services/apiService/newApiFamily/default/acco
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { ApiError } from "~/services/apiTransport/errors"
+import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { fetchApi } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -73,11 +75,14 @@ export const fetchSiteOriginalTitle = async (
 
   // 临时上下文失败则直接 fetch，可能拿到缓存或被 WAF 误拦截，但总比没有数据好
   const html = await fetchApi<string>(
-    {
-      baseUrl: url,
-      auth: { authType: AuthTypeEnum.None },
-      protectionBypassExecution,
-    },
+    bindApiTransportRequest(
+      {
+        baseUrl: url,
+        auth: { authType: AuthTypeEnum.None },
+        protectionBypassExecution,
+      },
+      API_DIRECT_REQUEST_REASONS.CallerManaged,
+    ),
     {
       endpoint: "/",
       responseType: "text",
@@ -157,11 +162,14 @@ async function detectNewApiFamilySiteTypeFromCompatAuthError(
 ): Promise<AccountSiteType> {
   try {
     await newApiFamilyRequests.data<unknown>(
-      {
-        baseUrl: url,
-        auth: { authType: AuthTypeEnum.Cookie },
-        protectionBypassExecution,
-      },
+      bindApiTransportRequest(
+        {
+          baseUrl: url,
+          auth: { authType: AuthTypeEnum.Cookie },
+          protectionBypassExecution,
+        },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      ),
       {
         endpoint: "/api/user/self",
         options: {
@@ -316,11 +324,16 @@ async function fetchPublicSiteStatusSignals(
   const noSignals: PublicSiteStatusSignals = { identifiesRixApi: false }
 
   const readSignals = async (attempt?: ProtectionBypassExecution) => {
-    const siteStatus = await fetchSiteStatus({
-      baseUrl: new URL("/", url).toString(),
-      auth: { authType: AuthTypeEnum.None },
-      ...(attempt ? { protectionBypassExecution: attempt } : {}),
-    })
+    const siteStatus = await fetchSiteStatus(
+      bindApiTransportRequest(
+        {
+          baseUrl: new URL("/", url).toString(),
+          auth: { authType: AuthTypeEnum.None },
+          ...(attempt ? { protectionBypassExecution: attempt } : {}),
+        },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      ),
+    )
     if (!siteStatus) return noSignals
 
     const rawStatus = siteStatus as unknown as Record<string, unknown>
