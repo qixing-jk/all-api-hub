@@ -120,7 +120,9 @@ export function createAccountCompletionHelpersMock(
     isCheckedInToday?: boolean
   },
 ) {
-  const createServiceRequest = vi.fn(
+  const createServiceRequest = vi.fn<
+    AccountCompletionHelpers["createServiceRequest"]
+  >(
     ({
       baseUrl,
       auth,
