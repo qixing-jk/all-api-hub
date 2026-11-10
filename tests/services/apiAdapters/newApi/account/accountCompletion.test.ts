@@ -112,7 +112,7 @@ describe("newApiAccountCompletion", () => {
       SITE_TYPES.NEW_API,
     )
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
-      directRequestReason: "passive" as const,
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://new.example.com",
       fetchContext: currentTabFetchContext,
       auth: {
@@ -121,7 +121,7 @@ describe("newApiAccountCompletion", () => {
       },
     })
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
-      directRequestReason: "passive" as const,
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://new.example.com",
       fetchContext: currentTabFetchContext,
       auth: {
@@ -192,7 +192,7 @@ describe("newApiAccountCompletion", () => {
       },
     )
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
-      directRequestReason: "passive" as const,
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://panel.example.invalid/settings",
       fetchContext: currentTabFetchContext,
       auth: {
@@ -552,7 +552,7 @@ describe("newApiAccountCompletion", () => {
     )
 
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
-      directRequestReason: "passive" as const,
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://family.example.invalid",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -587,7 +587,7 @@ describe("newApiAccountCompletion", () => {
     )
 
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
-      directRequestReason: "passive" as const,
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -596,7 +596,7 @@ describe("newApiAccountCompletion", () => {
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
-      directRequestReason: "passive" as const,
+      directRequestReason: "caller_managed" as const,
       baseUrl: "https://cookie.example.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -604,7 +604,7 @@ describe("newApiAccountCompletion", () => {
     })
     expect(mockFetchCheckInSupport).toHaveBeenCalledWith(
       {
-        directRequestReason: "passive" as const,
+        directRequestReason: "caller_managed" as const,
         baseUrl: "https://cookie.example.com",
         auth: {
           authType: AuthTypeEnum.None,

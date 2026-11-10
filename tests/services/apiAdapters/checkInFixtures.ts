@@ -126,7 +126,7 @@ export function createAccountCompletionHelpersMock(
       auth,
       context,
     }: Parameters<AccountCompletionHelpers["createServiceRequest"]>[0]) => ({
-      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
       baseUrl,
       auth,
       ...(context.fetchContext ? { fetchContext: context.fetchContext } : {}),
