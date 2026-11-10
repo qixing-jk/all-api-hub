@@ -56,6 +56,21 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("native password browser orchestration", () => {
+  it("keeps a lost API fallback reply uncertain without repeating login", async () => {
+    session.send
+      .mockResolvedValueOnce({ kind: "fallback" })
+      .mockRejectedValueOnce(
+        new Error("The message port closed before a response was received."),
+      )
+
+    await expect(authenticate()).resolves.toEqual({ status: "uncertain" })
+    expect(session.send.mock.calls.map(([action]) => action)).toEqual([
+      "ui",
+      "api",
+    ])
+    expect(session.navigate).not.toHaveBeenCalled()
+  })
+
   it.each(["pending", "settled during the final sleep"])(
     "verifies the session after an uncaptured response exhausts its wait (%s)",
     async (state) => {

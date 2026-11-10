@@ -172,6 +172,9 @@ without first checking their recorded dispatch and authoritative outcome.
   `artifacts/common-waf-acceptance.md`, `artifacts/contract-acceptance.md`.
 - Full-branch regression and review matrix: `artifacts/review-20261111/report.md`;
   final contract refactor checks: `artifacts/scout-20261111.md`.
+- PR #1862 follow-up coverage decisions and remote acceptance:
+  `../pr-1862/artifacts/worklist.md`. Generated provider reports and focused
+  coverage remain local for review; the existing live-validation gaps above remain.
 - Existing reminder gallery: `.scratch/visual-captures/run-AGKMjl/`. There is no
   comparable old workflow capture. Fixture behavior checks and visual comparison
   evidence remain separate.

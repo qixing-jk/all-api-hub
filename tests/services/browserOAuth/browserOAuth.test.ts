@@ -403,6 +403,52 @@ describe("browser OAuth context", () => {
     release()
     await expect(result).resolves.toMatchObject({ status: "authenticated" })
   })
+  it("continues page clearance when reminder delivery rejects", async () => {
+    vi.useFakeTimers()
+    const present = vi.fn().mockRejectedValue(new Error("Reminder unavailable"))
+    setLoginVerificationPresenter(present)
+    vi.mocked(waitForTabComplete).mockRejectedValueOnce(
+      new ProtectionPageTimeoutError(),
+    )
+
+    const result = browserOAuthContext.authenticate({
+      origin,
+      requestId: "failed-reminder",
+    })
+    await vi.runAllTimersAsync()
+
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+    expect(present).toHaveBeenCalledExactlyOnceWith("failed-reminder")
+    expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+  })
+  it("ends a stalled page check when the manual verification budget expires", async () => {
+    vi.useFakeTimers()
+    let guardSignal: AbortSignal | undefined
+    vi.mocked(waitForTabComplete)
+      .mockRejectedValueOnce(new ProtectionPageTimeoutError())
+      .mockImplementation((_tabId, options) => {
+        guardSignal = options?.signal
+        return new Promise(() => {})
+      })
+    const result = browserOAuthContext.authenticate({
+      origin,
+      requestId: "stalled-protection",
+    })
+    await vi.advanceTimersByTimeAsync(46_000)
+
+    await expect(result).resolves.toEqual({
+      status: "interaction_required",
+      reason: "verification_required",
+    })
+    expect(guardSignal?.aborted).toBe(true)
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.map(
+        ([, message]) => message.action,
+      ),
+    ).toEqual([actions.clear])
+    expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    expect(getLoginVerificationContext("stalled-protection")).toBeUndefined()
+  })
   it("honors the existing reminder's manual deadline when it opens during a pending protection check", async () => {
     vi.useFakeTimers()
     let release!: () => void
@@ -575,7 +621,7 @@ describe("browser OAuth context", () => {
     ).toEqual([PASSWORD_UI_PHASES.Prepare, PASSWORD_UI_PHASES.Submit])
     expect(dispose).toHaveBeenCalledOnce()
   })
-  it.each(["abort", "window"])(
+  it.each(["abort", "window", "tab"])(
     "cancels a protection continuation when its owner closes (%s)",
     async (cause) => {
       vi.useFakeTimers()
@@ -590,8 +636,14 @@ describe("browser OAuth context", () => {
         abortSignal: controller.signal,
       })
       await vi.advanceTimersByTimeAsync(1_000)
+      removalListeners.window?.(99)
+      removalListeners.tab?.(99)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(browserApi.removeWindow).not.toHaveBeenCalled()
+      expect(getLoginVerificationContext(requestId)).toBeDefined()
       if (cause === "abort") controller.abort()
-      else removalListeners.window?.(7)
+      else if (cause === "window") removalListeners.window?.(7)
+      else removalListeners.tab?.(11)
       await vi.advanceTimersByTimeAsync(1)
       await expect(result).resolves.toMatchObject({ status: "cancelled" })
       expect(getLoginVerificationContext(requestId)).toBeUndefined()
