@@ -163,7 +163,7 @@ export function AllAccountsGroupFilterMenu({
           aria-label={t("accountGroupFilterTrigger")}
           className={cn("w-full justify-between px-3 sm:w-56")}
         >
-          <span className="gap-y-density-2 flex items-center gap-x-2">
+          <span className="flex items-center gap-x-2 gap-y-density-2">
             <Funnel className="h-4 w-4" />
             <span>{t("accountGroupFilterTrigger")}</span>
           </span>
@@ -181,113 +181,152 @@ export function AllAccountsGroupFilterMenu({
         align="end"
         className="w-[min(42rem,calc(100vw-2rem))] p-0"
       >
-        <div className="dark:border-border py-density-3 border-b px-4">
-          <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-density-1">
-              <div className="text-foreground text-sm font-semibold">
-                {t("accountGroupFilterTitle")}
-              </div>
-              <p className="text-muted-foreground text-xs">
-                {t("accountGroupFilterDescription")}
-              </p>
+        <AccountGroupFilterContent
+          accountSections={accountSections}
+          excludedGroupsByAccountId={excludedGroupsByAccountId}
+          totalExcludedGroups={totalExcludedGroups}
+          handleResetAll={handleResetAll}
+          handleSelectAllForAccount={handleSelectAllForAccount}
+          handleClearAllForAccount={handleClearAllForAccount}
+          handleAccountSelectionChange={handleAccountSelectionChange}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/** Renders account sections only while the popover mounts its content. */
+function AccountGroupFilterContent({
+  accountSections,
+  excludedGroupsByAccountId,
+  totalExcludedGroups,
+  handleResetAll,
+  handleSelectAllForAccount,
+  handleClearAllForAccount,
+  handleAccountSelectionChange,
+}: {
+  accountSections: {
+    accountId: string
+    accountName: string
+    groups: string[]
+    groupOptions: AccountGroupOption[]
+  }[]
+  excludedGroupsByAccountId: Record<string, string[]>
+  totalExcludedGroups: number
+  handleResetAll: () => void
+  handleSelectAllForAccount: (accountId: string) => void
+  handleClearAllForAccount: (accountId: string) => void
+  handleAccountSelectionChange: (accountId: string, groups: string[]) => void
+}) {
+  const { t } = useTranslation("modelList")
+  return (
+    <>
+      <div className="border-b px-4 py-density-3 dark:border-border">
+        <div className="flex flex-col gap-x-3 gap-y-density-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-density-1">
+            <div className="text-sm font-semibold text-foreground">
+              {t("accountGroupFilterTitle")}
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleResetAll}
-              disabled={totalExcludedGroups === 0}
-            >
-              {t("accountGroupFilterResetAll")}
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              {t("accountGroupFilterDescription")}
+            </p>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleResetAll}
+            disabled={totalExcludedGroups === 0}
+          >
+            {t("accountGroupFilterResetAll")}
+          </Button>
         </div>
+      </div>
 
-        <div className="space-y-density-3 py-density-4 max-h-[70vh] overflow-y-auto px-4">
-          {accountSections.length === 0 ? (
-            <div className="border-border text-muted-foreground py-density-6 rounded-lg border border-dashed px-4 text-sm">
-              {t("accountGroupFilterNoGroups")}
-            </div>
-          ) : (
-            accountSections.map(
-              ({ accountId, accountName, groups, groupOptions }) => {
-                const excluded = new Set(
-                  toUniqueGroups(excludedGroupsByAccountId[accountId] ?? []),
-                )
-                const selectedGroups = groups.filter(
-                  (group) => !excluded.has(group),
-                )
+      <div className="max-h-[70vh] space-y-density-3 overflow-y-auto px-4 py-density-4">
+        {accountSections.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border px-4 py-density-6 text-sm text-muted-foreground">
+            {t("accountGroupFilterNoGroups")}
+          </div>
+        ) : (
+          accountSections.map(
+            ({ accountId, accountName, groups, groupOptions }) => {
+              const excluded = new Set(
+                toUniqueGroups(excludedGroupsByAccountId[accountId] ?? []),
+              )
+              const selectedGroups = groups.filter(
+                (group) => !excluded.has(group),
+              )
 
-                return (
-                  <section
-                    key={accountId}
-                    className="border-border space-y-density-3 py-density-3 rounded-lg border px-3"
-                  >
-                    <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-density-1">
-                        <div className="text-foreground text-sm font-medium">
-                          {accountName}
-                        </div>
-                        <div className="text-muted-foreground text-xs">
-                          {t("accountGroupFilterSelectedSummary", {
-                            selected: selectedGroups.length,
-                            total: groups.length,
-                          })}
-                        </div>
+              return (
+                <section
+                  key={accountId}
+                  className="space-y-density-3 rounded-lg border border-border px-3 py-density-3"
+                >
+                  <div className="flex flex-col gap-x-3 gap-y-density-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-density-1">
+                      <div className="text-sm font-medium text-foreground">
+                        {accountName}
                       </div>
-
-                      <div className="gap-y-density-2 flex items-center gap-x-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSelectAllForAccount(accountId)}
-                          disabled={selectedGroups.length === groups.length}
-                        >
-                          {t("accountGroupFilterSelectAll")}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleClearAllForAccount(accountId)}
-                          disabled={selectedGroups.length === 0}
-                        >
-                          {t("accountGroupFilterClearAll")}
-                        </Button>
+                      <div className="text-xs text-muted-foreground">
+                        {t("accountGroupFilterSelectedSummary", {
+                          selected: selectedGroups.length,
+                          total: groups.length,
+                        })}
                       </div>
                     </div>
 
-                    <CompactMultiSelect
-                      options={groupOptions.map((group) => ({
-                        value: group.name,
-                        label:
-                          group.ratio === undefined
-                            ? group.displayName ?? group.name
-                            : formatGroupLabel(
-                                group.displayName ?? group.name,
-                                group.ratio,
-                              ),
-                      }))}
-                      selected={selectedGroups}
-                      onChange={(values) =>
-                        handleAccountSelectionChange(accountId, values)
-                      }
-                      size="sm"
-                      displayMode="summary"
-                      placeholder={t(
-                        selectedGroups.length === 0
-                          ? "accountGroupFilterNoGroupsIncluded"
-                          : "accountGroupFilterAllIncluded",
-                      )}
-                    />
-                  </section>
-                )
-              },
-            )
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+                    <div className="flex items-center gap-x-2 gap-y-density-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSelectAllForAccount(accountId)}
+                        disabled={selectedGroups.length === groups.length}
+                      >
+                        {t("accountGroupFilterSelectAll")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleClearAllForAccount(accountId)}
+                        disabled={selectedGroups.length === 0}
+                      >
+                        {t("accountGroupFilterClearAll")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <CompactMultiSelect
+                    options={groupOptions.map((group) => ({
+                      value: group.name,
+                      label:
+                        group.ratio === undefined
+                          ? (group.displayName ?? group.name)
+                          : formatGroupLabel(
+                              group.displayName ?? group.name,
+                              group.ratio,
+                            ),
+                    }))}
+                    selected={selectedGroups}
+                    onChange={(values) =>
+                      handleAccountSelectionChange(accountId, values)
+                    }
+                    size="sm"
+                    displayMode="summary"
+                    placeholder={t(
+                      selectedGroups.length === 0
+                        ? "accountGroupFilterNoGroupsIncluded"
+                        : "accountGroupFilterAllIncluded",
+                    )}
+                  />
+                </section>
+              )
+            },
+          )
+        )}
+      </div>
+    </>
   )
 }

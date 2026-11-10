@@ -161,21 +161,27 @@ test("groups credentials by Base URL while preserving each credential entry", as
     ],
   })
   await page.setViewportSize({ width: 320, height: 1100 })
-  expect(
-    await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth <=
-        document.documentElement.clientWidth,
-    ),
-  ).toBe(true)
+  // Responsive layout can settle after setViewportSize resolves. Keep the
+  // no-overflow requirement, but observe it through the resize update.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true)
   await page.setViewportSize({ width: 420, height: 900 })
-  expect(
-    await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth <=
-        document.documentElement.clientWidth,
-    ),
-  ).toBe(true)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true)
 
   const toolbar = page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)

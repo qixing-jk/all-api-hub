@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
@@ -72,42 +72,48 @@ export function useModelListVerificationWorkflow({
     [modelKeyContext, displayedModels],
   )
 
-  const handleVerifyModel = (
-    source: ModelManagementItemSource,
-    modelId: string,
-    modelEnableGroups?: string[],
-    supportedEndpointTypes?: string[],
-  ) => {
-    if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
-      setVerifyProfileContext({
-        profile: source.profile,
+  const handleVerifyModel = useCallback(
+    (
+      source: ModelManagementItemSource,
+      modelId: string,
+      modelEnableGroups?: string[],
+      supportedEndpointTypes?: string[],
+    ) => {
+      if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
+        setVerifyProfileContext({
+          profile: source.profile,
+          modelId,
+          supportedEndpointTypes,
+        })
+        return
+      }
+
+      setVerifyContext({
+        account: source.account,
         modelId,
+        modelEnableGroups,
         supportedEndpointTypes,
       })
-      return
-    }
+    },
+    [],
+  )
 
-    setVerifyContext({
-      account: source.account,
-      modelId,
-      modelEnableGroups,
-      supportedEndpointTypes,
-    })
-  }
+  const handleVerifyCliSupport = useCallback(
+    (
+      source: ModelManagementItemSource,
+      modelId: string,
+      modelEnableGroups?: string[],
+    ) => {
+      setVerifyCliContext({ source, modelId, modelEnableGroups })
+    },
+    [],
+  )
 
-  const handleVerifyCliSupport = (
-    source: ModelManagementItemSource,
-    modelId: string,
-    modelEnableGroups?: string[],
-  ) => {
-    setVerifyCliContext({ source, modelId, modelEnableGroups })
-  }
-
-  const handleOpenModelKeyDialog = (
-    account: DisplaySiteData,
-    modelId: string,
-    modelEnableGroups?: string[],
-  ) => setModelKeyContext({ account, modelId, modelEnableGroups })
+  const handleOpenModelKeyDialog = useCallback(
+    (account: DisplaySiteData, modelId: string, modelEnableGroups?: string[]) =>
+      setModelKeyContext({ account, modelId, modelEnableGroups }),
+    [],
+  )
 
   const handleManageVerifyModelKey = () => {
     if (!verifyContext) return

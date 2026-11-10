@@ -230,20 +230,28 @@ export default function ModelList(props: {
     setIsSourceSelectorOpen(true)
   }, [])
 
+  const handleConfigurePricing = useCallback(() => {
+    if (!isModelListPriceSortMode(sortMode))
+      setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
+  }, [sortMode, setSortMode])
+
+  const handleModelGroupChange = useCallback(
+    (itemKey: string, group: string | undefined) => {
+      setModelGroupOverrides((previous) => {
+        const next = { ...previous }
+        if (group === undefined) delete next[itemKey]
+        else next[itemKey] = group
+        return next
+      })
+    },
+    [setModelGroupOverrides],
+  )
+
   const renderModelDisplay = () => (
     <ModelDisplay
       modelGroupOverrides={modelGroupOverrides}
       onModelGroupChange={
-        isAllAccountsScope && !expandGroups
-          ? (itemKey, group) => {
-              setModelGroupOverrides((previous) => {
-                const next = { ...previous }
-                if (group === undefined) delete next[itemKey]
-                else next[itemKey] = group
-                return next
-              })
-            }
-          : undefined
+        isAllAccountsScope && !expandGroups ? handleModelGroupChange : undefined
       }
       excludedGroupsByAccountId={allAccountsExcludedGroupsByAccountId}
       onCatalogChanged={loadPricingData}
@@ -272,7 +280,7 @@ export default function ModelList(props: {
 
   const page = (
     <div
-      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      className="px-4 py-density-4 sm:px-6 sm:py-density-6"
       data-testid={MODEL_LIST_TEST_IDS.page}
       data-model-source={selectedSourceValue}
       data-options-page-pending={
@@ -649,12 +657,7 @@ export default function ModelList(props: {
     </div>
   )
   return (
-    <PricingScenarioNavigation
-      onConfigure={() => {
-        if (!isModelListPriceSortMode(sortMode))
-          setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
-      }}
-    >
+    <PricingScenarioNavigation onConfigure={handleConfigurePricing}>
       {page}
     </PricingScenarioNavigation>
   )

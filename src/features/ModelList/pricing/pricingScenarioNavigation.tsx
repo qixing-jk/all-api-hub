@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -114,6 +115,20 @@ export function PricingScenarioNavigation({
   const controlsRef = useRef<HTMLElement>(null)
   const targetRef = useRef<PricingConditionTarget[]>([])
   const [requested, setRequested] = useState(0)
+  const navigation = useMemo(
+    () => ({
+      controlsRef,
+      configure: (
+        target?: PricingConditionTarget | PricingConditionTarget[],
+      ) => {
+        targetRef.current =
+          target === undefined ? [] : Array.isArray(target) ? target : [target]
+        onConfigure()
+        setRequested((value) => value + 1)
+      },
+    }),
+    [onConfigure],
+  )
   useEffect(() => {
     if (!requested) return
     const controls = controlsRef.current
@@ -152,21 +167,7 @@ export function PricingScenarioNavigation({
     }
   }, [requested])
   return (
-    <PricingScenarioNavigationContext.Provider
-      value={{
-        controlsRef,
-        configure: (target) => {
-          targetRef.current =
-            target === undefined
-              ? []
-              : Array.isArray(target)
-                ? target
-                : [target]
-          onConfigure()
-          setRequested((value) => value + 1)
-        },
-      }}
-    >
+    <PricingScenarioNavigationContext.Provider value={navigation}>
       {children}
     </PricingScenarioNavigationContext.Provider>
   )

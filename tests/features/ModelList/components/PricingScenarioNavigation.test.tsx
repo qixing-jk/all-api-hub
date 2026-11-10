@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { afterEach, expect, it, vi } from "vitest"
 
 import {
@@ -10,6 +10,41 @@ import {
 import { PRICING_RANGE_AXES } from "~/services/modelPricing/pricingConstants"
 
 afterEach(() => vi.useRealTimers())
+
+it("does not invalidate quote consumers when navigation has not changed", () => {
+  const renders = vi.fn()
+  const configure = vi.fn()
+  const Consumer = memo(function Consumer() {
+    const navigation = usePricingScenarioNavigation()!
+    renders()
+    return <button onClick={() => navigation.configure()}>Adjust</button>
+  })
+  const { rerender } = render(
+    <PricingScenarioNavigation onConfigure={configure}>
+      <Consumer />
+    </PricingScenarioNavigation>,
+  )
+  renders.mockClear()
+  rerender(
+    <PricingScenarioNavigation onConfigure={configure}>
+      <Consumer />
+    </PricingScenarioNavigation>,
+  )
+  expect(renders).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole("button", { name: "Adjust" }))
+  expect(configure).toHaveBeenCalledOnce()
+  expect(renders).not.toHaveBeenCalled()
+
+  const nextConfigure = vi.fn()
+  rerender(
+    <PricingScenarioNavigation onConfigure={nextConfigure}>
+      <Consumer />
+    </PricingScenarioNavigation>,
+  )
+  fireEvent.click(screen.getByRole("button", { name: "Adjust" }))
+  expect(nextConfigure).toHaveBeenCalledOnce()
+  expect(configure).toHaveBeenCalledOnce()
+})
 
 it.each([undefined, "at"] as const)(
   "opens and focuses local conditions for target %s",

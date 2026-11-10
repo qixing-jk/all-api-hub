@@ -1,4 +1,4 @@
-import { useId, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
@@ -59,7 +59,6 @@ export function ModelPriceQuote({
   const [showCalculation, setShowCalculation] = useState(false)
   const calculationId = useId()
   const { t, i18n } = useTranslation("modelList")
-  const options = pricingScenarioOptions(t)
   const navigation = usePricingScenarioNavigation()
   const conditionTarget = getPricingConditionTarget(quote)
   const conditionTargets = getPricingConditionTargets(quote)
@@ -75,7 +74,7 @@ export function ModelPriceQuote({
             : conditionTarget === "cacheWrite"
               ? t("priceComparison.weights.cacheWrite")
               : conditionTarget
-                ? options.labels[conditionTarget]
+                ? pricingScenarioOptions(t).labels[conditionTarget]
                 : undefined
   const canConfigure = quote.issues.some((issue) =>
     [
@@ -88,7 +87,7 @@ export function ModelPriceQuote({
       PRICING_ISSUE_CODES.PRICE_RANGE_UNAVAILABLE,
     ].some((code) => code === issue.code),
   )
-  const meterLabels = pricingMeterLabels(t)
+  const meterLabels = useMemo(() => pricingMeterLabels(t), [t])
   const omittedMeters = [
     ...new Set(
       quote.issues.flatMap((issue) =>
@@ -263,7 +262,7 @@ export function ModelPriceQuote({
             conditionTargets.length ? conditionTargets : conditionTarget,
           )
         }
-        className="text-link max-w-full cursor-pointer text-xs font-medium underline underline-offset-2"
+        className="max-w-full cursor-pointer text-xs font-medium text-link underline underline-offset-2"
       >
         {t("scenario.configure")}
         {conditionLabel && ` · ${conditionLabel}`}
@@ -273,7 +272,7 @@ export function ModelPriceQuote({
   return (
     <div className="mt-density-2 space-y-density-2 text-xs">
       {showSummary && (
-        <div className="gap-y-density-1 flex flex-wrap items-baseline gap-x-2">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-density-1">
           {(hasKnownSubtotal || isPriceIndex) && (
             <span>
               {quote.unit === QUOTE_UNITS.IMAGE
@@ -289,7 +288,7 @@ export function ModelPriceQuote({
                       )}
             </span>
           )}
-          <span className="text-foreground text-sm font-semibold tracking-tight">
+          <span className="text-sm font-semibold tracking-tight text-foreground">
             {quote.amount === null
               ? hasPublishedPrices
                 ? isPriceIndex
@@ -324,7 +323,7 @@ export function ModelPriceQuote({
         </div>
       )}
       {showSummary && !details && (
-        <div className="text-muted-foreground gap-y-density-1 flex flex-wrap items-center gap-x-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-density-1 text-muted-foreground">
           {quote.unit === QUOTE_UNITS.MILLION_SELECTED_TOKENS && (
             <span>{t("scenario.calculationHint")}</span>
           )}
@@ -336,7 +335,7 @@ export function ModelPriceQuote({
           )}
           <button
             type="button"
-            className="text-link cursor-pointer underline underline-offset-2"
+            className="cursor-pointer text-link underline underline-offset-2"
             aria-expanded={onShowDetails ? undefined : showCalculation}
             aria-controls={onShowDetails ? undefined : calculationId}
             onClick={() =>
@@ -352,9 +351,9 @@ export function ModelPriceQuote({
       {showSummary &&
         publishedBase &&
         quote.status !== QUOTE_STATUSES.COMPLETE && (
-          <div className="text-muted-foreground gap-y-density-1 flex flex-wrap gap-x-4">
+          <div className="flex flex-wrap gap-x-4 gap-y-density-1 text-muted-foreground">
             <span>{t("scenario.publishedPrices")}</span>
-            <div className="gap-y-density-1 flex flex-wrap gap-x-4">
+            <div className="flex flex-wrap gap-x-4 gap-y-density-1">
               {Object.entries(publishedBase.rates).map(([meter, rate]) => (
                 <span key={meter}>
                   {meterLabels[meter as PriceMeter]}:{" "}
@@ -385,7 +384,7 @@ export function ModelPriceQuote({
           </p>
         )}
       {showSummary && activeRanges.length > 0 && (
-        <div className="bg-primary-soft border-primary-soft-border space-y-density-1 py-density-1-5 rounded-r-md border-l-2 pr-2 pl-2.5">
+        <div className="space-y-density-1 rounded-r-md border-l-2 border-primary-soft-border bg-primary-soft py-density-1-5 pr-2 pl-2.5">
           <Badge variant="secondary">{t("scenario.tiered")}</Badge>
           {activeRanges.map((condition, index) => (
             <p key={index}>

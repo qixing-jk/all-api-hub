@@ -1,7 +1,7 @@
 import { render as rtlRender, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactElement, ReactNode, Ref } from "react"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -16,18 +16,26 @@ import {
 } from "~/features/ModelList/groups/groupContext"
 import ModelList from "~/features/ModelList/ModelList"
 import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
+import { usePricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
-const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
-  vi.hoisted(() => ({
-    mockUseModelListData: vi.fn(),
-    openKeysPageMock: vi.fn(),
-    replaceWithinOptionsPageMock: vi.fn(),
-  }))
+const {
+  mockUseModelListData,
+  openKeysPageMock,
+  replaceWithinOptionsPageMock,
+  modelDisplayRenderSpy,
+  emptyVerificationSummaries,
+} = vi.hoisted(() => ({
+  mockUseModelListData: vi.fn(),
+  openKeysPageMock: vi.fn(),
+  replaceWithinOptionsPageMock: vi.fn(),
+  modelDisplayRenderSpy: vi.fn(),
+  emptyVerificationSummaries: {},
+}))
 
 vi.mock("~/features/ModelList/catalog/useModelListData", () => ({
   useModelListData: (...args: unknown[]) => mockUseModelListData(...args),
@@ -55,7 +63,9 @@ vi.mock(
 
     return {
       ...original,
-      useVerificationResultHistorySummaries: () => ({ summariesByKey: {} }),
+      useVerificationResultHistorySummaries: () => ({
+        summariesByKey: emptyVerificationSummaries,
+      }),
     }
   },
 )
@@ -170,45 +180,59 @@ vi.mock("~/features/ModelList/presentation/StatusIndicator", () => ({
 }))
 
 vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
-  ModelDisplay: ({
-    models,
-    onVerifyModel,
-    onModelGroupChange,
-    modelGroupOverrides,
-  }: {
-    models?: Array<{ model: { model_name: string } }>
-    onVerifyModel?: (...args: any[]) => void
-    onModelGroupChange?: (key: string, group: string | undefined) => void
-    modelGroupOverrides?: Record<string, string>
-  }) => (
-    <div>
-      <button
-        onClick={() =>
-          onModelGroupChange?.("account:account-1:gpt-test", "vip")
-        }
-      >
-        select-model-group
-      </button>
-      <button
-        onClick={() =>
-          onModelGroupChange?.("account:account-1:gpt-test", undefined)
-        }
-      >
-        clear-model-group
-      </button>
-      <output aria-label="model group">
-        {modelGroupOverrides?.["account:account-1:gpt-test"] ?? "automatic"}
-      </output>
-      <button
-        type="button"
-        onClick={() => onVerifyModel?.(ACCOUNT_SOURCE, "gpt-test", ["vip"])}
-      >
-        open-api-verification
-        {models?.map(({ model }) => (
-          <span key={model.model_name}>{model.model_name}</span>
-        ))}
-      </button>
-    </div>
+  ModelDisplay: memo(
+    ({
+      models,
+      onVerifyModel,
+      onModelGroupChange,
+      modelGroupOverrides,
+      handleGroupClick,
+    }: {
+      models?: Array<{ model: { model_name: string } }>
+      onVerifyModel?: (...args: any[]) => void
+      onModelGroupChange?: (key: string, group: string | undefined) => void
+      modelGroupOverrides?: Record<string, string>
+      handleGroupClick: (group: string) => void
+    }) => {
+      modelDisplayRenderSpy()
+      const navigation = usePricingScenarioNavigation()
+      return (
+        <div>
+          <button type="button" onClick={() => navigation?.configure()}>
+            configure-pricing
+          </button>
+          <button type="button" onClick={() => handleGroupClick("vip")}>
+            select-filter-group
+          </button>
+          <button
+            onClick={() =>
+              onModelGroupChange?.("account:account-1:gpt-test", "vip")
+            }
+          >
+            select-model-group
+          </button>
+          <button
+            onClick={() =>
+              onModelGroupChange?.("account:account-1:gpt-test", undefined)
+            }
+          >
+            clear-model-group
+          </button>
+          <output aria-label="model group">
+            {modelGroupOverrides?.["account:account-1:gpt-test"] ?? "automatic"}
+          </output>
+          <button
+            type="button"
+            onClick={() => onVerifyModel?.(ACCOUNT_SOURCE, "gpt-test", ["vip"])}
+          >
+            open-api-verification
+            {models?.map(({ model }) => (
+              <span key={model.model_name}>{model.model_name}</span>
+            ))}
+          </button>
+        </div>
+      )
+    },
   ),
 }))
 
@@ -412,6 +436,77 @@ function createModelListData() {
 }
 
 describe("ModelList", () => {
+  it.each(["default", "verification-latency-asc"])(
+    "configures pricing from %s and preserves the latest price sort",
+    async (sortMode) => {
+      const fixture = { ...createModelListData(), sortMode }
+      mockUseModelListData.mockReturnValue(fixture)
+      const user = userEvent.setup()
+      const { rerender } = render(<ModelList />)
+
+      await user.click(
+        screen.getByRole("button", { name: "configure-pricing" }),
+      )
+      expect(fixture.setSortMode).toHaveBeenCalledWith("model-cheapest-first")
+
+      for (const priceSort of [
+        "price-asc",
+        "price-desc",
+        "model-cheapest-first",
+      ]) {
+        fixture.setSortMode.mockClear()
+        mockUseModelListData.mockReturnValue({
+          ...fixture,
+          sortMode: priceSort,
+        })
+        rerender(<ModelList />)
+        await user.click(
+          screen.getByRole("button", { name: "configure-pricing" }),
+        )
+        expect(fixture.setSortMode).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it.each([false, true])(
+    "reuses the model display across parent and dialog updates (all accounts: %s)",
+    async (allAccounts) => {
+      const fixture = createModelListData()
+      mockUseModelListData.mockReturnValue({
+        ...fixture,
+        ...(allAccounts
+          ? {
+              selectedSource: {
+                kind: MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+                value: ALL_ACCOUNTS_SOURCE_VALUE,
+                capabilities: CAPABILITIES,
+              },
+              pricingContexts: [
+                { account: ACCOUNT, pricing: fixture.pricingData },
+              ],
+            }
+          : {}),
+      })
+      const user = userEvent.setup()
+      const { rerender } = render(<ModelList />)
+      modelDisplayRenderSpy.mockClear()
+
+      rerender(<ModelList />)
+      expect(modelDisplayRenderSpy).not.toHaveBeenCalled()
+      await user.click(
+        screen.getByRole("button", { name: "open-api-verification" }),
+      )
+      expect(screen.getByTestId("verify-api-dialog")).toHaveTextContent(
+        "gpt-test",
+      )
+      expect(modelDisplayRenderSpy).not.toHaveBeenCalled()
+      await user.click(
+        screen.getByRole("button", { name: "select-filter-group" }),
+      )
+      expect(fixture.setSelectedGroups).toHaveBeenCalledWith(["vip"])
+    },
+  )
+
   it("selects and clears a model group in the all-account scope", async () => {
     mockUseModelListData.mockImplementation(() => {
       const [modelGroupOverrides, setModelGroupOverrides] = useState({})

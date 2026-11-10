@@ -1,3 +1,5 @@
+import { isEqual } from "lodash-es"
+
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import {
   isModelListPriceSortMode,
@@ -545,6 +547,45 @@ export function calculateModelListPrices(params: {
     }
     return [calculate(candidates)]
   })
+}
+
+/** Reuses unchanged offers while retaining only the current filtered inventory. */
+export function createModelListPriceCalculator() {
+  type Input = Parameters<typeof calculateModelListPrices>[0]
+  type Entry = {
+    input: Omit<Input, "rawItems" | "getGroupCandidates"> & {
+      item: ModelListItem
+      groups: string[] | undefined
+    }
+    result: CalculatedModelItem[]
+  }
+  let previous = new Map<string, Entry>()
+
+  return ({ rawItems, getGroupCandidates, ...options }: Input) => {
+    const next = new Map<string, Entry>()
+    const results = rawItems.flatMap((item) => {
+      const key = getModelItemKey(item)
+      const input = { ...options, item, groups: getGroupCandidates(item) }
+      const cached = previous.get(key)
+      const entry =
+        cached && isEqual(cached.input, input)
+          ? cached
+          : {
+              input,
+              result: calculateModelListPrices({
+                ...options,
+                rawItems: [item],
+                getGroupCandidates: () => input.groups,
+              }),
+            }
+      next.set(key, entry)
+      return entry.result
+    })
+    // A superseded React render may reduce cache hits, but cannot change the
+    // result: every reuse compares the complete row and pricing inputs.
+    previous = next
+    return results
+  }
 }
 
 /** Orders evaluated rows and marks comparable minima within matching model and billing units. */

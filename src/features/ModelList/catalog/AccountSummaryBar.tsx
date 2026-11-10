@@ -1,5 +1,6 @@
+import { isEqual } from "lodash-es"
 import { ChevronDown } from "lucide-react"
-import { useId, useState } from "react"
+import { memo, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent } from "~/components/ui"
@@ -33,7 +34,7 @@ interface StatusPresentation {
 }
 
 /** Renders one account filter and owns its status presentation. */
-function AccountSummaryBadge({
+const AccountSummaryBadge = memo(function AccountSummaryBadge({
   item,
   isActive,
   onAccountClick,
@@ -119,7 +120,7 @@ function AccountSummaryBadge({
       </button>
     </Badge>
   )
-}
+}, isEqual)
 
 /**
  * Shows clickable badges summarizing model counts per account.
@@ -168,11 +169,11 @@ export function AccountSummaryBar({
   return (
     <Card className="mb-density-4">
       <CardContent className="py-density-3">
-        <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-secondary-foreground text-sm font-medium">
+        <div className="flex flex-col gap-x-2 gap-y-density-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm font-medium text-secondary-foreground">
             {t("accountSummary.title")}
           </div>
-          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+          <div className="flex flex-wrap gap-x-2 gap-y-density-2">
             {visibleItems.map(renderAccountBadge)}
             {foldedItems.length > 0 && (
               <Badge asChild variant="secondary">
@@ -198,7 +199,7 @@ export function AccountSummaryBar({
               className="w-full"
             >
               {isExpanded && foldedItems.length > 0 && (
-                <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+                <div className="flex flex-wrap gap-x-2 gap-y-density-2">
                   {foldedItems.map(renderAccountBadge)}
                 </div>
               )}

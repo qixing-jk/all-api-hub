@@ -112,9 +112,12 @@ export function useModelListSourcePresentation({
     [accounts, profiles, setSelectedSourceValue],
   )
 
-  const handleGroupClick = (group: string) => {
-    setSelectedGroups([group])
-  }
+  const handleGroupClick = useCallback(
+    (group: string) => {
+      setSelectedGroups([group])
+    },
+    [setSelectedGroups],
+  )
 
   const isAllAccountsScope =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
@@ -156,19 +159,22 @@ export function useModelListSourcePresentation({
     : MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE
   const isModelGroupSelectionInteractive = !isAllAccountsScope
 
-  const handleAccountSummaryClick = (accountId: string) => {
-    setAllAccountsFilterAccountIds((currentAccountIds) =>
-      currentAccountIds.includes(accountId)
-        ? currentAccountIds.filter((id) => id !== accountId)
-        : [...currentAccountIds, accountId],
-    )
-    void trackProductAnalyticsActionStarted({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelListFilterScope,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-  }
+  const handleAccountSummaryClick = useCallback(
+    (accountId: string) => {
+      setAllAccountsFilterAccountIds((currentAccountIds) =>
+        currentAccountIds.includes(accountId)
+          ? currentAccountIds.filter((id) => id !== accountId)
+          : [...currentAccountIds, accountId],
+      )
+      void trackProductAnalyticsActionStarted({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelListFilterScope,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+    },
+    [setAllAccountsFilterAccountIds],
+  )
 
   const hasModelData =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
@@ -184,9 +190,9 @@ export function useModelListSourcePresentation({
     !canCreateAccountKeyResources(currentAccount)
   const hasInferenceRouteFallback = Boolean(
     pricingData?.model_list_source?.inferenceRouteFallback ||
-      pricingContexts.some(
-        ({ pricing }) => pricing.model_list_source?.inferenceRouteFallback,
-      ),
+    pricingContexts.some(
+      ({ pricing }) => pricing.model_list_source?.inferenceRouteFallback,
+    ),
   )
   const showCatalogOnlyNotice =
     isFallbackCatalogActive && !sourceCapabilities.supportsPricing
