@@ -652,6 +652,20 @@ describe("account persistence and form validation", () => {
   })
 
   describe("getSiteName", () => {
+    it.each([
+      ["My API portal", "My API portal"],
+      ["New API", ""],
+      [undefined, ""],
+    ])(
+      "handles a browser tab without a URL and title %s",
+      async (title, expected) => {
+        await expect(getSiteName({ title } as browser.tabs.Tab)).resolves.toBe(
+          expected,
+        )
+        expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+      },
+    )
+
     it("preserves a deployment title on registered adapter-family hosts", async () => {
       expect(
         await getSiteName({
