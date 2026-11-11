@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
-import { afterEach, beforeEach, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest"
 
 import { NeedlePanel } from "~/features/Verification/api/NeedlePanel"
 import { useNeedleTest } from "~/features/Verification/api/useNeedleTest"
@@ -15,8 +15,11 @@ import {
 import { createNeedlePlan } from "~/services/verification/modelQuality/needlePlan"
 import * as needlePrompt from "~/services/verification/modelQuality/needlePrompt"
 import { runNeedleTest } from "~/services/verification/modelQuality/needleRun"
+import { preloadContextTokens } from "~~/tests/test-utils/contextTokens"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+
+beforeAll(preloadContextTokens)
 
 beforeEach(() => {
   // Exercise the real runner and request lifecycle with a small prepared prompt.
