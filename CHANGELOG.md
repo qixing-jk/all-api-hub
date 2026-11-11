@@ -1,5 +1,41 @@
 # Changelog
 
+## [4.10.0](https://github.com/qixing-jk/all-api-hub/compare/v4.9.0...v4.10.0) (2026-11-11)
+
+
+### Features
+
+* **accounts:** verify Cookies and recover AnyRouter login ([#1839](https://github.com/qixing-jk/all-api-hub/issues/1839)) ([b586a36](https://github.com/qixing-jk/all-api-hub/commit/b586a36f560151076eeff5dab125b8e6b3761ab6))
+* **balance-history:** streamline filters and trend charts ([#1838](https://github.com/qixing-jk/all-api-hub/issues/1838)) ([c15993a](https://github.com/qixing-jk/all-api-hub/commit/c15993a5f40de2a0ec4e96c3ff2725db34951cee))
+* **dev:** persist browser data and organize cleanup tools ([#1836](https://github.com/qixing-jk/all-api-hub/issues/1836)) ([fc9ca64](https://github.com/qixing-jk/all-api-hub/commit/fc9ca64bc3dfff18cc9112812ca65059578a129d))
+* expand CC Switch provider export targets ([#1828](https://github.com/qixing-jk/all-api-hub/issues/1828)) ([c4c20d2](https://github.com/qixing-jk/all-api-hub/commit/c4c20d2a17f4c5547e88adc3fff3e672fa179c44))
+* **sub2api:** recover login and retain renewable tokens ([#1852](https://github.com/qixing-jk/all-api-hub/issues/1852)) ([1c17f28](https://github.com/qixing-jk/all-api-hub/commit/1c17f28f9cc19292ef1cba1a86f0e0e8d13db542))
+* **ui:** add quick dialog fade transitions ([#1834](https://github.com/qixing-jk/all-api-hub/issues/1834)) ([adbd219](https://github.com/qixing-jk/all-api-hub/commit/adbd21980a0941128ea9b9985515698cd2f6b7e6))
+* **verification:** add planned needle-in-haystack tests ([#1845](https://github.com/qixing-jk/all-api-hub/issues/1845)) ([2593b39](https://github.com/qixing-jk/all-api-hub/commit/2593b399a2e47a196aa753c9862fecaed60045bd))
+* **verification:** add Q&A tests and clarify test panels ([#1856](https://github.com/qixing-jk/all-api-hub/issues/1856)) ([1740dca](https://github.com/qixing-jk/all-api-hub/commit/1740dca289904efd158f0aa8e2b7eecdb04ff188))
+* **verification:** add resumable model context capacity probes ([#1833](https://github.com/qixing-jk/all-api-hub/issues/1833)) ([2c8e4af](https://github.com/qixing-jk/all-api-hub/commit/2c8e4afdda00b69bdbf66365b420559f181f26f3))
+* **verification:** unify API and CLI testing and redesign the workspace ([#1843](https://github.com/qixing-jk/all-api-hub/issues/1843)) ([f929526](https://github.com/qixing-jk/all-api-hub/commit/f9295263e1c73fa5b2c544c8c5dc5e54c63ef15e))
+
+
+### Bug Fixes
+
+* **accounts:** preserve credential failure guidance during recovery ([#1851](https://github.com/qixing-jk/all-api-hub/issues/1851)) ([7d55a1d](https://github.com/qixing-jk/all-api-hub/commit/7d55a1d875bf10c50fcf38acf9b032a254a5bb79))
+* confirm AgentRouter password check-ins and report WAF challenges ([#1850](https://github.com/qixing-jk/all-api-hub/issues/1850)) ([3809fa3](https://github.com/qixing-jk/all-api-hub/commit/3809fa326df7153da4875cb5436327418cddf4df))
+* coordinate concurrent check-ins and stabilize browser tests ([#1844](https://github.com/qixing-jk/all-api-hub/issues/1844)) ([69f8187](https://github.com/qixing-jk/all-api-hub/commit/69f81879a0c8a75158c78b531df0cdbd6fb60c9b))
+* **dev:** keep browser opening manual in no-browser mode ([#1864](https://github.com/qixing-jk/all-api-hub/issues/1864)) ([0e5a5df](https://github.com/qixing-jk/all-api-hub/commit/0e5a5dfb5530252245e59442880ad64aedda2ccd))
+* **kimi:** correct console balance and consumption units ([#1860](https://github.com/qixing-jk/all-api-hub/issues/1860)) ([46e3821](https://github.com/qixing-jk/all-api-hub/commit/46e382199c6132d872419e59ea8fa72c60323d07))
+* **magpie:** prevent HTTP management 403 errors ([#1846](https://github.com/qixing-jk/all-api-hub/issues/1846)) ([f732fd5](https://github.com/qixing-jk/all-api-hub/commit/f732fd5f240eb91a4831db7d9f568ba365253e37))
+* preserve login outcomes through website verification ([#1862](https://github.com/qixing-jk/all-api-hub/issues/1862)) ([af38290](https://github.com/qixing-jk/all-api-hub/commit/af38290894f34722818f4ec1d64d84dc404355cb))
+* preserve WAF failures across shared API requests ([#1861](https://github.com/qixing-jk/all-api-hub/issues/1861)) ([e8c8dad](https://github.com/qixing-jk/all-api-hub/commit/e8c8dad6dcc07841c7bd954de45333dd46205e61))
+* restore shadow-root tooltips and upgrade CI tooling ([#1849](https://github.com/qixing-jk/all-api-hub/issues/1849)) ([3e5f40d](https://github.com/qixing-jk/all-api-hub/commit/3e5f40dc8f4e201eeba82327bf3e31596b5005db))
+* **ui:** flatten credential and account key lists ([#1847](https://github.com/qixing-jk/all-api-hub/issues/1847)) ([55080ad](https://github.com/qixing-jk/all-api-hub/commit/55080ada34d88406036b1924725516cdde393eb9))
+* **verification:** recognize provider context overflow across HTTP and SSE ([#1848](https://github.com/qixing-jk/all-api-hub/issues/1848)) ([d1bb127](https://github.com/qixing-jk/all-api-hub/commit/d1bb12718107f481329cd5a7c3d37137e8f9955a))
+
+
+### Performance Improvements
+
+* **model-list:** reduce repeated work in large catalogs ([#1858](https://github.com/qixing-jk/all-api-hub/issues/1858)) ([526b095](https://github.com/qixing-jk/all-api-hub/commit/526b0953bfc8560417efca8e4100ba3736362e99))
+
 ## [4.9.0](https://github.com/qixing-jk/all-api-hub/compare/v4.8.0...v4.9.0) (2026-11-05)
 
 
