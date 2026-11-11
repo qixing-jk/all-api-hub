@@ -8,6 +8,30 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.10.0
+This release brings deep evaluation tools including Needle in a Haystack, real context limit testing, and custom Q&A quizzes, alongside an all-in-one redesigned `API Test` window with CLI tool simulation; introduces automatic login recovery and token renewal for AnyRouter and Sub2API with on-the-spot Cookie validation; expands CC Switch export to Claude Desktop, Antigravity (AGY), Pi, MiniMax Code, and more desktop clients; refines balance history filters and trend charts while improving large catalog performance and dialog animations; and fixes website verification challenge detection, Kimi Open Platform balance units, and Magpie HTTP 403 errors.
+
+- **New Features:**
+  - **Needle in a Haystack, real context limits, and custom Q&A testing**: Added dedicated test tools to help you evaluate a model's true capabilities: run "Needle in a Haystack" to see how well a model finds hidden info across different depths of long text, shown in an intuitive color-coded matrix; test real context limits by gradually increasing text length to find the model's true ceiling, with support for pausing and resuming at any time; and run custom Q&A tests with your own questions and reference answers checked locally without sending answers to the model. See [Model List](./model-list.md).
+  - **All-in-one `API Test` window and smoother testing**: Replaces the separate "Verify API" and "CLI compatibility test" popups with a unified "API Test" window. You can now run basic checks, test streaming responses, and simulate CLI tools like Claude Code or Codex all from a single place, switching formats and individual checks without hopping between dialogs. See [Model List](./model-list.md) and [API Credential Profiles](./api-credential-profiles.md).
+  - **AnyRouter automatic login recovery**: Configure GitHub, Linux DO, or password login recovery in account settings; when refreshing balances, copying keys, or running check-ins encounters session expiration, the notification offers a direct recovery route and automatically renews cookies when needed. See [Auto-Detection Troubleshooting](./auto-detect.md) and [Automatic Check-in](./auto-checkin.md).
+  - **Sub2API login recovery and automatic Token renewal**: Sub2API accounts can now configure login credentials and enable automatic recovery; automatically rotates and renews Refresh Tokens, and falls back to configured login credentials to restore sessions when tokens are missing or expired. See [Auto-Detection Troubleshooting](./auto-detect.md).
+  - **On-the-spot Cookie verification**: When adding or editing accounts with Cookie authentication, click "Verify this Cookie" to check whether the cookie is accepted by the site and belongs to the current account with clear feedback. See [Auto-Detection Troubleshooting](./auto-detect.md).
+  - **Expanded CC Switch export targets**: CC Switch deeplink export now supports Claude Desktop, Antigravity (AGY), Pi, MiniMax Code, Kimi Code, DeepSeek Harness, and OhMyPi; enforces required model fields for clients that need them, and normalizes provider identifiers for Hermes. See [Quick Export Profiles](./quick-export.md).
+
+- **Experience Improvements:**
+  - **Streamlined balance history filter sheet and trend charts**: Redesigned balance history filters into an accessible drawer with search for accounts and tags; connects missing intermediate dates in trend charts with dashed lines for clearer visual continuity. See [Balance History](./balance-history.md).
+  - **Large model catalog rendering optimizations**: Significantly reduced redundant price recalculations and unnecessary re-renders when browsing accounts with large model catalogs. See [Model List](./model-list.md).
+  - **Flattened credential and key cards**: Simplified visual hierarchy in API Credential Profiles and Key Management by removing nested container borders for higher density and clearer readability. See [Key Management](./key-management.md) and [API Credential Profiles](./api-credential-profiles.md).
+  - **Quick dialog fade transitions**: Added smooth, lightweight fade transitions for modals, dialogs, and the account editor, isolating reopened sessions and eliminating visual glitches.
+
+- **Bug Fixes:**
+  - **Accurate website verification challenge handling**: Improved Cloudflare and Aliyun WAF challenge detection to report "verification required" accurately instead of vague format errors, and prevented duplicate submission side-effects during login and check-in recovery. See [Cloudflare Helper](./cloudflare-helper.md).
+  - **Corrected Kimi Open Platform balance and usage units**: Fixed an issue where Kimi console balances and daily consumption were not properly scaled to standard currency amounts.
+  - **Magpie HTTP local management 403 fix**: Resolved 403 forbidden errors when managing Magpie over plain HTTP local/LAN endpoints caused by request header restrictions.
+  - **AgentRouter password check-in confirmation**: Fixed AgentRouter password check-in verification to accurately recognize WAF challenges and confirm completion results. See [Automatic Check-in](./auto-checkin.md).
+  - **Restored tooltips in Shadow DOM**: Fixed tooltips in isolated Shadow DOM environments (such as the web text-selection modal) failing to render or misaligning.
+
 ## 4.9.0
 This release adds account support for AI/ML API and NanoGPT with granular key limits and privacy routing; adds daily check-in support for Bai API; lets you expand account billing groups side-by-side in the model list; brings realistic pricing estimations for video generation, audio, and web search; improves model dropdowns with clearer loading feedback and direct manual input; and smooths out background requests to avoid rate limit errors.
 
