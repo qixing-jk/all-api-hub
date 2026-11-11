@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.1](https://github.com/qixing-jk/all-api-hub/compare/v4.10.0...v4.10.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* **release:** keep Firefox scripts within AMO file limits ([#1865](https://github.com/qixing-jk/all-api-hub/issues/1865)) ([48adfa0](https://github.com/qixing-jk/all-api-hub/commit/48adfa073162d85dd4a7527bb69f6418710ab0f4))
+
 ## [4.10.0](https://github.com/qixing-jk/all-api-hub/compare/v4.9.0...v4.10.0) (2026-11-11)
 
 
