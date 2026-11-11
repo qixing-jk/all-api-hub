@@ -16,10 +16,9 @@ import {
 } from "~/services/verification/modelQuality/constants"
 import type { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
 import type { getModelContextInfo } from "~/services/verification/modelQuality/contextTokens"
-import {
-  runPelicanTest,
-  type PelicanExecutionMode,
-  type PelicanTestResult,
+import type {
+  PelicanExecutionMode,
+  PelicanTestResult,
 } from "~/services/verification/modelQuality/pelican"
 import type { runQuestionAnswerTest } from "~/services/verification/modelQuality/questionAnswer"
 import { PELICAN_PROMPT_ID } from "~/services/verification/promptOverrides"
@@ -132,10 +131,10 @@ export type UseVerificationToolsOptions = {
   /** Pelican prompt override; blank falls back to the built-in prompt. */
   pelicanPrompt?: string
   /**
-   * Runs the drawing test. Defaults to calling the provider directly; the Web AI
-   * API Check content script delegates to the background instead.
+   * Runs the drawing test in the caller's execution context. Content scripts
+   * delegate to the background without bundling the guest JavaScript runtime.
    */
-  runPelicanRequest?: PelicanRunner
+  runPelicanRequest: PelicanRunner
 }
 
 /** Bind a drawing's compact history to the model actually requested. */
@@ -177,7 +176,7 @@ export function useVerificationTools({
   isSupported,
   isBlocked,
   pelicanPrompt,
-  runPelicanRequest = runPelicanTest,
+  runPelicanRequest,
   enableContextCapacity = false,
   contextCapacityKey = "",
   runContextCapacityRequest,

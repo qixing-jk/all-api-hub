@@ -96,14 +96,10 @@ const dynamicImportAllowlist = [
     file: "src/services/apiService/sub2api/auth/authLifecycle.ts",
     imports: ["~/services/accountCredentialRecovery"],
   },
-  // Capacity probes load only the selected tokenizer vocabulary after user initiation.
+  // Capacity probes load the tokenizer engine after reading the selected packaged vocabulary.
   {
     file: "src/services/verification/modelQuality/contextTokens.ts",
-    imports: [
-      "gpt-tokenizer/modelsMap",
-      "gpt-tokenizer/encoding/cl100k_base",
-      "gpt-tokenizer/encoding/o200k_base",
-    ],
+    imports: ["gpt-tokenizer/modelsMap", "gpt-tokenizer/GptEncoding"],
   },
   // Optional code execution loads the WASM interpreter only when a test uses JS.
   {

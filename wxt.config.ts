@@ -23,6 +23,11 @@ import {
   REQUESTY_WEB_ORIGIN,
 } from "./src/services/accountSiteDefinitions/identifiers"
 import {
+  CONTEXT_TOKEN_ENCODINGS,
+  CONTEXT_TOKEN_VOCABULARY_DIR,
+  CONTEXT_TOKEN_VOCABULARY_GLOB,
+} from "./src/services/verification/modelQuality/contextTokenConstants"
+import {
   formatDevManifestName,
   type BakedDevIdentity,
 } from "./src/utils/core/devIdentity"
@@ -113,6 +118,23 @@ export default defineConfig({
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   hooks: {
+    "build:publicAssets": async (_wxt, assets) => {
+      // IIFE background/content builds inline dynamic imports. Keep the large
+      // vocabularies as data so AMO can parse every JavaScript file (<5 MB).
+      const [{ default: cl100k }, { default: o200k }] = await Promise.all([
+        import("gpt-tokenizer/bpeRanks/cl100k_base"),
+        import("gpt-tokenizer/bpeRanks/o200k_base"),
+      ])
+      for (const [encoding, ranks] of [
+        [CONTEXT_TOKEN_ENCODINGS.Cl100k, cl100k],
+        [CONTEXT_TOKEN_ENCODINGS.O200k, o200k],
+      ] as const) {
+        assets.push({
+          relativeDest: `${CONTEXT_TOKEN_VOCABULARY_DIR}/${encoding}.json`,
+          contents: JSON.stringify(ranks),
+        })
+      }
+    },
     "server:started": (wxt) => {
       if (process.env.WXT_OPEN_BROWSER !== "0") return
       // WXT opens the browser after each server start, including config reloads.
@@ -216,7 +238,7 @@ export default defineConfig({
           matches: [`${REQUESTY_WEB_ORIGIN}/*`],
         },
         {
-          resources: [APP_LOCALE_ASSET_GLOB],
+          resources: [APP_LOCALE_ASSET_GLOB, CONTEXT_TOKEN_VOCABULARY_GLOB],
           matches: ["<all_urls>"],
           use_dynamic_url: true,
         },

@@ -134,6 +134,12 @@ jobs:
           # signing key exists, then the variable makes a missing CRX fail loudly.
           require-crx-self-update: ${{ vars.CRX_SELF_UPDATE_REQUIRED || 'false' }}
 
+      - name: Validate Firefox store package
+        if: ${{ steps.get_ref.outputs.checkout_ref != '' }}
+        uses: ./.github/actions/validate-firefox-package
+        with:
+          working-directory: source
+
       - name: Validate Safari build inputs
         if: ${{ steps.get_ref.outputs.checkout_ref != '' }}
         working-directory: source

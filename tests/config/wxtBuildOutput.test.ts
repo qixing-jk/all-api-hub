@@ -133,4 +133,14 @@ describe("WXT build output", () => {
       await rm(directory, { recursive: true, force: true })
     }
   })
+
+  it("keeps the guest JavaScript runtime out of delegated verification controls", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    const { chunk } = await buildFixture(
+      "build",
+      "production",
+      `export { useVerificationTools } from "~/features/Verification/api/useVerificationTools";`,
+    )
+    expect(chunk.moduleIds.some((id) => id.includes("quickjs"))).toBe(false)
+  })
 })
