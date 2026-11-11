@@ -89,7 +89,14 @@ export default defineConfig({
   outDir: process.env.AAH_DISTRIBUTION_OUT_DIR || undefined,
   zip: { excludeSources: [".output/**"] },
   // Dependency caches are not source files; watching them is costly on Windows.
-  watchOptions: { ignored: ["**/.pnpm-store/**"] },
+  watchOptions: {
+    ignored: [
+      "**/.pnpm-store/**",
+      // Browser config edits otherwise make WXT launch Chrome automatically.
+      // In manual mode, `o + Enter` reloads this config before opening.
+      ...(process.env.WXT_OPEN_BROWSER === "0" ? ["**/web-ext.config.*"] : []),
+    ],
+  },
   publicDir: "src/public",
   // Locale changes restart dev so the local module can regenerate runtime assets.
   modulesDir: "src/locales",
@@ -106,6 +113,16 @@ export default defineConfig({
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   hooks: {
+    "server:started": (wxt) => {
+      if (process.env.WXT_OPEN_BROWSER !== "0") return
+      // WXT opens the browser after each server start, including config reloads.
+      // Skip that call, then restore the runner for `o + Enter`.
+      const runner = wxt.runner
+      const openBrowser = runner.openBrowser
+      runner.openBrowser = async () => {
+        runner.openBrowser = openBrowser
+      }
+    },
     "config:resolved": (wxt) => {
       const webExt = wxt.config.webExt.config
       // Resolve after local overrides: Firefox keeps web-ext's copy behavior.
@@ -143,8 +160,6 @@ export default defineConfig({
     },
   },
   webExt: {
-    // Keep WXT's default startup; opt out via dev:no-browser or the CDP runner.
-    disabled: process.env.WXT_OPEN_BROWSER === "0",
     // Config/module edits can restart Chrome. Reuse this worktree's data
     // instead of web-ext's disposable profile; Windows requires an absolute path.
     chromiumProfile: path.join(getProjectRootPath(), ".browser-data", "chrome"),

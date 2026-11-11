@@ -50,7 +50,7 @@ pnpm dev
 pnpm dev:firefox
 ```
 
-These commands automatically open a browser with the extension loaded, following WXT's default behavior. To start only the dev server without opening a browser:
+These commands automatically open a browser with the extension loaded, following WXT's default behavior. To start the dev server without automatically opening a browser:
 
 ```bash
 pnpm dev:no-browser
@@ -58,7 +58,9 @@ pnpm dev:no-browser
 pnpm dev:no-browser -b firefox
 ```
 
-When needed, `pnpm browser:cdp` opens a debugging browser with the Chrome extension loaded automatically and reuses an existing debugging window. It can also start the dev server itself. Alternatively, load the extension in your own browser as described below. `WXT_OPEN_BROWSER=0` also disables automatic browser startup for the regular dev commands.
+In an interactive terminal, press `o` followed by Enter to open the browser with the extension loaded. Server/config restarts also skip automatic opening; if WXT closes an opened browser during a restart, press `o` followed by Enter again. Changes to `web-ext.config.*` take effect on the next manual opening rather than automatically restarting the browser. `WXT_OPEN_BROWSER=0` gives the regular dev commands the same behavior. Setting `webExt.disabled: true` in local `web-ext.config.ts` disables both automatic and manual opening.
+
+When needed, `pnpm browser:cdp` opens a debugging browser with the Chrome extension loaded automatically and reuses an existing debugging window. It can also start the dev server itself. Alternatively, load the extension in your own browser as described below.
 
 The development Chrome browser keeps its profile in this worktree's `.browser-data/chrome` directory, preserving saved accounts, settings and website logins across browser and dev-server restarts and `wxt clean`. Each worktree has separate data. Local `web-ext.config.ts` settings can override the profile and persistence; Firefox keeps its temporary-copy behavior unless `keepProfileChanges` is explicitly enabled. An existing `.wxt/chrome-data` profile is moved to the new location during WXT configuration, including before cleanup. Close the browser using that old profile first; an active profile or an existing destination stops migration without overwriting either directory. Removing `.browser-data/chrome` resets that development data; earlier disposable profiles are not migrated.
 
