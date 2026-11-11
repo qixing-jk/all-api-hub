@@ -10,6 +10,13 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import {
+  createServer,
+  type ExtensionRunner,
+  type Wxt,
+  type WxtDevServer,
+  type WxtHooks,
+} from "wxt"
 
 import { isUserDataDirInUse } from "~~/scripts/cdp/dev-browser-identity.mjs"
 
@@ -109,17 +116,126 @@ describe("development browser startup", () => {
   })
 
   it.each([
-    [undefined, false],
-    ["0", true],
-    ["1", false],
+    [undefined, true],
+    ["0", false],
+    ["1", true],
   ])(
-    "WXT_OPEN_BROWSER=%s disables browser startup: %s",
-    async (value, disabled) => {
+    "WXT_OPEN_BROWSER=%s automatically opens the browser: %s, while allowing manual opening",
+    async (value, automaticallyOpened) => {
       vi.stubEnv("WXT_OPEN_BROWSER", value)
       vi.resetModules()
       const { default: config } = await import("~~/wxt.config")
 
-      expect(config.webExt?.disabled).toBe(disabled)
+      let browserOpen = false
+      const runner: ExtensionRunner = {
+        async openBrowser() {
+          browserOpen = true
+        },
+      }
+      const wxt = { runner } as Wxt
+      await (config.hooks as Partial<WxtHooks>)["server:started"]?.(
+        wxt,
+        {} as WxtDevServer,
+      )
+      await runner.openBrowser()
+      expect(browserOpen).toBe(automaticallyOpened)
+
+      // WXT's `o + Enter` handler calls the runner again after startup.
+      expect(config.webExt?.disabled).not.toBe(true)
+      await runner.openBrowser()
+      expect(browserOpen).toBe(true)
+    },
+  )
+
+  it.each(["chrome", "firefox"])(
+    "allows manual %s opening after startup and server restarts",
+    async (browser) => {
+      vi.stubEnv("WXT_OPEN_BROWSER", "0")
+      const { default: config } = await import("~~/wxt.config")
+      const root = mkdtempSync(path.join(os.tmpdir(), "aah-browser-startup-"))
+      mkdirSync(path.join(root, "entrypoints"))
+      writeFileSync(
+        path.join(root, "entrypoints", "popup.html"),
+        "<!doctype html><html><head><title>Startup fixture</title></head><body>Ready</body></html>",
+      )
+      writeFileSync(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "startup-fixture", version: "0.0.0" }),
+      )
+      const browserConfigPath = path.join(root, "web-ext.config.ts")
+      writeFileSync(browserConfigPath, "export default { startUrls: [] }")
+
+      // Replace only the external browser boundary; exercise WXT's real
+      // startup, manual-open API (used by `o + Enter`) and config reloads.
+      const runner = {
+        browserOpen: false,
+        canOpen: async () => true,
+        async openBrowser() {
+          this.browserOpen = true
+        },
+        async closeBrowser() {
+          this.browserOpen = false
+        },
+      }
+      let configuredWxt: Wxt
+      let server: WxtDevServer | undefined
+      try {
+        server = await createServer({
+          root,
+          configFile: false,
+          srcDir: ".",
+          browser,
+          watchOptions: config.watchOptions,
+          dev: { server: { host: "127.0.0.1", port: 0 } },
+          hooks: {
+            ready: (wxt) => {
+              wxt.runner = runner
+              configuredWxt = wxt
+            },
+            "server:started": (config.hooks as Partial<WxtHooks>)[
+              "server:started"
+            ],
+          },
+        })
+        await server.start()
+        expect(runner.browserOpen).toBe(false)
+
+        // Observe real filesystem changes long enough for WXT's debounce:
+        // browser config edits must wait for a manual open, while source
+        // files remain watched.
+        const changedFiles: string[] = []
+        server.watcher.on("all", (_event, file) => changedFiles.push(file))
+        writeFileSync(
+          browserConfigPath,
+          "export default { startUrls: ['about:blank'] }",
+        )
+        const sourcePath = path.join(root, "watcher-probe.txt")
+        writeFileSync(sourcePath, "The filesystem watcher remains active")
+        await vi.waitFor(() => {
+          expect(changedFiles.map(path.normalize)).toContain(sourcePath)
+        })
+        await new Promise((resolve) => setTimeout(resolve, 750))
+        expect(changedFiles.map(path.normalize)).not.toContain(
+          browserConfigPath,
+        )
+        expect(runner.browserOpen).toBe(false)
+
+        await server.restartBrowser()
+        expect(runner.browserOpen).toBe(true)
+        expect(configuredWxt!.config.webExt.config.startUrls).toEqual([
+          "about:blank",
+        ])
+        await server.restartBrowser()
+        expect(runner.browserOpen).toBe(true)
+
+        await server.restart()
+        expect(runner.browserOpen).toBe(false)
+        await server.restartBrowser()
+        expect(runner.browserOpen).toBe(true)
+      } finally {
+        await server?.stop()
+        rmSync(root, { recursive: true, force: true })
+      }
     },
   )
 })
