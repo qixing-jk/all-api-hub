@@ -48,6 +48,7 @@ import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVer
 import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
@@ -230,6 +231,7 @@ export function useProfileVerification({
       verificationMode,
     ])
   const tools = useVerificationTools({
+    runPelicanRequest: runPelicanTest,
     modelId: requestedModelId,
     enableContextCapacity: isOpen,
     contextCapacityKey: JSON.stringify([

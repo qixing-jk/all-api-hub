@@ -5,6 +5,16 @@ import { http, HttpResponse, type HttpHandler } from "msw"
  * These are placeholder handlers that can be extended for specific tests
  */
 export const handlers: HttpHandler[] = [
+  // Serve the same data packaged by WXT without making external requests.
+  http.get("*/tokenizers/cl100k_base.json", async () => {
+    const { default: ranks } =
+      await import("gpt-tokenizer/bpeRanks/cl100k_base")
+    return HttpResponse.json(ranks)
+  }),
+  http.get("*/tokenizers/o200k_base.json", async () => {
+    const { default: ranks } = await import("gpt-tokenizer/bpeRanks/o200k_base")
+    return HttpResponse.json(ranks)
+  }),
   // Mock account info endpoint (common pattern across aggregators)
   http.get("https://api.example.com/api/user/self", () => {
     return HttpResponse.json({

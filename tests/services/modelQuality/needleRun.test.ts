@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, expect, it, vi } from "vitest"
 
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
@@ -12,8 +12,11 @@ import {
   type NeedleResult,
   type NeedleRunControls,
 } from "~/services/verification/modelQuality/needleRun"
+import { preloadContextTokens } from "~~/tests/test-utils/contextTokens"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createNeedleResult } from "~~/tests/test-utils/needle"
+
+beforeAll(preloadContextTokens)
 
 const params = {
   baseUrl: "https://example.invalid",

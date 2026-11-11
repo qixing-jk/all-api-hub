@@ -1,9 +1,38 @@
+import type { RawBytePairRanks } from "gpt-tokenizer/BytePairEncodingCore"
+import type { GptEncoding } from "gpt-tokenizer/GptEncoding"
+
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelIdentityLookupResult } from "~/services/models/modelMetadata/types"
 import {
   CONTEXT_TOKEN_BATCH_SIZE,
   CONTEXT_TOKEN_ENCODINGS,
+  CONTEXT_TOKEN_VOCABULARY_DIR,
 } from "~/services/verification/modelQuality/contextTokenConstants"
+import { getExtensionURL } from "~/utils/browser/runtime"
+
+const encodings = new Map<string, Promise<GptEncoding>>()
+
+/** Share one lazy encoding per vocabulary; failed reads remain retryable. */
+function loadContextEncoding(encoding: "cl100k_base" | "o200k_base") {
+  let pending = encodings.get(encoding)
+  if (!pending) {
+    pending = (async () => {
+      const response = await fetch(
+        getExtensionURL(`${CONTEXT_TOKEN_VOCABULARY_DIR}/${encoding}.json`),
+      )
+      if (!response.ok)
+        throw new Error(`Cannot load tokenizer vocabulary: ${response.status}`)
+      const ranks = (await response.json()) as RawBytePairRanks
+      const { GptEncoding } = await import("gpt-tokenizer/GptEncoding")
+      return GptEncoding.getEncodingApi(encoding, () => ranks)
+    })().catch((error) => {
+      encodings.delete(encoding)
+      throw error
+    })
+    encodings.set(encoding, pending)
+  }
+  return pending
+}
 
 export type ContextCounterInfo = {
   encoding: string
@@ -29,8 +58,8 @@ async function resolveContextCounterInfo(identity: ModelIdentityLookupResult) {
       : CONTEXT_TOKEN_ENCODINGS.O200k
   const matched = Boolean(
     bareId &&
-      (models[CONTEXT_TOKEN_ENCODINGS.Cl100k].includes(bareId) ||
-        models[CONTEXT_TOKEN_ENCODINGS.O200k].includes(bareId)),
+    (models[CONTEXT_TOKEN_ENCODINGS.Cl100k].includes(bareId) ||
+      models[CONTEXT_TOKEN_ENCODINGS.O200k].includes(bareId)),
   )
   const info: ContextCounterInfo = {
     encoding,
@@ -56,11 +85,11 @@ export async function getModelContextInfo(modelId: string) {
 /** Load the matching vocabulary only when a long-input test starts. */
 export async function createContextTokens(identity: ModelIdentityLookupResult) {
   const info = await resolveContextCounterInfo(identity)
-  const { encoding } = info
-  const api =
-    encoding === CONTEXT_TOKEN_ENCODINGS.Cl100k
-      ? await import("gpt-tokenizer/encoding/cl100k_base")
-      : await import("gpt-tokenizer/encoding/o200k_base")
+  const encoding =
+    info.encoding === CONTEXT_TOKEN_ENCODINGS.Cl100k
+      ? CONTEXT_TOKEN_ENCODINGS.Cl100k
+      : CONTEXT_TOKEN_ENCODINGS.O200k
+  const api = await loadContextEncoding(encoding)
   const yieldToCaller = async (signal: AbortSignal) => {
     await new Promise<void>((resolve) => setTimeout(resolve, 0))
     signal.throwIfAborted()

@@ -2,8 +2,9 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  useVerificationTools,
+  useVerificationTools as useTools,
   VERIFICATION_TOOL_STATUSES,
+  type UseVerificationToolsOptions,
   type VerificationToolRequestParams,
 } from "~/features/Verification/api/useVerificationTools"
 import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification/types"
@@ -13,6 +14,14 @@ import {
 } from "~/services/verification/modelQuality/constants"
 
 const mockRunPelicanTest = vi.fn()
+
+/** Supply the extension-page executor used by these controller scenarios. */
+function useVerificationTools(
+  options: Omit<UseVerificationToolsOptions, "runPelicanRequest"> &
+    Partial<Pick<UseVerificationToolsOptions, "runPelicanRequest">>,
+) {
+  return useTools({ runPelicanRequest: mockRunPelicanTest, ...options })
+}
 const mockLoadOverrides = vi.fn()
 const mockSaveOverrides = vi.fn()
 const mockGetDrawing = vi.fn()

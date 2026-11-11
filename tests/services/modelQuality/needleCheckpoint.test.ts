@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest"
+import { beforeAll, beforeEach, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -16,7 +16,10 @@ import {
 import { needleHistory } from "~/services/verification/verificationResultHistory/needleHistory"
 import { getVerificationScopeKey } from "~/services/verification/verificationResultHistory/requestIdentity"
 import { runDurableNeedleTest } from "~/services/verification/webAiApiCheck/needleCheckpoint"
+import { preloadContextTokens } from "~~/tests/test-utils/contextTokens"
 import { createNeedleResult } from "~~/tests/test-utils/needle"
+
+beforeAll(preloadContextTokens)
 
 const request = {
   baseUrl: "https://example.invalid",
@@ -120,9 +123,8 @@ it.each(["google", "openai-compatible"] as const)(
 )
 
 it("executes the selected retry from a recovered recipe without replaying other cells", async () => {
-  const { modelMetadataService } = await import(
-    "~/services/models/modelMetadata"
-  )
+  const { modelMetadataService } =
+    await import("~/services/models/modelMetadata")
   modelMetadataService.clearCache()
   let requests = 0
   const fetch = vi
@@ -248,9 +250,8 @@ it.each(["smaller", "missing"] as const)(
 )
 
 it("allows a recovered cell retry within the approved scope of a smaller plan", async () => {
-  const { modelMetadataService } = await import(
-    "~/services/models/modelMetadata"
-  )
+  const { modelMetadataService } =
+    await import("~/services/models/modelMetadata")
   modelMetadataService.clearCache()
   const params = { ...request, mode: "non-streaming" as const }
   const store = new Storage({ area: "local" })
@@ -390,9 +391,8 @@ it("finalizes a failed preparation with retained measurements before another exp
 it.each([false, true])(
   "retains completed measurements after history save failure; recoverOnly=%s",
   async (recoverOnly) => {
-    const needle = await import(
-      "~/services/verification/modelQuality/needleRun"
-    )
+    const needle =
+      await import("~/services/verification/modelQuality/needleRun")
     const completed = createNeedleResult()
     const run = vi
       .spyOn(needle, "runNeedleTest")
@@ -496,9 +496,8 @@ it("does not start a new run when recovery has no saved checkpoint", async () =>
 
 it("continues matching saved measurements with the compatible capacity observation", async () => {
   const needle = await import("~/services/verification/modelQuality/needleRun")
-  const { contextCapacityHistory } = await import(
-    "~/services/verification/verificationResultHistory/contextCapacityHistory"
-  )
+  const { contextCapacityHistory } =
+    await import("~/services/verification/verificationResultHistory/contextCapacityHistory")
   const previous = createNeedleResult()
   await needleHistory.save(request, previous)
   const run = vi.spyOn(needle, "runNeedleTest").mockResolvedValue(previous)

@@ -1,10 +1,13 @@
 import { APICallError, StreamProviderError } from "ai"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
 import { classifyContextError } from "~/services/verification/modelQuality/contextErrors"
+import { preloadContextTokens } from "~~/tests/test-utils/contextTokens"
+
+beforeAll(preloadContextTokens)
 
 // Original report: https://github.com/anomalyco/opencode/issues/1000
 const GROQ_OUTPUT_LIMIT =
@@ -569,9 +572,8 @@ describe("capacity request outcomes", () => {
 it.each([false, true])(
   "bounds explicit and resumed input by fixture ceiling: resume=%s",
   async (resume) => {
-    const counters = await import(
-      "~/services/verification/modelQuality/contextCounter"
-    )
+    const counters =
+      await import("~/services/verification/modelQuality/contextCounter")
     const counter = await counters.createContextCounter({ state: "unmatched" })
     const preparePrompt = vi.fn(counter.preparePrompt)
     const spy = vi
@@ -714,9 +716,8 @@ it("rejects an invalid resumed limit before sending provider input", async () =>
 })
 
 it("does not accept generation that resolves after caller cancellation", async () => {
-  const generation = await import(
-    "~/services/verification/aiApiVerification/probes/probeGeneration"
-  )
+  const generation =
+    await import("~/services/verification/aiApiVerification/probes/probeGeneration")
   const controller = new AbortController()
   const run = vi
     .spyOn(generation, "runProbeGeneration")

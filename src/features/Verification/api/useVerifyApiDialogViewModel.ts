@@ -67,6 +67,7 @@ import {
 import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import { createAccountModelVerificationHistoryTarget } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
 
@@ -276,6 +277,7 @@ export function useVerifyApiDialogViewModel({
   )
 
   const tools = useVerificationTools({
+    runPelicanRequest: runPelicanTest,
     modelId: requestedModelId || tokenModelHint || "",
     enableContextCapacity: isOpen,
     contextCapacityKey: JSON.stringify([
@@ -358,13 +360,13 @@ export function useVerifyApiDialogViewModel({
       setAccountRuntimeKeys(sorted)
 
       const defaultRuntimeKey = hasModelContext
-        ? sorted.find((runtimeKey) =>
+        ? (sorted.find((runtimeKey) =>
             isRuntimeKeyCompatibleWithModel(runtimeKey, {
               hasModelContext,
               requestedModelId,
               modelEnableGroups,
             }),
-          ) ?? null
+          ) ?? null)
         : findDefaultSelectableAccountRuntimeKey(sorted)
       setSelectedRuntimeKeyId(defaultRuntimeKey ? defaultRuntimeKey.id : "")
     } catch (error) {
