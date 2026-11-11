@@ -1,18 +1,40 @@
 import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
 import {
+  BROWSER_OAUTH_CONTENT_FAILURE_REASONS,
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
+} from "~/constants/browserOAuth"
+import {
   isAgentRouterLoginUrl,
   isAgentRouterSystemName,
 } from "~/services/accountLogin/providers/agentrouter/config"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { AGENT_ROUTER_ACCOUNT_LOGIN } from "~/services/accountSiteDefinitions/deployments"
-import { getErrorMessage } from "~/utils/core/error"
+import {
+  BrowserOAuthRequestError,
+  fetchBrowserOAuthRequest,
+  runBrowserOAuthContentAction as run,
+} from "~/services/browserOAuth/contentRequest"
+import { isRecord } from "~/utils/core/object"
+
+const AGENT_ROUTER_OAUTH_ENDPOINTS = {
+  Status: "/api/status",
+  Logout: "/api/user/logout",
+  State: "/api/oauth/state",
+  Self: "/api/user/self",
+} as const
 
 type SendResponse = (response: unknown) => void
 
 /** Normalized response envelope returned by AgentRouter JSON endpoints. */
 interface ApiEnvelope {
-  success?: boolean
+  success: boolean
   data?: unknown
   message?: unknown
+}
+
+/** A usable envelope must distinguish a definite rejection from a lost reply. */
+function isApiEnvelope(value: unknown): value is ApiEnvelope {
+  return isRecord(value) && typeof value.success === "boolean"
 }
 
 interface AgentRouterOAuthRequest {
@@ -23,21 +45,9 @@ interface LinuxDoAuthorizationRequest {
   authorizationUrl?: unknown
 }
 
-/** Converts the provider's numeric or string identity into a stable string. */
-function normalizeIdentity(value: unknown): string | null {
-  if (typeof value === "string") {
-    const trimmed = value.trim()
-    return trimmed || null
-  }
-  if (typeof value === "number" && Number.isFinite(value)) return String(value)
-  return null
-}
-
 /** Narrows arbitrary JSON to a plain object. */
 function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null
+  return isRecord(value) ? value : null
 }
 
 /** Accepts canonical and verified mirror AgentRouter content-script origins. */
@@ -50,16 +60,30 @@ async function fetchEnvelope(
   path: string,
   userId?: string,
 ): Promise<ApiEnvelope> {
-  const response = await fetch(path, {
-    method: "GET",
-    credentials: "include",
-    redirect: "error",
-    headers: {
-      Accept: "application/json",
-      ...(userId ? { [AGENT_ROUTER_ACCOUNT_LOGIN.userIdHeader]: userId } : {}),
+  const mutationRisk =
+    path === AGENT_ROUTER_OAUTH_ENDPOINTS.Logout ||
+    path.startsWith(AGENT_ROUTER_OAUTH_ENDPOINTS.State)
+  const response = await fetchBrowserOAuthRequest(
+    path,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...(userId
+          ? { [AGENT_ROUTER_ACCOUNT_LOGIN.userIdHeader]: userId }
+          : {}),
+      },
     },
-  })
-  const payload = (await response.json()) as ApiEnvelope
+    { mutationRisk },
+  )
+  let payload: unknown
+  try {
+    payload = await response.json()
+  } catch {
+    throw BrowserOAuthRequestError.fromMutationRisk(mutationRisk)
+  }
+  if (!isApiEnvelope(payload))
+    throw BrowserOAuthRequestError.fromMutationRisk(mutationRisk)
   if (!response.ok || payload.success !== true) {
     throw new Error(
       typeof payload.message === "string"
@@ -68,23 +92,6 @@ async function fetchEnvelope(
     )
   }
   return payload
-}
-
-/** Runs an asynchronous content action and returns its response port signal. */
-function run(
-  sendResponse: SendResponse,
-  work: () => Promise<Record<string, unknown>>,
-): true {
-  void work()
-    .then(sendResponse)
-    .catch((error) => {
-      sendResponse({
-        success: false,
-        reason: "request_failed",
-        message: getErrorMessage(error),
-      })
-    })
-  return true
 }
 
 /**
@@ -98,7 +105,10 @@ export function handlePrepareAgentRouterOAuth(
 ): true {
   return run(sendResponse, async () => {
     if (!isAgentRouterOrigin()) {
-      return { success: false, reason: "unexpected_origin" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedOrigin,
+      }
     }
 
     // `checked_in` belongs to the latest OAuth callback. Never let an older
@@ -109,7 +119,9 @@ export function handlePrepareAgentRouterOAuth(
     // credential as well as the server session before requesting fresh OAuth.
     globalThis.localStorage.removeItem("__agwt_rt")
 
-    const status = asRecord((await fetchEnvelope("/api/status")).data)
+    const status = asRecord(
+      (await fetchEnvelope(AGENT_ROUTER_OAUTH_ENDPOINTS.Status)).data,
+    )
     const loginProvider = request.loginProvider
     const provider =
       loginProvider === ACCOUNT_LOGIN_PROVIDERS.Github
@@ -141,11 +153,16 @@ export function handlePrepareAgentRouterOAuth(
     // The deployed callback enters account binding when a login session remains,
     // even with mode=login. Use the site's logout contract, then establish state
     // in the resulting anonymous session (verified on agentrouter.org 2026-09-13).
-    await fetchEnvelope("/api/user/logout")
-    const statePayload = await fetchEnvelope("/api/oauth/state?mode=login")
+    await fetchEnvelope(AGENT_ROUTER_OAUTH_ENDPOINTS.Logout)
+    const statePayload = await fetchEnvelope(
+      `${AGENT_ROUTER_OAUTH_ENDPOINTS.State}?mode=login`,
+    )
     const state =
       typeof statePayload.data === "string" ? statePayload.data.trim() : ""
-    if (!state) throw new Error("AgentRouter returned an invalid OAuth state.")
+    if (!state)
+      throw new BrowserOAuthRequestError(
+        BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain,
+      )
 
     return { success: true, clientId, state }
   })
@@ -157,7 +174,10 @@ export function handleClearAgentRouterOAuthEvidence(
 ): true {
   return run(sendResponse, async () => {
     if (!isAgentRouterOrigin()) {
-      return { success: false, reason: "unexpected_origin" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedOrigin,
+      }
     }
     globalThis.localStorage.removeItem("user")
     return { success: true }
@@ -174,14 +194,20 @@ export function handleCompleteAgentRouterOAuth(
 ): true {
   return run(sendResponse, async () => {
     if (!isAgentRouterOrigin()) {
-      return { success: false, reason: "unexpected_origin" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedOrigin,
+      }
     }
     if (
       !AGENT_ROUTER_ACCOUNT_LOGIN.completionPaths.some(
         (path) => path === globalThis.location.pathname,
       )
     ) {
-      return { success: false, reason: "unexpected_page" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedPage,
+      }
     }
 
     let callbackUser: Record<string, unknown> | null
@@ -193,22 +219,29 @@ export function handleCompleteAgentRouterOAuth(
       callbackUser = null
     }
 
-    const callbackUserId = normalizeIdentity(callbackUser?.id)
+    const callbackUserId = normalizeAccountIdentity(callbackUser?.id)
     if (!callbackUserId) {
       globalThis.localStorage.removeItem("user")
-      return { success: false, reason: "identity_mismatch" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
+      }
     }
 
     // https://agentrouter.org: the reported /api/user/self rejection requires
     // New-Api-User even with a logged-in cookie session. Use the callback ID as
     // a request hint, then still verify the identity returned by the server.
     const selfUser = asRecord(
-      (await fetchEnvelope("/api/user/self", callbackUserId)).data,
+      (await fetchEnvelope(AGENT_ROUTER_OAUTH_ENDPOINTS.Self, callbackUserId))
+        .data,
     )
-    const selfUserId = normalizeIdentity(selfUser?.id)
+    const selfUserId = normalizeAccountIdentity(selfUser?.id)
     if (!selfUserId || callbackUserId !== selfUserId) {
       globalThis.localStorage.removeItem("user")
-      return { success: false, reason: "identity_mismatch" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
+      }
     }
 
     return {
@@ -328,12 +361,19 @@ export function handleApproveLinuxDoOAuth(
 ): true {
   return run(sendResponse, async () => {
     if (!isExpectedLinuxDoAuthorizationPage(request.authorizationUrl)) {
-      return { success: false, reason: "unexpected_page" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedPage,
+      }
     }
 
     const control = await waitForLinuxDoAuthorizationControl()
     if (!control) {
-      return { success: false, reason: "authorization_control_unavailable" }
+      return {
+        success: false,
+        reason:
+          BROWSER_OAUTH_CONTENT_FAILURE_REASONS.AuthorizationControlUnavailable,
+      }
     }
     control.click()
     return { success: true }

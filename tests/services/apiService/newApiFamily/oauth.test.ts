@@ -40,6 +40,21 @@ const run = (
 ) => new Promise((resolve) => handler(input, resolve))
 
 describe("New API OAuth protocol", () => {
+  it.each([200, 403])(
+    "reports a challenge from any deployment before decoding the OAuth response (HTTP %s)",
+    async (httpStatus) => {
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response('<meta name="aliyun_waf_aa">', { status: httpStatus }),
+        )
+      expect(await run(handlePrepareNewApiOAuth)).toEqual({
+        success: false,
+        reason: "verification_required",
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    },
+  )
   beforeEach(() => {
     localStorage.clear()
     sessionStorage.clear()

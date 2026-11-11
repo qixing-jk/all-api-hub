@@ -1,5 +1,23 @@
 # Session assessment and reuse
 
+## Preserve initial session conditions
+
+When testing first-contact WAF, expired credentials, or recovery without an open
+site page, the initial session state is part of the reproduction. Import the
+saved-account configuration directly and let the application perform the first
+provider request and any page creation. Website navigation, automatic account
+detection, identity probes, and session/Cookie transfer during test setup can
+clear a challenge or renew authentication before the behavior under test runs.
+
+Establish the required state through browser metadata: the selected profile,
+provider tabs, cookies and site storage. Use independent fresh profiles for
+scenarios requiring no previous visit. Record zero provider requests before the
+trigger, and distinguish application-created pages from tester navigation. A
+failed setup can reuse a profile only with evidence that no provider request
+occurred; otherwise recreate the intended initial conditions before rerunning.
+Report a missing first-document capture separately from successful operation:
+success alone does not prove that no transient challenge appeared.
+
 ## Read-only preflight
 
 Use `scripts/cdp/session-preflight.mjs` in live runners. `probePageSession(page, { endpoint, readIdentity })` makes a bounded, same-origin GET with the page's credentials and projects only a stable account ID. Keep provider response parsing in the site runner. An explicit 401 means unauthenticated; a 403, redirect, challenge, malformed identity or transport failure is an error requiring investigation.

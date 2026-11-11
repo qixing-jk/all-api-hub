@@ -1,20 +1,20 @@
 # Cloudflare Shield Bypass Assistant
 
-> Applies to aggregated relay stations with Cloudflare's 5-second shield (or stricter Bot Fight Mode) enabled, ensuring the plugin can both identify account information and automatically retry requests when they are restricted.
+> Helps with supported website verification pages, including Cloudflare and Aliyun. When the operation, permissions and settings allow it, the extension waits for clearance and resumes safe reads. Continuing after manual verification depends on the active operation and browser session.
 
 ## Feature Overview
 
-- **Automatic Detection**: Automatically triggers the shield bypass process when the page title contains `Just a moment`, `#cf-content` exists, or the API returns status codes like 401/403/429.
-- **Temporary Window**: Opens a temporary tab in the background with the same origin as the target domain, reusing browser cookies, and returns to the original page after completing Cloudflare's JS/human challenge.
-- **Request Degradation**: When a regular `fetch` fails, the request is replayed by the temporary window carrying cookies, avoiding infinite retries caused by cross-origin/missing credentials.
-- **Manual Fallback**: If Cloudflare determines that user interaction is required, a window will automatically pop up, prompting the user to complete verification within 20 seconds.
+- **Verification detection**: Shared request and login flows identify known challenge pages and response signals. A 401, 403, 429 or ordinary CAPTCHA widget alone does not establish a protection challenge.
+- **Policy-based recovery**: Eligible reads can use a temporary page that respects the account and browser storage context. Automatic tasks follow the master and feature switches; manual operations still require appropriate permissions and environment support. Direct requests with isolated credentials do not switch to another browser login session.
+- **No duplicate submission**: Operations with side effects, including login, check-in and token creation, are not automatically replayed after a challenge or lost response, even when they use GET. Unconfirmed outcomes remain unconfirmed; clearance alone does not prove business success.
+- **Login verification handoff**: Password and OAuth login first wait for page verification. If it persists, the original window stays available for a bounded continuation period and uses the configured reminder channels. Background windows do not take focus automatically. Open the reminder to handle verification in that page; closing the window or cancelling the task ends the wait.
 
 ## Usage Steps
 
 1. **Log in to the target site**, add an account in the plugin → fill in the site address → click "Auto Identify".
-2. If a Cloudflare prompt appears, the browser will automatically pop up a window; simply keep the window in the foreground and wait for automatic verification or click as prompted.
-3. After successful verification, the plugin will automatically return to the identification process and continue to read data such as Access Token, balance, and model list.
-4. If rate limiting is triggered during the API request phase (common in CC Switch/CherryStudio export or New API synchronization), the system will automatically enable the temporary window to resend, no additional action is required.
+2. If the operation reports website verification, wait for the page scripts to finish. When a reminder requests manual action, open its page and follow the site's instructions.
+3. Tasks that support continuation resume safe steps after clearance and independently confirm identity and the operation result. Check the final refresh, login or check-in status.
+4. If settings, missing permissions or the environment prevent recovery, review the relevant settings and shield bypass history. Rate limits and ordinary network failures do not unconditionally trigger a browser retry.
 
 ## Troubleshoot with shield bypass history
 
@@ -33,18 +33,18 @@ History retains the latest **100 records** on this device. It records new tempor
 
 ## Notes
 
-- **IP Quality**: If verification fails continuously, you need to change your network or temporarily relax protection on the site side; the default timeout is 20 seconds.
-- **Pop-up Permissions**: Please allow the browser to pop up windows, otherwise the plugin cannot create temporary tabs.
-- **Repeated Challenges**: If 429 is frequently triggered, you can lower the rate or enable a model whitelist in Self-Hosted Site Management to reduce invalid requests.
+- **Wait limits**: Each automatic page check has a 20-second limit. Login sessions supporting manual continuation have a separate bounded wait. Closing the window cancels that login.
+- **Permissions and settings**: Use the extension's specific reason to check optional permissions, automatic bypass settings and browser support.
+- **Repeated restrictions**: Follow the site's guidance for rate limits such as 429. Reopening pages or resubmitting operations is not a substitute for waiting.
 
 ## Common Issues
 
 | Scenario | Solution |
 |------|----------|
-| Pop-up closes immediately | Check if the browser's address bar on the right is blocking pop-ups; allow it and re-identify. |
-| Stuck on "Just a moment" | Manually complete the CAPTCHA in the pop-up window; if it still fails, change your IP. |
-| API export still reports 403 | Manually click "Export Again"; the backend will reuse the cookie that just passed the shield bypass; if it fails, check if the target site restricts administrator Tokens. |
-| No pop-up but identification fails | The site may have removed Cloudflare, but the API returns 401 (credentials invalid); please log in to the site again and refresh the plugin data. |
+| Verification window closes | Check the task result and bypass history to distinguish completion, cancellation, timeout and environment limits. |
+| Stuck on "Just a moment" | If a continuation reminder is available, open the original page to handle verification; check the final result after the task deadline. |
+| Operation still reports 403 | Review verification and permission reasons. If the operation was already submitted, confirm its result before repeating it. |
+| No pop-up but identification fails | Check the specific error and settings. Direct requests, missing permissions or an ineligible recovery may leave the browser closed. |
 | Verification page does not fit | Adjust and save the width and height under **Settings → Data Refresh → Website Verification Assistance → Verification Window Size**. Applies to newly created verification windows. |
 
 ## Related Documents

@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_PASSWORD_IDENTITIES } from "~/constants/accountLogin"
 import { BROWSER_LOGIN_SESSION_KEYS } from "~/constants/browserLogin"
+import {
+  BROWSER_OAUTH_CONTENT_FAILURE_REASONS,
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
+} from "~/constants/browserOAuth"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -394,19 +398,37 @@ describe("Sub2API adapter-owned OAuth login", () => {
     ).toEqual({ authorizationUrl: "https://idp.example/start" })
     expect(flow.parsePreparation({ success: true })).toBeNull()
     expect(
-      flow.parsePreparation({ reason: "interaction_required" }),
+      flow.parsePreparation({
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired,
+      }),
     ).toMatchObject({ status: "interaction_required" })
-    expect(flow.parsePreparation({ reason: "unsupported" })).toEqual({
+    expect(
+      flow.parsePreparation({
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.Unsupported,
+      }),
+    ).toEqual({
       status: "unsupported",
     })
-    expect(flow.parsePreparation({ reason: "uncertain" })).toMatchObject({
+    expect(
+      flow.parsePreparation({
+        reason: BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain,
+      }),
+    ).toMatchObject({
       status: "uncertain",
     })
     expect(flow.parsePreparation({ success: false })).toBeNull()
-    expect(flow.parseCompletion({ reason: "identity_mismatch" })).toEqual({
+    expect(
+      flow.parseCompletion({
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
+      }),
+    ).toEqual({
       status: "identity_mismatch",
     })
-    expect(flow.parseCompletion({ reason: "interaction_required" })).toEqual({
+    expect(
+      flow.parseCompletion({
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired,
+      }),
+    ).toEqual({
       status: "interaction_required",
     })
     expect(

@@ -1,17 +1,24 @@
+import type { BrowserLoginFailureReason } from "~/constants/browserLogin"
+import { BROWSER_LOGIN_FAILURE_REASONS } from "~/constants/browserLogin"
 import {
   BROWSER_OAUTH_COMPLETION_STATUS,
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
   BROWSER_OAUTH_STATUS,
 } from "~/constants/browserOAuth"
 import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
 import {
+  BrowserLoginOriginMismatchError,
   createBrowserLoginContext,
   type BrowserLoginContextOptions,
   type BrowserLoginResult,
   type BrowserLoginSession,
 } from "~/services/browserLogin/browserLogin"
+import { BrowserLoginResponseError } from "~/services/browserLogin/contentResponse"
+import { getBrowserLoginPageFailureReason } from "~/services/browserLogin/pageProtection"
 import { isMessageReceiverUnavailableError } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { isRecord } from "~/utils/core/object"
 
 const logger = createLogger("BrowserOAuth")
 const INTERACTIVE_TIMEOUT_MS = 2 * 60 * 1000
@@ -23,13 +30,13 @@ export type BrowserOAuthFailureStatus = Exclude<
 
 type BrowserOAuthFailure = {
   status: BrowserOAuthFailureStatus
+  reason?: BrowserLoginFailureReason
   message?: string
 }
 export type BrowserOAuthContextOptions = BrowserLoginContextOptions
 
 export type BrowserOAuthPreparation =
-  | { authorizationUrl: string }
-  | BrowserOAuthFailure
+  { authorizationUrl: string } | BrowserOAuthFailure
 
 export type BrowserOAuthCompletion<Evidence> =
   | {
@@ -63,17 +70,82 @@ export interface BrowserOAuthFlow<Evidence> {
   isCompletionUrl(url: URL, origin: string): boolean
 }
 
+/** Shared request failures retain their outcome before provider-specific parsing. */
+function contentActionFailure(
+  response: unknown,
+  afterCallback = false,
+): BrowserOAuthFailure | null {
+  if (!isRecord(response) || response.success !== false) return null
+  if (
+    response.reason === BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain ||
+    (afterCallback &&
+      response.reason === BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed)
+  )
+    return { status: BROWSER_OAUTH_STATUS.Uncertain }
+  if (
+    response.reason !== BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired &&
+    response.reason !== BROWSER_LOGIN_FAILURE_REASONS.PageUnavailable
+  )
+    return null
+  return {
+    status:
+      afterCallback || response.mutationRisk === true
+        ? BROWSER_OAUTH_STATUS.Uncertain
+        : response.reason === BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
+          ? BROWSER_OAUTH_STATUS.InteractionRequired
+          : BROWSER_OAUTH_STATUS.Failed,
+    reason: response.reason,
+  }
+}
+
+/** Sends site work through readiness while preserving its pre/post-callback outcome. */
+async function sendOAuthSiteAction(
+  session: BrowserLoginSession,
+  action: string,
+  afterCallback = false,
+  details?: Record<string, unknown>,
+): Promise<unknown> {
+  try {
+    return await session.sendSiteAction(action, {
+      ...details,
+      origin: session.input.origin,
+    })
+  } catch (error) {
+    const reason = getBrowserLoginPageFailureReason(error)
+    if (!reason) {
+      if (
+        afterCallback ||
+        (error instanceof BrowserLoginResponseError && error.mutationRisk)
+      )
+        return {
+          success: false,
+          reason: BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain,
+        }
+      throw error
+    }
+    return {
+      success: false,
+      reason,
+      mutationRisk: afterCallback,
+    }
+  }
+}
+
 /** Executes OAuth navigation and completion inside the shared account session. */
 async function executeOAuth<Evidence>(
   flow: BrowserOAuthFlow<Evidence>,
   session: BrowserLoginSession,
 ): Promise<BrowserLoginResult<Evidence>> {
   const { input } = session
-  const prepareResponse = await session.send<unknown>(flow.prepareAction, {
-    ...flow.prepareDetails,
-    origin: input.origin,
-  })
-  const prepared = flow.parsePreparation(prepareResponse)
+  const prepareResponse = await sendOAuthSiteAction(
+    session,
+    flow.prepareAction,
+    false,
+    flow.prepareDetails,
+  )
+  const prepared =
+    contentActionFailure(prepareResponse) ??
+    flow.parsePreparation(prepareResponse)
   if (!prepared) {
     throw new Error(`${flow.displayName} OAuth could not be prepared.`)
   }
@@ -109,9 +181,14 @@ async function executeOAuth<Evidence>(
         }
         handledInteractionUrls.add(currentUrl.href)
         void session
-          .send(interaction.action, { authorizationUrl: authorizationUrl.href })
+          .sendAuthorizationAction(interaction.action, authorizationUrl.href, {
+            authorizationUrl: authorizationUrl.href,
+          })
           .catch((error) => {
-            if (isMessageReceiverUnavailableError(error)) {
+            if (
+              error instanceof BrowserLoginOriginMismatchError ||
+              isMessageReceiverUnavailableError(error)
+            ) {
               handledInteractionUrls.delete(currentUrl.href)
             }
             logger.warn(
@@ -129,11 +206,14 @@ async function executeOAuth<Evidence>(
     },
   )
 
-  await session.assertOrigin()
-  const completionResponse = await session.send<unknown>(flow.completeAction, {
-    origin: input.origin,
-  })
-  const completed = flow.parseCompletion(completionResponse)
+  const completionResponse = await sendOAuthSiteAction(
+    session,
+    flow.completeAction,
+    true,
+  )
+  const completed =
+    contentActionFailure(completionResponse, true) ??
+    flow.parseCompletion(completionResponse)
   if (
     completed.status !== BROWSER_OAUTH_COMPLETION_STATUS.Verified &&
     completed.status !== BROWSER_OAUTH_COMPLETION_STATUS.Invalid

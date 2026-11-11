@@ -1,5 +1,12 @@
-import { BROWSER_LOGIN_SESSION_KEYS } from "~/constants/browserLogin"
-import { BROWSER_OAUTH_COMPLETION_STATUS } from "~/constants/browserOAuth"
+import {
+  BROWSER_LOGIN_SESSION_KEYS,
+  BROWSER_LOGIN_STATUS,
+} from "~/constants/browserLogin"
+import {
+  BROWSER_OAUTH_COMPLETION_STATUS,
+  BROWSER_OAUTH_CONTENT_FAILURE_REASONS,
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
+} from "~/constants/browserOAuth"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountLoginEvidence } from "~/services/apiAdapters/contracts/accountLogin"
 import { captureNewApiLoginCookieCredential } from "~/services/apiAdapters/newApi/account/cookieCredential"
@@ -18,8 +25,10 @@ function parseCompletion(
   response: unknown,
 ): BrowserOAuthCompletion<AccountLoginEvidence> {
   const record = isRecord(response) ? response : null
-  if (record?.reason === "identity_mismatch") {
-    return { status: "identity_mismatch" as const }
+  if (
+    record?.reason === BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch
+  ) {
+    return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }
   }
   const identity =
     typeof record?.userId === "string" ? record.userId.trim() : ""
@@ -84,7 +93,10 @@ export function createNewApiOAuthFlow(input: {
       : {}),
     parsePreparation(response) {
       const record = isRecord(response) ? response : null
-      if (record?.reason === "unsupported" || record?.reason === "uncertain") {
+      if (
+        record?.reason === BROWSER_OAUTH_CONTENT_FAILURE_REASONS.Unsupported ||
+        record?.reason === BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain
+      ) {
         return { status: record.reason }
       }
       return record?.success === true &&
@@ -102,22 +114,22 @@ export function createNewApiOAuthFlow(input: {
         !url.searchParams.get("client_id")
       )
         return false
-      if (provider === "github")
+      if (provider === NEW_API_OAUTH_PROVIDERS.Github)
         return (
           url.origin === "https://github.com" &&
           url.pathname === "/login/oauth/authorize"
         )
-      if (provider === "linuxdo")
+      if (provider === NEW_API_OAUTH_PROVIDERS.LinuxDo)
         return (
           url.origin === "https://connect.linux.do" &&
           url.pathname === "/oauth2/authorize"
         )
-      if (provider === "discord")
+      if (provider === NEW_API_OAUTH_PROVIDERS.Discord)
         return (
           url.origin === "https://discord.com" &&
           url.pathname === "/oauth2/authorize"
         )
-      return provider === "oidc"
+      return provider === NEW_API_OAUTH_PROVIDERS.Oidc
     },
     isCompletionUrl(url, origin) {
       return (

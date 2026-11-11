@@ -103,6 +103,8 @@ If dev startup fails or the loaded UI does not receive edits, follow [desktop de
 
 ### 3. Verify Session Readiness Before Authenticated Flows
 
+For tests of first-contact WAF, expired sessions, or behavior with no site page open, use [preserving initial session conditions](references/session-reuse.md#preserve-initial-session-conditions) instead of the normal authenticated preflight below.
+
 Checking readiness is required; synchronizing state is conditional. Use the site's authenticated identity endpoint in the selected dev profile, not a saved extension account, tab title or Cookie count. Reuse a valid target session immediately, checking the expected account ID when known.
 
 If the target is unauthenticated, inspect task-authorized source sessions and select an applicable sync method before asking the user to log in. A target 401 establishes only that the target lacks authentication. A closed-browser requirement applies to database copying, not to all session reuse. Network failures, challenges and identity mismatches require diagnosis rather than a login request.

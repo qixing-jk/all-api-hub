@@ -1,10 +1,25 @@
-const BROWSER_OAUTH_REQUEST_TIMEOUT_MS = 15_000
+import { BROWSER_LOGIN_FAILURE_REASONS } from "~/constants/browserLogin"
+import {
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
+  type BrowserOAuthRequestFailureReason,
+} from "~/constants/browserOAuth"
+import { BrowserLoginResponseError } from "~/services/browserLogin/contentResponse"
+import { isProtectionResponse } from "~/services/protectionBypass/response"
 
-export type BrowserOAuthRequestFailureReason = "request_failed" | "uncertain"
+const BROWSER_OAUTH_REQUEST_TIMEOUT_MS = 15_000
 
 export class BrowserOAuthRequestError extends Error {
   constructor(readonly reason: BrowserOAuthRequestFailureReason) {
     super(reason)
+  }
+
+  /** A lost or unusable mutation response cannot establish that the request failed. */
+  static fromMutationRisk(mutationRisk: boolean): BrowserOAuthRequestError {
+    return new BrowserOAuthRequestError(
+      mutationRisk
+        ? BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain
+        : BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed,
+    )
   }
 }
 
@@ -17,15 +32,23 @@ export function runBrowserOAuthContentAction(
 ): true {
   void work()
     .then(reply)
-    .catch((error) =>
+    .catch((error) => {
+      if (error instanceof BrowserLoginResponseError) {
+        reply({
+          success: false,
+          reason: error.reason,
+          ...(error.mutationRisk ? { mutationRisk: true } : {}),
+        })
+        return
+      }
       reply({
         success: false,
         reason:
           error instanceof BrowserOAuthRequestError
             ? error.reason
-            : "request_failed",
-      }),
-    )
+            : BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed,
+      })
+    })
   return true
 }
 
@@ -38,17 +61,31 @@ export async function fetchBrowserOAuthRequest(
   init: RequestInit = {},
   options: { mutationRisk?: boolean } = {},
 ): Promise<Response> {
+  const mutationRisk =
+    options.mutationRisk ??
+    !["GET", "HEAD"].includes((init.method ?? "GET").toUpperCase())
+  let response: Response
+  let challenged: boolean
   try {
-    return await fetch(path, {
+    response = await fetch(path, {
       ...init,
       credentials: "include",
       redirect: "error",
       cache: "no-store",
       signal: AbortSignal.timeout(BROWSER_OAUTH_REQUEST_TIMEOUT_MS),
     })
+    // Inspect a clone so callers retain their response status and readable body.
+    challenged =
+      isProtectionResponse(undefined, response.headers) ||
+      isProtectionResponse(await response.clone().text(), response.headers)
   } catch {
-    throw new BrowserOAuthRequestError(
-      options.mutationRisk ? "uncertain" : "request_failed",
+    throw BrowserOAuthRequestError.fromMutationRisk(mutationRisk)
+  }
+  if (challenged) {
+    throw new BrowserLoginResponseError(
+      BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired,
+      mutationRisk,
     )
   }
+  return response
 }

@@ -1,4 +1,8 @@
 import {
+  BROWSER_OAUTH_CONTENT_FAILURE_REASONS,
+  BROWSER_OAUTH_REQUEST_FAILURE_REASONS,
+} from "~/constants/browserOAuth"
+import {
   readIdentityJwtExpiry,
   readIdentityStorageRecord,
   readIdentityStorageString,
@@ -51,7 +55,9 @@ function validate(request: Request): string {
     typeof request.requestId !== "string" ||
     !request.requestId.trim()
   ) {
-    throw new BrowserOAuthRequestError("request_failed")
+    throw new BrowserOAuthRequestError(
+      BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed,
+    )
   }
   return request.requestId
 }
@@ -70,7 +76,6 @@ function readFlow(requestId: string) {
 /** Fetches a fixed same-origin route without automatic refresh or mutation replay. */
 async function requestApi(path: string, options: RequestInit = {}) {
   const mutates = options.method === "POST"
-  const uncertainReason = mutates ? "uncertain" : "request_failed"
   const response = await fetchBrowserOAuthRequest(
     path,
     {
@@ -84,20 +89,23 @@ async function requestApi(path: string, options: RequestInit = {}) {
     { mutationRisk: mutates },
   )
   if (!response.ok) {
-    throw new BrowserOAuthRequestError(
-      response.status >= 500 ? uncertainReason : "request_failed",
+    throw BrowserOAuthRequestError.fromMutationRisk(
+      response.status >= 500 && mutates,
     )
   }
   let body: unknown
   try {
     body = await response.json()
   } catch {
-    throw new BrowserOAuthRequestError(uncertainReason)
+    throw BrowserOAuthRequestError.fromMutationRisk(mutates)
   }
   if (!isRecord(body) || typeof body.code !== "number") {
-    throw new BrowserOAuthRequestError(uncertainReason)
+    throw BrowserOAuthRequestError.fromMutationRisk(mutates)
   }
-  if (body.code !== 0) throw new BrowserOAuthRequestError("request_failed")
+  if (body.code !== 0)
+    throw new BrowserOAuthRequestError(
+      BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed,
+    )
   return body.data
 }
 
@@ -113,17 +121,28 @@ export function handlePrepareSub2ApiOAuth(
   return runBrowserOAuthContentAction(reply, async () => {
     const requestId = validate(request)
     if (!isSub2ApiOAuthProvider(request.loginProvider)) {
-      return { success: false, reason: "unsupported" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.Unsupported,
+      }
     }
     const provider = request.loginProvider
     const settings = await requestApi(SUB2API_PUBLIC_SETTINGS_ENDPOINT)
     if (!isRecord(settings))
-      throw new BrowserOAuthRequestError("request_failed")
+      throw new BrowserOAuthRequestError(
+        BROWSER_OAUTH_REQUEST_FAILURE_REASONS.RequestFailed,
+      )
     if (discoverSub2ApiOAuthMethods(settings, [provider]).length === 0) {
-      return { success: false, reason: "unsupported" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.Unsupported,
+      }
     }
     if (requiresSub2ApiOAuthInteraction(settings)) {
-      return { success: false, reason: "interaction_required" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired,
+      }
     }
 
     sessionStorage.removeItem(FLOW_KEY)
@@ -176,7 +195,10 @@ export function handleCompleteSub2ApiOAuth(
         requestId,
       )
     ) {
-      return { success: false, reason: "unexpected_page" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.UnexpectedPage,
+      }
     }
     const { token, expiresAt } = readSub2ApiBrowserToken()
     if (
@@ -185,26 +207,38 @@ export function handleCompleteSub2ApiOAuth(
       (readIdentityJwtExpiry(token) ?? Infinity) <= Date.now() ||
       readIdentityStorageString(SUB2API_AUTH_STORAGE_KEYS.pendingAuthSession)
     ) {
-      return { success: false, reason: "interaction_required" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired,
+      }
     }
     observedSession = { requestId, token }
     const cachedIdentity = normalizeSub2ApiLoginIdentity(
       readIdentityStorageRecord(SUB2API_AUTH_STORAGE_KEYS.authUser)?.id,
     )
     if (!cachedIdentity) {
-      return { success: false, reason: "identity_mismatch" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
+      }
     }
     const user = await requestApi(SUB2API_AUTH_ME_ENDPOINT, {
       headers: { Authorization: "Bearer " + token },
     })
     if (readSub2ApiBrowserToken().token !== token) {
-      return { success: false, reason: "interaction_required" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired,
+      }
     }
     const identity = normalizeSub2ApiLoginIdentity(
       isRecord(user) ? user.id : null,
     )
     if (identity !== cachedIdentity) {
-      return { success: false, reason: "identity_mismatch" }
+      return {
+        success: false,
+        reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
+      }
     }
     observedSession = undefined
     sessionStorage.removeItem(FLOW_KEY)
