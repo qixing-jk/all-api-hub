@@ -1,0 +1,24 @@
+name: validate-firefox-package
+description: Validate the exact Firefox ZIP with Mozilla's AMO validator before publication.
+
+inputs:
+  working-directory:
+    description: Directory containing the Firefox ZIP and installed dependencies
+    default: "."
+  zip-path:
+    description: Firefox archive relative to the working directory
+    default: ".output/stores/firefox-amo.zip"
+
+runs:
+  using: composite
+  steps:
+    - name: Validate Firefox store package
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        FIREFOX_ZIP: ${{ inputs.zip-path }}
+      run: |
+        validation_dir="$(mktemp -d)"
+        trap 'rm -rf -- "$validation_dir"' EXIT
+        unzip -q "$FIREFOX_ZIP" -d "$validation_dir"
+        pnpm exec web-ext lint --source-dir "$validation_dir" --no-config-discovery

@@ -26,6 +26,8 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
       - ".github/workflows/e2e-build.yml"
+      - ".github/actions/validate-firefox-package/**"
+      - "tests/scripts/firefoxPackageValidation.test.ts"
       - ".github/actions/setup-unit-test-browser/**"
       - "scripts/e2e-ci-build-cache.mjs"
       - "scripts/mobile/adapters.*"
@@ -52,6 +54,8 @@ on:
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
       - ".github/workflows/e2e-build.yml"
+      - ".github/actions/validate-firefox-package/**"
+      - "tests/scripts/firefoxPackageValidation.test.ts"
       - ".github/actions/setup-unit-test-browser/**"
       - "scripts/e2e-ci-build-cache.mjs"
       - "scripts/mobile/adapters.*"
@@ -105,6 +109,48 @@ jobs:
   release-changes:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
+
+  firefox-amo-validation:
+    name: Firefox AMO package
+    # Validate release candidates before release-please creates the GitHub Release.
+    # Ordinary PRs retain their existing checks without another production build.
+    needs: release-changes
+    if: ${{ !cancelled() && needs.release-changes.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
+      - name: Build Firefox store package
+        shell: bash
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+          AAH_DISTRIBUTION_CHANNEL: firefox-amo
+          AAH_DISTRIBUTION_OUT_DIR: .output/firefox-amo-pr
+          VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN || vars.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
+          VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST || vars.VITE_PUBLIC_POSTHOG_HOST }}
+        run: |
+          node node_modules/wxt/bin/wxt.mjs zip -b firefox
+          shopt -s nullglob
+          archives=(.output/firefox-amo-pr/*-firefox.zip)
+          if [ "${#archives[@]}" -ne 1 ]; then
+            echo "Expected exactly one Firefox store archive."
+            exit 1
+          fi
+          mkdir -p .output/stores
+          cp -- "${archives[0]}" .output/stores/firefox-amo.zip
+      - name: Validate Firefox store package
+        uses: ./.github/actions/validate-firefox-package
+      - name: Retain Firefox store package
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: firefox-amo-package-${{ github.run_attempt }}
+          path: .output/stores/firefox-amo.zip
+          retention-days: 7
 
   e2e-build:
     # One build produces every artifact: the variants only differ in the manifest's

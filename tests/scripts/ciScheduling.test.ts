@@ -2,8 +2,8 @@ import { existsSync, readFileSync } from "node:fs"
 import { runInNewContext } from "node:vm"
 import { describe, expect, it } from "vitest"
 
-// Every workflow that spends a runner on a pull request must honour the release gate:
-// release-please touches package.json, which is an input to all of them.
+// Ordinary checks skip verified release metadata. Release package validation is
+// the exception: it checks the final package before merging the release PR.
 const workflows = [
   "test.yml",
   "quality.yml",
@@ -375,6 +375,65 @@ describe("smoke tests after an ordinary skipped release ancestor", () => {
         ),
       ).toBe(false)
     }
+  })
+})
+
+describe("Firefox AMO validation before merging release PRs", () => {
+  it.each(["true", "false"])(
+    "validates release PR packages with release-only=%s",
+    (releaseOnly) => {
+      expect(
+        shouldRun("e2e-smoke.yml", "firefox-amo-validation", {
+          github: github("pull_request", "release-please--branches--main"),
+          needs: needs("success", releaseOnly),
+          labels: ["skip-e2e", "e2e-optional"],
+        }),
+      ).toBe(true)
+    },
+  )
+
+  it.each(["push", "pull_request", "workflow_dispatch"])(
+    "does not add a production build to ordinary %s checks",
+    (eventName) => {
+      expect(
+        shouldRun(
+          "e2e-smoke.yml",
+          "firefox-amo-validation",
+          {
+            github: github(eventName),
+            needs: needs("skipped"),
+          },
+          false,
+        ),
+      ).toBe(false)
+    },
+  )
+
+  it.each(["failure", "cancelled", "skipped"])(
+    "does not validate after a %s release check",
+    (result) => {
+      expect(
+        shouldRun(
+          "e2e-smoke.yml",
+          "firefox-amo-validation",
+          {
+            github: github("pull_request", "release-please--branches--main"),
+            needs: needs(result),
+          },
+          false,
+        ),
+      ).toBe(false)
+    },
+  )
+
+  it("honors workflow cancellation after successful release detection", () => {
+    expect(
+      shouldRun("e2e-smoke.yml", "firefox-amo-validation", {
+        github: github("pull_request", "release-please--branches--main"),
+        needs: needs("success", "true"),
+        cancelled: () => true,
+      }),
+    ).toBe(false)
   })
 })
 

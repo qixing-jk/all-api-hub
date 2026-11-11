@@ -136,10 +136,9 @@ jobs:
 
       - name: Validate Firefox store package
         if: ${{ steps.get_ref.outputs.checkout_ref != '' }}
-        working-directory: source
-        run: |
-          unzip -q .output/stores/firefox-amo.zip -d .output/firefox-amo-validation
-          pnpm exec web-ext lint --source-dir .output/firefox-amo-validation --no-config-discovery
+        uses: ./.github/actions/validate-firefox-package
+        with:
+          working-directory: source
 
       - name: Validate Safari build inputs
         if: ${{ steps.get_ref.outputs.checkout_ref != '' }}
