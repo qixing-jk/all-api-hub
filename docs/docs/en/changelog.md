@@ -8,6 +8,14 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.10.1
+
+::: info Firefox release fix
+Fixed oversized script files in the Firefox extension package that prevented it from passing the add-on store's validation. This is a compatibility fix; see the [4.10.0 changelog](#v4-10-0) for the main features and improvements.
+:::
+
+<a id="v4-10-0"></a>
+
 ## 4.10.0
 This release brings deep evaluation tools including Needle in a Haystack, real context limit testing, and custom Q&A quizzes, alongside an all-in-one redesigned `API Test` window with CLI tool simulation; introduces automatic login recovery and token renewal for AnyRouter and Sub2API with on-the-spot Cookie validation; expands CC Switch export to Claude Desktop, Antigravity (AGY), Pi, MiniMax Code, and more desktop clients; refines balance history filters and trend charts while improving large catalog performance and dialog animations; and fixes website verification challenge detection, Kimi Open Platform balance units, and Magpie HTTP 403 errors.
 
