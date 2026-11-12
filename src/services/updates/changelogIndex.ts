@@ -4,10 +4,7 @@ import {
   getGitHubRawChangelogMarkdownUrl,
 } from "~/utils/navigation/docsLinks"
 
-import {
-  compareDottedVersions,
-  normalizeDottedVersion,
-} from "./versionComparison"
+import { normalizeDottedVersion } from "./versionComparison"
 
 const CHANGELOG_INDEX_SCHEMA_VERSION = 1
 const CHANGELOG_SOURCE_FETCH_TIMEOUT_MS = 2_000
@@ -213,28 +210,12 @@ export async function fetchFirstAvailableChangelogVersionSource(): Promise<Chang
   )
 }
 
-/**
- * Decide whether an update should automatically open the changelog for the current version.
- */
-export async function shouldAutoOpenChangelogForUpdate(options: {
-  currentVersion: string
-  previousVersion?: string
-}): Promise<boolean> {
-  const currentVersion = normalizeDottedVersion(options.currentVersion)
-  if (!currentVersion) {
-    return false
-  }
-
+/** Resolve only the installed version's published notes; failures remain retryable. */
+export async function resolveChangelogVersion(
+  installedVersion: string,
+): Promise<string | null> {
+  const installed = normalizeDottedVersion(installedVersion)
+  if (!installed) return null
   const source = await fetchFirstAvailableChangelogVersionSource()
-  if (source.ok) {
-    return source.versions.has(currentVersion)
-  }
-
-  const previousVersion = normalizeDottedVersion(options.previousVersion)
-  if (!previousVersion) {
-    return true
-  }
-
-  const comparison = compareDottedVersions(currentVersion, previousVersion)
-  return comparison == null || comparison > 0
+  return source.ok && source.versions.has(installed) ? installed : null
 }

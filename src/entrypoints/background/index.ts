@@ -34,8 +34,11 @@ import {
 } from "~/services/productAnalytics/runtime/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { uninstallSurveyService } from "~/services/uninstallSurvey/uninstallSurvey"
-import { shouldAutoOpenChangelogForUpdate } from "~/services/updates/changelogIndex"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
+import {
+  compareDottedVersions,
+  normalizeDottedVersion,
+} from "~/services/updates/versionComparison"
 import {
   getExtensionVersion,
   getRuntimeId,
@@ -156,13 +159,10 @@ export default defineBackground(() => {
         }
 
         if (details.reason === "update") {
-          const version = getExtensionVersion("")
+          const version = normalizeDottedVersion(getExtensionVersion(""))
           if (
             version &&
-            (await shouldAutoOpenChangelogForUpdate({
-              currentVersion: version,
-              previousVersion: details.previousVersion,
-            }))
+            (compareDottedVersions(version, details.previousVersion) ?? 1) > 0
           ) {
             await changelogOnUpdateState.setPendingVersion(version)
           }
