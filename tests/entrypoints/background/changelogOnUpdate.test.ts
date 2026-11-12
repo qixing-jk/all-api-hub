@@ -45,7 +45,6 @@ describe("background onInstalled changelog opening", () => {
   let optionalPermissions: string[]
   let setPendingVersionMock: Mock
   let setLastSeenOptionalPermissionsMock: Mock
-  let shouldAutoOpenChangelogForUpdateMock: Mock
   let triggerStartupSponsorRecommendationsDailySummaryMock: ReturnType<
     typeof vi.fn
   >
@@ -77,7 +76,6 @@ describe("background onInstalled changelog opening", () => {
     optionalPermissions = []
     setPendingVersionMock = vi.fn().mockResolvedValue(undefined)
     setLastSeenOptionalPermissionsMock = vi.fn().mockResolvedValue(undefined)
-    shouldAutoOpenChangelogForUpdateMock = vi.fn().mockResolvedValue(true)
     triggerStartupSponsorRecommendationsDailySummaryMock = vi.fn()
     isTestModeMock = vi.fn().mockReturnValue(true)
     applyActionClickBehaviorMock.mockReset().mockResolvedValue(undefined)
@@ -128,10 +126,6 @@ describe("background onInstalled changelog opening", () => {
       changelogOnUpdateState: {
         setPendingVersion: setPendingVersionMock,
       },
-    }))
-
-    vi.doMock("~/services/updates/changelogIndex", () => ({
-      shouldAutoOpenChangelogForUpdate: shouldAutoOpenChangelogForUpdateMock,
     }))
 
     // Avoid heavy side effects from the background entrypoint; only the update
@@ -285,7 +279,23 @@ describe("background onInstalled changelog opening", () => {
     ).toHaveBeenCalledTimes(1)
   })
 
-  it("passes current and previous versions to the changelog index gate", async () => {
+  it.each(["2.39.0", "2.40.0"])(
+    "does not schedule same-version reloads or rollbacks from %s",
+    async (previousVersion) => {
+      await import("~/entrypoints/background/index")
+
+      expect(onInstalledListener).toBeTypeOf("function")
+      await onInstalledListener?.({
+        reason: "update",
+        previousVersion,
+      })
+      await flushPromises()
+
+      expect(setPendingVersionMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it("records pending updates even when their changelog has not been published", async () => {
     await import("~/entrypoints/background/index")
 
     expect(onInstalledListener).toBeTypeOf("function")
@@ -295,30 +305,7 @@ describe("background onInstalled changelog opening", () => {
     })
     await flushPromises()
 
-    expect(shouldAutoOpenChangelogForUpdateMock).toHaveBeenCalledWith({
-      currentVersion: "2.39.0",
-      previousVersion: "2.38.0",
-    })
     expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
-  })
-
-  it("skips pending-version state when the changelog index gate rejects the version", async () => {
-    shouldAutoOpenChangelogForUpdateMock.mockResolvedValue(false)
-
-    await import("~/entrypoints/background/index")
-
-    expect(onInstalledListener).toBeTypeOf("function")
-    await onInstalledListener?.({
-      reason: "update",
-      previousVersion: "2.40.0",
-    })
-    await flushPromises()
-
-    expect(shouldAutoOpenChangelogForUpdateMock).toHaveBeenCalledWith({
-      currentVersion: "2.39.0",
-      previousVersion: "2.40.0",
-    })
-    expect(setPendingVersionMock).not.toHaveBeenCalled()
   })
 
   it("marks pending version even when openChangelogOnUpdate is disabled", async () => {

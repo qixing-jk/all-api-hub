@@ -5,7 +5,7 @@ import {
   fetchFirstAvailableChangelogVersionSource,
   parseChangelogIndex,
   parseChangelogMarkdownVersions,
-  shouldAutoOpenChangelogForUpdate,
+  resolveChangelogVersion,
 } from "~/services/updates/changelogIndex"
 import { server } from "~~/tests/msw/server"
 
@@ -65,6 +65,15 @@ const useStalledSource = (url: string) => {
 }
 
 describe("changelogIndex", () => {
+  it("waits for the installed version even if an index includes legacy display metadata", async () => {
+    useJsonSource(changelogSourceUrls.docsIndex, {
+      ...validIndex(["4.10.0"]),
+      displayVersions: { "4.10.1": "4.10.0" },
+    })
+
+    await expect(resolveChangelogVersion("4.10.1")).resolves.toBeNull()
+  })
+
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
@@ -264,97 +273,34 @@ describe("changelogIndex", () => {
     expect(result).toEqual({ ok: false })
   })
 
-  it("does not continue to raw sources when a valid docs index misses the current version", async () => {
-    let docsIndexRequests = 0
-    useJsonSource(changelogSourceUrls.docsIndex, validIndex(["3.44.0"]), {
-      onRequest: () => {
-        docsIndexRequests += 1
-      },
-    })
-
-    await expect(
-      shouldAutoOpenChangelogForUpdate({
-        currentVersion: "3.45.0",
-        previousVersion: "3.44.0",
-      }),
-    ).resolves.toBe(false)
-    expect(docsIndexRequests).toBe(1)
+  it("keeps unpublished notes pending instead of choosing an unrelated older release", async () => {
+    useJsonSource(changelogSourceUrls.docsIndex, validIndex(["4.10.0"]))
+    await expect(resolveChangelogVersion("4.11.0")).resolves.toBeNull()
   })
 
-  it("falls back closed for invalid current versions without fetching sources", async () => {
+  it("returns unavailable for invalid versions without requesting sources", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch")
-
-    await expect(
-      shouldAutoOpenChangelogForUpdate({
-        currentVersion: "nightly",
-        previousVersion: "3.44.0",
-      }),
-    ).resolves.toBe(false)
+    await expect(resolveChangelogVersion("nightly")).resolves.toBeNull()
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  it("treats all changelog source failures as unavailable", async () => {
+  it("does not open notes when every source is unavailable", async () => {
     useUnavailableSource(changelogSourceUrls.docsIndex)
     useUnavailableSource(changelogSourceUrls.ghPagesIndex)
     useUnavailableSource(changelogSourceUrls.rawMarkdown)
+    await expect(resolveChangelogVersion("4.10.1")).resolves.toBeNull()
+  })
 
-    await expect(fetchFirstAvailableChangelogVersionSource()).resolves.toEqual({
-      ok: false,
+  it("resolves exact versions for older indexes without mappings", async () => {
+    useJsonSource(changelogSourceUrls.docsIndex, validIndex(["4.10.1"]))
+    await expect(resolveChangelogVersion("v4.10.1")).resolves.toBe("4.10.1")
+  })
+
+  it("uses the installed-version section even if old display metadata is present", async () => {
+    useJsonSource(changelogSourceUrls.docsIndex, {
+      ...validIndex(["4.10.1", "4.10.0"]),
+      displayVersions: { "4.10.1": "4.10.0" },
     })
-  })
-
-  it("uses source membership before version direction", async () => {
-    useJsonSource(changelogSourceUrls.docsIndex, validIndex(["3.43.0"]))
-
-    await expect(
-      shouldAutoOpenChangelogForUpdate({
-        currentVersion: "3.43.0",
-        previousVersion: "3.44.0",
-      }),
-    ).resolves.toBe(true)
-  })
-
-  it("falls back closed for rollbacks when all sources are unavailable", async () => {
-    useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
-    useUnavailableSource(changelogSourceUrls.rawMarkdown)
-
-    await expect(
-      shouldAutoOpenChangelogForUpdate({
-        currentVersion: "3.43.0",
-        previousVersion: "3.44.0",
-      }),
-    ).resolves.toBe(false)
-  })
-
-  it("falls back closed for same-version checks when all sources are unavailable", async () => {
-    useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
-    useUnavailableSource(changelogSourceUrls.rawMarkdown)
-
-    await expect(
-      shouldAutoOpenChangelogForUpdate({
-        currentVersion: "3.44.0",
-        previousVersion: "3.44.0",
-      }),
-    ).resolves.toBe(false)
-  })
-
-  it("falls back open for upgrades or unknown previous versions when all sources are unavailable", async () => {
-    useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
-    useUnavailableSource(changelogSourceUrls.rawMarkdown)
-
-    await expect(
-      shouldAutoOpenChangelogForUpdate({
-        currentVersion: "3.45.0",
-        previousVersion: "3.44.0",
-      }),
-    ).resolves.toBe(true)
-    await expect(
-      shouldAutoOpenChangelogForUpdate({
-        currentVersion: "3.45.0",
-      }),
-    ).resolves.toBe(true)
+    await expect(resolveChangelogVersion("4.10.1")).resolves.toBe("4.10.1")
   })
 })

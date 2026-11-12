@@ -99,22 +99,22 @@ export function UpdateLogDialog({
   }
 
   const header = (
-    <div className="gap-density-3 flex w-full flex-wrap items-center justify-between pr-8">
-      <h3 className="text-foreground text-lg font-semibold">
+    <div className="flex w-full flex-wrap items-center justify-between gap-density-3 pr-8">
+      <h3 className="text-lg font-semibold text-foreground">
         {t("ui:dialog.updateLog.updatedTo", { version })}
       </h3>
     </div>
   )
 
   const footer = (
-    <div className="gap-density-3 flex w-full flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex w-full flex-col gap-density-3 sm:flex-row sm:items-center sm:justify-between">
       {showStarPrompt ? (
         <Button
           variant="link"
           size="sm"
           type="button"
           onClick={() => void handleStarFromUpdateLog()}
-          leftIcon={<Star className="text-link h-4 w-4" />}
+          leftIcon={<Star className="h-4 w-4 text-link" />}
           className="h-auto w-fit justify-start p-0 text-left font-semibold whitespace-normal"
         >
           {t("ui:dialog.updateLog.starPrompt")}
@@ -126,7 +126,7 @@ export function UpdateLogDialog({
       >
         <div
           data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footerActions}
-          className="gap-x-density-3 flex items-center justify-end"
+          className="flex items-center justify-end gap-x-density-3"
         >
           <Button
             data-testid={UPDATE_LOG_DIALOG_TEST_IDS.closeButton}
@@ -141,7 +141,7 @@ export function UpdateLogDialog({
             variant="outline"
             onClick={() => void handleOpenFullChangelog()}
             type="button"
-            className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
+            className="h-auto min-h-(--density-control) w-full py-density-2 text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
           >
             {t("ui:dialog.updateLog.openFullChangelog")}
           </Button>
@@ -161,13 +161,13 @@ export function UpdateLogDialog({
     >
       <div
         data-testid={UPDATE_LOG_DIALOG_TEST_IDS.root}
-        className="gap-y-density-3 flex min-h-0 flex-1 flex-col gap-x-3"
+        className="flex min-h-0 flex-1 flex-col gap-x-3 gap-y-density-3"
       >
-        <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border">
           <div className="relative h-full">
             {iframeStatus === IFRAME_STATUSES.Loading && (
-              <div className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center">
-                <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/60">
+                <p className="text-sm text-muted-foreground dark:text-secondary-foreground">
                   {t("ui:dialog.updateLog.loading")}
                 </p>
               </div>
@@ -176,7 +176,7 @@ export function UpdateLogDialog({
             <iframe
               title={t("ui:dialog.updateLog.title")}
               src={iframeUrl}
-              className="bg-card block h-full w-full"
+              className="block h-full w-full bg-card"
               onLoad={() => setIframeStatus(IFRAME_STATUSES.Loaded)}
               sandbox="allow-same-origin allow-scripts"
             />
@@ -184,7 +184,7 @@ export function UpdateLogDialog({
         </div>
 
         {iframeStatus === IFRAME_STATUSES.Failed && (
-          <p className="dark:text-secondary-foreground text-muted-foreground shrink-0 text-sm">
+          <p className="shrink-0 text-sm text-muted-foreground dark:text-secondary-foreground">
             {t("ui:dialog.updateLog.missingSection", { version })}
           </p>
         )}

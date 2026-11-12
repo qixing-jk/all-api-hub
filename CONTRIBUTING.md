@@ -561,6 +561,12 @@ To reproduce a single store build, set `AAH_DISTRIBUTION_CHANNEL` to `chrome-web
 
 Analytics includes the finite `distribution_channel` enum on existing consent-controlled events. Count distinct anonymous installations on `app_opened`, grouped by channel, browser family and application version, for active-install distribution. Event counts are not installation counts. Old or unmarked packages remain unknown; installations with analytics disabled are absent from this sample.
 
+### Release notes shown after updates
+
+Updates leave a persistent pending version before checking documentation. Opening the options page checks for the installed version's published notes; missing notes or unavailable sources remain pending for the next visit. Once notes are ready, the pending marker is consumed under the storage lock so only one settings window displays the reminder. Disabling automatic update logs discards the pending reminder when options opens. Popup and side panel visits do not trigger these checks.
+
+For patch releases, write a short explanation in that version's own changelog section and link to the previous release's main updates when helpful. The dialog always uses the actual installed version. Deferred checking requires an extension build containing this workflow; publishing documentation alone cannot add it to older installed builds.
+
 ## Continuous Integration
 
 GitHub Actions selects checks according to each workflow's configured events and changed paths:
