@@ -38,6 +38,15 @@ describe("deferred changelog state", () => {
     expect(await changelogOnUpdateState.getPendingVersion()).toBe("4.10.1")
     expect(await changelogOnUpdateState.getPendingVersion()).toBe("4.10.1")
   })
+  it.each([undefined, 42, "   "])(
+    "treats an absent or malformed marker %j as no pending reminder without rewriting storage",
+    async (value) => {
+      storage.value = value
+      expect(await changelogOnUpdateState.getPendingVersion()).toBeNull()
+      expect(storage.set).not.toHaveBeenCalled()
+      expect(storage.remove).not.toHaveBeenCalled()
+    },
+  )
   it("allows only one concurrent settings window to consume a reminder", async () => {
     await changelogOnUpdateState.setPendingVersion("4.10.1")
     expect(

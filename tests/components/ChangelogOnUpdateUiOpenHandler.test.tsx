@@ -16,6 +16,7 @@ import {
   getGitHubRawChangelogMarkdownUrl,
 } from "~/utils/navigation/docsLinks"
 import { server } from "~~/tests/msw/server"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -64,7 +65,89 @@ describe("ChangelogOnUpdateUiOpenHandler", () => {
     )
   })
   afterEach(() => {
+    testI18n.removeResourceBundle("en", "ui")
     vi.restoreAllMocks()
+  })
+
+  it("uses the default reminder preference when the stored preference is absent", async () => {
+    await changelogOnUpdateState.setPendingVersion("4.10.1")
+    const prefs = await userPreferences.getPreferencesStrict()
+    vi.spyOn(userPreferences, "getPreferencesStrict").mockResolvedValue({
+      ...prefs,
+      openChangelogOnUpdate: undefined,
+    })
+    publishNotes(["4.10.1"])
+    openOptions()
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
+    expect(await changelogOnUpdateState.getPendingVersion()).toBeNull()
+  })
+
+  it("preserves the reminder when options closes during the pending-version read", async () => {
+    await changelogOnUpdateState.setPendingVersion("4.10.1")
+    const pending = createDeferred<string | null>()
+    const read = vi
+      .spyOn(changelogOnUpdateState, "getPendingVersion")
+      .mockReturnValue(pending.promise)
+    const consume = vi.spyOn(changelogOnUpdateState, "consumePendingVersion")
+    const prefs = vi.spyOn(userPreferences, "getPreferencesStrict")
+    const page = render(view(), {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    page.unmount()
+    await act(async () => pending.resolve("4.10.1"))
+    expect(prefs).not.toHaveBeenCalled()
+    expect(consume).not.toHaveBeenCalled()
+    read.mockRestore()
+    expect(await changelogOnUpdateState.getPendingVersion()).toBe("4.10.1")
+  })
+
+  it.each([1, 2])(
+    "preserves the reminder when options closes during preference read %i",
+    async (readNumber) => {
+      await changelogOnUpdateState.setPendingVersion("4.10.1")
+      const prefs = await userPreferences.getPreferencesStrict()
+      const pending = createDeferred<typeof prefs>()
+      let reads = 0
+      vi.spyOn(userPreferences, "getPreferencesStrict").mockImplementation(
+        async () => {
+          reads++
+          return reads === readNumber ? pending.promise : prefs
+        },
+      )
+      const consume = vi.spyOn(changelogOnUpdateState, "consumePendingVersion")
+      publishNotes(["4.10.1"])
+      const page = render(view(), {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await waitFor(() => expect(reads).toBe(readNumber))
+      page.unmount()
+      await act(async () => pending.resolve(prefs))
+      expect(consume).not.toHaveBeenCalled()
+      expect(await changelogOnUpdateState.getPendingVersion()).toBe("4.10.1")
+    },
+  )
+
+  it("preserves a newer reminder when an older notes request completes", async () => {
+    await changelogOnUpdateState.setPendingVersion("4.10.1")
+    const requested = createDeferred<void>()
+    const response = createDeferred<void>()
+    server.use(
+      http.get(getDocsChangelogIndexUrl(), async () => {
+        requested.resolve()
+        await response.promise
+        return HttpResponse.json({ schemaVersion: 1, versions: ["4.10.1"] })
+      }),
+    )
+    const consume = vi.spyOn(changelogOnUpdateState, "consumePendingVersion")
+    openOptions()
+    await requested.promise
+    await changelogOnUpdateState.setPendingVersion("4.11.0")
+    await act(async () => response.resolve())
+    await waitFor(() => expect(consume).toHaveResolvedWith(null))
+    expect(await changelogOnUpdateState.getPendingVersion()).toBe("4.11.0")
+    expect(screen.queryByRole("dialog")).toBeNull()
   })
 
   it("rechecks unpublished notes on the next options visit and opens the installed version", async () => {
