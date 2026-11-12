@@ -1,7 +1,7 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import ts from "typescript"
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 
 import {
   SUPPORTED_UI_LANGUAGES,
@@ -204,8 +204,8 @@ function objectLiteralHasProperty(
 function hasCountOption(node: ts.Expression | undefined) {
   return Boolean(
     node &&
-      ts.isObjectLiteralExpression(node) &&
-      objectLiteralHasProperty(node, "count"),
+    ts.isObjectLiteralExpression(node) &&
+    objectLiteralHasProperty(node, "count"),
   )
 }
 
@@ -300,7 +300,35 @@ function mayContainStaticTranslationReference(sourceText: string) {
   )
 }
 
+// Bound each validation case as the repository grows, rather than putting the
+// entire source tree under one test timeout on shared CI workers.
+const sourceFiles = await listSourceFiles(SRC_DIR)
+const SOURCE_BATCH_SIZE = 100
+const sourceBatches = Array.from(
+  { length: Math.ceil(sourceFiles.length / SOURCE_BATCH_SIZE) },
+  (_, index) => ({
+    batch: index + 1,
+    files: sourceFiles.slice(
+      index * SOURCE_BATCH_SIZE,
+      (index + 1) * SOURCE_BATCH_SIZE,
+    ),
+  }),
+)
+
 describe("i18n locale validation", () => {
+  let localeMapsByLanguage: Record<SupportedUiLanguage, LocaleMap>
+
+  beforeAll(async () => {
+    localeMapsByLanguage = Object.fromEntries(
+      await Promise.all(
+        SUPPORTED_UI_LANGUAGES.map(async (language) => [
+          language,
+          await readLocaleMap(language),
+        ]),
+      ),
+    ) as Record<SupportedUiLanguage, LocaleMap>
+  })
+
   it("keeps partial inventory copy available without partial visible-count copy", async () => {
     const requiredPluralFamilies = ["knownTotalKeys"]
     const removedCountFamilies = [
@@ -434,212 +462,213 @@ describe("i18n locale validation", () => {
     expect(mismatches).toEqual([])
   })
 
-  it("resolves static translation keys referenced in src", async () => {
-    const localeMapsByLanguage = Object.fromEntries(
-      await Promise.all(
-        SUPPORTED_UI_LANGUAGES.map(async (language) => [
-          language,
-          await readLocaleMap(language),
-        ]),
-      ),
-    ) as Record<SupportedUiLanguage, LocaleMap>
-    const sourceFiles = await listSourceFiles(SRC_DIR)
-    const missingKeys: string[] = []
+  it.each(sourceBatches)(
+    "resolves static translation keys in source batch $batch",
+    async ({ files }) => {
+      const missingKeys: string[] = []
 
-    for (const file of sourceFiles) {
-      const sourceText = await fs.readFile(file, "utf8")
-      if (!mayContainStaticTranslationReference(sourceText)) continue
+      for (const file of files) {
+        const sourceText = await fs.readFile(file, "utf8")
+        if (!mayContainStaticTranslationReference(sourceText)) continue
 
-      const sourceFile = ts.createSourceFile(
-        file,
-        sourceText,
-        ts.ScriptTarget.Latest,
-        true,
-        file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-      )
-      const translationBindings = new Map<string, string[] | null>()
-      const transComponentBindings = new Set<string>()
+        const sourceFile = ts.createSourceFile(
+          file,
+          sourceText,
+          ts.ScriptTarget.Latest,
+          true,
+          file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+        )
+        const translationBindings = new Map<string, string[] | null>()
+        const transComponentBindings = new Set<string>()
 
-      const verifyKey = (
-        key: string,
-        line: number,
-        options?: { usesPlural?: boolean },
-      ) => {
-        const match = key.match(/^([^:]+):(.+)$/)
-        if (!match) return
+        const verifyKey = (
+          key: string,
+          line: number,
+          options?: { usesPlural?: boolean },
+        ) => {
+          const match = key.match(/^([^:]+):(.+)$/)
+          if (!match) return
 
-        const namespace = atIndex(match, 1)
-        const localeKey = atIndex(match, 2)
+          const namespace = atIndex(match, 1)
+          const localeKey = atIndex(match, 2)
 
-        if (options?.usesPlural) {
-          for (const language of SUPPORTED_UI_LANGUAGES) {
-            const localeKeys = localeMapsByLanguage[language][namespace]
-            const pluralCategories = PLURAL_CATEGORIES_BY_LANGUAGE[language]
+          if (options?.usesPlural) {
+            for (const language of SUPPORTED_UI_LANGUAGES) {
+              const localeKeys = localeMapsByLanguage[language][namespace]
+              const pluralCategories = PLURAL_CATEGORIES_BY_LANGUAGE[language]
 
-            if (
-              pluralCategories.length === 1 &&
-              pluralCategories[0] === "other"
-            ) {
               if (
-                !localeKeys?.has(localeKey) &&
-                !localeKeys?.has(`${localeKey}_other`)
+                pluralCategories.length === 1 &&
+                pluralCategories[0] === "other"
               ) {
+                if (
+                  !localeKeys?.has(localeKey) &&
+                  !localeKeys?.has(`${localeKey}_other`)
+                ) {
+                  missingKeys.push(
+                    `${getRelativePath(file)}:${line} ${language} ${key} (${localeKey} or ${localeKey}_other)`,
+                  )
+                }
+                continue
+              }
+
+              const missingPluralKeys = pluralCategories.filter(
+                (suffix) => !localeKeys?.has(`${localeKey}_${suffix}`),
+              )
+
+              if (missingPluralKeys.length > 0) {
                 missingKeys.push(
-                  `${getRelativePath(file)}:${line} ${language} ${key} (${localeKey} or ${localeKey}_other)`,
+                  `${getRelativePath(file)}:${line} ${language} ${key} (${missingPluralKeys
+                    .map((suffix) => `${localeKey}_${suffix}`)
+                    .join(", ")})`,
                 )
               }
-              continue
             }
 
-            const missingPluralKeys = pluralCategories.filter(
-              (suffix) => !localeKeys?.has(`${localeKey}_${suffix}`),
-            )
+            return
+          }
 
-            if (missingPluralKeys.length > 0) {
+          for (const language of SUPPORTED_UI_LANGUAGES) {
+            const localeKeys = localeMapsByLanguage[language][namespace]
+            if (!localeKeys?.has(localeKey)) {
               missingKeys.push(
-                `${getRelativePath(file)}:${line} ${language} ${key} (${missingPluralKeys
-                  .map((suffix) => `${localeKey}_${suffix}`)
-                  .join(", ")})`,
+                `${getRelativePath(file)}:${line} ${language} ${key}`,
               )
             }
           }
-
-          return
         }
 
-        for (const language of SUPPORTED_UI_LANGUAGES) {
-          const localeKeys = localeMapsByLanguage[language][namespace]
-          if (!localeKeys?.has(localeKey)) {
-            missingKeys.push(
-              `${getRelativePath(file)}:${line} ${language} ${key}`,
-            )
-          }
-        }
-      }
+        const visit = (node: ts.Node) => {
+          if (
+            ts.isImportDeclaration(node) &&
+            ts.isStringLiteral(node.moduleSpecifier)
+          ) {
+            const moduleName = node.moduleSpecifier.text
+            const namedBindings = node.importClause?.namedBindings
 
-      const visit = (node: ts.Node) => {
-        if (
-          ts.isImportDeclaration(node) &&
-          ts.isStringLiteral(node.moduleSpecifier)
-        ) {
-          const moduleName = node.moduleSpecifier.text
-          const namedBindings = node.importClause?.namedBindings
+            if (namedBindings && ts.isNamedImports(namedBindings)) {
+              for (const element of namedBindings.elements) {
+                const importedName =
+                  element.propertyName?.text || element.name.text
+                const localName = element.name.text
 
-          if (namedBindings && ts.isNamedImports(namedBindings)) {
-            for (const element of namedBindings.elements) {
-              const importedName =
-                element.propertyName?.text || element.name.text
-              const localName = element.name.text
+                if (
+                  moduleName === "react-i18next" &&
+                  importedName === "Trans"
+                ) {
+                  transComponentBindings.add(localName)
+                }
 
-              if (moduleName === "react-i18next" && importedName === "Trans") {
-                transComponentBindings.add(localName)
-              }
-
-              if (
-                (moduleName === "~/utils/i18n/core" ||
-                  moduleName === "i18next") &&
-                importedName === "t"
-              ) {
-                translationBindings.set(localName, null)
+                if (
+                  (moduleName === "~/utils/i18n/core" ||
+                    moduleName === "i18next") &&
+                  importedName === "t"
+                ) {
+                  translationBindings.set(localName, null)
+                }
               }
             }
           }
-        }
-
-        if (
-          ts.isVariableDeclaration(node) &&
-          node.initializer &&
-          ts.isCallExpression(node.initializer) &&
-          ts.isIdentifier(node.initializer.expression) &&
-          node.initializer.expression.text === "useTranslation" &&
-          ts.isObjectBindingPattern(node.name)
-        ) {
-          const namespaces = readUseTranslationNamespaces(node.initializer)
-
-          for (const element of node.name.elements) {
-            if (!ts.isIdentifier(element.name)) continue
-
-            const propertyName =
-              element.propertyName && ts.isIdentifier(element.propertyName)
-                ? element.propertyName.text
-                : element.name.text
-
-            if (propertyName === "t") {
-              translationBindings.set(element.name.text, namespaces)
-            }
-          }
-        }
-
-        if (ts.isCallExpression(node)) {
-          const firstArg = node.arguments[0]
-          const secondArg = node.arguments[1]
-          const keyText = readStaticString(firstArg)
-          let defaultNamespaces: string[] | null | undefined
 
           if (
-            ts.isIdentifier(node.expression) &&
-            translationBindings.has(node.expression.text)
+            ts.isVariableDeclaration(node) &&
+            node.initializer &&
+            ts.isCallExpression(node.initializer) &&
+            ts.isIdentifier(node.initializer.expression) &&
+            node.initializer.expression.text === "useTranslation" &&
+            ts.isObjectBindingPattern(node.name)
           ) {
-            defaultNamespaces = translationBindings.get(node.expression.text)
-          } else if (
-            ts.isPropertyAccessExpression(node.expression) &&
-            node.expression.name.text === "t"
-          ) {
-            defaultNamespaces = null
+            const namespaces = readUseTranslationNamespaces(node.initializer)
+
+            for (const element of node.name.elements) {
+              if (!ts.isIdentifier(element.name)) continue
+
+              const propertyName =
+                element.propertyName && ts.isIdentifier(element.propertyName)
+                  ? element.propertyName.text
+                  : element.name.text
+
+              if (propertyName === "t") {
+                translationBindings.set(element.name.text, namespaces)
+              }
+            }
           }
 
-          if (defaultNamespaces !== undefined && keyText) {
-            const normalizedKey = normalizeTranslationKey({
-              text: keyText,
-              defaultNamespaces,
-              optionsNode: secondArg,
-            })
+          if (ts.isCallExpression(node)) {
+            const firstArg = node.arguments[0]
+            const secondArg = node.arguments[1]
+            const keyText = readStaticString(firstArg)
+            let defaultNamespaces: string[] | null | undefined
 
-            if (normalizedKey) {
-              const line =
-                sourceFile.getLineAndCharacterOfPosition(node.getStart()).line +
-                1
-              verifyKey(normalizedKey, line, {
-                usesPlural: hasCountOption(secondArg),
+            if (
+              ts.isIdentifier(node.expression) &&
+              translationBindings.has(node.expression.text)
+            ) {
+              defaultNamespaces = translationBindings.get(node.expression.text)
+            } else if (
+              ts.isPropertyAccessExpression(node.expression) &&
+              node.expression.name.text === "t"
+            ) {
+              defaultNamespaces = null
+            }
+
+            if (defaultNamespaces !== undefined && keyText) {
+              const normalizedKey = normalizeTranslationKey({
+                text: keyText,
+                defaultNamespaces,
+                optionsNode: secondArg,
               })
-            }
-          }
-        }
 
-        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-          const tagName = node.tagName
-
-          if (
-            ts.isIdentifier(tagName) &&
-            transComponentBindings.has(tagName.text)
-          ) {
-            const usesPlural = jsxElementUsesPluralCount(node)
-
-            for (const property of node.attributes.properties) {
-              if (
-                ts.isJsxAttribute(property) &&
-                ts.isIdentifier(property.name) &&
-                property.name.text === "i18nKey" &&
-                property.initializer &&
-                ts.isStringLiteral(property.initializer)
-              ) {
+              if (normalizedKey) {
                 const line =
-                  sourceFile.getLineAndCharacterOfPosition(property.getStart())
+                  sourceFile.getLineAndCharacterOfPosition(node.getStart())
                     .line + 1
-                verifyKey(property.initializer.text, line, { usesPlural })
+                verifyKey(normalizedKey, line, {
+                  usesPlural: hasCountOption(secondArg),
+                })
               }
             }
           }
+
+          if (
+            ts.isJsxOpeningElement(node) ||
+            ts.isJsxSelfClosingElement(node)
+          ) {
+            const tagName = node.tagName
+
+            if (
+              ts.isIdentifier(tagName) &&
+              transComponentBindings.has(tagName.text)
+            ) {
+              const usesPlural = jsxElementUsesPluralCount(node)
+
+              for (const property of node.attributes.properties) {
+                if (
+                  ts.isJsxAttribute(property) &&
+                  ts.isIdentifier(property.name) &&
+                  property.name.text === "i18nKey" &&
+                  property.initializer &&
+                  ts.isStringLiteral(property.initializer)
+                ) {
+                  const line =
+                    sourceFile.getLineAndCharacterOfPosition(
+                      property.getStart(),
+                    ).line + 1
+                  verifyKey(property.initializer.text, line, { usesPlural })
+                }
+              }
+            }
+          }
+
+          ts.forEachChild(node, visit)
         }
 
-        ts.forEachChild(node, visit)
+        visit(sourceFile)
       }
 
-      visit(sourceFile)
-    }
-
-    expect(missingKeys).toEqual([])
-  })
+      expect(missingKeys).toEqual([])
+    },
+  )
 
   it("keeps the generic Spanish manifest locale aligned with Latin American Spanish", async () => {
     const genericSpanishManifest = JSON.parse(
