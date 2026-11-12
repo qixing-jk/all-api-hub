@@ -274,6 +274,16 @@ for (const scenario of [
     )
     let backgroundRun: Promise<{ res?: { success?: boolean } }> | undefined
     if (unattended) {
+      if (protectionOutcome) {
+        // Page reminders require document focus. Older headless Chrome keeps
+        // this page unfocused after navigation, even with bringToFront().
+        await page
+          .getByRole("heading", { name: "Auto Check-in", exact: true })
+          .click()
+        await expect
+          .poll(() => page.evaluate(() => document.hasFocus()))
+          .toBe(true)
+      }
       // Scheduling may already target tomorrow (for example after the daily
       // window closes). Exercise that state, then explicitly admit today's run.
       const tomorrow = new Date()
