@@ -199,7 +199,11 @@ test("sends credential-specific UA headers without changing concurrent ordinary 
     await textProbe
       .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
       .click()
-    await expect(textProbe).toContainText("Text generation succeeded")
+    await expect(textProbe).toContainText("Pass")
+    await textProbe
+      .getByRole("button", { name: "Text generation", exact: true })
+      .click()
+    await expect(textProbe.getByText("OK", { exact: true })).toBeVisible()
     expect(
       captures.find((capture) => capture.path === "/v1/chat/completions"),
     ).toMatchObject({ key: "Bearer key-a", ua: "client-a/1", client: "a" })

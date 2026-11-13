@@ -740,7 +740,9 @@ describe("AccountKeyResourceListItem", () => {
             name: "keyManagement:actions.verifyApi",
           }),
         )
-        expect(await screen.findByRole("dialog")).toBeVisible()
+        expect(
+          await screen.findByRole("dialog", { name: "Dialog" }),
+        ).toBeVisible()
       })
     },
   )

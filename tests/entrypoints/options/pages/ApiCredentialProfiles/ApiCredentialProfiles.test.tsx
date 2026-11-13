@@ -123,8 +123,8 @@ const mockCreateProfile = vi.fn(
   }) => {
     const normalizedBaseUrl =
       input.apiType === API_TYPES.GOOGLE
-        ? normalizeGoogleFamilyBaseUrl(input.baseUrl) ?? input.baseUrl
-        : normalizeOpenAiFamilyBaseUrl(input.baseUrl) ?? input.baseUrl
+        ? (normalizeGoogleFamilyBaseUrl(input.baseUrl) ?? input.baseUrl)
+        : (normalizeOpenAiFamilyBaseUrl(input.baseUrl) ?? input.baseUrl)
 
     const now = Date.now()
     const profile: ApiCredentialProfile = {
@@ -1563,6 +1563,11 @@ describe("ApiCredentialProfiles page", () => {
     expect(
       await screen.findByText("aiApiVerification:verifyDialog.title"),
     ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.workspace.settings",
+      }),
+    )
     expect(
       screen.getByRole("combobox", {
         name: "aiApiVerification:verifyDialog.meta.model",
