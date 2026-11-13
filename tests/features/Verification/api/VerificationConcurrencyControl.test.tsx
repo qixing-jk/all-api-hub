@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
 import { expect, it, vi } from "vitest"
 
@@ -7,9 +8,129 @@ import {
   VERIFICATION_CONCURRENCY_CONTROL_VARIANTS,
   VerificationConcurrencyControl,
 } from "~/features/Verification/api/VerificationConcurrencyControl"
+import { VERIFICATION_CONCURRENCY_ERRORS } from "~/hooks/verification/useVerificationConcurrency"
 import en from "~/locales/en/aiApiVerification.json"
 import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+
+it("commits keyboard edits and decrements the edited limit without a blur race", async () => {
+  const user = userEvent.setup()
+  const i18n = await createResourceTestI18n(
+    { en: { aiApiVerification: en } },
+    "en",
+  )
+  const update = vi.fn()
+  function Control() {
+    const [value, setValue] = useState(2)
+    return (
+      <I18nextProvider i18n={i18n}>
+        <VerificationConcurrencyControl
+          controller={{
+            kind: VERIFICATION_CONCURRENCY_KINDS.Needle,
+            value,
+            ready: true,
+            saving: false,
+            error: null,
+            retry: vi.fn(),
+            update: async (next) => {
+              update(next)
+              setValue(next)
+            },
+          }}
+        />
+      </I18nextProvider>
+    )
+  }
+  render(<Control />)
+  const input = screen.getByRole("spinbutton")
+  await user.clear(input)
+  await user.type(input, "6{Enter}")
+  expect(update).toHaveBeenLastCalledWith(6)
+  expect(input).toHaveAccessibleDescription(
+    en.verifyDialog.concurrency.needleHint,
+  )
+  await user.clear(input)
+  await user.type(input, "4")
+  update.mockClear()
+  await user.click(screen.getByRole("button", { name: "Decrease concurrency" }))
+  expect(update).toHaveBeenCalledExactlyOnceWith(3)
+  const slider = screen.getByRole("slider")
+  fireEvent.change(slider, { target: { value: "5" } })
+  fireEvent.keyUp(slider, { key: "ArrowRight" })
+  expect(update).toHaveBeenLastCalledWith(5)
+  fireEvent.change(slider, { target: { value: "7" } })
+  fireEvent.blur(slider)
+  expect(update).toHaveBeenLastCalledWith(7)
+})
+
+it.each([
+  [VERIFICATION_CONCURRENCY_ERRORS.Load, en.verifyDialog.concurrency.loadError],
+  [VERIFICATION_CONCURRENCY_ERRORS.Save, en.verifyDialog.concurrency.saveError],
+])("offers retry for a %s failure", async (error, message) => {
+  const user = userEvent.setup()
+  const i18n = await createResourceTestI18n(
+    { en: { aiApiVerification: en } },
+    "en",
+  )
+  const retry = vi.fn()
+  render(
+    <I18nextProvider i18n={i18n}>
+      <VerificationConcurrencyControl
+        controller={{
+          kind: VERIFICATION_CONCURRENCY_KINDS.Routine,
+          value: 2,
+          ready: error !== VERIFICATION_CONCURRENCY_ERRORS.Load,
+          saving: false,
+          error,
+          retry,
+          update: vi.fn(),
+        }}
+      />
+    </I18nextProvider>,
+  )
+  expect(screen.getByRole("alert")).toHaveTextContent(message)
+  await user.click(
+    screen.getByRole("button", { name: en.verifyDialog.concurrency.retry }),
+  )
+  expect(retry).toHaveBeenCalledOnce()
+})
+
+it("commits a chosen preset instead of the draft on pointer focus change", async () => {
+  const user = userEvent.setup()
+  const i18n = await createResourceTestI18n(
+    { en: { aiApiVerification: en } },
+    "en",
+  )
+  const update = vi.fn()
+  function Control() {
+    const [saving, setSaving] = useState(false)
+    return (
+      <I18nextProvider i18n={i18n}>
+        <VerificationConcurrencyControl
+          showPresets
+          controller={{
+            kind: VERIFICATION_CONCURRENCY_KINDS.Routine,
+            value: 2,
+            ready: true,
+            saving,
+            error: null,
+            retry: vi.fn(),
+            update: async (value) => {
+              update(value)
+              setSaving(true)
+            },
+          }}
+        />
+      </I18nextProvider>
+    )
+  }
+  render(<Control />)
+  const input = screen.getByRole("spinbutton")
+  await user.clear(input)
+  await user.type(input, "4")
+  await user.click(screen.getByRole("button", { name: "1 Safe" }))
+  expect(update).toHaveBeenCalledExactlyOnceWith(1)
+})
 
 it("edits a bounded batch limit with buttons or direct input and explains the running lock", async () => {
   const user = userEvent.setup()

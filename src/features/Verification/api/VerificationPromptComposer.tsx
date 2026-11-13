@@ -106,6 +106,7 @@ export function VerificationPromptComposer({
           onBlur={onBlur}
           onKeyDown={(event) => {
             if (
+              action &&
               event.key === "Enter" &&
               !event.shiftKey &&
               !event.nativeEvent.isComposing &&

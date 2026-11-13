@@ -95,7 +95,8 @@ export function MarkdownContent({
       )}
     >
       <Streamdown
-        mode={streaming ? "streaming" : "static"}
+        mode="streaming"
+        parseIncompleteMarkdown={streaming}
         isAnimating={streaming}
         components={components}
         rehypePlugins={rehypePlugins}

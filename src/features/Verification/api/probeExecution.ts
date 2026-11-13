@@ -72,14 +72,25 @@ export async function executeDialogProbe({
     ),
   )
 
+  let settled = false
   const settleStopped = () => {
+    settled = true
     replaceProbes(withStoppedProbe(readProbes(), probeId, stoppedMode()))
     return { result: null }
   }
   const accept = async (result: ApiVerificationProbeResult) => {
+    settled = true
     const probes = readProbes().map((probe) =>
       probe.definition.id === probeId
-        ? { ...probe, isRunning: false, result }
+        ? {
+            ...probe,
+            isRunning: false,
+            result,
+            progress:
+              result.status === API_VERIFICATION_PROBE_STATUSES.Pass
+                ? undefined
+                : probe.progress,
+          }
         : probe,
     )
     replaceProbes(probes)
@@ -90,7 +101,7 @@ export async function executeDialogProbe({
   let result: ApiVerificationProbeResult
   try {
     result = await execute((progress) => {
-      if (!isCurrent() || isStopped()) return
+      if (settled || !isCurrent() || isStopped()) return
       replaceProbes(
         readProbes().map((probe) =>
           probe.definition.id === probeId ? { ...probe, progress } : probe,

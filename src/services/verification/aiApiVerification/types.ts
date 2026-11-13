@@ -1,4 +1,5 @@
 import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 
 /**
  * Canonical API verification types shared by services and UI.
@@ -70,6 +71,8 @@ export type ApiVerificationProbeResult = {
   id: ApiVerificationProbeId
   status: ApiVerificationProbeStatus
   metrics?: VerificationGenerationMetrics[]
+  /** Sanitized evidence for this live result; omitted from persisted summaries. */
+  generation?: VerificationGenerationProgress
   latencyMs: number
   /**
    * Generation mode selected for this probe. Absent for non-generation probes

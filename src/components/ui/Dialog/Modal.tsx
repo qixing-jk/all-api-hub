@@ -16,7 +16,7 @@ import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
 
 import { ToasterPortalHost } from "../../toast/ToasterPortal"
-import { FloatingLayerProvider } from "../floating-layer"
+import { FloatingLayerProvider, hasOpenFloatingLayer } from "../floating-layer"
 
 type Size = "sm" | "md" | "lg" | "xl"
 
@@ -52,13 +52,6 @@ const sizeMap: Record<Size, string> = {
   lg: "max-w-2xl",
   xl: "max-w-5xl",
 }
-
-const openFloatingLayerSelector = [
-  '[data-slot="select-content"][data-state="open"]',
-  '[data-slot="popover-content"][data-state="open"]',
-  '[data-slot="combobox-content"][data-open]',
-  '[data-tooltip-open="true"]',
-].join(",")
 
 type FocusSession = {
   generation: number
@@ -189,17 +182,6 @@ const settleDeferredFocusLease = (session: FocusSession) => {
 
 const scheduleDeferredFocusLeaseSettlement = (session: FocusSession) => {
   queueMicrotask(() => settleDeferredFocusLease(session))
-}
-
-/**
- * Detects nested select, popover, combobox, or interactive tooltip layers that should handle Escape
- * before the legacy Modal treats it as a dialog dismissal request.
- */
-function hasOpenFloatingLayer() {
-  return (
-    typeof document !== "undefined" &&
-    document.querySelector(openFloatingLayerSelector) !== null
-  )
 }
 
 /**

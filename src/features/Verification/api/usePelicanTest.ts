@@ -211,6 +211,7 @@ export function usePelicanTest({
         })
 
         if (pelicanControllerRef.current !== controller) return
+        controller.signal.throwIfAborted()
         setPelican(result)
         if (targetToSave) {
           const summary = buildDrawingSummary(targetToSave, request, {

@@ -314,6 +314,33 @@ describe("VerifyApiCredentialProfileDialog", () => {
     initialModelId: "model",
   }
 
+  it("uses a model selected in the composer for the next profile probe", async () => {
+    const user = userEvent.setup()
+    mockProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model", "new-model"])
+    mockRunApiVerificationProbe.mockReturnValue(new Promise(() => {}))
+    render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
+    const probe = within(
+      await screen.findByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.meta.model",
+      }),
+    )
+    await user.click(await screen.findByRole("option", { name: "new-model" }))
+    await user.click(
+      probe.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton),
+    )
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: "new-model" }),
+    )
+  })
+
   it("opens the profile CLI preset with editable protocol and normal test order", async () => {
     const user = userEvent.setup()
     mockProbeDefinitions.mockReturnValue([

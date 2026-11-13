@@ -46,6 +46,7 @@ import {
   expectVerificationMobileSheet,
   expectVerificationWorkspaceFlush,
   showVerificationSettings,
+  showVerificationTest,
 } from "~~/e2e/utils/verificationWorkspace"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
@@ -104,7 +105,7 @@ for (const source of ["profile", "account"] as const) {
       .click()
     await expect(testsSheet).toBeHidden()
     // Capture the original layout even when the subsequent regression assertion fails.
-    await page.getByRole("dialog").screenshot({
+    await page.locator('[data-slot="modal-panel"]').screenshot({
       path: test.info().outputPath("mobile-tools.png"),
       animations: "disabled",
     })
@@ -155,7 +156,7 @@ for (const source of ["profile", "account"] as const) {
       has: page.locator("[data-verification-summary-collapsed]"),
     })
     await expect(rail).toBeVisible()
-    await page.getByRole("dialog").screenshot({
+    await page.locator('[data-slot="modal-panel"]').screenshot({
       path: test.info().outputPath("mobile-rail-ready.png"),
       animations: "allow",
     })
@@ -177,7 +178,7 @@ for (const source of ["profile", "account"] as const) {
     ).not.toBeNull()
     expect(railMotion!.opacity).toBeGreaterThan(0)
     expect(railMotion!.opacity).toBeLessThan(1)
-    await page.getByRole("dialog").screenshot({
+    await page.locator('[data-slot="modal-panel"]').screenshot({
       path: test.info().outputPath("mobile-rail-mid-transition.png"),
       animations: "allow",
     })
@@ -193,7 +194,7 @@ for (const source of ["profile", "account"] as const) {
           page,
           ready: rail,
           extensionDir,
-          id: `rail-phase-${String(frame).padStart(3, "0")}`,
+          id: `rail-${source}-phase-${String(frame).padStart(3, "0")}`,
           animations: "allow",
         })
       }
@@ -230,7 +231,7 @@ for (const source of ["profile", "account"] as const) {
     await composer.getByRole("textbox").blur()
     await page.mouse.move(0, 0)
     await expect(page.getByRole("tooltip")).toBeHidden()
-    await page.getByRole("dialog").screenshot({
+    await page.locator('[data-slot="modal-panel"]').screenshot({
       path: test.info().outputPath("mobile-composer.png"),
       animations: "disabled",
     })
@@ -634,14 +635,12 @@ for (const source of ["profile", "account"] as const) {
       expect((await detail.boundingBox())!.x).toBeLessThan(
         (await page.locator("[data-verification-settings]").boundingBox())!.x,
       )
-      const shortPreview = result.locator('[data-slot="reasoning-preview"]')
-      await expect(shortPreview).toBeVisible()
-      expect(
-        await shortPreview.evaluate((element) => ({
-          overflow: element.scrollHeight - element.clientHeight,
-          fade: getComputedStyle(element).getPropertyValue("--scroll-fade-t"),
-        })),
-      ).toEqual({ overflow: 0, fade: "0px" })
+      await expect(
+        result.getByRole("button", {
+          name: zhVerification.verifyDialog.generation.reasoning,
+          exact: true,
+        }),
+      ).toBeVisible()
       expect(fixture.requests).toHaveLength(1)
       expect(fixture.prompts).toEqual([
         "Reply with exactly: OK. This is an unsaved edit.",
@@ -664,18 +663,7 @@ for (const source of ["profile", "account"] as const) {
       const statisticsButton = workspace
         .getByTestId("verification-active-test")
         .getByRole("button", { name: "统计", exact: true })
-      const titleBox = (await workspace
-        .locator(".verification-workspace-list-header button span")
-        .boundingBox())!
-      const statisticsBox = (await statisticsButton.boundingBox())!
-      expect(
-        Math.abs(
-          titleBox.y +
-            titleBox.height / 2 -
-            statisticsBox.y -
-            statisticsBox.height / 2,
-        ),
-      ).toBeLessThanOrEqual(1)
+      await expect(statisticsButton).toBeInViewport()
       await captureVisualViews({
         page,
         ready: result,
@@ -709,7 +697,11 @@ for (const source of ["profile", "account"] as const) {
           { id: "dark", width: 1280, height: 960, theme: "dark" },
         ],
       })
-      await result.getByRole("button", { name: "推理内容" }).click()
+      await result
+        .getByRole("button", {
+          name: zhVerification.verifyDialog.generation.reasoning,
+        })
+        .click()
       await expect(
         result.getByText(
           "The requested answer is OK. Return only that answer.",
@@ -940,7 +932,10 @@ for (const source of ["profile", "account"] as const) {
           .getByRole("button", { name: "Drawing test", exact: true })
           .click()
         const drawingSettings = await page
-          .getByRole("group", { name: "Test settings", exact: true })
+          .getByRole("group", {
+            name: "Current test · Drawing test",
+            exact: true,
+          })
           .boundingBox()
         await page.locator('[data-slot="modal-panel"]').screenshot({
           path: test.info().outputPath("drawing-settings-reference.png"),
@@ -950,7 +945,7 @@ for (const source of ["profile", "account"] as const) {
           .getByRole("button", { name: "Q&A test", exact: true })
           .click()
         const settings = page.getByRole("group", {
-          name: "Test settings",
+          name: "Current test · Q&A test",
           exact: true,
         })
         const questionSettings = await settings.boundingBox()
@@ -1026,11 +1021,12 @@ for (const source of ["profile", "account"] as const) {
           .getByTestId("verification-config")
           .getByRole("button", { name: "Request configuration" }),
       ).toHaveAttribute("aria-expanded", "true")
-      const settingsToggle = page.getByRole("button", {
-        name: "Test settings",
-        exact: true,
-      })
-      await expect(settingsToggle).toHaveAttribute("aria-expanded", "true")
+      await expect(
+        page.getByRole("group", {
+          name: "Current test · Q&A test",
+          exact: true,
+        }),
+      ).toBeVisible()
       await expect(questionInput).toBeDisabled()
       const preview = process.locator('[data-slot="reasoning-preview"]')
       await expect(preview).toBeVisible()
@@ -1155,7 +1151,7 @@ for (const source of ["profile", "account"] as const) {
       await statisticsTrigger.click()
       expect(fixture.requests).toHaveLength(1)
       expect(fixture.requests[0]!.stream).toBe(true)
-      const comparison = panel.getByRole("group", { name: "Answer comparison" })
+      const comparison = page.getByRole("group", { name: "Answer comparison" })
       await comparison
         .getByRole("button", { name: "Answer comparison", exact: true })
         .click()
@@ -1182,6 +1178,7 @@ for (const source of ["profile", "account"] as const) {
           document.documentElement.classList.remove("dark"),
         )
         await page.setViewportSize({ width: 420, height: 900 })
+        await showVerificationTest(page, "Q&A test")
         await comparison.scrollIntoViewIfNeeded()
         expect(
           await comparison.evaluate(
@@ -1194,8 +1191,6 @@ for (const source of ["profile", "account"] as const) {
         })
         await page.setViewportSize({ width: 1280, height: 960 })
         await showVerificationSettings(page)
-        if ((await settingsToggle.getAttribute("aria-expanded")) === "false")
-          await settingsToggle.click()
         await page
           .getByRole("textbox", { name: "Question", exact: true })
           .fill("Explain a rainbow.")
@@ -1203,7 +1198,8 @@ for (const source of ["profile", "account"] as const) {
           .getByRole("textbox", { name: "Reference answer (optional)" })
           .fill("Private reference for the reviewer")
         await expect(
-          panel
+          page
+            .getByTestId("verification-active-test")
             .getByRole("status")
             .filter({ hasText: "The question or reference has changed." }),
         ).toBeVisible()
@@ -1211,24 +1207,37 @@ for (const source of ["profile", "account"] as const) {
           "21",
           "21",
         ])
-        await panel
+        await page
           .getByRole("button", { name: "Run Q&A test", exact: true })
+          .first()
           .click()
         await expect(
-          panel.getByText("Does not match reference", { exact: true }).first(),
+          page
+            .getByTestId("verification-active-test")
+            .getByText("Does not match reference", { exact: true })
+            .first(),
         ).toBeVisible()
         expect(JSON.stringify(fixture.requests.at(-1))).not.toContain(
           "Private reference",
         )
-        await expect(settingsToggle).toHaveAttribute("aria-expanded", "true")
+        await expect(
+          page.getByRole("group", {
+            name: "Current test · Q&A test",
+            exact: true,
+          }),
+        ).toBeVisible()
         await page
           .getByRole("textbox", { name: "Reference answer (optional)" })
           .fill("")
-        await panel
+        await page
           .getByRole("button", { name: "Run Q&A test", exact: true })
+          .first()
           .click()
         await expect(
-          panel.getByText("Response received", { exact: true }).first(),
+          page
+            .getByTestId("verification-active-test")
+            .getByText("Response received", { exact: true })
+            .first(),
         ).toBeVisible()
         expect(fixture.requests.at(-1)!.messages).toEqual([
           { role: "user", content: "Explain a rainbow." },
@@ -1240,7 +1249,10 @@ for (const source of ["profile", "account"] as const) {
           )
           .toMatchObject({ question: "Explain a rainbow." })
         await page.setViewportSize({ width: 420, height: 900 })
-        await panel.scrollIntoViewIfNeeded()
+        await showVerificationTest(page, "Q&A test")
+        await page
+          .locator("[data-verification-detail]:not([hidden])")
+          .scrollIntoViewIfNeeded()
         expect(
           await panel.evaluate(
             (element) => element.scrollWidth <= element.clientWidth,
@@ -1251,11 +1263,16 @@ for (const source of ["profile", "account"] as const) {
           animations: "disabled",
         })
         await showVerificationSettings(page)
-        await expect(settingsToggle).toHaveAttribute("aria-expanded", "true")
+        await expect(
+          page
+            .getByTestId("verification-workspace")
+            .getByRole("button", { name: "Settings", exact: true }),
+        ).toHaveAttribute("aria-expanded", "true")
         await page
           .getByTestId("verification-workspace")
           .getByRole("button", { name: "Settings", exact: true })
           .click()
+        await showVerificationTest(page, "Q&A test")
         await page
           .getByRole("button", {
             name: "Reset question and answer",
@@ -1512,7 +1529,7 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
     await panel.getByRole("button", { name: "问答测试", exact: true }).click()
     await expect(
       page.getByRole("textbox", { name: "问题", exact: true }),
-    ).not.toHaveAttribute("aria-describedby", /.+/)
+    ).toHaveAccessibleDescription("Enter 运行 · Shift+Enter 换行")
     const rules = page.getByRole("button", { name: "比对规则", exact: true })
     await expect(rules).toHaveAttribute("aria-expanded", "false")
     await expect(
@@ -1528,7 +1545,7 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
       animations: "disabled",
     })
     await page
-      .getByRole("group", { name: "测试设置", exact: true })
+      .getByRole("group", { name: "当前测试 · 问答测试", exact: true })
       .screenshot({
         path: test.info().outputPath("qa-zh-settings.png"),
         animations: "disabled",
@@ -1537,7 +1554,7 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
       await page.setViewportSize({ width, height: 1000 })
       await showVerificationSettings(page)
       const settings = page.getByRole("group", {
-        name: "测试设置",
+        name: "当前测试 · 问答测试",
         exact: true,
       })
       const input = settings.getByRole("textbox", {
@@ -1592,11 +1609,14 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
       path: test.info().outputPath("qa-zh-edit.png"),
       animations: "disabled",
     })
-    await panel
+    await page
       .getByRole("button", { name: "运行问答测试", exact: true })
+      .first()
       .click()
     await expect(
-      panel.getByText("与参考答案一致", { exact: true }).first(),
+      page
+        .getByTestId("verification-active-test")
+        .getByText("与参考答案一致", { exact: true }),
     ).toBeVisible()
     expect(fixture.requests).toHaveLength(1)
     await page.locator('[data-slot="modal-panel"]').screenshot({
@@ -1612,7 +1632,7 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
       .getByText("九乘九等于多少？", { exact: true })
     await expect(runQuestion).toBeVisible()
     await expect(
-      page.getByRole("button", { name: "测试设置", exact: true }),
+      page.getByRole("button", { name: "当前测试 · 问答测试", exact: true }),
     ).toHaveAttribute("aria-expanded", "true")
     await expect(
       page
@@ -1674,13 +1694,22 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
       page.getByText("请填写问题后再运行测试。", { exact: true }),
     ).toBeVisible()
     await expect(
-      panel.getByRole("button", { name: "运行问答测试", exact: true }),
+      page.getByRole("button", { name: "运行问答测试", exact: true }).first(),
     ).toBeDisabled()
     await expect(
-      panel.getByRole("status").filter({ hasText: "问题或参考答案已修改。" }),
+      page
+        .getByTestId("verification-active-test")
+        .getByRole("status")
+        .filter({ hasText: "问题或参考答案已修改。" }),
     ).toBeVisible()
+    const comparison = page.getByRole("button", {
+      name: "答案对照",
+      exact: true,
+    })
+    if ((await comparison.getAttribute("aria-expanded")) === "false")
+      await comparison.click()
     await expect(
-      panel.getByRole("group", { name: "答案对照" }).getByRole("definition"),
+      page.getByRole("group", { name: "答案对照" }).getByRole("definition"),
     ).toHaveText(["81", "81"])
     await page.locator('[data-slot="modal-panel"]').screenshot({
       path: test.info().outputPath("qa-zh-stale-and-empty.png"),
@@ -1843,12 +1872,8 @@ test("verification tests run concurrently and cancel independently", async ({
     const statusBox = (await textProbe
       .getByText("Pending", { exact: true })
       .boundingBox())!
-    expect(statusBox.x).toBeGreaterThan(titleBox.x + titleBox.width)
-    expect(
-      Math.abs(
-        statusBox.y + statusBox.height / 2 - titleBox.y - titleBox.height / 2,
-      ),
-    ).toBeLessThanOrEqual(2)
+    expect(statusBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height)
+    expect(statusBox.x).toBeGreaterThanOrEqual(titleBox.x)
     await captureVisualViews({
       page,
       ready: routine,
@@ -1956,12 +1981,16 @@ test("verification tests run concurrently and cancel independently", async ({
       .click()
     await expect.poll(() => fixture.requests.length).toBe(3)
     await capacity.getByRole("button", { name: "Stop", exact: true }).click()
-    await expect(capacity).toContainText("Probe stopped")
+    await expect(
+      page
+        .getByTestId("verification-active-test")
+        .getByRole("status", { name: "Context capacity result" }),
+    ).toHaveAttribute("title", /Probe stopped/)
     await expect(
       drawing.getByRole("button", { name: "Stop", exact: true }),
     ).toBeEnabled()
     await drawing.scrollIntoViewIfNeeded()
-    await page.getByRole("dialog").screenshot({
+    await page.locator('[data-slot="modal-panel"]').screenshot({
       path: test.info().outputPath("concurrent-verification.png"),
       animations: "disabled",
     })
@@ -2045,9 +2074,11 @@ test("verification tests run concurrently and cancel independently", async ({
     await page.reload()
     await waitForExtensionRoot(page)
     await page.getByTestId(IDS.verifyButton).click()
-    await expect(page.getByTestId("pelican-history-summary")).toContainText(
-      "Drawing generated",
-    )
+    await expect(
+      page
+        .getByTestId("verification-tools-panel")
+        .getByTestId("pelican-history-summary"),
+    ).toContainText("Drawing generated")
     await expect(
       page.getByTestId(
         getApiCredentialProfileVerifyProbeTestId("text-generation"),
@@ -2152,15 +2183,17 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         )
         .toBe(true)
       await expect(
-        page.getByRole("button", { name: "Test settings", exact: true }),
+        page
+          .getByTestId("verification-workspace")
+          .getByRole("button", { name: "Settings", exact: true }),
       ).toHaveAttribute("aria-expanded", "true")
       await agentSwitch.scrollIntoViewIfNeeded()
-      await page.getByRole("dialog").screenshot({
+      await page.locator('[data-slot="modal-panel"]').screenshot({
         path: test.info().outputPath("agent-summary.png"),
         animations: "disabled",
       })
       await preview.scrollIntoViewIfNeeded()
-      await page.getByRole("dialog").screenshot({
+      await page.locator('[data-slot="modal-panel"]').screenshot({
         path: test.info().outputPath("drawing-result.png"),
         animations: "disabled",
       })
@@ -2212,7 +2245,7 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         page.getByRole("button", { name: "pelican.svg", exact: true }),
       ).toBeVisible()
       await result.scrollIntoViewIfNeeded()
-      await page.getByRole("dialog").screenshot({
+      await page.locator('[data-slot="modal-panel"]').screenshot({
         path: test.info().outputPath("agent-tools.png"),
         animations: "disabled",
       })
@@ -2235,7 +2268,7 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         .getByRole("button", { name: "Drawing test", exact: true })
         .click()
       await drawingHistory.scrollIntoViewIfNeeded()
-      await page.getByRole("dialog").screenshot({
+      await page.locator('[data-slot="modal-panel"]').screenshot({
         path: test.info().outputPath("drawing-history-restored.png"),
         animations: "disabled",
       })
@@ -2253,10 +2286,7 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
       const historyBadge = drawingHistory.getByRole("button", {
         name: /^Previously:/,
       })
-      const drawingSelection = page.getByRole("button", {
-        name: "Drawing test",
-        exact: true,
-      })
+      const activeDrawing = page.getByTestId("verification-active-test")
       await expect(historyBadge.locator("button")).toHaveCount(0)
       await historyBadge.hover()
       const historyHint = page
@@ -2264,7 +2294,7 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         .filter({ hasText: "History does not retain the drawing" })
       await expect(historyHint).toBeVisible()
       await expect(historyHint).toHaveCSS("opacity", "0.9")
-      await page.getByRole("dialog").screenshot({
+      await page.locator('[data-slot="modal-panel"]').screenshot({
         path: test.info().outputPath("drawing-history-tooltip.png"),
         animations: "disabled",
       })
@@ -2295,8 +2325,11 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         })
         await expect(historyHint).toBeVisible()
         await expect(historyHint).toHaveCSS("opacity", "0.9")
-        await expect(drawingSelection).toHaveAttribute("aria-expanded", "true")
-        await page.getByRole("dialog").screenshot({
+        await expect(activeDrawing).toHaveAttribute(
+          "aria-label",
+          "Drawing test",
+        )
+        await page.locator('[data-slot="modal-panel"]').screenshot({
           path: test.info().outputPath("drawing-history-tooltip-narrow.png"),
           animations: "disabled",
         })
@@ -2387,7 +2420,7 @@ test("the shared verification tools run an on-demand drawing test", async ({
     await drawingPanel
       .getByRole("button", { name: "Drawing test", exact: true })
       .click()
-    const drawingPrompt = drawingPanel.getByRole("textbox", {
+    const drawingPrompt = page.getByRole("textbox", {
       name: "Drawing test prompt",
       exact: true,
     })
@@ -2398,15 +2431,18 @@ test("the shared verification tools run an on-demand drawing test", async ({
     await expect(drawingPrompt).toBeVisible()
     for (const width of [1280, 420]) {
       await page.setViewportSize({ width, height: 1000 })
+      await showVerificationTest(page, "Drawing test")
       await expect(drawingPrompt).toBeVisible()
     }
     await page.setViewportSize({ width: 1280, height: 1000 })
     expect(fixture.requests).toHaveLength(0)
     await expect(
-      drawingPanel.getByRole("button", {
-        name: "Run drawing test",
-        exact: true,
-      }),
+      page
+        .getByRole("button", {
+          name: "Run drawing test",
+          exact: true,
+        })
+        .first(),
     ).toHaveText("Run")
     await captureVisualViews({
       page,
@@ -2435,7 +2471,7 @@ test("the shared verification tools run an on-demand drawing test", async ({
 
     const preview = page.getByTestId("pelican-svg-preview")
     await expect(preview).toBeVisible({ timeout: 30_000 })
-    const drawingResult = drawingPanel.getByRole("region", {
+    const drawingResult = page.getByRole("region", {
       name: "Execution result",
       exact: true,
     })
@@ -2460,10 +2496,10 @@ test("the shared verification tools run an on-demand drawing test", async ({
       ],
     })
     await expect(
-      page.getByRole("heading", { name: "On-demand tests", exact: true }),
+      page.getByRole("region", { name: "On-demand tests", exact: true }),
     ).toBeVisible()
     await expect(
-      drawingPanel.getByRole("region", {
+      page.getByRole("region", {
         name: "Execution result",
         exact: true,
       }),
@@ -2653,12 +2689,14 @@ test("an edited probe prompt persists and is used by the next run", async ({
     await selectText.click()
     await showVerificationSettings(page)
     const settings = page.locator("[data-verification-settings]")
-    const textbox = textProbe.getByRole("textbox", {
+    const textbox = page.getByRole("textbox", {
       name: "Text generation prompt",
       exact: true,
     })
     await expect(textbox).toHaveValue("Reply with exactly: OK")
-    const detail = textProbe.locator("[data-verification-detail]")
+    const detail = page.locator(
+      '[data-verification-detail-probe="text-generation"]',
+    )
     const before = (await detail.boundingBox())!
     const dialogBefore = (await dialog.boundingBox())!
     await textbox.fill(Array(80).fill("A line of prompt content").join("\n"))
@@ -2694,6 +2732,7 @@ test("an edited probe prompt persists and is used by the next run", async ({
         .click()
       await expect(settings).toBeHidden()
       await expect(dialog).toBeVisible()
+      await showVerificationTest(page, "Text generation")
       await expect(textbox).toBeVisible()
       await expect(textbox).toHaveValue("Reply with exactly: EDITED")
       expect(
@@ -2873,7 +2912,7 @@ test("account verification configuration aligns fields without empty grid cells"
   await expect(page.getByText("正在加载密钥...", { exact: true })).toHaveCount(
     1,
   )
-  await page.getByRole("dialog").screenshot({
+  await page.locator('[data-slot="modal-panel"]').screenshot({
     path: test.info().outputPath("account-key-loading.png"),
     animations: "disabled",
   })
@@ -2920,7 +2959,6 @@ test("account verification configuration aligns fields without empty grid cells"
   const modelsProbe = page.getByTestId("verify-probe-models")
   const titleBounds = await modelsProbe
     .locator("[data-verification-summary]")
-    .getByText("模型列表", { exact: true })
     .boundingBox()
   const runBounds = await modelsProbe
     .locator("[data-verification-summary]")
@@ -2970,6 +3008,14 @@ test("account verification configuration aligns fields without empty grid cells"
     id: "inline-run-keyboard-focus",
     extensionDir,
   })
+  const workspace = page.getByTestId("verification-workspace")
+  const showTests = async () => {
+    const toggle = workspace.locator(
+      ".verification-workspace-list-header button",
+    )
+    if ((await toggle.getAttribute("aria-expanded")) === "false")
+      await toggle.click()
+  }
   const contextPanel = page.getByRole("region", {
     name: "上下文容量测试",
     exact: true,
@@ -2991,7 +3037,9 @@ test("account verification configuration aligns fields without empty grid cells"
     [1280, 480],
   ] as const) {
     await page.setViewportSize({ width, height })
+    await showTests()
     await page.getByRole("button", { name: "文本生成", exact: true }).click()
+    await showTests()
     await contextHelp.click()
     const contextTooltip = page.getByRole("tooltip")
     await expect(contextTooltip).toContainText("每批累计输入预算约 8M tokens")
@@ -3087,10 +3135,18 @@ test("account verification configuration aligns fields without empty grid cells"
         }
       }),
     })
-    await expect(contextSelection).toHaveAttribute("aria-expanded", "true")
+    await expect(
+      workspace.getByTestId("verification-active-test"),
+    ).toHaveAttribute("aria-label", "上下文容量测试")
   }
+  await showTests()
   await page.getByRole("button", { name: "绘图测试", exact: true }).click()
   await page.setViewportSize({ width: 420, height: 840 })
+  const listToggle = workspace.locator(
+    ".verification-workspace-list-header button",
+  )
+  if ((await listToggle.getAttribute("aria-expanded")) === "true")
+    await listToggle.click()
   await help.click()
   const helpPanel = page
     .getByRole("tooltip")
@@ -3111,6 +3167,7 @@ test("account verification configuration aligns fields without empty grid cells"
   })
   await help.press("Escape")
   await expect(helpPanel).toHaveCount(0)
+  await showTests()
   const narrowModels = (await modelsProbe.boundingBox())!
   const narrowText = (await page
     .getByTestId("verify-probe-text-generation")
@@ -3137,10 +3194,12 @@ test("account verification configuration aligns fields without empty grid cells"
     { exact: true },
   )
   await expect(shortcutHint).toHaveCount(0)
+  await page.setViewportSize({ width: 1280, height: 850 })
   await page
     .getByRole("button", { name: "关闭", exact: true })
     .filter({ hasText: "关闭" })
     .click()
+  await expect(header).toBeHidden()
   await page.setViewportSize({ width: 1280, height: 850 })
   const cliShortcut = page
     .getByTestId(MODEL_LIST_TEST_IDS.verifyCliSupportButton)
@@ -3175,10 +3234,12 @@ test("account verification configuration aligns fields without empty grid cells"
   await profile.click()
   await page.getByRole("option", { name: "Codex CLI", exact: true }).click()
   await expect(shortcutHint).toHaveCount(0)
+  await page.setViewportSize({ width: 1280, height: 850 })
   await page
     .getByRole("button", { name: "关闭", exact: true })
     .filter({ hasText: "关闭" })
     .click()
+  await expect(header).toBeHidden()
   await cliShortcut.click()
   await showVerificationSettings(page)
   await expect(shortcutHint).toBeVisible()
@@ -3254,10 +3315,11 @@ for (const outcome of ["timeout", "empty"] as const) {
       const contextResult = page
         .locator("[data-verification-active-test]")
         .getByRole("status")
-      await expect(contextResult).toContainText(
+      await expect(contextResult).toHaveAttribute(
+        "title",
         outcome === "timeout"
-          ? "超时不能证明输入超过模型容量"
-          : "接口正常结束但未返回正文",
+          ? /超时不能证明输入超过容量限制/
+          : /接口正常结束但未返回正文/,
       )
       await expect(
         panel.getByRole("region", { name: "执行结果" }),

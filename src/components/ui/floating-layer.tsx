@@ -6,6 +6,19 @@ type FloatingLayer = "page" | "modal-contained"
 
 const FloatingLayerContext = React.createContext<FloatingLayer>("page")
 
+const openFloatingLayerSelector = [
+  '[data-slot="select-content"][data-state="open"]',
+  '[data-slot="popover-content"][data-state="open"]',
+  '[data-slot="combobox-content"][data-open]',
+  '[data-tooltip-open="true"]',
+].join(",")
+
+/** Let a nested floating control handle Escape before its containing surface. */
+export function hasOpenFloatingLayer(root?: ParentNode | null) {
+  const target = root ?? (typeof document !== "undefined" ? document : null)
+  return target?.querySelector(openFloatingLayerSelector) != null
+}
+
 interface FloatingLayerProviderProps {
   layer: FloatingLayer
   children: React.ReactNode

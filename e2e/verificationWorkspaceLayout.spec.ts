@@ -82,73 +82,104 @@ test("verification sidebar boundaries stay aligned throughout animated toggles",
               horizontalScrollbars: string[]
             }[] = []
             const start = performance.now()
-            let reversals = 0
-            toggle.click()
-            await new Promise<void>((resolve) => {
-              const sample = () => {
-                if (
-                  interrupted &&
-                  reversals < 2 &&
-                  performance.now() - start >= 60 * (reversals + 1)
-                ) {
-                  toggle.click()
-                  reversals++
-                }
-                const bounds = detail.getBoundingClientRect()
-                const listBounds = list.getBoundingClientRect()
-                const title = controls.querySelector(
-                  ".verification-settings-title",
-                )!
-                const titleRange = document.createRange()
-                titleRange.selectNodeContents(title)
-                const scrollContainers = [
-                  ...root.querySelectorAll<HTMLElement>("*"),
-                ]
-                for (
-                  let parent = root.parentElement;
-                  parent;
-                  parent = parent.parentElement
+            // Pause transitions when they start, before a busy CI renderer can skip
+            // every intermediate frame. Seek actual CSS animations and inspect each
+            // rendered boundary, including two reversals from an intermediate frame.
+            const pauseTransitions = () => {
+              for (const animation of root.getAnimations({ subtree: true }))
+                animation.pause()
+            }
+            const frameReady = () =>
+              new Promise<void>((resolve) =>
+                requestAnimationFrame(() => resolve()),
+              )
+            const sample = () => {
+              const bounds = detail.getBoundingClientRect()
+              const listBounds = list.getBoundingClientRect()
+              const title = controls.querySelector(
+                ".verification-settings-title",
+              )!
+              const titleRange = document.createRange()
+              titleRange.selectNodeContents(title)
+              const scrollContainers = [
+                ...root.querySelectorAll<HTMLElement>("*"),
+              ]
+              for (
+                let parent = root.parentElement;
+                parent;
+                parent = parent.parentElement
+              )
+                scrollContainers.push(parent)
+              samples.push({
+                time: performance.now() - start,
+                listGap: bounds.left - listBounds.right,
+                headerGap: header.getBoundingClientRect().right - bounds.left,
+                settingsGap:
+                  bounds.right - controls.getBoundingClientRect().left,
+                paneGap:
+                  bounds.right -
+                  Math.min(
+                    frame.getBoundingClientRect().right,
+                    settings.getBoundingClientRect().left,
+                  ),
+                edge:
+                  side === "list"
+                    ? listBounds.right
+                    : settings.getBoundingClientRect().left,
+                barHeight: bar.getBoundingClientRect().height,
+                titleLines: new Set(
+                  Array.from(titleRange.getClientRects(), (rect) => rect.top),
+                ).size,
+                horizontalScrollbars: scrollContainers
+                  .filter(
+                    (element) =>
+                      element.clientWidth > 0 &&
+                      element.scrollWidth > element.clientWidth + 1 &&
+                      ["auto", "scroll"].includes(
+                        getComputedStyle(element).overflowX,
+                      ),
+                  )
+                  .map((element) => `${element.tagName}.${element.className}`),
+              })
+            }
+            root.addEventListener("transitionrun", pauseTransitions, true)
+            try {
+              sample()
+              for (let leg = 0; leg < (interrupted ? 3 : 1); leg++) {
+                toggle.click()
+                await frameReady()
+                await frameReady()
+                const animations = root.getAnimations({ subtree: true })
+                if (!animations.length)
+                  throw new Error("Sidebar toggle started no CSS transition")
+                await Promise.all(
+                  animations.map((animation) => animation.ready),
                 )
-                  scrollContainers.push(parent)
-                samples.push({
-                  time: performance.now() - start,
-                  listGap: bounds.left - listBounds.right,
-                  headerGap: header.getBoundingClientRect().right - bounds.left,
-                  settingsGap:
-                    bounds.right - controls.getBoundingClientRect().left,
-                  paneGap:
-                    bounds.right -
-                    Math.min(
-                      frame.getBoundingClientRect().right,
-                      settings.getBoundingClientRect().left,
-                    ),
-                  edge:
-                    side === "list"
-                      ? listBounds.right
-                      : settings.getBoundingClientRect().left,
-                  barHeight: bar.getBoundingClientRect().height,
-                  titleLines: new Set(
-                    Array.from(titleRange.getClientRects(), (rect) => rect.top),
-                  ).size,
-                  horizontalScrollbars: scrollContainers
-                    .filter(
-                      (element) =>
-                        element.clientWidth > 0 &&
-                        element.scrollWidth > element.clientWidth + 1 &&
-                        ["auto", "scroll"].includes(
-                          getComputedStyle(element).overflowX,
-                        ),
+                const fractions =
+                  interrupted && leg < 2
+                    ? [0, 0.2, 0.4]
+                    : [0, 0.2, 0.4, 0.6, 0.8, 1]
+                for (const fraction of fractions) {
+                  for (const animation of animations) {
+                    const duration = Number(
+                      animation.effect!.getComputedTiming().duration,
                     )
-                    .map(
-                      (element) => `${element.tagName}.${element.className}`,
-                    ),
-                })
-                if (performance.now() - start < 450)
-                  requestAnimationFrame(sample)
-                else resolve()
+                    animation.currentTime = duration * fraction
+                  }
+                  await frameReady()
+                  sample()
+                }
+                for (const animation of animations) animation.play()
+                if (!interrupted || leg === 2)
+                  await Promise.allSettled(
+                    animations.map((animation) => animation.finished),
+                  )
               }
-              requestAnimationFrame(sample)
-            })
+            } finally {
+              root.removeEventListener("transitionrun", pauseTransitions, true)
+              for (const animation of root.getAnimations({ subtree: true }))
+                animation.play()
+            }
             return samples
           },
           { side, interrupted },

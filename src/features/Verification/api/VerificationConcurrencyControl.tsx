@@ -133,6 +133,7 @@ export function VerificationConcurrencyControl({
                   active && "font-medium shadow-none",
                 )}
                 onClick={() => commit(preset.value)}
+                onPointerDown={(event) => event.preventDefault()}
               >
                 {preset.label}
               </Button>

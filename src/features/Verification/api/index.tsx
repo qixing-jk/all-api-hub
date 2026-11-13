@@ -76,10 +76,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     if (
       modelsProbe?.result?.output &&
       typeof modelsProbe.result.output === "object" &&
-      "models" in modelsProbe.result.output &&
-      Array.isArray(modelsProbe.result.output.models)
+      "modelIdsPreview" in modelsProbe.result.output &&
+      Array.isArray(modelsProbe.result.output.modelIdsPreview)
     ) {
-      return modelsProbe.result.output.models as string[]
+      return modelsProbe.result.output.modelIdsPreview.filter(
+        (id): id is string => typeof id === "string",
+      )
     }
     return []
   }, [modelsProbe?.result?.output])

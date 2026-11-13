@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { VerifyApiDialog } from "~/features/Verification/api"
+import { useAccountVerificationRuntimeKeys } from "~/features/Verification/api/useAccountVerificationRuntimeKeys"
 import { useVerifyApiDialogViewModel } from "~/features/Verification/api/useVerifyApiDialogViewModel"
 import enVerification from "~/locales/en/aiApiVerification.json"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
@@ -349,6 +350,62 @@ describe("VerifyApiDialog", () => {
     })
     await verificationResultHistoryStorage.clearAllData()
     mockRunPelicanTest.mockReset()
+  })
+
+  it("offers models discovered by the Models probe in the prompt selector", async () => {
+    const user = userEvent.setup()
+    const account = buildDisplaySiteData()
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "models",
+      status: "pass",
+      latencyMs: 1,
+      summary: "Models found",
+      output: { modelIdsPreview: ["discovered-model"] },
+    })
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={vi.fn()}
+        account={account}
+        initialModelId="initial-model"
+      />,
+    )
+    const models = await screen.findByTestId("verify-probe-models")
+    const run = within(models).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(run).toBeEnabled())
+    await user.click(run)
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledOnce(),
+    )
+    await waitFor(() =>
+      expect(getVerificationHeader(models)).toHaveTextContent("Models found"),
+    )
+    await user.click(
+      within(screen.getByTestId("verify-probe-text-generation")).getByRole(
+        "button",
+        { name: "aiApiVerification:verifyDialog.probes.text-generation" },
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.meta.model",
+      }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "discovered-model" }),
+    ).toBeVisible()
   })
 
   it("opens a CLI shortcut with editable protocol and normal test order", async () => {
@@ -2922,4 +2979,63 @@ describe("VerifyApiDialog", () => {
     })
     expect(sidebarInput).toHaveValue("gpt-4o-mini")
   })
+  it.each(["resolve", "reject"] as const)(
+    "ignores a stale runtime-key inventory %s while the current account is loading",
+    async (outcome) => {
+      const account = buildDisplaySiteData({ id: "current-inventory" })
+      const previous = createDeferred<AccountRuntimeKey[]>()
+      const current = createDeferred<AccountRuntimeKey[]>()
+      mockFetchDisplayAccountRuntimeKeys.mockReset()
+      mockFetchDisplayAccountRuntimeKeys
+        .mockReturnValueOnce(previous.promise)
+        .mockReturnValueOnce(current.promise)
+      let generation = 0
+      const captureContext = () => {
+        const captured = generation
+        return () => captured === generation
+      }
+      const { result } = renderHook(() =>
+        useAccountVerificationRuntimeKeys({
+          account,
+          requestedModelId: "",
+          modelEnableGroups: undefined,
+          captureContext,
+        }),
+      )
+      let previousLoad: Promise<void>
+      act(() => {
+        previousLoad = result.current.loadRuntimeKeys()
+      })
+      generation++
+      let currentLoad: Promise<void>
+      act(() => {
+        currentLoad = result.current.loadRuntimeKeys()
+      })
+      await act(async () => {
+        if (outcome === "resolve")
+          previous.resolve([
+            buildNewApiRuntimeKey(
+              account,
+              buildNewApiToken({ id: 1, name: "Previous account" }),
+            ),
+          ])
+        else previous.reject(new Error("Old account no longer exists"))
+        await previousLoad
+      })
+      expect(result.current.accountRuntimeKeys).toEqual([])
+      expect(result.current.runtimeKeysLoadFailed).toBe(false)
+      expect(result.current.isLoadingRuntimeKeys).toBe(true)
+      const currentKey = buildNewApiRuntimeKey(
+        account,
+        buildNewApiToken({ id: 2, name: "Current account" }),
+      )
+      await act(async () => {
+        current.resolve([currentKey])
+        await currentLoad
+      })
+      expect(result.current.accountRuntimeKeys).toEqual([currentKey])
+      expect(result.current.selectedRuntimeKeyId).toBe(currentKey.id)
+      expect(result.current.isLoadingRuntimeKeys).toBe(false)
+    },
+  )
 })

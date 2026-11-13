@@ -8,6 +8,8 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import { hasOpenFloatingLayer } from "~/components/ui/floating-layer"
+
 import { useVerificationWorkspaceHeight } from "./useVerificationWorkspaceHeight"
 import {
   VERIFICATION_SETTINGS_TARGETS,
@@ -125,6 +127,7 @@ export function useVerificationWorkspace({
   }
   const onSettingsKeyDown = useCallback(
     (event: KeyboardEvent<HTMLElement>) => {
+      if (hasOpenFloatingLayer(event.currentTarget)) return
       // Modal's capture handler prevents the browser default before this pane handles Escape.
       if (
         isWide &&

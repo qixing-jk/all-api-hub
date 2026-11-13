@@ -190,6 +190,7 @@ export function ApiCheckRequestConfiguration({
               options={view.modelIdsOptions}
               value={view.modelId}
               onChange={actions.setModelId}
+              disabled={!view.canClose}
               portalContainer={view.popoverPortalContainer ?? undefined}
               placeholder="gpt-4o-mini"
               loading={view.isFetchingModels}

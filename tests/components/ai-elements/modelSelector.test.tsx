@@ -7,6 +7,23 @@ import { PromptModelSelector } from "~/components/ai-elements/model-selector"
 import { render } from "~~/tests/test-utils/render"
 
 describe("PromptModelSelector", () => {
+  it("explains an empty search result when custom models are disabled", async () => {
+    const user = userEvent.setup()
+    render(
+      <PromptModelSelector
+        value=""
+        onChange={vi.fn()}
+        options={["gpt-4o"]}
+        allowCustomValue={false}
+        emptyMessage="No matching models"
+      />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+    await user.click(screen.getByRole("button", { name: /model/i }))
+    await user.type(await screen.findByRole("combobox"), "unrelated")
+    expect(await screen.findByText("No matching models")).toBeVisible()
+    expect(screen.queryByRole("option")).not.toBeInTheDocument()
+  })
   it("renders trigger with placeholder when no model is selected", () => {
     render(
       <PromptModelSelector

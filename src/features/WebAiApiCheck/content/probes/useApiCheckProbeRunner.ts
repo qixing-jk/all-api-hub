@@ -28,6 +28,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/facts/verification"
 import {
+  API_VERIFICATION_PROBE_STATUSES,
   getProbesForModality,
   resolveModelTestModality,
   type ApiVerificationApiType,
@@ -188,7 +189,17 @@ export function useApiCheckProbeRunner({
       if (!acceptResult(result)) return false
       setProbes((prev) =>
         prev.map((probe) =>
-          probe.id === probeId ? { ...probe, isRunning: false, result } : probe,
+          probe.id === probeId
+            ? {
+                ...probe,
+                isRunning: false,
+                result,
+                progress:
+                  result.status === API_VERIFICATION_PROBE_STATUSES.Pass
+                    ? undefined
+                    : probe.progress,
+              }
+            : probe,
         ),
       )
       return true
@@ -305,7 +316,9 @@ export function useApiCheckProbeRunner({
         if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) return
         setProbes((prev) =>
           prev.map((probe) =>
-            probe.id === probeId ? { ...probe, progress } : probe,
+            probe.id === probeId && probe.isRunning
+              ? { ...probe, progress }
+              : probe,
           ),
         )
       })

@@ -8,7 +8,10 @@ import {
   VERIFICATION_GENERATION_PART_TYPES,
   VERIFICATION_GENERATION_TOOL_STATES,
 } from "~/services/verification/aiApiVerification/generationProgress"
-import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
+import type {
+  VerificationGenerationPart,
+  VerificationGenerationProgress,
+} from "~/services/verification/aiApiVerification/generationProgress"
 
 import { formatLatency } from "./utils"
 import { VerificationGenerationFeed } from "./VerificationGenerationFeed"
@@ -50,7 +53,7 @@ export function VerificationGenerationOutput({
   }, [running, startedAt])
   const content = text ?? progress?.text
   const steps = metrics ?? progress?.metrics
-  const parts = progress?.parts?.length
+  let parts: VerificationGenerationPart[] = progress?.parts?.length
     ? progress.parts
     : content
       ? [
@@ -62,6 +65,27 @@ export function VerificationGenerationOutput({
           },
         ]
       : []
+  // Accepted output takes precedence over its final streamed draft, while the
+  // earlier reasoning and tool blocks remain attached to the completed request.
+  if (!running && text !== undefined && progress?.parts?.length) {
+    const finalTextIndex = parts.findLastIndex(
+      (part) => part.type === VERIFICATION_GENERATION_PART_TYPES.Text,
+    )
+    if (finalTextIndex >= 0)
+      parts = parts.map((part, index) =>
+        index === finalTextIndex ? { ...part, text } : part,
+      )
+    else if (text)
+      parts = [
+        ...parts,
+        {
+          id: "accepted-answer",
+          step: progress.step,
+          type: VERIFICATION_GENERATION_PART_TYPES.Text,
+          text,
+        },
+      ]
+  }
   const lastPart = parts.at(-1)
   const activity = running ? (
     <p

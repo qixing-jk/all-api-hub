@@ -1,3 +1,4 @@
+import { useContext } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, CollapsibleSection } from "~/components/ui"
@@ -7,6 +8,7 @@ import type { ContextCapacityPresentation } from "./contextCapacityPresentation"
 import { formatContextTokens } from "./contextTokenDisplay"
 import type { ContextCapacityController } from "./useContextCapacity"
 import { VERIFICATION_HISTORY_KINDS } from "./VerificationHistoryBadge"
+import { VerificationDetailContext } from "./VerificationSelectionContext"
 import { VerificationStatusBadge } from "./VerificationStatusBadge"
 
 type Props = {
@@ -23,6 +25,7 @@ export function ContextCapacityResultSummary({
   presentation,
 }: Props) {
   const { t } = useTranslation("aiApiVerification")
+  const inHeader = Boolean(useContext(VerificationDetailContext)?.headerTarget)
   const {
     observation,
     lower,
@@ -34,12 +37,57 @@ export function ContextCapacityResultSummary({
     declaredContext,
   } = presentation
   if (controller.running && lower === 0) return null
+  if (
+    inHeader &&
+    (controller.running ||
+      observation ||
+      controller.error ||
+      controller.stopped)
+  ) {
+    const accepted =
+      lower > 0
+        ? t("verifyDialog.tools.context.acceptedTitle", {
+            tokens: formatContextTokens(lower),
+          })
+        : ""
+    const comparison = hasComparison
+      ? t("verifyDialog.tools.context.comparison", {
+          expected: formatContextTokens(declaredContext!),
+        })
+      : ""
+    const showTitle =
+      reason === CONTEXT_CAPACITY_REASONS.Budget ||
+      reason === CONTEXT_CAPACITY_REASONS.Inconclusive ||
+      reason === CONTEXT_CAPACITY_REASONS.Error ||
+      reason === CONTEXT_CAPACITY_REASONS.Stopped
+    const summary = [showTitle || !accepted ? title : "", accepted, comparison]
+      .filter(Boolean)
+      .join(" · ")
+    return (
+      <div
+        className="min-w-0 truncate"
+        role="status"
+        aria-label={t("verifyDialog.tools.context.resultLabel")}
+        title={[
+          summary,
+          reasonText,
+          historical?.requiresCredentialVerification
+            ? t("verifyDialog.tools.context.maskedHistoryHint")
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n")}
+      >
+        {summary}
+      </div>
+    )
+  }
   return controller.running ||
     observation ||
     controller.error ||
     controller.stopped ? (
     <div
-      className="space-y-2"
+      className="min-w-0 space-y-2"
       role="status"
       aria-label={t("verifyDialog.tools.context.resultLabel")}
     >

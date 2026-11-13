@@ -40,6 +40,7 @@ import {
   expectVerificationMobileSheet,
   expectVerificationWorkspaceFlush,
   showVerificationSettings,
+  showVerificationTest,
 } from "~~/e2e/utils/verificationWorkspace"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -48,6 +49,36 @@ const TEST_PAGE_URL = "https://api-console.example.test/console"
 const TEST_PAGE_ORIGIN = "https://api-console.example.test"
 const API_BASE_URL = "https://api-console.example.test/api"
 const API_KEY = "sk-e2e-content-api-check-key"
+
+test("web batch Stop remains clickable after credentials are cleared", async ({
+  context,
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await stubLlmMetadataIndex(context)
+  await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+  let requested = false
+  await context.route(`${API_BASE_URL}/v1/chat/completions`, async () => {
+    requested = true
+    await new Promise(() => {})
+  })
+  const { modal } = await openApiCheckModalFromCopiedCredentials(page)
+  await modal
+    .getByRole("button", { name: enApiCheck.modal.actions.test, exact: true })
+    .click()
+  await expect.poll(() => requested).toBe(true)
+  await showVerificationSettings(page)
+  await modal.getByPlaceholder("sk-...").clear()
+  const stop = modal
+    .getByRole("button", {
+      name: enApiCheck.modal.actions.stopTest,
+      exact: true,
+    })
+    .last()
+  await expect(stop).toHaveCSS("pointer-events", "auto")
+  await stop.click()
+  await expect(modal).toContainText(enApiCheck.modal.messages.testStopped)
+})
 
 test("web context test keeps Stop accessible with the mobile list collapsed", async ({
   context,
@@ -78,10 +109,12 @@ test("web context test keeps Stop accessible with the mobile list collapsed", as
     .getByTestId("verification-active-test")
     .getByRole("button", { name: "Stop", exact: true })
   await expect(stop).toBeInViewport()
-  await modal.getByRole("dialog").screenshot({
-    path: test.info().outputPath("web-mobile-context-stop.png"),
-    animations: "disabled",
-  })
+  await modal
+    .getByRole("dialog", { name: "API Testing", exact: true })
+    .screenshot({
+      path: test.info().outputPath("web-mobile-context-stop.png"),
+      animations: "disabled",
+    })
   await stop.click()
   await expect(workspace.getByTestId("verification-active-test")).toContainText(
     "Stopped",
@@ -293,6 +326,13 @@ test.beforeEach(async ({ context, page }, testInfo) => {
     page,
     [
       "mobile settings sheet in the webpage workspace",
+      "prioritizes extraction until both URL and key are available",
+      "keeps web probe rows compact when inspecting process diagnostics",
+      "keeps page verification actions visible while scrolling at desktop and narrow widths",
+      "opens client and test explanations on tap without closing the workspace",
+      "recovers an interrupted webpage context request after its worker stops without replaying it",
+      "recovers an interrupted webpage needle request after its worker stops without replaying it",
+      "web context probe shows progress, measured bounds and cancellation",
       "web context test keeps Stop accessible with the mobile list collapsed",
       "web needle test plans automatically, follows a context probe and restores its results",
       "keeps settings beside the conversation and preserves drafts when the responsive pane closes",
@@ -457,9 +497,9 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
       path: test.info().outputPath("qa-web-streaming.png"),
       animations: "disabled",
     })
-    await panel
-      .locator("[data-verification-summary]")
+    await modal
       .getByRole("button", { name: "Stop", exact: true })
+      .first()
       .click()
     await expect(
       panel.getByRole("button", { name: "Q&A test", exact: true }),
@@ -478,6 +518,10 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
     gate = new Promise<void>((resolve) => {
       release = resolve
     })
+    const runPreferences = modal.getByRole("button", {
+      name: "Run preferences and concurrency settings",
+    })
+    await runPreferences.click()
     const concurrency = modal.getByRole("spinbutton", {
       name: "Tests at once",
       exact: true,
@@ -491,6 +535,7 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
             .verificationConcurrency,
       )
       .toMatchObject({ routine: 2 })
+    await runPreferences.click()
     await modal
       .getByRole("button", { name: "Run routine tests", exact: true })
       .click()
@@ -509,7 +554,9 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
       animations: "disabled",
     })
     await modal.getByRole("button", { name: "Stop test", exact: true }).click()
+    await runPreferences.click()
     await expect(concurrency).toBeEnabled()
+    await runPreferences.click()
     await expect(textProbe).toContainText("Stopped")
     expect(fixture.requests).toHaveLength(4)
   } finally {
@@ -616,13 +663,24 @@ test("web context probe shows progress, measured bounds and cancellation", async
     await expect(panel.getByRole("spinbutton")).toHaveCount(0)
     for (const width of [1280, 380]) {
       await page.setViewportSize({ width, height: 800 })
-      await panel.scrollIntoViewIfNeeded()
+      if (width === 380) {
+        const testsSheet = modal.getByRole("dialog", {
+          name: "Tests",
+          exact: true,
+        })
+        await expect(testsSheet).toHaveAccessibleName("Tests")
+        await testsSheet
+          .getByRole("button", { name: "Context capacity test", exact: true })
+          .click()
+      }
+      const detail = modal.locator("[data-verification-detail]:not([hidden])")
+      await detail.scrollIntoViewIfNeeded()
       expect(
         await panel.evaluate(
           (element) => element.scrollWidth <= element.clientWidth,
         ),
       ).toBe(true)
-      await panel.screenshot({
+      await modal.screenshot({
         path: test.info().outputPath(`web-context-idle-${width}.png`),
         animations: "disabled",
       })
@@ -631,7 +689,11 @@ test("web context probe shows progress, measured bounds and cancellation", async
     await panel
       .getByRole("button", { name: "Context capacity test", exact: true })
       .click()
-    await panel.getByRole("button", { name: "Run context probe" }).click()
+    await showVerificationTest(page, "Context capacity test")
+    await modal
+      .getByRole("button", { name: "Run context probe", exact: true })
+      .last()
+      .click()
     await expect(
       panel.getByRole("button", { name: "Test details", exact: true }),
     ).toBeVisible({ timeout: 30000 })
@@ -698,9 +760,9 @@ test("web context probe shows progress, measured bounds and cancellation", async
     const completedRequests = requests.length
     await panel.getByRole("button", { name: "Run context probe" }).click()
     await expect.poll(() => requests.length).toBeGreaterThan(completedRequests)
-    await panel
-      .locator("[data-verification-summary]")
+    await modal
       .getByRole("button", { name: "Stop", exact: true })
+      .first()
       .click()
     await expect(
       panel.getByRole("button", { name: "Run context probe" }),
@@ -964,12 +1026,12 @@ test("web needle test plans automatically, follows a context probe and restores 
     ).toBeVisible()
     await captureVisualViews({
       page,
-      ready: panel.getByRole("table"),
+      ready: page.getByRole("table"),
       id: "needle-progress",
       extensionDir,
       views: [{ id: "desktop", theme: "light", width: 1280, height: 850 }],
     })
-    const cells = panel.getByRole("table").getByRole("cell")
+    const cells = page.getByRole("table").getByRole("cell")
     await expect(cells.nth(0)).toHaveText("Match")
     await expect(
       cells.nth(1).getByText("Running...", { exact: true }),
@@ -984,7 +1046,7 @@ test("web needle test plans automatically, follows a context probe and restores 
     expect(needleRequests).toBe(3)
     await captureVisualViews({
       page,
-      ready: panel.getByRole("table"),
+      ready: page.getByRole("table"),
       id: "needle-results",
       extensionDir,
       views: [{ id: "desktop", theme: "light", width: 1280, height: 850 }],
@@ -1000,12 +1062,12 @@ test("web needle test plans automatically, follows a context probe and restores 
       await configurationToggle.click()
     await captureVisualViews({
       page,
-      ready: panel.getByRole("table"),
+      ready: page.getByRole("table"),
       id: "needle-results-narrow",
       extensionDir,
     })
     await page.setViewportSize({ width: 1280, height: 720 })
-    await panel.getByRole("button", { name: /10%: Match/ }).click()
+    await page.getByRole("button", { name: /10%: Match/ }).click()
     await panel
       .getByRole("region", { name: "Cell details", exact: true })
       .getByRole("button", { name: "Request and answer details" })
@@ -1139,8 +1201,9 @@ test("web needle test plans automatically, follows a context probe and restores 
       await touch.detach()
     }
     expect(needleRequests).toBe(3)
-    await reopened.panel.getByRole("button", { name: /50%: Match$/ }).click()
-    const cellDetails = reopened.panel.getByRole("region", {
+    await showVerificationTest(page, "Needle in a haystack")
+    await page.getByRole("button", { name: /50%: Match$/ }).click()
+    const cellDetails = page.getByRole("region", {
       name: "Cell details",
       exact: true,
     })
@@ -1162,11 +1225,9 @@ test("web needle test plans automatically, follows a context probe and restores 
     ).toBeEnabled()
     expect(needleRequests).toBe(4)
     await expect(
-      reopened.panel.getByRole("button", { name: /50%: Cancelled$/ }),
+      page.getByRole("button", { name: /50%: Cancelled$/ }),
     ).toBeVisible()
-    await expect(
-      reopened.panel.getByRole("table").getByRole("cell"),
-    ).toHaveCount(3)
+    await expect(page.getByRole("table").getByRole("cell")).toHaveCount(3)
   } finally {
     releaseRequest()
     server.closeAllConnections()
@@ -1212,7 +1273,7 @@ test("keeps web probe rows compact when inspecting process diagnostics", async (
       .getByRole("button", { name: "Run", exact: true })
       .click()
     await expect(
-      textProbe.getByRole("region", { name: "Execution result", exact: true }),
+      page.getByRole("region", { name: "Execution result", exact: true }),
     ).toBeVisible()
     await modal
       .locator("[data-verification-active-test]")
@@ -1298,17 +1359,35 @@ test("keeps web probe rows compact when inspecting process diagnostics", async (
       .getByRole("button", { name: "Request details", exact: true })
       .click()
     await expect(
-      textProbe.getByRole("region", { name: "Execution result", exact: true }),
+      page.getByRole("region", { name: "Execution result", exact: true }),
     ).toBeVisible()
     for (const width of [1280, 900, 380]) {
       await page.setViewportSize({ width, height: 800 })
-      const left = (await models.boundingBox())!
-      const right = (await textProbe.boundingBox())!
-      expect(right.x).toBeCloseTo(left.x, 0)
-      expect(right.y).toBeGreaterThanOrEqual(left.y + left.height)
-      expect(right.y - (left.y + left.height)).toBeLessThanOrEqual(24)
-      // Evidence stays in the detail pane; the test list does not move.
-      expect(right.width).toBeCloseTo(left.width, 0)
+      await expect
+        .poll(async () => {
+          const boxes = await modal.evaluate((element) => {
+            const left = element
+              .querySelector('[data-testid="api-check-probe-models"]')!
+              .getBoundingClientRect()
+            const right = element
+              .querySelector('[data-testid="api-check-probe-text-generation"]')!
+              .getBoundingClientRect()
+            return { left: left.toJSON(), right: right.toJSON() }
+          })
+          const { left, right } = boxes
+          // Expanded lists stack rows; a collapsed mobile rail places icons side by side.
+          const horizontal = Math.abs(right.y - left.y) <= 1
+          expect(horizontal ? right.x : right.y).toBeGreaterThanOrEqual(
+            horizontal ? left.x + left.width : left.y + left.height,
+          )
+          expect(
+            horizontal
+              ? right.x - left.x - left.width
+              : right.y - left.y - left.height,
+          ).toBeLessThanOrEqual(24)
+          return Math.abs(right.width - left.width)
+        })
+        .toBeLessThanOrEqual(1)
       const scroll = modal.getByTestId(
         WEB_AI_API_CHECK_TEST_IDS.scrollContainer,
       )
@@ -1335,6 +1414,7 @@ test("keeps web probe rows compact when inspecting process diagnostics", async (
       })
     if ((await settingsToggle.getAttribute("aria-expanded")) === "true")
       await settingsToggle.click()
+    await showVerificationTest(page, "Text generation")
     await page
       .getByRole("button", { name: "Reset this prompt", exact: true })
       .click()
@@ -1347,15 +1427,15 @@ test("keeps web probe rows compact when inspecting process diagnostics", async (
         )?.["text-generation"]
       })
       .toBeUndefined()
-    await textProbe.getByRole("button", { name: "Retry", exact: true }).click()
+    await modal
+      .getByTestId("verification-active-test")
+      .getByRole("button", { name: "Retry", exact: true })
+      .click()
+    await expect(modal.getByTestId("verification-active-test")).toContainText(
+      "Pass",
+    )
     await expect(
-      textProbe
-        .locator("[data-verification-summary]")
-        .locator('[data-slot="badge"]')
-        .filter({ hasText: "Pass" }),
-    ).toBeVisible()
-    await expect(
-      textProbe.getByRole("region", { name: "Execution result", exact: true }),
+      page.getByRole("region", { name: "Execution result", exact: true }),
     ).toContainText("OK")
   } finally {
     fixture.server.closeAllConnections()
@@ -1411,7 +1491,9 @@ test("prioritizes extraction until both URL and key are available", async ({
       (await saveHint.boundingBox())!.y +
         (await saveHint.boundingBox())!.height,
     ).toBeLessThanOrEqual(
-      (await save.boundingBox())!.y + (await save.boundingBox())!.height,
+      await save.evaluate(
+        (button) => button.parentElement!.getBoundingClientRect().bottom,
+      ),
     )
     await baseUrl.clear()
     await apiKey.clear()
@@ -1423,7 +1505,9 @@ test("prioritizes extraction until both URL and key are available", async ({
       }
       if (width === 1440) {
         expect(
-          (await modal.getByRole("dialog").boundingBox())!.width,
+          (await modal
+            .getByRole("dialog", { name: "API Testing", exact: true })
+            .boundingBox())!.width,
         ).toBeLessThanOrEqual(960)
         const editorBounds = (await source.boundingBox())!
         const fieldBounds = (await baseUrl.boundingBox())!
@@ -1515,7 +1599,9 @@ test("uses the available source space when save options expand", async ({
     await expect(options).toHaveAttribute("aria-expanded", "false")
     const compactTop =
       (await source.boundingBox())!.y -
-      (await modal.getByRole("dialog").boundingBox())!.y
+      (await modal
+        .getByRole("dialog", { name: "API Testing", exact: true })
+        .boundingBox())!.y
     await options.click()
     await expect(
       modal.getByLabel(enApiCheck.modal.fields.notes, { exact: true }),
@@ -1530,7 +1616,9 @@ test("uses the available source space when save options expand", async ({
       expect(
         Math.abs(
           (await source.boundingBox())!.y -
-            (await modal.getByRole("dialog").boundingBox())!.y -
+            (await modal
+              .getByRole("dialog", { name: "API Testing", exact: true })
+              .boundingBox())!.y -
             compactTop,
         ),
       ).toBeLessThanOrEqual(2)
@@ -1764,8 +1852,10 @@ test("collapses the sidebars completely while preserving the active test and dra
     .locator(".verification-workspace-frame")
     .boundingBox())!
   const fullResult = (await detail.boundingBox())!
-  expect(fullResult.x).toBeCloseTo(frame.x, 0)
-  expect(fullResult.width).toBeCloseTo(frame.width, 0)
+  const rail = (await modal.locator("[data-verification-list]").boundingBox())!
+  expect(rail.width).toBeCloseTo(56, 0)
+  expect(fullResult.x).toBeCloseTo(rail.x + rail.width, 0)
+  expect(fullResult.width).toBeCloseTo(frame.width - rail.width, 0)
   await capture("sidebar-both-collapsed.png")
   await bar
     .getByRole("button", { name: /Expand test list/, exact: true })
@@ -1852,10 +1942,12 @@ test("keeps page verification actions visible while scrolling at desktop and nar
   await sourceEditor.fill(
     Array.from({ length: 6 }, (_, i) => `Source note ${i}`).join("\n"),
   )
-  await modal.getByRole("dialog").screenshot({
-    path: test.info().outputPath("source-text-six-lines.png"),
-    animations: "disabled",
-  })
+  await modal
+    .getByRole("dialog", { name: "API Testing", exact: true })
+    .screenshot({
+      path: test.info().outputPath("source-text-six-lines.png"),
+      animations: "disabled",
+    })
   expect((await sourceEditor.boundingBox())!.height).toBeGreaterThan(
     initialHeight,
   )
@@ -1878,26 +1970,29 @@ test("keeps page verification actions visible while scrolling at desktop and nar
         if (child.scrollTop) child.scrollTop = 0
       }
     })
-    await modal.getByRole("dialog").screenshot({
-      path: test.info().outputPath(`layout-${width}.png`),
-      animations: "disabled",
-    })
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath(`layout-${width}.png`),
+        animations: "disabled",
+      })
     const config = await modal.getByTestId("verification-config").boundingBox()
     if (width < 1280)
       await modal
         .getByTestId("verification-workspace")
         .getByRole("button", { name: "Settings", exact: true })
         .click()
-    const models = await modal
-      .getByTestId(getWebAiApiCheckProbeTestId("models"))
-      .boundingBox()
+    const modelsRow = modal.getByTestId(getWebAiApiCheckProbeTestId("models"))
+    await modelsRow.scrollIntoViewIfNeeded()
+    const models = await modelsRow.boundingBox()
     expect(config).not.toBeNull()
     expect(models).not.toBeNull()
     if (width >= 1280)
       expect(config!.x).toBeGreaterThan(models!.x + models!.width)
-    const textProbe = await modal
-      .getByTestId(getWebAiApiCheckProbeTestId("text-generation"))
-      .boundingBox()
+    const textProbeRow = modal.getByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+    const textProbe = await textProbeRow.boundingBox()
     expect(textProbe).not.toBeNull()
     if (width >= 1024) {
       expect(textProbe!.y).toBeGreaterThanOrEqual(models!.y + models!.height)
@@ -1912,7 +2007,22 @@ test("keeps page verification actions visible while scrolling at desktop and nar
           Math.min(...controls.map((box) => box!.x)),
       ).toBeLessThanOrEqual(2)
     } else {
-      expect(textProbe!.y).toBeGreaterThanOrEqual(models!.y + models!.height)
+      // Wait for sidebar relocation before comparing both rows in one frame.
+      await expect
+        .poll(() =>
+          modal.evaluate((element) => {
+            const first = element
+              .querySelector('[data-testid="api-check-probe-models"]')!
+              .getBoundingClientRect()
+            const next = element
+              .querySelector('[data-testid="api-check-probe-text-generation"]')!
+              .getBoundingClientRect()
+            return Math.abs(next.y - first.y) <= 1
+              ? next.x - first.right
+              : next.y - first.bottom
+          }),
+        )
+        .toBeGreaterThanOrEqual(0)
     }
     const source = modal.getByRole("textbox", {
       name: "Extraction source",
@@ -1922,36 +2032,54 @@ test("keeps page verification actions visible while scrolling at desktop and nar
     await source.scrollIntoViewIfNeeded()
     await expect(source).toBeInViewport()
     const sourceBounds = await source.boundingBox()
-    const dialogBounds = await modal.getByRole("dialog").boundingBox()
+    const dialogBounds = await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .boundingBox()
     expect(sourceBounds!.x).toBeGreaterThanOrEqual(dialogBounds!.x)
     expect(sourceBounds!.x + sourceBounds!.width).toBeLessThanOrEqual(
       dialogBounds!.x + dialogBounds!.width,
     )
     if (width >= 1280)
-      expect(sourceBounds!.width).toBeGreaterThan(
-        (await modal.locator("[data-verification-settings]").boundingBox())!
-          .width,
-      )
+      expect(sourceBounds!.width).toBeLessThanOrEqual(dialogBounds!.width)
     if (width >= 1280) expect(dialogBounds!.width).toBeGreaterThanOrEqual(1000)
-    const drawing = modal.getByRole("button", {
-      name: "Run drawing test",
-      exact: true,
-    })
+    const drawing = page
+      .locator("[data-verification-detail]:not([hidden])")
+      .getByRole("button", { name: "Run", exact: true })
+      .first()
     if (width < 1280)
       await modal
         .getByTestId("verification-workspace")
         .getByRole("button", { name: "Settings", exact: true })
         .click()
+    await page
+      .getByRole("button", { name: "Drawing test", exact: true })
+      .click()
+    await showVerificationTest(page, "Drawing test")
     await drawing.scrollIntoViewIfNeeded()
     await expect(drawing).toBeInViewport()
     const drawingBounds = await modal
       .getByTestId("verification-tools-panel")
       .boundingBox()
-    expect(drawingBounds!.width).toBeCloseTo(models!.width, 0)
-    await modal.getByRole("dialog").screenshot({
-      path: test.info().outputPath(`layout-${width}-drawing.png`),
-      animations: "disabled",
-    })
+    if (width >= 1280)
+      expect(drawingBounds!.width).toBeCloseTo(
+        (await modelsRow.boundingBox())!.width,
+        0,
+      )
+    else {
+      const detail = page.locator("[data-verification-detail]:not([hidden])")
+      await expect(detail).toBeVisible()
+      expect(
+        await detail.evaluate(
+          (element) => element.scrollWidth - element.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1)
+    }
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath(`layout-${width}-drawing.png`),
+        animations: "disabled",
+      })
     const save = modal.getByTestId(
       WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton,
     )
@@ -2040,6 +2168,10 @@ test.describe("verification help on touch screens", () => {
     await page.keyboard.press("Escape")
     await expect(tooltip).toBeHidden()
     await expect(modal).toBeVisible()
+    const settingsToggle = modal
+      .getByTestId("verification-workspace")
+      .getByRole("button", { name: "Settings", exact: true })
+    await settingsToggle.tap()
     await modal
       .getByRole("button", {
         name: enVerification.verifyDialog.about,
@@ -2056,10 +2188,8 @@ test.describe("verification help on touch screens", () => {
     await page.keyboard.press("Escape")
     await expect(modal.getByRole("tooltip")).toBeHidden()
     await expect(modal).toBeVisible()
-    await modal
-      .getByTestId("verification-workspace")
-      .getByRole("button", { name: "Settings", exact: true })
-      .tap()
+    if ((await settingsToggle.getAttribute("aria-expanded")) === "true")
+      await settingsToggle.tap()
     await modal
       .getByRole("region", { name: "Needle in a haystack", exact: true })
       .getByRole("button", { name: "Needle in a haystack", exact: true })
@@ -2266,13 +2396,12 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
     name: "Test information",
     exact: true,
   })
-  await expect(help).toHaveAttribute(
-    "title",
-    "Results apply only to the API, model and request configuration used in this test.",
+  await expect(help).toHaveAccessibleDescription(
+    enVerification.verifyDialog.warning,
   )
   await help.click()
-  const helpPanel = contentHost.getByRole("dialog", {
-    name: "Test information",
+  const helpPanel = contentHost.getByRole("tooltip", {
+    name: enVerification.verifyDialog.warning,
     exact: true,
   })
   await expect(helpPanel).toHaveText(
@@ -2333,7 +2462,9 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
     .locator("[data-verification-summary]")
     .getByRole("button", { name: "Run", exact: true })
     .click()
-  await expect(modelsProbe).toContainText("Fetched 1 model.")
+  await expect(modal.getByTestId("verification-active-test")).toContainText(
+    "Fetched 1 model.",
+  )
 
   const listWidth = (await modelsProbe.boundingBox())!.width
   expect(listWidth).toBeLessThan(360)
@@ -2343,10 +2474,12 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   await expect(
     modelsProbe.getByRole("region", { name: "Execution result", exact: true }),
   ).toBeVisible()
-  await modal.getByRole("dialog").screenshot({
-    path: test.info().outputPath("page-models-expanded-grid.png"),
-    animations: "disabled",
-  })
+  await modal
+    .getByRole("dialog", { name: "API Testing", exact: true })
+    .screenshot({
+      path: test.info().outputPath("page-models-expanded-grid.png"),
+      animations: "disabled",
+    })
   expect((await modelsProbe.boundingBox())!.width).toBeCloseTo(listWidth, 0)
   const modelsSummary = modelsProbe.locator("[data-verification-summary]")
   const duration = modelsSummary.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)
@@ -2439,7 +2572,7 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
     await expect(badge).toContainText("Pass")
     await expect(badge.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)).toHaveCount(1)
     await expect(
-      textProbe.getByRole("heading", {
+      textProbe.getByRole("region", {
         name: "Execution result",
         exact: true,
       }),
@@ -2590,7 +2723,10 @@ test("controls website participation from the webpage and autosaving settings", 
     name: "Auto-detect on this website",
   })
   await expect(siteSwitch).toHaveCount(0)
-  await modal.getByRole("button", { name: "Settings", exact: true }).click()
+  await modal
+    .getByTestId("verification-header")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click()
   const siteSettings = contentHost.getByRole("region", {
     name: "Settings",
     exact: true,
@@ -2611,7 +2747,10 @@ test("controls website participation from the webpage and autosaving settings", 
     pageUrl: TEST_PAGE_URL,
     selectionText: `base_url=${API_BASE_URL}\napi_key=${API_KEY}`,
   })
-  await modal.getByRole("button", { name: "Settings", exact: true }).click()
+  await modal
+    .getByTestId("verification-header")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click()
   await expect(siteSwitch).toBeChecked()
   await siteSwitch.click()
   await expect(siteSwitch).not.toBeChecked()
@@ -2635,7 +2774,10 @@ test("controls website participation from the webpage and autosaving settings", 
     pageUrl: TEST_PAGE_URL,
     selectionText: `base_url=${API_BASE_URL}\napi_key=${API_KEY}`,
   })
-  await modal.getByRole("button", { name: "Settings", exact: true }).click()
+  await modal
+    .getByTestId("verification-header")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click()
   await expect(siteSwitch).not.toBeChecked()
   await siteSwitch.click()
   await expect(siteSwitch).toBeChecked()
@@ -3016,8 +3158,21 @@ for (const state of [
       exact: true,
     })
     await expect.poll(() => requests).toBeGreaterThan(0)
-    if (state === "unrequested") await modal.getByPlaceholder("sk-...").fill("")
-    else if (state === "loading")
+    if (state === "unrequested") {
+      await modal.getByPlaceholder("sk-...").fill("")
+      await expect(
+        modal.getByRole("heading", {
+          name: enApiCheck.modal.preparation.title,
+        }),
+      ).toBeVisible()
+      await expect(selector).toBeHidden()
+      release()
+      await modal.screenshot({
+        path: test.info().outputPath("model-selector-unrequested.png"),
+        animations: "disabled",
+      })
+      return
+    } else if (state === "loading")
       await expect(selector).toHaveAttribute("aria-busy", "true")
     else await expect(selector).not.toHaveAttribute("aria-busy", "true")
     await selector.click()
@@ -3258,7 +3413,7 @@ test("recovers an interrupted webpage context request after its worker stops wit
       .getByRole("option", { name: "gpt-4o-mini", exact: true })
       .click()
     const panel = modal.getByRole("region", { name: "Context capacity test" })
-    await panel
+    await page
       .getByRole("button", { name: "Context capacity test", exact: true })
       .click()
     const checkpointWorker = await getServiceWorker(context)
@@ -3283,13 +3438,13 @@ test("recovers an interrupted webpage context request after its worker stops wit
       abandoned,
       { lock: STORAGE_LOCKS.WEB_AI_API_CHECK },
     )
-    await panel.getByRole("button", { name: "Run context probe" }).click()
-    await expect(panel.getByRole("alert")).toContainText(
+    await page.getByRole("button", { name: "Run context probe" }).click()
+    await expect(page.getByRole("alert")).toContainText(
       "charge status is unknown",
     )
     expect(requests).toBe(0)
     await expect(
-      panel.getByRole("button", { name: "Run context probe" }),
+      page.getByRole("button", { name: "Run context probe" }),
     ).toBeDisabled()
     for (const width of [1280, 380]) {
       await page.setViewportSize({ width, height: 800 })
@@ -3304,15 +3459,23 @@ test("recovers an interrupted webpage context request after its worker stops wit
         animations: "disabled",
       })
     }
-    await panel
+    await showVerificationTest(page, "Context capacity test")
+    await page
       .getByRole("button", { name: "Discard interrupted tests" })
       .click()
     await expect(
-      panel.getByRole("button", { name: "Run context probe" }),
+      page
+        .locator("[data-verification-detail]:not([hidden])")
+        .getByRole("button", { name: "Run", exact: true })
+        .first(),
     ).toBeEnabled()
-    await expect(panel.getByRole("alert")).toHaveCount(0)
+    await expect(page.getByRole("alert")).toHaveCount(0)
     await page.setViewportSize({ width: 1280, height: 720 })
-    await panel.getByRole("button", { name: "Run context probe" }).click()
+    await page
+      .locator("[data-verification-detail]:not([hidden])")
+      .getByRole("button", { name: "Run", exact: true })
+      .first()
+      .click()
     await expect.poll(() => requests).toBe(1)
     const worker = await getServiceWorker(context)
     const stored = await getPlasmoStorageRawValue(
@@ -3338,24 +3501,34 @@ test("recovers an interrupted webpage context request after its worker stops wit
     )!
     await cdp.send("ServiceWorker.stopWorker", { versionId: version.versionId })
     await expect(
-      panel.getByRole("status", { name: "Context capacity result" }),
-    ).toContainText("charge status is unknown", { timeout: 30000 })
+      modal
+        .getByTestId("verification-active-test")
+        .getByRole("status", { name: "Context capacity result" }),
+    ).toHaveAttribute("title", /charge status is unknown/, { timeout: 30000 })
     expect(requests).toBe(1)
     await panel.screenshot({
       path: test.info().outputPath("web-context-worker-interrupted.png"),
       animations: "disabled",
     })
     await page.setViewportSize({ width: 380, height: 800 })
-    await panel.scrollIntoViewIfNeeded()
+    await showVerificationTest(page, "Context capacity test")
+    const currentDetail = page.locator(
+      "[data-verification-detail]:not([hidden])",
+    )
+    await currentDetail.scrollIntoViewIfNeeded()
     expect(
-      await panel.evaluate(
+      await currentDetail.evaluate(
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true)
-    await panel.screenshot({
-      path: test.info().outputPath("web-context-worker-interrupted-narrow.png"),
-      animations: "disabled",
-    })
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test
+          .info()
+          .outputPath("web-context-worker-interrupted-narrow.png"),
+        animations: "disabled",
+      })
   } finally {
     await cdp.detach()
     server.closeAllConnections()

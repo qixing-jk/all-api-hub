@@ -288,7 +288,9 @@ function ApiCheckModalContent({ t, view, actions, refs }: ApiCheckModalProps) {
                 }
                 portalContainer={view.popoverPortalContainer ?? undefined}
                 className={
-                  preparing ? "pointer-events-none opacity-50" : undefined
+                  preparing && !view.isRunningAll
+                    ? "pointer-events-none opacity-50"
+                    : undefined
                 }
               />
             </ActionGroup>

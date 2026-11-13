@@ -18,6 +18,26 @@ const result: ApiVerificationProbeResult = {
 }
 
 describe("API check result admission", () => {
+  it("invalidates a batch retry's old verdict while retaining completed siblings", () => {
+    const session = createApiCheckProbeSession({
+      cancelRun: vi.fn(async () => undefined),
+    })
+    const previous = session.beginProbe(result.id, "previous", null, context)
+    previous.acceptResult(result)
+    previous.finish()
+    const models = { ...result, id: "models" as const }
+    const sibling = session.beginProbe(models.id, "models", null, context)
+    sibling.acceptResult(models)
+    sibling.finish()
+    const batch = session.beginBatch()
+    batch.selectProbe(result.id, "retry")
+    const retry = session.beginProbe(result.id, "retry", null, context)
+    expect(session.resultsForContext(context)).toEqual([models])
+    session.stopBatch()
+    expect(retry.acceptResult(result)).toBe(false)
+    retry.finish()
+    expect(session.resultsForContext(context)).toEqual([models])
+  })
   it("stops every active batch request while preserving a newer independent run", () => {
     const cancelRun = vi.fn(async () => undefined)
     const session = createApiCheckProbeSession({ cancelRun })

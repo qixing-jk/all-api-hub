@@ -61,9 +61,9 @@ export async function verifyOpenApiCredentialProfileModelsProbeDialog(
   if (params.expectedStatus === "handled") {
     await expect(modelsProbe).toContainText(/Pass|Fail/)
   } else {
-    await expect(modelsProbe).toContainText(
-      params.expectedStatus === "fail" ? "Fail" : "Pass",
-    )
+    await expect(
+      params.page.getByTestId("verification-active-test"),
+    ).toContainText(params.expectedStatus === "fail" ? "Fail" : "Pass")
   }
   if (typeof params.expectedModelCount === "number") {
     await expect(modelsProbe).toContainText(
@@ -71,7 +71,9 @@ export async function verifyOpenApiCredentialProfileModelsProbeDialog(
     )
   }
   if (params.expectedSummaryText) {
-    await expect(modelsProbe).toContainText(params.expectedSummaryText)
+    await expect(
+      params.page.getByTestId("verification-active-test"),
+    ).toContainText(params.expectedSummaryText)
   }
 
   if (params.closeDialog) {

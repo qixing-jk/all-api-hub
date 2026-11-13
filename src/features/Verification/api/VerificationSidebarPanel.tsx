@@ -9,8 +9,10 @@ import {
 } from "react"
 import { createPortal } from "react-dom"
 
+import { hasOpenFloatingLayer } from "~/components/ui/floating-layer"
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet"
 
+import { moveVerificationPortalHost } from "./moveVerificationPortalHost"
 import {
   VERIFICATION_SIDEBAR_SIDES,
   type VerificationSidebarSide,
@@ -71,7 +73,7 @@ export function VerificationSidebarPanel({
     (node: HTMLDivElement | null) => {
       setDrawerAttached(node !== null)
       const host = node ?? parkingRef.current
-      host?.appendChild(editorContainer)
+      if (host) moveVerificationPortalHost(editorContainer, host)
     },
     [editorContainer],
   )
@@ -173,6 +175,9 @@ export function VerificationSidebarPanel({
           onCloseAutoFocus={(event) => {
             event.preventDefault()
             if (restoreFocus) toggleRef.current?.focus()
+          }}
+          onEscapeKeyDown={(event) => {
+            if (hasOpenFloatingLayer(editorContainer)) event.preventDefault()
           }}
         >
           <SheetTitle className="sr-only">{title}</SheetTitle>

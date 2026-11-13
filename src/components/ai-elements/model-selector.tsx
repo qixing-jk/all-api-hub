@@ -184,9 +184,7 @@ export function PromptModelSelector({
             onValueChange={setSearch}
           />
           <CommandList className="max-h-60 overflow-y-auto overscroll-contain p-1">
-            {normalizedOptions.length === 0 && !showCustomOption ? (
-              <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
-            ) : null}
+            <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
 
             {showCustomOption ? (
               <CommandGroup>

@@ -92,11 +92,20 @@ async function expectSheetExit(
   const closingSurface = page.locator(
     '[data-slot="sheet-content"][data-motion-probe="closing"]',
   )
-  await close()
-  await expect(closingSurface).toHaveAttribute("data-observed-exit", "true")
-  await expect(closingSurface).toHaveAttribute("data-state", "closed")
-  await capture()
-  await expect(closingSurface).toHaveCount(0)
+  // Retain this exact node: Radix may remove it before the first assertion poll.
+  const surface = await closingSurface.elementHandle()
+  expect(surface).not.toBeNull()
+  try {
+    await close()
+    await expect
+      .poll(() => surface!.getAttribute("data-observed-exit"))
+      .toBe("true")
+    await expect.poll(() => surface!.getAttribute("data-state")).toBe("closed")
+    await capture()
+    await expect(closingSurface).toHaveCount(0)
+  } finally {
+    await surface?.dispose()
+  }
 }
 
 /** A mobile entry offers test selection; outer Close works before and after choosing. */
@@ -911,4 +920,35 @@ export async function showVerificationSettings(page: Page) {
   if ((await toggle.getAttribute("aria-expanded")) === "false")
     await toggle.click()
   await expect(page.locator("[data-verification-settings]")).toBeVisible()
+  const sheet = page.locator('[data-slot="sheet-content"][data-side="right"]')
+  if (await sheet.isVisible())
+    await expect(sheet).toHaveAccessibleName(/^(Settings|配置)$/)
+}
+
+/** Resize can reopen the mobile list; select the current test to expose its detail. */
+export async function showVerificationTest(page: Page, label: string) {
+  const settingsSheet = page.locator(
+    '[data-slot="sheet-content"][data-side="right"]',
+  )
+  if (await settingsSheet.isVisible())
+    await page
+      .getByTestId("verification-workspace")
+      .locator(".verification-workspace-controls button")
+      .click()
+  const sheet = page.locator('[data-slot="sheet-content"][data-side="left"]')
+  if (await sheet.isVisible())
+    await sheet.getByRole("button", { name: label, exact: true }).click()
+  else if (
+    (await page
+      .getByTestId("verification-active-test")
+      .getAttribute("aria-label")) !== label
+  )
+    await page.getByRole("button", { name: label, exact: true }).click()
+  await expect(page.getByTestId("verification-active-test")).toHaveAttribute(
+    "aria-label",
+    label,
+  )
+  await expect(
+    page.locator("[data-verification-detail]:not([hidden])"),
+  ).toBeVisible()
 }

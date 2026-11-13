@@ -1,5 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react"
 
+import { moveVerificationPortalHost } from "./moveVerificationPortalHost"
+
 /** Move a stable portal host across responsive targets without remounting editors. */
 export function useVerificationDetailPortal(
   detailTarget: HTMLElement | null | undefined,
@@ -22,7 +24,7 @@ export function useVerificationDetailPortal(
     // Move the portal host rather than React-owned editor nodes on resize.
     const target = detailTarget ?? detailParkingRef.current
     if (target && detailContainer.parentElement !== target)
-      target.appendChild(detailContainer)
+      moveVerificationPortalHost(detailContainer, target)
   }, [detailContainer, detailTarget])
   return { detailContainer, attachDetailParking }
 }

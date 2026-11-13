@@ -68,6 +68,7 @@ export function createApiCheckProbeSession({
         previous.tracker = null
       }
       const resultContext = contextKey(context)
+      results.delete(probeId)
       const run = { runId, tracker, cancelled: false, generation }
       active.set(probeId, run)
       return {

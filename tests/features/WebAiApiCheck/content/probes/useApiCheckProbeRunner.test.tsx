@@ -52,6 +52,51 @@ function renderProbeRunner(
 }
 
 describe("API check probe session", () => {
+  it("keeps the accepted complete response when a progress delivery arrives late", async () => {
+    let publish!: Parameters<
+      typeof generationProgress.subscribeGenerationProgress
+    >[1]
+    const subscription = vi
+      .spyOn(generationProgress, "subscribeGenerationProgress")
+      .mockImplementation((_id, callback) => {
+        publish = callback
+        return vi.fn()
+      })
+    let finish!: (value: unknown) => void
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }) as never,
+    )
+    try {
+      const { result } = renderProbeRunner()
+      act(() => result.current.runProbe("text-generation"))
+      act(() => publish({ text: "Partial", reasoning: "", tools: [], step: 1 }))
+      await act(async () =>
+        finish({
+          success: true,
+          result: {
+            id: "text-generation",
+            status: "pass",
+            latencyMs: 1,
+            summary: "Complete",
+            output: { text: "Complete answer" },
+          },
+        }),
+      )
+      const probe = () =>
+        result.current.probes.find((p) => p.id === "text-generation")!
+      expect(probe().result?.output).toEqual({ text: "Complete answer" })
+      expect(probe().progress).toBeUndefined()
+      act(() =>
+        publish({ text: "Late partial", reasoning: "", tools: [], step: 1 }),
+      )
+      expect(probe().progress).toBeUndefined()
+    } finally {
+      subscription.mockRestore()
+    }
+  })
   it("keeps partial output after stopping a rerun without reusing its earlier passing verdict", async () => {
     let publish!: Parameters<
       typeof generationProgress.subscribeGenerationProgress
@@ -91,7 +136,11 @@ describe("API check probe session", () => {
             ?.result?.status,
         ).toBe("pass"),
       )
+      expect(
+        result.current.getCurrentVerificationResultsSnapshot()?.results,
+      ).toHaveLength(1)
       act(() => result.current.runProbe("text-generation"))
+      expect(result.current.getCurrentVerificationResultsSnapshot()).toBeNull()
       act(() =>
         publish({
           text: "unfinished answer",
@@ -112,6 +161,7 @@ describe("API check probe session", () => {
         "verifyDialog.summaries.stopped",
       )
       expect(stopped().isRunning).toBe(false)
+      expect(result.current.getCurrentVerificationResultsSnapshot()).toBeNull()
       await act(async () => modelMetadataService.initialize())
     } finally {
       subscription.mockRestore()

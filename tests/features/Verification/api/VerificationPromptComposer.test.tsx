@@ -11,6 +11,27 @@ import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
 
 describe("verification prompt composer", () => {
+  it("allows plain Enter to insert a newline in an editor without an action", async () => {
+    const user = userEvent.setup()
+    function Editor() {
+      const [value, setValue] = useState("First")
+      return (
+        <VerificationPromptComposer
+          label="Prompt"
+          value={value}
+          onChange={setValue}
+        />
+      )
+    }
+    render(<Editor />, {
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    const input = screen.getByRole("textbox", { name: "Prompt" })
+    await user.click(input)
+    await user.keyboard("{Enter}Second")
+    expect(input).toHaveValue("First\nSecond")
+  })
   it("gives the current test action a visible Run label", async () => {
     const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
     render(

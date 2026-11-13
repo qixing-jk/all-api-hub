@@ -82,6 +82,40 @@ async function expandOptionalSaveFields(
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
 
+  it("saves the source page edited in optional profile fields", async () => {
+    const user = userEvent.setup()
+    await openModal()
+    await pasteIntoField(
+      user,
+      await screen.findByPlaceholderText("https://example.com/api"),
+      "https://proxy.example.com",
+    )
+    await pasteIntoField(
+      user,
+      await screen.findByPlaceholderText("sk-..."),
+      "fixture-key",
+    )
+    await expandOptionalSaveFields(user)
+    const source = screen.getByPlaceholderText(
+      "webAiApiCheck:modal.placeholders.sourceUrl",
+    )
+    await user.clear(source)
+    await user.type(source, "https://source.example.com/credentials")
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.saveToProfiles",
+      }),
+    )
+    await waitFor(() =>
+      expectTypedApiCheckMessage(
+        WebAiApiCheckMessageTypes.SaveProfile,
+        expect.objectContaining({
+          sourceUrl: "https://source.example.com/credentials",
+        }),
+      ),
+    )
+  })
+
   it("tracks single unsupported probe completion as skipped", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(

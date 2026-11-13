@@ -13,7 +13,7 @@ import { VerificationDetailContext } from "./VerificationSelectionContext"
 
 export type ProbeDetailsResult = Pick<
   ApiVerificationProbeResult,
-  "input" | "output" | "media" | "summary" | "metrics"
+  "input" | "output" | "media" | "summary" | "metrics" | "generation"
 > & {
   status?: ApiVerificationProbeResult["status"]
 }
@@ -92,8 +92,9 @@ export function VerificationProbeResult({
         ? (detailsContent ?? (
             <VerificationGenerationOutput
               {...generation}
+              progress={generation?.progress ?? result?.generation}
               question={question}
-              text={generation?.progress ? undefined : text}
+              text={generation?.running ? undefined : text}
               metrics={result?.metrics}
               requestDetails={requestDetails}
             >

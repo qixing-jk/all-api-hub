@@ -1,6 +1,9 @@
 import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
 import { createSafeGenerationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
-import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+import type {
+  VerificationGenerationProgress,
+  VerificationProgressCallback,
+} from "~/services/verification/aiApiVerification/generationProgress"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { getProbePromptOverrides } from "~/services/verification/probePromptStore"
 
@@ -67,10 +70,14 @@ export async function runApiVerificationProbe(
   const probePromptOverrides: ApiVerificationProbePromptOverrides =
     params.probePromptOverrides ?? (await getProbePromptOverrides())
 
-  const onProgress = createSafeGenerationProgressCallback(params.onProgress, [
-    params.apiKey,
-    ...Object.values(params.requestHeaders ?? {}),
-  ])
+  let generation: VerificationGenerationProgress | undefined
+  const onProgress = createSafeGenerationProgressCallback(
+    (progress) => {
+      generation = progress
+      params.onProgress?.(progress)
+    },
+    [params.apiKey, ...Object.values(params.requestHeaders ?? {})],
+  )
   let metrics: VerificationGenerationMetrics[] | undefined
   const runnerParams = {
     baseUrl: params.baseUrl,
@@ -97,6 +104,7 @@ export async function runApiVerificationProbe(
   if (!registryEntry.requiresModelId) {
     const result = await registryEntry.run(runnerParams)
     if (metrics) result.metrics = metrics
+    if (generation) result.generation = generation
     return profile
       ? { ...result, requestProfile: profile, ...enhanced }
       : result
@@ -123,6 +131,7 @@ export async function runApiVerificationProbe(
     modelId: resolvedModelId,
   })
   if (metrics) result.metrics = metrics
+  if (generation) result.generation = generation
   return params.requestProfile
     ? { ...result, requestProfile: params.requestProfile, ...enhanced }
     : result

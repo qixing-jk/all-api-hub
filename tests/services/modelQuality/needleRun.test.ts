@@ -29,6 +29,37 @@ const params = {
   seed: 123,
 }
 
+it("aborts admitted provider work when checkpoint persistence fails", async () => {
+  const failure = new Error("checkpoint unavailable")
+  const signals: AbortSignal[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      const signal = init!.signal!
+      signals.push(signal)
+      if (signals.length === 1) return completion("wrong")
+      return new Promise<Response>((_resolve, reject) =>
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        }),
+      )
+    }),
+  )
+  const run = runNeedleTest({
+    ...params,
+    concurrency: 2,
+    abortSignal: new AbortController().signal,
+    onCheckpoint: async (result) => {
+      if (result.cells.length > 0) throw failure
+    },
+  })
+  await expect(run).rejects.toBe(failure)
+  expect(signals).toHaveLength(2)
+  expect(signals[1]!.aborted).toBe(true)
+})
+
 it("cancels every admitted combination and leaves unstarted cells untouched", async () => {
   const controller = new AbortController()
   const requests: AbortSignal[] = []

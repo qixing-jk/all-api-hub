@@ -36,6 +36,33 @@ const options = {
 }
 
 describe("question answer workspace", () => {
+  it("rejects progress and a resolved answer after the workspace unmounts", async () => {
+    let captured!: QuestionAnswerRequest
+    let finish!: (result: QuestionAnswerResult) => void
+    const runner = vi.fn((request: QuestionAnswerRequest) => {
+      captured = request
+      return new Promise<QuestionAnswerResult>((resolve) => {
+        finish = resolve
+      })
+    })
+    const view = renderHook(() => useQuestionAnswerTest({ ...options, runner }))
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    await act(async () => view.result.current.run())
+    const before = view.result.current
+    view.unmount()
+    expect(captured.abortSignal.aborted).toBe(true)
+    await act(async () => {
+      captured.onProgress?.({
+        text: "Late answer",
+        reasoning: "",
+        tools: [],
+        step: 1,
+      })
+      finish(resultValue)
+    })
+    expect(view.result.current).toBe(before)
+    expect(view.result.current.result).toBeNull()
+  })
   it("keeps partial output on stop and ignores later chunks", async () => {
     let captured!: QuestionAnswerRequest
     let finish!: (result: QuestionAnswerResult) => void

@@ -13,6 +13,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { showVerificationTest } from "~~/e2e/utils/verificationWorkspace"
 
 for (const scenario of [
   "bracket",
@@ -228,7 +229,7 @@ for (const scenario of [
       const panel = page.getByRole("region", {
         name: "Context capacity test",
       })
-      const summary = panel.locator("[data-verification-summary]")
+      const summary = page.getByTestId("verification-active-test")
       const selection = panel.getByRole("button", {
         name: "Context capacity test",
         exact: true,
@@ -312,32 +313,29 @@ for (const scenario of [
         )
       }
       if (outputLimited) {
-        await expect(panel).toContainText("Context capacity:", {
+        await expect(
+          panel.getByRole("button", { name: "Stop", exact: true }),
+        ).toBeHidden({
           timeout: 30000,
         })
         await expect(
-          panel
-            .locator("[data-verification-summary]")
-            .getByText("Context ≈99.9%", { exact: true }),
+          summary.getByText("Context ≈99.9%", { exact: true }),
         ).toBeVisible()
         await expect(
-          panel.getByRole("status", { name: "Context capacity result" }),
+          summary.getByRole("status", { name: "Context capacity result" }),
         ).toContainText("metadata declares 128K tokens")
         await expect(
-          panel
-            .locator("[data-verification-summary]")
-            .getByText("Context ≈99.9%", { exact: true }),
+          summary.getByText("Context ≈99.9%", { exact: true }),
         ).toHaveClass(/bg-success-soft/)
-        await expect(panel).toContainText("Non-streaming")
         await expect(
-          panel.getByRole("button", { name: "Execution result", exact: true }),
-        ).toBeVisible()
+          page.getByRole("combobox", { name: "Test mode" }),
+        ).toContainText("Non-streaming")
         const disclosure = panel.getByRole("button", {
           name: "Test details",
           exact: true,
         })
         await expect(disclosure).toHaveAttribute("aria-expanded", "false")
-        const summaryBounds = await panel
+        const summaryBounds = await summary
           .getByRole("status", { name: "Context capacity result" })
           .boundingBox()
         const disclosureBounds = await disclosure.boundingBox()
@@ -350,17 +348,31 @@ for (const scenario of [
           path: test.info().outputPath("context-summary.png"),
           animations: "disabled",
         })
+        await page
+          .getByRole("dialog")
+          .first()
+          .screenshot({
+            path: test.info().outputPath("context-header-after.png"),
+            animations: "disabled",
+          })
         await page.setViewportSize({ width: 420, height: 900 })
-        await panel.scrollIntoViewIfNeeded()
+        await showVerificationTest(page, "Context capacity test")
+        const narrowDetail = page.locator(
+          "[data-verification-detail]:not([hidden])",
+        )
+        await narrowDetail.scrollIntoViewIfNeeded()
         expect(
           await panel.evaluate(
             (element) => element.scrollWidth <= element.clientWidth,
           ),
         ).toBe(true)
-        await panel.screenshot({
-          path: test.info().outputPath("context-summary-narrow.png"),
-          animations: "disabled",
-        })
+        await page
+          .getByRole("dialog")
+          .first()
+          .screenshot({
+            path: test.info().outputPath("context-summary-narrow.png"),
+            animations: "disabled",
+          })
         await page.setViewportSize({ width: 1280, height: 720 })
         await panel
           .getByRole("button", { name: "Test details", exact: true })
@@ -375,12 +387,11 @@ for (const scenario of [
           panel.getByText("Request and usage", { exact: true }),
         ).toBeVisible()
         await expect(
-          panel.getByText(
-            "This input length was accepted. The actual capacity may be larger.",
-            { exact: true },
-          ),
-        ).toHaveCount(1)
-        await expect(panel).toContainText("Non-streaming")
+          summary.getByRole("status", { name: "Context capacity result" }),
+        ).toHaveAttribute("title", /This input length was accepted/)
+        await expect(
+          page.getByRole("combobox", { name: "Test mode" }),
+        ).toContainText("Non-streaming")
         await expect(panel).toContainText("Largest accepted input:")
         await expect(panel).not.toContainText("An inconclusive request stopped")
         await expect(panel).not.toContainText("Capacity rejection at:")
@@ -396,19 +407,19 @@ for (const scenario of [
         await page
           .getByRole("option", { name: "Non-streaming", exact: true })
           .click()
-        await expect(panel).toContainText("Non-streaming")
+        await expect(
+          page.getByRole("combobox", { name: "Test mode" }),
+        ).toContainText("Non-streaming")
         await selection.click()
         await expect(
-          panel.getByRole("status", { name: "Context capacity result" }),
+          summary.getByRole("status", { name: "Context capacity result" }),
         ).toContainText("Context capacity:")
         expect(requests.length).toBe(completedRequests)
         await expect(
-          panel
-            .locator("[data-verification-summary]")
-            .getByText("Context ≈99.9%", { exact: true }),
+          summary.getByText("Context ≈99.9%", { exact: true }),
         ).toBeVisible()
         await expect(
-          panel.getByRole("status", { name: "Context capacity result" }),
+          summary.getByRole("status", { name: "Context capacity result" }),
         ).toContainText("metadata declares 128K tokens")
         await panel.screenshot({
           path: test.info().outputPath("context-history.png"),
@@ -441,7 +452,7 @@ for (const scenario of [
       }
       if (inconclusive) {
         await expect(
-          panel.getByRole("status", { name: "Context capacity result" }),
+          summary.getByRole("status", { name: "Context capacity result" }),
         ).toContainText("Could not confirm input capacity", { timeout: 30000 })
         await expect(panel).not.toContainText("Result saved")
         await expect(panel).not.toContainText("Tokenizer:")
@@ -451,7 +462,9 @@ for (const scenario of [
         })
         return
       }
-      await expect(panel).toContainText("Context capacity:", { timeout: 30000 })
+      await expect(
+        panel.getByRole("button", { name: "Stop", exact: true }),
+      ).toBeHidden({ timeout: 30000 })
       await expect(panel).not.toContainText("Result saved")
       if (scenario === "bracket" || streamingOverflow)
         await expect(summary.getByText(/^Context ≈/)).toHaveClass(
@@ -465,12 +478,26 @@ for (const scenario of [
         path: test.info().outputPath("context-summary.png"),
         animations: "disabled",
       })
+      await page
+        .getByRole("dialog")
+        .first()
+        .screenshot({
+          path: test.info().outputPath("context-header-after.png"),
+          animations: "disabled",
+        })
+      await expect
+        .poll(() =>
+          page
+            .locator("[data-verification-workspace-bar]")
+            .evaluate((element) => element.getBoundingClientRect().height),
+        )
+        .toBeLessThanOrEqual(96)
       await panel
         .getByRole("button", { name: "Test details", exact: true })
         .click()
       await expect(panel).toContainText("Largest accepted input:")
       await expect(panel).toContainText("Capacity rejection at:")
-      await expect(panel).toContainText("Estimated model encoding.")
+      await expect(panel).toContainText("Estimated tokenizer encoding.")
       expect(requests.length).toBeGreaterThan(2)
       expect(
         requests.every(

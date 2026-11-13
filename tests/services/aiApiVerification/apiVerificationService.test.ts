@@ -73,6 +73,44 @@ describe("apiVerificationService", () => {
     mockGenerateText.mockReset()
   })
 
+  it("retains sanitized generation evidence with the accepted result", async () => {
+    mockGenerateText.mockResolvedValue({
+      text: "OK",
+      steps: [
+        {
+          content: [
+            {
+              type: "reasoning",
+              text: "Choose OK without exposing fixture-secret",
+            },
+            { type: "text", text: "OK" },
+          ],
+        },
+      ],
+    })
+    const result = await runApiVerificationProbe({
+      probeId: "text-generation",
+      mode: "non-streaming",
+      modelId: "model",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.com",
+      apiKey: "fixture-secret",
+    })
+    expect(result).toMatchObject({
+      status: "pass",
+      generation: {
+        parts: [
+          { type: "reasoning", text: expect.stringContaining("Choose OK") },
+          { type: "text", text: "OK" },
+        ],
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain("fixture-secret")
+    const { toPersistedProbeSummary } =
+      await import("~/services/verification/verificationResultHistory/utils")
+    expect(toPersistedProbeSummary(result)).not.toHaveProperty("generation")
+  })
+
   it("runs openai-compatible suite successfully", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["m1", "m2"])
     mockGenerateText
@@ -240,7 +278,7 @@ describe("apiVerificationService", () => {
       expect(tools?.status).toBe("fail")
       for (const result of report.results) {
         expect(result.mode).toBe(
-          result.id === "models" ? undefined : mode ?? "streaming",
+          result.id === "models" ? undefined : (mode ?? "streaming"),
         )
       }
       expect(mockGenerateText).not.toHaveBeenCalled()

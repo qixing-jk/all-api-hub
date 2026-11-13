@@ -824,12 +824,17 @@ describe("webAiApiCheck background handlers", () => {
     }
     const send = vi
       .spyOn(messaging, "sendWebAiApiCheckMessage")
+      .mockRejectedValueOnce(new Error("Source frame closed"))
       .mockResolvedValue(undefined)
+    let onProgress: Parameters<
+      typeof capacity.runContextCapacity
+    >[0]["onProgress"]
     let signal: AbortSignal | undefined
     const run = vi
       .spyOn(capacity, "runContextCapacity")
       .mockImplementation(async (params) => {
         signal = params.abortSignal
+        onProgress = params.onProgress
         params.onProgress?.(progress)
         return new Promise((_, reject) =>
           params.abortSignal.addEventListener("abort", () =>
@@ -865,6 +870,9 @@ describe("webAiApiCheck background handlers", () => {
       for (const listener of tabUpdatedListeners)
         listener(947, { status: "loading" })
       expect(signal?.aborted).toBe(true)
+      send.mockClear()
+      onProgress?.(progress)
+      expect(send).not.toHaveBeenCalled()
       await expect(pending).resolves.toMatchObject({ success: false })
     } finally {
       run.mockRestore()

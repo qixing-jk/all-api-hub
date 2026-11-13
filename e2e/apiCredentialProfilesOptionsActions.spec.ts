@@ -311,10 +311,10 @@ test("filters options-page profiles and copies reusable credentials", async ({
       ])
       return Boolean(
         baseUrlBox &&
-          countBox &&
-          baseUrlBox.x < countBox.x &&
-          baseUrlBox.y < countBox.y + countBox.height &&
-          countBox.y < baseUrlBox.y + baseUrlBox.height,
+        countBox &&
+        baseUrlBox.x < countBox.x &&
+        baseUrlBox.y < countBox.y + countBox.height &&
+        countBox.y < baseUrlBox.y + baseUrlBox.height,
       )
     })
     .toBe(true)
@@ -361,10 +361,10 @@ test("filters options-page profiles and copies reusable credentials", async ({
       ])
       return Boolean(
         firstButtonBox &&
-          lastButtonBox &&
-          firstButtonBox.x < lastButtonBox.x &&
-          firstButtonBox.y < lastButtonBox.y + lastButtonBox.height &&
-          lastButtonBox.y < firstButtonBox.y + firstButtonBox.height,
+        lastButtonBox &&
+        firstButtonBox.x < lastButtonBox.x &&
+        firstButtonBox.y < lastButtonBox.y + lastButtonBox.height &&
+        lastButtonBox.y < firstButtonBox.y + firstButtonBox.height,
       )
     })
     .toBe(true)
@@ -999,7 +999,7 @@ test("imports an API credential profile into Claude Code Router", async ({
 // Each configuration field shares a grid row with one sibling, so both label
 // rows and both controls must render at the same offsets: API type pairs with
 // Model, and Test mode pairs with Client simulation.
-test("aligns the credential verification meta fields across the paired rows", async ({
+test("aligns the credential verification meta fields in the request panel", async ({
   context,
   extensionId,
   extensionDir,
@@ -1066,12 +1066,18 @@ test("aligns the credential verification meta fields across the paired rows", as
   const modeTriggerBox = await modeTrigger.boundingBox()
   const profileTriggerBox = await profileTrigger.boundingBox()
 
-  expect(modelLabelBox?.y).toBe(apiTypeLabelBox?.y)
-  expect(modelTriggerBox?.y).toBe(apiTypeTriggerBox?.y)
+  expect(modelLabelBox?.x).toBe(apiTypeLabelBox?.x)
+  expect(modelLabelBox!.y).toBeGreaterThan(
+    apiTypeTriggerBox!.y + apiTypeTriggerBox!.height,
+  )
+  expect(modelTriggerBox?.x).toBe(apiTypeTriggerBox?.x)
   expect(modelTriggerBox?.width).toBe(apiTypeTriggerBox?.width)
   expect(modelTriggerBox?.height).toBe(apiTypeTriggerBox?.height)
-  expect(profileLabelBox?.y).toBe(modeLabelBox?.y)
-  expect(profileTriggerBox?.y).toBe(modeTriggerBox?.y)
+  expect(profileLabelBox?.x).toBe(modeLabelBox?.x)
+  expect(profileTriggerBox!.y + profileTriggerBox!.height).toBeLessThan(
+    modeLabelBox!.y,
+  )
+  expect(profileTriggerBox?.x).toBe(modeTriggerBox?.x)
   expect(profileTriggerBox?.width).toBe(modeTriggerBox?.width)
   expect(profileTriggerBox?.height).toBe(modeTriggerBox?.height)
   await captureVisualViews({
@@ -1257,7 +1263,7 @@ test("verifies embedding and image models after changing the selected modality",
   await embeddingProbe
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
     .click()
-  await expect(embeddingProbe).toContainText(
+  await expect(page.getByTestId("verification-active-test")).toContainText(
     "Embedding generated successfully (dimension: 3).",
   )
   expect(requests[0]).toMatchObject({
@@ -1281,7 +1287,9 @@ test("verifies embedding and image models after changing the selected modality",
   await imageProbe
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
     .click()
-  await expect(imageProbe).toContainText("Image generation succeeded")
+  await expect(page.getByTestId("verification-active-test")).toContainText(
+    "Image generation succeeded",
+  )
   expect(requests[1]).toMatchObject({
     model: "catalog-image",
   })
@@ -1386,7 +1394,9 @@ test("previews Base64 images and plays completed video tasks", async ({
   await imageProbe
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
     .click()
-  await expect(imageProbe).toContainText("Image generation succeeded")
+  await expect(page.getByTestId("verification-active-test")).toContainText(
+    "Image generation succeeded",
+  )
   await imageProbe
     .getByRole("button", { name: "Image generation", exact: true })
     .click()
@@ -1421,7 +1431,9 @@ test("previews Base64 images and plays completed video tasks", async ({
   await videoProbe
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
     .click()
-  await expect(videoProbe).toContainText("Video generated successfully.")
+  await expect(page.getByTestId("verification-active-test")).toContainText(
+    "Video generated successfully.",
+  )
   expect(videoPosts).toBe(1)
   expect(videoPolls).toBe(2)
   await videoProbe

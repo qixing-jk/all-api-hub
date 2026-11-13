@@ -7,11 +7,13 @@ import {
   type UseVerificationToolsOptions,
 } from "~/features/Verification/api/useVerificationTools"
 import { type VerificationToolRequestParams } from "~/features/Verification/api/verificationToolRequestTypes"
+import type { PelicanRunner } from "~/features/Verification/api/verificationToolRequestTypes"
 import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification/types"
 import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const mockRunPelicanTest = vi.fn()
 
@@ -91,6 +93,59 @@ const buildPelicanResult = () => ({
 })
 
 describe("useVerificationTools", () => {
+  it("preserves stopped drawing output and rejects superseded progress and completion", async () => {
+    const first = createDeferred<Awaited<ReturnType<PelicanRunner>>>()
+    const second = createDeferred<Awaited<ReturnType<PelicanRunner>>>()
+    let oldRequest!: Parameters<PelicanRunner>[0]
+    const runner = vi
+      .fn<PelicanRunner>()
+      .mockImplementationOnce((request) => {
+        oldRequest = request
+        return first.promise
+      })
+      .mockReturnValueOnce(second.promise)
+    const { result } = renderHook(() =>
+      useVerificationTools({
+        resolveRequest: async () => buildRequest(),
+        isSupported: true,
+        isBlocked: false,
+        runPelicanRequest: runner,
+      }),
+    )
+    act(() => result.current.runPelican())
+    await waitFor(() => expect(runner).toHaveBeenCalledOnce())
+    const progress = {
+      text: "partial drawing",
+      reasoning: "",
+      tools: [],
+      step: 1,
+    }
+    act(() => {
+      oldRequest.onProgress?.(progress)
+      result.current.setPelicanExecutionMode(PELICAN_EXECUTION_MODES.Agent)
+    })
+    expect(result.current.pelicanProgress).toEqual(progress)
+    expect(result.current.pelicanExecutionMode).toBe(
+      PELICAN_EXECUTION_MODES.Reply,
+    )
+    act(() => result.current.stopPelican())
+    await act(async () => first.resolve(buildPelicanResult()))
+    expect(result.current.pelicanStatus).toBe(
+      VERIFICATION_TOOL_STATUSES.Stopped,
+    )
+    expect(result.current.pelican).toBeNull()
+    expect(result.current.pelicanProgress).toEqual(progress)
+    act(() => result.current.runPelican())
+    await waitFor(() => expect(runner).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      oldRequest.onProgress?.({ ...progress, text: "late drawing" })
+      first.resolve(buildPelicanResult())
+    })
+    expect(result.current.pelican).toBeNull()
+    expect(result.current.pelicanProgress).toBeUndefined()
+    await act(async () => second.resolve(buildPelicanResult()))
+    expect(result.current.pelicanStatus).toBe(VERIFICATION_TOOL_STATUSES.Done)
+  })
   it.each(["capacity", "needle"])(
     "runs needle and capacity independently when %s starts first",
     async (first) => {
