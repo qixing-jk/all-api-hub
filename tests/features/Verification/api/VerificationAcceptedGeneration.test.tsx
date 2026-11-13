@@ -12,6 +12,7 @@ it.each([true, false])(
   async (hasDraft) => {
     const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
     const result = {
+      summary: "Accepted answer",
       output: { text: "Final answer" },
       generation: {
         text: "stale draft",

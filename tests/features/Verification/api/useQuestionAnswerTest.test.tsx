@@ -50,7 +50,7 @@ describe("question answer workspace", () => {
     await act(async () => view.result.current.run())
     const before = view.result.current
     view.unmount()
-    expect(captured.abortSignal.aborted).toBe(true)
+    expect(captured.abortSignal?.aborted).toBe(true)
     await act(async () => {
       captured.onProgress?.({
         text: "Late answer",

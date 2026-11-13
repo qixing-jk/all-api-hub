@@ -68,9 +68,13 @@ export function VerificationGenerationOutput({
   // Accepted output takes precedence over its final streamed draft, while the
   // earlier reasoning and tool blocks remain attached to the completed request.
   if (!running && text !== undefined && progress?.parts?.length) {
-    const finalTextIndex = parts.findLastIndex(
-      (part) => part.type === VERIFICATION_GENERATION_PART_TYPES.Text,
-    )
+    let finalTextIndex = -1
+    for (let index = parts.length - 1; index >= 0; index--) {
+      if (parts[index].type === VERIFICATION_GENERATION_PART_TYPES.Text) {
+        finalTextIndex = index
+        break
+      }
+    }
     if (finalTextIndex >= 0)
       parts = parts.map((part, index) =>
         index === finalTextIndex ? { ...part, text } : part,

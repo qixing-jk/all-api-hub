@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest"
 
 import { useVerificationConcurrency } from "~/hooks/verification/useVerificationConcurrency"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { PREFERENCE_WRITE_FAILURE_TYPES } from "~/services/preferences/preferencesStore"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
 import { createDeferred } from "~~/tests/test-utils/deferred"
@@ -73,7 +74,13 @@ it("reports a rejected storage result and prevents overlapping writes", async ()
   await act(async () => result.current.update(5))
   expect(save).toHaveBeenCalledTimes(1)
   await act(async () => {
-    pending.resolve({ ok: false, preferences: DEFAULT_PREFERENCES })
+    pending.resolve({
+      ok: false,
+      reason: {
+        type: PREFERENCE_WRITE_FAILURE_TYPES.StorageError,
+        error: new Error("storage unavailable"),
+      },
+    })
     await writing
   })
   expect(result.current.error).toBe("save")
