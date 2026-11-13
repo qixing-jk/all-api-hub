@@ -1,6 +1,7 @@
 import { relative } from "node:path"
 
 const workflowOwner = "src/components/icons/WorkflowTransitionIcon.tsx"
+const sidebarOwner = "src/components/icons/SidebarIcon.tsx"
 const helpOwners = new Set([
   "src/components/icons/productIcons.ts",
   // These glyphs represent unknown state or confirmation, not a help affordance.
@@ -13,6 +14,8 @@ const workflowNames =
   /^(?:ArrowUpRight|ExternalLink|SquareArrowOutUpRight|ArrowUpRightFromSquare)(?:Icon)?$/
 const helpNames =
   /^(?:CircleHelp|HelpCircle|CircleQuestionMark|CircleQuestion)(?:Icon)?$/
+const sidebarNames =
+  /^(?:Lucide)?(?:Panel(?:Left|Right)(?:Open|Close)?|Sidebar(?:Open|Close)?)(?:Icon)?$/
 
 /**
  * Resolve the module source of an import/export node.
@@ -37,11 +40,13 @@ export const sharedUiImportsRule = {
     messages: {
       workflow:
         "Use ~/components/icons/WorkflowTransitionIcon for workflow/link arrows.",
+      sidebar:
+        'Use ~/components/icons/SidebarIcon with an explicit side="left" or side="right" for sidebar affordances.',
       help: "Use HelpHintIcon from ~/components/icons/productIcons for help affordances. Non-help question glyphs need an explicit owner in scripts/eslint/shared-ui-imports.mjs.",
       tooltip:
         "Use ~/components/Tooltip so appearance and accessible interaction stay shared.",
       namespace:
-        "Use named lucide-react imports so shared help and workflow icon boundaries can be checked.",
+        "Use named lucide-react imports so shared icon boundaries can be checked.",
     },
   },
   create(context) {
@@ -95,6 +100,9 @@ export const sharedUiImportsRule = {
         }
         if (helpNames.test(name) && !helpOwners.has(file)) {
           context.report({ node: specifier, messageId: "help" })
+        }
+        if (sidebarNames.test(name) && file !== sidebarOwner) {
+          context.report({ node: specifier, messageId: "sidebar" })
         }
       }
     }

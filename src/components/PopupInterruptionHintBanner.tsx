@@ -1,7 +1,7 @@
-import { PanelRightOpen } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { SidebarIcon } from "~/components/icons/SidebarIcon"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button, Notice } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -87,7 +87,7 @@ export default function PopupInterruptionHintBanner({
       <Notice
         tone="warning"
         className={surfaceClassName}
-        icon={<PanelRightOpen className="h-3.5 w-3.5" />}
+        icon={<SidebarIcon side="right" className="h-3.5 w-3.5" />}
         title={t("popupInterruption.title")}
         description={
           sidePanelSupported
@@ -104,7 +104,7 @@ export default function PopupInterruptionHintBanner({
               loading={isApplying}
               leftIcon={
                 sidePanelSupported ? (
-                  <PanelRightOpen className="h-3.5 w-3.5" />
+                  <SidebarIcon side="right" className="h-3.5 w-3.5" />
                 ) : (
                   <WorkflowTransitionIcon className="h-3.5 w-3.5" />
                 )
@@ -120,7 +120,7 @@ export default function PopupInterruptionHintBanner({
               type="button"
               size="sm"
               variant="ghost"
-              className="dark:text-secondary-foreground text-muted-foreground hover:bg-warning-soft min-h-(--density-control-tight) px-2.5 text-xs"
+              className="min-h-(--density-control-tight) px-2.5 text-xs text-muted-foreground hover:bg-warning-soft dark:text-secondary-foreground"
               onClick={dismiss}
               disabled={isApplying}
             >

@@ -74,6 +74,38 @@ describe("icon import lint policy", () => {
   })
 })
 
+describe("shared sidebar icon boundary", () => {
+  it.each([
+    'import { PanelLeft } from "lucide-react"',
+    'import { PanelRight as Toggle } from "lucide-react"',
+    'import { PanelLeftOpen, PanelLeftClose } from "lucide-react"',
+    'import { PanelRightOpen, PanelRightClose } from "lucide-react"',
+    'import { SidebarIcon, SidebarOpen, SidebarClose } from "lucide-react"',
+    'export { PanelRightIcon as Toggle } from "lucide-react"',
+    'import { LucidePanelLeft } from "lucide-react"',
+  ])("directs sidebar imports to their shared owner: %s", async (code) => {
+    const messages = await check(code)
+    expect(messages.length).toBeGreaterThan(0)
+    expect(
+      messages.every((message) => message.message.includes("SidebarIcon")),
+    ).toBe(true)
+  })
+
+  it("allows the owner, shared consumers, and directional edge handles", async () => {
+    expect(
+      await check(
+        'import { PanelLeft, PanelRight } from "lucide-react"',
+        "src/components/icons/SidebarIcon.tsx",
+      ),
+    ).toEqual([])
+    expect(
+      await check(
+        'import { SidebarIcon } from "~/components/icons/SidebarIcon"; import { ChevronLeft, ChevronRight } from "lucide-react"',
+      ),
+    ).toEqual([])
+  })
+})
+
 describe("shared help and tooltip boundaries", () => {
   it("rejects a locally renamed workflow arrow", async () => {
     const messages = await check(
