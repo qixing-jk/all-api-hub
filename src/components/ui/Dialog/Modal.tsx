@@ -4,11 +4,13 @@ import {
   useCallback,
   useLayoutEffect,
   useRef,
+  useState,
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
 } from "react"
 
+import { TooltipPortalContext } from "~/components/Tooltip"
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
@@ -228,6 +230,8 @@ export function Modal({
   onCloseComplete,
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const [tooltipPortalContainer, setTooltipPortalContainer] =
+    useState<HTMLDivElement | null>(null)
   const backdropPointerDownTargetRef = useRef<HTMLDivElement | null>(null)
   const focusGenerationRef = useRef(0)
   const activeFocusSessionRef = useRef<FocusSession | null>(null)
@@ -355,6 +359,12 @@ export function Modal({
     if (!closeOnEsc) return false
     if (hasOpenFloatingLayer()) return false
     const activeElement = document.activeElement
+    // Inline panes can own Escape while focus is inside them, like floating layers.
+    if (
+      activeElement instanceof Element &&
+      activeElement.closest("[data-escape-boundary]")
+    )
+      return false
     return (
       activeElement instanceof Node &&
       contentRef.current?.contains(activeElement) === true
@@ -448,6 +458,7 @@ export function Modal({
               onClick={handleBackdropClick}
             >
               <div
+                ref={setTooltipPortalContainer}
                 className={panelBaseClass}
                 data-slot="modal-panel"
                 data-testid={panelTestId}
@@ -479,7 +490,10 @@ export function Modal({
                   data-slot="modal-body"
                   className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
                 >
-                  {children}
+                  {/* Keep hints outside body scrolling and sticky pane layers. */}
+                  <TooltipPortalContext.Provider value={tooltipPortalContainer}>
+                    {children}
+                  </TooltipPortalContext.Provider>
                 </div>
 
                 {footer && (

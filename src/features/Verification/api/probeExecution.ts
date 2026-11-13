@@ -7,6 +7,7 @@ import {
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
 import {
   buildSafeProbeFailureDiagnostics,
   isAbortError,
@@ -22,7 +23,9 @@ type ProbeExecution = {
   isAbortFailure?: (error: unknown) => boolean
   readProbes: () => ProbeItemState[]
   replaceProbes: (probes: ProbeItemState[]) => void
-  execute: () => Promise<ApiVerificationProbeResult>
+  execute: (
+    onProgress: VerificationProgressCallback,
+  ) => Promise<ApiVerificationProbeResult>
   acceptResult: (
     probes: ProbeItemState[],
     result: ApiVerificationProbeResult,
@@ -60,6 +63,8 @@ export async function executeDialogProbe({
         ? {
             ...probe,
             isRunning: true,
+            progress: undefined,
+            startedAt: Date.now(),
             historical: false,
             attempts: probe.attempts + 1,
           }
@@ -84,7 +89,14 @@ export async function executeDialogProbe({
 
   let result: ApiVerificationProbeResult
   try {
-    result = await execute()
+    result = await execute((progress) => {
+      if (!isCurrent() || isStopped()) return
+      replaceProbes(
+        readProbes().map((probe) =>
+          probe.definition.id === probeId ? { ...probe, progress } : probe,
+        ),
+      )
+    })
   } catch (error) {
     if (!isCurrent()) return { result: null }
     if (isAbortFailure(error) || isStopped()) return settleStopped()

@@ -17,6 +17,105 @@ import {
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
 
+  it("attaches optional-test guidance to the save action", async () => {
+    await openModal()
+    expect(
+      screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton),
+    ).toHaveAccessibleDescription("webAiApiCheck:modal.hints.saveWithoutTest")
+  })
+
+  it("uses one source label for the disclosure and its editor", async () => {
+    await openModal()
+    expect(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.workspace.source",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("textbox", {
+        name: "aiApiVerification:verifyDialog.workspace.source",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("webAiApiCheck:modal.sourceText.label"),
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["empty", ""],
+    ["URL only", "Base URL: https://proxy.example.com/api"],
+    ["key only", "API Key: sk-test-source-priority-fixture"],
+  ])(
+    "prioritizes %s credential acquisition over test controls",
+    async (_state, sourceText) => {
+      const user = userEvent.setup()
+      await openModal({ sourceText })
+      const source = screen.getByRole("textbox", {
+        name: "aiApiVerification:verifyDialog.workspace.source",
+      })
+      const disclosure = screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.workspace.source",
+      })
+      await user.click(disclosure)
+      expect(source).toBeVisible()
+      expect(
+        screen.getByRole("heading", {
+          name: "webAiApiCheck:modal.preparation.title",
+        }),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: "webAiApiCheck:modal.actions.test",
+        }),
+      ).toBeDisabled()
+      expect(
+        screen.getByRole("region", {
+          name: "aiApiVerification:verifyDialog.sections.routine",
+          hidden: true,
+        }),
+      ).not.toBeVisible()
+      expect(
+        screen.getByLabelText("webAiApiCheck:modal.fields.baseUrl"),
+      ).toBeVisible()
+      expect(
+        screen.getByLabelText("webAiApiCheck:modal.fields.apiKey"),
+      ).toBeVisible()
+    },
+  )
+
+  it("expands optional save fields during credential acquisition and allows collapsing them", async () => {
+    const user = userEvent.setup()
+    await openModal({ sourceText: "https://proxy.example.com/api" })
+    const options = screen.getByRole("button", {
+      name: "webAiApiCheck:modal.optionalProfileFields.title",
+    })
+    expect(options).toHaveAttribute("aria-expanded", "true")
+    const notes = screen.getByLabelText("webAiApiCheck:modal.fields.notes")
+    await user.type(notes, "Keep these notes")
+    await user.click(options)
+    expect(options).toHaveAttribute("aria-expanded", "false")
+    await user.click(options)
+    expect(
+      screen.getByLabelText("webAiApiCheck:modal.fields.notes"),
+    ).toHaveValue("Keep these notes")
+  })
+
+  it("opens testing directly when the supplied credentials are complete", async () => {
+    await openModal({
+      sourceText: "https://proxy.example.com/api sk-test-complete-fixture",
+    })
+    expect(
+      screen.queryByRole("heading", {
+        name: "webAiApiCheck:modal.preparation.title",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("region", {
+        name: "aiApiVerification:verifyDialog.sections.routine",
+      }),
+    ).toBeVisible()
+  })
+
   it("does not attach a focus tooltip to the close control when credentials are detected", async () => {
     await openModal({
       sourceText:
@@ -57,6 +156,12 @@ describe("ApiCheckModalHost", () => {
       expect(baseUrlInput.value).toBe("https://proxy.example.com/api")
       expect(apiKeyInput.value).toBe("sk-test-modal-input-fixture-12345")
     })
+    expect(textarea).toBeVisible()
+    expect(textarea).toHaveFocus()
+    await user.keyboard("{Enter}Keep editing")
+    expect(textarea).toHaveValue(
+      "Base URL: https://proxy.example.com/api/v1\nAPI Key: sk-test-modal-input-fixture-12345\nKeep editing",
+    )
   })
 
   it("prefills cleaned enhanced values without showing an enhanced disclosure", async () => {

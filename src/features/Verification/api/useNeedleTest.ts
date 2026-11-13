@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { useVerificationConcurrency } from "~/hooks/verification/useVerificationConcurrency"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
 import { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } from "~/services/verification/modelQuality/contextCapacityConstants"
 import { getModelContextInfo } from "~/services/verification/modelQuality/contextTokens"
 import type { ContextCounterInfo } from "~/services/verification/modelQuality/contextTokens"
@@ -17,6 +19,7 @@ import {
   selectNeedleCells,
   type NeedleCapacityEvidence,
   type NeedleCoordinate,
+  type NeedlePlan,
   type NeedleSelection,
 } from "~/services/verification/modelQuality/needlePlan"
 import type {
@@ -37,7 +40,7 @@ import {
   MASKED_CONTEXT_HISTORY_REQUEST,
   type ContextCapacityHistoryRequestResolver,
 } from "./useContextCapacity"
-import type { VerificationToolRequestParams } from "./useVerificationTools"
+import type { VerificationToolRequestParams } from "./verificationToolRequestTypes"
 
 export type NeedleRunner = (
   params: RunNeedleParams,
@@ -64,6 +67,9 @@ type Options = {
 
 /** An independently cancellable test; planning never resolves a hidden credential. */
 export function useNeedleTest(options: Options) {
+  const concurrency = useVerificationConcurrency(
+    VERIFICATION_CONCURRENCY_KINDS.Needle,
+  )
   const { t } = useTranslation("aiApiVerification")
   const [counter, setCounter] = useState<ContextCounterInfo | null>(null)
   const [result, setResult] = useState<NeedleResult | null>(null)
@@ -72,6 +78,7 @@ export function useNeedleTest(options: Options) {
   const [controls, setControls] = useState<NeedleRunControls | null>(null)
   const [stopError, setStopError] = useState<NeedleSelection | null>(null)
   const [execution, setExecution] = useState<{
+    plan: NeedlePlan
     cells: NeedleCoordinate[]
     selection?: NeedleSelection
     settled?: boolean
@@ -222,7 +229,7 @@ export function useNeedleTest(options: Options) {
     let remoteControls: NeedleRunControls | undefined
     const cancelledCells: NeedleCoordinate[] = []
     const queuedSelections: NeedleSelection[] = []
-    setExecution({ cells, selection })
+    setExecution({ plan: approvedPlan, cells, selection })
     setRunning(true)
     setStopError(null)
     setControls({
@@ -294,6 +301,7 @@ export function useNeedleTest(options: Options) {
           selection,
           resumeFrom: previous ?? undefined,
           approvedPlan,
+          concurrency: concurrency.value,
           approvedCounter: previous?.counter ?? counter!,
           abortSignal: controller.signal,
           onControls: (value) => {
@@ -306,7 +314,11 @@ export function useNeedleTest(options: Options) {
           },
           onProgress: (progress) => {
             if (current() && !controller.signal.aborted) {
-              if (progress.reason !== NEEDLE_RUN_REASONS.Running) {
+              if (
+                progress.reason !== NEEDLE_RUN_REASONS.Running &&
+                !progress.inFlightCells?.length &&
+                !progress.preparingCells?.length
+              ) {
                 setExecution((value) =>
                   value ? { ...value, settled: true } : value,
                 )
@@ -339,6 +351,8 @@ export function useNeedleTest(options: Options) {
               ...observed.current,
               reason: NEEDLE_RUN_REASONS.Error,
               inFlight: undefined,
+              inFlightCells: undefined,
+              preparingCells: undefined,
               pending: undefined,
             })
           const name = failure instanceof Error ? failure.name : "Error"
@@ -394,17 +408,15 @@ export function useNeedleTest(options: Options) {
       }
     }
   }
+  const matrixPlan = execution?.plan ?? result?.plan ?? planning.plan
   return {
+    concurrency,
     counter,
     reference: counter
       ? getNeedleInputReference({ counter, capacity: options.capacity })
       : null,
     plan: planning.plan,
-    matrixPlan: result
-      ? expandNeedlePlan(result.plan)
-      : planning.plan
-        ? expandNeedlePlan(planning.plan)
-        : null,
+    matrixPlan: matrixPlan ? expandNeedlePlan(matrixPlan) : null,
     invalid: planning.invalid,
     result,
     historical,

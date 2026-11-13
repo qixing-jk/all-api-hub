@@ -7,6 +7,35 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 describe("Modal", () => {
+  it("lets a focused inline pane handle Escape without closing the containing dialog", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const onPaneEscape = vi.fn()
+    render(
+      <Modal isOpen onClose={onClose} title="Workspace">
+        <section
+          data-escape-boundary
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation()
+              onPaneEscape()
+            }
+          }}
+        >
+          <input aria-label="Pane draft" />
+        </section>
+        <button>Outside pane</button>
+      </Modal>,
+    )
+    await user.click(await screen.findByRole("textbox", { name: "Pane draft" }))
+    await user.keyboard("{Escape}")
+    expect(onPaneEscape).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: "Outside pane" }))
+    await user.keyboard("{Escape}")
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
   it("moves focus to an enabled control when the fallback key disables the focused action", async () => {
     function SelectionModal() {
       const [cleared, setCleared] = useState(false)

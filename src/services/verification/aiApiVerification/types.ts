@@ -1,3 +1,5 @@
+import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+
 /**
  * Canonical API verification types shared by services and UI.
  */
@@ -67,6 +69,7 @@ export const API_VERIFICATION_MEDIA_TYPES = {
 export type ApiVerificationProbeResult = {
   id: ApiVerificationProbeId
   status: ApiVerificationProbeStatus
+  metrics?: VerificationGenerationMetrics[]
   latencyMs: number
   /**
    * Generation mode selected for this probe. Absent for non-generation probes

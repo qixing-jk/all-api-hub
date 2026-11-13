@@ -34,6 +34,30 @@ function createExecution() {
 }
 
 describe("dialog probe execution", () => {
+  it("shows partial output while running and keeps it after a failure", async () => {
+    const { options } = createExecution()
+    await executeDialogProbe({
+      ...options,
+      execute: async (onProgress) => {
+        onProgress({
+          text: "Partial answer",
+          reasoning: "",
+          tools: [],
+          step: 1,
+        })
+        expect(options.readProbes()[0]).toMatchObject({
+          isRunning: true,
+          progress: { text: "Partial answer" },
+        })
+        throw new Error("connection lost")
+      },
+    })
+    expect(options.readProbes()[0]).toMatchObject({
+      isRunning: false,
+      progress: { text: "Partial answer" },
+      result: { status: "fail" },
+    })
+  })
   it.each(["pass", "fail", "stopped"] as const)(
     "replaces only the rerun probe's historical state on %s",
     async (outcome) => {

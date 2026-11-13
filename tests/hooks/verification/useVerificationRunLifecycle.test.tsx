@@ -13,6 +13,73 @@ function deferred() {
 }
 
 describe("verification run lifecycle", () => {
+  it("discovers a model before starting dependent parallel probes while manual requests stay independent", async () => {
+    const { result } = renderHook(() => useVerificationRunLifecycle())
+    const models = deferred()
+    const generations = deferred()
+    const started: string[] = []
+    let suite!: Promise<void>
+    let manual!: Promise<void>
+    act(() => {
+      suite = result.current.runSuite((signal) =>
+        result.current.runProbes(
+          API_TYPES.OPENAI_COMPATIBLE,
+          async (probe) => {
+            started.push(probe.id)
+            await (probe.id === "models" ? models.promise : generations.promise)
+          },
+          signal,
+          undefined,
+          2,
+          true,
+        ),
+      )
+      manual = result.current.runProbe("web-search", async () => {
+        started.push("manual")
+        await generations.promise
+      })
+    })
+    expect(started).toEqual(["models", "manual"])
+    await act(async () => models.resolve())
+    expect(started).toHaveLength(4)
+    expect(started.slice(2)).not.toContain("models")
+    await act(async () => {
+      generations.resolve()
+      await Promise.all([suite, manual])
+    })
+  })
+  it("fills available batch slots and stops admitting work after cancellation", async () => {
+    const { result } = renderHook(() => useVerificationRunLifecycle())
+    const pending = Array.from({ length: 10 }, deferred)
+    const started: string[] = []
+    let signal!: AbortSignal
+    let running!: Promise<void>
+    act(() => {
+      running = result.current.runSuite(async (nextSignal) => {
+        signal = nextSignal
+        await result.current.runProbes(
+          API_TYPES.OPENAI_COMPATIBLE,
+          async (probe) => {
+            const index = started.push(probe.id) - 1
+            await pending[index]!.promise
+          },
+          signal,
+          undefined,
+          2,
+        )
+      })
+    })
+    expect(started).toHaveLength(2)
+    await act(async () => pending[1]!.resolve())
+    expect(started).toHaveLength(3)
+    act(() => result.current.stopSuite())
+    expect(signal.aborted).toBe(true)
+    await act(async () => {
+      pending.forEach((item) => item.resolve())
+      await running
+    })
+    expect(started).toHaveLength(3)
+  })
   it("does not let a reset suite completion clear its replacement", async () => {
     const older = deferred()
     const newer = deferred()
@@ -69,7 +136,7 @@ describe("verification run lifecycle", () => {
     let running!: Promise<void>
     act(() => {
       running = result.current.runSuite(async (signal) => {
-        await result.current.runSequentialProbes(
+        await result.current.runProbes(
           API_TYPES.OPENAI_COMPATIBLE,
           async (probe) => {
             started.push(probe.id)

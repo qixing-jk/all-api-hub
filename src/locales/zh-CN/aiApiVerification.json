@@ -19,16 +19,71 @@
       "openaiCompatible": "OpenAI 兼容"
     },
     "associatedCredentialHint": "此站点不支持重新读取完整密钥。测试会使用 API 凭据库中与所选密钥关联的完整 Key；若尚未关联，请先前往密钥管理保存或关联密钥。",
+    "composer": {
+      "autoSave": "自动保存",
+      "keyboardHint": "Enter 运行 · Shift+Enter 换行",
+      "questionSavedScope": "问题与参考答案会保存，供以后的问答测试使用。",
+      "savedScope": "自动保存，适用于所有账号与凭据的同类测试。"
+    },
+    "concurrency": {
+      "current": "并发：{{value}}",
+      "decrease": "减少并发",
+      "increase": "增加并发",
+      "loadError": "未能读取并发设置。",
+      "locked": "本次运行使用此并发上限，停止后可调整。",
+      "needle": "同时测试组合数",
+      "needleHint": "最多同时测试此数量的长度与深度组合。设为 1 时依次执行。",
+      "options": "运行选项",
+      "optionsTrigger": "运行偏好与并发设置",
+      "presetFast": "4 快速",
+      "presetModerate": "2 适度",
+      "presetSafe": "1 稳定",
+      "presetSafeHint": "逐项依次执行，更稳定防 429 速率限制（推荐）",
+      "retry": "重试",
+      "routine": "同时运行项数",
+      "routineHint": "一键测试时最多同时运行此数量的常规测试项目。设为 1 时依次执行。",
+      "saveError": "并发设置未保存。"
+    },
     "details": {
       "input": "输入",
       "output": "输出",
       "result": "执行结果"
     },
     "errors": {
+      "loadRuntimeKeysFailed": "无法加载 API 密钥，请重试获取密钥列表。",
       "unexpected": "发生未知错误"
     },
     "generatedImagePreview": "生成图像预览",
     "generatedVideoPreview": "生成的视频预览",
+    "generation": {
+      "cachedTokens": "缓存输入 token",
+      "collapseReasoning": "收起思考过程",
+      "effectiveSpeed": "全程速度",
+      "firstOutput": "首个输出",
+      "inputTokens": "输入 token",
+      "jumpToAnswer": "查看最终回答",
+      "jumpToLatest": "跳到最新",
+      "metricsHelp": "指标说明",
+      "metricsHint": "按每一步请求展示服务返回的 token 用量和实测响应时间。首个输出包括正文、推理或工具调用；输出速度按首个输出后的生成阶段计算，全程速度包含首次等待。缺失指标不显示，短回复的速度不代表持续生成速度。",
+      "outputSpeed": "输出速度",
+      "outputTokens": "输出 token",
+      "partial": "已保留部分输出，本次响应未完成。",
+      "process": "测试过程",
+      "reasoning": "推理内容",
+      "reasoningTokens": "推理 token",
+      "requestDetails": "请求详情",
+      "responding": "正在回答",
+      "responseTime": "响应耗时",
+      "statistics": "统计",
+      "step": "第 {{step}} 步",
+      "thinking": "正在思考",
+      "toolCompleted": "已完成",
+      "toolError": "失败",
+      "toolIncomplete": "未收到结果",
+      "toolPreparing": "接收参数中",
+      "toolRunning": "执行中",
+      "waiting": "等待输出"
+    },
     "history": {
       "clear": "清除历史",
       "lastVerified": "最近测试",
@@ -74,6 +129,10 @@
       "quotaCost": "按次计费",
       "video": "生成视频并等待最多两分钟以供播放。停止只会结束本地等待；服务端任务可能继续并产生费用。"
     },
+    "modelSelector": {
+      "discoveredModels": "已探测模型",
+      "suggestedModels": "推荐模型"
+    },
     "modes": {
       "nonStreaming": "非流式",
       "streaming": "流式"
@@ -107,6 +166,7 @@
       "shortcutTooltip": "测试此 API 对 CLI 客户端的支持情况"
     },
     "requiresModelId": "请输入模型 ID 后运行该测试。",
+    "requiresRuntimeKey": "请在配置中选择 API 密钥后运行测试。",
     "sections": {
       "onDemand": "按需测试",
       "routine": "常规测试"
@@ -185,26 +245,26 @@
         "summary": "轮次：{{steps}} · 工具调用：{{calls}} 次 · {{seconds}} 秒"
       },
       "context": {
-        "about": "模型上下文测试说明",
-        "acceptedTitle": "模型上下文：已验证约 {{tokens}} tokens",
+        "about": "上下文容量测试说明",
+        "acceptedTitle": "上下文容量：已验证约 {{tokens}} tokens",
         "comparison": "元数据声明 {{expected}} tokens",
         "continue": "继续探测",
         "counter": "分词器：{{encoding}}。",
         "coverage": "上下文 ≈{{percent}}%",
-        "description": "按模型声明的上下文长度设置测试上限；未知时最高测试 1M tokens。每批累计输入预算约 8M tokens，暂停后可继续。",
+        "description": "按声明的上下文长度设置测试上限；未知时最高测试 1M tokens。每批累计输入预算约 8M tokens，暂停后可继续。",
         "details": "测试详情",
         "discard": "丢弃中断测试",
         "discardWarning": "中断测试记录已达上限。可丢弃未运行的记录后继续；这些请求的计费状态未知，正在运行的测试会保留。",
         "emptyResponse": "接口正常结束但未返回正文，尚无法确认输入接收结果。",
         "errorTitle": "探测未能完成",
-        "estimated": "模型编码为估算。",
-        "hint": "测试模型可接收的输入上下文长度。结果受接口和请求配置影响，不代表完整上下文窗口。",
+        "estimated": "分词编码为估算。",
+        "hint": "测试接口可接收的输入上下文长度。结果受接口和请求配置影响，不代表完整上下文窗口。",
         "historyError": "历史记录暂不可用，当前结果仍可查看。",
         "incompleteResponse": "未获得可判定的回复，结束原因：{{reason}}。",
         "interrupted": "请求已中断，计费状态未知，未自动重试。重新开始测试可能产生额外用量。",
         "lower": "最大已接收输入：{{tokens}} 个本地文本 token",
         "maskedHistoryHint": "这是此脱敏密钥的历史测量，当前真实凭证尚未重新验证。",
-        "matched": "已匹配模型编码；完整请求的 token 数可能不同。",
+        "matched": "已匹配分词编码；完整请求的 token 数可能不同。",
         "measuredBadge": "已接收约 {{tokens}} tokens",
         "measurementDetails": "测量依据",
         "outputLimited": "输入已接收；输出因长度限制被截断，不影响输入接收结论。",
@@ -215,7 +275,7 @@
           "budget": "已达到本批请求或累计输入预算。继续将增加用量，并从当前位置恢复。",
           "inconclusive": "未获得可判断的结果，探测已停止。可以重试或展开详情查看原因。",
           "test-limit": "这个长度的输入已被接收，实际容量可能更大。",
-          "timeout": "请求超时，未能确认这次输入是否被接收。超时不能证明输入超过模型容量。可以稍后重试；重试仍会发送长文本，并可能消耗额度。"
+          "timeout": "请求超时，未能确认这次输入是否被接收。超时不能证明输入超过容量限制。可以稍后重试；重试仍会发送长文本，并可能消耗额度。"
         },
         "reportedUsage": "接口报告用量：输入 {{input}} + 输出 {{output}} = 合计 {{total}} tokens",
         "requestDetails": "请求与用量",
@@ -223,7 +283,7 @@
         "run": "探测上下文",
         "startHint": "探测会发送长文本并消耗接口额度，达到用量预算后暂停。",
         "stoppedTitle": "探测已停止",
-        "title": "模型上下文测试",
+        "title": "上下文容量测试",
         "unableTitle": "本次未能确认输入容量",
         "upper": "容量拒绝位置：{{tokens}} 个本地文本 token"
       },
@@ -240,7 +300,7 @@
         "capped": "本次每条请求最多测试 1M 输入 tokens。",
         "cell": "本地输入 {{tokens}} tokens · 实际位置 {{depth}}% · {{latency}} 毫秒",
         "cellDetails": "单元格详情",
-        "cumulativeScore": "累计结果：可判定答案中命中 {{hits}}/{{graded}}",
+        "cumulativeScore": "累计结果：命中 {{hits}}/{{total}} 个组合",
         "custom": "自定义",
         "customLimit": "自定义长度（tokens）",
         "description": "在长文本的不同位置查找指定信息，检查模型的检索能力。",
@@ -313,6 +373,7 @@
         "score": "{{hits}}/{{total}} 命中",
         "seedHint": "留空时每次生成新样本。使用相同编号和设置，可重复测试同一份文本。",
         "seedInput": "测试样本编号（选填）",
+        "settingsPreview": "请求：{{requests}} · 输入：约 {{tokens}} tokens（输出另计）",
         "singleLengthRule": "本次只测试 {{limit}} 这一种长度。",
         "sources": {
           "custom": "你将最长测试输入设为 {{limit}}，本次按此上限选择长度。",
@@ -348,16 +409,15 @@
       },
       "prompts": {
         "editorLabel": "{{probe}} 提示词",
-        "label": "提示词",
         "resetOne": "恢复此项默认",
-        "saveFailed": "保存提示词失败：{{message}}",
-        "sharedHint": "已保存的提示词对所有测试入口生效。"
+        "saveFailed": "保存提示词失败：{{message}}"
       },
       "questionAnswer": {
         "comparison": "答案对照",
         "comparisonHint": "仅对照最终答案的文本是否一致，推理是否正确请结合完整回答判断。",
         "description": "用自定义问题查看模型的回答与推理；可填写参考答案，对照最终答案。",
         "draftChanged": "问题或参考答案已修改。当前展示的是上次运行结果，请重新运行以对照修改后的内容。",
+        "editReference": "编辑参考答案",
         "finalAnswer": "提取的最终答案",
         "loadFailed": "无法读取问答设置，请重试以加载已保存的草稿。",
         "notIdentified": "未提取到",
@@ -386,7 +446,6 @@
         "runQuestion": "本次使用的问题",
         "runReference": "本次参考答案",
         "saveFailed": "设置保存失败，当前草稿仍可用于测试。",
-        "saving": "正在保存…",
         "title": "问答测试"
       },
       "settingsTitle": "测试设置",
@@ -394,6 +453,17 @@
       "stopped": "已停止，本次结果未记录。"
     },
     "unsupportedProbeForApiType": "当前接口类型不支持 {{probe}} 探测。",
-    "warning": "结果仅适用于本次测试的接口、模型和请求配置。"
+    "warning": "结果仅适用于本次测试的接口、模型和请求配置。",
+    "workspace": {
+      "collapseSettings": "收起设置侧栏",
+      "collapseTests": "收起测试侧栏",
+      "currentTest": "当前测试",
+      "execution": "常规测试执行",
+      "expandSettings": "展开设置侧栏",
+      "expandTests": "展开测试侧栏",
+      "settings": "配置",
+      "source": "识别来源",
+      "tests": "测试项目"
+    }
   }
 }

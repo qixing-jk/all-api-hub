@@ -17,12 +17,10 @@ import {
 it.each(Object.values(API_VERIFICATION_REQUEST_PROFILES))(
   "preserves valid %s client identity through background probe dispatch",
   async (requestProfile) => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockResolvedValue({
       id: "text-generation",
       status: "pass",
@@ -192,12 +190,10 @@ describe("webAiApiCheck background handlers", () => {
   ])(
     "rejects invalid needle configuration before dispatch %#",
     async (override) => {
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
-      const durable = await import(
-        "~/services/verification/webAiApiCheck/needleCheckpoint"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
+      const durable =
+        await import("~/services/verification/webAiApiCheck/needleCheckpoint")
       const run = vi.spyOn(durable, "runDurableNeedleTest")
       background.setupWebAiApiCheckMessagingListeners()
       try {
@@ -216,15 +212,12 @@ describe("webAiApiCheck background handlers", () => {
   it.each([undefined, { tab: { id: 8 }, frameId: 2 }])(
     "routes needle progress and scoped cancellation to its active owner: %j",
     async (sender) => {
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
-      const durable = await import(
-        "~/services/verification/webAiApiCheck/needleCheckpoint"
-      )
-      const messaging = await import(
-        "~/services/verification/webAiApiCheck/messaging"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
+      const durable =
+        await import("~/services/verification/webAiApiCheck/needleCheckpoint")
+      const messaging =
+        await import("~/services/verification/webAiApiCheck/messaging")
       const { createNeedleResult } = await import("~~/tests/test-utils/needle")
       const entered = createDeferred<void>()
       const finish = createDeferred<void>()
@@ -277,15 +270,12 @@ describe("webAiApiCheck background handlers", () => {
   )
 
   it("redacts failed needle requests and preserves checkpoint recovery classification", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const durable = await import(
-      "~/services/verification/webAiApiCheck/needleCheckpoint"
-    )
-    const { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } = await import(
-      "~/services/verification/modelQuality/contextCapacityConstants"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const durable =
+      await import("~/services/verification/webAiApiCheck/needleCheckpoint")
+    const { CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME } =
+      await import("~/services/verification/modelQuality/contextCapacityConstants")
     const run = vi.spyOn(durable, "runDurableNeedleTest").mockRejectedValue(
       Object.assign(new Error("needle-secret private-header unavailable"), {
         name: CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
@@ -313,15 +303,12 @@ describe("webAiApiCheck background handlers", () => {
   it.each(["proxy", "proxy/v1beta"])(
     "normalizes pasted needle endpoints through %s and forwards the history owner on readback",
     async (prefix) => {
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
-      const durable = await import(
-        "~/services/verification/webAiApiCheck/needleCheckpoint"
-      )
-      const { needleHistory } = await import(
-        "~/services/verification/verificationResultHistory/needleHistory"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
+      const durable =
+        await import("~/services/verification/webAiApiCheck/needleCheckpoint")
+      const { needleHistory } =
+        await import("~/services/verification/verificationResultHistory/needleHistory")
       const { createNeedleResult } = await import("~~/tests/test-utils/needle")
       const historyTarget = {
         kind: "profile-model",
@@ -362,18 +349,14 @@ describe("webAiApiCheck background handlers", () => {
   )
 
   it("reports metadata, history and discard failures without claiming success", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const tokens = await import(
-      "~/services/verification/modelQuality/contextTokens"
-    )
-    const { needleHistory } = await import(
-      "~/services/verification/verificationResultHistory/needleHistory"
-    )
-    const durable = await import(
-      "~/services/verification/webAiApiCheck/needleCheckpoint"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const tokens =
+      await import("~/services/verification/modelQuality/contextTokens")
+    const { needleHistory } =
+      await import("~/services/verification/verificationResultHistory/needleHistory")
+    const durable =
+      await import("~/services/verification/webAiApiCheck/needleCheckpoint")
     const info = { encoding: "o200k_base", estimated: true }
     const metadata = vi
       .spyOn(tokens, "getModelContextInfo")
@@ -416,22 +399,17 @@ describe("webAiApiCheck background handlers", () => {
   })
 
   it("keeps one background owner across native pages, protects its checkpoint and preserves request headers", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const needle = await import(
-      "~/services/verification/modelQuality/needleRun"
-    )
-    const { createNeedlePlan } = await import(
-      "~/services/verification/modelQuality/needlePlan"
-    )
-    const { needleHistory } = await import(
-      "~/services/verification/verificationResultHistory/needleHistory"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const needle =
+      await import("~/services/verification/modelQuality/needleRun")
+    const { createNeedlePlan } =
+      await import("~/services/verification/modelQuality/needlePlan")
+    const { needleHistory } =
+      await import("~/services/verification/verificationResultHistory/needleHistory")
     const { Storage } = await import("@plasmohq/storage")
-    const { WEB_AI_API_CHECK_STORAGE_KEYS } = await import(
-      "~/services/core/storageKeys"
-    )
+    const { WEB_AI_API_CHECK_STORAGE_KEYS } =
+      await import("~/services/core/storageKeys")
     const entered = createDeferred<void>()
     const finish = createDeferred<void>()
     const counter = { encoding: "o200k_base", estimated: true }
@@ -447,7 +425,9 @@ describe("webAiApiCheck background handlers", () => {
     const run = vi
       .spyOn(needle, "runNeedleTest")
       .mockImplementationOnce(async (params) => {
-        await params.onCheckpoint?.(snapshot, { targetTokens: 8192, depth: 10 })
+        await params.onCheckpoint?.(snapshot, [
+          { targetTokens: 8192, depth: 10 },
+        ])
         entered.resolve()
         await finish.promise
         return { ...snapshot, reason: "complete" }
@@ -505,12 +485,10 @@ describe("webAiApiCheck background handlers", () => {
     save.mockRestore()
   })
   it("recovers an interrupted in-flight request without sending it again", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const capacity = await import(
-      "~/services/verification/modelQuality/contextCapacityRun"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const capacity =
+      await import("~/services/verification/modelQuality/contextCapacityRun")
     const snapshot = {
       lowerBoundTokens: 1024,
       reason: "test-limit" as const,
@@ -563,12 +541,10 @@ describe("webAiApiCheck background handlers", () => {
   })
 
   it("does not dispatch a provider request for a recovery-only lookup without a checkpoint", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const capacity = await import(
-      "~/services/verification/modelQuality/contextCapacityRun"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const capacity =
+      await import("~/services/verification/modelQuality/contextCapacityRun")
     const run = vi.spyOn(capacity, "runContextCapacity")
     try {
       background.setupWebAiApiCheckMessagingListeners()
@@ -591,15 +567,12 @@ describe("webAiApiCheck background handlers", () => {
   })
 
   it("recovers completed attempts as an explicit budget continuation", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const capacity = await import(
-      "~/services/verification/modelQuality/contextCapacityRun"
-    )
-    const history = await import(
-      "~/services/verification/verificationResultHistory/contextCapacityHistory"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const capacity =
+      await import("~/services/verification/modelQuality/contextCapacityRun")
+    const history =
+      await import("~/services/verification/verificationResultHistory/contextCapacityHistory")
     const snapshot = {
       lowerBoundTokens: 1024,
       reason: "test-limit" as const,
@@ -644,19 +617,15 @@ describe("webAiApiCheck background handlers", () => {
   })
 
   it("persists a completed capacity observation before clearing its checkpoint", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const capacity = await import(
-      "~/services/verification/modelQuality/contextCapacityRun"
-    )
-    const history = await import(
-      "~/services/verification/verificationResultHistory/contextCapacityHistory"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const capacity =
+      await import("~/services/verification/modelQuality/contextCapacityRun")
+    const history =
+      await import("~/services/verification/verificationResultHistory/contextCapacityHistory")
     const { Storage } = await import("@plasmohq/storage")
-    const { WEB_AI_API_CHECK_STORAGE_KEYS } = await import(
-      "~/services/core/storageKeys"
-    )
+    const { WEB_AI_API_CHECK_STORAGE_KEYS } =
+      await import("~/services/core/storageKeys")
     const result = {
       lowerBoundTokens: 1024,
       reason: "test-limit" as const,
@@ -708,12 +677,10 @@ describe("webAiApiCheck background handlers", () => {
     { modelId: "" },
     { baseUrl: "file:///tmp" },
   ])("rejects invalid context history identity %j", async (override) => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const history = await import(
-      "~/services/verification/verificationResultHistory/contextCapacityHistory"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const history =
+      await import("~/services/verification/verificationResultHistory/contextCapacityHistory")
     const get = vi.spyOn(history.contextCapacityHistory, "get")
     try {
       background.setupWebAiApiCheckMessagingListeners()
@@ -740,12 +707,10 @@ describe("webAiApiCheck background handlers", () => {
   it.each(["get", "save"] as const)(
     "returns a safe failure when context history %s fails",
     async (action) => {
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
-      const { contextCapacityHistory } = await import(
-        "~/services/verification/verificationResultHistory/contextCapacityHistory"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
+      const { contextCapacityHistory } =
+        await import("~/services/verification/verificationResultHistory/contextCapacityHistory")
       const operation = vi
         .spyOn(contextCapacityHistory, action)
         .mockRejectedValueOnce(new Error("private history secret"))
@@ -770,12 +735,10 @@ describe("webAiApiCheck background handlers", () => {
     },
   )
   it("returns a safe failure when interrupted-record cleanup cannot persist", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const checkpoints = await import(
-      "~/services/verification/webAiApiCheck/contextCapacityCheckpoint"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const checkpoints =
+      await import("~/services/verification/webAiApiCheck/contextCapacityCheckpoint")
     const discard = vi
       .spyOn(checkpoints, "discardInactiveContextCheckpoints")
       .mockRejectedValueOnce(new Error("private storage detail"))
@@ -792,9 +755,8 @@ describe("webAiApiCheck background handlers", () => {
   })
 
   it("restores compact webpage capacity history without exposing connection credentials", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     background.setupWebAiApiCheckMessagingListeners()
     const handler = webAiApiCheckMessageHandlers.get(
       "webAiApiCheck:contextHistory",
@@ -849,15 +811,12 @@ describe("webAiApiCheck background handlers", () => {
     ).resolves.toEqual({ success: true, summary: null })
   })
   it("returns compact context progress to the source frame and stops when its tab navigates", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const capacity = await import(
-      "~/services/verification/modelQuality/contextCapacityRun"
-    )
-    const messaging = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const capacity =
+      await import("~/services/verification/modelQuality/contextCapacityRun")
+    const messaging =
+      await import("~/services/verification/webAiApiCheck/messaging")
     const progress = {
       lowerBoundTokens: 1024,
       reason: CONTEXT_CAPACITY_REASONS.TestLimit,
@@ -923,12 +882,10 @@ describe("webAiApiCheck background handlers", () => {
   ])(
     "rejects invalid context configuration %j before dispatch",
     async (override) => {
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
-      const capacity = await import(
-        "~/services/verification/modelQuality/contextCapacityRun"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
+      const capacity =
+        await import("~/services/verification/modelQuality/contextCapacityRun")
       const run = vi.spyOn(capacity, "runContextCapacity")
       try {
         background.setupWebAiApiCheckMessagingListeners()
@@ -965,15 +922,12 @@ describe("webAiApiCheck background handlers", () => {
       inputLimit: 8192,
       counter: { encoding: "o200k_base", estimated: true },
     }
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const capacity = await import(
-      "~/services/verification/modelQuality/contextCapacityRun"
-    )
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const capacity =
+      await import("~/services/verification/modelQuality/contextCapacityRun")
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
     let signal: AbortSignal | undefined
     const spy = vi
       .spyOn(capacity, "runContextCapacity")
@@ -1026,9 +980,8 @@ describe("webAiApiCheck background handlers", () => {
     }
   })
   it("returns a completed drawing result through the background message boundary", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     const pelican = await import("~/services/verification/modelQuality/pelican")
     const drawing = {
       runAt: 1,
@@ -1039,9 +992,8 @@ describe("webAiApiCheck background handlers", () => {
     }
     const spy = vi.spyOn(pelican, "runPelicanTest").mockResolvedValue(drawing)
     try {
-      const { WebAiApiCheckMessageTypes } = await import(
-        "~/services/verification/webAiApiCheck/messaging"
-      )
+      const { WebAiApiCheckMessageTypes } =
+        await import("~/services/verification/webAiApiCheck/messaging")
       background.setupWebAiApiCheckMessagingListeners()
       const handler = webAiApiCheckMessageHandlers.get(
         WebAiApiCheckMessageTypes.RunPelican,
@@ -1063,13 +1015,11 @@ describe("webAiApiCheck background handlers", () => {
   })
 
   it("forwards agent mode and client identity and cancels the actual background drawing run", async () => {
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     const pelican = await import("~/services/verification/modelQuality/pelican")
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
     let runSignal: AbortSignal | undefined
     const spy = vi
       .spyOn(pelican, "runPelicanTest")
@@ -1119,13 +1069,11 @@ describe("webAiApiCheck background handlers", () => {
 
   it("cancels a drawing run when its sender tab is torn down", async () => {
     vi.resetModules()
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     const pelican = await import("~/services/verification/modelQuality/pelican")
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
     const runSignals = new Map<string, AbortSignal | undefined>()
     const spy = vi
       .spyOn(pelican, "runPelicanTest")
@@ -1175,12 +1123,10 @@ describe("webAiApiCheck background handlers", () => {
 
   it("rejects a drawing run whose execution mode or client identity is invalid", async () => {
     vi.resetModules()
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
     background.setupWebAiApiCheckMessagingListeners()
     const handler = webAiApiCheckMessageHandlers.get(
       WebAiApiCheckMessageTypes.RunPelican,
@@ -1228,15 +1174,13 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fails closed when reading the saved detection scope fails", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferencesStrict).mockRejectedValueOnce(
       new Error("read failed"),
     )
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     await expect(
       background.resolveWebAiApiCheckShouldPromptMessage({
         pageUrl: "https://example.com",
@@ -1246,9 +1190,8 @@ describe("webAiApiCheck background handlers", () => {
 
   it("saves a website choice and returns its actual effective scope", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.setWebAiApiCheckSiteEnabled).mockResolvedValue({
       ok: true,
       preferences: DEFAULT_PREFERENCES,
@@ -1256,12 +1199,10 @@ describe("webAiApiCheck background handlers", () => {
     vi.mocked(userPreferences.getPreferencesStrict).mockResolvedValue(
       DEFAULT_PREFERENCES,
     )
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
     background.setupWebAiApiCheckMessagingListeners()
     const handler = webAiApiCheckMessageHandlers.get(
       WebAiApiCheckMessageTypes.SetSiteAccess,
@@ -1289,9 +1230,8 @@ describe("webAiApiCheck background handlers", () => {
   it("shouldPrompt rejects missing page urls", async () => {
     vi.resetModules()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckShouldPromptMessage({
       pageUrl: "   ",
@@ -1305,9 +1245,8 @@ describe("webAiApiCheck background handlers", () => {
 
   it("shouldPrompt returns false when auto-detect is disabled", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       webAiApiCheck: {
@@ -1326,9 +1265,8 @@ describe("webAiApiCheck background handlers", () => {
       },
     })
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckShouldPromptMessage({
       pageUrl: "https://example.com/docs",
@@ -1346,9 +1284,8 @@ describe("webAiApiCheck background handlers", () => {
 
   it("shouldPrompt returns true when enabled and whitelisted", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       webAiApiCheck: {
@@ -1367,9 +1304,8 @@ describe("webAiApiCheck background handlers", () => {
       },
     })
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckShouldPromptMessage({
       pageUrl: "https://example.com/docs",
@@ -1387,17 +1323,15 @@ describe("webAiApiCheck background handlers", () => {
 
   it("shouldPrompt falls back to default web-ai-api-check preferences when the section is missing", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       webAiApiCheck: undefined,
     })
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckShouldPromptMessage({
       pageUrl: "https://example.com/docs",
@@ -1416,9 +1350,8 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels rejects requests with missing required fields", async () => {
     vi.resetModules()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "openai-compatible",
@@ -1437,9 +1370,8 @@ describe("webAiApiCheck background handlers", () => {
     vi.resetModules()
     const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "google",
@@ -1457,14 +1389,12 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels normalizes baseUrl and returns model ids", async () => {
     vi.resetModules()
-    const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/aiApi/openaiCompatible"
-    )
+    const { fetchOpenAICompatibleModelIds } =
+      await import("~/services/aiApi/openaiCompatible")
     vi.mocked(fetchOpenAICompatibleModelIds).mockResolvedValue(["m1", "m2"])
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "openai-compatible",
@@ -1490,9 +1420,8 @@ describe("webAiApiCheck background handlers", () => {
       "gemini-2.0",
     ])
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "google",
@@ -1512,17 +1441,15 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels supports anthropic and strips /v1 from baseUrl", async () => {
     vi.resetModules()
-    const { fetchAnthropicModelIds } = await import(
-      "~/services/aiApi/anthropic"
-    )
+    const { fetchAnthropicModelIds } =
+      await import("~/services/aiApi/anthropic")
     vi.mocked(fetchAnthropicModelIds).mockResolvedValue([
       "claude-3-7-sonnet-latest",
       "claude-3-5-haiku-latest",
     ])
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "anthropic",
@@ -1542,16 +1469,14 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels sanitizes apiKey in error messages", async () => {
     vi.resetModules()
-    const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/aiApi/openaiCompatible"
-    )
+    const { fetchOpenAICompatibleModelIds } =
+      await import("~/services/aiApi/openaiCompatible")
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
       new Error("Unauthorized: sk-test-secret-fixture"),
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "openai",
@@ -1567,16 +1492,14 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels does not expose message-derived status codes to analytics", async () => {
     vi.resetModules()
-    const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/aiApi/openaiCompatible"
-    )
+    const { fetchOpenAICompatibleModelIds } =
+      await import("~/services/aiApi/openaiCompatible")
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
       new Error("Unauthorized 401: sk-test-secret-fixture"),
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "openai",
@@ -1593,17 +1516,15 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels returns structured status codes for analytics classification", async () => {
     vi.resetModules()
-    const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/aiApi/openaiCompatible"
-    )
+    const { fetchOpenAICompatibleModelIds } =
+      await import("~/services/aiApi/openaiCompatible")
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue({
       statusCode: 401,
       message: "Unauthorized: sk-test-secret-fixture",
     })
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "openai",
@@ -1621,9 +1542,8 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels returns a stable error for unsupported api types after generic normalization", async () => {
     vi.resetModules()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckFetchModelsMessage({
       apiType: "custom-api" as any,
@@ -1640,9 +1560,8 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe rejects requests with missing required fields", async () => {
     vi.resetModules()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckRunProbeMessage({
       apiType: "openai-compatible",
@@ -1660,24 +1579,26 @@ describe("webAiApiCheck background handlers", () => {
 
   it("attributes a probe run to its sender tab, and accepts a sender-less one", async () => {
     vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     let probeSignal: AbortSignal | undefined
     const probeDeferred = createDeferred<ApiVerificationProbeResult>()
-    vi.mocked(runApiVerificationProbe).mockImplementation(
-      async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
-        probeSignal = abortSignal
-        return await probeDeferred.promise
-      },
-    )
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    let onProgress: Parameters<typeof runApiVerificationProbe>[0]["onProgress"]
+    vi.mocked(runApiVerificationProbe).mockImplementation(async (params) => {
+      const { abortSignal } = params
+      onProgress = params.onProgress
+      probeSignal = abortSignal
+      return await probeDeferred.promise
+    })
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     const pelican = await import("~/services/verification/modelQuality/pelican")
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const messaging =
+      await import("~/services/verification/webAiApiCheck/messaging")
+    const { WebAiApiCheckMessageTypes } = messaging
+    const sendWebAiApiCheckMessage = vi
+      .spyOn(messaging, "sendWebAiApiCheckMessage")
+      .mockResolvedValue(undefined as never)
     background.setupWebAiApiCheckMessagingListeners()
     const probeHandler = webAiApiCheckMessageHandlers.get(
       WebAiApiCheckMessageTypes.RunProbe,
@@ -1697,11 +1618,26 @@ describe("webAiApiCheck background handlers", () => {
       sender: { tab: { id: 99 } },
     })
     await vi.waitFor(() => expect(probeSignal).toBeInstanceOf(AbortSignal))
+    const progress = {
+      text: "partial answer",
+      reasoning: "",
+      tools: [],
+      step: 1,
+    }
+    onProgress?.(progress)
+    expect(sendWebAiApiCheckMessage).toHaveBeenLastCalledWith(
+      WebAiApiCheckMessageTypes.GenerationProgress,
+      { runId: "probe-run", progress },
+      { tabId: 99 },
+    )
 
     // The message handler must pass the sender tab through, or a probe still in
     // flight when its page is torn down would never be cancelled.
     tabRemovedListeners.forEach((listener) => listener(99))
     expect(probeSignal?.aborted).toBe(true)
+    vi.mocked(sendWebAiApiCheckMessage).mockClear()
+    onProgress?.(progress)
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
 
     probeDeferred.resolve({
       id: "text-generation",
@@ -1745,13 +1681,11 @@ describe("webAiApiCheck background handlers", () => {
 
   it("runProbe rejects invalid base urls before dispatching a probe", async () => {
     vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckRunProbeMessage({
       apiType: "openai-compatible",
@@ -1772,9 +1706,8 @@ describe("webAiApiCheck background handlers", () => {
     "runProbe forwards mode %s and trims blank model ids",
     async (mode) => {
       vi.resetModules()
-      const { runApiVerificationProbe } = await import(
-        "~/services/verification/aiApiVerification"
-      )
+      const { runApiVerificationProbe } =
+        await import("~/services/verification/aiApiVerification")
       vi.mocked(runApiVerificationProbe).mockResolvedValue({
         id: "text-generation",
         status: "pass",
@@ -1786,9 +1719,8 @@ describe("webAiApiCheck background handlers", () => {
         },
       } as any)
 
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
 
       const response = await background.resolveWebAiApiCheckRunProbeMessage({
         apiType: "openai-compatible",
@@ -1800,6 +1732,7 @@ describe("webAiApiCheck background handlers", () => {
       })
 
       expect(runApiVerificationProbe).toHaveBeenCalledWith({
+        onProgress: expect.any(Function),
         apiType: "openai-compatible",
         apiKey: "sk-test-secret-fixture",
         baseUrl: "https://proxy.example.com/api",
@@ -1826,13 +1759,11 @@ describe("webAiApiCheck background handlers", () => {
 
   it("runProbe rejects invalid verification modes without dispatching a probe", async () => {
     vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockClear()
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckRunProbeMessage({
       apiType: "openai-compatible",
@@ -1855,9 +1786,8 @@ describe("webAiApiCheck background handlers", () => {
     let receivedSignal: AbortSignal | undefined
     const probeDeferred = createDeferred<ApiVerificationProbeResult>()
 
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockImplementation(
       async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
         receivedSignal = abortSignal
@@ -1865,9 +1795,8 @@ describe("webAiApiCheck background handlers", () => {
       },
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const probePromise = background.resolveWebAiApiCheckRunProbeMessage({
       runId: "web-ai-api-check-run-1",
@@ -1921,9 +1850,8 @@ describe("webAiApiCheck background handlers", () => {
     const first = createDeferred<ApiVerificationProbeResult>()
     const second = createDeferred<ApiVerificationProbeResult>()
     const signals: (AbortSignal | undefined)[] = []
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe)
       .mockImplementationOnce(async ({ abortSignal }) => {
         signals.push(abortSignal)
@@ -1933,9 +1861,8 @@ describe("webAiApiCheck background handlers", () => {
         signals.push(abortSignal)
         return second.promise
       })
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     const request = {
       runId: "replacement-probe",
       apiType: "openai-compatible" as const,
@@ -1970,9 +1897,8 @@ describe("webAiApiCheck background handlers", () => {
   it("cancelRunProbe rejects malformed run ids without throwing", async () => {
     vi.resetModules()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     await expect(
       background.resolveWebAiApiCheckCancelRunProbeMessage({
@@ -1986,9 +1912,8 @@ describe("webAiApiCheck background handlers", () => {
     let receivedSignal: AbortSignal | undefined
     const probeDeferred = createDeferred<ApiVerificationProbeResult>()
 
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockImplementation(
       async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
         receivedSignal = abortSignal
@@ -1996,9 +1921,8 @@ describe("webAiApiCheck background handlers", () => {
       },
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const probePromise = background.resolveWebAiApiCheckRunProbeMessage({
       runId: "web-ai-api-check-run-throws",
@@ -2052,16 +1976,14 @@ describe("webAiApiCheck background handlers", () => {
     "runProbe preserves $probeId mode $mode and redacts thrown errors",
     async ({ probeId, mode, expectedMode }) => {
       vi.resetModules()
-      const { runApiVerificationProbe } = await import(
-        "~/services/verification/aiApiVerification"
-      )
+      const { runApiVerificationProbe } =
+        await import("~/services/verification/aiApiVerification")
       vi.mocked(runApiVerificationProbe).mockRejectedValue(
         new Error("Forbidden: sk-test-secret-fixture"),
       )
 
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
 
       const response = await background.resolveWebAiApiCheckRunProbeMessage({
         apiType: "openai-compatible",
@@ -2084,13 +2006,11 @@ describe("webAiApiCheck background handlers", () => {
     "rejects malformed client identity %j before probe dispatch",
     async (requestProfile) => {
       vi.resetModules()
-      const { runApiVerificationProbe } = await import(
-        "~/services/verification/aiApiVerification"
-      )
+      const { runApiVerificationProbe } =
+        await import("~/services/verification/aiApiVerification")
       vi.mocked(runApiVerificationProbe).mockClear()
-      const background = await import(
-        "~/services/verification/webAiApiCheck/background"
-      )
+      const background =
+        await import("~/services/verification/webAiApiCheck/background")
       const response = await background.resolveWebAiApiCheckRunProbeMessage({
         apiType: "openai",
         baseUrl: "https://example.invalid/v1",
@@ -2111,15 +2031,13 @@ describe("webAiApiCheck background handlers", () => {
 
   it("retains enhanced client identity when the probe throws", async () => {
     vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Network failed"),
     )
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
     const response = await background.resolveWebAiApiCheckRunProbeMessage({
       apiType: "openai",
       baseUrl: "https://example.invalid/v1",
@@ -2141,16 +2059,14 @@ describe("webAiApiCheck background handlers", () => {
 
   it("runProbe omits analytics HTTP status when status is message-derived", async () => {
     vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Forbidden 401: sk-test-secret-fixture"),
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckRunProbeMessage({
       apiType: "openai-compatible",
@@ -2171,17 +2087,15 @@ describe("webAiApiCheck background handlers", () => {
 
   it("runProbe exposes structured HTTP status for analytics classification", async () => {
     vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockRejectedValue({
       response: { status: 401 },
       message: "Forbidden: sk-test-secret-fixture",
     })
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckRunProbeMessage({
       apiType: "openai-compatible",
@@ -2198,16 +2112,14 @@ describe("webAiApiCheck background handlers", () => {
 
   it("runProbe omits summary params when the failure has no inferable status code", async () => {
     vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
+    const { runApiVerificationProbe } =
+      await import("~/services/verification/aiApiVerification")
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Socket hang up: sk-test-secret-fixture"),
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckRunProbeMessage({
       apiType: "openai-compatible",
@@ -2237,9 +2149,8 @@ describe("webAiApiCheck background handlers", () => {
   it("saveProfile normalizes baseUrl and persists a profile without echoing secrets", async () => {
     vi.resetModules()
 
-    const { apiCredentialProfilesStorage } = await import(
-      "~/services/apiCredentialProfiles/storage/profiles"
-    )
+    const { apiCredentialProfilesStorage } =
+      await import("~/services/apiCredentialProfiles/storage/profiles")
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
       id: "p-1",
@@ -2253,9 +2164,8 @@ describe("webAiApiCheck background handlers", () => {
       updatedAt: 1,
     } as any)
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckSaveProfileMessage({
       apiType: "openai-compatible",
@@ -2289,9 +2199,8 @@ describe("webAiApiCheck background handlers", () => {
   it("saveProfile passes a trimmed HTTP(S) source URL through and drops invalid ones", async () => {
     vi.resetModules()
 
-    const { apiCredentialProfilesStorage } = await import(
-      "~/services/apiCredentialProfiles/storage/profiles"
-    )
+    const { apiCredentialProfilesStorage } =
+      await import("~/services/apiCredentialProfiles/storage/profiles")
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
       id: "p-source",
@@ -2305,9 +2214,8 @@ describe("webAiApiCheck background handlers", () => {
       updatedAt: 1,
     } as any)
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     await background.resolveWebAiApiCheckSaveProfileMessage({
       apiType: "openai-compatible",
@@ -2341,9 +2249,8 @@ describe("webAiApiCheck background handlers", () => {
   it("saveProfile rejects missing required fields", async () => {
     vi.resetModules()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckSaveProfileMessage({
       apiType: "openai-compatible",
@@ -2361,9 +2268,8 @@ describe("webAiApiCheck background handlers", () => {
   it("saveProfile rejects invalid base urls", async () => {
     vi.resetModules()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckSaveProfileMessage({
       apiType: "openai-compatible",
@@ -2381,17 +2287,15 @@ describe("webAiApiCheck background handlers", () => {
   it("saveProfile sanitizes apiKey when profile creation fails", async () => {
     vi.resetModules()
 
-    const { apiCredentialProfilesStorage } = await import(
-      "~/services/apiCredentialProfiles/storage/profiles"
-    )
+    const { apiCredentialProfilesStorage } =
+      await import("~/services/apiCredentialProfiles/storage/profiles")
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockRejectedValue(
       new Error("duplicate key sk-test-secret-fixture"),
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckSaveProfileMessage({
       apiType: "openai-compatible",
@@ -2416,16 +2320,14 @@ describe("webAiApiCheck background handlers", () => {
   it("falls back to a generic error when the top-level handler throws", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockRejectedValue(
       new Error("preferences exploded"),
     )
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response = await background.resolveWebAiApiCheckShouldPromptMessage({
       pageUrl: "https://example.com/docs",
@@ -2440,9 +2342,8 @@ describe("webAiApiCheck background handlers", () => {
   it("records Base URL history and returns current suggestions", async () => {
     vi.resetModules()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     const recordUseSpy = vi
       .spyOn(webAiApiCheckBaseUrlHistoryStorage, "recordUse")
       .mockResolvedValue({
@@ -2460,9 +2361,8 @@ describe("webAiApiCheck background handlers", () => {
         useCount: 2,
       },
     ])
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response =
       await background.resolveWebAiApiCheckRecordBaseUrlHistoryMessage({
@@ -2491,9 +2391,8 @@ describe("webAiApiCheck background handlers", () => {
     onWebAiApiCheckMessageMock.mockClear()
     webAiApiCheckMessageHandlers.clear()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     const getSuggestionsSpy = vi
       .spyOn(webAiApiCheckBaseUrlHistoryStorage, "getSuggestions")
       .mockResolvedValue([
@@ -2504,12 +2403,10 @@ describe("webAiApiCheck background handlers", () => {
           matchedSourceOrigin: "https://docs.example.invalid",
         },
       ])
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
 
     background.setupWebAiApiCheckMessagingListeners()
     const handler = webAiApiCheckMessageHandlers.get(
@@ -2545,19 +2442,16 @@ describe("webAiApiCheck background handlers", () => {
     onWebAiApiCheckMessageMock.mockClear()
     webAiApiCheckMessageHandlers.clear()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     vi.spyOn(
       webAiApiCheckBaseUrlHistoryStorage,
       "getSuggestions",
     ).mockRejectedValue(new Error("database path leaked"))
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
 
     background.setupWebAiApiCheckMessagingListeners()
     const handler = webAiApiCheckMessageHandlers.get(
@@ -2580,9 +2474,8 @@ describe("webAiApiCheck background handlers", () => {
   it("records no Base URL history for blank input but still returns suggestions", async () => {
     vi.resetModules()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     const recordUseSpy = vi.spyOn(
       webAiApiCheckBaseUrlHistoryStorage,
       "recordUse",
@@ -2591,9 +2484,8 @@ describe("webAiApiCheck background handlers", () => {
       webAiApiCheckBaseUrlHistoryStorage,
       "getSuggestions",
     ).mockResolvedValue([])
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response =
       await background.resolveWebAiApiCheckRecordBaseUrlHistoryMessage({
@@ -2608,15 +2500,13 @@ describe("webAiApiCheck background handlers", () => {
   it("keeps record Base URL history best-effort when storage fails", async () => {
     vi.resetModules()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     vi.spyOn(webAiApiCheckBaseUrlHistoryStorage, "recordUse").mockRejectedValue(
       new Error("storage unavailable"),
     )
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response =
       await background.resolveWebAiApiCheckRecordBaseUrlHistoryMessage({
@@ -2630,9 +2520,8 @@ describe("webAiApiCheck background handlers", () => {
   it("removes a stored Base URL history entry and returns current suggestions", async () => {
     vi.resetModules()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     const removeBaseUrlSpy = vi
       .spyOn(webAiApiCheckBaseUrlHistoryStorage, "removeBaseUrl")
       .mockResolvedValue({
@@ -2649,9 +2538,8 @@ describe("webAiApiCheck background handlers", () => {
           useCount: 1,
         },
       ])
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response =
       await background.resolveWebAiApiCheckRemoveBaseUrlHistoryMessage({
@@ -2681,9 +2569,8 @@ describe("webAiApiCheck background handlers", () => {
   it("removes no Base URL history for blank input but still returns suggestions", async () => {
     vi.resetModules()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     const removeBaseUrlSpy = vi.spyOn(
       webAiApiCheckBaseUrlHistoryStorage,
       "removeBaseUrl",
@@ -2692,9 +2579,8 @@ describe("webAiApiCheck background handlers", () => {
       webAiApiCheckBaseUrlHistoryStorage,
       "getSuggestions",
     ).mockResolvedValue([])
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response =
       await background.resolveWebAiApiCheckRemoveBaseUrlHistoryMessage({
@@ -2709,16 +2595,14 @@ describe("webAiApiCheck background handlers", () => {
   it("keeps remove Base URL history best-effort when storage fails", async () => {
     vi.resetModules()
 
-    const { webAiApiCheckBaseUrlHistoryStorage } = await import(
-      "~/services/verification/webAiApiCheck/baseUrlHistory"
-    )
+    const { webAiApiCheckBaseUrlHistoryStorage } =
+      await import("~/services/verification/webAiApiCheck/baseUrlHistory")
     vi.spyOn(
       webAiApiCheckBaseUrlHistoryStorage,
       "removeBaseUrl",
     ).mockRejectedValue(new Error("storage unavailable"))
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
 
     const response =
       await background.resolveWebAiApiCheckRemoveBaseUrlHistoryMessage({
@@ -2733,12 +2617,10 @@ describe("webAiApiCheck background handlers", () => {
     vi.resetModules()
     onWebAiApiCheckMessageMock.mockClear()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
     const { tagStorage } = await import("~/services/tags/tagStorage")
 
     vi.mocked(tagStorage.listTags).mockResolvedValue([
@@ -2838,12 +2720,10 @@ describe("webAiApiCheck background handlers", () => {
     vi.resetModules()
     onWebAiApiCheckMessageMock.mockClear()
 
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-    const { WebAiApiCheckMessageTypes } = await import(
-      "~/services/verification/webAiApiCheck/messaging"
-    )
+    const background =
+      await import("~/services/verification/webAiApiCheck/background")
+    const { WebAiApiCheckMessageTypes } =
+      await import("~/services/verification/webAiApiCheck/messaging")
     const { tagStorage } = await import("~/services/tags/tagStorage")
 
     vi.mocked(tagStorage.listTags).mockRejectedValue(new Error("list failed"))

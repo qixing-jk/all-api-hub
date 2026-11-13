@@ -257,6 +257,7 @@ test("filters cached site announcements and marks unread items as read", async (
   extensionId,
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
   const serviceWorker = await getServiceWorker(context)
   await seedSiteAnnouncementsStore(serviceWorker, createAnnouncementStore())
 
@@ -334,6 +335,10 @@ test("filters cached site announcements and marks unread items as read", async (
       ),
     ).toBeGreaterThan(parseFloat(font))
     await expect(markdown.locator("code")).toBeVisible()
+    await markdown.screenshot({
+      path: test.info().outputPath(`announcement-markdown-${textSize}.png`),
+      animations: "disabled",
+    })
   }
 
   await page.getByRole("button", { name: "Mark read" }).click()

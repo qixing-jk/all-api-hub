@@ -69,8 +69,6 @@ const config: KnipConfig = {
     "@wxt-dev/auto-icons",
     // Spawned by plugins/react-devtools-auto.ts during development.
     "react-devtools",
-    // On-demand UI generator configured by components.json.
-    "shadcn",
   ],
   // Exported props and signature types may be used only within their owning
   // module. Keep checking types that have no internal or external consumers.

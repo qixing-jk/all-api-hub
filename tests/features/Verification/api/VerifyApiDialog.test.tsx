@@ -1,11 +1,13 @@
 import { act, renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
+import { I18nextProvider } from "react-i18next"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { VerifyApiDialog } from "~/features/Verification/api"
 import { useVerifyApiDialogViewModel } from "~/features/Verification/api/useVerifyApiDialogViewModel"
+import enVerification from "~/locales/en/aiApiVerification.json"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import * as siteCapabilities from "~/services/apiAdapters/registry"
@@ -18,7 +20,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  API_TYPES,
+  type ApiVerificationProbeResult,
+} from "~/services/verification/aiApiVerification"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -32,6 +37,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 import {
   fireEvent,
@@ -41,6 +47,10 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 import { stubVerificationOwnerStoresUnavailable } from "~~/tests/test-utils/verificationOwnerStores"
+import {
+  getVerificationHeader,
+  mockVerificationWorkspaceLayout,
+} from "~~/tests/test-utils/verificationWorkspace"
 
 const {
   mockFetchAccountTokens,
@@ -167,9 +177,155 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("VerifyApiDialog", () => {
+  it("locks the model in an idle test while another single probe is running", async () => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({
+      en: { aiApiVerification: enVerification },
+    })
+    mockFetchAccountTokens.mockResolvedValue([
+      buildNewApiToken({ key: "synthetic-key" }),
+    ])
+    const pending = createDeferred<ApiVerificationProbeResult>()
+    mockRunApiVerificationProbe.mockReturnValue(pending.promise)
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerifyApiDialog
+          isOpen
+          onClose={vi.fn()}
+          account={buildDisplaySiteData()}
+          initialModelId="gpt-first"
+        />
+      </I18nextProvider>,
+    )
+    const row = await screen.findByTestId("verify-probe-text-generation")
+    const run = within(row).getByRole("button", { name: "Run" })
+    await waitFor(() => expect(run).toBeEnabled())
+    await user.click(run)
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledOnce(),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "Tool/function calling",
+      }),
+    )
+    const detail = screen
+      .getByRole("textbox", {
+        name: "Tool/function calling prompt",
+      })
+      .closest("[data-verification-detail]")!
+    expect(
+      within(detail as HTMLElement).getByRole("button", {
+        name: "Model",
+      }),
+    ).toBeDisabled()
+    await act(async () => {
+      pending.resolve({
+        id: "text-generation",
+        status: "pass",
+        latencyMs: 1,
+        summary: "Finished",
+      })
+    })
+    expect(
+      within(detail as HTMLElement).getByRole("button", {
+        name: "Model",
+      }),
+    ).toBeEnabled()
+  })
+  it("enables testing after retry retrieves a usable runtime key", async () => {
+    const account = buildDisplaySiteData()
+    const runtime = buildNewApiRuntimeKey(
+      account,
+      buildNewApiToken({ key: "synthetic-runtime-key", status: 1 }),
+    )
+    mockFetchDisplayAccountRuntimeKeys
+      .mockRejectedValueOnce(new Error("Unavailable"))
+      .mockResolvedValue([runtime])
+    const { result } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: { isOpen: true, account, initialModelId: "test-model" },
+    })
+    await waitFor(() => expect(result.current.runtimeKeysLoadFailed).toBe(true))
+    expect(result.current.canRunAll).toBe(false)
+    await act(async () => {
+      await result.current.reloadRuntimeKeys()
+    })
+    expect(result.current.runtimeKeysLoadFailed).toBe(false)
+    expect(result.current.selectedRuntimeKey?.id).toBe(runtime.id)
+    expect(result.current.canRunAll).toBe(true)
+    expect(result.current.tools.contextCapacity?.canRun).toBe(true)
+  })
+  it("distinguishes runtime-key loading failure from an empty inventory and retries it", async () => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({
+      en: { aiApiVerification: enVerification },
+    })
+    mockFetchDisplayAccountRuntimeKeys
+      .mockRejectedValueOnce(new Error("Unavailable"))
+      .mockResolvedValue([])
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerifyApiDialog
+          isOpen
+          onClose={vi.fn()}
+          account={buildDisplaySiteData()}
+          initialModelId="test-model"
+        />
+      </I18nextProvider>,
+    )
+    const failure = await screen.findByText(
+      "Could not load API keys. Retry to retrieve the key list.",
+    )
+    expect(failure).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Retry" }))
+    expect(
+      await screen.findByText(
+        "Select an API key in configuration to run tests.",
+      ),
+    ).toBeVisible()
+    expect(failure).not.toBeInTheDocument()
+    expect(mockFetchDisplayAccountRuntimeKeys).toHaveBeenCalledTimes(2)
+  })
+  it("explains missing runtime keys and opens configuration with a management destination", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(900)
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({
+      en: { aiApiVerification: enVerification },
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([])
+    const onManageModelKey = vi.fn()
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerifyApiDialog
+          isOpen
+          onClose={vi.fn()}
+          account={buildDisplaySiteData()}
+          initialModelId="test-model"
+          onManageModelKey={onManageModelKey}
+        />
+      </I18nextProvider>,
+    )
+    expect(
+      await screen.findByText(
+        "Select an API key in configuration to run tests.",
+      ),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "Expand configuration" }),
+    )
+    const manage = await screen.findByRole("button", {
+      name: enVerification.verifyDialog.actions.manageModelKey,
+    })
+    expect(manage).toBeVisible()
+    await user.click(manage)
+    expect(onManageModelKey).toHaveBeenCalledOnce()
+  })
   afterEach(() => vi.restoreAllMocks())
 
   beforeEach(async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1440)
+    mockVerificationWorkspaceLayout()
+
     // This suite passes accounts in as props instead of persisting them, so the
     // orphan sweep must not read the empty owner stores as "every owner is gone".
     stubVerificationOwnerStoresUnavailable()
@@ -281,9 +437,8 @@ describe("VerifyApiDialog", () => {
   it.each(["known-secret", "sk-known-secret"])(
     "restores account capacity for effective New API secret %s without fetching credentials",
     async (secret) => {
-      const { contextCapacityHistory } = await import(
-        "~/services/verification/verificationResultHistory/contextCapacityHistory"
-      )
+      const { contextCapacityHistory } =
+        await import("~/services/verification/verificationResultHistory/contextCapacityHistory")
       const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
       const runtime = buildServiceCredentialRuntimeKey(account, {
         kind: "singleton_service_key",
@@ -408,9 +563,8 @@ describe("VerifyApiDialog", () => {
           })
         }),
       )
-      const capacity = await import(
-        "~/services/verification/modelQuality/contextCapacityRun"
-      )
+      const capacity =
+        await import("~/services/verification/modelQuality/contextCapacityRun")
       const run = vi.spyOn(capacity, "runContextCapacity").mockResolvedValue({
         lowerBoundTokens: 4096,
         reason: "test-limit",
@@ -695,8 +849,8 @@ describe("VerifyApiDialog", () => {
       })
       mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
       mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
-      const oldRequest = createDeferred<any>()
-      const newRequest = createDeferred<any>()
+      const oldRequest = createDeferred<ApiVerificationProbeResult>()
+      const newRequest = createDeferred<ApiVerificationProbeResult>()
       mockRunApiVerificationProbe
         .mockReturnValueOnce(oldRequest.promise)
         .mockReturnValueOnce(newRequest.promise)
@@ -844,9 +998,11 @@ describe("VerifyApiDialog", () => {
     await act(async () => finishProbe())
     expect(
       await within(
-        within(probeCard).getByRole("button", {
-          name: "aiApiVerification:verifyDialog.probes.text-generation",
-        }),
+        within(probeCard)
+          .getByRole("button", {
+            name: "aiApiVerification:verifyDialog.probes.text-generation",
+          })
+          .closest<HTMLElement>("[data-verification-summary]")!,
       ).findByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
     await waitFor(() => expect(modeSelect).toBeEnabled())
@@ -858,9 +1014,11 @@ describe("VerifyApiDialog", () => {
     )
     expect(
       within(
-        within(probeCard).getByRole("button", {
-          name: "aiApiVerification:verifyDialog.probes.text-generation",
-        }),
+        within(probeCard)
+          .getByRole("button", {
+            name: "aiApiVerification:verifyDialog.probes.text-generation",
+          })
+          .closest<HTMLElement>("[data-verification-summary]")!,
       ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
   })
@@ -979,7 +1137,7 @@ describe("VerifyApiDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("runs and retries a single probe and shows collapsible input/output", async () => {
+  it("runs and retries a single probe and shows input/output in request details", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -1044,7 +1202,9 @@ describe("VerifyApiDialog", () => {
     )
 
     expect(
-      await within(probeCard).findByText("Text generation succeeded"),
+      await within(getVerificationHeader(probeCard)).findByText(
+        "Text generation succeeded",
+      ),
     ).toBeInTheDocument()
 
     expect(
@@ -1058,17 +1218,13 @@ describe("VerifyApiDialog", () => {
         name: "aiApiVerification:verifyDialog.probes.text-generation",
       }),
     )
-    const inputToggle = within(probeCard).getByRole("button", {
-      name: "aiApiVerification:verifyDialog.details.input",
-    })
-    fireEvent.click(inputToggle)
+    await userEvent.setup().click(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.generation.requestDetails",
+      }),
+    )
     expect(await within(probeCard).findByText(/"foo": 1/)).toBeInTheDocument()
 
-    const outputToggle = within(probeCard).getByRole("button", {
-      name: "aiApiVerification:verifyDialog.details.output",
-    })
-    expect(outputToggle).toHaveAttribute("aria-expanded", "false")
-    fireEvent.click(outputToggle)
     expect(await within(probeCard).findByText(/"bar": 2/)).toBeInTheDocument()
   })
 
@@ -1675,7 +1831,7 @@ describe("VerifyApiDialog", () => {
       expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1),
     )
     expect(
-      await within(probeCard).findByText(
+      await within(getVerificationHeader(probeCard)).findByText(
         "aiApiVerification:verifyDialog.unsupportedProbeForApiType",
       ),
     ).toBeInTheDocument()
@@ -1778,8 +1934,10 @@ describe("VerifyApiDialog", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("aiApiVerification:verifyDialog.status.unverified"),
-      ).toBeInTheDocument()
+        screen.queryByText(
+          "aiApiVerification:verifyDialog.history.lastVerified",
+        ),
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -2153,7 +2311,7 @@ describe("VerifyApiDialog", () => {
       expect(receivedSignal?.aborted).toBe(true)
     })
     expect(
-      await within(probeCard).findByText(
+      await within(getVerificationHeader(probeCard)).findByText(
         "aiApiVerification:verifyDialog.summaries.stopped",
       ),
     ).toBeInTheDocument()
@@ -2164,9 +2322,11 @@ describe("VerifyApiDialog", () => {
     ).toBeInTheDocument()
     expect(
       within(
-        within(probeCard).getByRole("button", {
-          name: "aiApiVerification:verifyDialog.probes.text-generation",
-        }),
+        within(probeCard)
+          .getByRole("button", {
+            name: "aiApiVerification:verifyDialog.probes.text-generation",
+          })
+          .closest<HTMLElement>("[data-verification-summary]")!,
       ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
   })
@@ -2338,9 +2498,11 @@ describe("VerifyApiDialog", () => {
     })
     expect(
       within(
-        screen.getByRole("button", {
-          name: "aiApiVerification:verifyDialog.probes.text-generation",
-        }),
+        screen
+          .getByRole("button", {
+            name: "aiApiVerification:verifyDialog.probes.text-generation",
+          })
+          .closest<HTMLElement>("[data-verification-summary]")!,
       ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
     ).toBeVisible()
     expect(
@@ -2494,9 +2656,8 @@ describe("VerifyApiDialog", () => {
     })
     await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
 
-    const historyModule = await import(
-      "~/services/verification/verificationResultHistory"
-    )
+    const historyModule =
+      await import("~/services/verification/verificationResultHistory")
     vi.spyOn(
       historyModule,
       "createVerificationHistorySummary",
@@ -2561,7 +2722,7 @@ describe("VerifyApiDialog", () => {
     await waitFor(() => expect(result.current.tools.isRunning).toBe(true))
     expect(result.current.canClose).toBe(false)
 
-    const probe = createDeferred<any>()
+    const probe = createDeferred<ApiVerificationProbeResult>()
     mockRunApiVerificationProbe.mockReturnValue(probe.promise)
     expect(result.current.canRunAll).toBe(true)
     act(() => {
@@ -2713,5 +2874,52 @@ describe("VerifyApiDialog", () => {
         name: "aiApiVerification:verifyDialog.tools.pelican.title",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("allows selecting a model directly inside the AI conversation prompt composer", async () => {
+    const user = userEvent.setup()
+    const account = buildDisplaySiteData()
+    const runtimeKey = {
+      ...buildNewApiRuntimeKey(account, buildNewApiToken()),
+      modelAccess: {
+        groups: null,
+        allowedModelIds: null,
+        suggestedModelIds: ["gpt-4o", "gpt-4o-mini"],
+      },
+    }
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([runtimeKey])
+
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        initialModelId="gpt-4o"
+        account={account}
+      />,
+    )
+
+    // Select text generation probe to open its conversation composer
+    const textGenRow = await screen.findByTestId("verify-probe-text-generation")
+    const textGenButton = within(textGenRow).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.probes.text-generation",
+    })
+    await user.click(textGenButton)
+
+    const modelSelectorTrigger = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.meta.model",
+    })
+    expect(modelSelectorTrigger).toHaveTextContent("gpt-4o")
+
+    await user.click(modelSelectorTrigger)
+
+    const miniOption = await screen.findByText("gpt-4o-mini")
+    await user.click(miniOption)
+
+    expect(modelSelectorTrigger).toHaveTextContent("gpt-4o-mini")
+
+    const sidebarInput = screen.getByRole("textbox", {
+      name: "aiApiVerification:verifyDialog.meta.model",
+    })
+    expect(sidebarInput).toHaveValue("gpt-4o-mini")
   })
 })

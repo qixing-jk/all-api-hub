@@ -7,12 +7,14 @@ import {
   contentApiCheckAnalyticsScope,
   getProbeAnalyticsResult,
 } from "~/features/WebAiApiCheck/content/modal/apiCheckModalAnalytics"
+import { API_CHECK_VALIDATION_ERRORS } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import type {
   ApiCheckValidationError,
   ProbeItemState,
 } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { createApiCheckProbeSession } from "~/features/WebAiApiCheck/content/probes/apiCheckProbeSession"
 import { useModelMetadataLookup } from "~/hooks/verification/useModelMetadataLookup"
+import { useVerificationConcurrency } from "~/hooks/verification/useVerificationConcurrency"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -23,34 +25,42 @@ import {
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-  type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/facts/verification"
 import {
-  API_VERIFICATION_PROBE_IDS,
-  API_VERIFICATION_PROBE_STATUSES,
   getProbesForModality,
   resolveModelTestModality,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
+  type ApiVerificationProbePromptOverrides,
   type ApiVerificationProbeResult,
   type ApiVerificationRequestProfile,
-  type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
+import { subscribeGenerationProgress } from "~/services/verification/webAiApiCheck/generationProgress"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
-type ApiCheckProbeResultWithAnalyticsCategory = ApiVerificationProbeResult & {
-  analyticsErrorCategory?: ProductAnalyticsErrorCategory
-}
+import { runApiCheckProbeBatch } from "./apiCheckProbeBatch"
+import {
+  API_CHECK_TEST_STOP_PHASES,
+  buildFailedProbeResult,
+  buildMissingModelResult,
+  buildProbeState,
+  markProbeStopped,
+  type ApiCheckProbeResultWithAnalyticsCategory,
+  type ApiCheckRunProbeOptions,
+  type ApiCheckTestStopPhase,
+} from "./apiCheckProbeState"
 
 type UseApiCheckProbeRunnerOptions = {
+  getProbePromptOverrides?: () => ApiVerificationProbePromptOverrides
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>
   apiType: ApiVerificationApiType
   verificationMode: ApiVerificationMode
@@ -64,13 +74,6 @@ type UseApiCheckProbeRunnerOptions = {
   recordBaseUrlHistory: (baseUrl: string) => void
 }
 
-type RunProbeOptions = {
-  trackIndividual?: boolean
-  recordHistory?: boolean
-  runId?: string
-  shouldIgnoreResult?: () => boolean
-}
-
 interface VerificationResultsSnapshot {
   apiType: ApiVerificationApiType
   baseUrl: string
@@ -80,63 +83,10 @@ interface VerificationResultsSnapshot {
 }
 
 /**
- * Build the initial probe UI state for the selected API type.
- */
-function buildProbeState(
-  apiType: ApiVerificationApiType,
-  modality?: ModelTestModality,
-): ProbeItemState[] {
-  return getProbesForModality(modality, apiType).map(
-    (def): ProbeItemState => ({
-      id: def.id,
-      requiresModelId: def.requiresModelId,
-      isRunning: false,
-      attempts: 0,
-      result: null,
-    }),
-  )
-}
-
-/**
- * Clear the running flag when a late probe result should no longer update UI data.
- */
-function markProbeNotRunning(
-  probes: ProbeItemState[],
-  probeId: ApiVerificationProbeId,
-): ProbeItemState[] {
-  return probes.map((probe) =>
-    probe.id === probeId ? { ...probe, isRunning: false } : probe,
-  )
-}
-
-/**
- * Build the local validation result for probes that cannot run without a model.
- */
-function buildMissingModelResult(
-  apiType: ApiVerificationApiType,
-  baseUrl: string,
-  probeId: ApiVerificationProbeId,
-  mode: ApiVerificationMode,
-): ApiCheckProbeResultWithAnalyticsCategory {
-  return {
-    id: probeId,
-    mode,
-    status: API_VERIFICATION_PROBE_STATUSES.Fail,
-    latencyMs: 0,
-    summary: "No model id provided",
-    summaryKey: "verifyDialog.requiresModelId",
-    analyticsErrorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-    input: {
-      apiType,
-      baseUrl,
-    },
-  }
-}
-
-/**
  * Owns the API verification probe state machine, cancellation, and probe analytics.
  */
 export function useApiCheckProbeRunner({
+  getProbePromptOverrides,
   t,
   apiType,
   verificationMode,
@@ -149,6 +99,9 @@ export function useApiCheckProbeRunner({
   setValidationError,
   recordBaseUrlHistory,
 }: UseApiCheckProbeRunnerOptions) {
+  const concurrency = useVerificationConcurrency(
+    VERIFICATION_CONCURRENCY_KINDS.Routine,
+  )
   const [isRunningAll, setIsRunningAll] = useState(false)
   const [probes, setProbes] = useState<ProbeItemState[]>(() =>
     buildProbeState(apiType, resolveModelTestModality({ modelId })),
@@ -189,13 +142,12 @@ export function useApiCheckProbeRunner({
     })
   }, [probeDefinitions])
   const [isStoppingRunAll, setIsStoppingRunAll] = useState(false)
-  const [testStopPhase, setTestStopPhase] = useState<
-    "stopping" | "stopped" | null
-  >(null)
+  const [testStopPhase, setTestStopPhase] =
+    useState<ApiCheckTestStopPhase | null>(null)
   const testStoppedMessage =
-    testStopPhase === "stopping"
+    testStopPhase === API_CHECK_TEST_STOP_PHASES.Stopping
       ? t("webAiApiCheck:modal.messages.stoppingTest")
-      : testStopPhase === "stopped"
+      : testStopPhase === API_CHECK_TEST_STOP_PHASES.Stopped
         ? t("webAiApiCheck:modal.messages.testStopped")
         : null
   const [session] = useState(() =>
@@ -267,7 +219,7 @@ export function useApiCheckProbeRunner({
   const runProbe = useCallback(
     async (
       probeId: ApiVerificationProbeId,
-      options: RunProbeOptions = {},
+      options: ApiCheckRunProbeOptions = {},
     ): Promise<ApiCheckProbeResultWithAnalyticsCategory | null> => {
       const shouldTrack = options.trackIndividual !== false
       const tracker = shouldTrack
@@ -283,7 +235,7 @@ export function useApiCheckProbeRunner({
       const trimmedApiKey = apiKey.trim()
 
       if (!trimmedBaseUrl || !trimmedApiKey) {
-        setValidationError("missing-credentials")
+        setValidationError(API_CHECK_VALIDATION_ERRORS.MissingCredentials)
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
@@ -306,7 +258,7 @@ export function useApiCheckProbeRunner({
           probeId,
           verificationMode,
         )
-        setValidationError("missing-model")
+        setValidationError(API_CHECK_VALIDATION_ERRORS.MissingModel)
         setProbes((prev) =>
           prev.map((probe) =>
             probe.id === probeId
@@ -333,6 +285,8 @@ export function useApiCheckProbeRunner({
             ? {
                 ...probe,
                 isRunning: true,
+                progress: undefined,
+                startedAt: Date.now(),
                 attempts: probe.attempts + 1,
               }
             : probe,
@@ -347,6 +301,25 @@ export function useApiCheckProbeRunner({
         apiKey,
         modelId,
       })
+      const unsubscribe = subscribeGenerationProgress(runId, (progress) => {
+        if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) return
+        setProbes((prev) =>
+          prev.map((probe) =>
+            probe.id === probeId ? { ...probe, progress } : probe,
+          ),
+        )
+      })
+      const acceptResult = (result: ApiVerificationProbeResult) => {
+        if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) {
+          if (run.isCurrent()) {
+            setProbes((prev) =>
+              markProbeStopped(prev, probeId, verificationMode),
+            )
+          }
+          return false
+        }
+        return updateProbeResult(probeId, result, run.acceptResult)
+      }
       try {
         const response = await sendWebAiApiCheckMessage(
           WebAiApiCheckMessageTypes.RunProbe,
@@ -362,19 +335,14 @@ export function useApiCheckProbeRunner({
             apiKey: trimmedApiKey,
             modelId: modelId.trim() || undefined,
             probeId,
+            probePromptOverrides: getProbePromptOverrides?.(),
           },
         )
 
         if (response.success && response.result) {
           const result =
             response.result as ApiCheckProbeResultWithAnalyticsCategory
-          if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) {
-            if (run.isCurrent()) {
-              setProbes((prev) => markProbeNotRunning(prev, probeId))
-            }
-            return null
-          }
-          if (!updateProbeResult(probeId, result, run.acceptResult)) return null
+          if (!acceptResult(result)) return null
           const analyticsResult = getProbeAnalyticsResult(result)
           tracker?.complete(analyticsResult, {
             ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
@@ -393,33 +361,16 @@ export function useApiCheckProbeRunner({
         const failedResponse = response.success ? undefined : response
         const message = failedResponse?.error
 
-        const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
-          id: probeId,
-          mode:
-            probeId === API_VERIFICATION_PROBE_IDS.Models
-              ? undefined
-              : verificationMode,
-          status: API_VERIFICATION_PROBE_STATUSES.Fail,
-          latencyMs: 0,
-          summary: message || "Probe failed.",
-          ...(message
-            ? {}
-            : { summaryKey: "webAiApiCheck:modal.errors.runProbeFailed" }),
-          analyticsErrorCategory: failedResponse?.errorCategory,
-          input: {
-            apiType,
-            baseUrl: trimmedBaseUrl,
-          },
-        }
+        const fallback = buildFailedProbeResult(
+          apiType,
+          trimmedBaseUrl,
+          probeId,
+          verificationMode,
+          failedResponse?.errorCategory,
+          message,
+        )
 
-        if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) {
-          if (run.isCurrent()) {
-            setProbes((prev) => markProbeNotRunning(prev, probeId))
-          }
-          return null
-        }
-
-        if (!updateProbeResult(probeId, fallback, run.acceptResult)) return null
+        if (!acceptResult(fallback)) return null
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory:
             failedResponse?.errorCategory ??
@@ -432,29 +383,15 @@ export function useApiCheckProbeRunner({
       } catch (error) {
         const errorCategory =
           resolveProductAnalyticsErrorCategoryFromError(error)
-        const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
-          id: probeId,
-          mode:
-            probeId === API_VERIFICATION_PROBE_IDS.Models
-              ? undefined
-              : verificationMode,
-          status: API_VERIFICATION_PROBE_STATUSES.Fail,
-          latencyMs: 0,
-          summary: "Probe failed.",
-          summaryKey: "webAiApiCheck:modal.errors.runProbeFailed",
-          analyticsErrorCategory: errorCategory,
-          input: {
-            apiType,
-            baseUrl: trimmedBaseUrl,
-          },
-        }
-        if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) {
-          if (run.isCurrent()) {
-            setProbes((prev) => markProbeNotRunning(prev, probeId))
-          }
-          return null
-        }
-        if (!updateProbeResult(probeId, fallback, run.acceptResult)) return null
+        const fallback = buildFailedProbeResult(
+          apiType,
+          trimmedBaseUrl,
+          probeId,
+          verificationMode,
+          errorCategory,
+        )
+
+        if (!acceptResult(fallback)) return null
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory,
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
@@ -463,6 +400,7 @@ export function useApiCheckProbeRunner({
         })
         return fallback
       } finally {
+        unsubscribe()
         run.finish()
       }
     },
@@ -476,6 +414,7 @@ export function useApiCheckProbeRunner({
       setValidationError,
       trigger,
       updateProbeResult,
+      getProbePromptOverrides,
       session,
       verificationMode,
       requestProfile,
@@ -495,179 +434,69 @@ export function useApiCheckProbeRunner({
       )
         return
 
-      setProbes((prev) => markProbeNotRunning(prev, probeId))
+      setProbes((prev) => markProbeStopped(prev, probeId, verificationMode))
     },
-    [apiType, trigger, session],
+    [apiType, trigger, session, verificationMode],
   )
 
   const stopRunAll = useCallback(() => {
     if (!session.stopBatch()) return
     setIsStoppingRunAll(true)
-    setTestStopPhase("stopping")
+    setTestStopPhase(API_CHECK_TEST_STOP_PHASES.Stopping)
   }, [session])
 
-  const runAll = useCallback(async () => {
-    const tracker = startProductAnalyticsAction({
-      ...contentApiCheckAnalyticsScope,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbeSuite,
-    })
-
-    const trimmedBaseUrl = baseUrl.trim()
-    const trimmedApiKey = apiKey.trim()
-    if (!trimmedBaseUrl || !trimmedApiKey) {
-      setValidationError("missing-credentials")
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
-          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
-          itemCount: probeDefinitions.length,
-          successCount: 0,
-          failureCount: 0,
-          skippedCount: probeDefinitions.length,
-        }),
-      })
-      return
-    }
-    recordBaseUrlHistory(trimmedBaseUrl)
-
-    const batch = session.beginBatch()
-    setIsStoppingRunAll(false)
-    setTestStopPhase(null)
-    setIsRunningAll(true)
-    const results: ApiCheckProbeResultWithAnalyticsCategory[] = []
-    try {
-      for (const def of probeDefinitions) {
-        if (batch.isStopped()) break
-        if (def.requiresModelId && !modelId.trim()) {
-          const fallback = buildMissingModelResult(
-            apiType,
-            trimmedBaseUrl,
-            def.id,
-            verificationMode,
-          )
-          setValidationError("missing-model")
+  const runAll = useCallback(
+    () =>
+      runApiCheckProbeBatch({
+        apiKey,
+        apiType,
+        baseUrl,
+        modelId,
+        probeDefinitions,
+        recordBaseUrlHistory,
+        runProbe,
+        concurrency: concurrency.value,
+        setValidationError,
+        trigger,
+        verificationMode,
+        session,
+        recordMissingModel: (id, result) =>
           setProbes((prev) =>
             prev.map((probe) =>
-              probe.id === def.id
-                ? {
-                    ...probe,
-                    attempts: probe.attempts + 1,
-                    result: fallback,
-                  }
+              probe.id === id
+                ? { ...probe, attempts: probe.attempts + 1, result }
                 : probe,
             ),
-          )
-          results.push(fallback)
-          continue
-        }
-        // Run sequentially so the UI updates progressively and we avoid bursty network traffic.
-        const runId = safeRandomUUID(`web-ai-api-check-${def.id}`)
-        batch.selectProbe(def.id)
-        const result = await runProbe(def.id, {
-          trackIndividual: false,
-          recordHistory: false,
-          runId,
-          shouldIgnoreResult: () => batch.isStopped(),
-        })
-        if (!batch.isStopped() && result) results.push(result)
-        if (batch.isStopped()) break
-      }
-
-      if (batch.isStopped()) {
-        const successCount = results.filter(
-          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
-        ).length
-        const failureCount = results.filter(
-          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-        ).length
-        const skippedCount = Math.max(
-          probeDefinitions.length - successCount - failureCount,
-          0,
-        )
-
-        if (batch.isCurrent()) {
-          setProbes((prev) =>
-            prev.map((probe) =>
-              probe.isRunning ? { ...probe, isRunning: false } : probe,
-            ),
-          )
-          setTestStopPhase("stopped")
-        }
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-          insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
-            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
-            itemCount: probeDefinitions.length,
-            successCount,
-            failureCount,
-            skippedCount,
-            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
-          }),
-        })
-        return
-      }
-
-      const successCount = results.filter(
-        (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
-      ).length
-      const failureCount = results.filter(
-        (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-      ).length
-      const skippedCount = results.filter(
-        (result) =>
-          result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported,
-      ).length
-      const analyticsResult =
-        failureCount > 0
-          ? PRODUCT_ANALYTICS_RESULTS.Failure
-          : successCount > 0
-            ? PRODUCT_ANALYTICS_RESULTS.Success
-            : PRODUCT_ANALYTICS_RESULTS.Skipped
-
-      tracker.complete(analyticsResult, {
-        ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
-          ? {
-              errorCategory:
-                results.find(
-                  (result) =>
-                    result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-                )?.analyticsErrorCategory ??
-                resolveProductAnalyticsErrorCategoryFromProbeResult(
-                  results.find(
-                    (result) =>
-                      result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-                  ),
-                ),
-            }
-          : {}),
-        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
-          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
-          itemCount: results.length || probeDefinitions.length,
-          successCount,
-          failureCount,
-          skippedCount,
-        }),
-      })
-    } finally {
-      if (batch.finish()) {
-        setIsRunningAll(false)
-        setIsStoppingRunAll(false)
-      }
-    }
-  }, [
-    apiKey,
-    apiType,
-    baseUrl,
-    modelId,
-    probeDefinitions,
-    recordBaseUrlHistory,
-    runProbe,
-    setValidationError,
-    trigger,
-    verificationMode,
-    session,
-  ])
+          ),
+        onStart: () => {
+          setIsStoppingRunAll(false)
+          setTestStopPhase(null)
+          setIsRunningAll(true)
+        },
+        onStopped: () => setTestStopPhase(API_CHECK_TEST_STOP_PHASES.Stopped),
+        onFinish: () => {
+          setIsRunningAll(false)
+          setIsStoppingRunAll(false)
+        },
+      }),
+    [
+      apiKey,
+      apiType,
+      baseUrl,
+      modelId,
+      probeDefinitions,
+      recordBaseUrlHistory,
+      runProbe,
+      concurrency.value,
+      setValidationError,
+      trigger,
+      verificationMode,
+      session,
+    ],
+  )
 
   return {
+    concurrency,
     modelModality,
     probes,
     isRunningAll,

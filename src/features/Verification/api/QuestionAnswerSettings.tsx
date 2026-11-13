@@ -1,21 +1,19 @@
-import { RotateCcw } from "lucide-react"
-import { useId } from "react"
+import { useContext, useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  Alert,
-  Button,
-  CollapsibleSection,
-  Spinner,
-  Textarea,
-} from "~/components/ui"
-import { cn } from "~/lib/utils"
+import { Alert, Button, CollapsibleSection, Textarea } from "~/components/ui"
 import { DEFAULT_QUESTION_ANSWER_SETTINGS } from "~/services/verification/modelQuality/questionAnswerSettings"
 
+import { VERIFICATION_SETTINGS_ERROR_PHASES } from "./types"
 import type { QuestionAnswerController } from "./useQuestionAnswerTest"
+import { VerificationPromptComposer } from "./VerificationPromptComposer"
+import {
+  VERIFICATION_SETTINGS_TARGETS,
+  VerificationSelectionContext,
+} from "./VerificationSelectionContext"
 import { VerificationSettingsCard } from "./VerificationSettingsCard"
 
-/** Edit and reset the default question like the other verification prompts. */
+/** Keep grading configuration in the settings sidebar. */
 export function QuestionAnswerSettings({
   controller,
 }: {
@@ -25,89 +23,16 @@ export function QuestionAnswerSettings({
   const id = useId()
   const { settings, updateSettings, ready, running } = controller
   const disabled = !ready || running
-  const questionEmpty = ready && !settings.question.trim()
-  const modified =
-    settings.question !== DEFAULT_QUESTION_ANSWER_SETTINGS.question ||
-    settings.referenceAnswer !==
-      DEFAULT_QUESTION_ANSWER_SETTINGS.referenceAnswer
-  const fieldClass =
-    "grid min-w-0 items-start gap-3 @sm/question-answer:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]"
-
+  const fieldClass = "grid min-w-0 items-start gap-3"
   return (
-    <VerificationSettingsCard>
+    <VerificationSettingsCard running={running}>
       <div className="@container/question-answer space-y-4">
-        <div className={fieldClass}>
-          <div className="min-w-0">
-            <div className="flex min-h-8 items-center gap-1.5">
-              <label
-                htmlFor={`${id}-question`}
-                className="text-foreground text-sm font-medium"
-              >
-                {t("verifyDialog.tools.questionAnswer.question")}
-              </label>
-              {modified ? (
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={t("verifyDialog.tools.questionAnswer.reset")}
-                  title={t("verifyDialog.tools.questionAnswer.reset")}
-                  disabled={disabled}
-                  onClick={() => {
-                    updateSettings(DEFAULT_QUESTION_ANSWER_SETTINGS)
-                    void controller.saveSettings()
-                  }}
-                >
-                  <RotateCcw aria-hidden="true" />
-                </Button>
-              ) : null}
-              {controller.saving ? (
-                <span
-                  role="status"
-                  aria-label={t("verifyDialog.tools.questionAnswer.saving")}
-                >
-                  <Spinner size="sm" variant="gray" />
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <div className="min-w-0">
-            <Textarea
-              id={`${id}-question`}
-              autoSize
-              rows={2}
-              value={settings.question}
-              disabled={disabled}
-              aria-invalid={questionEmpty || undefined}
-              aria-describedby={
-                questionEmpty ? `${id}-question-error` : undefined
-              }
-              variant={questionEmpty ? "error" : "default"}
-              onChange={(event) =>
-                updateSettings({ question: event.target.value })
-              }
-              onBlur={() => void controller.saveSettings()}
-              className={cn(
-                "bg-card max-h-32! min-h-16 text-xs",
-                !questionEmpty && "border-border-subtle",
-              )}
-            />
-            {questionEmpty ? (
-              <p
-                id={`${id}-question-error`}
-                className="text-destructive-text mt-density-1 text-xs"
-              >
-                {t("verifyDialog.tools.questionAnswer.questionRequired")}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <div className="border-border-subtle border-t pt-4">
+        <div className="space-y-3">
           <div className={fieldClass}>
             <div className="min-w-0">
               <label
                 htmlFor={`${id}-reference`}
-                className="text-foreground text-sm font-medium"
+                className="text-sm font-medium text-foreground"
               >
                 {t("verifyDialog.tools.questionAnswer.reference")}
               </label>
@@ -115,6 +40,7 @@ export function QuestionAnswerSettings({
             <div className="min-w-0">
               <Textarea
                 id={`${id}-reference`}
+                data-verification-reference-answer
                 autoSize
                 rows={1}
                 value={settings.referenceAnswer}
@@ -123,14 +49,14 @@ export function QuestionAnswerSettings({
                   updateSettings({ referenceAnswer: event.target.value })
                 }
                 onBlur={() => void controller.saveSettings()}
-                className="border-border-subtle bg-card max-h-32! min-h-9 text-xs"
+                className="max-h-32! min-h-9 border-border-subtle bg-card text-xs"
               />
               <CollapsibleSection
                 title={t("verifyDialog.tools.questionAnswer.rules.title")}
                 buttonClassName="mt-density-1 px-0"
                 panelClassName="bg-transparent rounded-none border-0 px-0"
               >
-                <ul className="text-muted-foreground list-disc space-y-2 pl-4 text-xs leading-relaxed">
+                <ul className="list-disc space-y-2 pl-4 text-xs leading-relaxed text-muted-foreground">
                   <li>
                     {t("verifyDialog.tools.questionAnswer.rules.extraction")}
                   </li>
@@ -149,9 +75,80 @@ export function QuestionAnswerSettings({
           </div>
         </div>
       </div>
+    </VerificationSettingsCard>
+  )
+}
+
+/** The editable question and send action stay beside the conversation. */
+export function QuestionAnswerComposer({
+  controller,
+}: {
+  controller: QuestionAnswerController
+}) {
+  const { t } = useTranslation("aiApiVerification")
+  const workspace = useContext(VerificationSelectionContext)
+  const { settings, ready, running } = controller
+  const modified =
+    settings.question !== DEFAULT_QUESTION_ANSWER_SETTINGS.question ||
+    settings.referenceAnswer !==
+      DEFAULT_QUESTION_ANSWER_SETTINGS.referenceAnswer
+  return (
+    <>
+      <VerificationPromptComposer
+        label={t("verifyDialog.tools.questionAnswer.question")}
+        value={settings.question}
+        onChange={(question) => controller.updateSettings({ question })}
+        onBlur={() => void controller.saveSettings()}
+        disabled={!ready}
+        running={running}
+        saving={controller.saving}
+        saveHint={t("verifyDialog.composer.questionSavedScope")}
+        accessory={
+          workspace?.openSettings ? (
+            <div className="flex min-w-0 items-center gap-2 text-xs">
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto shrink-0 p-0 text-xs"
+                onClick={() =>
+                  workspace.openSettings?.(
+                    VERIFICATION_SETTINGS_TARGETS.ReferenceAnswer,
+                  )
+                }
+              >
+                {t("verifyDialog.tools.questionAnswer.editReference")}
+              </Button>
+              {settings.referenceAnswer.trim() ? (
+                <span className="truncate text-muted-foreground">
+                  {settings.referenceAnswer}
+                </span>
+              ) : null}
+            </div>
+          ) : undefined
+        }
+        error={
+          ready && !settings.question.trim()
+            ? t("verifyDialog.tools.questionAnswer.questionRequired")
+            : undefined
+        }
+        resetLabel={t("verifyDialog.tools.questionAnswer.reset")}
+        onReset={
+          modified
+            ? () => {
+                controller.updateSettings(DEFAULT_QUESTION_ANSWER_SETTINGS)
+                void controller.saveSettings()
+              }
+            : undefined
+        }
+        action={{
+          onClick: running ? controller.stop : controller.run,
+          disabled: !running && !controller.canRun,
+        }}
+      />
       {controller.saveError ? (
         <Alert variant="warning">
-          {controller.saveError === "load"
+          {controller.saveError === VERIFICATION_SETTINGS_ERROR_PHASES.Load
             ? t("verifyDialog.tools.questionAnswer.loadFailed")
             : t("verifyDialog.tools.questionAnswer.saveFailed")}
           <Button
@@ -167,6 +164,6 @@ export function QuestionAnswerSettings({
           </Button>
         </Alert>
       ) : null}
-    </VerificationSettingsCard>
+    </>
   )
 }

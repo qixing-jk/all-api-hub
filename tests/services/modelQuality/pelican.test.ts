@@ -48,6 +48,31 @@ const BASE_PARAMS = {
 }
 
 describe("drawing prompt delivery", () => {
+  it("retains a generated SVG while marking a length-truncated response incomplete", async () => {
+    server.use(
+      http.post(`${baseUrl}/v1/chat/completions`, () =>
+        HttpResponse.json({
+          id: "truncated",
+          object: "chat.completion",
+          created: 0,
+          model: "quality-model",
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content: `${SVG}\nPartial explanation`,
+              },
+              finish_reason: "length",
+            },
+          ],
+        }),
+      ),
+    )
+    const result = await runPelicanTest(BASE_PARAMS)
+    expect(result.svg).toBe(SVG)
+    expect(result.responseComplete).toBe(false)
+  })
   it("delivers custom request headers to the drawing provider", async () => {
     let tenant: string | null = null
     server.use(

@@ -28,3 +28,14 @@ it("allows stopping an active cell before cancellation is requested", () => {
     getNeedleMatrixState(result, true, [coordinate]).getCell(coordinate),
   ).toMatchObject({ state: "running", canStop: true })
 })
+
+it("keeps admitted parallel cells active while an error stops new work", () => {
+  const coordinate = { targetTokens: 8192, depth: 10 }
+  const result = createNeedleResult({
+    reason: "error",
+    inFlightCells: [coordinate],
+  })
+  expect(
+    getNeedleMatrixState(result, true, [coordinate]).getCell(coordinate),
+  ).toMatchObject({ state: "running", canStop: true })
+})

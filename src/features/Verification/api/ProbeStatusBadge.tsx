@@ -1,10 +1,26 @@
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { VerificationRequestProfileBadge } from "~/features/Verification/api/VerificationRequestProfile"
-import { VerificationStatusBadge } from "~/features/Verification/api/VerificationStatusBadge"
+import {
+  getVerificationStatusLabel,
+  VerificationStatusBadge,
+} from "~/features/Verification/api/VerificationStatusBadge"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 
 import { VERIFICATION_HISTORY_KINDS } from "./VerificationHistoryBadge"
+
+/** Use the same outcome in compact navigation and the full result badge. */
+export function getVerificationProbeStatusLabel(
+  t: TFunction<"aiApiVerification">,
+  result: ApiVerificationProbeResult,
+) {
+  return result.summaryKey === "verifyDialog.summaries.stopped"
+    ? t("verifyDialog.status.stopped")
+    : result.summaryKey === "verifyDialog.summaries.requestTimedOut"
+      ? t("verifyDialog.status.timeout")
+      : getVerificationStatusLabel(t, result.status)
+}
 
 /**
  * Render the probe status alongside its recorded generation mode and latency.
@@ -24,13 +40,7 @@ export function ProbeStatusBadge({
         status={result.status}
         latencyMs={result.latencyMs}
         mode={result.mode}
-        label={
-          result.summaryKey === "verifyDialog.summaries.stopped"
-            ? t("verifyDialog.status.stopped")
-            : result.summaryKey === "verifyDialog.summaries.requestTimedOut"
-              ? t("verifyDialog.status.timeout")
-              : undefined
-        }
+        label={getVerificationProbeStatusLabel(t, result)}
       />
       <VerificationRequestProfileBadge
         profile={result.requestProfile}

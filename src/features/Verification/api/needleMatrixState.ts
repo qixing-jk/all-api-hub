@@ -32,11 +32,14 @@ export function getNeedleMatrixState(
   plannedCells: NeedleCoordinate[],
 ) {
   const live =
-    running && result?.reason === NEEDLE_RUN_REASONS.Running
+    running &&
+    (result?.reason === NEEDLE_RUN_REASONS.Running ||
+      result?.inFlightCells?.length ||
+      result?.preparingCells?.length)
       ? result
       : undefined
-  const pending = running ? live?.pending ?? plannedCells : []
-  const cancelled = !running || live ? result?.cancelled ?? [] : []
+  const pending = running ? (live?.pending ?? plannedCells) : []
+  const cancelled = !running || live ? (result?.cancelled ?? []) : []
   const getCell = (coordinate: NeedleCoordinate) => {
     const cell = result?.cells.find((item) =>
       isSameNeedleCoordinate(item, coordinate),
@@ -44,14 +47,15 @@ export function getNeedleMatrixState(
     const stopped = cancelled.some((item) =>
       isSameNeedleCoordinate(item, coordinate),
     )
-    const state: NeedleCellState = isSameNeedleCoordinate(
-      coordinate,
-      live?.inFlight,
-    )
+    const state: NeedleCellState = (
+      live?.inFlightCells ?? [live?.inFlight]
+    ).some((item) => isSameNeedleCoordinate(coordinate, item))
       ? stopped
         ? NEEDLE_CELL_STATES.Stopping
         : NEEDLE_CELL_STATES.Running
-      : isSameNeedleCoordinate(coordinate, live?.preparing)
+      : (live?.preparingCells ?? [live?.preparing]).some((item) =>
+            isSameNeedleCoordinate(coordinate, item),
+          )
         ? stopped
           ? NEEDLE_CELL_STATES.Stopping
           : NEEDLE_CELL_STATES.Preparing
@@ -70,6 +74,9 @@ export function getNeedleMatrixState(
                 : NEEDLE_CELL_STATES.NotScheduled
     return {
       cell,
+      output: result?.outputs?.find((entry) =>
+        isSameNeedleCoordinate(entry, coordinate),
+      ),
       state,
       canStop:
         state === NEEDLE_CELL_STATES.Running ||

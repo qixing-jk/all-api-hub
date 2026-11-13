@@ -6,6 +6,16 @@ import { MarkdownContent } from "~/components/MarkdownContent"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("MarkdownContent", () => {
+  it("renders incomplete emphasis while streaming and preserves the completed text", () => {
+    const { rerender } = render(
+      <MarkdownContent content="**正在生成" streaming />,
+    )
+    expect(screen.getByText("正在生成").closest("strong")).not.toBeNull()
+    rerender(<MarkdownContent content="**正在生成完成**" streaming={false} />)
+    expect(screen.getByText("正在生成完成").closest("strong")).not.toBeNull()
+    expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument()
+  })
+
   it("preserves separate disclosure states and focus when summaries repeat", async () => {
     const user = userEvent.setup()
     const content =

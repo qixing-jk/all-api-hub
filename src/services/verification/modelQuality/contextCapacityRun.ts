@@ -1,4 +1,5 @@
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 import { API_VERIFICATION_MODES } from "~/services/verification/aiApiVerification/types"
 import type {
   ApiVerificationApiType,
@@ -101,11 +102,18 @@ export async function runContextCapacity(
     JSON.stringify(params.resumeFrom.counter) !== JSON.stringify(counter.info)
   )
     throw new Error("Model token counter changed; start a new context test")
+  let observation: ContextCapacityResult | undefined
+  let generationProgress: VerificationGenerationProgress | undefined
+  let generationStartedAt: number | undefined
   const result = await probeContextCapacity({
     maxInputTokens: inputLimit,
     resumeFrom: params.resumeFrom,
     signal: params.abortSignal,
     beforeAttempt: async (inFlightTarget, result) => {
+      observation = result
+      generationProgress = undefined
+      generationStartedAt = Date.now()
+      params.onProgress?.({ ...result, generationStartedAt })
       await params.onCheckpoint?.({
         result: {
           ...result,
@@ -125,7 +133,11 @@ export async function runContextCapacity(
           mode: params.mode,
         },
       })
-      params.onProgress?.(result)
+      params.onProgress?.({
+        ...result,
+        generation: generationProgress,
+        generationStartedAt,
+      })
     },
     attempt: async (targetTokens) => {
       const { prompt, inputTokens: localInputTokens } =
@@ -141,6 +153,16 @@ export async function runContextCapacity(
           {
             prompt,
             maxOutputTokens,
+            onProgress: (progress) => {
+              generationProgress = progress
+              if (observation)
+                params.onProgress?.({
+                  ...observation,
+                  attempts: [...observation.attempts],
+                  generation: progress,
+                  generationStartedAt,
+                })
+            },
             abortSignal: params.abortSignal,
           },
           params.mode,
@@ -161,6 +183,7 @@ export async function runContextCapacity(
             ? CONTEXT_ATTEMPT_OUTCOMES.Accepted
             : CONTEXT_ATTEMPT_OUTCOMES.Inconclusive,
           finishReason: generation.finishReason,
+          metrics: generation.metrics,
           localInputTokens,
           inputTokens: generation.usage?.inputTokens,
           outputTokens: generation.usage?.outputTokens,
@@ -183,6 +206,8 @@ export async function runContextCapacity(
   return {
     ...result,
     counter: counter.info,
+    generation: generationProgress,
+    generationStartedAt,
     inputLimit,
     latencyMs: performance.now() - startedAt,
     mode: params.mode ?? API_VERIFICATION_MODES.Streaming,

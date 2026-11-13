@@ -18,6 +18,32 @@ const result: ApiVerificationProbeResult = {
 }
 
 describe("API check result admission", () => {
+  it("stops every active batch request while preserving a newer independent run", () => {
+    const cancelRun = vi.fn(async () => undefined)
+    const session = createApiCheckProbeSession({ cancelRun })
+    const batch = session.beginBatch()
+    batch.selectProbe("models", "models-batch")
+    session.beginProbe("models", "models-batch", null, context)
+    batch.selectProbe("text-generation", "text-batch")
+    const text = session.beginProbe(
+      "text-generation",
+      "text-batch",
+      null,
+      context,
+    )
+    const independent = session.beginProbe(
+      "models",
+      "models-manual",
+      null,
+      context,
+    )
+    cancelRun.mockClear()
+    session.stopBatch()
+    expect(cancelRun).toHaveBeenCalledWith("text-batch")
+    expect(cancelRun).not.toHaveBeenCalledWith("models-manual")
+    expect(text.shouldIgnoreResult()).toBe(true)
+    expect(independent.shouldIgnoreResult()).toBe(false)
+  })
   it.each(["cancelled", "replaced", "reset", "finished"] as const)(
     "rejects late results from a %s run without overwriting accepted results",
     (change) => {

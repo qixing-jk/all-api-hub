@@ -1,5 +1,5 @@
 import { act, screen, waitFor } from "@testing-library/react"
-import type userEvent from "@testing-library/user-event"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, vi } from "vitest"
 
 import {
@@ -16,6 +16,7 @@ import {
 } from "~/services/verification/webAiApiCheck/messaging"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { render } from "~~/tests/test-utils/render"
+import { mockVerificationWorkspaceLayout } from "~~/tests/test-utils/verificationWorkspace"
 
 import {
   completeProductAnalyticsActionMock,
@@ -40,9 +41,14 @@ export function createDeferred<T>() {
  */
 export const setupApiCheckModalHostTest = () => {
   beforeEach(() => {
-    ;(toast.success as any).mockReset()
-    ;(toast.error as any).mockReset()
-    ;(toast.dismiss as any).mockReset()
+    // These form workflows exercise the desktop pane; JSDOM has no container layout.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1200)
+    if (vi.isMockFunction(window.getComputedStyle))
+      vi.mocked(window.getComputedStyle).mockRestore()
+    mockVerificationWorkspaceLayout()
+    vi.mocked(toast.success).mockReset()
+    vi.mocked(toast.error).mockReset()
+    vi.mocked(toast.dismiss).mockReset()
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
@@ -160,6 +166,16 @@ export const openModal = async (
   await act(async () => {
     dispatchOpenApiCheckModal({ ...defaultDetail, ...detailOverrides })
   })
+  const user = userEvent.setup()
+  const settings = screen.queryByRole("button", {
+    name: "aiApiVerification:verifyDialog.workspace.settings",
+  })
+  if (settings?.getAttribute("aria-expanded") === "false")
+    await user.click(settings)
+  const source = screen.getByRole("button", {
+    name: "aiApiVerification:verifyDialog.workspace.source",
+  })
+  if (source.getAttribute("aria-expanded") === "false") await user.click(source)
 }
 
 export const startManualProbeSuite = async (

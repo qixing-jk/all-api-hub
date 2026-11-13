@@ -20,7 +20,7 @@ import { getVerificationRequestIdentity } from "~/services/verification/verifica
 import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
 import { API_VERIFICATION_HISTORY_TARGET_KINDS } from "~/services/verification/verificationResultHistory/types"
 
-import type { VerificationToolRequestParams } from "./useVerificationTools"
+import type { VerificationToolRequestParams } from "./verificationToolRequestTypes"
 
 export const MASKED_CONTEXT_HISTORY_REQUEST = "masked-inventory" as const
 export type ContextCapacityHistoryRequestResolver = (

@@ -19,16 +19,71 @@
       "openaiCompatible": "OpenAI 互換"
     },
     "associatedCredentialHint": "このサイトから完全なキーを再取得することはできません。テストには API 認証情報ライブラリで選択したキーに関連付けた完全なキーを使用します。未関連付けの場合は、キー管理で保存または関連付けてください。",
+    "composer": {
+      "autoSave": "自動保存",
+      "keyboardHint": "Enter で実行 · Shift+Enter で改行",
+      "questionSavedScope": "質問と参考回答は今後の質問テスト用に保存されます。",
+      "savedScope": "自動保存され、すべてのアカウントと認証情報の同じテストに適用されます。"
+    },
+    "concurrency": {
+      "current": "並列数：{{value}}",
+      "decrease": "同時実行数を減らす",
+      "increase": "同時実行数を増やす",
+      "loadError": "並列設定を読み込めませんでした。",
+      "locked": "同時実行数を変更するには、この実行を停止してください。",
+      "needle": "同時にテストする組み合わせ数",
+      "needleHint": "同時にテストする長さと深度の組み合わせ数の上限です。1 にすると順番に実行します。",
+      "options": "実行設定",
+      "optionsTrigger": "実行設定と同時実行数",
+      "presetFast": "4 高速",
+      "presetModerate": "2 標準",
+      "presetSafe": "1 安定",
+      "presetSafeHint": "1件ずつ順番に実行し、429レート制限を防ぎます（推奨）",
+      "retry": "再試行",
+      "routine": "同時に実行するテスト数",
+      "routineHint": "一括テストで同時に実行する通常テストの上限です。1 にすると順番に実行します。",
+      "saveError": "並列設定を保存できませんでした。"
+    },
     "details": {
       "input": "入力",
       "output": "出力",
       "result": "実行結果"
     },
     "errors": {
+      "loadRuntimeKeysFailed": "API キーを読み込めませんでした。再試行してキー一覧を取得してください。",
       "unexpected": "予期しないエラー"
     },
     "generatedImagePreview": "生成画像のプレビュー",
     "generatedVideoPreview": "生成された動画のプレビュー",
+    "generation": {
+      "cachedTokens": "キャッシュ入力トークン",
+      "collapseReasoning": "思考過程を折りたたむ",
+      "effectiveSpeed": "全体の速度",
+      "firstOutput": "最初の出力",
+      "inputTokens": "入力トークン",
+      "jumpToAnswer": "最終回答へ",
+      "jumpToLatest": "最新へ",
+      "metricsHelp": "指標について",
+      "metricsHint": "各ステップの報告されたトークン使用量と実測応答時間を表示します。最初の出力には本文、推論、ツール呼び出しを含みます。出力速度は最初の出力以降、全体の速度は最初の待機時間も含みます。取得できない指標は表示しません。短い応答の速度は持続的な生成速度とは異なる場合があります。",
+      "outputSpeed": "出力速度",
+      "outputTokens": "出力トークン",
+      "partial": "応答が完了しなかったため、途中の出力を保持しています。",
+      "process": "テストの実行過程",
+      "reasoning": "推論内容",
+      "reasoningTokens": "推論トークン",
+      "requestDetails": "リクエスト詳細",
+      "responding": "回答を生成中",
+      "responseTime": "応答時間",
+      "statistics": "統計",
+      "step": "ステップ {{step}}",
+      "thinking": "思考中",
+      "toolCompleted": "完了",
+      "toolError": "失敗",
+      "toolIncomplete": "結果未受信",
+      "toolPreparing": "引数を受信中",
+      "toolRunning": "実行中",
+      "waiting": "出力を待機中"
+    },
     "history": {
       "clear": "履歴をクリア",
       "lastVerified": "最終テスト",
@@ -74,6 +129,10 @@
       "quotaCost": "都度課金",
       "video": "動画を生成し、再生まで最大2分待機します。停止はローカルの待機のみを終了します。サーバーのタスクは継続し、料金が発生する場合があります。"
     },
+    "modelSelector": {
+      "discoveredModels": "検出されたモデル",
+      "suggestedModels": "推奨モデル"
+    },
     "modes": {
       "nonStreaming": "非ストリーミング",
       "streaming": "ストリーミング"
@@ -107,6 +166,7 @@
       "shortcutTooltip": "この API の CLI クライアントへの対応状況をテストします"
     },
     "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
+    "requiresRuntimeKey": "テストを実行するには、設定で API キーを選択してください。",
     "sections": {
       "onDemand": "個別テスト",
       "routine": "通常テスト"
@@ -186,26 +246,26 @@
         "summary": "ターン数: {{steps}} · ツール呼び出し: {{calls}} · {{seconds}} 秒"
       },
       "context": {
-        "about": "モデルコンテキストテストの説明",
-        "acceptedTitle": "モデルコンテキスト：約 {{tokens}} tokens を検証済み",
+        "about": "コンテキスト容量テストの説明",
+        "acceptedTitle": "コンテキスト容量：約 {{tokens}} tokens を検証済み",
         "comparison": "メタデータの宣言値 {{expected}} tokens",
         "continue": "探測を続ける",
         "counter": "トークナイザー：{{encoding}}。",
         "coverage": "コンテキスト ≈{{percent}}%",
-        "description": "モデルの宣言値をテスト上限とし、不明な場合は最大 1M tokens をテストします。各バッチの累積入力予算は約 8M tokens で、一時停止後に続行できます。",
+        "description": "宣言されたコンテキスト長をテスト上限とし、不明な場合は最大 1M tokens をテストします。各バッチの累積入力予算は約 8M tokens で、一時停止後に続行できます。",
         "details": "テストの詳細",
         "discard": "中断したテストを破棄",
         "discardWarning": "中断したテストの保存件数が上限に達しました。続行するには実行中でない記録を破棄してください。課金状況は不明です。実行中のテストは保持されます。",
         "emptyResponse": "応答は正常終了しましたが本文がなく、入力の受理は未確認です。",
         "errorTitle": "テストを完了できませんでした",
-        "estimated": "モデルのエンコーディングは推定です。",
-        "hint": "モデルが受け付ける入力コンテキスト長をテストします。結果は API とリクエスト設定に依存し、コンテキストウィンドウ全体を保証するものではありません。",
+        "estimated": "トークナイザーのエンコーディングは推定です。",
+        "hint": "受け付ける入力コンテキスト長をテストします。結果は API とリクエスト設定に依存し、コンテキストウィンドウ全体を保証するものではありません。",
         "historyError": "履歴を利用できません。今回の結果は表示されています。",
         "incompleteResponse": "判定可能な応答がありません。終了理由：{{reason}}。",
         "interrupted": "リクエストが中断され、課金状況は不明です。自動再試行はしていません。新しいテストを開始すると追加の使用量が発生する可能性があります。",
         "lower": "最大受理入力：ローカルテキスト {{tokens}} トークン",
         "maskedHistoryHint": "このマスクされたキーの過去の測定結果です。現在の認証情報は再検証されていません。",
-        "matched": "モデルのエンコーディングを照合済みです。リクエスト全体のトークン数は異なる場合があります。",
+        "matched": "トークナイザーのエンコーディングを照合済みです。リクエスト全体のトークン数は異なる場合があります。",
         "measuredBadge": "約 {{tokens}} tokens を受信済み",
         "measurementDetails": "測定の根拠",
         "outputLimited": "入力は受理されました。出力は長さ制限で切り詰められましたが、入力の受理結果は有効です。",
@@ -216,7 +276,7 @@
           "budget": "このバッチのリクエスト数または累積入力予算に達しました。続行すると使用量を追加し、現在位置から再開します。",
           "inconclusive": "容量の上限を確認できませんでした。再試行するか実行詳細で原因を確認してください。",
           "test-limit": "この長さの入力は受理されました。実際の容量はさらに大きい可能性があります。",
-          "timeout": "リクエストがタイムアウトし、入力が受け付けられたか確認できませんでした。タイムアウトだけではモデルの容量超過とは判断できません。時間をおいて再試行してください。再試行では長文を再送信するため、利用料金が発生する場合があります。"
+          "timeout": "リクエストがタイムアウトし、入力が受け付けられたか確認できませんでした。タイムアウトだけでは容量超過とは判断できません。時間をおいて再試行してください。再試行では長文を再送信するため、利用料金が発生する場合があります。"
         },
         "reportedUsage": "報告された使用量：入力 {{input}} + 出力 {{output}} = 合計 {{total}} トークン",
         "requestDetails": "リクエストと使用量",
@@ -224,7 +284,7 @@
         "run": "コンテキストを測定",
         "startHint": "長いテキストを送信し API 使用量が発生します。予算に達すると一時停止します。",
         "stoppedTitle": "テストを停止しました",
-        "title": "モデルコンテキストテスト",
+        "title": "コンテキスト容量テスト",
         "unableTitle": "入力容量を確認できませんでした",
         "upper": "容量による拒否：ローカル文字列で{{tokens}}トークン"
       },
@@ -241,7 +301,7 @@
         "capped": "各リクエストの入力は最大 1M tokens です。",
         "cell": "ローカル入力 {{tokens}} tokens · 実際の位置 {{depth}}% · {{latency}} ms",
         "cellDetails": "セルの詳細",
-        "cumulativeScore": "累計結果：判定可能な回答 {{graded}} 件中 {{hits}} 件が一致",
+        "cumulativeScore": "累計結果：全 {{total}} 組合中 {{hits}} 組合が一致",
         "custom": "カスタム",
         "customLimit": "カスタム長（tokens）",
         "description": "長いテキスト内の異なる位置から、指定した情報を見つけられるか確認します。",
@@ -314,6 +374,7 @@
         "score": "{{hits}}/{{total}} 一致",
         "seedHint": "空欄なら毎回新しいサンプルを生成します。同じ番号と設定で同じテキストを再テストできます。",
         "seedInput": "テストサンプル番号（任意）",
+        "settingsPreview": "リクエスト数：{{requests}} · 入力：約 {{tokens}} トークン（出力は別）",
         "singleLengthRule": "今回は {{limit}} の長さだけをテストします。",
         "sources": {
           "custom": "指定した最大入力長 {{limit}} を基にテストします。",
@@ -349,16 +410,15 @@
       },
       "prompts": {
         "editorLabel": "{{probe}} のプロンプト",
-        "label": "プロンプト",
         "resetOne": "この項目を既定に戻す",
-        "saveFailed": "プロンプトを保存できませんでした：{{message}}",
-        "sharedHint": "保存したプロンプトはすべてのテスト入口で共有されます。"
+        "saveFailed": "プロンプトを保存できませんでした：{{message}}"
       },
       "questionAnswer": {
         "comparison": "回答の比較",
         "comparisonHint": "最終回答のテキストのみを比較します。推論の妥当性は回答全文で確認してください。",
         "description": "独自の質問でモデルの回答や推論を確認できます。参照回答を入力すると、最終回答を比較できます。",
         "draftChanged": "質問または参考回答が変更されています。前回の実行結果を表示しています。変更後の内容を比較するには再実行してください。",
+        "editReference": "参照回答を編集",
         "finalAnswer": "抽出された最終回答",
         "loadFailed": "問答設定を読み込めませんでした。保存済みの下書きを読み込むには再試行してください。",
         "notIdentified": "抽出できませんでした",
@@ -387,7 +447,6 @@
         "runQuestion": "今回使用した質問",
         "runReference": "今回の参考回答",
         "saveFailed": "設定を保存できませんでした。現在の下書きでテストできます。",
-        "saving": "保存中…",
         "title": "問答テスト"
       },
       "settingsTitle": "テスト設定",
@@ -395,6 +454,17 @@
       "stopped": "途中で停止したため、結果は保存していません。"
     },
     "unsupportedProbeForApiType": "{{probe}} プローブはこの API 種別ではサポートされていません。",
-    "warning": "結果は、このテストで使用した API、モデル、リクエスト設定にのみ適用されます。"
+    "warning": "結果は、このテストで使用した API、モデル、リクエスト設定にのみ適用されます。",
+    "workspace": {
+      "collapseSettings": "設定サイドバーを折りたたむ",
+      "collapseTests": "テストサイドバーを折りたたむ",
+      "currentTest": "現在のテスト",
+      "execution": "通常テストの実行",
+      "expandSettings": "設定サイドバーを展開",
+      "expandTests": "テストサイドバーを展開",
+      "settings": "設定",
+      "source": "抽出元",
+      "tests": "テスト"
+    }
   }
 }

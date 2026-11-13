@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { CircleCheck, CircleX } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -29,6 +30,20 @@ export type VerificationStatusBadgeProps = {
   historyKind?: VerificationHistoryKind
 }
 
+/** Resolve the same default outcome label for badges and compact navigation. */
+export function getVerificationStatusLabel(
+  t: TFunction<"aiApiVerification">,
+  status: VerificationStatusBadgeProps["status"],
+) {
+  return status === API_VERIFICATION_PROBE_STATUSES.Pass
+    ? t("verifyDialog.status.pass")
+    : status === API_VERIFICATION_PROBE_STATUSES.Unsupported
+      ? t("verifyDialog.status.unsupported")
+      : status === API_VERIFICATION_HISTORY_STATUSES.Unverified
+        ? t("verifyDialog.status.unverified")
+        : t("verifyDialog.status.fail")
+}
+
 /**
  * Render a standardized status badge for verification results and persisted
  * verification summaries.
@@ -43,20 +58,12 @@ export function VerificationStatusBadge({
   historyKind,
 }: VerificationStatusBadgeProps) {
   const { t } = useTranslation("aiApiVerification")
+  const statusLabel = label ?? getVerificationStatusLabel(t, status)
   if (historyKind) {
-    const historyLabel =
-      label ??
-      (status === API_VERIFICATION_PROBE_STATUSES.Pass
-        ? t("verifyDialog.status.pass")
-        : status === API_VERIFICATION_PROBE_STATUSES.Unsupported
-          ? t("verifyDialog.status.unsupported")
-          : status === API_VERIFICATION_HISTORY_STATUSES.Unverified
-            ? t("verifyDialog.status.unverified")
-            : t("verifyDialog.status.fail"))
     return (
       <VerificationHistoryBadge
         kind={historyKind}
-        label={historyLabel}
+        label={statusLabel}
         latencyMs={latencyMs}
         mode={mode}
         className={className}
@@ -78,9 +85,9 @@ export function VerificationStatusBadge({
       latencyMs != null && latencyMs > 0 ? formatLatency(latencyMs) : null
     return (
       <Badge variant="success" size="sm" className={className}>
-        <span className="gap-y-density-1 flex items-center gap-x-1">
+        <span className="flex items-center gap-x-1 gap-y-density-1">
           <CircleCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span>{label ?? t("verifyDialog.status.pass")}</span>
+          <span>{statusLabel}</span>
         </span>
         {latencyText ? (
           <span className="font-normal">{latencyText}</span>
@@ -100,7 +107,7 @@ export function VerificationStatusBadge({
           className,
         )}
       >
-        {label ?? t("verifyDialog.status.unsupported")}
+        {statusLabel}
         {modeContent}
       </Badge>
     )
@@ -109,7 +116,7 @@ export function VerificationStatusBadge({
   if (status === API_VERIFICATION_HISTORY_STATUSES.Unverified) {
     return (
       <Badge variant="outline" size="sm" className={className}>
-        {label ?? t("verifyDialog.status.unverified")}
+        {statusLabel}
         {modeContent}
       </Badge>
     )
@@ -117,9 +124,9 @@ export function VerificationStatusBadge({
 
   return (
     <Badge variant="destructive" size="sm" className={className}>
-      <span className="gap-y-density-1 flex items-center gap-x-1">
+      <span className="flex items-center gap-x-1 gap-y-density-1">
         <CircleX className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        {label ?? t("verifyDialog.status.fail")}
+        {statusLabel}
       </span>
       {modeContent}
     </Badge>

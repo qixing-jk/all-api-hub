@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next"
 
-import { FieldHelpPopover } from "~/components/FieldHelpPopover"
+import { HelpHintIcon } from "~/components/icons/productIcons"
+import Tooltip from "~/components/Tooltip"
+import { IconButton } from "~/components/ui"
 import { getDeclaredInputLimit } from "~/services/verification/modelQuality/contextLimits"
 import type { ContextCounterInfo } from "~/services/verification/modelQuality/contextTokens"
 import {
@@ -47,12 +49,13 @@ export function NeedlePlanHelp({
           : t("verifyDialog.tools.needle.sources.fallback", { limit })
 
   return (
-    <FieldHelpPopover
-      label={title}
-      contentClassName="text-muted-foreground max-h-(--radix-popover-content-available-height) w-88 overflow-y-auto text-xs leading-relaxed"
+    <Tooltip
+      anchorAsChild
+      openOnClick
+      className="max-w-[min(22rem,calc(100vw-2rem))] leading-relaxed"
       content={
-        <div className="space-y-3">
-          <p className="text-foreground text-sm font-medium">{title}</p>
+        <div className="max-h-[min(24rem,calc(var(--available-height,100dvh)-2rem))] space-y-3 overflow-y-auto">
+          <p className="text-sm font-medium">{title}</p>
           <p>{source}</p>
           {plan.capped ? <p>{t("verifyDialog.tools.needle.capped")}</p> : null}
           <p>
@@ -65,7 +68,7 @@ export function NeedlePlanHelp({
               positions: plan.depths.map((depth) => `${depth}%`).join(" / "),
             })}
           </p>
-          <div className="border-border-subtle space-y-1 border-t pt-3">
+          <div className="space-y-1 border-t border-current/20 pt-3">
             <p>
               {t("verifyDialog.tools.needle.exactLengths", {
                 lengths: plan.lengths
@@ -82,6 +85,16 @@ export function NeedlePlanHelp({
           </div>
         </div>
       }
-    />
+    >
+      <IconButton
+        type="button"
+        variant="ghost"
+        size="none"
+        className="size-5 min-h-0 shrink-0 p-0 text-muted-foreground"
+        aria-label={title}
+      >
+        <HelpHintIcon className="size-4" aria-hidden="true" />
+      </IconButton>
+    </Tooltip>
   )
 }

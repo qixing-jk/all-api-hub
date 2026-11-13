@@ -17,6 +17,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { showVerificationSettings } from "~~/e2e/utils/verificationWorkspace"
 
 test("API and CLI shortcuts share the workspace with CLI presets only", async ({
   context,
@@ -221,6 +222,7 @@ test("API and CLI shortcuts share the workspace with CLI presets only", async ({
       )
     }
     await page.setViewportSize({ width: 420, height: 900 })
+    await showVerificationSettings(page)
     await client.scrollIntoViewIfNeeded()
     await page.getByTestId("verification-config").screenshot({
       path: test.info().outputPath("configuration-mobile.png"),

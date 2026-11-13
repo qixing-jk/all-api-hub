@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { contentApiCheckAnalyticsScope } from "~/features/WebAiApiCheck/content/modal/apiCheckModalAnalytics"
+import { API_CHECK_VALIDATION_ERRORS } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import type { ApiCheckValidationError } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -151,7 +152,7 @@ export function useApiCheckModelDiscovery({
       const trimmedApiKey = apiKey.trim()
       if (!trimmedBaseUrl || !trimmedApiKey) {
         if (origin === MODEL_FETCH_ORIGINS.Manual) {
-          setValidationError("missing-credentials")
+          setValidationError(API_CHECK_VALIDATION_ERRORS.MissingCredentials)
         }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,

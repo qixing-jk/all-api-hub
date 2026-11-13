@@ -115,6 +115,7 @@ export const runNeedleInBackground = (
         seed: params.seed,
         maxInputTokens: params.maxInputTokens,
         quick: params.quick,
+        concurrency: params.concurrency,
         selection: params.selection,
         cancelledCells: params.cancelledCells,
         resumeFrom: params.resumeFrom,

@@ -17,7 +17,12 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { expectTooltipUnobstructed } from "~~/e2e/utils/tooltipVisibility"
 import { createDrawingServer } from "~~/e2e/utils/verificationDrawingServer"
+import {
+  expectVerificationWorkspaceFlush,
+  showVerificationSettings,
+} from "~~/e2e/utils/verificationWorkspace"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 test("CLI enhancement stays below the fields and temporary protocol is a field note", async ({
@@ -86,16 +91,32 @@ test("CLI enhancement stays below the fields and temporary protocol is a field n
       ].map((field) => field.boundingBox()),
     )
     expect(
-      Math.max(...fieldBoxes.map((box) => box!.y)) -
-        Math.min(...fieldBoxes.map((box) => box!.y)),
+      Math.max(...fieldBoxes.map((box) => box!.x)) -
+        Math.min(...fieldBoxes.map((box) => box!.x)),
     ).toBeLessThanOrEqual(2)
     const help = page.getByRole("button", { name: "客户端模拟", exact: true })
     await expect(help).toHaveAccessibleDescription(
       "选择客户端会匹配其默认协议，之后仍可手动修改协议。模拟对应客户端的 API 请求，不会启动本机 CLI。",
     )
+    const workspace = page.getByTestId("verification-workspace")
+    const heightBeforeHelp = (await workspace.boundingBox())!.height
     await help.focus()
     await expect(page.getByRole("tooltip")).toContainText(
       "选择客户端会匹配其默认协议",
+    )
+    await captureVisualViews({
+      page,
+      ready: help,
+      id: "client-help-desktop",
+      extensionDir,
+    })
+    await expectTooltipUnobstructed(page.getByRole("tooltip"))
+    expect((await workspace.boundingBox())!.height).toBeCloseTo(
+      heightBeforeHelp,
+      0,
+    )
+    await expectVerificationWorkspaceFlush(
+      page.getByTestId("verification-workspace"),
     )
     await selector.focus()
     await expect(config.getByRole("alert")).toContainText(
@@ -132,12 +153,35 @@ test("CLI enhancement stays below the fields and temporary protocol is a field n
     await enhanced.click()
     await expect(enhanced).toBeChecked()
     await page.setViewportSize({ width: 380, height: 800 })
+    await showVerificationSettings(page)
+    for (const width of [380, 320]) {
+      await page.setViewportSize({ width, height: 800 })
+      await selector.focus()
+      await help.scrollIntoViewIfNeeded()
+      const beforeHelp = (await workspace.boundingBox())!.height
+      await help.focus()
+      await expectTooltipUnobstructed(page.getByRole("tooltip"))
+      expect((await workspace.boundingBox())!.height).toBeCloseTo(beforeHelp, 0)
+      await expectVerificationWorkspaceFlush(workspace)
+      await captureVisualViews({
+        page,
+        ready: help,
+        id: `client-help-${width}`,
+        extensionDir,
+      })
+    }
+    await page.setViewportSize({ width: 380, height: 800 })
+    await selector.focus()
     const enhancementHelp = page.getByRole("button", {
       name: "增强 CLI 模拟",
       exact: true,
     })
+    await expectVerificationWorkspaceFlush(
+      page.getByTestId("verification-workspace"),
+    )
     await enhancementHelp.click()
     await expect(page.getByRole("tooltip")).toContainText("SDK 请求头")
+    await expectTooltipUnobstructed(page.getByRole("tooltip"))
     await expect(enhanced).toBeChecked()
     await captureVisualViews({
       page,
@@ -281,7 +325,7 @@ test("ordinary probes can opt into actual CLI headers and return to ordinary req
     )
     const run = probe.getByTestId(IDS.verifyProbeRunButton)
     await run.click()
-    await expect(probe).toContainText("Forbidden (403)")
+    await expect(probe).toContainText("CLI client required")
     await selector.click()
     await page.getByRole("option", { name: "Codex CLI", exact: true }).click()
     const enhanced = page.getByRole("switch", {
@@ -291,7 +335,10 @@ test("ordinary probes can opt into actual CLI headers and return to ordinary req
     await expect(enhanced).not.toBeChecked()
     await enhanced.click()
     await run.click()
-    await expect(probe).toContainText("Text generation succeeded")
+    await probe
+      .getByRole("button", { name: "Text generation", exact: true })
+      .click()
+    await expect(probe.getByText("OK", { exact: true })).toBeVisible()
     expect(captures[1]).toMatchObject({
       headers: {
         "user-agent": "codex_cli_rs/0.164.0 (Windows 10.0; x86_64)",
@@ -321,7 +368,7 @@ test("ordinary probes can opt into actual CLI headers and return to ordinary req
       .getByRole("option", { name: "Ordinary API", exact: true })
       .click()
     await run.click()
-    await expect(probe).toContainText("Forbidden (403)")
+    await expect(probe).toContainText("CLI client required")
     expect(captures[2]!.headers["user-agent"]).not.toContain("codex_cli_rs")
     expect(captures[2]!.body).not.toHaveProperty("client_metadata")
     await selector.click()

@@ -1,5 +1,6 @@
 import type { VerificationToolsController } from "~/features/Verification/api/useVerificationTools"
 import { type ApiCheckOpenModalDetail } from "~/features/WebAiApiCheck/content/events"
+import type { useVerificationConcurrency } from "~/hooks/verification/useVerificationConcurrency"
 import {
   type ApiVerificationApiType,
   type ApiVerificationMode,
@@ -8,19 +9,28 @@ import {
   type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
+import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 import type { Tag } from "~/types"
 
-export type ApiCheckValidationError = "missing-credentials" | "missing-model"
+export const API_CHECK_VALIDATION_ERRORS = {
+  MissingCredentials: "missing-credentials",
+  MissingModel: "missing-model",
+} as const
+export type ApiCheckValidationError =
+  (typeof API_CHECK_VALIDATION_ERRORS)[keyof typeof API_CHECK_VALIDATION_ERRORS]
 
 export interface ProbeItemState {
   id: ApiVerificationProbeId
   requiresModelId: boolean
+  progress?: VerificationGenerationProgress
+  startedAt?: number
   isRunning: boolean
   attempts: number
   result: ApiVerificationProbeResult | null
 }
 export interface ApiCheckModalViewModel {
+  concurrency: ReturnType<typeof useVerificationConcurrency>
   pageUrl: string
   isOpen: boolean
   sourceText: string

@@ -33,6 +33,7 @@ export function ContextCapacityResultSummary({
     hasComparison,
     declaredContext,
   } = presentation
+  if (controller.running && lower === 0) return null
   return controller.running ||
     observation ||
     controller.error ||
@@ -43,13 +44,9 @@ export function ContextCapacityResultSummary({
       aria-label={t("verifyDialog.tools.context.resultLabel")}
     >
       {controller.running ? (
-        lower > 0 ? (
-          t("verifyDialog.tools.context.acceptedTitle", {
-            tokens: formatContextTokens(lower),
-          })
-        ) : (
-          t("verifyDialog.actions.running")
-        )
+        t("verifyDialog.tools.context.acceptedTitle", {
+          tokens: formatContextTokens(lower),
+        })
       ) : (
         <>
           {reason === CONTEXT_CAPACITY_REASONS.Budget ||
@@ -63,7 +60,7 @@ export function ContextCapacityResultSummary({
             <p>{t("verifyDialog.tools.context.maskedHistoryHint")}</p>
           ) : null}
           {lower > 0 ? (
-            <p className="text-foreground text-base font-semibold">
+            <p className="text-base font-semibold text-foreground">
               {t("verifyDialog.tools.context.acceptedTitle", {
                 tokens: formatContextTokens(lower),
               })}
@@ -167,9 +164,9 @@ export function ContextCapacityDiagnostics({
       panelClassName="bg-transparent mt-2 rounded-none border-0 px-0 py-2"
     >
       <section aria-label={t("verifyDialog.tools.context.details")}>
-        <div className="text-muted-foreground space-y-density-3 text-xs">
+        <div className="space-y-density-3 text-xs text-muted-foreground">
           <div className="space-y-density-1">
-            <p className="text-foreground font-medium">
+            <p className="font-medium text-foreground">
               {t("verifyDialog.tools.context.measurementDetails")}
             </p>
             {outputLimited ? (
@@ -212,8 +209,8 @@ export function ContextCapacityDiagnostics({
               <p>{controller.error ?? lastAttempt?.message}</p>
             ) : null}
           </div>
-          <div className="border-border-subtle space-y-density-1 pt-density-2 border-t">
-            <p className="text-foreground font-medium">
+          <div className="space-y-density-1 border-t border-border-subtle pt-density-2">
+            <p className="font-medium text-foreground">
               {t("verifyDialog.tools.context.requestDetails")}
             </p>
 

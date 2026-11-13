@@ -45,7 +45,7 @@
     },
     "hints": {
       "expiresAt": "Optional. Notieren Sie, wann dieser Schlüssel voraussichtlich ablaufen wird.",
-      "saveWithoutTest": "Tipp: Sie können speichern, sobald Basis-URL und API-Schlüssel angegeben sind. Sie müssen Modelle vorher weder testen noch abrufen. Das Testen ist optional und dient lediglich der Überprüfung der Verfügbarkeit.",
+      "saveWithoutTest": "Base URL und API-Schlüssel genügen zum Speichern. Modellabruf und Tests sind optional.",
       "sourceUrl": "Optional. Notieren Sie die Seite, auf der Sie diese Zugangsdaten gefunden haben, um später erneut darauf zuzugreifen.",
       "tags": "Optional. Mit den globalen Konto- und Lesezeichen-Tags geteilt."
     },
@@ -70,9 +70,12 @@
       "sourceUrl": "https://example.com/post",
       "tags": "Tags auswählen"
     },
+    "preparation": {
+      "description": "Webseitentext einfügen, um Base URL und API-Schlüssel zu erkennen, oder beide direkt eingeben. Sobald beide vorliegen, erscheinen die Tests.",
+      "title": "Zuerst die API-Verbindung erfassen"
+    },
     "privacyHint": "API-Schlüssel werden als vertrauliche Informationen betrachtet: standardmäßig ausgeblendet und nichts wird gespeichert, es sei denn, Sie entscheiden sich für die Speicherung in der API-Anmeldeinformationsbibliothek.",
     "sourceText": {
-      "label": "Text, aus dem extrahiert werden soll",
       "placeholder": "Fügen Sie hier eine Basis-URL und einen API-Schlüssel ein oder verwenden Sie das Kontextmenü, um die Auswahl vorab auszufüllen."
     },
     "title": "API-Tests"

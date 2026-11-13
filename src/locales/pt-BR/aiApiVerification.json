@@ -19,16 +19,71 @@
       "openaiCompatible": "Compatível com OpenAI"
     },
     "associatedCredentialHint": "Este site não permite recuperar a chave completa. Os testes usam a chave completa salva na biblioteca de credenciais de API e vinculada à chave selecionada. Se não houver vínculo, primeiro salve ou vincule a chave no gerenciamento de chaves.",
+    "composer": {
+      "autoSave": "Salvamento automático",
+      "keyboardHint": "Enter executa · Shift+Enter adiciona uma linha",
+      "questionSavedScope": "A pergunta e a resposta de referência são salvas para futuros testes.",
+      "savedScope": "Salvo automaticamente para este teste em todas as contas e credenciais."
+    },
+    "concurrency": {
+      "current": "Em paralelo: {{value}}",
+      "decrease": "Diminuir simultaneidade",
+      "increase": "Aumentar simultaneidade",
+      "loadError": "Não foi possível carregar o paralelismo.",
+      "locked": "Pare esta execução para ajustar a simultaneidade.",
+      "needle": "Combinações simultâneas",
+      "needleHint": "Máximo de combinações de comprimento e profundidade simultâneas. Com 1, são executadas uma de cada vez.",
+      "options": "Opções de execução",
+      "optionsTrigger": "Opções de execução e simultaneidade",
+      "presetFast": "4 Rápido",
+      "presetModerate": "2 Moderado",
+      "presetSafe": "1 Seguro",
+      "presetSafeHint": "Executar um de cada vez, recomendado para evitar limites 429",
+      "retry": "Tentar novamente",
+      "routine": "Testes simultâneos",
+      "routineHint": "Máximo de testes de rotina executados simultaneamente. Com 1, são executados um de cada vez.",
+      "saveError": "O paralelismo não foi salvo."
+    },
     "details": {
       "input": "Entrada",
       "output": "Saída",
       "result": "Resultado da execução"
     },
     "errors": {
+      "loadRuntimeKeysFailed": "Não foi possível carregar as chaves de API. Tente obter a lista novamente.",
       "unexpected": "Erro inesperado"
     },
     "generatedImagePreview": "Prévia da imagem gerada",
     "generatedVideoPreview": "Prévia do vídeo gerado",
+    "generation": {
+      "cachedTokens": "Tokens de entrada em cache",
+      "collapseReasoning": "Recolher raciocínio",
+      "effectiveSpeed": "Velocidade total",
+      "firstOutput": "Primeira saída",
+      "inputTokens": "Tokens de entrada",
+      "jumpToAnswer": "Ir para a resposta final",
+      "jumpToLatest": "Ir para o mais recente",
+      "metricsHelp": "Sobre as métricas",
+      "metricsHint": "Cada etapa mostra o uso de tokens informado e o tempo de resposta medido. A primeira saída inclui texto, raciocínio ou chamadas de ferramentas. A velocidade de saída começa na primeira saída; a velocidade total inclui a espera inicial. Métricas indisponíveis são omitidas; respostas curtas podem não refletir a velocidade sustentada.",
+      "outputSpeed": "Velocidade de saída",
+      "outputTokens": "Tokens de saída",
+      "partial": "Saída parcial mantida; a resposta não foi concluída.",
+      "process": "Processo do teste",
+      "reasoning": "Raciocínio",
+      "reasoningTokens": "Tokens de raciocínio",
+      "requestDetails": "Detalhes da solicitação",
+      "responding": "Escrevendo resposta",
+      "responseTime": "Tempo de resposta",
+      "statistics": "Estatísticas",
+      "step": "Etapa {{step}}",
+      "thinking": "Pensando",
+      "toolCompleted": "Concluído",
+      "toolError": "Falhou",
+      "toolIncomplete": "Nenhum resultado recebido",
+      "toolPreparing": "Recebendo argumentos",
+      "toolRunning": "Em execução",
+      "waiting": "Aguardando resposta"
+    },
     "history": {
       "clear": "Limpar histórico",
       "lastVerified": "Último teste",
@@ -74,6 +129,10 @@
       "quotaCost": "Por chamada",
       "video": "Cria um vídeo e aguarda até dois minutos para reproduzi-lo. Parar interrompe apenas a espera local; a tarefa no servidor pode continuar e gerar cobranças."
     },
+    "modelSelector": {
+      "discoveredModels": "Modelos descobertos",
+      "suggestedModels": "Modelos sugeridos"
+    },
     "modes": {
       "nonStreaming": "Sem streaming",
       "streaming": "Com streaming"
@@ -107,6 +166,7 @@
       "shortcutTooltip": "Teste o suporte desta API a clientes CLI"
     },
     "requiresModelId": "Insira um ID de modelo para executar este teste.",
+    "requiresRuntimeKey": "Selecione uma chave de API na configuração para executar os testes.",
     "sections": {
       "onDemand": "Testes sob demanda",
       "routine": "Testes padrão"
@@ -187,8 +247,8 @@
         "summary": "Rodadas: {{steps}} · Chamadas de ferramentas: {{calls}} · {{seconds}} s"
       },
       "context": {
-        "about": "Sobre o teste de contexto",
-        "acceptedTitle": "Contexto do modelo: cerca de {{tokens}} tokens verificados",
+        "about": "Sobre o teste de capacidade de contexto",
+        "acceptedTitle": "Capacidade de contexto: cerca de {{tokens}} tokens verificados",
         "comparison": "metadados declaram {{expected}} tokens",
         "continue": "Continuar teste",
         "counter": "Tokenizador: {{encoding}}.",
@@ -199,14 +259,14 @@
         "discardWarning": "Há muitos testes interrompidos salvos. Descarte os registros inativos para continuar. O status de cobrança é desconhecido; os testes em execução serão mantidos.",
         "emptyResponse": "A resposta terminou normalmente sem texto; a aceitação da entrada permanece não confirmada.",
         "errorTitle": "O teste não pôde ser concluído",
-        "estimated": "Codificação do modelo estimada.",
-        "hint": "Testa o contexto de entrada aceito pelo modelo. O resultado depende da API e da configuração da solicitação e não confirma toda a janela de contexto.",
+        "estimated": "Codificação do tokenizador estimada.",
+        "hint": "Testa o contexto de entrada aceito pelo endpoint. O resultado depende da API e da configuração da solicitação e não confirma toda a janela de contexto.",
         "historyError": "O histórico está indisponível. O resultado atual continua visível.",
         "incompleteResponse": "Nenhuma resposta conclusiva foi recebida. Motivo do término: {{reason}}.",
         "interrupted": "A solicitação foi interrompida e o status de cobrança é desconhecido. Não houve nova tentativa. Iniciar outro teste pode gerar uso adicional.",
         "lower": "Maior entrada aceita: {{tokens}} tokens de texto locais",
         "maskedHistoryHint": "Medição salva para esta chave mascarada. A credencial atual ainda não foi revalidada.",
-        "matched": "Codificação do modelo identificada; a contagem da solicitação completa pode variar.",
+        "matched": "Codificação do tokenizador identificada; a contagem da solicitação completa pode variar.",
         "measuredBadge": "≈{{tokens}} tokens aceitos",
         "measurementDetails": "Evidências da medição",
         "outputLimited": "Entrada aceita; a saída foi truncada por um limite de comprimento. Isso não invalida a aceitação da entrada.",
@@ -217,7 +277,7 @@
           "budget": "Este lote atingiu o orçamento de solicitações ou de entrada acumulada. Continue daqui para permitir mais consumo.",
           "inconclusive": "Nenhum limite de capacidade foi confirmado. Tente novamente ou veja a causa nos detalhes.",
           "test-limit": "Este comprimento de entrada foi aceito. A capacidade real pode ser maior.",
-          "timeout": "A solicitação excedeu o tempo limite antes de confirmar a aceitação da entrada. Isso não comprova que a entrada excede a capacidade do modelo. Tente novamente mais tarde; o texto longo será reenviado e poderá consumir créditos."
+          "timeout": "A solicitação excedeu o tempo limite antes de confirmar a aceitação da entrada. Isso não comprova que a entrada excede a capacidade. Tente novamente mais tarde; o texto longo será reenviado e poderá consumir créditos."
         },
         "reportedUsage": "Uso informado: entrada {{input}} + saída {{output}} = total {{total}} tokens",
         "requestDetails": "Solicitação e uso",
@@ -225,7 +285,7 @@
         "run": "Testar contexto",
         "startHint": "Envia texto longo e consome créditos da API. Pausa ao atingir o orçamento.",
         "stoppedTitle": "Teste interrompido",
-        "title": "Teste de contexto do modelo",
+        "title": "Teste de capacidade de contexto",
         "unableTitle": "Não foi possível confirmar a capacidade de entrada",
         "upper": "Rejeição por capacidade em: {{tokens}} tokens de texto locais"
       },
@@ -242,7 +302,7 @@
         "capped": "Cada solicitação testa até 1M tokens de entrada.",
         "cell": "Entrada local: {{tokens}} tokens · Posição real: {{depth}}% · {{latency}} ms",
         "cellDetails": "Detalhes da célula",
-        "cumulativeScore": "Resultados acumulados: {{hits}}/{{graded}} respostas avaliáveis correspondem",
+        "cumulativeScore": "Resultados acumulados: {{hits}}/{{total}} combinações correspondem",
         "custom": "Personalizado",
         "customLimit": "Comprimento personalizado (tokens)",
         "description": "Verifica se o modelo encontra um registro específico em diferentes posições de um texto longo.",
@@ -317,6 +377,7 @@
         "score": "{{hits}}/{{total}} acertos",
         "seedHint": "Deixe em branco para gerar uma nova amostra a cada vez. Use o mesmo número e as mesmas configurações para repetir o texto.",
         "seedInput": "Número da amostra (opcional)",
+        "settingsPreview": "Solicitações: {{requests}} · Entrada: ~{{tokens}} tokens (saída à parte)",
         "singleLengthRule": "Este plano testa apenas um comprimento: {{limit}}.",
         "sources": {
           "custom": "Você definiu a entrada máxima como {{limit}}. O plano usa esse limite.",
@@ -352,16 +413,15 @@
       },
       "prompts": {
         "editorLabel": "Prompt de {{probe}}",
-        "label": "Prompt",
         "resetOne": "Restaurar este prompt",
-        "saveFailed": "Não foi possível salvar os prompts: {{message}}",
-        "sharedHint": "Os prompts salvos são compartilhados por todas as entradas de teste."
+        "saveFailed": "Não foi possível salvar os prompts: {{message}}"
       },
       "questionAnswer": {
         "comparison": "Comparação de respostas",
         "comparisonHint": "Apenas o texto da resposta final é comparado. Revise a resposta completa para avaliar o raciocínio.",
         "description": "Use sua própria pergunta para analisar a resposta e o raciocínio do modelo. Adicione uma resposta de referência para comparar a resposta final.",
         "draftChanged": "A pergunta ou a resposta de referência mudou. Este resultado é da execução anterior; execute novamente para comparar as alterações.",
+        "editReference": "Editar resposta de referência",
         "finalAnswer": "Resposta final extraída",
         "loadFailed": "Não foi possível carregar as configurações. Tente novamente para recuperar o rascunho salvo.",
         "notIdentified": "Não identificada",
@@ -390,7 +450,6 @@
         "runQuestion": "Pergunta usada nesta execução",
         "runReference": "Resposta de referência desta execução",
         "saveFailed": "Não foi possível salvar as configurações. O rascunho atual ainda pode ser usado.",
-        "saving": "Salvando…",
         "title": "Teste de perguntas e respostas"
       },
       "settingsTitle": "Configurações do teste",
@@ -398,6 +457,17 @@
       "stopped": "Interrompido antes de terminar; nada foi registrado."
     },
     "unsupportedProbeForApiType": "O teste {{probe}} não é compatível com este tipo de API.",
-    "warning": "Os resultados se aplicam apenas à API, ao modelo e à configuração da solicitação usados neste teste."
+    "warning": "Os resultados se aplicam apenas à API, ao modelo e à configuração da solicitação usados neste teste.",
+    "workspace": {
+      "collapseSettings": "Recolher configuração",
+      "collapseTests": "Recolher painel de testes",
+      "currentTest": "Teste atual",
+      "execution": "Execução de testes de rotina",
+      "expandSettings": "Expandir configuração",
+      "expandTests": "Expandir painel de testes",
+      "settings": "Ajustes",
+      "source": "Origem da extração",
+      "tests": "Testes"
+    }
   }
 }

@@ -102,6 +102,25 @@ describe("VerificationStatusBadge", () => {
       "destructive",
     )
   })
+
+  it("renders historical latency and mode inside the history badge", () => {
+    render(
+      <VerificationStatusBadge
+        historyKind="probe"
+        status="pass"
+        latencyMs={1200}
+        mode="streaming"
+      />,
+    )
+
+    const badge = screen.getByText("1.2s").closest("[data-variant]")
+    expect(badge).toHaveAttribute("data-variant", "secondary")
+    expect(badge).toHaveTextContent("verifyDialog.history.previousResult")
+    expect(badge).toHaveTextContent("1.2s")
+    expect(badge).toHaveTextContent(
+      "aiApiVerification:verifyDialog.modes.streaming",
+    )
+  })
 })
 
 describe("ProbeStatusBadge", () => {

@@ -173,7 +173,7 @@ export function DatePicker({
         onSelect={selectDate}
         locale={calendarLocale}
       />
-      <div className="border-border gap-y-density-2 py-density-2 grid grid-cols-2 gap-x-2 border-t px-2">
+      <div className="grid grid-cols-2 gap-x-2 gap-y-density-2 border-t border-border px-2 py-density-2">
         <Button
           type="button"
           variant="ghost"
@@ -269,7 +269,8 @@ export function DatePicker({
           </PopoverAnchor>
           <PopoverContent
             align="start"
-            className="w-auto p-0"
+            collisionPadding={8}
+            className="max-h-(--radix-popover-content-available-height) w-auto overflow-y-auto overscroll-contain p-0"
             container={portalContainer ?? undefined}
           >
             {calendarContent}
@@ -303,7 +304,7 @@ export function DatePicker({
           aria-label={accessibleTriggerLabel}
           disabled={disabled}
           className={cn(
-            "gap-y-density-2 w-full justify-start gap-x-2 text-left font-normal",
+            "w-full justify-start gap-x-2 gap-y-density-2 text-left font-normal",
             !selectedDate && "text-muted-foreground",
             className,
           )}
@@ -314,7 +315,8 @@ export function DatePicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-auto p-0"
+        collisionPadding={8}
+        className="max-h-(--radix-popover-content-available-height) w-auto overflow-y-auto overscroll-contain p-0"
         container={portalContainer ?? undefined}
       >
         {calendarContent}

@@ -7,7 +7,7 @@ import { VERIFICATION_SOURCE_KINDS } from "~/features/Verification/api/types"
 import {
   VerificationDialogHeader,
   VerificationSourceSubtitle,
-} from "~/features/Verification/api/VerificationLayout"
+} from "~/features/Verification/api/VerificationDialogHeader"
 import zhVerification from "~/locales/zh-CN/aiApiVerification.json"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
@@ -32,6 +32,12 @@ const renderHeader = (props: Parameters<typeof VerificationDialogHeader>[0]) =>
   )
 
 describe("VerificationDialogHeader", () => {
+  it("omits an untested history badge when there is no saved run", () => {
+    renderHeader({ title: "Verification", historySummary: null })
+    expect(
+      screen.queryByText("aiApiVerification:verifyDialog.history.lastVerified"),
+    ).not.toBeInTheDocument()
+  })
   it.each([
     [VERIFICATION_SOURCE_KINDS.Account, "账号：12"],
     [VERIFICATION_SOURCE_KINDS.Profile, "凭据：12"],
@@ -65,28 +71,19 @@ describe("VerificationDialogHeader", () => {
     const help = screen.getByRole("button", {
       name: "aiApiVerification:verifyDialog.about",
     })
-    expect(help).toHaveAttribute(
-      "title",
+    expect(help).toHaveAccessibleDescription(
       "aiApiVerification:verifyDialog.warning",
     )
-    expect(help).toHaveAttribute("aria-expanded", "false")
     await user.tab()
     expect(help).toHaveFocus()
-    await user.keyboard("{Enter}")
-    expect(
-      await screen.findByRole("dialog", {
-        name: "aiApiVerification:verifyDialog.about",
-      }),
-    ).toHaveTextContent("aiApiVerification:verifyDialog.warning")
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "aiApiVerification:verifyDialog.warning",
+    )
     await user.keyboard("{Escape}")
-    expect(help).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
     expect(help).toHaveFocus()
     await user.click(help)
-    expect(
-      await screen.findByRole("dialog", {
-        name: "aiApiVerification:verifyDialog.about",
-      }),
-    ).toBeVisible()
+    expect(await screen.findByRole("tooltip")).toBeVisible()
   })
 
   it("shows the persisted summary and its timestamp beside the title", () => {

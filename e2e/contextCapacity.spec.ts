@@ -226,24 +226,27 @@ for (const scenario of [
         })
         .click()
       const panel = page.getByRole("region", {
-        name: "Model context test",
+        name: "Context capacity test",
       })
       const summary = panel.locator("[data-verification-summary]")
       const selection = panel.getByRole("button", {
-        name: "Model context test",
+        name: "Context capacity test",
         exact: true,
       })
       await selection.click()
       await expect(panel).toContainText("Pending")
       await expect(
-        panel.getByText("Tests the input context the model can accept", {
-          exact: false,
-        }),
+        panel.getByText(
+          "Tests the input context length accepted by the endpoint",
+          {
+            exact: false,
+          },
+        ),
       ).toBeVisible()
       await expect(panel.getByRole("spinbutton")).toHaveCount(0)
       const titleBounds = await selection.boundingBox()
       const helpBounds = await panel
-        .getByRole("button", { name: "About the model context test" })
+        .getByRole("button", { name: "About the context capacity test" })
         .boundingBox()
       const statusBounds = await panel
         .getByText("Pending", { exact: true })
@@ -262,10 +265,12 @@ for (const scenario of [
           statusBounds!.y >= helpBounds!.y + helpBounds!.height,
       ).toBe(true)
       await panel
-        .getByRole("button", { name: "About the model context test" })
+        .getByRole("button", { name: "About the context capacity test" })
         .hover()
       const explanation = page.getByRole("tooltip")
-      await expect(explanation).toContainText("Uses the declared model context")
+      await expect(explanation).toContainText(
+        "Uses the declared context length",
+      )
       await expect(explanation).toContainText("8M-token")
       await panel.getByRole("button", { name: "Run context probe" }).click()
       try {
@@ -307,7 +312,9 @@ for (const scenario of [
         )
       }
       if (outputLimited) {
-        await expect(panel).toContainText("Model context:", { timeout: 30000 })
+        await expect(panel).toContainText("Context capacity:", {
+          timeout: 30000,
+        })
         await expect(
           panel
             .locator("[data-verification-summary]")
@@ -393,7 +400,7 @@ for (const scenario of [
         await selection.click()
         await expect(
           panel.getByRole("status", { name: "Context capacity result" }),
-        ).toContainText("Model context:")
+        ).toContainText("Context capacity:")
         expect(requests.length).toBe(completedRequests)
         await expect(
           panel
@@ -444,7 +451,7 @@ for (const scenario of [
         })
         return
       }
-      await expect(panel).toContainText("Model context:", { timeout: 30000 })
+      await expect(panel).toContainText("Context capacity:", { timeout: 30000 })
       await expect(panel).not.toContainText("Result saved")
       if (scenario === "bracket" || streamingOverflow)
         await expect(summary.getByText(/^Context ≈/)).toHaveClass(

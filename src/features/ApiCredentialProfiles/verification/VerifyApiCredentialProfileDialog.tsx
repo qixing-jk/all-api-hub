@@ -1,15 +1,7 @@
-import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/components/Tooltip"
-import {
-  ActionGroup,
-  Button,
-  BUTTON_LOADING_BEHAVIORS,
-  SearchableSelect,
-} from "~/components/ui"
+import { ActionGroup, Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { getSelectFetchResult } from "~/components/ui/SelectFetchFeedback"
 import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
   getApiCredentialProfileVerifyProbeTestId,
@@ -18,81 +10,49 @@ import {
   useProfileVerification,
   type VerifyApiCredentialProfileDialogProps,
 } from "~/features/ApiCredentialProfiles/verification/useProfileVerification"
-import { buildProbeState } from "~/features/Verification/api/probeState"
 import { getVerificationProbeSummary } from "~/features/Verification/api/probeSummary"
 import { VERIFICATION_SOURCE_KINDS } from "~/features/Verification/api/types"
 import {
-  VerificationConfigSection,
   VerificationDialogHeader,
   VerificationSourceSubtitle,
-  VerificationTestSection,
-} from "~/features/Verification/api/VerificationLayout"
-import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
+} from "~/features/Verification/api/VerificationDialogHeader"
+import { VerificationTestSection } from "~/features/Verification/api/VerificationLayout"
 import { VerificationProbeRow } from "~/features/Verification/api/VerificationProbeRow"
-import {
-  VerificationRequestProfileEnhancement,
-  VerificationRequestProfileHint,
-  VerificationRequestProfileSelect,
-} from "~/features/Verification/api/VerificationRequestProfile"
+import { VerificationRunAllButton } from "~/features/Verification/api/VerificationRunAllButton"
 import { VerificationToolsPanel } from "~/features/Verification/api/VerificationToolsPanel"
-import { cn } from "~/lib/utils"
-import {
-  API_TYPES,
-  API_VERIFICATION_REQUEST_PROFILES,
-  MODEL_TEST_MODALITIES,
-  type ApiVerificationApiType,
-} from "~/services/verification/aiApiVerification"
-import {
-  getApiVerificationApiTypeLabel,
-  getApiVerificationProbeLabel,
-} from "~/services/verification/aiApiVerification/i18n"
+import { getApiVerificationProbeLabel } from "~/services/verification/aiApiVerification/i18n"
+
+import { ProfileVerificationConfiguration } from "./ProfileVerificationConfiguration"
 
 /** Render the feature through its state and command owner. */
 export function VerifyApiCredentialProfileDialog(
   props: VerifyApiCredentialProfileDialogProps,
 ) {
-  const overrideHintId = useId()
   const { isOpen, onClose, profile } = props
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
+  const controller = useProfileVerification(props)
   const {
     isRunning,
-    apiType,
-    setApiType,
     modelId,
     setModelId,
-    verificationMode,
-    setVerificationMode,
-    requestProfile,
-    showRequestProfileHint,
-    setRequestProfile,
-    requestProfileEnhanced,
-    setRequestProfileEnhanced,
     modelOptions,
-    setModelOptions,
     isFetchingModels,
-    setFetchModelsDiagnostic,
-    fetchModelsError,
-    fetchedModelCount,
     isPersisting,
     activeProbeIds,
     historyTarget,
     probes,
-    replaceProbes,
     persistedSummary,
     setPersistedSummary,
     isAnyProbeRunning,
     canClose,
-    hasApiTypeOverride,
-    savedApiTypeLabel,
-    fetchModels,
     clearHistory,
     runSingleProbe,
     stopProbe,
     stopRun,
+    concurrency,
     runAll,
-    modelModality,
     tools,
-  } = useProfileVerification(props)
+  } = controller
   const footer = (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
@@ -108,27 +68,19 @@ export function VerifyApiCredentialProfileDialog(
           onClick={onClose}
           disabled={!canClose}
           data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.verifyDialogCloseButton}
+          className="hidden min-[52rem]:inline-flex"
         >
           {t("aiApiVerification:verifyDialog.actions.close")}
         </Button>
-        <Tooltip
-          anchorAsChild
-          content={t("aiApiVerification:verifyDialog.actions.runAllHint")}
-        >
-          <Button
-            variant={isRunning ? "secondary" : "default"}
-            onClick={isRunning ? stopRun : runAll}
-            disabled={
-              !isRunning && (isPersisting || isAnyProbeRunning || !profile)
-            }
-            loading={isRunning}
-            loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
-          >
-            {isRunning
-              ? t("aiApiVerification:verifyDialog.actions.stop")
-              : t("aiApiVerification:verifyDialog.actions.runAll")}
-          </Button>
-        </Tooltip>
+        <VerificationRunAllButton
+          isRunning={isRunning}
+          disabled={
+            !isRunning && (isPersisting || isAnyProbeRunning || !profile)
+          }
+          concurrency={concurrency}
+          onRun={runAll}
+          onStop={stopRun}
+        />
       </ActionGroup>
     </div>
   )
@@ -155,144 +107,28 @@ export function VerifyApiCredentialProfileDialog(
       }
       footer={footer}
       size="xl"
-      panelClassName="max-w-6xl [&>[data-slot=modal-body]]:py-density-4"
+      panelClassName="verification-dialog max-w-[100rem] [&>[data-slot=modal-body]]:p-0"
       closeOnEsc={canClose}
       closeOnBackdropClick={canClose}
     >
       {!profile ? null : (
         <div className="space-y-density-3 sm:space-y-density-4">
-          <div className="space-y-density-3">
-            <VerificationConfigSection>
-              <div
-                className={cn(
-                  "gap-y-density-2 sm:gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2",
-                  modelModality === MODEL_TEST_MODALITIES.Text
-                    ? "lg:grid-cols-4"
-                    : "lg:grid-cols-3",
-                )}
-              >
-                <div>
-                  <VerificationRequestProfileSelect
-                    value={requestProfile}
-                    apiType={apiType}
-                    onChange={setRequestProfile}
-                    disabled={!canClose}
-                  />
-                </div>
-
-                <div className="space-y-density-1-5">
-                  <div className="gap-y-density-2 flex items-center gap-x-2">
-                    <div className="text-muted-foreground text-xs">
-                      {t("aiApiVerification:verifyDialog.meta.apiType")}
-                    </div>
-                  </div>
-                  <SearchableSelect
-                    aria-label={t(
-                      "aiApiVerification:verifyDialog.meta.apiType",
-                    )}
-                    options={Object.values(API_TYPES).map((value) => ({
-                      value,
-                      label: getApiVerificationApiTypeLabel(t, value),
-                    }))}
-                    aria-describedby={
-                      hasApiTypeOverride ? overrideHintId : undefined
-                    }
-                    value={apiType}
-                    onChange={(value) => {
-                      const nextApiType = value as ApiVerificationApiType
-                      setApiType(nextApiType)
-                      setModelOptions([])
-                      setFetchModelsDiagnostic(null)
-                      setPersistedSummary(null)
-                      replaceProbes(
-                        buildProbeState(nextApiType, null, modelModality),
-                      )
-                      void fetchModels(nextApiType)
-                    }}
-                    disabled={!canClose}
-                  />
-                  {hasApiTypeOverride && (
-                    <p
-                      id={overrideHintId}
-                      className="text-muted-foreground text-xs"
-                      role="note"
-                    >
-                      {t("apiCredentialProfiles:verify.override.description", {
-                        savedApiType: savedApiTypeLabel,
-                      })}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-density-1-5">
-                  <div className="flex items-center">
-                    <div className="text-muted-foreground text-xs">
-                      {t("aiApiVerification:verifyDialog.meta.model")}
-                    </div>
-                  </div>
-
-                  <SearchableSelect
-                    aria-label={t("aiApiVerification:verifyDialog.meta.model")}
-                    data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId}
-                    options={modelOptions.map((id) => ({
-                      value: id,
-                      label: id,
-                    }))}
-                    value={modelId}
-                    onChange={(value) => {
-                      setModelId(value)
-                      setPersistedSummary(null)
-                    }}
-                    placeholder={t(
-                      "apiCredentialProfiles:verify.modelPickerPlaceholder",
-                    )}
-                    loading={isFetchingModels}
-                    onRetryFetch={() => void fetchModels(apiType)}
-                    retryFetchDisabled={!canClose}
-                    fetchResult={getSelectFetchResult(
-                      fetchModelsError,
-                      fetchedModelCount,
-                    )}
-                    allowCustomValue
-                    disabled={!canClose}
-                  />
-                </div>
-
-                {modelModality === MODEL_TEST_MODALITIES.Text ? (
-                  <VerificationModeSelect
-                    value={verificationMode}
-                    onChange={setVerificationMode}
-                    disabled={!canClose}
-                  />
-                ) : null}
-
-                {(modelModality === MODEL_TEST_MODALITIES.Image ||
-                  modelModality === MODEL_TEST_MODALITIES.Video) && (
-                  <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 col-span-full rounded-md border px-3 text-xs">
-                    {modelModality === MODEL_TEST_MODALITIES.Image
-                      ? t("aiApiVerification:verifyDialog.modalityNotice.image")
-                      : t(
-                          "aiApiVerification:verifyDialog.modalityNotice.video",
-                        )}
-                  </div>
-                )}
-              </div>
-              {requestProfile !== API_VERIFICATION_REQUEST_PROFILES.Default && (
-                <div className="mt-density-3">
-                  <VerificationRequestProfileEnhancement
-                    value={requestProfileEnhanced}
-                    onChange={setRequestProfileEnhanced}
-                    disabled={!canClose}
-                  />
-                </div>
-              )}
-            </VerificationConfigSection>
-            {showRequestProfileHint && (
-              <VerificationRequestProfileHint profile={requestProfile} />
-            )}
-          </div>
           <VerificationTestSection
+            running={isRunning}
+            configuration={
+              <ProfileVerificationConfiguration controller={controller} />
+            }
             tools={<VerificationToolsPanel controller={tools} />}
+            model={{
+              modelId,
+              onModelChange: (next) => {
+                setModelId(next)
+                setPersistedSummary(null)
+              },
+              options: modelOptions,
+              disabled: !canClose || isRunning || tools.isRunning,
+              loading: isFetchingModels,
+            }}
           >
             {probes.map((probe) => {
               const result = probe.result
@@ -323,6 +159,8 @@ export function VerifyApiCredentialProfileDialog(
                   )}
                 >
                   <VerificationProbeRow
+                    progress={probe.progress}
+                    startedAt={probe.startedAt}
                     historical={probe.historical}
                     isRunning={probe.isRunning}
                     controller={tools}

@@ -1,21 +1,44 @@
-import { useContext, useEffect, useId, type ReactNode } from "react"
+import {
+  useEffect,
+  useId,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
+import { createPortal } from "react-dom"
+import { useTranslation } from "react-i18next"
 
-import { Heading6 } from "~/components/ui"
+import {
+  VERIFICATION_RAIL_STATUS_VARIANTS,
+  type VerificationRailStatusVariant,
+} from "~/features/Verification/api/types"
 import type { VerificationToolsController } from "~/features/Verification/api/useVerificationTools"
-import { VerificationSelectionContext } from "~/features/Verification/api/VerificationSelectionContext"
+import {
+  useVerificationProbeSelection,
+  VerificationDetailContext,
+} from "~/features/Verification/api/VerificationSelectionContext"
+import { type VerificationTestId } from "~/features/Verification/api/VerificationTestLabel"
 import { cn } from "~/lib/utils"
-import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification/types"
+import {
+  API_VERIFICATION_PROBE_STATUSES,
+  type ApiVerificationProbeId,
+} from "~/services/verification/aiApiVerification/types"
 
+import { VERIFICATION_PROBE_INTERRUPTION_STATUSES } from "./types"
+import { useVerificationDetailPortal } from "./useVerificationDetailPortal"
 import {
   VerificationProbeResult,
   type ProbeDetailsResult,
+  type ProbeGenerationState,
 } from "./VerificationProbeResult"
-import { VerificationPromptSettings } from "./VerificationPromptSettings"
+import { VerificationProbeSummary } from "./VerificationProbeSummary"
+import { VerificationPromptEditor } from "./VerificationPromptEditor"
 
 /** Keeps a test's editable configuration separate from the evidence of its last run. */
 export function VerificationProbeDetails({
   controller,
   probeId,
+  testId,
   result,
   label,
   heading,
@@ -24,11 +47,19 @@ export function VerificationProbeDetails({
   resultSummary,
   status,
   statusInteractive = false,
+  statusVariant,
+  statusLabel,
+  running,
   action,
+  detailAction,
   children,
   detailsContent,
+  generation,
   idleContent,
-  defaultDetailsOpen = true,
+  settings,
+  composer,
+  promptAction,
+  question,
 }: {
   label?: string
   heading?: ReactNode
@@ -37,139 +68,214 @@ export function VerificationProbeDetails({
   resultSummary?: ReactNode
   status?: ReactNode
   statusInteractive?: boolean
+  statusVariant?: VerificationRailStatusVariant
+  statusLabel?: string
+  running?: boolean
   action?: ReactNode
+  detailAction?: ReactNode
   children?: ReactNode
   detailsContent?: ReactNode
+  generation?: ProbeGenerationState
   idleContent?: ReactNode
-  defaultDetailsOpen?: boolean
+  settings?: ReactNode
+  composer?: ReactNode
+  promptAction?: ComponentProps<typeof VerificationPromptEditor>["action"]
+  question?: string
   controller?: VerificationToolsController
   probeId?: ApiVerificationProbeId
+  testId?: VerificationTestId
   result?: ProbeDetailsResult | null
 }) {
+  const { t } = useTranslation("aiApiVerification")
   const id = useId()
-  const selection = useContext(VerificationSelectionContext)
+  const { selection, selected, detailCovered } =
+    useVerificationProbeSelection(id)
+  const { detailContainer, attachDetailParking } = useVerificationDetailPortal(
+    selection && !selection.isWide ? selection.detailTarget : null,
+  )
+  const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null)
   const register = selection?.register
-  useEffect(() => register?.(id), [register, id])
-  const selected = !selection || selection.selectedId === id
-  const SummaryControl = selection ? "button" : "div"
-  const separateStatus = Boolean(headingAccessory || statusInteractive)
-  const hasResult = Boolean(result || detailsContent || resultSummary)
+  useEffect(() => register?.(id, label), [register, id, label])
+  const headerActionsTarget = selection?.isWide
+    ? headerTarget
+    : (selection?.headerStatusTarget ?? headerTarget)
+  const showDetailAction = selected && !detailCovered && Boolean(detailAction)
+  const hasResult = Boolean(
+    result || detailsContent || generation || resultSummary || question,
+  )
   const hasPrompt =
     controller && probeId && controller.promptIds.includes(probeId)
+  const settingsContent = settings
+  const composerContent =
+    composer ??
+    (hasPrompt ? (
+      <VerificationPromptEditor
+        controller={controller}
+        probeId={probeId}
+        action={promptAction}
+        running={generation?.running}
+      />
+    ) : null)
+  const resolvedTestId = testId ?? probeId
+  const isRunning = Boolean(running || generation?.running)
+  const resolvedStatusVariant =
+    statusVariant ??
+    (isRunning
+      ? VERIFICATION_RAIL_STATUS_VARIANTS.Running
+      : result && "status" in result
+        ? result.status === API_VERIFICATION_PROBE_STATUSES.Pass
+          ? VERIFICATION_RAIL_STATUS_VARIANTS.Success
+          : result.status === API_VERIFICATION_PROBE_STATUSES.Fail
+            ? VERIFICATION_RAIL_STATUS_VARIANTS.Danger
+            : result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported ||
+                result.status ===
+                  VERIFICATION_PROBE_INTERRUPTION_STATUSES.Stopped ||
+                result.status ===
+                  VERIFICATION_PROBE_INTERRUPTION_STATUSES.Timeout
+              ? VERIFICATION_RAIL_STATUS_VARIANTS.Warning
+              : undefined
+        : undefined)
+  const resolvedStatusLabel =
+    statusLabel ?? (isRunning ? t("verifyDialog.actions.running") : undefined)
+
+  const detail = (
+    <div
+      id={`${id}-detail`}
+      hidden={!selected}
+      aria-hidden={detailCovered ? true : undefined}
+      inert={detailCovered}
+      data-verification-detail
+      data-verification-detail-probe={probeId}
+      className={cn(
+        "min-w-0",
+        selection &&
+          "my-1 p-2 [@container(min-width:52rem)]:absolute [@container(min-width:52rem)]:inset-y-0 [@container(min-width:52rem)]:right-(--verification-settings-space) [@container(min-width:52rem)]:left-(--verification-list-width) [@container(min-width:52rem)]:my-0 [@container(min-width:52rem)]:overflow-y-auto [@container(min-width:52rem)]:p-5",
+      )}
+    >
+      <VerificationDetailContext.Provider
+        value={
+          selection ? { headerTarget, headerActionsTarget, selected } : null
+        }
+      >
+        <div
+          data-verification-detail-content
+          className="flex min-h-0 flex-col gap-density-2 [@container(min-width:52rem)]:h-full [@container(min-width:52rem)]:gap-density-3 [@container(min-width:52rem)]:[&>*:not([data-slot=verification-result])]:shrink-0"
+        >
+          {description}
+          <VerificationProbeResult
+            result={result}
+            resultSummary={resultSummary}
+            detailsContent={detailsContent}
+            generation={generation}
+            selected={selected}
+            question={question}
+          />
+          {!selection?.settingsTarget ? settingsContent : null}
+          {children}
+          {idleContent}
+          {composerContent}
+          {showDetailAction ? (
+            <div className="mt-auto shrink-0 pt-3">{detailAction}</div>
+          ) : null}
+        </div>
+      </VerificationDetailContext.Provider>
+    </div>
+  )
+
   if (!heading && !action && !hasPrompt && !hasResult) return null
   return (
     <div
       data-verification-probe={probeId}
       data-testid={probeId ? `verification-prompt-${probeId}` : undefined}
     >
-      <div
-        data-verification-summary
-        className={cn(
-          "flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 [@container(min-width:52rem)]:px-3 [@container(min-width:52rem)]:py-2",
-          selection && (selected ? "bg-primary/10" : "hover:bg-muted/60"),
-        )}
-      >
-        <div className="relative flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          {heading ? (
-            <SummaryControl
-              type={selection ? "button" : undefined}
-              aria-label={selection ? label : undefined}
-              aria-labelledby={selection && !label ? `${id}-label` : undefined}
-              aria-expanded={selection ? selected : undefined}
-              aria-controls={selection ? `${id}-detail` : undefined}
-              aria-describedby={
-                selection && status ? `${id}-status` : undefined
-              }
-              onClick={selection ? () => selection.select(id) : undefined}
-              className={cn(
-                "focus-visible:ring-ring flex min-h-(--density-control-sm) min-w-0 items-center gap-2 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none",
-                separateStatus
-                  ? selection && "after:absolute after:inset-0"
-                  : "flex-1",
-              )}
+      <VerificationProbeSummary
+        probeId={probeId}
+        id={id}
+        label={label}
+        heading={heading}
+        headingAccessory={headingAccessory}
+        status={status}
+        statusInteractive={statusInteractive}
+        statusVariant={resolvedStatusVariant}
+        statusLabel={resolvedStatusLabel}
+        testId={resolvedTestId}
+        action={showDetailAction ? null : action}
+      />
+      {selection?.headerStatusTarget && status
+        ? createPortal(
+            <div
+              hidden={!selected}
+              className="flex shrink-0 items-center gap-2"
+              data-verification-header-status
             >
-              <div id={`${id}-label`} className="min-w-0">
-                {heading}
-              </div>
-              {!separateStatus && status ? (
+              {status}
+            </div>,
+            selection.headerStatusTarget,
+            `${id}-identity-status`,
+          )
+        : null}
+      {selection?.headerTarget
+        ? createPortal(
+            <div
+              hidden={!selected}
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+              data-verification-test-header
+              data-probe-id={probeId}
+            >
+              {status && !selection.headerStatusTarget ? (
                 <div
-                  id={`${id}-status`}
-                  className="ml-auto flex shrink-0 items-center gap-2"
+                  className="flex shrink-0 items-center gap-2"
+                  data-verification-header-status
                 >
                   {status}
                 </div>
               ) : null}
-            </SummaryControl>
-          ) : null}
-          {separateStatus ? (
-            <>
-              {/* Keep help above the selection hit area without nesting buttons. */}
-              {headingAccessory ? (
-                <div className="relative z-10 flex shrink-0 items-center">
-                  {headingAccessory}
-                </div>
-              ) : null}
-              {status ? (
+              {(selection?.listCollapsed || (selection && !selection.isWide)) &&
+              action &&
+              !detailAction ? (
                 <div
-                  id={`${id}-status`}
-                  className={cn(
-                    "ml-auto flex max-w-full flex-wrap items-center gap-2",
-                    statusInteractive ? "relative z-10" : "pointer-events-none",
-                  )}
+                  data-verification-header-actions
+                  className="flex shrink-0 items-center"
                 >
-                  {status}
+                  {action}
                 </div>
               ) : null}
-            </>
-          ) : null}
-        </div>
-        <div className="shrink-0">{action}</div>
-      </div>
-      {/* Keep each detail mounted in its row. CSS moves it to the desktop pane;
-          selection and resizing must not reset editors, results or requests. */}
-      <div
-        id={`${id}-detail`}
-        hidden={!selected}
-        data-verification-detail
-        className={cn(
-          "min-w-0 [@container(min-width:52rem)]:[&_:is(pre,textarea,ol)]:max-h-none",
-          selection &&
-            "bg-surface-subtle my-1 rounded-lg p-3 [@container(min-width:52rem)]:absolute [@container(min-width:52rem)]:inset-y-0 [@container(min-width:52rem)]:right-0 [@container(min-width:52rem)]:left-[calc(var(--verification-list-width)+1.25rem)] [@container(min-width:52rem)]:my-0 [@container(min-width:52rem)]:overflow-y-auto [@container(min-width:52rem)]:rounded-xl [@container(min-width:52rem)]:p-5",
-        )}
-      >
-        <div
-          data-verification-detail-content
-          className={cn(
-            idleContent
-              ? "gap-density-2 [@container(min-width:52rem)]:gap-density-3 flex flex-col [@container(min-width:52rem)]:h-full [@container(min-width:52rem)]:[&>*:not(:last-child)]:shrink-0"
-              : "space-y-density-2 [@container(min-width:52rem)]:space-y-density-3",
-          )}
-        >
-          {selection && label && !idleContent ? (
-            <Heading6 className="text-foreground hidden text-base font-semibold [@container(min-width:52rem)]:block">
-              {label}
-            </Heading6>
-          ) : null}
-          {description}
-          <VerificationProbeResult
-            result={result}
-            resultSummary={resultSummary}
-            detailsContent={detailsContent}
-            status={selection ? status : undefined}
-            selected={selected}
-            defaultDetailsOpen={defaultDetailsOpen}
-          />
-          {hasPrompt ? (
-            <VerificationPromptSettings
-              controller={controller}
-              probeId={probeId}
-              autoOpen={hasResult ? false : undefined}
-            />
-          ) : null}
-          {children}
-          {idleContent}
-        </div>
-      </div>
+              <div
+                ref={setHeaderTarget}
+                data-verification-header-details
+                className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+              />
+            </div>,
+            selection.headerTarget,
+            `${id}-status`,
+          )
+        : null}
+      {selection?.settingsTarget && settingsContent
+        ? createPortal(
+            <div
+              hidden={!selected}
+              className="space-y-2"
+              data-verification-test-settings
+              onKeyDown={selection.onSettingsKeyDown}
+            >
+              <VerificationDetailContext.Provider
+                value={{
+                  headerTarget,
+                  headerActionsTarget,
+                  selected,
+                  settingsTitle: `${t("verifyDialog.workspace.currentTest")}${label ? ` · ${label}` : ""}`,
+                }}
+              >
+                {settingsContent}
+              </VerificationDetailContext.Provider>
+            </div>,
+            selection.settingsTarget,
+            id,
+          )
+        : null}
+      {/* Keep desktop grouping; park mobile detail outside the sliding list. */}
+      <div ref={attachDetailParking} className="contents" />
+      {createPortal(detail, detailContainer, `${id}-detail`)}
     </div>
   )
 }

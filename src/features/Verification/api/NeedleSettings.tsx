@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next"
 import { Input } from "~/components/ui"
 import { NEEDLE_DEFAULTS } from "~/services/verification/modelQuality/needleConstants"
 
+import { formatContextTokens } from "./contextTokenDisplay"
 import { NeedleInputLimit } from "./NeedleInputLimit"
 import type { NeedleController } from "./useNeedleTest"
+import { VerificationConcurrencyControl } from "./VerificationConcurrencyControl"
 import { VerificationSettingsCard } from "./VerificationSettingsCard"
 import { VerificationSettingToggle } from "./VerificationSettingToggle"
 
@@ -18,6 +20,7 @@ export function NeedleSettings({
 }: {
   controller: Pick<
     NeedleController,
+    | "concurrency"
     | "counter"
     | "plan"
     | "reference"
@@ -37,8 +40,23 @@ export function NeedleSettings({
   const { t } = useTranslation("aiApiVerification")
   const id = useId()
   return (
-    <VerificationSettingsCard>
+    <VerificationSettingsCard running={controller.running}>
       <div className="@container/needle space-y-4 text-xs">
+        {controller.plan && !controller.invalid ? (
+          <p
+            aria-live="polite"
+            className="sticky top-0 z-10 border-b border-border-subtle bg-surface-subtle pb-3 text-xs leading-relaxed text-foreground"
+          >
+            {t("verifyDialog.tools.needle.settingsPreview", {
+              requests: controller.plan.requests,
+              tokens: formatContextTokens(controller.plan.totalInputTokens),
+            })}
+          </p>
+        ) : null}
+        <VerificationConcurrencyControl
+          controller={controller.concurrency}
+          disabled={controller.running}
+        />
         <NeedleInputLimit
           controller={controller}
           runCapacity={runCapacity}
@@ -46,7 +64,7 @@ export function NeedleSettings({
           capacityRunning={capacityRunning}
         />
         <VerificationSettingToggle
-          className="border-border-subtle border-t pt-4"
+          className="border-t border-border-subtle pt-4"
           id={`${id}-quick`}
           hintId={`${id}-quick-hint`}
           aria-describedby={`${id}-quick-hint`}
@@ -56,17 +74,17 @@ export function NeedleSettings({
           onChange={controller.setQuick}
           disabled={controller.running}
         />
-        <div className="border-border-subtle grid items-center gap-3 border-t pt-4 @sm/needle:grid-cols-[minmax(0,1fr)_11rem]">
+        <div className="grid items-center gap-3 border-t border-border-subtle pt-4 @sm/needle:grid-cols-[minmax(0,1fr)_11rem]">
           <div className="space-y-1">
             <label
-              className="text-foreground text-sm font-medium"
+              className="text-sm font-medium text-foreground"
               htmlFor={`${id}-seed`}
             >
               {t("verifyDialog.tools.needle.seedInput")}
             </label>
             <p
               id={`${id}-seed-hint`}
-              className="text-muted-foreground leading-relaxed"
+              className="leading-relaxed text-muted-foreground"
             >
               {t("verifyDialog.tools.needle.seedHint")}
             </p>
@@ -85,7 +103,7 @@ export function NeedleSettings({
         </div>
       </div>
       {controller.invalid ? (
-        <p className="text-destructive text-xs" role="alert">
+        <p className="text-xs text-destructive" role="alert">
           {t("verifyDialog.tools.needle.invalid")}
         </p>
       ) : null}

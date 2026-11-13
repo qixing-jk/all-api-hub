@@ -35,24 +35,28 @@ export function VerificationHistorySummary({
     <div
       className={
         className ??
-        "gap-y-density-1-5 sm:gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-1.5 sm:gap-x-2"
+        "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-density-1-5 sm:gap-x-2 sm:gap-y-density-2"
       }
     >
-      <span className="sr-only">{t("verifyDialog.history.lastVerified")}</span>
+      <span
+        className={hideTimestamp ? "text-xs text-muted-foreground" : "sr-only"}
+      >
+        {t("verifyDialog.history.lastVerified")}
+      </span>
       <VerificationStatusBadge
         status={summary?.status ?? API_VERIFICATION_HISTORY_STATUSES.Unverified}
         latencyMs={latencyMs}
       />
       {!hideTimestamp && relativeTimestamp ? (
-        <span className="gap-y-density-1-5 inline-flex min-w-0 items-center gap-x-1.5">
+        <span className="inline-flex min-w-0 items-center gap-x-1.5 gap-y-density-1-5">
           <span
             aria-hidden="true"
-            className="bg-surface-strong h-1 w-1 shrink-0 rounded-full"
+            className="h-1 w-1 shrink-0 rounded-full bg-surface-strong"
           />
           <time
             dateTime={verificationTimestampIso}
             title={fullTimestamp}
-            className="text-muted-foreground text-2xs cursor-default truncate sm:text-xs"
+            className="cursor-default truncate text-2xs text-muted-foreground sm:text-xs"
           >
             {relativeTimestamp}
           </time>

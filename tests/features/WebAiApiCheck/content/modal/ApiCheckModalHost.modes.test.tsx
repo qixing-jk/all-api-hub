@@ -1,4 +1,5 @@
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+import { getVerificationHeader } from "~~/tests/test-utils/verificationWorkspace"
 
 import "./apiCheckModalHostMocks"
 
@@ -286,7 +287,7 @@ describe("web API verification modes", () => {
         }),
       )
       expect(
-        within(textProbe).getByText(
+        within(getVerificationHeader(textProbe)).getByText(
           "webAiApiCheck:modal.errors.runProbeFailed",
         ),
       ).toBeVisible()
@@ -307,7 +308,9 @@ describe("web API verification modes", () => {
 
   it("selects API types from the project control inside the page modal portal", async () => {
     const user = userEvent.setup()
-    await openModal()
+    await openModal({
+      sourceText: "https://proxy.example.com/api sk-test-complete-fixture",
+    })
 
     const apiTypeSelect = screen.getByRole("combobox", {
       name: "webAiApiCheck:modal.fields.apiType",
@@ -418,7 +421,9 @@ describe("web API verification modes", () => {
         }),
       )
       expect(
-        await within(textProbe).findByText("Mode fixture passed"),
+        await within(getVerificationHeader(textProbe)).findByText(
+          "Mode fixture passed",
+        ),
       ).toBeVisible()
       await waitFor(() => expect(modeSelect).toBeEnabled())
 
@@ -460,11 +465,16 @@ describe("web API verification modes", () => {
       )
       await act(async () => {
         dispatchOpenApiCheckModal({
-          sourceText: "",
+          sourceText: "https://proxy.example.com/api sk-test-complete-fixture",
           pageUrl: "https://example.com",
           trigger: "contextMenu",
         })
       })
+      const settings = screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.workspace.settings",
+      })
+      if (settings.getAttribute("aria-expanded") === "false")
+        await user.click(settings)
       expect(
         screen.getByRole("combobox", {
           name: "aiApiVerification:verifyDialog.meta.mode",

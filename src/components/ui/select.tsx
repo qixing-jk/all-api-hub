@@ -9,6 +9,11 @@ import { useFloatingLayerClass } from "./floating-layer"
 import { Spinner } from "./spinner"
 
 const SelectViewportResizeContext = React.createContext(false)
+const SelectPortalContainerContext = React.createContext<
+  HTMLElement | undefined
+>(undefined)
+/** Keep dropdowns within a content-script root when its styles are isolated. */
+const SelectPortalContainerProvider = SelectPortalContainerContext.Provider
 
 interface SelectViewportResizeProviderProps {
   children: React.ReactNode
@@ -221,7 +226,7 @@ const SelectTrigger = React.forwardRef<
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground [&_svg:not([class*='text-'])]:text-faint-foreground dark:[&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-density-2 *:data-[slot=select-value]:gap-density-2 py-density-1 flex h-auto w-full min-w-0 items-center justify-between rounded-md border px-3 text-left text-sm break-words whitespace-normal shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 data-[size=default]:min-h-(--density-control) data-[size=sm]:min-h-(--density-control-sm) *:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex h-auto w-full min-w-0 items-center justify-between gap-density-2 rounded-md border border-border-strong bg-card px-3 py-density-1 text-left text-sm break-words whitespace-normal text-foreground shadow-xs transition-colors outline-none hover:bg-surface-subtle focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 data-placeholder:text-faint-foreground data-[size=default]:min-h-(--density-control) data-[size=sm]:min-h-(--density-control-sm) *:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-density-2 dark:border-border dark:hover:bg-card/80 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-faint-foreground dark:[&_svg:not([class*='text-'])]:text-muted-foreground",
         className,
       )}
       {...props}
@@ -251,14 +256,15 @@ const SelectContent = React.forwardRef<
     ref,
   ) => {
     const floatingLayerClass = useFloatingLayerClass()
+    const portalContainer = React.useContext(SelectPortalContainerContext)
 
     return (
-      <SelectPrimitive.Portal>
+      <SelectPrimitive.Portal container={portalContainer}>
         <SelectPrimitive.Content
           ref={ref}
           data-slot="select-content"
           className={cn(
-            "dark:border-border/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 corners-concentric border-border bg-popover text-popover-foreground ring-shadow/5 dark:ring-foreground/5 relative max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-hidden rounded-lg border shadow-lg ring-1 [--corner-inset:5px]",
+            "relative max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg ring-1 ring-shadow/5 [--corner-inset:5px] corners-concentric data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 dark:border-border/80 dark:ring-foreground/5",
             floatingLayerClass,
             position === "popper" &&
               "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
@@ -271,7 +277,7 @@ const SelectContent = React.forwardRef<
           <SelectScrollUpButton />
           <SelectPrimitive.Viewport
             className={cn(
-              "py-density-1 px-1",
+              "px-1 py-density-1",
               position === "popper" &&
                 "h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width) scroll-my-1",
             )}
@@ -294,7 +300,7 @@ const SelectLabel = React.forwardRef<
     ref={ref}
     data-slot="select-label"
     className={cn(
-      "text-muted-foreground py-density-1-5 px-2 text-xs font-medium",
+      "px-2 py-density-1-5 text-xs font-medium text-muted-foreground",
       className,
     )}
     {...props}
@@ -310,14 +316,14 @@ const SelectItem = React.forwardRef<
     ref={ref}
     data-slot="select-item"
     className={cn(
-      `dark:text-foreground dark:focus:bg-secondary/80 gap-density-2 relative flex w-full min-w-0 cursor-pointer items-center ${CORNERS.item} text-secondary-foreground focus:bg-theme-50 focus:text-foreground data-[state=checked]:text-foreground py-density-1-5 *:[span]:last:gap-density-2 pr-8 pl-2 text-sm break-words whitespace-normal outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:min-w-0 *:[span]:last:items-center`,
+      `relative flex w-full min-w-0 cursor-pointer items-center gap-density-2 dark:text-foreground dark:focus:bg-secondary/80 ${CORNERS.item} py-density-1-5 pr-8 pl-2 text-sm break-words whitespace-normal text-secondary-foreground outline-hidden transition-colors select-none focus:bg-theme-50 focus:text-foreground data-[state=checked]:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:min-w-0 *:[span]:last:items-center *:[span]:last:gap-density-2`,
       className,
     )}
     {...props}
   >
     <span className="absolute right-2 flex size-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <CheckIcon className="text-primary size-4" />
+        <CheckIcon className="size-4 text-primary" />
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -333,7 +339,7 @@ const SelectSeparator = React.forwardRef<
     ref={ref}
     data-slot="select-separator"
     className={cn(
-      "bg-border my-density-1 pointer-events-none -mx-1 h-px",
+      "pointer-events-none -mx-1 my-density-1 h-px bg-border",
       className,
     )}
     {...props}
@@ -349,7 +355,7 @@ const SelectScrollUpButton = React.forwardRef<
     ref={ref}
     data-slot="select-scroll-up-button"
     className={cn(
-      "py-density-1 flex cursor-default items-center justify-center",
+      "flex cursor-default items-center justify-center py-density-1",
       className,
     )}
     {...props}
@@ -367,7 +373,7 @@ const SelectScrollDownButton = React.forwardRef<
     ref={ref}
     data-slot="select-scroll-down-button"
     className={cn(
-      "py-density-1 flex cursor-default items-center justify-center",
+      "flex cursor-default items-center justify-center py-density-1",
       className,
     )}
     {...props}
@@ -383,6 +389,7 @@ export {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectPortalContainerProvider,
   SelectLabel,
   SelectScrollDownButton,
   SelectScrollUpButton,

@@ -1,28 +1,37 @@
 import { Play } from "lucide-react"
-import { type MouseEventHandler } from "react"
+import { type MouseEventHandler, type ReactNode } from "react"
 import { Trans, useTranslation } from "react-i18next"
 
 import { Button, Heading6 } from "~/components/ui"
-import type { VerificationTestId } from "~/features/Verification/api/VerificationTestLabel"
+import {
+  VerificationTestIcon,
+  type VerificationTestId,
+} from "~/features/Verification/api/VerificationTestLabel"
+import { cn } from "~/lib/utils"
 import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification"
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
 import { NEEDLE_TEST_ID } from "~/services/verification/modelQuality/needleConstants"
 import { QUESTION_ANSWER_TEST_ID } from "~/services/verification/modelQuality/questionAnswer"
 
-/** Explains an unstarted probe without implying progress or fabricating results. */
+/** Explain a test when no current evidence is available, including restored summaries. */
 export function VerificationProbeIntroduction({
   probeId,
   title,
   onRun,
   disabled,
+  note,
 }: {
   probeId: VerificationTestId
   title: string
   onRun: MouseEventHandler<HTMLButtonElement> | undefined
   disabled?: boolean
+  note?: ReactNode
 }) {
   const { t } = useTranslation("aiApiVerification")
+  const primaryRun =
+    probeId === API_VERIFICATION_PROBE_IDS.Models ||
+    probeId === CONTEXT_CAPACITY_TEST_ID
   const descriptions: Record<VerificationTestId, string> = {
     [QUESTION_ANSWER_TEST_ID]: t(
       "verifyDialog.tools.questionAnswer.description",
@@ -58,17 +67,34 @@ export function VerificationProbeIntroduction({
     ),
   }
   return (
-    <div className="order-first min-h-0 w-full [container-name:probe-intro] [@container(min-width:52rem)]:[container-type:size] [@container(min-width:52rem)]:order-last [@container(min-width:52rem)]:mx-auto [@container(min-width:52rem)]:max-w-[38rem] [@container(min-width:52rem)]:flex-1">
+    <div
+      data-verification-introduction
+      className="[container-type:size] order-first min-h-0 w-full flex-1 [container-name:probe-intro] [@container(min-width:52rem)]:mx-auto [@container(min-width:52rem)]:max-w-xl"
+    >
       <div className="flex h-full items-center justify-center">
-        {/* Scale intrinsic-height content so the alignment wrapper cannot add overflow. */}
-        <div className="flex w-full flex-col gap-4 text-left [@container_probe-intro_(max-height:5rem)]:hidden [@container_probe-intro_(min-height:0px)]:max-w-md [@container_probe-intro_(min-height:0px)]:items-center [@container_probe-intro_(min-height:0px)]:py-2 [@container_probe-intro_(min-height:0px)]:text-center [@container_probe-intro_(min-width:38rem)_and_(min-height:30rem)]:scale-[1.1]">
-          <Heading6 className="text-foreground hidden w-full text-center text-xl font-semibold [@container_probe-intro_(min-height:10rem)]:block">
+        {/* Reveal supporting copy only when the available height can contain it. */}
+        <div className="flex w-full flex-col gap-3.5 text-left [@container_probe-intro_(max-height:3rem)]:hidden [@container_probe-intro_(min-height:0px)]:max-w-lg [@container_probe-intro_(min-height:0px)]:items-center [@container_probe-intro_(min-height:0px)]:py-2 [@container_probe-intro_(min-height:0px)]:text-center [@container_probe-intro_(min-height:22rem)]:gap-5">
+          <div
+            data-testid="probe-intro-icon"
+            className="hidden size-14 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-xs transition-all [@container_probe-intro_(min-height:20rem)]:flex [@container_probe-intro_(min-height:22rem)]:size-16"
+          >
+            <VerificationTestIcon
+              testId={probeId}
+              className="size-7 shrink-0 [@container_probe-intro_(min-height:22rem)]:size-8"
+            />
+          </div>
+          <Heading6 className="hidden w-full text-center text-xl font-semibold tracking-tight text-foreground [@container_probe-intro_(min-height:22rem)]:text-2xl [@container_probe-intro_(min-height:8rem)]:block">
             {title}
           </Heading6>
-          <p className="text-muted-foreground w-full min-w-0 text-xs leading-relaxed [@container_probe-intro_(min-height:14rem)]:text-sm">
+          <p className="w-full min-w-0 text-xs leading-relaxed text-muted-foreground [@container_probe-intro_(min-height:14rem)]:text-sm [@container_probe-intro_(min-height:22rem)]:text-base">
             {descriptions[probeId]}
           </p>
-          <p className="text-muted-foreground hidden text-xs [@container_probe-intro_(min-height:16rem)]:block">
+          {note ? (
+            <p className="w-full text-xs leading-relaxed text-muted-foreground">
+              {note}
+            </p>
+          ) : null}
+          <p className="hidden text-xs text-muted-foreground [@container_probe-intro_(min-height:12rem)]:block">
             <Trans
               t={t}
               i18nKey="verifyDialog.intro.startHint"
@@ -76,11 +102,21 @@ export function VerificationProbeIntroduction({
                 run: (
                   <Button
                     type="button"
-                    variant="outline"
-                    className="hover:border-primary/30 hover:bg-primary/5 hover:text-primary mx-1 min-h-0 gap-1 rounded-md px-2 py-0.5 align-baseline text-xs whitespace-nowrap has-[>svg]:px-2"
-                    leftIcon={<Play aria-hidden="true" className="size-3" />}
+                    variant={primaryRun ? "default" : "outline"}
+                    className={cn(
+                      "mx-1.5 inline-flex min-h-(--density-control-sm) gap-1.5 rounded-lg px-3 py-1 align-middle text-xs font-medium has-[>svg]:px-2.5",
+                      !primaryRun &&
+                        "border-primary/30 bg-primary/5 text-primary shadow-2xs transition-colors hover:border-primary/50 hover:bg-primary/10",
+                    )}
+                    leftIcon={
+                      <Play
+                        aria-hidden="true"
+                        className="size-3.5 fill-current"
+                      />
+                    }
                     onClick={onRun}
                     disabled={disabled}
+                    data-testid="probe-intro-run-button"
                   />
                 ),
               }}

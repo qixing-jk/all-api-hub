@@ -7,10 +7,16 @@ import {
   VERIFICATION_TOOL_STATUSES,
   type VerificationToolsController,
 } from "~/features/Verification/api/useVerificationTools"
+import { VerificationTestSection } from "~/features/Verification/api/VerificationLayout"
 import { VerificationProbeDetails } from "~/features/Verification/api/VerificationProbeDetails"
-import { VerificationPromptEditor } from "~/features/Verification/api/VerificationPromptEditor"
+import { VerificationProbeRow } from "~/features/Verification/api/VerificationProbeRow"
 import { VerificationToolsPanel } from "~/features/Verification/api/VerificationToolsPanel"
+import en from "~/locales/en/aiApiVerification.json"
 import zhCN from "~/locales/zh-CN/aiApiVerification.json"
+import {
+  VERIFICATION_GENERATION_PART_TYPES,
+  VERIFICATION_GENERATION_TOOL_STATES,
+} from "~/services/verification/aiApiVerification/generationProgress"
 import { getDefaultProbePrompt } from "~/services/verification/aiApiVerification/probes/probePrompts"
 import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification/types"
 import {
@@ -50,6 +56,25 @@ const buildPelican = (
     shapeCount: 2,
     wheelClues: 1,
   },
+  ...overrides,
+})
+
+const buildDrawingSummary = (
+  overrides: Partial<
+    NonNullable<VerificationToolsController["pelicanSummary"]>
+  > = {},
+): NonNullable<VerificationToolsController["pelicanSummary"]> => ({
+  target: { kind: "profile-model", profileId: "profile", modelId: "model" },
+  targetKey: "profile",
+  apiType: "openai-compatible",
+  modelId: "model",
+  executionMode: PELICAN_EXECUTION_MODES.Reply,
+  outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+  latencyMs: 20000,
+  verifiedAt: 1000,
+  steps: 0,
+  calls: 0,
+  files: 1,
   ...overrides,
 })
 
@@ -94,6 +119,213 @@ const renderPanel = (controller: VerificationToolsController) =>
   )
 
 describe("VerificationToolsPanel", () => {
+  it("keeps the save hint short with its scope available on demand", async () => {
+    const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerificationToolsPanel controller={buildController()} />
+      </I18nextProvider>,
+    )
+    const hint = screen.getByText("Auto-save", { exact: true })
+    expect(hint).toBeVisible()
+    expect(hint).toHaveAccessibleDescription(
+      "Auto-saved for this test across accounts and credentials.",
+    )
+  })
+  it("labels a truncated drawing response as partial while retaining its SVG", () => {
+    renderPanel(
+      buildController({
+        pelican: buildPelican({ responseComplete: false }),
+        pelicanStatus: VERIFICATION_TOOL_STATUSES.Done,
+        pelicanProgress: {
+          text: "Partial explanation",
+          reasoning: "",
+          tools: [],
+          step: 1,
+          parts: [
+            {
+              id: "text",
+              step: 0,
+              type: VERIFICATION_GENERATION_PART_TYPES.Text,
+              text: "Partial explanation",
+            },
+          ],
+        },
+      }),
+    )
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.generation.partial"),
+    ).toBeVisible()
+    expect(screen.getByRole("log")).toHaveTextContent("Partial explanation")
+  })
+  it("retains the sent prompt when stopped before the first response block", () => {
+    const row = (running: boolean) => (
+      <I18nextProvider i18n={testI18n}>
+        <VerificationProbeRow
+          controller={buildController()}
+          probeId={API_VERIFICATION_PROBE_IDS.TextGeneration}
+          isRunning={running}
+          startedAt={1}
+          result={null}
+          runButtonProps={{ children: "Run" }}
+        />
+      </I18nextProvider>
+    )
+    const view = render(row(true))
+    view.rerender(row(false))
+    expect(
+      within(screen.getByRole("log")).getByRole("region", {
+        name: "aiApiVerification:verifyDialog.tools.questionAnswer.runQuestion",
+      }),
+    ).toHaveTextContent("Reply with exactly: OK")
+  })
+  it("starts with the sent prompt, retains it after edits, and replaces it on retry", async () => {
+    const stop = vi.fn()
+    const row = (running: boolean, draft: string, startedAt = 1) => (
+      <I18nextProvider i18n={testI18n}>
+        <VerificationProbeRow
+          controller={buildController({
+            promptDraft: { "text-generation": draft },
+          })}
+          probeId={API_VERIFICATION_PROBE_IDS.TextGeneration}
+          isRunning={running}
+          startedAt={startedAt}
+          progress={{ text: "Answer", reasoning: "", tools: [], step: 1 }}
+          result={null}
+          runButtonProps={{ onClick: stop, loading: running, children: "Run" }}
+        />
+      </I18nextProvider>
+    )
+    const view = render(row(true, "Sent prompt"))
+    const question = within(screen.getByRole("log")).getByRole("region", {
+      name: "aiApiVerification:verifyDialog.tools.questionAnswer.runQuestion",
+    })
+    expect(question).toHaveTextContent("Sent prompt")
+    expect(screen.getByRole("textbox")).toBeDisabled()
+    await userEvent.setup().click(
+      within(document.querySelector("[data-verification-composer]")!).getByRole(
+        "button",
+        {
+          name: "aiApiVerification:verifyDialog.tools.stop",
+        },
+      ),
+    )
+    expect(stop).toHaveBeenCalledOnce()
+    view.rerender(row(false, "Next prompt"))
+    expect(question).toHaveTextContent("Sent prompt")
+    expect(question).not.toHaveTextContent("Next prompt")
+    view.rerender(row(true, "Next prompt", 2))
+    expect(
+      within(screen.getByRole("log")).getByRole("region", {
+        name: "aiApiVerification:verifyDialog.tools.questionAnswer.runQuestion",
+      }),
+    ).toHaveTextContent("Next prompt")
+  })
+  it("edits and sends a prompt from the detail pane while settings are closed", async () => {
+    const user = userEvent.setup()
+    const run = vi.fn()
+    const controller = buildController()
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <VerificationTestSection tools={null}>
+          <VerificationProbeRow
+            controller={controller}
+            probeId={API_VERIFICATION_PROBE_IDS.TextGeneration}
+            result={null}
+            runButtonProps={{ onClick: run, children: "Run" }}
+          />
+        </VerificationTestSection>
+      </I18nextProvider>,
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.probes.text-generation",
+      }),
+    )
+    const detail = document.querySelector("[data-verification-detail]")!
+    const input = within(detail as HTMLElement).getByRole("textbox")
+    expect(input).toBeVisible()
+    fireEvent.change(input, {
+      target: { value: "Reply with exactly: OK edited" },
+    })
+    expect(controller.setPromptDraftValue).toHaveBeenCalledWith(
+      "text-generation",
+      "Reply with exactly: OK edited",
+    )
+    await user.click(
+      within(detail as HTMLElement).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+    expect(run).toHaveBeenCalledOnce()
+  })
+  it("keeps the inspected drawing process when the final artifact arrives", async () => {
+    const user = userEvent.setup()
+    const progress = {
+      text: "Created",
+      reasoning: "Inspect workspace",
+      tools: [],
+      step: 1,
+      parts: [
+        {
+          id: "0",
+          step: 1,
+          type: VERIFICATION_GENERATION_PART_TYPES.Reasoning,
+          text: "Inspect workspace",
+        },
+        {
+          id: "1",
+          step: 1,
+          type: VERIFICATION_GENERATION_PART_TYPES.Tool,
+          toolCallId: "a",
+          name: "write_file",
+          input: "{}",
+          output: "true",
+          state: VERIFICATION_GENERATION_TOOL_STATES.OutputAvailable,
+        },
+      ],
+    }
+    const panel = (running: boolean) => (
+      <I18nextProvider i18n={testI18n}>
+        <VerificationToolsPanel
+          controller={buildController({
+            isPelicanRunning: running,
+            pelicanStartedAt: 1,
+            pelicanProgress: progress,
+            pelicanStatus: running
+              ? VERIFICATION_TOOL_STATUSES.Running
+              : VERIFICATION_TOOL_STATUSES.Done,
+            pelican: running
+              ? null
+              : buildPelican({
+                  agent: {
+                    steps: 1,
+                    outcome: AGENT_TEST_OUTCOMES.Completed,
+                    files: [],
+                    calls: [],
+                  },
+                }),
+          })}
+        />
+      </I18nextProvider>
+    )
+    const view = render(panel(true))
+    await user.click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.generation.reasoning",
+      }),
+    )
+    view.rerender(panel(false))
+    expect(screen.getByText("Inspect workspace")).toBeVisible()
+    expect(screen.getByText("write_file")).toBeVisible()
+    expect(screen.getByTestId("pelican-svg-preview")).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "aiApiVerification:verifyDialog.tools.agent.calls",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("previews a safe drawing without a declared viewBox", async () => {
     const i18n = await createResourceTestI18n(
       { "zh-CN": { aiApiVerification: zhCN } },
@@ -129,7 +361,7 @@ describe("VerificationToolsPanel", () => {
       </I18nextProvider>
     )
     const { rerender } = render(panel(false))
-    const inlineRun = screen.getByRole("button", { name: "运行" })
+    const inlineRun = screen.getByTestId("probe-intro-run-button")
     expect(inlineRun).toBeDisabled()
     await user.click(inlineRun)
     expect(runPelican).not.toHaveBeenCalled()
@@ -137,6 +369,59 @@ describe("VerificationToolsPanel", () => {
     await user.click(inlineRun)
     expect(runPelican).toHaveBeenCalledOnce()
   })
+
+  it("explains a restored drawing summary and keeps the introduction available to run again", async () => {
+    const user = userEvent.setup()
+    const runPelican = vi.fn()
+    const i18n = await createResourceTestI18n(
+      { "zh-CN": { aiApiVerification: zhCN } },
+      "zh-CN",
+    )
+    const controller = buildController({
+      runPelican,
+      pelicanSummary: buildDrawingSummary({
+        verifiedAt: Date.now() - 86400000,
+      }),
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerificationToolsPanel controller={controller} />
+      </I18nextProvider>,
+    )
+    expect(
+      screen.getByText(zhCN.verifyDialog.tools.pelican.description),
+    ).toBeVisible()
+    expect(
+      within(
+        document.querySelector(
+          "[data-verification-introduction]",
+        ) as HTMLElement,
+      ).getByText(zhCN.verifyDialog.history.storage.drawing),
+    ).toBeVisible()
+    await user.click(screen.getByTestId("probe-intro-run-button"))
+    expect(runPelican).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    VERIFICATION_TOOL_STATUSES.Running,
+    VERIFICATION_TOOL_STATUSES.Stopped,
+    VERIFICATION_TOOL_STATUSES.Error,
+  ])(
+    "does not attach an old drawing timestamp to current state %s",
+    (pelicanStatus) => {
+      renderPanel(
+        buildController({
+          pelicanStatus,
+          isPelicanRunning:
+            pelicanStatus === VERIFICATION_TOOL_STATUSES.Running,
+          pelicanSummary: buildDrawingSummary(),
+        }),
+      )
+      expect(
+        screen.getByTestId("pelican-history-summary").querySelector("time"),
+      ).toBeNull()
+    },
+  )
 
   it.each(Object.values(VERIFICATION_TOOL_STATUSES))(
     "shows the drawing introduction only before a run, state %s",
@@ -272,13 +557,14 @@ describe("VerificationToolsPanel", () => {
       "aiApiVerification:verifyDialog.tools.pelican.historyOnly",
     )
     expect(
-      screen.queryByText("aiApiVerification:verifyDialog.intro.startHint"),
-    ).not.toBeInTheDocument()
+      screen.getByText("aiApiVerification:verifyDialog.intro.startHint"),
+    ).toBeVisible()
     const summary = screen.getByTestId("pelican-history-summary")
     const latency = within(summary).getByText("500ms")
     expect(latency.closest('[data-slot="badge"]')).toHaveTextContent(
       "aiApiVerification:verifyDialog.history.previousResult",
     )
+    expect(latency.closest("button")).not.toBeNull()
     expect(summary.querySelector("time")).toHaveAttribute("title")
     const historyBadge = within(summary).getByRole("button", {
       name: /verifyDialog.history.previousResult/,
@@ -385,7 +671,9 @@ describe("VerificationToolsPanel", () => {
     )
 
     await user.click(
-      screen.getByRole("button", {
+      within(
+        document.querySelector("[data-verification-composer]")! as HTMLElement,
+      ).getByRole("button", {
         name: "aiApiVerification:verifyDialog.tools.stop",
       }),
     )
@@ -548,12 +836,6 @@ describe("VerificationToolsPanel", () => {
       }),
     ).toBeVisible()
     expect(within(settings).getByRole("switch")).toBeVisible()
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
-    await user.click(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
-      }),
-    )
     const textarea = screen.getByRole("textbox", {
       name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
     })
@@ -576,11 +858,6 @@ describe("VerificationToolsPanel", () => {
       }),
     )
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
-      }),
-    )
     const resetBtn = screen.getByRole("button", {
       name: "aiApiVerification:verifyDialog.tools.prompts.resetOne",
     })
@@ -615,34 +892,28 @@ const renderPrompt = (
   return result
 }
 describe("VerificationPromptEditor", () => {
-  it("keeps a focused editor open when automatic presentation changes", async () => {
+  it("keeps a focused composer mounted when results arrive", async () => {
     const user = userEvent.setup()
     const controller = buildController()
-    const editor = (autoOpen: boolean) => (
+    const editor = (result?: string) => (
       <I18nextProvider i18n={testI18n}>
-        <VerificationPromptEditor
+        <VerificationProbeDetails
           controller={controller}
           probeId={API_VERIFICATION_PROBE_IDS.TextGeneration}
-          autoOpen={autoOpen}
+          result={result ? { summary: "Completed", output: result } : null}
         />
       </I18nextProvider>
     )
-    const { rerender } = render(editor(true))
+    const { rerender } = render(editor())
     const input = screen.getByRole("textbox")
     await user.click(input)
-    rerender(editor(false))
+    rerender(editor("Result"))
+    expect(screen.getByRole("textbox")).toBe(input)
     expect(input).toBeVisible()
     expect(input).toHaveFocus()
-    await user.click(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
-      }),
-    )
-    rerender(editor(true))
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
   })
 
-  it("keeps structured raw output folded until requested", async () => {
+  it("keeps structured raw output in request details until requested", async () => {
     const user = userEvent.setup()
     render(
       <I18nextProvider i18n={testI18n}>
@@ -656,43 +927,22 @@ describe("VerificationPromptEditor", () => {
       </I18nextProvider>,
     )
     const output = screen.getByRole("button", {
-      name: "aiApiVerification:verifyDialog.details.output",
+      name: "aiApiVerification:verifyDialog.generation.requestDetails",
     })
     expect(output).toHaveAttribute("aria-expanded", "false")
-    expect(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.details.input",
-      }),
-    ).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByText(/raw evidence/)).not.toBeInTheDocument()
     await user.click(output)
     expect(screen.getByText(/raw evidence/)).toBeVisible()
   })
 
-  it("starts collapsed with a visible prompt label and expands on request", async () => {
-    const user = userEvent.setup()
+  it("shows the default prompt directly without opening settings", () => {
     renderPrompt(buildController(), false)
-    expect(
-      within(
-        screen.getByRole("group", {
-          name: "aiApiVerification:verifyDialog.tools.settingsTitle",
-        }),
-      ).getByRole("heading", {
-        name: "aiApiVerification:verifyDialog.tools.settingsTitle",
-      }),
-    ).toBeVisible()
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
-    const disclosure = screen.getByRole("button", {
-      name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
-    })
-    expect(disclosure).toHaveAttribute("aria-expanded", "false")
-    await user.click(disclosure)
     expect(screen.getByRole("textbox")).toHaveValue("Reply with exactly: OK")
     expect(
-      screen.getByText(
-        "aiApiVerification:verifyDialog.tools.prompts.sharedHint",
-      ),
-    ).toBeVisible()
+      screen.queryByRole("button", {
+        name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
+      }),
+    ).not.toBeInTheDocument()
   })
   it("shows the saved prompt after expanding its editor", () => {
     renderPrompt(buildController())
@@ -890,7 +1140,7 @@ describe("VerificationPromptEditor", () => {
 })
 
 describe("restored verification details", () => {
-  it("keeps result disclosure keyboard-accessible and restores it after collapsing", async () => {
+  it("keeps request details keyboard-accessible without hiding the answer", async () => {
     const user = userEvent.setup()
     render(
       <I18nextProvider i18n={testI18n}>
@@ -899,16 +1149,21 @@ describe("restored verification details", () => {
         />
       </I18nextProvider>,
     )
-    const disclosure = screen.getByRole("button", {
-      name: "aiApiVerification:verifyDialog.details.result",
+    const trigger = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.generation.requestDetails",
     })
-    expect(disclosure).toHaveAttribute("aria-expanded", "true")
-    await user.click(disclosure)
-    expect(disclosure).toHaveAttribute("aria-expanded", "false")
-    expect(screen.getByRole("region")).toHaveTextContent("Completed")
-    expect(screen.queryByText("OK")).not.toBeInTheDocument()
+    trigger.focus()
     await user.keyboard("{Enter}")
-    expect(screen.getByRole("region")).toBeVisible()
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByRole("region", {
+        name: "aiApiVerification:verifyDialog.details.result",
+      }),
+    ).toHaveTextContent("Completed")
+    await user.keyboard("{Enter}")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(trigger).toHaveFocus()
+    expect(screen.getByText("OK")).toBeVisible()
   })
 
   it("does not offer execution details for a persisted summary without input or output", () => {
@@ -927,11 +1182,7 @@ describe("restored verification details", () => {
       }),
     ).not.toBeInTheDocument()
     expect(screen.getByRole("region")).toHaveTextContent("Previously passed")
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
-      }),
-    ).toHaveAttribute("aria-expanded", "false")
+    expect(screen.getByRole("textbox")).toHaveValue("Reply with exactly: OK")
+    expect(screen.queryByRole("log")).not.toBeInTheDocument()
   })
 })

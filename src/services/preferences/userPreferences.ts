@@ -61,6 +61,12 @@ import {
 
 /** Domain preference commands share store-owned transaction and metadata rules. */
 class UserPreferencesService extends PreferencesStore {
+  /** Merge each batch choice under the store's cross-context write lock. */
+  async updateVerificationConcurrency(
+    updates: import("~/services/verification/concurrency").VerificationConcurrency,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferencesWithResult({ verificationConcurrency: updates })
+  }
   /** Patch only edited question fields under the existing preference write lock. */
   async updateQuestionAnswerTest(
     updates: Partial<QuestionAnswerSettings>,

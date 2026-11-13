@@ -31,6 +31,35 @@ const request = {
 const counter = { encoding: CONTEXT_TOKEN_ENCODINGS.O200k, estimated: true }
 beforeEach(() => vi.restoreAllMocks())
 
+it("recovers all outstanding parallel requests as unknown without replay", async () => {
+  const storage = new Storage({ area: "local" })
+  const scope = await getVerificationScopeKey(request)
+  const result = createNeedleResult({
+    reason: NEEDLE_RUN_REASONS.Running,
+    cells: [],
+  })
+  const coordinates = result.plan.depths
+    .slice(0, 2)
+    .map((depth) => ({ targetTokens: result.plan.lengths[0]!, depth }))
+  await storage.set(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS, {
+    [scope]: { result, inFlightCells: coordinates, updatedAt: Date.now() },
+  })
+  const fetch = vi.spyOn(globalThis, "fetch")
+  const recovered = await runDurableNeedleTest(
+    { ...request, abortSignal: new AbortController().signal },
+    true,
+  )
+  expect(recovered.cells).toEqual(
+    coordinates.map((coordinate) =>
+      expect.objectContaining({
+        ...coordinate,
+        outcome: NEEDLE_OUTCOMES.Interrupted,
+      }),
+    ),
+  )
+  expect(fetch).not.toHaveBeenCalled()
+})
+
 it("rejects an invalid connection without dispatching a provider request", async () => {
   const fetch = vi.spyOn(globalThis, "fetch")
   await expect(

@@ -7,31 +7,23 @@ import {
   withUnfinishedProbesStopped,
 } from "~/features/Verification/api/probeState"
 import type { VerifyApiDialogProps } from "~/features/Verification/api/types"
+import { useAccountVerificationRuntimeKeys } from "~/features/Verification/api/useAccountVerificationRuntimeKeys"
 import { MASKED_CONTEXT_HISTORY_REQUEST } from "~/features/Verification/api/useContextCapacity"
 import { useVerificationDialogState } from "~/features/Verification/api/useVerificationDialogState"
-import {
-  useVerificationTools,
-  type VerificationToolRequestParams,
-} from "~/features/Verification/api/useVerificationTools"
+import { useVerificationTools } from "~/features/Verification/api/useVerificationTools"
+import { type VerificationToolRequestParams } from "~/features/Verification/api/verificationToolRequestTypes"
 import {
   filterVerificationRedactions as filterRedactions,
   isVerificationAbortError,
 } from "~/features/Verification/verificationDialogUtils"
 import { useModelMetadataLookup } from "~/hooks/verification/useModelMetadataLookup"
+import { useVerificationConcurrency } from "~/hooks/verification/useVerificationConcurrency"
 import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificationRunLifecycle"
 import {
   collectAccountRuntimeKeySecrets,
-  findDefaultSelectableAccountRuntimeKey,
   formatAccountRuntimeKeySecretForSite,
-  isAccountRuntimeKeyCompatibleWithModel,
-  isSelectableAccountRuntimeKey,
-  sortAccountRuntimeKeysActiveFirst,
-  type AccountRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
-import {
-  fetchDisplayAccountRuntimeKeys,
-  resolveDisplayAccountRuntimeKeySecret,
-} from "~/services/accounts/utils/apiServiceRequest"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -66,7 +58,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
 import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import { createAccountModelVerificationHistoryTarget } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
@@ -75,25 +67,6 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to the API verification dialog.
  */
 const logger = createLogger("VerifyApiDialog")
-
-/**
- * Applies model/group context to the owner-projected runtime-key policy.
- */
-function isRuntimeKeyCompatibleWithModel(
-  runtimeKey: AccountRuntimeKey,
-  options: {
-    hasModelContext: boolean
-    requestedModelId: string
-    modelEnableGroups: VerifyApiDialogProps["modelEnableGroups"]
-  },
-) {
-  if (!isSelectableAccountRuntimeKey(runtimeKey)) return false
-  if (!options.hasModelContext) return true
-  return isAccountRuntimeKeyCompatibleWithModel(runtimeKey, {
-    id: options.requestedModelId,
-    enableGroups: options.modelEnableGroups,
-  })
-}
 
 /**
  * Owns runtime-key preparation and verification runs while reusing history state.
@@ -122,16 +95,14 @@ export function useVerifyApiDialogViewModel({
     captureContext,
     runSuite,
     runProbe: runProbeTask,
-    runSequentialProbes,
+    runProbes,
     stopSuite: stopRun,
     stopProbe,
     reset,
   } = useVerificationRunLifecycle()
-  const [isLoadingRuntimeKeys, setIsLoadingRuntimeKeys] = useState(false)
-  const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
-    AccountRuntimeKey[]
-  >([])
-  const [selectedRuntimeKeyId, setSelectedRuntimeKeyId] = useState<string>("")
+  const concurrency = useVerificationConcurrency(
+    VERIFICATION_CONCURRENCY_KINDS.Routine,
+  )
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
   )
@@ -146,6 +117,26 @@ export function useVerifyApiDialogViewModel({
       API_VERIFICATION_REQUEST_PROFILES.Default,
     )
   const requestedModelId = modelId.trim() || initialModelId?.trim() || ""
+  const {
+    isLoadingRuntimeKeys,
+    runtimeKeysLoadFailed,
+    accountRuntimeKeys,
+    selectedRuntimeKeyId,
+    setSelectedRuntimeKeyId,
+    selectedRuntimeKey,
+    compatibleRuntimeKeyIds,
+    selectedRuntimeKeyIsCompatible,
+    runtimeKeyCompatibilityHint,
+    tokenModelHint,
+    loadRuntimeKeys,
+    resetRuntimeKeys,
+  } = useAccountVerificationRuntimeKeys({
+    account,
+    requestedModelId,
+    modelEnableGroups,
+    captureContext,
+  })
+
   const metadataLookup = useModelMetadataLookup(isOpen && !isRunning, () =>
     probesRef.current.some((probe) => probe.isRunning),
   )
@@ -187,44 +178,6 @@ export function useVerifyApiDialogViewModel({
     apiType,
     isOpen,
   })
-
-  const selectedRuntimeKey = accountRuntimeKeys.find(
-    (runtimeKey) => runtimeKey.id === selectedRuntimeKeyId,
-  )
-
-  const hasModelContext = requestedModelId.length > 0
-  const compatibleRuntimeKeys = useMemo(() => {
-    return accountRuntimeKeys.filter((runtimeKey) =>
-      isRuntimeKeyCompatibleWithModel(runtimeKey, {
-        hasModelContext,
-        requestedModelId,
-        modelEnableGroups,
-      }),
-    )
-  }, [accountRuntimeKeys, hasModelContext, modelEnableGroups, requestedModelId])
-  const compatibleRuntimeKeyIds = useMemo(
-    () => new Set(compatibleRuntimeKeys.map((runtimeKey) => runtimeKey.id)),
-    [compatibleRuntimeKeys],
-  )
-  const hasLoadedRuntimeKeys =
-    !isLoadingRuntimeKeys && accountRuntimeKeys.length > 0
-  const hasNoCompatibleRuntimeKey =
-    hasModelContext &&
-    hasLoadedRuntimeKeys &&
-    compatibleRuntimeKeys.length === 0
-  const selectedRuntimeKeyIsCompatible =
-    !selectedRuntimeKey || compatibleRuntimeKeyIds.has(selectedRuntimeKey.id)
-  const hasIncompatibleSelectedRuntimeKey =
-    hasModelContext &&
-    selectedRuntimeKey !== undefined &&
-    !selectedRuntimeKeyIsCompatible
-  const runtimeKeyCompatibilityHint = hasNoCompatibleRuntimeKey
-    ? t("verifyDialog.noCompatibleRuntimeKeyHint")
-    : hasIncompatibleSelectedRuntimeKey
-      ? t("verifyDialog.selectedRuntimeKeyIncompatibleHint")
-      : null
-
-  const tokenModelHint = selectedRuntimeKey?.modelAccess.suggestedModelIds[0]
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
 
@@ -348,42 +301,6 @@ export function useVerifyApiDialogViewModel({
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   } as const
 
-  const loadRuntimeKeys = async () => {
-    const isCurrentContext = captureContext()
-    setIsLoadingRuntimeKeys(true)
-    try {
-      const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
-      if (!isCurrentContext()) return
-
-      const sorted = sortAccountRuntimeKeysActiveFirst(runtimeKeys)
-
-      setAccountRuntimeKeys(sorted)
-
-      const defaultRuntimeKey = hasModelContext
-        ? (sorted.find((runtimeKey) =>
-            isRuntimeKeyCompatibleWithModel(runtimeKey, {
-              hasModelContext,
-              requestedModelId,
-              modelEnableGroups,
-            }),
-          ) ?? null)
-        : findDefaultSelectableAccountRuntimeKey(sorted)
-      setSelectedRuntimeKeyId(defaultRuntimeKey ? defaultRuntimeKey.id : "")
-    } catch (error) {
-      if (!isCurrentContext()) return
-      logger.error("Failed to load runtime keys", {
-        message: toSanitizedErrorSummary(
-          error,
-          filterRedactions([account.token, account.cookieAuthSessionCookie]),
-        ),
-      })
-      setAccountRuntimeKeys([])
-      setSelectedRuntimeKeyId("")
-    } finally {
-      if (isCurrentContext()) setIsLoadingRuntimeKeys(false)
-    }
-  }
-
   const runProbe = async (
     probeId: ApiVerificationProbeId,
     abortSignal?: AbortSignal,
@@ -402,7 +319,7 @@ export function useVerifyApiDialogViewModel({
       stoppedMode: () => executedMode,
       readProbes: () => probesRef.current,
       replaceProbes,
-      execute: async () => {
+      execute: async (onProgress) => {
         resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
           account,
           selectedRuntimeKey,
@@ -423,6 +340,8 @@ export function useVerifyApiDialogViewModel({
           modelId: modelId.trim() || undefined,
           fallbackModelId: resolvedRuntimeKey.modelAccess.suggestedModelIds[0],
           probeId,
+          probePromptOverrides: tools.promptDraft,
+          onProgress,
           abortSignal,
         })
       },
@@ -470,8 +389,7 @@ export function useVerifyApiDialogViewModel({
       let failedProbeResult: ApiVerificationProbeResult | undefined
       replaceProbes(buildProbeState(apiType, null, modelModality))
       try {
-        // Run sequentially so each probe updates independently (and can be retried individually).
-        await runSequentialProbes(
+        await runProbes(
           apiType,
           async (probe) => {
             if (probe.requiresModelId && !modelId.trim() && !tokenModelHint)
@@ -490,6 +408,7 @@ export function useVerifyApiDialogViewModel({
           },
           signal,
           modelModality,
+          concurrency.value,
         )
         if (isStopped(signal)) {
           if (isCurrent(signal))
@@ -548,8 +467,7 @@ export function useVerifyApiDialogViewModel({
 
     let cancelled = false
     const trimmedModelId = initialModelId?.trim() ?? ""
-    setAccountRuntimeKeys([])
-    setSelectedRuntimeKeyId("")
+    resetRuntimeKeys()
     setModelId(trimmedModelId)
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
     setRequestProfileEnhanced(false)
@@ -602,8 +520,11 @@ export function useVerifyApiDialogViewModel({
   }
 
   return {
+    concurrency,
     isRunning,
     isLoadingRuntimeKeys,
+    runtimeKeysLoadFailed,
+    reloadRuntimeKeys: loadRuntimeKeys,
     accountRuntimeKeys,
     selectedRuntimeKeyId,
     setSelectedRuntimeKeyId,

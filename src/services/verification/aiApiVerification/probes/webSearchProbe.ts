@@ -1,3 +1,5 @@
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+
 import { nowMs, okLatency } from "../probeTiming"
 import { createGoogleProvider, createOpenAIProvider } from "../providers"
 import {
@@ -31,6 +33,7 @@ type RunWebSearchProbeParams = {
   modelId: string
   mode?: ApiVerificationMode
   probePromptOverrides?: ApiVerificationProbePromptOverrides
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
 
@@ -89,6 +92,7 @@ export async function runWebSearchProbe(
             }),
           },
           toolChoice: { type: "tool", toolName: "web_search" },
+          onProgress: params.onProgress,
           abortSignal: params.abortSignal,
         },
         mode,
@@ -150,6 +154,7 @@ export async function runWebSearchProbe(
           // Google reports grounding as sources rather than a function call.
           // SDK 7 enforces forced tool calls; validate the search evidence below.
           toolChoice: "auto",
+          onProgress: params.onProgress,
           abortSignal: params.abortSignal,
         },
         mode,

@@ -47,7 +47,7 @@ export function createApiCheckProbeSession({
   let batch: {
     generation: number
     stopped: boolean
-    activeProbeId: ApiVerificationProbeId | null
+    runs: Map<ApiVerificationProbeId, string>
   } | null = null
   const requestCancellation = (runId: string) => {
     void cancelRun(runId).catch(() => {})
@@ -116,7 +116,7 @@ export function createApiCheckProbeSession({
       const current = {
         generation,
         stopped: false,
-        activeProbeId: null as ApiVerificationProbeId | null,
+        runs: new Map<ApiVerificationProbeId, string>(),
       }
       batch = current
       return {
@@ -125,8 +125,8 @@ export function createApiCheckProbeSession({
           current.stopped ||
           batch !== current ||
           current.generation !== generation,
-        selectProbe(probeId: ApiVerificationProbeId) {
-          current.activeProbeId = probeId
+        selectProbe(probeId: ApiVerificationProbeId, runId: string) {
+          current.runs.set(probeId, runId)
         },
         finish() {
           if (batch !== current || current.generation !== generation)
@@ -139,10 +139,12 @@ export function createApiCheckProbeSession({
     stopBatch() {
       if (!batch || batch.stopped) return false
       batch.stopped = true
-      const run = batch.activeProbeId
-        ? active.get(batch.activeProbeId)
-        : undefined
-      if (run) requestCancellation(run.runId)
+      for (const [probeId, runId] of batch.runs) {
+        const run = active.get(probeId)
+        if (run?.runId !== runId) continue
+        run.cancelled = true
+        requestCancellation(runId)
+      }
       return true
     },
     reset() {

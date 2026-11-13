@@ -10,11 +10,10 @@ import {
   withUnfinishedProbesStopped,
 } from "~/features/Verification/api/probeState"
 import type { ProbeItemState } from "~/features/Verification/api/types"
-import {
-  useVerificationTools,
-  type VerificationToolRequestParams,
-} from "~/features/Verification/api/useVerificationTools"
+import { useVerificationTools } from "~/features/Verification/api/useVerificationTools"
+import { type VerificationToolRequestParams } from "~/features/Verification/api/verificationToolRequestTypes"
 import { useModelMetadataLookup } from "~/hooks/verification/useModelMetadataLookup"
+import { useVerificationConcurrency } from "~/hooks/verification/useVerificationConcurrency"
 import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificationRunLifecycle"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -48,6 +47,7 @@ import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVer
 import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
 import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
@@ -125,10 +125,13 @@ export function useProfileVerification({
     reset,
     runSuite,
     runProbe: runProbeTask,
-    runSequentialProbes,
+    runProbes,
     stopProbe: abortProbe,
     stopAll: stopRun,
   } = useVerificationRunLifecycle()
+  const concurrency = useVerificationConcurrency(
+    VERIFICATION_CONCURRENCY_KINDS.Routine,
+  )
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     profile?.apiType ?? API_TYPES.OPENAI_COMPATIBLE,
   )
@@ -401,7 +404,7 @@ export function useProfileVerification({
       isCurrent: () => isCurrent(abortSignal),
       readProbes: () => probesRef.current,
       replaceProbes,
-      execute: () =>
+      execute: (onProgress) =>
         runApiVerificationProbe({
           ...getVerificationRequestProfileOptions(
             requestProfile,
@@ -414,6 +417,8 @@ export function useProfileVerification({
           mode: verificationMode,
           modelId: (modelIdOverride ?? modelId).trim() || undefined,
           probeId,
+          probePromptOverrides: tools.promptDraft,
+          onProgress,
           abortSignal,
         }),
       acceptResult: async (nextProbes, probeResult) => {
@@ -516,7 +521,7 @@ export function useProfileVerification({
         replaceProbes(buildProbeState(apiType, null, modelModality))
         let modelIdForSuite = modelId.trim()
 
-        await runSequentialProbes(
+        await runProbes(
           apiType,
           async (probe) => {
             if (probe.id === API_VERIFICATION_PROBE_IDS.Models) {
@@ -555,6 +560,8 @@ export function useProfileVerification({
           },
           signal,
           modelModality,
+          concurrency.value,
+          !modelId.trim(),
         )
 
         const stopped = isStopped(signal)
@@ -579,6 +586,7 @@ export function useProfileVerification({
   }
 
   return {
+    concurrency,
     isRunning,
     apiType,
     setApiType: (next: ApiVerificationApiType) => {

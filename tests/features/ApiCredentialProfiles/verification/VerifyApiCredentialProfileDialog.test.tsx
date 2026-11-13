@@ -50,6 +50,10 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 import { stubVerificationOwnerStoresUnavailable } from "~~/tests/test-utils/verificationOwnerStores"
+import {
+  getVerificationHeader,
+  mockVerificationWorkspaceLayout,
+} from "~~/tests/test-utils/verificationWorkspace"
 
 const {
   loggerErrorMock,
@@ -264,6 +268,8 @@ vi.mock("~/components/ui", async (importOriginal) => {
 describe("VerifyApiCredentialProfileDialog", () => {
   beforeEach(async () => {
     vi.restoreAllMocks()
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1440)
+    mockVerificationWorkspaceLayout()
     // Keep metadata initialization local, including on a cold test worker.
     // Individual metadata-arrival tests override this baseline handler.
     server.use(
@@ -478,10 +484,15 @@ describe("VerifyApiCredentialProfileDialog", () => {
       ),
     )
     await waitFor(() =>
-      expect(probe).toHaveTextContent(
+      expect(getVerificationHeader(probe)).toHaveTextContent(
         "aiApiVerification:verifyDialog.summaries.requestProfileIncompatible",
       ),
     )
+    const configuration = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.meta.configuration",
+    })
+    if (configuration.getAttribute("aria-expanded") === "false")
+      await user.click(configuration)
     expect(getApiTypeSelect()).toBeEnabled()
     await user.click(selector)
     await user.click(screen.getByRole("option", { name: /default/ }))
@@ -525,7 +536,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
       ),
     )
     await waitFor(() => expect(enhanced).toBeEnabled())
-    expect(probe).toHaveTextContent("Accepted")
+    expect(getVerificationHeader(probe)).toHaveTextContent("Accepted")
   })
 
   it("resets enhanced simulation when returning to ordinary requests", async () => {
@@ -905,9 +916,11 @@ describe("VerifyApiCredentialProfileDialog", () => {
       )
       expect(
         await within(
-          within(probeCard).getByRole("button", {
-            name: "aiApiVerification:verifyDialog.probes.text-generation",
-          }),
+          within(probeCard)
+            .getByRole("button", {
+              name: "aiApiVerification:verifyDialog.probes.text-generation",
+            })
+            .closest<HTMLElement>("[data-verification-summary]")!,
         ).findByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
       ).toBeVisible()
       const target = requireHistoryTarget(
@@ -1163,26 +1176,27 @@ describe("VerifyApiCredentialProfileDialog", () => {
     const probeCard = await screen.findByTestId(
       getApiCredentialProfileVerifyProbeTestId("models"),
     )
-    const probeButton = within(probeCard).getByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.runOne",
-    })
-    await user.click(probeButton)
+    const probeButton = () =>
+      within(probeCard).getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+      )
+    await user.click(probeButton())
     await waitFor(() =>
-      expect(probeButton).toHaveAccessibleName(
+      expect(probeButton()).toHaveAccessibleName(
         "aiApiVerification:verifyDialog.actions.stopProbe",
       ),
     )
 
-    await user.click(probeButton)
+    await user.click(probeButton())
 
     expect(probeSignal?.aborted).toBe(true)
     await waitFor(() =>
-      expect(probeButton).toHaveAccessibleName(
+      expect(probeButton()).toHaveAccessibleName(
         "aiApiVerification:verifyDialog.actions.retry",
       ),
     )
     expect(
-      within(probeCard).getByText(
+      within(getVerificationHeader(probeCard)).getByText(
         "aiApiVerification:verifyDialog.summaries.stopped",
       ),
     ).toBeVisible()
@@ -1275,9 +1289,10 @@ describe("VerifyApiCredentialProfileDialog", () => {
     const siblingProbe = await screen.findByTestId(
       getApiCredentialProfileVerifyProbeTestId("text-generation"),
     )
-    const initiatingButton = within(initiatingProbe).getByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.runOne",
-    })
+    const initiatingButton = () =>
+      within(initiatingProbe).getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+      )
     const siblingButton = within(siblingProbe).getByRole("button", {
       name: "aiApiVerification:verifyDialog.actions.runOne",
     })
@@ -1285,17 +1300,17 @@ describe("VerifyApiCredentialProfileDialog", () => {
       name: "aiApiVerification:verifyDialog.actions.runAll",
     })
 
-    await user.click(initiatingButton)
+    await user.click(initiatingButton())
 
     await waitFor(() => {
-      expect(initiatingButton).toHaveAccessibleName(
+      expect(initiatingButton()).toHaveAccessibleName(
         "aiApiVerification:verifyDialog.actions.stopProbe",
       )
     })
     // A single probe run is interruptible from its own row, so the button stays
     // actionable while it carries the progress state.
-    expect(initiatingButton).toBeEnabled()
-    expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+    expect(initiatingButton()).toBeEnabled()
+    expect(initiatingButton()).toHaveAttribute("aria-busy", "true")
     expect(siblingButton).toBeEnabled()
     expect(siblingButton).toHaveAccessibleName(
       "aiApiVerification:verifyDialog.actions.runOne",
@@ -1313,32 +1328,32 @@ describe("VerifyApiCredentialProfileDialog", () => {
     })
     // Persistence is part of the run, so the button stays busy until it settles
     // even though the aborted request already returned.
-    expect(initiatingButton).toHaveAccessibleName(
+    expect(initiatingButton()).toHaveAccessibleName(
       "aiApiVerification:verifyDialog.actions.running",
     )
-    expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+    expect(initiatingButton()).toHaveAttribute("aria-busy", "true")
     // Nothing is abortable in this window, so the row must not accept a restart.
-    expect(initiatingButton).toBeDisabled()
+    expect(initiatingButton()).toBeDisabled()
 
     persistDeferred.reject(new Error("persist failed"))
 
     await waitFor(() => {
-      expect(initiatingButton).toHaveAccessibleName(
+      expect(initiatingButton()).toHaveAccessibleName(
         "aiApiVerification:verifyDialog.actions.retry",
       )
-      expect(initiatingButton).toBeEnabled()
-      expect(initiatingButton).not.toHaveAttribute("aria-busy")
+      expect(initiatingButton()).toBeEnabled()
+      expect(initiatingButton()).not.toHaveAttribute("aria-busy")
       expect(siblingButton).toBeEnabled()
     })
 
-    await user.click(initiatingButton)
+    await user.click(initiatingButton())
     await waitFor(() => {
       expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2)
-      expect(initiatingButton).toHaveAccessibleName(
+      expect(initiatingButton()).toHaveAccessibleName(
         "aiApiVerification:verifyDialog.actions.retry",
       )
-      expect(initiatingButton).toBeEnabled()
-      expect(initiatingButton).not.toHaveAttribute("aria-busy")
+      expect(initiatingButton()).toBeEnabled()
+      expect(initiatingButton()).not.toHaveAttribute("aria-busy")
     })
   })
 
@@ -1583,7 +1598,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("runs a single probe and shows collapsible input/output", async () => {
+  it("runs a single probe and shows input/output in request details", async () => {
     const user = userEvent.setup()
 
     mockRunApiVerificationProbe.mockResolvedValueOnce({
@@ -1627,7 +1642,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     expect(
-      await within(probeCard).findByText("Fetched models"),
+      await within(getVerificationHeader(probeCard)).findByText(
+        "Fetched models",
+      ),
     ).toBeInTheDocument()
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
@@ -1642,18 +1659,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.details.input",
+        name: "aiApiVerification:verifyDialog.generation.requestDetails",
       }),
     )
     expect(
       await within(probeCard).findByText(/"endpoint":/),
     ).toBeInTheDocument()
 
-    const outputToggle = within(probeCard).getByRole("button", {
-      name: "aiApiVerification:verifyDialog.details.output",
-    })
-    expect(outputToggle).toHaveAttribute("aria-expanded", "false")
-    await user.click(outputToggle)
     expect(
       await within(probeCard).findByText(/"modelCount": 1/),
     ).toBeInTheDocument()
@@ -1837,7 +1849,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     await act(async () => {
       models.resolve(["claude-3-5-sonnet"])
     })
-    expect(screen.getByText("claude-3-5-sonnet")).toBeVisible()
+    expect(within(modelSelect).getByText("claude-3-5-sonnet")).toBeVisible()
     expect(modelSelect).toHaveTextContent("claude-3-5-sonnet")
     expect(getApiTypeSelect()).toHaveValue(API_TYPES.OPENAI_COMPATIBLE)
     expect(mockFetchAnthropicModelIds).not.toHaveBeenCalled()
@@ -2454,8 +2466,10 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("aiApiVerification:verifyDialog.status.unverified"),
-      ).toBeInTheDocument()
+        screen.queryByText(
+          "aiApiVerification:verifyDialog.history.lastVerified",
+        ),
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -2546,11 +2560,6 @@ describe("VerifyApiCredentialProfileDialog", () => {
         />,
       )
 
-      const modelProbe = within(
-        await screen.findByTestId(
-          getApiCredentialProfileVerifyProbeTestId("models"),
-        ),
-      )
       try {
         await waitFor(() => expect(historyRead).toHaveBeenCalled())
         expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
@@ -2560,7 +2569,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
             await initialHistoryLoaded.promise
           })
           expect(
-            await modelProbe.findByText("Stored m0 history"),
+            await within(getVerificationHeader("models")).findByText(
+              "Stored m0 history",
+            ),
           ).toBeInTheDocument()
         }
         await user.click(
@@ -2573,14 +2584,20 @@ describe("VerifyApiCredentialProfileDialog", () => {
           ).toHaveTextContent("m1"),
         )
         expect(
-          await modelProbe.findByText("Stored m1 history"),
+          await within(getVerificationHeader("models")).findByText(
+            "Stored m1 history",
+          ),
         ).toBeInTheDocument()
         if (lateFirstRead) {
           await act(async () => {
             initialHistoryRead.resolve()
             await initialHistoryLoaded.promise
           })
-          expect(modelProbe.getByText("Stored m1 history")).toBeInTheDocument()
+          expect(
+            within(getVerificationHeader("models")).getByText(
+              "Stored m1 history",
+            ),
+          ).toBeInTheDocument()
         }
         expect(screen.queryByText("Stored m0 history")).not.toBeInTheDocument()
       } finally {
@@ -2600,7 +2617,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
       await selectOpenAICompatibleApiTypeOption(user)
 
       expect(
-        await modelProbe.findByText("Stored m1 history"),
+        await within(getVerificationHeader("models")).findByText(
+          "Stored m1 history",
+        ),
       ).toBeInTheDocument()
     },
   )
@@ -2715,7 +2734,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
           ),
         ).toMatchObject({ resolvedModelId: "m1" })
         expect(
-          within(probeCard).getByText("Generated text"),
+          within(getVerificationHeader(probeCard)).getByText("Generated text"),
         ).toBeInTheDocument()
         return
       }
@@ -2786,7 +2805,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     await waitFor(() => {
-      expect(within(probeCard).getByText("Fetched models")).toBeInTheDocument()
+      expect(
+        within(getVerificationHeader(probeCard)).getByText("Fetched models"),
+      ).toBeInTheDocument()
       expect(closeButton).toBeDisabled()
       expect(clearButton).toBeDisabled()
     })
@@ -2798,7 +2819,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
       expect(clearButton).toBeEnabled()
     })
 
-    expect(within(probeCard).getByText("Fetched models")).toBeInTheDocument()
+    expect(
+      within(getVerificationHeader(probeCard)).getByText("Fetched models"),
+    ).toBeInTheDocument()
     expect(
       screen.queryByText("aiApiVerification:verifyDialog.errors.unexpected"),
     ).not.toBeInTheDocument()
@@ -2927,9 +2950,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
         getApiCredentialProfileVerifyProbeTestId("text-generation"),
       ),
     )
-    const runText = text.getByRole("button", {
-      name: "aiApiVerification:verifyDialog.actions.runOne",
-    })
+    const runText = text.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+    )
     await waitFor(() => expect(runText).toBeEnabled())
     await user.click(runText)
     const drawing = screen.getByRole("button", {
@@ -2940,9 +2963,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(
       within(
         screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
-      ).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.runOne",
-      }),
+      ).getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton),
     ).toBeEnabled()
     expect(text.getByRole("button", { name: /stopProbe/ })).toBeEnabled()
   })
@@ -2974,9 +2995,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
     await entered.promise
     await user.click(
-      text.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.runOne",
-      }),
+      text.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton),
     )
     await waitFor(() =>
       expect(
@@ -2988,17 +3007,15 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(
       within(
         screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
-      ).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.runOne",
-      }),
+      ).getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton),
     ).toBeEnabled()
     const sibling = within(
       screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("models")),
     )
     await user.click(
-      sibling.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.runOne",
-      }),
+      sibling.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+      ),
     )
     await waitFor(() =>
       expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2),

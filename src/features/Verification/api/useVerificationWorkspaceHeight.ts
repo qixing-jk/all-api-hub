@@ -7,6 +7,7 @@ const WORKSPACE_HEIGHT_ROUNDING_GUARD_PX = 1
 export function useVerificationWorkspaceHeight(selectedId: string | null) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [isWide, setIsWide] = useState(false)
+  const [isThreeColumn, setIsThreeColumn] = useState(false)
   const [availableHeight, setAvailableHeight] = useState(0)
 
   useLayoutEffect(() => {
@@ -18,22 +19,31 @@ export function useVerificationWorkspaceHeight(selectedId: string | null) {
     const shell = body?.closest<HTMLElement>(
       '[data-slot="modal-panel"], [role="dialog"]',
     )
-    const detail = frame?.querySelector<HTMLElement>(
-      "[data-verification-detail]:not([hidden])",
-    )
-    if (!frame || !view || !body || !shell || !detail) return
-
+    if (!frame || !view || !body || !shell) return
     const measure = () => {
-      const detailStyle = view.getComputedStyle(detail)
-      const wide = detailStyle.position === "absolute"
+      // Both mobile and desktop details occupy the frame with absolute layout.
+      // Read the same CSS boundary that chooses the split view.
+      const wide =
+        view
+          .getComputedStyle(frame)
+          .getPropertyValue("--verification-layout")
+          .trim() === "split"
       setIsWide(wide)
+      setIsThreeColumn(frame.clientWidth >= 1152)
       const limit = Number.parseFloat(view.getComputedStyle(shell).maxHeight)
       if (!Number.isFinite(limit)) {
         setAvailableHeight(0)
         return
       }
       const chrome = shell.offsetHeight - body.clientHeight
-      const otherContent = body.scrollHeight - frame.offsetHeight
+      // The workspace is the final block in the dialog body. Measure the flow
+      // before it rather than scrollHeight, which includes overflowing results
+      // and can feed back into a progressively smaller height budget.
+      const otherContent =
+        frame.getBoundingClientRect().top -
+        body.getBoundingClientRect().top +
+        body.scrollTop +
+        Number.parseFloat(view.getComputedStyle(body).paddingBottom || "0")
       const bodyLimit = Math.max(0, limit - chrome)
       // If configuration alone fills the dialog, retain an operable test area
       // and let the outer form scroll instead of collapsing the tests to zero.
@@ -47,8 +57,7 @@ export function useVerificationWorkspaceHeight(selectedId: string | null) {
         ) - WORKSPACE_HEIGHT_ROUNDING_GUARD_PX,
       )
       setAvailableHeight(available)
-      // Narrow layouts share the budget but retain natural height and one scroll.
-      if (!wide) return
+      // The introduction's size container uses the room after selectors/composer.
       const height = `${available}px`
       if (
         frame.style.getPropertyValue("--verification-workspace-height") !==
@@ -77,5 +86,5 @@ export function useVerificationWorkspaceHeight(selectedId: string | null) {
     }
   }, [selectedId])
 
-  return { frameRef, isWide, availableHeight }
+  return { frameRef, isWide, isThreeColumn, availableHeight }
 }

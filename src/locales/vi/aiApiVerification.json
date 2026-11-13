@@ -19,16 +19,71 @@
       "openaiCompatible": "Tương thích OpenAI"
     },
     "associatedCredentialHint": "Trang web này không cho phép đọc lại khóa đầy đủ. Các bài kiểm tra dùng khóa đầy đủ được lưu trong Thư viện thông tin xác thực API và liên kết với khóa đã chọn. Nếu chưa liên kết, hãy lưu hoặc liên kết khóa trong phần quản lý khóa trước.",
+    "composer": {
+      "autoSave": "Tự động lưu",
+      "keyboardHint": "Enter chạy · Shift+Enter xuống dòng",
+      "questionSavedScope": "Câu hỏi và câu trả lời tham chiếu được lưu cho các lần kiểm thử sau.",
+      "savedScope": "Tự động lưu cho loại kiểm thử này trên mọi tài khoản và thông tin xác thực."
+    },
+    "concurrency": {
+      "current": "Đồng thời: {{value}}",
+      "decrease": "Giảm số tác vụ đồng thời",
+      "increase": "Tăng số tác vụ đồng thời",
+      "loadError": "Không thể tải cài đặt đồng thời.",
+      "locked": "Dừng lượt kiểm tra này để điều chỉnh số tác vụ đồng thời.",
+      "needle": "Số tổ hợp kiểm tra đồng thời",
+      "needleHint": "Số tổ hợp độ dài và độ sâu tối đa được kiểm tra cùng lúc. Đặt thành 1 để chạy lần lượt.",
+      "options": "Tùy chọn chạy",
+      "optionsTrigger": "Tùy chọn chạy và độ đồng thời",
+      "presetFast": "4 Nhanh",
+      "presetModerate": "2 Vừa phải",
+      "presetSafe": "1 An toàn",
+      "presetSafeHint": "Chạy lần lượt, khuyên dùng để tránh giới hạn tốc độ 429",
+      "retry": "Thử lại",
+      "routine": "Số bài kiểm tra đồng thời",
+      "routineHint": "Số bài kiểm tra thường tối đa chạy cùng lúc. Đặt thành 1 để chạy lần lượt.",
+      "saveError": "Chưa lưu cài đặt đồng thời."
+    },
     "details": {
       "input": "Đầu vào",
       "output": "Đầu ra",
       "result": "Kết quả thực thi"
     },
     "errors": {
+      "loadRuntimeKeysFailed": "Không thể tải khóa API. Hãy thử lại để lấy danh sách khóa.",
       "unexpected": "Đã xảy ra lỗi không xác định"
     },
     "generatedImagePreview": "Xem trước ảnh đã tạo",
     "generatedVideoPreview": "Xem trước video đã tạo",
+    "generation": {
+      "cachedTokens": "Token đầu vào bộ nhớ đệm",
+      "collapseReasoning": "Thu gọn suy luận",
+      "effectiveSpeed": "Tốc độ toàn trình",
+      "firstOutput": "Đầu ra đầu tiên",
+      "inputTokens": "Token đầu vào",
+      "jumpToAnswer": "Đến câu trả lời cuối cùng",
+      "jumpToLatest": "Đến nội dung mới nhất",
+      "metricsHelp": "Giải thích chỉ số",
+      "metricsHint": "Mỗi bước hiển thị lượng token được báo cáo và thời gian phản hồi đo được. Đầu ra đầu tiên bao gồm văn bản, suy luận hoặc lời gọi công cụ. Tốc độ đầu ra tính từ đầu ra đầu tiên; tốc độ toàn trình bao gồm thời gian chờ ban đầu. Bỏ qua chỉ số không có dữ liệu; phản hồi ngắn có thể không phản ánh tốc độ tạo liên tục.",
+      "outputSpeed": "Tốc độ đầu ra",
+      "outputTokens": "Token đầu ra",
+      "partial": "Đã giữ lại đầu ra một phần; phản hồi chưa hoàn tất.",
+      "process": "Quá trình kiểm thử",
+      "reasoning": "Nội dung suy luận",
+      "reasoningTokens": "Token suy luận",
+      "requestDetails": "Chi tiết yêu cầu",
+      "responding": "Đang viết câu trả lời",
+      "responseTime": "Thời gian phản hồi",
+      "statistics": "Thống kê",
+      "step": "Bước {{step}}",
+      "thinking": "Đang suy nghĩ",
+      "toolCompleted": "Đã hoàn thành",
+      "toolError": "Thất bại",
+      "toolIncomplete": "Chưa nhận được kết quả",
+      "toolPreparing": "Đang nhận tham số",
+      "toolRunning": "Đang thực thi",
+      "waiting": "Đang chờ đầu ra"
+    },
     "history": {
       "clear": "Xóa lịch sử",
       "lastVerified": "Lần kiểm tra gần nhất",
@@ -74,6 +129,10 @@
       "quotaCost": "Tính theo lượt",
       "video": "Tạo video và đợi tối đa hai phút để phát. Dừng chỉ kết thúc việc chờ tại máy; tác vụ trên máy chủ có thể tiếp tục và phát sinh phí."
     },
+    "modelSelector": {
+      "discoveredModels": "Mô hình đã phát hiện",
+      "suggestedModels": "Mô hình gợi ý"
+    },
     "modes": {
       "nonStreaming": "Không truyền luồng",
       "streaming": "Truyền luồng"
@@ -107,6 +166,7 @@
       "shortcutTooltip": "Kiểm tra khả năng hỗ trợ ứng dụng khách CLI của API này"
     },
     "requiresModelId": "Vui lòng nhập ID mô hình trước khi chạy bài kiểm tra này.",
+    "requiresRuntimeKey": "Chọn khóa API trong phần cấu hình để chạy kiểm tra.",
     "sections": {
       "onDemand": "Kiểm tra theo yêu cầu",
       "routine": "Kiểm tra thông thường"
@@ -186,8 +246,8 @@
         "summary": "Số lượt: {{steps}} · Lần gọi công cụ: {{calls}} · {{seconds}} giây"
       },
       "context": {
-        "about": "Giới thiệu kiểm tra ngữ cảnh",
-        "acceptedTitle": "Ngữ cảnh mô hình: đã xác minh khoảng {{tokens}} tokens",
+        "about": "Giới thiệu kiểm tra dung lượng ngữ cảnh",
+        "acceptedTitle": "Dung lượng ngữ cảnh: đã xác minh khoảng {{tokens}} tokens",
         "comparison": "siêu dữ liệu công bố {{expected}} token",
         "continue": "Tiếp tục kiểm tra",
         "counter": "Bộ tách token: {{encoding}}.",
@@ -198,14 +258,14 @@
         "discardWarning": "Đã lưu quá nhiều kiểm tra bị gián đoạn. Bỏ các bản ghi không còn chạy để tiếp tục. Trạng thái tính phí chưa rõ; các kiểm tra đang chạy được giữ lại.",
         "emptyResponse": "Phản hồi kết thúc bình thường nhưng không có nội dung; chưa xác nhận được việc nhận đầu vào.",
         "errorTitle": "Không thể hoàn tất kiểm tra",
-        "estimated": "Mã hóa mô hình là ước tính.",
-        "hint": "Kiểm tra độ dài ngữ cảnh đầu vào mà mô hình chấp nhận. Kết quả phụ thuộc vào API và cấu hình yêu cầu, không xác nhận toàn bộ cửa sổ ngữ cảnh.",
+        "estimated": "Mã hóa bộ tách token là ước tính.",
+        "hint": "Kiểm tra độ dài ngữ cảnh đầu vào được chấp nhận. Kết quả phụ thuộc vào API và cấu hình yêu cầu, không xác nhận toàn bộ cửa sổ ngữ cảnh.",
         "historyError": "Lịch sử hiện không khả dụng. Kết quả hiện tại vẫn được hiển thị.",
         "incompleteResponse": "Chưa nhận được phản hồi đủ để kết luận. Lý do kết thúc: {{reason}}.",
         "interrupted": "Yêu cầu đã bị gián đoạn; trạng thái tính phí chưa rõ. Yêu cầu không được tự động thử lại. Bắt đầu kiểm tra mới có thể phát sinh thêm mức sử dụng.",
         "lower": "Đầu vào lớn nhất được chấp nhận: {{tokens}} token văn bản cục bộ",
         "maskedHistoryHint": "Kết quả đo đã lưu cho khóa bị che này. Thông tin xác thực hiện tại chưa được kiểm tra lại.",
-        "matched": "Đã khớp mã hóa mô hình; số token của toàn bộ yêu cầu có thể khác.",
+        "matched": "Đã khớp mã hóa bộ tách token; số token của toàn bộ yêu cầu có thể khác.",
         "measuredBadge": "Đã nhận ≈{{tokens}} token",
         "measurementDetails": "Cơ sở đo lường",
         "outputLimited": "Đầu vào đã được chấp nhận; đầu ra bị cắt do giới hạn độ dài. Điều này không làm mất kết quả chấp nhận đầu vào.",
@@ -216,7 +276,7 @@
           "budget": "Đợt này đã đạt ngân sách yêu cầu hoặc đầu vào cộng dồn. Tiếp tục từ đây sẽ cho phép dùng thêm hạn mức.",
           "inconclusive": "Chưa xác nhận được giới hạn dung lượng. Thử lại hoặc mở chi tiết để xem nguyên nhân.",
           "test-limit": "Đầu vào có độ dài này đã được nhận. Dung lượng thực tế có thể lớn hơn.",
-          "timeout": "Yêu cầu hết thời gian trước khi xác nhận đầu vào đã được chấp nhận. Điều này không chứng minh đầu vào vượt quá dung lượng của mô hình. Hãy thử lại sau; việc thử lại sẽ gửi lại văn bản dài và có thể tiêu tốn hạn mức."
+          "timeout": "Yêu cầu hết thời gian trước khi xác nhận đầu vào đã được chấp nhận. Điều này không chứng minh đầu vào vượt quá dung lượng. Hãy thử lại sau; việc thử lại sẽ gửi lại văn bản dài và có thể tiêu tốn hạn mức."
         },
         "reportedUsage": "Mức dùng được báo cáo: đầu vào {{input}} + đầu ra {{output}} = tổng {{total}} token",
         "requestDetails": "Yêu cầu và mức sử dụng",
@@ -224,7 +284,7 @@
         "run": "Thăm dò ngữ cảnh",
         "startHint": "Gửi văn bản dài và tiêu thụ hạn mức API. Tạm dừng khi đạt ngân sách.",
         "stoppedTitle": "Đã dừng kiểm tra",
-        "title": "Kiểm tra ngữ cảnh mô hình",
+        "title": "Kiểm tra dung lượng ngữ cảnh",
         "unableTitle": "Chưa xác nhận được dung lượng đầu vào",
         "upper": "Bị từ chối do dung lượng tại: {{tokens}} token văn bản cục bộ"
       },
@@ -241,7 +301,7 @@
         "capped": "Mỗi yêu cầu kiểm tra tối đa 1M token đầu vào.",
         "cell": "Đầu vào cục bộ: {{tokens}} token · Vị trí thực: {{depth}}% · {{latency}} ms",
         "cellDetails": "Chi tiết ô",
-        "cumulativeScore": "Kết quả tích lũy: {{hits}}/{{graded}} câu trả lời có thể đánh giá khớp",
+        "cumulativeScore": "Kết quả tích lũy: {{hits}}/{{total}} tổ hợp khớp",
         "custom": "Tùy chỉnh",
         "customLimit": "Độ dài tùy chỉnh (tokens)",
         "description": "Kiểm tra mô hình có tìm được thông tin cụ thể ở các vị trí khác nhau trong văn bản dài hay không.",
@@ -314,6 +374,7 @@
         "score": "{{hits}}/{{total}} khớp",
         "seedHint": "Để trống để tạo mẫu mới mỗi lần. Dùng cùng mã và cài đặt để kiểm tra lại cùng văn bản.",
         "seedInput": "Mã mẫu kiểm tra (không bắt buộc)",
+        "settingsPreview": "Yêu cầu: {{requests}} · Đầu vào: ~{{tokens}} token (chưa tính đầu ra)",
         "singleLengthRule": "Kế hoạch này chỉ kiểm tra một độ dài: {{limit}}.",
         "sources": {
           "custom": "Bạn đặt đầu vào tối đa là {{limit}}. Kế hoạch dùng giới hạn đó.",
@@ -349,16 +410,15 @@
       },
       "prompts": {
         "editorLabel": "Lời nhắc cho {{probe}}",
-        "label": "Lời nhắc",
         "resetOne": "Khôi phục mục này",
-        "saveFailed": "Không lưu được lời nhắc: {{message}}",
-        "sharedHint": "Lời nhắc đã lưu dùng chung cho mọi lối vào kiểm tra."
+        "saveFailed": "Không lưu được lời nhắc: {{message}}"
       },
       "questionAnswer": {
         "comparison": "So sánh đáp án",
         "comparisonHint": "Chỉ so sánh văn bản của đáp án cuối cùng. Hãy xem toàn bộ câu trả lời để đánh giá lập luận.",
         "description": "Dùng câu hỏi của bạn để xem câu trả lời và lập luận của mô hình. Thêm đáp án tham chiếu để đối chiếu đáp án cuối cùng.",
         "draftChanged": "Câu hỏi hoặc đáp án tham chiếu đã thay đổi. Đây là kết quả lần chạy trước; hãy chạy lại để so sánh nội dung mới.",
+        "editReference": "Sửa câu trả lời tham chiếu",
         "finalAnswer": "Đáp án cuối cùng được trích xuất",
         "loadFailed": "Không thể tải cài đặt hỏi đáp. Hãy thử lại để tải bản nháp đã lưu.",
         "notIdentified": "Không xác định được",
@@ -387,7 +447,6 @@
         "runQuestion": "Câu hỏi dùng trong lần chạy này",
         "runReference": "Đáp án tham chiếu của lần chạy này",
         "saveFailed": "Không thể lưu cài đặt. Bạn vẫn có thể dùng bản nháp hiện tại.",
-        "saving": "Đang lưu…",
         "title": "Kiểm tra hỏi đáp"
       },
       "settingsTitle": "Cài đặt kiểm tra",
@@ -395,6 +454,17 @@
       "stopped": "Đã dừng trước khi hoàn tất; không lưu kết quả."
     },
     "unsupportedProbeForApiType": "Loại API hiện tại không hỗ trợ thăm dò {{probe}}.",
-    "warning": "Kết quả chỉ áp dụng cho API, mô hình và cấu hình yêu cầu được sử dụng trong lần kiểm tra này."
+    "warning": "Kết quả chỉ áp dụng cho API, mô hình và cấu hình yêu cầu được sử dụng trong lần kiểm tra này.",
+    "workspace": {
+      "collapseSettings": "Thu gọn cấu hình",
+      "collapseTests": "Thu gọn thanh kiểm thử",
+      "currentTest": "Bài kiểm tra hiện tại",
+      "execution": "Chạy kiểm tra thường",
+      "expandSettings": "Mở rộng cấu hình",
+      "expandTests": "Mở rộng thanh kiểm thử",
+      "settings": "Cài đặt",
+      "source": "Nguồn trích xuất",
+      "tests": "Kiểm thử"
+    }
   }
 }

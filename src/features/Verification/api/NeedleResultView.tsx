@@ -1,5 +1,5 @@
 import { Eye } from "lucide-react"
-import { useEffect, useId, useState, type ReactNode } from "react"
+import { useContext, useEffect, useId, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CollapsibleSection, Heading6 } from "~/components/ui"
@@ -15,6 +15,10 @@ import { NeedleCellDetails } from "./NeedleCellDetails"
 import { NeedleMatrix } from "./NeedleMatrix"
 import { getNeedleMatrixState } from "./needleMatrixState"
 import { VerificationResultCard } from "./VerificationResultCard"
+import {
+  VerificationDetailContext,
+  VerificationSelectionContext,
+} from "./VerificationSelectionContext"
 
 /** Keep retrieval results visible while accounting and reproduction details stay optional. */
 export function NeedleResultView({
@@ -49,10 +53,27 @@ export function NeedleResultView({
   actions?: ReactNode
 }) {
   const { t } = useTranslation("aiApiVerification")
+  const workspace = useContext(VerificationSelectionContext)
+  const headerTarget = useContext(VerificationDetailContext)?.headerTarget
   const previewTitleId = useId()
   const [selected, setSelected] = useState<NeedleCoordinate | null>(null)
   const [showResult, setShowResult] = useState(true)
   const active = running && !historical
+  const latestCompleted =
+    active && result?.reason !== NEEDLE_RUN_REASONS.Running
+      ? 0
+      : (result?.processed ?? result?.cells.length ?? 0)
+  const latestTotal = active
+    ? plannedCells.length
+    : (result?.scheduled?.length ?? result?.plan.requests ?? 0)
+  const latestProgress = { completed: latestCompleted, total: latestTotal }
+  const showLatestProgress =
+    result &&
+    (active ||
+      latestTotal !== result.plan.requests ||
+      latestCompleted !== latestTotal)
+  const showHeaderScore =
+    result && (active || result.reason !== NEEDLE_RUN_REASONS.Complete)
   useEffect(() => {
     if (active) setShowResult(true)
   }, [active])
@@ -79,7 +100,7 @@ export function NeedleResultView({
       {selected && selectedCell ? (
         <section
           aria-label={t("verifyDialog.tools.needle.cellDetails")}
-          className="border-border mt-3 border-t pt-3"
+          className="mt-3 border-t border-border pt-3"
         >
           <NeedleCellDetails
             coordinate={selected}
@@ -89,8 +110,8 @@ export function NeedleResultView({
             onStop={onStop ? () => onStop(selected) : undefined}
             stopFailed={Boolean(
               stopError &&
-                stopError.targetTokens === selected.targetTokens &&
-                stopError.depth === selected.depth,
+              stopError.targetTokens === selected.targetTokens &&
+              stopError.depth === selected.depth,
             )}
           />
         </section>
@@ -109,10 +130,10 @@ export function NeedleResultView({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Heading6
               id={previewTitleId}
-              className="text-foreground flex items-center gap-2 text-sm font-semibold"
+              className="flex items-center gap-2 text-sm font-semibold text-foreground"
             >
               <Eye
-                className="text-muted-foreground size-4 shrink-0"
+                className="size-4 shrink-0 text-muted-foreground"
                 aria-hidden="true"
               />
               {t("verifyDialog.tools.needle.previewTitle")}
@@ -122,17 +143,17 @@ export function NeedleResultView({
           {planSummary}
         </div>
         {matrix ? (
-          <div className="border-border border-t p-4">{matrix}</div>
+          <div className="border-t border-border p-4">{matrix}</div>
         ) : null}
       </Card>
     )
   return (
     <VerificationResultCard
-      bodyHidden={!showResult}
-      onToggle={() => setShowResult(!showResult)}
+      bodyHidden={!workspace && !showResult}
+      onToggle={workspace ? undefined : () => setShowResult(!showResult)}
       status={
         <>
-          {status ? (
+          {!workspace && status ? (
             <Badge variant="outline" size="sm">
               {status}
             </Badge>
@@ -141,56 +162,82 @@ export function NeedleResultView({
         </>
       }
       summary={
-        <div className="space-y-3">
-          {result ? (
-            <div className="space-y-1" aria-live="polite">
-              <p className="font-semibold tabular-nums">
-                {t("verifyDialog.tools.needle.cumulativeScore", {
-                  hits,
-                  graded,
-                })}
-              </p>
-              <p className="text-muted-foreground text-xs tabular-nums">
-                {t("verifyDialog.tools.needle.progress", {
-                  completed:
-                    active && result.reason !== NEEDLE_RUN_REASONS.Running
-                      ? 0
-                      : result.processed ?? result.cells.length,
-                  total: active
-                    ? plannedCells.length
-                    : result.scheduled?.length ?? result.plan.requests,
-                })}
-              </p>
-              {historical ? (
-                <p className="text-muted-foreground text-xs">
-                  {t("verifyDialog.tools.needle.savedResult")}
-                </p>
+        headerTarget ? (
+          showHeaderScore || showLatestProgress ? (
+            <span
+              className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums"
+              aria-live="polite"
+            >
+              {showHeaderScore ? (
+                <span className="font-medium whitespace-nowrap text-foreground">
+                  {t("verifyDialog.tools.needle.score", {
+                    hits,
+                    total: result!.plan.requests,
+                  })}
+                </span>
               ) : null}
-            </div>
-          ) : null}
-          {planSummary}
-        </div>
+              {showLatestProgress ? (
+                <span
+                  className="whitespace-nowrap tabular-nums"
+                  title={t(
+                    "verifyDialog.tools.needle.progress",
+                    latestProgress,
+                  )}
+                >
+                  {t("verifyDialog.tools.needle.scopeProgress", latestProgress)}
+                </span>
+              ) : null}
+            </span>
+          ) : null
+        ) : (
+          <div className="space-y-3">
+            {result ? (
+              <div className="space-y-1" aria-live="polite">
+                <p className="font-semibold tabular-nums">
+                  {t("verifyDialog.tools.needle.cumulativeScore", {
+                    hits,
+                    total: result.plan.requests,
+                  })}
+                </p>
+                {!active && graded === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t("verifyDialog.tools.needle.cancelledUnknown")}
+                  </p>
+                ) : null}
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {t("verifyDialog.tools.needle.progress", latestProgress)}
+                </p>
+                {historical ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t("verifyDialog.tools.needle.savedResult")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        )
       }
     >
+      {planSummary}
       {matrix}
       {result ? (
         <CollapsibleSection
           title={t("verifyDialog.tools.needle.resultDetails")}
-          className="border-border border-t pt-2"
+          className="border-t border-border pt-2"
           buttonClassName="px-0 py-2"
           panelClassName="bg-transparent mt-0 space-y-density-2 rounded-none border-0 px-0 py-2"
         >
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             {t("verifyDialog.tools.needle.exactLengths", {
               lengths: result.plan.lengths
                 .map((length) => length.toLocaleString())
                 .join(" / "),
             })}
           </p>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             {t("verifyDialog.tools.needle.tokenUnits")}
           </p>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             {t("verifyDialog.tools.needle.reproduce", {
               seed: result.seed,
               encoding: result.counter.encoding,
@@ -199,7 +246,7 @@ export function NeedleResultView({
               ? t("verifyDialog.tools.context.estimated")
               : t("verifyDialog.tools.context.matched")}
           </p>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             {t("verifyDialog.tools.needle.limitation")}
           </p>
         </CollapsibleSection>

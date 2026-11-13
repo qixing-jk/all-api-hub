@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { expect, it, vi } from "vitest"
 
+import { NeedleCellDetails } from "~/features/Verification/api/NeedleCellDetails"
+import { NEEDLE_CELL_STATES } from "~/features/Verification/api/needleMatrixState"
 import { NeedlePanel } from "~/features/Verification/api/NeedlePanel"
 import { NeedlePlanHelp } from "~/features/Verification/api/NeedlePlanHelp"
 import { useNeedleTest } from "~/features/Verification/api/useNeedleTest"
@@ -14,6 +16,77 @@ import {
 import { createNeedlePlan } from "~/services/verification/modelQuality/needlePlan"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+
+it.each([NEEDLE_CELL_STATES.Incomplete, NEEDLE_CELL_STATES.Error])(
+  "retains %s cell text as partial output",
+  async (state) => {
+    const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <NeedleCellDetails
+          coordinate={{ targetTokens: 1024, depth: 50 }}
+          state={state}
+          output={{
+            targetTokens: 1024,
+            depth: 50,
+            startedAt: Date.now(),
+            progress: {
+              text: "Partial needle response",
+              reasoning: "",
+              step: 1,
+              tools: [],
+            },
+          }}
+          onRun={vi.fn()}
+          canRun
+          canStop={false}
+          stopFailed={false}
+        />
+      </I18nextProvider>,
+    )
+    expect(screen.getByRole("log")).toHaveTextContent("Partial needle response")
+    expect(screen.getByText(en.verifyDialog.generation.partial)).toBeVisible()
+  },
+)
+
+it("keeps the next run cost visible beside editable needle settings", async () => {
+  const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
+  function Harness() {
+    const controller = useNeedleTest({
+      enabled: true,
+      blocked: false,
+      contextKey: "cost-preview",
+      modelId: "model",
+      resolveRequest: async () => null,
+      loadCounter: async () => ({
+        encoding: "o200k_base",
+        estimated: true,
+        declaredContext: 32768,
+      }),
+      runner: vi.fn(),
+    })
+    return (
+      <NeedlePanel
+        controller={controller}
+        runCapacity={vi.fn()}
+        canRunCapacity={false}
+      />
+    )
+  }
+  render(
+    <I18nextProvider i18n={i18n}>
+      <Harness />
+    </I18nextProvider>,
+  )
+  const settings = screen.getByRole("group", { name: "Test settings" })
+  expect(await within(settings).findByText(/Requests: 3.*Input:/)).toBeVisible()
+  await userEvent.setup().click(
+    within(settings).getByRole("switch", {
+      name: "Test only the longest text",
+    }),
+  )
+  expect(await within(settings).findByText(/Requests: 9.*Input:/)).toBeVisible()
+})
 
 it("defaults to the longest length and preserves the user's mode across models", async () => {
   const user = userEvent.setup()
@@ -420,14 +493,13 @@ it("explains a compact plan with keyboard-accessible exact numbers without runni
       }),
     ).findByText("127K"),
   ).toBeVisible()
-  expect(screen.getByText(/741K/)).toBeVisible()
   expect(screen.getByText(/15 requests/)).toBeVisible()
   expect(screen.queryByText(/130,048/)).not.toBeInTheDocument()
   const settings = screen.getByRole("group", { name: "Test settings" })
   const preview = screen.getByRole("region", { name: "Test preview" })
   expect(within(preview).getByText(/741K/)).toBeVisible()
   expect(within(preview).queryByRole("spinbutton")).not.toBeInTheDocument()
-  expect(within(settings).queryByText(/741K/)).not.toBeInTheDocument()
+  expect(within(settings).getByText(/741K/)).toBeVisible()
   const limit = screen.getByRole("combobox", {
     name: "Maximum text length (tokens)",
   })
@@ -475,29 +547,25 @@ it("explains a compact plan with keyboard-accessible exact numbers without runni
     }),
   ).not.toBeInTheDocument()
   await user.hover(explanation)
-  expect(
-    await screen.findByRole("dialog", { name: "How are lengths chosen?" }),
-  ).toBeVisible()
+  expect(await screen.findByRole("tooltip")).toBeVisible()
   await user.unhover(explanation)
   await waitFor(() =>
-    expect(
-      screen.queryByRole("dialog", { name: "How are lengths chosen?" }),
-    ).not.toBeInTheDocument(),
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
   )
   await user.tab({ shift: true })
   expect(explanation).toHaveFocus()
-  expect(
-    await screen.findByRole("dialog", { name: "How are lengths chosen?" }),
-  ).toBeVisible()
+  expect(await screen.findByRole("tooltip")).toBeVisible()
   await user.keyboard("{Enter}")
-  expect(explanation).toHaveAttribute("aria-expanded", "true")
-  const help = screen.getByRole("dialog", { name: "How are lengths chosen?" })
+  expect(explanation).toHaveAccessibleDescription(
+    expect.stringContaining("Exact lengths:"),
+  )
+  const help = screen.getByRole("tooltip")
   expect(within(help).getByText(/128K.*1K.*127K/)).toBeVisible()
   expect(within(help).getByText(/Exact lengths:.*130,048/)).toBeVisible()
   expect(within(help).getByText(/758,784/)).toBeVisible()
   expect(within(help).getByText(/1K = 1,024/)).toBeVisible()
   await user.keyboard("{Escape}")
-  expect(help).not.toBeInTheDocument()
+  await waitFor(() => expect(help).not.toBeInTheDocument())
   expect(explanation).toHaveFocus()
   expect(runner).not.toHaveBeenCalled()
 })
@@ -818,9 +886,9 @@ it.each(["256K", "512K", "1023K"])(
         screen.getByRole("button", { name: "How are lengths chosen?" }),
       )
       expect(
-        within(
-          screen.getByRole("dialog", { name: "How are lengths chosen?" }),
-        ).getByText(/Estimated total input: 6,263,808 tokens/),
+        within(screen.getByRole("tooltip")).getByText(
+          /Estimated total input: 6,263,808 tokens/,
+        ),
       ).toBeVisible()
     }
     expect(runner).not.toHaveBeenCalled()
@@ -846,9 +914,7 @@ it("restores automatic limits and resets custom presets when the model changes",
     screen.getByRole("button", { name: "How are lengths chosen?" }),
   )
   expect(
-    within(
-      screen.getByRole("dialog", { name: "How are lengths chosen?" }),
-    ).getByText(/Exact lengths:.*1,047,552/),
+    within(screen.getByRole("tooltip")).getByText(/Exact lengths:.*1,047,552/),
   ).toBeVisible()
   await user.click(limit)
   await user.click(screen.getByRole("option", { name: "Custom" }))
@@ -916,7 +982,9 @@ it("preserves custom limit editing when a result moves settings below the matrix
     </I18nextProvider>,
   )
   await screen.findByText("3 requests")
-  await user.click(screen.getByRole("combobox"))
+  await user.click(
+    screen.getByRole("combobox", { name: en.verifyDialog.tools.needle.limit }),
+  )
   await user.click(
     screen.getByRole("option", { name: en.verifyDialog.tools.needle.custom }),
   )
@@ -929,12 +997,16 @@ it("preserves custom limit editing when a result moves settings below the matrix
     screen.getByRole("button", { name: en.verifyDialog.tools.needle.run }),
   )
   await screen.findByRole("region", { name: "Execution result" })
+  expect(screen.getByRole("button", { name: "Test settings" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  )
   expect(
     screen.getByRole("spinbutton", {
       name: en.verifyDialog.tools.needle.customLimit,
     }),
   ).toHaveValue(16384)
-  expect(screen.getByRole("combobox")).toHaveTextContent(
-    en.verifyDialog.tools.needle.custom,
-  )
+  expect(
+    screen.getByRole("combobox", { name: en.verifyDialog.tools.needle.limit }),
+  ).toHaveTextContent(en.verifyDialog.tools.needle.custom)
 })

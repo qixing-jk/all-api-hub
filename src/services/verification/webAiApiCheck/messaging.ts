@@ -2,6 +2,7 @@ import {
   defineExtensionMessaging,
   type Logger,
 } from "~/services/runtimeMessaging/extensionMessaging"
+import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 import type { ContextCounterInfo } from "~/services/verification/modelQuality/contextTokens"
 import type { NeedleSelection } from "~/services/verification/modelQuality/needlePlan"
 import type { NeedleResult } from "~/services/verification/modelQuality/needleRun"
@@ -49,6 +50,7 @@ import type {
 } from "./types"
 
 export const WebAiApiCheckMessageTypes = {
+  GenerationProgress: "webAiApiCheck:generationProgress",
   RunQuestionAnswer: "webAiApiCheck:runQuestionAnswer",
   ContextCounter: "webAiApiCheck:contextCounter",
   NeedleHistory: "webAiApiCheck:needleHistory",
@@ -94,6 +96,10 @@ function createWebAiApiCheckMessagingLogger(): Logger {
 }
 
 interface WebAiApiCheckProtocolMap {
+  [WebAiApiCheckMessageTypes.GenerationProgress](data: {
+    runId: string
+    progress: VerificationGenerationProgress
+  }): void
   [WebAiApiCheckMessageTypes.RunQuestionAnswer](
     data: ApiCheckQuestionAnswerRequest,
   ): ApiCheckQuestionAnswerResponse

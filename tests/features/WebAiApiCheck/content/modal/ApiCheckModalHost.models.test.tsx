@@ -1,4 +1,5 @@
 import type { ApiCheckFetchModelsResponse } from "~/services/verification/webAiApiCheck/types"
+import { getVerificationHeader } from "~~/tests/test-utils/verificationWorkspace"
 
 import "./apiCheckModalHostMocks"
 
@@ -562,7 +563,11 @@ describe("ApiCheckModalHost", () => {
         name: "aiApiVerification:verifyDialog.probes.text-generation",
       }),
     )
-    expect(await within(probeCard).findByText("OpenAI result")).toBeVisible()
+    expect(
+      await within(getVerificationHeader(probeCard)).findByText(
+        "OpenAI result",
+      ),
+    ).toBeVisible()
 
     await user.click(
       screen.getByRole("combobox", {

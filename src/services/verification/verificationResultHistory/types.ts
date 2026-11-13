@@ -1,3 +1,4 @@
+import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
 import type {
   ApiVerificationApiType,
   ApiVerificationMode,
@@ -26,7 +27,7 @@ import type { NeedleResult } from "~/services/verification/modelQuality/needleRu
  * decoded on every read; adding optional capacity metadata does not rely on
  * this primary-summary fast path.
  */
-export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 5
+export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 6
 
 export const API_VERIFICATION_HISTORY_STATUSES = {
   Pass: API_VERIFICATION_PROBE_STATUSES.Pass,
@@ -72,6 +73,7 @@ export type PersistedApiVerificationSummaryParams = Record<
 export type PersistedApiVerificationProbeSummary = {
   id: ApiVerificationProbeId
   status: ApiVerificationProbeStatus
+  metrics?: VerificationGenerationMetrics[]
   latencyMs: number
   mode?: ApiVerificationMode
   requestProfileEnhanced?: boolean
@@ -98,6 +100,7 @@ export type DrawingVerificationSummary = {
   verifiedAt: number
   apiType: ApiVerificationApiType
   modelId: string
+  metrics?: VerificationGenerationMetrics[]
   latencyMs: number
   executionMode: PelicanExecutionMode
   outcome: DrawingVerificationOutcome

@@ -1,3 +1,5 @@
+import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 import {
   CONTEXT_ATTEMPT_OUTCOMES,
   CONTEXT_CAPACITY_REASONS,
@@ -12,6 +14,7 @@ export type ContextAttemptOutcome =
   (typeof CONTEXT_ATTEMPT_OUTCOMES)[keyof typeof CONTEXT_ATTEMPT_OUTCOMES]
 
 export type ContextAttempt = {
+  metrics?: VerificationGenerationMetrics[]
   outcome: ContextAttemptOutcome
   inputTokens?: number
   outputTokens?: number
@@ -22,6 +25,8 @@ export type ContextAttempt = {
 }
 
 export type ContextCapacityResult = {
+  generation?: VerificationGenerationProgress
+  generationStartedAt?: number
   lowerBoundTokens: number
   upperBoundTokens?: number
   reason: Exclude<ContextCapacityReason, typeof CONTEXT_CAPACITY_REASONS.Error>

@@ -17,6 +17,9 @@ export function createDrawingServer(options?: {
   contextOutcome?: "timeout" | "empty"
   beforeRespond?: (request: DrawingRequest) => Promise<void>
   textResponse?: (request: DrawingRequest) => string | undefined
+  reasoningText?: string
+  streamTextChunks?: (text: string) => string[]
+  afterStreamChunk?: (request: DrawingRequest, index: number) => Promise<void>
 }) {
   const prompts: string[] = []
   const requests: DrawingRequest[] = []
@@ -85,10 +88,25 @@ export function createDrawingServer(options?: {
         choices: [{ index: 0, delta, finish_reason }],
       })
       response.writeHead(200, { "Content-Type": "text/event-stream" })
+      if (options?.reasoningText) {
+        response.write(
+          `data: ${JSON.stringify(chunk({ reasoning_content: options.reasoningText }, null))}\n\n`,
+        )
+      }
+      const parts = call
+        ? [null]
+        : (options?.streamTextChunks?.(text ?? "") ?? [text])
+      for (const [index, content] of parts.entries()) {
+        response.write(
+          `data: ${JSON.stringify(chunk({ role: "assistant", ...(call ? { tool_calls: [{ index: 0, ...call }] } : { content }) }, null))}\n\n`,
+        )
+        await options?.afterStreamChunk?.(body, index)
+        if (response.destroyed) return
+      }
       response.end(
         [
-          `data: ${JSON.stringify(chunk({ role: "assistant", ...(call ? { tool_calls: [{ index: 0, ...call }] } : { content: text }) }, null))}\n\n`,
           `data: ${JSON.stringify(chunk({}, finish))}\n\n`,
+          `data: ${JSON.stringify({ ...chunk({}, null), choices: [], usage: { prompt_tokens: 10, completion_tokens: 40, total_tokens: 50 } })}\n\n`,
           "data: [DONE]\n\n",
         ].join(""),
       )

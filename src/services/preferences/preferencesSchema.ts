@@ -379,6 +379,8 @@ export interface UserPreferences {
 
   /** Shared on-demand question draft; never included in analytics. */
   questionAnswerTest?: Partial<QuestionAnswerSettings>
+  /** Independent routine and needle batch choices; absent values run one at a time. */
+  verificationConcurrency?: import("~/services/verification/concurrency").VerificationConcurrency
 
   /**
    * 临时窗口过盾相关设置

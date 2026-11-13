@@ -29,21 +29,27 @@ function PelicanSvgPreview({ svg }: { svg: string }) {
       src={src}
       onError={() => setFailedSrc(src)}
       alt={t("verifyDialog.tools.pelican.previewAlt")}
-      className="border-border-subtle bg-surface-subtle max-h-80 w-full rounded-lg border object-contain p-3"
+      className="max-h-80 w-full rounded-lg border border-border-subtle bg-surface-subtle object-contain p-3"
       data-testid="pelican-svg-preview"
     />
   )
 }
 
 /** Render transient drawing evidence without owning request or history state. */
-export function PelicanTestResult({ pelican }: { pelican: PelicanResult }) {
+export function PelicanTestResult({
+  pelican,
+  showAgentCalls = true,
+}: {
+  pelican: PelicanResult
+  showAgentCalls?: boolean
+}) {
   const { t } = useTranslation("aiApiVerification")
   return (
     <div className="space-y-density-3" data-testid="pelican-result">
       {pelican.svg && pelican.analysis.safe ? (
         <PelicanSvgPreview svg={pelican.svg} />
       ) : null}
-      <div className="text-muted-foreground text-xs">
+      <div className="text-xs text-muted-foreground">
         {pelican.svg
           ? t("verifyDialog.tools.pelican.analysis", {
               shapes: pelican.analysis.shapeCount,
@@ -58,7 +64,11 @@ export function PelicanTestResult({ pelican }: { pelican: PelicanResult }) {
         </Alert>
       ) : null}
       {pelican.agent ? (
-        <AgentTestResult agent={pelican.agent} latencyMs={pelican.latencyMs} />
+        <AgentTestResult
+          agent={pelican.agent}
+          latencyMs={pelican.latencyMs}
+          showCalls={showAgentCalls}
+        />
       ) : null}
       <CollapsibleSection
         title={t("verifyDialog.tools.pelican.raw")}

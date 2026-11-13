@@ -5,16 +5,26 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { QuestionAnswerPanel } from "~/features/Verification/api/QuestionAnswerPanel"
-import { useQuestionAnswerTest } from "~/features/Verification/api/useQuestionAnswerTest"
+import { VERIFICATION_TOOL_STATUSES } from "~/features/Verification/api/types"
+import {
+  useQuestionAnswerTest,
+  type QuestionAnswerController,
+} from "~/features/Verification/api/useQuestionAnswerTest"
+import { VerificationTestSection } from "~/features/Verification/api/VerificationLayout"
 import en from "~/locales/en/aiApiVerification.json"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { VERIFICATION_GENERATION_PART_TYPES } from "~/services/verification/aiApiVerification/generationProgress"
+import { QUESTION_ANSWER_OUTCOMES } from "~/services/verification/modelQuality/questionAnswer"
 import { server } from "~~/tests/msw/server"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
 
 testI18n.addResourceBundle("en", "aiApiVerification", en)
 
-function Workspace() {
+function Workspace({
+  inWorkspace = false,
+  withConfiguration = false,
+}: { inWorkspace?: boolean; withConfiguration?: boolean } = {}) {
   const controller = useQuestionAnswerTest({
     contextKey: "profile",
     enabled: true,
@@ -30,10 +40,208 @@ function Workspace() {
       secrets: ["secret"],
     }),
   })
-  return <QuestionAnswerPanel controller={controller} />
+  const panel = <QuestionAnswerPanel controller={controller} />
+  return inWorkspace ? (
+    <VerificationTestSection
+      tools={null}
+      configuration={
+        withConfiguration ? <div>General request configuration</div> : undefined
+      }
+    >
+      {panel}
+    </VerificationTestSection>
+  ) : (
+    panel
+  )
 }
 
 describe("question answer panel", () => {
+  it.each([false, true])(
+    "opens configuration and focuses the reference answer directly from the question with folded settings=%s",
+    async (folded) => {
+      render(<Workspace inWorkspace withConfiguration />)
+      const user = userEvent.setup()
+      await user.click(await screen.findByRole("button", { name: "Q&A test" }))
+      const edit = await screen.findByRole("button", {
+        name: "Edit reference answer",
+      })
+      if (folded) {
+        await user.click(screen.getByRole("button", { name: "Settings" }))
+        await user.click(
+          screen.getByRole("button", {
+            name: "Current test · Q&A test",
+          }),
+        )
+        await user.click(screen.getByRole("button", { name: "Settings" }))
+      }
+      await user.click(edit)
+      const answer = await screen.findByRole("textbox", {
+        name: "Reference answer (optional)",
+      })
+      await waitFor(() => expect(answer).toHaveFocus())
+      expect(
+        screen.getByRole("button", {
+          name: "Current test · Q&A test",
+        }),
+      ).toHaveAttribute("aria-expanded", "true")
+    },
+  )
+  it("identifies a truncated response as partial output", async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post("https://qa-ui.invalid/v1/chat/completions", () =>
+        HttpResponse.json({
+          id: "truncated",
+          object: "chat.completion",
+          created: 0,
+          model: "test",
+          choices: [
+            {
+              index: 0,
+              finish_reason: "length",
+              message: { role: "assistant", content: "Partial calculation" },
+            },
+          ],
+        }),
+      ),
+    )
+    render(<Workspace />)
+    const run = await screen.findByRole("button", { name: "Run Q&A test" })
+    await waitFor(() => expect(run).toBeEnabled())
+    await user.click(run)
+    expect(
+      await screen.findByText("Incomplete response", { exact: true }),
+    ).toBeVisible()
+    expect(screen.getByText(en.verifyDialog.generation.partial)).toBeVisible()
+    expect(screen.getByRole("log")).toHaveTextContent("Partial calculation")
+    expect(run).toBeEnabled()
+  })
+  it("sends from the central composer and shows the question before the reply arrives", async () => {
+    const user = userEvent.setup()
+    let release!: () => void
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.post("https://qa-ui.invalid/v1/chat/completions", async () => {
+        await pending
+        return HttpResponse.json({
+          id: "qa",
+          object: "chat.completion",
+          created: 0,
+          model: "test",
+          choices: [
+            {
+              index: 0,
+              finish_reason: "stop",
+              message: { role: "assistant", content: "Received" },
+            },
+          ],
+        })
+      }),
+    )
+    render(<Workspace inWorkspace />)
+    await user.click(await screen.findByRole("button", { name: "Q&A test" }))
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-verification-detail]"),
+      ).not.toBeNull(),
+    )
+    const detail = document.querySelector(
+      "[data-verification-detail]",
+    )! as HTMLElement
+    const input = await within(detail).findByRole("textbox", {
+      name: "Question",
+    })
+    await waitFor(() => expect(input).toBeEnabled())
+    await user.clear(input)
+    await user.type(input, "My question")
+    await user.keyboard("{Enter}")
+    try {
+      const question = within(await screen.findByRole("log")).getByRole(
+        "region",
+        { name: "Question used for this run" },
+      )
+      expect(question).toHaveTextContent("My question")
+      expect(input).toBeDisabled()
+    } finally {
+      release()
+    }
+    expect(await screen.findByText("Received")).toBeVisible()
+    await user.clear(input)
+    await user.type(input, "Next question")
+    expect(
+      within(screen.getByRole("log")).getByRole("region", {
+        name: "Question used for this run",
+      }),
+    ).toHaveTextContent("My question")
+  })
+  it("keeps inspected reasoning open when the answer comparison arrives", async () => {
+    const user = userEvent.setup()
+    const controller: QuestionAnswerController = {
+      settings: { question: "Question", referenceAnswer: "21" },
+      updateSettings: vi.fn(),
+      saveSettings: vi.fn(),
+      loadSettings: vi.fn(),
+      ready: true,
+      saving: false,
+      saveError: null,
+      status: VERIFICATION_TOOL_STATUSES.Running,
+      running: true,
+      result: null,
+      startedAt: 1,
+      error: null,
+      canRun: false,
+      run: vi.fn(),
+      stop: vi.fn(),
+      progress: {
+        text: "FINAL_ANSWER: 21",
+        reasoning: "Checking answer",
+        tools: [],
+        step: 1,
+        parts: [
+          {
+            id: "0",
+            type: VERIFICATION_GENERATION_PART_TYPES.Reasoning,
+            step: 1,
+            text: "Checking answer",
+          },
+          {
+            id: "1",
+            type: VERIFICATION_GENERATION_PART_TYPES.Text,
+            step: 1,
+            text: "FINAL_ANSWER: 21",
+          },
+        ],
+      },
+    }
+    const view = render(<QuestionAnswerPanel controller={controller} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await user.click(await screen.findByRole("button", { name: "Reasoning" }))
+    view.rerender(
+      <QuestionAnswerPanel
+        controller={{
+          ...controller,
+          running: false,
+          status: VERIFICATION_TOOL_STATUSES.Done,
+          result: {
+            ...controller.settings,
+            text: "FINAL_ANSWER: 21",
+            answer: "21",
+            outcome: QUESTION_ANSWER_OUTCOMES.Matched,
+            latencyMs: 10,
+          },
+        }}
+      />,
+    )
+    expect(screen.getByText("Checking answer")).toBeVisible()
+    expect(
+      screen.getByRole("group", { name: "Answer comparison" }),
+    ).toBeVisible()
+  })
+
   afterEach(() => vi.restoreAllMocks())
   it.each(["load", "save"])(
     "retries a failed preference %s from the warning",
@@ -115,8 +323,19 @@ describe("question answer panel", () => {
     await waitFor(() => expect(run).toBeEnabled())
     try {
       await user.click(run)
-      await user.click(await screen.findByRole("button", { name: "Stop" }))
+      await user.click(
+        within(
+          document.querySelector(
+            "[data-verification-composer]",
+          )! as HTMLElement,
+        ).getByRole("button", { name: "Stop" }),
+      )
       expect(await screen.findByText("Stopped", { exact: true })).toBeVisible()
+      expect(
+        within(screen.getByRole("log")).getByRole("region", {
+          name: "Question used for this run",
+        }),
+      ).toHaveTextContent("黑色")
       expect(screen.getByRole("button", { name: "Run Q&A test" })).toBeEnabled()
     } finally {
       release()
@@ -127,7 +346,9 @@ describe("question answer panel", () => {
     render(<Workspace />)
     const question = await screen.findByRole("textbox", { name: "Question" })
     await waitFor(() => expect(question).toBeEnabled())
-    expect(question).not.toHaveAccessibleDescription()
+    expect(question).toHaveAccessibleDescription(
+      en.verifyDialog.composer.keyboardHint,
+    )
     const reference = screen.getByRole("textbox", {
       name: "Reference answer (optional)",
     })
@@ -196,6 +417,10 @@ describe("question answer panel", () => {
       const comparison = screen.getByRole("group", {
         name: "Answer comparison",
       })
+      expect(within(comparison).queryAllByRole("definition")).toHaveLength(0)
+      await user.click(
+        within(comparison).getByRole("button", { name: "Answer comparison" }),
+      )
       const values = within(comparison).getAllByRole("definition")
       expect(values[0]).toHaveTextContent(answer)
       expect(values[1]).toHaveTextContent("21")
@@ -205,6 +430,9 @@ describe("question answer panel", () => {
         ),
       ).toBeVisible()
       // Editing the next reference must not change the evidence for this run.
+      expect(
+        screen.getByRole("button", { name: "Test settings" }),
+      ).toHaveAttribute("aria-expanded", "true")
       await user.clear(
         screen.getByRole("textbox", { name: "Reference answer (optional)" }),
       )
@@ -316,10 +544,18 @@ describe("question answer panel", () => {
         "The question or reference has changed. This result is from the previous run; run again to compare your changes.",
       ),
     ).toBeVisible()
-    await user.click(
-      screen.getByRole("button", { name: "Question used for this run" }),
-    )
-    expect(screen.getByText("Explain the sky.", { exact: true })).toBeVisible()
+    const sentQuestion = within(screen.getByRole("log")).getByRole("region", {
+      name: "Question used for this run",
+    })
+    expect(sentQuestion).toHaveTextContent("Explain the sky.")
+    expect(
+      sentQuestion.compareDocumentPosition(
+        screen.getByRole("region", { name: "Model response" }),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      screen.queryByRole("button", { name: "Question used for this run" }),
+    ).not.toBeInTheDocument()
     await user.type(question, "Explain the sky.")
     expect(
       screen.queryByText(

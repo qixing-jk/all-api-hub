@@ -45,7 +45,7 @@
     },
     "hints": {
       "expiresAt": "可選。用於記錄這枚金鑰預計失效的日期。",
-      "saveWithoutTest": "提示：只要填寫 Base URL 與 API Key 就能儲存到 API 憑據庫（無需先測試或獲取模型列表）。測試僅用於驗證可用性。",
+      "saveWithoutTest": "填寫 Base URL 和 API Key 即可儲存，無須先測試或取得模型清單。",
       "sourceUrl": "可選。記錄你從哪個頁面取得這份憑證，之後可一鍵回訪查看更新。",
       "tags": "可選。與帳號/書籤共用全域標籤。"
     },
@@ -70,9 +70,12 @@
       "sourceUrl": "https://example.com/post",
       "tags": "選擇標籤"
     },
+    "preparation": {
+      "description": "貼上網頁中的內容，自動辨識 Base URL 和 API Key；也可以直接填寫。資訊齊全後，再選擇要執行的測試。",
+      "title": "先辨識 API 連線資訊"
+    },
     "privacyHint": "API Key 會被視為敏感資訊：預設隱藏，且除非你主動儲存到 API 憑據庫，否則不會持久化儲存任何資料。",
     "sourceText": {
-      "label": "用於提取的文字",
       "placeholder": "將 Base URL 和 API Key 貼上到這裡，或使用右鍵選單從選中文字預填。"
     },
     "title": "API 測試"

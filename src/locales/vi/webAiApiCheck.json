@@ -45,7 +45,7 @@
     },
     "hints": {
       "expiresAt": "Tùy chọn. Ghi lại ngày dự kiến khóa này hết hạn.",
-      "saveWithoutTest": "Mẹo: Chỉ cần điền Base URL và API Key là có thể lưu vào API Profiles (không cần kiểm tra hoặc lấy danh sách mô hình trước). Kiểm tra chỉ được sử dụng để xác minh khả năng khả dụng.",
+      "saveWithoutTest": "Chỉ cần Base URL và API Key để lưu. Lấy danh sách mô hình và kiểm tra là tùy chọn.",
       "sourceUrl": "Optional. Record the page where you found these credentials so you can revisit it later for updates.",
       "tags": "Tùy chọn. Dùng chung với thẻ toàn cục của tài khoản và dấu trang."
     },
@@ -70,9 +70,12 @@
       "sourceUrl": "https://example.com/post",
       "tags": "Chọn thẻ"
     },
+    "preparation": {
+      "description": "Dán nội dung trang web để nhận diện URL cơ sở và khóa API, hoặc nhập trực tiếp. Các bài kiểm tra xuất hiện khi có đủ cả hai.",
+      "title": "Bắt đầu với thông tin kết nối API"
+    },
     "privacyHint": "API Key được coi là thông tin nhạy cảm: mặc định bị ẩn và trừ khi bạn chủ động lưu vào API Profiles, sẽ không có bất kỳ dữ liệu nào được lưu trữ liên tục.",
     "sourceText": {
-      "label": "Văn bản để trích xuất",
       "placeholder": "Dán Base URL và API Key vào đây, hoặc sử dụng menu chuột phải để điền sẵn từ văn bản được chọn."
     },
     "title": "Kiểm tra API"

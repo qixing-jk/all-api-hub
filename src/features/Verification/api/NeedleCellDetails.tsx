@@ -12,6 +12,7 @@ import {
   NEEDLE_CELL_STATES,
   type NeedleCellState,
 } from "./needleMatrixState"
+import { VerificationGenerationOutput } from "./VerificationGenerationOutput"
 import { VerificationRunButton } from "./VerificationRunButton"
 
 /** Live details and an explicit run action for the cell selected in the matrix. */
@@ -19,6 +20,7 @@ export function NeedleCellDetails({
   coordinate,
   state,
   cell,
+  output,
   onRun,
   canRun,
   canStop,
@@ -27,6 +29,9 @@ export function NeedleCellDetails({
 }: {
   coordinate: NeedleCoordinate
   state: NeedleCellState
+  output?: NonNullable<
+    import("~/services/verification/modelQuality/needleRun").NeedleResult["outputs"]
+  >[number]
   cell?: NeedleCell
   onRun: () => void
   canRun: boolean
@@ -65,7 +70,7 @@ export function NeedleCellDetails({
     <div className="space-y-2 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-foreground font-medium">
+          <p className="font-medium text-foreground">
             {formatContextTokens(coordinate.targetTokens)} · {coordinate.depth}%
           </p>
           <Badge variant="outline" size="sm">
@@ -100,6 +105,20 @@ export function NeedleCellDetails({
             ? t("verifyDialog.tools.needle.cancelledUnknown")
             : t("verifyDialog.tools.needle.previousResult")}
         </p>
+      ) : null}
+      {output || measurement?.metrics ? (
+        <VerificationGenerationOutput
+          progress={output?.progress}
+          metrics={measurement?.metrics}
+          running={state === NEEDLE_CELL_STATES.Running}
+          startedAt={output?.startedAt}
+          partial={
+            state === NEEDLE_CELL_STATES.Interrupted ||
+            state === NEEDLE_CELL_STATES.Cancelled ||
+            state === NEEDLE_CELL_STATES.Incomplete ||
+            state === NEEDLE_CELL_STATES.Error
+          }
+        />
       ) : null}
       {measurement ? (
         <>
@@ -137,7 +156,7 @@ export function NeedleCellDetails({
                 </p>
               ) : null}
               {measurement.response !== undefined ? (
-                <pre className="border-border max-h-48 overflow-auto border-l-2 pl-3 break-words whitespace-pre-wrap">
+                <pre className="max-h-48 overflow-auto border-l-2 border-border pl-3 break-words whitespace-pre-wrap">
                   {measurement.response}
                 </pre>
               ) : null}

@@ -41,6 +41,7 @@ export function buildProbeState(
               : {}),
             status: persistedProbe.status,
             latencyMs: persistedProbe.latencyMs,
+            metrics: persistedProbe.metrics,
             summary: persistedProbe.summary,
             summaryKey: persistedProbe.summaryKey,
             summaryParams: persistedProbe.summaryParams,

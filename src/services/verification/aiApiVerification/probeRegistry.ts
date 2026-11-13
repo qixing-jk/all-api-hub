@@ -1,3 +1,5 @@
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+
 import { runDecisionProbe } from "./probes/decisionProbe"
 import { runEmbeddingProbe } from "./probes/embeddingProbe"
 import { runImageGenerationProbe } from "./probes/imageGenerationProbe"
@@ -31,6 +33,7 @@ type ProbeRunnerParams = {
   mode?: ApiVerificationMode
   modelId?: string
   probePromptOverrides?: ApiVerificationProbePromptOverrides
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
 

@@ -1,9 +1,12 @@
 @import "tailwindcss";
+@import "shadcn/tailwind.css";
 @import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 
 @import "./appearance.css";
 @import "./colors.css";
 @import "./themePresets.css";
+
+@source "../../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -199,15 +202,20 @@
   /* 阴影 */
   --shadow-sm: 0 1px 2px 0
     color-mix(in srgb, var(--shadow-color) 5%, transparent);
-  --shadow: 0 1px 3px 0 color-mix(in srgb, var(--shadow-color) 10%, transparent),
+  --shadow:
+    0 1px 3px 0 color-mix(in srgb, var(--shadow-color) 10%, transparent),
     0 1px 2px -1px color-mix(in srgb, var(--shadow-color) 10%, transparent);
-  --shadow-md: 0 4px 6px -1px color-mix(in srgb, var(--shadow-color) 10%, transparent),
+  --shadow-md:
+    0 4px 6px -1px color-mix(in srgb, var(--shadow-color) 10%, transparent),
     0 2px 4px -2px color-mix(in srgb, var(--shadow-color) 10%, transparent);
-  --shadow-lg: 0 10px 15px -3px color-mix(in srgb, var(--shadow-color) 10%, transparent),
+  --shadow-lg:
+    0 10px 15px -3px color-mix(in srgb, var(--shadow-color) 10%, transparent),
     0 4px 6px -4px color-mix(in srgb, var(--shadow-color) 10%, transparent);
-  --shadow-xl: 0 20px 25px -5px color-mix(in srgb, var(--shadow-color) 10%, transparent),
+  --shadow-xl:
+    0 20px 25px -5px color-mix(in srgb, var(--shadow-color) 10%, transparent),
     0 8px 10px -6px color-mix(in srgb, var(--shadow-color) 10%, transparent);
-  --shadow-2xl: 0 25px 50px -12px color-mix(in srgb, var(--shadow-color) 25%, transparent);
+  --shadow-2xl: 0 25px 50px -12px
+    color-mix(in srgb, var(--shadow-color) 25%, transparent);
   --shadow-inner: inset 0 2px 4px 0
     color-mix(in srgb, var(--shadow-color) 5%, transparent);
 
