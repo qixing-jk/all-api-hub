@@ -1,7 +1,7 @@
-import { PanelRightOpen } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { SidebarIcon } from "~/components/icons/SidebarIcon"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { ActionGroup, Alert, Button } from "~/components/ui"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
@@ -185,7 +185,7 @@ export function AccessTokenVerificationGuide({
               size="sm"
               disabled={continuation.isPending || continuation.disabled}
               onClick={continuation.onContinue}
-              leftIcon={<PanelRightOpen className="h-4 w-4" />}
+              leftIcon={<SidebarIcon side="right" className="h-4 w-4" />}
             >
               {continuation.isPending
                 ? t("accessTokenVerification.continuing")
@@ -199,7 +199,7 @@ export function AccessTokenVerificationGuide({
           </>
         ) : (
           <>
-            <ol className="space-y-density-1 list-decimal pl-5">
+            <ol className="list-decimal space-y-density-1 pl-5">
               <li>{copy.generateStep}</li>
               <li>{copy.pasteStep}</li>
             </ol>

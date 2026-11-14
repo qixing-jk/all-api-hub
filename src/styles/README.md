@@ -200,7 +200,9 @@ text such as badge counts follows its parent and must not receive a second
 increment.
 
 `MarkdownContent` owns Markdown parsing, sanitization, links, typography, and
-native disclosure state. Announcements and feedback previews share it. Enable
+native disclosure state through Streamdown. Announcements, feedback previews,
+and incremental verification output share it; use `streaming` while a response
+is arriving so incomplete Markdown remains readable. Enable
 only the typography plugin in the Tailwind v4 stylesheet; loading the legacy
 Tailwind config would also enable unrelated form resets. The `prose-sm` root
 uses `text-sm`; headings and other relative text follow it. Semantic prose

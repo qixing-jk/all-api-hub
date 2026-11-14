@@ -23,6 +23,118 @@ import { verificationResultHistoryStorage } from "~/services/verification/verifi
 import { CONTEXT_CAPACITY_INCONCLUSIVE_REASONS } from "~/services/verification/verificationResultHistory/types"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
+it.each([
+  {
+    error: "Request setup failed",
+    result: null,
+    history: null,
+    label: zhCN.verifyDialog.status.fail,
+  },
+  {
+    error: null,
+    result: {
+      reason: CONTEXT_CAPACITY_REASONS.Bracketed,
+      lowerBoundTokens: 1024,
+      upperBoundTokens: 2048,
+      attempts: [],
+      counter: { encoding: "o200k_base" as const, estimated: true },
+    },
+    label: zhCN.verifyDialog.status.pass,
+    history: null,
+  },
+  {
+    error: null,
+    result: null,
+    history: {
+      targetKey: "fixture",
+      scopeKey: "fixture",
+      verifiedAt: 1,
+      apiType: "openai" as const,
+      modelId: "model",
+      reason: "test-limit" as const,
+      requests: 1,
+      lowerBoundTokens: 4096,
+      outputLimited: false,
+      requiresCredentialVerification: true,
+    },
+    label: zhCN.verifyDialog.status.unverified,
+  },
+])(
+  "keeps the collapsed capacity status aligned with $label",
+  async ({ error, result, history, label }) => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n(
+      { "zh-CN": { aiApiVerification: zhCN } },
+      "zh-CN",
+    )
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerificationTestSection
+          tools={null}
+          configuration={<input aria-label="API key" />}
+        >
+          <ContextCapacityPanel
+            controller={{
+              enabled: true,
+              running: false,
+              canRun: true,
+              stopped: false,
+              progress: null,
+              result,
+              history,
+              error,
+              run: vi.fn(),
+              stop: vi.fn(),
+            }}
+          />
+        </VerificationTestSection>
+      </I18nextProvider>,
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: zhCN.verifyDialog.tools.context.title,
+      }),
+    )
+    const item = screen.getByRole("button", {
+      name: zhCN.verifyDialog.tools.context.title,
+    })
+    await user.hover(item)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(label)
+    expect(item).toHaveAccessibleDescription(new RegExp(label))
+  },
+)
+
+it("shows one running status while waiting for the first accepted input", async () => {
+  const i18n = await createResourceTestI18n(
+    { "zh-CN": { aiApiVerification: zhCN } },
+    "zh-CN",
+  )
+  render(
+    <I18nextProvider i18n={i18n}>
+      <ContextCapacityPanel
+        controller={{
+          enabled: true,
+          running: true,
+          canRun: false,
+          stopped: false,
+          progress: null,
+          result: null,
+          error: null,
+          run: vi.fn(),
+          stop: vi.fn(),
+        }}
+      />
+    </I18nextProvider>,
+  )
+  expect(screen.getAllByText(zhCN.verifyDialog.actions.running)).toHaveLength(1)
+  expect(
+    screen.queryByText(zhCN.verifyDialog.tools.context.hint),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.getByRole("button", { name: zhCN.verifyDialog.tools.stop }),
+  ).toBeEnabled()
+})
+
 it("offers continuation without duplicate failure copy when a budget pause has no accepted input", () => {
   render(
     <I18nextProvider i18n={testI18n}>
@@ -96,7 +208,7 @@ it("places context help before status without nesting it in the selection button
       </VerificationTestSection>
     </I18nextProvider>,
   )
-  const select = screen.getByRole("button", { name: "模型上下文测试" })
+  const select = screen.getByRole("button", { name: "上下文容量测试" })
   const help = screen.getByRole("button", {
     name: zhCN.verifyDialog.tools.context.about,
   })
@@ -113,7 +225,9 @@ it("places context help before status without nesting it in the selection button
   await user.tab({ shift: true })
   expect(select).toHaveFocus()
   await user.keyboard("{Enter}")
-  expect(select).toHaveAttribute("aria-expanded", "true")
+  expect(
+    screen.getByRole("button", { name: "上下文容量测试" }),
+  ).toHaveAttribute("aria-expanded", "true")
 })
 
 it("runs context probing from the inline hint only when allowed", async () => {
@@ -190,7 +304,7 @@ it.each([
     reason: CONTEXT_CAPACITY_REASONS.Inconclusive,
     failureReason: CONTEXT_ATTEMPT_FAILURE_REASONS.Timeout,
     label: "请求超时",
-    explanation: "超时不能证明输入超过模型容量",
+    explanation: "超时不能证明输入超过容量限制",
   },
   {
     reason: CONTEXT_CAPACITY_REASONS.Inconclusive,
@@ -370,7 +484,9 @@ it.each([
         zhCN.verifyDialog.tools.context.reasons[reason],
       ),
     ).toBeVisible()
-    expect(screen.getByText(zhCN.verifyDialog.tools.context.hint)).toBeVisible()
+    expect(
+      screen.queryByText(zhCN.verifyDialog.tools.context.hint),
+    ).not.toBeInTheDocument()
     expect(
       within(summary).queryByText(zhCN.verifyDialog.tools.context.hint),
     ).not.toBeInTheDocument()
@@ -545,17 +661,19 @@ it.each([0, 32768])(
         />
       </I18nextProvider>,
     )
-    expect(
-      within(
-        screen.getByRole("status", {
-          name: "aiApiVerification:verifyDialog.tools.context.resultLabel",
-        }),
-      ).getByText(
-        lowerBoundTokens > 0
-          ? "aiApiVerification:verifyDialog.tools.context.acceptedTitle"
-          : "aiApiVerification:verifyDialog.actions.running",
-      ),
-    ).toBeVisible()
+    const summary = screen.queryByRole("status", {
+      name: "aiApiVerification:verifyDialog.tools.context.resultLabel",
+    })
+    if (lowerBoundTokens > 0) {
+      expect(summary).toHaveTextContent(
+        "aiApiVerification:verifyDialog.tools.context.acceptedTitle",
+      )
+    } else {
+      expect(summary).not.toBeInTheDocument()
+      expect(
+        screen.getAllByText("aiApiVerification:verifyDialog.actions.running"),
+      ).toHaveLength(1)
+    }
     expect(
       screen.queryByText("aiApiVerification:verifyDialog.status.pending"),
     ).not.toBeInTheDocument()

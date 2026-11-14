@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button } from "~/components/ui"
+import { VERIFICATION_RAIL_STATUS_VARIANTS } from "~/features/Verification/api/types"
+import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification"
 import { NEEDLE_TEST_ID } from "~/services/verification/modelQuality/needleConstants"
 
 import { NeedlePlanSummary } from "./NeedlePlanSummary"
@@ -51,7 +53,7 @@ export function NeedlePanel({
   const planSummary = displayPlan ? (
     <NeedlePlanSummary plan={displayPlan} />
   ) : !controller.error && !controller.invalid ? (
-    <p className="text-muted-foreground text-xs" role="status">
+    <p className="text-xs text-muted-foreground" role="status">
       {t("verifyDialog.tools.needle.preparing")}
     </p>
   ) : null
@@ -68,6 +70,19 @@ export function NeedlePanel({
   return (
     <section aria-label={t("verifyDialog.tools.needle.title")}>
       <VerificationProbeDetails
+        settings={configuration}
+        testId={NEEDLE_TEST_ID}
+        running={executing}
+        statusLabel={badgeLabel}
+        statusVariant={
+          executing
+            ? VERIFICATION_RAIL_STATUS_VARIANTS.Running
+            : badgeStatus === API_VERIFICATION_PROBE_STATUSES.Pass
+              ? VERIFICATION_RAIL_STATUS_VARIANTS.Success
+              : badgeStatus === API_VERIFICATION_PROBE_STATUSES.Fail
+                ? VERIFICATION_RAIL_STATUS_VARIANTS.Danger
+                : undefined
+        }
         label={t("verifyDialog.tools.needle.title")}
         idleContent={
           idle ? (
@@ -80,7 +95,7 @@ export function NeedlePanel({
           ) : undefined
         }
         heading={
-          <span className="text-foreground text-sm font-medium">
+          <span className="text-sm font-medium text-foreground">
             <VerificationTestLabel testId={NEEDLE_TEST_ID}>
               {t("verifyDialog.tools.needle.title")}
             </VerificationTestLabel>
@@ -106,13 +121,12 @@ export function NeedlePanel({
         }
         description={
           !idle && !result ? (
-            <p className="text-muted-foreground text-xs leading-relaxed">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               {t("verifyDialog.tools.needle.description")}
             </p>
           ) : undefined
         }
       >
-        {!result ? configuration : null}
         {controller.error ? (
           <Alert variant="warning">
             <p className="text-xs break-words">{controller.error}</p>
@@ -129,7 +143,7 @@ export function NeedlePanel({
           </Alert>
         ) : null}
         {controller.historyError ? (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             {t("verifyDialog.tools.context.historyError")}
           </p>
         ) : null}
@@ -156,7 +170,6 @@ export function NeedlePanel({
             }
           />
         ) : null}
-        {result ? configuration : null}
       </VerificationProbeDetails>
     </section>
   )

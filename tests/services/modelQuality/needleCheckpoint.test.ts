@@ -31,6 +31,81 @@ const request = {
 const counter = { encoding: CONTEXT_TOKEN_ENCODINGS.O200k, estimated: true }
 beforeEach(() => vi.restoreAllMocks())
 
+it("does not dispatch without durable checkpoint storage and releases ownership for retry", async () => {
+  const failure = new Error("checkpoint storage unavailable")
+  const originalSet = browser.storage.local.set.bind(browser.storage.local)
+  const set = vi
+    .spyOn(browser.storage.local, "set")
+    .mockImplementation((items) => {
+      if (WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS in items)
+        return Promise.reject(failure)
+      return originalSet(items)
+    })
+  const fetch = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      if (String(input) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      return Response.json({
+        id: "needle",
+        object: "chat.completion",
+        created: 1,
+        model: "test",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "wrong" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    })
+  const params = {
+    ...request,
+    mode: "non-streaming" as const,
+    maxInputTokens: 1024,
+    quick: true,
+    abortSignal: new AbortController().signal,
+  }
+  await expect(runDurableNeedleTest(params)).rejects.toBe(failure)
+  expect(
+    fetch.mock.calls.every(([input]) => String(input) === MODEL_METADATA_URL),
+  ).toBe(true)
+  set.mockRestore()
+  await expect(runDurableNeedleTest(params)).resolves.toMatchObject({
+    reason: NEEDLE_RUN_REASONS.Complete,
+  })
+})
+
+it("recovers all outstanding parallel requests as unknown without replay", async () => {
+  const storage = new Storage({ area: "local" })
+  const scope = await getVerificationScopeKey(request)
+  const result = createNeedleResult({
+    reason: NEEDLE_RUN_REASONS.Running,
+    cells: [],
+  })
+  const coordinates = result.plan.depths
+    .slice(0, 2)
+    .map((depth) => ({ targetTokens: result.plan.lengths[0]!, depth }))
+  await storage.set(WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS, {
+    [scope]: { result, inFlightCells: coordinates, updatedAt: Date.now() },
+  })
+  const fetch = vi.spyOn(globalThis, "fetch")
+  const recovered = await runDurableNeedleTest(
+    { ...request, abortSignal: new AbortController().signal },
+    true,
+  )
+  expect(recovered.cells).toEqual(
+    coordinates.map((coordinate) =>
+      expect.objectContaining({
+        ...coordinate,
+        outcome: NEEDLE_OUTCOMES.Interrupted,
+      }),
+    ),
+  )
+  expect(fetch).not.toHaveBeenCalled()
+})
+
 it("rejects an invalid connection without dispatching a provider request", async () => {
   const fetch = vi.spyOn(globalThis, "fetch")
   await expect(

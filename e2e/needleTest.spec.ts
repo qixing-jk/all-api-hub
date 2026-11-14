@@ -19,6 +19,10 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import {
+  showVerificationSettings,
+  showVerificationTest,
+} from "~~/e2e/utils/verificationWorkspace"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 
@@ -141,7 +145,9 @@ for (const [stopScope, mode] of [
       })
       const stop =
         stopScope === "all"
-          ? resultPanel.getByRole("button", { name: "Stop", exact: true })
+          ? page
+              .getByTestId("verification-active-test")
+              .getByRole("button", { name: "Stop", exact: true })
           : stopScope === "row"
             ? first.getByRole("button", { name: /^Stop .* row$/ })
             : stopScope === "column"
@@ -163,33 +169,25 @@ for (const [stopScope, mode] of [
           { id: "narrow", theme: "light", width: 380, height: 800 },
         ],
       })
-      const resultToggle = first.getByRole("button", {
-        name: "Execution result",
-      })
-      if (stopScope === "all") {
-        await resultToggle.click()
-        await expect(first.getByRole("table")).toBeHidden()
-        await expect(stop).toBeVisible()
-      }
+      // The active header keeps Stop outside the result matrix.
+      await expect(
+        resultPanel.getByRole("button", { name: "Stop", exact: true }),
+      ).toHaveCount(0)
+      await expect(stop).toBeVisible()
       await stop.focus()
       await page.keyboard.press("Enter")
       await expect.poll(() => firstResponseClosed).toBe(true)
       await expect(first).toContainText("Stopped")
       const expectedRequests =
         stopScope === "cell" || stopScope === "column" ? 3 : 1
-      await expect(first).toContainText(
-        `Processed ${expectedRequests}/3 requests`,
+      await expect(page.getByTestId("verification-active-test")).toContainText(
+        `Processed ${expectedRequests}/3`,
       )
       await expect(
-        resultPanel.getByRole("button", { name: "Run", exact: true }),
+        page
+          .getByRole("button", { name: "Run needle test", exact: true })
+          .first(),
       ).toBeEnabled()
-      if (stopScope === "all") {
-        await expect(resultToggle).toHaveAttribute("aria-expanded", "false")
-        await expect(
-          first.getByText("Latest run: Processed 1/3 requests"),
-        ).toBeVisible()
-        await resultToggle.click()
-      }
       await expect(
         first.getByRole("button", {
           name: stopScope === "all" ? /10%: Unknown/ : /10%: Cancelled/,
@@ -210,7 +208,9 @@ for (const [stopScope, mode] of [
         .last()
         .click()
       const restored = await open(page)
-      await expect(restored).toContainText("Saved result")
+      await expect(
+        restored.getByRole("button", { name: /^Previously:/ }),
+      ).toBeVisible()
       await restored
         .getByRole("button", {
           name: "Test parameters and reproduction",
@@ -252,8 +252,8 @@ for (const [stopScope, mode] of [
         path: test.info().outputPath("native-needle-history-restored.png"),
         animations: "disabled",
       })
-      await expect(restored).toContainText(
-        `Processed ${expectedRequests}/3 requests`,
+      await expect(page.getByTestId("verification-active-test")).toContainText(
+        `Processed ${expectedRequests}/3`,
       )
       if (stopScope === "row")
         await expect(
@@ -478,19 +478,20 @@ test("account needle testing reveals a masked key only on run and uses the selec
       name: "Needle in a haystack",
       exact: true,
     })
-    await panel
+    await page
       .getByRole("button", { name: "Needle in a haystack", exact: true })
       .click()
     await expect(
-      panel.getByRole("button", { name: "Run needle test" }),
+      page.getByRole("button", { name: "Run needle test" }),
     ).toBeEnabled()
+    const activeTest = page.locator("[data-verification-active-test]")
     expect(reveals).toBe(0)
     expect(requests).toBe(0)
     await expect(
-      panel.getByRole("table").getByText("Planned", { exact: true }),
+      page.getByRole("table").getByText("Planned", { exact: true }),
     ).toHaveCount(3)
     await expect(
-      panel.getByRole("table").getByText("Not in this run", { exact: true }),
+      page.getByRole("table").getByText("Not in this run", { exact: true }),
     ).toHaveCount(3)
     await captureVisualViews({
       page,
@@ -502,19 +503,20 @@ test("account needle testing reveals a masked key only on run and uses the selec
         { id: "narrow", theme: "light", width: 380, height: 800 },
       ],
     })
+    await showVerificationSettings(page)
     await expect(
-      panel.getByRole("switch", { name: "Test only the longest text" }),
+      page.getByRole("switch", { name: "Test only the longest text" }),
     ).toBeChecked()
-    await panel
+    await page
       .getByRole("region", { name: "Test preview" })
       .getByRole("button", { name: "Run", exact: true })
       .click()
-    await expect(panel).toContainText("3/3 graded answers matched", {
+    await expect(activeTest).toContainText("3/3 matched", {
       timeout: 30000,
     })
     expect(reveals).toBe(1)
     expect(requests).toBe(3)
-    await panel
+    await page
       .getByRole("button", {
         name: "Retest 50% column (2 requests)",
         exact: true,
@@ -522,30 +524,31 @@ test("account needle testing reveals a masked key only on run and uses the selec
       .click()
     await expect.poll(() => requests).toBe(4)
     await expect(
-      panel.getByRole("button", { name: "8192 tokens · 50%: Running..." }),
+      page.getByRole("button", { name: "8192 tokens · 50%: Running..." }),
     ).toBeVisible()
-    const execution = panel.getByRole("region", { name: "Execution result" })
+    const execution = page.getByRole("region", { name: "Execution result" })
     await expect(
-      panel.getByRole("region", { name: "Test preview" }),
+      page.getByRole("region", { name: "Test preview" }),
     ).toHaveCount(0)
     await expect(execution).toContainText("2 requests")
     await expect(execution).toContainText("Each length is tested at 50%.")
     await expect(
-      panel.getByRole("button", {
+      page.getByRole("button", {
         name: "Stop 50% column",
         exact: true,
       }),
     ).toHaveAttribute("aria-busy", "true")
     await expect(
-      panel.getByRole("table").getByText("Not in this run", { exact: true }),
+      page.getByRole("table").getByText("Not in this run", { exact: true }),
     ).toHaveCount(2)
     await page.setViewportSize({ width: 380, height: 800 })
-    const runningCell = panel
+    await showVerificationTest(page, "Needle in a haystack")
+    const runningCell = page
       .getByRole("table")
       .getByText("Running...", { exact: true })
     await expect(runningCell).toBeVisible()
     expect(
-      await panel
+      await page
         .getByRole("table")
         .evaluate(
           (element) =>
@@ -567,7 +570,7 @@ test("account needle testing reveals a masked key only on run and uses the selec
     ).toBe(true)
     await captureVisualViews({
       page,
-      ready: panel.getByRole("table"),
+      ready: page.getByRole("table"),
       extensionDir,
       id: "account-needle-column-running",
       views: [
@@ -587,50 +590,48 @@ test("account needle testing reveals a masked key only on run and uses the selec
     })
     await page.setViewportSize({ width: 1280, height: 1000 })
     releaseColumn()
-    await expect(panel).toContainText("4/4 graded answers matched")
+    await expect(activeTest).toContainText("4/6 matched")
     await expect(
-      panel.getByRole("button", { name: "Run needle test" }),
+      page.getByRole("button", { name: "Run needle test" }),
     ).toBeEnabled()
     expect(requests).toBe(5)
-    await panel
+    await page
       .getByRole("button", { name: "Retest 8K row (3 requests)", exact: true })
       .click()
-    await expect(panel).toContainText("6/6 graded answers matched")
+    await expect(activeTest).toContainText("6/6 matched")
     expect(requests).toBe(8)
-    await panel
+    await page
       .getByRole("button", { name: "Retest 8K row (3 requests)", exact: true })
       .click()
     await expect(
-      panel.getByRole("button", { name: "Run needle test" }),
+      page.getByRole("button", { name: "Run needle test" }),
     ).toBeEnabled()
     expect(requests).toBe(11)
-    await expect(panel.getByRole("table").getByRole("cell")).toHaveCount(6)
-    const resultCard = panel.getByRole("region", {
+    await expect(page.getByRole("table").getByRole("cell")).toHaveCount(6)
+    const resultCard = page.getByRole("region", {
       name: "Execution result",
       exact: true,
     })
-    await expect(resultCard).toContainText(
-      "Cumulative results: 6/6 graded answers matched",
-    )
-    await expect(resultCard).toContainText("Latest run: Processed 3/3 requests")
+    await expect(activeTest).toContainText("6/6 matched")
+    await expect(activeTest).toContainText("Processed 3/3")
     await expect(
       resultCard.getByRole("group", {
         name: en.verifyDialog.tools.needle.plannedLengths,
       }),
     ).toHaveText("8Ktokens")
     await expect(
-      resultCard.getByRole("button", { name: "Run", exact: true }),
+      activeTest.getByRole("button", { name: "Run", exact: true }),
     ).toHaveAccessibleDescription("3 requests")
     const resultBounds = (await resultCard.boundingBox())!
-    const settingsBounds = (await panel
-      .getByRole("group", { name: "Test settings" })
+    const settingsBounds = (await page
+      .getByRole("group", { name: "Current test · Needle in a haystack" })
       .boundingBox())!
-    expect(resultBounds.y + resultBounds.height).toBeLessThanOrEqual(
-      settingsBounds.y,
+    expect(resultBounds.x + resultBounds.width).toBeLessThanOrEqual(
+      settingsBounds.x,
     )
     await captureVisualViews({
       page,
-      ready: panel.getByRole("table"),
+      ready: page.getByRole("table"),
       extensionDir,
       id: "account-needle-results",
       views: [
@@ -638,28 +639,28 @@ test("account needle testing reveals a masked key only on run and uses the selec
         { id: "narrow", theme: "light", width: 380, height: 800 },
       ],
     })
-    await panel.getByRole("table").scrollIntoViewIfNeeded()
+    await page.getByRole("table").scrollIntoViewIfNeeded()
     await page.screenshot({
       path: test.info().outputPath("account-needle-results.png"),
       animations: "disabled",
     })
-    await panel
+    await page
       .getByRole("button", { name: "Retest 8K row (3 requests)", exact: true })
       .click()
     await expect.poll(() => requests).toBe(12)
-    await panel
+    await page
       .getByRole("button", { name: "8192 tokens · 10%: Running..." })
       .hover()
-    const details = panel.getByRole("region", {
+    const details = page.getByRole("region", {
       name: "Cell details",
       exact: true,
     })
     await expect(details).toBeHidden()
-    await panel
+    await page
       .getByRole("button", { name: "8192 tokens · 10%: Running..." })
       .click()
     await expect(details).toContainText("Running...")
-    const activeMatrix = panel.getByRole("table")
+    const activeMatrix = page.getByRole("table")
     const statusBounds = await activeMatrix
       .getByRole("button", { name: "8192 tokens · 10%: Running..." })
       .boundingBox()
@@ -673,22 +674,22 @@ test("account needle testing reveals a masked key only on run and uses the selec
       Math.abs(statusBounds!.x + statusBounds!.width - stopBounds!.x),
     ).toBeLessThan(1)
     expect(requests).toBe(12)
-    await panel
+    await page
       .getByRole("button", { name: "8192 tokens · 90%: Pending", exact: true })
       .click()
     await details
       .getByRole("button", { name: "Stop 8K · 90%", exact: true })
       .click()
     await expect(
-      panel.getByRole("button", { name: "8192 tokens · 90%: Cancelled" }),
+      page.getByRole("button", { name: "8192 tokens · 90%: Cancelled" }),
     ).toBeVisible()
     expect(requests).toBe(12)
-    await panel
+    await page
       .getByRole("button", { name: "8192 tokens · 10%: Running..." })
       .click()
     await captureVisualViews({
       page,
-      ready: panel.getByRole("table"),
+      ready: page.getByRole("table"),
       extensionDir,
       id: "account-needle-scoped-controls",
       views: [
@@ -701,15 +702,17 @@ test("account needle testing reveals a masked key only on run and uses the selec
       .getByRole("button", { name: "Stop 8K · 10%", exact: true })
       .click()
     await expect(
-      panel.getByRole("button", { name: "Run needle test", exact: true }),
+      page.getByRole("button", { name: "Run needle test", exact: true }),
     ).toBeEnabled()
     expect(requests).toBe(13)
     await expect(details).toContainText("Cancelled")
     await expect(details).not.toContainText("Previous result (before this run)")
     await expect(details).toContainText("No gradable result was obtained.")
-    await panel.locator("[data-verification-detail]").evaluate((element) => {
-      element.scrollTop = 0
-    })
+    await page
+      .locator("[data-verification-detail]:not([hidden])")
+      .evaluate((element) => {
+        element.scrollTop = 0
+      })
     await captureVisualViews({
       page,
       ready: resultCard,
@@ -724,38 +727,22 @@ test("account needle testing reveals a masked key only on run and uses the selec
     const resultToggle = resultCard.getByRole("button", {
       name: "Execution result",
     })
-    await resultToggle.focus()
-    await page.keyboard.press("Enter")
-    await expect(resultToggle).toHaveAttribute("aria-expanded", "false")
-    await expect(resultCard.getByRole("table")).toBeHidden()
-    await expect(resultCard.getByText(/Cumulative results:/)).toBeVisible()
-    await expect(resultCard.getByText(/Latest run:/)).toBeVisible()
-    await captureVisualViews({
-      page,
-      ready: resultCard,
-      extensionDir,
-      id: "account-needle-collapsed-result",
-      views: [
-        { id: "desktop", theme: "light", width: 1280, height: 1000 },
-        { id: "narrow", theme: "light", width: 380, height: 800 },
-      ],
-    })
-    await resultToggle.click()
+    await expect(resultToggle).toHaveCount(0)
+    await expect(resultCard.getByRole("table")).toBeVisible()
+    await expect(activeTest).not.toContainText("Cumulative results:")
     await expect(details).toContainText("No gradable result was obtained.")
     await expect(
-      panel.getByRole("button", { name: "8192 tokens · 10%: Cancelled" }),
+      page.getByRole("button", { name: "8192 tokens · 10%: Cancelled" }),
     ).toHaveAttribute("aria-pressed", "true")
     await expect(
-      panel.getByRole("button", { name: "8192 tokens · 50%: Match" }),
+      page.getByRole("button", { name: "8192 tokens · 50%: Match" }),
     ).toBeVisible()
-    await panel
+    await page
       .getByRole("button", { name: "8192 tokens · 90%: Cancelled" })
       .focus()
     await page.keyboard.press("Enter")
     await expect(details).toContainText("Previous result (before this run)")
-    await panel
-      .getByRole("button", { name: "8192 tokens · 50%: Match" })
-      .click()
+    await page.getByRole("button", { name: "8192 tokens · 50%: Match" }).click()
     await details
       .getByRole("button", { name: "Request and answer details" })
       .click()
@@ -775,7 +762,7 @@ test("account needle testing reveals a masked key only on run and uses the selec
       ],
     })
     for (const depth of [50, 10, 90]) {
-      await panel
+      await page
         .getByRole("button", { name: new RegExp(`^8192 tokens · ${depth}%:`) })
         .click()
       const before = requests
@@ -783,17 +770,15 @@ test("account needle testing reveals a masked key only on run and uses the selec
         .getByRole("button", { name: "Retest this cell", exact: true })
         .click()
       await expect(
-        panel.getByRole("button", { name: "Run needle test" }),
+        page.getByRole("button", { name: "Run needle test" }),
       ).toBeEnabled()
       expect(requests).toBe(before + 1)
       await expect(
-        panel.getByRole("button", { name: `8192 tokens · ${depth}%: Match` }),
+        page.getByRole("button", { name: `8192 tokens · ${depth}%: Match` }),
       ).toBeVisible()
-      await expect(resultCard).toContainText(
-        "Latest run: Processed 1/1 requests",
-      )
+      await expect(activeTest).toContainText("Processed 1/1")
       await expect(
-        panel.getByRole("button", { name: "16384 tokens · 90%: Match" }),
+        page.getByRole("button", { name: "16384 tokens · 90%: Match" }),
       ).toBeVisible()
     }
   } finally {

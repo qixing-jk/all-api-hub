@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { expect, it, vi } from "vitest"
@@ -32,6 +32,67 @@ it("keeps a current result without detailed output distinct from history", async
   expect(screen.getByText("Fail")).toBeVisible()
   expect(screen.queryByText(/^Previously:/)).not.toBeInTheDocument()
 })
+
+it.each(["pass", "fail", "unsupported"] as const)(
+  "keeps the description and a rerun hint for a restored %s probe without raw evidence",
+  async (status) => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({ en: { aiApiVerification: en } })
+    const run = vi.fn()
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerificationTestSection
+          tools={null}
+          configuration={<input aria-label="Connection" />}
+        >
+          <VerificationProbeRow
+            probeId="models"
+            historical
+            result={{
+              id: "models",
+              status,
+              latencyMs: 100,
+              summary: "Saved result",
+              metrics: [
+                {
+                  responseTimeMs: 1000,
+                  timeToFirstOutputMs: 100,
+                  outputTokens: 10,
+                },
+              ],
+            }}
+            runButtonProps={{ onClick: run }}
+          />
+        </VerificationTestSection>
+      </I18nextProvider>,
+    )
+    await user.click(screen.getByRole("button", { name: "Model list" }))
+    const intro = document.querySelector(
+      "[data-verification-introduction]",
+    ) as HTMLElement
+    expect(intro).not.toBeNull()
+    expect(
+      within(intro).getByText(en.verifyDialog.intro.probes.models),
+    ).toBeVisible()
+    expect(
+      within(intro).getByText(en.verifyDialog.history.storage.probe),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("region", { name: "Execution result" }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Statistics" })).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Statistics" }))
+    expect(screen.getByText("First output")).toBeVisible()
+    expect(
+      within(screen.getByRole("dialog", { name: "Statistics" })).getByText(
+        "100ms",
+      ),
+    ).toBeVisible()
+    await user.keyboard("{Escape}")
+    await user.click(within(intro).getByTestId("probe-intro-run-button"))
+    expect(run).toHaveBeenCalledOnce()
+  },
+)
 
 it.each(["pass", "fail", "unsupported"] as const)(
   "marks restored %s results explicitly and opens help without selecting a test",

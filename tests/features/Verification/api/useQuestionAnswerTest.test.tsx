@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
+import { VERIFICATION_SETTINGS_ERROR_PHASES } from "~/features/Verification/api/types"
 import { useQuestionAnswerTest } from "~/features/Verification/api/useQuestionAnswerTest"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
@@ -35,6 +36,63 @@ const options = {
 }
 
 describe("question answer workspace", () => {
+  it("rejects progress and a resolved answer after the workspace unmounts", async () => {
+    let captured!: QuestionAnswerRequest
+    let finish!: (result: QuestionAnswerResult) => void
+    const runner = vi.fn((request: QuestionAnswerRequest) => {
+      captured = request
+      return new Promise<QuestionAnswerResult>((resolve) => {
+        finish = resolve
+      })
+    })
+    const view = renderHook(() => useQuestionAnswerTest({ ...options, runner }))
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    await act(async () => view.result.current.run())
+    const before = view.result.current
+    view.unmount()
+    expect(captured.abortSignal?.aborted).toBe(true)
+    await act(async () => {
+      captured.onProgress?.({
+        text: "Late answer",
+        reasoning: "",
+        tools: [],
+        step: 1,
+      })
+      finish(resultValue)
+    })
+    expect(view.result.current).toBe(before)
+    expect(view.result.current.result).toBeNull()
+  })
+  it("keeps partial output on stop and ignores later chunks", async () => {
+    let captured!: QuestionAnswerRequest
+    let finish!: (result: QuestionAnswerResult) => void
+    const runner = vi.fn((request: QuestionAnswerRequest) => {
+      captured = request
+      return new Promise<QuestionAnswerResult>((resolve) => {
+        finish = resolve
+      })
+    })
+    const view = renderHook(() => useQuestionAnswerTest({ ...options, runner }))
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    await act(async () => view.result.current.run())
+    act(() =>
+      captured.onProgress?.({
+        text: "Partial",
+        reasoning: "",
+        tools: [],
+        step: 1,
+      }),
+    )
+    expect(view.result.current.progress?.text).toBe("Partial")
+    expect(view.result.current.result).toBeNull()
+    act(() => view.result.current.stop())
+    await act(async () => {
+      captured.onProgress?.({ text: "Late", reasoning: "", tools: [], step: 1 })
+      finish(resultValue)
+    })
+    expect(view.result.current.progress?.text).toBe("Partial")
+    expect(view.result.current.result).toBeNull()
+  })
   afterEach(() => vi.restoreAllMocks())
   it.each([false, true])(
     "ignores a superseded settings load, rejected: %s",
@@ -208,7 +266,11 @@ describe("question answer workspace", () => {
       .mockRejectedValueOnce(new Error("read unavailable"))
     const write = vi.spyOn(fakeBrowser.storage.local, "set")
     const view = renderHook(() => useQuestionAnswerTest(options))
-    await waitFor(() => expect(view.result.current.saveError).toBe("load"))
+    await waitFor(() =>
+      expect(view.result.current.saveError).toBe(
+        VERIFICATION_SETTINGS_ERROR_PHASES.Load,
+      ),
+    )
     expect(view.result.current.canRun).toBe(false)
     expect(write).not.toHaveBeenCalled()
     read.mockRestore()

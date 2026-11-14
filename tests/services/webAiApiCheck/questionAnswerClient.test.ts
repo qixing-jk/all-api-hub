@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest"
 
 import type { QuestionAnswerResult } from "~/services/verification/modelQuality/questionAnswer"
 import {
+  onWebAiApiCheckMessage,
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
@@ -16,6 +17,7 @@ vi.mock(
       typeof import("~/services/verification/webAiApiCheck/messaging")
     >()),
     sendWebAiApiCheckMessage: vi.fn(),
+    onWebAiApiCheckMessage: vi.fn(() => vi.fn()),
   }),
 )
 const request = {
@@ -35,6 +37,44 @@ const result: QuestionAnswerResult = {
   latencyMs: 1,
 }
 beforeEach(() => vi.resetAllMocks())
+
+it("routes simultaneous streams by run id without serializing callbacks", async () => {
+  const first = createDeferred<ApiCheckQuestionAnswerResponse>()
+  const second = createDeferred<ApiCheckQuestionAnswerResponse>()
+  let receive!: (message: {
+    data: {
+      runId: string
+      progress: { text: string; reasoning: string; tools: []; step: number }
+    }
+  }) => unknown
+  const unsubscribe = vi.fn()
+  vi.mocked(onWebAiApiCheckMessage).mockImplementation((_type, listener) => {
+    receive = listener as unknown as typeof receive
+    return unsubscribe
+  })
+  vi.mocked(sendWebAiApiCheckMessage)
+    .mockReturnValueOnce(first.promise)
+    .mockReturnValueOnce(second.promise)
+  const onFirst = vi.fn()
+  const onSecond = vi.fn()
+  const a = runQuestionAnswerInBackground({ ...request, onProgress: onFirst })
+  const b = runQuestionAnswerInBackground({ ...request, onProgress: onSecond })
+  expect(onWebAiApiCheckMessage).toHaveBeenCalledOnce()
+  const sent = vi.mocked(sendWebAiApiCheckMessage).mock.calls
+  expect(sent[0]![1]).not.toHaveProperty("onProgress")
+  const progress = { text: "First", reasoning: "", tools: [] as [], step: 1 }
+  receive({
+    data: { runId: (sent[0]![1] as { runId: string }).runId, progress },
+  })
+  expect(onFirst).toHaveBeenCalledWith(progress)
+  expect(onSecond).not.toHaveBeenCalled()
+  first.resolve({ success: true, result })
+  await a
+  expect(unsubscribe).not.toHaveBeenCalled()
+  second.resolve({ success: true, result })
+  await b
+  expect(unsubscribe).toHaveBeenCalledOnce()
+})
 
 it("returns the background result with one correlated request and removes cancellation after completion", async () => {
   const controller = new AbortController()

@@ -1,34 +1,26 @@
-import { useId, type ComponentProps } from "react"
+import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
-import { PELICAN_PROMPT_ID } from "~/services/verification/promptOverrides"
 
 import type { VerificationToolsController } from "./useVerificationTools"
-import { VerificationPromptSettings } from "./VerificationPromptSettings"
+import { VerificationSettingsCard } from "./VerificationSettingsCard"
 import { VerificationSettingToggle } from "./VerificationSettingToggle"
 
 /** Compose drawing mode with the same prompt settings used by API probes. */
 export function PelicanSettings({
   controller,
-  idle,
 }: {
-  controller: ComponentProps<typeof VerificationPromptSettings>["controller"] &
-    Pick<
-      VerificationToolsController,
-      "pelicanExecutionMode" | "setPelicanExecutionMode" | "isPelicanRunning"
-    >
-  idle: boolean
+  controller: Pick<
+    VerificationToolsController,
+    "pelicanExecutionMode" | "setPelicanExecutionMode" | "isPelicanRunning"
+  >
 }) {
   const { t } = useTranslation("aiApiVerification")
   const agentSwitchId = useId()
   const { isPelicanRunning } = controller
   return (
-    <VerificationPromptSettings
-      controller={controller}
-      probeId={PELICAN_PROMPT_ID}
-      autoOpen={idle ? undefined : false}
-    >
+    <VerificationSettingsCard running={isPelicanRunning}>
       <VerificationSettingToggle
         id={agentSwitchId}
         label={t("verifyDialog.tools.agent.label")}
@@ -45,6 +37,6 @@ export function PelicanSettings({
         }
         disabled={isPelicanRunning}
       />
-    </VerificationPromptSettings>
+    </VerificationSettingsCard>
   )
 }

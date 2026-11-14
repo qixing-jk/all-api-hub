@@ -1,9 +1,10 @@
-import { Maximize2, PanelRightClose, RefreshCw, Settings } from "lucide-react"
+import { Maximize2, RefreshCw, Settings } from "lucide-react"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
 import { FeedbackDropdownMenu } from "~/components/FeedbackDropdownMenu"
+import { SidebarIcon } from "~/components/icons/SidebarIcon"
 import Tooltip from "~/components/Tooltip"
 import { BodySmall, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
@@ -190,10 +191,10 @@ export default function HeaderSection({
 
   return (
     <header
-      className={`py-density-2 sm:py-density-3 flex items-center justify-between px-3 sm:px-5 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
+      className={`flex items-center justify-between px-3 py-density-2 sm:px-5 sm:py-density-3 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
     >
       {/* Logo and Title Section */}
-      <div className="gap-y-density-2-5 sm:gap-y-density-3 @container flex min-w-7 flex-1 items-center gap-x-2.5 sm:min-w-8 sm:gap-x-3">
+      <div className="@container flex min-w-7 flex-1 items-center gap-x-2.5 gap-y-density-2-5 sm:min-w-8 sm:gap-x-3 sm:gap-y-density-3">
         <img
           src={iconImage}
           alt={t("ui:app.name")}
@@ -208,7 +209,7 @@ export default function HeaderSection({
             {/* Current extension version (links to the changelog). */}
             <VersionBadge
               size="sm"
-              className="[&>a]:gap-y-density-1 w-fit self-start px-1.5 py-0 text-[length:calc(0.65rem+var(--text-size-increment))] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
+              className="w-fit self-start px-1.5 py-0 text-[length:calc(0.65rem+var(--text-size-increment))] leading-tight [&>a]:gap-x-1 [&>a]:gap-y-density-1 [&>a]:leading-tight [&>a>svg]:size-3"
             />
           </div>
         </div>
@@ -216,7 +217,7 @@ export default function HeaderSection({
 
       {/* Action Buttons Section */}
       <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={headerSurface}>
-        <div className="gap-y-density-1 sm:gap-y-density-2 flex shrink-0 items-center gap-x-1 sm:gap-x-2">
+        <div className="flex shrink-0 items-center gap-x-1 gap-y-density-1 sm:gap-x-2 sm:gap-y-density-2">
           {showRefresh && (
             <div className="flex items-center gap-x-1 sm:gap-x-2">
               <ProductAnalyticsScope
@@ -238,11 +239,11 @@ export default function HeaderSection({
               </ProductAnalyticsScope>
             </div>
           )}
-          <div className="border-border flex items-center gap-x-1 sm:gap-x-2 sm:border-s sm:ps-2">
+          <div className="flex items-center gap-x-1 border-border sm:gap-x-2 sm:border-s sm:ps-2">
             <ProductAnnouncementButton surface="popup-header" onlyWhenRisk />
             <FeedbackDropdownMenu language={i18n.language} />
           </div>
-          <div className="border-border flex items-center gap-x-1 sm:gap-x-2 sm:border-s sm:ps-2">
+          <div className="flex items-center gap-x-1 border-border sm:gap-x-2 sm:border-s sm:ps-2">
             <HeaderThemeSwitcher />
             <ProductAnalyticsScope
               featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnalyticsSettings}
@@ -263,7 +264,7 @@ export default function HeaderSection({
               </Tooltip>
             </ProductAnalyticsScope>
           </div>
-          <div className="border-border flex items-center gap-x-1 sm:gap-x-2 sm:border-s sm:ps-2">
+          <div className="flex items-center gap-x-1 border-border sm:gap-x-2 sm:border-s sm:ps-2">
             <ProductAnalyticsScope
               featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
             >
@@ -294,7 +295,7 @@ export default function HeaderSection({
                       PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromPopup
                     }
                   >
-                    <PanelRightClose className="h-4 w-4" />
+                    <SidebarIcon side="right" className="h-4 w-4" />
                   </IconButton>
                 </Tooltip>
               )}

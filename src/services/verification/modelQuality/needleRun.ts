@@ -1,26 +1,26 @@
-import { modelMetadataService } from "~/services/models/modelMetadata"
+import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 import type {
   ApiVerificationApiType,
   ApiVerificationMode,
   ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification/types"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import { normalizeVerificationConcurrency } from "~/services/verification/concurrency"
+import { mapWithConcurrency } from "~/utils/core/mapWithConcurrency"
 
 import { CONTEXT_ATTEMPT_OUTCOMES } from "./contextCapacityConstants"
 import { classifyContextError } from "./contextErrors"
 import { runContextGeneration } from "./contextGeneration"
 import { exceedsContextBudget } from "./contextLimits"
-import { createContextTokens, type ContextCounterInfo } from "./contextTokens"
+import { type ContextCounterInfo } from "./contextTokens"
 import {
   NEEDLE_DEFAULTS as defaults,
   NEEDLE_EXECUTION_PHASES,
   NEEDLE_OUTCOMES,
-  NEEDLE_PLAN_SOURCES,
   NEEDLE_RUN_REASONS,
 } from "./needleConstants"
 import {
-  createNeedlePlan,
-  getNeedleCoordinateKey,
   isSameNeedleCoordinate,
   selectNeedleCells,
   type NeedleCapacityEvidence,
@@ -29,7 +29,7 @@ import {
   type NeedleSelection,
 } from "./needlePlan"
 import { prepareNeedlePrompt } from "./needlePrompt"
-import { coerceNeedleResult } from "./needleResultCodec"
+import { prepareNeedleRun } from "./needleRunPreparation"
 
 export type NeedleCell = {
   targetTokens: number
@@ -43,8 +43,13 @@ export type NeedleCell = {
   expected?: string
   message?: string
   latencyMs?: number
+  metrics?: VerificationGenerationMetrics[]
 }
 export type NeedleResult = {
+  outputs?: (NeedleCoordinate & {
+    progress: VerificationGenerationProgress
+    startedAt: number
+  })[]
   version: number
   seed: number
   plan: NeedlePlan
@@ -55,6 +60,8 @@ export type NeedleResult = {
   inFlight?: Pick<NeedleCell, "targetTokens" | "depth">
   pending?: NeedleCoordinate[]
   preparing?: NeedleCoordinate
+  inFlightCells?: NeedleCoordinate[]
+  preparingCells?: NeedleCoordinate[]
   /** Preserve the last run's scope independently of accumulated measurements. */
   scheduled?: NeedleCoordinate[]
   processed?: number
@@ -75,6 +82,7 @@ export type RunNeedleParams = {
   requestHeaders?: Record<string, string>
   maxInputTokens?: number
   quick?: boolean
+  concurrency?: number
   selection?: NeedleSelection
   resumeFrom?: NeedleResult
   seed: number
@@ -89,7 +97,7 @@ export type RunNeedleParams = {
   onProgress?: (result: NeedleResult) => void
   onCheckpoint?: (
     result: NeedleResult,
-    inFlight?: Pick<NeedleCell, "targetTokens" | "depth">,
+    inFlight?: NeedleCoordinate[],
   ) => Promise<void>
 }
 
@@ -97,71 +105,7 @@ export type RunNeedleParams = {
 export async function runNeedleTest(
   params: RunNeedleParams,
 ): Promise<NeedleResult> {
-  if (
-    !Number.isSafeInteger(params.seed) ||
-    params.seed < 0 ||
-    params.seed > defaults.maxSeed
-  )
-    throw new Error("Invalid test seed")
-  params.abortSignal.throwIfAborted()
-  await modelMetadataService.initialize()
-  const counter = await createContextTokens(
-    modelMetadataService.resolveModelIdentity(params.modelId),
-  )
-  const approved = params.approvedPlan
-  const plan = createNeedlePlan({
-    counter: counter.info,
-    capacity: params.capacity,
-    maxInputTokens: approved?.limit ?? params.maxInputTokens,
-    quick: approved ? approved.lengths.length === 1 : params.quick,
-  })
-  if (approved) {
-    if (
-      JSON.stringify(plan.lengths) !== JSON.stringify(approved.lengths) ||
-      plan.requests !== approved.requests ||
-      plan.totalInputTokens !== approved.totalInputTokens ||
-      !Object.values(NEEDLE_PLAN_SOURCES).includes(approved.source)
-    )
-      throw new Error("Invalid needle test plan")
-    if (
-      !params.approvedCounter ||
-      params.approvedCounter.encoding !== counter.info.encoding ||
-      params.approvedCounter.estimated !== counter.info.estimated
-    )
-      throw new Error("Model token counter changed; prepare a new test")
-    plan.source = approved.source
-    plan.capped = approved.capped
-  }
-  const previous = params.resumeFrom
-    ? coerceNeedleResult(params.resumeFrom)
-    : null
-  if (
-    params.resumeFrom &&
-    (!previous ||
-      previous.seed !== params.seed ||
-      previous.plan.limit !== plan.limit ||
-      previous.counter.encoding !== counter.info.encoding ||
-      previous.counter.estimated !== counter.info.estimated ||
-      previous.cells.some(
-        (cell) =>
-          !plan.lengths.includes(cell.targetTokens) ||
-          !plan.depths.some((depth) => depth === cell.depth),
-      ) ||
-      new Set(previous.cells.map(getNeedleCoordinateKey)).size !==
-        previous.cells.length)
-  )
-    throw new Error("Needle results do not match this test plan")
-  const result: NeedleResult = {
-    version: defaults.version,
-    seed: params.seed,
-    counter: counter.info,
-    plan,
-    reason: NEEDLE_RUN_REASONS.Running,
-    cells: previous?.cells ?? [],
-  }
-  const targets = selectNeedleCells(plan, params.selection, result.cells).cells
-  result.scheduled = targets
-  result.processed = 0
+  const { counter, plan, result, targets } = await prepareNeedleRun(params)
   // Every explicit run has its own budget; retained observations are not new requests.
   let totalInputTokens = 0
   let requests = 0
@@ -179,30 +123,57 @@ export async function runNeedleTest(
     )
     for (const cell of result.cancelled) remaining.delete(cell)
   }
-  let current:
-    | {
-        coordinate: NeedleCoordinate
-        controller: AbortController
-        phase: (typeof NEEDLE_EXECUTION_PHASES)[keyof typeof NEEDLE_EXECUTION_PHASES]
-      }
-    | undefined
+  type ActiveCell = {
+    coordinate: NeedleCoordinate
+    controller: AbortController
+    phase: (typeof NEEDLE_EXECUTION_PHASES)[keyof typeof NEEDLE_EXECUTION_PHASES]
+    dispatched: boolean
+  }
+  const active = new Map<NeedleCoordinate, ActiveCell>()
   let closed = false
-  const progress = () =>
+  let failed = false
+  let writes = Promise.resolve()
+  const coordinates = (phase: ActiveCell["phase"]) =>
+    [...active.values()]
+      .filter((cell) => cell.phase === phase)
+      .map((cell) => cell.coordinate)
+  const progress = () => {
+    const inFlightCells = coordinates(NEEDLE_EXECUTION_PHASES.InFlight)
+    const preparingCells = coordinates(NEEDLE_EXECUTION_PHASES.Preparing)
     params.onProgress?.({
       ...snapshot(),
-      ...(result.reason === NEEDLE_RUN_REASONS.Running
+      ...(result.reason === NEEDLE_RUN_REASONS.Running || active.size
         ? {
-            pending: [...remaining].filter(
-              (cell) => cell !== current?.coordinate,
-            ),
-            ...(current ? { [current.phase]: current.coordinate } : {}),
+            pending: [...remaining].filter((cell) => !active.has(cell)),
+            inFlight: inFlightCells[0],
+            preparing: preparingCells[0],
+            inFlightCells,
+            preparingCells,
           }
         : {}),
     })
-  const abortCurrent = () => current?.controller.abort()
+  }
+  const abortCurrent = () => active.forEach((cell) => cell.controller.abort())
   params.abortSignal.addEventListener("abort", abortCurrent, { once: true })
+  // Serialize snapshots at write time, so completing one cell cannot erase a
+  // sibling's dispatch marker or replace a newer completed measurement.
+  const checkpoint = () => {
+    const write = writes.then(async () => {
+      if (failed) return
+      const inFlight = coordinates(NEEDLE_EXECUTION_PHASES.InFlight)
+      await params.onCheckpoint?.(
+        snapshot(),
+        inFlight.length ? inFlight : undefined,
+      )
+    })
+    writes = write.catch(() => {
+      failed = true
+      abortCurrent()
+    })
+    return write
+  }
   const publish = async () => {
-    await params.onCheckpoint?.(snapshot())
+    await checkpoint()
     progress()
   }
   try {
@@ -210,7 +181,7 @@ export async function runNeedleTest(
       stopSelection: async (selection) => {
         if (
           closed ||
-          result.reason !== NEEDLE_RUN_REASONS.Running ||
+          (result.reason !== NEEDLE_RUN_REASONS.Running && !active.size) ||
           params.abortSignal.aborted ||
           !selection
         )
@@ -227,140 +198,178 @@ export async function runNeedleTest(
         if (!cancelled.length) return false
         result.cancelled = [...(result.cancelled ?? []), ...cancelled]
         for (const cell of cancelled) remaining.delete(cell)
-        if (current && cancelled.includes(current.coordinate))
-          current.controller.abort()
+        for (const cell of cancelled) active.get(cell)?.controller.abort()
         progress()
         return true
       },
     })
-    for (const coordinate of targets) {
-      const { targetTokens, depth } = coordinate
-      if (params.abortSignal.aborted) {
-        result.reason = NEEDLE_RUN_REASONS.Stopped
-        break
-      }
-      if (!remaining.has(coordinate)) continue
-      if (
-        exceedsContextBudget({
-          requests,
-          inputTokens: totalInputTokens,
-          nextInputTokens: targetTokens,
-          maxRequests: defaults.maxRequests,
-          maxInputTokens: defaults.maxTotalInputTokens,
-        })
-      ) {
-        result.reason = NEEDLE_RUN_REASONS.Budget
-        break
-      }
-      current = {
-        coordinate,
-        controller: new AbortController(),
-        phase: NEEDLE_EXECUTION_PHASES.Preparing,
-      }
-      const signal = current.controller.signal
-      let fixture: Awaited<ReturnType<typeof prepareNeedlePrompt>>
-      progress()
-      try {
-        fixture = await prepareNeedlePrompt(
-          counter,
-          targetTokens,
-          depth,
-          params.seed,
-          signal,
-        )
-      } catch (error) {
-        if (!signal.aborted) throw error
-        current = undefined
+    await mapWithConcurrency(
+      targets,
+      normalizeVerificationConcurrency(params.concurrency),
+      async (coordinate) => {
+        if (failed || result.reason !== NEEDLE_RUN_REASONS.Running) return
+        const { targetTokens, depth } = coordinate
         if (params.abortSignal.aborted) {
           result.reason = NEEDLE_RUN_REASONS.Stopped
-          break
+          return
         }
-        continue
-      }
-      if (params.abortSignal.aborted) {
-        result.reason = NEEDLE_RUN_REASONS.Stopped
-        break
-      }
-      if (signal.aborted) {
-        current = undefined
-        continue
-      }
-      await params.onCheckpoint?.(snapshot(), { targetTokens, depth })
-      if (params.abortSignal.aborted) {
-        result.reason = NEEDLE_RUN_REASONS.Stopped
-        break
-      }
-      if (signal.aborted) {
-        current = undefined
-        await publish()
-        continue
-      }
-      const started = performance.now()
-      const cell: NeedleCell = {
-        targetTokens,
-        depth,
-        actualDepth: fixture.actualDepth,
-        localInputTokens: fixture.localInputTokens,
-        expected: fixture.expected,
-        outcome: NEEDLE_OUTCOMES.Interrupted,
-      }
-      current.phase = NEEDLE_EXECUTION_PHASES.InFlight
-      progress()
-      const secrets = [
-        params.apiKey,
-        ...Object.values(params.requestHeaders ?? {}),
-      ]
-      try {
-        const generated = await runContextGeneration(
-          params,
-          {
-            prompt: fixture.prompt,
-            maxOutputTokens: defaults.maxOutputTokens,
-            abortSignal: signal,
-          },
-          params.mode,
-        )
-        // An accepted stop wins even when the generation aggregate settles concurrently.
-        signal.throwIfAborted()
-        cell.response = toSanitizedErrorSummary(generated.text, secrets).slice(
-          0,
-          2048,
-        )
-        cell.outcome =
-          generated.finishReason !== "stop" || !generated.text.trim()
-            ? NEEDLE_OUTCOMES.Incomplete
-            : generated.text.trim() === fixture.expected
-              ? NEEDLE_OUTCOMES.Hit
-              : NEEDLE_OUTCOMES.Miss
-        cell.inputTokens = generated.usage?.inputTokens
-        cell.outputTokens = generated.usage?.outputTokens
-      } catch (error) {
-        if (params.abortSignal.aborted)
-          result.reason = NEEDLE_RUN_REASONS.Stopped
-        else if (!signal.aborted) {
-          cell.outcome =
-            classifyContextError(error) ===
-            CONTEXT_ATTEMPT_OUTCOMES.ContextLimit
-              ? NEEDLE_OUTCOMES.ContextLimit
-              : NEEDLE_OUTCOMES.Error
-          cell.message = toSanitizedErrorSummary(error, secrets).slice(0, 1024)
-          result.reason = NEEDLE_RUN_REASONS.Error
+        if (!remaining.has(coordinate)) return
+        if (
+          exceedsContextBudget({
+            requests,
+            inputTokens: totalInputTokens,
+            nextInputTokens: targetTokens,
+            maxRequests: defaults.maxRequests,
+            maxInputTokens: defaults.maxTotalInputTokens,
+          })
+        ) {
+          result.reason = NEEDLE_RUN_REASONS.Budget
+          return
         }
-      }
-      cell.latencyMs = performance.now() - started
-      const previousIndex = result.cells.findIndex((item) =>
-        isSameNeedleCoordinate(item, coordinate),
-      )
-      if (previousIndex === -1) result.cells.push(cell)
-      else result.cells[previousIndex] = cell
-      requests++
-      result.processed++
-      totalInputTokens += Math.max(targetTokens, cell.inputTokens ?? 0)
-      remaining.delete(coordinate)
-      current = undefined
-      await publish()
-      if (result.reason !== NEEDLE_RUN_REASONS.Running) break
-    }
+        // Reserve the plan budget before preparation yields to another worker.
+        requests++
+        totalInputTokens += targetTokens
+        const current: ActiveCell = {
+          coordinate,
+          controller: new AbortController(),
+          phase: NEEDLE_EXECUTION_PHASES.Preparing,
+          dispatched: false,
+        }
+        active.set(coordinate, current)
+        try {
+          const signal = current.controller.signal
+          let fixture: Awaited<ReturnType<typeof prepareNeedlePrompt>>
+          progress()
+          try {
+            fixture = await prepareNeedlePrompt(
+              counter,
+              targetTokens,
+              depth,
+              params.seed,
+              signal,
+            )
+          } catch (error) {
+            if (!signal.aborted) throw error
+            if (params.abortSignal.aborted) {
+              result.reason = NEEDLE_RUN_REASONS.Stopped
+              return
+            }
+            return
+          }
+          if (params.abortSignal.aborted) {
+            result.reason = NEEDLE_RUN_REASONS.Stopped
+            return
+          }
+          if (signal.aborted) {
+            return
+          }
+          current.phase = NEEDLE_EXECUTION_PHASES.InFlight
+          await checkpoint()
+          if (params.abortSignal.aborted) {
+            result.reason = NEEDLE_RUN_REASONS.Stopped
+            return
+          }
+          if (signal.aborted) {
+            await publish()
+            return
+          }
+          const started = performance.now()
+          const outputStartedAt = Date.now()
+          const cell: NeedleCell = {
+            targetTokens,
+            depth,
+            actualDepth: fixture.actualDepth,
+            localInputTokens: fixture.localInputTokens,
+            expected: fixture.expected,
+            outcome: NEEDLE_OUTCOMES.Interrupted,
+          }
+          current.dispatched = true
+          progress()
+          const secrets = [
+            params.apiKey,
+            ...Object.values(params.requestHeaders ?? {}),
+          ]
+          try {
+            const generated = await runContextGeneration(
+              params,
+              {
+                prompt: fixture.prompt,
+                onProgress: (output) => {
+                  result.outputs = [
+                    ...(result.outputs ?? []).filter(
+                      (entry) => !isSameNeedleCoordinate(entry, coordinate),
+                    ),
+                    {
+                      ...coordinate,
+                      progress: output,
+                      startedAt: outputStartedAt,
+                    },
+                  ]
+                  progress()
+                },
+                maxOutputTokens: defaults.maxOutputTokens,
+                abortSignal: signal,
+              },
+              params.mode,
+            )
+            // An accepted stop wins even when the generation aggregate settles concurrently.
+            signal.throwIfAborted()
+            cell.response = toSanitizedErrorSummary(
+              generated.text,
+              secrets,
+            ).slice(0, 2048)
+            cell.outcome =
+              generated.finishReason !== "stop" || !generated.text.trim()
+                ? NEEDLE_OUTCOMES.Incomplete
+                : generated.text.trim() === fixture.expected
+                  ? NEEDLE_OUTCOMES.Hit
+                  : NEEDLE_OUTCOMES.Miss
+            cell.inputTokens = generated.usage?.inputTokens
+            cell.outputTokens = generated.usage?.outputTokens
+            cell.metrics = generated.metrics
+          } catch (error) {
+            if (params.abortSignal.aborted)
+              result.reason = NEEDLE_RUN_REASONS.Stopped
+            else if (!signal.aborted) {
+              cell.outcome =
+                classifyContextError(error) ===
+                CONTEXT_ATTEMPT_OUTCOMES.ContextLimit
+                  ? NEEDLE_OUTCOMES.ContextLimit
+                  : NEEDLE_OUTCOMES.Error
+              cell.message = toSanitizedErrorSummary(error, secrets).slice(
+                0,
+                1024,
+              )
+              result.reason = NEEDLE_RUN_REASONS.Error
+            }
+          }
+          cell.latencyMs = performance.now() - started
+          const previousIndex = result.cells.findIndex((item) =>
+            isSameNeedleCoordinate(item, coordinate),
+          )
+          if (previousIndex === -1) result.cells.push(cell)
+          else result.cells[previousIndex] = cell
+          result.processed!++
+          totalInputTokens += Math.max(
+            0,
+            (cell.inputTokens ?? 0) - targetTokens,
+          )
+        } catch (error) {
+          failed = true
+          abortCurrent()
+          throw error
+        } finally {
+          active.delete(coordinate)
+          remaining.delete(coordinate)
+          if (!current.dispatched) {
+            requests--
+            totalInputTokens -= targetTokens
+          }
+          if (!failed) await publish()
+        }
+      },
+    )
+    if (params.abortSignal.aborted) result.reason = NEEDLE_RUN_REASONS.Stopped
     if (result.reason === NEEDLE_RUN_REASONS.Running)
       result.reason = result.cancelled?.length
         ? NEEDLE_RUN_REASONS.Stopped

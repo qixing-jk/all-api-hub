@@ -1,4 +1,8 @@
-import type { ApiCheckFetchModelsResponse } from "~/services/verification/webAiApiCheck/types"
+import type {
+  ApiCheckFetchModelsResponse,
+  ApiCheckRunProbeResponse,
+} from "~/services/verification/webAiApiCheck/types"
+import { getVerificationHeader } from "~~/tests/test-utils/verificationWorkspace"
 
 import "./apiCheckModalHostMocks"
 
@@ -47,6 +51,46 @@ import {
 
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
+
+  it("locks the request model selector while an individual probe runs", async () => {
+    const user = userEvent.setup()
+    const pending = createDeferred<ApiCheckRunProbeResponse>()
+    const original = vi
+      .mocked(sendWebAiApiCheckMessage)
+      .getMockImplementation()!
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation((type, payload) =>
+      type === WebAiApiCheckMessageTypes.RunProbe
+        ? pending.promise
+        : original(type, payload),
+    )
+    await openModal()
+    await pasteIntoField(
+      user,
+      await screen.findByPlaceholderText("https://example.com/api"),
+      "https://proxy.example.com",
+    )
+    await pasteIntoField(
+      user,
+      await screen.findByPlaceholderText("sk-..."),
+      "fixture-key",
+    )
+    const models = screen.getByTestId(getWebAiApiCheckProbeTestId("models"))
+    await user.click(
+      within(models).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.actions.stopTest",
+      }),
+    ).toBeVisible()
+    expect(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId)).toBeDisabled()
+    await act(async () =>
+      pending.resolve({ success: false, error: "fixture failure" }),
+    )
+    expect(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId)).toBeEnabled()
+  })
 
   it("guides manual model input before credentials start discovery", async () => {
     await openModal()
@@ -562,7 +606,11 @@ describe("ApiCheckModalHost", () => {
         name: "aiApiVerification:verifyDialog.probes.text-generation",
       }),
     )
-    expect(await within(probeCard).findByText("OpenAI result")).toBeVisible()
+    expect(
+      await within(getVerificationHeader(probeCard)).findByText(
+        "OpenAI result",
+      ),
+    ).toBeVisible()
 
     await user.click(
       screen.getByRole("combobox", {

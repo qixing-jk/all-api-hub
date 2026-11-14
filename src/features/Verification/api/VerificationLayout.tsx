@@ -1,269 +1,230 @@
-import { Info } from "lucide-react"
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import { Alert, Button, Heading6 } from "~/components/ui"
+import { FloatingLayerProvider } from "~/components/ui/floating-layer"
+import { useVerificationWorkspace } from "~/features/Verification/api/useVerificationWorkspace"
+import type { useVerificationConcurrency } from "~/hooks/verification/useVerificationConcurrency"
+import { cn } from "~/lib/utils"
+
+import { VERIFICATION_SIDEBAR_SIDES } from "./types"
+import { VerificationConcurrencyControl } from "./VerificationConcurrencyControl"
+import { VerificationSidebarPanel } from "./VerificationSidebarPanel"
+import { VerificationWorkspaceToolbar } from "./VerificationWorkspaceToolbar"
+
+import "./verificationWorkspace.css"
+
 import {
-  ExternalUrlText,
-  Heading5,
-  Heading6,
-  IconButton,
-} from "~/components/ui"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover"
-import {
-  VERIFICATION_SOURCE_KINDS,
-  type VerificationSourceKind,
-} from "~/features/Verification/api/types"
-import { useVerificationWorkspaceHeight } from "~/features/Verification/api/useVerificationWorkspaceHeight"
-import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
+  VerificationModelContext,
+  type VerificationModelContextValue,
+} from "~/features/Verification/api/VerificationModelContext"
 import { VerificationSelectionContext } from "~/features/Verification/api/VerificationSelectionContext"
-import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
-import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
-/** Shared source identity for account, credential and CLI verification headers. */
-export function VerificationSourceSubtitle({
-  baseUrl,
-  name,
-  sourceKind,
-}: {
-  baseUrl: string
-  name: string
-  sourceKind: VerificationSourceKind
-}) {
-  const { t } = useTranslation("aiApiVerification")
-  return (
-    <>
-      <ExternalUrlText value={baseUrl} className="font-mono break-all" />
-      <span aria-hidden="true" className="text-muted-foreground/50">
-        ·
-      </span>
-      <span className="text-foreground/80 min-w-0 font-medium break-words">
-        {sourceKind === VERIFICATION_SOURCE_KINDS.Account
-          ? t("verifyDialog.source.account", { name })
-          : t("verifyDialog.source.profile", { name })}
-      </span>
-    </>
-  )
-}
-
-/** Groups the request fields without coupling the entry points' form state. */
-export function VerificationConfigSection({
-  children,
-}: {
-  children: ReactNode
-}) {
-  const { t } = useTranslation("aiApiVerification")
-  return (
-    <section
-      aria-label={t("verifyDialog.meta.configuration")}
-      data-testid="verification-config"
-      className="min-w-0"
-    >
-      {children}
-    </section>
-  )
-}
-
-/** One persistent test tree: a scrolling list and detail pane, or inline details on narrow screens. */
+/** One persistent test tree: split panes, or a full list/detail view on narrow screens. */
 export function VerificationTestSection({
   children,
   tools,
+  configuration,
+  supplementary,
+  concurrency,
+  running,
+  initialSettingsOpen = false,
+  source,
+  preparing = false,
+  model,
+  configurationWarning,
 }: {
   children: ReactNode
   tools: ReactNode
+  configuration?: ReactNode
+  supplementary?: ReactNode
+  concurrency?: ReturnType<typeof useVerificationConcurrency>
+  running?: boolean
+  initialSettingsOpen?: boolean
+  source?: ReactNode
+  preparing?: boolean
+  model?: VerificationModelContextValue
+  configurationWarning?: ReactNode
 }) {
   const { t } = useTranslation("aiApiVerification")
-  const [selectedId, select] = useState<string | null>(null)
-  const { frameRef, isWide, availableHeight } =
-    useVerificationWorkspaceHeight(selectedId)
-  const items = useRef(new Set<string>())
-  const register = useCallback((id: string) => {
-    items.current.add(id)
-    select((current) => current ?? id)
-    return () => {
-      items.current.delete(id)
-      select((current) =>
-        current === id ? items.current.values().next().value ?? null : current,
-      )
-    }
-  }, [])
-  const selection = useMemo(
-    () => ({ selectedId, select, register, isWide, availableHeight }),
-    [selectedId, register, isWide, availableHeight],
-  )
+  const hasSettings = configuration !== undefined
+  const workspace = useVerificationWorkspace({ preparing, initialSettingsOpen })
+  const {
+    frameRef,
+    isWide,
+    selectedId,
+    selection,
+    manualListCollapsed,
+    listCollapsed,
+    setListCollapsed,
+    listToggleRef,
+    listId,
+    mobileTestSwitcher,
+    settingsOpen,
+    settingsId,
+    toggleRef,
+    settingsRef,
+    closeSettings,
+    toggleSettings,
+    onSettingsKeyDown,
+    setSettingsTarget,
+    attachDetails,
+  } = workspace
   return (
-    <VerificationSelectionContext.Provider value={selection}>
-      <div
-        className="pt-density-1 sm:pt-density-2 @container"
-        data-testid="verification-workspace"
-      >
-        <div
-          ref={frameRef}
-          className="relative min-w-0 [--verification-list-width:21rem] [@container(min-width:52rem)]:h-(--verification-workspace-height)"
-        >
+    <VerificationModelContext.Provider value={model ?? null}>
+      <FloatingLayerProvider layer="modal-contained">
+        <VerificationSelectionContext.Provider value={selection}>
           <div
-            aria-hidden="true"
-            className="bg-surface-subtle pointer-events-none absolute inset-y-0 right-0 left-[calc(var(--verification-list-width)+1.25rem)] hidden rounded-xl [@container(min-width:52rem)]:block"
-          />
-          <div
-            data-verification-list
-            className="overscroll-y-contain [@container(min-width:52rem)]:h-full [@container(min-width:52rem)]:w-(--verification-list-width) [@container(min-width:52rem)]:overflow-y-auto"
+            className="verification-workspace @container"
+            data-testid="verification-workspace"
+            data-list-collapsed={listCollapsed}
+            data-mobile-test-switcher={mobileTestSwitcher}
+            data-layout={isWide ? "split" : "stacked"}
+            data-preparing={preparing}
           >
-            <div data-verification-list-content className="space-y-4">
-              <section
-                aria-label={t("verifyDialog.sections.routine")}
-                className="min-w-0 space-y-2"
-              >
-                <Heading6 className="text-foreground/80 px-2 text-xs font-semibold [@container(min-width:52rem)]:px-3">
-                  {t("verifyDialog.sections.routine")}
-                </Heading6>
-                <div className="[@container(min-width:52rem)]:space-y-1">
-                  {children}
-                </div>
-              </section>
-              <section
-                aria-label={t("verifyDialog.sections.onDemand")}
-                className="border-border min-w-0 space-y-2 border-t pt-4"
-              >
-                <Heading6 className="text-foreground/80 px-2 text-xs font-semibold [@container(min-width:52rem)]:px-3">
-                  {t("verifyDialog.sections.onDemand")}
-                </Heading6>
-                <div className="[@container(min-width:52rem)]:space-y-1">
-                  {tools}
-                </div>
-              </section>
-            </div>
-          </div>
-        </div>
-      </div>
-    </VerificationSelectionContext.Provider>
-  )
-}
-
-/** Native hover text and a keyboard/touch disclosure work in both document and shadow roots. */
-function VerificationTestNotice({
-  portalContainer,
-}: {
-  portalContainer?: HTMLElement
-}) {
-  const { t } = useTranslation("aiApiVerification")
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <IconButton
-          type="button"
-          variant="ghost"
-          size="none"
-          className="text-muted-foreground size-6 shrink-0"
-          aria-label={t("verifyDialog.about")}
-          title={t("verifyDialog.warning")}
-          disableAutoTooltip
-        >
-          <Info className="size-3.5" aria-hidden="true" />
-        </IconButton>
-      </PopoverTrigger>
-      <PopoverContent
-        container={portalContainer}
-        aria-label={t("verifyDialog.about")}
-        align="start"
-        className="w-72 max-w-[calc(100vw-2rem)] p-3 text-xs leading-relaxed"
-        onOpenAutoFocus={(event) => event.preventDefault()}
-        onEscapeKeyDown={(event) => event.stopPropagation()}
-      >
-        {t("verifyDialog.warning")}
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-export type VerificationDialogHeaderProps = {
-  title?: ReactNode
-  subtitle?: ReactNode
-  historySummary?: ApiVerificationHistorySummary | null
-  summary?: ReactNode
-  children?: ReactNode
-  portalContainer?: HTMLElement
-}
-
-/** Keeps test interpretation and existing history with the dialog identity. */
-export function VerificationDialogHeader({
-  title,
-  subtitle,
-  historySummary,
-  summary,
-  children,
-  portalContainer,
-}: VerificationDialogHeaderProps) {
-  const { t } = useTranslation("aiApiVerification")
-
-  const resolvedSummary =
-    historySummary !== undefined ? (
-      <VerificationHistorySummary summary={historySummary} hideTimestamp />
-    ) : (
-      summary
-    )
-
-  const date =
-    historySummary?.verifiedAt != null
-      ? new Date(historySummary.verifiedAt)
-      : undefined
-  const verificationTimestamp = date ? formatRelativeTime(date) : null
-  const verificationTimestampIso = date ? date.toISOString() : undefined
-  const fullTimestamp = date ? formatFullTime(date) : undefined
-
-  return (
-    <div className="space-y-density-1-5 w-full min-w-0 pr-8 sm:pr-10">
-      {title ? (
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            {typeof title === "string" ? (
-              <Heading5 className="text-foreground truncate font-semibold">
-                {title}
-              </Heading5>
-            ) : (
-              title
-            )}
-            <VerificationTestNotice portalContainer={portalContainer} />
-            {resolvedSummary ? (
-              <div className="flex shrink-0 items-center">
-                {resolvedSummary}
-              </div>
+            {source ? <div data-verification-source>{source}</div> : null}
+            {hasSettings ? (
+              <VerificationWorkspaceToolbar
+                workspace={workspace}
+                preparing={preparing}
+                running={running}
+              />
             ) : null}
-          </div>
-          {subtitle || verificationTimestamp ? (
-            <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
-              {subtitle}
-              {verificationTimestamp ? (
-                <>
-                  {subtitle ? (
-                    <span className="text-muted-foreground/50">·</span>
+            {configurationWarning ? (
+              <Alert variant="warning" className="mx-4 my-3 w-auto">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <div className="min-w-0 flex-1">{configurationWarning}</div>
+                  {hasSettings && !settingsOpen ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleSettings}
+                    >
+                      {t("verifyDialog.workspace.expandSettings")}
+                    </Button>
                   ) : null}
-                  <time
-                    dateTime={verificationTimestampIso}
-                    title={
-                      fullTimestamp ?? t("verifyDialog.history.lastVerified")
-                    }
-                    className="text-muted-foreground cursor-default"
+                </div>
+              </Alert>
+            ) : null}
+            <div
+              ref={frameRef}
+              data-settings-open={hasSettings && settingsOpen}
+              data-sidebars={hasSettings}
+              className="verification-workspace-frame relative min-w-0"
+            >
+              <div
+                ref={attachDetails}
+                hidden={preparing}
+                className="contents"
+              />
+              <VerificationSidebarPanel
+                side={VERIFICATION_SIDEBAR_SIDES.Left}
+                animate={manualListCollapsed !== undefined}
+                title={t("verifyDialog.workspace.tests")}
+                id={listId}
+                open={!listCollapsed && selectedId !== null && !settingsOpen}
+                isWide={isWide}
+                preparing={preparing}
+                onClose={() => setListCollapsed(true)}
+                toggleRef={listToggleRef}
+                restoreFocus={!settingsOpen}
+              >
+                <div
+                  id={`${listId}-items`}
+                  data-verification-list
+                  hidden={preparing}
+                  inert={!isWide && settingsOpen}
+                  aria-hidden={!isWide && settingsOpen ? true : undefined}
+                  className="overscroll-y-contain [@container(min-width:52rem)]:h-full [@container(min-width:52rem)]:w-(--verification-list-width) [@container(min-width:52rem)]:overflow-y-auto [@container(min-width:52rem)]:border-r [@container(min-width:52rem)]:border-border [@container(min-width:52rem)]:bg-surface-subtle [@container(min-width:52rem)]:p-4"
+                >
+                  <div
+                    data-verification-list-content
+                    className="space-y-3 [@container(min-width:52rem)]:space-y-4"
                   >
-                    {verificationTimestamp}
-                  </time>
-                </>
+                    <section
+                      aria-label={t("verifyDialog.sections.routine")}
+                      className="min-w-0 space-y-1 [@container(min-width:52rem)]:space-y-2"
+                    >
+                      <Heading6
+                        hidden={listCollapsed}
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        {t("verifyDialog.sections.routine")}
+                      </Heading6>
+                      <div className="[@container(min-width:52rem)]:space-y-1">
+                        {children}
+                      </div>
+                    </section>
+                    <section
+                      aria-label={t("verifyDialog.sections.onDemand")}
+                      className={cn(
+                        "min-w-0 border-t border-border",
+                        listCollapsed
+                          ? "my-2 pt-2"
+                          : "space-y-1 pt-2 [@container(min-width:52rem)]:space-y-2 [@container(min-width:52rem)]:pt-4",
+                      )}
+                    >
+                      <Heading6
+                        hidden={listCollapsed}
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        {t("verifyDialog.sections.onDemand")}
+                      </Heading6>
+                      <div className="[@container(min-width:52rem)]:space-y-1">
+                        {tools}
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </VerificationSidebarPanel>
+              {hasSettings ? (
+                <VerificationSidebarPanel
+                  side={VERIFICATION_SIDEBAR_SIDES.Right}
+                  title={t("verifyDialog.workspace.settings")}
+                  id={settingsId}
+                  open={settingsOpen}
+                  isWide={isWide}
+                  preparing={preparing}
+                  onClose={closeSettings}
+                  toggleRef={toggleRef}
+                  panelRef={settingsRef}
+                  restoreFocus={listCollapsed}
+                  onKeyDown={onSettingsKeyDown}
+                >
+                  <div
+                    data-verification-settings-scroll
+                    className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4"
+                  >
+                    <div
+                      ref={setSettingsTarget}
+                      hidden={preparing}
+                      className="verification-workspace-test-settings"
+                    />
+                    {configuration}
+                    {supplementary ? (
+                      <div data-verification-supplementary>{supplementary}</div>
+                    ) : null}
+                  </div>
+                  {concurrency && !preparing ? (
+                    <div
+                      data-verification-execution
+                      className="shrink-0 border-t border-border px-4 py-3"
+                      role="group"
+                      aria-label={t("verifyDialog.workspace.execution")}
+                    >
+                      <VerificationConcurrencyControl
+                        controller={concurrency}
+                        disabled={running}
+                      />
+                    </div>
+                  ) : null}
+                </VerificationSidebarPanel>
               ) : null}
             </div>
-          ) : null}
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">{children}</div>
-          <VerificationTestNotice portalContainer={portalContainer} />
-          {resolvedSummary ? (
-            <div className="flex shrink-0 items-center">{resolvedSummary}</div>
-          ) : null}
-        </div>
-      )}
-    </div>
+          </div>
+        </VerificationSelectionContext.Provider>
+      </FloatingLayerProvider>
+    </VerificationModelContext.Provider>
   )
 }

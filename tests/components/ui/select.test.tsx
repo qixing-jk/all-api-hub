@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -6,6 +6,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectPortalContainerProvider,
   SelectTrigger,
   SelectValue,
   SelectViewportResizeProvider,
@@ -47,6 +48,23 @@ function ControlledSelectFixture({
 }
 
 describe("Select viewport resize behavior", () => {
+  it("keeps options in the provided extension container and lets users change the value", async () => {
+    const user = userEvent.setup()
+    const { container: portal } = render(<div />)
+    render(
+      <SelectPortalContainerProvider value={portal}>
+        <SelectFixture preserveOpen={false} />
+      </SelectPortalContainerProvider>,
+    )
+    await user.click(
+      screen.getByRole("combobox", { name: "Example selection" }),
+    )
+    await user.click(within(portal).getByRole("option", { name: "Second" }))
+    expect(
+      screen.getByRole("combobox", { name: "Example selection" }),
+    ).toHaveTextContent("Second")
+    expect(within(portal).queryByRole("listbox")).not.toBeInTheDocument()
+  })
   it("preserves the selected value while exposing pending options on the trigger", () => {
     const renderSelect = (loading: boolean) => (
       <Select defaultValue="first">

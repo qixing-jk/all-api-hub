@@ -45,7 +45,7 @@
     },
     "hints": {
       "expiresAt": "Opcional. Registre quando esta chave deverá expirar.",
-      "saveWithoutTest": "Dica: você pode salvar assim que informar a URL base e a chave de API (não é necessário testar nem buscar os modelos primeiro). O teste é opcional e serve apenas para verificar a disponibilidade.",
+      "saveWithoutTest": "Basta informar a URL base e a chave de API para salvar. Buscar modelos e testar é opcional.",
       "sourceUrl": "Opcional. Registra a página onde você encontrou estas credenciales para revisá-la depois.",
       "tags": "Opcional. Compartilhado com a conta global e tags de favoritos."
     },
@@ -70,9 +70,12 @@
       "sourceUrl": "https://example.com/post",
       "tags": "Selecionar tags"
     },
+    "preparation": {
+      "description": "Cole o texto da página para detectar a URL base e a chave de API ou preencha-as diretamente. Os testes aparecem quando ambas estiverem disponíveis.",
+      "title": "Comece pela conexão da API"
+    },
     "privacyHint": "As chaves de API são tratadas como informações confidenciais: ficam ocultas por padrão e nada é armazenado, a menos que você opte por salvar na biblioteca de credenciais de API.",
     "sourceText": {
-      "label": "Texto para extrair",
       "placeholder": "Cole uma URL base e uma chave de API aqui ou use o menu de contexto para preencher os campos com o texto selecionado."
     },
     "title": "Testes de API"

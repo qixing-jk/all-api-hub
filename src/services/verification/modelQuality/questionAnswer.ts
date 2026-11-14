@@ -1,3 +1,6 @@
+import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+import { createSafeGenerationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
 import { runProbeGeneration } from "~/services/verification/aiApiVerification/probes/probeGeneration"
 import { createModel } from "~/services/verification/aiApiVerification/providers"
 import { createVerificationProfileHeaders } from "~/services/verification/aiApiVerification/requestProfiles"
@@ -23,19 +26,26 @@ export type QuestionAnswerRequest = QuestionAnswerSettings & {
   requestProfile?: ApiVerificationRequestProfile
   requestProfileEnhanced?: boolean
   requestHeaders?: Record<string, string>
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
+
+export const QUESTION_ANSWER_OUTCOMES = {
+  Matched: "matched",
+  Mismatched: "mismatched",
+  Manual: "manual",
+  Ungraded: "ungraded",
+  Empty: "empty",
+  Incomplete: "incomplete",
+} as const
+export type QuestionAnswerOutcome =
+  (typeof QUESTION_ANSWER_OUTCOMES)[keyof typeof QUESTION_ANSWER_OUTCOMES]
 
 export type QuestionAnswerResult = QuestionAnswerSettings & {
   text: string
   answer: string | null
-  outcome:
-    | "matched"
-    | "mismatched"
-    | "manual"
-    | "ungraded"
-    | "empty"
-    | "incomplete"
+  outcome: QuestionAnswerOutcome
+  metrics?: VerificationGenerationMetrics[]
   latencyMs: number
 }
 
@@ -65,6 +75,10 @@ export async function runQuestionAnswerTest(
               "Answer the question. Put your final short answer on the last line in this format: FINAL_ANSWER: <answer>",
           }
         : {}),
+      onProgress: createSafeGenerationProgressCallback(params.onProgress, [
+        params.apiKey,
+        ...Object.values(params.requestHeaders ?? {}),
+      ]),
       abortSignal: params.abortSignal,
       maxRetries: 0,
     },
@@ -81,20 +95,21 @@ export async function runQuestionAnswerTest(
     (normalize(text) === normalize(params.referenceAnswer) ? text : null)
   const outcome =
     result.finishReason !== "stop"
-      ? "incomplete"
+      ? QUESTION_ANSWER_OUTCOMES.Incomplete
       : !text
-        ? "empty"
+        ? QUESTION_ANSWER_OUTCOMES.Empty
         : !automatic
-          ? "manual"
+          ? QUESTION_ANSWER_OUTCOMES.Manual
           : !answer
-            ? "ungraded"
+            ? QUESTION_ANSWER_OUTCOMES.Ungraded
             : normalize(answer) === normalize(params.referenceAnswer)
-              ? "matched"
-              : "mismatched"
+              ? QUESTION_ANSWER_OUTCOMES.Matched
+              : QUESTION_ANSWER_OUTCOMES.Mismatched
   return {
     question: params.question,
     referenceAnswer: params.referenceAnswer,
     text,
+    metrics: result.metrics,
     answer,
     outcome,
     latencyMs: Date.now() - startedAt,

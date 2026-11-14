@@ -28,6 +28,34 @@ const counter = {
 }
 const saved = createNeedleResult({ counter })
 
+it("keeps the running matrix on its approved plan when capacity evidence changes", async () => {
+  const pending = createDeferred<needleRun.NeedleResult>()
+  const runner = vi.fn<NonNullable<Options["runner"]>>(() => pending.promise)
+  const { result, rerender, options } = await setup({ runner })
+  const approvedPlan = result.current.plan!
+  act(() => void result.current.run())
+  await waitFor(() => expect(runner).toHaveBeenCalledOnce())
+  rerender({
+    ...options,
+    capacity: {
+      lowerBoundTokens: 32768,
+      counter: { encoding: "o200k_base", estimated: true },
+    },
+  })
+  expect(result.current.plan!.limit).toBe(32768)
+  expect(result.current.matrixPlan!.limit).toBe(approvedPlan.limit)
+  expect(result.current.execution!.cells).toEqual([
+    { targetTokens: approvedPlan.limit, depth: 10 },
+    { targetTokens: approvedPlan.limit, depth: 50 },
+    { targetTokens: approvedPlan.limit, depth: 90 },
+  ])
+  await act(async () => {
+    pending.resolve(createNeedleResult({ counter, plan: approvedPlan }))
+  })
+  expect(result.current.result!.plan).toEqual(approvedPlan)
+  expect(result.current.canRun).toBe(true)
+})
+
 it("restores saved measurements after a full run reports only empty progress", async () => {
   const previous = createNeedleResult({
     ...saved,

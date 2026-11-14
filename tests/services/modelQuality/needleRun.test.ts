@@ -29,6 +29,169 @@ const params = {
   seed: 123,
 }
 
+it("aborts admitted provider work when checkpoint persistence fails", async () => {
+  const failure = new Error("checkpoint unavailable")
+  const signals: AbortSignal[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      const signal = init!.signal!
+      signals.push(signal)
+      if (signals.length === 1) return completion("wrong")
+      return new Promise<Response>((_resolve, reject) =>
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        }),
+      )
+    }),
+  )
+  const run = runNeedleTest({
+    ...params,
+    concurrency: 2,
+    abortSignal: new AbortController().signal,
+    onCheckpoint: async (result) => {
+      if (result.cells.length > 0) throw failure
+    },
+  })
+  await expect(run).rejects.toBe(failure)
+  expect(signals).toHaveLength(2)
+  expect(signals[1]!.aborted).toBe(true)
+})
+
+it("cancels every admitted combination and leaves unstarted cells untouched", async () => {
+  const controller = new AbortController()
+  const requests: AbortSignal[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      const signal = init!.signal!
+      requests.push(signal)
+      return new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        })
+      })
+    }),
+  )
+  const run = runNeedleTest({
+    ...params,
+    concurrency: 2,
+    abortSignal: controller.signal,
+  })
+  await vi.waitFor(() => expect(requests).toHaveLength(2))
+  controller.abort()
+  const result = await run
+  expect(requests).toHaveLength(2)
+  expect(requests.every((signal) => signal.aborted)).toBe(true)
+  expect(result.reason).toBe("stopped")
+  expect(result.cells).toHaveLength(2)
+  expect(
+    result.cells.every((cell) => cell.outcome === NEEDLE_OUTCOMES.Interrupted),
+  ).toBe(true)
+})
+
+it("can stop an active combination after a parallel sibling has failed", async () => {
+  const controller = new AbortController()
+  let controls!: NeedleRunControls
+  let latest!: NeedleResult
+  let requests = 0
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      if (++requests === 1)
+        return Response.json({ error: { message: "failed" } }, { status: 500 })
+      const signal = init!.signal!
+      return new Promise<Response>((_resolve, reject) =>
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        }),
+      )
+    }),
+  )
+  const run = runNeedleTest({
+    ...params,
+    concurrency: 2,
+    abortSignal: controller.signal,
+    onControls: (value) => {
+      controls = value
+    },
+    onProgress: (value) => {
+      latest = value
+    },
+  })
+  try {
+    await vi.waitFor(() =>
+      expect(latest).toMatchObject({
+        reason: "error",
+        inFlightCells: [{ targetTokens: 1024, depth: 50 }],
+      }),
+    )
+    expect(
+      await controls.stopSelection({ targetTokens: 1024, depth: 50 }),
+    ).toBe(true)
+    const result = await run
+    expect(result.cells.find((cell) => cell.depth === 50)?.outcome).toBe(
+      NEEDLE_OUTCOMES.Interrupted,
+    )
+    expect(requests).toBe(2)
+  } finally {
+    controller.abort()
+    await run
+  }
+})
+
+it("runs two combinations at once and checkpoints every outstanding request before dispatch", async () => {
+  const gates = Array.from({ length: 3 }, () => createDeferred<void>())
+  let requests = 0
+  let latest: unknown
+  const checkpoints: unknown[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: unknown) => {
+      if (String(url) === MODEL_METADATA_URL)
+        return Response.json({ models: [] })
+      const index = requests++
+      checkpoints.push(latest)
+      await gates[index]!.promise
+      return completion("wrong")
+    }),
+  )
+  const run = runNeedleTest({
+    ...params,
+    concurrency: 2,
+    abortSignal: new AbortController().signal,
+    onCheckpoint: async (_result, inFlight) => {
+      latest = inFlight
+    },
+  })
+  try {
+    await vi.waitFor(() => expect(requests).toBe(2))
+    expect(checkpoints[1]).toEqual(
+      expect.arrayContaining([
+        { targetTokens: 1024, depth: 10 },
+        { targetTokens: 1024, depth: 50 },
+      ]),
+    )
+    gates[1]!.resolve()
+    await vi.waitFor(() => expect(requests).toBe(3))
+    expect(checkpoints[2]).toEqual(
+      expect.arrayContaining([
+        { targetTokens: 1024, depth: 10 },
+        { targetTokens: 1024, depth: 90 },
+      ]),
+    )
+  } finally {
+    gates.forEach((gate) => gate.resolve())
+    await run
+  }
+})
+
 it("propagates a preparation failure before dispatch without retrying it", async () => {
   const failure = new Error("Preparation failed")
   const prepare = vi
@@ -136,7 +299,8 @@ it("honors a cell stop during checkpoint persistence and sends the remaining cel
       controls = value
     },
     onCheckpoint: async (_value, inFlight) => {
-      if (inFlight?.depth === 10) await controls!.stopSelection(inFlight)
+      if (inFlight?.some((cell) => cell.depth === 10))
+        await controls!.stopSelection({ depth: 10 })
     },
   })
   expect(requests).toBe(2)
@@ -778,7 +942,7 @@ it("records dispatch before sending and preserves an uncertain cancelled request
     vi.fn(async (url: unknown) => {
       if (String(url) === MODEL_METADATA_URL)
         return Response.json({ models: [] })
-      expect(checkpoints).toEqual([{ targetTokens: 1024, depth: 10 }])
+      expect(checkpoints).toEqual([[{ targetTokens: 1024, depth: 10 }]])
       controller.abort()
       throw controller.signal.reason
     }),

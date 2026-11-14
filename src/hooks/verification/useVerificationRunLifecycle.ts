@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
+  API_VERIFICATION_PROBE_IDS,
   getProbesForModality,
   type ApiVerificationApiType,
   type ApiVerificationProbeDefinition,
   type ApiVerificationProbeId,
   type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
+import { DEFAULT_VERIFICATION_CONCURRENCY } from "~/services/verification/concurrency"
+import { mapWithConcurrency } from "~/utils/core/mapWithConcurrency"
 
 /** Owns controllers and queue interruption for account and profile verification. */
 export function useVerificationRunLifecycle() {
@@ -77,7 +80,7 @@ export function useVerificationRunLifecycle() {
     [],
   )
 
-  const runSequentialProbes = useCallback(
+  const runProbes = useCallback(
     async (
       apiType: ApiVerificationApiType,
       execute: (
@@ -86,12 +89,21 @@ export function useVerificationRunLifecycle() {
       ) => Promise<void>,
       signal: AbortSignal,
       modality?: ModelTestModality,
+      concurrency = DEFAULT_VERIFICATION_CONCURRENCY,
+      prepareModelsFirst = false,
     ) => {
       const probes = getProbesForModality(modality, apiType)
-      for (const probe of probes) {
-        if (isStopped(signal)) break
-        await execute(probe, signal)
-      }
+      const models = prepareModelsFirst
+        ? probes.find((probe) => probe.id === API_VERIFICATION_PROBE_IDS.Models)
+        : undefined
+      if (models && !isStopped(signal)) await execute(models, signal)
+      await mapWithConcurrency(
+        probes.filter((probe) => probe !== models),
+        concurrency,
+        async (probe) => {
+          if (!isStopped(signal)) await execute(probe, signal)
+        },
+      )
     },
     [isStopped],
   )
@@ -136,7 +148,7 @@ export function useVerificationRunLifecycle() {
     isStopped,
     runSuite,
     runProbe,
-    runSequentialProbes,
+    runProbes,
     stopSuite,
     stopProbe,
     stopAll,

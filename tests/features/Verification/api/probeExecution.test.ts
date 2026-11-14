@@ -34,6 +34,62 @@ function createExecution() {
 }
 
 describe("dialog probe execution", () => {
+  it("shows partial output while running and keeps it after a failure", async () => {
+    const { options } = createExecution()
+    const connectionError = new Error("connection lost")
+    let runningState: ReturnType<typeof options.readProbes>[number] | undefined
+    const outcome = await executeDialogProbe({
+      ...options,
+      execute: async (onProgress) => {
+        onProgress({
+          text: "Partial answer",
+          reasoning: "",
+          tools: [],
+          step: 1,
+        })
+        runningState = options.readProbes()[0]
+        throw connectionError
+      },
+    })
+    expect(outcome.error).toBe(connectionError)
+    expect(runningState).toMatchObject({
+      isRunning: true,
+      progress: { text: "Partial answer" },
+    })
+    expect(options.readProbes()[0]).toMatchObject({
+      isRunning: false,
+      progress: { text: "Partial answer" },
+      result: { status: "fail" },
+    })
+  })
+  it("accepts the complete answer and rejects progress arriving after acceptance", async () => {
+    const { options } = createExecution()
+    let publish:
+      | Parameters<Parameters<typeof executeDialogProbe>[0]["execute"]>[0]
+      | undefined
+    const final: ApiVerificationProbeResult = {
+      id: options.probeId,
+      status: "pass",
+      latencyMs: 1,
+      summary: "Complete answer",
+      output: { text: "Complete answer" },
+    }
+    await executeDialogProbe({
+      ...options,
+      execute: async (onProgress) => {
+        publish = onProgress
+        onProgress({ text: "Partial", reasoning: "", tools: [], step: 1 })
+        return final
+      },
+    })
+    expect(options.readProbes()[0]).toMatchObject({
+      result: final,
+      isRunning: false,
+    })
+    expect(options.readProbes()[0]?.progress).toBeUndefined()
+    publish?.({ text: "Late partial", reasoning: "", tools: [], step: 1 })
+    expect(options.readProbes()[0]?.progress).toBeUndefined()
+  })
   it.each(["pass", "fail", "stopped"] as const)(
     "replaces only the rerun probe's historical state on %s",
     async (outcome) => {

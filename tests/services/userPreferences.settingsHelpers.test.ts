@@ -19,6 +19,15 @@ const expectSuccessfulWrite = async (write: Promise<PreferenceWriteResult>) => {
 }
 
 describe("userPreferences settings helpers", () => {
+  it("saves routine and needle parallelism independently", async () => {
+    await Promise.all([
+      userPreferences.updateVerificationConcurrency({ routine: 3 }),
+      userPreferences.updateVerificationConcurrency({ needle: 5 }),
+    ])
+    expect(
+      (await userPreferences.getPreferencesStrict()).verificationConcurrency,
+    ).toEqual({ routine: 3, needle: 5 })
+  })
   const storage = new Storage({ area: "local" })
 
   beforeEach(async () => {

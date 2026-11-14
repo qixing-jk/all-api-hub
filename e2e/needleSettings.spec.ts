@@ -14,6 +14,10 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import {
+  showVerificationSettings,
+  showVerificationTest,
+} from "~~/e2e/utils/verificationWorkspace"
 import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 
 for (const [language, resource] of [
@@ -72,16 +76,21 @@ for (const [language, resource] of [
         .getByRole("button", { name: labels.title, exact: true })
         .click()
       await expect(
-        panel.getByRole("button", { name: labels.run }),
+        page.getByRole("button", { name: labels.run, exact: true }).first(),
       ).toBeEnabled()
-      await expect(
-        panel.getByRole("switch", { name: labels.quick }),
-      ).toBeChecked()
-      await panel.getByRole("switch", { name: labels.quick }).click()
-      const settings = panel.getByRole("group", {
-        name: resource.verifyDialog.tools.settingsTitle,
+      const settings = page.getByRole("group", {
+        name: `${resource.verifyDialog.workspace.currentTest} · ${labels.title}`,
+        exact: true,
       })
-      const preview = panel.getByRole("region", { name: labels.previewTitle })
+      await showVerificationSettings(page)
+      await expect(
+        settings.getByRole("switch", { name: labels.quick }),
+      ).toBeChecked()
+      await settings.getByRole("switch", { name: labels.quick }).click()
+      const preview = page.getByRole("region", {
+        name: labels.previewTitle,
+        includeHidden: true,
+      })
       const plannedLengths = preview.getByRole("group", {
         name: labels.plannedLengths,
       })
@@ -95,23 +104,23 @@ for (const [language, resource] of [
           plannedLengths.getByText(large ? "1023K" : "127K", { exact: true }),
         ).toBeVisible()
         await expect(preview).toContainText(large ? "6M" : "741K")
-        await expect(panel).toContainText(
+        await expect(settings).toContainText(
           labels.reference.context.replace("{{tokens}}", large ? "1M" : "128K"),
         )
       } else {
         await expect(
-          panel.getByText(
+          settings.getByText(
             labels.reference.unknown.replace("{{tokens}}", "16K"),
             { exact: true },
           ),
         ).toBeVisible()
         await expect(
-          panel.getByRole("button", { name: labels.probeFirst }),
+          settings.getByRole("button", { name: labels.probeFirst }),
         ).toBeVisible()
       }
-      const limit = panel.getByRole("combobox", { name: labels.limit })
+      const limit = settings.getByRole("combobox", { name: labels.limit })
       if (!known) {
-        const detect = panel.getByRole("button", { name: labels.probeFirst })
+        const detect = settings.getByRole("button", { name: labels.probeFirst })
         await detect.hover()
         const detectionHint = page.getByRole("tooltip")
         await expect(detectionHint).toContainText(
@@ -135,7 +144,7 @@ for (const [language, resource] of [
       )
       await expect(limit).toHaveText(automaticLabel)
       await expect(
-        panel.getByRole("spinbutton", { name: labels.customLimit }),
+        settings.getByRole("spinbutton", { name: labels.customLimit }),
       ).toHaveCount(0)
       await limit.click()
       await expect(page.getByRole("option")).toHaveCount(
@@ -153,7 +162,7 @@ for (const [language, resource] of [
           : labels.reference.unknown.replace("{{tokens}}", "16K"),
       )
       await expect(
-        panel.getByRole("spinbutton", { name: labels.seedInput }),
+        settings.getByRole("spinbutton", { name: labels.seedInput }),
       ).toBeVisible()
       await selectLimit(known ? (large ? "1023K" : "127K") : "1M")
       await expect(limit).toHaveText(known ? (large ? "1023K" : "127K") : "1M")
@@ -164,7 +173,7 @@ for (const [language, resource] of [
       ).toBeVisible()
       if (!known)
         await expect(
-          panel.getByText(
+          settings.getByText(
             labels.reference.unknown.replace("{{tokens}}", "16K"),
             { exact: true },
           ),
@@ -182,37 +191,17 @@ for (const [language, resource] of [
         await page.evaluate((isDark) => {
           document.documentElement.classList.toggle("dark", isDark)
         }, dark)
+        await showVerificationSettings(page)
         await limit.scrollIntoViewIfNeeded()
         await expect(limit).toBeInViewport()
-        const settingsBox = (await settings.locator("..").boundingBox())!
-        const previewBox = (await preview.boundingBox())!
-        // Settings and the complete plan are separate, aligned sections.
-        const previewGap = previewBox.y - settingsBox.y - settingsBox.height
-        expect(previewGap).toBeGreaterThanOrEqual(8)
-        expect(previewGap).toBeLessThanOrEqual(24)
-        expect(Math.abs(previewBox.x - settingsBox.x)).toBeLessThanOrEqual(1)
+        const settingsSurface = page.locator("[data-verification-settings]")
+        await expect(settingsSurface).toBeVisible()
         expect(
-          Math.abs(previewBox.width - settingsBox.width),
+          await settingsSurface.evaluate(
+            (element) => element.scrollWidth - element.clientWidth,
+          ),
         ).toBeLessThanOrEqual(1)
-        if (view === "tall") {
-          const description = panel.getByText(labels.description, {
-            exact: true,
-          })
-          await expect(description).toBeVisible()
-          const descriptionBox = (await description.boundingBox())!
-          expect(descriptionBox.y).toBeGreaterThan(
-            previewBox.y + previewBox.height,
-          )
-        } else if (view === "narrow") {
-          const description = panel.getByText(labels.description, {
-            exact: true,
-          })
-          const descriptionBox = (await description.boundingBox())!
-          expect(descriptionBox.y + descriptionBox.height).toBeLessThanOrEqual(
-            settingsBox.y,
-          )
-        }
-        const labelBox = (await panel
+        const labelBox = (await settings
           .getByText(labels.limit, { exact: true })
           .boundingBox())!
         const helpBox = (await settings
@@ -230,7 +219,7 @@ for (const [language, resource] of [
           preview.getByRole("button", { name: labels.planDetails }),
         ).toHaveCount(0)
         if (!known) {
-          const probeBox = (await panel
+          const probeBox = (await settings
             .getByRole("button", { name: labels.probeFirst })
             .boundingBox())!
           expect(
@@ -246,39 +235,28 @@ for (const [language, resource] of [
           ).toBeLessThanOrEqual(2)
           expect(probeBox.width).toBeLessThanOrEqual(36)
         }
-        const details = panel.locator("[data-verification-detail]")
-        // Both sections share a surface style; the preview owns the whole plan.
-        expect(
-          await settings.evaluate(
-            (element) => getComputedStyle(element).backgroundColor,
-          ),
-        ).toBe(
-          await preview.evaluate(
-            (element) => getComputedStyle(element).backgroundColor,
-          ),
-        )
-        expect(
-          await settings.evaluate((element) => {
-            const card = getComputedStyle(element.parentElement!)
-            const background = getComputedStyle(element).backgroundColor
-            return (
-              parseFloat(card.borderTopWidth) > 0 &&
-              card.borderTopColor !== background
-            )
-          }),
-        ).toBe(true)
-        expect(
-          await details.evaluate(
-            (element) => element.scrollWidth <= element.clientWidth,
-          ),
-        ).toBe(true)
-        await details.screenshot({
+        await settingsSurface.screenshot({
           path: test.info().outputPath(`needle-settings-${view}.png`),
           animations: "disabled",
         })
+        if (width <= 1024) await page.keyboard.press("Escape")
+        await showVerificationTest(page, labels.title)
+        await expect(preview).toBeVisible()
+        expect(
+          await preview.evaluate(
+            (element) => element.scrollWidth - element.clientWidth,
+          ),
+        ).toBeLessThanOrEqual(1)
+        await preview.screenshot({
+          path: test.info().outputPath(`needle-preview-${view}.png`),
+          animations: "disabled",
+        })
       }
+      await showVerificationSettings(page)
       await selectLimit(labels.custom)
-      const custom = panel.getByRole("spinbutton", { name: labels.customLimit })
+      const custom = settings.getByRole("spinbutton", {
+        name: labels.customLimit,
+      })
       await expect(custom).toHaveValue(
         known ? (large ? "1047552" : "130048") : "16384",
       )
@@ -287,17 +265,17 @@ for (const [language, resource] of [
         plannedLengths.getByText("4K", { exact: true }),
       ).toBeVisible()
       await expect(
-        panel.getByRole("button", { name: labels.run }),
+        page.getByRole("button", { name: labels.run, exact: true }).first(),
       ).toBeEnabled()
       await custom.fill("0")
-      await expect(panel.getByRole("alert")).toBeVisible()
+      await expect(settings.getByRole("alert")).toBeVisible()
       await expect(
-        panel.getByRole("button", { name: labels.run }),
+        page.getByRole("button", { name: labels.run, exact: true }).first(),
       ).toBeDisabled()
       await custom.clear()
-      await expect(panel.getByRole("alert")).toHaveCount(0)
+      await expect(settings.getByRole("alert")).toHaveCount(0)
       await expect(
-        panel.getByRole("button", { name: labels.run }),
+        page.getByRole("button", { name: labels.run, exact: true }).first(),
       ).toBeEnabled()
       await custom.fill("16384")
       await expect(custom).toBeVisible()
@@ -308,11 +286,11 @@ for (const [language, resource] of [
       })
       await selectLimit(automaticLabel)
       await expect(custom).toHaveCount(0)
-      await panel.getByRole("switch", { name: labels.quick }).click()
+      await settings.getByRole("switch", { name: labels.quick }).click()
       await expect(
-        panel.getByRole("switch", { name: labels.quick }),
+        settings.getByRole("switch", { name: labels.quick }),
       ).toBeChecked()
-      const seed = panel.getByRole("spinbutton", { name: labels.seedInput })
+      const seed = settings.getByRole("spinbutton", { name: labels.seedInput })
       await seed.fill("42")
       await expect(seed).toHaveValue("42")
       await panel.locator("[data-verification-detail]").screenshot({
@@ -322,10 +300,9 @@ for (const [language, resource] of [
       const explanation = settings.getByRole("button", {
         name: labels.planDetails,
       })
-      const help = page.getByRole("dialog", {
-        name: labels.planDetails,
-        exact: true,
-      })
+      const help = page
+        .getByRole("tooltip")
+        .filter({ hasText: labels.planDetails })
       for (const [view, width, dark] of [
         ["desktop", 1280, false],
         ["narrow", 380, false],
@@ -336,6 +313,7 @@ for (const [language, resource] of [
           (isDark) => document.documentElement.classList.toggle("dark", isDark),
           dark,
         )
+        await showVerificationSettings(page)
         await explanation.scrollIntoViewIfNeeded()
         const previewBeforeHelp = (await preview.boundingBox())!
         if (view === "narrow") {
@@ -369,30 +347,13 @@ for (const [language, resource] of [
         expect(
           Math.abs(previewWithHelp.y - previewBeforeHelp.y),
         ).toBeLessThanOrEqual(1)
-        const detailsBounds = (await panel
-          .locator("[data-verification-detail]")
-          .boundingBox())!
-        const helpBounds = (await help.boundingBox())!
-        const x = Math.min(detailsBounds.x, helpBounds.x)
-        const y = Math.min(detailsBounds.y, helpBounds.y)
-        await page.screenshot({
-          path: test.info().outputPath(`needle-plan-details-${view}.png`),
-          clip: {
-            x,
-            y,
-            width:
-              Math.max(
-                detailsBounds.x + detailsBounds.width,
-                helpBounds.x + helpBounds.width,
-              ) - x,
-            height:
-              Math.max(
-                detailsBounds.y + detailsBounds.height,
-                helpBounds.y + helpBounds.height,
-              ) - y,
-          },
-          animations: "disabled",
-        })
+        await page
+          .getByRole("dialog")
+          .first()
+          .screenshot({
+            path: test.info().outputPath(`needle-plan-details-${view}.png`),
+            animations: "disabled",
+          })
         await help.screenshot({
           path: test.info().outputPath(`needle-length-help-${view}.png`),
           animations: "disabled",
@@ -425,17 +386,17 @@ for (const [language, resource] of [
             sibling.getByText(description, { exact: true }),
           ).toBeVisible()
           if (id === "drawing") {
-            const settings = sibling.getByRole("group", {
-              name: resource.verifyDialog.tools.settingsTitle,
+            const settings = page.getByRole("group", {
+              name: `${resource.verifyDialog.workspace.currentTest} · ${name}`,
             })
             await expect(
               settings.getByRole("heading", {
-                name: resource.verifyDialog.tools.settingsTitle,
+                name: `${resource.verifyDialog.workspace.currentTest} · ${name}`,
               }),
             ).toBeVisible()
             await expect(settings.getByRole("switch")).toBeVisible()
             await expect(
-              settings.getByRole("button", {
+              page.getByRole("textbox", {
                 name: resource.verifyDialog.tools.prompts.editorLabel.replace(
                   "{{probe}}",
                   name,
@@ -443,11 +404,12 @@ for (const [language, resource] of [
               }),
             ).toBeVisible()
             const settingsBox = (await settings.boundingBox())!
-            const titleBox = (await sibling
+            const detailBox = (await sibling
               .locator("[data-verification-detail]")
-              .getByRole("heading", { name, exact: true })
               .boundingBox())!
-            expect(settingsBox.y + settingsBox.height).toBeLessThan(titleBox.y)
+            expect(detailBox.x + detailBox.width).toBeLessThanOrEqual(
+              settingsBox.x + 1,
+            )
           }
           await sibling.locator("[data-verification-detail]").screenshot({
             path: test.info().outputPath(`${id}-idle-tall.png`),

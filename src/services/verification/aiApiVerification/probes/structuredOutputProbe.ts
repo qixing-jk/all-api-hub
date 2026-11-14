@@ -1,6 +1,8 @@
 import { Output } from "ai"
 import { z } from "zod"
 
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
 import {
@@ -33,6 +35,7 @@ type RunStructuredOutputProbeParams = {
   modelId: string
   mode?: ApiVerificationMode
   probePromptOverrides?: ApiVerificationProbePromptOverrides
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
 
@@ -75,6 +78,7 @@ export async function runStructuredOutputProbe(
             ok: z.literal(true),
           }),
         }),
+        onProgress: params.onProgress,
         abortSignal: params.abortSignal,
       },
       mode,

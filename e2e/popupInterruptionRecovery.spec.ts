@@ -10,11 +10,13 @@ import {
   getPlasmoStorageJsonValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 for (const mode of ["unavailable", "rejected", "native"] as const) {
   test(`continues interrupted popup detection with ${mode} side panel support`, async ({
     context,
     extensionId,
+    extensionDir,
     page,
   }) => {
     const worker = await getServiceWorker(context)
@@ -66,6 +68,12 @@ for (const mode of ["unavailable", "rejected", "native"] as const) {
     await expect(
       page.getByText("Auto-detect may have been interrupted"),
     ).toBeVisible()
+    await captureVisualViews({
+      page,
+      ready: page.getByText("Auto-detect may have been interrupted"),
+      id: `popup-interruption-${mode}`,
+      extensionDir,
+    })
     if (mode === "native") {
       await page.getByRole("button", { name: "Continue in side panel" }).click()
       const bridge = await context.newPage()

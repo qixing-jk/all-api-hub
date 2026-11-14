@@ -1,3 +1,9 @@
+import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+import { createSafeGenerationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+import type {
+  VerificationGenerationProgress,
+  VerificationProgressCallback,
+} from "~/services/verification/aiApiVerification/generationProgress"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { getProbePromptOverrides } from "~/services/verification/probePromptStore"
 
@@ -35,6 +41,7 @@ type RunApiVerificationProbeParams = {
    * preferences, then to the built-in prompt.
    */
   probePromptOverrides?: ApiVerificationProbePromptOverrides
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
 
@@ -63,6 +70,15 @@ export async function runApiVerificationProbe(
   const probePromptOverrides: ApiVerificationProbePromptOverrides =
     params.probePromptOverrides ?? (await getProbePromptOverrides())
 
+  let generation: VerificationGenerationProgress | undefined
+  const onProgress = createSafeGenerationProgressCallback(
+    (progress) => {
+      generation = progress
+      params.onProgress?.(progress)
+    },
+    [params.apiKey, ...Object.values(params.requestHeaders ?? {})],
+  )
+  let metrics: VerificationGenerationMetrics[] | undefined
   const runnerParams = {
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
@@ -78,11 +94,17 @@ export async function runApiVerificationProbe(
     modelId: resolvedModelId,
     mode: params.mode,
     probePromptOverrides,
+    onProgress: (progress: Parameters<VerificationProgressCallback>[0]) => {
+      metrics = progress.metrics ?? metrics
+      onProgress?.(progress)
+    },
     abortSignal: params.abortSignal,
   }
 
   if (!registryEntry.requiresModelId) {
     const result = await registryEntry.run(runnerParams)
+    if (metrics) result.metrics = metrics
+    if (generation) result.generation = generation
     return profile
       ? { ...result, requestProfile: profile, ...enhanced }
       : result
@@ -108,6 +130,8 @@ export async function runApiVerificationProbe(
     ...runnerParams,
     modelId: resolvedModelId,
   })
+  if (metrics) result.metrics = metrics
+  if (generation) result.generation = generation
   return params.requestProfile
     ? { ...result, requestProfile: params.requestProfile, ...enhanced }
     : result

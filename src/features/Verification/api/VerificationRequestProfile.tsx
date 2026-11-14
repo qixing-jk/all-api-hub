@@ -4,12 +4,8 @@ import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
 import { HelpHintIcon } from "~/components/icons/productIcons"
+import Tooltip from "~/components/Tooltip"
 import { Badge, IconButton, SearchableSelect, Switch } from "~/components/ui"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover"
 import { cn } from "~/lib/utils"
 import type {
   ApiVerificationApiType,
@@ -46,7 +42,7 @@ export function VerificationRequestProfileHint({
   return (
     <p
       role="note"
-      className="text-muted-foreground flex items-start gap-2 text-xs leading-relaxed"
+      className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"
     >
       <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
       <span>
@@ -83,11 +79,8 @@ export function VerificationRequestProfileSelect({
       type="button"
       variant="ghost"
       size="none"
-      className="text-muted-foreground size-4 min-h-0 shrink-0 p-0"
+      className="size-4 min-h-0 shrink-0 p-0 text-muted-foreground"
       aria-label={t("verifyDialog.meta.requestProfile")}
-      title={t("verifyDialog.requestProfiles.hint")}
-      tooltip={t("verifyDialog.requestProfiles.hint")}
-      disableAutoTooltip={Boolean(portalContainer)}
     >
       <HelpHintIcon className="size-3.5" aria-hidden="true" />
     </IconButton>
@@ -95,26 +88,18 @@ export function VerificationRequestProfileSelect({
   return (
     <div className="space-y-density-1-5">
       <div className={cn("flex items-center gap-1", labelRowClassName)}>
-        <span className="text-muted-foreground text-xs">
+        <span className="text-xs text-muted-foreground">
           {t("verifyDialog.meta.requestProfile")}
         </span>
-        {portalContainer ? (
-          <Popover>
-            <PopoverTrigger asChild>{helpButton}</PopoverTrigger>
-            <PopoverContent
-              container={portalContainer}
-              aria-label={t("verifyDialog.meta.requestProfile")}
-              align="end"
-              className="w-72 max-w-[calc(100vw-2rem)] p-3 text-xs leading-relaxed"
-              onOpenAutoFocus={(event) => event.preventDefault()}
-              onEscapeKeyDown={(event) => event.stopPropagation()}
-            >
-              {t("verifyDialog.requestProfiles.hint")}
-            </PopoverContent>
-          </Popover>
-        ) : (
-          helpButton
-        )}
+        <Tooltip
+          content={t("verifyDialog.requestProfiles.hint")}
+          portalContainer={portalContainer}
+          anchorAsChild
+          openOnClick
+          className="max-w-[min(20rem,calc(100vw-2rem))] leading-relaxed"
+        >
+          {helpButton}
+        </Tooltip>
       </div>
       <SearchableSelect
         aria-label={t("verifyDialog.meta.requestProfile")}
@@ -130,7 +115,7 @@ export function VerificationRequestProfileSelect({
         )}
       />
       {hasProtocolMismatch && (
-        <p className="text-warning-soft-foreground text-xs" role="alert">
+        <p className="text-xs text-warning-soft-foreground" role="alert">
           {t("verifyDialog.requestProfiles.protocolMismatch", {
             apiType: getApiVerificationApiTypeLabel(t, defaultApiType),
           })}
@@ -153,8 +138,8 @@ export function VerificationRequestProfileEnhancement({
   const { t } = useTranslation("aiApiVerification")
   const id = useId()
   return (
-    <div className="gap-density-2 flex flex-col sm:flex-row sm:items-center sm:gap-x-4">
-      <div className="gap-density-2 flex shrink-0 items-center">
+    <div className="flex flex-col gap-density-2 sm:flex-row sm:items-center sm:gap-x-4">
+      <div className="flex shrink-0 items-center gap-density-2">
         <Switch
           id={id}
           aria-describedby={`${id}-hint`}
@@ -163,21 +148,21 @@ export function VerificationRequestProfileEnhancement({
           disabled={disabled}
           size="sm"
         />
-        <label htmlFor={id} className="text-muted-foreground text-xs">
+        <label htmlFor={id} className="text-xs text-muted-foreground">
           {t("verifyDialog.requestProfiles.enhancedLabel")}
         </label>
         <IconButton
           type="button"
           variant="ghost"
           size="none"
-          className="text-muted-foreground size-4 min-h-0 p-0"
+          className="size-4 min-h-0 p-0 text-muted-foreground"
           aria-label={t("verifyDialog.requestProfiles.enhancedLabel")}
           tooltip={t("verifyDialog.requestProfiles.enhancedHint")}
         >
           <HelpHintIcon className="size-3.5" aria-hidden="true" />
         </IconButton>
       </div>
-      <p id={`${id}-hint`} className="text-muted-foreground text-xs">
+      <p id={`${id}-hint`} className="text-xs text-muted-foreground">
         {t("verifyDialog.requestProfiles.enhancedCostHint")}
       </p>
     </div>

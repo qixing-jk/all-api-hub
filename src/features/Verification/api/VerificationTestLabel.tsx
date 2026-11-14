@@ -2,6 +2,7 @@ import {
   ArrowDownUp,
   Binary,
   Braces,
+  FlaskConical,
   GitBranch,
   Globe,
   Image,
@@ -51,14 +52,14 @@ const TEST_ICONS: Record<VerificationTestId, LucideIcon> = {
 }
 
 /** Consistent decorative test icons without changing translated labels. */
-function VerificationTestIcon({
+export function VerificationTestIcon({
   testId,
   className,
 }: {
-  testId: VerificationTestId
+  testId?: VerificationTestId
   className?: string
 }) {
-  const Icon = TEST_ICONS[testId]
+  const Icon = (testId && TEST_ICONS[testId]) || FlaskConical
   return <Icon className={className} aria-hidden="true" />
 }
 
@@ -74,9 +75,9 @@ export function VerificationTestLabel({
     <span className="flex max-w-full min-w-0 items-center gap-2">
       <VerificationTestIcon
         testId={testId}
-        className="text-muted-foreground size-4 shrink-0"
+        className="size-4 shrink-0 text-muted-foreground"
       />
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 break-words whitespace-normal">{children}</span>
     </span>
   )
 }

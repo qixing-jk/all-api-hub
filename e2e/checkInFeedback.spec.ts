@@ -227,6 +227,7 @@ for (const { width, language } of [
         .getByRole("button", { name: language === "en" ? /Check-in/i : /签到/ })
         .first()
         .click()
+    await page.emulateMedia({ reducedMotion: "reduce" })
     await section.screenshot({
       path: testInfo.outputPath("checkin-settings.png"),
       animations: "disabled",
@@ -277,6 +278,10 @@ for (const { width, language } of [
     await renderedReport
       .getByRole("rowheader", { name: "route hint", exact: true })
       .scrollIntoViewIfNeeded()
+    await feedback.screenshot({
+      path: testInfo.outputPath(`markdown-report-${language}-${width}.png`),
+      animations: "disabled",
+    })
     await page.screenshot({
       animations: "disabled",
       path: testInfo.outputPath(`feedback-report-${language}-${width}.png`),

@@ -1,3 +1,5 @@
+import { getVerificationHeader } from "~~/tests/test-utils/verificationWorkspace"
+
 import "./apiCheckModalHostMocks"
 
 import {
@@ -18,6 +20,7 @@ import {
   API_CHECK_MODAL_CLOSED_EVENT,
   dispatchOpenApiCheckModal,
 } from "~/features/WebAiApiCheck/content/events"
+import { useApiCheckModalViewModel } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalViewModel"
 import {
   parseDateInputValue,
   useApiCheckProfileSaveWorkflow,
@@ -66,8 +69,52 @@ import {
   waitForSelectedModelId,
 } from "./apiCheckModalHostTestSupport"
 
+async function expandOptionalSaveFields(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  const trigger = await screen.findByRole("button", {
+    name: "webAiApiCheck:modal.optionalProfileFields.title",
+  })
+  if (trigger.getAttribute("aria-expanded") === "false")
+    await user.click(trigger)
+}
+
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
+
+  it("saves the source page edited in optional profile fields", async () => {
+    const user = userEvent.setup()
+    await openModal()
+    await pasteIntoField(
+      user,
+      await screen.findByPlaceholderText("https://example.com/api"),
+      "https://proxy.example.com",
+    )
+    await pasteIntoField(
+      user,
+      await screen.findByPlaceholderText("sk-..."),
+      "fixture-key",
+    )
+    await expandOptionalSaveFields(user)
+    const source = screen.getByPlaceholderText(
+      "webAiApiCheck:modal.placeholders.sourceUrl",
+    )
+    await user.clear(source)
+    await user.type(source, "https://source.example.com/credentials")
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.saveToProfiles",
+      }),
+    )
+    await waitFor(() =>
+      expectTypedApiCheckMessage(
+        WebAiApiCheckMessageTypes.SaveProfile,
+        expect.objectContaining({
+          sourceUrl: "https://source.example.com/credentials",
+        }),
+      ),
+    )
+  })
 
   it("tracks single unsupported probe completion as skipped", async () => {
     const user = userEvent.setup()
@@ -117,7 +164,9 @@ describe("ApiCheckModalHost", () => {
     )
 
     expect(
-      await within(probeCard).findByText("Streaming is not supported"),
+      await within(getVerificationHeader(probeCard)).findByText(
+        "Streaming is not supported",
+      ),
     ).toBeInTheDocument()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -351,7 +400,9 @@ describe("ApiCheckModalHost", () => {
       })
     })
 
-    expect(await within(probeCard).findByText("Retry OK")).toBeInTheDocument()
+    expect(
+      await within(getVerificationHeader(probeCard)).findByText("Retry OK"),
+    ).toBeInTheDocument()
   })
 
   it("ignores a stopped probe failure response and cancel transport errors", async () => {
@@ -603,7 +654,9 @@ describe("ApiCheckModalHost", () => {
       }),
     )
 
-    expect(await within(probeCard).findByText("Probe OK")).toBeInTheDocument()
+    expect(
+      await within(getVerificationHeader(probeCard)).findByText("Probe OK"),
+    ).toBeInTheDocument()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbe,
@@ -674,7 +727,9 @@ describe("ApiCheckModalHost", () => {
     )
 
     expect(
-      await within(probeCard).findByText("Unauthorized: [REDACTED]"),
+      await within(getVerificationHeader(probeCard)).findByText(
+        "Unauthorized: [REDACTED]",
+      ),
     ).toBeInTheDocument()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -1043,7 +1098,7 @@ describe("ApiCheckModalHost", () => {
     )
 
     expect(
-      await within(probeCard).findByText(
+      await within(getVerificationHeader(probeCard)).findByText(
         "webAiApiCheck:modal.errors.runProbeFailed",
       ),
     ).toBeInTheDocument()
@@ -1297,7 +1352,7 @@ describe("ApiCheckModalHost", () => {
         }),
       )
       expect(
-        await within(probeCard).findByText(
+        await within(getVerificationHeader(probeCard)).findByText(
           "aiApiVerification:verifyDialog.summaries.textGenerationSucceeded",
         ),
       ).toBeVisible()
@@ -1437,7 +1492,9 @@ describe("ApiCheckModalHost", () => {
       }),
     )
     expect(
-      await within(probeCard).findByText("Text generation OK"),
+      await within(getVerificationHeader(probeCard)).findByText(
+        "Text generation OK",
+      ),
     ).toBeVisible()
 
     await user.clear(apiKeyInput)
@@ -1519,7 +1576,9 @@ describe("ApiCheckModalHost", () => {
       }),
     )
     expect(
-      await within(modelsProbeCard).findByText("Original models OK"),
+      await within(getVerificationHeader(modelsProbeCard)).findByText(
+        "Original models OK",
+      ),
     ).toBeVisible()
 
     await user.clear(apiKeyInput)
@@ -1547,7 +1606,7 @@ describe("ApiCheckModalHost", () => {
       }),
     )
     expect(
-      await within(textGenerationProbeCard).findByText(
+      await within(getVerificationHeader(textGenerationProbeCard)).findByText(
         "Changed text generation OK",
       ),
     ).toBeVisible()
@@ -1626,13 +1685,9 @@ describe("ApiCheckModalHost", () => {
       screen.queryByRole("button", {
         name: "webAiApiCheck:modal.placeholders.tags",
       }),
-    ).toBeNull()
+    ).not.toBeNull()
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.optionalProfileFields.title",
-      }),
-    )
+    await expandOptionalSaveFields(user)
 
     await user.click(
       await screen.findByRole("button", {
@@ -1709,7 +1764,8 @@ describe("ApiCheckModalHost", () => {
     const optionalSaveFieldsTrigger = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.optionalProfileFields.title",
     })
-    await user.click(optionalSaveFieldsTrigger)
+    if (optionalSaveFieldsTrigger.getAttribute("aria-expanded") === "false")
+      await user.click(optionalSaveFieldsTrigger)
     await user.click(
       await screen.findByRole("button", {
         name: "webAiApiCheck:modal.placeholders.tags",
@@ -1744,11 +1800,7 @@ describe("ApiCheckModalHost", () => {
       })
     })
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.optionalProfileFields.title",
-      }),
-    )
+    await expandOptionalSaveFields(user)
     await user.click(
       await screen.findByRole("button", {
         name: "webAiApiCheck:modal.placeholders.tags",
@@ -1765,11 +1817,7 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.optionalProfileFields.title",
-      }),
-    )
+    await expandOptionalSaveFields(user)
     await user.click(
       await screen.findByRole("button", {
         name: "webAiApiCheck:modal.placeholders.tags",
@@ -1818,11 +1866,7 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.optionalProfileFields.title",
-      }),
-    )
+    await expandOptionalSaveFields(user)
     await user.click(
       await screen.findByRole("button", {
         name: "webAiApiCheck:modal.placeholders.tags",
@@ -1852,11 +1896,7 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.optionalProfileFields.title",
-      }),
-    )
+    await expandOptionalSaveFields(user)
     await user.click(
       await screen.findByRole("button", {
         name: "webAiApiCheck:modal.placeholders.tags",
@@ -1918,11 +1958,7 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.optionalProfileFields.title",
-      }),
-    )
+    await expandOptionalSaveFields(user)
     await user.click(
       await screen.findByRole("button", {
         name: "webAiApiCheck:modal.placeholders.tags",
@@ -1976,11 +2012,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(await screen.findByPlaceholderText("sk-..."))
     await user.paste("sk-test-secret-fixture")
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.optionalProfileFields.title",
-      }),
-    )
+    await expandOptionalSaveFields(user)
     fireEvent.change(
       await screen.findByLabelText("webAiApiCheck:modal.fields.expiresAt"),
       { target: { value: "2026-02-31" } },
@@ -2013,7 +2045,8 @@ describe("ApiCheckModalHost", () => {
     const optionalSaveFieldsTrigger = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.optionalProfileFields.title",
     })
-    await user.click(optionalSaveFieldsTrigger)
+    if (optionalSaveFieldsTrigger.getAttribute("aria-expanded") === "false")
+      await user.click(optionalSaveFieldsTrigger)
 
     await user.click(
       await screen.findByRole("button", {
@@ -2385,7 +2418,7 @@ describe("ApiCheckModalHost", () => {
       }),
     )
     expect(
-      await within(probeCard).findByText(
+      await within(getVerificationHeader(probeCard)).findByText(
         "webAiApiCheck:modal.errors.runProbeFailed",
       ),
     ).toBeInTheDocument()
@@ -2405,7 +2438,7 @@ describe("ApiCheckModalHost", () => {
         await testI18n.changeLanguage("zh-CN")
       })
       expect(
-        within(probeCard).getByText(
+        within(getVerificationHeader(probeCard)).getByText(
           testI18n.t("webAiApiCheck:modal.errors.runProbeFailed"),
         ),
       ).toBeVisible()
@@ -2487,23 +2520,18 @@ describe("ApiCheckModalHost", () => {
   })
 
   it("shows validation error instead of running a probe without credentials", async () => {
-    const user = userEvent.setup()
-
-    await openModal()
-
-    const probeCard = await screen.findByTestId(
-      getWebAiApiCheckProbeTestId("text-generation"),
-    )
-
-    await user.click(
-      within(probeCard).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.runOne",
+    const { result } = renderHook(useApiCheckModalViewModel)
+    act(() =>
+      dispatchOpenApiCheckModal({
+        sourceText: "",
+        pageUrl: "https://example.com",
+        trigger: "contextMenu",
       }),
     )
-
-    expect(
-      await screen.findByText("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
-    ).toBeInTheDocument()
+    await act(async () => result.current.actions.runProbe("text-generation"))
+    expect(result.current.view.validationError).toBe(
+      "webAiApiCheck:modal.errors.missingBaseUrlOrKey",
+    )
     expect(
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
     ).toHaveLength(0)
@@ -2958,7 +2986,9 @@ describe("ApiCheckModalHost", () => {
       }),
     )
 
-    expect(await within(probeCard).findByText("Probe OK")).toBeInTheDocument()
+    expect(
+      await within(getVerificationHeader(probeCard)).findByText("Probe OK"),
+    ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.close" }),

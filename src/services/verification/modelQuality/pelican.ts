@@ -13,6 +13,9 @@ import {
   createAgentTestInstructions,
   type AgentTestTask,
 } from "~/services/verification/agentTest/instructions"
+import type { VerificationGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+import { createSafeGenerationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
 import { runProbeGeneration } from "~/services/verification/aiApiVerification/probes/probeGeneration"
 import { createModel } from "~/services/verification/aiApiVerification/providers"
 import {
@@ -67,6 +70,9 @@ export type PelicanSvgAnalysis = {
 
 export type PelicanTestResult = {
   runAt: number
+  /** Artifact generation does not establish that the accompanying response completed. */
+  responseComplete?: boolean
+  metrics?: VerificationGenerationMetrics[]
   latencyMs: number
   text: string
   svg: string | null
@@ -91,6 +97,7 @@ export type RunPelicanTestParams = {
   executionMode?: PelicanExecutionMode
   /** Overrides the built-in drawing prompt when non-blank. */
   prompt?: string
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
 
@@ -232,6 +239,10 @@ export async function runPelicanTest(
               },
             }
           : {}),
+        onProgress: createSafeGenerationProgressCallback(params.onProgress, [
+          params.apiKey,
+          ...Object.values(params.requestHeaders ?? {}),
+        ]),
         abortSignal: params.abortSignal,
         maxRetries: 0,
       },
@@ -248,8 +259,10 @@ export async function runPelicanTest(
 
     return {
       runAt,
+      responseComplete: result.finishReason === "stop",
       latencyMs: Math.max(0, Math.round(nowMs() - startedAt)),
       text,
+      metrics: result.metrics,
       svg,
       analysis: analyzePelicanSvg(svg),
       ...(environment

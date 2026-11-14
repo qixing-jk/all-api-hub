@@ -17,7 +17,7 @@ export const VERIFICATION_HISTORY_KINDS = {
 export type VerificationHistoryKind =
   (typeof VERIFICATION_HISTORY_KINDS)[keyof typeof VERIFICATION_HISTORY_KINDS]
 
-/** Distinguish restored outcomes from current evidence without permanent explanatory copy. */
+/** Distinguish restored outcomes and disclose which evidence was saved. */
 export function VerificationHistoryBadge({
   label,
   kind,
@@ -47,6 +47,18 @@ export function VerificationHistoryBadge({
       "verifyDialog.history.storage.needle",
     ),
   }[kind]
+  const modeLabel = mode ? getApiVerificationModeLabel(t, mode) : null
+  const modeContent = modeLabel ? (
+    <>
+      <span aria-hidden="true" className="opacity-40">
+        ·
+      </span>
+      <span className="font-normal">{modeLabel}</span>
+    </>
+  ) : null
+  const latencyText =
+    latencyMs != null && latencyMs > 0 ? formatLatency(latencyMs) : null
+
   return (
     <Tooltip
       content={explanation}
@@ -59,23 +71,19 @@ export function VerificationHistoryBadge({
     >
       <button
         type="button"
-        className="focus-visible:ring-ring inline-flex rounded-full outline-none focus-visible:ring-2"
+        className="inline-flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Badge variant="secondary" size="sm" className={className}>
           <span>{previousResult}</span>
-          {latencyMs != null && latencyMs > 0 ? (
-            <span className="font-normal">{formatLatency(latencyMs)}</span>
-          ) : null}
-          {mode ? (
+          {latencyText ? (
             <>
               <span aria-hidden="true" className="opacity-40">
                 ·
               </span>
-              <span className="font-normal">
-                {getApiVerificationModeLabel(t, mode)}
-              </span>
+              <span className="font-normal tabular-nums">{latencyText}</span>
             </>
           ) : null}
+          {modeContent}
         </Badge>
       </button>
     </Tooltip>

@@ -1,5 +1,7 @@
 import { jsonSchema, tool } from "ai"
 
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
 import {
@@ -32,6 +34,7 @@ type RunToolCallingProbeParams = {
   modelId: string
   mode?: ApiVerificationMode
   probePromptOverrides?: ApiVerificationProbePromptOverrides
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
 
@@ -101,6 +104,7 @@ export async function runToolCallingProbe(
         prompt,
         tools: { [VERIFY_TOOL_NAME]: verifyTool },
         toolChoice: "required",
+        onProgress: params.onProgress,
         abortSignal: params.abortSignal,
       },
       mode,

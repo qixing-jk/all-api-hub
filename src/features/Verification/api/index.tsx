@@ -1,49 +1,24 @@
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/components/Tooltip"
-import {
-  ActionGroup,
-  Alert,
-  Button,
-  BUTTON_LOADING_BEHAVIORS,
-  Input,
-  SearchableSelect,
-} from "~/components/ui"
+import { ActionGroup, Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { getVerificationProbeSummary } from "~/features/Verification/api/probeSummary"
-import { VERIFICATION_SOURCE_KINDS } from "~/features/Verification/api/types"
 import type { VerifyApiDialogProps } from "~/features/Verification/api/types"
+import { VERIFICATION_SOURCE_KINDS } from "~/features/Verification/api/types"
 import { useVerifyApiDialogViewModel } from "~/features/Verification/api/useVerifyApiDialogViewModel"
 import {
-  VerificationConfigSection,
   VerificationDialogHeader,
   VerificationSourceSubtitle,
-  VerificationTestSection,
-} from "~/features/Verification/api/VerificationLayout"
-import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
+} from "~/features/Verification/api/VerificationDialogHeader"
+import { VerificationTestSection } from "~/features/Verification/api/VerificationLayout"
 import { VerificationProbeRow } from "~/features/Verification/api/VerificationProbeRow"
-import {
-  VerificationRequestProfileEnhancement,
-  VerificationRequestProfileHint,
-  VerificationRequestProfileSelect,
-} from "~/features/Verification/api/VerificationRequestProfile"
+import { VerificationRunAllButton } from "~/features/Verification/api/VerificationRunAllButton"
 import { VerificationToolsPanel } from "~/features/Verification/api/VerificationToolsPanel"
-import { cn } from "~/lib/utils"
-import {
-  getInventorySecretAvailability,
-  INVENTORY_SECRET_AVAILABILITIES,
-} from "~/services/apiAdapters/contracts/inventorySecret"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
-import {
-  API_TYPES,
-  API_VERIFICATION_REQUEST_PROFILES,
-  MODEL_TEST_MODALITIES,
-} from "~/services/verification/aiApiVerification"
-import {
-  getApiVerificationApiTypeLabel,
-  getApiVerificationProbeLabel,
-} from "~/services/verification/aiApiVerification/i18n"
+import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification"
+import { getApiVerificationProbeLabel } from "~/services/verification/aiApiVerification/i18n"
+
+import { AccountVerificationConfiguration } from "./AccountVerificationConfiguration"
 
 /**
  * Modal dialog that runs API verification for a selected runtime key + model.
@@ -61,41 +36,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   } = props
   const { t } = useTranslation("aiApiVerification")
 
-  const {
-    isRunning,
-    isLoadingRuntimeKeys,
-    accountRuntimeKeys,
-    selectedRuntimeKeyId,
-    setSelectedRuntimeKeyId,
-    apiType,
-    setApiType,
-    modelId,
-    setModelId,
-    verificationMode,
-    setVerificationMode,
-    requestProfile,
-    showRequestProfileHint,
-    requestProfileEnhanced,
-    setRequestProfileEnhanced,
-    setRequestProfile,
-    historyTarget,
-    probes,
-    persistedSummary,
-    selectedRuntimeKey,
-    compatibleRuntimeKeyIds,
-    selectedRuntimeKeyIsCompatible,
-    runtimeKeyCompatibilityHint,
-    tokenModelHint,
-    canClose,
-    clearHistory,
-    canRunAll,
-    runAll,
-    stopRun,
-    stopProbe,
-    runSingleProbe,
-    modelModality,
-    tools,
-  } = useVerifyApiDialogViewModel({
+  const controller = useVerifyApiDialogViewModel({
     isOpen,
     account,
     initialModelId,
@@ -103,17 +44,90 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     initialSupportedEndpointTypes,
     modelEnableGroups,
   })
+  const {
+    isRunning,
+    isLoadingRuntimeKeys,
+    runtimeKeysLoadFailed,
+    reloadRuntimeKeys,
+    modelId,
+    setModelId,
+    historyTarget,
+    probes,
+    persistedSummary,
+    selectedRuntimeKey,
+    selectedRuntimeKeyIsCompatible,
+    runtimeKeyCompatibilityHint,
+    tokenModelHint,
+    canClose,
+    clearHistory,
+    canRunAll,
+    concurrency,
+    runAll,
+    stopRun,
+    stopProbe,
+    runSingleProbe,
+    tools,
+  } = controller
 
-  const runtimeKeyPlaceholder = isLoadingRuntimeKeys
-    ? t("verifyDialog.loadingRuntimeKeysHint")
-    : t("verifyDialog.meta.runtimeKeyPlaceholder")
-  const keyResources = getSiteTypeCapabilities(account.siteType).account
-    ?.keyResourceManagement
-  const usesAssociatedCredential =
-    keyResources &&
-    getInventorySecretAvailability(keyResources) !==
-      INVENTORY_SECRET_AVAILABILITIES.Recoverable &&
-    !selectedRuntimeKey?.secret.trim()
+  const modelsProbe = probes.find(
+    (probe) => probe.definition.id === API_VERIFICATION_PROBE_IDS.Models,
+  )
+  const probeModels = useMemo(() => {
+    if (
+      modelsProbe?.result?.output &&
+      typeof modelsProbe.result.output === "object" &&
+      "modelIdsPreview" in modelsProbe.result.output &&
+      Array.isArray(modelsProbe.result.output.modelIdsPreview)
+    ) {
+      return modelsProbe.result.output.modelIdsPreview.filter(
+        (id): id is string => typeof id === "string",
+      )
+    }
+    return []
+  }, [modelsProbe?.result?.output])
+
+  const suggestedModelOptions = useMemo(() => {
+    const set = new Set<string>()
+    const options: Array<{ value: string; label: string; group?: string }> = []
+
+    const addModel = (id: string | undefined, group?: string) => {
+      const trimmed = id?.trim()
+      if (!trimmed || set.has(trimmed)) return
+      set.add(trimmed)
+      options.push({ value: trimmed, label: trimmed, group })
+    }
+
+    if (modelId) addModel(modelId)
+    if (initialModelId) addModel(initialModelId)
+    if (tokenModelHint) addModel(tokenModelHint)
+
+    for (const id of selectedRuntimeKey?.modelAccess.suggestedModelIds ?? []) {
+      addModel(
+        id,
+        t("verifyDialog.modelSelector.suggestedModels", {
+          defaultValue: "Suggested Models",
+        }),
+      )
+    }
+
+    for (const id of probeModels) {
+      addModel(
+        id,
+        t("verifyDialog.modelSelector.discoveredModels", {
+          defaultValue: "Discovered Models",
+        }),
+      )
+    }
+
+    return options
+  }, [
+    modelId,
+    initialModelId,
+    tokenModelHint,
+    selectedRuntimeKey?.modelAccess.suggestedModelIds,
+    probeModels,
+    t,
+  ])
 
   const footer = (
     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -125,22 +139,21 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         ) : null}
       </div>
       <ActionGroup className="ml-auto">
-        <Button variant="secondary" onClick={onClose} disabled={!canClose}>
+        <Button
+          variant="secondary"
+          onClick={onClose}
+          disabled={!canClose}
+          className="hidden min-[52rem]:inline-flex"
+        >
           {t("verifyDialog.actions.close")}
         </Button>
-        <Tooltip anchorAsChild content={t("verifyDialog.actions.runAllHint")}>
-          <Button
-            variant={isRunning ? "secondary" : "default"}
-            onClick={isRunning ? stopRun : runAll}
-            disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
-            loading={isRunning}
-            loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
-          >
-            {isRunning
-              ? t("verifyDialog.actions.stop")
-              : t("verifyDialog.actions.runAll")}
-          </Button>
-        </Tooltip>
+        <VerificationRunAllButton
+          isRunning={isRunning}
+          disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
+          concurrency={concurrency}
+          onRun={runAll}
+          onStop={stopRun}
+        />
       </ActionGroup>
     </div>
   )
@@ -165,159 +178,47 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       }
       footer={footer}
       size="xl"
-      panelClassName="max-w-6xl [&>[data-slot=modal-body]]:py-density-4"
+      panelClassName="verification-dialog max-w-[100rem] [&>[data-slot=modal-body]]:p-0"
       closeOnEsc={canClose}
       closeOnBackdropClick={canClose}
     >
       <div className="space-y-density-3 sm:space-y-density-4">
-        <div className="space-y-density-3">
-          <VerificationConfigSection>
-            <div
-              className={cn(
-                "gap-y-density-2 sm:gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2",
-                modelModality === MODEL_TEST_MODALITIES.Text
-                  ? "lg:grid-cols-[1fr_1fr_1.2fr_0.8fr_1.4fr]"
-                  : "lg:grid-cols-[1fr_1fr_1.2fr_1.4fr]",
-              )}
-            >
-              <div>
-                <VerificationRequestProfileSelect
-                  value={requestProfile}
-                  apiType={apiType}
-                  onChange={setRequestProfile}
-                  disabled={!canClose}
-                />
-              </div>
-
-              <div className="space-y-density-1-5">
-                <div className="text-muted-foreground text-xs">
-                  {t("verifyDialog.meta.apiType")}
-                </div>
-                <SearchableSelect
-                  options={Object.values(API_TYPES).map((value) => ({
-                    value,
-                    label: getApiVerificationApiTypeLabel(t, value),
-                  }))}
-                  aria-label={t("verifyDialog.meta.apiType")}
-                  value={apiType}
-                  onChange={(value) =>
-                    setApiType(value as ApiVerificationApiType)
-                  }
-                  disabled={!canClose}
-                  placeholder={t("verifyDialog.meta.apiTypePlaceholder")}
-                />
-              </div>
-
-              <div className="space-y-density-1-5">
-                <div className="text-muted-foreground text-xs">
-                  {t("verifyDialog.meta.runtimeKey")}
-                </div>
-                <SearchableSelect
-                  options={[
-                    {
-                      value: "",
-                      label: runtimeKeyPlaceholder,
-                    },
-                    ...accountRuntimeKeys.map((runtimeKey) => {
-                      const isCompatible = compatibleRuntimeKeyIds.has(
-                        runtimeKey.id,
-                      )
-                      return {
-                        value: runtimeKey.id,
-                        label: runtimeKey.label,
-                        disabled: !isCompatible,
-                        suffix: isCompatible ? undefined : (
-                          <span className="text-faint-foreground text-xs">
-                            {t("verifyDialog.meta.runtimeKeyIncompatible")}
-                          </span>
-                        ),
-                      }
-                    }),
-                  ]}
-                  aria-label={t("verifyDialog.meta.runtimeKey")}
-                  value={isLoadingRuntimeKeys ? "" : selectedRuntimeKeyId}
-                  onChange={setSelectedRuntimeKeyId}
-                  loading={isLoadingRuntimeKeys}
-                  disabled={isLoadingRuntimeKeys}
-                  placeholder={runtimeKeyPlaceholder}
-                />
-                {runtimeKeyCompatibilityHint || usesAssociatedCredential ? (
-                  <div className="space-y-density-1-5">
-                    {runtimeKeyCompatibilityHint && (
-                      <div
-                        className="text-destructive-text text-xs"
-                        role="alert"
-                      >
-                        {runtimeKeyCompatibilityHint}
-                      </div>
-                    )}
-                    {usesAssociatedCredential && (
-                      <p className="text-muted-foreground text-xs" role="note">
-                        {t("verifyDialog.associatedCredentialHint")}
-                      </p>
-                    )}
-                    {onManageModelKey ? (
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="sm"
-                        className="h-auto min-h-0 px-0 py-0 text-xs"
-                        onClick={onManageModelKey}
-                      >
-                        {t("verifyDialog.actions.manageModelKey")}
-                      </Button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-
-              {modelModality === MODEL_TEST_MODALITIES.Text && (
-                <VerificationModeSelect
-                  value={verificationMode}
-                  onChange={setVerificationMode}
-                  disabled={!canClose}
-                />
-              )}
-              <div className="space-y-density-1-5 sm:col-span-2 lg:col-span-1">
-                <div className="text-muted-foreground text-xs">
-                  {t("verifyDialog.meta.model")}
-                </div>
-                <Input
-                  className="bg-card"
-                  aria-label={t("verifyDialog.meta.model")}
-                  value={modelId}
-                  onChange={(e) => setModelId(e.target.value)}
-                  placeholder={t("verifyDialog.meta.modelPlaceholder")}
-                  disabled={isRunning || tools.isRunning}
-                />
-              </div>
-            </div>
-            {requestProfile !== API_VERIFICATION_REQUEST_PROFILES.Default && (
-              <div className="mt-density-3">
-                <VerificationRequestProfileEnhancement
-                  value={requestProfileEnhanced}
-                  onChange={setRequestProfileEnhanced}
-                  disabled={!canClose}
-                />
-              </div>
-            )}
-          </VerificationConfigSection>
-          {showRequestProfileHint && (
-            <VerificationRequestProfileHint profile={requestProfile} />
-          )}
-
-          {(modelModality === MODEL_TEST_MODALITIES.Image ||
-            modelModality === MODEL_TEST_MODALITIES.Video) && (
-            <Alert variant="info">
-              <p>
-                {modelModality === MODEL_TEST_MODALITIES.Image
-                  ? t("verifyDialog.modalityNotice.image")
-                  : t("verifyDialog.modalityNotice.video")}
-              </p>
-            </Alert>
-          )}
-        </div>
         <VerificationTestSection
+          configurationWarning={
+            isLoadingRuntimeKeys ? undefined : runtimeKeysLoadFailed ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span>{t("verifyDialog.errors.loadRuntimeKeysFailed")}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void reloadRuntimeKeys()}
+                  disabled={!canClose}
+                >
+                  {t("verifyDialog.actions.retry")}
+                </Button>
+              </div>
+            ) : (
+              (runtimeKeyCompatibilityHint ??
+              (!selectedRuntimeKey
+                ? t("verifyDialog.requiresRuntimeKey")
+                : undefined))
+            )
+          }
+          running={isRunning}
+          model={{
+            modelId,
+            onModelChange: setModelId,
+            options: suggestedModelOptions,
+            disabled: !canClose || isLoadingRuntimeKeys,
+          }}
+          configuration={
+            <AccountVerificationConfiguration
+              controller={controller}
+              account={account}
+              onManageModelKey={onManageModelKey}
+            />
+          }
           tools={<VerificationToolsPanel controller={tools} />}
         >
           {probes.map((probe) => {
@@ -335,6 +236,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                 data-testid={`verify-probe-${probe.definition.id}`}
               >
                 <VerificationProbeRow
+                  progress={probe.progress}
+                  startedAt={probe.startedAt}
                   historical={probe.historical}
                   isRunning={probe.isRunning}
                   controller={tools}

@@ -33,6 +33,22 @@ function answer(text: string, finishReason = "stop") {
 }
 
 describe("question and answer testing", () => {
+  it("returns reported token usage and SDK performance for a completed answer", async () => {
+    server.use(
+      http.post(`${baseUrl}/v1/chat/completions`, () =>
+        answer("FINAL_ANSWER: 42"),
+      ),
+    )
+    const result = await runQuestionAnswerTest(params)
+    expect(result.metrics).toEqual([
+      expect.objectContaining({
+        inputTokens: 12,
+        outputTokens: 8,
+        responseTimeMs: expect.any(Number),
+      }),
+    ])
+    expect(result.metrics?.[0]?.timeToFirstOutputMs).toBeUndefined()
+  })
   afterEach(() => vi.unstubAllEnvs())
   it("uses the selected client identity and custom headers for question requests", async () => {
     vi.stubEnv("BROWSER", "firefox")

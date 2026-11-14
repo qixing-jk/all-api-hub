@@ -1,3 +1,4 @@
+import { sanitizeGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
 import { isVerificationRequestProfile } from "~/services/verification/aiApiVerification/requestProfiles"
 import {
   API_TYPES,
@@ -257,6 +258,7 @@ export function toPersistedProbeSummary(
     ...(result.mode ? { mode: result.mode } : {}),
     ...sanitizeVerificationRequestProfile(result),
     status: result.status,
+    metrics: sanitizeGenerationMetrics(result.metrics),
     latencyMs:
       typeof result.latencyMs === "number" && Number.isFinite(result.latencyMs)
         ? Math.max(0, Math.round(result.latencyMs))

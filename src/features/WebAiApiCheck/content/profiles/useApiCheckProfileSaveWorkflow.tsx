@@ -8,6 +8,7 @@ import {
   buildApiCheckAnalyticsInsights,
   contentApiCheckAnalyticsScope,
 } from "~/features/WebAiApiCheck/content/modal/apiCheckModalAnalytics"
+import { API_CHECK_VALIDATION_ERRORS } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import type { ApiCheckValidationError } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { type useApiCheckProbeRunner } from "~/features/WebAiApiCheck/content/probes/useApiCheckProbeRunner"
 import { normalizeApiCheckSourceUrl } from "~/features/WebAiApiCheck/content/profiles/apiCheckSourceUrl"
@@ -129,7 +130,7 @@ export function useApiCheckProfileSaveWorkflow({
     const trimmedApiKey = apiKey.trim()
 
     if (!trimmedBaseUrl || !trimmedApiKey) {
-      setValidationError("missing-credentials")
+      setValidationError(API_CHECK_VALIDATION_ERRORS.MissingCredentials)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         insights: buildApiCheckAnalyticsInsights(apiType, trigger),
@@ -163,7 +164,7 @@ export function useApiCheckProfileSaveWorkflow({
 
         toast.success(
           (toastInstance) => (
-            <div className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
+            <div className="flex min-w-0 items-center gap-x-2 gap-y-density-2">
               <span className="min-w-0 flex-1 truncate">
                 {t("webAiApiCheck:modal.messages.savedToProfiles", {
                   name: typeof response.name === "string" ? response.name : "",
@@ -174,7 +175,7 @@ export function useApiCheckProfileSaveWorkflow({
                 data-testid={
                   WEB_AI_API_CHECK_TEST_IDS.openApiProfilesToastButton
                 }
-                className="bg-primary text-primary-foreground hover:bg-primary/90 py-density-1 min-h-(--density-control-xs) shrink-0 rounded-md px-2 text-xs font-medium"
+                className="min-h-(--density-control-xs) shrink-0 rounded-md bg-primary px-2 py-density-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
                 onClick={() => {
                   void sendRuntimeMessage({
                     action: RuntimeActionIds.OpenSettingsApiCredentialProfiles,

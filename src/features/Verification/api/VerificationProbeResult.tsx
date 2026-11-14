@@ -1,48 +1,49 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useContext, type ComponentProps, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CollapsibleSection } from "~/components/ui"
+import { Heading6 } from "~/components/ui"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification/types"
 
 import { safeJsonStringify } from "./utils"
+import { VerificationGenerationOutput } from "./VerificationGenerationOutput"
 import { VerificationMediaPreview } from "./VerificationMediaPreview"
 import { VerificationOutputText } from "./VerificationOutputText"
 import { VerificationResultCard } from "./VerificationResultCard"
+import { VerificationDetailContext } from "./VerificationSelectionContext"
 
 export type ProbeDetailsResult = Pick<
   ApiVerificationProbeResult,
-  "input" | "output" | "media" | "summary"
+  "input" | "output" | "media" | "summary" | "metrics" | "generation"
+> & {
+  status?: ApiVerificationProbeResult["status"]
+}
+export type ProbeGenerationState = Pick<
+  ComponentProps<typeof VerificationGenerationOutput>,
+  "progress" | "running" | "startedAt" | "partial"
 >
 
-/** Own result disclosure and generic response evidence independently of test selection. */
+/** Keep conclusions visible alongside the ordered process and optional diagnostics. */
 export function VerificationProbeResult({
   result,
   resultSummary,
   detailsContent,
+  generation,
   status,
   selected,
-  defaultDetailsOpen = true,
+  question,
 }: {
   result?: ProbeDetailsResult | null
   resultSummary?: ReactNode
   detailsContent?: ReactNode
+  generation?: ProbeGenerationState
   status?: ReactNode
   selected: boolean
-  defaultDetailsOpen?: boolean
+  question?: string
 }) {
   const { t } = useTranslation("aiApiVerification")
-  const hasResult = Boolean(result || detailsContent || resultSummary)
-  const hasDetails = Boolean(
-    detailsContent ||
-      (result &&
-        (result.input !== undefined ||
-          result.output !== undefined ||
-          result.media)),
-  )
-  const [showResult, setShowResult] = useState(hasDetails && defaultDetailsOpen)
-  useEffect(() => {
-    if (hasDetails && defaultDetailsOpen) setShowResult(true)
-  }, [result, hasDetails, defaultDetailsOpen])
+  const detail = useContext(VerificationDetailContext)
+  if (!(result || detailsContent || generation || resultSummary || question))
+    return null
   const output = result?.output
   const text =
     typeof output === "string"
@@ -52,62 +53,61 @@ export function VerificationProbeResult({
           "text" in output &&
           typeof output.text === "string"
         ? output.text
-        : null
+        : undefined
+  const hasMedia = Boolean(
+    result?.media || (output && typeof output === "object" && "url" in output),
+  )
+  const requestDetails =
+    result?.input !== undefined || output !== undefined ? (
+      <>
+        {result?.input !== undefined ? (
+          <section className="space-y-2">
+            <Heading6 className="text-xs text-muted-foreground">
+              {t("verifyDialog.details.input")}
+            </Heading6>
+            <VerificationOutputText text={safeJsonStringify(result.input)} />
+          </section>
+        ) : null}
+        {output !== undefined ? (
+          <section className="space-y-2">
+            <Heading6 className="text-xs text-muted-foreground">
+              {t("verifyDialog.details.output")}
+            </Heading6>
+            <VerificationOutputText text={safeJsonStringify(output)} />
+          </section>
+        ) : null}
+      </>
+    ) : undefined
+  const hasEvidence = Boolean(
+    question || detailsContent || generation || requestDetails || hasMedia,
+  )
+  const hasDetails = hasEvidence || Boolean(result?.metrics?.length)
   return (
-    <>
-      {hasResult ? (
-        <VerificationResultCard
-          bodyHidden={!showResult}
-          onToggle={hasDetails ? () => setShowResult(!showResult) : undefined}
-          status={status}
-          summary={
-            resultSummary ?? (!detailsContent ? result?.summary : undefined)
-          }
-        >
-          {hasDetails ? (
-            <div className="space-y-density-3">
-              {showResult
-                ? detailsContent ?? (
-                    <>
-                      <VerificationMediaPreview
-                        output={output}
-                        media={result?.media}
-                        active={selected}
-                      />
-                      {text !== null ? (
-                        <pre className="text-foreground bg-surface-subtle max-h-64 overflow-auto rounded-lg p-3 text-sm leading-relaxed break-words whitespace-pre-wrap">
-                          {text}
-                        </pre>
-                      ) : null}
-                      {result?.input !== undefined ? (
-                        <CollapsibleSection
-                          title={t("verifyDialog.details.input")}
-                          buttonClassName="px-0 py-2"
-                          panelClassName="bg-transparent rounded-none border-0 px-0"
-                        >
-                          <VerificationOutputText
-                            text={safeJsonStringify(result.input)}
-                          />
-                        </CollapsibleSection>
-                      ) : null}
-                      {output !== undefined ? (
-                        <CollapsibleSection
-                          title={t("verifyDialog.details.output")}
-                          buttonClassName="px-0 py-2"
-                          panelClassName="bg-transparent rounded-none border-0 px-0"
-                        >
-                          <VerificationOutputText
-                            text={safeJsonStringify(output)}
-                          />
-                        </CollapsibleSection>
-                      ) : null}
-                    </>
-                  )
-                : null}
-            </div>
-          ) : null}
-        </VerificationResultCard>
-      ) : null}
-    </>
+    <VerificationResultCard
+      bodyHidden={Boolean(detail?.headerTarget) && !hasEvidence}
+      status={status}
+      summary={resultSummary ?? (!detailsContent ? result?.summary : undefined)}
+    >
+      {hasDetails
+        ? (detailsContent ?? (
+            <VerificationGenerationOutput
+              {...generation}
+              progress={generation?.progress ?? result?.generation}
+              question={question}
+              text={generation?.running ? undefined : text}
+              metrics={result?.metrics}
+              requestDetails={requestDetails}
+            >
+              {hasMedia ? (
+                <VerificationMediaPreview
+                  output={output}
+                  media={result?.media}
+                  active={selected}
+                />
+              ) : null}
+            </VerificationGenerationOutput>
+          ))
+        : null}
+    </VerificationResultCard>
   )
 }

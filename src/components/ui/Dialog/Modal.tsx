@@ -4,17 +4,19 @@ import {
   useCallback,
   useLayoutEffect,
   useRef,
+  useState,
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
 } from "react"
 
+import { TooltipPortalContext } from "~/components/Tooltip"
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
 
 import { ToasterPortalHost } from "../../toast/ToasterPortal"
-import { FloatingLayerProvider } from "../floating-layer"
+import { FloatingLayerProvider, hasOpenFloatingLayer } from "../floating-layer"
 
 type Size = "sm" | "md" | "lg" | "xl"
 
@@ -50,13 +52,6 @@ const sizeMap: Record<Size, string> = {
   lg: "max-w-2xl",
   xl: "max-w-5xl",
 }
-
-const openFloatingLayerSelector = [
-  '[data-slot="select-content"][data-state="open"]',
-  '[data-slot="popover-content"][data-state="open"]',
-  '[data-slot="combobox-content"][data-open]',
-  '[data-tooltip-open="true"]',
-].join(",")
 
 type FocusSession = {
   generation: number
@@ -190,17 +185,6 @@ const scheduleDeferredFocusLeaseSettlement = (session: FocusSession) => {
 }
 
 /**
- * Detects nested select, popover, combobox, or interactive tooltip layers that should handle Escape
- * before the legacy Modal treats it as a dialog dismissal request.
- */
-function hasOpenFloatingLayer() {
-  return (
-    typeof document !== "undefined" &&
-    document.querySelector(openFloatingLayerSelector) !== null
-  )
-}
-
-/**
  * Modal renders a Radix/shadcn-compatible dialog with the legacy slot API.
  * @deprecated Use the shadcn-style primitives from `~/components/ui/dialog`
  * for new dialogs. Keep this wrapper only for existing dialogs that still
@@ -228,6 +212,8 @@ export function Modal({
   onCloseComplete,
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const [tooltipPortalContainer, setTooltipPortalContainer] =
+    useState<HTMLDivElement | null>(null)
   const backdropPointerDownTargetRef = useRef<HTMLDivElement | null>(null)
   const focusGenerationRef = useRef(0)
   const activeFocusSessionRef = useRef<FocusSession | null>(null)
@@ -355,6 +341,12 @@ export function Modal({
     if (!closeOnEsc) return false
     if (hasOpenFloatingLayer()) return false
     const activeElement = document.activeElement
+    // Inline panes can own Escape while focus is inside them, like floating layers.
+    if (
+      activeElement instanceof Element &&
+      activeElement.closest("[data-escape-boundary]")
+    )
+      return false
     return (
       activeElement instanceof Node &&
       contentRef.current?.contains(activeElement) === true
@@ -448,6 +440,7 @@ export function Modal({
               onClick={handleBackdropClick}
             >
               <div
+                ref={setTooltipPortalContainer}
                 className={panelBaseClass}
                 data-slot="modal-panel"
                 data-testid={panelTestId}
@@ -479,7 +472,10 @@ export function Modal({
                   data-slot="modal-body"
                   className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
                 >
-                  {children}
+                  {/* Keep hints outside body scrolling and sticky pane layers. */}
+                  <TooltipPortalContext.Provider value={tooltipPortalContainer}>
+                    {children}
+                  </TooltipPortalContext.Provider>
                 </div>
 
                 {footer && (

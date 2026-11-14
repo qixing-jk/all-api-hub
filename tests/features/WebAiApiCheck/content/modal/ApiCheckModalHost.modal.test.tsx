@@ -50,7 +50,9 @@ describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
 
   it("keeps model actions inside the dropdown rather than the footer", async () => {
-    await openModal()
+    await openModal({
+      sourceText: "https://proxy.example.com/api sk-test-complete-fixture",
+    })
     expect(
       screen.queryByRole("button", {
         name: "webAiApiCheck:modal.actions.fetchModels",
@@ -117,10 +119,14 @@ describe("ApiCheckModalHost", () => {
   })
 
   it("associates visible field labels with modal controls", async () => {
-    await openModal()
+    await openModal({
+      sourceText: "https://proxy.example.com/api sk-test-complete-fixture",
+    })
 
     expect(
-      await screen.findByLabelText("webAiApiCheck:modal.sourceText.label"),
+      await screen.findByLabelText(
+        "aiApiVerification:verifyDialog.workspace.source",
+      ),
     ).toBeVisible()
     expect(
       screen.getByLabelText("webAiApiCheck:modal.fields.baseUrl"),
@@ -645,7 +651,7 @@ describe("ApiCheckModalHost", () => {
       "webAiApiCheck:modal.fields.apiKey",
     ) as HTMLInputElement
     const sourceTextInput = screen.getByLabelText(
-      "webAiApiCheck:modal.sourceText.label",
+      "aiApiVerification:verifyDialog.workspace.source",
     )
 
     expect(baseUrlInput.value).toBe("https://proxy.example.com/api")
@@ -689,7 +695,7 @@ describe("ApiCheckModalHost", () => {
       "webAiApiCheck:modal.fields.apiKey",
     ) as HTMLInputElement
     const sourceTextInput = screen.getByLabelText(
-      "webAiApiCheck:modal.sourceText.label",
+      "aiApiVerification:verifyDialog.workspace.source",
     )
 
     expect(baseUrlInput.value).toBe("https://proxy.example.com/api")

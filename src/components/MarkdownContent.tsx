@@ -1,6 +1,8 @@
-import DOMPurify from "dompurify"
-import { marked } from "marked"
-import { useLayoutEffect, useRef, type ComponentPropsWithoutRef } from "react"
+import { useState, type ComponentPropsWithoutRef } from "react"
+import rehypeRaw from "rehype-raw"
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
+import remarkBreaks from "remark-breaks"
+import { defaultRemarkPlugins, Streamdown, type Components } from "streamdown"
 
 import { cn } from "~/lib/utils"
 
@@ -10,80 +12,105 @@ type MarkdownContentProps = Omit<
 > & {
   content: string
   breaks?: boolean
+  streaming?: boolean
 }
 
-/** Distinguish repeated summaries while retaining identity across text updates. */
-function getDisclosures(root: ParentNode) {
-  const occurrences = new Map<string, number>()
-  return Array.from(root.querySelectorAll("details"), (section) => {
-    const summary = section.querySelector(":scope > summary")
-    const text = summary?.textContent ?? ""
-    const occurrence = occurrences.get(text) ?? 0
-    occurrences.set(text, occurrence + 1)
-    return { section, summary, key: JSON.stringify([text, occurrence]) }
-  })
+// External content retains semantics; appearance remains owned by the reader.
+const authoredAppearance = new Set([
+  "style",
+  "className",
+  "id",
+  "size",
+  "face",
+  "color",
+])
+const schema = {
+  ...defaultSchema,
+  attributes: Object.fromEntries(
+    Object.entries(defaultSchema.attributes ?? {}).map(([tag, attributes]) => [
+      tag,
+      attributes.filter(
+        (attribute) =>
+          !authoredAppearance.has(
+            typeof attribute === "string" ? attribute : attribute[0],
+          ),
+      ),
+    ]),
+  ),
+}
+const rehypePlugins = [rehypeRaw, [rehypeSanitize, schema]] as NonNullable<
+  ComponentPropsWithoutRef<typeof Streamdown>["rehypePlugins"]
+>
+const remarkPlugins = Object.values(defaultRemarkPlugins)
+const breakingRemarkPlugins = [...remarkPlugins, remarkBreaks]
+
+// Semantic elements preserve native disclosure state and project typography.
+const components: Components = {
+  a: ({ node: _node, ...props }) => (
+    <a {...props} target="_blank" rel="noopener noreferrer" />
+  ),
+  p: "p",
+  h1: "h1",
+  h2: "h2",
+  h3: "h3",
+  h4: "h4",
+  h5: "h5",
+  h6: "h6",
+  ul: "ul",
+  ol: "ol",
+  li: "li",
+  blockquote: "blockquote",
+  strong: "strong",
+  em: "em",
+  hr: "hr",
+  pre: "pre",
+  code: "code",
+  inlineCode: ({ node: _node, ...props }) => <code {...props} />,
+  table: "table",
+  thead: "thead",
+  tbody: "tbody",
+  tr: "tr",
+  th: "th",
+  td: "td",
 }
 
-/** Render content structure with application typography, preserving open disclosures. */
+/** Shared static and incremental Markdown with owned HTML, links and typography. */
 export function MarkdownContent({
   content,
   breaks = false,
+  streaming = false,
   className,
   ...props
 }: MarkdownContentProps) {
-  const previewRef = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    const preview = previewRef.current
-    if (!preview) return
-    const disclosures = getDisclosures(preview)
-    const openSections = new Map(
-      disclosures.map(({ section, key }) => [key, section.open]),
-    )
-    const active = document.activeElement
-    const focusedSummary =
-      active instanceof HTMLElement && preview.contains(active)
-        ? disclosures.find(
-            ({ summary }) => summary === active.closest("summary"),
-          )?.key
-        : null
-    const fragment = DOMPurify.sanitize(
-      marked.parse(content, { gfm: true, async: false, breaks }),
-      {
-        RETURN_DOM_FRAGMENT: true,
-        // Text content and semantic HTML survive; document styling belongs to us.
-        FORBID_ATTR: ["style", "class", "id", "size", "face", "color"],
-        FORBID_TAGS: ["font", "style", "link"],
-      },
-    )
-    fragment.querySelectorAll("a").forEach((link) => {
-      link.setAttribute("target", "_blank")
-      link.setAttribute("rel", "noopener noreferrer")
-    })
-    const nextDisclosures = getDisclosures(fragment)
-    nextDisclosures.forEach(({ section, key }) => {
-      if (openSections.has(key)) section.open = openSections.get(key)!
-    })
-    preview.replaceChildren(fragment)
-    if (focusedSummary) {
-      const summary = nextDisclosures.find(
-        ({ key }) => key === focusedSummary,
-      )?.summary
-      if (summary instanceof HTMLElement) summary.focus()
-    }
-  }, [content, breaks])
-
+  const [mode, setMode] = useState<"static" | "streaming">(
+    streaming ? "streaming" : "static",
+  )
+  // Static edits use one tree; once incremental rendering starts, keep its tree
+  // when the stream finishes so native disclosures and focus survive completion.
+  if (streaming && mode === "static") setMode("streaming")
   return (
     <div
       {...props}
-      ref={previewRef}
       className={cn(
         "app-markdown prose prose-sm max-w-none text-sm wrap-anywhere",
         "prose-headings:mt-density-4 prose-headings:mb-density-3 prose-headings:font-semibold",
-        "prose-p:my-density-2 prose-ul:my-density-2 prose-ol:my-density-2",
+        "prose-p:my-density-2 prose-ol:my-density-2 prose-ul:my-density-2",
         "prose-blockquote:my-density-3 prose-pre:my-density-3",
         "[&>:first-child]:mt-0 [&>:last-child]:mb-0",
         className,
       )}
-    />
+    >
+      <Streamdown
+        mode={mode}
+        parseIncompleteMarkdown={streaming}
+        isAnimating={streaming}
+        components={components}
+        rehypePlugins={rehypePlugins}
+        remarkPlugins={breaks ? breakingRemarkPlugins : remarkPlugins}
+        controls={false}
+      >
+        {content}
+      </Streamdown>
+    </div>
   )
 }

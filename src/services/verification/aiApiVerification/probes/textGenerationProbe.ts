@@ -1,3 +1,5 @@
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
 import {
@@ -30,6 +32,7 @@ type RunTextGenerationProbeParams = {
   modelId: string
   mode?: ApiVerificationMode
   probePromptOverrides?: ApiVerificationProbePromptOverrides
+  onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
 
@@ -67,6 +70,7 @@ export async function runTextGenerationProbe(
       {
         model,
         prompt,
+        onProgress: params.onProgress,
         abortSignal: params.abortSignal,
       },
       mode,

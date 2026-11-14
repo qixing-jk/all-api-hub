@@ -1,5 +1,7 @@
 import { APICallError, StreamProviderError } from "ai"
 
+import { createSafeGenerationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
+import type { VerificationProgressCallback } from "~/services/verification/aiApiVerification/generationProgress"
 import { runProbeGeneration } from "~/services/verification/aiApiVerification/probes/probeGeneration"
 import { createModel } from "~/services/verification/aiApiVerification/providers"
 import type { ApiVerificationMode } from "~/services/verification/aiApiVerification/types"
@@ -23,6 +25,7 @@ function streamErrorDetails(value: unknown) {
 export async function runContextGeneration(
   connection: Parameters<typeof createModel>[0],
   options: {
+    onProgress?: VerificationProgressCallback
     prompt: string
     maxOutputTokens: number
     abortSignal: AbortSignal
@@ -35,6 +38,10 @@ export async function runContextGeneration(
     return await runProbeGeneration(
       {
         ...options,
+        onProgress: createSafeGenerationProgressCallback(options.onProgress, [
+          connection.apiKey,
+          ...Object.values(connection.requestHeaders ?? {}),
+        ]),
         model: createModel({
           ...connection,
           onResponse: (response) => {

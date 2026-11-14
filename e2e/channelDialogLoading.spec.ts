@@ -254,9 +254,11 @@ for (const width of [1280, 420]) {
           .getByRole("button", { name: "Retry", exact: true }),
       ).toBeVisible()
       expect(
-        await dialog.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth + 1,
-        ),
+        await dialog
+          .getByTestId(CHANNEL_DIALOG_TEST_IDS.form)
+          .evaluate(
+            (element) => element.scrollWidth <= element.clientWidth + 1,
+          ),
       ).toBe(true)
       await page.screenshot({
         path: testInfo.outputPath("channel-opening-error.png"),
@@ -270,9 +272,11 @@ for (const width of [1280, 420]) {
         dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
       ).toBeVisible()
       expect(
-        await dialog.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth + 1,
-        ),
+        await dialog
+          .getByTestId(CHANNEL_DIALOG_TEST_IDS.form)
+          .evaluate(
+            (element) => element.scrollWidth <= element.clientWidth + 1,
+          ),
       ).toBe(true)
     } finally {
       release()

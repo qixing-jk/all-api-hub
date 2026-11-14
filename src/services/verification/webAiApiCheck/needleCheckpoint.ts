@@ -31,6 +31,30 @@ import { createLongContextCheckpoints } from "./longContextCheckpoints"
 type Checkpoint = {
   result: NeedleResult
   inFlight?: { targetTokens: number; depth: number }
+  inFlightCells?: { targetTokens: number; depth: number }[]
+}
+/** Read legacy single-request markers and the complete concurrent dispatch set. */
+function outstanding(checkpoint: Checkpoint, result: NeedleResult) {
+  const cells =
+    checkpoint.inFlightCells ??
+    (checkpoint.inFlight ? [checkpoint.inFlight] : [])
+  if (
+    !Array.isArray(cells) ||
+    cells.length > result.plan.requests ||
+    cells.some(
+      (cell) =>
+        !cell ||
+        !result.plan.lengths.includes(cell.targetTokens) ||
+        !result.plan.depths.some((depth) => depth === cell.depth),
+    )
+  )
+    throw Object.assign(new Error("Invalid needle checkpoint"), {
+      name: LONG_CONTEXT_ERROR_NAMES.NeedleCheckpoint,
+    })
+  return cells.filter(
+    (cell, index) =>
+      cells.findIndex((item) => isSameNeedleCoordinate(item, cell)) === index,
+  )
 }
 const checkpoints = createLongContextCheckpoints<Checkpoint>(
   WEB_AI_API_CHECK_STORAGE_KEYS.NEEDLE_CHECKPOINTS,
@@ -39,7 +63,7 @@ const checkpoints = createLongContextCheckpoints<Checkpoint>(
     if (!result) throw new Error("Invalid needle checkpoint")
     return {
       result,
-      ...(checkpoint.inFlight ? { inFlight: checkpoint.inFlight } : {}),
+      inFlightCells: outstanding(checkpoint, result),
     }
   },
 )
@@ -60,6 +84,7 @@ export async function runDurableNeedleTest(
   const scope = await getNeedleScopeKey(params)
   const release = checkpoints.claim(scope)
   let latestCheckpoint: Checkpoint | undefined
+  let checkpointWriteFailed = false
   try {
     const checkpoint = await checkpoints.get(scope)
     if (checkpoint) {
@@ -71,8 +96,9 @@ export async function runDurableNeedleTest(
           ),
           { name: LONG_CONTEXT_ERROR_NAMES.NeedleCheckpoint },
         )
-      if (checkpoint.inFlight) {
-        const { targetTokens, depth } = checkpoint.inFlight
+      const inFlightCells = outstanding(checkpoint, result)
+      for (const coordinate of inFlightCells) {
+        const { targetTokens, depth } = coordinate
         if (
           !result.plan.lengths.includes(targetTokens) ||
           !result.plan.depths.some((item) => item === depth)
@@ -88,14 +114,14 @@ export async function runDurableNeedleTest(
           outcome: NEEDLE_OUTCOMES.Interrupted,
         }
         const index = result.cells.findIndex((cell) =>
-          isSameNeedleCoordinate(cell, checkpoint.inFlight),
+          isSameNeedleCoordinate(cell, coordinate),
         )
         if (index === -1) result.cells.push(interrupted)
         else result.cells[index] = interrupted
         if (result.processed !== undefined) result.processed++
       }
       const interrupted =
-        checkpoint.inFlight || result.reason === NEEDLE_RUN_REASONS.Running
+        inFlightCells.length > 0 || result.reason === NEEDLE_RUN_REASONS.Running
       if (interrupted) result.reason = NEEDLE_RUN_REASONS.Interrupted
       await needleHistory.save(params, result, target)
       await checkpoints.update(scope)
@@ -153,16 +179,25 @@ export async function runDurableNeedleTest(
             counter: capacity.counter,
           }
         : undefined,
-      onCheckpoint: async (result, inFlight) => {
-        latestCheckpoint = { result, inFlight }
-        await checkpoints.update(scope, { result, inFlight })
+      onCheckpoint: async (result, inFlightCells) => {
+        try {
+          await checkpoints.update(scope, { result, inFlightCells })
+          latestCheckpoint = { result, inFlightCells }
+        } catch (error) {
+          checkpointWriteFailed = true
+          throw error
+        }
       },
     })
     await needleHistory.save(params, result, target)
     await checkpoints.update(scope)
     return result
   } catch (error) {
-    if (latestCheckpoint && !latestCheckpoint.inFlight) {
+    if (
+      !checkpointWriteFailed &&
+      latestCheckpoint &&
+      !latestCheckpoint.inFlightCells?.length
+    ) {
       const result = {
         ...latestCheckpoint.result,
         reason:

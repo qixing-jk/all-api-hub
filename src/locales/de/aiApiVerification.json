@@ -19,16 +19,71 @@
       "openaiCompatible": "OpenAI-kompatibel"
     },
     "associatedCredentialHint": "Diese Website kann den vollständigen Schlüssel nicht erneut ausgeben. Tests verwenden den vollständigen Schlüssel aus der API-Zugangsdatenbibliothek, der mit dem ausgewählten Schlüssel verknüpft ist. Fehlt die Verknüpfung, speichere oder verknüpfe den Schlüssel zuerst in der Schlüsselverwaltung.",
+    "composer": {
+      "autoSave": "Automatisch speichern",
+      "keyboardHint": "Enter startet · Shift+Enter fügt einen Zeilenumbruch ein",
+      "questionSavedScope": "Frage und Referenzantwort werden für künftige Fragetests gespeichert.",
+      "savedScope": "Automatisch für diesen Test bei allen Konten und Zugangsdaten gespeichert."
+    },
+    "concurrency": {
+      "current": "Parallel: {{value}}",
+      "decrease": "Parallelität verringern",
+      "increase": "Parallelität erhöhen",
+      "loadError": "Parallelität konnte nicht geladen werden.",
+      "locked": "Stoppen Sie diesen Testlauf, um die Parallelität anzupassen.",
+      "needle": "Gleichzeitige Kombinationen",
+      "needleHint": "So viele Kombinationen aus Länge und Tiefe dürfen gleichzeitig laufen. Mit 1 werden sie nacheinander ausgeführt.",
+      "options": "Ausführungsoptionen",
+      "optionsTrigger": "Ausführungsoptionen und Parallelität",
+      "presetFast": "4 Schnell",
+      "presetModerate": "2 Moderat",
+      "presetSafe": "1 Sicher",
+      "presetSafeHint": "Nacheinander ausführen, empfohlen zur Vermeidung von 429-Ratenbegrenzungen",
+      "retry": "Erneut versuchen",
+      "routine": "Gleichzeitige Tests",
+      "routineHint": "So viele Standardtests dürfen gleichzeitig laufen. Mit 1 werden sie nacheinander ausgeführt.",
+      "saveError": "Parallelität wurde nicht gespeichert."
+    },
     "details": {
       "input": "Eingabe",
       "output": "Ausgabe",
       "result": "Ausführungsergebnis"
     },
     "errors": {
+      "loadRuntimeKeysFailed": "API-Schlüssel konnten nicht geladen werden. Versuche erneut, die Schlüsselliste abzurufen.",
       "unexpected": "Unerwarteter Fehler"
     },
     "generatedImagePreview": "Vorschau des generierten Bildes",
     "generatedVideoPreview": "Vorschau des generierten Videos",
+    "generation": {
+      "cachedTokens": "Gecachte Eingabetokens",
+      "collapseReasoning": "Gedankengang einklappen",
+      "effectiveSpeed": "Gesamtgeschwindigkeit",
+      "firstOutput": "Erste Ausgabe",
+      "inputTokens": "Eingabetokens",
+      "jumpToAnswer": "Zur endgültigen Antwort",
+      "jumpToLatest": "Zum neuesten Eintrag",
+      "metricsHelp": "Zu diesen Messwerten",
+      "metricsHint": "Jeder Schritt zeigt die gemeldete Token-Nutzung und gemessene Antwortzeit. Die erste Ausgabe umfasst Text, Überlegungen oder Werkzeugaufrufe. Die Ausgabegeschwindigkeit gilt ab der ersten Ausgabe, die Gesamtgeschwindigkeit schließt die anfängliche Wartezeit ein. Fehlende Werte werden ausgelassen; kurze Antworten sind nicht repräsentativ für längere Ausgaben.",
+      "outputSpeed": "Ausgabegeschwindigkeit",
+      "outputTokens": "Ausgabetokens",
+      "partial": "Teilausgabe gespeichert; die Antwort wurde nicht abgeschlossen.",
+      "process": "Testverlauf",
+      "reasoning": "Überlegungen",
+      "reasoningTokens": "Denk-Tokens",
+      "requestDetails": "Anfragedetails",
+      "responding": "Antwort wird geschrieben",
+      "responseTime": "Antwortzeit",
+      "statistics": "Statistik",
+      "step": "Schritt {{step}}",
+      "thinking": "Denkt nach",
+      "toolCompleted": "Abgeschlossen",
+      "toolError": "Fehlgeschlagen",
+      "toolIncomplete": "Kein Ergebnis empfangen",
+      "toolPreparing": "Argumente werden empfangen",
+      "toolRunning": "Wird ausgeführt",
+      "waiting": "Warten auf Ausgabe"
+    },
     "history": {
       "clear": "Verlauf löschen",
       "lastVerified": "Zuletzt getestet",
@@ -74,6 +129,10 @@
       "quotaCost": "Pro Aufruf",
       "video": "Erstellt ein Video und wartet bis zu zwei Minuten auf die Wiedergabe. Stoppen beendet nur das lokale Warten; die Serveraufgabe kann weiterlaufen und Kosten verursachen."
     },
+    "modelSelector": {
+      "discoveredModels": "Erkannte Modelle",
+      "suggestedModels": "Vorgeschlagene Modelle"
+    },
     "modes": {
       "nonStreaming": "Ohne Streaming",
       "streaming": "Streaming"
@@ -107,6 +166,7 @@
       "shortcutTooltip": "Teste, ob diese API CLI-Clients unterstützt"
     },
     "requiresModelId": "Geben Sie eine Modell-ID ein, um diesen Test auszuführen.",
+    "requiresRuntimeKey": "Wähle in der Konfiguration einen API-Schlüssel aus, um Tests auszuführen.",
     "sections": {
       "onDemand": "Optionale Tests",
       "routine": "Standardtests"
@@ -187,26 +247,26 @@
         "summary": "Runden: {{steps}} · Werkzeugaufrufe: {{calls}} · {{seconds}} s"
       },
       "context": {
-        "about": "Über den Modellkontext-Test",
-        "acceptedTitle": "Modellkontext: etwa {{tokens}} Tokens geprüft",
+        "about": "Über den Kontextkapazitäts-Test",
+        "acceptedTitle": "Kontextkapazität: etwa {{tokens}} Tokens geprüft",
         "comparison": "Metadaten geben {{expected}} Tokens an",
         "continue": "Test fortsetzen",
         "counter": "Tokenizer: {{encoding}}.",
         "coverage": "Kontext ≈{{percent}}%",
-        "description": "Verwendet den angegebenen Modellkontext als Testgrenze, bei unbekanntem Wert bis zu 1M Tokens. Jede Serie hat ein kumulatives Eingabebudget von etwa 8M Tokens und kann nach einer Pause fortgesetzt werden.",
+        "description": "Verwendet den angegebenen Kontext als Testgrenze, bei unbekanntem Wert bis zu 1M Tokens. Jede Serie hat ein kumulatives Eingabebudget von etwa 8M Tokens und kann nach einer Pause fortgesetzt werden.",
         "details": "Testdetails",
         "discard": "Unterbrochene Tests verwerfen",
         "discardWarning": "Zu viele unterbrochene Tests sind gespeichert. Verwerfen Sie inaktive Einträge, um fortzufahren. Ihr Abrechnungsstatus ist unbekannt; laufende Tests bleiben erhalten.",
         "emptyResponse": "Die Antwort endete normal ohne Antworttext; die Eingabeannahme bleibt unbestätigt.",
         "errorTitle": "Test konnte nicht abgeschlossen werden",
-        "estimated": "Modellkodierung geschätzt.",
-        "hint": "Prüft den Eingabekontext, den das Modell akzeptiert. Das Ergebnis hängt von API und Anfragekonfiguration ab und bestätigt nicht das gesamte Kontextfenster.",
+        "estimated": "Tokenizer-Kodierung geschätzt.",
+        "hint": "Prüft den akzeptierten Eingabekontext. Das Ergebnis hängt von API und Anfragekonfiguration ab und bestätigt nicht das gesamte Kontextfenster.",
         "historyError": "Verlauf nicht verfügbar. Das aktuelle Ergebnis wird weiterhin angezeigt.",
         "incompleteResponse": "Keine eindeutige Antwort erhalten. Beendigungsgrund: {{reason}}.",
         "interrupted": "Die Anfrage wurde unterbrochen; der Abrechnungsstatus ist unbekannt. Sie wurde nicht erneut gesendet. Ein neuer Test kann zusätzliche Nutzung verursachen.",
         "lower": "Größte angenommene Eingabe: {{tokens}} lokale Texttokens",
         "maskedHistoryHint": "Gespeicherte Messung für diesen maskierten Schlüssel. Die aktuellen Zugangsdaten wurden nicht erneut geprüft.",
-        "matched": "Modellkodierung zugeordnet; die Tokenzahl der gesamten Anfrage kann abweichen.",
+        "matched": "Tokenizer-Kodierung zugeordnet; die Tokenzahl der gesamten Anfrage kann abweichen.",
         "measuredBadge": "≈{{tokens}} Tokens akzeptiert",
         "measurementDetails": "Messgrundlage",
         "outputLimited": "Eingabe angenommen; die Ausgabe wurde an einer Längengrenze abgeschnitten. Die Eingabeannahme bleibt bestätigt.",
@@ -217,7 +277,7 @@
           "budget": "Das Anfrage- oder Eingabebudget dieses Durchlaufs ist erreicht. Fortsetzen erlaubt weitere Nutzung ab dieser Stelle.",
           "inconclusive": "Keine Kapazitätsgrenze bestätigt. Erneut versuchen oder Ursache in den Ausführungsdetails prüfen.",
           "test-limit": "Diese Eingabelänge wurde angenommen. Die tatsächliche Kapazität kann größer sein.",
-          "timeout": "Die Anfrage hat das Zeitlimit überschritten, bevor die Annahme der Eingabe bestätigt werden konnte. Dies belegt keine Überschreitung der Modellkapazität. Versuchen Sie es später erneut. Dabei wird der lange Text erneut gesendet und es können Kosten entstehen."
+          "timeout": "Die Anfrage hat das Zeitlimit überschritten, bevor die Annahme der Eingabe bestätigt werden konnte. Dies belegt keine Überschreitung der Kapazität. Versuchen Sie es später erneut. Dabei wird der lange Text erneut gesendet und es können Kosten entstehen."
         },
         "reportedUsage": "Gemeldete Nutzung: Eingabe {{input}} + Ausgabe {{output}} = insgesamt {{total}} Tokens",
         "requestDetails": "Anfrage und Nutzung",
@@ -225,7 +285,7 @@
         "run": "Kontext prüfen",
         "startHint": "Sendet langen Text und verbraucht API-Kontingent. Pausiert am Nutzungslimit.",
         "stoppedTitle": "Test gestoppt",
-        "title": "Modellkontext-Test",
+        "title": "Kontextkapazitäts-Test",
         "unableTitle": "Eingabekapazität nicht bestätigt",
         "upper": "Kapazitätsablehnung bei: {{tokens}} lokalen Text-Tokens"
       },
@@ -242,7 +302,7 @@
         "capped": "Pro Anfrage werden höchstens 1M Eingabe-Tokens getestet.",
         "cell": "Lokale Eingabe: {{tokens}} Tokens · Tatsächliche Position: {{depth}}% · {{latency}} ms",
         "cellDetails": "Zelldetails",
-        "cumulativeScore": "Gesamtergebnisse: {{hits}}/{{graded}} auswertbare Antworten stimmen überein",
+        "cumulativeScore": "Gesamtergebnisse: {{hits}}/{{total}} Kombinationen stimmen überein",
         "custom": "Benutzerdefiniert",
         "customLimit": "Eigene Länge (Tokens)",
         "description": "Prüft, ob das Modell einen bestimmten Eintrag an verschiedenen Stellen eines langen Textes findet.",
@@ -316,6 +376,7 @@
         "score": "{{hits}}/{{total}} Treffer",
         "seedHint": "Leer lassen für ein neues Beispiel bei jedem Test. Dieselbe Nummer und dieselben Einstellungen erzeugen denselben Text.",
         "seedInput": "Testbeispielnummer (optional)",
+        "settingsPreview": "Anfragen: {{requests}} · Eingabe: ~{{tokens}} Tokens (Ausgabe zusätzlich)",
         "singleLengthRule": "Dieser Plan testet nur eine Länge: {{limit}}.",
         "sources": {
           "custom": "Sie haben die maximale Testeingabe auf {{limit}} gesetzt. Der Plan verwendet dieses Limit.",
@@ -351,16 +412,15 @@
       },
       "prompts": {
         "editorLabel": "Prompt für {{probe}}",
-        "label": "Prompt",
         "resetOne": "Diesen Prompt zurücksetzen",
-        "saveFailed": "Prompts konnten nicht gespeichert werden: {{message}}",
-        "sharedHint": "Gespeicherte Prompts gelten für alle Testzugänge."
+        "saveFailed": "Prompts konnten nicht gespeichert werden: {{message}}"
       },
       "questionAnswer": {
         "comparison": "Antwortvergleich",
         "comparisonHint": "Nur der Text der endgültigen Antwort wird verglichen. Prüfe die vollständige Antwort, um die Begründung zu beurteilen.",
         "description": "Mit einer eigenen Frage die Antwort und Begründung des Modells ansehen. Eine Referenzantwort ermöglicht den Vergleich der endgültigen Antwort.",
         "draftChanged": "Frage oder Referenzantwort wurde geändert. Dieses Ergebnis stammt vom vorherigen Durchlauf. Starte den Test erneut, um die Änderungen zu vergleichen.",
+        "editReference": "Referenzantwort bearbeiten",
         "finalAnswer": "Extrahierte endgültige Antwort",
         "loadFailed": "Frageneinstellungen konnten nicht geladen werden. Versuchen Sie es erneut, um den gespeicherten Entwurf zu laden.",
         "notIdentified": "Nicht erkannt",
@@ -389,7 +449,6 @@
         "runQuestion": "Frage dieses Testlaufs",
         "runReference": "Referenzantwort dieses Durchlaufs",
         "saveFailed": "Einstellungen konnten nicht gespeichert werden. Der aktuelle Entwurf bleibt nutzbar.",
-        "saving": "Wird gespeichert…",
         "title": "Fragen und Antworten"
       },
       "settingsTitle": "Testeinstellungen",
@@ -397,6 +456,17 @@
       "stopped": "Vor dem Abschluss gestoppt; nichts wurde gespeichert."
     },
     "unsupportedProbeForApiType": "Die Prüfung „{{probe}}“ wird für diesen API-Typ nicht unterstützt.",
-    "warning": "Die Ergebnisse gelten nur für die in diesem Test verwendete API, das Modell und die Anfragekonfiguration."
+    "warning": "Die Ergebnisse gelten nur für die in diesem Test verwendete API, das Modell und die Anfragekonfiguration.",
+    "workspace": {
+      "collapseSettings": "Konfiguration einklappen",
+      "collapseTests": "Testleiste einklappen",
+      "currentTest": "Aktueller Test",
+      "execution": "Standardtests ausführen",
+      "expandSettings": "Konfiguration ausklappen",
+      "expandTests": "Testleiste ausklappen",
+      "settings": "Optionen",
+      "source": "Extraktionsquelle",
+      "tests": "Tests"
+    }
   }
 }

@@ -12,11 +12,51 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import {
   cloneConfig,
+  coerceHistorySummary,
   createDefaultConfig,
 } from "~/services/verification/verificationResultHistory/codec"
 import { isApiVerificationApiType } from "~/services/verification/verificationResultHistory/utils"
 
 describe("verificationResultHistory utils", () => {
+  it("retains finite measured metrics through history and excludes raw response fields", () => {
+    const metrics = [
+      {
+        inputTokens: 12,
+        outputTokens: 8,
+        responseTimeMs: 1200,
+        timeToFirstOutputMs: 200,
+        outputTokensPerSecond: 8,
+        reasoningTokens: Number.NaN,
+        secret: "private output",
+      },
+    ]
+    const saved = createVerificationHistorySummary({
+      target: createProfileVerificationHistoryTarget("metric-profile")!,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      results: [
+        {
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 1500,
+          summary: "OK",
+          metrics,
+        },
+      ],
+    })
+    expect(saved?.probes[0]?.metrics).toEqual([
+      {
+        inputTokens: 12,
+        outputTokens: 8,
+        responseTimeMs: 1200,
+        timeToFirstOutputMs: 200,
+        outputTokensPerSecond: 8,
+      },
+    ])
+    expect(coerceHistorySummary(saved)?.probes[0]?.metrics).toEqual(
+      saved?.probes[0]?.metrics,
+    )
+    expect(JSON.stringify(saved)).not.toContain("private output")
+  })
   it("detaches persisted history when structuredClone is unavailable", () => {
     const original = createDefaultConfig()
     vi.stubGlobal("structuredClone", undefined)

@@ -7,6 +7,7 @@ import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "~/services/verification/aiApiVerification"
+import { sanitizeGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
 import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
@@ -215,6 +216,7 @@ function coerceProbeSummary(
       ? { mode: value.mode }
       : {}),
     status: value.status,
+    metrics: sanitizeGenerationMetrics(value.metrics),
     latencyMs:
       typeof value.latencyMs === "number" && Number.isFinite(value.latencyMs)
         ? Math.max(0, Math.round(value.latencyMs))
@@ -285,6 +287,7 @@ export function coerceDrawingSummary(
     apiType: value.apiType,
     modelId: sanitizeText(value.modelId),
     latencyMs: count(value.latencyMs),
+    metrics: sanitizeGenerationMetrics(value.metrics),
     executionMode:
       value.executionMode === PELICAN_EXECUTION_MODES.Agent
         ? PELICAN_EXECUTION_MODES.Agent

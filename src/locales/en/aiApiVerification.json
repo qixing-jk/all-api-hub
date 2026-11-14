@@ -19,16 +19,71 @@
       "openaiCompatible": "OpenAI-compatible"
     },
     "associatedCredentialHint": "This site cannot return the full key again. Tests use the full key saved in the API Credential Library and linked to the selected key. If none is linked, open key management to save or associate the key first.",
+    "composer": {
+      "autoSave": "Auto-save",
+      "keyboardHint": "Enter runs · Shift+Enter adds a line",
+      "questionSavedScope": "Question and reference answer are saved for future Q&A tests.",
+      "savedScope": "Auto-saved for this test across accounts and credentials."
+    },
+    "concurrency": {
+      "current": "Parallel: {{value}}",
+      "decrease": "Decrease concurrency",
+      "increase": "Increase concurrency",
+      "loadError": "Could not load parallelism.",
+      "locked": "Stop this batch to adjust its concurrency.",
+      "needle": "Combinations at once",
+      "needleHint": "Run up to this many length/depth combinations together. Set to 1 to run one at a time.",
+      "options": "Run options",
+      "optionsTrigger": "Run preferences and concurrency settings",
+      "presetFast": "4 Fast",
+      "presetModerate": "2 Moderate",
+      "presetSafe": "1 Safe",
+      "presetSafeHint": "Run one at a time, recommended to avoid 429 rate limits",
+      "retry": "Retry",
+      "routine": "Tests at once",
+      "routineHint": "Run up to this many routine tests together. Set to 1 to run one at a time.",
+      "saveError": "Parallelism was not saved."
+    },
     "details": {
       "input": "Input",
       "output": "Output",
       "result": "Execution result"
     },
     "errors": {
+      "loadRuntimeKeysFailed": "Could not load API keys. Retry to retrieve the key list.",
       "unexpected": "Unexpected error"
     },
     "generatedImagePreview": "Generated image preview",
     "generatedVideoPreview": "Generated video preview",
+    "generation": {
+      "cachedTokens": "Cached input tokens",
+      "collapseReasoning": "Collapse reasoning",
+      "effectiveSpeed": "End-to-end speed",
+      "firstOutput": "First output",
+      "inputTokens": "Input tokens",
+      "jumpToAnswer": "Jump to final answer",
+      "jumpToLatest": "Jump to latest",
+      "metricsHelp": "About these metrics",
+      "metricsHint": "Each step uses the provider-reported token usage and measured response timing. First output includes text, reasoning or tool calls. Output speed covers generation after the first output; end-to-end speed includes the initial wait. Missing metrics are omitted; short replies may not represent sustained speed.",
+      "outputSpeed": "Output speed",
+      "outputTokens": "Output tokens",
+      "partial": "Partial output retained; the response did not complete.",
+      "process": "Test process",
+      "reasoning": "Reasoning",
+      "reasoningTokens": "Reasoning tokens",
+      "requestDetails": "Request details",
+      "responding": "Writing response",
+      "responseTime": "Response time",
+      "statistics": "Statistics",
+      "step": "Step {{step}}",
+      "thinking": "Thinking",
+      "toolCompleted": "Completed",
+      "toolError": "Failed",
+      "toolIncomplete": "No result received",
+      "toolPreparing": "Receiving arguments",
+      "toolRunning": "Running",
+      "waiting": "Waiting for output"
+    },
     "history": {
       "clear": "Clear history",
       "lastVerified": "Last tested",
@@ -74,6 +129,10 @@
       "quotaCost": "Per-call",
       "video": "Creates a video and waits up to two minutes for playback. Stopping only ends local waiting; the server task may continue and incur charges."
     },
+    "modelSelector": {
+      "discoveredModels": "Discovered models",
+      "suggestedModels": "Suggested models"
+    },
     "modes": {
       "nonStreaming": "Non-streaming",
       "streaming": "Streaming"
@@ -107,6 +166,7 @@
       "shortcutTooltip": "Test this API’s support for CLI clients"
     },
     "requiresModelId": "Enter a model id to run this test.",
+    "requiresRuntimeKey": "Select an API key in configuration to run tests.",
     "sections": {
       "onDemand": "On-demand tests",
       "routine": "Routine tests"
@@ -187,26 +247,26 @@
         "summary": "Turns: {{steps}} · Tool calls: {{calls}} · {{seconds}} s"
       },
       "context": {
-        "about": "About the model context test",
-        "acceptedTitle": "Model context: about {{tokens}} tokens verified",
+        "about": "About the context capacity test",
+        "acceptedTitle": "Context capacity: about {{tokens}} tokens verified",
         "comparison": "metadata declares {{expected}} tokens",
         "continue": "Continue probe",
         "counter": "Tokenizer: {{encoding}}.",
         "coverage": "Context ≈{{percent}}%",
-        "description": "Uses the declared model context as the test cap, or up to 1M tokens when unknown. Each batch has about an 8M-token cumulative input budget and can resume after pausing.",
+        "description": "Uses the declared context length as the test cap, or up to 1M tokens when unknown. Each batch has about an 8M-token cumulative input budget and can resume after pausing.",
         "details": "Test details",
         "discard": "Discard interrupted tests",
         "discardWarning": "Too many interrupted tests are saved. Discard inactive records to continue. Their charge status is unknown; running tests are kept.",
         "emptyResponse": "The response ended normally without answer text; input acceptance remains unconfirmed.",
         "errorTitle": "Probe could not finish",
-        "estimated": "Estimated model encoding.",
-        "hint": "Tests the input context the model can accept. Results depend on the API and request configuration and do not establish the full context window.",
+        "estimated": "Estimated tokenizer encoding.",
+        "hint": "Tests the input context length accepted by the endpoint. Results depend on the API and request configuration and do not establish the full context window.",
         "historyError": "History is unavailable. The current result is still shown.",
         "incompleteResponse": "No conclusive response was received. Finish reason: {{reason}}.",
         "interrupted": "The request was interrupted; its charge status is unknown. It was not retried. Start a new test only if you accept the possible additional usage.",
         "lower": "Largest accepted input: {{tokens}} local text tokens",
         "maskedHistoryHint": "Saved measurement for this masked key. The current credential has not been revalidated.",
-        "matched": "Model encoding matched; full-request token count may differ.",
+        "matched": "Tokenizer encoding matched; full-request token count may differ.",
         "measuredBadge": "Accepted ≈{{tokens}} tokens",
         "measurementDetails": "Measurement evidence",
         "outputLimited": "Input accepted; output was truncated at a length limit. This does not invalidate input acceptance.",
@@ -217,7 +277,7 @@
           "budget": "This batch reached its request or cumulative input budget. Continue from here to allow more usage.",
           "inconclusive": "The response did not confirm a capacity limit. Retry or open execution details to see the cause.",
           "test-limit": "This input length was accepted. The actual capacity may be larger.",
-          "timeout": "The request timed out before input acceptance could be confirmed. A timeout does not prove the input exceeds model capacity. Try again later; retrying sends long text again and may use credits."
+          "timeout": "The request timed out before input acceptance could be confirmed. A timeout does not prove the input exceeds capacity. Try again later; retrying sends long text again and may use credits."
         },
         "reportedUsage": "Reported usage: input {{input}} + output {{output}} = total {{total}} tokens",
         "requestDetails": "Request and usage",
@@ -225,7 +285,7 @@
         "run": "Run context probe",
         "startHint": "Sends long text and uses API credits. Pauses at its usage budget.",
         "stoppedTitle": "Probe stopped",
-        "title": "Model context test",
+        "title": "Context capacity test",
         "unableTitle": "Could not confirm input capacity",
         "upper": "Capacity rejection at: {{tokens}} local text tokens"
       },
@@ -242,7 +302,7 @@
         "capped": "This run is capped at 1M input tokens per request.",
         "cell": "Local input: {{tokens}} tokens · Actual position: {{depth}}% · {{latency}} ms",
         "cellDetails": "Cell details",
-        "cumulativeScore": "Cumulative results: {{hits}}/{{graded}} graded answers matched",
+        "cumulativeScore": "Cumulative results: {{hits}}/{{total}} combinations matched",
         "custom": "Custom",
         "customLimit": "Custom length (tokens)",
         "description": "Check whether the model can find a specific record at different positions in a long text.",
@@ -316,6 +376,7 @@
         "score": "{{hits}}/{{total}} matched",
         "seedHint": "Leave blank for a new sample each time. Use the same ID and settings to repeat a sample.",
         "seedInput": "Test sample ID (optional)",
+        "settingsPreview": "Requests: {{requests}} · Input: ~{{tokens}} tokens (output extra)",
         "singleLengthRule": "This plan tests just one length: {{limit}}.",
         "sources": {
           "custom": "You set the maximum test input to {{limit}}. This plan uses that limit.",
@@ -351,16 +412,15 @@
       },
       "prompts": {
         "editorLabel": "{{probe}} prompt",
-        "label": "Prompt",
         "resetOne": "Reset this prompt",
-        "saveFailed": "Could not save prompts: {{message}}",
-        "sharedHint": "Saved prompts are shared by every test entry point."
+        "saveFailed": "Could not save prompts: {{message}}"
       },
       "questionAnswer": {
         "comparison": "Answer comparison",
         "comparisonHint": "Only final-answer text is compared. Review the full response to assess the reasoning.",
         "description": "Use your own question to inspect the model’s answer and reasoning. Add a reference answer to compare the final answer.",
         "draftChanged": "The question or reference has changed. This result is from the previous run; run again to compare your changes.",
+        "editReference": "Edit reference answer",
         "finalAnswer": "Extracted final answer",
         "loadFailed": "Could not load question settings. Retry to keep your saved draft.",
         "notIdentified": "Not identified",
@@ -389,7 +449,6 @@
         "runQuestion": "Question used for this run",
         "runReference": "Reference answer for this run",
         "saveFailed": "Could not save settings. Your current draft can still be used.",
-        "saving": "Saving…",
         "title": "Q&A test"
       },
       "settingsTitle": "Test settings",
@@ -397,6 +456,17 @@
       "stopped": "Stopped before finishing; nothing was recorded."
     },
     "unsupportedProbeForApiType": "{{probe}} probe is not supported for this API type.",
-    "warning": "Results apply only to the API, model and request configuration used in this test."
+    "warning": "Results apply only to the API, model and request configuration used in this test.",
+    "workspace": {
+      "collapseSettings": "Collapse configuration",
+      "collapseTests": "Collapse test list",
+      "currentTest": "Current test",
+      "execution": "Routine test execution",
+      "expandSettings": "Expand configuration",
+      "expandTests": "Expand test list",
+      "settings": "Settings",
+      "source": "Extraction source",
+      "tests": "Tests"
+    }
   }
 }

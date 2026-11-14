@@ -45,7 +45,7 @@
     },
     "hints": {
       "expiresAt": "可选。用于记录这枚密钥预计失效的日期。",
-      "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭据库（无需先测试或获取模型列表）。测试仅用于验证可用性。",
+      "saveWithoutTest": "填写 Base URL 和 API Key 即可保存，无需先测试或获取模型列表。",
       "sourceUrl": "可选。记录你从哪个页面拿到这份凭据，之后可一键回访查看更新。",
       "tags": "可选。与账号/书签共用全局标签。"
     },
@@ -70,9 +70,12 @@
       "sourceUrl": "https://example.com/post",
       "tags": "选择标签"
     },
+    "preparation": {
+      "description": "粘贴网页中的内容，自动识别 Base URL 和 API Key；也可以直接填写。信息齐全后，再选择要运行的测试。",
+      "title": "先识别 API 连接信息"
+    },
     "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且除非你主动保存到 API 凭据库，否则不会持久化保存任何数据。",
     "sourceText": {
-      "label": "用于提取的文本",
       "placeholder": "将 Base URL 和 API Key 粘贴到这里，或使用右键菜单从选中文本预填。"
     },
     "title": "API 测试"

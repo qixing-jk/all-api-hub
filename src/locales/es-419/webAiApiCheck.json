@@ -45,7 +45,7 @@
     },
     "hints": {
       "expiresAt": "Opcional. Registra cuándo se espera que expire esta clave.",
-      "saveWithoutTest": "Consejo: puedes guardar una vez que se proporcionen Base URL + API key (no necesitas probar ni obtener modelos primero). La prueba es opcional y solo ayuda a verificar la disponibilidad.",
+      "saveWithoutTest": "Basta con la URL base y la clave API para guardar. Obtener modelos y realizar pruebas es opcional.",
       "sourceUrl": "Opcional. Registra la página donde encontraste estas credenciales para poder revisarla más tarde.",
       "tags": "Opcional. Se comparten con las etiquetas globales de cuentas y marcadores."
     },
@@ -70,9 +70,12 @@
       "sourceUrl": "https://example.com/post",
       "tags": "Seleccionar etiquetas"
     },
+    "preparation": {
+      "description": "Pega el texto de la página para detectar la URL base y la clave API, o ingrésalas directamente. Las pruebas aparecen cuando ambas están disponibles.",
+      "title": "Primero, configura la conexión API"
+    },
     "privacyHint": "Las claves de API se considerarán información sensible: se ocultan de forma predeterminada y no se almacena nada a menos que elijas guardar en la biblioteca de credenciales API.",
     "sourceText": {
-      "label": "Texto del cual extraer",
       "placeholder": "Pega aquí una Base URL y API key, o usa el menú contextual para rellenar desde la selección."
     },
     "title": "Pruebas de API"

@@ -9,6 +9,7 @@ import {
   API_VERIFICATION_MODES,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
+import * as generationProgress from "~/services/verification/webAiApiCheck/generationProgress"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
@@ -51,6 +52,121 @@ function renderProbeRunner(
 }
 
 describe("API check probe session", () => {
+  it("keeps the accepted complete response when a progress delivery arrives late", async () => {
+    let publish!: Parameters<
+      typeof generationProgress.subscribeGenerationProgress
+    >[1]
+    const subscription = vi
+      .spyOn(generationProgress, "subscribeGenerationProgress")
+      .mockImplementation((_id, callback) => {
+        publish = callback
+        return vi.fn()
+      })
+    let finish!: (value: unknown) => void
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }) as never,
+    )
+    try {
+      const { result } = renderProbeRunner()
+      act(() => result.current.runProbe("text-generation"))
+      act(() => publish({ text: "Partial", reasoning: "", tools: [], step: 1 }))
+      await act(async () =>
+        finish({
+          success: true,
+          result: {
+            id: "text-generation",
+            status: "pass",
+            latencyMs: 1,
+            summary: "Complete",
+            output: { text: "Complete answer" },
+          },
+        }),
+      )
+      const probe = () =>
+        result.current.probes.find((p) => p.id === "text-generation")!
+      expect(probe().result?.output).toEqual({ text: "Complete answer" })
+      expect(probe().progress).toBeUndefined()
+      act(() =>
+        publish({ text: "Late partial", reasoning: "", tools: [], step: 1 }),
+      )
+      expect(probe().progress).toBeUndefined()
+    } finally {
+      subscription.mockRestore()
+    }
+  })
+  it("keeps partial output after stopping a rerun without reusing its earlier passing verdict", async () => {
+    let publish!: Parameters<
+      typeof generationProgress.subscribeGenerationProgress
+    >[1]
+    const subscription = vi
+      .spyOn(generationProgress, "subscribeGenerationProgress")
+      .mockImplementation((_id, callback) => {
+        publish = callback
+        return vi.fn()
+      })
+    let finish!: (value: unknown) => void
+    const passed = {
+      success: true,
+      result: {
+        id: "text-generation",
+        status: "pass",
+        latencyMs: 1,
+        summary: "old passing answer",
+      },
+    }
+    vi.mocked(sendWebAiApiCheckMessage)
+      .mockResolvedValueOnce(passed as never)
+      .mockImplementation(
+        (type) =>
+          (type === WebAiApiCheckMessageTypes.RunProbe
+            ? new Promise((resolve) => {
+                finish = resolve
+              })
+            : Promise.resolve({ success: true, cancelled: true })) as never,
+      )
+    try {
+      const { result } = renderProbeRunner()
+      act(() => result.current.runProbe("text-generation"))
+      await waitFor(() =>
+        expect(
+          result.current.probes.find((probe) => probe.id === "text-generation")
+            ?.result?.status,
+        ).toBe("pass"),
+      )
+      expect(
+        result.current.getCurrentVerificationResultsSnapshot()?.results,
+      ).toHaveLength(1)
+      act(() => result.current.runProbe("text-generation"))
+      expect(result.current.getCurrentVerificationResultsSnapshot()).toBeNull()
+      act(() =>
+        publish({
+          text: "unfinished answer",
+          reasoning: "",
+          tools: [],
+          step: 1,
+        }),
+      )
+      act(() => result.current.stopProbe("text-generation"))
+      const stopped = () =>
+        result.current.probes.find((probe) => probe.id === "text-generation")!
+      expect(stopped().progress?.text).toBe("unfinished answer")
+      expect(stopped().result?.summaryKey).toBe(
+        "verifyDialog.summaries.stopped",
+      )
+      await act(async () => finish(passed))
+      expect(stopped().result?.summaryKey).toBe(
+        "verifyDialog.summaries.stopped",
+      )
+      expect(stopped().isRunning).toBe(false)
+      expect(result.current.getCurrentVerificationResultsSnapshot()).toBeNull()
+      await act(async () => modelMetadataService.initialize())
+    } finally {
+      subscription.mockRestore()
+    }
+  })
   it("loads remote capabilities before relying on names for an unknown model", async () => {
     modelMetadataService.clearCache()
     server.use(
@@ -117,6 +233,34 @@ describe("API check probe session", () => {
       await probe
     })
     expect(result.current.isAnyProbeRunning).toBe(false)
+  })
+
+  it("does not stop a manual probe when a cancelled batch finishes", async () => {
+    const pending: ((value: unknown) => void)[] = []
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      (type) =>
+        (type === WebAiApiCheckMessageTypes.RunProbe
+          ? new Promise((resolve) => pending.push(resolve))
+          : Promise.resolve({ success: true, cancelled: true })) as never,
+    )
+    const { result } = renderProbeRunner()
+    act(() => result.current.runAll())
+    act(() => result.current.stopRunAll())
+    act(() => result.current.runProbe("text-generation"))
+    await act(async () =>
+      pending[0]!({ success: false, error: "cancelled batch" }),
+    )
+    expect(
+      result.current.probes.find((probe) => probe.id === "text-generation")
+        ?.isRunning,
+    ).toBe(true)
+    await act(async () =>
+      pending[1]!({ success: false, error: "manual result" }),
+    )
+    expect(
+      result.current.probes.find((probe) => probe.id === "text-generation")
+        ?.result?.summary,
+    ).toBe("manual result")
   })
 
   it("cancels and ignores a pending result when a new modal session resets the probes", async () => {

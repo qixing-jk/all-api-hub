@@ -1,0 +1,582 @@
+/* Pane widths include their padding; collapsed panes release the full width. */
+@media (max-width: 51.999rem) {
+  [data-slot="modal-content"]:has(.verification-dialog) {
+    top: 50dvh;
+    left: 50vw;
+    width: 100vw;
+    max-width: none;
+  }
+
+  [data-slot="modal-positioner"]:has(> .verification-dialog) {
+    padding: 0;
+  }
+
+  [data-slot="modal-panel"].verification-dialog,
+  [role="dialog"].verification-dialog {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-width: 0;
+    border-radius: 0;
+  }
+
+  [role="dialog"].verification-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+  }
+}
+
+.verification-workspace {
+  --verification-list-expanded-width: 21rem;
+  --verification-list-collapsed-width: 3.5rem;
+  --verification-list-width: var(--verification-list-expanded-width);
+  --verification-settings-width: 21rem;
+  --verification-settings-space: 0px;
+}
+
+.verification-workspace[data-list-collapsed="true"] {
+  --verification-list-width: var(--verification-list-collapsed-width);
+}
+
+.verification-workspace-frame {
+  --verification-layout: stacked;
+  height: var(--verification-workspace-height, auto);
+}
+
+/* Both sidebar sheets use the same workspace gutter and independent scrolling. */
+.verification-sidebar-sheet[data-animate="false"] {
+  animation: none;
+  transition: none;
+}
+
+.verification-sidebar-sheet {
+  animation-duration: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verification-sidebar-sheet {
+    animation: none;
+    transition: none;
+  }
+}
+
+.verification-sidebar-sheet [data-verification-list] {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.verification-sidebar-sheet
+  :is([data-verification-list], [data-verification-settings-scroll]) {
+  padding: 0.5rem 1rem;
+}
+
+.verification-sidebar-sheet [data-verification-summary] {
+  min-height: 2.75rem;
+}
+
+.verification-sidebar-sheet [data-verification-list] h6 {
+  padding-block: 0.25rem;
+}
+
+.verification-sidebar-sheet
+  [data-verification-list-content]
+  > section:first-child
+  > h6 {
+  min-height: 2rem;
+  margin-block-end: 0.375rem;
+}
+
+.verification-sidebar-sheet [data-verification-config] h6 {
+  display: flex;
+  min-height: 2rem;
+  align-items: center;
+}
+
+.verification-sidebar-sheet [data-verification-config] h6 > button {
+  min-height: 2.75rem;
+  /* Use the title's surrounding space for its full-size disclosure target. */
+  margin-block: -0.375rem;
+}
+
+.verification-sidebar-sheet [data-verification-config] h6 + div {
+  padding-top: 0.375rem;
+}
+
+.verification-workspace[data-list-collapsed="true"]
+  [data-verification-list]:not(
+    .verification-sidebar-sheet [data-verification-list]
+  ) {
+  padding: 0.5rem 0.25rem;
+}
+
+.verification-workspace[data-list-collapsed="true"]
+  [data-verification-list-content] {
+  width: 100%;
+}
+
+.verification-workspace[data-list-collapsed="true"]
+  .verification-workspace-list-header {
+  width: var(--verification-list-width);
+  min-width: var(--verification-list-collapsed-width);
+  padding: 0.25rem;
+  justify-content: center;
+}
+
+@container (max-width: 51.999rem) {
+  .verification-workspace[data-layout="stacked"]
+    :is(
+      [data-verification-list],
+      .verification-workspace-list-header,
+      .verification-workspace-controls,
+      [data-verification-detail]
+    ) {
+    transition: none;
+  }
+  .verification-workspace-bar {
+    padding-inline: 1rem;
+  }
+
+  .verification-workspace
+    .verification-workspace-bar
+    :is(.verification-workspace-list-header, .verification-workspace-controls) {
+    padding-inline: 0;
+    background: transparent;
+  }
+
+  .verification-workspace
+    .verification-workspace-bar
+    :is(.verification-workspace-list-header, .verification-workspace-controls)
+    > button {
+    padding-inline: 0;
+    gap: 0.375rem;
+  }
+
+  /* The list and detail share one viewport while retaining their mounted tree. */
+  .verification-workspace-frame {
+    overflow: hidden;
+  }
+
+  .verification-workspace[data-list-collapsed="true"]
+    [data-verification-list]:not([hidden]):not(
+      .verification-sidebar-sheet [data-verification-list]
+    ) {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 3.25rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .verification-workspace[data-list-collapsed="true"]
+    [data-verification-list]:not(
+      .verification-sidebar-sheet [data-verification-list]
+    )
+    :is([data-verification-list-content], section, section > div) {
+    display: contents;
+  }
+
+  .verification-workspace [data-verification-list] h6 {
+    padding-block: 0.25rem;
+  }
+
+  .verification-workspace [data-verification-summary] {
+    min-height: 2.75rem;
+  }
+
+  .verification-workspace [data-verification-summary-collapsed] {
+    flex-shrink: 0;
+    margin-block: 0;
+    padding-block: 0;
+  }
+
+  .verification-workspace [data-verification-detail] {
+    position: absolute;
+    inset: 3.25rem 0 0;
+    margin: 0;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  .verification-workspace [data-verification-detail-content] {
+    height: 100%;
+  }
+
+  .verification-workspace
+    [data-verification-detail-content]
+    > :not([data-verification-introduction]):not(
+      [data-slot="verification-result"]
+    ) {
+    flex-shrink: 0;
+  }
+
+  .verification-workspace [data-slot="verification-result"] {
+    flex: 1;
+    /* Evidence remains readable when prompt controls need the pane to scroll. */
+    min-height: 8rem;
+    overflow-y: auto;
+  }
+
+  .verification-workspace:not([data-mobile-test-switcher="true"])
+    [data-verification-active-test] {
+    display: none;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    .verification-workspace-bar {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(max-content, 1fr) auto;
+    column-gap: 0.5rem;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    [data-verification-active-test] {
+    display: contents;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    [data-verification-header-identity] {
+    grid-column: 2;
+    grid-row: 1;
+    width: max-content;
+    min-height: 3rem;
+    padding-block: 0.5rem;
+    justify-content: flex-start;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    [data-verification-header-content] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex: 0 1 auto;
+    /* Summary and disabled-action copy must not size the identity columns. */
+    contain: inline-size;
+    width: 100%;
+    padding: 0 0 0.5rem;
+    overflow: hidden;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    [data-verification-header-content]:not(
+      :has(
+        [data-verification-test-header]:not([hidden])
+          [data-verification-header-details]
+          > :not([hidden])
+      )
+    ) {
+    display: none;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    .verification-settings-title {
+    display: inline;
+  }
+
+  .verification-workspace-bar button {
+    min-height: 2.75rem;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    :is(.verification-workspace-list-header, .verification-workspace-controls) {
+    width: auto;
+    min-width: 0;
+    padding-block: 0;
+    border: 0;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    .verification-workspace-list-header {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    .verification-workspace-controls {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .verification-workspace[data-mobile-test-switcher="true"]
+    .verification-workspace-controls
+    > button {
+    justify-content: center;
+  }
+  .verification-workspace[data-mobile-test-switcher="true"]
+    .verification-workspace-list-header
+    > button {
+    justify-content: flex-start;
+  }
+}
+
+.verification-workspace-test-settings:has(> :not([hidden]))
+  + [data-verification-config] {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+/* The toolbar shrinks before its label can fit; reveal one clipped line. */
+.verification-workspace-controls > button,
+.verification-workspace-list-header > button {
+  overflow: hidden;
+}
+
+.verification-workspace-list-header > button > span,
+.verification-settings-title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@container (min-width: 52rem) {
+  .verification-workspace-frame {
+    --verification-layout: split;
+    overflow: clip;
+  }
+
+  .verification-workspace [data-verification-list] {
+    overflow-x: hidden;
+  }
+
+  /* Clip the list at its edge rather than rewrapping every row as it shrinks. */
+  .verification-workspace:not([data-list-collapsed="true"])
+    [data-verification-list-content] {
+    width: calc(var(--verification-list-expanded-width) - 2rem - 1px);
+  }
+
+  .verification-workspace-list-header {
+    min-width: 3rem;
+  }
+
+  .verification-workspace-controls {
+    min-width: 3rem;
+    min-height: 3rem;
+    background: var(--surface-subtle);
+  }
+
+  .verification-workspace-bar[data-settings-open="false"]
+    .verification-workspace-controls {
+    width: 0;
+    background: transparent;
+  }
+
+  .verification-workspace-bar[data-settings-open="false"]
+    .verification-settings-title {
+    display: none;
+  }
+
+  .verification-workspace-frame[data-settings-open="false"]
+    .verification-workspace-settings {
+    visibility: hidden;
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @container (max-width: 51.999rem) {
+    .verification-workspace[data-list-collapsed="true"]
+      [data-verification-list]:not([hidden]):not(
+        .verification-sidebar-sheet [data-verification-list]
+      ) {
+      animation: verification-rail-enter 180ms ease-out both;
+    }
+  }
+
+  .verification-workspace [data-verification-list],
+  .verification-workspace-list-header,
+  .verification-workspace-controls,
+  .verification-workspace [data-verification-detail] {
+    transition:
+      width 180ms ease,
+      left 180ms ease,
+      right 180ms ease,
+      padding 180ms ease,
+      border-width 180ms ease;
+  }
+
+  @container (min-width: 52rem) {
+    .verification-workspace-settings {
+      transition:
+        transform 180ms ease,
+        visibility 0s;
+    }
+
+    .verification-workspace-frame[data-settings-open="false"]
+      .verification-workspace-settings {
+      transition-delay: 0s, 180ms;
+    }
+  }
+}
+
+@keyframes verification-rail-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.verification-workspace-test-settings:not(
+  :has([data-verification-test-settings]:not([hidden]))
+) {
+  display: none;
+}
+
+@container (min-width: 52rem) {
+  .verification-workspace-frame[data-settings-open="true"] {
+    --verification-settings-space: var(--verification-settings-width);
+  }
+
+  .verification-workspace-settings {
+    max-height: none;
+    border-width: 0 0 0 1px;
+    box-shadow: none;
+  }
+
+  .verification-workspace-bar[data-settings-open="true"]
+    .verification-workspace-controls {
+    width: var(--verification-settings-width);
+    border-left: 1px solid var(--border);
+  }
+}
+
+@container (min-width: 52rem) and (max-width: 71.999rem) {
+  .verification-workspace-frame,
+  .verification-workspace-bar {
+    --verification-list-expanded-width: 18rem;
+    --verification-list-width: var(--verification-list-expanded-width);
+    --verification-settings-width: 18rem;
+  }
+
+  .verification-workspace[data-list-collapsed="true"]
+    .verification-workspace-frame,
+  .verification-workspace[data-list-collapsed="true"]
+    .verification-workspace-bar {
+    --verification-list-width: var(--verification-list-collapsed-width);
+  }
+}
+
+.verification-concurrency-slider {
+  appearance: none;
+  background: transparent;
+}
+
+.verification-concurrency-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--primary) var(--verification-concurrency),
+    var(--muted) var(--verification-concurrency)
+  );
+}
+
+.verification-concurrency-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.verification-concurrency-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--muted);
+}
+
+.verification-concurrency-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--primary);
+}
+
+.verification-concurrency-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.verification-concurrency-slider:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+
+/* Credential acquisition leads the webpage entry before test selection is useful.
+   Keep all editors mounted while the credentials reveal the testing workspace. */
+.verification-workspace[data-preparing="true"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.verification-workspace[data-preparing="true"] [data-verification-source] {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.verification-workspace[data-preparing="true"]
+  [data-verification-source]
+  textarea {
+  min-height: 8rem;
+}
+
+.verification-workspace[data-preparing="true"] .verification-workspace-frame {
+  display: contents;
+}
+
+.verification-workspace[data-preparing="true"]
+  .verification-workspace-settings {
+  position: static;
+  width: 100%;
+  max-height: none;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* Let save metadata span the setup width without moving or remounting editors. */
+.verification-workspace[data-preparing="true"] .verification-workspace-settings,
+.verification-workspace[data-preparing="true"] .verification-settings-editors,
+.verification-workspace[data-preparing="true"]
+  [data-verification-settings-scroll] {
+  display: contents;
+}
+
+.verification-workspace[data-preparing="true"] [data-verification-config] {
+  padding: 1rem;
+}
+
+.verification-workspace[data-preparing="true"]
+  [data-verification-supplementary] {
+  grid-column: 1 / -1;
+  padding-inline: 1.5rem;
+}
+
+@media (max-width: 880px) {
+  .verification-workspace[data-preparing="true"] {
+    display: block;
+    padding: 0;
+  }
+
+  .verification-workspace[data-preparing="true"]
+    [data-verification-source]
+    textarea {
+    min-height: 7rem;
+  }
+}

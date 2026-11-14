@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { sanitizeGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
 import { CONTEXT_TOKEN_ENCODINGS } from "~/services/verification/modelQuality/contextTokenConstants"
 import {
   getNeedleCoordinateKey,
@@ -64,6 +65,7 @@ const resultSchema = z
           inputTokens: count.optional(),
           outputTokens: count.optional(),
           latencyMs: z.number().nonnegative().optional(),
+          metrics: z.unknown().optional().transform(sanitizeGenerationMetrics),
         }),
       )
       .max(defaults.maxRequests),

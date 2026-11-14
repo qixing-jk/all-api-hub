@@ -5,13 +5,15 @@ import {
   useVerificationTools as useTools,
   VERIFICATION_TOOL_STATUSES,
   type UseVerificationToolsOptions,
-  type VerificationToolRequestParams,
 } from "~/features/Verification/api/useVerificationTools"
+import { type VerificationToolRequestParams } from "~/features/Verification/api/verificationToolRequestTypes"
+import type { PelicanRunner } from "~/features/Verification/api/verificationToolRequestTypes"
 import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification/types"
 import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const mockRunPelicanTest = vi.fn()
 
@@ -91,6 +93,140 @@ const buildPelicanResult = () => ({
 })
 
 describe("useVerificationTools", () => {
+  it("preserves stopped drawing output and rejects superseded progress and completion", async () => {
+    const first = createDeferred<Awaited<ReturnType<PelicanRunner>>>()
+    const second = createDeferred<Awaited<ReturnType<PelicanRunner>>>()
+    let oldRequest!: Parameters<PelicanRunner>[0]
+    const runner = vi
+      .fn<PelicanRunner>()
+      .mockImplementationOnce((request) => {
+        oldRequest = request
+        return first.promise
+      })
+      .mockReturnValueOnce(second.promise)
+    const { result } = renderHook(() =>
+      useVerificationTools({
+        resolveRequest: async () => buildRequest(),
+        isSupported: true,
+        isBlocked: false,
+        runPelicanRequest: runner,
+      }),
+    )
+    act(() => result.current.runPelican())
+    await waitFor(() => expect(runner).toHaveBeenCalledOnce())
+    const progress = {
+      text: "partial drawing",
+      reasoning: "",
+      tools: [],
+      step: 1,
+    }
+    act(() => {
+      oldRequest.onProgress?.(progress)
+      result.current.setPelicanExecutionMode(PELICAN_EXECUTION_MODES.Agent)
+    })
+    expect(result.current.pelicanProgress).toEqual(progress)
+    expect(result.current.pelicanExecutionMode).toBe(
+      PELICAN_EXECUTION_MODES.Reply,
+    )
+    act(() => result.current.stopPelican())
+    expect(result.current.pelicanStatus).toBe(
+      VERIFICATION_TOOL_STATUSES.Stopped,
+    )
+    expect(result.current.pelican).toBeNull()
+    expect(result.current.pelicanProgress).toEqual(progress)
+    act(() => result.current.runPelican())
+    await waitFor(() => expect(runner).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      oldRequest.onProgress?.({ ...progress, text: "late drawing" })
+      first.resolve(buildPelicanResult())
+    })
+    expect(result.current.pelican).toBeNull()
+    expect(result.current.pelicanProgress).toBeUndefined()
+    await act(async () => second.resolve(buildPelicanResult()))
+    expect(result.current.pelicanStatus).toBe(VERIFICATION_TOOL_STATUSES.Done)
+  })
+  it.each(["capacity", "needle"])(
+    "runs needle and capacity independently when %s starts first",
+    async (first) => {
+      let capacitySignal!: AbortSignal
+      let needleSignal!: AbortSignal
+      const capacityRunner = vi.fn(({ abortSignal }) => {
+        capacitySignal = abortSignal
+        return new Promise<never>(() => {})
+      })
+      const needleRunner = vi.fn(({ abortSignal }) => {
+        needleSignal = abortSignal
+        return new Promise<never>((_resolve, reject) => {
+          abortSignal.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          )
+        })
+      })
+      const { result, unmount } = renderHook(() =>
+        useVerificationTools({
+          resolveRequest: async () => buildRequest(),
+          isSupported: true,
+          isBlocked: false,
+          enableContextCapacity: true,
+          modelId: "gpt-test",
+          loadNeedleCounter: async () => ({
+            encoding: "o200k_base",
+            estimated: true,
+          }),
+          needleHistoryAccess: { get: async () => null, save: vi.fn() },
+          runNeedleRequest: needleRunner,
+          runContextCapacityRequest: capacityRunner,
+        }),
+      )
+      await waitFor(() => expect(result.current.needle!.canRun).toBe(true))
+      act(() => {
+        if (first === "capacity") result.current.contextCapacity!.run()
+        else void result.current.needle!.run()
+      })
+      expect(
+        first === "capacity"
+          ? result.current.needle!.canRun
+          : result.current.contextCapacity!.canRun,
+      ).toBe(true)
+      if (first === "capacity")
+        expect(result.current.needle!.canRunSelection).toBe(true)
+      act(() => {
+        if (first === "capacity") void result.current.needle!.run()
+        else result.current.contextCapacity!.run()
+      })
+      await waitFor(() => expect(needleRunner).toHaveBeenCalledOnce())
+      await waitFor(() => expect(capacityRunner).toHaveBeenCalledOnce())
+      expect(result.current.needle!.running).toBe(true)
+      expect(result.current.contextCapacity!.running).toBe(true)
+      act(() => {
+        void result.current.needle!.run()
+        result.current.contextCapacity!.run()
+      })
+      expect(needleRunner).toHaveBeenCalledOnce()
+      expect(capacityRunner).toHaveBeenCalledOnce()
+      if (first === "capacity") {
+        act(() => result.current.contextCapacity!.stop())
+        expect(capacitySignal.aborted).toBe(true)
+        expect(needleSignal.aborted).toBe(false)
+        expect(result.current.needle!.running).toBe(true)
+      } else {
+        act(() => result.current.needle!.stop())
+        await waitFor(() => expect(result.current.needle!.running).toBe(false))
+        expect(needleSignal.aborted).toBe(true)
+        expect(capacitySignal.aborted).toBe(false)
+        expect(result.current.contextCapacity!.running).toBe(true)
+      }
+      expect(result.current.isRunning).toBe(true)
+      act(() => {
+        result.current.needle!.stop()
+        result.current.contextCapacity!.stop()
+      })
+      await waitFor(() => expect(result.current.isRunning).toBe(false))
+      unmount()
+      expect(needleSignal.aborted).toBe(true)
+    },
+  )
+
   it.each(["drawing", "capacity"])(
     "runs drawing and capacity independently when %s starts first",
     async (first) => {

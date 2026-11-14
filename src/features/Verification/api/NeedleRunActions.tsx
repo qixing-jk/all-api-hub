@@ -24,7 +24,7 @@ export function NeedleRunActions({
   return displayPlan ? (
     <div className="flex items-center gap-3">
       {!controller.result || executing ? (
-        <span className="text-foreground text-sm font-medium tabular-nums">
+        <span className="text-sm font-medium text-foreground tabular-nums">
           {t("verifyDialog.tools.needle.requestCount", {
             count: displayPlan.requests,
           })}
@@ -32,6 +32,7 @@ export function NeedleRunActions({
       ) : null}
       <VerificationRunAction
         type="button"
+        variant={executing ? "secondary" : "default"}
         onRun={controller.run}
         onStop={controller.stop}
         canRun={controller.canRun}
@@ -41,10 +42,7 @@ export function NeedleRunActions({
       >
         {t("verifyDialog.actions.runOne")}
         {nextRun && plan ? (
-          <span
-            id={`${id}-run-requests`}
-            className="text-muted-foreground tabular-nums"
-          >
+          <span id={`${id}-run-requests`} className="tabular-nums">
             {t("verifyDialog.tools.needle.requestCount", {
               count: plan.requests,
             })}

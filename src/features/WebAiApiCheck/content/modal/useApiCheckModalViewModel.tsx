@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  useVerificationTools,
-  type PelicanRunner,
-  type VerificationToolRequestParams,
-} from "~/features/Verification/api/useVerificationTools"
+import { useVerificationTools } from "~/features/Verification/api/useVerificationTools"
+import { type VerificationToolRequestParams } from "~/features/Verification/api/verificationToolRequestTypes"
 import {
   API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_OPEN_MODAL_EVENT,
@@ -19,6 +16,7 @@ import {
   getApiCheckActionSourceKind,
   getApiCheckSourceKind,
 } from "~/features/WebAiApiCheck/content/modal/apiCheckModalAnalytics"
+import { API_CHECK_VALIDATION_ERRORS } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import type { ApiCheckValidationError } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { useApiCheckModalShell } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "~/features/WebAiApiCheck/content/models/useApiCheckModelDiscovery"
@@ -29,6 +27,7 @@ import {
 import { useApiCheckProbeRunner } from "~/features/WebAiApiCheck/content/probes/useApiCheckProbeRunner"
 import { normalizeApiCheckSourceUrl } from "~/features/WebAiApiCheck/content/profiles/apiCheckSourceUrl"
 import { useApiCheckProfileSaveWorkflow } from "~/features/WebAiApiCheck/content/profiles/useApiCheckProfileSaveWorkflow"
+import { useApiCheckTags } from "~/features/WebAiApiCheck/content/profiles/useApiCheckTags"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -42,23 +41,19 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
+  type ApiVerificationProbePromptOverrides,
   type ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
-import {
-  sendWebAiApiCheckMessage,
-  WebAiApiCheckMessageTypes,
-} from "~/services/verification/webAiApiCheck/messaging"
 import {
   discardNeedleCheckpointsInBackground,
   loadNeedleCounterInBackground,
   needleHistoryInBackground,
   runNeedleInBackground,
 } from "~/services/verification/webAiApiCheck/needleClient"
+import { runPelicanInBackground } from "~/services/verification/webAiApiCheck/pelicanClient"
 import { runQuestionAnswerInBackground } from "~/services/verification/webAiApiCheck/questionAnswerClient"
-import type { Tag } from "~/types"
-import { safeRandomUUID } from "~/utils/core/identifier"
 
 import { runContextCapacityInBackground } from "../probes/runContextCapacityInBackground"
 
@@ -97,7 +92,7 @@ export function useApiCheckModalViewModel() {
     useState<ApiVerificationRequestProfile>(
       API_VERIFICATION_REQUEST_PROFILES.Default,
     )
-  const [tags, setTags] = useState<Tag[]>([])
+  const { tags, loadTags, createTag, renameTag } = useApiCheckTags()
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
   const [expiresAtInput, setExpiresAtInput] = useState("")
@@ -112,9 +107,9 @@ export function useApiCheckModalViewModel() {
   const [validationFailure, setValidationError] =
     useState<ApiCheckValidationError | null>(null)
   const validationError =
-    validationFailure === "missing-credentials"
+    validationFailure === API_CHECK_VALIDATION_ERRORS.MissingCredentials
       ? t("webAiApiCheck:modal.errors.missingBaseUrlOrKey")
-      : validationFailure === "missing-model"
+      : validationFailure === API_CHECK_VALIDATION_ERRORS.MissingModel
         ? t("aiApiVerification:verifyDialog.requiresModelId")
         : null
   const prevApiTypeRef = useRef(apiType)
@@ -177,6 +172,8 @@ export function useApiCheckModalViewModel() {
   } = modelDiscovery
 
   const probeRunner = useApiCheckProbeRunner({
+    getProbePromptOverrides: (): ApiVerificationProbePromptOverrides =>
+      verificationTools.promptDraft,
     t,
     apiType,
     verificationMode,
@@ -205,55 +202,6 @@ export function useApiCheckModalViewModel() {
     stopRunAll,
     getCurrentVerificationResultsSnapshot,
   } = probeRunner
-
-  /**
-   * The content script delegates provider access and cancellation to background.
-   */
-  const runPelicanInBackground: PelicanRunner = async ({
-    baseUrl: pelicanBaseUrl,
-    apiKey: pelicanApiKey,
-    apiType: pelicanApiType,
-    modelId: pelicanModelId,
-    mode: pelicanMode,
-    prompt: pelicanPromptText,
-    executionMode,
-    requestProfile: pelicanRequestProfile,
-    requestProfileEnhanced: pelicanRequestProfileEnhanced,
-    abortSignal: pelicanSignal,
-  }) => {
-    pelicanSignal.throwIfAborted()
-    const runId = safeRandomUUID()
-    const cancel = () => {
-      void sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.CancelRunProbe, {
-        runId,
-      }).catch(() => undefined)
-    }
-    pelicanSignal.addEventListener("abort", cancel, { once: true })
-    try {
-      const response = await sendWebAiApiCheckMessage(
-        WebAiApiCheckMessageTypes.RunPelican,
-        {
-          runId,
-          executionMode,
-          requestProfile: pelicanRequestProfile,
-          requestProfileEnhanced: pelicanRequestProfileEnhanced,
-          apiType: pelicanApiType,
-          mode: pelicanMode,
-          baseUrl: pelicanBaseUrl,
-          apiKey: pelicanApiKey,
-          modelId: pelicanModelId,
-          ...(pelicanPromptText ? { prompt: pelicanPromptText } : {}),
-        },
-      )
-      pelicanSignal.throwIfAborted()
-      if (!response.success) {
-        throw new Error(response.error ?? "Pelican test failed")
-      }
-      return response.result
-    } finally {
-      pelicanSignal.removeEventListener("abort", cancel)
-    }
-  }
 
   const resolveToolRequest =
     useCallback(async (): Promise<VerificationToolRequestParams | null> => {
@@ -320,46 +268,6 @@ export function useApiCheckModalViewModel() {
     !!expiresAtInput.trim() ||
     !!sourceUrl.trim()
 
-  const loadTags = useCallback(async () => {
-    setTags([])
-    const response = await sendWebAiApiCheckMessage(
-      WebAiApiCheckMessageTypes.ListTags,
-      {},
-    )
-    if (response?.success) {
-      setTags(response.tags)
-    }
-  }, [])
-
-  const createTag = useCallback(async (name: string) => {
-    const response = await sendWebAiApiCheckMessage(
-      WebAiApiCheckMessageTypes.CreateTag,
-      { name },
-    )
-    if (!response?.success) {
-      throw new Error(response?.error || "Failed to create tag")
-    }
-    setTags((current) => [
-      ...current.filter((tag) => tag.id !== response.tag.id),
-      response.tag,
-    ])
-    return response.tag
-  }, [])
-
-  const renameTag = useCallback(async (tagId: string, name: string) => {
-    const response = await sendWebAiApiCheckMessage(
-      WebAiApiCheckMessageTypes.RenameTag,
-      { tagId, name },
-    )
-    if (!response?.success) {
-      throw new Error(response?.error || "Failed to rename tag")
-    }
-    setTags((current) =>
-      current.map((tag) => (tag.id === response.tag.id ? response.tag : tag)),
-    )
-    return response.tag
-  }, [])
-
   useEffect(() => {
     if (prevApiTypeRef.current === apiType) return
     prevApiTypeRef.current = apiType
@@ -411,7 +319,7 @@ export function useApiCheckModalViewModel() {
       setNotes("")
       setExpiresAtInput("")
       setSourceUrl(normalizeApiCheckSourceUrl(nextPageUrl) ?? "")
-      setIsProfileOptionsOpen(false)
+      setIsProfileOptionsOpen(!nextBaseUrl || !nextApiKey)
 
       setApiKeyVisible(true)
       resetModelList({ clearSelection: true })
@@ -447,13 +355,19 @@ export function useApiCheckModalViewModel() {
       void loadTags()
     }
 
-    window.addEventListener(API_CHECK_OPEN_MODAL_EVENT, handleOpen as any)
+    window.addEventListener(
+      API_CHECK_OPEN_MODAL_EVENT,
+      handleOpen as EventListener,
+    )
     if (!hasSignaledHostReadyRef.current) {
       hasSignaledHostReadyRef.current = true
       dispatchApiCheckModalHostReady()
     }
     return () => {
-      window.removeEventListener(API_CHECK_OPEN_MODAL_EVENT, handleOpen as any)
+      window.removeEventListener(
+        API_CHECK_OPEN_MODAL_EVENT,
+        handleOpen as EventListener,
+      )
     }
   }, [
     apiType,
@@ -586,6 +500,7 @@ export function useApiCheckModalViewModel() {
       fetchedModelCount,
       popoverPortalContainer,
       probes,
+      concurrency: probeRunner.concurrency,
       isRunningAll,
       isStoppingRunAll,
       testStoppedMessage,

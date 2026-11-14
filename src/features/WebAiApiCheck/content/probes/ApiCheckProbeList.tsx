@@ -34,12 +34,12 @@ export function ApiCheckProbeList({
       {probes.map((probe) => {
         const result = probe.result
         const summary = result?.summaryKey
-          ? translateApiVerificationSummary(
+          ? (translateApiVerificationSummary(
               t,
               result.summaryKey,
               result.summaryParams,
               result.summary,
-            ) ?? result.summary
+            ) ?? result.summary)
           : result?.summary
 
         return (
@@ -48,6 +48,8 @@ export function ApiCheckProbeList({
             data-testid={getWebAiApiCheckProbeTestId(probe.id)}
           >
             <VerificationProbeRow
+              progress={probe.progress}
+              startedAt={probe.startedAt}
               isRunning={probe.isRunning}
               controller={tools}
               probeId={probe.id}

@@ -3,6 +3,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationMode,
   ApiVerificationProbeId,
+  ApiVerificationProbePromptOverrides,
   ApiVerificationProbeResult,
   ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification"
@@ -165,6 +166,7 @@ export type ApiCheckFetchModelsResponse =
  * The returned result must never include secrets (apiKey), and error summaries must be sanitized.
  */
 export type ApiCheckRunProbeRequest = {
+  probePromptOverrides?: ApiVerificationProbePromptOverrides
   requestProfileEnhanced?: boolean
   requestProfile?: ApiVerificationRequestProfile
   runId?: string
@@ -315,7 +317,7 @@ export type ApiCheckRunNeedleResponse =
 
 export type ApiCheckQuestionAnswerRequest = Omit<
   QuestionAnswerRequest,
-  "abortSignal"
+  "abortSignal" | "onProgress"
 > & { runId: string }
 export type ApiCheckQuestionAnswerResponse =
   | { success: true; result: QuestionAnswerResult }

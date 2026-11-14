@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { userPreferences } from "~/services/preferences/userPreferences"
+import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   runQuestionAnswerTest,
@@ -12,7 +13,13 @@ import {
   normalizeQuestionAnswerSettings,
 } from "~/services/verification/modelQuality/questionAnswerSettings"
 
-import type { VerificationToolRequestParams } from "./useVerificationTools"
+import {
+  VERIFICATION_SETTINGS_ERROR_PHASES,
+  VERIFICATION_TOOL_STATUSES,
+  type VerificationSettingsErrorPhase,
+  type VerificationToolStatus,
+} from "./types"
+import type { VerificationToolRequestParams } from "./verificationToolRequestTypes"
 
 type Options = {
   contextKey: string
@@ -34,12 +41,15 @@ export function useQuestionAnswerTest({
 }: Options) {
   const [settings, setSettings] = useState(DEFAULT_QUESTION_ANSWER_SETTINGS)
   const [ready, setReady] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveError, setSaveError] =
+    useState<VerificationSettingsErrorPhase | null>(null)
   const [saving, setSaving] = useState(false)
-  const [status, setStatus] = useState<
-    "idle" | "running" | "done" | "stopped" | "error"
-  >("idle")
+  const [status, setStatus] = useState<VerificationToolStatus>(
+    VERIFICATION_TOOL_STATUSES.Idle,
+  )
   const [result, setResult] = useState<QuestionAnswerResult | null>(null)
+  const [progress, setProgress] = useState<VerificationGenerationProgress>()
+  const [startedAt, setStartedAt] = useState<number>()
   const [error, setError] = useState<string | null>(null)
   const active = useRef<AbortController | null>(null)
   const mounted = useRef(false)
@@ -66,7 +76,8 @@ export function useQuestionAnswerTest({
           if (mounted.current) setSaveError(null)
         } catch {
           pending.current = { ...patch, ...pending.current }
-          if (mounted.current) setSaveError("save")
+          if (mounted.current)
+            setSaveError(VERIFICATION_SETTINGS_ERROR_PHASES.Save)
         }
       })
       .finally(() => {
@@ -90,7 +101,7 @@ export function useQuestionAnswerTest({
       })
       .catch(() => {
         if (mounted.current && generation === loadGeneration.current)
-          setSaveError("load")
+          setSaveError(VERIFICATION_SETTINGS_ERROR_PHASES.Load)
       })
   }, [])
 
@@ -107,8 +118,10 @@ export function useQuestionAnswerTest({
   useEffect(() => {
     active.current?.abort()
     active.current = null
-    setStatus("idle")
+    setStatus(VERIFICATION_TOOL_STATUSES.Idle)
     setResult(null)
+    setProgress(undefined)
+    setStartedAt(undefined)
     setError(null)
     return () => {
       active.current?.abort()
@@ -129,7 +142,7 @@ export function useQuestionAnswerTest({
     [ready, saveSettings],
   )
 
-  const running = status === "running"
+  const running = status === VERIFICATION_TOOL_STATUSES.Running
   const canRun =
     enabled &&
     !blocked &&
@@ -141,7 +154,9 @@ export function useQuestionAnswerTest({
     const controller = new AbortController()
     active.current = controller
     const snapshot = { ...settings }
-    setStatus("running")
+    setStatus(VERIFICATION_TOOL_STATUSES.Running)
+    setProgress(undefined)
+    setStartedAt(Date.now())
     setResult(null)
     setError(null)
     let secrets: string[] = []
@@ -150,7 +165,7 @@ export function useQuestionAnswerTest({
         const request = await resolveRequest(controller.signal)
         if (active.current !== controller) return
         if (!request) {
-          setStatus("idle")
+          setStatus(VERIFICATION_TOOL_STATUSES.Idle)
           return
         }
         secrets = request.secrets
@@ -158,17 +173,22 @@ export function useQuestionAnswerTest({
         const answer = await runner({
           ...request,
           ...snapshot,
+          onProgress: (progress) => {
+            if (active.current === controller && !controller.signal.aborted)
+              setProgress(progress)
+          },
           abortSignal: controller.signal,
         })
         if (active.current !== controller || controller.signal.aborted) return
         setResult(answer)
-        setStatus("done")
+        setStatus(VERIFICATION_TOOL_STATUSES.Done)
       } catch (cause) {
         if (active.current !== controller) return
-        if (controller.signal.aborted) setStatus("stopped")
+        if (controller.signal.aborted)
+          setStatus(VERIFICATION_TOOL_STATUSES.Stopped)
         else {
           setError(toSanitizedErrorSummary(cause, secrets))
-          setStatus("error")
+          setStatus(VERIFICATION_TOOL_STATUSES.Error)
         }
       } finally {
         if (active.current === controller) active.current = null
@@ -179,7 +199,7 @@ export function useQuestionAnswerTest({
   const stop = useCallback(() => {
     active.current?.abort()
     active.current = null
-    setStatus("stopped")
+    setStatus(VERIFICATION_TOOL_STATUSES.Stopped)
   }, [])
 
   return {
@@ -193,6 +213,8 @@ export function useQuestionAnswerTest({
     status,
     running,
     result,
+    progress,
+    startedAt,
     error,
     canRun,
     run,
