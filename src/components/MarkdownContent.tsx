@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react"
+import { useState, type ComponentPropsWithoutRef } from "react"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import remarkBreaks from "remark-breaks"
@@ -82,6 +82,12 @@ export function MarkdownContent({
   className,
   ...props
 }: MarkdownContentProps) {
+  const [mode, setMode] = useState<"static" | "streaming">(
+    streaming ? "streaming" : "static",
+  )
+  // Static edits use one tree; once incremental rendering starts, keep its tree
+  // when the stream finishes so native disclosures and focus survive completion.
+  if (streaming && mode === "static") setMode("streaming")
   return (
     <div
       {...props}
@@ -95,7 +101,7 @@ export function MarkdownContent({
       )}
     >
       <Streamdown
-        mode="streaming"
+        mode={mode}
         parseIncompleteMarkdown={streaming}
         isAnimating={streaming}
         components={components}

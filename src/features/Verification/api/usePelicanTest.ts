@@ -277,7 +277,11 @@ export function usePelicanTest({
   ])
 
   const stopPelican = useCallback(() => {
-    pelicanControllerRef.current?.abort()
+    const controller = pelicanControllerRef.current
+    if (!controller) return
+    pelicanControllerRef.current = null
+    controller.abort()
+    setPelicanStatus(VERIFICATION_TOOL_STATUSES.Stopped)
   }, [])
 
   return useMemo(

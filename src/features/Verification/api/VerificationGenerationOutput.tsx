@@ -70,7 +70,10 @@ export function VerificationGenerationOutput({
   if (!running && text !== undefined && progress?.parts?.length) {
     let finalTextIndex = -1
     for (let index = parts.length - 1; index >= 0; index--) {
-      if (parts[index]?.type === VERIFICATION_GENERATION_PART_TYPES.Text) {
+      if (
+        parts[index]?.type === VERIFICATION_GENERATION_PART_TYPES.Text &&
+        parts[index]?.step === progress.step
+      ) {
         finalTextIndex = index
         break
       }

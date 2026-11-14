@@ -6,26 +6,31 @@ import { MarkdownContent } from "~/components/MarkdownContent"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("MarkdownContent", () => {
-  it("retains disclosure state and summary focus when streaming completes", async () => {
-    const user = userEvent.setup()
-    const content =
-      '<details><summary tabindex="0">Diagnostics</summary>Partial</details>'
-    const { container, rerender } = render(
-      <MarkdownContent content={content} streaming />,
-    )
-    await user.click(screen.getByText("Diagnostics"))
-    expect(container.querySelector("details")).toHaveAttribute("open")
-    expect(screen.getByText("Diagnostics")).toHaveFocus()
-    rerender(
-      <MarkdownContent
-        content={content.replace("Partial", "Complete")}
-        streaming={false}
-      />,
-    )
-    expect(container.querySelector("details")).toHaveAttribute("open")
-    expect(screen.getByText("Diagnostics")).toHaveFocus()
-    expect(screen.getByText("Complete")).toBeVisible()
-  })
+  it.each([true, false])(
+    "retains disclosure state and summary focus when streaming completes (initial stream: %s)",
+    async (initialStreaming) => {
+      const user = userEvent.setup()
+      const content =
+        '<details><summary tabindex="0">Diagnostics</summary>Partial</details>'
+      const { container, rerender } = render(
+        <MarkdownContent content={content} streaming={initialStreaming} />,
+      )
+      if (!initialStreaming)
+        rerender(<MarkdownContent content={content} streaming />)
+      await user.click(screen.getByText("Diagnostics"))
+      expect(container.querySelector("details")).toHaveAttribute("open")
+      expect(screen.getByText("Diagnostics")).toHaveFocus()
+      rerender(
+        <MarkdownContent
+          content={content.replace("Partial", "Complete")}
+          streaming={false}
+        />,
+      )
+      expect(container.querySelector("details")).toHaveAttribute("open")
+      expect(screen.getByText("Diagnostics")).toHaveFocus()
+      expect(screen.getByText("Complete")).toBeVisible()
+    },
+  )
   it("renders incomplete emphasis while streaming and preserves the completed text", () => {
     const { rerender } = render(
       <MarkdownContent content="**正在生成" streaming />,

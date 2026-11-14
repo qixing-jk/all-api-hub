@@ -911,6 +911,17 @@ export async function expectVerificationWorkspaceFlush(workspace: Locator) {
 
 /** Open the shared settings pane through its public control at any viewport. */
 export async function showVerificationSettings(page: Page) {
+  // Workspace measurements commit on the next animation frame after resize.
+  // Read the settled setting state so an automatic pane closure cannot race this open.
+  await page.getByTestId("verification-workspace").evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        const view = element.ownerDocument.defaultView!
+        view.requestAnimationFrame(() =>
+          view.requestAnimationFrame(() => resolve()),
+        )
+      }),
+  )
   const toggle = page
     .getByTestId("verification-workspace")
     .getByRole("button", {

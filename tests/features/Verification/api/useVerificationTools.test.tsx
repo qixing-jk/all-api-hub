@@ -129,7 +129,6 @@ describe("useVerificationTools", () => {
       PELICAN_EXECUTION_MODES.Reply,
     )
     act(() => result.current.stopPelican())
-    await act(async () => first.resolve(buildPelicanResult()))
     expect(result.current.pelicanStatus).toBe(
       VERIFICATION_TOOL_STATUSES.Stopped,
     )

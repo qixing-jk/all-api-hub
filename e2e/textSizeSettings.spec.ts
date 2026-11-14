@@ -26,6 +26,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { showVerificationSettings } from "~~/e2e/utils/verificationWorkspace"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 test.use({ actionTimeout: 10_000 })
@@ -145,6 +146,7 @@ for (const hostRootSize of [10, 16, 20]) {
       const contentHost = page.locator(CONTENT_UI_HOST_TAG)
       const modal = contentHost.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
       await expect(modal).toBeVisible()
+      await showVerificationSettings(page)
       const options = await context.newPage()
       await forceExtensionLanguage(options, "en")
       await options.goto(

@@ -66,9 +66,9 @@ export async function verifyOpenApiCredentialProfileModelsProbeDialog(
     ).toContainText(params.expectedStatus === "fail" ? "Fail" : "Pass")
   }
   if (typeof params.expectedModelCount === "number") {
-    await expect(modelsProbe).toContainText(
-      `Fetched ${params.expectedModelCount} models.`,
-    )
+    await expect(
+      params.page.getByTestId("verification-active-test"),
+    ).toContainText(`Fetched ${params.expectedModelCount} models.`)
   }
   if (params.expectedSummaryText) {
     await expect(
