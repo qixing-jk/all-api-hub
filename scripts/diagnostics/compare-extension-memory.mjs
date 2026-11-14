@@ -248,6 +248,7 @@ async function syncProbeFilesToBaseline(baselineSrcDir) {
     [
       "scripts/diagnostics/collect-extension-memory.mjs",
       "scripts/diagnostics/extension-memory-report-utils.mjs",
+      "e2e/utils/cdpTarget.ts",
     ],
     baselineSrcDir,
   )
@@ -386,6 +387,21 @@ async function main() {
       options: comparePageSnapshot(
         baselineReport.options,
         currentReport.options,
+      ),
+      sidepanel: comparePageSnapshot(
+        baselineReport.sidepanel,
+        currentReport.sidepanel,
+      ),
+      background: Object.fromEntries(
+        ["runtimeUsedSize", "embedderHeapUsedSize", "backingStorageSize"].map(
+          (key) => [
+            key,
+            compareNumericMetric(
+              baselineReport.background[key],
+              currentReport.background[key],
+            ),
+          ],
+        ),
       ),
       contentScriptImpact: compareContentScriptImpact(
         baselineReport.contentScriptImpact,

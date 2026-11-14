@@ -3,10 +3,10 @@ import os from "node:os"
 import path from "node:path"
 import { chromium } from "@playwright/test"
 
+import { createTargetCommandSender } from "../../e2e/utils/cdpTarget.ts"
 import { formatBytes } from "./extension-memory-report-utils.mjs"
 
 const repoRoot = process.cwd()
-const EXTENSION_PAGE_WAIT_MS = 1000
 const NEUTRAL_PAGE_WAIT_MS = 1500
 const STABLE_PAGE_POLL_MS = 200
 const STABLE_PAGE_MAX_WAIT_MS = 15_000
@@ -15,10 +15,12 @@ const HASHED_ASSET_PATTERN =
 const APP_SHELL_SELECTOR_BY_PAGE_PATH = {
   "options.html": '[data-testid="options-app"]',
   "popup.html": '[data-testid="popup-view-accounts"]',
+  "sidepanel.html": '[data-testid="popup-view-accounts"]',
 }
 const READY_SELECTOR_BY_PAGE_PATH = {
-  "options.html": '[data-testid="basic-settings-page"]',
+  "options.html": '[data-testid="options-overview-page"]',
   "popup.html": '[data-testid="account-list-view"]',
+  "sidepanel.html": '[data-testid="account-list-view"]',
 }
 
 /**
@@ -274,6 +276,7 @@ async function capturePageMetrics(context, page) {
   const namedMetrics = Object.fromEntries(
     performanceMetrics.metrics.map((metric) => [metric.name, metric.value]),
   )
+  await cdp.detach()
 
   return {
     title: pageState.title,
@@ -295,6 +298,41 @@ async function capturePageMetrics(context, page) {
       jsEventListeners:
         domCounters.jsEventListeners ?? namedMetrics.JSEventListeners ?? null,
     },
+  }
+}
+
+/** Measure the background worker after the popup has finished loading. */
+async function captureBackgroundMemory(context, extensionId) {
+  const session = await context.browser().newBrowserCDPSession()
+  let sessionId
+  try {
+    const { targetInfos } = await session.send("Target.getTargets")
+    const target = targetInfos.find(
+      (entry) =>
+        entry.type === "service_worker" &&
+        entry.url.startsWith(`chrome-extension://${extensionId}/`),
+    )
+    if (!target) throw new Error("Extension background worker is unavailable")
+    ;({ sessionId } = await session.send("Target.attachToTarget", {
+      targetId: target.targetId,
+      flatten: false,
+    }))
+    const send = createTargetCommandSender(session, sessionId)
+    await send("HeapProfiler.collectGarbage")
+    const heap = await send("Runtime.getHeapUsage")
+    return {
+      scenario: "after-popup-ready",
+      runtimeUsedSize: heap.usedSize,
+      runtimeTotalSize: heap.totalSize,
+      embedderHeapUsedSize: heap.embedderHeapUsedSize ?? null,
+      backingStorageSize: heap.backingStorageSize ?? null,
+    }
+  } finally {
+    if (sessionId)
+      await session
+        .send("Target.detachFromTarget", { sessionId })
+        .catch(() => {})
+    await session.detach()
   }
 }
 
@@ -423,7 +461,7 @@ async function waitForStableExtensionPageState(page, pagePath) {
     await page.waitForTimeout(STABLE_PAGE_POLL_MS)
   }
 
-  await page.waitForTimeout(EXTENSION_PAGE_WAIT_MS)
+  throw new Error(`Extension page did not become ready and stable: ${pagePath}`)
 }
 
 /**
@@ -464,6 +502,14 @@ async function collectExtensionPageSnapshot({ extensionDir, pagePath }) {
             memory: metrics.memory,
             dom: metrics.dom,
             resources,
+            ...(pagePath === "popup.html"
+              ? {
+                  backgroundMemory: await captureBackgroundMemory(
+                    context,
+                    extensionId,
+                  ),
+                }
+              : {}),
           }
         } finally {
           responseCollector.dispose()
@@ -606,6 +652,12 @@ function printSummary(report, reportPath) {
     `Options runtime heap: ${formatBytes(report.options.memory.runtimeUsedSize)} | embedder ${formatBytes(report.options.memory.embedderHeapUsedSize)} | nodes ${report.options.dom.nodes} | listeners ${report.options.dom.jsEventListeners}`,
   )
   console.log(
+    `Sidepanel runtime heap: ${formatBytes(report.sidepanel.memory.runtimeUsedSize)}`,
+  )
+  console.log(
+    `Background runtime heap (after popup ready): ${formatBytes(report.background.runtimeUsedSize)}`,
+  )
+  console.log(
     `Content script delta (${report.contentScriptImpact.targetUrl}): runtime heap ${formatBytes(report.contentScriptImpact.delta.runtimeUsedSize)} | listeners ${report.contentScriptImpact.delta.jsEventListeners ?? "n/a"} | nodes ${report.contentScriptImpact.delta.nodes ?? "n/a"}`,
   )
   console.log(
@@ -625,6 +677,10 @@ async function main() {
   const optionsPage = await collectExtensionPageSnapshot({
     extensionDir: options.extensionDir,
     pagePath: "options.html",
+  })
+  const sidepanel = await collectExtensionPageSnapshot({
+    extensionDir: options.extensionDir,
+    pagePath: "sidepanel.html",
   })
   const contentScriptImpact = await collectContentScriptImpact({
     extensionDir: options.extensionDir,
@@ -646,6 +702,8 @@ async function main() {
     buildArtifacts,
     popup,
     options: optionsPage,
+    sidepanel,
+    background: popup.backgroundMemory,
     contentScriptImpact,
   }
 
