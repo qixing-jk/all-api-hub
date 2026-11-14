@@ -379,7 +379,13 @@ export function Modal({
 
   return (
     <DeferredDialogFocusContext.Provider value={null}>
-      <DialogPrimitive.Root open={isOpen} modal={false}>
+      <DialogPrimitive.Root
+        open={isOpen}
+        modal={false}
+        onOpenChange={(open) => {
+          if (!open) requestClose()
+        }}
+      >
         <DialogPrimitive.Portal>
           <div
             data-slot="modal-overlay"

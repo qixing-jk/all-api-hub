@@ -1,7 +1,8 @@
 import userEvent from "@testing-library/user-event"
-import { Suspense, type ComponentProps } from "react"
+import { Suspense, useState, type ComponentProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DeferredDialog } from "~/components/DeferredDialog"
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildKiloCodeCreateTokenToastId } from "~/features/KiloCodeExport/hooks/useKiloCodeTokenInventory"
 import { KiloCodeExportDialog } from "~/features/KiloCodeExport/KiloCodeExportDialog"
@@ -603,6 +604,37 @@ describe("KiloCodeExportDialog", () => {
     )
 
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("restores focus after footer cancellation removes the account export workspace", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [],
+    })
+    function Example() {
+      const [open, setOpen] = useState(false)
+      const close = () => setOpen(false)
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>Export accounts</button>
+          {open && (
+            <DeferredDialog isOpen onClose={close}>
+              <KiloCodeExportDialog isOpen onClose={close} />
+            </DeferredDialog>
+          )}
+        </>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Example />)
+    const opener = await screen.findByRole("button", {
+      name: "Export accounts",
+    })
+    await user.click(opener)
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.cancel" }),
+    )
+    await waitFor(() => expect(opener).toHaveFocus())
   })
 
   it("disables export actions when there is nothing exportable", async () => {

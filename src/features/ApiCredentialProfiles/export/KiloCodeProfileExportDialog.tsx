@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { DialogClose } from "~/components/ui/dialog"
 import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
@@ -377,9 +378,11 @@ export function KiloCodeProfileExportDialog({
           surfaceId={exportDialogSurface}
         >
           <ActionGroup>
-            <Button variant="ghost" type="button" onClick={onClose}>
-              {t("common:actions.cancel")}
-            </Button>
+            <DialogClose asChild>
+              <Button variant="ghost" type="button">
+                {t("common:actions.cancel")}
+              </Button>
+            </DialogClose>
             <Button
               type="button"
               variant="secondary"

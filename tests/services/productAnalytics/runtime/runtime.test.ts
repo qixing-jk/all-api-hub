@@ -347,9 +347,8 @@ describe("product analytics runtime", () => {
     ).resolves.toEqual({ success: true })
 
     vi.resetModules()
-    const restartedRuntime = await import(
-      "~/services/productAnalytics/runtime/runtime"
-    )
+    const restartedRuntime =
+      await import("~/services/productAnalytics/runtime/runtime")
     await expect(
       restartedRuntime.handleProductAnalyticsMessage(
         ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
@@ -674,9 +673,8 @@ describe("product analytics runtime", () => {
     getAllAccountsMock.mockRejectedValueOnce(new Error("accounts unavailable"))
     mockIsDevBuild.mockReturnValue(true)
 
-    const { triggerStartupSiteEcosystemSnapshot } = await import(
-      "~/services/productAnalytics/runtime/runtime"
-    )
+    const { triggerStartupSiteEcosystemSnapshot } =
+      await import("~/services/productAnalytics/runtime/runtime")
 
     triggerStartupSiteEcosystemSnapshot()
     await vi.runAllTimersAsync()
@@ -691,9 +689,8 @@ describe("product analytics runtime", () => {
     stateMocks.getState.mockRejectedValueOnce(new Error("state unavailable"))
     mockIsDevBuild.mockReturnValue(true)
 
-    const { triggerStartupSettingsSnapshot } = await import(
-      "~/services/productAnalytics/runtime/runtime"
-    )
+    const { triggerStartupSettingsSnapshot } =
+      await import("~/services/productAnalytics/runtime/runtime")
 
     triggerStartupSettingsSnapshot()
     await vi.runAllTimersAsync()
@@ -704,24 +701,28 @@ describe("product analytics runtime", () => {
     )
   })
 
-  it("logs startup shield bypass summary failures in dev builds", async () => {
-    mockIsDevBuild.mockReturnValue(true)
-    stateMocks.getShieldBypassSummaryState.mockRejectedValueOnce(
-      new Error("shield summary unavailable"),
-    )
+  it.each([false, true])(
+    "contains startup shield bypass summary failures (dev: %s)",
+    async (dev) => {
+      mockIsDevBuild.mockReturnValue(dev)
+      stateMocks.getShieldBypassSummaryState.mockRejectedValueOnce(
+        new Error("shield summary unavailable"),
+      )
 
-    const { triggerStartupShieldBypassDailySummary } = await import(
-      "~/services/productAnalytics/runtime/runtime"
-    )
+      const { triggerStartupShieldBypassDailySummary } =
+        await import("~/services/productAnalytics/runtime/runtime")
 
-    triggerStartupShieldBypassDailySummary()
-    await vi.runAllTimersAsync()
+      triggerStartupShieldBypassDailySummary()
+      await vi.runAllTimersAsync()
 
-    expect(mockLoggerDebug).toHaveBeenCalledWith(
-      "Product analytics shield bypass summary failed",
-      expect.any(Error),
-    )
-  })
+      if (dev)
+        expect(mockLoggerDebug).toHaveBeenCalledWith(
+          "Product analytics shield bypass summary failed",
+          expect.any(Error),
+        )
+      else expect(mockLoggerDebug).not.toHaveBeenCalled()
+    },
+  )
 
   it("logs startup sponsor recommendations summary failures in dev builds", async () => {
     mockIsDevBuild.mockReturnValue(true)
@@ -729,9 +730,8 @@ describe("product analytics runtime", () => {
       new Error("sponsor summary unavailable"),
     )
 
-    const { triggerStartupSponsorRecommendationsDailySummary } = await import(
-      "~/services/productAnalytics/runtime/runtime"
-    )
+    const { triggerStartupSponsorRecommendationsDailySummary } =
+      await import("~/services/productAnalytics/runtime/runtime")
 
     triggerStartupSponsorRecommendationsDailySummary()
     await vi.runAllTimersAsync()

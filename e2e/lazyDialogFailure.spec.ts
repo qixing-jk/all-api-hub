@@ -140,6 +140,10 @@ test("contains a canceled Kilo export chunk failure and recovers after an explic
     await expect(
       page.getByRole("combobox", { name: "Selected sites", exact: true }),
     ).toBeEnabled()
+    await page.getByRole("button", { name: "Cancel", exact: true }).click()
+    await expect(
+      page.getByTestId(IDS.copyKeyDialogExportMenuButton),
+    ).toBeFocused()
   } finally {
     releaseChunk()
   }

@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { DialogClose } from "~/components/ui/dialog"
 import { SELECT_FETCH_STATUSES } from "~/components/ui/SelectFetchFeedback"
 import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import { useAccountData } from "~/features/AccountManagement/data/useAccountData"
@@ -389,9 +390,11 @@ export function KiloCodeExportDialog({
                 {selectionSummary}
               </div>
             )}
-            <Button variant="ghost" type="button" onClick={invalidateAndClose}>
-              {t("common:actions.cancel")}
-            </Button>
+            <DialogClose asChild>
+              <Button variant="ghost" type="button">
+                {t("common:actions.cancel")}
+              </Button>
+            </DialogClose>
             <Button
               type="button"
               variant="secondary"

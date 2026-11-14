@@ -8,6 +8,32 @@ import { RootErrorBoundary } from "~/components/RootErrorBoundary"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+it("offers an explicit page reload after a deferred module fails", async () => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+  const reload = vi.fn()
+  function FailedWorkspace(): never {
+    throw new Error("Chunk unavailable")
+  }
+  const user = userEvent.setup()
+  try {
+    render(
+      <DeferredDialog isOpen onClose={vi.fn()}>
+        <FailedWorkspace />
+      </DeferredDialog>,
+    )
+    const reloadButton = await screen.findByRole("button", {
+      name: "common:rootErrorBoundary.reload",
+    })
+    // jsdom's Location.reload is non-configurable; replace only the global read by this action.
+    vi.stubGlobal("window", { location: { reload } })
+    await user.click(reloadButton)
+    expect(reload).toHaveBeenCalledOnce()
+  } finally {
+    vi.unstubAllGlobals()
+    consoleError.mockRestore()
+  }
+})
+
 it.each([false, true])(
   "preserves other drafts when an on-demand dialog module fails (canceled: %s)",
   async (cancelBeforeFailure) => {
