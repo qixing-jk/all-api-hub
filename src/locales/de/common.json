@@ -42,6 +42,9 @@
     "noExpiration": "Kein Ablauf",
     "placeholder": "Datum auswählen"
   },
+  "dialogErrorBoundary": {
+    "description": "Dieser Dialog konnte nicht angezeigt werden. Sie können ihn schließen und die Seite weiter verwenden. Speichern Sie Ihre übrige Arbeit, bevor Sie die Seite neu laden und es erneut versuchen."
+  },
   "labels": {
     "apiKey": "API-Schlüssel",
     "notAvailable": "N/A",

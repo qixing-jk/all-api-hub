@@ -12,7 +12,7 @@ import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerific
 import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { CONTEXT_CAPACITY_TEST_ID } from "~/services/verification/modelQuality/contextCapacityConstants"
 import { NEEDLE_TEST_ID } from "~/services/verification/modelQuality/needleConstants"
-import { QUESTION_ANSWER_TEST_ID } from "~/services/verification/modelQuality/questionAnswer"
+import { QUESTION_ANSWER_TEST_ID } from "~/services/verification/modelQuality/questionAnswerConstants"
 
 /** Explain a test when no current evidence is available, including restored summaries. */
 export function VerificationProbeIntroduction({

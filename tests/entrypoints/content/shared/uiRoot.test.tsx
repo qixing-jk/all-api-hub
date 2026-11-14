@@ -1,6 +1,7 @@
 import { waitFor } from "@testing-library/react"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import type { ContentScriptContext } from "wxt/utils/content-script-context"
 
 import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -45,6 +46,11 @@ vi.mock("~/entrypoints/content/shared/ContentReactRoot", () => ({
   ContentReactRoot: mockContentReactRoot,
 }))
 
+/** Only invalidation is read here; WXT UI creation is mocked below. */
+function createContentContext() {
+  return { isInvalid: false } as ContentScriptContext & { isInvalid: boolean }
+}
+
 describe("uiRoot", () => {
   beforeEach(() => {
     vi.resetModules()
@@ -53,9 +59,8 @@ describe("uiRoot", () => {
   })
 
   it("warns and does not try to mount when the content-script context has not been set", async () => {
-    const { ensureRedemptionToastUi } = await import(
-      "~/entrypoints/content/shared/uiRoot"
-    )
+    const { ensureRedemptionToastUi } =
+      await import("~/entrypoints/content/shared/uiRoot")
 
     await ensureRedemptionToastUi()
 
@@ -84,11 +89,10 @@ describe("uiRoot", () => {
       }
     })
 
-    const { ensureRedemptionToastUi, setContentScriptContext } = await import(
-      "~/entrypoints/content/shared/uiRoot"
-    )
+    const { ensureRedemptionToastUi, setContentScriptContext } =
+      await import("~/entrypoints/content/shared/uiRoot")
 
-    setContentScriptContext({ contentScript: "ctx" } as any)
+    setContentScriptContext(createContentContext())
 
     await ensureRedemptionToastUi()
 
@@ -123,11 +127,10 @@ describe("uiRoot", () => {
       }
     })
 
-    const { ensureRedemptionToastUi, setContentScriptContext } = await import(
-      "~/entrypoints/content/shared/uiRoot"
-    )
+    const { ensureRedemptionToastUi, setContentScriptContext } =
+      await import("~/entrypoints/content/shared/uiRoot")
 
-    const ctx = { contentScript: "ctx" } as any
+    const ctx = createContentContext()
     setContentScriptContext(ctx)
 
     await ensureRedemptionToastUi()
@@ -183,10 +186,9 @@ describe("uiRoot", () => {
         },
       }
     })
-    const { ensureRedemptionToastUi, setContentScriptContext } = await import(
-      "~/entrypoints/content/shared/uiRoot"
-    )
-    setContentScriptContext({ contentScript: "ctx" } as any)
+    const { ensureRedemptionToastUi, setContentScriptContext } =
+      await import("~/entrypoints/content/shared/uiRoot")
+    setContentScriptContext(createContentContext())
     await ensureRedemptionToastUi()
     host.remove()
     await waitFor(() => expect(host.isConnected).toBe(true))
@@ -222,11 +224,10 @@ describe("uiRoot", () => {
         }),
     )
 
-    const { ensureRedemptionToastUi, setContentScriptContext } = await import(
-      "~/entrypoints/content/shared/uiRoot"
-    )
+    const { ensureRedemptionToastUi, setContentScriptContext } =
+      await import("~/entrypoints/content/shared/uiRoot")
 
-    setContentScriptContext({ contentScript: "ctx" } as any)
+    setContentScriptContext(createContentContext())
 
     const firstMount = ensureRedemptionToastUi()
     const secondMount = ensureRedemptionToastUi()
@@ -243,4 +244,64 @@ describe("uiRoot", () => {
     expect(createRootMock).toHaveBeenCalledTimes(1)
     expect(root.render).toHaveBeenCalledTimes(1)
   })
+
+  it("discards a UI created after its content context expires and allows a fresh context to mount", async () => {
+    const { ensureRedemptionToastUi, setContentScriptContext } =
+      await import("~/entrypoints/content/shared/uiRoot")
+    const ctx = createContentContext()
+    const mount = vi.fn()
+    const remove = vi.fn()
+    let finishCreation!: () => void
+    createShadowRootUiMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishCreation = () => resolve({ mount, remove })
+        }),
+    )
+    setContentScriptContext(ctx)
+    const pending = ensureRedemptionToastUi()
+    await waitFor(() => expect(createShadowRootUiMock).toHaveBeenCalledOnce())
+    ctx.isInvalid = true
+    finishCreation()
+    await pending
+
+    expect(mount).not.toHaveBeenCalled()
+    expect(remove).toHaveBeenCalledOnce()
+    expect(createRootMock).not.toHaveBeenCalled()
+
+    setContentScriptContext(createContentContext())
+    createShadowRootUiMock.mockResolvedValueOnce({ mount, remove })
+    await ensureRedemptionToastUi()
+    expect(mount).toHaveBeenCalledOnce()
+  })
+
+  it.each(["expired", "replaced"])(
+    "does not start creating UI when the context is %s while language is loading",
+    async (change) => {
+      const { ensureRedemptionToastUi, setContentScriptContext } =
+        await import("~/entrypoints/content/shared/uiRoot")
+      const ctx = createContentContext()
+      let finishLanguage!: () => void
+      ensureContentI18nReadyMock.mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          finishLanguage = resolve
+        }),
+      )
+      createShadowRootUiMock.mockResolvedValue({
+        mount: vi.fn(),
+        remove: vi.fn(),
+      })
+      setContentScriptContext(ctx)
+      const pending = ensureRedemptionToastUi()
+      if (change === "expired") {
+        ctx.isInvalid = true
+      } else {
+        setContentScriptContext(createContentContext())
+      }
+      finishLanguage()
+      await pending
+      expect(createShadowRootUiMock).not.toHaveBeenCalled()
+      expect(createRootMock).not.toHaveBeenCalled()
+    },
+  )
 })

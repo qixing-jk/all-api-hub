@@ -32,12 +32,9 @@ import {
 import {
   AGENT_TEST_OUTCOMES,
   PELICAN_EXECUTION_MODES,
+  PELICAN_TEST_PROMPT,
   type PelicanExecutionMode,
 } from "~/services/verification/modelQuality/constants"
-
-/** Built-in drawing prompt; users may replace it in the verification panel. */
-export const PELICAN_TEST_PROMPT =
-  "Generate an SVG of a pelican riding a bicycle"
 
 const PELICAN_AGENT_TASK = {
   artifactPath: "pelican.svg",

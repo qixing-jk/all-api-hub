@@ -6,9 +6,9 @@ import {
   CONTEXT_CAPACITY_REASONS,
   CONTEXT_CHECKPOINT_LIMIT_ERROR_NAME,
 } from "~/services/verification/modelQuality/contextCapacityConstants"
-import {
+import type {
+  ContextCapacityRunResult,
   runContextCapacity,
-  type ContextCapacityRunResult,
 } from "~/services/verification/modelQuality/contextCapacityRun"
 import {
   contextCapacityHistory,
@@ -37,7 +37,7 @@ type ContextCapacityOptions = {
     signal: AbortSignal,
   ) => Promise<VerificationToolRequestParams | null>
   resolveHistoryRequest?: ContextCapacityHistoryRequestResolver
-  runner?: typeof runContextCapacity
+  runner: typeof runContextCapacity
   historyAccess?: ContextCapacityHistoryAccess
   historyTarget?: ApiVerificationHistoryTarget | null
   discardCheckpoints?: () => Promise<void>
@@ -259,7 +259,7 @@ export function useContextCapacity(options: ContextCapacityOptions) {
           if (!current() || controller.signal.aborted) return
           continuationForRun =
             resultScope.current === scope ? resumeFrom : undefined
-          const response = await (options.runner ?? runContextCapacity)({
+          const response = await options.runner({
             ...request,
             resumeFrom: continuationForRun,
             abortSignal: controller.signal,

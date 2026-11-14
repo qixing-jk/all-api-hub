@@ -42,6 +42,9 @@
     "noExpiration": "No expiration",
     "placeholder": "Select date"
   },
+  "dialogErrorBoundary": {
+    "description": "This dialog could not be displayed. You can close it and continue using the page. Save your other work before reloading the page to try again."
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

@@ -102,7 +102,13 @@ export async function executeProtectionBypassTask<
 >(
   request: ProtectionBypassExecuteRequest<TTask>,
 ): Promise<TempContextTaskResult<TTask>> {
-  if (isExtensionBackground()) {
+  // WXT replaces ENTRYPOINT per bundle, so pages never inline the background
+  // coordinator through this dynamic import. Unbundled callers retain detection.
+  if (
+    (!import.meta.env.ENTRYPOINT ||
+      import.meta.env.ENTRYPOINT === "background") &&
+    isExtensionBackground()
+  ) {
     const { protectionBypassCoordinator } =
       await import("~/entrypoints/background/protectionBypassCoordinator")
     return await protectionBypassCoordinator.execute(request)

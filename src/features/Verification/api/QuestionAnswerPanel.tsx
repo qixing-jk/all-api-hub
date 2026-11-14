@@ -6,7 +6,7 @@ import { VERIFICATION_GENERATION_PART_TYPES } from "~/services/verification/aiAp
 import {
   QUESTION_ANSWER_OUTCOMES,
   QUESTION_ANSWER_TEST_ID,
-} from "~/services/verification/modelQuality/questionAnswer"
+} from "~/services/verification/modelQuality/questionAnswerConstants"
 
 import {
   QuestionAnswerComposer,

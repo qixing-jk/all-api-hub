@@ -118,10 +118,16 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
       modality === original.MODEL_TEST_MODALITIES.Text
         ? mockProbeDefinitions(apiType)
         : undefined) ?? original.getProbesForModality(modality, apiType),
-    runApiVerificationProbe: (...args: unknown[]) =>
-      mockRunApiVerificationProbe(...args),
   }
 })
+
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  () => ({
+    runApiVerificationProbe: (...args: unknown[]) =>
+      mockRunApiVerificationProbe(...args),
+  }),
+)
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
@@ -157,7 +163,6 @@ const { mockRunPelicanTest } = vi.hoisted(() => ({
 }))
 
 vi.mock("~/services/verification/modelQuality/pelican", () => ({
-  PELICAN_TEST_PROMPT: "pelican",
   runPelicanTest: (...args: unknown[]) => mockRunPelicanTest(...args),
 }))
 

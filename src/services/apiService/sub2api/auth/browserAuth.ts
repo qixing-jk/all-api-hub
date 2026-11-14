@@ -8,8 +8,6 @@ import { normalizeAccountIdentity } from "~/services/accounts/identity/accountId
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
-export const SUB2API_SESSION_BINDING_MISMATCH_CODE = "SESSION_BINDING_MISMATCH"
-
 export type Sub2ApiBrowserAuth = {
   accessToken: string
   userId?: string
@@ -86,8 +84,8 @@ export async function recoverSub2ApiBrowserAuth(
   const accessToken = session?.accessToken?.trim()
   const returnedIdentityMismatch = Boolean(
     session &&
-      normalizedExpectedUserId &&
-      normalizeAccountIdentity(session.userId) !== normalizedExpectedUserId,
+    normalizedExpectedUserId &&
+    normalizeAccountIdentity(session.userId) !== normalizedExpectedUserId,
   )
   if ((foundMismatchedCredential && !session) || returnedIdentityMismatch) {
     throw new Sub2ApiAuthIdentityMismatchError()

@@ -23,7 +23,7 @@ import {
   EditActionIcon,
   RefreshActionIcon,
 } from "~/components/icons/productIcons"
-import { IconButton } from "~/components/ui"
+import { IconButton, Spinner } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,7 +118,7 @@ export default function AccountActionButtons({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
       surfaceId={rowActionsSurface}
     >
-      <div className="gap-y-density-2 grid grid-cols-2 justify-end gap-x-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 justify-end gap-x-2 gap-y-density-2 sm:grid-cols-4">
         {/* Primary Level - Standalone buttons */}
         <IconButton
           onClick={handleCopyUrlLocal}
@@ -139,13 +139,20 @@ export default function AccountActionButtons({
           variant="ghost"
           size="sm"
           className="touch-manipulation"
-          loading={isCheckingTokens}
+          // Keep the opener focused while the async lookup chooses a dialog.
+          // handlePrimaryKeyAction suppresses repeated clicks while checking.
+          aria-busy={isCheckingTokens || undefined}
+          aria-disabled={isCheckingTokens || undefined}
           disabled={isAccountDisabled}
           aria-label={primaryKeyActionLabel}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton}
           title={primaryKeyActionLabel}
         >
-          <AccountKeyIcon className="h-4 w-4" />
+          {isCheckingTokens ? (
+            <Spinner size="sm" variant="current" aria-hidden />
+          ) : (
+            <AccountKeyIcon className="h-4 w-4" />
+          )}
         </IconButton>
 
         <IconButton
@@ -191,7 +198,7 @@ export default function AccountActionButtons({
                 suppressMoreActionsFocusRestoreRef.current = false
               }
             }}
-            className="border-border bg-card py-density-1 z-50 rounded-lg border shadow-lg focus:outline-none"
+            className="z-50 rounded-lg border border-border bg-card py-density-1 shadow-lg focus:outline-none"
           >
             {isAccountDisabled ? (
               <>
@@ -203,7 +210,7 @@ export default function AccountActionButtons({
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 
-                <DropdownMenuSeparator className="bg-secondary my-density-1" />
+                <DropdownMenuSeparator className="my-density-1 bg-secondary" />
 
                 <AccountActionMenuItem
                   onClick={handleDeleteLocal}
@@ -291,7 +298,7 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <DropdownMenuSeparator className="bg-secondary my-density-1" />
+                <DropdownMenuSeparator className="my-density-1 bg-secondary" />
 
                 <AccountActionMenuItem
                   onClick={handleRefreshLocal}
@@ -334,7 +341,7 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <DropdownMenuSeparator className="bg-secondary my-density-1" />
+                <DropdownMenuSeparator className="my-density-1 bg-secondary" />
 
                 {(canOpenUsagePage || canOpenRedeemPage) && (
                   <AccountActionSubmenu
@@ -416,7 +423,7 @@ export default function AccountActionButtons({
                   }
                 />
 
-                <DropdownMenuSeparator className="bg-secondary my-density-1" />
+                <DropdownMenuSeparator className="my-density-1 bg-secondary" />
 
                 {/* Pin/Unpin */}
                 {isPinFeatureEnabled && (

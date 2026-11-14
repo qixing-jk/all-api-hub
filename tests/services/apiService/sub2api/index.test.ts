@@ -25,7 +25,6 @@ import { fetchInviteLink } from "~/services/apiService/sub2api/account/inviteLin
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/auth/authSession"
 import {
   recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken,
-  SUB2API_SESSION_BINDING_MISMATCH_CODE,
   Sub2ApiAuthIdentityMismatchError,
 } from "~/services/apiService/sub2api/auth/browserAuth"
 import { deleteApiToken } from "~/services/apiService/sub2api/keys"
@@ -37,6 +36,7 @@ import {
   parseSub2ApiEnvelope,
   parseSub2ApiUserIdentity,
 } from "~/services/apiService/sub2api/parsing"
+import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/type"
 import type {
   Sub2ApiAnnouncementListData,
   Sub2ApiEnvelope,

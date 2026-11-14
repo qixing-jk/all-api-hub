@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 
 const params = {
   probeId: "video-generation",

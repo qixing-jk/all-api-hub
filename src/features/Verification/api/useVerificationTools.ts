@@ -70,7 +70,7 @@ export type VerificationToolsController = {
 } & ReturnType<typeof useVerificationPrompts>
 
 export type UseVerificationToolsOptions = {
-  runQuestionAnswerRequest?: typeof runQuestionAnswerTest
+  runQuestionAnswerRequest: typeof runQuestionAnswerTest
   modelId?: string
   runNeedleRequest?: NeedleRunner
   loadNeedleCounter?: typeof getModelContextInfo
@@ -80,7 +80,7 @@ export type UseVerificationToolsOptions = {
   discardContextCheckpoints?: () => Promise<void>
   contextHistoryAccess?: ContextCapacityHistoryAccess
   resolveContextHistoryRequest?: ContextCapacityHistoryRequestResolver
-  runContextCapacityRequest?: typeof runContextCapacity
+  runContextCapacityRequest: typeof runContextCapacity
   enableContextCapacity?: boolean
   contextCapacityKey?: string
   historyTarget?: ApiVerificationHistoryTarget | null

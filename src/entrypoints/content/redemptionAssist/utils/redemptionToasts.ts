@@ -7,7 +7,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { RedemptionAccountCandidate } from "~/services/redemption/accountCandidate"
+import type { RedemptionAccountCandidate } from "~/services/redemption/contracts"
 
 import { ensureRedemptionToastUi } from "../../shared/uiRoot"
 import type { RedemptionBatchResultItem } from "../components/RedemptionBatchResultToast"

@@ -64,12 +64,15 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/verification/aiApiVerification", async (original) => ({
-  ...(await original<
-    typeof import("~/services/verification/aiApiVerification")
-  >()),
-  runApiVerificationProbe: runApiVerificationProbeMock,
-}))
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/verification/aiApiVerification/apiVerificationService")
+    >()),
+    runApiVerificationProbe: runApiVerificationProbeMock,
+  }),
+)
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: vi.fn(() => ({

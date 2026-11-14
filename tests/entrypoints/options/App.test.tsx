@@ -307,8 +307,7 @@ describe("options App", () => {
     })
 
     const hotkeyRegistration = mockedUseSearchHotkeys.mock.calls[0]?.[0] as
-      | { onOpen: () => void }
-      | undefined
+      { onOpen: () => void } | undefined
     act(() => {
       hotkeyRegistration?.onOpen()
     })

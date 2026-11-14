@@ -12,10 +12,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { RedemptionAccountSelectToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast"
+import { ACCOUNT_USER_FEATURE_UNAVAILABLE_REASONS } from "~/services/apiAdapters/accountCapabilitySupport"
 import {
   REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
   type RedemptionAccountCandidate,
-} from "~/services/redemption/accountCandidate"
+} from "~/services/redemption/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -263,7 +264,7 @@ describe("RedemptionAccountSelectToast", () => {
         name: "Unsupported Account",
         automaticRedemptionSupport: {
           status: REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
-          reason: "capability-missing",
+          reason: ACCOUNT_USER_FEATURE_UNAVAILABLE_REASONS.CapabilityMissing,
         },
       }),
       makeAccount({ id: "supported-account", name: "Supported Account" }),
@@ -308,7 +309,7 @@ describe("RedemptionAccountSelectToast", () => {
       baseUrl: "",
       automaticRedemptionSupport: {
         status: REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
-        reason: "capability-missing",
+        reason: ACCOUNT_USER_FEATURE_UNAVAILABLE_REASONS.CapabilityMissing,
       },
     })
 
@@ -335,7 +336,7 @@ describe("RedemptionAccountSelectToast", () => {
       name: "Unsupported Account",
       automaticRedemptionSupport: {
         status: REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
-        reason: "capability-missing",
+        reason: ACCOUNT_USER_FEATURE_UNAVAILABLE_REASONS.CapabilityMissing,
       },
     })
 

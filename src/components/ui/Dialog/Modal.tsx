@@ -2,6 +2,7 @@ import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import {
   useCallback,
+  useContext,
   useLayoutEffect,
   useRef,
   useState,
@@ -17,6 +18,7 @@ import { t } from "~/utils/i18n/core"
 
 import { ToasterPortalHost } from "../../toast/ToasterPortal"
 import { FloatingLayerProvider, hasOpenFloatingLayer } from "../floating-layer"
+import { DeferredDialogFocusContext } from "./DeferredDialogFocusContext"
 
 type Size = "sm" | "md" | "lg" | "xl"
 
@@ -42,6 +44,8 @@ interface ModalProps {
   terminalCloseKey?: string | number | null
   /** Shares the original opener across an explicit terminal-dialog successor. */
   focusWorkflowId?: string | number
+  /** Only a deferred workspace's primary dialog inherits its loading opener. */
+  restoreDeferredFocus?: boolean
   /** Runs after Radix finishes close-autofocus handling for this open session. */
   onCloseComplete?: () => void
 }
@@ -209,6 +213,7 @@ export function Modal({
   focusFallbackKey,
   terminalCloseKey,
   focusWorkflowId,
+  restoreDeferredFocus = false,
   onCloseComplete,
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
@@ -220,6 +225,7 @@ export function Modal({
   const focusSessionsByContentRef = useRef(
     new WeakMap<HTMLElement, FocusSession>(),
   )
+  const deferredOpener = useContext(DeferredDialogFocusContext)
   const wasOpenRef = useRef(false)
   const terminalCloseKeyRef = useRef<string | number | null>(null)
 
@@ -235,7 +241,9 @@ export function Modal({
     ) {
       const focusSession = {
         generation: ++focusGenerationRef.current,
-        restoreElement: document.activeElement,
+        restoreElement:
+          (restoreDeferredFocus ? deferredOpener : null) ??
+          document.activeElement,
         active: true,
         settled: false,
         closeRequested: false,
@@ -252,7 +260,13 @@ export function Modal({
       }
     }
     wasOpenRef.current = true
-  }, [focusWorkflowId, isOpen, onCloseComplete])
+  }, [
+    deferredOpener,
+    focusWorkflowId,
+    isOpen,
+    onCloseComplete,
+    restoreDeferredFocus,
+  ])
 
   useLayoutEffect(() => {
     const activeSession = activeFocusSessionRef.current
@@ -364,133 +378,138 @@ export function Modal({
   )
 
   return (
-    <DialogPrimitive.Root open={isOpen} modal={false}>
-      <DialogPrimitive.Portal>
-        <div
-          data-slot="modal-overlay"
-          data-state={isOpen ? "open" : "closed"}
-          className={cn(
-            "dialog-fade fixed inset-0 bg-overlay/30 backdrop-blur-sm",
-            Z_INDEX.modal,
-          )}
-          onPointerDown={handleBackdropPointerDown}
-          onPointerCancel={handleBackdropPointerCancel}
-          onClick={handleBackdropClick}
-        />
+    <DeferredDialogFocusContext.Provider value={null}>
+      <DialogPrimitive.Root open={isOpen} modal={false}>
+        <DialogPrimitive.Portal>
+          <div
+            data-slot="modal-overlay"
+            data-state={isOpen ? "open" : "closed"}
+            className={cn(
+              "dialog-fade fixed inset-0 bg-overlay/30 backdrop-blur-sm",
+              Z_INDEX.modal,
+            )}
+            onPointerDown={handleBackdropPointerDown}
+            onPointerCancel={handleBackdropPointerCancel}
+            onClick={handleBackdropClick}
+          />
 
-        <ToasterPortalHost />
-        {floatingContent}
+          <ToasterPortalHost />
+          {floatingContent}
 
-        <DialogPrimitive.Content
-          data-slot="modal-content"
-          ref={contentRef}
-          aria-describedby={undefined}
-          className={cn(
-            "dialog-fade fixed top-[50%] left-[50%] w-full max-w-[calc(100%-1rem)] translate-x-[-50%] translate-y-[-50%] outline-none sm:max-w-[calc(100%-2rem)]",
-            Z_INDEX.modal,
-          )}
-          onEscapeKeyDown={handleEscapeKeyDown}
-          onOpenAutoFocus={(event) => {
-            const focusSession = activeFocusSessionRef.current
-            if (focusSession && event.currentTarget instanceof HTMLElement) {
-              focusSession.contentElement = event.currentTarget
-              focusSessionsByContentRef.current.set(
-                event.currentTarget,
-                focusSession,
-              )
-            }
-          }}
-          onCloseAutoFocus={(event) => {
-            // Radix dispatches close autofocus on a timer after the scope
-            // unmounts. The shared lease prevents a replaced instance from
-            // restoring focus over the currently opened dialog.
-            event.preventDefault()
-            const focusSession =
-              event.currentTarget instanceof HTMLElement
-                ? (focusSessionsByContentRef.current.get(event.currentTarget) ??
-                  activeFocusSessionRef.current)
-                : null
-            if (!focusSession) return
-            try {
-              const restoreSession = settleFocusLease(focusSession)
-              if (!restoreSession) return
-              const restoreFocusElement = restoreSession.restoreElement
-              if (!restoreFocusElement?.isConnected) return
-              restoreFocusElement.focus()
-            } finally {
-              notifyCloseComplete(focusSession)
-            }
-          }}
-          onPointerDownOutside={(event) => {
-            event.preventDefault()
-          }}
-          onInteractOutside={(event) => {
-            event.preventDefault()
-          }}
-        >
-          <FloatingLayerProvider layer="modal-contained">
-            <DialogPrimitive.Title asChild>
-              <span className="sr-only" aria-label={title} />
-            </DialogPrimitive.Title>
-            <div
-              className="flex items-center justify-center px-2 py-2 sm:px-4 sm:py-density-4"
-              data-slot="modal-positioner"
-              onPointerDown={handleBackdropPointerDown}
-              onPointerCancel={handleBackdropPointerCancel}
-              onClick={handleBackdropClick}
-            >
+          <DialogPrimitive.Content
+            data-slot="modal-content"
+            ref={contentRef}
+            aria-describedby={undefined}
+            className={cn(
+              "dialog-fade fixed top-[50%] left-[50%] w-full max-w-[calc(100%-1rem)] translate-x-[-50%] translate-y-[-50%] outline-none sm:max-w-[calc(100%-2rem)]",
+              Z_INDEX.modal,
+            )}
+            onEscapeKeyDown={handleEscapeKeyDown}
+            onOpenAutoFocus={(event) => {
+              const focusSession = activeFocusSessionRef.current
+              if (focusSession && event.currentTarget instanceof HTMLElement) {
+                focusSession.contentElement = event.currentTarget
+                focusSessionsByContentRef.current.set(
+                  event.currentTarget,
+                  focusSession,
+                )
+              }
+            }}
+            onCloseAutoFocus={(event) => {
+              // Radix dispatches close autofocus on a timer after the scope
+              // unmounts. The shared lease prevents a replaced instance from
+              // restoring focus over the currently opened dialog.
+              event.preventDefault()
+              const focusSession =
+                event.currentTarget instanceof HTMLElement
+                  ? (focusSessionsByContentRef.current.get(
+                      event.currentTarget,
+                    ) ?? activeFocusSessionRef.current)
+                  : null
+              if (!focusSession) return
+              try {
+                const restoreSession = settleFocusLease(focusSession)
+                if (!restoreSession) return
+                const restoreFocusElement = restoreSession.restoreElement
+                if (!restoreFocusElement?.isConnected) return
+                restoreFocusElement.focus()
+              } finally {
+                notifyCloseComplete(focusSession)
+              }
+            }}
+            onPointerDownOutside={(event) => {
+              event.preventDefault()
+            }}
+            onInteractOutside={(event) => {
+              event.preventDefault()
+            }}
+          >
+            <FloatingLayerProvider layer="modal-contained">
+              <DialogPrimitive.Title asChild>
+                <span className="sr-only" aria-label={title} />
+              </DialogPrimitive.Title>
               <div
-                ref={setTooltipPortalContainer}
-                className={panelBaseClass}
-                data-slot="modal-panel"
-                data-testid={panelTestId}
-                role="presentation"
+                className="flex items-center justify-center px-2 py-2 sm:px-4 sm:py-density-4"
+                data-slot="modal-positioner"
+                onPointerDown={handleBackdropPointerDown}
+                onPointerCancel={handleBackdropPointerCancel}
+                onClick={handleBackdropClick}
               >
-                {showCloseButton && (
-                  <button
-                    type="button"
-                    onClick={requestClose}
-                    aria-label={t("common:actions.close")}
-                    className="absolute top-3 right-3 z-10 min-h-(--density-control-xs) rounded-sm px-1.5 py-density-1-5 text-faint-foreground transition-colors hover:bg-muted hover:text-muted-foreground sm:top-4 sm:right-4 dark:hover:bg-secondary dark:hover:text-secondary-foreground"
-                  >
-                    <XIcon className="h-5 w-5" />
-                  </button>
-                )}
-
-                {header && (
-                  <div
-                    data-testid={headerTestId}
-                    className="shrink-0 border-b border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
-                  >
-                    <div className="flex items-start justify-between">
-                      {header}
-                    </div>
-                  </div>
-                )}
-
                 <div
-                  data-slot="modal-body"
-                  className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
+                  ref={setTooltipPortalContainer}
+                  className={panelBaseClass}
+                  data-slot="modal-panel"
+                  data-testid={panelTestId}
+                  role="presentation"
                 >
-                  {/* Keep hints outside body scrolling and sticky pane layers. */}
-                  <TooltipPortalContext.Provider value={tooltipPortalContainer}>
-                    {children}
-                  </TooltipPortalContext.Provider>
-                </div>
+                  {showCloseButton && (
+                    <button
+                      type="button"
+                      onClick={requestClose}
+                      aria-label={t("common:actions.close")}
+                      className="absolute top-3 right-3 z-10 min-h-(--density-control-xs) rounded-sm px-1.5 py-density-1-5 text-faint-foreground transition-colors hover:bg-muted hover:text-muted-foreground sm:top-4 sm:right-4 dark:hover:bg-secondary dark:hover:text-secondary-foreground"
+                    >
+                      <XIcon className="h-5 w-5" />
+                    </button>
+                  )}
 
-                {footer && (
+                  {header && (
+                    <div
+                      data-testid={headerTestId}
+                      className="shrink-0 border-b border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
+                    >
+                      <div className="flex items-start justify-between">
+                        {header}
+                      </div>
+                    </div>
+                  )}
+
                   <div
-                    data-testid={footerTestId}
-                    className="shrink-0 border-t border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
+                    data-slot="modal-body"
+                    className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
                   >
-                    {footer}
+                    {/* Keep hints outside body scrolling and sticky pane layers. */}
+                    <TooltipPortalContext.Provider
+                      value={tooltipPortalContainer}
+                    >
+                      {children}
+                    </TooltipPortalContext.Provider>
                   </div>
-                )}
+
+                  {footer && (
+                    <div
+                      data-testid={footerTestId}
+                      className="shrink-0 border-t border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
+                    >
+                      {footer}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </FloatingLayerProvider>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+            </FloatingLayerProvider>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    </DeferredDialogFocusContext.Provider>
   )
 }

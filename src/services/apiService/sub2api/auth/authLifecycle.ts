@@ -12,7 +12,6 @@ import {
 } from "~/services/apiService/sub2api/auth/authSession"
 import {
   recoverSub2ApiBrowserAuth,
-  SUB2API_SESSION_BINDING_MISMATCH_CODE,
   Sub2ApiAuthIdentityMismatchError,
   type Sub2ApiBrowserAuth,
 } from "~/services/apiService/sub2api/auth/browserAuth"
@@ -23,7 +22,10 @@ import {
   Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
-import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
+import {
+  SUB2API_AUTH_ME_ENDPOINT,
+  SUB2API_SESSION_BINDING_MISMATCH_CODE,
+} from "~/services/apiService/sub2api/type"
 import {
   API_ERROR_CODES,
   ApiError,
@@ -777,9 +779,8 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
     const rejected = isSub2ApiRefreshTokenContractError(error)
       ? createRefreshTokenInvalidError(endpoint)
       : error
-    const { executeWithAccountCredentialRecovery } = await import(
-      "~/services/accountCredentialRecovery"
-    )
+    const { executeWithAccountCredentialRecovery } =
+      await import("~/services/accountCredentialRecovery")
     let initial = true
     return executeWithAccountCredentialRecovery(state.request, async (next) => {
       if (initial) {

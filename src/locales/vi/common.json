@@ -42,6 +42,9 @@
     "noExpiration": "Không hết hạn",
     "placeholder": "Chọn ngày"
   },
+  "dialogErrorBoundary": {
+    "description": "Không thể hiển thị hộp thoại này. Bạn có thể đóng hộp thoại và tiếp tục sử dụng trang. Hãy lưu các nội dung đang làm khác trước khi tải lại trang để thử lại."
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

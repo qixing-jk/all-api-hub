@@ -63,16 +63,19 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getManagedSiteCapabilities: getManagedSiteCapabilitiesForTypeMock,
 }))
 
-vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/verification/aiApiVerification")
-    >()
-  return {
-    ...actual,
-    runApiVerificationProbe: runApiVerificationProbeMock,
-  }
-})
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/verification/aiApiVerification/apiVerificationService")
+      >()
+    return {
+      ...actual,
+      runApiVerificationProbe: runApiVerificationProbeMock,
+    }
+  },
+)
 
 // Supply the same adapter-owned protocol decision that the real sync callers provide.
 const matchesProbeFilterRule = (
@@ -80,9 +83,8 @@ const matchesProbeFilterRule = (
   modelId: string,
   context: ProbeFilterContext,
 ) => {
-  context.models = getSiteTypeCapabilitiesMock(
-    context.managedConfig.siteType,
-  )?.managedSites?.models
+  context.models = getSiteTypeCapabilitiesMock(context.managedConfig.siteType)
+    ?.managedSites?.models
   return evaluateProbeFilterRule(rule, modelId, context)
 }
 const resolveApiVerificationTypeForChannelType = (
@@ -303,10 +305,13 @@ const makeChannelConfigs = (
     }),
   )
 
-beforeEach(async () => {
-  const actual = await vi.importActual<
-    typeof import("~/services/apiAdapters/registry")
-  >("~/services/apiAdapters/registry")
+// Load the real protocol resolver once with the suite's dependencies, rather
+// than charging a cold registry import to the first case's setup timeout.
+const actualRegistry = await vi.importActual<
+  typeof import("~/services/apiAdapters/registry")
+>("~/services/apiAdapters/registry")
+
+beforeEach(() => {
   vi.clearAllMocks()
   getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
     siteType,
@@ -314,7 +319,7 @@ beforeEach(async () => {
       matching: getManagedSiteCapabilitiesForTypeMock()?.matching,
       models: {
         resolveVerificationProtocol:
-          actual.getSiteTypeCapabilities(siteType).managedSites?.models
+          actualRegistry.getSiteTypeCapabilities(siteType).managedSites?.models
             ?.resolveVerificationProtocol,
         list: listAllChannelsMock,
         fetchModels: fetchChannelModelsMock,

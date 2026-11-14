@@ -1,14 +1,15 @@
 import { Check, Copy } from "lucide-react"
 import {
   lazy,
-  Suspense,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import { DeferredDialog } from "~/components/DeferredDialog"
 import { IconButton } from "~/components/ui"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -88,9 +89,9 @@ const LazyKiloCodeExportDialog = lazy(() =>
   })),
 )
 const LazyKiloCodeProfileExportDialog = lazy(() =>
-  import(
-    "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog"
-  ).then((m) => ({ default: m.KiloCodeProfileExportDialog })),
+  import("~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog").then(
+    (m) => ({ default: m.KiloCodeProfileExportDialog }),
+  ),
 )
 
 const buildServiceCredentialExportProfile = (
@@ -135,6 +136,7 @@ export function RuntimeKeyActionControls({
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
 
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
+  const exportTriggerRef = useRef<HTMLButtonElement>(null)
   const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
   const [kelivoExportInput, setKelivoExportInput] =
     useState<KelivoProviderExportInput | null>(null)
@@ -184,9 +186,8 @@ export function RuntimeKeyActionControls({
     })
 
     try {
-      const { OpenInCherryStudio } = await import(
-        "~/services/integrations/cherryStudio"
-      )
+      const { OpenInCherryStudio } =
+        await import("~/services/integrations/cherryStudio")
       if (serviceCredentialProfile) {
         OpenInCherryStudio(
           createProfileCredentialExportData(serviceCredentialProfile),
@@ -322,30 +323,27 @@ export function RuntimeKeyActionControls({
 
   const renderKiloCodeExportDialog = () => {
     if (!isKiloCodeDialogOpen) return null
-
-    if (serviceCredentialProfile) {
-      return (
-        <Suspense fallback={null}>
-          <LazyKiloCodeProfileExportDialog
-            isOpen={true}
-            onClose={() => setIsKiloCodeDialogOpen(false)}
-            profile={serviceCredentialProfile}
-          />
-        </Suspense>
-      )
-    }
+    const closeDialog = () => setIsKiloCodeDialogOpen(false)
 
     return (
-      <Suspense fallback={null}>
-        <LazyKiloCodeExportDialog
-          isOpen={true}
-          onClose={() => setIsKiloCodeDialogOpen(false)}
-          initialSelectedSiteIds={[account.id]}
-          initialSelectedTokenIdsBySite={{
-            [account.id]: [getAccountRuntimeKeyExportId(runtimeKey)],
-          }}
-        />
-      </Suspense>
+      <DeferredDialog isOpen={isKiloCodeDialogOpen} onClose={closeDialog}>
+        {serviceCredentialProfile ? (
+          <LazyKiloCodeProfileExportDialog
+            isOpen={true}
+            onClose={closeDialog}
+            profile={serviceCredentialProfile}
+          />
+        ) : (
+          <LazyKiloCodeExportDialog
+            isOpen={true}
+            onClose={closeDialog}
+            initialSelectedSiteIds={[account.id]}
+            initialSelectedTokenIdsBySite={{
+              [account.id]: [getAccountRuntimeKeyExportId(runtimeKey)],
+            }}
+          />
+        )}
+      </DeferredDialog>
     )
   }
 
@@ -391,7 +389,7 @@ export function RuntimeKeyActionControls({
       ) : null}
       {renderClaudeCodeRouterImportDialog()}
 
-      <div className="gap-y-density-1 sm:gap-y-density-1-5 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-density-1 sm:gap-x-1.5 sm:gap-y-density-1-5">
         {actionPolicy.copySecret ? (
           <IconButton
             aria-label={
@@ -404,9 +402,9 @@ export function RuntimeKeyActionControls({
             onClick={handleCopy}
           >
             {copiedRuntimeKeyId === runtimeKey.id ? (
-              <Check className="text-success-indicator h-4 w-4" />
+              <Check className="h-4 w-4 text-success-indicator" />
             ) : (
-              <Copy className="text-muted-foreground h-4 w-4" />
+              <Copy className="h-4 w-4 text-muted-foreground" />
             )}
           </IconButton>
         ) : null}
@@ -421,6 +419,7 @@ export function RuntimeKeyActionControls({
               }
             />
             <ExportActionsMenu
+              triggerRef={exportTriggerRef}
               triggerTestId={
                 ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportMenuButton
               }
@@ -448,7 +447,11 @@ export function RuntimeKeyActionControls({
                   onSelect: () => setIsCursorPlusDialogOpen(true),
                 },
                 [EXPORT_ACTION_TARGETS.KiloCode]: {
-                  onSelect: () => setIsKiloCodeDialogOpen(true),
+                  onSelect: () => {
+                    // The selected menu item disappears; return focus to its trigger.
+                    exportTriggerRef.current?.focus()
+                    setIsKiloCodeDialogOpen(true)
+                  },
                 },
 
                 [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {

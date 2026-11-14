@@ -1,4 +1,4 @@
-export * from "./apiVerificationService"
+// UI-safe metadata and helpers. Import apiVerificationService directly to run probes.
 export * from "./apiTypeResolution"
 export * from "./modelModality"
 export * from "./probes"

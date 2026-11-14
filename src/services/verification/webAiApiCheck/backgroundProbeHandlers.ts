@@ -4,10 +4,10 @@ import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
-  runApiVerificationProbe,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import {
   getVerificationRequestProfileOptions,
   isVerificationRequestProfile,

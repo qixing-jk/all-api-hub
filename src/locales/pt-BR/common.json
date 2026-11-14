@@ -42,6 +42,9 @@
     "noExpiration": "Sem expiração",
     "placeholder": "Selecionar data"
   },
+  "dialogErrorBoundary": {
+    "description": "Não foi possível exibir esta janela. Você pode fechá-la e continuar usando a página. Salve os outros trabalhos antes de recarregar a página para tentar novamente."
+  },
   "labels": {
     "apiKey": "Chave de API",
     "notAvailable": "N/D",

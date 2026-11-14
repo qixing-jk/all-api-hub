@@ -92,6 +92,23 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
   {
+    // Page verification defers provider SDKs and quality executors until a test runs.
+    file: "src/services/verification/lazyRunners.ts",
+    imports: [
+      "./aiApiVerification/apiVerificationService",
+      "./modelQuality/questionAnswer",
+      "./modelQuality/contextCapacityRun",
+      "./modelQuality/pelican",
+    ],
+  },
+  {
+    // Capability lookup stays light; the IIFE background imports only this executor.
+    file: "src/services/models/modelSync/channelModelFilterEvaluator.ts",
+    imports: [
+      "~/services/verification/aiApiVerification/apiVerificationService",
+    ],
+  },
+  {
     // Recovery consults the adapter registry; defer it until Sub2API registration completes.
     file: "src/services/apiService/sub2api/auth/authLifecycle.ts",
     imports: ["~/services/accountCredentialRecovery"],

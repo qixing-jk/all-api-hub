@@ -12,6 +12,8 @@ const logger = createLogger("RootErrorBoundary")
 type RootErrorBoundaryProps = {
   children: ReactNode
   reloadPage?: () => void
+  /** Contain a section failure without replacing the surrounding page. */
+  fallback?: ReactNode
 }
 
 type RootErrorBoundaryState = {
@@ -58,23 +60,23 @@ function RootErrorFallback({
   const showTranslationGuidance = isLikelyExternalDomMutationError(error)
 
   return (
-    <main className="bg-background text-foreground py-density-8 flex min-h-screen items-center justify-center px-4">
-      <section className="bg-card py-density-6 w-full max-w-md rounded-lg border px-6 text-center shadow-sm">
-        <div className="bg-destructive-soft text-destructive-soft-foreground mb-density-4 mx-auto flex size-12 items-center justify-center rounded-full">
+    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-density-8 text-foreground">
+      <section className="w-full max-w-md rounded-lg border bg-card px-6 py-density-6 text-center shadow-sm">
+        <div className="mx-auto mb-density-4 flex size-12 items-center justify-center rounded-full bg-destructive-soft text-destructive-soft-foreground">
           <TriangleAlert className="size-6" aria-hidden="true" />
         </div>
         <h1 className="text-lg font-semibold">
           {t("rootErrorBoundary.title")}
         </h1>
-        <p className="text-muted-foreground mt-density-3 text-sm leading-6">
+        <p className="mt-density-3 text-sm leading-6 text-muted-foreground">
           {t("rootErrorBoundary.genericDescription")}
         </p>
         {showTranslationGuidance ? (
-          <p className="text-muted-foreground mt-density-2 text-sm leading-6">
+          <p className="mt-density-2 text-sm leading-6 text-muted-foreground">
             {t("rootErrorBoundary.translationDescription")}
           </p>
         ) : null}
-        <div className="mt-density-5 gap-y-density-2 flex flex-col items-center justify-center gap-x-2 sm:flex-row">
+        <div className="mt-density-5 flex flex-col items-center justify-center gap-x-2 gap-y-density-2 sm:flex-row">
           <Button
             type="button"
             leftIcon={<RefreshCw className="size-4" aria-hidden="true" />}
@@ -123,11 +125,17 @@ export class RootErrorBoundary extends Component<
   }
 
   override componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
-    logger.error("Root UI crashed", { error, componentStack: errorInfo })
+    logger.error(
+      this.props.fallback === undefined
+        ? "Root UI crashed"
+        : "UI section crashed",
+      { error, componentStack: errorInfo },
+    )
   }
 
   override render() {
     if (this.state.hasError) {
+      if (this.props.fallback !== undefined) return this.props.fallback
       return (
         <RootErrorFallback
           error={this.state.error}

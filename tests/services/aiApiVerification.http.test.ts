@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
 
-import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import { translateApiVerificationSummary } from "~/services/verification/aiApiVerification/i18n"
 import { server } from "~~/tests/msw/server"
 

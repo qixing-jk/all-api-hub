@@ -75,9 +75,8 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
-    const { buildNewApiRuntimeKey } = await import(
-      "~~/tests/test-utils/accountKeyFixtures"
-    )
+    const { buildNewApiRuntimeKey } =
+      await import("~~/tests/test-utils/accountKeyFixtures")
 
     return {
       ...actual,
@@ -170,10 +169,16 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
       (modality === undefined || modality === actual.MODEL_TEST_MODALITIES.Text
         ? mockProbeDefinitions(apiType)
         : undefined) ?? actual.getProbesForModality(modality, apiType),
-    runApiVerificationProbe: (...args: any[]) =>
-      mockRunApiVerificationProbe(...args),
   }
 })
+
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  () => ({
+    runApiVerificationProbe: (...args: unknown[]) =>
+      mockRunApiVerificationProbe(...args),
+  }),
+)
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>

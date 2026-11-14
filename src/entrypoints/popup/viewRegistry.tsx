@@ -28,6 +28,7 @@ import {
   type ProductAnalyticsFeatureId,
 } from "~/services/productAnalytics/contracts"
 import { isExtensionSidePanel } from "~/utils/browser"
+import { createLogger } from "~/utils/core/logger"
 
 import BalanceSection from "./components/BalanceSection"
 import type { PopupViewType } from "./components/PopupViewSwitchTabs"
@@ -35,10 +36,19 @@ import ShareOverviewSnapshotButton from "./components/ShareOverviewSnapshotButto
 import { POPUP_TEST_IDS } from "./testIds"
 import { POPUP_VIEW_TYPES } from "./viewTypes"
 
+const logger = createLogger("PopupViewPreload")
+
 const loadBookmarksList = () =>
   import("~/features/SiteBookmarks/list/BookmarksList")
 const loadApiCredentialProfilesPopupView = () =>
   import("~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView")
+
+/** Preloading is best effort; rendering retains the lazy component's error path. */
+function preloadApiCredentialProfilesPopupView() {
+  void loadApiCredentialProfilesPopupView().catch((error) =>
+    logger.warn("Credential profile view preload failed", error),
+  )
+}
 
 const LazyBookmarksList = lazy(loadBookmarksList)
 const LazyApiCredentialProfilesPopupView = lazy(
@@ -80,7 +90,7 @@ interface PopupViewRegistryOptions {
  */
 function PopupStatsFallback() {
   return (
-    <div className="bg-card/50 dark:bg-foreground/5 h-16 animate-pulse rounded-xl" />
+    <div className="h-16 animate-pulse rounded-xl bg-card/50 dark:bg-foreground/5" />
   )
 }
 
@@ -91,7 +101,7 @@ function PopupContentFallback() {
   const { t } = useTranslation("common")
 
   return (
-    <div className="text-muted-foreground py-density-8 flex min-h-40 items-center justify-center px-4 text-sm">
+    <div className="flex min-h-40 items-center justify-center px-4 py-density-8 text-sm text-muted-foreground">
       {t("status.loading")}
     </div>
   )
@@ -186,7 +196,7 @@ export function usePopupViewRegistry({
             apiCredentialProfilesViewRef.current.openAddDialog(intent.prefill)
           } else {
             setPendingApiCredentialProfilesAdd(intent.prefill)
-            void loadApiCredentialProfilesPopupView()
+            preloadApiCredentialProfilesPopupView()
           }
           break
       }
@@ -259,7 +269,9 @@ export function usePopupViewRegistry({
         </Suspense>
       ),
       preload: () => {
-        void loadBookmarksList()
+        void loadBookmarksList().catch((error) =>
+          logger.warn("Bookmark view preload failed", error),
+        )
       },
     },
     [POPUP_VIEW_TYPES.ApiCredentialProfiles]: {
@@ -280,7 +292,7 @@ export function usePopupViewRegistry({
         }
 
         setPendingApiCredentialProfilesAdd(true)
-        void loadApiCredentialProfilesPopupView()
+        preloadApiCredentialProfilesPopupView()
       },
       primaryAnalyticsAction: {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
@@ -297,9 +309,7 @@ export function usePopupViewRegistry({
           />
         </Suspense>
       ),
-      preload: () => {
-        void loadApiCredentialProfilesPopupView()
-      },
+      preload: preloadApiCredentialProfilesPopupView,
     },
   }
 }

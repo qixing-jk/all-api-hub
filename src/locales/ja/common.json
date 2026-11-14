@@ -42,6 +42,9 @@
     "noExpiration": "期限なし",
     "placeholder": "日付を選択"
   },
+  "dialogErrorBoundary": {
+    "description": "このダイアログを表示できませんでした。閉じても、ページのほかの操作は続けられます。再試行するには、ほかの作業を保存してからページを再読み込みしてください。"
+  },
   "labels": {
     "apiKey": "API キー",
     "notAvailable": "N/A",

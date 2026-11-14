@@ -28,7 +28,6 @@ import {
   API_VERIFICATION_PROBE_STATUSES,
   getProbesForModality,
   resolveModelTestModality,
-  runApiVerificationProbe,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
@@ -38,6 +37,7 @@ import {
   buildSafeProbeFailureDiagnostics,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
+import { runApiVerificationProbe } from "~/services/verification/lazyRunners"
 import { createLogger } from "~/utils/core/logger"
 
 type ExecutionContext = {

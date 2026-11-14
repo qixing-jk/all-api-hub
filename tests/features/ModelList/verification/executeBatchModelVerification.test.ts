@@ -23,17 +23,21 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/verification/aiApiVerification")
-    >()
-  return {
-    ...actual,
-    runApiVerificationProbe: (...args: any[]) =>
-      mockRunApiVerificationProbe(...args),
-  }
-})
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/verification/aiApiVerification/apiVerificationService")
+      >()
+    return {
+      ...actual,
+      runApiVerificationProbe: (
+        ...args: Parameters<typeof actual.runApiVerificationProbe>
+      ) => mockRunApiVerificationProbe(...args),
+    }
+  },
+)
 
 describe("executeBatchModelVerification", () => {
   it("logs an error and continues when persistResult rejects", async () => {

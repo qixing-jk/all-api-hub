@@ -1,4 +1,4 @@
-import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/auth/browserAuth"
+import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/type"
 import { readSafeUpstreamCode } from "~/services/apiTransport/responseError"
 import type { ApiResponseErrorDecoder } from "~/services/apiTransport/type"
 import { getErrorMessage } from "~/utils/core/error"

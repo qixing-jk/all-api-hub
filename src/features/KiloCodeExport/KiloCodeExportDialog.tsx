@@ -368,15 +368,16 @@ export function KiloCodeExportDialog({
   return (
     <>
       <Modal
+        restoreDeferredFocus
         isOpen={isOpen}
         onClose={invalidateAndClose}
         size="lg"
         header={
           <div className="pr-8">
-            <div className="text-foreground text-base font-semibold">
+            <div className="text-base font-semibold text-foreground">
               {t("ui:dialog.kiloCode.title")}
             </div>
-            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground dark:text-secondary-foreground">
               {t("ui:dialog.kiloCode.description")}
             </p>
           </div>
@@ -384,7 +385,7 @@ export function KiloCodeExportDialog({
         footer={
           <ActionGroup>
             {selectedSiteIds.length > 0 && (
-              <div className="dark:text-secondary-foreground text-muted-foreground mr-auto text-xs">
+              <div className="mr-auto text-xs text-muted-foreground dark:text-secondary-foreground">
                 {selectionSummary}
               </div>
             )}
@@ -485,7 +486,7 @@ export function KiloCodeExportDialog({
         </FormField>
 
         {isKiloV7Export && (
-          <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
+          <div className="grid gap-x-3 gap-y-density-3 sm:grid-cols-2">
             <FormField
               label={t("ui:dialog.kiloCode.labels.defaultProvider")}
               htmlFor="kilo-code-account-default-provider"

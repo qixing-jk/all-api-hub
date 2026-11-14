@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
-import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://verification-headers.example.invalid"

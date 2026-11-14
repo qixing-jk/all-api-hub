@@ -43,6 +43,7 @@ import {
 import {
   ACCOUNT,
   AIHUBMIX_ACCOUNT,
+  createDeferred,
   renderExpandedServiceCredentialDialog,
   selectExportAction,
   setupCopyKeyDialogTestDefaults,
@@ -88,6 +89,37 @@ describe("CopyKeyDialog exports and service credentials", () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it("does not copy a secret resolved after AccountList clears the dialog account", async () => {
+    const pending = createDeferred<string>()
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      { ...TOKEN, key: "sk-masked********" },
+    ])
+    resolveApiTokenKeyMock.mockReturnValueOnce(pending.promise)
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <CopyKeyDialog isOpen onClose={() => {}} account={ACCOUNT} />,
+    )
+    await user.click(
+      await screen.findByRole(
+        "button",
+        { name: "keyManagement:actions.detailsFor" },
+        { timeout: 10_000 },
+      ),
+    )
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    await user.click(
+      await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    )
+    await waitFor(() => expect(resolveApiTokenKeyMock).toHaveBeenCalled())
+    rerender(<CopyKeyDialog isOpen={false} onClose={() => {}} account={null} />)
+    await act(async () => {
+      pending.resolve("sk-late-secret")
+    })
+    expect(writeText).not.toHaveBeenCalled()
   })
 
   it("copies the resolved full key when inventory is masked", async () => {

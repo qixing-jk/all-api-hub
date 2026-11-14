@@ -5,20 +5,10 @@ import {
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { DisplaySiteData } from "~/types"
 
-export const REDEMPTION_ACCOUNT_SUPPORT_STATUSES = {
-  Supported: "supported",
-  Unsupported: "unsupported",
-} as const
-
-type RedemptionAccountSupportStatus =
-  (typeof REDEMPTION_ACCOUNT_SUPPORT_STATUSES)[keyof typeof REDEMPTION_ACCOUNT_SUPPORT_STATUSES]
-
-export interface RedemptionAccountCandidate extends DisplaySiteData {
-  automaticRedemptionSupport: {
-    status: RedemptionAccountSupportStatus
-    reason?: "capability-missing"
-  }
-}
+import {
+  REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
+  type RedemptionAccountCandidate,
+} from "./contracts"
 
 /** Adds serializable product support metadata for the content-script picker. */
 export function toRedemptionAccountCandidate(
@@ -33,7 +23,7 @@ export function toRedemptionAccountCandidate(
   return {
     ...account,
     automaticRedemptionSupport:
-      availability.status === "supported"
+      availability.status === REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Supported
         ? { status: REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Supported }
         : {
             status: REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,

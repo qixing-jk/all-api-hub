@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
-  toRedemptionAccountCandidate,
-} from "~/services/redemption/accountCandidate"
+import { toRedemptionAccountCandidate } from "~/services/redemption/accountCandidate"
+import { REDEMPTION_ACCOUNT_SUPPORT_STATUSES } from "~/services/redemption/contracts"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 describe("toRedemptionAccountCandidate", () => {

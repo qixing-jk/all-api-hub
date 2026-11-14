@@ -3,7 +3,7 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { productAnalyticsClient } from "~/services/productAnalytics/runtime/client"
+import type { productAnalyticsClient } from "~/services/productAnalytics/runtime/client"
 import {
   productAnalyticsState,
   type ProductAnalyticsSponsorRecommendationsSummaryPatch,
@@ -75,7 +75,9 @@ export async function recordSponsorRecommendationsSummary(
 /**
  * Sends the previous UTC day's sponsor recommendations summary when active.
  */
-export async function flushSponsorRecommendationsDailySummary(): Promise<boolean> {
+export async function flushSponsorRecommendationsDailySummary(
+  capture: typeof productAnalyticsClient.capture,
+): Promise<boolean> {
   const summary =
     await productAnalyticsState.getSponsorRecommendationsSummaryState()
   const today = getUtcDay()
@@ -84,7 +86,7 @@ export async function flushSponsorRecommendationsDailySummary(): Promise<boolean
     return false
   }
 
-  const captured = await productAnalyticsClient.capture(
+  const captured = await capture(
     PRODUCT_ANALYTICS_EVENTS.SponsorRecommendationsDailySummaryCaptured,
     buildSummaryProperties(summary),
   )

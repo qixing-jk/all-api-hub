@@ -14,7 +14,8 @@ import { VerificationTestSection } from "~/features/Verification/api/Verificatio
 import en from "~/locales/en/aiApiVerification.json"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { VERIFICATION_GENERATION_PART_TYPES } from "~/services/verification/aiApiVerification/generationProgress"
-import { QUESTION_ANSWER_OUTCOMES } from "~/services/verification/modelQuality/questionAnswer"
+import { runQuestionAnswerTest } from "~/services/verification/modelQuality/questionAnswer"
+import { QUESTION_ANSWER_OUTCOMES } from "~/services/verification/modelQuality/questionAnswerConstants"
 import { server } from "~~/tests/msw/server"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
@@ -26,6 +27,7 @@ function Workspace({
   withConfiguration = false,
 }: { inWorkspace?: boolean; withConfiguration?: boolean } = {}) {
   const controller = useQuestionAnswerTest({
+    runner: runQuestionAnswerTest,
     contextKey: "profile",
     enabled: true,
     blocked: false,

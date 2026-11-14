@@ -15,12 +15,6 @@ const { captureMock, stateMocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("~/services/productAnalytics/runtime/client", () => ({
-  productAnalyticsClient: {
-    capture: captureMock,
-  },
-}))
-
 vi.mock("~/services/productAnalytics/runtime/state", async (importOriginal) => {
   const actual =
     await importOriginal<
@@ -55,9 +49,8 @@ describe("sponsor recommendations product analytics summary", () => {
   })
 
   it("records sponsor recommendation impressions locally instead of sending per-impression analytics", async () => {
-    const { recordSponsorRecommendationsSummary } = await import(
-      "~/services/productAnalytics/facts/sponsorRecommendationsSummary"
-    )
+    const { recordSponsorRecommendationsSummary } =
+      await import("~/services/productAnalytics/facts/sponsorRecommendationsSummary")
 
     await recordSponsorRecommendationsSummary({
       impressionCount: 1,
@@ -80,11 +73,12 @@ describe("sponsor recommendations product analytics summary", () => {
   })
 
   it("uploads one daily summary and rolls the local state forward", async () => {
-    const { flushSponsorRecommendationsDailySummary } = await import(
-      "~/services/productAnalytics/facts/sponsorRecommendationsSummary"
-    )
+    const { flushSponsorRecommendationsDailySummary } =
+      await import("~/services/productAnalytics/facts/sponsorRecommendationsSummary")
 
-    await expect(flushSponsorRecommendationsDailySummary()).resolves.toBe(true)
+    await expect(
+      flushSponsorRecommendationsDailySummary(captureMock),
+    ).resolves.toBe(true)
 
     expect(captureMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.SponsorRecommendationsDailySummaryCaptured,
@@ -118,11 +112,12 @@ describe("sponsor recommendations product analytics summary", () => {
       day: "2026-05-12",
       impressionCount: 5,
     })
-    const { flushSponsorRecommendationsDailySummary } = await import(
-      "~/services/productAnalytics/facts/sponsorRecommendationsSummary"
-    )
+    const { flushSponsorRecommendationsDailySummary } =
+      await import("~/services/productAnalytics/facts/sponsorRecommendationsSummary")
 
-    await expect(flushSponsorRecommendationsDailySummary()).resolves.toBe(false)
+    await expect(
+      flushSponsorRecommendationsDailySummary(captureMock),
+    ).resolves.toBe(false)
 
     expect(captureMock).not.toHaveBeenCalled()
     expect(
@@ -132,11 +127,12 @@ describe("sponsor recommendations product analytics summary", () => {
 
   it("does not roll local state forward when daily summary upload fails", async () => {
     captureMock.mockResolvedValue(false)
-    const { flushSponsorRecommendationsDailySummary } = await import(
-      "~/services/productAnalytics/facts/sponsorRecommendationsSummary"
-    )
+    const { flushSponsorRecommendationsDailySummary } =
+      await import("~/services/productAnalytics/facts/sponsorRecommendationsSummary")
 
-    await expect(flushSponsorRecommendationsDailySummary()).resolves.toBe(false)
+    await expect(
+      flushSponsorRecommendationsDailySummary(captureMock),
+    ).resolves.toBe(false)
 
     expect(captureMock).toHaveBeenCalledTimes(1)
     expect(
@@ -148,11 +144,12 @@ describe("sponsor recommendations product analytics summary", () => {
     stateMocks.replaceSponsorRecommendationsSummaryState.mockResolvedValue(
       false,
     )
-    const { flushSponsorRecommendationsDailySummary } = await import(
-      "~/services/productAnalytics/facts/sponsorRecommendationsSummary"
-    )
+    const { flushSponsorRecommendationsDailySummary } =
+      await import("~/services/productAnalytics/facts/sponsorRecommendationsSummary")
 
-    await expect(flushSponsorRecommendationsDailySummary()).resolves.toBe(false)
+    await expect(
+      flushSponsorRecommendationsDailySummary(captureMock),
+    ).resolves.toBe(false)
 
     expect(captureMock).toHaveBeenCalledTimes(1)
     expect(
@@ -173,11 +170,12 @@ describe("sponsor recommendations product analytics summary", () => {
       day: "2026-05-11",
       impressionCount: 0,
     })
-    const { flushSponsorRecommendationsDailySummary } = await import(
-      "~/services/productAnalytics/facts/sponsorRecommendationsSummary"
-    )
+    const { flushSponsorRecommendationsDailySummary } =
+      await import("~/services/productAnalytics/facts/sponsorRecommendationsSummary")
 
-    await expect(flushSponsorRecommendationsDailySummary()).resolves.toBe(false)
+    await expect(
+      flushSponsorRecommendationsDailySummary(captureMock),
+    ).resolves.toBe(false)
 
     expect(captureMock).not.toHaveBeenCalled()
     expect(
