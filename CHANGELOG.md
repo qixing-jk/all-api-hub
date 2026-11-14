@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.11.0](https://github.com/qixing-jk/all-api-hub/compare/v4.10.1...v4.11.0) (2026-11-14)
+
+
+### Features
+
+* **verification:** stream results in a responsive test workspace ([#1876](https://github.com/qixing-jk/all-api-hub/issues/1876)) ([65ae160](https://github.com/qixing-jk/all-api-hub/commit/65ae1609a6cbbd5c3bac2a3c662444b2e01866e9))
+
+
+### Bug Fixes
+
+* **updates:** retry changelog reminders after notes are published ([#1870](https://github.com/qixing-jk/all-api-hub/issues/1870)) ([6dca549](https://github.com/qixing-jk/all-api-hub/commit/6dca5496b495f74c33186cecb1d885a617864157))
+
+
+### Performance Improvements
+
+* reduce extension loading footprint and preserve dialog recovery ([#1878](https://github.com/qixing-jk/all-api-hub/issues/1878)) ([145ca3a](https://github.com/qixing-jk/all-api-hub/commit/145ca3a01a621021234fd3c9551a692475bcf926))
+
 ## [4.10.1](https://github.com/qixing-jk/all-api-hub/compare/v4.10.0...v4.10.1) (2026-11-11)
 
 
