@@ -5,7 +5,7 @@ import {
   getDefaultProbePrompt,
 } from "~/services/verification/aiApiVerification/probes/probePrompts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import { PELICAN_TEST_PROMPT } from "~/services/verification/modelQuality/pelican"
+import { PELICAN_TEST_PROMPT } from "~/services/verification/modelQuality/constants"
 import {
   loadProbePromptOverrides,
   normalizeProbePromptDraft,

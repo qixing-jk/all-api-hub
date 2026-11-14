@@ -23,11 +23,9 @@ import {
   AGENT_TEST_OUTCOMES,
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
-} from "~/services/verification/modelQuality/constants"
-import {
   PELICAN_TEST_PROMPT,
-  type PelicanTestResult,
-} from "~/services/verification/modelQuality/pelican"
+} from "~/services/verification/modelQuality/constants"
+import type { PelicanTestResult } from "~/services/verification/modelQuality/pelican"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const buildPelican = (

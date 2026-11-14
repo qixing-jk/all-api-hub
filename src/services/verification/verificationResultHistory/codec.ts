@@ -1,13 +1,11 @@
-import type {
-  ApiVerificationProbeId,
-  ApiVerificationProbeStatus,
-} from "~/services/verification/aiApiVerification"
+import { sanitizeGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
 import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
-} from "~/services/verification/aiApiVerification"
-import { sanitizeGenerationMetrics } from "~/services/verification/aiApiVerification/generationMetrics"
+  type ApiVerificationProbeId,
+  type ApiVerificationProbeStatus,
+} from "~/services/verification/aiApiVerification/types"
 import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,

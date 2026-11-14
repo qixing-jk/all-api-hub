@@ -42,6 +42,9 @@
     "noExpiration": "Sin vencimiento",
     "placeholder": "Seleccionar fecha"
   },
+  "dialogErrorBoundary": {
+    "description": "No se pudo mostrar este diálogo. Puedes cerrarlo y seguir usando la página. Guarda los demás cambios antes de recargar la página para volver a intentarlo."
+  },
   "labels": {
     "apiKey": "Clave API",
     "notAvailable": "N/D",

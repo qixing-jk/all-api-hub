@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://cli-modes.example.invalid"

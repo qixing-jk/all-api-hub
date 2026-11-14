@@ -1,5 +1,9 @@
 export const PELICAN_PROMPT_ID = "pelican" as const
 
+/** Built-in drawing prompt shared by editors and the deferred executor. */
+export const PELICAN_TEST_PROMPT =
+  "Generate an SVG of a pelican riding a bicycle"
+
 /** Runtime values shared by drawing requests, results and persisted summaries. */
 export const PELICAN_EXECUTION_MODES = {
   Reply: "reply",

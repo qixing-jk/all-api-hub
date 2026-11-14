@@ -153,7 +153,6 @@ const mockProbeDefinitions = vi.fn()
 const mockRunPelicanTest = vi.fn()
 
 vi.mock("~/services/verification/modelQuality/pelican", () => ({
-  PELICAN_TEST_PROMPT: "pelican",
   runPelicanTest: (...args: unknown[]) => mockRunPelicanTest(...args),
 }))
 
@@ -172,10 +171,16 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
       modality === original.MODEL_TEST_MODALITIES.Text
         ? mockProbeDefinitions(apiType)
         : undefined) ?? original.getProbesForModality(modality, apiType),
-    runApiVerificationProbe: (...args: unknown[]) =>
-      mockRunApiVerificationProbe(...args),
   }
 })
+
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  () => ({
+    runApiVerificationProbe: (...args: unknown[]) =>
+      mockRunApiVerificationProbe(...args),
+  }),
+)
 
 describe("VerifyApiDialog", () => {
   it("locks the model in an idle test while another single probe is running", async () => {

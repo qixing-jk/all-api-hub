@@ -10,7 +10,10 @@ import type {
   ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification/types"
 
-export const QUESTION_ANSWER_TEST_ID = "question-answer" as const
+import {
+  QUESTION_ANSWER_OUTCOMES,
+  type QuestionAnswerOutcome,
+} from "./questionAnswerConstants"
 
 export type QuestionAnswerSettings = {
   question: string
@@ -29,17 +32,6 @@ export type QuestionAnswerRequest = QuestionAnswerSettings & {
   onProgress?: VerificationProgressCallback
   abortSignal?: AbortSignal
 }
-
-export const QUESTION_ANSWER_OUTCOMES = {
-  Matched: "matched",
-  Mismatched: "mismatched",
-  Manual: "manual",
-  Ungraded: "ungraded",
-  Empty: "empty",
-  Incomplete: "incomplete",
-} as const
-export type QuestionAnswerOutcome =
-  (typeof QUESTION_ANSWER_OUTCOMES)[keyof typeof QUESTION_ANSWER_OUTCOMES]
 
 export type QuestionAnswerResult = QuestionAnswerSettings & {
   text: string

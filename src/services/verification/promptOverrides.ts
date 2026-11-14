@@ -15,13 +15,14 @@ import {
   getDefaultProbePrompt,
 } from "~/services/verification/aiApiVerification/probes/probePrompts"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification/types"
-import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
-import { PELICAN_TEST_PROMPT } from "~/services/verification/modelQuality/pelican"
+import {
+  PELICAN_PROMPT_ID,
+  PELICAN_TEST_PROMPT,
+} from "~/services/verification/modelQuality/constants"
 
 export { PELICAN_PROMPT_ID } from "./modelQuality/constants"
 export type VerificationPromptId =
-  | ApiVerificationProbeId
-  | typeof PELICAN_PROMPT_ID
+  ApiVerificationProbeId | typeof PELICAN_PROMPT_ID
 
 export type ProbePromptDraft = Partial<Record<VerificationPromptId, string>>
 export type ProbePromptOverrides = Partial<Record<VerificationPromptId, string>>

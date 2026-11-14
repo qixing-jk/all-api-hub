@@ -18,7 +18,7 @@ import {
 import {
   REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
   type RedemptionAccountCandidate,
-} from "~/services/redemption/accountCandidate"
+} from "~/services/redemption/contracts"
 
 export interface RedemptionAccountSelectToastProps {
   title?: string
@@ -185,7 +185,7 @@ export const RedemptionAccountSelectToast: React.FC<
         onKeyDownCapture={handleKeyDownCapture}
       >
         {message && (
-          <div className="text-muted-foreground text-xs whitespace-pre-line">
+          <div className="text-xs whitespace-pre-line text-muted-foreground">
             {message}
           </div>
         )}
@@ -198,7 +198,7 @@ export const RedemptionAccountSelectToast: React.FC<
         />
 
         <div
-          className="space-y-density-1 max-h-56 overflow-y-auto pr-1"
+          className="max-h-56 space-y-density-1 overflow-y-auto pr-1"
           role="radiogroup"
           aria-labelledby={titleId}
         >
@@ -208,12 +208,12 @@ export const RedemptionAccountSelectToast: React.FC<
                 account.automaticRedemptionSupport.status ===
                 REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
             ) && (
-              <div className="bg-muted text-muted-foreground mb-density-2 py-density-1-5 rounded-md px-2 text-xs">
+              <div className="mb-density-2 rounded-md bg-muted px-2 py-density-1-5 text-xs text-muted-foreground">
                 {t("accountSelect.noSupportedAccounts")}
               </div>
             )}
           {displayedAccounts.length === 0 ? (
-            <div className="text-muted-foreground py-density-4 text-center text-xs">
+            <div className="py-density-4 text-center text-xs text-muted-foreground">
               {t("accountSelect.noResults")}
             </div>
           ) : (
@@ -237,7 +237,7 @@ export const RedemptionAccountSelectToast: React.FC<
                     }
                   }}
                   className={cn(
-                    "border-border/60 py-density-1-5 flex flex-col gap-0.5 rounded-md border px-2 text-xs",
+                    "flex flex-col gap-0.5 rounded-md border border-border/60 px-2 py-density-1-5 text-xs",
                     isSupported
                       ? "hover:bg-muted/70"
                       : "bg-muted/40 opacity-70",
@@ -249,7 +249,7 @@ export const RedemptionAccountSelectToast: React.FC<
                       isSupported ? "cursor-pointer" : "cursor-not-allowed",
                     )}
                   >
-                    <span className="gap-y-density-2 flex items-center gap-x-2">
+                    <span className="flex items-center gap-x-2 gap-y-density-2">
                       <input
                         type="radio"
                         className="h-3 w-3"
@@ -260,18 +260,18 @@ export const RedemptionAccountSelectToast: React.FC<
                           if (isSupported) setSelectedId(account.id)
                         }}
                       />
-                      <span className="text-foreground font-medium">
+                      <span className="font-medium text-foreground">
                         {account.name}
                       </span>
                     </span>
                     {checkInUrl && (
-                      <div className="text-muted-foreground text-2xs truncate pl-5">
+                      <div className="truncate pl-5 text-2xs text-muted-foreground">
                         {checkInUrl}
                       </div>
                     )}
                   </label>
                   {!isSupported && (
-                    <div className="text-muted-foreground gap-y-density-1 text-2xs flex flex-wrap items-center gap-x-2 pl-5">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-density-1 pl-5 text-2xs text-muted-foreground">
                       <span id={unsupportedReasonId}>
                         {t("accountSelect.unsupported")}
                       </span>

@@ -1,7 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { expect, it, vi } from "vitest"
 
-import { useContextCapacity } from "~/features/Verification/api/useContextCapacity"
+import { useContextCapacity as useController } from "~/features/Verification/api/useContextCapacity"
+import { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
 import type { ContextCapacitySummary } from "~/services/verification/verificationResultHistory/types"
 
 const request = {
@@ -381,3 +382,11 @@ it("keeps successful cleanup usable when reloading its history fails", async () 
   expect(result.current.error).toBeNull()
   expect(result.current.canRun).toBe(true)
 })
+
+/** Supply the extension-page executor while allowing controlled scenario runners. */
+function useContextCapacity(
+  options: Omit<Parameters<typeof useController>[0], "runner"> &
+    Partial<Pick<Parameters<typeof useController>[0], "runner">>,
+) {
+  return useController({ runner: runContextCapacity, ...options })
+}

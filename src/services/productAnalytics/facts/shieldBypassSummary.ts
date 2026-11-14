@@ -9,7 +9,7 @@ import {
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsProtectionBypassCountProperty,
 } from "~/services/productAnalytics/contracts"
-import { productAnalyticsClient } from "~/services/productAnalytics/runtime/client"
+import type { productAnalyticsClient } from "~/services/productAnalytics/runtime/client"
 import {
   productAnalyticsState,
   type ProductAnalyticsShieldBypassSummaryPatch,
@@ -327,7 +327,9 @@ export async function recordShieldBypassFocusObservation(params: {
 /**
  * Sends the previous UTC day's shield-bypass summary when it has activity.
  */
-export async function flushShieldBypassDailySummary(): Promise<boolean> {
+export async function flushShieldBypassDailySummary(
+  capture: typeof productAnalyticsClient.capture,
+): Promise<boolean> {
   const summary = await productAnalyticsState.getShieldBypassSummaryState()
   const today = getUtcDay()
 
@@ -335,7 +337,7 @@ export async function flushShieldBypassDailySummary(): Promise<boolean> {
     return false
   }
 
-  const captured = await productAnalyticsClient.capture(
+  const captured = await capture(
     PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
     buildSummaryProperties(summary),
   )

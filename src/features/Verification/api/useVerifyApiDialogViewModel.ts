@@ -54,12 +54,16 @@ import {
   MODEL_TEST_MODALITIES,
   resolveModelTestModality,
   resolveVerificationApiType,
-  runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
 import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
-import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
+import {
+  runApiVerificationProbe,
+  runContextCapacity,
+  runPelicanTest,
+  runQuestionAnswerTest,
+} from "~/services/verification/lazyRunners"
 import { createAccountModelVerificationHistoryTarget } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
 
@@ -231,6 +235,8 @@ export function useVerifyApiDialogViewModel({
 
   const tools = useVerificationTools({
     runPelicanRequest: runPelicanTest,
+    runContextCapacityRequest: runContextCapacity,
+    runQuestionAnswerRequest: runQuestionAnswerTest,
     modelId: requestedModelId || tokenModelHint || "",
     enableContextCapacity: isOpen,
     contextCapacityKey: JSON.stringify([

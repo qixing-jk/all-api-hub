@@ -13,16 +13,35 @@ import {
   DRAWING_VERIFICATION_OUTCOMES,
   PELICAN_EXECUTION_MODES,
 } from "~/services/verification/modelQuality/constants"
+import { runContextCapacity } from "~/services/verification/modelQuality/contextCapacityRun"
+import { runQuestionAnswerTest } from "~/services/verification/modelQuality/questionAnswer"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const mockRunPelicanTest = vi.fn()
 
 /** Supply the extension-page executor used by these controller scenarios. */
 function useVerificationTools(
-  options: Omit<UseVerificationToolsOptions, "runPelicanRequest"> &
-    Partial<Pick<UseVerificationToolsOptions, "runPelicanRequest">>,
+  options: Omit<
+    UseVerificationToolsOptions,
+    | "runPelicanRequest"
+    | "runContextCapacityRequest"
+    | "runQuestionAnswerRequest"
+  > &
+    Partial<
+      Pick<
+        UseVerificationToolsOptions,
+        | "runPelicanRequest"
+        | "runContextCapacityRequest"
+        | "runQuestionAnswerRequest"
+      >
+    >,
 ) {
-  return useTools({ runPelicanRequest: mockRunPelicanTest, ...options })
+  return useTools({
+    runPelicanRequest: mockRunPelicanTest,
+    runContextCapacityRequest: runContextCapacity,
+    runQuestionAnswerRequest: runQuestionAnswerTest,
+    ...options,
+  })
 }
 const mockLoadOverrides = vi.fn()
 const mockSaveOverrides = vi.fn()
@@ -38,7 +57,6 @@ vi.mock("~/services/verification/verificationResultHistory", () => ({
 }))
 
 vi.mock("~/services/verification/modelQuality/pelican", () => ({
-  PELICAN_TEST_PROMPT: "draw a pelican",
   runPelicanTest: (...args: unknown[]) => mockRunPelicanTest(...args),
 }))
 

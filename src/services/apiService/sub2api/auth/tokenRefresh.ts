@@ -1,5 +1,5 @@
-import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/auth/browserAuth"
 import { readSub2ApiFailureEnvelope } from "~/services/apiService/sub2api/responseError"
+import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/type"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 

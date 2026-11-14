@@ -54,6 +54,9 @@ export async function ensureRedemptionToastUi(): Promise<void> {
     logger.warn("ContentScriptContext not set, cannot mount UI")
     return
   }
+  const ctx = ctxRef
+  if (ctx.isInvalid) return
+  const isCurrentContext = () => !ctx.isInvalid && ctxRef === ctx
 
   if (mountingPromise) {
     return mountingPromise
@@ -61,10 +64,12 @@ export async function ensureRedemptionToastUi(): Promise<void> {
 
   mountingPromise = (async () => {
     await ensureContentI18nReady()
+    if (!isCurrentContext()) return
     const { createElement, ContentReactRoot } = await loadContentUiModules()
+    if (!isCurrentContext()) return
 
     let stopObserving = () => {}
-    const ui = await createShadowRootUi(ctxRef as ContentScriptContext, {
+    const ui = await createShadowRootUi(ctx, {
       name: CONTENT_UI_HOST_TAG,
       position: "overlay",
       zIndex: 2147483647,
@@ -86,6 +91,10 @@ export async function ensureRedemptionToastUi(): Promise<void> {
       },
     })
 
+    if (!isCurrentContext()) {
+      ui.remove()
+      return
+    }
     ui.mount()
     if (ui.shadowHost) {
       // Reuse the mounted React tree if a host page replaces its body contents.

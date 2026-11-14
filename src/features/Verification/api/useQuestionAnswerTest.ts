@@ -3,10 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { VerificationGenerationProgress } from "~/services/verification/aiApiVerification/generationProgress"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import {
+import type {
+  QuestionAnswerResult,
+  QuestionAnswerSettings,
   runQuestionAnswerTest,
-  type QuestionAnswerResult,
-  type QuestionAnswerSettings,
 } from "~/services/verification/modelQuality/questionAnswer"
 import {
   DEFAULT_QUESTION_ANSWER_SETTINGS,
@@ -28,7 +28,7 @@ type Options = {
   resolveRequest: (
     signal: AbortSignal,
   ) => Promise<VerificationToolRequestParams | null>
-  runner?: typeof runQuestionAnswerTest
+  runner: typeof runQuestionAnswerTest
 }
 
 /** Owns question drafts and one cancellable run for the current credential context. */
@@ -37,7 +37,7 @@ export function useQuestionAnswerTest({
   enabled,
   blocked,
   resolveRequest,
-  runner = runQuestionAnswerTest,
+  runner,
 }: Options) {
   const [settings, setSettings] = useState(DEFAULT_QUESTION_ANSWER_SETTINGS)
   const [ready, setReady] = useState(false)

@@ -1,10 +1,8 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
-import {
-  runApiVerificationProbe,
-  type ApiVerificationApiType,
-} from "~/services/verification/aiApiVerification"
+import { type ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import { server } from "~~/tests/msw/server"
 import { runApiVerificationTestSuite } from "~~/tests/test-utils/apiVerificationSuite"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"

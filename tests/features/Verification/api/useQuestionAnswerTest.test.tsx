@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { VERIFICATION_SETTINGS_ERROR_PHASES } from "~/features/Verification/api/types"
-import { useQuestionAnswerTest } from "~/features/Verification/api/useQuestionAnswerTest"
+import { useQuestionAnswerTest as useController } from "~/features/Verification/api/useQuestionAnswerTest"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { runQuestionAnswerTest } from "~/services/verification/modelQuality/questionAnswer"
 import type {
   QuestionAnswerRequest,
   QuestionAnswerResult,
@@ -392,3 +393,11 @@ describe("question answer workspace", () => {
     expect(view.result.current.status).toBe("idle")
   })
 })
+
+/** Supply the extension-page executor while allowing controlled scenario runners. */
+function useQuestionAnswerTest(
+  options: Omit<Parameters<typeof useController>[0], "runner"> &
+    Partial<Pick<Parameters<typeof useController>[0], "runner">>,
+) {
+  return useController({ runner: runQuestionAnswerTest, ...options })
+}

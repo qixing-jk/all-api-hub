@@ -91,7 +91,7 @@ function OptionsPageContentFallback() {
   const { t } = useTranslation("common")
 
   return (
-    <div className="py-density-12 flex items-center justify-center">
+    <div className="flex items-center justify-center py-density-12">
       <Spinner size="lg" aria-label={t("status.loading")} />
     </div>
   )
@@ -138,7 +138,7 @@ function OptionsPage() {
   // that page must not slide into place underneath its own landing position.
   const arrivalAnchor = Boolean(
     routeParams[OPTIONS_SEARCH_ANCHOR_PARAM] ??
-      routeParams[OPTIONS_SEARCH_HIGHLIGHT_PARAM],
+    routeParams[OPTIONS_SEARCH_HIGHLIGHT_PARAM],
   )
 
   useEffect(() => {
@@ -179,7 +179,7 @@ function OptionsPage() {
     >
       <DevPanelProvider surface="options" page={activeMenuItem}>
         <div
-          className="bg-workspace flex min-h-screen flex-col"
+          className="flex min-h-screen flex-col bg-workspace"
           data-testid={OPTIONS_TEST_IDS.app}
         >
           <Header
@@ -215,11 +215,11 @@ function OptionsPage() {
                     "max-w-7xl",
                 )}
               >
-                <PopupInterruptionHintBanner className="mt-density-4 mx-4 sm:mx-6" />
+                <PopupInterruptionHintBanner className="mx-4 mt-density-4 sm:mx-6" />
                 {appearanceSaveFailed && (
                   <p
                     role="alert"
-                    className="text-destructive-text mt-density-4 mx-4 text-sm sm:mx-6"
+                    className="mx-4 mt-density-4 text-sm text-destructive-text sm:mx-6"
                   >
                     {t("settings:appearance.saveFailed")}
                   </p>

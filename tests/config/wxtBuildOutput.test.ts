@@ -13,6 +13,8 @@ async function buildFixture(
   command: ConfigEnv["command"],
   mode = "development",
   source = 'console.log("memory-fixture")',
+  entrypoint?: string,
+  codeSplitting = false,
 ) {
   if (typeof wxtConfig.vite !== "function")
     throw new Error("Expected Vite factory")
@@ -27,6 +29,12 @@ async function buildFixture(
     ...config,
     mode,
     configFile: false,
+    define: {
+      ...config.define,
+      ...(entrypoint
+        ? { "import.meta.env.ENTRYPOINT": JSON.stringify(entrypoint) }
+        : {}),
+    },
     logLevel: "silent",
     resolve: {
       alias: { "~": path.resolve("src") },
@@ -45,20 +53,69 @@ async function buildFixture(
       rolldownOptions: {
         input: id,
         preserveEntrySignatures: "strict",
-        output: { codeSplitting: false },
+        output: { codeSplitting },
       },
     },
   })
   if (Array.isArray(result) || !("output" in result))
     throw new Error("Expected one build output")
-  const chunk = result.output.find((output) => output.type === "chunk")
+  const chunks = result.output.filter((output) => output.type === "chunk")
+  const chunk = chunks.find((output) => output.isEntry)
   if (!chunk || chunk.type !== "chunk")
     throw new Error("Expected fixture chunk")
-  return { chunk, id }
+  return { chunk, chunks, id }
 }
 
 describe("WXT build output", () => {
   afterEach(() => vi.unstubAllEnvs())
+
+  it.each([
+    ["managed model filtering", "~/services/apiAdapters/registry"],
+    [
+      "account verification",
+      "~/features/Verification/api/useVerifyApiDialogViewModel",
+    ],
+    [
+      "profile verification",
+      "~/features/ApiCredentialProfiles/verification/useProfileVerification",
+    ],
+  ])(
+    "loads probe execution only when %s runs",
+    async (_label, entry) => {
+      vi.stubEnv("NODE_ENV", "production")
+      const { chunk, chunks } = await buildFixture(
+        "build",
+        "production",
+        `export * from "${entry}";`,
+        "html",
+        true,
+      )
+      const initial = new Set([chunk.fileName])
+      for (const fileName of initial) {
+        for (const imported of chunks.find(
+          (candidate) => candidate.fileName === fileName,
+        )?.imports ?? [])
+          initial.add(imported)
+      }
+      const executesProbes = (id: string) =>
+        /\/(?:aiApiVerification\/apiVerificationService|modelQuality\/(?:pelican|questionAnswer|contextCapacityRun))\.ts$/u.test(
+          id.replaceAll("\\", "/"),
+        )
+      expect(
+        chunks
+          .filter((candidate) => initial.has(candidate.fileName))
+          .flatMap((candidate) => candidate.moduleIds)
+          .some(executesProbes),
+      ).toBe(false)
+      expect(
+        chunks
+          .filter((candidate) => !initial.has(candidate.fileName))
+          .flatMap((candidate) => candidate.moduleIds)
+          .some(executesProbes),
+      ).toBe(true)
+    },
+    60_000,
+  )
 
   it("preserves the existing browser baseline when Vite defaults change", async () => {
     if (typeof wxtConfig.vite !== "function")
@@ -143,4 +200,49 @@ describe("WXT build output", () => {
     )
     expect(chunk.moduleIds.some((id) => id.includes("quickjs"))).toBe(false)
   })
+
+  it("keeps the analytics SDK out of content-side facts", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    const { chunk } = await buildFixture(
+      "build",
+      "production",
+      `export * from "~/services/productAnalytics/facts/shieldBypassSummary";
+       export * from "~/services/productAnalytics/facts/sponsorRecommendationsSummary";`,
+      "content",
+    )
+    expect(chunk.moduleIds.filter((id) => id.includes("posthog-js"))).toEqual(
+      [],
+    )
+  })
+
+  it.each([
+    ["delegated controls", "~/features/Verification/api/useVerificationTools"],
+    ["content entry", "~/entrypoints/content/index"],
+    [
+      "webpage controller",
+      "~/features/WebAiApiCheck/content/modal/useApiCheckModalViewModel",
+    ],
+    ["webpage view", "~/features/WebAiApiCheck/content/modal/ApiCheckModal"],
+  ])(
+    "keeps provider execution out of %s",
+    async (_label, entry) => {
+      vi.stubEnv("NODE_ENV", "production")
+      const { chunk } = await buildFixture(
+        "build",
+        "production",
+        entry.endsWith("/content/index")
+          ? `export { default } from "${entry}";`
+          : `export * from "${entry}";`,
+        "content",
+      )
+      expect(
+        chunk.moduleIds.filter((id) =>
+          /node_modules\/(?:ai|@ai-sdk\/(?:openai|anthropic|google))\/dist\//u.test(
+            id.replaceAll("\\", "/"),
+          ),
+        ),
+      ).toEqual([])
+    },
+    60_000,
+  )
 })

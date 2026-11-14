@@ -1,6 +1,8 @@
 import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DeferredDialog } from "~/components/DeferredDialog"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
 import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCode/kiloCodeExport"
@@ -70,6 +72,35 @@ function renderDialog(profile = PROFILE) {
     />,
   )
 }
+
+it("returns focus to the export opener when footer cancellation unmounts the workspace", async () => {
+  function Example() {
+    const [open, setOpen] = useState(false)
+    const close = () => setOpen(false)
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>Export profile</button>
+        {open && (
+          <DeferredDialog isOpen onClose={close}>
+            <KiloCodeProfileExportDialog
+              isOpen
+              onClose={close}
+              profile={PROFILE}
+            />
+          </DeferredDialog>
+        )}
+      </>
+    )
+  }
+  const user = userEvent.setup()
+  render(<Example />)
+  const opener = await screen.findByRole("button", { name: "Export profile" })
+  await user.click(opener)
+  await user.click(
+    await screen.findByRole("button", { name: "common:actions.cancel" }),
+  )
+  await waitFor(() => expect(opener).toHaveFocus())
+})
 
 async function chooseExportTarget(
   user: ReturnType<typeof userEvent.setup>,

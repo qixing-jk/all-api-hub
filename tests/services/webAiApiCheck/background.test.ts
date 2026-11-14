@@ -20,7 +20,7 @@ it.each(Object.values(API_VERIFICATION_REQUEST_PROFILES))(
     const background =
       await import("~/services/verification/webAiApiCheck/background")
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockResolvedValue({
       id: "text-generation",
       status: "pass",
@@ -152,16 +152,19 @@ vi.mock("~/services/tags/tagStorage", () => ({
   },
 }))
 
-vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/verification/aiApiVerification")
-    >()
-  return {
-    ...actual,
-    runApiVerificationProbe: vi.fn(),
-  }
-})
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/verification/aiApiVerification/apiVerificationService")
+      >()
+    return {
+      ...actual,
+      runApiVerificationProbe: vi.fn(),
+    }
+  },
+)
 
 describe("webAiApiCheck background handlers", () => {
   const needleRequest = {
@@ -1588,7 +1591,7 @@ describe("webAiApiCheck background handlers", () => {
   it("attributes a probe run to its sender tab, and accepts a sender-less one", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     let probeSignal: AbortSignal | undefined
     const probeDeferred = createDeferred<ApiVerificationProbeResult>()
     let onProgress: Parameters<typeof runApiVerificationProbe>[0]["onProgress"]
@@ -1690,7 +1693,7 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe rejects invalid base urls before dispatching a probe", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
 
     const background =
       await import("~/services/verification/webAiApiCheck/background")
@@ -1715,7 +1718,7 @@ describe("webAiApiCheck background handlers", () => {
     async (mode) => {
       vi.resetModules()
       const { runApiVerificationProbe } =
-        await import("~/services/verification/aiApiVerification")
+        await import("~/services/verification/aiApiVerification/apiVerificationService")
       vi.mocked(runApiVerificationProbe).mockResolvedValue({
         id: "text-generation",
         status: "pass",
@@ -1768,7 +1771,7 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe rejects invalid verification modes without dispatching a probe", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockClear()
     const background =
       await import("~/services/verification/webAiApiCheck/background")
@@ -1795,7 +1798,7 @@ describe("webAiApiCheck background handlers", () => {
     const probeDeferred = createDeferred<ApiVerificationProbeResult>()
 
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockImplementation(
       async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
         receivedSignal = abortSignal
@@ -1859,7 +1862,7 @@ describe("webAiApiCheck background handlers", () => {
     const second = createDeferred<ApiVerificationProbeResult>()
     const signals: (AbortSignal | undefined)[] = []
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe)
       .mockImplementationOnce(async ({ abortSignal }) => {
         signals.push(abortSignal)
@@ -1921,7 +1924,7 @@ describe("webAiApiCheck background handlers", () => {
     const probeDeferred = createDeferred<ApiVerificationProbeResult>()
 
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockImplementation(
       async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
         receivedSignal = abortSignal
@@ -1985,7 +1988,7 @@ describe("webAiApiCheck background handlers", () => {
     async ({ probeId, mode, expectedMode }) => {
       vi.resetModules()
       const { runApiVerificationProbe } =
-        await import("~/services/verification/aiApiVerification")
+        await import("~/services/verification/aiApiVerification/apiVerificationService")
       vi.mocked(runApiVerificationProbe).mockRejectedValue(
         new Error("Forbidden: sk-test-secret-fixture"),
       )
@@ -2015,7 +2018,7 @@ describe("webAiApiCheck background handlers", () => {
     async (requestProfile) => {
       vi.resetModules()
       const { runApiVerificationProbe } =
-        await import("~/services/verification/aiApiVerification")
+        await import("~/services/verification/aiApiVerification/apiVerificationService")
       vi.mocked(runApiVerificationProbe).mockClear()
       const background =
         await import("~/services/verification/webAiApiCheck/background")
@@ -2040,7 +2043,7 @@ describe("webAiApiCheck background handlers", () => {
   it("retains enhanced client identity when the probe throws", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Network failed"),
     )
@@ -2068,7 +2071,7 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe omits analytics HTTP status when status is message-derived", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Forbidden 401: sk-test-secret-fixture"),
     )
@@ -2096,7 +2099,7 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe exposes structured HTTP status for analytics classification", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockRejectedValue({
       response: { status: 401 },
       message: "Forbidden: sk-test-secret-fixture",
@@ -2121,7 +2124,7 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe omits summary params when the failure has no inferable status code", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } =
-      await import("~/services/verification/aiApiVerification")
+      await import("~/services/verification/aiApiVerification/apiVerificationService")
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Socket hang up: sk-test-secret-fixture"),
     )

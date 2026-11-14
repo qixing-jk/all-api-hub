@@ -31,12 +31,6 @@ const { captureMock, stateMocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("~/services/productAnalytics/runtime/client", () => ({
-  productAnalyticsClient: {
-    capture: captureMock,
-  },
-}))
-
 vi.mock("~/services/productAnalytics/runtime/state", async (importOriginal) => {
   const actual =
     await importOriginal<
@@ -95,9 +89,8 @@ describe("shield bypass product analytics summary", () => {
   })
 
   it("records prompt exposure locally instead of sending per-exposure analytics", async () => {
-    const { recordShieldBypassPromptShown } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { recordShieldBypassPromptShown } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
     await recordShieldBypassPromptShown()
 
@@ -168,9 +161,8 @@ describe("shield bypass product analytics summary", () => {
   })
 
   it("counts a failure without a reviewed category in the total only", async () => {
-    const { recordShieldBypassTempWindowFetchResult } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { recordShieldBypassTempWindowFetchResult } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
     await recordShieldBypassTempWindowFetchResult(
       PRODUCT_ANALYTICS_RESULTS.Failure,
@@ -183,9 +175,8 @@ describe("shield bypass product analytics summary", () => {
   })
 
   it("records one privacy-safe marginal patch per final policy decision", async () => {
-    const { recordProtectionBypassDecision } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { recordProtectionBypassDecision } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
     await recordProtectionBypassDecision({
       feature: PROTECTION_BYPASS_FEATURES.Checkin,
@@ -218,9 +209,8 @@ describe("shield bypass product analytics summary", () => {
   ] as const)(
     "records an unfocused %s observation with background and foreground activation counters",
     async (transition, end) => {
-      const { recordShieldBypassFocusObservation } = await import(
-        "~/services/productAnalytics/facts/shieldBypassSummary"
-      )
+      const { recordShieldBypassFocusObservation } =
+        await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
       await recordShieldBypassFocusObservation({
         observation: {
@@ -243,9 +233,8 @@ describe("shield bypass product analytics summary", () => {
   )
 
   it("counts a focused end snapshot when the foreground event was missed", async () => {
-    const { recordShieldBypassFocusObservation } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { recordShieldBypassFocusObservation } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
     await recordShieldBypassFocusObservation({
       observation: {
@@ -266,9 +255,8 @@ describe("shield bypass product analytics summary", () => {
   })
 
   it("records incomplete focus observations without treating unknown start as background", async () => {
-    const { recordShieldBypassFocusObservation } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { recordShieldBypassFocusObservation } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
     await recordShieldBypassFocusObservation({
       observation: {
@@ -289,11 +277,10 @@ describe("shield bypass product analytics summary", () => {
   })
 
   it("uploads one exact daily summary and rolls the local state forward", async () => {
-    const { flushShieldBypassDailySummary } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { flushShieldBypassDailySummary } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
-    await expect(flushShieldBypassDailySummary()).resolves.toBe(true)
+    await expect(flushShieldBypassDailySummary(captureMock)).resolves.toBe(true)
 
     expect(captureMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
@@ -368,11 +355,12 @@ describe("shield bypass product analytics summary", () => {
 
   it("does not roll local state forward when daily summary upload fails", async () => {
     captureMock.mockResolvedValue(false)
-    const { flushShieldBypassDailySummary } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { flushShieldBypassDailySummary } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
-    await expect(flushShieldBypassDailySummary()).resolves.toBe(false)
+    await expect(flushShieldBypassDailySummary(captureMock)).resolves.toBe(
+      false,
+    )
 
     expect(captureMock).toHaveBeenCalledTimes(1)
     expect(stateMocks.replaceShieldBypassSummaryState).not.toHaveBeenCalled()
@@ -383,11 +371,10 @@ describe("shield bypass product analytics summary", () => {
       day: "2026-05-11",
       focusStartCounts: { unfocused: 1 },
     })
-    const { flushShieldBypassDailySummary } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { flushShieldBypassDailySummary } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
-    await expect(flushShieldBypassDailySummary()).resolves.toBe(true)
+    await expect(flushShieldBypassDailySummary(captureMock)).resolves.toBe(true)
 
     expect(captureMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
@@ -402,11 +389,12 @@ describe("shield bypass product analytics summary", () => {
       day: "2026-05-12",
       promptShownCount: 5,
     })
-    const { flushShieldBypassDailySummary } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { flushShieldBypassDailySummary } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
-    await expect(flushShieldBypassDailySummary()).resolves.toBe(false)
+    await expect(flushShieldBypassDailySummary(captureMock)).resolves.toBe(
+      false,
+    )
 
     expect(captureMock).not.toHaveBeenCalled()
     expect(stateMocks.replaceShieldBypassSummaryState).not.toHaveBeenCalled()
@@ -423,11 +411,12 @@ describe("shield bypass product analytics summary", () => {
       tempWindowTurnstileFetchSuccessCount: 0,
       tempWindowTurnstileFetchFailureCount: 0,
     })
-    const { flushShieldBypassDailySummary } = await import(
-      "~/services/productAnalytics/facts/shieldBypassSummary"
-    )
+    const { flushShieldBypassDailySummary } =
+      await import("~/services/productAnalytics/facts/shieldBypassSummary")
 
-    await expect(flushShieldBypassDailySummary()).resolves.toBe(false)
+    await expect(flushShieldBypassDailySummary(captureMock)).resolves.toBe(
+      false,
+    )
 
     expect(captureMock).not.toHaveBeenCalled()
     expect(stateMocks.replaceShieldBypassSummaryState).not.toHaveBeenCalled()

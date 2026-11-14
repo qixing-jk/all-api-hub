@@ -5,6 +5,8 @@
  * `{ code, message, data }`.
  */
 
+export const SUB2API_SESSION_BINDING_MISMATCH_CODE = "SESSION_BINDING_MISMATCH"
+
 export const SUB2API_AUTH_ME_ENDPOINT = "/api/v1/auth/me"
 export const SUB2API_PUBLIC_SETTINGS_ENDPOINT = "/api/v1/settings/public"
 export const SUB2API_AFFILIATE_ENDPOINT = "/api/v1/user/aff"
@@ -83,11 +85,7 @@ export type Sub2ApiGroupDescriptor = {
 }
 
 export type Sub2ApiKeyStatus =
-  | "active"
-  | "inactive"
-  | "quota_exhausted"
-  | "expired"
-  | (string & {})
+  "active" | "inactive" | "quota_exhausted" | "expired" | (string & {})
 
 export type Sub2ApiKeyData = {
   id: IntLike
@@ -107,8 +105,7 @@ export type Sub2ApiKeyData = {
 }
 
 export type Sub2ApiKeyListData =
-  | Sub2ApiPaginatedData<Sub2ApiKeyData>
-  | Sub2ApiKeyData[]
+  Sub2ApiPaginatedData<Sub2ApiKeyData> | Sub2ApiKeyData[]
 
 /** Validated native key identity; quota and expiry retain Sub2API semantics. */
 export type Sub2ApiNativeKey = Omit<
@@ -141,8 +138,7 @@ export type Sub2ApiAnnouncementData = {
 }
 
 export type Sub2ApiAnnouncementListData =
-  | Sub2ApiPaginatedData<Sub2ApiAnnouncementData>
-  | Sub2ApiAnnouncementData[]
+  Sub2ApiPaginatedData<Sub2ApiAnnouncementData> | Sub2ApiAnnouncementData[]
 
 export type Sub2ApiKeyWritePayloadBase = {
   name: string

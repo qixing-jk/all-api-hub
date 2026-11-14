@@ -35,7 +35,6 @@ import {
   getVerificationRequestProfileApiType,
   MODEL_TEST_MODALITIES,
   resolveModelTestModality,
-  runApiVerificationProbe,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
@@ -48,7 +47,12 @@ import { getVerificationRequestProfileOptions } from "~/services/verification/ai
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { VERIFICATION_CONCURRENCY_KINDS } from "~/services/verification/concurrency"
-import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
+import {
+  runApiVerificationProbe,
+  runContextCapacity,
+  runPelicanTest,
+  runQuestionAnswerTest,
+} from "~/services/verification/lazyRunners"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
@@ -235,6 +239,8 @@ export function useProfileVerification({
     ])
   const tools = useVerificationTools({
     runPelicanRequest: runPelicanTest,
+    runContextCapacityRequest: runContextCapacity,
+    runQuestionAnswerRequest: runQuestionAnswerTest,
     modelId: requestedModelId,
     enableContextCapacity: isOpen,
     contextCapacityKey: JSON.stringify([

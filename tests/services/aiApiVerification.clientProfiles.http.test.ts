@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { server } from "~~/tests/msw/server"
 
@@ -249,8 +249,7 @@ describe("verification CLI request profiles", () => {
 
   it("sends Claude Code headers, identity and local API-key metadata without changing the text test", async () => {
     let capture:
-      | { url: string; headers: Headers; body: Record<string, any> }
-      | undefined
+      { url: string; headers: Headers; body: Record<string, any> } | undefined
     server.use(
       http.post(`${baseUrl}/v1/messages`, async ({ request }) => {
         capture = {

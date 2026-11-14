@@ -1,11 +1,34 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 
+const COMPARISON_SECTION_KINDS = {
+  Page: "page",
+  Worker: "worker",
+  Artifacts: "artifacts",
+  ContentImpact: "content-impact",
+}
+
 const comparisonSectionConfigs = [
+  {
+    id: "sidepanel-startup",
+    title: "Sidepanel startup",
+    kind: COMPARISON_SECTION_KINDS.Page,
+    getSection(summary) {
+      return summary.comparison.sidepanel
+    },
+  },
+  {
+    id: "background",
+    title: "Background after popup ready",
+    kind: COMPARISON_SECTION_KINDS.Worker,
+    getSection(summary) {
+      return summary.comparison.background
+    },
+  },
   {
     id: "build-artifacts",
     title: "Build artifacts",
-    kind: "artifacts",
+    kind: COMPARISON_SECTION_KINDS.Artifacts,
     getSection(summary) {
       return summary.comparison.buildArtifacts
     },
@@ -13,7 +36,7 @@ const comparisonSectionConfigs = [
   {
     id: "popup-startup",
     title: "Popup startup",
-    kind: "page",
+    kind: COMPARISON_SECTION_KINDS.Page,
     getSection(summary) {
       return summary.comparison.popup
     },
@@ -21,7 +44,7 @@ const comparisonSectionConfigs = [
   {
     id: "options-startup",
     title: "Options startup",
-    kind: "page",
+    kind: COMPARISON_SECTION_KINDS.Page,
     getSection(summary) {
       return summary.comparison.options
     },
@@ -29,7 +52,7 @@ const comparisonSectionConfigs = [
   {
     id: "content-script-impact",
     title: "Content script impact",
-    kind: "content-impact",
+    kind: COMPARISON_SECTION_KINDS.ContentImpact,
     getSection(summary) {
       return summary.comparison.contentScriptImpact
     },
@@ -124,8 +147,28 @@ function renderListPanel(title, items, emptyLabel) {
   `
 }
 
+/** Keep page and worker heap labels, units and delta formatting aligned. */
+function buildHeapMetrics(section) {
+  return [
+    ["runtimeUsedSize", "Runtime heap"],
+    ["embedderHeapUsedSize", "Embedder heap"],
+    ["backingStorageSize", "Backing storage"],
+  ].map(([key, label]) => ({
+    label,
+    value: section[key],
+    valueFormatter: formatBytes,
+    deltaFormatter: formatSignedBytes,
+  }))
+}
+
 function renderSection({ title, kind, section }) {
-  if (kind === "artifacts") {
+  if (!section) return ""
+  if (kind === COMPARISON_SECTION_KINDS.Worker) {
+    return `<article class="card"><h3>${escapeHtml(title)}</h3>
+      <table><thead><tr><th>Metric</th><th>Baseline</th><th>Current</th><th>Delta</th></tr></thead><tbody>
+      ${renderMetricRows(buildHeapMetrics(section))}</tbody></table></article>`
+  }
+  if (kind === COMPARISON_SECTION_KINDS.Artifacts) {
     return `
       <article class="card">
         <h3>${escapeHtml(title)}</h3>
@@ -154,7 +197,7 @@ function renderSection({ title, kind, section }) {
     `
   }
 
-  if (kind === "content-impact") {
+  if (kind === COMPARISON_SECTION_KINDS.ContentImpact) {
     return `
       <article class="card">
         <h3>${escapeHtml(title)}</h3>
@@ -237,24 +280,7 @@ function renderSection({ title, kind, section }) {
               value: section.externalRequestCount,
               deltaFormatter: formatSignedNumber,
             },
-            {
-              label: "Runtime heap",
-              value: section.runtimeUsedSize,
-              valueFormatter: formatBytes,
-              deltaFormatter: formatSignedBytes,
-            },
-            {
-              label: "Embedder heap",
-              value: section.embedderHeapUsedSize,
-              valueFormatter: formatBytes,
-              deltaFormatter: formatSignedBytes,
-            },
-            {
-              label: "Backing storage",
-              value: section.backingStorageSize,
-              valueFormatter: formatBytes,
-              deltaFormatter: formatSignedBytes,
-            },
+            ...buildHeapMetrics(section),
             {
               label: "Perf JS heap",
               value: section.perfUsedJSHeapSize,

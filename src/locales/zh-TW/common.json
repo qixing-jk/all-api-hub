@@ -42,6 +42,9 @@
     "noExpiration": "不過期",
     "placeholder": "選擇日期"
   },
+  "dialogErrorBoundary": {
+    "description": "此對話框無法顯示。你可以關閉它，繼續使用目前頁面。若要重新載入頁面後再試，請先儲存其他尚未完成的內容。"
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

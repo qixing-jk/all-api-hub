@@ -203,7 +203,7 @@ export default function CopyKeyDialog({
         createError={
           defaultTokenGroupSelection
             ? null
-            : defaultTokenQuickCreateError ?? postCreateError
+            : (defaultTokenQuickCreateError ?? postCreateError)
         }
         onCreateDefaultKey={defaultTokenQuickCreate.start}
         onOpenAddTokenDialog={handleOpenAddTokenDialog}

@@ -103,8 +103,11 @@ describe("AccountActionButtons", () => {
     await user.click(copyButton)
 
     expect(copyButton).toHaveAttribute("aria-busy", "true")
-    expect(copyButton).toBeDisabled()
+    expect(copyButton).toHaveAttribute("aria-disabled", "true")
+    expect(copyButton).not.toBeDisabled()
+    expect(copyButton).toHaveFocus()
     await user.click(copyButton)
+    await user.keyboard("{Enter}")
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
 
     deferredTokens.reject(new Error("token probe failed"))
@@ -117,6 +120,7 @@ describe("AccountActionButtons", () => {
     expect(
       screen.getByRole("button", { name: "account:actions.copyKey" }),
     ).not.toHaveAttribute("aria-busy")
+    expect(copyButton).not.toHaveAttribute("aria-disabled")
   })
 
   it("reports an inventory failure when the native key list cannot be loaded", async () => {

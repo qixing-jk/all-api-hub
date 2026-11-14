@@ -11,7 +11,6 @@ import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resou
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   API_VERIFICATION_PROBE_STATUSES,
-  runApiVerificationProbe,
   toSanitizedErrorSummary,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
@@ -217,6 +216,9 @@ export async function matchesProbeFilterRule(
       }
 
       try {
+        // This also runs in the IIFE background: import only the needed executor.
+        const { runApiVerificationProbe } =
+          await import("~/services/verification/aiApiVerification/apiVerificationService")
         const result = await runApiVerificationProbe({
           ...executionInput,
           modelId,

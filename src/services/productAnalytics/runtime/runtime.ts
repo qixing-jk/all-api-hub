@@ -363,18 +363,22 @@ function captureSettingsSnapshotBestEffort() {
  * Starts shield-bypass summary capture without failing background startup.
  */
 function flushShieldBypassDailySummaryBestEffort() {
-  void flushShieldBypassDailySummary().catch((error) => {
-    if (isDevBuild()) {
-      logger.debug("Product analytics shield bypass summary failed", error)
-    }
-  })
+  void flushShieldBypassDailySummary(productAnalyticsClient.capture).catch(
+    (error) => {
+      if (isDevBuild()) {
+        logger.debug("Product analytics shield bypass summary failed", error)
+      }
+    },
+  )
 }
 
 /**
  * Starts sponsor recommendations summary capture without failing background startup.
  */
 function flushSponsorRecommendationsDailySummaryBestEffort() {
-  void flushSponsorRecommendationsDailySummary().catch((error) => {
+  void flushSponsorRecommendationsDailySummary(
+    productAnalyticsClient.capture,
+  ).catch((error) => {
     if (isDevBuild()) {
       logger.debug(
         "Product analytics sponsor recommendations summary failed",

@@ -414,7 +414,7 @@ export default function AccountDialog({
           <form
             id="account-form"
             onSubmit={handleSubmit}
-            className="gap-y-density-2 flex flex-col gap-x-2"
+            className="flex flex-col gap-x-2 gap-y-density-2"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}
             data-account-form-ready={showAccountForm ? "" : undefined}
           >
@@ -488,12 +488,12 @@ export default function AccountDialog({
             )}
 
             {state.phase !== ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
-              <div className="space-y-density-3 min-w-0">
-                <div className="space-y-density-4 min-w-0">
+              <div className="min-w-0 space-y-density-3">
+                <div className="min-w-0 space-y-density-4">
                   <SiteInfoInput {...siteInfoInputProps} />
                   {selectedSponsorPostClickNote ? (
                     <div
-                      className="bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-xs leading-5"
+                      className="flex items-start gap-x-2 gap-y-density-2 rounded-md bg-primary-soft px-2 py-density-2 text-xs leading-5 text-primary-soft-foreground"
                       data-testid={
                         ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote
                       }
@@ -542,7 +542,7 @@ export default function AccountDialog({
                   </div>
                 ) : null}
                 {mode === DIALOG_MODES.ADD && (
-                  <div className="border-border space-y-density-3 pt-density-3 border-t">
+                  <div className="space-y-density-3 border-t border-border pt-density-3">
                     <InfoPanel
                       mode={mode}
                       phase={state.phase}

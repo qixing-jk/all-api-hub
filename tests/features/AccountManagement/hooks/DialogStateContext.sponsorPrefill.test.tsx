@@ -148,7 +148,7 @@ describe("DialogStateContext sponsor prefill", () => {
     )
     await user.click(screen.getByRole("button", { name: "open" }))
     await user.type(
-      screen.getByRole("textbox", { name: "Account draft" }),
+      await screen.findByRole("textbox", { name: "Account draft" }),
       " original",
     )
     await user.click(screen.getByRole("button", { name: "open" }))

@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { tempWindowOpenRouterManagementKeyAction } from "~/services/apiAdapters/openrouter/keys/managementKeyActionClient"
 import {
@@ -63,9 +63,34 @@ vi.mock("~/entrypoints/background/protectionBypassCoordinator", () => ({
 }))
 
 describe("tempWindowFetch helpers (background context)", () => {
+  afterEach(() => vi.unstubAllEnvs())
   beforeEach(() => {
     vi.clearAllMocks()
+    executeProtectionBypassTaskMock.mockReset()
+    sendRuntimeMessageMock.mockReset()
   })
+
+  it.each(["background", "content", "html"])(
+    "routes protected tasks from the %s entrypoint",
+    async (entrypoint) => {
+      vi.stubEnv("ENTRYPOINT", entrypoint)
+      const expected = { success: true, data: "protected-result" }
+      executeProtectionBypassTaskMock.mockResolvedValueOnce(expected)
+      sendRuntimeMessageMock.mockResolvedValueOnce(expected)
+      const response = await tempWindowFetch({
+        protectionBypassExecution: testExecution,
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/test",
+      })
+      expect(response).toEqual(expected)
+      expect(executeProtectionBypassTaskMock).toHaveBeenCalledTimes(
+        entrypoint === "background" ? 1 : 0,
+      )
+      expect(sendRuntimeMessageMock).toHaveBeenCalledTimes(
+        entrypoint === "background" ? 0 : 1,
+      )
+    },
+  )
 
   it("keeps provider-specific OpenRouter transport out of the generic facade", () => {
     expect(tempWindowFetchClient).not.toHaveProperty(

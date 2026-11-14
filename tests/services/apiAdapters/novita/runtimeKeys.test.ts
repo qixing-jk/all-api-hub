@@ -14,8 +14,8 @@ import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles
 import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
-  runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import { server } from "~~/tests/msw/server"
 import {
   buildApiCredentialProfile,
@@ -31,12 +31,15 @@ vi.mock(
     resolveAssociatedProfileSecret: vi.fn(),
   }),
 )
-vi.mock("~/services/verification/aiApiVerification", async (original) => ({
-  ...(await original<
-    typeof import("~/services/verification/aiApiVerification")
-  >()),
-  runApiVerificationProbe: vi.fn(),
-}))
+vi.mock(
+  "~/services/verification/aiApiVerification/apiVerificationService",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/verification/aiApiVerification/apiVerificationService")
+    >()),
+    runApiVerificationProbe: vi.fn(),
+  }),
+)
 
 const account = buildDisplaySiteData({
   id: "novita-runtime",

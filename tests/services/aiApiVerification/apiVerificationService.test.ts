@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // Use shared API type constants to keep test inputs aligned with supported values.
-import {
-  API_TYPES,
-  runApiVerificationProbe,
-} from "~/services/verification/aiApiVerification"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import { runApiVerificationTestSuite } from "~~/tests/test-utils/apiVerificationSuite"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
