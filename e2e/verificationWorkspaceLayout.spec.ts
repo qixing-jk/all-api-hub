@@ -82,8 +82,9 @@ test("verification sidebar boundaries stay aligned throughout animated toggles",
               horizontalScrollbars: string[]
             }[] = []
             const start = performance.now()
-            // Pause transitions when they start, before a busy CI renderer can skip
-            // every intermediate frame. Seek actual CSS animations and inspect each
+            // Capture transitions when React commits the toggled attributes.
+            // transitionrun can arrive after a busy renderer has already finished
+            // the animation. Seek the paused CSS transitions to inspect each
             // rendered boundary, including two reversals from an intermediate frame.
             const pauseTransitions = () => {
               for (const animation of root.getAnimations({ subtree: true }))
@@ -142,7 +143,12 @@ test("verification sidebar boundaries stay aligned throughout animated toggles",
                   .map((element) => `${element.tagName}.${element.className}`),
               })
             }
-            root.addEventListener("transitionrun", pauseTransitions, true)
+            const transitions = new MutationObserver(pauseTransitions)
+            transitions.observe(root, {
+              subtree: true,
+              attributes: true,
+              attributeFilter: ["data-list-collapsed", "data-settings-open"],
+            })
             try {
               sample()
               for (let leg = 0; leg < (interrupted ? 3 : 1); leg++) {
@@ -176,7 +182,7 @@ test("verification sidebar boundaries stay aligned throughout animated toggles",
                   )
               }
             } finally {
-              root.removeEventListener("transitionrun", pauseTransitions, true)
+              transitions.disconnect()
               for (const animation of root.getAnimations({ subtree: true }))
                 animation.play()
             }

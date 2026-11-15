@@ -203,9 +203,23 @@ for (const source of ["profile", "account"] as const) {
     await expect(rail).toHaveCSS("opacity", "1")
     expect((await rail.boundingBox())!.y).toBeGreaterThan(railMotion!.top)
     await page.emulateMedia({ reducedMotion: "reduce" })
-    expect(
-      await rail.evaluate((element) => element.getAnimations().length),
-    ).toBe(0)
+    // Older Chromium retains the animation we explicitly finished above even
+    // after its CSS rule stops matching. Assert the applied motion policy.
+    await expect(rail).toHaveCSS("animation-name", "none")
+    await expect
+      .poll(() =>
+        rail.evaluate(
+          (element) =>
+            element
+              .getAnimations()
+              .filter(
+                (animation) =>
+                  animation.playState === "running" ||
+                  animation.playState === "paused",
+              ).length,
+        ),
+      )
+      .toBe(0)
     await workspace
       .getByRole("button", { name: "文本生成", exact: true })
       .click()

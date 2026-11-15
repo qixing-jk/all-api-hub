@@ -938,18 +938,39 @@ export async function showVerificationSettings(page: Page) {
 
 /** Resize can reopen the mobile list; select the current test to expose its detail. */
 export async function showVerificationTest(page: Page, label: string) {
+  const workspace = page.getByTestId("verification-workspace")
+  // ResizeObserver publishes the React layout after the viewport itself changes.
+  // Do not inspect drawers while the previous desktop layout is still committed.
+  await expect
+    .poll(() =>
+      workspace.evaluate((root) => {
+        const frame = root.querySelector(".verification-workspace-frame")!
+        const layout = getComputedStyle(frame)
+          .getPropertyValue("--verification-layout")
+          .trim()
+        return root.getAttribute("data-layout") === layout
+      }),
+    )
+    .toBe(true)
   const settingsSheet = page.locator(
     '[data-slot="sheet-content"][data-side="right"]',
   )
-  if (await settingsSheet.isVisible())
+  if (await settingsSheet.isVisible()) {
     await page
       .getByTestId("verification-workspace")
       .locator(".verification-workspace-controls button")
       .click()
+    await expect(settingsSheet).toBeHidden()
+  }
   const sheet = page.locator('[data-slot="sheet-content"][data-side="left"]')
-  if (await sheet.isVisible())
+  if (
+    (await workspace.getAttribute("data-layout")) === "stacked" &&
+    (await workspace.getAttribute("data-list-collapsed")) === "false"
+  ) {
+    await expect(sheet).toBeVisible()
     await sheet.getByRole("button", { name: label, exact: true }).click()
-  else if (
+    await expect(sheet).toBeHidden()
+  } else if (
     (await page
       .getByTestId("verification-active-test")
       .getAttribute("aria-label")) !== label

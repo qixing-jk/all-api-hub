@@ -1,3 +1,5 @@
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
 import type { BrowserContext, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
@@ -17,7 +19,7 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
-import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { test as base, expect } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -39,6 +41,55 @@ const CHECK_IN_FEEDBACK_ID = "#account-check-in-feedback"
 const ACCOUNT_REDETECT_LABEL = "Re-detect"
 const CHECK_IN_REDETECT_LABEL = "Detect check-in method"
 
+const test = base.extend<{ brandedSiteUrl: string }>({
+  brandedSiteUrl: async ({ extensionId }, runFixture) => {
+    void extensionId
+    // Extension-created inspection pages and worker fetches can bypass routes.
+    // Serve the re-detection fixture to both through the same loopback origin.
+    const server = createServer((request, response) => {
+      const path = new URL(request.url ?? "/", "http://localhost").pathname
+      if (path === "/") {
+        response.setHeader("Content-Type", "text/html")
+        response.end("<title>New API</title><body>Veloera</body>")
+        return
+      }
+      response.setHeader("Content-Type", "application/json")
+      if (path === "/api/status") {
+        response.end(JSON.stringify(brandedSiteStatus(SITE_TYPES.VELOERA)))
+      } else if (path === "/api/user/self") {
+        response.end(
+          JSON.stringify({
+            success: true,
+            data: { id: 1, username: "e2e-user", quota: 1000 },
+          }),
+        )
+      } else {
+        response.writeHead(404)
+        response.end(JSON.stringify({ success: false }))
+      }
+    })
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    try {
+      await runFixture(
+        `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      )
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      )
+    }
+  },
+})
+
+function brandedSiteStatus(brand: string) {
+  return {
+    success: true,
+    message: "",
+    data: { system_name: brand, checkin_enabled: true },
+  }
+}
+
 /**
  * Serves a site that brands itself through the public status name while its shell
  * title stays the stock one, and answers check-in with the flat body this
@@ -57,11 +108,7 @@ async function stubBrandedSite(context: BrowserContext, brand: string) {
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        success: true,
-        message: "",
-        data: { system_name: brand, checkin_enabled: true },
-      }),
+      body: JSON.stringify(brandedSiteStatus(brand)),
     }),
   )
   await context.route(`${SITE_URL}/api/user/checkin*`, (route) =>
@@ -78,7 +125,10 @@ async function stubBrandedSite(context: BrowserContext, brand: string) {
 }
 
 /** Seeds the account state an older detection would have stored for this site. */
-async function seedStaleTypeAccount(context: BrowserContext) {
+async function seedStaleTypeAccount(
+  context: BrowserContext,
+  siteUrl = SITE_URL,
+) {
   const worker = await getServiceWorker(context)
   await seedUserPreferences(worker, {
     autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
@@ -87,7 +137,7 @@ async function seedStaleTypeAccount(context: BrowserContext) {
     createStoredAccount({
       id: ACCOUNT_ID,
       site_name: "Branded site",
-      site_url: SITE_URL,
+      site_url: siteUrl,
       site_type: SITE_TYPES.NEW_API,
     }),
   ])
@@ -193,14 +243,14 @@ test("stays silent when the site resolves to the stored type", async ({
 })
 
 test("repairs a stale stored type through the account re-detect action", async ({
+  brandedSiteUrl,
   context,
   extensionId,
   page,
 }) => {
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
-  await stubBrandedSite(context, SITE_TYPES.VELOERA)
-  await seedStaleTypeAccount(context)
+  await seedStaleTypeAccount(context, brandedSiteUrl)
 
   const dialog = await openStoredAccountDialog(page, extensionId)
   const siteTypeTrigger = dialog.getByTestId(ids.siteTypeTrigger)

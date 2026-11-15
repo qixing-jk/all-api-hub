@@ -1052,14 +1052,7 @@ test("web needle test plans automatically, follows a context probe and restores 
       views: [{ id: "desktop", theme: "light", width: 1280, height: 850 }],
     })
     await page.setViewportSize({ width: 380, height: 800 })
-    const configurationToggle = page
-      .getByTestId("verification-workspace")
-      .getByRole("button", {
-        name: "Settings",
-        exact: true,
-      })
-    if ((await configurationToggle.getAttribute("aria-expanded")) === "true")
-      await configurationToggle.click()
+    await showVerificationTest(page, "Needle in a haystack")
     await captureVisualViews({
       page,
       ready: page.getByRole("table"),
@@ -1159,11 +1152,7 @@ test("web needle test plans automatically, follows a context probe and restores 
     await expect(historyHint).toBeHidden()
     await expect(reopened.panel).toBeVisible()
     await page.setViewportSize({ width: 380, height: 800 })
-    if ((await configurationToggle.getAttribute("aria-expanded")) === "true")
-      await configurationToggle.click()
-    await reopened.panel
-      .getByRole("button", { name: "Needle in a haystack", exact: true })
-      .click()
+    await showVerificationTest(page, "Needle in a haystack")
     await expect(historyBadge).toBeVisible()
     await captureVisualViews({
       page,
@@ -1792,6 +1781,8 @@ test("keeps settings beside the conversation and preserves drafts when the respo
   await calendar
     .getByRole("button", { name: "No expiration", exact: true })
     .click()
+  // The date value clears before the closing popover releases its Escape layer.
+  await expect(calendar).toHaveCount(0)
   await expect(expiration).toHaveValue("")
   await notes.press("Escape")
   await expect(settings).toBeHidden()

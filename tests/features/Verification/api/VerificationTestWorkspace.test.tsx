@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -38,6 +39,46 @@ beforeEach(() => {
 })
 
 describe("Verification test workspace", () => {
+  it("keeps focus on the settings toggle when closed before the opening frame", async () => {
+    const frames = new Map<number, FrameRequestCallback>()
+    let nextFrame = 0
+    const requestFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        frames.set(++nextFrame, callback)
+        return nextFrame
+      })
+    const cancelFrame = vi
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation((id) => {
+        frames.delete(id)
+      })
+    const user = userEvent.setup()
+    try {
+      render(
+        <VerificationTestSection
+          tools={null}
+          configuration={<input aria-label="API key" />}
+        >
+          <VerificationProbeDetails label="Text" heading="Text">
+            <p>Text output</p>
+          </VerificationProbeDetails>
+        </VerificationTestSection>,
+      )
+      const toggle = screen.getByRole("button", { name: /workspace.settings/ })
+      await user.click(toggle)
+      expect(toggle).toHaveAttribute("aria-expanded", "true")
+      await user.click(toggle)
+      expect(toggle).toHaveAttribute("aria-expanded", "false")
+      act(() => {
+        for (const callback of frames.values()) callback(0)
+      })
+      expect(toggle).toHaveFocus()
+    } finally {
+      requestFrame.mockRestore()
+      cancelFrame.mockRestore()
+    }
+  })
   it("keeps the mobile detail outside both sliding panels without resetting its draft", async () => {
     viewport.wide = false
     const user = userEvent.setup()

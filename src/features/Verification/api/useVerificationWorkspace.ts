@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -90,16 +91,26 @@ export function useVerificationWorkspace({
   const settingsId = useId()
   const toggleRef = useRef<HTMLButtonElement>(null)
   const settingsRef = useRef<HTMLElement>(null)
+  const settingsFocusFrame = useRef<number | null>(null)
+  const cancelSettingsFocus = useCallback(() => {
+    if (settingsFocusFrame.current === null) return
+    cancelAnimationFrame(settingsFocusFrame.current)
+    settingsFocusFrame.current = null
+  }, [])
+  useEffect(() => cancelSettingsFocus, [cancelSettingsFocus])
   const closeSettings = useCallback(() => {
+    cancelSettingsFocus()
     setManualSettingsOpen(false)
     if (!isWide) setListCollapsed(true)
     toggleRef.current?.focus()
-  }, [isWide])
+  }, [cancelSettingsFocus, isWide])
   const openSettings = useCallback(
     (target?: VerificationSettingsTarget) => {
+      cancelSettingsFocus()
       setManualSettingsOpen(true)
       if (!isWide) setListCollapsed(true)
-      requestAnimationFrame(() => {
+      settingsFocusFrame.current = requestAnimationFrame(() => {
+        settingsFocusFrame.current = null
         if (target === VERIFICATION_SETTINGS_TARGETS.ReferenceAnswer) {
           const field = settingsTarget?.querySelector<HTMLTextAreaElement>(
             "[data-verification-test-settings]:not([hidden]) [data-verification-reference-answer]",
@@ -109,7 +120,8 @@ export function useVerificationWorkspace({
             ?.querySelector<HTMLButtonElement>(":scope > h6 button")
           if (disclosure?.getAttribute("aria-expanded") === "false")
             disclosure.click()
-          requestAnimationFrame(() => {
+          settingsFocusFrame.current = requestAnimationFrame(() => {
+            settingsFocusFrame.current = null
             field?.scrollIntoView?.({ block: "nearest" })
             field?.focus()
           })
@@ -119,7 +131,7 @@ export function useVerificationWorkspace({
         if (toggleRef.current?.matches(":focus")) settingsRef.current?.focus()
       })
     },
-    [isWide, settingsTarget],
+    [cancelSettingsFocus, isWide, settingsTarget],
   )
   const toggleSettings = () => {
     if (settingsOpen) closeSettings()

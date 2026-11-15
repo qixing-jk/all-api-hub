@@ -4,14 +4,6 @@ export function moveVerificationPortalHost(
   target: HTMLElement,
 ) {
   if (host.parentElement === target) return
-  if (
-    typeof target.moveBefore === "function" &&
-    host.isConnected &&
-    target.isConnected
-  ) {
-    target.moveBefore(host, null)
-    return
-  }
   const root = host.getRootNode() as Document | ShadowRoot
   const focused = root.activeElement
   const editor =
@@ -24,9 +16,19 @@ export function moveVerificationPortalHost(
           direction: editor.selectionDirection,
         }
       : null
-  target.appendChild(host)
+  if (
+    typeof target.moveBefore === "function" &&
+    host.isConnected &&
+    target.isConnected
+  ) {
+    target.moveBefore(host, null)
+  } else {
+    target.appendChild(host)
+  }
   if (editor?.isConnected) {
     editor.focus({ preventScroll: true })
+    // Chrome 144 preserves focus with moveBefore but resets textarea selection.
+    // Restore the captured range on both native and appendChild paths.
     if (
       selection?.start != null &&
       selection.end != null &&

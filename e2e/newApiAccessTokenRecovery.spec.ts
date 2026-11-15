@@ -32,6 +32,7 @@ import {
   openAccountManagementPage,
   waitForSavedAccount,
 } from "~~/e2e/utils/realSite/accountAdd"
+import { waitForNewUserFacingCredentialPage } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const manualToken = "e2e-manually-copied-management-pat"
@@ -514,21 +515,17 @@ for (const scenario of [
       if (toggle?.getAttribute("aria-expanded") === "true") toggle.click()
     }, ACCOUNT_MANAGEMENT_TEST_IDS)
 
-    // Route discovery can open a temporary page at the same time. Only use the
-    // requested native destination; a probe page is owned and closed by the worker.
-    const securityPagePromise = context.waitForEvent("page", {
-      predicate: async (candidate) => {
-        try {
-          await candidate.waitForURL(`${baseUrl}${tokenPagePath}`, {
-            timeout: 10_000,
-            waitUntil: "commit",
-          })
-          return true
-        } catch {
-          return false
-        }
-      },
-    })
+    // Route discovery may open a temporary window at the exact same URL.
+    // Match the document in the user's window, not the first matching URL.
+    const sourceTab = await bridge.evaluate(() => chrome.tabs.getCurrent())
+    if (sourceTab?.windowId == null) {
+      throw new Error("Credential recovery requires the source window")
+    }
+    const securityPagePromise = waitForNewUserFacingCredentialPage(
+      context,
+      serviceWorker,
+      sourceTab.windowId,
+    )
     await recoveryView.evaluate((view, label) => {
       const button = Array.from(view.document.querySelectorAll("button")).find(
         (candidate) => candidate.textContent?.trim() === label,

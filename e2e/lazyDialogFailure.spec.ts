@@ -91,14 +91,19 @@ test("contains a canceled Kilo export chunk failure and recovers after an explic
     await page.keyboard.press("Escape")
     await expect(
       page.getByRole("dialog", { name: "Loading...", exact: true }),
-    ).toBeHidden()
+    ).toHaveCount(0)
     await expect(
       page.getByTestId(IDS.copyKeyDialogExportMenuButton),
     ).toBeFocused()
-    await page.keyboard.press("Escape")
-    await expect(
-      page.getByRole("dialog", { name: "Key List", exact: true }),
-    ).toBeHidden()
+    const keyList = page.getByRole("dialog").filter({
+      has: page.getByTestId(IDS.copyKeyDialogFooter),
+    })
+    await expect(keyList).toBeVisible()
+    await keyList
+      .getByTestId(IDS.copyKeyDialogFooter)
+      .getByRole("button", { name: "Close", exact: true })
+      .click()
+    await expect(keyList).toHaveCount(0)
     await page.getByTestId(IDS.addAccountButton).click()
     const name = page.getByTestId(IDS.siteUrlInput)
     await name.fill("https://unsaved.example.com")
