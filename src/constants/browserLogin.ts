@@ -16,6 +16,7 @@ export const BROWSER_LOGIN_FAILURE_REASONS = {
   InvalidResponse: "invalid_response",
   NetworkError: "network_error",
   PageUnavailable: "page_unavailable",
+  SessionConflict: "session_conflict",
 } as const
 export type BrowserLoginFailureReason =
   (typeof BROWSER_LOGIN_FAILURE_REASONS)[keyof typeof BROWSER_LOGIN_FAILURE_REASONS]
@@ -41,6 +42,7 @@ export const BROWSER_LOGIN_PAGE_TIMEOUT_MS = 30_000
 export const LOGIN_VERIFICATION_REASONS = {
   Login: "login",
   Session: "login-session",
+  CheckIn: "check-in",
 } as const
 export type LoginVerificationReason =
   (typeof LOGIN_VERIFICATION_REASONS)[keyof typeof LOGIN_VERIFICATION_REASONS]

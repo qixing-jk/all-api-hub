@@ -10,16 +10,54 @@ import {
   isAgentRouterLoginUrl,
   isAgentRouterSystemName,
 } from "~/services/accountLogin/providers/agentrouter/config"
-import { parseNewApiDashboardAuthBundleResponse } from "~/services/apiService/newApi/dashboardAuth"
+import {
+  parseNewApiDashboardAuthBundleResponse,
+  type NewApiDashboardAuthBundle,
+} from "~/services/apiService/newApi/dashboardAuth"
+import { NEW_API_DASHBOARD_AUTH_UNAVAILABLE_STATUSES } from "~/services/apiService/newApiFamily/dashboardAuth"
 import { readBrowserLoginJson } from "~/services/browserLogin/contentResponse"
 import { fetchBrowserOAuthRequest } from "~/services/browserOAuth/contentRequest"
 import { isRecord } from "~/utils/core/object"
 
-let bundle: { token: string; sid: string; identity: string } | undefined
+let bundle: NewApiDashboardAuthBundle | undefined
+let verified = false
+
+/** Retains only a bearer whose identity was independently confirmed by self. */
+export function rememberVerifiedNewApiDashboardSession(
+  auth: NewApiDashboardAuthBundle,
+) {
+  bundle = auth
+  verified = true
+}
+
+/** Read-only, document-local handoff to work inside the owned login context. */
+export function readNewApiDashboardSessionAuth(expectedOrigin: string) {
+  if (
+    expectedOrigin !== location.origin ||
+    !verified ||
+    !bundle ||
+    bundle.expiresAt <= Date.now() / 1000
+  )
+    return null
+  return {
+    success: true,
+    data: {
+      access_token: bundle.token,
+      token_type: "Bearer",
+      access_expires_at: bundle.expiresAt,
+      session: { sid: bundle.sessionId, current: true },
+      user: bundle.user,
+    },
+  }
+}
 /** Verify the current website session; auth material stays in this document. */
 async function readSession(options?: {
   canResetSession: boolean
 }): Promise<PasswordUiSession | null> {
+  if (bundle && bundle.expiresAt <= Date.now() / 1000) {
+    bundle = undefined
+    verified = false
+  }
   const cached = JSON.parse(localStorage.getItem("user") || "null")
   // AgentRouter persists native login identity in localStorage. Only an owned
   // private login context may skip probing an empty session; shared sessions
@@ -41,7 +79,8 @@ async function readSession(options?: {
   if (response.ok) {
     const self = await readBrowserLoginJson(response)
     if (!isRecord(self)) throw new Error("Invalid session")
-    if (self.success === true && isRecord(self.data) && self.data.id != null)
+    if (self.success === true && isRecord(self.data) && self.data.id != null) {
+      if (bundle) verified = String(self.data.id) === String(bundle.user.id)
       return {
         identity: String(self.data.id),
         ...(typeof self.data.checked_in === "boolean"
@@ -51,6 +90,7 @@ async function readSession(options?: {
             ? { checkedIn: cached.checked_in }
             : {}),
       }
+    }
     if (self.success === false && !cached?.id) return null
     throw new Error("Invalid session")
   }
@@ -67,15 +107,13 @@ async function readSession(options?: {
     { method: "POST" },
     { mutationRisk: true },
   )
-  if ([401, 404, 405].includes(refresh.status)) return null
+  if (NEW_API_DASHBOARD_AUTH_UNAVAILABLE_STATUSES.includes(refresh.status))
+    return null
   if (!refresh.ok) throw new Error("Session unavailable")
   const parsed = parseNewApiDashboardAuthBundleResponse(await refresh.json())
   if (parsed.kind !== "valid") throw new Error("Invalid session")
-  bundle = {
-    token: parsed.bundle.token,
-    sid: parsed.bundle.sessionId,
-    identity: String(parsed.bundle.user.id),
-  }
+  bundle = parsed.bundle
+  verified = false
   return readSession()
 }
 /** Revoke the observed site session without clearing a newer local identity. */
@@ -85,7 +123,7 @@ async function logout() {
     const result = await passwordLoginRequest(
       "/api/user/auth/logout",
       {},
-      { "X-Auth-Session": bundle.sid },
+      { "X-Auth-Session": bundle.sessionId },
     )
     if (result.success !== true) throw new Error("Logout failed")
   } else {
@@ -98,6 +136,7 @@ async function logout() {
       throw new Error("Logout failed")
   }
   bundle = undefined
+  verified = false
   if (localStorage.getItem("user") !== previousUser)
     throw new Error("Session changed")
   localStorage.removeItem("user")

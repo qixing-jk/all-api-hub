@@ -644,6 +644,11 @@ async function stubCredentialIsolatedNewApiSiteRoutes(context: BrowserContext) {
       return
     }
 
+    if (method === "GET" && url.pathname === "/api/user/xingya-checkin") {
+      await fulfillJson(200, { success: false, message: "Unsupported route" })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/user/checkin") {
       await fulfillJson(200, {
         success: true,

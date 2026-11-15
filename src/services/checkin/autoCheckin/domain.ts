@@ -3,6 +3,7 @@ import {
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
@@ -12,6 +13,7 @@ import {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
+import { getCheckInDiscoveryPriority } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -76,21 +78,51 @@ const deriveMethodChoices = (
 
 const deriveDiscoveryDecision = (
   choices: readonly CheckInMethodChoice[],
+  config: CheckInConfig,
 ): CheckInDiscoveryDecision => {
-  const matchedMethodIds = choices
+  const allMatchedMethodIds = choices
     .filter(
       (choice) =>
         choice.detectionOutcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
     )
     .map((choice) => choice.methodId)
+  const highestPriority = Math.max(
+    ...allMatchedMethodIds.map(getCheckInDiscoveryPriority),
+  )
+  const matchedMethodIds = allMatchedMethodIds.filter(
+    (id) => getCheckInDiscoveryPriority(id) === highestPriority,
+  )
   const unknownMethodIds = choices
     .filter(
       (choice) =>
         choice.detectionOutcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown,
     )
     .map((choice) => choice.methodId)
+    .filter((id) => getCheckInDiscoveryPriority(id) >= highestPriority)
 
   if (matchedMethodIds.length > 1) {
+    const scores = matchedMethodIds.map((id) => {
+      const detection = config.methodKnowledge.methods[id]?.detection
+      return detection?.outcome ===
+        CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched &&
+        detection.evidence.source ===
+          CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe
+        ? (detection.evidence.domainMatchCount ?? 0)
+        : 0
+    })
+    const highestScore = Math.max(...scores)
+    const winners = matchedMethodIds.filter(
+      (_id, index) => scores[index] === highestScore,
+    )
+    if (
+      highestScore > 0 &&
+      winners.length === 1 &&
+      unknownMethodIds.length === 0
+    )
+      return {
+        outcome: CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved,
+        methodId: winners[0]!,
+      }
     return {
       outcome: CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous,
       methodIds: matchedMethodIds,
@@ -344,7 +376,7 @@ export function inspectCheckInMethods(
 ): CheckInAccountState {
   const candidateMethodIds = uniqueCandidateMethodIds(input.candidateMethodIds)
   const choices = deriveMethodChoices(input.config, candidateMethodIds)
-  const decision = deriveDiscoveryDecision(choices)
+  const decision = deriveDiscoveryDecision(choices, input.config)
   const selectionState = deriveSelectionState(input.config, candidateMethodIds)
   const executionEligibility = deriveExecutionEligibility(
     input,
@@ -511,7 +543,21 @@ export function mergeCheckInDiscoveryResults(input: {
   const selectedDetection = selectedMethodIsCandidate
     ? methods[selectedMethodId]?.detection
     : undefined
+  const unresolvedPreferredMethodIds =
+    decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown
+      ? decision.unknownMethodIds
+      : decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
+        ? decision.methodIds
+        : []
   if (
+    (decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved &&
+      decision.methodId !== selectedMethodId) ||
+    (selectedMethodIsCandidate &&
+      unresolvedPreferredMethodIds.some(
+        (id) =>
+          getCheckInDiscoveryPriority(id) >
+          getCheckInDiscoveryPriority(selectedMethodId),
+      )) ||
     !selectedMethodIsCandidate ||
     selectedDetection?.outcome ===
       CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported

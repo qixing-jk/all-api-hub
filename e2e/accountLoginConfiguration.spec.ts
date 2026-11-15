@@ -322,9 +322,7 @@ for (const method of ["linuxdo", "password"] as const) {
       id: `account-login-${method}-editor`,
       extensionDir,
     })
-    await loginNotice
-      .getByRole("button", { name: "Change account login" })
-      .click()
+    await loginNotice.getByRole("button", { name: "Change login" }).click()
     await expect(
       loginSection.getByRole("combobox", { name: "Login method", exact: true }),
     ).toBeFocused()
@@ -344,9 +342,7 @@ for (const method of ["linuxdo", "password"] as const) {
         exact: true,
       })
       await expect(loginMethod).toBeVisible()
-      await loginNotice
-        .getByRole("button", { name: "Change account login" })
-        .click()
+      await loginNotice.getByRole("button", { name: "Change login" }).click()
       await expect(loginMethod).toBeFocused()
       await expect(loginSection).toHaveClass(/ring-theme-500/)
       const sectionBounds = (await loginSection.boundingBox())!

@@ -6,6 +6,7 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { refreshAutoCheckinAccountSnapshots } from "~/services/checkin/autoCheckin/accountSnapshot"
+import { AuthTypeEnum } from "~/types"
 import type { AutoCheckinAccountSnapshot } from "~/types/autoCheckin"
 import {
   buildCheckInConfig,
@@ -57,6 +58,39 @@ describe("current check-in readiness", () => {
     expect(updated?.lastResult).toEqual(old.lastResult)
     expect(old.detectionEnabled).toBe(false)
   })
+  it.each([
+    { accessToken: "test-token", providerAvailable: true },
+    { accessToken: "", providerAvailable: false },
+  ])(
+    "keeps checked-today eligibility separate from credential readiness ($providerAvailable)",
+    ({ accessToken, providerAvailable }) => {
+      const checked = structuredClone(account)
+      checked.authType = AuthTypeEnum.AccessToken
+      checked.account_info.access_token = accessToken
+      checked.checkIn.selection = {
+        mode: "automatic",
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      }
+      checked.checkIn.methodKnowledge.methods[
+        AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+      ]!.status = {
+        outcome: "known",
+        availability: "enabled",
+        today: "checked",
+        evidence: { source: "probe", observedAt: Date.now() },
+      }
+
+      const [snapshot] = refreshAutoCheckinAccountSnapshots([old], [checked])
+
+      expect(snapshot).toMatchObject({
+        detectionEnabled: true,
+        providerAvailable,
+        isCheckedInToday: true,
+        skipReason: "already_checked_today",
+        lastResult: old.lastResult,
+      })
+    },
+  )
   it("shows the latest disabled intent while keeping deleted-account history", () => {
     const [updated] = refreshAutoCheckinAccountSnapshots(
       [old],

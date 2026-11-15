@@ -42,7 +42,6 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
 import { AccountCookieVerification } from "~/features/AccountManagement/components/AccountDialog/form/AccountCookieVerification"
@@ -98,6 +97,7 @@ import {
   parseNovitaCredentials,
 } from "~/services/apiService/novita/constants"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { getCheckInAccountLoginMode } from "~/services/checkin/autoCheckin/providers/registry"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -338,9 +338,6 @@ export default function AccountForm({
     setIsLoginSectionOpen(true)
     setLoginFocusRequested(true)
   }
-  const usesLoginCheckIn =
-    resolveSelectedCheckInMethod({ config: checkIn, siteType, siteUrl }) ===
-    AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn
   const loginTarget = {
     authType,
     site_type: siteType,
@@ -348,6 +345,11 @@ export default function AccountForm({
     account_info: { id: userId },
   }
   const supportsCookieRecovery = supportsAccountCookieRecovery(loginTarget)
+  const usesLoginCheckIn = Boolean(
+    getCheckInAccountLoginMode(
+      resolveSelectedCheckInMethod({ config: checkIn, siteType, siteUrl }),
+    ) && getAccountLoginMethods(loginTarget).length,
+  )
   const usesAccountLogin =
     usesLoginCheckIn || supportsAccountCredentialRecovery(loginTarget)
   useEffect(() => {

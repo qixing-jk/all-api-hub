@@ -50,9 +50,11 @@ export function showTurnstileAssistPageNotice(
         },
       },
       action: {
-        label: request.reason
-          ? t("shieldBypass:notification.openLogin")
-          : t("shieldBypass:notification.openVerification"),
+        label:
+          request.reason === LOGIN_VERIFICATION_REASONS.Login ||
+          request.reason === LOGIN_VERIFICATION_REASONS.Session
+            ? t("shieldBypass:notification.openLogin")
+            : t("shieldBypass:notification.openVerification"),
         onClick: async () => {
           const response = await sendRuntimeMessage({
             action: RuntimeActionIds.TurnstileAssistOpen,

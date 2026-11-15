@@ -7,6 +7,7 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
+  CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import {
   getSub2ApiAuthPersistenceStatus,
@@ -389,11 +390,16 @@ export function inspectSelectedCheckInCompatibility(input: {
   globalAutomaticExecutionEnabled: boolean
   loginProviderClaimedByAnother?: boolean
 }) {
-  const { state, registration } = resolveSelectedCheckInRegistration({
+  const { state } = resolveSelectedCheckInRegistration({
     account: input.account,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
     loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
+  // Routine execution skips do not make a confirmed method's credentials unusable.
+  const registration =
+    state.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+      ? autoCheckinMethodRegistry.resolveById(state.selectionState.methodId)
+      : null
   const providerReadiness = registration?.provider.getReadiness(input.account)
   return {
     state,
@@ -840,9 +846,11 @@ async function executeSelectedCheckInOnce(
   const requiresAuthoritativeStatus =
     input.requireStatusConfirmationBeforeMutation === true ||
     registration.provider.requiresAuthoritativeStatusBeforeMutation === true
+  const confirmsStatusDuringExecution =
+    registration.provider.confirmsStatusDuringExecution?.(account) === true
   let refreshedConfig: CheckInConfig | undefined
   let statusProof: AutoCheckinProviderContext["statusProof"]
-  if (registration.provider.getStatus) {
+  if (registration.provider.getStatus && !confirmsStatusDuringExecution) {
     try {
       const status = await registration.provider.getStatus({
         account: account,
@@ -967,7 +975,9 @@ async function executeSelectedCheckInOnce(
     account: currentAccount,
     methodId: registration.id,
     providerResult,
-    getStatus: registration.provider.getStatus,
+    getStatus: confirmsStatusDuringExecution
+      ? undefined
+      : registration.provider.getStatus,
   })
   return {
     kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,

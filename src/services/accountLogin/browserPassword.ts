@@ -320,6 +320,9 @@ export function createBrowserPasswordContext(
                 status: submitted
                   ? BROWSER_LOGIN_STATUS.Uncertain
                   : BROWSER_LOGIN_STATUS.InteractionRequired,
+                ...(!submitted && phase === PASSWORD_UI_PHASES.Prepare
+                  ? { reason: BROWSER_LOGIN_FAILURE_REASONS.SessionConflict }
+                  : {}),
               }
           }
           if (!isRecord(response))

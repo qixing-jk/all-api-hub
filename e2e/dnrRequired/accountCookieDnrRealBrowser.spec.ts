@@ -890,6 +890,11 @@ async function startDnrCaptureNewApiServer({
       return
     }
 
+    if (method === "GET" && url.pathname === "/api/user/xingya-checkin") {
+      sendJson(200, { success: false, message: "Unsupported route" })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/user/checkin") {
       sendJson(200, {
         success: true,

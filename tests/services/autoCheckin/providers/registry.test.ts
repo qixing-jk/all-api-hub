@@ -33,6 +33,7 @@ import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloer
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import { xiaobaiCodeProvider } from "~/services/checkin/autoCheckin/providers/xiaobaiCode"
+import { xingyaProvider } from "~/services/checkin/autoCheckin/providers/xingya"
 import type { CheckInMethodId } from "~/types/checkIn"
 
 const OFFICIAL_METHOD_SOURCE = {
@@ -94,7 +95,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(24)
+    expect(registrationContracts).toHaveLength(25)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -167,6 +168,11 @@ describe("autoCheckinMethodRegistry", () => {
           candidateSiteTypes: [SITE_TYPES.RELAYFOR],
           provider: relayForProvider,
         },
+        {
+          id: "xingya:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.NEW_API],
+          provider: xingyaProvider,
+        },
       ]),
     )
 
@@ -223,7 +229,10 @@ describe("autoCheckinMethodRegistry", () => {
       autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.NEW_API, "https://normal.example")
         .map(({ id }) => id),
-    ).toEqual([AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn])
+    ).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    ])
     expect(
       autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.UNKNOWN, "https://agentrouter.org")
@@ -235,6 +244,40 @@ describe("autoCheckinMethodRegistry", () => {
         .map(({ id }) => id),
     ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.UNKNOWN)).toEqual([])
+  })
+
+  it("probes Xingya as a protocol candidate without replacing generic compatibility", () => {
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://xingya.site")
+        .map(({ id }) => id),
+    ).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    ])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://normal.example")
+        .map(({ id }) => id),
+    ).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    ])
+    expect(
+      getAutoCheckinCandidateMethodIds(
+        SITE_TYPES.NEW_API,
+        "https://xingya.site",
+      ),
+    ).toContain(AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn)
+    expect(
+      getAutoCheckinCandidateMethodIds(SITE_TYPES.NEW_API, undefined),
+    ).toContain(AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn)
+    expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.NEW_API)).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+    ])
+    expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.NEW_API)).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+    ])
   })
 
   it("distinguishes official methods from third-party protocol methods", () => {
@@ -537,6 +580,9 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([])
     expect(
       getAutoCheckinCandidateMethodIds(SITE_TYPES.NEW_API, "not a URL"),
-    ).toEqual([AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn])
+    ).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    ])
   })
 })

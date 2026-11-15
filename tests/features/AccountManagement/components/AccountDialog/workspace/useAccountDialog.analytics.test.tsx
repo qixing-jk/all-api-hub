@@ -281,7 +281,7 @@ describe("useAccountDialog analytics", () => {
           currentTabMatched: true,
           checkInDiscoveryTrigger: "initial_detection",
           checkInDiscoveryDecision: "unknown",
-          checkInCandidateCount: 1,
+          checkInCandidateCount: 2,
           checkInSelectionSource: "none",
         },
       },
@@ -298,7 +298,7 @@ describe("useAccountDialog analytics", () => {
       currentTabMatched: true,
       checkInDiscoveryTrigger: "initial_detection",
       checkInDiscoveryDecision: "unknown",
-      checkInCandidateCount: 1,
+      checkInCandidateCount: 2,
       checkInSelectionSource: "none",
     })
     expectNoSensitiveAnalyticsFields()
@@ -921,7 +921,7 @@ describe("useAccountDialog analytics", () => {
           siteType: SITE_TYPES.NEW_API,
           checkInDiscoveryTrigger: "initial_detection",
           checkInDiscoveryDecision: "unknown",
-          checkInCandidateCount: 1,
+          checkInCandidateCount: 2,
           checkInSelectionSource: "none",
         },
       },
@@ -1011,9 +1011,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks successful cookie import without sensitive fields", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=private-cookie",
@@ -1039,9 +1038,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks cookie permission denial as a permission failure", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       errorCode: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,
@@ -1077,9 +1075,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks cookie import responses without a failure code as invalid responses", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       error: "private backend message",
@@ -1114,9 +1111,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks cookie read failures with request diagnostics", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       errorCode: COOKIE_IMPORT_FAILURE_REASONS.ReadFailed,
@@ -1152,9 +1148,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks thrown cookie import errors with sanitized diagnostics", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
       Object.assign(new Error("private cookie failure"), { statusCode: 403 }),
     )
@@ -1188,9 +1183,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks empty cookie imports as skipped", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       errorCode: COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound,
@@ -1216,9 +1210,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks successful Sub2API session import without sensitive fields", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: {
@@ -1259,9 +1252,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks Sub2API import with missing session as skipped", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: {
@@ -1303,9 +1295,8 @@ describe("useAccountDialog analytics", () => {
 
   it("keeps Sub2API import skipped when an existing-tab probe fails before missing temp-window session", async () => {
     const { getAllTabs } = await import("~/utils/browser/tabs")
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(getAllTabs).mockResolvedValueOnce([
       {
         id: 12,
@@ -1356,9 +1347,8 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks Sub2API import runtime errors as failures without raw error text", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
       Object.assign(new Error("private backend error"), { statusCode: 401 }),
     )

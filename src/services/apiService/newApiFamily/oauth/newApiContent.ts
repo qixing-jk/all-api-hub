@@ -2,7 +2,9 @@ import { BROWSER_OAUTH_CONTENT_FAILURE_REASONS } from "~/constants/browserOAuth"
 import {
   NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
   parseNewApiDashboardAuthBundleResponse,
+  type NewApiDashboardAuthBundle,
 } from "~/services/apiService/newApi/dashboardAuth"
+import { rememberVerifiedNewApiDashboardSession } from "~/services/apiService/newApiFamily/passwordUi"
 import {
   fetchBrowserOAuthRequest,
   runBrowserOAuthContentAction,
@@ -192,6 +194,7 @@ export function handleCompleteNewApiOAuth(
       }
     let userId: unknown
     let headers: Record<string, string>
+    let authBundle: NewApiDashboardAuthBundle | undefined
     if (flow.modern === true) {
       // Current New API stores its bearer only in memory. Refresh in the same
       // browser cookie context, verify /self, and never export the auth bundle.
@@ -201,6 +204,7 @@ export function handleCompleteNewApiOAuth(
         ),
       )
       if (parsed.kind !== "valid") throw new Error("Missing session")
+      authBundle = parsed.bundle
       userId = parsed.bundle.user.id
       headers = { Authorization: `Bearer ${parsed.bundle.token}` }
       if (
@@ -247,6 +251,7 @@ export function handleCompleteNewApiOAuth(
         success: false,
         reason: BROWSER_OAUTH_CONTENT_FAILURE_REASONS.IdentityMismatch,
       }
+    if (authBundle) rememberVerifiedNewApiDashboardSession(authBundle)
     return { success: true, userId: String(userId) }
   })
 }

@@ -27,6 +27,7 @@ import {
   ACCOUNT_LOGIN_PROVIDERS,
 } from "~/constants/accountLogin"
 import {
+  CHECK_IN_ACCOUNT_LOGIN_MODES,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
@@ -55,6 +56,7 @@ import {
 } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { getCheckInAccountLoginMode } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types"
 
 import { AccountVerificationContinuation } from "./AccountVerificationContinuation"
@@ -114,6 +116,26 @@ export function AccountCheckInSection({
     siteUrl,
   })
   const candidateMethodIds = inspection.choices.map((choice) => choice.methodId)
+  const loginMode = getCheckInAccountLoginMode(
+    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+      ? inspection.selectionState.methodId
+      : undefined,
+  )
+  const loginNoticeCopy =
+    loginMode === CHECK_IN_ACCOUNT_LOGIN_MODES.Session
+      ? {
+          title: t("login.sessionCheckInTitle"),
+          explanation: t("login.sessionCheckInExplanation"),
+        }
+      : loginMode === CHECK_IN_ACCOUNT_LOGIN_MODES.NativePage
+        ? {
+            title: t("login.nativeCheckInTitle"),
+            explanation: t("login.nativeCheckInExplanation"),
+          }
+        : {
+            title: t("login.checkInTitle"),
+            explanation: t("login.checkInExplanation"),
+          }
   const hasCandidates = candidateMethodIds.length > 0
   const shouldOfferRedetect =
     hasCandidates ||
@@ -172,11 +194,11 @@ export function AccountCheckInSection({
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
       id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
     >
-      <div className="gap-y-density-2 grid grid-cols-1 items-center gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <p className="text-secondary-foreground text-sm font-medium">
+      <div className="grid grid-cols-1 items-center gap-x-2 gap-y-density-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <p className="text-sm font-medium text-secondary-foreground">
           {t("form.checkInStatus")}
         </p>
-        <p className="text-muted-foreground text-xs sm:col-span-2 sm:row-start-2">
+        <p className="text-xs text-muted-foreground sm:col-span-2 sm:row-start-2">
           {isSelectedMethodDisabled
             ? t("form.checkInStatusDisabled")
             : isSelectedStatusUnavailable
@@ -191,7 +213,7 @@ export function AccountCheckInSection({
                     ? t("form.checkInStatusPending")
                     : t("form.checkInStatusUnsupported")}
         </p>
-        <div className="gap-y-density-1-5 flex flex-wrap items-center gap-x-1.5 sm:col-start-2 sm:row-start-1 sm:justify-end">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-density-1-5 sm:col-start-2 sm:row-start-1 sm:justify-end">
           {shouldOfferRedetect && (
             <Button
               type="button"
@@ -251,7 +273,7 @@ export function AccountCheckInSection({
       {hasCandidates && (
         <div className="space-y-density-2">
           <FormField>
-            <div className="gap-density-2 flex flex-wrap items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-density-2">
               <Label htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.method}>
                 {t("form.checkInMethod")}
               </Label>
@@ -260,7 +282,7 @@ export function AccountCheckInSection({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-muted-foreground text-xs"
+                  className="text-xs text-muted-foreground"
                   leftIcon={
                     <RotateCcw className="size-3.5" aria-hidden="true" />
                   }
@@ -321,7 +343,7 @@ export function AccountCheckInSection({
           </FormField>
           <p
             id={CHECK_IN_METHOD_HELPER_ID}
-            className="text-muted-foreground text-xs"
+            className="text-xs text-muted-foreground"
           >
             <span>{selectionPresentation.helperText}</span>
             {selectionPresentation.selectedMethodDisclosure && (
@@ -335,13 +357,18 @@ export function AccountCheckInSection({
 
       {onConfigureLogin && (
         <Notice
-          tone={loginConfigured ? "info" : "warning"}
+          tone={
+            loginConfigured ||
+            loginMode === CHECK_IN_ACCOUNT_LOGIN_MODES.NativePage
+              ? "info"
+              : "warning"
+          }
           size="sm"
           actionsLayout={NOTICE_ACTION_LAYOUTS.Inline}
-          title={t("login.checkInTitle")}
+          title={loginNoticeCopy.title}
           description={
             <>
-              {t("login.checkInExplanation")}
+              {loginNoticeCopy.explanation}
               <span className="block">
                 {loginConfigured
                   ? t("login.checkInConfigured", {
@@ -394,18 +421,18 @@ export function AccountCheckInSection({
       )}
 
       {hasCandidates && (
-        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
+        <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
           <div className="flex-1">
-            <div className="gap-y-density-1 flex items-center gap-x-1">
+            <div className="flex items-center gap-x-1 gap-y-density-1">
               <label
                 htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
-                className="text-secondary-foreground text-sm font-medium"
+                className="text-sm font-medium text-secondary-foreground"
               >
                 {t("form.autoCheckInEnabled")}
               </label>
               <AutoCheckinRiskHint />
             </div>
-            <p className="text-muted-foreground mt-density-1 text-xs">
+            <p className="mt-density-1 text-xs text-muted-foreground">
               {isSelectedMethodDisabled
                 ? t("form.autoCheckInPausedBySiteDesc")
                 : hasSelectedMethod
@@ -466,10 +493,10 @@ export function AccountCheckInSection({
       </FormField>
 
       {checkIn.customCheckIn?.url && (
-        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
+        <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
           <label
             htmlFor={OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID}
-            className="text-secondary-foreground text-sm font-medium"
+            className="text-sm font-medium text-secondary-foreground"
           >
             {t("form.openRedeemWithCheckIn")}
           </label>

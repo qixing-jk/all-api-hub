@@ -12,6 +12,15 @@ const message = {
   action: RuntimeActionIds.TurnstileAssistPageNotice,
   requestId: "request",
 } as const
+it("opens the check-in verification context after login has completed", () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible")
+  vi.spyOn(document, "hasFocus").mockReturnValue(true)
+  const notify = { info: vi.fn(), dismiss: vi.fn() }
+  showTurnstileAssistPageNotice({ ...message, reason: "check-in" }, notify)
+  expect(notify.info.mock.calls[0]![1].action.label).toBe(
+    "shieldBypass:notification.openVerification",
+  )
+})
 
 it("identifies the extension and links directly to reminder settings without opening verification", async () => {
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible")

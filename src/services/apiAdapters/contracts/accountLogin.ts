@@ -13,6 +13,7 @@ import type {
 import type {
   BrowserLoginFailureReason,
   BrowserLoginSessionMode,
+  LoginVerificationReason,
 } from "~/constants/browserLogin"
 import { type BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import type { ApiTransportFetchContext } from "~/services/apiTransport/type"
@@ -36,6 +37,22 @@ export type AccountLoginCredential =
   | { cookie: string; accessToken?: never; sub2apiAuth?: never }
   | { cookie?: never; accessToken: string; sub2apiAuth?: Sub2ApiAuthConfig }
 
+/** Operations owned by a verified login context; valid only during its callback. */
+export interface AccountAuthenticatedSession {
+  readonly tabId: number
+  readonly abortSignal?: AbortSignal
+  navigate(url: string): Promise<unknown>
+  waitForReadyPage(url: string): Promise<void>
+  setVerificationReason(reason: LoginVerificationReason): void
+  assertOrigin(): Promise<void>
+  sendSiteAction<T = unknown>(
+    action: string,
+    /** Prepared after page protection clears, immediately before delivery. */
+    details?:
+      Record<string, unknown> | (() => Promise<Record<string, unknown>>),
+  ): Promise<T>
+}
+
 export interface AccountLoginRequest {
   /** Stops queued/active login work; local only, never sent to a content script. */
   abortSignal?: AbortSignal
@@ -52,6 +69,8 @@ export interface AccountLoginRequest {
   sessionMode?: BrowserLoginSessionMode
   /** Export the verified login context's credential before that context closes. */
   captureCredential?: boolean
+  /** Holds the context and its same-origin queue until this operation settles. */
+  onAuthenticated?: (session: AccountAuthenticatedSession) => Promise<void>
 }
 
 export interface AccountLoginMethod {

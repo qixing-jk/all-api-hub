@@ -1,8 +1,17 @@
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_ACCOUNT_LOGIN_MODES,
+  CHECK_IN_DISCOVERY_PRIORITIES,
+  type CheckInAccountLoginMode,
+} from "~/constants/checkIn"
 import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
+import {
+  XINGYA_CHECK_IN_ORIGINS,
+  XINGYA_CHECK_IN_STATUS_ENDPOINT,
+} from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
 import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
@@ -86,6 +95,11 @@ type FeedbackStatusRoutes = readonly [
 ]
 
 interface AutoCheckinMethodDefinitionBase {
+  readonly discoveryPriority?: number
+  /** Public-domain hints for the last tie-break; never an origin authorization. */
+  readonly discoveryOrigins?: readonly string[]
+  /** How account login participates in execution, independent of API credentials. */
+  readonly accountLogin?: CheckInAccountLoginMode
   readonly id: CheckInMethodId
   readonly siteTypes: readonly AccountSiteType[]
   readonly origins?: readonly string[]
@@ -99,13 +113,14 @@ interface AutoCheckinMethodDefinitionBase {
   readonly supportsRouteOverride?: boolean
 }
 
-/** Hiyo can award again; DaiGua/Sidrune/FreeAPI duplicate guarantees are unverified. Never queue replays. */
+/** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingya duplicate guarantees are unverified. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
   ])
 
 /**
@@ -118,8 +133,7 @@ export type AutoCheckinMethodDefinition = AutoCheckinMethodDefinitionBase &
         /** True only when the executable provider implements getStatus. */
         readonly supportsStatusReadback: true
         readonly feedbackStatusRoutes:
-          | FeedbackStatusRoutes
-          | ((now: Date) => FeedbackStatusRoutes)
+          FeedbackStatusRoutes | ((now: Date) => FeedbackStatusRoutes)
       }
     | {
         readonly supportsStatusReadback?: false
@@ -277,6 +291,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
+    accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.Login,
     id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],
     origins: AGENT_ROUTER_ORIGINS,
@@ -314,9 +329,13 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: true,
   },
   [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+    discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Generic,
+    accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.NativePage,
     id: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
     // Agent Router uses login check-in instead of this deployment's protocol.
+    // A confirmed specific fork protocol outranks this generic candidate,
+    // including when the retained upstream check-in route is disabled.
     excludedOrigins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
@@ -563,7 +582,31 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+    accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.Session,
+    id: AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    siteTypes: [SITE_TYPES.NEW_API],
+    // These verified console domains are tie-break hints. The public protocol
+    // marker, rather than the hostname, establishes a match on other mirrors.
+    discoveryOrigins: XINGYA_CHECK_IN_ORIGINS,
+    excludedOrigins: AGENT_ROUTER_ORIGINS,
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Xingya",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: XINGYA_CHECK_IN_STATUS_ENDPOINT }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
+
+/** Unranked protocols remain peers; generic protocols are automatic-selection fallbacks. */
+export function getCheckInDiscoveryPriority(methodId: CheckInMethodId): number {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.discoveryPriority ?? CHECK_IN_DISCOVERY_PRIORITIES.Specific
+}
 
 /** Returns whether the selected method can verify today without posting. */
 export function supportsCheckInStatusReadback(
@@ -587,6 +630,16 @@ export function supportsCheckInRouteOverride(
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
   return definition.supportsRouteOverride === true
+}
+
+/** Returns how a selected check-in method uses the account's login configuration. */
+export function getCheckInAccountLoginMode(
+  methodId: string | null | undefined,
+) {
+  if (!isCheckInMethodId(methodId)) return undefined
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.accountLogin
 }
 
 /** Returns the product source used to present a registered method. */
@@ -702,6 +755,7 @@ export function decodePersistedCheckInMethodId(
 }
 
 export interface AutoCheckinMethodRegistration {
+  readonly discoveryOrigins?: readonly string[]
   readonly id: CheckInMethodId
   /** Static candidate filter only; never proof that a deployment supports the method. */
   readonly siteTypes: readonly AccountSiteType[]

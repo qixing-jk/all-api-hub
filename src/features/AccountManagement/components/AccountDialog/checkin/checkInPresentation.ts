@@ -72,6 +72,9 @@ export function getCheckInMethodPresentation(
   t: TFunction<"accountDialog">,
   methodId: CheckInMethodId,
 ) {
+  if (methodId === AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn) {
+    return { label: t("form.xingyaDailyCheckInMethod"), disclosure: null }
+  }
   if (methodId === AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn) {
     return {
       label: t("form.agentRouterLoginCheckInMethod"),

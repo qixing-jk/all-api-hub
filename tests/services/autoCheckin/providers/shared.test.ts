@@ -1,9 +1,35 @@
 import { describe, expect, it } from "vitest"
 
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
+import {
+  resolveCheckinLoginFailure,
+  resolveProviderErrorResult,
+} from "~/services/checkin/autoCheckin/providers/shared"
 
 describe("auto-checkin provider error normalization", () => {
+  it.each([
+    { status: "interaction_required", reason: "session_conflict" },
+    { status: "identity_mismatch" },
+  ] as const)(
+    "keeps another webpage account ($status) distinct from another queued login",
+    (result) => {
+      expect(
+        resolveCheckinLoginFailure(
+          result,
+          "https://site.example/console/personal",
+        ),
+      ).toMatchObject({
+        reasonCode: "authentication_required",
+        messageKey: "autoCheckin:providerFallback.nativePageIdentityMismatch",
+      })
+      expect(
+        resolveCheckinLoginFailure(
+          { status: "session_busy" },
+          "https://site.example/console/personal",
+        ),
+      ).toMatchObject({ reasonCode: "session_busy" })
+    },
+  )
   it("labels fetch transport failures as network-related without exposing raw transport copy", () => {
     expect(
       resolveProviderErrorResult({

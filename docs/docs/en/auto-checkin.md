@@ -93,7 +93,7 @@ The following sites have supported check-in methods. Availability still depends 
 
 | Site type | Built-in automatic check-in | Authentication |
 |----------|------------------|----------|
-| `new-api` | Yes | Access Token (Cookie accounts can use the Cookie session) and account ID |
+| `new-api` | Yes | Access Token (Cookie accounts can use the Cookie session) and account ID; account login can prepare the native-page fallback, while Xingya claims require a dashboard session. See below. |
 | `ModelFlare` | Yes | Cookie session and account ID |
 | `Veloera` | Yes | Access Token or Cookie, plus account ID |
 | `anyrouter` | Yes | Cookie session or browser sign-in context, plus account ID |
@@ -102,6 +102,14 @@ The following sites have supported check-in methods. Availability still depends 
 | `sub2api` | Yes | Valid login credentials required by the detected check-in method |
 | `relayfor` | Yes | Access Token |
 | AgentRouter | Yes | After selecting login check-in, configure GitHub, Linux DO or a username and password under Account login below. Saving does not sign in; check-in uses this configuration when executed. Confirm the execution result. |
+
+### New API native-page fallback and Xingya claims
+
+Standard New API check-in tries the API first. When login, proof of work (PoW), or page verification is required, it can use the site's native check-in page. Edit the account, confirm the method under Check-in settings, and use its configuration link to fill in Account login below. The extension signs in to the configured account, verifies its identity and today's status, clicks the check-in button once, and reads the status to confirm the result. Without configured login, it still tries the existing page session. You may need to complete a CAPTCHA in the window.
+
+Xingya provides a third-party check-in extension to New API. After detecting its method, configure login for the target account. An ordinary API access token may read status but cannot make a claim that requires a dashboard session. The extension claims within an identity-verified login session and displays that claim's reward; changes in the regular balance cannot establish the reward. Saving login settings does not sign in or claim immediately. An uncertain result is checked through status reads without automatically repeating the claim. If it remains unconfirmed, check the site first. The current Xingya integration does not cover claims with Turnstile enabled; complete those on the original site.
+
+When a login method or credentials are missing, or authentication fails, use the login configuration action in the check-in result to open the affected account, save its settings, and retry.
 
 ### Check-in differences between Sub2API sites
 
@@ -118,7 +126,7 @@ Sub2API operators may add their own check-in features. Keep the account type as 
 
 ### AgentRouter login check-in and account login
 
-AgentRouter checks in by signing in again. In the account editor, select login check-in under Check-in settings to reveal the separate Account login section below. The check-in section shows the configured method and links to it. Turning automatic check-in off does not hide it, because manual check-in also needs login. Selecting another check-in method hides it without clearing saved login settings.
+AgentRouter checks in by signing in again. In the account editor, select login check-in under Check-in settings to reveal the separate Account login section below. The check-in section shows the configured method and links to it. Turning automatic check-in off does not hide it, because manual check-in also needs login. Account login also supports Xingya claims and the New API native-page fallback. Selecting a method that does not use account login hides the section without clearing saved login settings.
 
 - **Username and password**: choose this method and enter the website login username and password for the account. Passwords are hidden by default, stored per account, and may be included in account backups and sync. They are not API keys and do not replace API access tokens. Saving updates configuration without signing in.
 - **Login flow and sessions**: password login opens the website’s password entry first, then fills and submits its native form. Recognized login agreement checkboxes are selected automatically; checked items stay checked, and optional items such as marketing subscriptions remain unchanged. CAPTCHA, two-factor authentication and pages requiring manual interaction use the extension’s existing assistance reminders in the same login window. API fallback is limited to cases with no identifiable native login controls before submission and no additional verification requirement. Unrecognized login screens remain open for you to operate, and uncertain submissions are not repeated. Login-based check-in requires a fresh login rather than reuse of an existing session. Allowing the extension in private windows helps separate regular-window sessions, although private windows can still share a session. An existing session is signed out automatically only in a private context with no other same-site tabs; otherwise, the extension asks you to confirm and sign out manually before continuing with the target account.

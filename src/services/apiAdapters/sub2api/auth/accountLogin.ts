@@ -137,6 +137,7 @@ export const sub2ApiAccountLogin: AccountLoginCapability = {
       requestId,
       abortSignal: request.abortSignal,
       captureCredential: request.captureCredential,
+      onAuthenticated: request.onAuthenticated,
       ...(attended === undefined ? {} : { attended }),
     })
     return result.status === BROWSER_LOGIN_STATUS.Authenticated

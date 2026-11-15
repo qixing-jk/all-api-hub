@@ -158,6 +158,12 @@ describe("registered check-in feedback status routes", () => {
     expect(routes).toContainEqual({ path: "/api/status", public: true })
   })
 
+  it("includes the xingya fork's read-only status on its console origin", () => {
+    expect(
+      getCheckInFeedbackStatusRoutes(SITE_TYPES.NEW_API, "https://xingya.site"),
+    ).toContainEqual({ path: "/api/user/xingya-checkin" })
+  })
+
   it("requires feedback coverage for every method with status readback", () => {
     for (const definition of Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS)) {
       if (!definition.supportsStatusReadback) continue

@@ -3,7 +3,10 @@ import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ACCOUNT_FORM_SECTION_IDS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
-import { supportsAccountCredentialRecovery } from "~/features/AccountManagement/credentialRecovery/guidance"
+import {
+  supportsAccountCredentialRecovery,
+  supportsCheckInAccountLogin,
+} from "~/features/AccountManagement/credentialRecovery/guidance"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import {
@@ -11,6 +14,7 @@ import {
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/AccountManagement/routeParams"
 import toast from "~/lib/notify"
+import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 /** Opens a requested saved account after loading, without replacing an active editor. */
@@ -54,7 +58,15 @@ export function useAccountEditRouteAction({
       )
       const focusSection =
         requestedSection === "account-login" &&
-        !supportsAccountCredentialRecovery(account)
+        !supportsAccountCredentialRecovery(account) &&
+        !supportsCheckInAccountLogin(
+          account,
+          resolveSelectedCheckInMethod({
+            config: account.checkIn,
+            siteType: account.siteType,
+            siteUrl: account.baseUrl,
+          }),
+        )
           ? "account-auth"
           : requestedSection
       openEditAccount(account, focusSection ? { focusSection } : undefined)

@@ -91,6 +91,7 @@ export function createNewApiAccountLogin(
         expectedIdentity,
         requestId: request.requestId,
         captureCredential: request.captureCredential,
+        onAuthenticated: request.onAuthenticated,
         abortSignal: request.abortSignal,
         ...(request.attended === undefined
           ? {}

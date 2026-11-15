@@ -22,6 +22,7 @@ import type {
 const NEW_API_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
 const VELOERA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn
 const ANYROUTER_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn
+const XINGYA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn
 
 describe("check-in selection policy", () => {
   it.each([
@@ -300,10 +301,10 @@ describe("inspectCheckInMethods", () => {
       expected: "resolved",
     },
     {
-      name: "multiple candidates are matched",
-      candidates: [NEW_API_METHOD_ID, VELOERA_METHOD_ID],
+      name: "multiple specific candidates are matched",
+      candidates: [XINGYA_METHOD_ID, VELOERA_METHOD_ID],
       detections: {
-        [NEW_API_METHOD_ID]: matched,
+        [XINGYA_METHOD_ID]: matched,
         [VELOERA_METHOD_ID]: matched,
       },
       expected: "ambiguous",
@@ -336,9 +337,9 @@ describe("inspectCheckInMethods", () => {
     },
     {
       name: "multiple matches remain ambiguous when another candidate is unknown",
-      candidates: [NEW_API_METHOD_ID, VELOERA_METHOD_ID, ANYROUTER_METHOD_ID],
+      candidates: [XINGYA_METHOD_ID, VELOERA_METHOD_ID, ANYROUTER_METHOD_ID],
       detections: {
-        [NEW_API_METHOD_ID]: matched,
+        [XINGYA_METHOD_ID]: matched,
         [VELOERA_METHOD_ID]: matched,
         [ANYROUTER_METHOD_ID]: unknown,
       },
@@ -699,7 +700,7 @@ describe("mergeCheckInDiscoveryResults", () => {
     expect(merged.methodKnowledge.lastFullDiscoveryAt).toBe(200)
   })
 
-  it("retains definitive facts for temporary and missing unknown results", () => {
+  it("retains definitive facts but pauses a generic fallback after unknown specific results", () => {
     const config = createConfig({
       [NEW_API_METHOD_ID]: matched,
       [VELOERA_METHOD_ID]: unsupported,
@@ -739,7 +740,6 @@ describe("mergeCheckInDiscoveryResults", () => {
     })
     expect(merged.selection).toEqual({
       mode: "automatic",
-      methodId: NEW_API_METHOD_ID,
     })
     expect(
       inspectCheckInMethods({
@@ -749,8 +749,8 @@ describe("mergeCheckInDiscoveryResults", () => {
     ).toMatchObject({
       decision: { outcome: "unknown" },
       executionEligibility: {
-        eligible: true,
-        methodId: NEW_API_METHOD_ID,
+        eligible: false,
+        skipReason: "no_selected_method",
       },
     })
   })
@@ -845,19 +845,19 @@ describe("mergeCheckInDiscoveryResults", () => {
 
   it("does not revoke a still-matched automatic selection when discovery becomes ambiguous", () => {
     const config = createConfig({
-      [NEW_API_METHOD_ID]: matched,
+      [XINGYA_METHOD_ID]: matched,
       [VELOERA_METHOD_ID]: unsupported,
     })
     config.selection = {
       mode: "automatic",
-      methodId: NEW_API_METHOD_ID,
+      methodId: XINGYA_METHOD_ID,
     }
 
     const merged = mergeCheckInDiscoveryResults({
       config,
-      candidateMethodIds: [NEW_API_METHOD_ID, VELOERA_METHOD_ID],
+      candidateMethodIds: [XINGYA_METHOD_ID, VELOERA_METHOD_ID],
       detections: {
-        [NEW_API_METHOD_ID]: matched,
+        [XINGYA_METHOD_ID]: matched,
         [VELOERA_METHOD_ID]: matched,
       },
       completedAt: 500,
@@ -867,9 +867,9 @@ describe("mergeCheckInDiscoveryResults", () => {
     expect(
       inspectCheckInMethods({
         config: merged,
-        candidateMethodIds: [NEW_API_METHOD_ID, VELOERA_METHOD_ID],
+        candidateMethodIds: [XINGYA_METHOD_ID, VELOERA_METHOD_ID],
       }).executionEligibility,
-    ).toEqual({ eligible: true, methodId: NEW_API_METHOD_ID })
+    ).toEqual({ eligible: true, methodId: XINGYA_METHOD_ID })
   })
 })
 
