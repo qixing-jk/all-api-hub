@@ -19,6 +19,10 @@ import {
   isUserFacingCredentialPage,
   waitForNewUserFacingCredentialPage,
 } from "~~/e2e/utils/realSite/newApiAccountRecovery"
+import {
+  copyNewApiAccessToken,
+  revokeNewApiAccessTokenFromUi,
+} from "~~/scripts/flows/new-api-token-ui.mjs"
 
 const scenarios = [
   {
@@ -88,6 +92,107 @@ const recoveryTest = test.extend<{
     }
   },
 })
+
+recoveryTest(
+  "creates a scoped token with native expiry and revokes only its owned UI row",
+  async ({ page, securitySite }) => {
+    securitySite.html = `<!doctype html>
+      <button onclick="document.getElementById('create').hidden=false">Create access token</button>
+      <div role="dialog" aria-label="Create access token" id="create" hidden>
+        <input name="name">
+        <button onclick="document.body.dataset.permissions='all'">Select all</button>
+        <button onclick="document.body.dataset.expiry='never'">Never expires</button>
+        <button onclick="this.parentElement.hidden=true;document.getElementById('verify').hidden=false">Create access token</button>
+      </div>
+      <div role="dialog" aria-label="Security verification" id="verify" hidden>
+        <button role="tab">Password</button>
+        <label>Password<input type="password"></label>
+        <button onclick="if(this.parentElement.querySelector('input').value==='fixture-password'){this.parentElement.hidden=true;document.getElementById('token').hidden=false}">Verify</button>
+      </div>
+      <div role="dialog" aria-label="Access tokens" id="token" hidden>
+        This token will not be shown again.
+        <input readonly value="fixture-issued-token">
+        <button onclick="this.parentElement.hidden=true">Close</button>
+      </div>`
+    await page.goto(`${securitySite.baseUrl}/security`)
+    let created = 0
+    const token = await copyNewApiAccessToken(
+      page,
+      { password: "fixture-password" },
+      {
+        tokenName: "Owned test token",
+        onScopedTokenCreated: () => {
+          created++
+        },
+      },
+    )
+    expect(token).toBe("fixture-issued-token")
+    expect(created).toBe(1)
+    await expect(page.locator('input[name="name"]')).toHaveValue(
+      "Owned test token",
+    )
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-permissions",
+      "all",
+    )
+    await expect(page.locator("body")).not.toHaveAttribute("data-expiry")
+
+    securitySite.html = `<!doctype html>
+      <div><span>Unrelated token</span><button>Open menu</button></div>
+      <div id="owned"><span>Owned test token</span>
+        <button onclick="document.getElementById('menu').hidden=false">Open menu</button>
+      </div>
+      <div id="menu" hidden><button role="menuitem" onclick="this.parentElement.hidden=true;document.getElementById('verify').hidden=false">Revoke</button></div>
+      <div role="dialog" aria-label="Security verification" id="verify" hidden>
+        <button role="tab">Password</button>
+        <label>Password<input type="password"></label>
+        <button onclick="if(this.parentElement.querySelector('input').value==='fixture-password'){this.parentElement.hidden=true;document.getElementById('owned').remove()}">Verify</button>
+      </div>`
+    // Cleanup uses a separate site tab in the live runner; force navigation
+    // instead of staying on the creation document with only a hash change.
+    await page.goto("about:blank")
+    await revokeNewApiAccessTokenFromUi(page, {
+      origin: securitySite.baseUrl,
+      tokenName: "Owned test token",
+      password: "fixture-password",
+    })
+    await expect(
+      page.getByText("Unrelated token", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.getByText("Owned test token", { exact: true }),
+    ).toHaveCount(0)
+  },
+)
+
+recoveryTest(
+  "registers a created token for cleanup before validating its display copy",
+  async ({ page, securitySite }) => {
+    securitySite.html = `<!doctype html>
+    <button onclick="document.getElementById('create').hidden=false">Create access token</button>
+    <div role="dialog" id="create" hidden>
+      <input name="name"><button>Select all</button>
+      <button onclick="this.parentElement.hidden=true;document.getElementById('token').hidden=false">Create access token</button>
+    </div>
+    <div role="dialog" aria-label="Access tokens" id="token" hidden>
+      Changed upstream display copy<input readonly value="fixture-issued-token">
+    </div>`
+    await page.goto(`${securitySite.baseUrl}/security`)
+    let created = false
+    await expect(
+      copyNewApiAccessToken(
+        page,
+        { password: "fixture-password" },
+        {
+          onScopedTokenCreated: () => {
+            created = true
+          },
+        },
+      ),
+    ).rejects.toThrow()
+    expect(created).toBe(true)
+  },
+)
 
 recoveryTest(
   "credential recovery matches the originating window when pages share a URL",

@@ -102,6 +102,12 @@ describe("new-account check-in defaults", () => {
           selection: { mode: "automatic" },
           methodKnowledge: {
             methods: {
+              "xingya:daily-checkin": {
+                detection: {
+                  outcome: "unsupported",
+                  evidence: { source: "probe", observedAt: 1 },
+                },
+              },
               "new-api:daily-checkin": {
                 detection: {
                   outcome: "unsupported",

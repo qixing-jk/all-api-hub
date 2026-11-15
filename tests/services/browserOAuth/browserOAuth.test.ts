@@ -160,6 +160,118 @@ const completedTab = {
 }
 
 describe("browser OAuth context", () => {
+  it("does not expose an authenticated operation for a mismatched account", async () => {
+    const onAuthenticated = vi.fn()
+    await expect(
+      browserOAuthContext.authenticate({
+        origin,
+        requestId: "mismatched-operation",
+        expectedIdentity: "other-user",
+        onAuthenticated,
+      }),
+    ).resolves.toMatchObject({ status: "identity_mismatch" })
+    expect(onAuthenticated).not.toHaveBeenCalled()
+    expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+  })
+
+  it("cancels an active authenticated operation and rejects later actions", async () => {
+    const controller = new AbortController()
+    let captured:
+      | import("~/services/apiAdapters/contracts/accountLogin").AccountAuthenticatedSession
+      | undefined
+    let release!: () => void
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const onAuthenticated = vi.fn(async (session) => {
+      captured = session
+      await pending
+    })
+    const result = browserOAuthContext.authenticate({
+      origin,
+      requestId: "cancel-operation",
+      expectedIdentity: "user-1",
+      abortSignal: controller.signal,
+      onAuthenticated,
+    })
+    try {
+      await vi.waitFor(() => expect(onAuthenticated).toHaveBeenCalledOnce())
+      controller.abort()
+      await expect(result).resolves.toMatchObject({ status: "cancelled" })
+      await expect(captured!.sendSiteAction("late-mutation")).rejects.toThrow()
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.some(
+          ([, message]) => message.action === "late-mutation",
+        ),
+      ).toBe(false)
+      expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+    } finally {
+      release()
+    }
+  })
+  it("queues another account until the verified session operation finishes", async () => {
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(async (_tab, message) =>
+        message.action === actions.prepare
+          ? { success: true, authorizationUrl }
+          : { success: true, identity: "user-1", completed: true },
+      )
+    let release!: () => void
+    const operation = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const onAuthenticated = vi.fn(async () => {
+      await operation
+    })
+    const first = browserOAuthContext.authenticate({
+      origin,
+      requestId: "first-operation",
+      expectedIdentity: "user-1",
+      onAuthenticated,
+    })
+    await vi.waitFor(() => expect(onAuthenticated).toHaveBeenCalledOnce())
+    const secondOperation = vi.fn(async () => {})
+    const second = browserOAuthContext.authenticate({
+      origin,
+      requestId: "second-operation",
+      expectedIdentity: "user-1",
+      onAuthenticated: secondOperation,
+    })
+    try {
+      expect(browserApi.createWindow).toHaveBeenCalledOnce()
+      expect(secondOperation).not.toHaveBeenCalled()
+    } finally {
+      release()
+      await Promise.all([first, second])
+    }
+    expect(secondOperation).toHaveBeenCalledOnce()
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+  })
+  it("keeps the verified browser session open until the account operation finishes", async () => {
+    let release!: () => void
+    const operation = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const onAuthenticated = vi.fn(async (session) => {
+      expect(session.tabId).toBe(11)
+      await operation
+    })
+    const login = browserOAuthContext.authenticate({
+      origin,
+      requestId: "account-operation",
+      expectedIdentity: "user-1",
+      onAuthenticated,
+    })
+    try {
+      await vi.waitFor(() => expect(onAuthenticated).toHaveBeenCalledOnce())
+      expect(browserApi.removeWindow).not.toHaveBeenCalled()
+    } finally {
+      release()
+      await login
+    }
+    expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
+  })
   it.each(["reply", "message"] as const)(
     "preserves uncertainty when OAuth completion loses its %s",
     async (loss) => {
@@ -1231,6 +1343,7 @@ describe("browser OAuth context", () => {
     expect(finished).toBe(true)
     await expect(result).resolves.toMatchObject({
       status: "interaction_required",
+      reason: "session_conflict",
     })
   })
 

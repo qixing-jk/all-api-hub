@@ -82,6 +82,17 @@ describe("isRetryableCheckinResult", () => {
 })
 
 describe("canAutomaticallyRetryCheckinResult", () => {
+  it("does not queue an unconfirmed Xingya claim for another mutation", () => {
+    expect(
+      canAutomaticallyRetryCheckinResult(
+        {
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+        },
+        AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+      ),
+    ).toBe(false)
+  })
   it("classifies confirmed absence as unsupported without retrying or requesting selection", () => {
     expect(
       CHECKIN_SKIP_REASON_CATEGORIES[

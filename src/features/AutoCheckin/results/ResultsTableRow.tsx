@@ -16,6 +16,7 @@ import {
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import { cn } from "~/lib/utils"
+import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import type { CurrencyType, DisplaySiteData } from "~/types"
@@ -119,27 +120,27 @@ export default function ResultsTableRow({
 
   return (
     <TableRow className="group border-border hover:bg-surface-subtle dark:hover:bg-card">
-      <TableCell className="text-foreground py-density-3 w-40 max-w-40 min-w-40 px-4 text-sm font-medium [@container(min-width:48rem)]:w-56 [@container(min-width:48rem)]:max-w-56 [@container(min-width:48rem)]:min-w-56 [@container(min-width:48rem)]:px-6">
+      <TableCell className="w-40 max-w-40 min-w-40 px-4 py-density-3 text-sm font-medium text-foreground [@container(min-width:48rem)]:w-56 [@container(min-width:48rem)]:max-w-56 [@container(min-width:48rem)]:min-w-56 [@container(min-width:48rem)]:px-6">
         <AccountLinkButton
           accountId={result.accountId}
           accountName={result.accountName}
           className="w-full max-w-full min-w-0 shrink justify-start overflow-hidden px-0 text-left"
         />
       </TableCell>
-      <TableCell className="py-density-3 px-4 text-sm whitespace-nowrap [@container(min-width:48rem)]:px-6">
+      <TableCell className="px-4 py-density-3 text-sm whitespace-nowrap [@container(min-width:48rem)]:px-6">
         <ResultStatusBadge status={result.status} />
       </TableCell>
-      <TableCell className="text-muted-foreground py-density-3 max-w-lg min-w-64 px-6 text-sm break-words">
+      <TableCell className="max-w-lg min-w-64 px-6 py-density-3 text-sm break-words text-muted-foreground">
         <div className="space-y-density-1">
           {/* The amount trails the message as its own node: the search and the
               status filter read the message string alone. */}
-          <div className="gap-density-1 flex flex-wrap items-baseline">
+          <div className="flex flex-wrap items-baseline gap-density-1">
             <span>{message}</span>
             {rewardText && (
               <>
                 <span aria-hidden="true">·</span>
                 <span
-                  className="text-success-text font-medium"
+                  className="font-medium text-success-text"
                   title={t("execution.reward.title")}
                 >
                   {rewardText}
@@ -148,16 +149,32 @@ export default function ResultsTableRow({
             )}
           </div>
           {troubleshootingHintKey && (
-            <div className="text-faint-foreground text-xs">
+            <div className="text-xs text-faint-foreground">
               {getTroubleshootingHintLabel(troubleshootingHintKey)}
             </div>
           )}
           {account &&
             (result.status === CHECKIN_RESULT_STATUS.FAILED ||
               result.status === CHECKIN_RESULT_STATUS.SKIPPED) &&
-            result.reasonCode ===
-              AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED && (
-              <AccountCredentialRecoveryGuidance account={account} failure />
+            (result.reasonCode ===
+              AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED ||
+              result.reasonCode ===
+                AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING ||
+              result.reasonCode ===
+                AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_REQUIRED) && (
+              <AccountCredentialRecoveryGuidance
+                account={account}
+                failure
+                checkInMethodId={
+                  result.methodId ??
+                  resolveSelectedCheckInMethod({
+                    config: account.checkIn,
+                    siteType: account.siteType,
+                    siteUrl: account.baseUrl,
+                  }) ??
+                  undefined
+                }
+              />
             )}
           {(troubleshootingHintKey ===
             AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.manualVerificationRequired ||
@@ -170,12 +187,12 @@ export default function ResultsTableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground py-density-3 px-6 text-sm whitespace-nowrap">
+      <TableCell className="px-6 py-density-3 text-sm whitespace-nowrap text-muted-foreground">
         {formatTimestamp(result.timestamp)}
       </TableCell>
       <TableCell
         className={cn(
-          "border-border bg-card text-muted-foreground group-hover:bg-surface-subtle dark:bg-background dark:group-hover:bg-card py-density-3 sticky right-0 w-12 min-w-12 border-l px-2 text-sm [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
+          "sticky right-0 w-12 min-w-12 border-l border-border bg-card px-2 py-density-3 text-sm text-muted-foreground group-hover:bg-surface-subtle dark:bg-background dark:group-hover:bg-card [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
           Z_INDEX.tableStickyCell,
         )}
       >

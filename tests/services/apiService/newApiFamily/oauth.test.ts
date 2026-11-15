@@ -11,6 +11,7 @@ import {
   handleCompleteNewApiOAuth,
   handlePrepareNewApiOAuth,
 } from "~/services/apiService/newApiFamily/oauth/newApiContent"
+import { readNewApiDashboardSessionAuth } from "~/services/apiService/newApiFamily/passwordUi"
 
 const request = {
   requestId: "login-1",
@@ -303,6 +304,11 @@ describe("New API OAuth protocol", () => {
         }),
       )
       expect(JSON.stringify(result)).not.toContain("transient-secret")
+      if (matching)
+        expect(readNewApiDashboardSessionAuth(request.origin)).toMatchObject({
+          success: true,
+          data: { access_token: "transient-secret", user: { id: 17 } },
+        })
       expect(localStorage.length).toBe(0)
       expect(sessionStorage.getItem("all-api-hub:oauth")).not.toContain(
         "transient-secret",

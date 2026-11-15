@@ -46,6 +46,7 @@ export const RuntimeActionIds = {
   ContentSyncDahlKeyNames: "contentSyncDahlKeyNames",
   ContentPrepareNewApiOAuth: "prepareNewApiOAuth",
   ContentNewApiPasswordUi: "newApiPasswordUi",
+  ContentNewApiDashboardSessionAuth: "newApiDashboardSessionAuth",
   ContentSub2ApiPasswordUi: "sub2ApiPasswordUi",
   ContentNewApiPasswordLogin: "newApiPasswordLogin",
   ContentClearNewApiPasswordLogin: "clearNewApiPasswordLogin",

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   resolveAccountSiteRouteUrl,
@@ -12,7 +13,10 @@ import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import {
+  TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
+  TEMP_WINDOW_REQUEST_SOURCES,
+} from "~/types/tempWindowFetch"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import {
   tempWindowTriggerCheckinPageAction,
@@ -28,6 +32,8 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 const { mockFetchSupportCheckIn } = vi.hoisted(() => ({
   mockFetchSupportCheckIn: vi.fn(),
 }))
+const login = vi.hoisted(() => ({ loginAccount: vi.fn() }))
+vi.mock("~/services/accountLogin", () => login)
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
   newApiFamilyRequests: {
@@ -118,7 +124,512 @@ const mockCheckInStatusSequence = (...checkedInToday: boolean[]) => {
   }
 }
 
+/** Configure one independently verified session without invoking a real browser. */
+function prepareAccountSession(
+  pageIdentity = "123",
+  loseTriggerReply = false,
+  beforeTrigger?: () => void,
+) {
+  const clicked = vi.fn()
+  const sendSiteAction = vi.fn(async (action, details?) => {
+    if (action === RuntimeActionIds.ContentNewApiDashboardSessionAuth)
+      return {
+        success: true,
+        data: {
+          access_token: "dashboard-target",
+          token_type: "Bearer",
+          access_expires_at: Date.now() / 1000 + 900,
+          session: { sid: "target-session", current: true },
+          user: { id: "123" },
+        },
+      }
+    if (action === RuntimeActionIds.ContentGetUserFromLocalStorage)
+      return { success: true, data: { userId: pageIdentity } }
+    beforeTrigger?.()
+    if (details?.prepareOnly === true) return { success: true, clicked: false }
+    if (typeof details === "function") await details()
+    clicked()
+    if (loseTriggerReply) throw new Error("Receiver disappeared after dispatch")
+    return {
+      success: true,
+      status: "clicked",
+      clicked: true,
+      reason: "clicked",
+    }
+  })
+  login.loginAccount.mockImplementation(async (request) => {
+    await request.onAuthenticated({
+      tabId: 11,
+      assertOrigin: async () => {},
+      sendSiteAction,
+      navigate: vi.fn(),
+      waitForReadyPage: vi.fn(),
+      setVerificationReason: vi.fn(),
+    })
+    return { status: "authenticated", identity: "123" }
+  })
+  vi.mocked(newApiFamilyRequests.envelope)
+    .mockResolvedValueOnce({
+      success: false,
+      message: "Proof of work required",
+      data: null,
+    })
+    .mockResolvedValueOnce({
+      success: true,
+      message: "",
+      data: { id: pageIdentity },
+    })
+  return {
+    clicked,
+    sendSiteAction,
+    account: {
+      ...mockAccount,
+      checkIn: structuredClone(mockAccount.checkIn),
+      login: {
+        methodId: "password",
+        credentials: { username: "target", password: "fixture" },
+      },
+    },
+  }
+}
+
 describe("newApiProvider", () => {
+  it.each([
+    { readback: "checked", expected: "success" },
+    { readback: "not_checked", expected: "uncertain" },
+    { readback: "unavailable", expected: "uncertain" },
+  ])(
+    "reconciles a lost direct claim with configured login ($readback)",
+    async ({ readback, expected }) => {
+      vi.mocked(newApiFamilyRequests.data)
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockImplementationOnce(async () => {
+          if (readback === "unavailable") throw new TypeError("Failed to fetch")
+          return {
+            enabled: true,
+            stats: { checked_in_today: readback === "checked" },
+          }
+        })
+      vi.mocked(newApiFamilyRequests.envelope).mockImplementationOnce(
+        async (request) => {
+          request.observer?.onDispatch()
+          throw new TypeError("Failed to fetch")
+        },
+      )
+      await expect(
+        checkInForTest(
+          {
+            ...mockAccount,
+            login: {
+              methodId: "password",
+              credentials: { username: "target", password: "fixture" },
+            },
+          },
+          {
+            ...DEFAULT_PROVIDER_CONTEXT,
+            mutationLifecycle: createAutoCheckinMutationLifecycle(),
+          },
+        ),
+      ).resolves.toMatchObject({ status: expected })
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
+      expect(login.loginAccount).not.toHaveBeenCalled()
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not click a delayed target after intent is withdrawn while it renders", async () => {
+    let allowed = true
+    const { account, clicked } = prepareAccountSession("123", false, () => {
+      allowed = false
+    })
+    account.checkIn.customCheckIn = {
+      turnstilePreTrigger: {
+        kind: "clickSelector",
+        selector: "#check-in",
+        targetWaitMs: 1000,
+      },
+    }
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
+    const lifecycle = createAutoCheckinMutationLifecycle()
+    const result = await checkInForTest(account, {
+      ...DEFAULT_PROVIDER_CONTEXT,
+      mutationLifecycle: lifecycle,
+      beforeRecoveredMutation: async () => allowed,
+    })
+    expect(result).toMatchObject({
+      status: "skipped",
+      reasonCode: "auto_checkin_disabled",
+    })
+    expect(clicked).not.toHaveBeenCalled()
+    expect(lifecycle.dispatched).toBe(false)
+  })
+
+  it("reads back an ambiguous content failure after a native click without replay", async () => {
+    const { account, clicked, sendSiteAction } = prepareAccountSession()
+    const original = sendSiteAction.getMockImplementation()!
+    sendSiteAction.mockImplementation(async (action, details?) => {
+      const result = await original(action, details)
+      return action === RuntimeActionIds.ContentTriggerCheckinPageAction
+        ? ({ success: false, error: "Verification observer failed" } as any)
+        : result
+    })
+    vi.mocked(newApiFamilyRequests.data)
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: true },
+      })
+    expect((await checkInForTest(account)).status).toBe("success")
+    expect(clicked).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not click when the page account changes during protection clearance", async () => {
+    const { account, clicked } = prepareAccountSession("123", false, () => {
+      vi.mocked(newApiFamilyRequests.envelope)
+        .mockReset()
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { id: "another-user" },
+        })
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
+    const mutationLifecycle = createAutoCheckinMutationLifecycle()
+    expect(
+      (
+        await checkInForTest(account, {
+          ...DEFAULT_PROVIDER_CONTEXT,
+          mutationLifecycle,
+        })
+      ).status,
+    ).toBe("failed")
+    expect(clicked).not.toHaveBeenCalled()
+    expect(mutationLifecycle.dispatched).toBe(false)
+  })
+
+  it("keeps a native click uncertain when authenticated readback fails", async () => {
+    const { account, clicked } = prepareAccountSession()
+    vi.mocked(newApiFamilyRequests.data)
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockRejectedValueOnce(new ApiError("unauthorized", 401))
+    const result = await checkInForTest(account)
+    expect(result).toMatchObject({
+      status: "uncertain",
+      reasonCode: "checkin_unconfirmed",
+    })
+    expect(clicked).toHaveBeenCalledTimes(1)
+  })
+
+  it("prepares the configured login after an attributed HTTP 401 rejection", async () => {
+    const { account, clicked } = prepareAccountSession()
+    const mutationLifecycle = createAutoCheckinMutationLifecycle()
+    vi.mocked(newApiFamilyRequests.envelope)
+      .mockReset()
+      .mockImplementationOnce(async () => {
+        mutationLifecycle.onDispatch()
+        mutationLifecycle.onResponse()
+        throw new ApiError(
+          "Unauthorized",
+          401,
+          "/api/user/checkin",
+          API_ERROR_CODES.HTTP_401,
+        )
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { id: "123" },
+      })
+    vi.mocked(newApiFamilyRequests.data)
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: true },
+      })
+    expect(
+      (
+        await checkInForTest(account, {
+          ...DEFAULT_PROVIDER_CONTEXT,
+          mutationLifecycle,
+        })
+      ).status,
+    ).toBe("success")
+    expect(login.loginAccount).toHaveBeenCalledTimes(1)
+    expect(clicked).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not dispatch a native click when intent is withdrawn during page protection", async () => {
+    let allowed = true
+    const { account, clicked } = prepareAccountSession("123", false, () => {
+      allowed = false
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
+    const mutationLifecycle = createAutoCheckinMutationLifecycle()
+    const result = await checkInForTest(account, {
+      ...DEFAULT_PROVIDER_CONTEXT,
+      mutationLifecycle,
+      beforeRecoveredMutation: async () => allowed,
+    })
+    expect(result).toMatchObject({
+      status: "skipped",
+      reasonCode: "auto_checkin_disabled",
+    })
+    expect(clicked).not.toHaveBeenCalled()
+    expect(mutationLifecycle.dispatched).toBe(false)
+  })
+
+  it.each(["another-user", ""])(
+    "does not click a page belonging to %s",
+    async (identity) => {
+      const { account, clicked } = prepareAccountSession(identity)
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      expect(await checkInForTest(account)).toMatchObject({
+        status: "failed",
+        reasonCode: "authentication_required",
+        messageKey: identity
+          ? "autoCheckin:providerFallback.nativePageIdentityMismatch"
+          : "autoCheckin:providerFallback.nativePageIdentityMissing",
+      })
+      expect(clicked).not.toHaveBeenCalled()
+    },
+  )
+
+  it("confirms a lost native action reply without clicking again", async () => {
+    const { account, sendSiteAction } = prepareAccountSession("123", true)
+    vi.mocked(newApiFamilyRequests.data)
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: true },
+      })
+    expect((await checkInForTest(account)).status).toBe("success")
+    expect(
+      sendSiteAction.mock.calls.filter(
+        ([action]) =>
+          action === RuntimeActionIds.ContentTriggerCheckinPageAction,
+      ),
+    ).toHaveLength(1)
+  })
+
+  it("does not click after execution intent is withdrawn during login", async () => {
+    const { account, clicked } = prepareAccountSession()
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
+    const beforeRecoveredMutation = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+    await expect(
+      checkInForTest(account, {
+        ...DEFAULT_PROVIDER_CONTEXT,
+        beforeRecoveredMutation,
+      }),
+    ).resolves.toMatchObject({
+      status: "skipped",
+      reasonCode: "auto_checkin_disabled",
+    })
+    expect(clicked).not.toHaveBeenCalled()
+  })
+
+  it("uses the configured login directly when saved credentials cannot read status", async () => {
+    const { account, sendSiteAction } = prepareAccountSession()
+    vi.mocked(newApiFamilyRequests.envelope)
+      .mockReset()
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { id: "123" },
+      })
+    vi.mocked(newApiFamilyRequests.data)
+      .mockRejectedValueOnce(new ApiError("unauthorized", 401))
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: true },
+      })
+    expect(
+      (
+        await checkInForTest({
+          ...account,
+          account_info: { ...account.account_info, access_token: "" },
+        })
+      ).status,
+    ).toBe("success")
+    expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+    expect(
+      sendSiteAction.mock.calls.filter(
+        ([action]) =>
+          action === RuntimeActionIds.ContentTriggerCheckinPageAction,
+      ),
+    ).toHaveLength(1)
+  })
+  it("can prepare a configured login without a saved API credential", () => {
+    expect(
+      newApiProvider.getReadiness({
+        ...mockAccount,
+        account_info: { ...mockAccount.account_info, access_token: "" },
+        login: {
+          methodId: "password",
+          credentials: { username: "target", password: "fixture" },
+        },
+      }),
+    ).toEqual({ ready: true })
+  })
+  it.each(["dynamic check-in requires page action", "Turnstile token invalid"])(
+    "uses the target login and native page for %s",
+    async (message) => {
+      const sendSiteAction = vi.fn(async (action, details?) => {
+        if (action === RuntimeActionIds.ContentNewApiDashboardSessionAuth)
+          return {
+            success: true,
+            data: {
+              access_token: "dashboard-target",
+              token_type: "Bearer",
+              access_expires_at: Date.now() / 1000 + 900,
+              session: { sid: "target-session", current: true },
+              user: { id: "123" },
+            },
+          }
+        if (action === RuntimeActionIds.ContentGetUserFromLocalStorage)
+          return { success: true, data: { userId: "123" } }
+        if (typeof details === "function") await details()
+        return {
+          success: true,
+          status: "clicked",
+          clicked: true,
+          reason: "clicked",
+          verification: { status: "not_present" },
+        }
+      })
+      const navigate = vi.fn(),
+        waitForReadyPage = vi.fn(),
+        setVerificationReason = vi.fn()
+      login.loginAccount.mockImplementation(async (request) => {
+        await request.onAuthenticated({
+          tabId: 11,
+          assertOrigin: async () => {},
+          sendSiteAction,
+          navigate,
+          waitForReadyPage,
+          setVerificationReason,
+        })
+        return { status: "authenticated", identity: "123" }
+      })
+      vi.mocked(newApiFamilyRequests.envelope)
+        .mockResolvedValueOnce({ success: false, message, data: null })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { id: "123" },
+        })
+      vi.mocked(newApiFamilyRequests.data)
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: true },
+        })
+      const account = {
+        ...mockAccount,
+        login: {
+          methodId: "password",
+          credentials: { username: "target", password: "fixture" },
+        },
+      }
+      const result = await checkInForTest(account)
+      expect(result.status).toBe("success")
+      expect(login.loginAccount).toHaveBeenCalledOnce()
+      expect(navigate).toHaveBeenCalledWith(
+        "https://site.example.invalid/console/personal",
+      )
+      expect(
+        sendSiteAction.mock.calls.filter(
+          ([action]) =>
+            action === RuntimeActionIds.ContentTriggerCheckinPageAction,
+        ),
+      ).toHaveLength(1)
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+      expect(newApiFamilyRequests.data).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          fetchContext: expect.objectContaining({ tabId: 11 }),
+          auth: expect.objectContaining({ accessToken: "dashboard-target" }),
+        }),
+        expect.anything(),
+      )
+    },
+  )
   beforeEach(() => {
     vi.resetAllMocks()
     mockFetchSupportCheckIn.mockResolvedValue(undefined)
@@ -879,7 +1390,7 @@ describe("newApiProvider", () => {
       })
       vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
         success: false,
-        reason: "identity_missing",
+        reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMissing,
         identity: null,
       })
 
@@ -893,7 +1404,11 @@ describe("newApiProvider", () => {
           checkInUrl: "https://site.example.invalid/console/personal",
         },
         rawMessage: undefined,
-        data: { success: false, reason: "identity_missing", identity: null },
+        data: {
+          success: false,
+          reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMissing,
+          identity: null,
+        },
       })
     })
 
@@ -905,7 +1420,7 @@ describe("newApiProvider", () => {
       })
       vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
         success: false,
-        reason: "identity_mismatch",
+        reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch,
         identity: { userId: "456", user: { id: "456" } },
         expectedUserId: "123",
       })
@@ -921,7 +1436,7 @@ describe("newApiProvider", () => {
         },
         rawMessage: undefined,
         data: expect.objectContaining({
-          reason: "identity_mismatch",
+          reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch,
           expectedUserId: "123",
         }),
       })
@@ -935,7 +1450,7 @@ describe("newApiProvider", () => {
       })
       vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
         success: false,
-        reason: "target_not_found",
+        reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound,
         identity: { userId: "123", user: { id: "123" } },
         trigger: {
           status: "target_not_found",
@@ -1933,7 +2448,7 @@ describe("newApiProvider", () => {
       })
       vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
         success: false,
-        reason: "target_not_found",
+        reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound,
         identity: { userId: "123", user: { id: "123" } },
       })
 

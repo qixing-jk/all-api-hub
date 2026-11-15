@@ -34,6 +34,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   DayaDailyCheckIn: "daya:daily-checkin",
   PmApiDailyCheckIn: "pmapi:daily-checkin",
   BaiApiDailyCheckIn: "bai-api:daily-checkin",
+  XingyaDailyCheckIn: "xingya:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {
@@ -62,6 +63,23 @@ export const CHECK_IN_PROVIDER_READINESS_REASONS = {
   AccountDataMissing: "account_data_missing",
   CredentialsMissing: "credentials_missing",
 } as const
+
+/** Protocol specificity, independent of enablement or execution readiness. */
+export const CHECK_IN_DISCOVERY_PRIORITIES = {
+  Generic: 0,
+  Specific: 1,
+} as const
+export const CHECK_IN_DISCOVERY_METADATA_MAX_HOSTS = 32
+
+/** How an executable method uses account login, independently of API auth. */
+export const CHECK_IN_ACCOUNT_LOGIN_MODES = {
+  Login: "login",
+  Session: "session",
+  NativePage: "native-page",
+} as const
+
+export type CheckInAccountLoginMode =
+  (typeof CHECK_IN_ACCOUNT_LOGIN_MODES)[keyof typeof CHECK_IN_ACCOUNT_LOGIN_MODES]
 
 export const CHECK_IN_METHOD_DETECTION_OUTCOMES = {
   Matched: "matched",

@@ -9,6 +9,10 @@ description: Control, debug, and test live All API Hub extension UI on desktop o
 
 Automate and test the development browser extension UI against real accounts and logged-in states without closing or disturbing the user's daily primary browser.
 
+Default to **extension-led UI acceptance**: start at the ordinary extension entrypoint and let the product identify the site/account, acquire credentials, discover capabilities, save and execute. Do not replace these steps with seeded accounts, edited storage/Cookies, injected detection evidence, forced site/method selections, runtime messages or direct API calls. Existing saved-account, protocol and synthetic-fixture checks remain useful for explicitly scoped diagnostics; label them accordingly and do not count them as normal onboarding acceptance. Passive network observation and visible DOM inspection may corroborate UI outcomes.
+
+Native website login, OAuth consent, token creation and security verification are part of this UI path. Automate their real controls, using shared env login inputs when needed; reading a credential displayed by the website and filling the extension's normal field is allowed. A product label such as “Enter an Access Token manually” does not require a human to perform the step. Before declaring credential acquisition blocked, inspect the existing site E2E continuation and reuse its UI helper; exclude any direct-API setup/cleanup it also performs. Env tokens or IDs must not stand in for acquisition/identity discovery being tested; IDs may be assertions against the detected result.
+
 For acceptance, default to exercising all applicable actions and state branches in the scoped workflow. Before browser execution, follow [coverage before execution and closure](../add-site-integration/references/evidence-and-validation.md#coverage-before-execution): derive the inventory independently of the existing script, execute available authorized cases, and account for every untested row. Generic smoke, representative screenshots and a green selected suite do not establish complete coverage. Read-only diagnosis stays read-only; coverage adds no mutation authority.
 
 Apply this to every UI acceptance task, including settings, permissions, popup/sidepanel, imports/exports, models, account/key workflows and Android CDP/RDP, not only new site integrations. Use the [shared execution and reporting contract](../../../CONTRIBUTING.md#reusable-cdp-ui-checks) for maintained runners: derive `all` from registered suites, reject unknown selections, retain skipped/blocked/unselected coverage and both execution/cleanup errors, and preserve each run's report. A successful focused run proves only its asserted scope; neither all registered suites nor a successful device connection establishes complete product acceptance. Do not expand read-only or explicit-write modes to satisfy coverage.
@@ -105,11 +109,11 @@ If dev startup fails or the loaded UI does not receive edits, follow [desktop de
 
 For tests of first-contact WAF, expired sessions, or behavior with no site page open, use [preserving initial session conditions](references/session-reuse.md#preserve-initial-session-conditions) instead of the normal authenticated preflight below.
 
-Checking readiness is required; synchronizing state is conditional. Use the site's authenticated identity endpoint in the selected dev profile, not a saved extension account, tab title or Cookie count. Reuse a valid target session immediately, checking the expected account ID when known.
+Checking readiness is required. For extension-led UI acceptance, use the normal website login UI and the extension's fresh detected identity; compare the expected account when known and use passively observed identity responses when available. A tab title, saved extension account or Cookie count alone is insufficient. Reuse a valid session immediately. Do not call an identity API or transfer browser storage to bypass the starting condition under test.
 
-If the target is unauthenticated, inspect task-authorized source sessions and select an applicable sync method before asking the user to log in. A target 401 establishes only that the target lacks authentication. A closed-browser requirement applies to database copying, not to all session reuse. Network failures, challenges and identity mismatches require diagnosis rather than a login request.
+If the target is unauthenticated, automate the available website login with the authorized env credentials or OAuth session. Record a remaining CAPTCHA/consent/login prerequisite explicitly. For separately requested session diagnostics or transfer, inspect task-authorized source sessions and use an applicable sync method; a target 401 establishes only that the target lacks authentication. Network failures, challenges and identity mismatches require diagnosis rather than a premature login request.
 
-Read [session assessment and reuse](references/session-reuse.md) for the shared preflight helper, origin-scoped live transfer and offline sync commands. After transfer, re-read the target identity and compare it with the source. Request manual login only after authorized sources and applicable transfer methods have been checked and found unusable; report missing evidence as uninspected, not unavailable. Do not replace an authenticated but mismatched account silently.
+For separately requested session diagnostics or transfer, read [session assessment and reuse](references/session-reuse.md) for the shared preflight helper, origin-scoped live transfer and offline sync commands. In that scope, re-read the target identity after transfer and compare it with the source; request manual login only after authorized sources and applicable transfer methods have been checked and found unusable. These transfer prerequisites do not apply to extension-led UI acceptance. Report missing evidence as uninspected, not unavailable, and do not replace an authenticated but mismatched account silently.
 
 ### 4. Automate and Verify the Extension UI
 For an optional general connectivity check, run the default smoke runner (include `-- --isolate` when launched with an isolated profile):
@@ -155,7 +159,7 @@ try {
 const dev = await connectExtensionById({ extensionId })
 let page
 try {
-  const { context, serviceWorker: sw } = dev
+  const { context } = dev
 
   // 2. Open any extension entrypoint
   page = await context.newPage()
@@ -175,19 +179,10 @@ try {
   const dialog = page.getByTestId("account-management-account-dialog")
   await dialog.waitFor({ state: "visible", timeout: 10000 })
 
-  // 4. Inspect extension storage without changing it
-  // NOTE: Plasmo Storage serializes envelopes as JSON strings (e.g. { accounts: [...] })
-  const accounts = await sw.evaluate(() => {
-    return new Promise((resolve) => {
-      chrome.storage.local.get("site_accounts", (res) => {
-        const data =
-          typeof res.site_accounts === "string"
-            ? JSON.parse(res.site_accounts)
-            : res.site_accounts
-        resolve(data?.accounts || [])
-      })
-    })
-  })
+  // 4. Continue through Auto Detect, native credential guidance, and Save.
+  // Reopen the saved account through its row action and assert persisted fields.
+  // Use the extension's own capability-detection and execution controls.
+  // Expected site/method IDs are assertions, never values forced into the draft.
 } finally {
   await page?.close().catch(() => {})
   await dev.close()
@@ -199,6 +194,10 @@ try {
 For account integrations, use the authentication and guidance contract in [account sites](../add-site-integration/references/account-sites.md#complete-automatic-onboarding). Drive a fresh add-account form with its normal authentication default through automatic detection, any credential guidance, verification, save, and refresh. Manually preselecting another method or pre-seeding a saved account only validates that alternate path; it does not establish that ordinary onboarding works.
 
 When credentials require user interaction, assert that detection preserves the discovered account context, offers the official acquisition page and a clear return/paste action, and reaches an actionable state. Exercise the persistent UI handoff when starting from a popup. Record the authentication mode and starting state in the reusable runner's evidence. If the credential is unavailable, validate the guide independently and report save/refresh as unverified; do not count a successful Cookie fallback as proof of the preferred token path.
+
+New API token/security UI is shared by [`newApiAccountRecovery.ts`](../../../e2e/utils/realSite/newApiAccountRecovery.ts) and [`new-api-token-ui.mjs`](../../../scripts/flows/new-api-token-ui.mjs). The UI helper contains no direct-API cleanup; its caller owns resource retention/removal. Use [`e2e:cdp:checkin-ui`](../../../CONTRIBUTING.md#extension-led-check-in-acceptance) for Xingya/Runanytime normal onboarding. Its synthetic configuration sibling does not prove this path.
+
+For automatic check-in acceptance, assert the automatic selection before saving and after reopening; exercise the actual detect/re-detect control without choosing the expected method, and wait for this attempt's completion feedback. Follow offered account login configuration through its normal controls when session check-in needs it, using the authorized credentials or OAuth provider; verify persistence and preserve the automatically discovered check-in selection. Verify account-scoped execution and repeat behavior through UI results. Keep first grant, already-checked skip, native PoW/CAPTCHA and login recovery separate in the coverage record. An already-checked account cannot pass the first-grant or PoW case; report it incomplete and wait for a natural eligible account/day, never reset dates or status. Preserve failed attempts and both execution/cleanup errors; do not turn a partial live run into a full-pass summary.
 
 ## Native resource editor readiness
 

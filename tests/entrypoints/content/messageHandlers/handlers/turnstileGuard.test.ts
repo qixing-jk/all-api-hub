@@ -9,6 +9,7 @@ const {
   loggerMocks,
   triggerCheckinPageActionMock,
   waitForTurnstileTokenMock,
+  waitForCheckinPageActionTargetMock,
   sendRuntimeMessageMock,
   showTurnstileManualAssistToastMock,
 } = vi.hoisted(() => ({
@@ -20,6 +21,7 @@ const {
   },
   triggerCheckinPageActionMock: vi.fn(),
   waitForTurnstileTokenMock: vi.fn(),
+  waitForCheckinPageActionTargetMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
   showTurnstileManualAssistToastMock: vi.fn(),
 }))
@@ -47,9 +49,27 @@ vi.mock(
 vi.mock("~/entrypoints/content/messageHandlers/utils/turnstileGuard", () => ({
   triggerCheckinPageAction: triggerCheckinPageActionMock,
   waitForTurnstileToken: waitForTurnstileTokenMock,
+  waitForCheckinPageActionTarget: waitForCheckinPageActionTargetMock,
 }))
 
 describe("content turnstile guard handler", () => {
+  it("prepares a delayed native target without clicking", async () => {
+    const trigger = {
+      kind: "clickSelector",
+      selector: "#check-in",
+      targetWaitMs: 1000,
+    } as const
+    const response = await new Promise<any>((resolve) => {
+      handleTriggerCheckinPageAction(
+        { trigger, prepareOnly: true } as any,
+        resolve,
+      )
+    })
+    expect(waitForCheckinPageActionTargetMock).toHaveBeenCalledWith(trigger)
+    expect(triggerCheckinPageActionMock).not.toHaveBeenCalled()
+    expect(response).toMatchObject({ success: true, clicked: false })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

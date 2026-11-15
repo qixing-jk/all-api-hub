@@ -15,6 +15,7 @@ import { parseNewApiDashboardAuthBundleResponse } from "~/services/apiService/ne
 import { isRecord } from "~/utils/core/object"
 
 import { encryptNewApiPassword } from "./passwordEncryption"
+import { rememberVerifiedNewApiDashboardSession } from "./passwordUi"
 
 let observed: { requestId: string; identity: string; sid?: string } | undefined
 
@@ -78,6 +79,8 @@ export function handleNewApiPasswordLogin(
         return { status: BROWSER_LOGIN_STATUS.Uncertain }
       if (String(self.data.id) !== identity)
         return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }
+      if (parsed.kind === "valid")
+        rememberVerifiedNewApiDashboardSession(parsed.bundle)
       if (parsed.kind !== "valid")
         localStorage.setItem("user", JSON.stringify(user))
       return {

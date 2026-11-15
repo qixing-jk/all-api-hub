@@ -26,7 +26,13 @@ test("validates, saves and clears a deployment check-in route", async ({
   extensionId,
   extensionDir,
 }) => {
-  installExtensionPageGuards(page)
+  installExtensionPageGuards(page, {
+    // Ordinary New API deployments do not serve the newly probed fork route.
+    ignoreConsoleError: (message) =>
+      message.text().includes("status of 404") &&
+      message.location().url ===
+        "https://route-edit.example.invalid/api/user/xingya-checkin",
+  })
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
   const baseUrl = "https://route-edit.example.invalid"

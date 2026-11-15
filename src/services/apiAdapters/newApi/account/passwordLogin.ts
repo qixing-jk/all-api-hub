@@ -46,6 +46,7 @@ export async function loginNewApiWithPassword(
     requestId: request.requestId,
     sessionMode: request.sessionMode,
     captureCredential: request.captureCredential,
+    onAuthenticated: request.onAuthenticated,
     abortSignal: request.abortSignal,
     ...(request.attended === undefined ? {} : { attended: request.attended }),
   })

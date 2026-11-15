@@ -39,8 +39,7 @@ type UnknownPersistedCheckInMethodId = string & {
 }
 
 export type PersistedCheckInMethodId =
-  | CheckInMethodId
-  | UnknownPersistedCheckInMethodId
+  CheckInMethodId | UnknownPersistedCheckInMethodId
 
 export type CheckInMethodUnknownReason =
   (typeof CHECK_IN_METHOD_UNKNOWN_REASONS)[number]
@@ -57,6 +56,8 @@ export type CheckInMethodDetection =
         | {
             source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe
             observedAt: number
+            /** Bounded unique public-domain overlap; only breaks confirmed protocol ties. */
+            domainMatchCount?: number
           }
         | {
             source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.LegacyMigration

@@ -27,7 +27,10 @@ import {
   handleClearNewApiPasswordLogin,
   handleNewApiPasswordLogin,
 } from "~/services/apiService/newApiFamily/passwordLogin"
-import { handleNewApiPasswordUi } from "~/services/apiService/newApiFamily/passwordUi"
+import {
+  handleNewApiPasswordUi,
+  readNewApiDashboardSessionAuth,
+} from "~/services/apiService/newApiFamily/passwordUi"
 import {
   handleClearSub2ApiPasswordLogin,
   handleSub2ApiPasswordLogin,
@@ -51,6 +54,10 @@ import { handleInspectCredentialPage } from "./handlers/credentialPage"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (request.action === RuntimeActionIds.ContentNewApiDashboardSessionAuth) {
+      sendResponse(readNewApiDashboardSessionAuth(request.expectedOrigin))
+      return false
+    }
     if (request.action === RuntimeActionIds.ContentNewApiPasswordUi)
       return handleNewApiPasswordUi(request, sendResponse)
     if (request.action === RuntimeActionIds.ContentSub2ApiPasswordUi)
