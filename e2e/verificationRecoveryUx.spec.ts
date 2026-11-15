@@ -100,6 +100,8 @@ for (const width of [390, 1600]) {
     const search = page.locator('[data-slot="command-input"]:visible')
     await search.fill("Draft model")
     await search.press("Enter")
+    // Let the model picker release its Escape layer and restore trigger focus.
+    await expect(model).toBeFocused()
     await model.press("Escape")
     await expect(workspace.getByLabel("API type", { exact: true })).toBeHidden()
     await expect(settingsToggle).toBeFocused()
