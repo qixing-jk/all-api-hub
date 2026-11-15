@@ -233,13 +233,20 @@ for (const source of ["profile", "account"] as const) {
       await page.setViewportSize({ width, height: 960 })
       const model = composer.getByRole("button", { name: "模型", exact: true })
       const run = composer.getByRole("button", { name: "运行", exact: true })
-      const modelBox = (await model.boundingBox())!
-      const runBox = (await run.boundingBox())!
-      expect(
-        Math.abs(
-          modelBox.y + modelBox.height / 2 - runBox.y - runBox.height / 2,
-        ),
-      ).toBeLessThanOrEqual(1)
+      // Resizing can reflow the composer between geometry reads. Check the
+      // settled layout at each width while keeping the one-pixel tolerance.
+      await expect
+        .poll(async () => {
+          const [modelBox, runBox] = await Promise.all([
+            model.boundingBox(),
+            run.boundingBox(),
+          ])
+          if (!modelBox || !runBox) return Infinity
+          return Math.abs(
+            modelBox.y + modelBox.height / 2 - runBox.y - runBox.height / 2,
+          )
+        })
+        .toBeLessThanOrEqual(1)
     }
     await page.setViewportSize({ width: 380, height: 960 })
     await composer.getByRole("textbox").blur()
