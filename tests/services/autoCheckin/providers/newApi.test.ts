@@ -194,31 +194,101 @@ function prepareAccountSession(
 }
 
 describe("newApiProvider", () => {
-  it("retains manual verification guidance when a native click cannot be confirmed", async () => {
-    vi.useFakeTimers()
-    try {
-      const { account, clicked, sendSiteAction } = prepareAccountSession()
-      const original = sendSiteAction.getMockImplementation()!
-      sendSiteAction.mockImplementation(async (action, details) => {
-        const result = await original(action, details)
-        return typeof details === "function"
-          ? ({ ...result, verification: { status: "required" } } as any)
-          : result
-      })
-      vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+  it.each(["required", "absent", "lost-reply"])(
+    "retains an unconfirmed native click with verification %s",
+    async (verification) => {
+      vi.useFakeTimers()
+      try {
+        const { account, clicked, sendSiteAction } = prepareAccountSession(
+          "123",
+          verification === "lost-reply",
+        )
+        const original = sendSiteAction.getMockImplementation()!
+        sendSiteAction.mockImplementation(async (action, details) => {
+          const result = await original(action, details)
+          return typeof details === "function" && verification === "required"
+            ? ({ ...result, verification: { status: "required" } } as any)
+            : result
+        })
+        vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        const result = checkInForTest(account)
+        await vi.advanceTimersByTimeAsync(8500)
+        await expect(result).resolves.toMatchObject({
+          status: "uncertain",
+          reasonCode:
+            verification === "required"
+              ? "manual_verification_required"
+              : "checkin_unconfirmed",
+        })
+        expect(clicked).toHaveBeenCalledOnce()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+  it("prepares a custom selector before dispatching one immediate native click", async () => {
+    const { account, clicked, sendSiteAction } = prepareAccountSession()
+    account.checkIn.customCheckIn = {
+      turnstilePreTrigger: {
+        kind: "clickSelector",
+        selector: "#check-in",
+        targetWaitMs: 1000,
+      },
+    }
+    const original = sendSiteAction.getMockImplementation()!
+    const dispatchOptions = vi.fn()
+    sendSiteAction.mockImplementation((action, details) =>
+      original(
+        action,
+        typeof details === "function"
+          ? async () => {
+              const options = await details()
+              dispatchOptions(options)
+              return options
+            }
+          : details,
+      ),
+    )
+    vi.mocked(newApiFamilyRequests.data)
+      .mockResolvedValueOnce({
         enabled: true,
         stats: { checked_in_today: false },
       })
-      const result = checkInForTest(account)
-      await vi.advanceTimersByTimeAsync(8500)
-      await expect(result).resolves.toMatchObject({
-        status: "uncertain",
-        reasonCode: "manual_verification_required",
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
       })
-      expect(clicked).toHaveBeenCalledOnce()
-    } finally {
-      vi.useRealTimers()
-    }
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValue({ enabled: true, stats: { checked_in_today: true } })
+    await expect(checkInForTest(account)).resolves.toMatchObject({
+      status: "success",
+    })
+    expect(sendSiteAction).toHaveBeenCalledWith(
+      RuntimeActionIds.ContentTriggerCheckinPageAction,
+      {
+        trigger: {
+          kind: "clickSelector",
+          selector: "#check-in",
+          targetWaitMs: 1000,
+        },
+        prepareOnly: true,
+      },
+    )
+    expect(dispatchOptions).toHaveBeenCalledExactlyOnceWith({
+      trigger: {
+        kind: "clickSelector",
+        selector: "#check-in",
+        targetWaitMs: 0,
+        throttle: { maxAttempts: 1 },
+      },
+    })
+    expect(clicked).toHaveBeenCalledOnce()
   })
   it.each(["unknown-status", "login-message"])(
     "prepares target login for %s and performs one native claim",
