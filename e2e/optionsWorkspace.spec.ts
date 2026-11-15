@@ -154,6 +154,7 @@ for (const width of [1440, 390, 320]) {
     await expect(
       page.getByRole("menuitemradio", { name: "English", exact: true }),
     ).toBeVisible()
+    await expect(page.getByRole("menu")).toBeFocused()
     await page.keyboard.press("Escape")
     await expect(language).toBeFocused()
     await expect(

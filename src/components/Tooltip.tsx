@@ -134,9 +134,7 @@ export default function Tooltip({
         activeElement = activeElement.shadowRoot.activeElement
       }
       const popupRoot = popup?.getRootNode() as
-        | Document
-        | ShadowRoot
-        | undefined
+        Document | ShadowRoot | undefined
       const popupActive = popupRoot?.activeElement
       if (
         !anchor?.contains(activeElement) &&
@@ -197,7 +195,8 @@ export default function Tooltip({
     const document = anchorRef.current?.ownerDocument
     const dismiss = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
-      // An expanded focused control owns Escape before a merely hovered hint.
+      // An open control owns Escape before a merely hovered hint, including
+      // menus that move focus from the expanded trigger into their content.
       // composedPath also reaches controls inside a webpage's shadow root.
       if (
         event
@@ -206,7 +205,7 @@ export default function Tooltip({
             (target) =>
               target instanceof Element &&
               target.matches(
-                '[role="combobox"][aria-expanded="true"], [aria-haspopup]:not([aria-haspopup="false"])[aria-expanded="true"]',
+                '[role="menu"], [role="combobox"][aria-expanded="true"], [aria-haspopup]:not([aria-haspopup="false"])[aria-expanded="true"]',
               ),
           )
       )
@@ -253,7 +252,7 @@ export default function Tooltip({
       id={anchorId}
       data-tooltip-open={isOpen ? "true" : undefined}
       className={cn(
-        "gap-y-density-2 flex items-center justify-center gap-x-2",
+        "flex items-center justify-center gap-x-2 gap-y-density-2",
         wrapperClassName,
       )}
       onFocusCapture={handleFocusCapture}
@@ -281,7 +280,7 @@ export default function Tooltip({
         id={tooltipId}
         role={isOpen ? "tooltip" : "presentation"}
         className={cn(
-          "bg-surface-inverse py-density-2 text-inverse-foreground dark:bg-secondary dark:text-foreground w-max max-w-[90vw] rounded-sm px-3 text-xs opacity-90 shadow-lg",
+          "w-max max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground opacity-90 shadow-lg dark:bg-secondary dark:text-foreground",
           className,
         )}
       >
