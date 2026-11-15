@@ -248,7 +248,12 @@ describe("newApiProvider", () => {
             waitForReadyPage: vi.fn(),
             setVerificationReason: vi.fn(),
             assertOrigin: vi.fn(),
-            sendSiteAction: async (_action, details) => {
+            sendSiteAction: async (
+              _action: string,
+              details?:
+                | Record<string, unknown>
+                | (() => Promise<Record<string, unknown>>),
+            ) => {
               if (typeof details !== "function")
                 return {
                   success: true,

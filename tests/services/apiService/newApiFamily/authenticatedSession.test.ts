@@ -39,6 +39,7 @@ it.each([401, 404, 405])(
       .mockResolvedValueOnce({ status, data: {} })
     vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
       success: true,
+      message: "",
       data: { id: account.account_info.id },
     })
     const result = await createNewApiAuthenticatedSessionRequest(
@@ -63,6 +64,7 @@ it("refreshes an absent cached session and binds the verified bearer to its tab"
     .mockResolvedValueOnce({ status: 200, data: bundle() })
   vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
     success: true,
+    message: "",
     data: { id: account.account_info.id },
   })
   const result = await createNewApiAuthenticatedSessionRequest(
@@ -101,7 +103,10 @@ it.each([
   { success: false, data: { id: account.account_info.id } },
   { success: true, data: null },
 ])("rejects unconfirmed server identity: %j", async (self) => {
-  vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue(self)
+  vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+    ...self,
+    message: "",
+  })
   await expect(
     createNewApiAuthenticatedSessionRequest(
       session(vi.fn().mockResolvedValue(bundle())),

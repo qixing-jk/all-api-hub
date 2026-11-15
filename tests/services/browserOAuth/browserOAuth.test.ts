@@ -172,6 +172,7 @@ describe("browser OAuth context", () => {
       execute: async () => ({
         status: "authenticated" as const,
         identity: "someone-else",
+        evidence: {},
       }),
     })
     await expect(
