@@ -150,6 +150,36 @@
       "uiOpenPretriggerEligible": "介面開啟預觸發條件滿足。"
     }
   },
+  "methods": {
+    "daily": {
+      "description": "此方式使用 {{source}} 的第三方簽到協定，僅適用於支援該協定的部署。",
+      "name": "{{source}} 簽到"
+    },
+    "generic": {
+      "name": "每日簽到"
+    },
+    "login": {
+      "description": "登入 {{source}} 並確認本次簽到結果。",
+      "name": "{{source}} 登入簽到"
+    },
+    "sources": {
+      "agentRouter": "Agent Router",
+      "aiRouter": "AI-ROUTER",
+      "baiApi": "柏API",
+      "clawhud": "詞元公益站",
+      "daigua": "DaiGua",
+      "denxio": "登仙公益站",
+      "freeApi": "露娜",
+      "geniusProgrammer": "天才程式設計師中轉站",
+      "hiyo": "Hiyo Free",
+      "nexavlinks": "NexaVlinks",
+      "sidrune": "Sidrune",
+      "sub2apiPro": "Sub2API Pro",
+      "toolcode": "ToolCode",
+      "xiaobaiCode": "小白Code",
+      "xingya": "星芽"
+    }
+  },
   "providerFallback": {
     "alreadyCheckedToday": "今日已簽到",
     "checkinFailed": "簽到失敗，站點沒有回報具體原因。可稍後重試，或手動簽到。",

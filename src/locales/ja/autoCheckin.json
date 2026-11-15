@@ -150,6 +150,36 @@
       "uiOpenPretriggerEligible": "UI 起動時の事前起動条件を満たしています。"
     }
   },
+  "methods": {
+    "daily": {
+      "description": "この方式はサードパーティーの {{source}} チェックインプロトコルを使用し、対応する環境でのみ利用できます。",
+      "name": "{{source}} のデイリーチェックイン"
+    },
+    "generic": {
+      "name": "デイリーチェックイン"
+    },
+    "login": {
+      "description": "{{source}} にログインしてチェックイン結果を確認します。",
+      "name": "{{source}} ログインチェックイン"
+    },
+    "sources": {
+      "agentRouter": "Agent Router",
+      "aiRouter": "AI-ROUTER",
+      "baiApi": "Bai API",
+      "clawhud": "Clawhud",
+      "daigua": "DaiGua",
+      "denxio": "Denxio",
+      "freeApi": "Luna",
+      "geniusProgrammer": "天才プログラマー中継サイト",
+      "hiyo": "Hiyo Free",
+      "nexavlinks": "NexaVlinks",
+      "sidrune": "Sidrune",
+      "sub2apiPro": "Sub2API Pro",
+      "toolcode": "ToolCode",
+      "xiaobaiCode": "Xiaobai Code",
+      "xingya": "星芽"
+    }
+  },
   "providerFallback": {
     "alreadyCheckedToday": "本日はすでにチェックイン済みです",
     "checkinFailed": "チェックインに失敗しました。サイトから理由は返っていません。しばらくして再試行するか、手動でチェックインしてください。",

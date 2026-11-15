@@ -10,10 +10,12 @@ import { sub2ApiAccountKeyResources } from "~/services/apiAdapters/sub2api/keys/
 import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/models/modelCatalog"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
+import { sub2ApiSiteEndpointMetadata } from "./siteEndpointMetadata"
 
 export const sub2ApiCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.SUB2API,
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
+  site: { endpointMetadata: sub2ApiSiteEndpointMetadata },
   account: {
     login: sub2ApiAccountLogin,
     announcements: sub2ApiSiteAnnouncements,

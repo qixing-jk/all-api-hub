@@ -1,7 +1,6 @@
 import type { TFunction } from "i18next"
 
 import {
-  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
@@ -11,10 +10,7 @@ import {
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
-import {
-  AUTO_CHECKIN_METHOD_SOURCE_KINDS,
-  getAutoCheckinMethodSource,
-} from "~/services/checkin/autoCheckin/providers/registry"
+import { getCheckInMethodPresentationMetadata } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -72,30 +68,16 @@ export function getCheckInMethodPresentation(
   t: TFunction<"accountDialog">,
   methodId: CheckInMethodId,
 ) {
-  if (methodId === AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn) {
-    return { label: t("form.xingyaDailyCheckInMethod"), disclosure: null }
+  const metadata = getCheckInMethodPresentationMetadata(methodId)
+  const source = metadata.sourceNameKey
+    ? t(metadata.sourceNameKey, { ns: "autoCheckin" })
+    : metadata.sourceName
+  return {
+    label: t(metadata.labelKey, { ns: "autoCheckin", source }),
+    disclosure: metadata.disclosureKey
+      ? t(metadata.disclosureKey, { ns: "autoCheckin", source })
+      : null,
   }
-  if (methodId === AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn) {
-    return {
-      label: t("form.agentRouterLoginCheckInMethod"),
-      disclosure: t("form.agentRouterLoginCheckInMethodDesc"),
-    }
-  }
-
-  const source = getAutoCheckinMethodSource(methodId)
-  return source.kind === AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty
-    ? {
-        label: t("form.thirdPartyDailyCheckInMethod", {
-          source: source.sourceName,
-        }),
-        disclosure: t("form.thirdPartyCheckInMethodDesc", {
-          source: source.sourceName,
-        }),
-      }
-    : {
-        label: t("form.dailyCheckInMethod"),
-        disclosure: null,
-      }
 }
 
 /** Derives method-selection copy from one canonical account inspection. */

@@ -7,6 +7,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { CheckInRedetectionButton } from "~/features/CheckIn/CheckInRedetectionButton"
 import { addDevCheckInFixtureAccounts } from "~/features/DevPanel/fixtureAccounts"
 import accountDialog from "~/locales/en/accountDialog.json"
+import autoCheckin from "~/locales/en/autoCheckin.json"
 import common from "~/locales/en/common.json"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
@@ -38,7 +39,9 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-const i18n = await createResourceTestI18n({ en: { accountDialog, common } })
+const i18n = await createResourceTestI18n({
+  en: { accountDialog, autoCheckin, common },
+})
 beforeEach(() => {
   data.clear()
   vi.stubEnv("DEV", true)

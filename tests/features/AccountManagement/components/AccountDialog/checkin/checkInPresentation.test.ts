@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next"
+import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -10,6 +10,7 @@ import {
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
+import { SUPPORTED_UI_LANGUAGES } from "~/constants/i18n"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createCheckInRedetectionFeedback,
@@ -17,23 +18,42 @@ import {
   getCheckInRedetectionFeedbackPresentation,
   getCheckInSelectionPresentation,
 } from "~/features/AccountManagement/components/AccountDialog/checkin/checkInPresentation"
+import englishAccountDialog from "~/locales/en/accountDialog.json"
+import englishAutoCheckin from "~/locales/en/autoCheckin.json"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
+import { getCheckInMethodPresentationMetadata } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInAccountState } from "~/types/checkIn"
 
+const localizedDialogs = import.meta.glob<Record<string, unknown>>(
+  "/src/locales/*/accountDialog.json",
+  { eager: true, import: "default" },
+)
+
+const localizedMethods = import.meta.glob<Record<string, unknown>>(
+  "/src/locales/*/autoCheckin.json",
+  { eager: true, import: "default" },
+)
+
 const t = ((key: string, options?: Record<string, unknown>) =>
-  options?.source
-    ? `${key}:${options.source}`
-    : options?.detail
-      ? `${key}:${options.detail}`
-      : options?.method
-        ? `${key}:${options.method}`
-        : options?.error
-          ? `${key}:${options.error}`
-          : options?.suggestedType
-            ? `${key}:${options.storedType}->${options.suggestedType}`
-            : key) as TFunction<"accountDialog">
+  key.startsWith("methods.sources.")
+    ? englishAutoCheckin.methods.sources[
+        key.slice(
+          "methods.sources.".length,
+        ) as keyof typeof englishAutoCheckin.methods.sources
+      ]
+    : options?.source
+      ? `${key}:${options.source}`
+      : options?.detail
+        ? `${key}:${options.detail}`
+        : options?.method
+          ? `${key}:${options.method}`
+          : options?.error
+            ? `${key}:${options.error}`
+            : options?.suggestedType
+              ? `${key}:${options.storedType}->${options.suggestedType}`
+              : key) as TFunction<"accountDialog">
 
 const createAmbiguousState = (): CheckInAccountState => ({
   decision: {
@@ -67,6 +87,91 @@ const createAmbiguousState = (): CheckInAccountState => ({
 })
 
 describe("check-in presentation", () => {
+  it("reads method names from the shared check-in namespace independently of the form", async () => {
+    const instance = createInstance()
+    await instance.init({
+      lng: "en",
+      resources: {
+        en: {
+          autoCheckin: {
+            methods: {
+              daily: { name: "{{source}} shared method" },
+              sources: { xingya: "Shared Xingya" },
+            },
+          },
+        },
+      },
+    })
+    const presentation = getCheckInMethodPresentation(
+      instance.getFixedT("en", "accountDialog"),
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    )
+    expect(presentation.label).toBe("Shared Xingya shared method")
+  })
+  it.each(SUPPORTED_UI_LANGUAGES)(
+    "resolves every registered method and source in %s",
+    async (language) => {
+      const instance = createInstance()
+      const resources =
+        localizedDialogs[`/src/locales/${language}/accountDialog.json`]
+      const methods =
+        localizedMethods[`/src/locales/${language}/autoCheckin.json`]
+      if (!resources || !methods)
+        throw new Error(`Missing locale fixture: ${language}`)
+      await instance.init({
+        lng: language,
+        fallbackLng: false,
+        resources: {
+          [language]: {
+            accountDialog: resources,
+            autoCheckin: methods,
+          },
+        },
+      })
+      const translate = instance.getFixedT(language, "accountDialog")
+      for (const methodId of Object.values(AUTO_CHECKIN_METHOD_IDS)) {
+        const metadata = getCheckInMethodPresentationMetadata(methodId)
+        const presentation = getCheckInMethodPresentation(translate, methodId)
+        expect(instance.exists(`autoCheckin:${metadata.labelKey}`)).toBe(true)
+        expect(presentation.label).not.toContain("form.")
+        if (metadata.disclosureKey)
+          expect(instance.exists(`autoCheckin:${metadata.disclosureKey}`)).toBe(
+            true,
+          )
+        if (metadata.sourceName) expect(metadata.sourceNameKey).toBeDefined()
+        if (metadata.sourceNameKey) {
+          expect(instance.exists(`autoCheckin:${metadata.sourceNameKey}`)).toBe(
+            true,
+          )
+          expect(presentation.label).toContain(
+            translate(metadata.sourceNameKey, { ns: "autoCheckin" }),
+          )
+          expect(presentation.disclosure).toContain(
+            translate(metadata.sourceNameKey, { ns: "autoCheckin" }),
+          )
+        }
+      }
+    },
+  )
+  it("localizes a fork source alongside the check-in label and disclosure", async () => {
+    const instance = createInstance()
+    await instance.init({
+      lng: "en",
+      resources: {
+        en: {
+          accountDialog: englishAccountDialog,
+          autoCheckin: englishAutoCheckin,
+        },
+      },
+    })
+    const presentation = getCheckInMethodPresentation(
+      instance.getFixedT("en", "accountDialog"),
+      AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
+    )
+    expect(presentation.label).toContain("Genius Programmer Relay")
+    expect(presentation.disclosure).toContain("Genius Programmer Relay")
+    expect(presentation.label).not.toContain("天才程序员")
+  })
   it("distinguishes the Xingya protocol from the generic daily method", () => {
     const generic = getCheckInMethodPresentation(
       t,
@@ -77,7 +182,7 @@ describe("check-in presentation", () => {
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
     )
     expect(xingya.label).not.toBe(generic.label)
-    expect(xingya.label).toBe("form.xingyaDailyCheckInMethod")
+    expect(xingya.label).toBe("methods.daily.name:Xingya")
   })
   it("keeps an inconclusive probe visible instead of reporting an older disabled status", () => {
     const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
@@ -146,7 +251,7 @@ describe("check-in presentation", () => {
       getCheckInSelectionPresentation(t, state, updated.selection),
     ).toMatchObject({
       selectedMethodId: methodId,
-      triggerLabel: "form.dailyCheckInMethod",
+      triggerLabel: "methods.generic.name",
       helperText: "form.checkInSelectionStale",
     })
   })
@@ -185,10 +290,10 @@ describe("check-in presentation", () => {
 
       expect(updated.selection).toEqual(config.selection)
       expect(presentation.triggerLabel).toContain(
-        "form.checkInMethodNeedsConfirmation:form.dailyCheckInMethod",
+        "form.checkInMethodNeedsConfirmation:methods.generic.name",
       )
       expect(presentation.helperText).toBe(
-        "form.checkInSelectionUnconfirmed:form.dailyCheckInMethod",
+        "form.checkInSelectionUnconfirmed:methods.generic.name",
       )
     },
   )
@@ -200,7 +305,7 @@ describe("check-in presentation", () => {
         AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       ),
     ).toEqual({
-      label: "form.dailyCheckInMethod",
+      label: "methods.generic.name",
       disclosure: null,
     })
     expect(
@@ -209,8 +314,8 @@ describe("check-in presentation", () => {
         AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
       ),
     ).toEqual({
-      label: "form.thirdPartyDailyCheckInMethod:Sub2API Pro",
-      disclosure: "form.thirdPartyCheckInMethodDesc:Sub2API Pro",
+      label: "methods.daily.name:Sub2API Pro",
+      disclosure: "methods.daily.description:Sub2API Pro",
     })
   })
 
@@ -221,8 +326,8 @@ describe("check-in presentation", () => {
         AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
       ),
     ).toEqual({
-      label: "form.agentRouterLoginCheckInMethod",
-      disclosure: "form.agentRouterLoginCheckInMethodDesc",
+      label: "methods.login.name:Agent Router",
+      disclosure: "methods.login.description:Agent Router",
     })
   })
 

@@ -155,8 +155,6 @@
   },
   "form": {
     "accessToken": "Access Token",
-    "agentRouterLoginCheckInMethod": "Log in again and check in",
-    "agentRouterLoginCheckInMethodDesc": "Sign in to Agent Router and verify the check-in result.",
     "aimlApiKey": "Regular API key (optional)",
     "aimlApiKeyHelp": "AI/ML API shows balance, billing and usage only to a regular API key, while key management requires the management key above. Add a regular key to read the account balance; without one the account still manages keys but reports balance as unavailable.",
     "aimlApiKeyPlaceholder": "Paste a regular API key",
@@ -217,7 +215,6 @@
     "customCheckInUrl": "External check-in site URL (optional)",
     "customRedeemUrl": "Custom recharge/redeem page URL (optional)",
     "customRedeemUrlDesc": "URL for recharge/exchange page",
-    "dailyCheckInMethod": "Daily check-in",
     "exchangeRate": "Recharge Amount Ratio (CNY/USD)",
     "exchangeRateDesc": "Indicates how much RMB is needed to recharge 1 USD. The system will try to get it automatically, please fill in manually if not obtained",
     "exchangeRatePlaceholder": "Please enter exchange rate",
@@ -286,8 +283,6 @@
     "tagsSearchPlaceholder": "Search tags...",
     "tagsSelectedCount_one": "{{count}} tag selected",
     "tagsSelectedCount_other": "{{count}} tags selected",
-    "thirdPartyCheckInMethodDesc": "This method uses the third-party {{source}} check-in protocol and only works on deployments that support it.",
-    "thirdPartyDailyCheckInMethod": "{{source}} daily check-in",
     "userId": "User ID",
     "username": "Username",
     "validRateError": "Please enter a valid exchange rate, greater than 0",
@@ -297,8 +292,7 @@
     "vercelTeam": "Vercel team",
     "vercelTeamHelp": "Choose the team that owns the AI Gateway balance and keys. Each team is saved as a separate account.",
     "vercelTeamLoadFailed": "Could not load teams. Check the access token and retry.",
-    "vercelTeamPlaceholder": "Select a team",
-    "xingyaDailyCheckInMethod": "Xingya daily check-in"
+    "vercelTeamPlaceholder": "Select a team"
   },
   "infoPanel": {
     "aimlapiBootstrapInfo": "Use your signed-in AI/ML API session to reuse or create dedicated management and regular API keys, verify them, and fill in your account name and ID. If automatic connection cannot finish, continue with the manual guide.",

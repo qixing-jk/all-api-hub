@@ -155,8 +155,6 @@
   },
   "form": {
     "accessToken": "Access Token",
-    "agentRouterLoginCheckInMethod": "Volver a iniciar sesión y registrar asistencia",
-    "agentRouterLoginCheckInMethodDesc": "Inicia sesión en Agent Router y verifica el resultado del registro diario.",
     "aimlApiKey": "Clave de API normal (opcional)",
     "aimlApiKeyHelp": "AI/ML API solo muestra el saldo, la facturación y el uso a una clave de API normal, mientras que la gestión de claves requiere la clave de administración de arriba. Añade una clave normal para leer el saldo; sin ella la cuenta aún gestiona claves, pero el saldo aparece como no disponible.",
     "aimlApiKeyPlaceholder": "Pega una clave de API normal",
@@ -217,7 +215,6 @@
     "customCheckInUrl": "URL de sitio externo de check-in (opcional)",
     "customRedeemUrl": "URL personalizada de página de recarga/canje (opcional)",
     "customRedeemUrlDesc": "URL de la página de recarga/canje",
-    "dailyCheckInMethod": "Check-in diario",
     "exchangeRate": "Relación de monto de recarga (CNY/USD)",
     "exchangeRateDesc": "Indica cuántos RMB se necesitan para recargar 1 USD. El sistema intentará obtenerla automáticamente; complétala manualmente si no se obtiene",
     "exchangeRatePlaceholder": "Ingresa el tipo de cambio",
@@ -287,8 +284,6 @@
     "tagsSelectedCount_one": "{{count}} etiqueta seleccionada",
     "tagsSelectedCount_many": "{{count}} etiquetas seleccionadas",
     "tagsSelectedCount_other": "{{count}} etiquetas seleccionadas",
-    "thirdPartyCheckInMethodDesc": "Este método usa el protocolo de check-in de terceros de {{source}} y solo funciona en instalaciones compatibles.",
-    "thirdPartyDailyCheckInMethod": "Check-in diario de {{source}}",
     "userId": "ID de usuario",
     "username": "Nombre de usuario",
     "validRateError": "Ingresa un tipo de cambio válido, mayor que 0",
@@ -298,8 +293,7 @@
     "vercelTeam": "Equipo de Vercel",
     "vercelTeamHelp": "Elige el equipo que posee el saldo y las claves de AI Gateway. Cada equipo se guarda como una cuenta separada.",
     "vercelTeamLoadFailed": "No se pudieron cargar los equipos. Revisa el token de acceso y reintenta.",
-    "vercelTeamPlaceholder": "Selecciona un equipo",
-    "xingyaDailyCheckInMethod": "Check-in diario de Xingya"
+    "vercelTeamPlaceholder": "Selecciona un equipo"
   },
   "infoPanel": {
     "aimlapiBootstrapInfo": "Usa tu sesión de AI/ML API para reutilizar o crear claves dedicadas de administración y API, verificarlas y completar tu nombre de usuario e ID. Si la conexión automática no se completa, sigue la guía manual.",
