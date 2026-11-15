@@ -194,6 +194,32 @@ function prepareAccountSession(
 }
 
 describe("newApiProvider", () => {
+  it("retains manual verification guidance when a native click cannot be confirmed", async () => {
+    vi.useFakeTimers()
+    try {
+      const { account, clicked, sendSiteAction } = prepareAccountSession()
+      const original = sendSiteAction.getMockImplementation()!
+      sendSiteAction.mockImplementation(async (action, details) => {
+        const result = await original(action, details)
+        return typeof details === "function"
+          ? ({ ...result, verification: { status: "required" } } as any)
+          : result
+      })
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      const result = checkInForTest(account)
+      await vi.advanceTimersByTimeAsync(8500)
+      await expect(result).resolves.toMatchObject({
+        status: "uncertain",
+        reasonCode: "manual_verification_required",
+      })
+      expect(clicked).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
   it.each(["unknown-status", "login-message"])(
     "prepares target login for %s and performs one native claim",
     async (mode) => {

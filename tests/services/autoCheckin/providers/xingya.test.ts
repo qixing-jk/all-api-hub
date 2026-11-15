@@ -115,6 +115,53 @@ function prepareLoginSession(identity: string | null = "7451") {
 }
 
 describe("xingyaProvider", () => {
+  it("does not admit a session claim from a rejected status envelope", async () => {
+    prepareLoginSession()
+    const requests = await requestModule()
+    vi.mocked(requests.envelope)
+      .mockReset()
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { id: "7451" },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "status unavailable",
+        data: { ...liveStatusData, today_record: { checked_in: false } },
+      })
+    await expect(
+      xingyaProvider.checkIn(sessionAccount(), DEFAULT_PROVIDER_CONTEXT),
+    ).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "status_unavailable",
+    })
+    expect(requests.envelope).toHaveBeenCalledTimes(2)
+  })
+  it.each([false, true])(
+    "preserves public detection failure with prior status evidence=%s",
+    async (priorStatus) => {
+      const requests = await requestModule()
+      const account = {
+        ...mockAccount,
+        authType: priorStatus ? AuthTypeEnum.AccessToken : AuthTypeEnum.Cookie,
+      }
+      vi.mocked(requests.envelope).mockReset()
+      if (priorStatus)
+        vi.mocked(requests.envelope).mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: {},
+        })
+      vi.mocked(requests.envelope).mockRejectedValueOnce(
+        new Error("Public status unavailable"),
+      )
+      const result = xingyaProvider.detect!({ account, observedAt: 100 })
+      if (priorStatus)
+        await expect(result).resolves.toMatchObject({ outcome: "unknown" })
+      else await expect(result).rejects.toThrow("Public status unavailable")
+    },
+  )
   it.each([
     {
       response: { success: false, code: "AUTH_SESSION_REQUIRED" },
