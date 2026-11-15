@@ -16,6 +16,7 @@ import { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/k
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
+import { newApiSiteEndpointMetadata } from "./siteEndpointMetadata"
 import { getNewApiVariantRegistration } from "./variantRegistration"
 
 export const createNewApiCapabilities = (
@@ -24,6 +25,7 @@ export const createNewApiCapabilities = (
   siteType,
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
   site: {
+    endpointMetadata: newApiSiteEndpointMetadata,
     announcements: newApiSiteStructuredAnnouncements,
     notice: createNewApiSiteNotice(siteType),
   },

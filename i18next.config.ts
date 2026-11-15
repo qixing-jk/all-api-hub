@@ -20,6 +20,8 @@ export default defineConfig({
     transComponents: ["Trans"],
     useTranslationNames: ["useTranslation"],
     preservePatterns: [
+      // Check-in labels and localized source names are selected by the method registry.
+      "autoCheckin:methods.*",
       // Skip-reason labels are resolved from the reason-code map, so the
       // extractor never sees them in a t() call.
       "autoCheckin:skipReasons.*",

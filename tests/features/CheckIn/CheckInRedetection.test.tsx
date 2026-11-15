@@ -18,6 +18,7 @@ import { CheckInRedetectionButton } from "~/features/CheckIn/CheckInRedetectionB
 import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import toast from "~/lib/notify"
 import accountDialogLocale from "~/locales/en/accountDialog.json"
+import autoCheckinLocale from "~/locales/en/autoCheckin.json"
 import commonLocale from "~/locales/en/common.json"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/accountDiscovery"
@@ -29,7 +30,11 @@ import {
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
 const testI18n = await createResourceTestI18n({
-  en: { accountDialog: accountDialogLocale, common: commonLocale },
+  en: {
+    accountDialog: accountDialogLocale,
+    autoCheckin: autoCheckinLocale,
+    common: commonLocale,
+  },
 })
 const render = (ui: ReactElement) =>
   rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)

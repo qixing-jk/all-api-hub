@@ -158,6 +158,36 @@
       "uiOpenPretriggerEligible": "La preactivación al abrir la UI es elegible."
     }
   },
+  "methods": {
+    "daily": {
+      "description": "Este método usa el protocolo de check-in de terceros de {{source}} y solo funciona en instalaciones compatibles.",
+      "name": "Check-in diario de {{source}}"
+    },
+    "generic": {
+      "name": "Check-in diario"
+    },
+    "login": {
+      "description": "Inicia sesión en {{source}} y verifica el resultado del registro diario.",
+      "name": "Check-in por inicio de sesión en {{source}}"
+    },
+    "sources": {
+      "agentRouter": "Agent Router",
+      "aiRouter": "AI-ROUTER",
+      "baiApi": "Bai API",
+      "clawhud": "Clawhud",
+      "daigua": "DaiGua",
+      "denxio": "Denxio",
+      "freeApi": "Luna",
+      "geniusProgrammer": "Genius Programmer Relay",
+      "hiyo": "Hiyo Free",
+      "nexavlinks": "NexaVlinks",
+      "sidrune": "Sidrune",
+      "sub2apiPro": "Sub2API Pro",
+      "toolcode": "ToolCode",
+      "xiaobaiCode": "Xiaobai Code",
+      "xingya": "Xingya"
+    }
+  },
   "providerFallback": {
     "alreadyCheckedToday": "Ya hizo check-in hoy",
     "checkinFailed": "El check-in falló y el sitio no indicó el motivo. Inténtalo de nuevo más tarde o haz el check-in manualmente.",

@@ -28,7 +28,7 @@ export function useCheckInRedetection(
   accountId: string,
   onUpdated?: () => void | Promise<unknown>,
 ) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "autoCheckin"])
   const [isPending, setIsPending] = useState(false)
   const [choiceAccount, setChoiceAccount] = useState<SiteAccount | null>(null)
   const [choiceError, setChoiceError] = useState<string | null>(null)
@@ -224,7 +224,7 @@ export function useCheckInRedetection(
         }
       >
         <div className="space-y-density-3">
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {choiceAccount.site_name}
           </p>
           <Notice tone="info" title={t("messages.checkInRedetectAmbiguous")} />

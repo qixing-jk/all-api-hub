@@ -16,6 +16,7 @@ import type { ProviderModelCatalogCapability } from "./providerModelCatalog"
 import type { RedemptionCapability } from "./redemption"
 import type { ServiceCredentialCapability } from "./serviceCredential"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
+import type { SiteEndpointMetadataCapability } from "./siteEndpointMetadata"
 import type { SiteNoticeCapability } from "./siteNotice"
 import type { UsageHistoryCapability } from "./usageHistory"
 
@@ -27,6 +28,7 @@ export type SiteTypeCapabilities = {
   siteType: SiteType
   family?: SiteBackendFamily
   site?: {
+    endpointMetadata?: SiteEndpointMetadataCapability
     announcements?: SiteAnnouncementsCapability
     notice?: SiteNoticeCapability
   }

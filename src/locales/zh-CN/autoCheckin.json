@@ -150,6 +150,36 @@
       "uiOpenPretriggerEligible": "界面打开预触发条件满足。"
     }
   },
+  "methods": {
+    "daily": {
+      "description": "此方式使用 {{source}} 的第三方签到协议，仅适用于支持该协议的部署。",
+      "name": "{{source}} 签到"
+    },
+    "generic": {
+      "name": "每日签到"
+    },
+    "login": {
+      "description": "登录 {{source}} 并确认本次签到结果。",
+      "name": "{{source}} 登录签到"
+    },
+    "sources": {
+      "agentRouter": "Agent Router",
+      "aiRouter": "AI-ROUTER",
+      "baiApi": "柏API",
+      "clawhud": "詞元公益站",
+      "daigua": "DaiGua",
+      "denxio": "登仙公益站",
+      "freeApi": "露娜",
+      "geniusProgrammer": "天才程序员中转站",
+      "hiyo": "Hiyo Free",
+      "nexavlinks": "NexaVlinks",
+      "sidrune": "Sidrune",
+      "sub2apiPro": "Sub2API Pro",
+      "toolcode": "ToolCode",
+      "xiaobaiCode": "小白Code",
+      "xingya": "星芽"
+    }
+  },
   "providerFallback": {
     "alreadyCheckedToday": "今日已签到",
     "checkinFailed": "签到失败，站点没有返回具体原因。可稍后重试，或手动签到。",

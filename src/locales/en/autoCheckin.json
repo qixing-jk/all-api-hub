@@ -154,6 +154,36 @@
       "uiOpenPretriggerEligible": "UI-open pre-trigger is eligible."
     }
   },
+  "methods": {
+    "daily": {
+      "description": "This method uses the third-party {{source}} check-in protocol and only works on deployments that support it.",
+      "name": "{{source}} daily check-in"
+    },
+    "generic": {
+      "name": "Daily check-in"
+    },
+    "login": {
+      "description": "Sign in to {{source}} and verify the check-in result.",
+      "name": "{{source}} login check-in"
+    },
+    "sources": {
+      "agentRouter": "Agent Router",
+      "aiRouter": "AI-ROUTER",
+      "baiApi": "Bai API",
+      "clawhud": "Clawhud",
+      "daigua": "DaiGua",
+      "denxio": "Denxio",
+      "freeApi": "Luna",
+      "geniusProgrammer": "Genius Programmer Relay",
+      "hiyo": "Hiyo Free",
+      "nexavlinks": "NexaVlinks",
+      "sidrune": "Sidrune",
+      "sub2apiPro": "Sub2API Pro",
+      "toolcode": "ToolCode",
+      "xiaobaiCode": "Xiaobai Code",
+      "xingya": "Xingya"
+    }
+  },
   "providerFallback": {
     "alreadyCheckedToday": "Already checked in today",
     "checkinFailed": "Check-in failed and the site did not say why. Try again later, or check in manually.",

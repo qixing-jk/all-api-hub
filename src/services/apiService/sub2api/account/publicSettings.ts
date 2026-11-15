@@ -14,12 +14,17 @@ import { AuthTypeEnum } from "~/types/auth"
  */
 export async function fetchSub2ApiPublicSettings(
   request: ApiServiceRequest,
+  options?: { signal?: AbortSignal },
 ): Promise<Sub2ApiPublicSettingsData | undefined> {
   const body = await fetchApi<unknown>(
     { ...request, auth: { authType: AuthTypeEnum.None } },
     {
       endpoint: SUB2API_PUBLIC_SETTINGS_ENDPOINT,
-      options: { method: "GET", cache: "no-store" },
+      options: {
+        method: "GET",
+        cache: "no-store",
+        ...(options?.signal ? { signal: options.signal } : {}),
+      },
       errorResponseDecoder: decodeSub2ApiResponseError,
     },
   )

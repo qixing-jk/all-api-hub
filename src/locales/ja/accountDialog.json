@@ -155,8 +155,6 @@
   },
   "form": {
     "accessToken": "Access Token",
-    "agentRouterLoginCheckInMethod": "再ログインしてチェックイン",
-    "agentRouterLoginCheckInMethodDesc": "Agent Router にログインしてチェックイン結果を確認します。",
     "aimlApiKey": "通常の API キー（任意）",
     "aimlApiKeyHelp": "AI/ML API は残高・請求・使用量を通常の API キーにのみ表示し、キー管理には上の管理キーが必要です。通常の API キーを追加すると残高を取得できます。未設定でもキー管理は可能ですが、残高は利用不可として表示されます。",
     "aimlApiKeyPlaceholder": "通常の API キーを貼り付け",
@@ -217,7 +215,6 @@
     "customCheckInUrl": "外部チェックインサイト URL（任意）",
     "customRedeemUrl": "カスタムチャージ / 引き換えページ URL（任意）",
     "customRedeemUrlDesc": "チャージ / 交換ページの URL",
-    "dailyCheckInMethod": "デイリーチェックイン",
     "exchangeRate": "チャージ金額レート（CNY/USD）",
     "exchangeRateDesc": "1 USD をチャージするのに必要な人民元額を表します。システムが自動取得を試みますが、取得できない場合は手動入力してください",
     "exchangeRatePlaceholder": "レートを入力してください",
@@ -285,8 +282,6 @@
     "tagsRenameSave": "保存",
     "tagsSearchPlaceholder": "タグを検索...",
     "tagsSelectedCount_other": "{{count}} 個のタグを選択中",
-    "thirdPartyCheckInMethodDesc": "この方式はサードパーティーの {{source}} チェックインプロトコルを使用し、対応する環境でのみ利用できます。",
-    "thirdPartyDailyCheckInMethod": "{{source}} のデイリーチェックイン",
     "userId": "ユーザー ID",
     "username": "ユーザー名",
     "validRateError": "0 より大きい有効な為替レートを入力してください",
@@ -296,8 +291,7 @@
     "vercelTeam": "Vercel チーム",
     "vercelTeamHelp": "AI Gateway の残高とキーを所有するチームを選択します。チームごとに別のアカウントとして保存されます。",
     "vercelTeamLoadFailed": "チームを読み込めませんでした。アクセストークンを確認して再試行してください。",
-    "vercelTeamPlaceholder": "チームを選択",
-    "xingyaDailyCheckInMethod": "星芽デイリーチェックイン"
+    "vercelTeamPlaceholder": "チームを選択"
   },
   "infoPanel": {
     "aimlapiBootstrapInfo": "ログイン中の AI/ML API セッションを使い、専用の管理キーと通常の API キーを再利用または作成します。検証後、ユーザー名と ID を自動入力します。自動接続できない場合は、手動の案内に従ってください。",

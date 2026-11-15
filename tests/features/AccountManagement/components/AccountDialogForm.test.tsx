@@ -26,6 +26,7 @@ import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/comp
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AUTO_CHECKIN_TARGET_IDS } from "~/features/BasicSettings/components/tabs/CheckinRedeem/searchTargets"
 import enAccountDialog from "~/locales/en/accountDialog.json"
+import enAutoCheckin from "~/locales/en/autoCheckin.json"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
@@ -2914,6 +2915,7 @@ describe("AccountDialog AccountForm", () => {
 
   it("shows the automatic result in the trigger and explains it below", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+    testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
     const props = createProps()
     props.draft.siteType = SITE_TYPES.NEW_API
     props.draft.checkIn = createCheckIn({
@@ -2936,11 +2938,13 @@ describe("AccountDialog AccountForm", () => {
       )
     } finally {
       testI18n.removeResourceBundle("en", "accountDialog")
+      testI18n.removeResourceBundle("en", "autoCheckin")
     }
   })
 
   it("names a third-party check-in protocol and explains its compatibility boundary", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+    testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
     const props = createProps()
     const methodId = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
     props.draft.siteType = SITE_TYPES.SUB2API
@@ -2980,11 +2984,13 @@ describe("AccountDialog AccountForm", () => {
       ).toBeVisible()
     } finally {
       testI18n.removeResourceBundle("en", "accountDialog")
+      testI18n.removeResourceBundle("en", "autoCheckin")
     }
   })
 
   it("names the fixed method in the manual selection helper", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+    testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
     const props = createProps()
     props.draft.siteType = SITE_TYPES.NEW_API
     props.draft.checkIn = {
@@ -3013,6 +3019,7 @@ describe("AccountDialog AccountForm", () => {
       ).toBeVisible()
     } finally {
       testI18n.removeResourceBundle("en", "accountDialog")
+      testI18n.removeResourceBundle("en", "autoCheckin")
     }
   })
 
@@ -3091,7 +3098,7 @@ describe("AccountDialog AccountForm", () => {
     )
     await user.click(
       screen.getByRole("option", {
-        name: "accountDialog:form.dailyCheckInMethod",
+        name: "autoCheckin:methods.generic.name",
       }),
     )
     expect(props.onCheckInSelectionChange).toHaveBeenCalledWith(
