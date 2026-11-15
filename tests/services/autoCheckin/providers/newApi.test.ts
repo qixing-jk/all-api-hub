@@ -194,6 +194,183 @@ function prepareAccountSession(
 }
 
 describe("newApiProvider", () => {
+  it.each(["unknown-status", "login-message"])(
+    "prepares target login for %s and performs one native claim",
+    async (mode) => {
+      const { account, clicked } = prepareAccountSession()
+      vi.mocked(newApiFamilyRequests.data)
+        .mockReset()
+        .mockResolvedValueOnce(
+          mode === "unknown-status"
+            ? {}
+            : { enabled: true, stats: { checked_in_today: false } },
+        )
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValue({ enabled: true, stats: { checked_in_today: true } })
+      vi.mocked(newApiFamilyRequests.envelope).mockReset()
+      if (mode === "login-message")
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message: "Login required",
+          data: null,
+        })
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+        success: true,
+        message: "",
+        data: { id: "123" },
+      })
+      await expect(checkInForTest(account)).resolves.toMatchObject({
+        status: "success",
+      })
+      expect(clicked).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each([false, true])(
+    "preserves native session cancellation with dispatched=%s",
+    async (dispatched) => {
+      const { account } = prepareAccountSession()
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      login.loginAccount.mockImplementation(async (input) => {
+        if (dispatched)
+          await input.onAuthenticated({
+            navigate: vi.fn(),
+            waitForReadyPage: vi.fn(),
+            setVerificationReason: vi.fn(),
+            assertOrigin: vi.fn(),
+            sendSiteAction: async (_action, details) => {
+              if (typeof details !== "function")
+                return {
+                  success: true,
+                  data: {
+                    access_token: "test",
+                    token_type: "Bearer",
+                    access_expires_at: Date.now() / 1000 + 600,
+                    session: { sid: "test", current: true },
+                    user: { id: "123" },
+                  },
+                }
+              await details()
+              return { clicked: false, status: "target_not_found" }
+            },
+          })
+        return { status: "cancelled" }
+      })
+      await expect(checkInForTest(account)).resolves.toMatchObject({
+        status: dispatched ? "uncertain" : "failed",
+      })
+    },
+  )
+
+  it.each([
+    {
+      data: { enabled: true, stats: { checked_in_today: true } },
+      status: "already_checked",
+    },
+    {
+      data: { enabled: false, stats: { checked_in_today: false } },
+      status: "failed",
+    },
+  ])(
+    "stops configured login before mutation for status $status",
+    async ({ data, status }) => {
+      const { account, clicked } = prepareAccountSession()
+      vi.mocked(newApiFamilyRequests.envelope).mockReset()
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue(data)
+      await expect(checkInForTest(account)).resolves.toMatchObject({ status })
+      expect(login.loginAccount).not.toHaveBeenCalled()
+      expect(clicked).not.toHaveBeenCalled()
+      expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not start a login or mutation when configured-login status is rate limited", async () => {
+    const { account } = prepareAccountSession()
+    vi.mocked(newApiFamilyRequests.envelope).mockReset()
+    vi.mocked(newApiFamilyRequests.data).mockRejectedValue(
+      new ApiError("Too many requests", 429),
+    )
+    await expect(checkInForTest(account)).resolves.toMatchObject({
+      status: "failed",
+    })
+    expect(login.loginAccount).not.toHaveBeenCalled()
+    expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+  })
+
+  it("checks current execution intent before the configured-login direct mutation", async () => {
+    const { account } = prepareAccountSession()
+    vi.mocked(newApiFamilyRequests.envelope).mockReset()
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
+    await expect(
+      checkInForTest(account, {
+        ...DEFAULT_PROVIDER_CONTEXT,
+        beforeRecoveredMutation: async () => false,
+      }),
+    ).resolves.toMatchObject({
+      status: "skipped",
+      reasonCode: "auto_checkin_disabled",
+    })
+    expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { enabled: true, stats: { checked_in_today: true } },
+    { enabled: false, stats: { checked_in_today: false } },
+    {},
+  ])(
+    "does not click the authenticated native page without an eligible status %j",
+    async (status) => {
+      const { account, clicked } = prepareAccountSession()
+      vi.mocked(newApiFamilyRequests.data)
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValue(status)
+      await checkInForTest(account)
+      expect(login.loginAccount).toHaveBeenCalledOnce()
+      expect(clicked).not.toHaveBeenCalled()
+    },
+  )
+
+  it("reports an unavailable native target without dispatching a claim", async () => {
+    const { account, clicked, sendSiteAction } = prepareAccountSession()
+    account.checkIn.customCheckIn = {
+      turnstilePreTrigger: { kind: "clickSelector", selector: "#missing" },
+    }
+    const original = sendSiteAction.getMockImplementation()!
+    sendSiteAction.mockImplementation(async (action, details) =>
+      details?.prepareOnly
+        ? ({ success: false } as any)
+        : original(action, details),
+    )
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
+    await expect(checkInForTest(account)).resolves.toMatchObject({
+      status: "failed",
+    })
+    expect(clicked).not.toHaveBeenCalled()
+  })
+
   it.each([
     { readback: "checked", expected: "success" },
     { readback: "not_checked", expected: "uncertain" },

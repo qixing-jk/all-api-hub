@@ -5,7 +5,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { expect } from "@playwright/test"
 
-import { connectDevExtension } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import {
   getAccounts,
@@ -53,7 +53,9 @@ async function readStatus(bearer) {
   return body
 }
 
-const dev = await connectDevExtension()
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3-dev"),
+})
 let fixtureId
 let mutationCount = 0
 dev.context.on("request", (request) => {
@@ -208,9 +210,12 @@ try {
           await expect(
             page.getByText(fixture.site_name, { exact: true }).first(),
           ).toBeVisible({ timeout: 20_000 })
-          await page
+          const accountRow = page.getByTestId(
+            `account-management-account-list-item-${fixture.id}`,
+          )
+          await accountRow.hover()
+          await accountRow
             .getByTestId("account-management-row-edit-button")
-            .first()
             .click()
           const section = page.locator("#account-check-in-config")
           await page.locator("#account-check-in-redetect").click()

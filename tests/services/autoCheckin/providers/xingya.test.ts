@@ -115,6 +115,71 @@ function prepareLoginSession(identity: string | null = "7451") {
 }
 
 describe("xingyaProvider", () => {
+  it("cannot discover or fetch a status without an account or request", async () => {
+    const requests = await requestModule()
+    vi.mocked(requests.envelope).mockReset()
+    await expect(
+      xingyaProvider.getStatus!({ observedAt: 100 }),
+    ).resolves.toBeUndefined()
+    const detection = await xingyaProvider.detect!({ observedAt: 100 })
+    expect(detection).toMatchObject({ outcome: "unknown" })
+    expect(requests.envelope).not.toHaveBeenCalled()
+  })
+  it.each([
+    ["session_busy", undefined, "session_busy"],
+    ["failed", "verification_required", "manual_verification_required"],
+    ["failed", undefined, "authentication_required"],
+  ])(
+    "does not claim after login returns %s / %s",
+    async (status, reason, reasonCode) => {
+      login.loginAccount.mockResolvedValue({ status, reason })
+      const requests = await requestModule()
+      vi.mocked(requests.envelope).mockReset()
+      await expect(
+        xingyaProvider.checkIn(sessionAccount(), DEFAULT_PROVIDER_CONTEXT),
+      ).resolves.toMatchObject({ reasonCode })
+      expect(requests.envelope).not.toHaveBeenCalled()
+    },
+  )
+
+  it("keeps a dispatched claim uncertain when the login session ends before completion", async () => {
+    const mutationLifecycle = createAutoCheckinMutationLifecycle()
+    login.loginAccount.mockImplementation(async () => {
+      mutationLifecycle.onDispatch()
+      return { status: "cancelled" }
+    })
+    await expect(
+      xingyaProvider.checkIn(sessionAccount(), {
+        ...DEFAULT_PROVIDER_CONTEXT,
+        mutationLifecycle,
+      }),
+    ).resolves.toMatchObject({
+      status: "uncertain",
+      reasonCode: "checkin_unconfirmed",
+    })
+  })
+
+  it("reports a session transport failure before claiming", async () => {
+    prepareLoginSession().mockRejectedValue(new Error("session unavailable"))
+    const requests = await requestModule()
+    vi.mocked(requests.envelope).mockReset()
+    await expect(
+      xingyaProvider.checkIn(sessionAccount(), DEFAULT_PROVIDER_CONTEXT),
+    ).resolves.toMatchObject({ status: "failed" })
+    expect(requests.envelope).not.toHaveBeenCalled()
+  })
+
+  it("does not read status using a saved Cookie without its target login", async () => {
+    const requests = await requestModule()
+    vi.mocked(requests.envelope).mockReset()
+    await expect(
+      xingyaProvider.getStatus!({
+        account: { ...mockAccount, authType: AuthTypeEnum.Cookie },
+        observedAt: 100,
+      }),
+    ).resolves.toBeUndefined()
+    expect(requests.envelope).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })

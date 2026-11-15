@@ -18,6 +18,7 @@ import { createAgentRouterOAuthFlow } from "~/services/apiAdapters/newApi/accoun
 import { captureNewApiLoginCookieCredential } from "~/services/apiAdapters/newApi/account/cookieCredential"
 import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/browserOAuth"
 import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
+import { createBrowserLoginContext } from "~/services/browserLogin/browserLogin"
 import {
   getLoginVerificationContext,
   setLoginVerificationPresenter,
@@ -160,6 +161,91 @@ const completedTab = {
 }
 
 describe("browser OAuth context", () => {
+  it("rejects a protocol's mismatched authenticated identity before exposing account operations", async () => {
+    const onAuthenticated = vi.fn()
+    const context = createBrowserLoginContext({
+      id: "mismatch-protocol",
+      concurrencyKey: "mismatch-protocol",
+      displayName: "Test",
+      loginPath: "/login",
+      clearEvidenceAction: actions.clear,
+      execute: async () => ({
+        status: "authenticated" as const,
+        identity: "someone-else",
+      }),
+    })
+    await expect(
+      context.authenticate({
+        origin,
+        requestId: "protocol-mismatch",
+        expectedIdentity: "user-1",
+        onAuthenticated,
+      }),
+    ).resolves.toMatchObject({ status: "identity_mismatch" })
+    expect(onAuthenticated).not.toHaveBeenCalled()
+  })
+  it("keeps credential capture uncertain when the verified session exposes no credential", async () => {
+    const flow = { ...testFlow, captureCredential: async () => null }
+    await expect(
+      createBrowserOAuthContext(flow).authenticate({
+        origin,
+        requestId: "empty-capture",
+        expectedIdentity: "user-1",
+        captureCredential: true,
+      }),
+    ).resolves.toMatchObject({ status: "uncertain" })
+  })
+  it("rejects an authenticated operation without a target identity before opening a window", async () => {
+    const operation = vi.fn()
+    await expect(
+      browserOAuthContext.authenticate({
+        origin,
+        requestId: "missing-target",
+        onAuthenticated: operation,
+      }),
+    ).resolves.toMatchObject({ status: "failed" })
+    expect(operation).not.toHaveBeenCalled()
+    expect(browserApi.createWindow).not.toHaveBeenCalled()
+  })
+
+  it("waits for the same-origin account page and rejects foreign destinations", async () => {
+    const operation = vi.fn(async (session) => {
+      await expect(
+        session.waitForReadyPage("https://other.example/checkin"),
+      ).rejects.toThrow("Invalid account page origin")
+      browserApi.getTab
+        .mockResolvedValueOnce({ ...completedTab, status: "loading" })
+        .mockResolvedValue({ ...completedTab, url: `${origin}/checkin` })
+      await session.navigate(`${origin}/checkin`)
+      const ready = session.waitForReadyPage(`${origin}/checkin`)
+      await vi.waitFor(() =>
+        expect(
+          browserApi.getTab.mock.results.at(-1)?.value,
+        ).resolves.toMatchObject({ status: "loading" }),
+      )
+      tabUpdatedListeners.at(-1)!(
+        11,
+        {},
+        { ...completedTab, url: `${origin}/checkin` },
+      )
+      await ready
+      session.setVerificationReason("checkin")
+    })
+    await expect(
+      browserOAuthContext.authenticate({
+        origin,
+        requestId: "ready-page",
+        expectedIdentity: "user-1",
+        onAuthenticated: operation,
+      }),
+    ).resolves.toMatchObject({ status: "authenticated" })
+    expect(operation).toHaveBeenCalledOnce()
+    expect(browserApi.updateTab).toHaveBeenCalledWith(11, {
+      url: `${origin}/checkin`,
+      active: true,
+    })
+  })
+
   it("does not expose an authenticated operation for a mismatched account", async () => {
     const onAuthenticated = vi.fn()
     await expect(

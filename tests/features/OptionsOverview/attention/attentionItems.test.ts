@@ -249,6 +249,15 @@ describe("overview attention items", () => {
         automaticExecutionEnabled: true,
         methodKnowledge: {
           methods: {
+            [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+              detection: {
+                outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported,
+                evidence: {
+                  source: CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe,
+                  observedAt: 1,
+                },
+              },
+            },
             [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
               detection: {
                 outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported,

@@ -17,6 +17,22 @@ vi.mock("~/services/apiService/newApiFamily/request", () => ({
 }))
 beforeEach(() => vi.resetAllMocks())
 
+it("ignores invalid and non-web metadata URLs without choosing a peer", async () => {
+  vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+    success: true,
+    message: "",
+    data: { api_info: [{ url: "not a URL" }, { url: "ftp://xingya.site" }] },
+  })
+  const account = discoveryAccount()
+  const result = await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry: peersRegistry(),
+  })
+  expect(result.config.selection).toEqual({ mode: "automatic" })
+  expect(result.decision.outcome).toBe("ambiguous")
+})
+
 const discoveryAccount = (siteUrl = "https://mirror.example") =>
   buildSiteAccount({
     site_type: SITE_TYPES.NEW_API,

@@ -158,8 +158,13 @@ for (const mode of [
       if (mode !== "shared-mismatch") {
         const settings = await context.newPage()
         await settings.goto(`chrome://extensions/?id=${extensionId}`)
-        await settings.locator("extensions-toolbar #devMode").click()
-        await settings.locator("#allow-incognito cr-toggle").click()
+        const developerMode = settings.locator("extensions-toolbar #devMode")
+        if (!(await developerMode.evaluate((element: any) => element.checked)))
+          await developerMode.click()
+        const incognito = settings.locator("#allow-incognito cr-toggle")
+        if (!(await incognito.evaluate((element: any) => element.checked)))
+          await incognito.click()
+        await expect(incognito).toHaveJSProperty("checked", true)
         await expect
           .poll(() =>
             settings.evaluate(

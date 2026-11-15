@@ -199,6 +199,7 @@ export async function removeOwnedAccountFromUi(
     // Search mounts virtualized rows after its debounce. A missing DOM row is
     // never sufficient evidence that a saved account has already disappeared.
     await expect(accountRow).toBeVisible({ timeout: 30_000 })
+    await accountRow.hover()
     await accountRow.getByTestId(ids.rowMoreActionsButton).click()
     await page.getByTestId(ids.rowDeleteMenuItem).click()
     await page.getByTestId(ids.deleteConfirmButton).click()
@@ -459,6 +460,9 @@ async function runSite({ dev, site, directory, keepAccount }) {
                 credentials,
                 {
                   tokenName,
+                  beforeCreateScopedToken: async () => {
+                    state.tokenCreationAttempted = true
+                  },
                   onScopedTokenCreated: () => {
                     state.createdToken = true
                   },
@@ -700,13 +704,14 @@ async function runSite({ dev, site, directory, keepAccount }) {
         errors.push({ phase: "account-cleanup", message: error.message })
       }
     }
-    if (state.createdToken && !keepAccount) {
+    if (state.tokenCreationAttempted && !keepAccount) {
       try {
         await revokeNewApiAccessTokenFromUi(sitePage, {
           origin: site.origin,
           tokenName,
           ...credentials,
         })
+        state.tokenCleanupConfirmed = true
       } catch (error) {
         errors.push({ phase: "token-cleanup", message: error.message })
       }
@@ -742,9 +747,13 @@ async function runSite({ dev, site, directory, keepAccount }) {
           : state.accountSaveAttempted
             ? null
             : false,
-      tokenRetained:
-        Boolean(state.createdToken) &&
-        (keepAccount || errors.some(({ phase }) => phase === "token-cleanup")),
+      tokenRetained: state.tokenCleanupConfirmed
+        ? false
+        : state.createdToken
+          ? true
+          : state.tokenCreationAttempted
+            ? null
+            : false,
     },
     unverified: [
       "cold-login",

@@ -28,6 +28,30 @@ beforeEach(() => {
   fetchMock.mockReset()
   vi.stubGlobal("fetch", fetchMock)
 })
+it("discards a verified dashboard bearer after expiry before probing the website session", async () => {
+  vi.resetModules()
+  const ui = await import("~/services/apiService/newApiFamily/passwordUi")
+  ui.rememberVerifiedNewApiDashboardSession({
+    token: "expired-token",
+    expiresAt: Date.now() / 1000 - 1,
+    sessionId: "test",
+    user: { id: 17 },
+  })
+  expect(ui.readNewApiDashboardSessionAuth(request.origin)).toBeNull()
+  fetchMock.mockResolvedValue(
+    Response.json({ success: true, data: { id: 17 } }),
+  )
+  await new Promise((resolve) =>
+    ui.handleNewApiPasswordUi(
+      { ...request, phase: PASSWORD_UI_PHASES.Prepare },
+      resolve,
+    ),
+  )
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/user/self",
+    expect.objectContaining({ headers: {} }),
+  )
+})
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.useRealTimers()

@@ -263,6 +263,13 @@ export async function revokeNewApiAccessTokenFromUi(page, config) {
       })
       .click()
   }
-  await completeNewApiSecurityVerification(verification, config)
+  await expect
+    .poll(
+      async () => (await verification.isVisible()) || !(await name.isVisible()),
+      { timeout: 30_000 },
+    )
+    .toBe(true)
+  if (await name.isVisible())
+    await completeNewApiSecurityVerification(verification, config)
   await expect(name).toBeHidden({ timeout: 30_000 })
 }

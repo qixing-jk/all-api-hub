@@ -360,7 +360,7 @@ for (const scenario of [
 
     // Status is read before the mutation, and a day already claimed or a
     // deployment with claims paused never mutates at all.
-    expect(statusCalls[0]).toBe("GET status")
+    expect(calls[0]).toBe("GET status")
     if (scenario === "already_checked" || scenario === "claim_disabled") {
       expect(claimCalls).toHaveLength(0)
     } else {

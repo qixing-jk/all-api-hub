@@ -189,6 +189,11 @@ async function startBookmarkImportServer(): Promise<BookmarkImportServer> {
     // The New API check-in provider reads GET /api/user/checkin?month=... after
     // account import; report check-in disabled so no mutation is attempted and
     // no console error is logged for the missing route.
+    if (method === "GET" && url.pathname === "/api/user/xingya-checkin") {
+      sendJson(200, { success: false, message: "Unsupported route" })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/user/checkin") {
       sendJson(200, {
         success: true,

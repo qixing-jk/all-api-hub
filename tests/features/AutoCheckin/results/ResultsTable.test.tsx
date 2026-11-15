@@ -93,60 +93,64 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
-  it("guides a credential-blocked Cookie account before execution records a method", async () => {
-    const account = buildDisplaySiteData({
-      id: failedResult.accountId,
-      siteType: SITE_TYPES.NEW_API,
-      baseUrl: "https://xingya.site",
-      authType: AuthTypeEnum.Cookie,
-      checkIn: buildCheckInConfig({
-        selection: {
-          mode: "manual",
-          methodId: AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
-        },
-        methodKnowledge: {
-          methods: {
-            [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
-              detection: {
-                outcome: "matched",
-                evidence: {
-                  source: "probe",
-                  observedAt: failedResult.timestamp,
+  it.each([undefined, AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn])(
+    "guides a credential-blocked account using current selection over historical %s",
+    async (methodId) => {
+      const account = buildDisplaySiteData({
+        id: failedResult.accountId,
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://xingya.site",
+        authType: AuthTypeEnum.Cookie,
+        checkIn: buildCheckInConfig({
+          selection: {
+            mode: "manual",
+            methodId: AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+          },
+          methodKnowledge: {
+            methods: {
+              [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: {
+                    source: "probe",
+                    observedAt: failedResult.timestamp,
+                  },
                 },
               },
             },
           },
-        },
-      }),
-    })
-    render(
-      <ResultsTable
-        results={[
-          {
-            accountId: account.id,
-            accountName: failedResult.accountName,
-            timestamp: failedResult.timestamp,
-            status: CHECKIN_RESULT_STATUS.SKIPPED,
-            reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
-          },
-        ]}
-        accountInfoById={{ [account.id]: account }}
-      />,
-    )
-    await userEvent.setup().click(
-      await screen.findByRole("button", {
-        name: "accountDialog:login.configure",
-      }),
-    )
-    expect(openTargetedOptionsPage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        inPageSearchParams: expect.objectContaining({
-          accountId: account.id,
-          focusSection: "account-login",
         }),
-      }),
-    )
-  })
+      })
+      render(
+        <ResultsTable
+          results={[
+            {
+              accountId: account.id,
+              accountName: failedResult.accountName,
+              timestamp: failedResult.timestamp,
+              status: CHECKIN_RESULT_STATUS.SKIPPED,
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+              methodId,
+            },
+          ]}
+          accountInfoById={{ [account.id]: account }}
+        />,
+      )
+      await userEvent.setup().click(
+        await screen.findByRole("button", {
+          name: "accountDialog:login.configure",
+        }),
+      )
+      expect(openTargetedOptionsPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inPageSearchParams: expect.objectContaining({
+            accountId: account.id,
+            focusSection: "account-login",
+          }),
+        }),
+      )
+    },
+  )
 
   it.each([
     [
@@ -167,8 +171,27 @@ describe("AutoCheckin ResultsTable", () => {
       const account = buildDisplaySiteData({
         id: failedResult.accountId,
         siteType: SITE_TYPES.NEW_API,
-        baseUrl: "https://xingya.site",
+        baseUrl:
+          methodId === AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn
+            ? "https://agentrouter.org"
+            : "https://xingya.site",
         authType: AuthTypeEnum.AccessToken,
+        checkIn: buildCheckInConfig({
+          selection: { mode: "manual", methodId },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: {
+                    source: "probe",
+                    observedAt: failedResult.timestamp,
+                  },
+                },
+              },
+            },
+          },
+        }),
       })
       const user = userEvent.setup()
       render(

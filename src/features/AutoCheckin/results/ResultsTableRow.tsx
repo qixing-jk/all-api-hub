@@ -166,13 +166,11 @@ export default function ResultsTableRow({
                 account={account}
                 failure
                 checkInMethodId={
-                  result.methodId ??
                   resolveSelectedCheckInMethod({
                     config: account.checkIn,
                     siteType: account.siteType,
                     siteUrl: account.baseUrl,
-                  }) ??
-                  undefined
+                  }) ?? undefined
                 }
               />
             )}

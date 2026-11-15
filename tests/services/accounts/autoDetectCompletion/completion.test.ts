@@ -43,6 +43,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
   fetchApiData: fetchCheckInStatusMock,
+  fetchApi: vi.fn(async () => ({ success: true, data: {} })),
 }))
 
 vi.mock(
@@ -379,7 +380,7 @@ describe("auto-detect completion", () => {
     "keeps the completion draft unselected when discovery is $name",
     async ({ outcomes, expectedDecision }) => {
       const methodIds = [
-        "new-api:daily-checkin",
+        "xingya:daily-checkin",
         "veloera:daily-checkin",
       ] as const
       const registry = createAutoCheckinMethodRegistry(
