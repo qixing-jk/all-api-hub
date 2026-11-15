@@ -278,7 +278,7 @@ for (const method of ["linuxdo", "password"] as const) {
     })
     await checkInMethod.click()
     await page
-      .getByRole("option", { name: "Log in again and check in", exact: true })
+      .getByRole("option", { name: "Agent Router login check-in", exact: true })
       .click()
     const restoreAutomatic = dialog.getByRole("button", {
       name: "Restore automatic selection",

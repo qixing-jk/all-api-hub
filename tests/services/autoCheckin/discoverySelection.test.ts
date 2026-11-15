@@ -3,10 +3,12 @@ import { beforeEach, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
+import { fetchApi, fetchApiResponse } from "~/services/apiTransport/request"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { inspectCheckInMethods } from "~/services/checkin/autoCheckin/domain"
+import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { createAutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import { AuthTypeEnum } from "~/types"
 import type { CheckInMethodDetection, CheckInMethodId } from "~/types/checkIn"
@@ -14,6 +16,11 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
   newApiFamilyRequests: { data: vi.fn(), envelope: vi.fn() },
+}))
+vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
+  fetchApi: vi.fn(),
+  fetchApiResponse: vi.fn(),
 }))
 beforeEach(() => vi.resetAllMocks())
 
@@ -61,11 +68,13 @@ const peersRegistry = (
     "xingya:daily-checkin": matched(),
     "veloera:daily-checkin": matched(),
   },
+  siteType:
+    typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.SUB2API = SITE_TYPES.NEW_API,
 ) =>
   createAutoCheckinMethodRegistry(
     Object.entries(detections).map(([id, detection]) => ({
       id: id as CheckInMethodId,
-      siteTypes: [SITE_TYPES.NEW_API],
+      siteTypes: [siteType],
       discoveryOrigins:
         id === "xingya:daily-checkin"
           ? ["https://xingya.site", "https://xingya.space"]
@@ -78,27 +87,451 @@ const peersRegistry = (
     })),
   )
 
-it.each([
-  { apiInfo: { invalid: "not-an-array" } },
-  { apiInfo: [{ url: "https://xingya.site" }, { url: 42 }] },
-  { apiInfo: ["https://xingya.site"] },
-])(
-  "keeps a confirmed tie when public endpoint metadata is malformed: %j",
-  async ({ apiInfo }) => {
+it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
+  "keeps a %s protocol tie when an advertised endpoint member is malformed",
+  async (siteType) => {
     vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
       success: true,
+      data: { api_info: [{ url: "https://xingya.site" }, { url: 42 }] },
       message: "",
-      data: { api_info: apiInfo },
     })
-    const account = discoveryAccount("https://xingya.site")
+    vi.mocked(fetchApi).mockResolvedValue({
+      code: 0,
+      message: "",
+      data: {
+        api_base_url: "https://xingya.site",
+        custom_endpoints: [{ endpoint: 42 }],
+      },
+    })
+    const account = discoveryAccount()
+    account.site_type = siteType
     const result = await discoverCheckInMethods({
       account,
       config: account.checkIn,
-      registry: peersRegistry(),
+      registry: peersRegistry(undefined, siteType),
     })
     expect(result.decision.outcome).toBe("ambiguous")
   },
 )
+
+it("ranks Sub2API peers using its public API base and custom endpoints", async () => {
+  vi.mocked(fetchApi).mockResolvedValue({
+    code: 0,
+    message: "",
+    data: {
+      api_base_url: "https://codexcli.club/v1",
+      custom_endpoints: [
+        { name: "Mirror", endpoint: "https://mirror.codexcli.club/v1" },
+        { name: "Other", endpoint: "https://other.example/v1" },
+      ],
+    },
+  })
+  const account = discoveryAccount()
+  account.site_type = SITE_TYPES.SUB2API
+  const registry = createAutoCheckinMethodRegistry([
+    {
+      id: "genius-programmer:daily-checkin",
+      siteTypes: [SITE_TYPES.SUB2API],
+      discoveryOrigins: [
+        "https://codexcli.club",
+        "https://mirror.codexcli.club",
+      ],
+      provider: {
+        getReadiness: () => ({ ready: true }),
+        detect: async () => matched(),
+        checkIn: vi.fn(),
+      },
+    },
+    {
+      id: "sub2api-pro:daily-checkin",
+      siteTypes: [SITE_TYPES.SUB2API],
+      discoveryOrigins: ["https://other.example"],
+      provider: {
+        getReadiness: () => ({ ready: true }),
+        detect: async () => matched(),
+        checkIn: vi.fn(),
+      },
+    },
+  ])
+  const result = await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry,
+  })
+  expect(result.decision).toEqual({
+    outcome: "resolved",
+    methodId: "genius-programmer:daily-checkin",
+  })
+  expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+  expect(fetchApi).toHaveBeenCalledWith(
+    expect.objectContaining({
+      baseUrl: account.site_url,
+      auth: { authType: AuthTypeEnum.None },
+    }),
+    expect.objectContaining({ endpoint: "/api/v1/settings/public" }),
+  )
+})
+
+it("uses registered deployment hints without restricting mirror candidates", async () => {
+  vi.mocked(fetchApi).mockResolvedValue({
+    code: 0,
+    message: "",
+    data: { api_base_url: "https://codexcli.club/v1" },
+  })
+  const account = discoveryAccount()
+  account.site_type = SITE_TYPES.SUB2API
+  const methodIds: CheckInMethodId[] = [
+    "genius-programmer:daily-checkin",
+    "toolcode:daily-checkin",
+  ]
+  const registry = createAutoCheckinMethodRegistry(
+    autoCheckinMethodRegistry.registrations
+      .filter(({ id }) => methodIds.includes(id))
+      .map((entry) => ({
+        ...entry,
+        provider: {
+          getReadiness: () => ({ ready: true }),
+          detect: async () => matched(),
+          checkIn: vi.fn(),
+        },
+      })),
+  )
+  expect(
+    registry.getCandidates(SITE_TYPES.SUB2API, account.site_url),
+  ).toHaveLength(2)
+  const result = await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry,
+  })
+  expect(result.decision).toEqual({
+    outcome: "resolved",
+    methodId: "genius-programmer:daily-checkin",
+  })
+})
+
+const knownSub2ApiSourceAddresses = [
+  ["sub2api-pro:daily-checkin", "https://demo.sub2api.org"],
+  ["genius-programmer:daily-checkin", "https://codexcli.club"],
+  ["genius-programmer:daily-checkin", "https://api.codexcli.club"],
+  ["toolcode:daily-checkin", "https://toolcode.top"],
+  ["toolcode:daily-checkin", "https://toolcode.cc"],
+  ["toolcode:daily-checkin", "https://api.fasttoken.top"],
+  ["denxio:daily-checkin", "https://api.denxio.top"],
+  ["hiyo:daily-checkin", "https://free.hiyo.top"],
+  ["hiyo:daily-checkin", "https://codexfree.xiaotuxp.com"],
+  ["xiaobai-code:daily-checkin", "https://token.dialoguedui.com"],
+  ["xiaobai-code:daily-checkin", "https://img-api.dialoguedui.com"],
+  ["clawhud:daily-checkin", "https://api.clawhud.com"],
+  ["daigua:daily-checkin", "https://api.daigua.icu"],
+  ["sidrune:daily-checkin", "https://global.sidrune.ai"],
+  ["sidrune:daily-checkin", "https://cn.sidrune.ai"],
+  ["nexavlinks:daily-checkin", "https://asia.nexavlinks.com"],
+  ["nexavlinks:daily-checkin", "https://ai.man8out.com"],
+  ["nexavlinks:daily-checkin", "https://www.nexavlinks.com"],
+  ["freeapi:daily-checkin", "https://freeapi.site"],
+  ["bai-api:daily-checkin", "https://byeapi.top"],
+  ["bai-api:daily-checkin", "https://api.byeapi.top"],
+] as const satisfies readonly (readonly [CheckInMethodId, string])[]
+
+it.each(
+  knownSub2ApiSourceAddresses.flatMap(([methodId, origin]) =>
+    ["current", "api"].map((evidence) => ({ methodId, origin, evidence })),
+  ),
+)(
+  "ranks $methodId from its $evidence address $origin",
+  async ({ methodId, origin, evidence }) => {
+    vi.mocked(fetchApi).mockResolvedValue({
+      code: 0,
+      message: "",
+      data: evidence === "api" ? { api_base_url: `${origin}/v1` } : {},
+    })
+    const peerId: CheckInMethodId =
+      methodId === "genius-programmer:daily-checkin"
+        ? "toolcode:daily-checkin"
+        : "genius-programmer:daily-checkin"
+    const registry = createAutoCheckinMethodRegistry(
+      autoCheckinMethodRegistry.registrations
+        .filter(({ id }) => id === methodId || id === peerId)
+        .map((entry) => ({
+          ...entry,
+          provider: {
+            getReadiness: () => ({ ready: true }),
+            detect: async () => matched(),
+            checkIn: vi.fn(),
+          },
+        })),
+    )
+    const account = discoveryAccount(
+      evidence === "current" ? origin : "https://mirror.example",
+    )
+    account.site_type = SITE_TYPES.SUB2API
+    expect(
+      registry.getCandidates(account.site_type, account.site_url),
+    ).toHaveLength(2)
+    const result = await discoverCheckInMethods({
+      account,
+      config: account.checkIn,
+      registry,
+    })
+    expect(result.decision).toEqual({ outcome: "resolved", methodId })
+    for (const registration of registry.registrations)
+      expect(registration.provider.checkIn).not.toHaveBeenCalled()
+  },
+)
+
+it("counts AI-ROUTER's advertised API address while retaining its console eligibility gate", async () => {
+  vi.mocked(fetchApi).mockResolvedValue({
+    code: 0,
+    message: "",
+    data: {
+      api_base_url: "https://api.ai-router.dev",
+      custom_endpoints: [{ endpoint: "https://codexcli.club/v1" }],
+    },
+  })
+  const registry = createAutoCheckinMethodRegistry(
+    autoCheckinMethodRegistry.registrations
+      .filter(
+        ({ id }) =>
+          id === "ai-router:daily-checkin" ||
+          id === "genius-programmer:daily-checkin",
+      )
+      .map((entry) => ({
+        ...entry,
+        provider: {
+          getReadiness: () => ({ ready: true }),
+          detect: async () => matched(),
+          checkIn: vi.fn(),
+        },
+      })),
+  )
+  expect(
+    registry
+      .getCandidates(SITE_TYPES.SUB2API, "https://mirror.example")
+      .map(({ id }) => id),
+  ).not.toContain("ai-router:daily-checkin")
+  const account = discoveryAccount("https://ai-router.dev")
+  account.site_type = SITE_TYPES.SUB2API
+  const result = await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry,
+  })
+  expect(result.decision).toEqual({
+    outcome: "resolved",
+    methodId: "ai-router:daily-checkin",
+  })
+})
+
+const registeredSub2ApiPeers = () =>
+  createAutoCheckinMethodRegistry(
+    autoCheckinMethodRegistry.registrations
+      .filter(
+        ({ id }) =>
+          id === "genius-programmer:daily-checkin" ||
+          id === "toolcode:daily-checkin",
+      )
+      .map((entry) => ({
+        ...entry,
+        provider: {
+          getReadiness: () => ({ ready: true }),
+          detect: async () => matched(),
+          checkIn: vi.fn(),
+        },
+      })),
+  )
+
+it.each([true, false])(
+  "preserves native sibling certainty with a complete fingerprint: %s",
+  async (complete) => {
+    vi.mocked(fetchApi).mockImplementation(async (_request, options) => {
+      if (options.endpoint === "/api/v1/settings/public")
+        return {
+          code: 0,
+          message: "",
+          data: { api_base_url: "https://codexcli.club/v1" },
+        }
+      throw new ApiError("Not found", 404, options.endpoint)
+    })
+    vi.mocked(fetchApiResponse).mockImplementation(
+      async (_request, options) => {
+        const path = options.endpoint.split("?")[0]
+        if (path === "/api/v1/user/checkin/status")
+          return {
+            ok: true,
+            status: 200,
+            headers: {},
+            body: {
+              code: 0,
+              message: "",
+              data: {
+                enabled: true,
+                today_checked_in: false,
+                ...(complete ? { recent_records: [] } : {}),
+              },
+            },
+          }
+        if (path === "/api/v1/engagement/checkin/status")
+          return {
+            ok: true,
+            status: 200,
+            headers: {},
+            body: {
+              code: 0,
+              message: "",
+              data: {
+                checkin_enabled: true,
+                checked_in_today: false,
+                can_checkin: true,
+              },
+            },
+          }
+        return {
+          ok: false,
+          status: 404,
+          headers: {},
+          body: "404 page not found",
+        }
+      },
+    )
+    const account = discoveryAccount()
+    account.site_type = SITE_TYPES.SUB2API
+    const result = await discoverCheckInMethods({
+      account,
+      config: account.checkIn,
+    })
+    expect(result.detections["genius-programmer:daily-checkin"]?.outcome).toBe(
+      "matched",
+    )
+    expect(result.detections["toolcode:daily-checkin"]?.outcome).toBe("matched")
+    expect(result.detections["clawhud:daily-checkin"]?.outcome).toBe(
+      complete ? "unsupported" : "unknown",
+    )
+    expect(result.decision.outcome).toBe(complete ? "resolved" : "ambiguous")
+    if (complete)
+      expect(result.config.selection.methodId).toBe(
+        "genius-programmer:daily-checkin",
+      )
+  },
+)
+
+it.each([
+  { name: "empty metadata", data: {}, expected: "resolved" },
+  {
+    name: "a malformed API base",
+    data: { api_base_url: 42 },
+    expected: "ambiguous",
+  },
+  {
+    name: "a malformed endpoint list",
+    data: { custom_endpoints: {} },
+    expected: "ambiguous",
+  },
+  { name: "a missing envelope", data: undefined, expected: "ambiguous" },
+])(
+  "preserves Sub2API observation semantics for $name",
+  async ({ data, expected }) => {
+    vi.mocked(fetchApi).mockResolvedValue({ code: 0, message: "", data })
+    const account = discoveryAccount("https://codexcli.club")
+    account.site_type = SITE_TYPES.SUB2API
+    const result = await discoverCheckInMethods({
+      account,
+      config: account.checkIn,
+      registry: registeredSub2ApiPeers(),
+    })
+    expect(result.decision.outcome).toBe(expected)
+  },
+)
+
+it.each([
+  {
+    name: "registered API hostname",
+    data: { custom_endpoints: [{ endpoint: "https://api.codexcli.club/v1" }] },
+    expected: "resolved",
+  },
+  {
+    name: "custom endpoint field",
+    data: { custom_endpoints: [{ endpoint: "https://codexcli.club/v1" }] },
+    expected: "resolved",
+  },
+  {
+    name: "repeated hosts",
+    data: {
+      api_base_url: "https://codexcli.club",
+      custom_endpoints: [
+        ...Array(40).fill({ endpoint: "https://codexcli.club/v1" }),
+        { endpoint: "https://toolcode.top/v1" },
+      ],
+    },
+    expected: "ambiguous",
+  },
+  {
+    name: "relative and non-HTTP addresses",
+    data: {
+      api_base_url: "/codexcli.club/v1",
+      custom_endpoints: [{ endpoint: "file://codexcli.club" }],
+    },
+    expected: "ambiguous",
+  },
+  {
+    name: "documentation and foreign-family metadata",
+    data: {
+      doc_url: "https://codexcli.club",
+      api_info: [{ url: "https://codexcli.club" }],
+    },
+    expected: "ambiguous",
+  },
+])("ranks only advertised API URLs for $name", async ({ data, expected }) => {
+  vi.mocked(fetchApi).mockResolvedValue({ code: 0, message: "", data })
+  const account = discoveryAccount()
+  account.site_type = SITE_TYPES.SUB2API
+  const result = await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry: registeredSub2ApiPeers(),
+  })
+  expect(result.decision.outcome).toBe(expected)
+})
+
+it("keeps Sub2API public metadata in its browser partition without account credentials", async () => {
+  vi.mocked(fetchApi).mockResolvedValue({
+    code: 0,
+    message: "",
+    data: { api_base_url: "https://codexcli.club/v1" },
+  })
+  const account = discoveryAccount()
+  account.site_type = SITE_TYPES.SUB2API
+  const fetchContext = {
+    kind: "current-tab" as const,
+    tabId: 42,
+    origin: account.site_url,
+    incognito: true,
+  }
+  await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry: registeredSub2ApiPeers(),
+    request: {
+      baseUrl: account.site_url,
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test-token" },
+      cookieAuthSessionCookie: "test-cookie",
+      requestHeaders: { Authorization: "test-header" },
+      fetchContext,
+      currentTabFallback: "forbid",
+      directRequestReason: "caller_managed",
+    },
+  })
+  const publicCall = vi.mocked(fetchApi).mock.calls[0]
+  if (!publicCall) throw new Error("Missing public metadata request")
+  expect(publicCall[0]).toEqual({
+    baseUrl: account.site_url,
+    auth: { authType: AuthTypeEnum.None },
+    directRequestReason: "provider_protocol",
+    fetchContext,
+    currentTabFallback: "forbid",
+  })
+  expect(publicCall[1].options?.signal?.aborted).toBe(true)
+})
 
 it("lets the current hostname break a confirmed tie even when api_info is empty", async () => {
   vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({

@@ -154,6 +154,36 @@
       "uiOpenPretriggerEligible": "UI-Open-Pre-Trigger ist berechtigt."
     }
   },
+  "methods": {
+    "daily": {
+      "description": "Diese Methode verwendet das Check-in-Protokoll des Drittanbieters {{source}} und funktioniert nur bei Installationen, die es unterstützen.",
+      "name": "Täglicher Check-in über {{source}}"
+    },
+    "generic": {
+      "name": "Täglicher Check-in"
+    },
+    "login": {
+      "description": "Bei {{source}} anmelden und das Check-in-Ergebnis prüfen.",
+      "name": "Check-in durch Anmeldung bei {{source}}"
+    },
+    "sources": {
+      "agentRouter": "Agent Router",
+      "aiRouter": "AI-ROUTER",
+      "baiApi": "Bai API",
+      "clawhud": "Clawhud",
+      "daigua": "DaiGua",
+      "denxio": "Denxio",
+      "freeApi": "Luna",
+      "geniusProgrammer": "Genius Programmer Relay",
+      "hiyo": "Hiyo Free",
+      "nexavlinks": "NexaVlinks",
+      "sidrune": "Sidrune",
+      "sub2apiPro": "Sub2API Pro",
+      "toolcode": "ToolCode",
+      "xiaobaiCode": "Xiaobai Code",
+      "xingya": "Xingya"
+    }
+  },
   "providerFallback": {
     "alreadyCheckedToday": "Heute schon eingecheckt",
     "checkinFailed": "Check-in fehlgeschlagen, die Website hat keinen Grund genannt. Versuchen Sie es später erneut oder checken Sie manuell ein.",

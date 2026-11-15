@@ -155,8 +155,6 @@
   },
   "form": {
     "accessToken": "Access Token",
-    "agentRouterLoginCheckInMethod": "Đăng nhập lại và điểm danh",
-    "agentRouterLoginCheckInMethodDesc": "Đăng nhập Agent Router và xác nhận kết quả điểm danh.",
     "aimlApiKey": "Khóa API thường (tùy chọn)",
     "aimlApiKeyHelp": "AI/ML API chỉ hiển thị số dư, hóa đơn và mức sử dụng cho khóa API thường, còn việc quản lý khóa cần khóa quản trị ở trên. Hãy thêm khóa thường để đọc số dư; nếu không có, tài khoản vẫn quản lý được khóa nhưng số dư sẽ hiển thị là không khả dụng.",
     "aimlApiKeyPlaceholder": "Dán khóa API thường",
@@ -217,7 +215,6 @@
     "customCheckInUrl": "URL trang web điểm danh bên ngoài (tùy chọn)",
     "customRedeemUrl": "URL trang nạp tiền/quy đổi tùy chỉnh (tùy chọn)",
     "customRedeemUrlDesc": "URL của trang nạp tiền/quy đổi",
-    "dailyCheckInMethod": "Điểm danh hằng ngày",
     "exchangeRate": "Tỷ giá nạp (CNY/USD)",
     "exchangeRateDesc": "Biểu thị cần bao nhiêu Nhân dân tệ (CNY) để nạp 1 đô la Mỹ (USD). Hệ thống sẽ cố gắng tự động lấy, nếu không lấy được, vui lòng điền thủ công",
     "exchangeRatePlaceholder": "Vui lòng nhập tỷ giá nạp",
@@ -285,8 +282,6 @@
     "tagsRenameSave": "Lưu",
     "tagsSearchPlaceholder": "Tìm kiếm thẻ…",
     "tagsSelectedCount_other": "Đã chọn {{count}} thẻ",
-    "thirdPartyCheckInMethodDesc": "Phương thức này dùng giao thức điểm danh của bên thứ ba {{source}} và chỉ hoạt động trên các bản triển khai có hỗ trợ giao thức đó.",
-    "thirdPartyDailyCheckInMethod": "Điểm danh hằng ngày qua {{source}}",
     "userId": "User ID",
     "username": "Tên người dùng",
     "validRateError": "Vui lòng nhập tỷ giá hợp lệ, lớn hơn 0",
@@ -296,8 +291,7 @@
     "vercelTeam": "Nhóm Vercel",
     "vercelTeamHelp": "Chọn nhóm sở hữu số dư và khóa AI Gateway. Mỗi nhóm được lưu thành một tài khoản riêng.",
     "vercelTeamLoadFailed": "Không thể tải nhóm. Kiểm tra token truy cập rồi thử lại.",
-    "vercelTeamPlaceholder": "Chọn nhóm",
-    "xingyaDailyCheckInMethod": "Điểm danh Xingya hằng ngày"
+    "vercelTeamPlaceholder": "Chọn nhóm"
   },
   "infoPanel": {
     "aimlapiBootstrapInfo": "Dùng phiên AI/ML API đã đăng nhập để sử dụng lại hoặc tạo khóa quản lý và khóa API thông thường riêng, xác minh rồi tự điền tên người dùng và ID. Nếu không thể kết nối tự động, hãy làm theo hướng dẫn thủ công.",

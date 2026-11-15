@@ -108,7 +108,7 @@ export function AccountCheckInSection({
   isRedetectingCheckInMethods,
   checkInRedetectionFeedback,
 }: AccountCheckInSectionProps) {
-  const { t } = useTranslation(["accountDialog", "messages"])
+  const { t } = useTranslation(["accountDialog", "messages", "autoCheckin"])
   const { openFeedback, feedbackDialog } = useCheckInFeedback()
   const inspection = inspectAccountCheckIn({
     config: checkIn,

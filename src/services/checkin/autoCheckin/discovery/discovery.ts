@@ -6,9 +6,8 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
-import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   setCheckInSelection as applySelection,
   inspectCheckInMethods,
@@ -25,7 +24,6 @@ import type {
   AutoCheckinMethodRegistration,
   AutoCheckinMethodRegistry,
 } from "~/services/checkin/autoCheckin/providers/registry"
-import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
 import type {
   CheckInConfig,
@@ -34,7 +32,6 @@ import type {
   CheckInMethodId,
   CheckInMethodStatus,
 } from "~/types/checkIn"
-import { isRecord } from "~/utils/core/object"
 
 const DEFAULT_PER_ADAPTER_TIMEOUT_MS = 5_000
 const DEFAULT_DISCOVERY_DEADLINE_MS = 15_000
@@ -64,59 +61,35 @@ async function applySiteMetadataTieBreak(
       methodIds.includes(id) && (discoveryOrigins ?? origins)?.length,
   )
   if (!peers.length || timeoutMs <= 0 || input.signal?.aborted) return
+  const metadata = getSiteTypeCapabilities(input.account.site_type)?.site
+    ?.endpointMetadata
+  if (!metadata) return
   const controller = new AbortController()
   const onAbort = () => controller.abort()
   input.signal?.addEventListener("abort", onAbort, { once: true })
   try {
     const result = await withTimeout(
-      newApiFamilyRequests.envelope<unknown>(
-        {
-          baseUrl: input.account.site_url,
-          auth: { authType: AuthTypeEnum.None },
-          directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
-          ...(input.request?.fetchContext
-            ? { fetchContext: input.request.fetchContext }
-            : {}),
-          ...(input.request?.currentTabFallback
-            ? { currentTabFallback: input.request.currentTabFallback }
-            : {}),
-        },
-        {
-          endpoint: "/api/status",
-          options: {
-            method: "GET",
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        },
-      ),
+      metadata.read({
+        baseUrl: input.account.site_url,
+        signal: controller.signal,
+        ...(input.request?.fetchContext
+          ? { fetchContext: input.request.fetchContext }
+          : {}),
+        ...(input.request?.currentTabFallback
+          ? { currentTabFallback: input.request.currentTabFallback }
+          : {}),
+      }),
       timeoutMs,
       input.signal,
     )
-    if (
-      result.timedOut ||
-      input.signal?.aborted ||
-      result.value?.success !== true ||
-      !isRecord(result.value.data)
-    )
-      return
-    const routes = result.value.data.api_info
-    if (routes != null && !Array.isArray(routes)) return
-    if (
-      Array.isArray(routes) &&
-      routes.some((route) => !isRecord(route) || typeof route.url !== "string")
-    )
-      return
+    if (result.timedOut || input.signal?.aborted || !result.value) return
     const hostnames = new Set<string>()
     const ownHostname = readPublicHostname(input.account.site_url)
     if (ownHostname) hostnames.add(ownHostname)
-    if (Array.isArray(routes))
-      for (const route of routes) {
-        const hostname = isRecord(route)
-          ? readPublicHostname(route.url)
-          : undefined
-        if (hostname) hostnames.add(hostname)
-      }
+    for (const url of result.value.apiUrls) {
+      const hostname = readPublicHostname(url)
+      if (hostname) hostnames.add(hostname)
+    }
     const rankedDetections: Array<[CheckInMethodId, CheckInMethodDetection]> =
       []
     for (const peer of peers) {

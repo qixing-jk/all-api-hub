@@ -52,6 +52,10 @@ export type Sub2ApiAuthMeData = {
 export type Sub2ApiAuthMeResponse = Sub2ApiEnvelope<Sub2ApiAuthMeData>
 
 export type Sub2ApiPublicSettingsData = {
+  /** Admin-advertised API addresses, not console aliases or account API routing. */
+  api_base_url?: string | null
+  custom_endpoints?:
+    readonly { name?: string; endpoint: string; description?: string }[] | null
   affiliate_enabled?: boolean | null
   site_name?: string | null
   github_oauth_enabled?: boolean | null

@@ -32,7 +32,7 @@ function AccountCheckInRouteField({
   methodId: CheckInMethodId
   multiple: boolean
 }) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "autoCheckin"])
   const override = readCheckInRouteOverride(checkIn, methodId)
   const savedPath = override?.path ?? ""
   const [value, setValue] = useState(savedPath)
@@ -113,7 +113,7 @@ export function AccountCheckInRouteFields({
         />
       ))}
       {multiple && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           {t("form.checkInRoutePathDesc")}
         </p>
       )}

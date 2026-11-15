@@ -4,7 +4,10 @@ import {
   CHECK_IN_DISCOVERY_PRIORITIES,
   type CheckInAccountLoginMode,
 } from "~/constants/checkIn"
-import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
+import {
+  AI_ROUTER_API_ORIGIN,
+  AI_ROUTER_ORIGINS,
+} from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
@@ -94,7 +97,39 @@ type FeedbackStatusRoutes = readonly [
   ...CheckInFeedbackStatusRoute[],
 ]
 
+type CheckInMethodLabelKey =
+  "methods.generic.name" | "methods.daily.name" | "methods.login.name"
+type CheckInMethodDisclosureKey =
+  "methods.daily.description" | "methods.login.description"
+type CheckInMethodSourceNameKey = `methods.sources.${
+  | "geniusProgrammer"
+  | "denxio"
+  | "xiaobaiCode"
+  | "clawhud"
+  | "freeApi"
+  | "baiApi"
+  | "sub2apiPro"
+  | "toolcode"
+  | "hiyo"
+  | "aiRouter"
+  | "daigua"
+  | "sidrune"
+  | "nexavlinks"
+  | "xingya"
+  | "agentRouter"}`
+
+export type CheckInMethodPresentationMetadata = {
+  readonly kind: "daily" | "login"
+  readonly labelKey: CheckInMethodLabelKey
+  readonly disclosureKey?: CheckInMethodDisclosureKey
+  readonly sourceName?: string
+  readonly sourceNameKey?: CheckInMethodSourceNameKey
+}
+
 interface AutoCheckinMethodDefinitionBase {
+  readonly presentation?: Partial<
+    Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
+  >
   readonly discoveryPriority?: number
   /** Public-domain hints for the last tie-break; never an origin authorization. */
   readonly discoveryOrigins?: readonly string[]
@@ -291,11 +326,18 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
+    presentation: {
+      kind: "login",
+      sourceNameKey: "methods.sources.agentRouter",
+    },
     accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.Login,
     id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],
     origins: AGENT_ROUTER_ORIGINS,
-    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Agent Router",
+    },
     supportsStatusReadback: false,
     feedbackStatusRoutes: [{ path: "/api/status", public: true }],
     legacy: false,
@@ -356,6 +398,10 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: true,
   },
   [AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn]: {
+    // The pinned fork README advertises this demo; this hint does not prove support.
+    // jiangmuran/sub2api_pro@3f8585707632c959ca36be84e13c5a738c005a83.
+    discoveryOrigins: ["https://demo.sub2api.org"],
+    presentation: { sourceNameKey: "methods.sources.sub2apiPro" },
     id: AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -368,6 +414,12 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn]: {
+    presentation: {
+      sourceNameKey: "methods.sources.geniusProgrammer",
+    },
+    // Deployment observation: apiService/sub2api/checkin/geniusProgrammerCheckIn.ts.
+    // Public settings advertised api.codexcli.club on 2026-11-15; both are hints only.
+    discoveryOrigins: ["https://codexcli.club", "https://api.codexcli.club"],
     id: AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -382,6 +434,13 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.toolcode" },
+    // Console and advertised API addresses, public settings observed 2026-11-15.
+    discoveryOrigins: [
+      "https://toolcode.top",
+      "https://toolcode.cc",
+      "https://api.fasttoken.top",
+    ],
     id: AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -401,6 +460,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.denxio" },
+    // Deployment observation: apiService/sub2api/checkin/denxioCheckIn.ts.
+    discoveryOrigins: ["https://api.denxio.top"],
     id: AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -413,6 +475,13 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.hiyo" },
+    // Deployment observation: apiService/sub2api/checkin/hiyoCheckIn.ts.
+    // Public settings also advertise the CDN API address (2026-11-15).
+    discoveryOrigins: [
+      "https://free.hiyo.top",
+      "https://codexfree.xiaotuxp.com",
+    ],
     id: AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -427,6 +496,12 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn]: {
+    // #1575/#1581 and public settings, including the image API (2026-11-15).
+    discoveryOrigins: [
+      "https://token.dialoguedui.com",
+      "https://img-api.dialoguedui.com",
+    ],
+    presentation: { sourceNameKey: "methods.sources.xiaobaiCode" },
     id: AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -439,12 +514,15 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.aiRouter" },
     id: AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     // The protocol is served by one enumerated deployment on a different origin
     // than the dashboard, so it is gated by origin instead of probed on every
     // other Sub2API site.
     origins: AI_ROUTER_ORIGINS,
+    // API evidence may break a tie but cannot broaden the console eligibility gate.
+    discoveryOrigins: [...AI_ROUTER_ORIGINS, AI_ROUTER_API_ORIGIN],
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "AI-ROUTER",
@@ -457,6 +535,8 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.clawhud" },
+    discoveryOrigins: ["https://api.clawhud.com"],
     id: AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -473,6 +553,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn]: {
+    // #1622 and .scratch/daigua-checkin/spec.md identify this deployment.
+    discoveryOrigins: ["https://api.daigua.icu"],
+    presentation: { sourceNameKey: "methods.sources.daigua" },
     id: AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -489,6 +572,10 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: {
+    // #1688's selector links both consoles; public settings verified 2026-11-15.
+    // These hints do not assert shared accounts or credentials across currencies.
+    discoveryOrigins: ["https://global.sidrune.ai", "https://cn.sidrune.ai"],
+    presentation: { sourceNameKey: "methods.sources.sidrune" },
     id: AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
@@ -501,6 +588,8 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.freeApi" },
+    discoveryOrigins: ["https://freeapi.site"],
     id: AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     // The dashboard reads and writes `/api/v1/user/checkin` itself, so the
@@ -523,6 +612,14 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.nexavlinks" },
+    // Public settings advertised these API addresses on 2026-11-15; the latter
+    // addresses are not declarations of console aliases or shared accounts.
+    discoveryOrigins: [
+      "https://asia.nexavlinks.com",
+      "https://ai.man8out.com",
+      "https://www.nexavlinks.com",
+    ],
     id: AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     // The dashboard reads and writes `/api/v1/check-in` itself, so the method
@@ -545,6 +642,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: {
+    // #1746 plus api_base_url in the deployment's public settings (2026-11-15).
+    discoveryOrigins: ["https://byeapi.top", "https://api.byeapi.top"],
+    presentation: { sourceNameKey: "methods.sources.baiApi" },
     id: AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     // The daily rewards module is a deployment addition; upstream Sub2API has
@@ -583,6 +683,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.xingya" },
     accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.Session,
     id: AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
     siteTypes: [SITE_TYPES.NEW_API],
@@ -647,6 +748,29 @@ export function getAutoCheckinMethodSource(
   methodId: CheckInMethodId,
 ): AutoCheckinMethodSource {
   return AUTO_CHECKIN_METHOD_DEFINITIONS[methodId].source
+}
+
+/** All method UI consumes this projection; executable providers remain unloaded. */
+export function getCheckInMethodPresentationMetadata(
+  methodId: CheckInMethodId,
+): CheckInMethodPresentationMetadata {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  const kind = definition.presentation?.kind ?? "daily"
+  const defaults: CheckInMethodPresentationMetadata =
+    definition.source.kind === AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty
+      ? {
+          kind,
+          labelKey:
+            kind === "login" ? "methods.login.name" : "methods.daily.name",
+          disclosureKey:
+            kind === "login"
+              ? "methods.login.description"
+              : "methods.daily.description",
+          sourceName: definition.source.sourceName,
+        }
+      : { kind, labelKey: "methods.generic.name" }
+  return { ...defaults, ...definition.presentation }
 }
 
 const AUTO_CHECKIN_METHOD_METADATA = createAutoCheckinMethodMetadata(

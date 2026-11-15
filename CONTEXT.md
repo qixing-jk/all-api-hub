@@ -36,6 +36,29 @@ _Avoid_: dedicated override, alias, fallback
 A normalized product-owned shape consumed by features after upstream backend payloads have been adapted.
 _Avoid_: upstream response, New API response
 
+**Service Deployment**:
+An independently operated installation of an upstream backend. One deployment
+may expose several console and API addresses; shared software or branding does
+not establish a shared account store.
+_Avoid_: site type, adapter family, hostname alias
+
+**Site Endpoint**:
+A deployment address with an identified console or API purpose. Its path and
+inference protocol can distinguish it from another endpoint on the same host.
+_Avoid_: domain, origin, account URL
+
+**Endpoint Declaration**:
+Product-maintained facts about a deployment's addresses and their intended uses.
+An address declaration alone does not establish credential validity or account
+equivalence across those addresses.
+_Avoid_: advertised endpoint, credential permission
+
+**Endpoint Observation**:
+Address information observed from a particular site or account, with its source
+and scope. An advertised address may remain unclassified until its purpose is
+established.
+_Avoid_: endpoint declaration, verified account alias
+
 **Announcement Source**:
 An origin of announcements with its own sharing scope and available operations.
 A site-wide source is shared by accounts of that site; an account-scoped source
@@ -235,6 +258,10 @@ _Avoid_: provider
 - An **Account-Only Site Type** is an **Account Site Type** that is not a **Managed Site Type**.
 - A **Site Adapter Capability** may use shared **Adapter Family** behavior or site-specific protocol handling behind an explicit account-site seam.
 - An **Upstream Backend** may have deployments or forks whose behavior differs from the default upstream reference.
+- A **Service Deployment** may expose multiple **Site Endpoints** without
+  changing its **Site Type** or **Adapter Family**.
+- An **Endpoint Observation** can support discovery or display without becoming
+  an **Endpoint Declaration** or establishing shared account credentials.
 - A **Product Canonical Model** may retain historical New API field names when
   those fields are now the product contract. Its owner is determined by product
   semantics, not by the upstream backend that originally shaped it.

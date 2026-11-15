@@ -155,8 +155,6 @@
   },
   "form": {
     "accessToken": "訪問令牌",
-    "agentRouterLoginCheckInMethod": "重新登入並簽到",
-    "agentRouterLoginCheckInMethodDesc": "登入 Agent Router 並確認本次簽到結果。",
     "aimlApiKey": "一般 API Key（選填）",
     "aimlApiKeyHelp": "AI/ML API 只向一般 API Key 顯示餘額、帳單與用量，而金鑰管理需要上方的管理金鑰。填入一般 API Key 可讀取帳戶餘額；未填時仍可管理金鑰，但餘額會顯示為不可用。",
     "aimlApiKeyPlaceholder": "貼上一般 API Key",
@@ -217,7 +215,6 @@
     "customCheckInUrl": "外部簽到站點 URL（可選）",
     "customRedeemUrl": "自定義充值/兌換頁面 URL（可選）",
     "customRedeemUrlDesc": "充值/兌換頁面的 URL",
-    "dailyCheckInMethod": "每日簽到",
     "exchangeRate": "充值金額比例（CNY/USD）",
     "exchangeRateDesc": "表示充值 1 美元需要多少人民幣。系統會嘗試自動獲取，如未獲取到請手動填寫",
     "exchangeRatePlaceholder": "請輸入充值比例",
@@ -285,8 +282,6 @@
     "tagsRenameSave": "儲存",
     "tagsSearchPlaceholder": "搜尋標籤…",
     "tagsSelectedCount_other": "已選擇 {{count}} 個標籤",
-    "thirdPartyCheckInMethodDesc": "此方式使用 {{source}} 的第三方簽到協定，僅適用於支援該協定的部署。",
-    "thirdPartyDailyCheckInMethod": "{{source}} 簽到",
     "userId": "使用者 ID",
     "username": "使用者名稱",
     "validRateError": "請輸入有效的匯率，大於 0",
@@ -296,8 +291,7 @@
     "vercelTeam": "Vercel 團隊",
     "vercelTeamHelp": "選擇擁有 AI Gateway 餘額和金鑰的團隊。每個團隊儲存為獨立帳號。",
     "vercelTeamLoadFailed": "無法載入團隊，請檢查存取權杖後重試。",
-    "vercelTeamPlaceholder": "選擇團隊",
-    "xingyaDailyCheckInMethod": "星芽每日簽到"
+    "vercelTeamPlaceholder": "選擇團隊"
   },
   "infoPanel": {
     "aimlapiBootstrapInfo": "使用已登入的 AI/ML API 工作階段，重用或建立專用管理金鑰和一般 API key，驗證後自動填寫使用者名稱與 ID。無法完成自動連線時，再依指引手動填寫。",

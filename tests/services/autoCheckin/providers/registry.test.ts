@@ -54,6 +54,18 @@ const getAnyrouterRegistration = () =>
   registrationFor(AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn)
 
 describe("autoCheckinMethodRegistry", () => {
+  it.each([
+    AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+  ])(
+    "exposes site-specific extension %s as a third-party source",
+    (methodId) => {
+      expect(getAutoCheckinMethodSource(methodId)).toMatchObject({
+        kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+        sourceName: expect.any(String),
+      })
+    },
+  )
   it("uses Xiaoen's own daily method with authoritative status readback", () => {
     expect(getAutoCheckinCandidateMethodIds(SITE_TYPES.XIAOEN)).toEqual([
       AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn,
