@@ -115,6 +115,44 @@ function prepareLoginSession(identity: string | null = "7451") {
 }
 
 describe("xingyaProvider", () => {
+  it.each([
+    {
+      response: { success: false, code: "AUTH_SESSION_REQUIRED" },
+      expected: { reasonCode: "authentication_required" },
+    },
+    {
+      response: { success: false },
+      expected: {
+        reasonCode: "upstream_rejected",
+        messageKey: "autoCheckin:providerFallback.checkinFailed",
+      },
+    },
+    {
+      response: {
+        success: true,
+        message: "Already claimed",
+        data: { already_claimed: true, quota_awarded: 100 },
+      },
+      expected: { status: "already_checked", rawMessage: "Already claimed" },
+    },
+    {
+      response: {
+        success: true,
+        message: "Claimed",
+        data: { already_claimed: false, quota_awarded: 100 },
+      },
+      expected: { status: "success", rawMessage: "Claimed" },
+    },
+  ])(
+    "preserves the claim outcome and site copy for $response",
+    async ({ response, expected }) => {
+      const requests = await requestModule()
+      vi.mocked(requests.envelope).mockResolvedValueOnce(response as any)
+      await expect(
+        xingyaProvider.checkIn(mockAccount, DEFAULT_PROVIDER_CONTEXT),
+      ).resolves.toMatchObject(expected)
+    },
+  )
   it("cannot discover or fetch a status without an account or request", async () => {
     const requests = await requestModule()
     vi.mocked(requests.envelope).mockReset()
