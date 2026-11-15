@@ -396,23 +396,36 @@ describe("runPelicanTest", () => {
   })
 
   it.each([
-    ["while (true) {}", "interrupted"],
-    ["fs.writeFile('../escape.svg', 'bad')", "outside the virtual workspace"],
-    ["return new Uint8Array(256 * 1024 * 1024)", "out of memory"],
-  ])("returns bounded JS failures to the model: %s", async (code, message) => {
-    const requests = mockAgentTurns([
-      [AGENT_TEST_TOOL_NAMES.ExecuteJs, { code, timeout_ms: 50 }],
-    ])
-    const result = await runPelicanTest({
-      ...BASE_PARAMS,
-      executionMode: PELICAN_EXECUTION_MODES.Agent,
-    })
-    expect(result.agent?.calls[0]?.output).toEqual({
-      error: expect.stringContaining(message),
-    })
-    expect(result.agent?.files).toEqual([])
-    expect(requests).toHaveLength(2)
-  })
+    { code: "while (true) {}", message: "interrupted", timeoutMs: 50 },
+    {
+      code: "fs.writeFile('../escape.svg', 'bad')",
+      message: "outside the virtual workspace",
+      timeoutMs: undefined,
+    },
+    {
+      code: "return new Uint8Array(256 * 1024 * 1024)",
+      message: "out of memory",
+      timeoutMs: undefined,
+    },
+  ])(
+    "returns bounded JS failures to the model: $code",
+    async ({ code, message, timeoutMs }) => {
+      // Only the deadline case needs a short execution budget. Keep the default
+      // for other guards so CI scheduling cannot mask their specific failures.
+      const requests = mockAgentTurns([
+        [AGENT_TEST_TOOL_NAMES.ExecuteJs, { code, timeout_ms: timeoutMs }],
+      ])
+      const result = await runPelicanTest({
+        ...BASE_PARAMS,
+        executionMode: PELICAN_EXECUTION_MODES.Agent,
+      })
+      expect(result.agent?.calls[0]?.output).toEqual({
+        error: expect.stringContaining(message),
+      })
+      expect(result.agent?.files).toEqual([])
+      expect(requests).toHaveLength(2)
+    },
+  )
 
   it("continues past the former turn and tool limits until the model finishes", async () => {
     const requests = mockAgentTurns([
