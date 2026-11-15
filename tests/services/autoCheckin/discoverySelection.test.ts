@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApi, fetchApiResponse } from "~/services/apiTransport/request"
@@ -68,8 +68,7 @@ const peersRegistry = (
     "xingya:daily-checkin": matched(),
     "veloera:daily-checkin": matched(),
   },
-  siteType:
-    typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.SUB2API = SITE_TYPES.NEW_API,
+  siteType: AccountSiteType = SITE_TYPES.NEW_API,
 ) =>
   createAutoCheckinMethodRegistry(
     Object.entries(detections).map(([id, detection]) => ({
@@ -86,6 +85,42 @@ const peersRegistry = (
       },
     })),
   )
+
+it.each(
+  [
+    "https://user@xingya.site/v1",
+    "https://:password@xingya.site/v1",
+    "https://xingya.site/v1?token=temporary",
+  ].flatMap((url) =>
+    [SITE_TYPES.NEW_API, SITE_TYPES.SUB2API].map((siteType) => ({
+      url,
+      siteType,
+    })),
+  ),
+)(
+  "ignores credential or query-bearing $siteType discovery evidence: $url",
+  async ({ url, siteType }) => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+      success: true,
+      message: "",
+      data: { api_info: [{ url }] },
+    })
+    vi.mocked(fetchApi).mockResolvedValue({
+      code: 0,
+      message: "",
+      data: { api_base_url: url, custom_endpoints: [{ endpoint: url }] },
+    })
+    const account = discoveryAccount()
+    account.site_type = siteType
+    const result = await discoverCheckInMethods({
+      account,
+      config: account.checkIn,
+      registry: peersRegistry(undefined, siteType),
+    })
+    expect(result.decision.outcome).toBe("ambiguous")
+    expect(result.config.selection).toEqual({ mode: "automatic" })
+  },
+)
 
 it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
   "keeps a %s protocol tie when an advertised endpoint member is malformed",
@@ -642,6 +677,10 @@ it.each([
 it.each([
   { name: "a failed request", response: undefined },
   {
+    name: "a malformed New API endpoint list",
+    response: { success: true, message: "", data: { api_info: {} } },
+  },
+  {
     name: "an unsuccessful envelope",
     response: {
       success: false,
@@ -726,6 +765,36 @@ it("never uses metadata to promote an unknown peer", async () => {
   expect(result.decision.outcome).toBe("unknown")
   expect(result.config.selection.methodId).toBeUndefined()
   expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+})
+
+it("keeps confirmed peers ambiguous when the site has no metadata capability", async () => {
+  const account = discoveryAccount("https://xingya.site")
+  account.site_type = SITE_TYPES.OPENROUTER
+  const result = await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry: peersRegistry(undefined, SITE_TYPES.OPENROUTER),
+  })
+  expect(result.decision.outcome).toBe("ambiguous")
+  expect(result.config.selection).toEqual({ mode: "automatic" })
+  expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+  expect(fetchApi).not.toHaveBeenCalled()
+})
+
+it("keeps a tie when New API metadata has no response data", async () => {
+  vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+    success: true,
+    message: "",
+    data: null,
+  })
+  const account = discoveryAccount("https://xingya.site")
+  const result = await discoverCheckInMethods({
+    account,
+    config: account.checkIn,
+    registry: peersRegistry(),
+  })
+  expect(result.decision.outcome).toBe("ambiguous")
+  expect(result.config.selection).toEqual({ mode: "automatic" })
 })
 
 it("does not keep an automatic generic fallback when a more specific probe becomes unknown", async () => {

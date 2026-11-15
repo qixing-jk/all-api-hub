@@ -331,3 +331,9 @@ type CheckInMethodDiscoveryMetadata = {
 - 不创建全局可编排原生 operation 路由系统：已有适配器负责实际差异；共享端点结构只消除可验证的地址、归一化和元数据重复。
 
 本 spec 与新增领域词条保留 Git，供后续实现和审查。此前 Sub2API 源码副本及 Xingya 发现日志保留在原任务忽略的 evidence 目录；精确上游 revision/链接已提取到本 spec。此次不产生新日志、截图或 API dump，也不清理其他任务材料。
+
+### PR #1883 发现证据边界（2026-11-15）
+
+带 userinfo 或 query 的地址由签到发现的 hostname 投影拒绝；共享 metadata 归一化继续保留完整地址，其他消费者仍须执行自身用途和安全校验。New API/Sub2API 的自动选择回归测试覆盖此边界。
+
+评审和覆盖率核对材料保留在本地 `.scratch/pr-1883/artifacts/`，入口为 `acceptance.md`；供本次远端验收和开发者复查，不纳入 Git。两种 reader 在前置校验后再次检查 map 元素类型的兜底分支，以及 registry 保证返回对象后的可选链空对象分支，无法通过现有公开契约触发；保留防御代码，不构造违背契约的测试。

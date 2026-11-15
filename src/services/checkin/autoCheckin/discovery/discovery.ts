@@ -40,6 +40,8 @@ const readPublicHostname = (value: unknown): string | undefined => {
   if (typeof value !== "string") return undefined
   try {
     const url = new URL(value)
+    // Credential-bearing or temporary URLs are not reusable discovery evidence.
+    if (url.username || url.password || url.search) return undefined
     return url.protocol === "https:" || url.protocol === "http:"
       ? url.hostname.toLowerCase()
       : undefined
