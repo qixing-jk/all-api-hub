@@ -1781,6 +1781,8 @@ test("keeps settings beside the conversation and preserves drafts when the respo
   await calendar
     .getByRole("button", { name: "No expiration", exact: true })
     .click()
+  // The date value clears before the closing popover releases its Escape layer.
+  await expect(calendar).toHaveCount(0)
   await expect(expiration).toHaveValue("")
   await notes.press("Escape")
   await expect(settings).toBeHidden()
