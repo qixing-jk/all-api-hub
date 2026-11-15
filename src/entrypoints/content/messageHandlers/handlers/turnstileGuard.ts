@@ -30,8 +30,7 @@ interface WaitForTurnstileTokenRequest {
   preTrigger?: TurnstilePreTrigger
 }
 
-interface WaitForTurnstileTokenSuccessResponse
-  extends TurnstileTokenWaitResult {
+interface WaitForTurnstileTokenSuccessResponse extends TurnstileTokenWaitResult {
   success: true
 }
 
@@ -41,16 +40,15 @@ interface WaitForTurnstileTokenErrorResponse {
 }
 
 type WaitForTurnstileTokenResponse =
-  | WaitForTurnstileTokenSuccessResponse
-  | WaitForTurnstileTokenErrorResponse
+  WaitForTurnstileTokenSuccessResponse | WaitForTurnstileTokenErrorResponse
 
 interface TriggerCheckinPageActionRequest {
   requestId?: string
   trigger?: TurnstilePreTrigger
+  prepareOnly?: boolean
 }
 
-interface TriggerCheckinPageActionSuccessResponse
-  extends CheckinPageActionTriggerResult {
+interface TriggerCheckinPageActionSuccessResponse extends CheckinPageActionTriggerResult {
   success: true
 }
 
@@ -59,9 +57,15 @@ interface TriggerCheckinPageActionErrorResponse {
   error: string
 }
 
+interface TriggerCheckinPageActionPreparedResponse {
+  success: true
+  clicked: false
+}
+
 type TriggerCheckinPageActionResponse =
   | TriggerCheckinPageActionSuccessResponse
   | TriggerCheckinPageActionErrorResponse
+  | TriggerCheckinPageActionPreparedResponse
 
 /**
  * Builds the in-page assist hooks for a Turnstile wait.
@@ -85,9 +89,8 @@ function createTurnstileUserAssist(requestId?: string): TurnstileUserAssist {
       }
       if (!presented) return false
       // Loaded lazily so content-script UI setup is not pulled into node tests.
-      const { showTurnstileManualAssistToast } = await import(
-        "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
-      )
+      const { showTurnstileManualAssistToast } =
+        await import("~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts")
       await showTurnstileManualAssistToast()
       return true
     },
@@ -171,6 +174,10 @@ export function handleTriggerCheckinPageAction(
     try {
       if (request.trigger?.kind === TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector) {
         await waitForCheckinPageActionTarget(request.trigger)
+      }
+      if (request.prepareOnly === true) {
+        sendResponse({ success: true, clicked: false })
+        return
       }
       const existingWidgets = capturePageVerificationWidgets()
       const result = triggerCheckinPageAction({

@@ -46,6 +46,7 @@ export async function loginSub2ApiWithPassword(
     sessionMode: request.sessionMode,
     abortSignal: request.abortSignal,
     captureCredential: request.captureCredential,
+    onAuthenticated: request.onAuthenticated,
     ...(request.attended === undefined ? {} : { attended: request.attended }),
   })
 }

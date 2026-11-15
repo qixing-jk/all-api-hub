@@ -1,10 +1,7 @@
 import type { BrowserContext, Worker } from "@playwright/test"
 import { expect } from "@playwright/test"
 
-import {
-  createTargetCommandSender,
-  evaluateInTarget,
-} from "~~/e2e/utils/cdpTarget"
+import { createTargetCommandSender, evaluateInTarget } from "./cdpTarget.ts"
 
 /**
  * Evaluate callbacks with JSON arguments in the current extension worker.

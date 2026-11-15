@@ -10,7 +10,10 @@ import type {
   LoginVerificationReason,
 } from "~/constants/browserLogin"
 import { TURNSTILE_MANUAL_WAIT_MS } from "~/constants/turnstile"
-import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
+import type {
+  AccountAuthenticatedSession,
+  AccountLoginCredential,
+} from "~/services/apiAdapters/contracts/accountLogin"
 import {
   composeAbortSignals,
   runAbortableTask,
@@ -89,6 +92,7 @@ export interface BrowserLoginInput {
   attended?: boolean
   sessionMode?: BrowserLoginSessionMode
   captureCredential?: boolean
+  onAuthenticated?: (session: AccountAuthenticatedSession) => Promise<void>
 }
 
 type BrowserLoginProtocolFailureStatus =
@@ -128,7 +132,7 @@ export interface BrowserLoginContextOptions {
   sessionWaitTimeoutMs?: number
 }
 
-export interface BrowserLoginSession {
+export interface BrowserLoginSession extends AccountAuthenticatedSession {
   tabId: number
   input: BrowserLoginInput
   sendSiteAction<T = unknown>(
@@ -383,6 +387,8 @@ async function authenticateBrowserLogin<Evidence>(
     runAbortableTask(task, { signals: [signal] })
   try {
     signal?.throwIfAborted()
+    if (input.onAuthenticated && !input.expectedIdentity)
+      return { status: BROWSER_LOGIN_STATUS.Failed }
     context = await openVisibleAuthContext(
       input.origin,
       flow.loginPath,
@@ -432,77 +438,107 @@ async function authenticateBrowserLogin<Evidence>(
         ),
       )
     }
-    const result = await active(() =>
-      flow.execute({
-        tabId: opened.tabId,
-        input,
-        async sendSiteAction<T>(
-          action: string,
-          details?:
-            Record<string, unknown> | (() => Promise<Record<string, unknown>>),
-        ) {
-          await waitForBrowserLoginPageProtection({
-            tabId: opened.tabId,
-            origin: input.origin,
-            requestId: input.requestId,
+    const session: BrowserLoginSession = {
+      tabId: opened.tabId,
+      abortSignal: signal,
+      input,
+      async sendSiteAction<T>(
+        action: string,
+        details?:
+          Record<string, unknown> | (() => Promise<Record<string, unknown>>),
+      ) {
+        await waitForBrowserLoginPageProtection({
+          tabId: opened.tabId,
+          origin: input.origin,
+          requestId: input.requestId,
+          signal,
+          assertOrigin: () =>
+            active(() => assertTabOrigin(opened, input.origin)),
+          interactionDeadline: () => interactionDeadline,
+        })
+        // Ownership and document-bound observation must use the page that
+        // survived clearance, which can navigate or take manual interaction.
+        const preparedDetails =
+          typeof details === "function" ? await details() : details
+        return await sendSiteMessage<T>(action, preparedDetails)
+      },
+      observeSubmittedAction: sendSiteMessage,
+      async sendAuthorizationAction<T>(
+        action: string,
+        authorizationUrl: string,
+        details?: Record<string, unknown>,
+      ) {
+        await active(() =>
+          assertTabOrigin(opened, new URL(authorizationUrl).origin),
+        )
+        return await active(() =>
+          sendContentMessage<T>(
+            opened.tabId,
+            action,
+            input.requestId,
+            details,
             signal,
-            assertOrigin: () =>
-              active(() => assertTabOrigin(opened, input.origin)),
-            interactionDeadline: () => interactionDeadline,
-          })
-          // Ownership and document-bound observation must use the page that
-          // survived clearance, which can navigate or take manual interaction.
-          const preparedDetails =
-            typeof details === "function" ? await details() : details
-          return await sendSiteMessage<T>(action, preparedDetails)
-        },
-        observeSubmittedAction: sendSiteMessage,
-        async sendAuthorizationAction<T>(
-          action: string,
-          authorizationUrl: string,
-          details?: Record<string, unknown>,
-        ) {
-          await active(() =>
-            assertTabOrigin(opened, new URL(authorizationUrl).origin),
-          )
-          return await active(() =>
-            sendContentMessage<T>(
-              opened.tabId,
-              action,
-              input.requestId,
-              details,
-              signal,
-            ),
-          )
-        },
-        navigate: (url) =>
-          active(() => updateTab(opened.tabId, { url, active: true })),
-        assertOrigin: () => active(() => assertTabOrigin(opened, input.origin)),
-        async canResetSession() {
-          signal?.throwIfAborted()
-          const tab = await getTab(opened.tabId)
-          if (!tab.incognito) return false
-          const others = await queryTabs({})
-          return !others.some(
-            (other) =>
-              other.id !== opened.tabId &&
-              other.incognito === true &&
-              other.url &&
-              new URL(other.url).origin === input.origin,
-          )
-        },
-        async requestAssist(reason) {
-          signal?.throwIfAborted()
-          const registered = getLoginVerificationContext(input.requestId)
-          if (registered) registered.reason = reason
-          return requestLoginVerificationAssist(input.requestId)
-        },
-        interactionDeadline: () => interactionDeadline,
-        waitForTab: (predicate, timeoutMs, onPending) =>
-          waitForTab(opened, predicate, timeoutMs, onPending, signal),
-      }),
-    )
+          ),
+        )
+      },
+      navigate: (url) =>
+        active(() => updateTab(opened.tabId, { url, active: true })),
+      async waitForReadyPage(url) {
+        const target = new URL(url)
+        if (target.origin !== input.origin)
+          throw new Error("Invalid account page origin")
+        await waitForTab(
+          opened,
+          (tab) => {
+            if (tab.status !== "complete" || !tab.url) return false
+            const current = new URL(tab.url)
+            return (
+              current.origin === target.origin &&
+              current.pathname === target.pathname
+            )
+          },
+          BROWSER_LOGIN_PAGE_TIMEOUT_MS,
+          undefined,
+          signal,
+        )
+      },
+      setVerificationReason(reason) {
+        signal?.throwIfAborted()
+        const context = getLoginVerificationContext(input.requestId)
+        if (context) context.reason = reason
+      },
+      assertOrigin: () => active(() => assertTabOrigin(opened, input.origin)),
+      async canResetSession() {
+        signal?.throwIfAborted()
+        const tab = await getTab(opened.tabId)
+        if (!tab.incognito) return false
+        const others = await queryTabs({})
+        return !others.some(
+          (other) =>
+            other.id !== opened.tabId &&
+            other.incognito === true &&
+            other.url &&
+            new URL(other.url).origin === input.origin,
+        )
+      },
+      async requestAssist(reason) {
+        signal?.throwIfAborted()
+        const registered = getLoginVerificationContext(input.requestId)
+        if (registered) registered.reason = reason
+        return requestLoginVerificationAssist(input.requestId)
+      },
+      interactionDeadline: () => interactionDeadline,
+      waitForTab: (predicate, timeoutMs, onPending) =>
+        waitForTab(opened, predicate, timeoutMs, onPending, signal),
+    }
+    let result = await active(() => flow.execute(session))
     signal?.throwIfAborted()
+    if (
+      result.status === BROWSER_LOGIN_STATUS.Authenticated &&
+      input.expectedIdentity &&
+      result.identity !== input.expectedIdentity
+    )
+      return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }
     if (
       result.status === BROWSER_LOGIN_STATUS.Authenticated &&
       input.captureCredential
@@ -513,10 +549,14 @@ async function authenticateBrowserLogin<Evidence>(
       )
       signal?.throwIfAborted()
       if (!credential) return { status: BROWSER_LOGIN_STATUS.Uncertain }
-      authenticated = true
-      return { ...result, credential }
+      result = { ...result, credential }
     }
     authenticated = result.status === BROWSER_LOGIN_STATUS.Authenticated
+    if (authenticated && input.onAuthenticated) {
+      await session.assertOrigin()
+      await active(() => input.onAuthenticated!(session))
+      signal?.throwIfAborted()
+    }
     return result
   } catch (error) {
     if (signal?.aborted || error instanceof AuthCancelledError)
@@ -636,6 +676,7 @@ function buildJoinKey<Evidence>(
   if (
     !input.expectedIdentity ||
     flow.joinConcurrent === false ||
+    input.onAuthenticated ||
     input.abortSignal
   )
     return null

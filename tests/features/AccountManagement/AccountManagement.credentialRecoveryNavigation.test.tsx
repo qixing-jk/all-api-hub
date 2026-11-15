@@ -1,12 +1,16 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountManagement from "~/features/AccountManagement/AccountManagement"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  buildCheckInConfig,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { scenario, openEditAccount } = vi.hoisted(() => ({
@@ -98,6 +102,36 @@ describe("account login recovery navigation", () => {
         scenario.displayData[0],
         undefined,
       ),
+    )
+  })
+
+  it("keeps a session check-in account on login settings without credential recovery support", async () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn
+    const account = buildDisplaySiteData({
+      id: routeParams.accountId,
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://xingya.site",
+      authType: AuthTypeEnum.Cookie,
+      checkIn: buildCheckInConfig({
+        selection: { mode: "manual", methodId },
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 1 },
+              },
+            },
+          },
+        },
+      }),
+    })
+    scenario.displayData = [account]
+    render(<AccountManagement routeParams={routeParams} />)
+    await waitFor(() =>
+      expect(openEditAccount).toHaveBeenCalledWith(account, {
+        focusSection: "account-login",
+      }),
     )
   })
 

@@ -5,6 +5,8 @@ import {
 } from "~/features/AccountManagement/routeParams"
 import toast from "~/lib/notify"
 import { supportsAccountCredentialRecovery as supportsRecovery } from "~/services/accountCredentialRecovery/policy"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
+import { getCheckInAccountLoginMode } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   ACCOUNT_AUTH_HEALTH_STATUS_CODES,
   SiteHealthStatus,
@@ -23,19 +25,35 @@ type RecoveryAccount = Pick<
 > &
   Partial<Pick<DisplaySiteData, "disabled" | "health">>
 
+/** Check-in login settings can be available without credential replacement. */
+export function supportsCheckInAccountLogin(
+  account: RecoveryAccount,
+  methodId?: string | null,
+): boolean {
+  return Boolean(
+    !account.disabled &&
+    getCheckInAccountLoginMode(methodId) &&
+    getAccountLoginMethods({
+      site_type: account.siteType,
+      site_url: account.baseUrl,
+      account_info: {},
+    }).length,
+  )
+}
+
 /** Only adopted accounts can use account login to replace their saved credential. */
 export function supportsAccountCredentialRecovery(
   account: RecoveryAccount | null | undefined,
 ): boolean {
   return Boolean(
     account &&
-      !account.disabled &&
-      supportsRecovery({
-        authType: account.authType,
-        site_type: account.siteType,
-        site_url: account.baseUrl,
-        account_info: {},
-      }),
+    !account.disabled &&
+    supportsRecovery({
+      authType: account.authType,
+      site_type: account.siteType,
+      site_url: account.baseUrl,
+      account_info: {},
+    }),
   )
 }
 
@@ -45,9 +63,9 @@ export function hasCredentialRecoveryAuthenticationFailure(
 ): boolean {
   return Boolean(
     supportsAccountCredentialRecovery(account) &&
-      account?.health?.status === SiteHealthStatus.Warning &&
-      account.health.code ===
-        ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED,
+    account?.health?.status === SiteHealthStatus.Warning &&
+    account.health.code ===
+      ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED,
   )
 }
 

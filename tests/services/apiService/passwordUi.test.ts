@@ -28,9 +28,73 @@ beforeEach(() => {
   fetchMock.mockReset()
   vi.stubGlobal("fetch", fetchMock)
 })
+it("discards a verified dashboard bearer after expiry before probing the website session", async () => {
+  vi.resetModules()
+  const ui = await import("~/services/apiService/newApiFamily/passwordUi")
+  ui.rememberVerifiedNewApiDashboardSession({
+    token: "expired-token",
+    expiresAt: Date.now() / 1000 - 1,
+    sessionId: "test",
+    user: { id: 17 },
+  })
+  expect(ui.readNewApiDashboardSessionAuth(request.origin)).toBeNull()
+  fetchMock.mockResolvedValue(
+    Response.json({ success: true, data: { id: 17 } }),
+  )
+  await new Promise((resolve) =>
+    ui.handleNewApiPasswordUi(
+      { ...request, phase: PASSWORD_UI_PHASES.Prepare },
+      resolve,
+    ),
+  )
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/user/self",
+    expect.objectContaining({ headers: {} }),
+  )
+})
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.useRealTimers()
+})
+it("reuses the verified dashboard bearer for subsequent work without refreshing again", async () => {
+  vi.resetModules()
+  const ui = await import("~/services/apiService/newApiFamily/passwordUi")
+  const auth = {
+    access_token: "verified-bearer",
+    token_type: "Bearer",
+    access_expires_at: Date.now() / 1000 + 600,
+    session: { sid: "session-a", current: true },
+    user: { id: 17 },
+  }
+  fetchMock.mockImplementation(async (path, init) => {
+    if (path === "/api/user/self")
+      return (init?.headers as Record<string, string>)?.Authorization
+        ? Response.json({ success: true, data: { id: 17 } })
+        : new Response(null, { status: 401 })
+    if (path === "/api/user/auth/refresh")
+      return Response.json({ success: true, data: auth })
+    throw new Error("Unexpected endpoint")
+  })
+  const result = await new Promise((resolve) =>
+    ui.handleNewApiPasswordUi(
+      { ...request, phase: PASSWORD_UI_PHASES.Prepare },
+      resolve,
+    ),
+  )
+  expect(result).toMatchObject({ status: "authenticated", identity: "17" })
+  expect(ui.readNewApiDashboardSessionAuth(request.origin)).toMatchObject({
+    success: true,
+    data: auth,
+  })
+  expect(
+    ui.readNewApiDashboardSessionAuth("https://another.example"),
+  ).toBeNull()
+  expect(
+    fetchMock.mock.calls.filter(([path]) => path === "/api/user/auth/refresh"),
+  ).toHaveLength(1)
+  vi.useFakeTimers()
+  vi.setSystemTime((auth.access_expires_at + 1) * 1000)
+  expect(ui.readNewApiDashboardSessionAuth(request.origin)).toBeNull()
 })
 it.each([handleNewApiPasswordUi, handleSub2ApiPasswordUi])(
   "keeps an unrecognized login choice in native UI instead of invoking API fallback (%#)",
@@ -151,9 +215,9 @@ it.each(["legacy", "modern", "sub2api"])(
       setTimeout(() => {
         checkbox.setAttribute("aria-checked", "true")
         document
-          .querySelectorAll<
-            HTMLInputElement | HTMLButtonElement
-          >("input, button")
+          .querySelectorAll<HTMLInputElement | HTMLButtonElement>(
+            "input, button",
+          )
           .forEach((control) => (control.disabled = false))
       }, 30)
     })
@@ -455,9 +519,8 @@ it.each([false, true])(
   "adopts modern New API auth in memory and protects concurrent logout changes (changed=%s)",
   async (changed) => {
     vi.resetModules()
-    const { handleNewApiPasswordUi: isolatedHandler } = await import(
-      "~/services/apiService/newApiFamily/passwordUi"
-    )
+    const { handleNewApiPasswordUi: isolatedHandler } =
+      await import("~/services/apiService/newApiFamily/passwordUi")
     let loggedOut = false
     fetchMock.mockImplementation(async (path, init) => {
       if (path === "/api/user/self") {
@@ -600,9 +663,8 @@ it.each([
 
 it("keeps WAF uncertainty and verification when revoking a modern session", async () => {
   vi.resetModules()
-  const { handleNewApiPasswordUi: handler } = await import(
-    "~/services/apiService/newApiFamily/passwordUi"
-  )
+  const { handleNewApiPasswordUi: handler } =
+    await import("~/services/apiService/newApiFamily/passwordUi")
   localStorage.setItem("user", JSON.stringify({ id: 17 }))
   fetchMock.mockImplementation(async (path, init) => {
     if (path === "/api/user/self")

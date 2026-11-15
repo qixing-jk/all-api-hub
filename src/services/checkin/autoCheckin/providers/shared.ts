@@ -6,6 +6,11 @@
  */
 
 import {
+  BROWSER_LOGIN_FAILURE_REASONS,
+  BROWSER_LOGIN_STATUS,
+} from "~/constants/browserLogin"
+import type { AccountLoginResult } from "~/services/apiAdapters/contracts/accountLogin"
+import {
   API_ERROR_CODES,
   hasUnattributedMessage,
 } from "~/services/apiTransport/errors"
@@ -22,7 +27,10 @@ import {
   type AutoCheckinSkipReason,
   type CheckInReward,
 } from "~/types/autoCheckin"
-import type { TempWindowCheckinPageAction } from "~/types/tempWindowFetch"
+import {
+  TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
+  type TempWindowCheckinPageAction,
+} from "~/types/tempWindowFetch"
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   alreadyCheckedToday: "autoCheckin:providerFallback.alreadyCheckedToday",
@@ -427,8 +435,10 @@ export function resolveNativePageFailureResult(params: {
   checkInUrl: string
 }): AutoCheckinProviderOutcome {
   const identityReasonCode =
-    params.action.reason === "identity_missing" ||
-    params.action.reason === "identity_mismatch"
+    params.action.reason ===
+      TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMissing ||
+    params.action.reason ===
+      TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch
       ? AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
       : AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE
   const base = {
@@ -439,7 +449,10 @@ export function resolveNativePageFailureResult(params: {
     data: params.action,
   } satisfies Partial<AutoCheckinProviderOutcome>
 
-  if (params.action.reason === "identity_missing") {
+  if (
+    params.action.reason ===
+    TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMissing
+  ) {
     return {
       ...base,
       messageKey:
@@ -447,7 +460,10 @@ export function resolveNativePageFailureResult(params: {
     }
   }
 
-  if (params.action.reason === "identity_mismatch") {
+  if (
+    params.action.reason ===
+    TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch
+  ) {
     return {
       ...base,
       messageKey:
@@ -455,7 +471,10 @@ export function resolveNativePageFailureResult(params: {
     }
   }
 
-  if (params.action.reason === "target_not_found") {
+  if (
+    params.action.reason ===
+    TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound
+  ) {
     return {
       ...base,
       messageKey:
@@ -468,6 +487,34 @@ export function resolveNativePageFailureResult(params: {
     messageKey:
       AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageTriggerFailed,
   }
+}
+
+/** Distinguishes a different webpage account from a queued login or verification. */
+export function resolveCheckinLoginFailure(
+  result: AccountLoginResult,
+  checkInUrl: string,
+): AutoCheckinProviderOutcome {
+  if (
+    result.status === BROWSER_LOGIN_STATUS.IdentityMismatch ||
+    ("reason" in result &&
+      result.reason === BROWSER_LOGIN_FAILURE_REASONS.SessionConflict)
+  )
+    return resolveNativePageFailureResult({
+      action: {
+        success: false,
+        reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch,
+      },
+      checkInUrl,
+    })
+  return createTerminalFailureResult({
+    reasonCode:
+      result.status === BROWSER_LOGIN_STATUS.SessionBusy
+        ? AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY
+        : "reason" in result &&
+            result.reason === BROWSER_LOGIN_FAILURE_REASONS.VerificationRequired
+          ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
+          : AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+  })
 }
 
 /**

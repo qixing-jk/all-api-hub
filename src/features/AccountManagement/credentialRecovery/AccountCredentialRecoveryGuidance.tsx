@@ -6,6 +6,7 @@ import { WorkflowTransitionButton } from "~/components/ui"
 import {
   openAccountCredentialRecoverySettings,
   supportsAccountCredentialRecovery,
+  supportsCheckInAccountLogin,
 } from "~/features/AccountManagement/credentialRecovery/guidance"
 import type { DisplaySiteData } from "~/types"
 
@@ -16,6 +17,7 @@ export function AccountCredentialRecoveryGuidance({
   onNavigate,
   failure = false,
   compact = false,
+  checkInMethodId,
 }: {
   account: Pick<DisplaySiteData, "siteType" | "authType" | "baseUrl"> &
     Partial<Pick<DisplaySiteData, "id" | "disabled">>
@@ -23,10 +25,12 @@ export function AccountCredentialRecoveryGuidance({
   onNavigate?: () => void
   failure?: boolean
   compact?: boolean
+  checkInMethodId?: string
 }) {
   const { t } = useTranslation(["accountDialog", "messages"])
+  const checkInLogin = supportsCheckInAccountLogin(account, checkInMethodId)
   if (
-    !supportsAccountCredentialRecovery(account) ||
+    (!checkInLogin && !supportsAccountCredentialRecovery(account)) ||
     (!onConfigure && !account.id)
   )
     return null
@@ -54,12 +58,18 @@ export function AccountCredentialRecoveryGuidance({
           ? "h-auto min-h-0 p-0 text-left text-xs"
           : "h-auto min-h-0 p-0 text-left"
       }
-      aria-label={t("accountDialog:login.configureRecovery")}
+      aria-label={
+        checkInLogin
+          ? t("accountDialog:login.configure")
+          : t("accountDialog:login.configureRecovery")
+      }
       onClick={handleConfigure}
     >
-      {compact
-        ? t("accountDialog:login.configureRecoveryShort")
-        : t("accountDialog:login.configureRecovery")}
+      {checkInLogin
+        ? t("accountDialog:login.configure")
+        : compact
+          ? t("accountDialog:login.configureRecoveryShort")
+          : t("accountDialog:login.configureRecovery")}
     </WorkflowTransitionButton>
   )
   if (compact) {
@@ -78,10 +88,12 @@ export function AccountCredentialRecoveryGuidance({
   }
   return (
     <div className="space-y-density-1">
-      <p className="text-muted-foreground text-xs">
-        {failure
-          ? t("accountDialog:login.recoveryFailureDescription")
-          : t("accountDialog:login.recoveryGuideDescription")}
+      <p className="text-xs text-muted-foreground">
+        {checkInLogin
+          ? t("accountDialog:login.checkInFailureDescription")
+          : failure
+            ? t("accountDialog:login.recoveryFailureDescription")
+            : t("accountDialog:login.recoveryGuideDescription")}
       </p>
       {action}
     </div>

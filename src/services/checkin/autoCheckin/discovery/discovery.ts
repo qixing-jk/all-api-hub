@@ -1,10 +1,14 @@
 import {
+  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_DISCOVERY_METADATA_MAX_HOSTS,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   setCheckInSelection as applySelection,
   inspectCheckInMethods,
@@ -21,6 +25,7 @@ import type {
   AutoCheckinMethodRegistration,
   AutoCheckinMethodRegistry,
 } from "~/services/checkin/autoCheckin/providers/registry"
+import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
 import type {
   CheckInConfig,
@@ -29,9 +34,129 @@ import type {
   CheckInMethodId,
   CheckInMethodStatus,
 } from "~/types/checkIn"
+import { isRecord } from "~/utils/core/object"
 
 const DEFAULT_PER_ADAPTER_TIMEOUT_MS = 5_000
 const DEFAULT_DISCOVERY_DEADLINE_MS = 15_000
+
+const readPublicHostname = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.hostname.toLowerCase()
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** Metadata ranks confirmed peers only; it never authenticates or redirects requests. */
+async function applySiteMetadataTieBreak(
+  input: CheckInDiscoveryInput,
+  registrations: readonly AutoCheckinMethodRegistration[],
+  methodIds: readonly CheckInMethodId[],
+  detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>,
+  timeoutMs: number,
+) {
+  const peers = registrations.filter(
+    ({ id, discoveryOrigins, origins }) =>
+      methodIds.includes(id) && (discoveryOrigins ?? origins)?.length,
+  )
+  if (!peers.length || timeoutMs <= 0 || input.signal?.aborted) return
+  const controller = new AbortController()
+  const onAbort = () => controller.abort()
+  input.signal?.addEventListener("abort", onAbort, { once: true })
+  try {
+    const result = await withTimeout(
+      newApiFamilyRequests.envelope<unknown>(
+        {
+          baseUrl: input.account.site_url,
+          auth: { authType: AuthTypeEnum.None },
+          directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
+          ...(input.request?.fetchContext
+            ? { fetchContext: input.request.fetchContext }
+            : {}),
+          ...(input.request?.currentTabFallback
+            ? { currentTabFallback: input.request.currentTabFallback }
+            : {}),
+        },
+        {
+          endpoint: "/api/status",
+          options: {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        },
+      ),
+      timeoutMs,
+      input.signal,
+    )
+    if (
+      result.timedOut ||
+      input.signal?.aborted ||
+      result.value?.success !== true ||
+      !isRecord(result.value.data)
+    )
+      return
+    const routes = result.value.data.api_info
+    if (routes != null && !Array.isArray(routes)) return
+    if (
+      Array.isArray(routes) &&
+      routes.some((route) => !isRecord(route) || typeof route.url !== "string")
+    )
+      return
+    const hostnames = new Set<string>()
+    const ownHostname = readPublicHostname(input.account.site_url)
+    if (ownHostname) hostnames.add(ownHostname)
+    if (Array.isArray(routes))
+      for (const route of routes) {
+        const hostname = isRecord(route)
+          ? readPublicHostname(route.url)
+          : undefined
+        if (hostname) hostnames.add(hostname)
+      }
+    const rankedDetections: Array<[CheckInMethodId, CheckInMethodDetection]> =
+      []
+    for (const peer of peers) {
+      const detection = detections[peer.id]
+      if (
+        detection?.outcome !== CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched ||
+        detection.evidence.source !==
+          CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe
+      )
+        continue
+      const knownHosts = new Set(
+        (peer.discoveryOrigins ?? peer.origins ?? [])
+          .map(readPublicHostname)
+          .filter((host): host is string => Boolean(host)),
+      )
+      const domainMatchCount = [...knownHosts].filter((host) =>
+        hostnames.has(host),
+      ).length
+      // Do not persist a partial/saturated score that could change the winner
+      // after readback. All peers retain the protocol tie if a count overflows.
+      if (domainMatchCount > CHECK_IN_DISCOVERY_METADATA_MAX_HOSTS) return
+      rankedDetections.push([
+        peer.id,
+        {
+          ...detection,
+          evidence: {
+            ...detection.evidence,
+            ...(domainMatchCount ? { domainMatchCount } : {}),
+          },
+        },
+      ])
+    }
+    for (const [id, detection] of rankedDetections) detections[id] = detection
+  } catch {
+    // Missing or inaccessible metadata keeps the existing protocol decision.
+  } finally {
+    controller.abort()
+    input.signal?.removeEventListener("abort", onAbort)
+  }
+}
 
 interface CheckInDiscoveryInput {
   account: SiteAccount
@@ -248,17 +373,34 @@ export async function discoverCheckInMethods(
   }
 
   const candidateMethodIds = registrations.map(({ id }) => id)
-  const config = mergeCheckInDiscoveryResults({
-    config: input.config,
-    candidateMethodIds,
-    detections,
-    statuses,
-    completedAt: observedAt,
-  })
-  const decision: CheckInDiscoveryDecision = inspectCheckInMethods({
+  const mergeResults = () =>
+    mergeCheckInDiscoveryResults({
+      config: input.config,
+      candidateMethodIds,
+      detections,
+      statuses,
+      completedAt: observedAt,
+    })
+  let config = mergeResults()
+  let decision: CheckInDiscoveryDecision = inspectCheckInMethods({
     config,
     candidateMethodIds,
   }).decision
+
+  if (
+    input.config.selection.mode === CHECK_IN_SELECTION_MODES.Automatic &&
+    decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
+  ) {
+    await applySiteMetadataTieBreak(
+      input,
+      registrations,
+      decision.methodIds,
+      detections,
+      Math.min(perAdapterTimeoutMs, deadlineAt - Date.now()),
+    )
+    config = mergeResults()
+    decision = inspectCheckInMethods({ config, candidateMethodIds }).decision
+  }
 
   return { config, decision, detections, statuses, timedOutMethodIds }
 }

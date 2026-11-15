@@ -269,8 +269,14 @@ describe("accountAutoDetection", () => {
       exchangeRate: 6.6,
       checkIn: expect.objectContaining({
         automaticExecutionEnabled: true,
-        selection: expect.objectContaining({
-          methodId: "new-api:daily-checkin",
+        // Cookie identity alone cannot confirm the newly competing Xingya method.
+        selection: { mode: "automatic" },
+        methodKnowledge: expect.objectContaining({
+          methods: expect.objectContaining({
+            "xingya:daily-checkin": expect.objectContaining({
+              detection: expect.objectContaining({ outcome: "unknown" }),
+            }),
+          }),
         }),
       }),
     })

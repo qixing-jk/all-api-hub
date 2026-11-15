@@ -120,6 +120,51 @@ describe("check-in methods compatibility activation", () => {
     ),
   })
 
+  it("allows Xingya to confirm status inside its configured login session", async () => {
+    const registration = autoCheckinMethodRegistry.resolveById(
+      "xingya:daily-checkin",
+    )!
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.NEW_API,
+      site_url: "https://xingya.site",
+      authType: AuthTypeEnum.Cookie,
+      login: {
+        methodId: "password",
+        credentials: { username: "fixture", password: "fixture-password" },
+      },
+      checkIn: {
+        automaticExecutionEnabled: true,
+        selection: { mode: "manual", methodId: "xingya:daily-checkin" },
+        methodKnowledge: {
+          methods: {
+            "xingya:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 100 },
+              },
+            },
+          },
+        },
+      },
+    })
+    vi.spyOn(registration.provider, "getStatus").mockRejectedValue({
+      statusCode: 401,
+    })
+    const execute = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+    expect(result).toMatchObject({
+      kind: "executed",
+      result: { status: "success" },
+    })
+    expect(execute).toHaveBeenCalledOnce()
+  })
+
   it.each([
     ["无权进行此操作，权限不足", "permission_denied"],
     ["Permission denied. Insufficient privileges.", "permission_denied"],
@@ -550,7 +595,7 @@ describe("check-in methods compatibility activation", () => {
     "does not create a selection for $name",
     async ({ outcomes, decision }) => {
       const methodIds = [
-        "new-api:daily-checkin",
+        "xingya:daily-checkin",
         "veloera:daily-checkin",
       ] as const
       const registry = createAutoCheckinMethodRegistry(
@@ -1586,6 +1631,54 @@ describe("check-in methods compatibility activation", () => {
     expect(getStatus.mock.invocationCallOrder[0]).toBeLessThan(
       atIndex(checkInRequest.mock.invocationCallOrder, 0),
     )
+  })
+
+  it("lets configured login confirm status despite a cached disabled method", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    account.login = {
+      methodId: "password",
+      credentials: { username: "target", password: "fixture" },
+    }
+    account.checkIn.methodKnowledge.methods["new-api:daily-checkin"]!.status = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: 100,
+      },
+    }
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+    expect(result.kind).toBe("executed")
+    expect(checkInRequest).toHaveBeenCalledOnce()
+  })
+
+  it("does not reuse skipped status proof when configured login is removed during revalidation", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    account.login = {
+      methodId: "password",
+      credentials: { username: "target", password: "fixture" },
+    }
+    const latest = { ...account, login: undefined }
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+    await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+      revalidateAccount: async () => latest,
+    })
+    expect(checkInRequest).not.toHaveBeenCalled()
   })
 
   it("does not post when execution-time status says the method is disabled", async () => {

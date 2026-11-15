@@ -42,8 +42,7 @@ export interface AnyrouterCheckInParams {
 }
 
 /** Execution dependencies supplied by the check-in scheduler. */
-export interface AutoCheckinMutationLifecycle
-  extends ApiTransportRequestObserver {
+export interface AutoCheckinMutationLifecycle extends ApiTransportRequestObserver {
   dispatched: boolean
   responseReceived: boolean
 }
@@ -80,6 +79,8 @@ export interface AutoCheckinProvider {
    * with `getStatus` can honour it; a method without readback submits directly.
    */
   readonly requiresAuthoritativeStatusBeforeMutation?: boolean
+  /** This account's status must be confirmed inside the provider's owned login session. */
+  confirmsStatusDuringExecution?: (account: SiteAccount) => boolean
   /**
    * This protocol has one canonical route the account may replace with its
    * deployment's own path. Declared only where the operations behind that route

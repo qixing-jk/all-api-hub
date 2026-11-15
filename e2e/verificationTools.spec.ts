@@ -233,19 +233,29 @@ for (const source of ["profile", "account"] as const) {
       await page.setViewportSize({ width, height: 960 })
       const model = composer.getByRole("button", { name: "模型", exact: true })
       const run = composer.getByRole("button", { name: "运行", exact: true })
-      // Resizing can reflow the composer between geometry reads. Check the
-      // settled layout at each width while keeping the one-pixel tolerance.
+      const controls = model.or(run)
+      await expect(controls).toHaveCount(2)
+      // ResizeObserver can move the entire composer between protocol calls.
+      // Compare both controls in one layout snapshot while the viewport settles.
       await expect
-        .poll(async () => {
-          const [modelBox, runBox] = await Promise.all([
-            model.boundingBox(),
-            run.boundingBox(),
-          ])
-          if (!modelBox || !runBox) return Infinity
-          return Math.abs(
-            modelBox.y + modelBox.height / 2 - runBox.y - runBox.height / 2,
-          )
-        })
+        .poll(() =>
+          controls.evaluateAll((elements) => {
+            const boxes = elements.map((element) =>
+              element.getBoundingClientRect(),
+            )
+            const [first, second] = boxes
+            if (
+              boxes.length !== 2 ||
+              !first ||
+              !second ||
+              boxes.some((box) => !box.width || !box.height)
+            )
+              return Infinity
+            return Math.abs(
+              first.y + first.height / 2 - second.y - second.height / 2,
+            )
+          }),
+        )
         .toBeLessThanOrEqual(1)
     }
     await page.setViewportSize({ width: 380, height: 960 })

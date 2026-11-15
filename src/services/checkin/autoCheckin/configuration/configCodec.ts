@@ -3,6 +3,7 @@ import {
   ACCOUNT_LOGIN_PROVIDERS,
 } from "~/constants/accountLogin"
 import {
+  CHECK_IN_DISCOVERY_METADATA_MAX_HOSTS,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
@@ -216,6 +217,12 @@ const normalizeDetection = (
       evidence: {
         source: CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe,
         observedAt,
+        ...(typeof value.evidence.domainMatchCount === "number" &&
+        Number.isInteger(value.evidence.domainMatchCount) &&
+        value.evidence.domainMatchCount > 0 &&
+        value.evidence.domainMatchCount <= CHECK_IN_DISCOVERY_METADATA_MAX_HOSTS
+          ? { domainMatchCount: value.evidence.domainMatchCount as number }
+          : {}),
       },
       ...(lastUnknownAttempt ? { lastUnknownAttempt } : {}),
     }

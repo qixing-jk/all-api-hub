@@ -2,6 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import ResultsTable from "~/features/AutoCheckin/results/ResultsTable"
 import { EMRANK_TOKEN_ASSET } from "~/services/apiService/emrank/constants"
@@ -18,7 +19,10 @@ import {
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
 import { openTargetedOptionsPage } from "~/utils/navigation/optionsPage"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  buildCheckInConfig,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => ({
@@ -89,6 +93,131 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
+  it.each([undefined, AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn])(
+    "guides a credential-blocked account using current selection over historical %s",
+    async (methodId) => {
+      const account = buildDisplaySiteData({
+        id: failedResult.accountId,
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://xingya.site",
+        authType: AuthTypeEnum.Cookie,
+        checkIn: buildCheckInConfig({
+          selection: {
+            mode: "manual",
+            methodId: AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+          },
+          methodKnowledge: {
+            methods: {
+              [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: {
+                    source: "probe",
+                    observedAt: failedResult.timestamp,
+                  },
+                },
+              },
+            },
+          },
+        }),
+      })
+      render(
+        <ResultsTable
+          results={[
+            {
+              accountId: account.id,
+              accountName: failedResult.accountName,
+              timestamp: failedResult.timestamp,
+              status: CHECKIN_RESULT_STATUS.SKIPPED,
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+              methodId,
+            },
+          ]}
+          accountInfoById={{ [account.id]: account }}
+        />,
+      )
+      await userEvent.setup().click(
+        await screen.findByRole("button", {
+          name: "accountDialog:login.configure",
+        }),
+      )
+      expect(openTargetedOptionsPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inPageSearchParams: expect.objectContaining({
+            accountId: account.id,
+            focusSection: "account-login",
+          }),
+        }),
+      )
+    },
+  )
+
+  it.each([
+    [
+      AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+      AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_REQUIRED,
+    ],
+    [
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+      AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+    ],
+    [
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+    ],
+  ])(
+    "takes a blocked %s account to its login configuration even with Access Token auth",
+    async (methodId, reasonCode) => {
+      const account = buildDisplaySiteData({
+        id: failedResult.accountId,
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl:
+          methodId === AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn
+            ? "https://agentrouter.org"
+            : "https://xingya.site",
+        authType: AuthTypeEnum.AccessToken,
+        checkIn: buildCheckInConfig({
+          selection: { mode: "manual", methodId },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: {
+                    source: "probe",
+                    observedAt: failedResult.timestamp,
+                  },
+                },
+              },
+            },
+          },
+        }),
+      })
+      const user = userEvent.setup()
+      render(
+        <ResultsTable
+          results={[{ ...failedResult, methodId, reasonCode }]}
+          accountInfoById={{ [account.id]: account }}
+        />,
+      )
+      await user.click(
+        await screen.findByRole("button", {
+          name: "accountDialog:login.configure",
+        }),
+      )
+      const { openTargetedOptionsPage } =
+        await import("~/utils/navigation/optionsPage")
+      expect(openTargetedOptionsPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inPageSearchParams: expect.objectContaining({
+            accountId: account.id,
+            focusSection: "account-login",
+          }),
+        }),
+      )
+    },
+  )
+
   it.each([CHECKIN_RESULT_STATUS.FAILED, CHECKIN_RESULT_STATUS.SKIPPED])(
     "guides an authentication rejection to the current account's login settings (%s)",
     async (status) => {

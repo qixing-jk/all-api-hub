@@ -941,6 +941,15 @@ export async function stubNewApiSiteRoutes(
       return
     }
 
+    if (method === "GET" && url.pathname === "/api/user/xingya-checkin") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Unsupported route" }),
+      })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/user/checkin") {
       await route.fulfill({
         status: 200,

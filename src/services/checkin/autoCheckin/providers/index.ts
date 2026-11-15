@@ -30,6 +30,7 @@ import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 import { xiaobaiCodeProvider } from "./xiaobaiCode"
 import { xiaoenProvider } from "./xiaoen"
+import { xingyaProvider } from "./xingya"
 
 const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: sidruneProvider,
@@ -57,12 +58,16 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]: dayaProvider,
   [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]: pmApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: baiApiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: xingyaProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
   Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS).map((definition) => ({
     id: definition.id,
     siteTypes: definition.siteTypes,
+    ...("discoveryOrigins" in definition
+      ? { discoveryOrigins: definition.discoveryOrigins }
+      : {}),
     ...("origins" in definition ? { origins: definition.origins } : {}),
     ...("excludedOrigins" in definition
       ? { excludedOrigins: definition.excludedOrigins }

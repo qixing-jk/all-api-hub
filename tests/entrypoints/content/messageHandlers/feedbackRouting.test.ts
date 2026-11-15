@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   inspectCredential: vi.fn(),
   requesty: vi.fn(),
   newApiPasswordUi: vi.fn(),
+  dashboardSession: vi.fn(),
   sub2ApiPasswordUi: vi.fn(),
   newApiPasswordLogin: vi.fn(),
   clearNewApiPassword: vi.fn(),
@@ -28,6 +29,7 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock("~/services/apiService/newApiFamily/passwordUi", () => ({
   handleNewApiPasswordUi: mocks.newApiPasswordUi,
+  readNewApiDashboardSessionAuth: mocks.dashboardSession,
 }))
 vi.mock("~/services/apiService/sub2api/auth/passwordUi", () => ({
   handleSub2ApiPasswordUi: mocks.sub2ApiPasswordUi,
@@ -76,6 +78,29 @@ vi.mock(
   () => ({ handleInspectCredentialPage: mocks.inspectCredential }),
 )
 beforeEach(() => vi.resetAllMocks())
+
+it("replies with document-scoped dashboard authentication for the requested origin", () => {
+  setupContentMessageHandlers()
+  const listener = mocks.register.mock.calls[0]![0]
+  const reply = vi.fn()
+  mocks.dashboardSession.mockReturnValue({
+    success: true,
+    data: { access_token: "fixture" },
+  })
+  listener(
+    {
+      action: RuntimeActionIds.ContentNewApiDashboardSessionAuth,
+      expectedOrigin: "https://site.example",
+    },
+    {},
+    reply,
+  )
+  expect(mocks.dashboardSession).toHaveBeenCalledWith("https://site.example")
+  expect(reply).toHaveBeenCalledWith({
+    success: true,
+    data: { access_token: "fixture" },
+  })
+})
 
 it("routes Requesty creation to its content handler and preserves the asynchronous reply contract", () => {
   mocks.requesty.mockReturnValue(true)

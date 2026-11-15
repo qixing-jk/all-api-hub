@@ -91,6 +91,76 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
 const { openSettingsTabInNewTab } = await import("~/utils/navigation")
 
 describe("AccountDialog AccountForm", () => {
+  it.each([
+    [
+      "https://xingya.site",
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+      "sessionCheckInTitle",
+    ],
+    [
+      "https://runanytime.hxi.me",
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      "nativeCheckInTitle",
+    ],
+  ])(
+    "guides %s check-in to the account login fields without changing the draft",
+    async (siteUrl, methodId, title) => {
+      const props = createProps()
+      props.siteUrl = siteUrl
+      props.draft.siteType = SITE_TYPES.NEW_API
+      props.draft.checkIn = {
+        ...props.draft.checkIn,
+        selection: { mode: "manual", methodId },
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 1 },
+              },
+            },
+          },
+        },
+      }
+      props.draft.login = {
+        methodId: "password",
+        credentials: { username: "member", password: "" },
+      }
+      const user = userEvent.setup()
+      const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
+      const section = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+      )
+      expect(
+        within(section).getByText(`accountDialog:login.${title}`),
+      ).toBeVisible()
+      expect(
+        within(section).getByText("accountDialog:login.checkInMissing"),
+      ).toBeVisible()
+      await user.click(
+        within(section).getByRole("button", {
+          name: "accountDialog:login.configure",
+        }),
+      )
+      expect(
+        await screen.findByRole("combobox", {
+          name: "accountDialog:login.method",
+        }),
+      ).toHaveFocus()
+      expect(props.onLoginChange).not.toHaveBeenCalled()
+      props.draft = { ...props.draft, login: { methodId: "linuxdo" } }
+      rerender(<AccountForm {...withSitePolicy(props)} />)
+      expect(
+        within(section).queryByText("accountDialog:login.checkInMissing"),
+      ).not.toBeInTheDocument()
+      expect(
+        within(section).getByRole("button", {
+          name: "accountDialog:login.change",
+        }),
+      ).toBeVisible()
+    },
+  )
+
   it("opens login from route focus and invokes configured recovery after Cookie rejection", async () => {
     const props = createProps()
     props.siteUrl = "https://anyrouter.top"
@@ -2705,6 +2775,8 @@ describe("AccountDialog AccountForm", () => {
         },
       },
     }
+    props.draft.checkIn.methodKnowledge.methods["xingya:daily-checkin"] =
+      props.draft.checkIn.methodKnowledge.methods["new-api:daily-checkin"]
 
     render(<AccountForm {...withSitePolicy(props)} />)
 
@@ -2987,6 +3059,12 @@ describe("AccountDialog AccountForm", () => {
       siteType: SITE_TYPES.NEW_API,
       supported: true,
     })
+    props.draft.checkIn.methodKnowledge.methods["xingya:daily-checkin"] = {
+      detection: {
+        outcome: "unsupported",
+        evidence: { source: "probe", observedAt: 200 },
+      },
+    }
 
     const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 

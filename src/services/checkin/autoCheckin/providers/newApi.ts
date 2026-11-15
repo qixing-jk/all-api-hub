@@ -6,12 +6,21 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
+import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
+import {
+  isAccountLoginConfigured,
+  resolveAccountLogin,
+} from "~/services/accountLogin/configCodec"
 import type {
   NewApiCheckInRecord,
   NewApiCheckInResponse,
 } from "~/services/apiService/newApiFamily/checkInDto"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  API_ERROR_CODES,
+  ApiError,
+  isAuthenticationRequiredError,
+} from "~/services/apiTransport/errors"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import type {
   AutoCheckinProvider,
@@ -218,6 +227,56 @@ async function checkinNewApi(
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
     context.tempWindowRequestSource,
   )
+  const configuredLogin = resolveAccountLogin(account)
+  const nativeFallback = (responseMessage: string) =>
+    resolveNativePageCheckinResult({
+      account,
+      responseMessage,
+      tempWindowRequestSource,
+      protectionBypassExecution: context.protectionBypassExecution,
+      mutationLifecycle: context.mutationLifecycle,
+      beforeRecoveredMutation: context.beforeRecoveredMutation,
+    })
+  if (configuredLogin) {
+    // This provider owns status admission when it can prepare a login session.
+    try {
+      const status = await fetchCheckedInTodayStatus(
+        account,
+        tempWindowRequestSource,
+        context.protectionBypassExecution,
+        false,
+        undefined,
+        true,
+      )
+      if (status?.checkedInToday === true)
+        return {
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          reward: readQuotaReward(status.todayQuotaAwarded),
+        }
+      if (status?.enabled === false)
+        return {
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+        }
+      if (status?.checkedInToday !== false || status.enabled !== true)
+        return nativeFallback("")
+    } catch (error) {
+      if (
+        getErrorStatusCode(error) === 429 ||
+        isRateLimitedMessage(getProviderErrorMessage(error))
+      )
+        return resolveProviderErrorResult({ error })
+      return nativeFallback(getProviderErrorMessage(error))
+    }
+    if (
+      context.beforeRecoveredMutation &&
+      !(await context.beforeRecoveredMutation())
+    )
+      return {
+        status: CHECKIN_RESULT_STATUS.SKIPPED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
+      }
+  }
   try {
     const checkinResponse = await performCheckin(
       account,
@@ -260,12 +319,20 @@ async function checkinNewApi(
     if (standardResult) {
       return standardResult
     }
+    if (
+      configuredLogin &&
+      !checkinResponse.success &&
+      isAuthOrPermissionFailureMessage(responseMessage) &&
+      !isPermissionFailureMessage(responseMessage)
+    )
+      return nativeFallback(responseMessage)
 
     if (
       responseMessage &&
       isTurnstileRequiredMessage(responseMessage) &&
       !checkinResponse.success
     ) {
+      if (configuredLogin) return nativeFallback(responseMessage)
       return await resolveTurnstileAssistedCheckinResult({
         account,
         responseMessage,
@@ -280,12 +347,7 @@ async function checkinNewApi(
         message: responseMessage,
       })
     ) {
-      return await resolveNativePageCheckinResult({
-        account,
-        responseMessage,
-        tempWindowRequestSource,
-        protectionBypassExecution: context.protectionBypassExecution,
-      })
+      return await nativeFallback(responseMessage)
     }
 
     const directReason = resolveDirectFailureReason({
@@ -301,11 +363,41 @@ async function checkinNewApi(
       data: checkinResponse ?? undefined,
     }
   } catch (error: unknown) {
+    // An attributed 401 confirms rejection; a lost response cannot permit replay.
+    if (configuredLogin && isAuthenticationRequiredError(error))
+      return nativeFallback(getProviderErrorMessage(error))
     if (context.mutationLifecycle?.dispatched) {
-      return resolveProviderErrorResult({
+      const result = resolveProviderErrorResult({
         error,
         mutationDispatched: true,
       })
+      // Configured login makes this provider own readback even when the direct
+      // API path ran. A lost response must never start a native-page mutation.
+      if (
+        configuredLogin &&
+        result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+      ) {
+        try {
+          const status = await fetchCheckedInTodayStatus(
+            account,
+            tempWindowRequestSource,
+            context.protectionBypassExecution,
+            false,
+            undefined,
+            true,
+          )
+          if (status?.checkedInToday === true)
+            return {
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              reward: readQuotaReward(status.todayQuotaAwarded),
+              messageKey:
+                AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+            }
+        } catch {
+          // Unavailable readback leaves the original dispatch uncertain.
+        }
+      }
+      return result
     }
 
     const errorMessage = getProviderErrorMessage(error)
@@ -330,12 +422,7 @@ async function checkinNewApi(
         error,
       })
     ) {
-      return await resolveNativePageCheckinResult({
-        account,
-        responseMessage: errorMessage,
-        tempWindowRequestSource,
-        protectionBypassExecution: context.protectionBypassExecution,
-      })
+      return await nativeFallback(errorMessage)
     }
 
     return resolveProviderErrorResult({
@@ -357,6 +444,9 @@ function getReadiness(account: SiteAccount) {
   }
 
   const authType = getEffectiveAuthType(account)
+  const login = resolveAccountLogin(account)
+  if (login && isAccountLoginConfigured(login, getAccountLoginMethods(account)))
+    return { ready: true } as const
 
   if (authType === AuthTypeEnum.AccessToken) {
     return account.account_info?.access_token
@@ -433,6 +523,8 @@ function classifyStatusError(error: unknown) {
 
 export const newApiProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
+  confirmsStatusDuringExecution: (account) =>
+    Boolean(resolveAccountLogin(account)),
   supportsRouteOverride: true,
   canonicalRoutePath: AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   probeRouteOverride: ({ account, path, signal }) =>

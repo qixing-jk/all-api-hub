@@ -67,6 +67,18 @@ const createAmbiguousState = (): CheckInAccountState => ({
 })
 
 describe("check-in presentation", () => {
+  it("distinguishes the Xingya protocol from the generic daily method", () => {
+    const generic = getCheckInMethodPresentation(
+      t,
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+    )
+    const xingya = getCheckInMethodPresentation(
+      t,
+      AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    )
+    expect(xingya.label).not.toBe(generic.label)
+    expect(xingya.label).toBe("form.xingyaDailyCheckInMethod")
+  })
   it("keeps an inconclusive probe visible instead of reporting an older disabled status", () => {
     const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
     const config = createCompatibilityCheckInConfig({
