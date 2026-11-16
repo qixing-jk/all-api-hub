@@ -1,5 +1,6 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
 
+import { XINGYA_CHECK_IN_STATUS_ENDPOINT } from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { ExtensionPageGuardOptions } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
@@ -25,7 +26,7 @@ export {
 
 /**
  * Follow the same manual-token recovery offered to a user after auto-detection.
- * Only the token endpoint's expected 403 is allowed through the console guard;
+ * Allow the token exchange and optional Xingya status probe's expected 403s;
  * the flow must still reach either a saveable account or the recovery guidance.
  */
 export function createNewApiAccountRecovery(params: {
@@ -42,13 +43,16 @@ export function createNewApiAccountRecovery(params: {
   // their own security check. Newer builds never reach that refusal here: the
   // extension reads their contract instead of attempting creation.
   const tokenUrl = new URL("api/user/token", baseUrl).href
+  // On ordinary New API, this optional fork probe matches the admin /user/:id
+  // route and returns 403. Discovery then reads the public site marker.
+  const xingyaStatusUrl = new URL(XINGYA_CHECK_IN_STATUS_ENDPOINT, baseUrl).href
   const dialogReadyTimeoutMs = params.dialogReadyTimeoutMs ?? 30_000
   const refreshObserver = observeNewApiRefreshes(params.page, baseUrl)
 
   return {
     extensionPageGuardOptions: {
       ignoreConsoleError: (message) =>
-        message.location().url === tokenUrl &&
+        [tokenUrl, xingyaStatusUrl].includes(message.location().url) &&
         /^Failed to load resource: .*status of 403\b/u.test(message.text()),
     },
     prepareDetectedDialog: async (dialog) => {
