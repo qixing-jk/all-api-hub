@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Notice } from "~/components/ui"
+import { Button, InlineMessage } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
 import {
@@ -227,9 +227,13 @@ export function useCheckInRedetection(
           <p className="text-sm text-muted-foreground">
             {choiceAccount.site_name}
           </p>
-          <Notice tone="info" title={t("messages.checkInRedetectAmbiguous")} />
+          <InlineMessage tone="info" role="note" size="sm">
+            {t("messages.checkInRedetectAmbiguous")}
+          </InlineMessage>
           {choiceError && (
-            <Notice tone="destructive" title={choiceError} role="alert" />
+            <InlineMessage tone="destructive" role="alert" size="sm">
+              {choiceError}
+            </InlineMessage>
           )}
           {choices.map(({ methodId }) => {
             const presentation = getCheckInMethodPresentation(t, methodId)

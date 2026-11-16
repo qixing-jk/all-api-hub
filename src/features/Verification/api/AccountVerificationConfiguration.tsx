@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button, Input, SearchableSelect } from "~/components/ui"
+import { Button, InlineMessage, Input, SearchableSelect } from "~/components/ui"
 import type { VerifyApiDialogProps } from "~/features/Verification/api/types"
 import { type useVerifyApiDialogViewModel } from "~/features/Verification/api/useVerifyApiDialogViewModel"
 import { VerificationConfigSection } from "~/features/Verification/api/VerificationConfigSection"
@@ -225,13 +225,13 @@ export function AccountVerificationConfiguration({
 
       {(modelModality === MODEL_TEST_MODALITIES.Image ||
         modelModality === MODEL_TEST_MODALITIES.Video) && (
-        <Alert variant="info">
+        <InlineMessage tone="info" role="note">
           <p>
             {modelModality === MODEL_TEST_MODALITIES.Image
               ? t("verifyDialog.modalityNotice.image")
               : t("verifyDialog.modalityNotice.video")}
           </p>
-        </Alert>
+        </InlineMessage>
       )}
     </div>
   )

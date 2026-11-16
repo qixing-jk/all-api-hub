@@ -8,6 +8,7 @@ import {
   formatCheckInFeedbackClues,
 } from "~/services/checkin/feedback/scan"
 import { FEEDBACK_SCAN_LIMITS } from "~/services/checkin/feedback/scanLimits"
+import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/feedback/scanTypes"
 import { AuthTypeEnum } from "~/types"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -33,7 +34,7 @@ describe("optional check-in clue scan", () => {
       new AbortController().signal,
       { fetch: fetch as typeof globalThis.fetch },
     )
-    expect(clues.status).toBe("completed")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
     expect(clues.authenticatedQueriesUnavailable).toBe(false)
     expect(clues.statusQueries).toEqual([
       { path: "/api/status", status: 200, keys: ["success", "data"] },
@@ -80,7 +81,7 @@ describe("optional check-in clue scan", () => {
     )
     expect(fetch).toHaveBeenCalledOnce()
     expect(clues.statusQueries).toHaveLength(1)
-    expect(clues.status).toBe("partial")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
   })
 
   it("includes ToolCode's read-only growth-center status in Sub2API feedback", () => {
@@ -128,7 +129,7 @@ describe("optional check-in clue scan", () => {
       new AbortController().signal,
     )
     expect(clues.routes).toHaveLength(FEEDBACK_SCAN_LIMITS.routes)
-    expect(clues.status).toBe("partial")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(clues.issues).toEqual(
       expect.arrayContaining(["route_limit", "resource_response"]),
     )
@@ -165,7 +166,7 @@ describe("optional check-in clue scan", () => {
       baseUrl + "/active.js",
     ])
     expect(clues.resources).toEqual({ discovered: 4, scanned: 3, skipped: 1 })
-    expect(clues.status).toBe("completed")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
     expect(formatCheckInFeedbackClues(clues)).toContain(
       "unloaded_resources_skipped: 1",
     )
@@ -198,7 +199,7 @@ describe("optional check-in clue scan", () => {
       baseUrl + "/unused.js",
       baseUrl + "/deep.js",
     ])
-    expect(clues.status).toBe("completed")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
     expect(clues.resources).toEqual({ discovered: 4, scanned: 4 })
   })
 
@@ -320,7 +321,7 @@ describe("optional check-in clue scan", () => {
     expect(peak).toBe(FEEDBACK_SCAN_LIMITS.resourceConcurrency)
     await vi.advanceTimersByTimeAsync(6000)
     const clues = await pending
-    expect(clues.status).toBe("completed")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
     expect(clues.resources).toEqual({ discovered: 9, scanned: 9 })
     expect(clues.issues).toEqual([])
     expect(vi.getTimerCount()).toBe(0)
@@ -373,7 +374,7 @@ describe("optional check-in clue scan", () => {
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
-    expect(clues.status).toBe("completed")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
     expect(clues.keywords).toEqual(
       expect.arrayContaining(["签到", "簽到", "daily", "reward", "attendance"]),
     )
@@ -401,7 +402,7 @@ describe("optional check-in clue scan", () => {
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
-    expect(clues.status).toBe("partial")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(clues.routes).toEqual(["/api/attendance"])
     expect(clues.resources).toEqual({ discovered: 4, scanned: 3 })
     expect(formatCheckInFeedbackClues(clues)).toContain(
@@ -455,7 +456,7 @@ describe("optional check-in clue scan", () => {
         },
         new AbortController().signal,
       )
-      expect(clues.status).toBe("completed")
+      expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
       expect(clues.routes).toEqual(["/new/checkin", "/api/redeem"])
       expect(atIndex(clues.statusQueries, 0).keys).toEqual(["success", "data"])
       for (const [url, init] of fetch.mock.calls as unknown as Array<
@@ -502,7 +503,7 @@ describe("optional check-in clue scan", () => {
       },
       new AbortController().signal,
     )
-    expect(clues.status).toBe("partial")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(clues.statusQueries).toEqual([
       { path: "/api/check_in/stats", status: 404, keys: [] },
     ])
@@ -549,7 +550,7 @@ describe("optional check-in clue scan", () => {
       new AbortController().signal,
     )
     expect(fetch).toHaveBeenCalledTimes(FEEDBACK_SCAN_LIMITS.requests)
-    expect(clues.status).toBe("partial")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(clues.issues).toContain("limit")
   })
 
@@ -587,7 +588,7 @@ describe("optional check-in clue scan", () => {
     expect(clues.routes).toEqual(["/api/checkin"])
     expect(clues.issues).toContain("limit")
     expect(clues.issues).not.toContain("unavailable")
-    expect(clues.status).toBe("partial")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(cancel).toHaveBeenCalledOnce()
   })
@@ -613,7 +614,7 @@ describe("optional check-in clue scan", () => {
     )
     expect(cancel).toHaveBeenCalledOnce()
     expect(fetch).toHaveBeenCalledOnce()
-    expect(clues.status).toBe("empty")
+    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Empty)
   })
 
   it("cancels a pending request on close and on timeout", async () => {
@@ -648,7 +649,7 @@ describe("optional check-in clue scan", () => {
     )
     await vi.advanceTimersByTimeAsync(FEEDBACK_SCAN_LIMITS.requestTimeoutMs)
     const timedOut = await second
-    expect(timedOut.status).toBe("empty")
+    expect(timedOut.status).toBe(FEEDBACK_SCAN_STATUSES.Empty)
     expect(timedOut.issues).toContain("timeout")
     expect(atIndex(signals, 1).aborted).toBe(true)
     expect(vi.getTimerCount()).toBe(0)

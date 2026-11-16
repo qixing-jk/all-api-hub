@@ -14,7 +14,7 @@ import {
 } from "~/components/ai-elements/reasoning"
 import { Tool, ToolContent, ToolHeader } from "~/components/ai-elements/tool"
 import { MarkdownContent } from "~/components/MarkdownContent"
-import { Alert, Badge } from "~/components/ui"
+import { Badge, InlineMessage } from "~/components/ui"
 import { Message, MessageContent } from "~/components/ui/message"
 import {
   VERIFICATION_GENERATION_PART_TYPES,
@@ -101,7 +101,9 @@ export function VerificationGenerationFeed({
                     </ReasoningContent>
                   </Reasoning>
                 ) : part.type === VERIFICATION_GENERATION_PART_TYPES.Error ? (
-                  <Alert variant="warning">{part.text}</Alert>
+                  <InlineMessage tone="warning" role="alert">
+                    {part.text}
+                  </InlineMessage>
                 ) : (
                   <Tool>
                     <ToolHeader

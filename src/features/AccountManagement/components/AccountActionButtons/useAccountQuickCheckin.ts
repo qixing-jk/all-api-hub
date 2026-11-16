@@ -213,7 +213,7 @@ export function useAccountQuickCheckin(site: DisplaySiteData) {
       if (!result) {
         toast.error(
           t("autoCheckin:messages.error.runFailed", {
-            error: statusResponse?.success ? "" : statusResponse?.error ?? "",
+            error: statusResponse?.success ? "" : (statusResponse?.error ?? ""),
           }),
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

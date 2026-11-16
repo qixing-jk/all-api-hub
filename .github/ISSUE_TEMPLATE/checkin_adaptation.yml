@@ -1,5 +1,5 @@
-name: Check-in support / 签到适配
-description: Request site check-in support or share check-in clues / 申请站点签到支持或补充线索
+name: Check-in feedback / 签到反馈
+description: Report check-in problems, request site support, or share clues / 反馈签到问题、申请站点支持或补充线索
 title: "[Check-in] "
 labels: ["site-support", "check-in"]
 body:
@@ -26,12 +26,23 @@ body:
     id: summary
     attributes:
       label: Brief summary / 简短摘要
-      description: A long description may be shortened here. Paste the full report below. / 长描述可能在此缩短，请在下方粘贴完整报告。
+      description: Optional. If the full report below already includes the description, you can leave this empty. / 选填；下方完整报告已有问题描述时，无需重复填写。
   - type: textarea
     id: feedback
     attributes:
       label: Problem description or extension feedback / 问题描述或扩展反馈
-      description: Paste the full report copied from the extension, or describe what works on the website and what happens in the extension. No packet capture is required. / 请粘贴扩展复制的完整报告，或描述网站能否签到及扩展中的现象，无需先抓包。
+      description: Review any prefilled information, paste a copied report, or describe what happened. If convenient, add details below to help us investigate. No packet capture is required. / 请检查预填信息、粘贴复制的报告，或描述遇到的情况。如果方便，可在下方补充信息帮助排查，无需先抓包。
       placeholder: Paste the copied report here / 在此粘贴已复制的报告
     validations:
       required: true
+  - type: input
+    id: browser-info
+    attributes:
+      label: Browser and version (optional) / 浏览器及版本（选填）
+      description: Helpful for browser-specific problems; omit it if the report already includes it. / 有助于排查特定浏览器的问题；报告已有此信息时无需重复填写。
+      placeholder: e.g., Firefox 132, Chrome 130
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps and observed results (optional) / 操作步骤与实际结果（选填）
+      description: If you remember, tell us where you started, what you clicked, and what happened on the website and in the extension. / 如果还记得，可说明从哪个入口进入、点击了什么，以及网页和扩展分别出现了什么结果。

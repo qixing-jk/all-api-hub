@@ -16,9 +16,11 @@ import {
   normalizeAssetUrls,
 } from "./scanParsing"
 import { createScanReader } from "./scanReader"
-import type {
-  CheckInFeedbackClues,
-  CheckInFeedbackScanInput,
+import {
+  FEEDBACK_SCAN_ISSUES,
+  FEEDBACK_SCAN_STATUSES,
+  type CheckInFeedbackClues,
+  type CheckInFeedbackScanInput,
 } from "./scanTypes"
 
 export { extractCheckInRoutes } from "./scanParsing"
@@ -36,7 +38,7 @@ export async function collectCheckInFeedbackClues(
 ): Promise<CheckInFeedbackClues> {
   const origin = getFeedbackOrigin(input.baseUrl)
   const result: CheckInFeedbackClues = {
-    status: "empty",
+    status: FEEDBACK_SCAN_STATUSES.Empty,
     statusQueries: [],
     routes: [],
     authenticatedQueriesUnavailable: false,
@@ -119,7 +121,7 @@ export async function collectCheckInFeedbackClues(
       try {
         const html = await read(origin)
         if (html.status !== 200 || !/html/i.test(html.type)) {
-          scanIssues.add("resource_response")
+          scanIssues.add(FEEDBACK_SCAN_ISSUES.ResourceResponse)
           throw new Error("scan_html")
         }
         const queue = new PQueue({
@@ -156,7 +158,7 @@ export async function collectCheckInFeedbackClues(
             if (routes.size < FEEDBACK_SCAN_LIMITS.routes) routes.add(path)
             else if (!routes.has(path)) {
               partial = true
-              scanIssues.add("route_limit")
+              scanIssues.add(FEEDBACK_SCAN_ISSUES.RouteLimit)
             }
           })
           discoverAssets(decoded, base, isHtml).forEach((asset) => {
@@ -177,7 +179,7 @@ export async function collectCheckInFeedbackClues(
                 resource.type,
               )
             ) {
-              scanIssues.add("resource_response")
+              scanIssues.add(FEEDBACK_SCAN_ISSUES.ResourceResponse)
               throw new Error("scan_asset")
             }
             result.resources!.scanned++
@@ -208,7 +210,7 @@ export async function collectCheckInFeedbackClues(
       }
     }
     await statusQueries
-    if (timedOut) scanIssues.add("task_timeout")
+    if (timedOut) scanIssues.add(FEEDBACK_SCAN_ISSUES.TaskTimeout)
     issues.forEach((issue) => scanIssues.add(issue))
     result.issues = [...scanIssues].sort()
     partial ||= task.signal.aborted
@@ -216,7 +218,11 @@ export async function collectCheckInFeedbackClues(
       result.routes.length > 0 ||
       (result.keywords?.length ?? 0) > 0 ||
       result.statusQueries.some((query) => query.status !== undefined)
-    result.status = hasClues ? (partial ? "partial" : "completed") : "empty"
+    result.status = hasClues
+      ? partial
+        ? FEEDBACK_SCAN_STATUSES.Partial
+        : FEEDBACK_SCAN_STATUSES.Completed
+      : FEEDBACK_SCAN_STATUSES.Empty
     return result
   } finally {
     clearTimeout(timer)

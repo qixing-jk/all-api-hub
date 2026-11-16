@@ -7,8 +7,8 @@ import {
   ActionGroup,
   Badge,
   Button,
+  InlineMessage,
   Modal,
-  Notice,
   SearchableSelect,
   Spinner,
 } from "~/components/ui"
@@ -136,8 +136,8 @@ export function AssociateApiCredentialProfileDialog({
             label: `${profile.name} · ${profile.baseUrl}`,
             match,
             suffix: (
-              <div className="gap-y-density-1 flex max-w-1/2 shrink-0 flex-col items-end">
-                <span className="text-muted-foreground font-mono text-xs">
+              <div className="flex max-w-1/2 shrink-0 flex-col items-end gap-y-density-1">
+                <span className="font-mono text-xs text-muted-foreground">
                   {maskSecretForDisplay(profile.apiKey)}
                 </span>
                 <Badge
@@ -184,11 +184,11 @@ export function AssociateApiCredentialProfileDialog({
       size="md"
       header={
         <div className="space-y-density-1">
-          <div className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
+          <div className="flex items-center gap-x-2 gap-y-density-2 text-base font-semibold">
             <Link2 aria-hidden="true" className="h-4 w-4" />
             {t("apiCredentialProfiles:association.linkExisting")}
           </div>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {t("apiCredentialProfiles:association.linkExistingDescription")}
           </p>
         </div>
@@ -219,8 +219,8 @@ export function AssociateApiCredentialProfileDialog({
       panelTestId={KEY_MANAGEMENT_TEST_IDS.associateCredentialDialog}
     >
       <div className="space-y-density-4">
-        <div className="py-density-3 rounded-md border px-3 text-sm">
-          <div className="text-muted-foreground text-xs">
+        <div className="rounded-md border px-3 py-density-3 text-sm">
+          <div className="text-xs text-muted-foreground">
             {t("apiCredentialProfiles:association.resourceLabel")}
           </div>
           <div className="mt-density-1 font-medium break-all">
@@ -229,7 +229,7 @@ export function AssociateApiCredentialProfileDialog({
         </div>
 
         {existingProfileNames.length > 0 ? (
-          <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-3 rounded-md border px-3 text-sm">
+          <div className="rounded-md border border-warning-border bg-warning-soft px-3 py-density-3 text-sm text-warning-soft-foreground">
             {t("apiCredentialProfiles:association.replaceExisting", {
               names: existingProfileNames.join(", "),
             })}
@@ -239,7 +239,7 @@ export function AssociateApiCredentialProfileDialog({
         {isProfilesLoading ? (
           <div
             role="status"
-            className="text-muted-foreground gap-y-density-2 flex items-center gap-x-2 text-sm"
+            className="flex items-center gap-x-2 gap-y-density-2 text-sm text-muted-foreground"
           >
             <Spinner size="sm" />
             {t("apiCredentialProfiles:association.loadingProfiles")}
@@ -262,18 +262,18 @@ export function AssociateApiCredentialProfileDialog({
               )}
             />
             {selectedProfileMatch ? (
-              <Notice
+              <InlineMessage
                 tone={
                   selectedProfileMatch ===
                   KEY_CREDENTIAL_SECRET_MATCHES.Mismatch
                     ? "warning"
                     : "info"
                 }
-                description={getSecretComparisonDescription(
-                  selectedProfileMatch,
-                  t,
-                )}
-              />
+                role="status"
+                size="sm"
+              >
+                {getSecretComparisonDescription(selectedProfileMatch, t)}
+              </InlineMessage>
             ) : null}
           </>
         ) : (

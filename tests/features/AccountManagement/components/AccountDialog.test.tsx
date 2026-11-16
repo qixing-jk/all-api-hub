@@ -717,7 +717,9 @@ describe("AccountDialog", () => {
         ) as HTMLTextAreaElement
       ).value
       expect(report).toContain(
-        `<th scope="row">execution</th><td>${scenario === "same" ? "failed" : "unavailable"}</td>`,
+        scenario === "same"
+          ? `<th scope="row">execution</th><td>failed</td>`
+          : `<th scope="row">execution record</th><td>not_linked</td>`,
       )
     },
   )

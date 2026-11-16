@@ -2,7 +2,7 @@ import { Copy } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { Button, Notice } from "~/components/ui"
+import { Button, InlineMessage } from "~/components/ui"
 import { cn } from "~/lib/utils"
 
 import { SUBMISSION_FEEDBACK } from "./submissionFeedback"
@@ -34,23 +34,23 @@ export function FeedbackFormFooter({
   return (
     <div className="space-y-density-3">
       {feedback && (
-        <Notice
+        <InlineMessage
           tone={failed ? "destructive" : "success"}
           role={failed ? "alert" : "status"}
-          description={feedbackMessages[feedback]}
-        />
+          size="sm"
+        >
+          {feedbackMessages[feedback]}
+        </InlineMessage>
       )}
-      <p className="text-muted-foreground text-xs leading-5">
+      <p className="text-xs leading-5 text-muted-foreground">
         {t("checkInFeedback.disclosure")}
       </p>
       {needsCopy && (
-        <Notice
-          tone="warning"
-          size="sm"
-          description={t("checkInFeedback.longReport")}
-        />
+        <InlineMessage tone="warning" size="sm" role="status">
+          {t("checkInFeedback.longReport")}
+        </InlineMessage>
       )}
-      <div className="gap-y-density-2 grid grid-cols-2 items-center gap-x-2 sm:flex sm:flex-wrap sm:justify-end">
+      <div className="grid grid-cols-2 items-center gap-x-2 gap-y-density-2 sm:flex sm:flex-wrap sm:justify-end">
         <Button
           type="button"
           variant="ghost"

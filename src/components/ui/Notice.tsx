@@ -1,59 +1,48 @@
-import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react"
 import React, { useId } from "react"
 
 import { cn } from "~/lib/utils"
 
 import { ActionGroup } from "./ActionGroup"
+import { feedbackToneStyles, type FeedbackTone } from "./feedbackTone"
 
 // General guidance follows the theme; explicit status tones keep their meaning.
-export type NoticeTone =
-  | "default"
-  | "neutral"
-  | "info"
-  | "warning"
-  | "success"
-  | "destructive"
+export type NoticeTone = FeedbackTone
 
-export type NoticeSize = "default" | "sm"
+const NOTICE_SIZES = { Default: "default", Small: "sm" } as const
+
+export type NoticeSize = (typeof NOTICE_SIZES)[keyof typeof NOTICE_SIZES]
 
 const noticeToneStyles: Record<
   NoticeTone,
   {
     surface: string
     icon: string
-    Icon: React.ComponentType<{ className?: string }>
   }
 > = {
   default: {
     surface: "border-primary-soft-border bg-primary-soft",
     icon: "bg-primary-soft-hover text-primary-soft-foreground",
-    Icon: Info,
   },
   neutral: {
     surface:
       "border-border/60 bg-muted/40 text-muted-foreground dark:border-border/40 dark:bg-muted/20",
     icon: "bg-muted text-muted-foreground",
-    Icon: Info,
   },
   info: {
     surface: "border-info-border bg-info-soft",
     icon: "bg-info-soft text-info-soft-foreground",
-    Icon: Info,
   },
   warning: {
     surface: "border-warning-border bg-warning-soft",
     icon: "bg-warning-soft text-warning-soft-foreground",
-    Icon: TriangleAlert,
   },
   success: {
     surface: "border-success-border bg-success-soft",
     icon: "bg-success-soft text-success-soft-foreground",
-    Icon: CircleCheck,
   },
   destructive: {
     surface: "border-destructive-border bg-destructive-soft",
     icon: "bg-destructive-soft text-destructive-soft-foreground",
-    Icon: CircleAlert,
   },
 }
 
@@ -62,8 +51,10 @@ export const NOTICE_ACTION_LAYOUTS = {
   Inline: "inline",
 } as const
 
-export interface NoticeProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
+export interface NoticeProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "title"
+> {
   tone?: NoticeTone
   size?: NoticeSize
   title?: React.ReactNode
@@ -76,14 +67,14 @@ export interface NoticeProps
 }
 
 /**
- * Lightweight non-blocking notice for contextual guidance and recoverable states.
+ * Bounded contextual guidance with a title, details or grouped recovery actions.
  */
 export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
   (
     {
       className,
       tone = "default",
-      size = "default",
+      size = NOTICE_SIZES.Default,
       title,
       description,
       icon,
@@ -98,8 +89,8 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
     const titleId = useId()
     const descriptionId = useId()
     const toneStyles = noticeToneStyles[tone]
-    const DefaultIcon = toneStyles.Icon
-    const isCompact = size === "sm"
+    const DefaultIcon = feedbackToneStyles[tone].Icon
+    const isCompact = size === NOTICE_SIZES.Small
     const resolvedIcon =
       icon === undefined ? (
         <DefaultIcon
@@ -161,14 +152,14 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
             className={cn(
               "min-w-0 flex-1",
               actionsLayout === NOTICE_ACTION_LAYOUTS.Inline &&
-                "gap-density-1 flex flex-col @md/notice:flex-row @md/notice:gap-x-3",
+                "flex flex-col gap-density-1 @md/notice:flex-row @md/notice:gap-x-3",
             )}
           >
             <div className="min-w-0 flex-1">
               {title ? (
                 <div
                   id={titleId}
-                  className="text-foreground text-sm leading-normal font-medium"
+                  className="text-sm leading-normal font-medium text-foreground"
                 >
                   {title}
                 </div>
@@ -179,8 +170,8 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
                   className={cn(
                     "text-xs",
                     isCompact
-                      ? "text-muted-foreground leading-normal"
-                      : "dark:text-secondary-foreground text-muted-foreground leading-[max(1.25rem,var(--font-size-xs--line-height))]",
+                      ? "leading-normal text-muted-foreground"
+                      : "leading-[max(1.25rem,var(--font-size-xs--line-height))] text-muted-foreground dark:text-secondary-foreground",
                     !isCompact && title && "mt-0.5",
                   )}
                 >

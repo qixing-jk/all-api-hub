@@ -38,6 +38,7 @@ export { Label, labelVariants } from "./label"
 export { AlertAction, Alert, AlertTitle, AlertDescription } from "./Alert"
 export { Notice, type NoticeProps } from "./Notice"
 export { NoticeActionButton } from "./NoticeActionButton"
+export { InlineMessage } from "./InlineMessage"
 export { Badge, BadgeAdornment, badgeVariants } from "./badge"
 export {
   Select,

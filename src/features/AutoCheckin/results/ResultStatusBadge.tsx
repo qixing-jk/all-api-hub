@@ -18,7 +18,7 @@ function renderResultBadge(Icon: LucideIcon, label: string, className: string) {
   return (
     <span
       className={cn(
-        "gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium",
+        "inline-flex items-center gap-x-1 gap-y-density-1 rounded-full px-2 py-density-1 text-xs font-medium",
         className,
       )}
     >
@@ -31,45 +31,48 @@ function renderResultBadge(Icon: LucideIcon, label: string, className: string) {
 /** Shared result badge for execution history and adaptation reports. */
 export default function ResultStatusBadge({
   status,
+  label,
 }: {
   status: CheckinResultStatus
+  /** Allows historical feedback to avoid presenting a success as the current command. */
+  label?: string
 }) {
   const { t } = useTranslation("autoCheckin")
   switch (status) {
     case CHECKIN_RESULT_STATUS.SUCCESS:
       return renderResultBadge(
         CircleCheck,
-        t("execution.status.success"),
+        label ?? t("execution.status.success"),
         "bg-success-soft text-success-soft-foreground",
       )
     case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
       return renderResultBadge(
         CircleCheck,
-        t("execution.status.alreadyChecked"),
+        label ?? t("execution.status.alreadyChecked"),
         "bg-success-soft text-success-soft-foreground",
       )
     case CHECKIN_RESULT_STATUS.FAILED:
       return renderResultBadge(
         CircleX,
-        t("execution.status.failed"),
+        label ?? t("execution.status.failed"),
         "bg-destructive-soft text-destructive-soft-foreground",
       )
     case CHECKIN_RESULT_STATUS.SKIPPED:
       return renderResultBadge(
         CircleMinus,
-        t("execution.status.skipped"),
+        label ?? t("execution.status.skipped"),
         "bg-muted text-secondary-foreground",
       )
     case CHECKIN_RESULT_STATUS.UNCERTAIN:
       return renderResultBadge(
         TriangleAlert,
-        t("execution.status.uncertain"),
+        label ?? t("execution.status.uncertain"),
         "bg-warning-soft text-warning-soft-foreground",
       )
     default:
       return (
-        <span className="bg-muted text-secondary-foreground dark:bg-secondary py-density-1 inline-flex items-center rounded-full px-2 text-xs font-medium">
-          {status}
+        <span className="inline-flex items-center rounded-full bg-muted px-2 py-density-1 text-xs font-medium text-secondary-foreground dark:bg-secondary">
+          {label ?? status}
         </span>
       )
   }

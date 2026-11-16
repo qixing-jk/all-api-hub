@@ -6,6 +6,16 @@ import type { ScanReadIssue } from "./scanReader"
 /** Includes page readiness and the bounded scan, without waiting after completion. */
 export const FEEDBACK_SCAN_SESSION_TIMEOUT_MS = 45000
 
+/** Terminal collection outcomes shared by the scanner and its presentation. */
+export const FEEDBACK_SCAN_STATUSES = {
+  Completed: "completed",
+  Partial: "partial",
+  Empty: "empty",
+} as const
+
+export type FeedbackScanStatus =
+  (typeof FEEDBACK_SCAN_STATUSES)[keyof typeof FEEDBACK_SCAN_STATUSES]
+
 export interface CheckInFeedbackScanInput {
   baseUrl: string
   siteType: AccountSiteType
@@ -17,14 +27,22 @@ export interface CheckInFeedbackScanInput {
   routePaths?: string[]
 }
 
+/** Additional collection issues supplement the reader's own failure reasons. */
+export const FEEDBACK_SCAN_ISSUES = {
+  TaskTimeout: "task_timeout",
+  ResourceResponse: "resource_response",
+  RouteLimit: "route_limit",
+} as const
+
 export interface CheckInFeedbackClues {
-  status: "completed" | "partial" | "empty"
+  status: FeedbackScanStatus
   statusQueries: Array<{ path: string; status?: number; keys: string[] }>
   routes: string[]
   authenticatedQueriesUnavailable: boolean
   resources?: { discovered: number; scanned: number; skipped?: number }
   keywords?: string[]
   issues?: Array<
-    ScanReadIssue | "task_timeout" | "resource_response" | "route_limit"
+    | ScanReadIssue
+    | (typeof FEEDBACK_SCAN_ISSUES)[keyof typeof FEEDBACK_SCAN_ISSUES]
   >
 }

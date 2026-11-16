@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next"
 
-import { Alert, Badge, CollapsibleSection, Heading6 } from "~/components/ui"
+import {
+  Badge,
+  CollapsibleSection,
+  Heading6,
+  InlineMessage,
+} from "~/components/ui"
 import { VERIFICATION_RAIL_STATUS_VARIANTS } from "~/features/Verification/api/types"
 import { VERIFICATION_GENERATION_PART_TYPES } from "~/services/verification/aiApiVerification/generationProgress"
 import {
@@ -141,9 +146,9 @@ export function QuestionAnswerPanel({
         }
         resultSummary={
           draftChanged ? (
-            <Alert variant="info" role="status" compact>
+            <InlineMessage tone="info" role="status">
               {t("verifyDialog.tools.questionAnswer.draftChanged")}
-            </Alert>
+            </InlineMessage>
           ) : undefined
         }
         detailsContent={
@@ -213,11 +218,11 @@ export function QuestionAnswerPanel({
         !controller.progress?.parts?.some(
           (part) => part.type === VERIFICATION_GENERATION_PART_TYPES.Error,
         ) ? (
-          <Alert variant="warning">
+          <InlineMessage tone="warning" role="alert">
             {t("verifyDialog.tools.errors.unexpected", {
               message: controller.error,
             })}
-          </Alert>
+          </InlineMessage>
         ) : null}
       </VerificationProbeDetails>
     </section>

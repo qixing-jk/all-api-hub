@@ -1,9 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority"
-import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react"
 import React from "react"
 
 import { Heading5 } from "~/components/ui/Typography"
 import { cn } from "~/lib/utils"
+
+import { feedbackToneStyles } from "./feedbackTone"
 
 const alertVariants = cva(
   "relative w-full rounded-lg border px-4 py-density-4",
@@ -64,18 +65,11 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
 
       const iconClassName = cn("h-4 w-4", compact && "mt-0.5 shrink-0")
 
-      switch (variant) {
-        case "destructive":
-          return <CircleAlert className={iconClassName} />
-        case "success":
-          return <CircleCheck className={iconClassName} />
-        case "warning":
-          return <TriangleAlert className={iconClassName} />
-        case "info":
-          return <Info className={iconClassName} />
-        default:
-          return <Info className={iconClassName} />
-      }
+      const Icon =
+        feedbackToneStyles[
+          variant === "primary" ? "default" : (variant ?? "neutral")
+        ].Icon
+      return <Icon className={iconClassName} />
     }
 
     const icon = getIcon()

@@ -178,7 +178,9 @@ class AutoCheckinStorage {
   /**
    * Get auto check-in status
    */
-  async getStatus(): Promise<AutoCheckinStatus | null> {
+  async getStatus(options?: {
+    throwOnError?: boolean
+  }): Promise<AutoCheckinStatus | null> {
     try {
       const stored = (await this.storage.get(
         STORAGE_KEYS.AUTO_CHECKIN_STATUS,
@@ -191,6 +193,7 @@ class AutoCheckinStorage {
         PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Read,
         error,
       )
+      if (options?.throwOnError) throw error
       return null
     }
   }
@@ -402,8 +405,8 @@ class AutoCheckinStorage {
           : summaryBase
       const pendingRetry = Boolean(
         retryState &&
-          Array.isArray(retryState.pendingAccountIds) &&
-          retryState.pendingAccountIds.length > 0,
+        Array.isArray(retryState.pendingAccountIds) &&
+        retryState.pendingAccountIds.length > 0,
       )
 
       return {

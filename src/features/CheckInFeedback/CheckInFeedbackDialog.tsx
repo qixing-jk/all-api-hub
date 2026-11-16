@@ -4,8 +4,16 @@ import { useTranslation } from "react-i18next"
 import { Button, Spinner } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import type { AuthConfig } from "~/services/apiTransport/type"
-import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import {
+  readFeedbackExecution,
+  type FeedbackExecutionEvidence,
+} from "~/services/checkin/feedback/execution"
+import {
+  FEEDBACK_EXECUTION_RECORDS,
+  FEEDBACK_EXECUTION_SOURCES,
+} from "~/services/checkin/feedback/executionTypes"
 import type { CheckInFeedbackSnapshot } from "~/services/checkin/feedback/report"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { SiteAccount } from "~/types"
@@ -63,6 +71,15 @@ function getRefreshSnapshot(
   }
 }
 
+/** Retains only the identity needed to keep a later reload tied to this dialog. */
+function getAccountIdentity(account: SiteAccount) {
+  return {
+    siteUrl: account.site_url,
+    siteType: account.site_type,
+    userId: normalizeAccountIdentity(account.account_info.id),
+  }
+}
+
 /** Preserves editor drafts while enriching identified accounts with saved execution facts. */
 export default function CheckInFeedbackDialog({
   source,
@@ -79,6 +96,7 @@ export default function CheckInFeedbackDialog({
   const [data, setData] = useState<{
     snapshot: CheckInFeedbackSnapshot
     auth?: AuthConfig
+    savedAccountIdentity?: ReturnType<typeof getAccountIdentity>
   } | null>(null)
   const [unavailable, setUnavailable] = useState(false)
   useEffect(() => {
@@ -86,27 +104,51 @@ export default function CheckInFeedbackDialog({
     if ("snapshot" in source) {
       const accountId = source.accountId
       if (accountId) {
-        void Promise.all([
-          accountQueries.getAccountById(accountId).catch(() => null),
-          source.snapshot.execution
-            ? Promise.resolve(null)
-            : autoCheckinStorage.getStatus().catch(() => null),
-        ]).then(([account, status]) => {
-          if (active)
-            setData({
-              ...source,
-              snapshot: {
-                ...source.snapshot,
-                refresh: account
-                  ? getRefreshSnapshot(account)
-                  : source.snapshot.refresh,
-                execution: sanitizeExecution(
-                  source.snapshot.execution ?? status?.perAccount?.[accountId],
-                  account,
-                ),
-              },
-            })
-        })
+        void accountQueries
+          .getAccountById(accountId)
+          .catch(() => null)
+          .then(async (account) => {
+            if (!active) return
+            const draftUserId = normalizeAccountIdentity(source.auth?.userId)
+            if (
+              account &&
+              (account.site_url !== source.snapshot.baseUrl ||
+                account.site_type !== source.snapshot.siteType ||
+                (draftUserId !== null &&
+                  normalizeAccountIdentity(account.account_info.id) !==
+                    draftUserId))
+            ) {
+              setData({
+                ...source,
+                snapshot: {
+                  ...source.snapshot,
+                  execution: undefined,
+                  executionRecord: FEEDBACK_EXECUTION_RECORDS.NotLinked,
+                  executionSource: FEEDBACK_EXECUTION_SOURCES.UnlinkedDraft,
+                },
+              })
+              return
+            }
+            const execution = await readFeedbackExecution(
+              accountId,
+              source.snapshot.execution,
+            )
+            if (active)
+              setData({
+                ...source,
+                savedAccountIdentity: account
+                  ? getAccountIdentity(account)
+                  : undefined,
+                snapshot: {
+                  ...source.snapshot,
+                  ...execution,
+                  refresh: account
+                    ? getRefreshSnapshot(account)
+                    : source.snapshot.refresh,
+                  execution: sanitizeExecution(execution.execution, account),
+                },
+              })
+          })
       } else {
         setData(source)
       }
@@ -119,18 +161,20 @@ export default function CheckInFeedbackDialog({
             setUnavailable(true)
             return
           }
-          const execution =
-            source.execution ??
-            (await autoCheckinStorage.getStatus().catch(() => null))
-              ?.perAccount?.[source.accountId]
+          const execution = await readFeedbackExecution(
+            source.accountId,
+            source.execution,
+          )
           if (!active) return
           setData({
+            savedAccountIdentity: getAccountIdentity(account),
             snapshot: {
               baseUrl: account.site_url,
               siteType: account.site_type,
               checkIn: account.checkIn,
               refresh: getRefreshSnapshot(account),
-              execution: sanitizeExecution(execution, account),
+              ...execution,
+              execution: sanitizeExecution(execution.execution, account),
             },
             auth: {
               authType: account.authType,
@@ -149,10 +193,39 @@ export default function CheckInFeedbackDialog({
       active = false
     }
   }, [source])
+  const accountId = source.accountId
+  const providedExecution =
+    "snapshot" in source ? source.snapshot.execution : source.execution
+  /** Rechecks the saved identity before replacing execution evidence. */
+  async function reloadExecution(): Promise<FeedbackExecutionEvidence> {
+    const notLinked: FeedbackExecutionEvidence = {
+      executionRecord: FEEDBACK_EXECUTION_RECORDS.NotLinked,
+      executionSource: FEEDBACK_EXECUTION_SOURCES.UnlinkedDraft,
+    }
+    if (!accountId || !data?.savedAccountIdentity) return notLinked
+    const account = await accountQueries.getAccountById(accountId)
+    if (!account) return notLinked
+    const identity = getAccountIdentity(account)
+    if (
+      identity.siteUrl !== data.savedAccountIdentity.siteUrl ||
+      identity.siteType !== data.savedAccountIdentity.siteType ||
+      identity.userId !== data.savedAccountIdentity.userId
+    )
+      return notLinked
+    const evidence = await readFeedbackExecution(accountId)
+    return {
+      ...evidence,
+      execution: sanitizeExecution(evidence.execution, account),
+    }
+  }
   if (data)
     return (
       <FeedbackForm
-        {...data}
+        snapshot={data.snapshot}
+        auth={data.auth}
+        reloadExecution={
+          accountId && !providedExecution ? reloadExecution : undefined
+        }
         isOpen={isOpen}
         onClose={onClose}
         onCloseComplete={onCloseComplete}

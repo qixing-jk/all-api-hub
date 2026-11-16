@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button, Notice } from "~/components/ui"
+import { Button, InlineMessage } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -90,7 +90,7 @@ export default function SiteAnnouncementsPage({
 
   return (
     <div
-      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      className="px-4 py-density-4 sm:px-6 sm:py-density-6"
       data-options-page-pending={isLoading ? "" : undefined}
     >
       <PageHeader
@@ -184,15 +184,21 @@ export default function SiteAnnouncementsPage({
       />
 
       {siteKey === "all" && hasAggregateIssues ? (
-        <Notice
+        <InlineMessage
           tone="warning"
+          aria-label={t("status.aggregateIssuesTitle")}
           className="mb-density-4"
-          title={t("status.aggregateIssuesTitle")}
-          description={t("status.aggregateIssues", {
-            failed: aggregateFailedSiteCount,
-            unsupported: aggregateUnsupportedSiteCount,
-          })}
-        />
+          role="status"
+          size="sm"
+        >
+          <p>{t("status.aggregateIssuesTitle")}</p>
+          <p>
+            {t("status.aggregateIssues", {
+              failed: aggregateFailedSiteCount,
+              unsupported: aggregateUnsupportedSiteCount,
+            })}
+          </p>
+        </InlineMessage>
       ) : null}
 
       {selectedStatus && (

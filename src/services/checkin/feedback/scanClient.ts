@@ -13,7 +13,9 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { getFeedbackOrigin } from "./report"
 import { collectCheckInFeedbackClues } from "./scan"
 import {
+  FEEDBACK_SCAN_ISSUES,
   FEEDBACK_SCAN_SESSION_TIMEOUT_MS,
+  FEEDBACK_SCAN_STATUSES,
   type CheckInFeedbackClues,
   type CheckInFeedbackScanInput,
 } from "./scanTypes"
@@ -85,11 +87,11 @@ export async function collectFeedbackCluesInBrowser(
   const remaining = FEEDBACK_SCAN_SESSION_TIMEOUT_MS - (Date.now() - started)
   if (remaining <= 0)
     return {
-      status: "empty",
+      status: FEEDBACK_SCAN_STATUSES.Empty,
       statusQueries: [],
       routes: [],
       authenticatedQueriesUnavailable: false,
-      issues: ["task_timeout"],
+      issues: [FEEDBACK_SCAN_ISSUES.TaskTimeout],
     }
   return collectCheckInFeedbackClues(input, signal, { timeoutMs: remaining })
 }

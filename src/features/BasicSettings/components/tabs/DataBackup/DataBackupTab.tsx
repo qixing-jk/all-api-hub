@@ -2,10 +2,10 @@ import { ArrowLeftRight } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
-  Alert,
   Card,
   CardContent,
   Heading3,
+  InlineMessage,
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -28,20 +28,20 @@ export default function DataBackupTab() {
       <section id="import-export-entry">
         <Heading3
           as="h2"
-          className="mb-density-2 gap-y-density-2 flex items-center gap-x-2 text-xl"
+          className="mb-density-2 flex items-center gap-x-2 gap-y-density-2 text-xl"
         >
           <ArrowLeftRight
-            className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
+            className="size-5 shrink-0 text-theme-600 dark:text-theme-400"
             aria-hidden="true"
           />
           {t("dataBackup.importExport.title")}
         </Heading3>
         <Card>
           <CardContent className="space-y-density-4">
-            <p className="text-secondary-foreground text-sm">
+            <p className="text-sm text-secondary-foreground">
               {t("dataBackup.importExport.description")}
             </p>
-            <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
+            <div className="flex flex-col gap-x-3 gap-y-density-3 sm:flex-row">
               <WorkflowTransitionButton
                 onClick={handleNavigateToImportExport}
                 variant="default"
@@ -51,9 +51,9 @@ export default function DataBackupTab() {
                 {t("dataBackup.importExport.openPage")}
               </WorkflowTransitionButton>
             </div>
-            <Alert variant="default">
+            <InlineMessage tone="neutral" role="note">
               <p className="text-sm">{t("dataBackup.importExport.info")}</p>
-            </Alert>
+            </InlineMessage>
           </CardContent>
         </Card>
       </section>

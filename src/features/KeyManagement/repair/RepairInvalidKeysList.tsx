@@ -1,7 +1,13 @@
 import type { TFunction } from "i18next"
 import { Search } from "lucide-react"
 
-import { Alert, Badge, Button, Checkbox, EmptyState } from "~/components/ui"
+import {
+  Badge,
+  Button,
+  Checkbox,
+  EmptyState,
+  InlineMessage,
+} from "~/components/ui"
 import {
   getInvalidResourceKey,
   getInvalidResourceReasonLabel,
@@ -34,14 +40,16 @@ export function RepairInvalidKeysList({
   onSelectedInvalidResourceKeysChange,
   t,
 }: RepairInvalidKeysListProps) {
+  const deleteFeedback = deleteResultMessage ? (
+    <div className="px-4 pt-density-4">
+      <InlineMessage role="alert">{deleteResultMessage}</InlineMessage>
+    </div>
+  ) : null
+
   if (invalidResources.length === 0) {
     return (
       <div>
-        {deleteResultMessage ? (
-          <div className="pt-density-4 px-4">
-            <Alert description={deleteResultMessage} />
-          </div>
-        ) : null}
+        {deleteFeedback}
         <EmptyState
           icon={<Search className="h-12 w-12" />}
           title={t("keyManagement:repairMissingKeys.invalidKeys.emptyTitle")}
@@ -57,11 +65,7 @@ export function RepairInvalidKeysList({
   if (filteredInvalidResources.length === 0) {
     return (
       <div>
-        {deleteResultMessage ? (
-          <div className="pt-density-4 px-4">
-            <Alert description={deleteResultMessage} />
-          </div>
-        ) : null}
+        {deleteFeedback}
         <EmptyState
           icon={<Search className="h-12 w-12" />}
           title={t("keyManagement:repairMissingKeys.noMatchingResults")}
@@ -73,16 +77,12 @@ export function RepairInvalidKeysList({
 
   return (
     <div>
-      {deleteResultMessage ? (
-        <div className="pt-density-4 px-4">
-          <Alert description={deleteResultMessage} />
-        </div>
-      ) : null}
+      {deleteFeedback}
 
       {!readOnly ? (
-        <div className="border-border space-y-density-2 py-density-3 border-b px-4">
-          <div className="gap-density-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <label className="gap-density-2 flex items-center text-sm">
+        <div className="space-y-density-2 border-b border-border px-4 py-density-3">
+          <div className="flex flex-col gap-density-2 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex items-center gap-density-2 text-sm">
               <Checkbox
                 checked={
                   filteredInvalidResources.length > 0 &&
@@ -104,8 +104,8 @@ export function RepairInvalidKeysList({
               />
               {t("keyManagement:repairMissingKeys.invalidKeys.selectAll")}
             </label>
-            <div className="gap-density-2 flex items-center">
-              <span className="text-muted-foreground text-xs">
+            <div className="flex items-center gap-density-2">
+              <span className="text-xs text-muted-foreground">
                 {t(
                   "keyManagement:repairMissingKeys.invalidKeys.selectedCount",
                   { count: selectedInvalidResources.length },
@@ -127,7 +127,7 @@ export function RepairInvalidKeysList({
         </div>
       ) : null}
 
-      <ul className="dark:divide-border divide-y">
+      <ul className="divide-y dark:divide-border">
         {filteredInvalidResources.map((resource) => {
           const resourceKey = getInvalidResourceKey(resource)
           const displayLabel =
@@ -135,9 +135,9 @@ export function RepairInvalidKeysList({
             t("keyManagement:repairMissingKeys.invalidKeys.unnamed")
 
           return (
-            <li key={resourceKey} className="py-density-3 px-4">
-              <div className="gap-density-2 flex flex-col sm:flex-row sm:items-start sm:justify-between">
-                <div className="gap-density-3 flex min-w-0">
+            <li key={resourceKey} className="px-4 py-density-3">
+              <div className="flex flex-col gap-density-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 gap-density-3">
                   {!readOnly ? (
                     <Checkbox
                       checked={selectedInvalidResourceKeys.has(resourceKey)}
@@ -153,8 +153,8 @@ export function RepairInvalidKeysList({
                       className="mt-0.5 shrink-0"
                     />
                   ) : null}
-                  <div className="space-y-density-1 min-w-0">
-                    <div className="gap-density-2 flex min-w-0 flex-wrap items-center">
+                  <div className="min-w-0 space-y-density-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-density-2">
                       <div className="truncate text-sm font-medium">
                         {displayLabel}
                       </div>
@@ -169,7 +169,7 @@ export function RepairInvalidKeysList({
                         <Badge
                           variant="outline"
                           size="sm"
-                          className="border-border text-2xs shrink-0 px-2 py-0.5 font-medium"
+                          className="shrink-0 border-border px-2 py-0.5 text-2xs font-medium"
                           title={resource.groupLabel}
                         >
                           {t(
@@ -179,7 +179,7 @@ export function RepairInvalidKeysList({
                         </Badge>
                       ) : null}
                     </div>
-                    <div className="dark:text-secondary-foreground text-muted-foreground truncate text-xs">
+                    <div className="truncate text-xs text-muted-foreground dark:text-secondary-foreground">
                       {resource.accountName} · {resource.siteUrlOrigin}
                     </div>
                   </div>
@@ -187,13 +187,13 @@ export function RepairInvalidKeysList({
                 <Badge
                   variant="outline"
                   size="sm"
-                  className="border-border text-2xs shrink-0 px-2 py-0.5 font-medium"
+                  className="shrink-0 border-border px-2 py-0.5 text-2xs font-medium"
                   title={resource.siteType}
                 >
                   {resource.siteType}
                 </Badge>
               </div>
-              <div className="text-warning-text mt-density-2 text-xs">
+              <div className="mt-density-2 text-xs text-warning-text">
                 {getInvalidResourceReasonLabel(t, resource)}
               </div>
             </li>

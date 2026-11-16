@@ -1,13 +1,14 @@
-import { Info, RefreshCw, Search } from "lucide-react"
+import { RefreshCw, Search } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
   ActionGroup,
-  Alert,
   Badge,
   Button,
   EmptyState,
+  InlineMessage,
   Input,
+  NoticeActionButton,
   Spinner,
   Tabs,
   TabsContent,
@@ -96,42 +97,40 @@ export function ManagedSiteModelSyncTabs({
       }}
     >
       <TabsList
-        className={`corners-concentric bg-muted dark:bg-card mb-density-4 py-density-1 flex space-x-2 rounded-lg px-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+        className={`mb-density-4 flex space-x-2 rounded-lg bg-muted px-1 py-density-1 [--corner-inset:--spacing(1)] corners-concentric dark:bg-card ${CORNERS.buttonItems}`}
       >
         <TabsTrigger
           value={TAB_VALUE.history}
-          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 py-density-2 flex-1 rounded-lg px-4 text-sm font-medium transition-colors data-[state=active]:shadow"
+          className="flex-1 rounded-lg px-4 py-density-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 data-[state=active]:shadow dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400"
         >
           {historyTabLabel}
         </TabsTrigger>
         <TabsTrigger
           value={TAB_VALUE.manual}
-          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 py-density-2 flex-1 rounded-lg px-4 text-sm font-medium transition-colors data-[state=active]:shadow"
+          className="flex-1 rounded-lg px-4 py-density-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 data-[state=active]:shadow dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400"
         >
           {manualTabLabel}
         </TabsTrigger>
       </TabsList>
       {routeResourceUnavailable && (
-        <Alert variant="warning" role="status" className="mb-density-4">
+        <InlineMessage tone="warning" role="status" className="mb-density-4">
           {t("execution.table.resourceUnavailable")}
-        </Alert>
+        </InlineMessage>
       )}
-      <div
+      <InlineMessage
         id={MODEL_SYNC_EXCLUSIONS_TARGET_ID}
-        className="border-border bg-muted/30 text-muted-foreground mb-density-4 py-density-3 flex items-start gap-2 rounded-lg border px-3 text-sm"
+        role="note"
+        className="mb-density-4"
       >
-        <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-        <p className="min-w-0 leading-relaxed">
-          {t("execution.exclusions.description")}
-        </p>
-      </div>
+        {t("execution.exclusions.description")}
+      </InlineMessage>
       {exclusions.error && (
-        <Alert variant="warning" role="alert" className="mb-density-4">
-          {exclusions.error}
-          <Button variant="ghost" onClick={() => void exclusions.reload()}>
+        <InlineMessage tone="warning" role="alert" className="mb-density-4">
+          {exclusions.error}{" "}
+          <NoticeActionButton onClick={() => void exclusions.reload()}>
             {t("common:actions.retry")}
-          </Button>
-        </Alert>
+          </NoticeActionButton>
+        </InlineMessage>
       )}
       <TabsContent value={TAB_VALUE.history}>
         <div className="space-y-density-4">
@@ -178,7 +177,7 @@ export function ManagedSiteModelSyncTabs({
       </TabsContent>
       <TabsContent value={TAB_VALUE.manual}>
         <div className="space-y-density-4">
-          <div className="gap-y-density-3 flex flex-wrap items-center gap-x-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-density-3">
             <div className="w-full min-w-0 sm:w-64 sm:min-w-64 sm:flex-1 lg:max-w-sm">
               <Input
                 type="text"
@@ -240,7 +239,7 @@ export function ManagedSiteModelSyncTabs({
           {isChannelsLoading ? (
             <div
               role="status"
-              className="border-border-strong text-muted-foreground dark:border-border py-density-6 gap-y-density-3 flex flex-col items-center rounded-lg border border-dashed px-6 text-center text-sm"
+              className="flex flex-col items-center gap-y-density-3 rounded-lg border border-dashed border-border-strong px-6 py-density-6 text-center text-sm text-muted-foreground dark:border-border"
             >
               <Spinner size="lg" variant="gray" aria-hidden="true" />
               {t("execution.manual.loading")}

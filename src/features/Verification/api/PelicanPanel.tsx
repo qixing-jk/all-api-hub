@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Heading6 } from "~/components/ui"
+import { Heading6, InlineMessage } from "~/components/ui"
 import { PelicanTestResult } from "~/features/Verification/api/PelicanTestResult"
 import { VERIFICATION_RAIL_STATUS_VARIANTS } from "~/features/Verification/api/types"
 import {
@@ -182,13 +182,13 @@ export function PelicanPanel({
           !controller.pelicanProgress?.parts?.some(
             (part) => part.type === VERIFICATION_GENERATION_PART_TYPES.Error,
           ) ? (
-            <Alert variant="warning">
+            <InlineMessage tone="warning" role="alert">
               <p>
                 {t("verifyDialog.tools.errors.unexpected", {
                   message: pelicanErrorMessage,
                 })}
               </p>
-            </Alert>
+            </InlineMessage>
           ) : null}
         </VerificationProbeDetails>
       </div>
