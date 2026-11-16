@@ -322,7 +322,14 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
 
     await expect(
       performSub2ApiProDailyCheckIn(createRequest()),
-    ).resolves.toEqual({ kind: "already_checked" })
+    ).resolves.toMatchObject({
+      kind: "already_checked",
+      statusObservation: {
+        observation: { enabled: true, checkedInToday: true },
+        siteUrl: "https://checkin.example.invalid",
+        userId: "42",
+      },
+    })
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
   })
 

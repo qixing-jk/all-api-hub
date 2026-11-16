@@ -13,6 +13,7 @@ import {
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { fetchNexaVlinksDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/nexavlinksCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
@@ -144,6 +145,29 @@ const checkInWithStatusProof = () =>
   })
 
 describe("NexaVlinks check-in integration", () => {
+  it("rereads native completion delivered across month-end without clicking again", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      vi.mocked(fetchNexaVlinksDailyCheckInStatus)
+        .mockImplementationOnce(async () => {
+          await Promise.resolve()
+          vi.setSystemTime(startedAt + 2_000)
+          return { enabled: true, checkedInToday: true }
+        })
+        .mockResolvedValueOnce({ enabled: true, checkedInToday: true })
+      await expect(checkInWithStatusProof()).resolves.toMatchObject({
+        status: "success",
+        confirmation: { kind: "observed", observedAt: startedAt + 2_000 },
+      })
+      expect(fetchNexaVlinksDailyCheckInStatus).toHaveBeenCalledTimes(2)
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(fetchNexaVlinksDailyCheckInStatus).mockResolvedValue(
@@ -316,6 +340,71 @@ describe("NexaVlinks check-in integration", () => {
     })
     expect(result.reward).toBeUndefined()
   })
+
+  it("accepts final checked status after the page's own readback was unavailable", async () => {
+    vi.mocked(fetchNexaVlinksDailyCheckInStatus)
+      .mockResolvedValueOnce(notCheckedStatus)
+      .mockRejectedValueOnce(new Error("status temporarily unavailable"))
+      .mockResolvedValueOnce({ enabled: true, checkedInToday: true })
+
+    const outcome = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+    })
+
+    expect(outcome).toMatchObject({
+      kind: "executed",
+      methodId: METHOD_ID,
+      retryable: false,
+      result: {
+        status: "already_checked",
+        messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+        reconciliation: "checked",
+      },
+    })
+    if (outcome.kind === "executed") {
+      expect(outcome.result.reasonCode).toBeUndefined()
+      expect(outcome.result.rawMessage).toBeUndefined()
+    }
+    expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+    expect(fetchNexaVlinksDailyCheckInStatus).toHaveBeenCalledTimes(3)
+  })
+
+  it.each(["not_checked", "unavailable"])(
+    "keeps the page action unconfirmed when final status is %s",
+    async (finalStatus) => {
+      const read = vi
+        .mocked(fetchNexaVlinksDailyCheckInStatus)
+        .mockResolvedValueOnce(notCheckedStatus)
+        .mockRejectedValueOnce(new Error("status temporarily unavailable"))
+      if (finalStatus === "unavailable") {
+        read.mockRejectedValueOnce(new Error("final status unavailable"))
+      } else {
+        read.mockResolvedValueOnce(notCheckedStatus)
+      }
+
+      const outcome = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        methodId: METHOD_ID,
+        result: {
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+          messageKey:
+            "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
+          messageParams: { checkInUrl: CHECK_IN_URL },
+        },
+      })
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+      expect(read).toHaveBeenCalledTimes(3)
+    },
+  )
 
   it("hands an unfinished verification back to the person on the page", async () => {
     vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(

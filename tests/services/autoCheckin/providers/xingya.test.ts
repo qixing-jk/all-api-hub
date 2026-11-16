@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { xingyaProvider } from "~/services/checkin/autoCheckin/providers/xingya"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
@@ -115,6 +117,66 @@ function prepareLoginSession(identity: string | null = "7451") {
 }
 
 describe("xingyaProvider", () => {
+  it("rereads a session admission response delivered across month-end before claiming", async () => {
+    const beforeMidnight = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(beforeMidnight)
+    try {
+      prepareLoginSession()
+      const requests = await requestModule()
+      vi.mocked(requests.envelope)
+        .mockReset()
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { id: "7451" },
+        })
+        .mockImplementationOnce(async () => {
+          await Promise.resolve()
+          vi.setSystemTime(beforeMidnight + 2_000)
+          return {
+            success: true,
+            message: "",
+            data: {
+              ...liveStatusData,
+              today: "2026-01-31",
+              today_record: { checked_in: true, quota_awarded: 100 },
+            },
+          }
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: {
+            ...liveStatusData,
+            today: "2026-02-01",
+            today_record: { checked_in: false },
+          },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "Claimed",
+          data: { already_claimed: false, quota_awarded: 200 },
+        })
+      await expect(
+        xingyaProvider.checkIn(sessionAccount(), DEFAULT_PROVIDER_CONTEXT),
+      ).resolves.toMatchObject({
+        status: "success",
+        reward: { quota: 200 },
+      })
+      expect(requests.envelope).toHaveBeenCalledTimes(4)
+      expect(
+        vi
+          .mocked(requests.envelope)
+          .mock.calls.filter(
+            ([, options]) => options.options?.method === "POST",
+          ),
+      ).toHaveLength(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("does not admit a session claim from a rejected status envelope", async () => {
     prepareLoginSession()
     const requests = await requestModule()
@@ -324,6 +386,151 @@ describe("xingyaProvider", () => {
     expect(sendSiteAction).toHaveBeenCalledTimes(1)
   })
 
+  it.each([false, true])(
+    "confirms a rejected claim before releasing its login session (cleanup crosses midnight: %s)",
+    async (crossesMidnight) => {
+      const confirmedAt = new Date(2026, 0, 2, 23, 59, 59).getTime()
+      vi.useFakeTimers()
+      vi.setSystemTime(confirmedAt)
+      prepareLoginSession()
+      let sessionOpen = true
+      const runLogin = login.loginAccount.getMockImplementation()!
+      login.loginAccount.mockImplementation(async (request) => {
+        try {
+          return await runLogin(request)
+        } finally {
+          sessionOpen = false
+          if (crossesMidnight) vi.setSystemTime(confirmedAt + 2_000)
+        }
+      })
+      const requests = await requestModule()
+      vi.mocked(requests.envelope)
+        .mockReset()
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { id: "7451" },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: {
+            ...liveStatusData,
+            today_record: { checked_in: false, quota_awarded: 0 },
+          },
+        })
+        .mockResolvedValueOnce({
+          success: false,
+          message: "verification rejected",
+          data: undefined,
+        })
+        .mockImplementationOnce(async () => {
+          expect(sessionOpen).toBe(true)
+          return { success: true, message: "", data: liveStatusData }
+        })
+
+      const account = sessionAccount()
+      const methodId = AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn
+      account.checkIn.selection = { mode: "manual", methodId }
+      account.checkIn.methodKnowledge.methods[methodId] = {
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: Date.now() },
+        },
+      }
+      const outsideRead = vi.spyOn(xingyaProvider, "getStatus")
+      try {
+        const execution = await executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: DEFAULT_PROVIDER_CONTEXT,
+        })
+        expect(execution).toMatchObject({
+          kind: "executed",
+          result: {
+            status: "already_checked",
+            messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+          },
+          confirmation: { kind: "observed", accountId: "test-id" },
+          retryable: false,
+          completedAt: confirmedAt,
+        })
+        if (execution.kind === "executed") {
+          expect(execution.result.rawMessage).toBeUndefined()
+          expect(execution.result.reasonCode).toBeUndefined()
+          expect(execution.result).not.toHaveProperty("confirmation")
+        }
+        expect(outsideRead).not.toHaveBeenCalled()
+      } finally {
+        outsideRead.mockRestore()
+        vi.useRealTimers()
+      }
+      expect(sessionOpen).toBe(false)
+      expect(requests.envelope).toHaveBeenCalledTimes(4)
+      expect(
+        vi
+          .mocked(requests.envelope)
+          .mock.calls.filter(
+            ([, operation]) => operation.options?.method === "POST",
+          ),
+      ).toHaveLength(1)
+    },
+  )
+
+  it.each([
+    ["permission denied", "permission_denied"],
+    ["authentication required", "authentication_required"],
+  ])(
+    "preserves a definitive session %s refusal despite checked readback",
+    async (message, reasonCode) => {
+      prepareLoginSession()
+      const requests = await requestModule()
+      vi.mocked(requests.envelope)
+        .mockReset()
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { id: "7451" },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: {
+            ...liveStatusData,
+            today_record: { checked_in: false, quota_awarded: 0 },
+          },
+        })
+        .mockResolvedValueOnce({ success: false, message, data: undefined })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: liveStatusData,
+        })
+      const account = sessionAccount()
+      const methodId = AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn
+      account.checkIn.selection = { mode: "manual", methodId }
+      account.checkIn.methodKnowledge.methods[methodId] = {
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: Date.now() },
+        },
+      }
+      await expect(
+        executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: DEFAULT_PROVIDER_CONTEXT,
+        }),
+      ).resolves.toMatchObject({
+        kind: "executed",
+        result: { status: "failed", reasonCode, rawMessage: message },
+        confirmation: { kind: "observed" },
+        retryable: false,
+      })
+      expect(requests.envelope).toHaveBeenCalledTimes(4)
+    },
+  )
+
   it("confirms a lost claim response in the same session without replaying the claim", async () => {
     prepareLoginSession()
     const requests = await requestModule()
@@ -410,7 +617,7 @@ describe("xingyaProvider", () => {
       ).resolves.toMatchObject(
         checked
           ? { status: "success", reward: { quota: 69350 } }
-          : { status: "uncertain", reasonCode: "checkin_unconfirmed" },
+          : { status: "failed", reasonCode: "checkin_unconfirmed" },
       )
       expect(
         vi

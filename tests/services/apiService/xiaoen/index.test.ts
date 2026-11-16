@@ -9,7 +9,10 @@ import { loadAccountCatalogSource } from "~/services/modelCatalog/loader"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
@@ -34,6 +37,135 @@ const request = {
 }
 
 describe("肖恩 AI console", () => {
+  it("keeps two day-crossing identity reads unavailable without sending a sign-in", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    const account = buildSiteAccount({
+      site_type: "xiaoen",
+      site_url: origin,
+      authType: AuthTypeEnum.Cookie,
+      account_info: { ...buildSiteAccount().account_info, id: user.id },
+    })
+    let reads = 0
+    const mutation = vi.fn(() => HttpResponse.json({ success: true }))
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      server.use(
+        http.get(`${origin}/api/auth/me`, () => {
+          vi.setSystemTime(startedAt + 2_000 + reads++ * 86_400_000)
+          return HttpResponse.json({
+            success: true,
+            data: { ...user, hasSignedInToday: false },
+          })
+        }),
+        http.post(`${origin}/api/user/signin`, mutation),
+      )
+      await expect(
+        xiaoenProvider.checkIn(account, {
+          tempWindowRequestSource: {} as never,
+          protectionBypassExecution: {} as never,
+        }),
+      ).resolves.toMatchObject({
+        status: "uncertain",
+        reasonCode: "checkin_unconfirmed",
+        confirmation: { kind: "unavailable" },
+      })
+      expect(reads).toBe(2)
+      expect(mutation).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("claims the new day once after discarding a previous-day checked identity", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    let reads = 0
+    const mutation = vi.fn(() => {
+      vi.setSystemTime(startedAt + 2_000 + 86_400_000)
+      return HttpResponse.json({ success: true, data: { bonus: 2962 } })
+    })
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      server.use(
+        http.get(`${origin}/api/auth/me`, () => {
+          const checked = reads++ === 0
+          if (checked) vi.setSystemTime(startedAt + 2_000)
+          return HttpResponse.json({
+            success: true,
+            data: { ...user, hasSignedInToday: checked },
+          })
+        }),
+        http.post(`${origin}/api/user/signin`, mutation),
+      )
+      await expect(performCheckIn(request)).resolves.toMatchObject({
+        alreadyChecked: false,
+        status: "success",
+        data: { bonus: 2962 },
+      })
+      expect(reads).toBe(2)
+      expect(mutation).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("confirms an already-checked read after midnight using a fresh GET and one Cookie capture", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    const account = buildSiteAccount({
+      site_type: "xiaoen",
+      site_url: origin,
+      authType: AuthTypeEnum.Cookie,
+      account_info: { ...buildSiteAccount().account_info, id: user.id },
+    })
+    let capturesAtFirstRead = 0
+    let reads = 0
+    const mutation = vi.fn(() => HttpResponse.json({ success: true }))
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      server.use(
+        http.get(`${origin}/api/auth/me`, ({ request }) => {
+          expect(request.headers.get("cookie")).toBe(
+            "auth_token=browser-account",
+          )
+          if (reads++ === 0) {
+            capturesAtFirstRead = vi.mocked(browser.cookies.getAll).mock.calls
+              .length
+            vi.setSystemTime(startedAt + 2_000)
+          }
+          return HttpResponse.json({ success: true, data: user })
+        }),
+        http.post(`${origin}/api/user/signin`, mutation),
+      )
+      await expect(
+        xiaoenProvider.checkIn(account, {
+          tempWindowRequestSource: {} as never,
+          protectionBypassExecution: {} as never,
+        }),
+      ).resolves.toMatchObject({
+        status: "already_checked",
+        confirmation: {
+          kind: "observed",
+          accountId: account.id,
+          siteUrl: origin,
+          userId: user.id,
+          observedAt: startedAt + 2_000,
+          status: {
+            outcome: "known",
+            today: "checked",
+            evidence: { source: "probe", observedAt: startedAt + 2_000 },
+          },
+        },
+      })
+      expect(reads).toBe(2)
+      expect(browser.cookies.getAll).toHaveBeenCalledTimes(capturesAtFirstRead)
+      expect(mutation).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("limits the actual account Model List loader to runtime-visible models, retaining missing-price models", async () => {
     server.use(
       http.get("https://speed27.toter.me/v1/models", ({ request: native }) => {
@@ -291,6 +423,10 @@ describe("肖恩 AI console", () => {
     server.use(http.post(`${origin}/api/user/signin`, mutation))
     expect(await performCheckIn(request)).toMatchObject({
       alreadyChecked: true,
+      statusObservation: {
+        observation: { id: user.id, hasSignedInToday: true },
+        observedAt: expect.any(Number),
+      },
     })
     expect(mutation).not.toHaveBeenCalled()
   })

@@ -70,8 +70,9 @@ export async function performSub2ApiProDailyCheckIn(
       },
       fetchSub2ApiProDailyCheckInStatusWithRequest,
       options,
-      (reason) =>
+      (reason, statusObservation) =>
         new Sub2ApiProRecoveredMutationBlockedError({
+          ...(statusObservation ? { statusObservation } : {}),
           kind: {
             [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
               SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,

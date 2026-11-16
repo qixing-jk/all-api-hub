@@ -141,6 +141,7 @@ export async function readXiaoen(
   return withXiaoenSession(request, async (scoped) => {
     const reusable =
       (options.method ?? "GET").toUpperCase() === "GET" &&
+      options.cache !== "no-store" &&
       reusableEndpoints.has(endpoint)
     if (!reusable) return readXiaoenUncached(scoped, endpoint, options)
     const reads = operationReads.get(scoped)!

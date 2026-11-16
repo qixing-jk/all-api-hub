@@ -1822,16 +1822,150 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
-  it.each([undefined, "checked", "not_checked"] as const)(
-    "keeps a reused check-in completion on its original day across midnight (newer status %s)",
-    async (newerToday) => {
-      const { executeAccountCheckin } = await import(
-        "~/services/checkin/autoCheckin/execution/accountExecution"
+  it.each(
+    [false, true].flatMap((reused) =>
+      [-1_000, 0, 1_000].map((probeOffset) => ({ reused, probeOffset })),
+    ),
+  )(
+    "persists a dated provider success with a same-day unchecked probe (reused: $reused, probe offset: $probeOffset)",
+    async ({ reused, probeOffset }) => {
+      const { executeAccountCheckin } =
+        await import("~/services/checkin/autoCheckin/execution/accountExecution")
+      const methods = await import("~/services/checkin/autoCheckin/methods")
+      const { sub2apiProProvider } =
+        await import("~/services/checkin/autoCheckin/providers/sub2apiPro")
+      const { confirmCheckInAttempt } =
+        await import("~/services/checkin/autoCheckin/confirmation")
+      const observedAt = new Date(2026, 0, 2, 12).getTime()
+      const completedAt = observedAt - 2_000
+      const storedProbeAt = observedAt + probeOffset
+      const admissionAt = Math.min(storedProbeAt, observedAt)
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(observedAt)
+      const statusProof = {
+        outcome: "known" as const,
+        availability: "enabled" as const,
+        today: "not_checked" as const,
+        evidence: { source: "probe" as const, observedAt: admissionAt },
+      }
+      const account = createAccount({
+        id: "dated-provider-success",
+        site_type: SITE_TYPES.SUB2API,
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: {
+            mode: "automatic",
+            methodId: "sub2api-pro:daily-checkin",
+          },
+          methodKnowledge: {
+            methods: {
+              "sub2api-pro:daily-checkin": {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: admissionAt },
+                },
+                status: {
+                  ...statusProof,
+                  evidence: { source: "probe", observedAt: storedProbeAt },
+                },
+              },
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      server.use(
+        http.post(`${account.site_url}/api/v1/redeem/checkin`, () =>
+          HttpResponse.json({
+            code: 0,
+            message: "success",
+            data: {
+              message: "checked in",
+              reward_amount: 1,
+              new_balance: 10,
+              checked_in_at: new Date(completedAt).toISOString(),
+            },
+          }),
+        ),
       )
+      const execution = vi
+        .spyOn(methods, "executeSelectedCheckIn")
+        .mockImplementation(async ({ context }) => {
+          const providerResult = await sub2apiProProvider.checkIn(account, {
+            ...context,
+            statusProof,
+          })
+          const confirmed = await confirmCheckInAttempt({
+            account,
+            result: providerResult,
+            startedAt: admissionAt,
+          })
+          vi.setSystemTime(Math.max(storedProbeAt, observedAt))
+          return {
+            kind: "executed",
+            methodId: "sub2api-pro:daily-checkin",
+            ...confirmed,
+            retryable: false,
+            completedAt:
+              confirmed.confirmation.kind === "response"
+                ? confirmed.confirmation.completedAt
+                : undefined,
+            ...(reused ? { reused: true as const } : {}),
+          }
+        })
+      try {
+        const outcome = await executeAccountCheckin(
+          account,
+          account.site_name,
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+          userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin),
+        )
+        expect(outcome).toMatchObject({
+          ...(reused ? { reused: true } : {}),
+          result: {
+            status: "success",
+            timestamp: observedAt,
+            accountStateDurability: "persisted",
+          },
+        })
+        const saved = await accountStorage.getAccountById(account.id)
+        expect(
+          saved?.checkIn.methodKnowledge.methods["sub2api-pro:daily-checkin"]
+            ?.status,
+        ).toMatchObject({
+          today: probeOffset > 0 ? "not_checked" : "checked",
+          evidence:
+            probeOffset > 0
+              ? { source: "probe", observedAt: storedProbeAt }
+              : { source: "execution", observedAt },
+        })
+      } finally {
+        execution.mockRestore()
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it.each(
+    ([undefined, "checked", "not_checked"] as const).flatMap((newerToday) =>
+      [false, true].flatMap((reused) =>
+        [false, true].map((observedAfterMidnight) => ({
+          newerToday,
+          reused,
+          observedAfterMidnight,
+        })),
+      ),
+    ),
+  )(
+    "keeps a check-in completion on its original day across midnight (reused: $reused, newer status: $newerToday, observed after midnight: $observedAfterMidnight)",
+    async ({ newerToday, reused, observedAfterMidnight }) => {
+      const { executeAccountCheckin } =
+        await import("~/services/checkin/autoCheckin/execution/accountExecution")
       const methods = await import("~/services/checkin/autoCheckin/methods")
       const completedAt = new Date(2026, 0, 2, 23, 59, 59).getTime()
       vi.useFakeTimers()
       vi.setSystemTime(new Date(2026, 0, 3, 0, 0, 1))
+      const observedAt = observedAfterMidnight ? Date.now() : completedAt
       const account = createAccount({
         id: "reused-midnight",
         site_type: SITE_TYPES.ANYROUTER,
@@ -1869,9 +2003,17 @@ describe("accountStorage core behaviors", () => {
           kind: "executed",
           methodId: "anyrouter:daily-checkin",
           result: { status: "success" },
+          confirmation: {
+            kind: "response",
+            accountId: account.id,
+            siteUrl: account.site_url,
+            userId: String(account.account_info.id),
+            observedAt,
+            completedAt,
+          },
           retryable: false,
           completedAt,
-          reused: true,
+          ...(reused ? { reused: true as const } : {}),
         })
       try {
         const outcome = await executeAccountCheckin(
@@ -1881,10 +2023,10 @@ describe("accountStorage core behaviors", () => {
           userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin),
         )
         expect(outcome).toMatchObject({
-          reused: true,
+          ...(reused ? { reused: true } : {}),
           result: {
             status: "success",
-            timestamp: completedAt,
+            timestamp: observedAt,
             accountStateDurability: "persisted",
           },
         })
@@ -1908,6 +2050,62 @@ describe("accountStorage core behaviors", () => {
         execution.mockRestore()
         vi.useRealTimers()
       }
+    },
+  )
+
+  it.each([
+    ["probe", "not_checked", "checked"],
+    ["probe", "checked", "not_checked"],
+    ["execution", "checked", "not_checked"],
+  ] as const)(
+    "retains stored %s %s against an equal-time %s probe",
+    async (source, storedToday, probeToday) => {
+      const observedAt = new Date(2026, 0, 2, 12).getTime()
+      const methodId = "new-api:daily-checkin" as const
+      const storedStatus = {
+        outcome: "known" as const,
+        today: storedToday,
+        evidence: { source, observedAt },
+      }
+      const account = createAccount({
+        id: "equal-probe",
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "automatic", methodId },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "compatibility_registration" },
+                },
+                status: storedStatus,
+              },
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      await accountStorage.prepareAccountForSelectedCheckIn(account.id, {
+        ...account.checkIn,
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              ...account.checkIn.methodKnowledge.methods[methodId]!,
+              status: {
+                outcome: "known",
+                today: probeToday,
+                evidence: { source: "probe", observedAt },
+              },
+            },
+          },
+        },
+      })
+      const saved = await accountStorage.getAccountById(account.id)
+      expect(saved?.checkIn.methodKnowledge.methods[methodId]?.status).toEqual(
+        storedStatus,
+      )
     },
   )
 
@@ -6176,8 +6374,7 @@ describe("accountStorage core behaviors", () => {
     expect(result).toBeNull()
 
     const stored = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
-      | AccountStorageConfig
-      | undefined
+      AccountStorageConfig | undefined
     const updated = stored?.accounts.find(
       (item) => item.id === "refresh-throws",
     )
@@ -6263,8 +6460,7 @@ describe("accountStorage bookmarks", () => {
       expect(id).toMatch(/^bookmark-/)
 
       const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
-        | AccountStorageConfig
-        | undefined
+        AccountStorageConfig | undefined
 
       expect(saved?.bookmarks).toHaveLength(1)
       expect(saved?.bookmarks?.[0]).toEqual(
@@ -6334,8 +6530,7 @@ describe("accountStorage bookmarks", () => {
       expect(id).toBe("bookmark-new")
 
       const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
-        | AccountStorageConfig
-        | undefined
+        AccountStorageConfig | undefined
       expect(saved?.bookmarks.map((bookmark) => bookmark.id)).toEqual([
         "bookmark-existing",
         "bookmark-new",
@@ -6382,8 +6577,7 @@ describe("accountStorage bookmarks", () => {
       expect(success).toBe(true)
 
       const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
-        | AccountStorageConfig
-        | undefined
+        AccountStorageConfig | undefined
 
       expect(saved?.bookmarks).toHaveLength(1)
       expect(saved?.bookmarks?.[0]).toEqual(
@@ -6417,8 +6611,7 @@ describe("accountStorage bookmarks", () => {
     expect(success).toBe(true)
 
     const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
-      | AccountStorageConfig
-      | undefined
+      AccountStorageConfig | undefined
 
     expect(saved?.bookmarks).toEqual([])
     expect(saved?.pinnedAccountIds).toEqual(["a-1"])

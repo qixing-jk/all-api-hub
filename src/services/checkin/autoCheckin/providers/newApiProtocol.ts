@@ -21,6 +21,11 @@ import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { readCheckInRoutePath } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  withCheckInConfirmation,
+  withCheckInResponseConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/providers/contracts"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
@@ -32,6 +37,8 @@ import {
   readQuotaReward,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
+import { createConfirmedCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -140,6 +147,7 @@ export function resolveCheckInUrl(
  * can fall back to Turnstile/manual-required handling.
  */
 export function resolveStandardCheckinResult(params: {
+  account: SiteAccount
   payload: NewApiCheckInResponse | undefined
   message?: string
 }): CheckinResult | null {
@@ -147,9 +155,13 @@ export function resolveStandardCheckinResult(params: {
   if (!payload) return null
 
   const message = params.message ?? normalizeCheckinMessage(payload.message)
+  const confirmed = (result: CheckinResult) =>
+    withCheckInResponseConfirmation(params.account, result, {
+      day: payload.data?.checkin_date,
+    })
 
   if (message && isAlreadyCheckedMessage(message) && !payload.success) {
-    return {
+    return confirmed({
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
       rawMessage: message || undefined,
       // A repeat answer may carry the day's record; the day-match guard keeps
@@ -158,11 +170,11 @@ export function resolveStandardCheckinResult(params: {
         resolveTodayQuotaAwarded(payload.data ? [payload.data] : undefined),
       ),
       data: payload.data,
-    }
+    })
   }
 
   if (payload.success) {
-    return {
+    return confirmed({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       rawMessage: message || undefined,
       messageKey: message
@@ -172,7 +184,7 @@ export function resolveStandardCheckinResult(params: {
       // already an internal quota amount.
       reward: readQuotaReward(payload.data?.quota_awarded),
       data: payload.data ?? undefined,
-    }
+    })
   }
 
   return null
@@ -208,9 +220,21 @@ async function resolveAvailability(
  *
  * Some deployments only render Turnstile after clicking a "check-in" button.
  * That click can also advance the server-side check-in flow, so we confirm the
- * actual status when the Turnstile-assisted attempt cannot obtain a token.
+ * actual status after an unsuccessful attempt, including a rejected token replay.
  */
 export async function fetchCheckedInTodayStatus(
+  ...params: Parameters<typeof fetchSingleNewApiCheckInStatus>
+) {
+  const stable = await readDayStableCheckInObservation(() =>
+    fetchSingleNewApiCheckInStatus(...params),
+  )
+  return stable
+    ? { ...stable.observation, observedAt: stable.observedAt }
+    : undefined
+}
+
+/** Read one complete protocol observation; the caller owns its day-boundary check. */
+export async function fetchSingleNewApiCheckInStatus(
   account: SiteAccount | undefined,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
@@ -304,6 +328,80 @@ export async function fetchCheckedInTodayStatus(
     }
 
     return undefined
+  }
+}
+
+/** Interpret New API readback without making another request or retaining failure copy. */
+export function resolveNewApiCheckInReadback(
+  observation: Awaited<ReturnType<typeof fetchCheckedInTodayStatus>>,
+  input: {
+    account: SiteAccount
+    data?: unknown
+    status?:
+      | typeof CHECKIN_RESULT_STATUS.SUCCESS
+      | typeof CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+  },
+) {
+  if (observation?.checkedInToday !== true) return null
+  const result = createConfirmedCheckInResult({
+    status: input.status ?? CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    reward: readQuotaReward(observation.todayQuotaAwarded),
+    data: input.data,
+  })
+  return withNewApiStatusConfirmation(input.account, result, observation)
+}
+
+/** Share observed status between intermediate fallback gates and final confirmation. */
+export function withNewApiStatusConfirmation<
+  T extends AutoCheckinProviderOutcome,
+>(
+  account: SiteAccount,
+  result: T,
+  observation: Awaited<ReturnType<typeof fetchCheckedInTodayStatus>>,
+) {
+  const observedAt = observation?.observedAt ?? Date.now()
+  const status = toNewApiMethodStatus(observation, observedAt)
+  return withCheckInConfirmation(
+    account,
+    result,
+    status
+      ? {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+          status,
+          reward: observation?.checkedInToday
+            ? readQuotaReward(observation.todayQuotaAwarded)
+            : undefined,
+        }
+      : { kind: CHECK_IN_CONFIRMATION_KINDS.Unavailable },
+  )
+}
+
+/** Adapt optional status facts without inventing missing availability or day state. */
+export function toNewApiMethodStatus(
+  observation: Awaited<ReturnType<typeof fetchSingleNewApiCheckInStatus>>,
+  observedAt: number,
+): CheckInMethodStatus | undefined {
+  if (!observation) return undefined
+  return {
+    outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+    ...(typeof observation.enabled === "boolean"
+      ? {
+          availability: observation.enabled
+            ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
+            : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+        }
+      : {}),
+    ...(typeof observation.checkedInToday === "boolean"
+      ? {
+          today: observation.checkedInToday
+            ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+            : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        }
+      : {}),
+    evidence: {
+      source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+      observedAt,
+    },
   }
 }
 

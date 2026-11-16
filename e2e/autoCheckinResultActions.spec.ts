@@ -42,6 +42,8 @@ for (const language of ["zh-CN", "en"] as const) {
       result: AutoCheckinAccountResultFixture
       primary?: string
       external?: boolean
+      expectedMessage?: string
+      expectedStatus?: string
     }[] = [
       {
         name: "Failed Account",
@@ -53,6 +55,18 @@ for (const language of ["zh-CN", "en"] as const) {
         result: { status: "uncertain", reconciliation: "unknown" },
         primary: copy.execution.actions.verifyStatus,
         external: true,
+      },
+      {
+        name: "Unresolved Replay Account",
+        result: {
+          status: "uncertain",
+          reasonCode: "upstream_error",
+          messageKey: "autoCheckin:skipReasons.upstream_error",
+          reconciliation: "unavailable",
+        },
+        primary: copy.execution.actions.verifyStatus,
+        expectedMessage: copy.skipReasons.upstream_error,
+        expectedStatus: copy.execution.status.uncertain,
       },
       {
         name: "Unsupported Account",
@@ -71,11 +85,43 @@ for (const language of ["zh-CN", "en"] as const) {
       },
       {
         name: "External Account",
-        result: { status: "success" },
+        result: {
+          status: "success",
+          messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+        },
         primary: copy.execution.actions.openExternal,
         external: true,
+        expectedMessage: copy.providerFallback.checkinSuccessful,
       },
-      { name: "Success Account", result: { status: "success" } },
+      {
+        name: "Success Account",
+        result: {
+          status: "success",
+          messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+        },
+        expectedMessage: copy.providerFallback.checkinSuccessful,
+      },
+      {
+        name: "Confirmed After Verification Account",
+        result: {
+          status: "already_checked",
+          messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+        },
+        expectedMessage: copy.providerFallback.alreadyCheckedToday,
+        expectedStatus: copy.execution.status.alreadyChecked,
+      },
+      {
+        name: "Permission Denied Account",
+        result: {
+          status: "failed",
+          reasonCode: "permission_denied",
+          messageKey: "autoCheckin:skipReasons.permission_denied",
+          rawMessage: "permission denied",
+          retryable: false,
+        },
+        expectedMessage: copy.skipReasons.permission_denied,
+        expectedStatus: copy.execution.status.failed,
+      },
     ]
     const serviceWorker = await getServiceWorker(context)
     await stubLlmMetadataIndex(context)
@@ -178,8 +224,16 @@ for (const language of ["zh-CN", "en"] as const) {
 
     for (const width of [1600, 1200, 640]) {
       await page.setViewportSize({ width, height: 1100 })
-      for (const { name, primary } of cases) {
+      for (const { name, primary, expectedMessage, expectedStatus } of cases) {
         const row = page.getByRole("row").filter({ hasText: name })
+        if (expectedMessage) {
+          await expect(row).toContainText(expectedMessage)
+          await expect(row).not.toContainText("Turnstile 校验失败")
+        }
+        if (expectedStatus)
+          await expect(
+            row.getByText(expectedStatus, { exact: true }),
+          ).toBeVisible()
         const actions = row.getByRole("cell").last()
         await actions
           .getByRole("button", { name: common.actions.more, exact: true })
@@ -242,6 +296,10 @@ for (const language of ["zh-CN", "en"] as const) {
         path: testInfo.outputPath(`result-actions-${language}-${width}.png`),
         animations: "disabled",
         fullPage: true,
+      })
+      await page.getByRole("table").screenshot({
+        path: testInfo.outputPath(`confirmed-results-${language}-${width}.png`),
+        animations: "disabled",
       })
     }
   })

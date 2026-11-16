@@ -223,7 +223,7 @@ describe("AI-ROUTER daily check-in", () => {
 
     await expect(performAiRouterDailyCheckIn(request)).resolves.toEqual({
       kind: AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-      data: { rewardAmount: Number(rewardAmount) },
+      data: { rewardAmount: Number(rewardAmount), checkinDate: "2026-09-27" },
     })
   })
 

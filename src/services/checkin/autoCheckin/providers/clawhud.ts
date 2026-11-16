@@ -10,6 +10,7 @@ import {
 import { isForeignCheckInContract } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { ApiError } from "~/services/apiTransport/errors"
+import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -49,6 +50,7 @@ const readStatus = async (context: AutoCheckinProviderReadContext) => {
 const mapMutationError = (
   error: unknown,
   context: AutoCheckinProviderContext,
+  account: SiteAccount,
 ) => {
   if (
     error instanceof ApiError &&
@@ -59,7 +61,7 @@ const mapMutationError = (
       rawMessage: getSafeErrorMessage(error),
     }
   }
-  return mapSub2ApiCheckInMutationError(error, context)
+  return mapSub2ApiCheckInMutationError(error, context, account)
 }
 
 export const clawhudProvider: AutoCheckinProvider = {
@@ -92,15 +94,19 @@ export const clawhudProvider: AutoCheckinProvider = {
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
         { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
-      return {
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-        messageKey:
-          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        reward: readUsdReward(result.data.rewardAmount),
-        data: result.data,
-      }
+      return withCheckInResponseConfirmation(
+        account as SiteAccount,
+        {
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+          reward: readUsdReward(result.data.rewardAmount),
+          data: { rewardAmount: result.data.rewardAmount },
+        },
+        { day: result.data.checkinDate, timestamp: result.data.checkedInAt },
+      )
     } catch (error) {
-      return mapMutationError(error, context)
+      return mapMutationError(error, context, account as SiteAccount)
     }
   },
 }

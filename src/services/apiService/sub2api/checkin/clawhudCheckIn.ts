@@ -100,7 +100,13 @@ export function parseClawhudDailyCheckInMutationResponse(
   }
   return {
     kind: CLAWHUD_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-    data: { rewardAmount: data.today_amount },
+    data: {
+      rewardAmount: data.today_amount,
+      ...(typeof data.today === "string" ? { checkinDate: data.today } : {}),
+      ...(typeof data.checked_in_at === "string"
+        ? { checkedInAt: data.checked_in_at }
+        : {}),
+    },
   }
 }
 

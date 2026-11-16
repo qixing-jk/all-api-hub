@@ -17,7 +17,9 @@ import {
   fetchCheckedInTodayStatus,
   getProviderErrorMessage,
   resolveCheckInUrl,
+  resolveNewApiCheckInReadback,
   resolveTurnstilePreTrigger,
+  withNewApiStatusConfirmation,
 } from "~/services/checkin/autoCheckin/providers/newApiProtocol"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
@@ -200,10 +202,14 @@ async function performNativeSessionCheckin(
           request,
         )
         if (status?.checkedInToday === true)
-          preparationOutcome = {
-            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-            reward: readQuotaReward(status.todayQuotaAwarded),
-          }
+          preparationOutcome = withNewApiStatusConfirmation(
+            params.account,
+            {
+              status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+              reward: readQuotaReward(status.todayQuotaAwarded),
+            },
+            status,
+          )
         else if (status?.enabled !== true || status.checkedInToday !== false)
           preparationOutcome = {
             status: CHECKIN_RESULT_STATUS.FAILED,
@@ -261,22 +267,24 @@ async function performNativeSessionCheckin(
     params.protectionBypassExecution,
     request,
   )
-  return observed?.checkedInToday === true
-    ? {
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-        reward: readQuotaReward(observed.todayQuotaAwarded),
-        messageKey:
-          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        data: trigger,
-      }
-    : {
-        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
-        reasonCode:
-          trigger?.verification?.status === "required"
-            ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
-            : AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-        data: trigger,
-      }
+  const confirmed = resolveNewApiCheckInReadback(observed, {
+    account: params.account,
+    status: CHECKIN_RESULT_STATUS.SUCCESS,
+    data: trigger,
+  })
+  if (confirmed) return confirmed
+  return withNewApiStatusConfirmation(
+    params.account,
+    {
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode:
+        trigger?.verification?.status === "required"
+          ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
+          : AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      data: trigger,
+    },
+    observed,
+  )
 }
 
 /** Execute a native page action using the target login when one is configured. */
@@ -347,28 +355,28 @@ export async function resolveNativePageCheckinResult(
     params.tempWindowRequestSource,
     params.protectionBypassExecution,
   )
-  if (observedAfterNativeAction?.checkedInToday === true) {
-    return {
-      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-      messageKey:
-        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
-      reward: readQuotaReward(observedAfterNativeAction.todayQuotaAwarded),
-      data: action,
-    }
-  }
+  const confirmed = resolveNewApiCheckInReadback(observedAfterNativeAction, {
+    account: params.account,
+    data: action,
+  })
+  if (confirmed) return confirmed
 
   const verificationRequired =
     action.trigger?.verification?.status === "required"
-  return {
-    status: CHECKIN_RESULT_STATUS.FAILED,
-    reasonCode: verificationRequired
-      ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
-      : AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-    messageKey: verificationRequired
-      ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageVerificationRequired
-      : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageStatusUnconfirmed,
-    messageParams: { checkInUrl },
-    rawMessage: action.error || undefined,
-    data: action,
-  }
+  return withNewApiStatusConfirmation(
+    params.account,
+    {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: verificationRequired
+        ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
+        : AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      messageKey: verificationRequired
+        ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageVerificationRequired
+        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageStatusUnconfirmed,
+      messageParams: { checkInUrl },
+      rawMessage: action.error || undefined,
+      data: action,
+    },
+    observedAfterNativeAction,
+  )
 }

@@ -13,12 +13,17 @@ import {
 import {
   SUB2API_CHECK_IN_RECOVERY_REASONS,
   Sub2ApiCheckInRecoveryBlockedError,
+  type Sub2ApiCheckInRecoveryObservation,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { convertUsdBalanceToQuota } from "~/services/apiService/sub2api/parsing"
 import { ApiError } from "~/services/apiTransport/errors"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
@@ -125,15 +130,12 @@ export function readUsdReward(value: unknown): CheckInReward | undefined {
 export const mapSub2ApiCheckInMutationError = (
   error: unknown,
   context: AutoCheckinProviderContext,
+  account: SiteAccount,
 ): AutoCheckinProviderOutcome => {
   if (error instanceof Sub2ApiCheckInRecoveryBlockedError) {
     switch (error.reason) {
       case SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked:
-        return {
-          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-          messageKey:
-            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
-        }
+        return observedSub2ApiAlreadyChecked(account, error.statusObservation)
       case SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled:
         return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED)
       case SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable:
@@ -194,6 +196,46 @@ export const mapSub2ApiCheckInMutationError = (
       return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE)
     default:
       return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
+  }
+}
+
+/** Recovery GETs carry observation time and the identity actually read. */
+export function observedSub2ApiAlreadyChecked(
+  account: SiteAccount,
+  observation?: Sub2ApiCheckInRecoveryObservation,
+): AutoCheckinProviderOutcome {
+  if (!observation)
+    return withCheckInConfirmation(
+      account,
+      {
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+        messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
+      },
+      { kind: CHECK_IN_CONFIRMATION_KINDS.Unavailable },
+    )
+  const result = withCheckInConfirmation(
+    account,
+    {
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+    },
+    {
+      kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+      status: toSub2ApiCheckInStatus(
+        observation.observation,
+        observation.observedAt,
+      ),
+    },
+  )
+  return {
+    ...result,
+    confirmation: {
+      ...result.confirmation,
+      siteUrl: observation.siteUrl,
+      userId: observation.userId,
+    },
   }
 }
 

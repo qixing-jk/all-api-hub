@@ -162,4 +162,42 @@ describe("VoAPI v2 token re-sync", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
   })
+
+  it.each([
+    { browserUserId: "7", accepted: true },
+    { browserUserId: "8", accepted: false },
+  ])(
+    "filters dashboard sessions for the saved account during selection and readback: %j",
+    async ({ browserUserId, accepted }) => {
+      const session = {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        siteType: "voapi-v2",
+        userId: browserUserId,
+        user: { username: "browser-owner" },
+        accessToken: "browser-dashboard-token",
+      }
+      mockResolveAccountBrowserSession.mockImplementationOnce(
+        async ({ isUsableSession }) => {
+          expect(isUsableSession(session)).toBe(accepted)
+          // Even a resolver returning a rejected candidate cannot change identity.
+          return session
+        },
+      )
+
+      const result = await resyncVoApiV2AuthToken(
+        "https://voapi.example.invalid",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin),
+        "7",
+      )
+      if (accepted) {
+        expect(result).toMatchObject({
+          accessToken: "browser-dashboard-token",
+          userId: "7",
+        })
+      } else {
+        expect(result).toBeNull()
+      }
+    },
+  )
 })

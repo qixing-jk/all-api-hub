@@ -1,3 +1,8 @@
+import {
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
 import { CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS } from "~/constants/turnstile"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
@@ -5,9 +10,20 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import { fetchPmApiIdentity } from "~/services/apiService/pmapi/identity"
+import {
+  fetchPmApiIdentity,
+  type PmApiIdentity,
+} from "~/services/apiService/pmapi/identity"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
+import {
+  readDayStableCheckInObservation,
+  type CheckInStatusObservation,
+} from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -96,25 +112,60 @@ export async function clickNativeCheckInPage(
     API_DIRECT_REQUEST_REASONS.CallerManaged,
   )
   const deadline = Date.now() + STATUS_READBACK_TIMEOUT_MS
+  let observation: CheckInStatusObservation<PmApiIdentity> | undefined
   do {
     try {
-      if ((await fetchPmApiIdentity(request)).checkedInToday)
-        return {
-          status: CHECKIN_RESULT_STATUS.SUCCESS,
-          messageKey: messages.checkinSuccessful,
-          data: action,
-        }
+      observation = await readDayStableCheckInObservation(() =>
+        fetchPmApiIdentity(request),
+      )
+      if (observation?.observation.checkedInToday)
+        return withCheckInConfirmation(
+          account,
+          {
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            messageKey: messages.checkinSuccessful,
+            data: action,
+          },
+          {
+            kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+            status: {
+              outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+              today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+              evidence: {
+                source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+                observedAt: observation.observedAt,
+              },
+            },
+          },
+        )
     } catch {
       // A failed read does not establish whether the page completed its claim.
+      observation = undefined
     }
     if (Date.now() >= deadline) break
     await new Promise((resolve) => setTimeout(resolve, STATUS_READBACK_POLL_MS))
   } while (Date.now() <= deadline)
-  return {
-    status: CHECKIN_RESULT_STATUS.FAILED,
-    reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
-    messageKey: messages.nativePageVerificationRequired,
-    messageParams: { checkInUrl },
-    data: action,
-  }
+  return withCheckInConfirmation(
+    account,
+    {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+      messageKey: messages.nativePageVerificationRequired,
+      messageParams: { checkInUrl },
+      data: action,
+    },
+    observation
+      ? {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+          status: {
+            outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+            today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+            evidence: {
+              source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+              observedAt: observation.observedAt,
+            },
+          },
+        }
+      : { kind: CHECK_IN_CONFIRMATION_KINDS.Unavailable },
+  )
 }

@@ -2,6 +2,7 @@ import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2ap
 import {
   executeSub2ApiCheckInWithRecovery,
   SUB2API_CHECK_IN_RECOVERY_REASONS,
+  type Sub2ApiCheckInRecoveryObservation,
   type Sub2ApiCheckInRecoveryOptions,
   type Sub2ApiCheckInRecoveryReason,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
@@ -55,7 +56,10 @@ type DenxioDailyCheckInOperationResult =
       kind: typeof DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Applied
       rewardAmount: number
     }
-  | { kind: typeof DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked }
+  | {
+      kind: typeof DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked
+      statusObservation?: Sub2ApiCheckInRecoveryObservation
+    }
   | { kind: typeof DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Disabled }
   | {
       kind: typeof DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable
@@ -252,8 +256,12 @@ export async function performDenxioDailyCheckIn(
   } = {},
 ): Promise<DenxioDailyCheckInOperationResult> {
   const timezone = resolveTimezone()
-  const blocked = (reason: Sub2ApiCheckInRecoveryReason) =>
+  const blocked = (
+    reason: Sub2ApiCheckInRecoveryReason,
+    statusObservation?: Sub2ApiCheckInRecoveryObservation,
+  ) =>
     new DenxioRecoveredMutationBlockedError({
+      ...(statusObservation ? { statusObservation } : {}),
       kind: {
         [SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked]:
           DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,

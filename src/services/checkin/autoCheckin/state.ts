@@ -38,7 +38,7 @@ function retainLastKnownStatus(
     (getCheckInMethodStatusTimestamp(previousKnown) ?? 0) >
       (getCheckInMethodStatusTimestamp(status.lastKnown) ?? 0)
       ? previousKnown
-      : status.lastKnown ?? previousKnown
+      : (status.lastKnown ?? previousKnown)
   return lastKnown ? { ...status, lastKnown } : status
 }
 
@@ -98,6 +98,18 @@ const getCheckInMethodStatusTimestamp = (
     ? status.evidence.legacyObservedAt
     : status.evidence.observedAt
 }
+
+/** A successful mutation can share the same clock tick as its admission probe. */
+const isExecutionConfirmingUncheckedProbe = (
+  previous: CheckInMethodStatus | undefined,
+  status: CheckInMethodStatus,
+): boolean =>
+  previous?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+  previous.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked &&
+  previous.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe &&
+  status.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+  status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked &&
+  status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution
 
 /** Merges a provider's boolean daily-status result into method knowledge. */
 export function mergeCompatibilityCheckInStatus(input: {
@@ -394,7 +406,12 @@ export function mergeRefreshedCheckInStatus(input: {
     if (
       latestTimestamp !== undefined &&
       (refreshedTimestamp === undefined ||
-        refreshedTimestamp <= latestTimestamp)
+        refreshedTimestamp < latestTimestamp ||
+        (refreshedTimestamp === latestTimestamp &&
+          !isExecutionConfirmingUncheckedProbe(
+            latestKnowledge.status,
+            refreshedKnowledge.status,
+          )))
     ) {
       continue
     }

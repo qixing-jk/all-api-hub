@@ -57,15 +57,21 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
 } as const
 
 /**
- * Builds the retryable upstream failure shared by message-only check-in
- * backends. Backend copy wins when present; the localized generic failure is
- * the fallback.
+ * Classify explicit terminal refusals before a generic message-only rejection.
+ * Backend copy is retained; the localized generic failure is the fallback.
  */
 export function createUpstreamFailureResult(params: {
   rawMessage?: string
   data?: unknown
 }): AutoCheckinProviderOutcome {
   const rawMessage = params.rawMessage || undefined
+  const terminalReason = rawMessage && matchTerminalFailureReason(rawMessage)
+  if (terminalReason)
+    return createTerminalFailureResult({
+      reasonCode: terminalReason,
+      rawMessage,
+      data: params.data,
+    })
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,

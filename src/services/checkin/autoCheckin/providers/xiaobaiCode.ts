@@ -151,7 +151,11 @@ export const xiaobaiCodeProvider: AutoCheckinProvider = {
           }
       }
     } catch (error) {
-      return mapSub2ApiCheckInMutationError(error, context)
+      return mapSub2ApiCheckInMutationError(
+        error,
+        context,
+        account as SiteAccount,
+      )
     }
   },
 }

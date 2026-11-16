@@ -1,3 +1,4 @@
+import type { Sub2ApiCheckInRecoveryObservation } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 
@@ -36,6 +37,7 @@ export type Sub2ApiProDailyCheckInMutationResult =
     }
   | {
       kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked
+      statusObservation?: Sub2ApiCheckInRecoveryObservation
     }
   | { kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled }
   | { kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RoleForbidden }

@@ -17,6 +17,10 @@ import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
+import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createUpstreamFailureResult,
   getEffectiveAuthType,
@@ -26,6 +30,8 @@ import {
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
+import { reconcileCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -163,23 +169,30 @@ async function checkinVeloera(
 
     // Veloera's failure copy is deployment-controlled. Confirm the current
     // state before deciding whether an arbitrary message means "already".
+    const failure = createUpstreamFailureResult({
+      rawMessage: responseMessage,
+      data: response,
+    })
     try {
-      const observation = await fetchCheckInObservation(request)
-      if (observation?.canCheckIn === false) {
-        return {
-          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-          rawMessage: responseMessage || undefined,
-          data: response.data ?? undefined,
-        }
+      const observation = await readDayStableCheckInObservation(() =>
+        fetchCheckInObservation(request),
+      )
+      if (observation) {
+        const status = toVeloeraMethodStatus(
+          observation.observation,
+          observation.observedAt,
+        )
+        const result = reconcileCheckInResult({ result: failure, status })
+        return withCheckInConfirmation(account, result, {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+          status,
+        })
       }
     } catch {
       // Preserve the original mutation failure if best-effort readback fails.
     }
 
-    return createUpstreamFailureResult({
-      rawMessage: responseMessage,
-      data: response,
-    })
+    return failure
   } catch (error: unknown) {
     return resolveProviderErrorResult({
       error,
@@ -239,7 +252,14 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
   if (!statusRequest) return undefined
   const observation = await fetchCheckInObservation(statusRequest, signal)
   if (!observation) return undefined
+  return toVeloeraMethodStatus(observation, observedAt)
+}
 
+/** Map can-check-in into the shared day state used by admission and confirmation. */
+function toVeloeraMethodStatus(
+  observation: NonNullable<Awaited<ReturnType<typeof fetchCheckInObservation>>>,
+  observedAt: number,
+) {
   return {
     outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
     ...(observation.enabled !== undefined

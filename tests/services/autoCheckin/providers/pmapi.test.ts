@@ -11,6 +11,7 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import autoCheckin from "~/locales/en/autoCheckin.json"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { confirmCheckInAttempt } from "~/services/checkin/autoCheckin/confirmation"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
 import { clickNativeCheckInPage } from "~/services/checkin/autoCheckin/providers/pmapiNativePageClick"
@@ -71,6 +72,132 @@ const readContext = () => ({
 })
 
 describe("pmApiProvider", () => {
+  it("keeps a quota grant delivered across midnight as a response without replaying the POST", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    const claim = vi.fn(() => {
+      vi.setSystemTime(startedAt + 2_000)
+      return HttpResponse.json(envelope({ quota: 50_000 }))
+    })
+    try {
+      server.use(
+        http.get(`${origin}/api/me`, () =>
+          HttpResponse.json(envelope(identity(false))),
+        ),
+        http.post(`${origin}/api/me/checkin`, claim),
+      )
+      await expect(
+        pmApiProvider.checkIn(account, executionContext()),
+      ).resolves.toMatchObject({
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        reward: { quota: 50_000 },
+        confirmation: { kind: "response" },
+      })
+      expect(claim).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("keeps two day-crossing identity reads unavailable without claiming a grant", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    let reads = 0
+    const claim = vi.fn(() => HttpResponse.json(envelope({ quota: 50_000 })))
+    try {
+      server.use(
+        http.get(`${origin}/api/me`, () => {
+          vi.setSystemTime(startedAt + 2_000 + reads++ * 86_400_000)
+          return HttpResponse.json(envelope(identity(false)))
+        }),
+        http.post(`${origin}/api/me/checkin`, claim),
+      )
+      await expect(
+        pmApiProvider.checkIn(account, executionContext()),
+      ).resolves.toMatchObject({
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+        confirmation: { kind: "unavailable" },
+      })
+      expect(reads).toBe(2)
+      expect(claim).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("attributes an already-checked identity read to its stable local day", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    let reads = 0
+    const claim = vi.fn(() => HttpResponse.json(envelope({ quota: 50_000 })))
+    try {
+      server.use(
+        http.get(`${origin}/api/me`, () => {
+          if (reads++ === 0) vi.setSystemTime(startedAt + 2_000)
+          return HttpResponse.json(envelope(identity(true)))
+        }),
+        http.post(`${origin}/api/me/checkin`, claim),
+      )
+      await expect(
+        pmApiProvider.checkIn(account, executionContext()),
+      ).resolves.toMatchObject({
+        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+        confirmation: {
+          kind: "observed",
+          accountId: account.id,
+          siteUrl: origin,
+          userId: "10171",
+          observedAt: startedAt + 2_000,
+          status: {
+            outcome: "known",
+            today: "checked",
+            evidence: { source: "probe", observedAt: startedAt + 2_000 },
+          },
+        },
+      })
+      expect(reads).toBe(2)
+      expect(claim).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("rereads native identity confirmation delivered across month-end without clicking again", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    let reads = 0
+    try {
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
+        success: true,
+        reason: "clicked",
+      })
+      server.use(
+        http.get(`${origin}/api/me`, async () => {
+          if (reads++ === 0) {
+            await Promise.resolve()
+            vi.setSystemTime(startedAt + 2_000)
+          }
+          return HttpResponse.json(envelope(identity(true)))
+        }),
+      )
+      await expect(
+        clickNativeCheckInPage(account, executionContext()),
+      ).resolves.toMatchObject({
+        status: "success",
+        confirmation: { kind: "observed", observedAt: startedAt + 2_000 },
+      })
+      expect(reads).toBe(2)
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   beforeEach(() => {
     i18n.addResourceBundle("en", "autoCheckin", autoCheckin, true, true)
     vi.restoreAllMocks()
@@ -79,6 +206,173 @@ describe("pmApiProvider", () => {
       autoCheckin: { continueWhenVerificationRequired: false },
     } as never)
   })
+
+  it("reuses a final unchecked native poll without another status request", async () => {
+    const startedAt = new Date(2026, 0, 31, 12).getTime()
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(startedAt)
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { continueWhenVerificationRequired: true },
+    } as never)
+    vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
+      success: true,
+      reason: "clicked",
+    })
+    let reads = 0
+    const status = vi.fn(() =>
+      HttpResponse.json(envelope({ checkin_enabled: true })),
+    )
+    server.use(
+      http.get(`${origin}/api/status`, status),
+      http.get(`${origin}/api/me`, () => {
+        if (++reads === 2) vi.setSystemTime(startedAt + 8_000)
+        return HttpResponse.json(envelope(identity(false)))
+      }),
+      http.post(`${origin}/api/me/checkin`, () =>
+        HttpResponse.json(
+          { success: false, data: null, message: "请先完成人机验证" },
+          { status: 400 },
+        ),
+      ),
+    )
+    try {
+      const result = await pmApiProvider.checkIn(account, executionContext())
+      vi.setSystemTime(startedAt + 8_500)
+      const confirmed = await confirmCheckInAttempt({
+        account,
+        result,
+        startedAt,
+        readStatus: async () => {
+          const status = await pmApiProvider.getStatus!({
+            account,
+            observedAt: Date.now(),
+          })
+          return status ? { status } : undefined
+        },
+      })
+      expect(confirmed).toMatchObject({
+        result: {
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+          messageKey:
+            "autoCheckin:providerFallback.nativePageVerificationRequired",
+          messageParams: { checkInUrl: `${origin}/#/console/wallet` },
+          data: { success: true, reason: "clicked" },
+        },
+        confirmation: {
+          kind: "observed",
+          accountId: account.id,
+          siteUrl: origin,
+          userId: "10171",
+          observedAt: startedAt + 8_000,
+          status: {
+            outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+            today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+            evidence: { observedAt: startedAt + 8_000 },
+          },
+        },
+      })
+      expect(reads).toBe(2)
+      expect(status).not.toHaveBeenCalled()
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each(["request failure", "identity mismatch", "day-unstable response"])(
+    "discards an earlier unchecked poll after a final %s without reading again",
+    async (failure) => {
+      const startedAt = new Date(2026, 0, 31, 12).getTime()
+      const completedAt =
+        failure === "day-unstable response"
+          ? startedAt + 172_800_000
+          : startedAt + 8_000
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(startedAt)
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        autoCheckin: { continueWhenVerificationRequired: true },
+      } as never)
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
+        success: true,
+        reason: "clicked",
+      })
+      let reads = 0
+      const status = vi.fn(() =>
+        HttpResponse.json(envelope({ checkin_enabled: true })),
+      )
+      server.use(
+        http.get(`${origin}/api/status`, status),
+        http.get(`${origin}/api/me`, () => {
+          reads++
+          if (reads === 2) vi.setSystemTime(startedAt + 7_000)
+          if (reads === 3) {
+            vi.setSystemTime(
+              failure === "day-unstable response"
+                ? startedAt + 86_400_000
+                : completedAt,
+            )
+            if (failure === "request failure")
+              return HttpResponse.json(
+                { success: false, message: "identity unavailable" },
+                { status: 503 },
+              )
+            if (failure === "identity mismatch")
+              return HttpResponse.json(
+                envelope({ ...identity(false), id: 10172 }),
+              )
+          }
+          if (reads === 4 && failure === "day-unstable response")
+            vi.setSystemTime(completedAt)
+          return HttpResponse.json(envelope(identity(false)))
+        }),
+        http.post(`${origin}/api/me/checkin`, () =>
+          HttpResponse.json(
+            { success: false, data: null, message: "请先完成人机验证" },
+            { status: 400 },
+          ),
+        ),
+      )
+      try {
+        const result = await pmApiProvider.checkIn(account, executionContext())
+        vi.setSystemTime(completedAt + 500)
+        const confirmed = await confirmCheckInAttempt({
+          account,
+          result,
+          startedAt,
+          readStatus: async () => {
+            const status = await pmApiProvider.getStatus!({
+              account,
+              observedAt: Date.now(),
+            })
+            return status ? { status } : undefined
+          },
+        })
+        expect(confirmed).toMatchObject({
+          result: {
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+            messageKey:
+              "autoCheckin:providerFallback.nativePageVerificationRequired",
+            messageParams: { checkInUrl: `${origin}/#/console/wallet` },
+            data: { success: true, reason: "clicked" },
+          },
+          confirmation: {
+            kind: "unavailable",
+            accountId: account.id,
+            siteUrl: origin,
+            userId: "10171",
+            observedAt: completedAt,
+          },
+        })
+        expect(reads).toBe(failure === "day-unstable response" ? 4 : 3)
+        expect(status).not.toHaveBeenCalled()
+        expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledOnce()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it.each(["identity_mismatch", "identity_missing"] as const)(
     "reports %s without a second click",
@@ -114,6 +408,53 @@ describe("pmApiProvider", () => {
       reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
     })
     expect(canAutomaticallyRetryCheckinResult(result)).toBe(false)
+    expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledOnce()
+  })
+
+  it("keeps the readable confirmation fallback when the page action response is lost", async () => {
+    const startedAt = Date.now()
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { continueWhenVerificationRequired: true },
+    } as never)
+    vi.mocked(tempWindowTriggerCheckinPageAction).mockRejectedValue(
+      new Error("response lost"),
+    )
+    const status = vi.fn(() =>
+      HttpResponse.json(envelope({ checkin_enabled: true })),
+    )
+    const identityRead = vi.fn(() =>
+      HttpResponse.json(envelope(identity(false))),
+    )
+    mockVerificationRefusal()
+    server.use(
+      http.get(`${origin}/api/status`, status),
+      http.get(`${origin}/api/me`, identityRead),
+    )
+    const result = await pmApiProvider.checkIn(account, executionContext())
+    expect(result.confirmation).toBeUndefined()
+    const confirmed = await confirmCheckInAttempt({
+      account,
+      result,
+      startedAt,
+      readStatus: async () => {
+        const status = await pmApiProvider.getStatus!({
+          account,
+          observedAt: Date.now(),
+        })
+        return status ? { status } : undefined
+      },
+    })
+    expect(confirmed).toMatchObject({
+      result: {
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+      },
+      confirmation: {
+        kind: "observed",
+        status: { today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked },
+      },
+    })
+    expect(status).toHaveBeenCalledOnce()
+    expect(identityRead).toHaveBeenCalledTimes(2)
     expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledOnce()
   })
 
@@ -410,6 +751,7 @@ describe("pmApiProvider", () => {
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       reward: { quota: 50_000 },
+      confirmation: { kind: "response" },
     })
     expect(claim).toHaveBeenCalledOnce()
   })

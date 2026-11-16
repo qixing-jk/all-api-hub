@@ -23,10 +23,12 @@ export async function resyncVoApiV2AuthToken(
   baseUrl: string,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
+  expectedUserId?: string | number,
 ): Promise<BrowserResyncedToken | null> {
   return resyncToken({
     baseUrl,
     tempWindowRequestSource,
     protectionBypassExecution,
+    expectedUserId,
   })
 }

@@ -63,9 +63,7 @@ export type AiRouterStatusProbe =
   | {
       outcome: typeof AI_ROUTER_STATUS_OUTCOMES.Unknown
       reason:
-        | "authentication_required"
-        | "permission_denied"
-        | "invalid_response"
+        "authentication_required" | "permission_denied" | "invalid_response"
     }
 
 export const AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS = {
@@ -76,7 +74,7 @@ export const AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS = {
 export type AiRouterDailyCheckInResult =
   | {
       kind: typeof AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied
-      data: { rewardAmount: number }
+      data: { rewardAmount: number; checkinDate?: string }
     }
   | {
       kind: typeof AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked
@@ -264,7 +262,12 @@ const parseClaimResponse = (
 
   return {
     kind: AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-    data: { rewardAmount },
+    data: {
+      rewardAmount,
+      ...(typeof data.checkin_date === "string"
+        ? { checkinDate: data.checkin_date }
+        : {}),
+    },
   }
 }
 

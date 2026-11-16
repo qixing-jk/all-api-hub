@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/contracts"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -86,6 +92,264 @@ const checkInForTest = (
 ) => voApiV2Provider.checkIn(account, context)
 
 describe("voApiV2Provider", () => {
+  it.each([0, 1])(
+    "keeps unavailable stats uncertain when both final reads cross local days for submit code %s",
+    async (code) => {
+      const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(startedAt)
+      let reads = 0
+      try {
+        server.use(
+          http.post("https://example.invalid/api/check_in", () =>
+            HttpResponse.json({
+              code,
+              data: { amount: "0.1", bonusAmount: "0" },
+            }),
+          ),
+          http.get("https://example.invalid/api/check_in/stats", () => {
+            reads++
+            if (reads === 2) {
+              vi.setSystemTime(new Date(2026, 1, 1, 23, 59, 59))
+            } else if (reads === 3) {
+              vi.setSystemTime(new Date(2026, 1, 2, 0, 0, 1))
+            }
+            return HttpResponse.json({
+              code: 0,
+              data: { todaySigned: reads > 1 },
+            })
+          }),
+        )
+        const outcome = await executeSelectedCheckIn({
+          account: {
+            ...account,
+            checkIn: createCompatibilityCheckInConfig({
+              siteType: SITE_TYPES.VO_API_V2,
+              supported: true,
+              automaticExecutionEnabled: true,
+            }),
+          },
+          globalAutomaticExecutionEnabled: true,
+          context: DEFAULT_PROVIDER_CONTEXT,
+        })
+        expect(outcome).toMatchObject({
+          kind: "executed",
+          result: {
+            status: "uncertain",
+            reasonCode: "checkin_unconfirmed",
+            reconciliation: "unavailable",
+          },
+          confirmation: { kind: "unavailable" },
+        })
+        if (outcome.kind === "executed") {
+          expect(
+            canAutomaticallyRetryCheckinResult(
+              outcome.result,
+              outcome.methodId,
+            ),
+          ).toBe(true)
+        }
+        expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+        expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
+        expect(reads).toBe(3)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it.each([0, 1])(
+    "keeps accepted submit code %s uncertain when final stats omit todaySigned",
+    async (code) => {
+      let reads = 0
+      server.use(
+        http.post("https://example.invalid/api/check_in", () =>
+          HttpResponse.json({
+            code,
+            data: { amount: "0.1", bonusAmount: "0" },
+          }),
+        ),
+        http.get("https://example.invalid/api/check_in/stats", () =>
+          HttpResponse.json({
+            code: 0,
+            data: ++reads === 1 ? { todaySigned: false } : {},
+          }),
+        ),
+      )
+      const outcome = await executeSelectedCheckIn({
+        account: {
+          ...account,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.VO_API_V2,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        globalAutomaticExecutionEnabled: true,
+        context: DEFAULT_PROVIDER_CONTEXT,
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result: {
+          status: "uncertain",
+          reasonCode: "checkin_unconfirmed",
+          reconciliation: "unavailable",
+        },
+        confirmation: { kind: "unavailable" },
+      })
+      if (outcome.kind === "executed") {
+        expect(
+          canAutomaticallyRetryCheckinResult(outcome.result, outcome.methodId),
+        ).toBe(true)
+      }
+      expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+      expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
+      expect(reads).toBe(2)
+    },
+  )
+
+  it.each([0, 1])(
+    "keeps observed completion scoped across rollover for submit code %s",
+    async (code) => {
+      const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(startedAt)
+      let reads = 0
+      try {
+        server.use(
+          http.post("https://example.invalid/api/check_in", () =>
+            HttpResponse.json({
+              code,
+              data: { amount: "0.1", bonusAmount: "0" },
+            }),
+          ),
+          http.get("https://example.invalid/api/check_in/stats", () => {
+            reads++
+            if (reads === 2) {
+              vi.setSystemTime(startedAt + 2_000)
+              return HttpResponse.json({ code: 0, data: { todaySigned: true } })
+            }
+            return HttpResponse.json({ code: 0, data: { todaySigned: false } })
+          }),
+        )
+        const outcome = await executeSelectedCheckIn({
+          account: {
+            ...account,
+            checkIn: createCompatibilityCheckInConfig({
+              siteType: SITE_TYPES.VO_API_V2,
+              supported: true,
+              automaticExecutionEnabled: true,
+            }),
+          },
+          globalAutomaticExecutionEnabled: true,
+          context: DEFAULT_PROVIDER_CONTEXT,
+        })
+        expect(outcome).toMatchObject({
+          kind: "executed",
+          result: { status: "failed", reasonCode: "upstream_rejected" },
+          confirmation: { kind: "observed" },
+        })
+        expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+        expect(reads).toBe(3)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("carries current VoAPI stats confirmation without a redundant outer GET", async () => {
+    let reads = 0
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({ code: 1 }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: ++reads > 1 } }),
+      ),
+    )
+    const outcome = await executeSelectedCheckIn({
+      account: {
+        ...account,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.VO_API_V2,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
+      },
+      globalAutomaticExecutionEnabled: true,
+      context: DEFAULT_PROVIDER_CONTEXT,
+    })
+    expect(outcome).toMatchObject({
+      kind: "executed",
+      result: { status: "already_checked" },
+      confirmation: { kind: "observed" },
+    })
+    expect(reads).toBe(2)
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+  })
+
+  it("does not replay a completed submit when only its stats read rejects authentication", async () => {
+    mockResyncVoApiV2AuthToken.mockResolvedValue({
+      accessToken: "renewed",
+      userId: "7",
+      source: "existing_tab",
+    })
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { amount: "0.1", bonusAmount: "0" },
+        }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 2, data: null, msg: "Auth expire" }),
+      ),
+    )
+    const result = await checkInForTest(account)
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+    expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      status: "failed",
+      confirmation: { kind: "unavailable" },
+    })
+  })
+
+  it("preserves uncertainty when a dispatched submit's stats response is lost", async () => {
+    let reads = 0
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { amount: "0.1", bonusAmount: "0" },
+        }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        ++reads === 1
+          ? HttpResponse.json({ code: 0, data: { todaySigned: false } })
+          : HttpResponse.error(),
+      ),
+    )
+    const outcome = await executeSelectedCheckIn({
+      account: {
+        ...account,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.VO_API_V2,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
+      },
+      globalAutomaticExecutionEnabled: true,
+      context: DEFAULT_PROVIDER_CONTEXT,
+    })
+    expect(outcome).toMatchObject({
+      kind: "executed",
+      result: { status: "uncertain", reconciliation: "unavailable" },
+      confirmation: { kind: "unavailable" },
+    })
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+    expect(reads).toBe(2)
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockResyncVoApiV2AuthToken.mockResolvedValue(null)
@@ -248,23 +512,48 @@ describe("voApiV2Provider", () => {
     ).toEqual({ ready: true })
   })
 
-  it("reports failure when submit succeeds but final stats are not checked in", async () => {
-    server.use(
-      http.post("https://example.invalid/api/check_in", () =>
-        HttpResponse.json({
-          code: 0,
-          data: { amount: "0.1", bonusAmount: "0" },
+  it.each([0, 1])(
+    "preserves failed classification for submit code %s with explicit final todaySigned=false",
+    async (code) => {
+      let reads = 0
+      server.use(
+        http.post("https://example.invalid/api/check_in", () =>
+          HttpResponse.json({
+            code,
+            data: { amount: "0.1", bonusAmount: "0" },
+          }),
+        ),
+        http.get("https://example.invalid/api/check_in/stats", () => {
+          reads++
+          return HttpResponse.json({ code: 0, data: { todaySigned: false } })
         }),
-      ),
-      http.get("https://example.invalid/api/check_in/stats", () =>
-        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
-      ),
-    )
+      )
 
-    await expect(checkInForTest(account)).resolves.toMatchObject({
-      status: CHECKIN_RESULT_STATUS.FAILED,
-    })
-  })
+      const outcome = await executeSelectedCheckIn({
+        account: {
+          ...account,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.VO_API_V2,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        globalAutomaticExecutionEnabled: true,
+        context: DEFAULT_PROVIDER_CONTEXT,
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result: { status: "failed", reasonCode: "upstream_rejected" },
+        confirmation: {
+          kind: "observed",
+          status: { outcome: "known", today: "not_checked" },
+        },
+      })
+      expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+      expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
+      expect(reads).toBe(2)
+    },
+  )
 
   it("returns a provider error result when an expired JWT cannot be resynced", async () => {
     mockResyncVoApiV2AuthToken.mockResolvedValueOnce(null)
@@ -280,15 +569,22 @@ describe("voApiV2Provider", () => {
 
     await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+      rawMessage: "Auth expire",
+      confirmation: { kind: "unavailable", userId: "7" },
     })
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
       TEMP_WINDOW_REQUEST_SOURCES.Background,
       DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
+      "7",
     )
+    expect(mockUpdateAccount).not.toHaveBeenCalled()
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+    expect(mockFetchVoApiV2CheckInStats).not.toHaveBeenCalled()
   })
 
-  it("keeps a failed token resync retryable after an authoritative 401", async () => {
+  it("keeps a failed token resync retryable after an auth-expired refusal", async () => {
     const mutationLifecycle = createAutoCheckinMutationLifecycle()
     mockResyncVoApiV2AuthToken.mockRejectedValueOnce(
       new Error("dashboard token resync unavailable"),
@@ -299,23 +595,113 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(
-      checkInForTest(account, {
-        ...DEFAULT_PROVIDER_CONTEXT,
-        mutationLifecycle,
-      }),
-    ).resolves.toMatchObject({
+    const result = await checkInForTest(account, {
+      ...DEFAULT_PROVIDER_CONTEXT,
+      mutationLifecycle,
+    })
+    expect(result).toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
       rawMessage: "dashboard token resync unavailable",
     })
+    expect(
+      canAutomaticallyRetryCheckinResult(
+        result,
+        AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,
+      ),
+    ).toBe(true)
     expect(mutationLifecycle.dispatched).toBe(false)
   })
 
-  it("keeps a failed auth persistence step retryable after an authoritative 401", async () => {
+  it.each([
+    { entrypoint: "provider", resyncedUserId: "8" },
+    { entrypoint: "executor", resyncedUserId: "8" },
+    { entrypoint: "provider", resyncedUserId: null },
+    { entrypoint: "executor", resyncedUserId: null },
+  ])(
+    "rejects unusable browser recovery without updating auth or replaying: %j",
+    async ({ entrypoint, resyncedUserId }) => {
+      const mutationLifecycle = createAutoCheckinMutationLifecycle()
+      const postAuthorizations: (string | null)[] = []
+      let statsReads = 0
+      mockResyncVoApiV2AuthToken.mockResolvedValueOnce(
+        resyncedUserId
+          ? {
+              accessToken: "foreign-dashboard-token",
+              userId: resyncedUserId,
+              username: "foreign-owner",
+              source: "existing_tab",
+            }
+          : null,
+      )
+      server.use(
+        http.post("https://example.invalid/api/check_in", ({ request }) => {
+          postAuthorizations.push(request.headers.get("authorization"))
+          return HttpResponse.json({ code: 2, data: null, msg: "Auth expire" })
+        }),
+        http.get("https://example.invalid/api/check_in/stats", () => {
+          statsReads++
+          return HttpResponse.json({ code: 0, data: { todaySigned: false } })
+        }),
+      )
+
+      const outcome =
+        entrypoint === "provider"
+          ? await checkInForTest(account, {
+              ...DEFAULT_PROVIDER_CONTEXT,
+              mutationLifecycle,
+            })
+          : await executeSelectedCheckIn({
+              account: {
+                ...account,
+                checkIn: createCompatibilityCheckInConfig({
+                  siteType: SITE_TYPES.VO_API_V2,
+                  supported: true,
+                  automaticExecutionEnabled: true,
+                }),
+              },
+              globalAutomaticExecutionEnabled: true,
+              context: DEFAULT_PROVIDER_CONTEXT,
+            })
+      const result = (() => {
+        if (!("kind" in outcome)) return outcome
+        expect(outcome).toMatchObject({ kind: "executed", retryable: false })
+        if (outcome.kind !== "executed") throw new Error("Check-in was skipped")
+        return outcome.result
+      })()
+      expect(result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+        rawMessage: "Auth expire",
+      })
+      expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
+        "https://example.invalid",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
+        "7",
+      )
+      expect(
+        canAutomaticallyRetryCheckinResult(
+          result,
+          AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,
+        ),
+      ).toBe(false)
+      expect(postAuthorizations).toEqual(["jwt-dashboard"])
+      // The executor's admission read happens before the rejected submit.
+      expect(statsReads).toBe(entrypoint === "executor" ? 1 : 0)
+      expect(mockUpdateAccount).not.toHaveBeenCalled()
+      expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledOnce()
+      expect(mutationLifecycle).toMatchObject({
+        dispatched: false,
+        responseReceived: false,
+      })
+    },
+  )
+
+  it("keeps a failed auth persistence step retryable after an auth-expired refusal", async () => {
     const mutationLifecycle = createAutoCheckinMutationLifecycle()
     mockResyncVoApiV2AuthToken.mockResolvedValueOnce({
       accessToken: "resynced-dashboard-token",
-      userId: "8",
+      userId: "7",
       username: "resynced-owner",
       source: "existing_tab",
     })
@@ -328,15 +714,20 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(
-      checkInForTest(account, {
-        ...DEFAULT_PROVIDER_CONTEXT,
-        mutationLifecycle,
-      }),
-    ).resolves.toMatchObject({
+    const result = await checkInForTest(account, {
+      ...DEFAULT_PROVIDER_CONTEXT,
+      mutationLifecycle,
+    })
+    expect(result).toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
       rawMessage: "account auth persistence unavailable",
     })
+    expect(
+      canAutomaticallyRetryCheckinResult(
+        result,
+        AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,
+      ),
+    ).toBe(true)
     expect(mutationLifecycle.dispatched).toBe(false)
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledTimes(1)
   })
@@ -357,81 +748,128 @@ describe("voApiV2Provider", () => {
     expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
   })
 
-  it("re-syncs an expired dashboard JWT before retrying API check-in", async () => {
-    const postAuthorizations: (string | null)[] = []
-    const statsAuthorizations: (string | null)[] = []
-    mockResyncVoApiV2AuthToken.mockResolvedValueOnce({
-      accessToken: "resynced-dashboard-token",
-      userId: "8",
-      username: "resynced-owner",
-      source: "existing_tab",
-    })
+  it.each(["provider", "executor"])(
+    "re-syncs the same user's expired dashboard JWT before retrying through the %s",
+    async (entrypoint) => {
+      const mutationLifecycle = createAutoCheckinMutationLifecycle()
+      const postAuthorizations: (string | null)[] = []
+      const statsAuthorizations: (string | null)[] = []
+      mockResyncVoApiV2AuthToken.mockResolvedValueOnce({
+        accessToken: "resynced-dashboard-token",
+        userId: "7",
+        username: "resynced-owner",
+        source: "existing_tab",
+      })
 
-    server.use(
-      http.post("https://example.invalid/api/check_in", ({ request }) => {
-        const authorization = request.headers.get("authorization")
-        postAuthorizations.push(authorization)
-        if (authorization === "jwt-dashboard") {
+      server.use(
+        http.post("https://example.invalid/api/check_in", ({ request }) => {
+          const authorization = request.headers.get("authorization")
+          postAuthorizations.push(authorization)
+          if (authorization === "jwt-dashboard") {
+            return HttpResponse.json({
+              code: 2,
+              data: null,
+              msg: "Auth expire",
+            })
+          }
+
           return HttpResponse.json({
-            code: 2,
-            data: null,
-            msg: "Auth expire",
+            code: 0,
+            data: { amount: "0.1", bonusAmount: "0" },
           })
-        }
+        }),
+        http.get(
+          "https://example.invalid/api/check_in/stats",
+          ({ request }) => {
+            const authorization = request.headers.get("authorization")
+            statsAuthorizations.push(authorization)
+            return HttpResponse.json({
+              code: 0,
+              data: {
+                todaySigned: authorization === "resynced-dashboard-token",
+              },
+            })
+          },
+        ),
+      )
 
-        return HttpResponse.json({
-          code: 0,
-          data: { amount: "0.1", bonusAmount: "0" },
-        })
-      }),
-      http.get("https://example.invalid/api/check_in/stats", ({ request }) => {
-        statsAuthorizations.push(request.headers.get("authorization"))
-        return HttpResponse.json({ code: 0, data: { todaySigned: true } })
-      }),
-    )
-
-    await expect(
-      checkInForTest(account, {
+      const context = {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         protectionBypassExecution: userCommandExecution(
           PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
         ),
-      }),
-    ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
-
-    expect(postAuthorizations).toEqual([
-      "jwt-dashboard",
-      "resynced-dashboard-token",
-    ])
-    expect(statsAuthorizations).toEqual(["resynced-dashboard-token"])
-    expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
-      "https://example.invalid",
-      TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
-    )
-    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledTimes(2)
-    for (const [request] of mockSubmitVoApiV2CheckIn.mock.calls) {
-      expect(request).toMatchObject({
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        protectionBypassExecution:
-          DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
+        mutationLifecycle,
+      }
+      const outcome =
+        entrypoint === "provider"
+          ? await checkInForTest(account, context)
+          : await executeSelectedCheckIn({
+              account: {
+                ...account,
+                checkIn: createCompatibilityCheckInConfig({
+                  siteType: SITE_TYPES.VO_API_V2,
+                  supported: true,
+                  automaticExecutionEnabled: true,
+                }),
+              },
+              globalAutomaticExecutionEnabled: true,
+              context,
+            })
+      const result = (() => {
+        if (!("kind" in outcome)) return outcome
+        expect(outcome.kind).toBe("executed")
+        if (outcome.kind !== "executed") throw new Error("Check-in was skipped")
+        return outcome.result
+      })()
+      expect(result).toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
+      expect(outcome).toMatchObject({
+        confirmation: { kind: "observed", userId: "7" },
       })
-    }
-    expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      }),
-    )
-    expect(mockUpdateAccount).toHaveBeenCalledWith(
-      "account-1",
-      expect.objectContaining({
-        account_info: expect.objectContaining({
-          access_token: "resynced-dashboard-token",
-          id: "8",
-          username: "resynced-owner",
+
+      expect(postAuthorizations).toEqual([
+        "jwt-dashboard",
+        "resynced-dashboard-token",
+      ])
+      expect(statsAuthorizations).toEqual(
+        entrypoint === "executor"
+          ? ["jwt-dashboard", "resynced-dashboard-token"]
+          : ["resynced-dashboard-token"],
+      )
+      expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
+        "https://example.invalid",
+        TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
+        "7",
+      )
+      expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledTimes(2)
+      for (const [request] of mockSubmitVoApiV2CheckIn.mock.calls) {
+        expect(request).toMatchObject({
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution:
+            DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
+        })
+      }
+      const replayRequest = mockSubmitVoApiV2CheckIn.mock.calls[1]?.[0]
+      expect(replayRequest).toBeDefined()
+      if (!replayRequest) throw new Error("Check-in replay request was missing")
+      expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          auth: expect.objectContaining({ userId: "7" }),
+          observer: replayRequest.observer,
         }),
-      }),
-      expect.any(Object),
-    )
-  })
+      )
+      expect(mockUpdateAccount).toHaveBeenCalledWith(
+        "account-1",
+        expect.objectContaining({
+          account_info: expect.objectContaining({
+            access_token: "resynced-dashboard-token",
+            id: "7",
+            username: "resynced-owner",
+          }),
+        }),
+        expect.any(Object),
+      )
+    },
+  )
 })

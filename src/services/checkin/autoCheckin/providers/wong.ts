@@ -38,6 +38,7 @@ import {
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
+import { createConfirmedCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -128,18 +129,21 @@ async function checkinWongGongyi(
     const hasStructuredCheckedIn =
       typeof checkinResponse.data?.checked_in === "boolean"
 
+    if (checkinResponse.data?.checked_in === true) {
+      return createConfirmedCheckInResult({
+        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+        data: checkinResponse.data,
+      })
+    }
+
     if (
-      checkinResponse.data?.checked_in === true ||
-      (!hasStructuredCheckedIn &&
-        responseMessage &&
-        isAlreadyCheckedMessage(responseMessage))
+      !hasStructuredCheckedIn &&
+      responseMessage &&
+      isAlreadyCheckedMessage(responseMessage)
     ) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        rawMessage: responseMessage || undefined,
-        messageKey: responseMessage
-          ? undefined
-          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+        rawMessage: responseMessage,
         data: checkinResponse.data,
       }
     }

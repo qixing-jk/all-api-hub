@@ -1,5 +1,9 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import {
+  readDayStableCheckInObservation,
+  type CheckInStatusObservation,
+} from "~/services/checkin/statusObservation"
 import { isRecord } from "~/utils/core/object"
 
 import { EMRANK_CHECK_IN_STATUSES, EMRANK_ENDPOINTS } from "./constants"
@@ -88,10 +92,16 @@ export async function fetchCheckInState(
 }
 
 export type EmRankCheckInResult = {
-  alreadyChecked: boolean
   message: string
   record: EmRankCheckInRecord | null
-}
+} & (
+  | {
+      alreadyChecked: true
+      statusObservation: CheckInStatusObservation<EmRankCheckInState>
+    }
+  | { alreadyChecked: false; statusObservation: undefined }
+  | { alreadyChecked: false }
+)
 
 /**
  * Claim once after the authoritative state says the day is open.
@@ -108,7 +118,17 @@ export async function performCheckIn(
   return withEmRankSession(request, async (scoped) => {
     const endpoint = EMRANK_ENDPOINTS.CheckIn
     await fetchEmRankIdentity(scoped)
-    const before = readState(await readEmRank(scoped, endpoint), endpoint)
+    const statusObservation = await readDayStableCheckInObservation(async () =>
+      readState(await readEmRank(scoped, endpoint), endpoint),
+    )
+    if (!statusObservation)
+      return {
+        alreadyChecked: false,
+        message: "",
+        record: null,
+        statusObservation: undefined,
+      }
+    const before = statusObservation.observation
     if (!before.available)
       throw new ApiError(
         "EMRank check-in is unavailable",
@@ -121,6 +141,7 @@ export async function performCheckIn(
         alreadyChecked: true,
         message: before.message,
         record: before.record,
+        statusObservation,
       }
     }
     if (!before.canClaim) {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   CHECK_IN_METHOD_AVAILABILITIES,
@@ -32,14 +32,17 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+import { CHECK_IN_CONFIRMATION_KINDS } from "~/services/checkin/autoCheckin/confirmation"
 import { aiRouterProvider } from "~/services/checkin/autoCheckin/providers/aiRouter"
 import { baiApiProvider } from "~/services/checkin/autoCheckin/providers/baiApi"
 import { clawhudProvider } from "~/services/checkin/autoCheckin/providers/clawhud"
 import { daiguaProvider } from "~/services/checkin/autoCheckin/providers/daigua"
+import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { freeApiProvider } from "~/services/checkin/autoCheckin/providers/freeApi"
 import { geniusProgrammerProvider } from "~/services/checkin/autoCheckin/providers/geniusProgrammer"
 import { hiyoProvider } from "~/services/checkin/autoCheckin/providers/hiyo"
 import { sidruneProvider } from "~/services/checkin/autoCheckin/providers/sidrune"
+import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"
 import { mapSub2ApiCheckInMutationError } from "~/services/checkin/autoCheckin/providers/sub2apiShared"
 import { toolcodeProvider } from "~/services/checkin/autoCheckin/providers/toolcode"
 import { xiaobaiCodeProvider } from "~/services/checkin/autoCheckin/providers/xiaobaiCode"
@@ -236,6 +239,7 @@ describe.each(cases)(
         source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
       })
     })
+    afterEach(() => vi.useRealTimers())
 
     it("rechecks with recovered credentials and stops when today is already checked", async () => {
       vi.mocked(fetchApiResponse)
@@ -357,6 +361,66 @@ describe.each(cases)(
       expect(result).toMatchObject({ status: "already_checked" })
       expect(result.reward).toBeUndefined()
     })
+    it("preserves the recovered GET as dated observation evidence", async () => {
+      const observedAt = new Date(2026, 10, 15, 12).getTime()
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(observedAt)
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(reply(null, 401))
+        .mockResolvedValueOnce(reply(status(true)))
+      const result = await provider.checkIn(account, context())
+      expect(result.confirmation).toMatchObject({
+        kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+        accountId: account.id,
+        userId: "42",
+        observedAt,
+        status: { today: CHECK_IN_METHOD_TODAY_STATUSES.Checked },
+      })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+    })
+    it("rereads a recovered GET that crosses midnight before replaying", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date(2026, 10, 15, 23, 59, 59))
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(reply(null, 401))
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime(new Date(2026, 10, 16, 0, 0, 1))
+          return reply(status(true))
+        })
+        .mockResolvedValueOnce(reply(status(false)))
+        .mockResolvedValueOnce(reply(award))
+      const result = await provider.checkIn(account, context())
+      expect(result.status).toBe("success")
+      expect(
+        vi
+          .mocked(fetchApiResponse)
+          .mock.calls.map(([, o]) => o.options?.method),
+      ).toEqual(["POST", "GET", "GET", "POST"])
+    })
+    it("blocks replay after two recovered reads cross their respective day boundaries", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date(2026, 10, 15, 23, 59, 59))
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(reply(null, 401))
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime(new Date(2026, 10, 16, 0, 0, 1))
+          return reply(status(true))
+        })
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime(new Date(2026, 10, 17, 0, 0, 1))
+          return reply(status(false))
+        })
+      const result = await provider.checkIn(account, context())
+      expect(result).toMatchObject({
+        status: "failed",
+        reasonCode: "status_unavailable",
+      })
+      expect(
+        vi
+          .mocked(fetchApiResponse)
+          .mock.calls.map(([, o]) => o.options?.method),
+      ).toEqual(["POST", "GET", "GET"])
+    })
     it("stops recovered submission when current account intent changed", async () => {
       const beforeRecoveredMutation = vi
         .fn()
@@ -459,6 +523,228 @@ describe.each([
 })
 
 describe("recovery outcome mapping", () => {
+  afterEach(() => vi.useRealTimers())
+  it.each([
+    {
+      provider: baiApiProvider,
+      dto: { cash_amount_usd: 0.1, checkin_date: "invalid" },
+    },
+    {
+      provider: baiApiProvider,
+      dto: { cash_amount_usd: 0.1, checkin_date: "2026-02-31" },
+    },
+    {
+      provider: baiApiProvider,
+      dto: { cash_amount_usd: 0.1, checkin_date: "2026-02-02" },
+    },
+    {
+      provider: sub2apiProProvider,
+      dto: {
+        message: "applied",
+        reward_amount: 0.1,
+        new_balance: 1,
+        checked_in_at: "invalid",
+      },
+    },
+    {
+      provider: sub2apiProProvider,
+      dto: {
+        message: "applied",
+        reward_amount: 0.1,
+        new_balance: 1,
+        checked_in_at: "2026-02-31T12:00:00Z",
+      },
+    },
+    {
+      provider: sub2apiProProvider,
+      dto: {
+        message: "applied",
+        reward_amount: 0.1,
+        new_balance: 1,
+        checked_in_at: "2026-02-02T12:00:00Z",
+      },
+    },
+  ])(
+    "keeps the actual grant when its optional date cannot establish completion",
+    async ({ provider, dto }) => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date(2026, 1, 1, 12))
+      vi.mocked(fetchApiResponse)
+        .mockReset()
+        .mockResolvedValueOnce(response(dto))
+      const result = await provider.checkIn(buildSiteAccount(), {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
+        statusProof: {
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          evidence: {
+            source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+            observedAt: Date.now(),
+          },
+        },
+      })
+      expect(result).toMatchObject({
+        status: "success",
+        reward: { quota: 50_000 },
+        confirmation: {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Response,
+          observedAt: Date.now(),
+        },
+      })
+      expect(result.confirmation && "completedAt" in result.confirmation).toBe(
+        false,
+      )
+      expect(fetchApiResponse).toHaveBeenCalledOnce()
+    },
+  )
+  it.each([
+    {
+      name: "Bai API",
+      provider: baiApiProvider,
+      dto: { checkin_date: "2026-01-31", cash_amount_usd: 0.1 },
+      completedAt: new Date(2026, 1, 1).getTime() - 1,
+    },
+    {
+      name: "Pro",
+      provider: sub2apiProProvider,
+      dto: {
+        message: "applied",
+        reward_amount: 0.1,
+        new_balance: 1,
+        checked_in_at: new Date(2026, 0, 31, 23, 59, 59).toISOString(),
+      },
+      completedAt: new Date(2026, 0, 31, 23, 59, 59).getTime(),
+    },
+    {
+      name: "Clawhud",
+      provider: clawhudProvider,
+      dto: {
+        checked_in_today: true,
+        today_amount: 0.1,
+        today: "2026-01-31",
+        checked_in_at: new Date(2026, 0, 31, 23, 59, 59).toISOString(),
+      },
+      completedAt: new Date(2026, 0, 31, 23, 59, 59).getTime(),
+    },
+    {
+      name: "AI-ROUTER",
+      provider: aiRouterProvider,
+      dto: {
+        checked_today: true,
+        reward_amount: 0.1,
+        checkin_date: "2026-01-31",
+      },
+      completedAt: new Date(2026, 1, 1).getTime() - 1,
+    },
+  ])(
+    "attributes the delayed $name POST grant to its protocol completion date",
+    async ({ provider, dto, completedAt }) => {
+      const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(startedAt)
+      vi.mocked(fetchApiResponse)
+        .mockReset()
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime(startedAt + 2_000)
+          const result = response(dto)
+          if (provider === aiRouterProvider)
+            result.body = JSON.stringify(result.body)
+          return result
+        })
+      const account = buildSiteAccount({
+        site_url: request.baseUrl,
+        account_info: { ...buildSiteAccount().account_info, id: "42" },
+      })
+      const result = await provider.checkIn(account, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
+        statusProof: {
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          evidence: {
+            source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+            observedAt: startedAt,
+          },
+        },
+      })
+      expect(result).toMatchObject({
+        status: "success",
+        reward: { quota: 50_000 },
+        confirmation: {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Response,
+          observedAt: startedAt + 2_000,
+          completedAt,
+        },
+      })
+      expect(fetchApiResponse).toHaveBeenCalledOnce()
+    },
+  )
+  it.each([
+    {
+      name: "Pro",
+      provider: sub2apiProProvider,
+      dto: {
+        enabled: true,
+        checked_in_today: true,
+        reward_min: 1,
+        reward_max: 3,
+      },
+    },
+    {
+      name: "Denxio",
+      provider: denxioProvider,
+      dto: { config: { normal_checkin_enabled: true }, normal_done: true },
+    },
+  ])(
+    "preserves $name recovered status evidence through its custom result",
+    async ({ provider, dto }) => {
+      const observedAt = new Date(2026, 10, 15, 12).getTime()
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(observedAt)
+      vi.mocked(recoverSub2ApiBrowserAuth).mockResolvedValue({
+        accessToken: "recovered",
+        userId: "42",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      })
+      vi.mocked(fetchApiResponse)
+        .mockReset()
+        .mockResolvedValueOnce(response(null, 401))
+        .mockResolvedValueOnce(response(dto))
+      const account = buildSiteAccount({
+        site_url: request.baseUrl,
+        account_info: { ...buildSiteAccount().account_info, id: "42" },
+      })
+      const result = await provider.checkIn(account, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
+        statusProof: {
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          evidence: {
+            source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+            observedAt,
+          },
+        },
+      })
+      expect(result.status).toBe("already_checked")
+      expect(result.confirmation).toMatchObject({
+        kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+        observedAt,
+        userId: "42",
+      })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+    },
+  )
   it("maps a disabled recovered method to a definite failure", () => {
     expect(
       mapSub2ApiCheckInMutationError(
@@ -471,6 +757,7 @@ describe("recovery outcome mapping", () => {
             PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
           ),
         },
+        buildSiteAccount(),
       ),
     ).toMatchObject({ status: "failed", reasonCode: "method_disabled" })
   })
@@ -491,9 +778,16 @@ describe("recovery outcome mapping", () => {
           reward_max: 3,
         }),
       )
-    await expect(performSub2ApiProDailyCheckIn(request)).resolves.toEqual({
-      kind: "already_checked",
-    })
+    await expect(performSub2ApiProDailyCheckIn(request)).resolves.toMatchObject(
+      {
+        kind: "already_checked",
+        statusObservation: {
+          observation: { enabled: true, checkedInToday: true },
+          userId: "42",
+          siteUrl: request.baseUrl,
+        },
+      },
+    )
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
   })
 })

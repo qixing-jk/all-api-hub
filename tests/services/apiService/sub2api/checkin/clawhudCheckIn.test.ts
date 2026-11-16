@@ -224,7 +224,11 @@ describe("Clawhud check-in protocol", () => {
       ),
     ).toEqual({
       kind: CLAWHUD_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-      data: { rewardAmount: 1.14 },
+      data: {
+        rewardAmount: 1.14,
+        checkinDate: "2026-10-11",
+        checkedInAt: "2026-10-11T12:52:08.131448304+08:00",
+      },
     })
   })
 
