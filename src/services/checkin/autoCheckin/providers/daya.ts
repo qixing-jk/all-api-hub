@@ -9,12 +9,19 @@ import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/ut
 import {
   fetchDayaCheckInOverview,
   performDayaCheckIn,
+  type DayaCheckInOverview,
 } from "~/services/apiService/daya/rewards"
 import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  createUnconfirmedCheckInResult,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { CheckInMethodStatus } from "~/types/checkIn"
 
 import { createAccountCheckInRequest } from "./accountRequest"
 import type { AutoCheckinProvider } from "./contracts"
@@ -23,6 +30,24 @@ import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   resolveProviderErrorResult,
 } from "./shared"
+
+/** Normalize the overview using the timestamp of the actual status read. */
+function normalizeStatus(
+  overview: DayaCheckInOverview,
+  observedAt: number,
+): CheckInMethodStatus {
+  return {
+    outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+    availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+    today: overview.checkInClaimable
+      ? CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+      : CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+    evidence: {
+      source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+      observedAt,
+    },
+  }
+}
 
 const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
   context,
@@ -39,17 +64,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
       ...request,
       ...(composed.signal ? { abortSignal: composed.signal } : {}),
     })
-    return {
-      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-      availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
-      today: overview.checkInClaimable
-        ? CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
-        : CHECK_IN_METHOD_TODAY_STATUSES.Checked,
-      evidence: {
-        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-        observedAt: context.observedAt,
-      },
-    }
+    return normalizeStatus(overview, context.observedAt)
   } catch (error) {
     return {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
@@ -78,17 +93,37 @@ export const dayaProvider: AutoCheckinProvider = {
       const result = await performDayaCheckIn(
         createAccountCheckInRequest(account as SiteAccount, context),
       )
-      return {
-        status: result.alreadyChecked
-          ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-          : CHECKIN_RESULT_STATUS.SUCCESS,
-        messageKey: result.alreadyChecked
-          ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday
-          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        ...(!result.alreadyChecked
-          ? { rawMessage: result.message, data: result.data }
-          : {}),
+      if ("statusObservation" in result) {
+        const observation = result.statusObservation
+        if (!observation)
+          return createUnconfirmedCheckInResult(account as SiteAccount)
+        return withCheckInConfirmation(
+          account as SiteAccount,
+          {
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            messageKey:
+              AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+          },
+          {
+            kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+            status: normalizeStatus(
+              observation.observation,
+              observation.observedAt,
+            ),
+          },
+        )
       }
+      return withCheckInConfirmation(
+        account as SiteAccount,
+        {
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+          rawMessage: result.message,
+          data: result.data,
+        },
+        { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
+      )
     } catch (error) {
       return resolveProviderErrorResult({
         error,

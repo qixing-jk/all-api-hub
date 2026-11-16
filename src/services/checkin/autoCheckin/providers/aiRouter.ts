@@ -11,6 +11,7 @@ import {
   performAiRouterDailyCheckIn,
   probeAiRouterDailyCheckInStatus,
 } from "~/services/apiService/sub2api/checkin/aiRouterCheckIn"
+import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
@@ -141,13 +142,17 @@ export const aiRouterProvider: AutoCheckinProvider = {
       )
       switch (result.kind) {
         case AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied:
-          return {
-            status: CHECKIN_RESULT_STATUS.SUCCESS,
-            messageKey:
-              AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-            reward: readUsdReward(result.data.rewardAmount),
-            data: result.data,
-          }
+          return withCheckInResponseConfirmation(
+            account as SiteAccount,
+            {
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              messageKey:
+                AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+              reward: readUsdReward(result.data.rewardAmount),
+              data: { rewardAmount: result.data.rewardAmount },
+            },
+            { day: result.data.checkinDate },
+          )
         case AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
           return {
             status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
@@ -156,7 +161,11 @@ export const aiRouterProvider: AutoCheckinProvider = {
           }
       }
     } catch (error) {
-      return mapSub2ApiCheckInMutationError(error, context)
+      return mapSub2ApiCheckInMutationError(
+        error,
+        context,
+        account as SiteAccount,
+      )
     }
   },
 }

@@ -8,10 +8,8 @@ import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
-  createTerminalFailureResult,
   createUpstreamFailureResult,
   isAlreadyCheckedMessage,
-  matchTerminalFailureReason,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
@@ -163,15 +161,6 @@ const checkinAnyRouter = async (
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         data: response,
       }
-    }
-
-    const terminalReason = matchTerminalFailureReason(rawResponseMessage)
-    if (terminalReason) {
-      return createTerminalFailureResult({
-        reasonCode: terminalReason,
-        rawMessage: rawResponseMessage,
-        data: response,
-      })
     }
 
     return createUpstreamFailureResult({

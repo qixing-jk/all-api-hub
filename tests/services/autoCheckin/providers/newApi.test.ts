@@ -8,6 +8,8 @@ import {
 } from "~/services/accounts/utils/siteRouteResolver"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -16,6 +18,7 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import {
   TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
   TEMP_WINDOW_REQUEST_SOURCES,
+  type TempWindowTurnstileFetch,
 } from "~/types/tempWindowFetch"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import {
@@ -194,6 +197,666 @@ function prepareAccountSession(
 }
 
 describe("newApiProvider", () => {
+  it("retains a rate-limit refusal with its final not-checked observation", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "too many requests",
+      data: null,
+    })
+    mockCheckInStatusSequence(false)
+    await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_error",
+      rawMessage: "too many requests",
+      confirmation: { kind: "observed", status: { today: "not_checked" } },
+    })
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
+  it("explains a message-less refusal when check-in has been disabled", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "",
+      data: null,
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "method_disabled",
+    })
+    expect(result.rawMessage).toBeUndefined()
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+  })
+
+  it("keeps a message-less refusal failed when its final status is unavailable", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "",
+      data: null,
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce(undefined)
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_error",
+      messageKey: "autoCheckin:providerFallback.checkinFailed",
+    })
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
+  it.each(["not_present", "token_obtained"] as const)(
+    "retains the upstream verification message after assistance omits its own error (%s)",
+    async (status) => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      mockCheckInStatusSequence(false, false)
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(false)
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: false,
+        error: "",
+        turnstile: { status, hasTurnstile: status === "token_obtained" },
+      })
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: status === "not_present" ? "failed" : "uncertain",
+        rawMessage: "Turnstile token invalid",
+      })
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("reports an unavailable check-in route before attempting verification assistance", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "Turnstile token invalid",
+      data: null,
+    })
+    mockCheckInStatusSequence(false)
+    vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(null)
+    await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "checkin_page_unavailable",
+    })
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
+  it("discards the initial observation when fallback verification cannot read status", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "Turnstile token invalid",
+      data: null,
+    })
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+    vi.mocked(tempWindowTurnstileFetch)
+      .mockResolvedValueOnce({
+        success: false,
+        error: "initial verification error",
+        turnstile: { status: "not_present", hasTurnstile: false },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        error: "fallback verification error",
+        turnstile: { status: "not_present", hasTurnstile: false },
+      })
+    mockCheckInStatusSequence(false, false)
+    vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
+      new Error("final read failed"),
+    )
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      rawMessage: "initial verification error",
+    })
+    expect(result).toMatchObject({ confirmation: { kind: "unavailable" } })
+    expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
+  })
+
+  it("discards the initial observation when the fallback window returns no reply", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "Turnstile token invalid",
+      data: null,
+    })
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+    vi.mocked(tempWindowTurnstileFetch)
+      .mockResolvedValueOnce({
+        success: false,
+        error: "initial verification error",
+        turnstile: { status: "not_present", hasTurnstile: false },
+      })
+      // The browser message boundary can return no usable payload.
+      .mockResolvedValueOnce(null as unknown as TempWindowTurnstileFetch)
+    mockCheckInStatusSequence(false, false)
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      rawMessage: "initial verification error",
+    })
+    expect(result).not.toHaveProperty("confirmation")
+    expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(["checked", "repeated_rollover"])(
+    "uses one rollover guard for lost-response final readback (%s)",
+    async (finalRead) => {
+      const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+      vi.useFakeTimers()
+      vi.setSystemTime(startedAt)
+      try {
+        vi.mocked(newApiFamilyRequests.envelope).mockImplementationOnce(
+          async (request) => {
+            request.observer?.onDispatch()
+            throw new TypeError("Failed to fetch")
+          },
+        )
+        vi.mocked(newApiFamilyRequests.data)
+          .mockResolvedValueOnce({
+            enabled: true,
+            stats: { checked_in_today: false },
+          })
+          .mockImplementationOnce(async () => {
+            vi.setSystemTime(startedAt + 2_000)
+            return { enabled: true, stats: { checked_in_today: true } }
+          })
+          .mockImplementationOnce(async () => {
+            if (finalRead === "repeated_rollover")
+              vi.setSystemTime(startedAt + 86_402_000)
+            return { enabled: true, stats: { checked_in_today: true } }
+          })
+          .mockResolvedValue(undefined)
+        const outcome = await executeSelectedCheckIn({
+          account: {
+            ...mockAccount,
+            checkIn: createCompatibilityCheckInConfig({
+              siteType: SITE_TYPES.NEW_API,
+              supported: true,
+              automaticExecutionEnabled: true,
+            }),
+          },
+          globalAutomaticExecutionEnabled: true,
+          context: DEFAULT_PROVIDER_CONTEXT,
+        })
+        expect(outcome).toMatchObject({
+          kind: "executed",
+          result: {
+            status: finalRead === "checked" ? "success" : "uncertain",
+            reconciliation: finalRead === "checked" ? "checked" : "unavailable",
+          },
+          ...(finalRead === "checked" ? { retryable: false } : {}),
+        })
+        expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
+        expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("keeps current-day checked admission after rereading a response crossing midnight", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      vi.mocked(newApiFamilyRequests.data)
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime(startedAt + 2_000)
+          return { enabled: true, stats: { checked_in_today: true } }
+        })
+        .mockResolvedValue({ enabled: true, stats: { checked_in_today: true } })
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+        success: true,
+        message: "",
+        data: null,
+      })
+      const outcome = await executeSelectedCheckIn({
+        account: {
+          ...mockAccount,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        globalAutomaticExecutionEnabled: true,
+        context: DEFAULT_PROVIDER_CONTEXT,
+      })
+      expect(outcome).toMatchObject({
+        kind: "skipped",
+        reason: "already_checked",
+      })
+      expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each(["day", "month"])(
+    "rereads a status response crossing a %s boundary before confirming completion",
+    async (boundary) => {
+      const startedAt = new Date(
+        2026,
+        0,
+        boundary === "month" ? 31 : 2,
+        23,
+        59,
+        59,
+      ).getTime()
+      const nextDay = startedAt + 2_000
+      vi.useFakeTimers()
+      vi.setSystemTime(startedAt)
+      try {
+        const data = vi.mocked(newApiFamilyRequests.data)
+        data.mockImplementationOnce(async () => {
+          vi.setSystemTime(nextDay)
+          return {
+            enabled: true,
+            stats: {
+              checked_in_today: true,
+              records: [
+                {
+                  checkin_date: formatLocalDayKey(new Date(startedAt)),
+                  quota_awarded: 500,
+                },
+              ],
+            },
+          }
+        })
+        data.mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        await expect(
+          newApiProvider.getStatus!({
+            account: mockAccount,
+            observedAt: startedAt,
+          }),
+        ).resolves.toMatchObject({ today: "not_checked" })
+        expect(data).toHaveBeenCalledTimes(2)
+        const secondOptions = data.mock.calls[1]![1]
+        expect(secondOptions.endpoint).toContain(
+          boundary === "month" ? "month=2026-02" : "month=2026-01",
+        )
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("attributes a delayed successful record to its confirmed date", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      vi.mocked(newApiFamilyRequests.envelope).mockImplementationOnce(
+        async () => {
+          vi.setSystemTime(startedAt + 2_000)
+          return {
+            success: true,
+            message: "",
+            data: { checkin_date: "2026-01-31", quota_awarded: 500 },
+          }
+        },
+      )
+      const outcome = await executeSelectedCheckIn({
+        account: {
+          ...mockAccount,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        globalAutomaticExecutionEnabled: true,
+        context: DEFAULT_PROVIDER_CONTEXT,
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result: { status: "success", reward: { quota: 500 } },
+      })
+      if (outcome.kind === "executed")
+        expect(formatLocalDayKey(new Date(outcome.completedAt!))).toBe(
+          "2026-01-31",
+        )
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each(
+    [
+      ["permission denied for check-in", "permission_denied"],
+      ["unauthorized check-in request", "authentication_required"],
+    ].flatMap(([message, reason]) =>
+      [200, 401, 403].flatMap((status) =>
+        [true, false, undefined].flatMap((checked) =>
+          [false, true].map((fallback) => ({
+            message,
+            reason,
+            status,
+            checked,
+            fallback,
+          })),
+        ),
+      ),
+    ),
+  )(
+    "preserves terminal assisted replay refusals (HTTP: $status, reason: $reason, checked: $checked, fallback: $fallback)",
+    async ({ message, reason, status, checked, fallback }) => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      const data = vi.mocked(newApiFamilyRequests.data)
+      data.mockResolvedValue({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      data.mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      data.mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+      if (fallback) {
+        vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+          success: false,
+          error: "Turnstile token unavailable",
+          turnstile: { status: "not_present", hasTurnstile: false },
+        })
+        data.mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+      }
+      data.mockResolvedValueOnce(
+        checked === undefined
+          ? undefined
+          : {
+              enabled: true,
+              stats: { checked_in_today: checked },
+            },
+      )
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: status === 200,
+        status,
+        headers: { "content-type": "application/json" },
+        data: { success: false, message, data: null },
+        ...(status === 200 ? {} : { error: message }),
+        turnstile: { status: "token_obtained", hasTurnstile: true },
+      })
+      const outcome = await executeSelectedCheckIn({
+        account: {
+          ...mockAccount,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        globalAutomaticExecutionEnabled: true,
+        context: DEFAULT_PROVIDER_CONTEXT,
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result: {
+          status: "failed",
+          reasonCode: reason,
+          rawMessage: message,
+          retryable: false,
+        },
+      })
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(fallback ? 2 : 1)
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(fallback ? 4 : 3)
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(login.loginAccount).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(
+    [
+      {
+        body: "HTML",
+        payload: "<html>403 Forbidden: permission denied for check-in</html>",
+        message: "<html>403 Forbidden: permission denied for check-in</html>",
+      },
+      { body: "bare", payload: null, message: "HTTP 403 Forbidden" },
+      {
+        body: "Turnstile challenge",
+        payload: {
+          success: false,
+          message: "Turnstile token invalid",
+          data: null,
+        },
+        message: "Turnstile token invalid",
+      },
+    ].flatMap((response) =>
+      [true, false, undefined].map((checked) => ({ ...response, checked })),
+    ),
+  )(
+    "reconciles an unresolved assisted HTTP 403 response (body: $body, checked: $checked)",
+    async ({ payload, message, checked }) => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(newApiFamilyRequests.data)
+        .mockResolvedValue({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce(
+          checked === undefined
+            ? undefined
+            : { enabled: true, stats: { checked_in_today: checked } },
+        )
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: false,
+        status: 403,
+        headers: {},
+        data: payload,
+        error: message,
+        turnstile: { status: "token_obtained", hasTurnstile: true },
+      })
+
+      const outcome = await executeSelectedCheckIn({
+        account: {
+          ...mockAccount,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        globalAutomaticExecutionEnabled: true,
+        context: DEFAULT_PROVIDER_CONTEXT,
+      })
+
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result:
+          checked === true
+            ? { status: "already_checked", retryable: false }
+            : checked === undefined &&
+                (typeof payload !== "object" || payload?.success !== false)
+              ? {
+                  status: "uncertain",
+                  reasonCode: "upstream_error",
+                  rawMessage: message,
+                  reconciliation: "unavailable",
+                  retryable: true,
+                }
+              : {
+                  status: "failed",
+                  reasonCode: "upstream_error",
+                  rawMessage: message,
+                  retryable: true,
+                },
+      })
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledOnce()
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(login.loginAccount).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(["permission denied for check-in", "unauthorized check-in request"])(
+    "preserves a positive assisted grant despite refusal-like copy: %s",
+    async (message) => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        headers: {},
+        data: { success: true, message, data: { quota_awarded: 500 } },
+        turnstile: { status: "token_obtained", hasTurnstile: true },
+      })
+
+      const outcome = await executeSelectedCheckIn({
+        account: {
+          ...mockAccount,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        globalAutomaticExecutionEnabled: true,
+        context: DEFAULT_PROVIDER_CONTEXT,
+      })
+
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result: {
+          status: "success",
+          rawMessage: message,
+          reward: { quota: 500 },
+          retryable: false,
+        },
+      })
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledOnce()
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    },
+  )
+
+  it("retains readback when incognito permission guidance ends the execution", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "Turnstile token invalid",
+      data: null,
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(false)
+    vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+      success: false,
+      error: "Turnstile token unavailable",
+      turnstile: { status: "not_present", hasTurnstile: false },
+    })
+    const outcome = await executeSelectedCheckIn({
+      account: {
+        ...mockAccount,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
+      },
+      globalAutomaticExecutionEnabled: true,
+      context: DEFAULT_PROVIDER_CONTEXT,
+    })
+    expect(outcome).toMatchObject({
+      kind: "executed",
+      result: {
+        status: "failed",
+        reasonCode: "manual_verification_required",
+        messageKey:
+          "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",
+        retryable: false,
+      },
+      confirmation: { kind: "observed" },
+    })
+    // Admission, direct rejection, and final assisted readback; no fourth outer GET.
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
+    expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("retains a native pre-admission checked observation across login cleanup at midnight", async () => {
+    const observedAt = new Date(2026, 0, 2, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(observedAt)
+    try {
+      const { account, clicked } = prepareAccountSession()
+      const runLogin = login.loginAccount.getMockImplementation()!
+      login.loginAccount.mockImplementation(async (request) => {
+        const result = await runLogin(request)
+        vi.setSystemTime(observedAt + 2_000)
+        return result
+      })
+      vi.mocked(newApiFamilyRequests.data)
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: false },
+        })
+        .mockResolvedValueOnce({
+          enabled: true,
+          stats: { checked_in_today: true },
+        })
+
+      await expect(checkInForTest(account)).resolves.toMatchObject({
+        status: "already_checked",
+        confirmation: { kind: "observed", observedAt },
+      })
+      expect(clicked).not.toHaveBeenCalled()
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it.each(["required", "absent", "lost-reply"])(
     "retains an unconfirmed native click with verification %s",
     async (verification) => {
@@ -814,100 +1477,101 @@ describe("newApiProvider", () => {
       }),
     ).toEqual({ ready: true })
   })
-  it.each(["dynamic check-in requires page action", "Turnstile token invalid"])(
-    "uses the target login and native page for %s",
-    async (message) => {
-      const sendSiteAction = vi.fn(async (action, details?) => {
-        if (action === RuntimeActionIds.ContentNewApiDashboardSessionAuth)
-          return {
-            success: true,
-            data: {
-              access_token: "dashboard-target",
-              token_type: "Bearer",
-              access_expires_at: Date.now() / 1000 + 900,
-              session: { sid: "target-session", current: true },
-              user: { id: "123" },
-            },
-          }
-        if (action === RuntimeActionIds.ContentGetUserFromLocalStorage)
-          return { success: true, data: { userId: "123" } }
-        if (typeof details === "function") await details()
+  it.each([
+    "dynamic check-in requires page action",
+    "Turnstile token invalid",
+    "authentication required",
+  ])("uses the target login and native page for %s", async (message) => {
+    const sendSiteAction = vi.fn(async (action, details?) => {
+      if (action === RuntimeActionIds.ContentNewApiDashboardSessionAuth)
         return {
           success: true,
-          status: "clicked",
-          clicked: true,
-          reason: "clicked",
-          verification: { status: "not_present" },
+          data: {
+            access_token: "dashboard-target",
+            token_type: "Bearer",
+            access_expires_at: Date.now() / 1000 + 900,
+            session: { sid: "target-session", current: true },
+            user: { id: "123" },
+          },
         }
-      })
-      const navigate = vi.fn(),
-        waitForReadyPage = vi.fn(),
-        setVerificationReason = vi.fn()
-      login.loginAccount.mockImplementation(async (request) => {
-        await request.onAuthenticated({
-          tabId: 11,
-          assertOrigin: async () => {},
-          sendSiteAction,
-          navigate,
-          waitForReadyPage,
-          setVerificationReason,
-        })
-        return { status: "authenticated", identity: "123" }
-      })
-      vi.mocked(newApiFamilyRequests.envelope)
-        .mockResolvedValueOnce({ success: false, message, data: null })
-        .mockResolvedValueOnce({
-          success: true,
-          message: "",
-          data: { id: "123" },
-        })
-      vi.mocked(newApiFamilyRequests.data)
-        .mockResolvedValueOnce({
-          enabled: true,
-          stats: { checked_in_today: false },
-        })
-        .mockResolvedValueOnce({
-          enabled: true,
-          stats: { checked_in_today: false },
-        })
-        .mockResolvedValueOnce({
-          enabled: true,
-          stats: { checked_in_today: false },
-        })
-        .mockResolvedValueOnce({
-          enabled: true,
-          stats: { checked_in_today: true },
-        })
-      const account = {
-        ...mockAccount,
-        login: {
-          methodId: "password",
-          credentials: { username: "target", password: "fixture" },
-        },
+      if (action === RuntimeActionIds.ContentGetUserFromLocalStorage)
+        return { success: true, data: { userId: "123" } }
+      if (typeof details === "function") await details()
+      return {
+        success: true,
+        status: "clicked",
+        clicked: true,
+        reason: "clicked",
+        verification: { status: "not_present" },
       }
-      const result = await checkInForTest(account)
-      expect(result.status).toBe("success")
-      expect(login.loginAccount).toHaveBeenCalledOnce()
-      expect(navigate).toHaveBeenCalledWith(
-        "https://site.example.invalid/console/personal",
-      )
-      expect(
-        sendSiteAction.mock.calls.filter(
-          ([action]) =>
-            action === RuntimeActionIds.ContentTriggerCheckinPageAction,
-        ),
-      ).toHaveLength(1)
-      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
-      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
-      expect(newApiFamilyRequests.data).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          fetchContext: expect.objectContaining({ tabId: 11 }),
-          auth: expect.objectContaining({ accessToken: "dashboard-target" }),
-        }),
-        expect.anything(),
-      )
-    },
-  )
+    })
+    const navigate = vi.fn(),
+      waitForReadyPage = vi.fn(),
+      setVerificationReason = vi.fn()
+    login.loginAccount.mockImplementation(async (request) => {
+      await request.onAuthenticated({
+        tabId: 11,
+        assertOrigin: async () => {},
+        sendSiteAction,
+        navigate,
+        waitForReadyPage,
+        setVerificationReason,
+      })
+      return { status: "authenticated", identity: "123" }
+    })
+    vi.mocked(newApiFamilyRequests.envelope)
+      .mockResolvedValueOnce({ success: false, message, data: null })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { id: "123" },
+      })
+    vi.mocked(newApiFamilyRequests.data)
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: true },
+      })
+    const account = {
+      ...mockAccount,
+      login: {
+        methodId: "password",
+        credentials: { username: "target", password: "fixture" },
+      },
+    }
+    const result = await checkInForTest(account)
+    expect(result.status).toBe("success")
+    expect(login.loginAccount).toHaveBeenCalledOnce()
+    expect(navigate).toHaveBeenCalledWith(
+      "https://site.example.invalid/console/personal",
+    )
+    expect(
+      sendSiteAction.mock.calls.filter(
+        ([action]) =>
+          action === RuntimeActionIds.ContentTriggerCheckinPageAction,
+      ),
+    ).toHaveLength(1)
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    expect(newApiFamilyRequests.data).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        fetchContext: expect.objectContaining({ tabId: 11 }),
+        auth: expect.objectContaining({ accessToken: "dashboard-target" }),
+      }),
+      expect.anything(),
+    )
+  })
   beforeEach(() => {
     vi.resetAllMocks()
     mockFetchSupportCheckIn.mockResolvedValue(undefined)
@@ -1411,7 +2075,7 @@ describe("newApiProvider", () => {
         ),
       })
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "already_checked",
         messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
         data: expect.objectContaining({
@@ -1576,7 +2240,7 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "failed",
         reasonCode: "method_disabled",
         messageKey: "autoCheckin:providerWong.checkinDisabled",
@@ -1585,6 +2249,10 @@ describe("newApiProvider", () => {
           success: false,
           message: "check-in unavailable",
           data: null,
+        },
+        confirmation: {
+          kind: "observed",
+          status: { outcome: "known", availability: "disabled" },
         },
       })
       expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
@@ -1609,6 +2277,59 @@ describe("newApiProvider", () => {
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 
+    it.each(
+      [false, true].flatMap((configuredLogin) =>
+        [false, true].map((checked) => ({ configuredLogin, checked })),
+      ),
+    )(
+      "carries a direct rejection's readback while preserving permission failure (configured login: $configuredLogin, checked: $checked)",
+      async ({ configuredLogin, checked }) => {
+        vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+          enabled: true,
+          stats: { checked_in_today: checked },
+        })
+        if (configuredLogin)
+          vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+            enabled: true,
+            stats: { checked_in_today: false },
+          })
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message: "permission denied for check-in",
+          data: null,
+        })
+        const account = configuredLogin
+          ? {
+              ...mockAccount,
+              login: {
+                methodId: "password",
+                credentials: { username: "target", password: "fixture" },
+              },
+            }
+          : mockAccount
+
+        await expect(checkInForTest(account)).resolves.toMatchObject({
+          status: "failed",
+          reasonCode: "permission_denied",
+          rawMessage: "permission denied for check-in",
+          confirmation: {
+            kind: "observed",
+            accountId: "test-id",
+            status: {
+              outcome: "known",
+              today: checked ? "checked" : "not_checked",
+            },
+          },
+        })
+        expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+        expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(
+          configuredLogin ? 2 : 1,
+        )
+        expect(login.loginAccount).not.toHaveBeenCalled()
+        expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      },
+    )
+
     it.each([
       ["check-in endpoint unsupported", "no_provider"],
       ["unauthorized check-in request", "authentication_required"],
@@ -1628,17 +2349,17 @@ describe("newApiProvider", () => {
 
         const result = await checkInForTest(mockAccount)
 
-        expect(result).toEqual({
+        expect(result).toMatchObject({
           status: "failed",
           reasonCode: expectedReason,
           rawMessage: message,
-          messageKey: undefined,
           data: {
             success: false,
             message,
             data: null,
           },
         })
+        expect(result.messageKey).toBeUndefined()
         expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
         expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
       },
@@ -2063,7 +2784,7 @@ describe("newApiProvider", () => {
       })
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "success",
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinSuccessful",
@@ -2086,7 +2807,7 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "already_checked",
         rawMessage: "今日已签到",
         data: { checkin_date: "2026-01-01" },
@@ -2096,7 +2817,7 @@ describe("newApiProvider", () => {
     it("uses status readback to recognize already checked independently of error copy", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
-        message: "No action is necessary today",
+        message: "Turnstile 校验失败，请刷新重试！",
         data: null,
       })
       mockFetchSupportCheckIn.mockResolvedValueOnce(true)
@@ -2105,9 +2826,9 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      await expect(checkInForTest(mockAccount)).resolves.toEqual({
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
         status: "already_checked",
-        rawMessage: "No action is necessary today",
+        messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
         data: null,
       })
       expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
@@ -2363,6 +3084,143 @@ describe("newApiProvider", () => {
       )
     })
 
+    it.each(["token_obtained", "missing_widget_status", "transport_failure"])(
+      "reports already checked when the page completes check-in before the Turnstile replay is rejected (%s)",
+      async (mode) => {
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message: "Turnstile 校验失败，请刷新重试！",
+          data: null,
+        })
+        const assisted = {
+          success: mode !== "transport_failure",
+          status: 200,
+          headers: {},
+          data: {
+            success: false,
+            message: "Turnstile 校验失败，请刷新重试！",
+            data: null,
+          },
+          ...(mode === "missing_widget_status"
+            ? {}
+            : {
+                turnstile: {
+                  status: "token_obtained" as const,
+                  hasTurnstile: true,
+                },
+              }),
+        }
+        // Older or malformed transport replies can omit the widget metadata.
+        vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce(
+          assisted as TempWindowTurnstileFetch,
+        )
+        mockCheckInStatusSequence(false, true)
+
+        const result = await checkInForTest(mockAccount)
+
+        expect(result.status).toBe("already_checked")
+        expect(result.messageKey).toBe(
+          "autoCheckin:providerFallback.alreadyCheckedToday",
+        )
+        expect(result.rawMessage).toBeUndefined()
+        expect(result.reasonCode).toBeUndefined()
+        expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+      },
+    )
+
+    it.each([true, false])(
+      "rechecks the target account after a fallback page completes check-in (initial incognito: %s)",
+      async (initialIncognito) => {
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message: "Turnstile 校验失败，请刷新重试！",
+          data: null,
+        })
+        vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+        vi.mocked(tempWindowTurnstileFetch)
+          .mockResolvedValueOnce({
+            success: false,
+            error: "Turnstile token not available",
+            turnstile: { status: "not_present", hasTurnstile: false },
+          })
+          .mockResolvedValueOnce({
+            success: false,
+            error: "Turnstile 校验失败，请刷新重试！",
+            turnstile: { status: "token_obtained", hasTurnstile: true },
+          })
+        mockCheckInStatusSequence(false, false, true)
+
+        const result = await checkInForTest({
+          ...mockAccount,
+          authType: initialIncognito
+            ? AuthTypeEnum.AccessToken
+            : AuthTypeEnum.Cookie,
+        })
+
+        expect(result.status).toBe("already_checked")
+        expect(result.rawMessage).toBeUndefined()
+        expect(result.reasonCode).toBeUndefined()
+        expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+      },
+    )
+
+    it.each([
+      "not_checked",
+      "missing",
+      "malformed",
+      "read_error",
+      "all_reads_error",
+    ])(
+      "preserves the replay rejection when final status is %s",
+      async (readback) => {
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message: "Turnstile 校验失败，请刷新重试！",
+          data: null,
+        })
+        vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+          success: true,
+          status: 200,
+          headers: {},
+          data: {
+            success: false,
+            message: "Turnstile 校验失败，请刷新重试！",
+            data: null,
+          },
+          turnstile: { status: "token_obtained", hasTurnstile: true },
+        })
+        mockCheckInStatusSequence(false)
+        const status = vi.mocked(newApiFamilyRequests.data)
+        if (readback === "read_error" || readback === "all_reads_error") {
+          status.mockRejectedValueOnce(new Error("status request unavailable"))
+          if (readback === "all_reads_error") {
+            mockFetchSupportCheckIn.mockRejectedValue(
+              new Error("site unavailable"),
+            )
+          }
+        } else {
+          status.mockResolvedValueOnce(
+            readback === "missing"
+              ? undefined
+              : {
+                  stats: {
+                    checked_in_today: readback === "malformed" ? "true" : false,
+                  },
+                },
+          )
+        }
+
+        const result = await checkInForTest(mockAccount)
+
+        expect(result).toMatchObject({
+          status: "failed",
+          reasonCode: "upstream_error",
+          rawMessage: "Turnstile 校验失败，请刷新重试！",
+        })
+        expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+      },
+    )
+
     it("returns already-checked when Turnstile token is missing but status confirms checked_in_today", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
@@ -2411,7 +3269,7 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "failed",
         messageKey:
           "autoCheckin:providerFallback.nativePageVerificationRequired",
@@ -2451,7 +3309,7 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "already_checked",
         messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
         data: {
@@ -2482,7 +3340,7 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "failed",
         reasonCode: "upstream_error",
         rawMessage: "daily quota exhausted",
@@ -2493,10 +3351,10 @@ describe("newApiProvider", () => {
           data: null,
         },
       })
-      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(1)
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
     })
 
-    it("falls back to the generic failure key when assisted replay returns no usable payload", async () => {
+    it("keeps uncertainty with generic feedback when assisted replay returns no usable payload", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile verify failed",
@@ -2512,17 +3370,17 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
-        status: "failed",
+      expect(result).toMatchObject({
+        status: "uncertain",
         reasonCode: "upstream_error",
         rawMessage: undefined,
-        messageKey: "autoCheckin:providerFallback.checkinFailed",
+        messageKey: "autoCheckin:skipReasons.upstream_error",
         data: undefined,
       })
-      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(1)
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
     })
 
-    it("falls back to a generic failure when assisted Turnstile fetch fails after token capture without an explicit error", async () => {
+    it("keeps uncertainty with generic feedback when token capture is followed by an unusable answer", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token invalid",
@@ -2536,11 +3394,11 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         reasonCode: "upstream_error",
-        status: "failed",
+        status: "uncertain",
         rawMessage: "Turnstile token invalid",
-        messageKey: "autoCheckin:providerFallback.checkinFailed",
+        messageKey: "autoCheckin:skipReasons.upstream_error",
         data: {
           success: false,
           turnstile: { status: "token_obtained", hasTurnstile: true },
@@ -2548,7 +3406,7 @@ describe("newApiProvider", () => {
       })
     })
 
-    it("uses the assisted error directly when token capture succeeds but replay still fails", async () => {
+    it("preserves the assisted error while token capture leaves the replay outcome uncertain", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token invalid",
@@ -2563,9 +3421,9 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         reasonCode: "upstream_error",
-        status: "failed",
+        status: "uncertain",
         rawMessage: "server rejected assisted replay",
         messageKey: undefined,
         data: {
@@ -2574,6 +3432,75 @@ describe("newApiProvider", () => {
           turnstile: { status: "token_obtained", hasTurnstile: true },
         },
       })
+    })
+
+    it.each([AuthTypeEnum.AccessToken, AuthTypeEnum.Cookie])(
+      "retains the fallback replay's concrete rejection after obtaining a token (%s)",
+      async (authType) => {
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message: "Turnstile token invalid",
+          data: null,
+        })
+        vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+        vi.mocked(tempWindowTurnstileFetch)
+          .mockResolvedValueOnce({
+            success: false,
+            error: "Turnstile token not available",
+            turnstile: { status: "not_present", hasTurnstile: false },
+          })
+          .mockResolvedValueOnce({
+            success: true,
+            status: 200,
+            headers: {},
+            data: {
+              success: false,
+              message: "daily quota exhausted",
+              data: null,
+            },
+            turnstile: { status: "token_obtained", hasTurnstile: true },
+          })
+        mockCheckInStatusSequence(false, false, false)
+
+        await expect(
+          checkInForTest({ ...mockAccount, authType }),
+        ).resolves.toMatchObject({
+          status: "failed",
+          reasonCode: "upstream_error",
+          rawMessage: "daily quota exhausted",
+        })
+        expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+        expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
+      },
+    )
+
+    it("uses the fallback observation when retaining the initial verification message", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+      vi.mocked(tempWindowTurnstileFetch)
+        .mockResolvedValueOnce({
+          success: false,
+          error: "initial verification error",
+          turnstile: { status: "not_present", hasTurnstile: false },
+        })
+        .mockResolvedValueOnce({
+          success: false,
+          error: "fallback verification error",
+          turnstile: { status: "not_present", hasTurnstile: false },
+        })
+      mockCheckInStatusSequence(false, false)
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({} as never)
+      const result = await checkInForTest(mockAccount)
+      expect(result).toMatchObject({
+        status: "failed",
+        confirmation: { kind: "unavailable" },
+      })
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
     })
 
     it("preserves the popup source across preferred and fallback Turnstile attempts", async () => {
@@ -2670,7 +3597,7 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         status: "failed",
         messageKey:
           "autoCheckin:providerFallback.nativePageVerificationRequired",

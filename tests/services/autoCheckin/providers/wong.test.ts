@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
@@ -65,6 +67,55 @@ describe("wongGongyiProvider", () => {
     vi.clearAllMocks()
   })
 
+  it.each([
+    ["permission denied", "permission_denied"],
+    ["authentication required", "authentication_required"],
+  ])(
+    "preserves a definitive %s refusal despite checked readback",
+    async (message, reasonCode) => {
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
+      vi.mocked(newApiFamilyRequests.envelope)
+        .mockReset()
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { enabled: true, checked_in: false },
+        })
+        .mockResolvedValueOnce({
+          success: false,
+          message,
+          data: { enabled: true, checked_in: false },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { enabled: true, checked_in: true },
+        })
+      const account = {
+        ...mockAccount,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.WONG_GONGYI,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
+      }
+      await expect(
+        executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: DEFAULT_PROVIDER_CONTEXT,
+        }),
+      ).resolves.toMatchObject({
+        kind: "executed",
+        result: { status: "failed", reasonCode, rawMessage: message },
+        confirmation: { kind: "observed" },
+        retryable: false,
+      })
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(3)
+    },
+  )
+
   describe("getReadiness", () => {
     it("returns ready for a valid account", () => {
       expect(wongGongyiProvider.getReadiness(mockAccount)).toEqual({
@@ -113,9 +164,8 @@ describe("wongGongyiProvider", () => {
   })
 
   it("uses a strict GET status envelope and never probes with POST", async () => {
-    const { newApiFamilyRequests } = await import(
-      "~/services/apiService/newApiFamily/request"
-    )
+    const { newApiFamilyRequests } =
+      await import("~/services/apiService/newApiFamily/request")
     vi.mocked(newApiFamilyRequests.envelope)
       .mockResolvedValueOnce({
         success: true,
@@ -158,38 +208,41 @@ describe("wongGongyiProvider", () => {
   })
 
   describe("checkIn", () => {
-    it("propagates the popup source when POST indicates checked_in true", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
+    it.each(["", "Turnstile 校验失败，请刷新重试！"])(
+      "uses confirmed checked status without retaining failure copy (%s)",
+      async (message) => {
+        const { newApiFamilyRequests } =
+          await import("~/services/apiService/newApiFamily/request")
+        const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
-      mockedFetchApi.mockResolvedValueOnce({
-        success: false,
-        message: "",
-        data: { enabled: true, checked_in: true },
-      })
+        mockedFetchApi.mockResolvedValueOnce({
+          success: false,
+          message,
+          data: { enabled: true, checked_in: true },
+        })
 
-      const result = await checkInForTest(mockAccount, {
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        protectionBypassExecution: userCommandExecution(
-          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
-        ),
-      })
-      expect(result.status).toBe("already_checked")
-      expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
-        accountId: "test-id",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      })
-      expect(result.messageKey).toBe(
-        "autoCheckin:providerFallback.alreadyCheckedToday",
-      )
-    })
+        const result = await checkInForTest(mockAccount, {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+        })
+        expect(result.status).toBe("already_checked")
+        expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
+          accountId: "test-id",
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        })
+        expect(result.messageKey).toBe(
+          "autoCheckin:providerFallback.alreadyCheckedToday",
+        )
+        expect(result.rawMessage).toBeUndefined()
+        expect(result.reasonCode).toBeUndefined()
+      },
+    )
 
     it("returns already_checked when POST success=true but message indicates already checked", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -206,9 +259,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST indicates enabled false", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -223,9 +275,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns success when POST succeeds and user was not checked in", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -242,9 +293,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("reports the awarded quota as the check-in reward", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedEnvelope = vi.mocked(newApiFamilyRequests.envelope)
 
       // Deployments in this family report amounts as numbers or decimal strings.
@@ -262,9 +312,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("omits the reward when the response carries no usable amount", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedEnvelope = vi.mocked(newApiFamilyRequests.envelope)
 
       for (const quota of [undefined, 0, -1, "abc", "", Number.NaN]) {
@@ -281,9 +330,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("does not let ambiguous copy override an explicit unchecked status", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         message: "User was not already checked in",
@@ -297,9 +345,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST returns success=false without already-checked signal", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -316,9 +363,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns already_checked when POST returns already checked message", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -332,9 +378,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("handles network errors gracefully", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockRejectedValueOnce(new TypeError("Failed to fetch"))
@@ -349,9 +394,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("marks a lost response after POST dispatch as uncertain", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mutationLifecycle = createAutoCheckinMutationLifecycle()
       vi.mocked(newApiFamilyRequests.envelope).mockImplementationOnce(
         async (request) => {
@@ -372,9 +416,8 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns endpointNotSupported when API returns 404", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
+      const { newApiFamilyRequests } =
+        await import("~/services/apiService/newApiFamily/request")
       const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockRejectedValueOnce({

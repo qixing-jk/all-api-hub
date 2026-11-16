@@ -158,6 +158,117 @@ describe("EMRank response and capability boundaries", () => {
       PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
     ),
   }
+
+  it("confirms the current scoped GET claim observation after month-end", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    let reads = 0
+    const write = vi.fn(() =>
+      HttpResponse.json({ record: claimedState.state.record }),
+    )
+    const saved = storedAccount()
+    try {
+      server.use(
+        http.get(`${origin}/api/account/check-ins`, async () => {
+          if (reads++ === 0) {
+            await Promise.resolve()
+            vi.setSystemTime(startedAt + 2_000)
+          }
+          return HttpResponse.json(claimedState)
+        }),
+        http.post(`${origin}/api/account/check-ins`, write),
+      )
+      await expect(
+        emRankProvider.checkIn(saved, claimContext),
+      ).resolves.toMatchObject({
+        status: "already_checked",
+        reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+        confirmation: {
+          kind: "observed",
+          accountId: saved.id,
+          siteUrl: origin,
+          userId,
+          observedAt: startedAt + 2_000,
+          status: {
+            outcome: "known",
+            today: "checked",
+            evidence: { source: "probe", observedAt: startedAt + 2_000 },
+          },
+          reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+        },
+      })
+      expect(reads).toBe(2)
+      expect(write).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("returns unavailable uncertainty without a native claim after two unstable reads", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
+    let reads = 0
+    const write = vi.fn(() =>
+      HttpResponse.json({ record: claimedState.state.record }),
+    )
+    try {
+      server.use(
+        http.get(`${origin}/api/account/check-ins`, async () => {
+          await Promise.resolve()
+          vi.setSystemTime(new Date(2026, 1, ++reads, 0, 0, 1))
+          return HttpResponse.json(readyState)
+        }),
+        http.post(`${origin}/api/account/check-ins`, write),
+      )
+      const result = await emRankProvider.checkIn(storedAccount(), claimContext)
+      expect(result).toMatchObject({
+        status: "uncertain",
+        reasonCode: "checkin_unconfirmed",
+        confirmation: { kind: "unavailable", siteUrl: origin, userId },
+      })
+      expect(result.reward).toBeUndefined()
+      expect(reads).toBe(2)
+      expect(write).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("keeps a native POST grant delivered across midnight as a response without resubmission", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    const write = vi.fn(async () => {
+      await Promise.resolve()
+      vi.setSystemTime(startedAt + 2_000)
+      return HttpResponse.json({
+        record: { ...claimedState.state.record, day: "2026-01-31" },
+      })
+    })
+    try {
+      server.use(
+        http.get(`${origin}/api/account/check-ins`, () =>
+          HttpResponse.json(readyState),
+        ),
+        http.post(`${origin}/api/account/check-ins`, write),
+      )
+      await expect(
+        emRankProvider.checkIn(storedAccount(), claimContext),
+      ).resolves.toMatchObject({
+        status: "success",
+        reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+        confirmation: {
+          kind: "response",
+          observedAt: startedAt + 2_000,
+          completedAt: new Date(2026, 1, 1).getTime() - 1,
+        },
+      })
+      expect(write).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
   beforeEach(() => {
     installCookieTransport(EMRANK_SESSION_COOKIE_NAME, "emrank.tech")
     handlers()
@@ -556,6 +667,117 @@ describe("EMRank console contract", () => {
     installCookieTransport(EMRANK_SESSION_COOKIE_NAME, "emrank.tech")
   })
   afterEach(() => vi.restoreAllMocks())
+
+  it("rereads a claimed state delivered across month-end and preserves its native observation", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    let reads = 0
+    const write = vi.fn(() =>
+      HttpResponse.json({ record: claimedState.state.record }),
+    )
+    try {
+      server.use(
+        http.get(`${origin}/api/auth/session`, () =>
+          HttpResponse.json(session),
+        ),
+        http.get(`${origin}/api/account/check-ins`, async () => {
+          if (reads++ === 0) {
+            await Promise.resolve()
+            vi.setSystemTime(startedAt + 2_000)
+          }
+          return HttpResponse.json({
+            ...claimedState,
+            state: {
+              ...claimedState.state,
+              record: { day: "2026-02-01", reward: reads * 2_000_000 },
+            },
+          })
+        }),
+        http.post(`${origin}/api/account/check-ins`, write),
+      )
+      await expect(performCheckIn(request)).resolves.toMatchObject({
+        alreadyChecked: true,
+        statusObservation: {
+          observedAt: startedAt + 2_000,
+          observation: {
+            status: "already_claimed",
+            record: { day: "2026-02-01", reward: 4_000_000 },
+          },
+        },
+      })
+      expect(reads).toBe(2)
+      expect(write).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("claims once when the fresh day replaces a delayed claimed state with ready", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    let reads = 0
+    const write = vi.fn(() =>
+      HttpResponse.json({ record: claimedState.state.record }),
+    )
+    try {
+      server.use(
+        http.get(`${origin}/api/auth/session`, () =>
+          HttpResponse.json(session),
+        ),
+        http.get(`${origin}/api/account/check-ins`, async () => {
+          if (reads++ === 0) {
+            await Promise.resolve()
+            vi.setSystemTime(startedAt + 2_000)
+            return HttpResponse.json(claimedState)
+          }
+          return HttpResponse.json(readyState)
+        }),
+        http.post(`${origin}/api/account/check-ins`, write),
+      )
+      await expect(performCheckIn(request)).resolves.toMatchObject({
+        alreadyChecked: false,
+        record: { reward: 2_000_000 },
+      })
+      expect(reads).toBe(2)
+      expect(write).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not claim when both state reads cross a day", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
+    let reads = 0
+    const write = vi.fn(() =>
+      HttpResponse.json({ record: claimedState.state.record }),
+    )
+    try {
+      server.use(
+        http.get(`${origin}/api/auth/session`, () =>
+          HttpResponse.json(session),
+        ),
+        http.get(`${origin}/api/account/check-ins`, async () => {
+          await Promise.resolve()
+          vi.setSystemTime(new Date(2026, 1, ++reads, 0, 0, 1))
+          return HttpResponse.json(readyState)
+        }),
+        http.post(`${origin}/api/account/check-ins`, write),
+      )
+      await expect(performCheckIn(request)).resolves.toEqual({
+        alreadyChecked: false,
+        message: "",
+        record: null,
+        statusObservation: undefined,
+      })
+      expect(reads).toBe(2)
+      expect(write).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
   it("exposes the native onboarding routes without a token or access-token path", async () => {
     const bootstrap = getSiteTypeCapabilities(SITE_TYPES.EMRANK).account!

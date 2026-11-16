@@ -76,7 +76,11 @@ export const freeApiProvider: AutoCheckinProvider = {
         data: result.data,
       }
     } catch (error) {
-      return mapSub2ApiCheckInMutationError(error, context)
+      return mapSub2ApiCheckInMutationError(
+        error,
+        context,
+        account as SiteAccount,
+      )
     }
   },
 }

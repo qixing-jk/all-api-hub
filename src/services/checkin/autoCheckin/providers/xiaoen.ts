@@ -11,6 +11,11 @@ import {
   performCheckIn,
 } from "~/services/apiService/xiaoen/checkIn"
 import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  createUnconfirmedCheckInResult,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
@@ -78,7 +83,9 @@ export const xiaoenProvider: AutoCheckinProvider = {
       const result = await performCheckIn(
         createAccountCheckInRequest(account as SiteAccount, context),
       )
-      return {
+      if (result.status === CHECKIN_RESULT_STATUS.UNCERTAIN)
+        return createUnconfirmedCheckInResult(account as SiteAccount)
+      const outcome = {
         status: result.alreadyChecked
           ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED
           : CHECKIN_RESULT_STATUS.SUCCESS,
@@ -89,6 +96,24 @@ export const xiaoenProvider: AutoCheckinProvider = {
           ? { rawMessage: result.message, data: result.data }
           : {}),
       }
+      return withCheckInConfirmation(
+        account as SiteAccount,
+        outcome,
+        result.alreadyChecked
+          ? {
+              kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+              status: {
+                outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+                availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+                today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+                evidence: {
+                  source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+                  observedAt: result.statusObservation.observedAt,
+                },
+              },
+            }
+          : { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
+      )
     } catch (error) {
       return resolveProviderErrorResult({
         error,

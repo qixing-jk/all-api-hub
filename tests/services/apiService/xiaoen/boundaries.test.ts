@@ -405,6 +405,7 @@ describe("Xiaoen protocol boundaries", () => {
       )
       expect(await xiaoenProvider.checkIn(account, execution)).toMatchObject({
         status: checked ? "already_checked" : "success",
+        confirmation: { kind: checked ? "observed" : "response" },
       })
       expect(
         fetchApi.mock.calls.filter(

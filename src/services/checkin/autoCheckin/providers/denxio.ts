@@ -40,6 +40,7 @@ import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
   getSub2ApiCheckInReadiness,
+  observedSub2ApiAlreadyChecked,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -173,6 +174,11 @@ export const denxioProvider: AutoCheckinProvider = {
             data: { rewardAmount: result.rewardAmount },
           }
         case DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
+          if (result.statusObservation)
+            return observedSub2ApiAlreadyChecked(
+              account as SiteAccount,
+              result.statusObservation,
+            )
           return {
             status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
             messageKey:

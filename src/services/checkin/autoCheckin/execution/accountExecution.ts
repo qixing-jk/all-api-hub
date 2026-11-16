@@ -27,6 +27,7 @@ import {
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
 import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 
 export interface RunAccountCheckinOptions {
@@ -171,6 +172,7 @@ export async function executeAccountCheckin(
       }
     }
     const providerResult = execution.result
+    // History compares observation freshness; a grant may belong to an earlier day.
     const result = buildResult(providerResult.status, {
       messageKey: providerResult.messageKey,
       messageParams: providerResult.messageParams,
@@ -179,7 +181,10 @@ export async function executeAccountCheckin(
       methodId: execution.methodId,
       reconciliation: providerResult.reconciliation,
       reward: providerResult.reward,
-      timestamp: execution.completedAt ?? Date.now(),
+      timestamp:
+        execution.confirmation?.observedAt ??
+        execution.completedAt ??
+        Date.now(),
       ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED ||
       providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
         ? { retryable: execution.retryable === true }
@@ -190,12 +195,18 @@ export async function executeAccountCheckin(
       providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
       providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
     ) {
-      const persisted = execution.reused
-        ? await accountCheckInState.markAccountAsSiteCheckedIn(
-            account.id,
-            result.timestamp,
-          )
-        : await accountCheckInState.markAccountAsSiteCheckedIn(account.id)
+      const completedAt = execution.completedAt ?? result.timestamp
+      // Account status uses one timestamp for freshness and local-day attribution.
+      // Prefer the observation within that day, but retain yesterday's grant date.
+      const observedAt =
+        formatLocalDayKey(new Date(completedAt)) ===
+        formatLocalDayKey(new Date(result.timestamp))
+          ? result.timestamp
+          : completedAt
+      const persisted = await accountCheckInState.markAccountAsSiteCheckedIn(
+        account.id,
+        observedAt,
+      )
       result.accountStateDurability =
         persisted === false
           ? CHECKIN_ACCOUNT_STATE_DURABILITY.FAILED

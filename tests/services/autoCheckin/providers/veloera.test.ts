@@ -72,6 +72,96 @@ const checkInForTest = (
 ) => veloeraProvider.checkIn(account, context)
 
 describe("veloeraProvider", () => {
+  it("confirms a checked account after a temporary check-in service outage", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message:
+        "Check-in unavailable: service temporarily unavailable, please retry later",
+      data: null,
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+      can_check_in: false,
+    })
+    await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      status: "already_checked",
+      messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+    })
+    expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(1)
+  })
+
+  it("confirms a checked account after an authentication-service outage", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "authentication service temporarily unavailable",
+      data: null,
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+      can_check_in: false,
+    })
+    await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      status: "already_checked",
+      messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+    })
+    expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves a rejection when neither status read belongs to a stable day", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
+    try {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "claim rejected",
+        data: null,
+      })
+      vi.mocked(newApiFamilyRequests.data).mockImplementation(async () => {
+        vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1_000)
+        return { can_check_in: false }
+      })
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: "upstream_rejected",
+        rawMessage: "claim rejected",
+      })
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.mocked(newApiFamilyRequests.data).mockReset()
+      vi.useRealTimers()
+    }
+  })
+
+  it("discards a checked readback delivered across month-end before settling a rejection", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      mockFetchVeloeraCheckInSupport.mockResolvedValue(true)
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "claim rejected",
+        data: null,
+      })
+      vi.mocked(newApiFamilyRequests.data)
+        .mockImplementationOnce(async () => {
+          await Promise.resolve()
+          vi.setSystemTime(startedAt + 2_000)
+          return { can_check_in: false }
+        })
+        .mockResolvedValueOnce({ can_check_in: true })
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: "upstream_rejected",
+      })
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockFetchVeloeraCheckInSupport.mockReset()
@@ -181,6 +271,32 @@ describe("veloeraProvider", () => {
   })
 
   describe("checkIn", () => {
+    it.each([
+      ["permission denied", "permission_denied"],
+      ["authentication required", "authentication_required"],
+    ])(
+      "preserves a definitive %s refusal despite checked readback",
+      async (message, reasonCode) => {
+        mockFetchVeloeraCheckInSupport.mockResolvedValue(true)
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message,
+          data: null,
+        })
+        vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+          can_check_in: false,
+        })
+        await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+          status: "failed",
+          reasonCode,
+          rawMessage: message,
+          confirmation: { kind: "observed", status: { today: "checked" } },
+        })
+        expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+        expect(newApiFamilyRequests.data).toHaveBeenCalledOnce()
+      },
+    )
+
     it("propagates the popup source when the backend omits a message", async () => {
       const mutationLifecycle = createAutoCheckinMutationLifecycle()
       const { newApiFamilyRequests } =
@@ -288,17 +404,20 @@ describe("veloeraProvider", () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         data: null,
-        message: "No action was performed",
+        message: "Turnstile 校验失败，请刷新重试！",
       })
       mockFetchVeloeraCheckInSupport.mockResolvedValueOnce(true)
       vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         can_check_in: false,
       })
 
-      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      const result = await checkInForTest(mockAccount)
+      expect(result).toMatchObject({
         status: "already_checked",
-        rawMessage: "No action was performed",
+        messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
       })
+      expect(result.rawMessage).toBeUndefined()
+      expect(result.reasonCode).toBeUndefined()
     })
 
     it("does not infer endpoint support from unrelated error text", async () => {

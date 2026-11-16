@@ -8,6 +8,7 @@ import {
   performBaiApiCheckIn,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
+import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import {
@@ -88,15 +89,19 @@ export const baiApiProvider: AutoCheckinProvider = {
         { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       const reward = readUsdReward(result.rewardAmount)
-      return {
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-        messageKey:
-          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        ...(reward ? { reward } : {}),
-        data: result,
-      }
+      return withCheckInResponseConfirmation(
+        account as SiteAccount,
+        {
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+          ...(reward ? { reward } : {}),
+          data: result,
+        },
+        { day: result.checkinDate },
+      )
     } catch (error) {
-      return mapBaiApiMutationError(error, context)
+      return mapBaiApiMutationError(error, context, account as SiteAccount)
     }
   },
 }
@@ -111,6 +116,7 @@ export const baiApiProvider: AutoCheckinProvider = {
 function mapBaiApiMutationError(
   error: unknown,
   context: AutoCheckinProviderContext,
+  account: SiteAccount,
 ) {
   if (
     error instanceof ApiError &&
@@ -123,5 +129,5 @@ function mapBaiApiMutationError(
         AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
     }
   }
-  return mapSub2ApiCheckInMutationError(error, context)
+  return mapSub2ApiCheckInMutationError(error, context, account)
 }

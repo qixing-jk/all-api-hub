@@ -4,12 +4,17 @@ import {
 } from "~/constants/checkIn"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { fetchNexaVlinksDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/nexavlinksCheckIn"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   getEffectiveAuthType,
   resolveNativePageFailureResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -75,13 +80,24 @@ const readStatus = async (context: AutoCheckinProviderReadContext) =>
  * Polls the read-only status until the page's own claim lands or the budget
  * ends. A read that throws leaves the outcome to the caller's catch.
  */
-async function pollCheckedInToday(account: SiteAccount): Promise<boolean> {
+async function pollCheckedInToday(account: SiteAccount) {
   const deadline = Date.now() + NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS
+  let lastStatus:
+    | {
+        observation: Awaited<
+          ReturnType<typeof fetchNexaVlinksDailyCheckInStatus>
+        >
+        observedAt: number
+      }
+    | undefined
   while (Date.now() <= deadline) {
-    const status = await fetchNexaVlinksDailyCheckInStatus(
-      createSub2ApiCheckInReadRequest({ account, observedAt: Date.now() }),
+    const status = await readDayStableCheckInObservation(() =>
+      fetchNexaVlinksDailyCheckInStatus(
+        createSub2ApiCheckInReadRequest({ account, observedAt: Date.now() }),
+      ),
     )
-    if (status.checkedInToday) return true
+    lastStatus = status
+    if (status?.observation.checkedInToday) return status
     const remainingMs = deadline - Date.now()
     if (remainingMs <= 0) break
     await new Promise((resolve) =>
@@ -91,7 +107,7 @@ async function pollCheckedInToday(account: SiteAccount): Promise<boolean> {
       ),
     )
   }
-  return false
+  return lastStatus
 }
 
 export const nexavlinksProvider: AutoCheckinProvider = {
@@ -168,18 +184,29 @@ export const nexavlinksProvider: AutoCheckinProvider = {
       return resolveNativePageFailureResult({ action, checkInUrl })
     }
 
+    let observation: Awaited<ReturnType<typeof pollCheckedInToday>>
     try {
-      const checked = await pollCheckedInToday(siteAccount)
-      if (checked) {
+      observation = await pollCheckedInToday(siteAccount)
+      if (observation?.observation.checkedInToday) {
         // The page completed the claim inside this run and the read-only status
         // confirms it. The award is credit-denominated on this deployment, so
         // no quota reward is claimed from it.
-        return {
-          status: CHECKIN_RESULT_STATUS.SUCCESS,
-          messageKey:
-            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-          data: action,
-        }
+        return withCheckInConfirmation(
+          siteAccount,
+          {
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            messageKey:
+              AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+            data: action,
+          },
+          {
+            kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+            status: toSub2ApiCheckInStatus(
+              observation.observation,
+              observation.observedAt,
+            ),
+          },
+        )
       }
     } catch {
       // The action was dispatched; an unreadable confirmation is not a failure
@@ -196,7 +223,7 @@ export const nexavlinksProvider: AutoCheckinProvider = {
 
     const verificationRequired =
       action.trigger?.verification?.status === "required"
-    return {
+    const result = {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: verificationRequired
         ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
@@ -207,6 +234,15 @@ export const nexavlinksProvider: AutoCheckinProvider = {
       messageParams: { checkInUrl },
       rawMessage: action.error || undefined,
       data: action,
-    }
+    } as const
+    return observation
+      ? withCheckInConfirmation(siteAccount, result, {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+          status: toSub2ApiCheckInStatus(
+            observation.observation,
+            observation.observedAt,
+          ),
+        })
+      : result
   },
 }

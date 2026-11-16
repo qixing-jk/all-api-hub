@@ -1,3 +1,7 @@
+import {
+  readDayStableCheckInObservation,
+  type CheckInStatusObservation,
+} from "~/services/checkin/statusObservation"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { isRecord } from "~/utils/core/object"
 
@@ -16,6 +20,20 @@ export type DayaCheckInOverview = {
   rewardUsd: number | null
   raw: unknown
 }
+
+export type DayaCheckInResult =
+  | {
+      alreadyChecked: true
+      statusObservation: CheckInStatusObservation<DayaCheckInOverview>
+    }
+  | { alreadyChecked: false; statusObservation: undefined }
+  | {
+      alreadyChecked: false
+      status: typeof CHECKIN_RESULT_STATUS.SUCCESS
+      rewardUsd: number | null
+      data: unknown
+      message: string | undefined
+    }
 
 /** Today's grant state; binding tasks are separate and never parsed as status. */
 function parseOverview(data: unknown): DayaCheckInOverview {
@@ -56,16 +74,22 @@ export async function fetchDayaCheckInOverview(
 }
 
 /**
- * Check once, send once. Binding tasks (`bind_phone`/`bind_wechat`/
+ * Read a day-stable status, send once. Binding tasks (`bind_phone`/`bind_wechat`/
  * `bind_email`) are account-credential operations and are deliberately not
  * automated; only the daily grant is claimed.
  */
 export async function performDayaCheckIn(
   request: Parameters<typeof fetchDayaIdentity>[0],
-) {
+): Promise<DayaCheckInResult> {
   return withDayaSession(request, async (scoped) => {
-    const overview = await fetchDayaCheckInOverview(scoped)
-    if (!overview.checkInClaimable) return { alreadyChecked: true as const }
+    const statusObservation = await readDayStableCheckInObservation(() =>
+      fetchDayaCheckInOverview(scoped),
+    )
+    if (!statusObservation)
+      return { alreadyChecked: false, statusObservation: undefined }
+    const overview = statusObservation.observation
+    if (!overview.checkInClaimable)
+      return { alreadyChecked: true, statusObservation }
     const envelope = await fetchDayaEnvelope(scoped, DAYA_ENDPOINTS.CheckIn, {
       method: "POST",
     })

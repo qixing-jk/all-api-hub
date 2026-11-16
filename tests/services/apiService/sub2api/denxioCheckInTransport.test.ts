@@ -354,7 +354,19 @@ describe("Denxio daily check-in authenticated transport", () => {
 
       await expect(
         performDenxioDailyCheckIn(createRequest(), { wait: async () => {} }),
-      ).resolves.toEqual({ kind: expectedKind })
+      ).resolves.toEqual({
+        kind: expectedKind,
+        ...(expectedKind === "already_checked"
+          ? {
+              statusObservation: {
+                observation: { enabled: true, checkedInToday: true },
+                observedAt: expect.any(Number),
+                siteUrl: "https://checkin.example.invalid",
+                userId: "42",
+              },
+            }
+          : {}),
+      })
       expect(fetchApiResponse).toHaveBeenCalledTimes(2)
     },
   )

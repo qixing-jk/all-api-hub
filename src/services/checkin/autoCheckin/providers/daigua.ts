@@ -11,8 +11,13 @@ import {
 } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
 import { DAIGUA_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -70,9 +75,22 @@ async function assistTurnstile(
     return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE)
   }
   // Another native action may have completed the shared ordinary/lucky day.
-  const status = await readStatus({ account, observedAt: Date.now() })
+  const observation = await readDayStableCheckInObservation(() =>
+    fetchDaiguaDailyCheckInStatus(
+      createSub2ApiCheckInReadRequest({ account, observedAt: Date.now() }),
+    ),
+  )
+  if (!observation) return manual()
+  const status = toSub2ApiCheckInStatus(
+    observation.observation,
+    observation.observedAt,
+  )
   if (status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked) {
-    return { status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED }
+    return withCheckInConfirmation(
+      account,
+      { status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED },
+      { kind: CHECK_IN_CONFIRMATION_KINDS.Observed, status },
+    )
   }
   if (status.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled)
     return manual()
@@ -158,10 +176,18 @@ export const daiguaProvider: AutoCheckinProvider = {
         try {
           return await assistTurnstile(account as SiteAccount, context)
         } catch (assistError) {
-          return mapSub2ApiCheckInMutationError(assistError, context)
+          return mapSub2ApiCheckInMutationError(
+            assistError,
+            context,
+            account as SiteAccount,
+          )
         }
       }
-      return mapSub2ApiCheckInMutationError(error, context)
+      return mapSub2ApiCheckInMutationError(
+        error,
+        context,
+        account as SiteAccount,
+      )
     }
   },
 }

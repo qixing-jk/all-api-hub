@@ -1,4 +1,5 @@
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { isRecord } from "~/utils/core/object"
 
@@ -44,15 +45,27 @@ export async function fetchPmApiCheckInOverview(
 }
 
 /**
- * Check once, send once. The mutation decision reads only the identity's
- * `checked_in_today`; the calendar route serves status display, not the
+ * Read a day-stable identity, then send once. The mutation decision reads only
+ * the identity's `checked_in_today`; the calendar route serves status display, not the
  * gate. The console's own check-in button POSTs without a captcha token; a
  * deployment that enforces its slider scene answers a business failure that
  * is surfaced unchanged.
  */
 export async function performPmApiCheckIn(request: ApiServiceRequest) {
-  const identity = await fetchPmApiIdentity(request)
-  if (identity.checkedInToday) return { alreadyChecked: true as const }
+  const statusObservation = await readDayStableCheckInObservation(() =>
+    fetchPmApiIdentity(request),
+  )
+  if (!statusObservation)
+    return {
+      alreadyChecked: false as const,
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+    }
+  if (statusObservation.observation.checkedInToday)
+    return {
+      alreadyChecked: true as const,
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      statusObservation,
+    }
   const granted = await fetchPmApiData(request, PMAPI_ENDPOINTS.CheckIn, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

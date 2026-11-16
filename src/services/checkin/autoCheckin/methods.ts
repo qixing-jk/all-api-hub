@@ -5,7 +5,6 @@ import {
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
-  CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
@@ -14,6 +13,11 @@ import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
 } from "~/services/apiService/sub2api/auth/authSession"
 import { ApiError } from "~/services/apiTransport/errors"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  confirmCheckInAttempt,
+  type CheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import {
   inspectAccountCheckIn,
@@ -32,10 +36,11 @@ import {
 } from "~/services/checkin/autoCheckin/execution/checkInMutationAdmission"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
-import type {
-  AutoCheckinMutationLifecycle,
-  AutoCheckinProvider,
-  AutoCheckinProviderContext,
+import {
+  CHECK_IN_STATUS_DAY_GUARD_OWNERS,
+  type AutoCheckinMutationLifecycle,
+  type AutoCheckinProvider,
+  type AutoCheckinProviderContext,
 } from "~/services/checkin/autoCheckin/providers/contracts"
 import { readProviderDetectResult } from "~/services/checkin/autoCheckin/providers/detection"
 import {
@@ -43,21 +48,22 @@ import {
   NON_REPEAT_SAFE_CHECKIN_METHOD_IDS,
   type AutoCheckinMethodRegistration,
 } from "~/services/checkin/autoCheckin/providers/registry"
-import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type {
+  AutoCheckinProviderOutcome,
+  AutoCheckinProviderResult,
+} from "~/services/checkin/autoCheckin/providers/types"
 import {
   isPersistableInitialCheckInDetection,
   replaceCheckInMethodDetection,
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import { PROTECTION_BYPASS_EXECUTION_KINDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
-  CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
-  getAutoCheckinSkipReasonTranslationKey,
 } from "~/types/autoCheckin"
 import type {
   CheckInConfig,
@@ -80,9 +86,13 @@ type ExecuteSelectedCheckInResult =
       kind: typeof CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed
       methodId: CheckInMethodId
       result: AutoCheckinProviderResult
+      confirmation: CheckInConfirmation
       /** Whether a later attempt can safely begin with authoritative readback. */
       retryable: boolean
-      /** Observation time belongs to the actual attempt, including its waiters. */
+      /**
+       * Protocol completion time when supplied; otherwise the observation time.
+       * `confirmation.observedAt` determines freshness, including for waiters.
+       */
       completedAt?: number
       /** A waiter observed this attempt without executing another mutation. */
       reused?: true
@@ -299,88 +309,35 @@ const withAutomaticRetry = (
   retryable: canAutomaticallyRetryCheckinResult(result, methodId),
 })
 
-/** Reads final status for every provider outcome without erasing confirmed grants. */
+/** Gather final evidence without taking over provider-owned login sessions. */
 const reconcileProviderResult = async (input: {
   account: SiteAccount
   methodId: AutoCheckinMethodRegistration["id"]
-  providerResult: AutoCheckinProviderResult
+  providerResult: AutoCheckinProviderOutcome
+  startedAt: number
   getStatus?: NonNullable<AutoCheckinProvider["getStatus"]>
-}): Promise<DecidedCheckInResult> => {
-  const original = withAutomaticRetry(input.providerResult, input.methodId)
-  const uncertain =
-    input.providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
-  const unresolved = (
-    reconciliation: DecidedCheckInResult["reconciliation"],
-  ) => (uncertain ? { ...original, reconciliation } : original)
-  if (!input.getStatus) {
-    return unresolved(CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE)
-  }
-
-  try {
-    const status = await input.getStatus({
-      account: input.account,
-      observedAt: Date.now(),
-    })
-    if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
-      return unresolved(
-        status
-          ? CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN
-          : CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
-      )
-    }
-    if (status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked) {
-      if (
-        !uncertain &&
-        input.providerResult.reasonCode !==
-          AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
-      )
-        return original
-      return {
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-        messageKey:
-          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        data: input.providerResult.data,
-        retryable: false,
-        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
-      }
-    }
-    // Known provider results remain authoritative when readback is inconclusive
-    // or has not yet caught up; only uncertain writes need further classification.
-    if (!uncertain) return original
-    if (status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled) {
-      return {
-        ...input.providerResult,
-        status: CHECKIN_RESULT_STATUS.FAILED,
-        reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
-        messageKey: getAutoCheckinSkipReasonTranslationKey(
-          AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
-        ),
-        retryable: false,
-        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
-      }
-    }
-    if (status.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked) {
-      const reasonCode =
-        input.providerResult.reasonCode ??
-        AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED
-      return withAutomaticRetry(
-        {
-          ...input.providerResult,
-          status: CHECKIN_RESULT_STATUS.FAILED,
-          reasonCode,
-          messageKey: input.providerResult.reasonCode
-            ? input.providerResult.messageKey
-            : getAutoCheckinSkipReasonTranslationKey(
-                AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-              ),
-          reconciliation: CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
-        },
-        input.methodId,
-      )
-    }
-    return unresolved(CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN)
-  } catch {
-    return unresolved(CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE)
+}): Promise<{
+  result: DecidedCheckInResult
+  confirmation: CheckInConfirmation
+}> => {
+  const execution = await confirmCheckInAttempt({
+    account: input.account,
+    result: input.providerResult,
+    startedAt: input.startedAt,
+    readStatus: input.getStatus
+      ? async () => {
+          const status = await input.getStatus!({
+            account: input.account,
+            observedAt: Date.now(),
+            dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+          })
+          return status ? { status } : undefined
+        }
+      : undefined,
+  })
+  return {
+    result: withAutomaticRetry(execution.result, input.methodId),
+    confirmation: execution.confirmation,
   }
 }
 
@@ -846,16 +803,20 @@ async function executeSelectedCheckInOnce(
   const requiresAuthoritativeStatus =
     input.requireStatusConfirmationBeforeMutation === true ||
     registration.provider.requiresAuthoritativeStatusBeforeMutation === true
-  const confirmsStatusDuringExecution =
-    registration.provider.confirmsStatusDuringExecution?.(account) === true
+  const ownsStatusAdmission =
+    registration.provider.ownsStatusAdmission?.(account) === true
   let refreshedConfig: CheckInConfig | undefined
   let statusProof: AutoCheckinProviderContext["statusProof"]
-  if (registration.provider.getStatus && !confirmsStatusDuringExecution) {
+  if (registration.provider.getStatus && !ownsStatusAdmission) {
     try {
-      const status = await registration.provider.getStatus({
-        account: account,
-        observedAt: Date.now(),
-      })
+      const stable = await readDayStableCheckInObservation(() =>
+        registration.provider.getStatus!({
+          account,
+          observedAt: Date.now(),
+          dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+        }),
+      )
+      const status = stable?.observation
       if (status) {
         if (status.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown) {
           const reason = toUnknownStatusSkipReason(status.reason)
@@ -951,6 +912,7 @@ async function executeSelectedCheckInOnce(
     revalidateAccount: input.revalidateAccount,
     isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
   })
+  const startedAt = Date.now()
   const providerResult = await registration.provider.checkIn(currentAccount, {
     ...input.context,
     mutationLifecycle,
@@ -971,19 +933,23 @@ async function executeSelectedCheckInOnce(
       return accountStateWriteFailure()
     }
   }
-  const result = await reconcileProviderResult({
+  const execution = await reconcileProviderResult({
     account: currentAccount,
     methodId: registration.id,
     providerResult,
-    getStatus: confirmsStatusDuringExecution
-      ? undefined
-      : registration.provider.getStatus,
+    startedAt,
+    getStatus: registration.provider.getStatus,
   })
   return {
     kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
     methodId: registration.id,
-    result,
-    retryable: result.retryable,
-    completedAt: Date.now(),
+    result: execution.result,
+    confirmation: execution.confirmation,
+    retryable: execution.result.retryable,
+    completedAt:
+      execution.confirmation.kind === CHECK_IN_CONFIRMATION_KINDS.Response
+        ? (execution.confirmation.completedAt ??
+          execution.confirmation.observedAt)
+        : execution.confirmation.observedAt,
   }
 }

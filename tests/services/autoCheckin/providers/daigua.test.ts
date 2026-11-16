@@ -83,6 +83,96 @@ const run = () =>
   })
 
 describe("registered DaiGua daily check-in", () => {
+  it("does not replay a verification rejection when both assisted admission reads cross midnight", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
+    try {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockImplementation(async () => {
+          vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1_000)
+          return response(statusData(true))
+        })
+      await expect(
+        daiguaProvider.checkIn(account(), {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+          statusProof: {
+            outcome: "known",
+            availability: "enabled",
+            today: "not_checked",
+            evidence: { source: "probe", observedAt: Date.now() },
+          },
+        }),
+      ).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: "manual_verification_required",
+      })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(3)
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    } finally {
+      vi.mocked(fetchApiResponse).mockReset()
+      vi.useRealTimers()
+    }
+  })
+
+  it("rereads the assisted admission gate delivered across month-end without replaying a claim", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    try {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockImplementationOnce(async () => {
+          await Promise.resolve()
+          vi.setSystemTime(startedAt + 2_000)
+          return response(statusData(true))
+        })
+        .mockResolvedValueOnce(response({ ...statusData(), enabled: false }))
+      await expect(
+        daiguaProvider.checkIn(account(), {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+          statusProof: {
+            outcome: "known",
+            availability: "enabled",
+            today: "not_checked",
+            evidence: { source: "probe", observedAt: startedAt },
+          },
+        }),
+      ).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: "manual_verification_required",
+      })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(3)
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   beforeEach(() => {
     vi.mocked(fetchApiResponse)
       .mockReset()
@@ -200,7 +290,7 @@ describe("registered DaiGua daily check-in", () => {
   )
 
   it.each(["direct", "assisted"])(
-    "preserves the %s grant and reward when final status readback fails",
+    "uses the confirmed %s grant and reward without an additional status read",
     async (mode) => {
       vi.mocked(fetchApiResponse)
         .mockResolvedValueOnce(response(statusData()))
@@ -241,10 +331,12 @@ describe("registered DaiGua daily check-in", () => {
         kind: "executed",
         retryable: false,
         result: { status: "success", reward: { quota: 95000 } },
+        confirmation: { kind: "response" },
       })
       expect(
         vi.mocked(fetchApiResponse).mock.calls.at(-1)?.[1]?.options?.method,
-      ).toBe("GET")
+      ).toBe(mode === "direct" ? "POST" : "GET")
+      expect(fetchApiResponse).toHaveBeenCalledTimes(mode === "direct" ? 2 : 3)
     },
   )
 
@@ -333,7 +425,7 @@ describe("registered DaiGua daily check-in", () => {
       kind: "executed",
       result: { status: "success", reward: { quota: 145000 } },
     })
-    expect(fetchApiResponse).toHaveBeenCalledTimes(3)
+    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
   })
 
   it.each([

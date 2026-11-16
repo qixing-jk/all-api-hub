@@ -51,26 +51,24 @@ export async function inspectCheckInMutationAdmission(input: {
   if (
     !account ||
     !hasSameCheckInAccountIdentity(input.expectedAccount, account) ||
-    (input.registration.provider.confirmsStatusDuringExecution?.(
+    (input.registration.provider.ownsStatusAdmission?.(
       input.expectedAccount,
     ) ===
       true) !==
-      (input.registration.provider.confirmsStatusDuringExecution?.(account) ===
-        true)
+      (input.registration.provider.ownsStatusAdmission?.(account) === true)
   ) {
     return {
       eligible: false,
       reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
     }
   }
-  const confirmsStatusDuringExecution =
-    input.registration.provider.confirmsStatusDuringExecution?.(account) ===
-    true
+  const ownsStatusAdmission =
+    input.registration.provider.ownsStatusAdmission?.(account) === true
   const knowledge =
     account.checkIn.methodKnowledge.methods[input.registration.id]
   // Session-owned providers obtain fresh status before POST; stale cache is not admission proof.
   const config =
-    confirmsStatusDuringExecution && knowledge?.status
+    ownsStatusAdmission && knowledge?.status
       ? {
           ...account.checkIn,
           methodKnowledge: {

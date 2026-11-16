@@ -395,6 +395,12 @@ describe("PM-API check-in", () => {
     )
     const result = await performPmApiCheckIn(accountRequest())
     expect(result.alreadyChecked).toBe(true)
+    expect(result).toMatchObject({
+      statusObservation: {
+        observation: { id: 10171, checkedInToday: true },
+        observedAt: expect.any(Number),
+      },
+    })
     expect(claim).not.toHaveBeenCalled()
   })
 

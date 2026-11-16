@@ -15,8 +15,11 @@ import {
 } from "./transport"
 
 /** Validate all account facts against the saved identity before accepting them. */
-export async function fetchIdentity(request: ApiServiceRequest) {
-  const data = await readXiaoen(request, XIAOEN_ENDPOINTS.Identity)
+export async function fetchIdentity(
+  request: ApiServiceRequest,
+  options: RequestInit = {},
+) {
+  const data = await readXiaoen(request, XIAOEN_ENDPOINTS.Identity, options)
   const user = parseXiaoenIdentity({ success: true, data })
   if (!user) throw invalidXiaoenResponse(XIAOEN_ENDPOINTS.Identity)
   if (request.auth.userId && String(request.auth.userId) !== user.id)

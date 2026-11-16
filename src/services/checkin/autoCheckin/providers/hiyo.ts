@@ -60,7 +60,11 @@ export const hiyoProvider: AutoCheckinProvider = {
         data,
       }
     } catch (error) {
-      return mapSub2ApiCheckInMutationError(error, context)
+      return mapSub2ApiCheckInMutationError(
+        error,
+        context,
+        account as SiteAccount,
+      )
     }
   },
 }

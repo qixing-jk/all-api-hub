@@ -670,6 +670,71 @@ describe("Daya API daily check-in", () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it("rereads a claimed overview delivered across month-end and preserves its observation", async () => {
+    const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+    let reads = 0
+    const write = vi.fn(() => HttpResponse.json(envelope({})))
+    try {
+      await mockIdentity([
+        http.get(`${origin}/api/v1/rewards/overview`, async () => {
+          if (reads++ === 0) {
+            await Promise.resolve()
+            vi.setSystemTime(startedAt + 2_000)
+          }
+          return HttpResponse.json(
+            envelope({
+              daily_check_in: { claimable: false, display_amount: reads },
+            }),
+          )
+        }),
+        http.post(`${origin}/api/v1/rewards/check-in`, write),
+      ])
+      await expect(performDayaCheckIn(accountRequest())).resolves.toMatchObject(
+        {
+          alreadyChecked: true,
+          statusObservation: {
+            observedAt: startedAt + 2_000,
+            observation: { checkInClaimable: false, rewardUsd: 2 },
+          },
+        },
+      )
+      expect(reads).toBe(2)
+      expect(write).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not claim when both overview reads cross a day", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
+    let reads = 0
+    const write = vi.fn(() => HttpResponse.json(envelope({})))
+    try {
+      await mockIdentity([
+        http.get(`${origin}/api/v1/rewards/overview`, async () => {
+          await Promise.resolve()
+          vi.setSystemTime(new Date(2026, 1, ++reads, 0, 0, 1))
+          return HttpResponse.json(
+            envelope({ daily_check_in: { claimable: true } }),
+          )
+        }),
+        http.post(`${origin}/api/v1/rewards/check-in`, write),
+      ])
+      const result = await performDayaCheckIn(accountRequest())
+      expect(result).toEqual({
+        alreadyChecked: false,
+        statusObservation: undefined,
+      })
+      expect(reads).toBe(2)
+      expect(write).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("reports a claimable daily grant from the rewards overview", async () => {
     await mockIdentity([
       http.get(`${origin}/api/v1/rewards/overview`, () =>

@@ -1,8 +1,4 @@
 import {
-  CHECK_IN_METHOD_AVAILABILITIES,
-  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
-  CHECK_IN_METHOD_STATUS_OUTCOMES,
-  CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
@@ -21,21 +17,27 @@ import {
   ApiError,
   isAuthenticationRequiredError,
 } from "~/services/apiTransport/errors"
+import { completeSessionCheckIn } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderContext,
+import {
+  CHECK_IN_STATUS_DAY_GUARD_OWNERS,
+  type AutoCheckinProvider,
+  type AutoCheckinProviderContext,
 } from "~/services/checkin/autoCheckin/providers/contracts"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { resolveNativePageCheckinResult } from "~/services/checkin/autoCheckin/providers/newApiNativePage"
 import {
   createCheckInRequest,
   fetchCheckedInTodayStatus,
+  fetchSingleNewApiCheckInStatus,
   getProviderErrorMessage,
   isCheckInDisabled,
   probeCheckInRoute,
   resolveCheckInEndpoint,
+  resolveNewApiCheckInReadback,
   resolveStandardCheckinResult,
+  toNewApiMethodStatus,
+  withNewApiStatusConfirmation,
 } from "~/services/checkin/autoCheckin/providers/newApiProtocol"
 import {
   isTurnstileRelatedMessage,
@@ -48,6 +50,7 @@ import {
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   isPermissionFailureMessage,
+  matchTerminalFailureReason,
   normalizeCheckinMessage,
   readQuotaReward,
   resolveProviderErrorResult,
@@ -63,6 +66,7 @@ import {
 } from "~/types/autoCheckin"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 
 type CheckinResult = AutoCheckinProviderOutcome
 /**
@@ -249,10 +253,14 @@ async function checkinNewApi(
         true,
       )
       if (status?.checkedInToday === true)
-        return {
-          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-          reward: readQuotaReward(status.todayQuotaAwarded),
-        }
+        return withNewApiStatusConfirmation(
+          account,
+          {
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            reward: readQuotaReward(status.todayQuotaAwarded),
+          },
+          status,
+        )
       if (status?.enabled === false)
         return {
           status: CHECKIN_RESULT_STATUS.FAILED,
@@ -285,34 +293,59 @@ async function checkinNewApi(
       context.mutationLifecycle,
     )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
+    let statusAfterFailure: Awaited<
+      ReturnType<typeof fetchCheckedInTodayStatus>
+    >
 
     if (!checkinResponse.success) {
-      const statusAfterFailure = await fetchCheckedInTodayStatus(
+      statusAfterFailure = await fetchCheckedInTodayStatus(
         account,
         tempWindowRequestSource,
         context.protectionBypassExecution,
       )
       if (statusAfterFailure?.enabled === false) {
-        return {
-          status: CHECKIN_RESULT_STATUS.FAILED,
-          reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
-          messageKey:
-            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinDisabled,
-          rawMessage: responseMessage || undefined,
-          data: checkinResponse,
-        }
+        return withNewApiStatusConfirmation(
+          account,
+          {
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+            messageKey:
+              AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinDisabled,
+            rawMessage: responseMessage || undefined,
+            data: checkinResponse,
+          },
+          statusAfterFailure,
+        )
       }
-      if (statusAfterFailure?.checkedInToday === true) {
-        return {
-          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-          rawMessage: responseMessage || undefined,
-          reward: readQuotaReward(statusAfterFailure.todayQuotaAwarded),
-          data: checkinResponse.data,
-        }
-      }
+      const terminalReason = matchTerminalFailureReason(responseMessage)
+      if (
+        (terminalReason === AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED &&
+          !configuredLogin) ||
+        terminalReason === AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED
+      )
+        return withNewApiStatusConfirmation(
+          account,
+          {
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            reasonCode: terminalReason,
+            rawMessage: responseMessage,
+            data: checkinResponse,
+          },
+          statusAfterFailure,
+        )
+      // An expired saved credential may recover through the configured login.
+      const confirmed =
+        terminalReason === AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
+          ? null
+          : resolveNewApiCheckInReadback(statusAfterFailure, {
+              account,
+              data: checkinResponse.data,
+            })
+      if (confirmed) return confirmed
     }
 
     const standardResult = resolveStandardCheckinResult({
+      account,
       payload: checkinResponse,
       message: responseMessage,
     })
@@ -353,7 +386,7 @@ async function checkinNewApi(
     const directReason = resolveDirectFailureReason({
       message: responseMessage,
     })
-    return {
+    const result: CheckinResult = {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: directReason,
       rawMessage: responseMessage || undefined,
@@ -362,6 +395,9 @@ async function checkinNewApi(
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: checkinResponse ?? undefined,
     }
+    return statusAfterFailure
+      ? withNewApiStatusConfirmation(account, result, statusAfterFailure)
+      : result
   } catch (error: unknown) {
     // An attributed 401 confirms rejection; a lost response cannot permit replay.
     if (configuredLogin && isAuthenticationRequiredError(error))
@@ -386,13 +422,12 @@ async function checkinNewApi(
             undefined,
             true,
           )
-          if (status?.checkedInToday === true)
-            return {
-              status: CHECKIN_RESULT_STATUS.SUCCESS,
-              reward: readQuotaReward(status.todayQuotaAwarded),
-              messageKey:
-                AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-            }
+          const confirmed = resolveNewApiCheckInReadback(status, {
+            account,
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+          })
+          if (confirmed) return confirmed
+          return withNewApiStatusConfirmation(account, result, status)
         } catch {
           // Unavailable readback leaves the original dispatch uncertain.
         }
@@ -468,8 +503,14 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
   request,
   observedAt,
   signal,
+  dayBoundaryGuardOwner,
 }) => {
-  const observation = await fetchCheckedInTodayStatus(
+  const startedDay = formatLocalDayKey()
+  const readStatus =
+    dayBoundaryGuardOwner === CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller
+      ? fetchSingleNewApiCheckInStatus
+      : fetchCheckedInTodayStatus
+  const observation = await readStatus(
     account,
     undefined,
     undefined,
@@ -478,29 +519,19 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
     true,
     request,
   )
-  return observation
-    ? {
-        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-        ...(typeof observation.enabled === "boolean"
-          ? {
-              availability: observation.enabled
-                ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
-                : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
-            }
-          : {}),
-        ...(typeof observation.checkedInToday === "boolean"
-          ? {
-              today: observation.checkedInToday
-                ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
-                : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-            }
-          : {}),
-        evidence: {
-          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-          observedAt,
-        },
-      }
-    : undefined
+  const readObservedAt =
+    observation &&
+    "observedAt" in observation &&
+    typeof observation.observedAt === "number"
+      ? observation.observedAt
+      : observedAt
+  // Preserve caller probe metadata unless a rollover required a new day's read.
+  return toNewApiMethodStatus(
+    observation,
+    observation && startedDay !== formatLocalDayKey(new Date(readObservedAt))
+      ? readObservedAt
+      : observedAt,
+  )
 }
 
 /** Classifies legacy permission envelopes without treating them as support evidence. */
@@ -523,8 +554,7 @@ function classifyStatusError(error: unknown) {
 
 export const newApiProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
-  confirmsStatusDuringExecution: (account) =>
-    Boolean(resolveAccountLogin(account)),
+  ownsStatusAdmission: (account) => Boolean(resolveAccountLogin(account)),
   supportsRouteOverride: true,
   canonicalRoutePath: AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   probeRouteOverride: ({ account, path, signal }) =>
@@ -539,5 +569,11 @@ export const newApiProvider: AutoCheckinProvider = {
   detect: (context) =>
     detectWithStatusReadback(context, getStatus, classifyStatusError),
   getStatus,
-  checkIn: checkinNewApi,
+  async checkIn(account, context) {
+    const siteAccount = account as SiteAccount
+    const outcome = await checkinNewApi(siteAccount, context)
+    return resolveAccountLogin(siteAccount)
+      ? completeSessionCheckIn(siteAccount, outcome)
+      : outcome
+  },
 }

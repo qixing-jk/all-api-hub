@@ -57,15 +57,21 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
 } as const
 
 /**
- * Builds the retryable upstream failure shared by message-only check-in
- * backends. Backend copy wins when present; the localized generic failure is
- * the fallback.
+ * Classify explicit terminal refusals before a generic message-only rejection.
+ * Backend copy is retained; the localized generic failure is the fallback.
  */
 export function createUpstreamFailureResult(params: {
   rawMessage?: string
   data?: unknown
 }): AutoCheckinProviderOutcome {
   const rawMessage = params.rawMessage || undefined
+  const terminalReason = rawMessage && matchTerminalFailureReason(rawMessage)
+  if (terminalReason)
+    return createTerminalFailureResult({
+      reasonCode: terminalReason,
+      rawMessage,
+      data: params.data,
+    })
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
@@ -152,8 +158,9 @@ function isAuthenticationFailureMessage(message: string): boolean {
     invalidAccessToken ||
     normalized.includes("unauthorized") ||
     normalized.includes("unauthenticated") ||
-    normalized.includes("authentication") ||
-    normalized.includes("authenticate") ||
+    /\bauthentication (?:is )?(?:required|failed)\b/.test(normalized) ||
+    /\b(?:please|must) authenticate\b/.test(normalized) ||
+    /\bfailed to authenticate\b/.test(normalized) ||
     normalized.includes("auth required") ||
     normalized.includes("invalid auth") ||
     normalized.includes("not logged") ||
@@ -189,8 +196,6 @@ function isMethodDisabledMessage(message: string): boolean {
     normalized.includes("check-in is disabled") ||
     normalized.includes("checkin closed") ||
     normalized.includes("check-in closed") ||
-    normalized.includes("check-in unavailable") ||
-    normalized.includes("checkin unavailable") ||
     message.includes("签到已关闭") ||
     message.includes("签到未开放") ||
     message.includes("暂未开放签到") ||

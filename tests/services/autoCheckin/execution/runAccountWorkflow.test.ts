@@ -3,15 +3,23 @@ import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
+} from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { CHECK_IN_CONFIRMATION_KINDS } from "~/services/checkin/autoCheckin/confirmation"
 import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import { selectCurrentRunResults } from "~/services/checkin/autoCheckin/execution/runResults"
 import { autoCheckinAlarmSchedule } from "~/services/checkin/autoCheckin/scheduling/alarmSchedule"
+import { mergeRetryRunOutcomes } from "~/services/checkin/autoCheckin/scheduling/retryQueue"
 import {
   AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
   expectRecordedRetryDecision,
   mockedAccountStorage,
@@ -21,11 +29,81 @@ import {
   runnableCheckIn,
   SCHEDULED_EXECUTION,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("execution/runAccountWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
+  it.each([false, true])(
+    "orders and persists a same-day dated grant by observation (reused=%s)",
+    async (reused) => {
+      const observedAt = new Date(2026, 0, 2, 12).getTime()
+      const completedAt = observedAt - 2_000
+      const account = buildSiteAccount({
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+      })
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+        result: {
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          reward: { quota: 50_000 },
+        },
+        retryable: false,
+        completedAt,
+        confirmation: {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Response,
+          accountId: account.id,
+          siteUrl: account.site_url,
+          userId: String(account.account_info.id),
+          observedAt,
+          completedAt,
+        },
+        ...(reused ? { reused: true } : {}),
+      })
+      const outcome = await accountCheckinRunWorkflow.runAccountCheckin(
+        account,
+        account.site_name,
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
+      )
+      expect(outcome.result.timestamp).toBe(observedAt)
+      expect(
+        mockedAccountStorage.markAccountAsSiteCheckedIn,
+      ).toHaveBeenCalledWith(account.id, observedAt)
+      const selected = selectCurrentRunResults(
+        {
+          [account.id]: {
+            accountId: account.id,
+            accountName: account.site_name,
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            timestamp: observedAt - 1_000,
+            reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
+            retryable: true,
+          },
+        },
+        { [account.id]: outcome.result },
+      )
+      expect(selected[account.id]).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        reward: { quota: 50_000 },
+        timestamp: observedAt,
+      })
+      const retry = mergeRetryRunOutcomes({
+        today: formatLocalDayKey(),
+        maxAttempts: 3,
+        current: {
+          day: formatLocalDayKey(),
+          pendingAccountIds: [account.id],
+          attemptsByAccount: { [account.id]: 1 },
+        },
+        attemptedAccountIds: [account.id],
+        results: selected,
+      })
+      expect(retry?.pendingAccountIds ?? []).toEqual([])
+    },
+  )
   it("reuses only valid daily alarms for the current schedule plan", () => {
     const triggerTime = new Date("2026-01-23T08:30:00")
 
@@ -594,9 +672,9 @@ describe("execution/runAccountWorkflow", () => {
 
     expect(
       mockedAccountStorage.markAccountAsSiteCheckedIn,
-    ).toHaveBeenNthCalledWith(1, "success-account")
+    ).toHaveBeenNthCalledWith(1, "success-account", expect.any(Number))
     expect(
       mockedAccountStorage.markAccountAsSiteCheckedIn,
-    ).toHaveBeenNthCalledWith(2, "already-checked-account")
+    ).toHaveBeenNthCalledWith(2, "already-checked-account", expect.any(Number))
   })
 })

@@ -1,3 +1,4 @@
+import type { CheckInConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import {
   type AutoCheckinSkipReason,
   type CHECKIN_RESULT_STATUS,
@@ -53,11 +54,13 @@ export type AutoCheckinProviderOutcome<
   TMessageParams extends Record<string, unknown> = Record<string, unknown>,
 > =
   | (AutoCheckinProviderResult<TData, TMessageParams> & {
+      confirmation?: CheckInConfirmation
       status:
         | typeof CHECKIN_RESULT_STATUS.SUCCESS
         | typeof CHECKIN_RESULT_STATUS.ALREADY_CHECKED
     })
   | (AutoCheckinProviderResult<TData, TMessageParams> & {
+      confirmation?: CheckInConfirmation
       status:
         | typeof CHECKIN_RESULT_STATUS.FAILED
         | typeof CHECKIN_RESULT_STATUS.UNCERTAIN

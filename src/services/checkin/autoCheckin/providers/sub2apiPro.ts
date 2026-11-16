@@ -7,6 +7,7 @@ import {
   fetchSub2ApiProDailyCheckInStatus,
   performSub2ApiProDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/proCheckInExecution"
+import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
@@ -25,6 +26,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
+  observedSub2ApiAlreadyChecked,
   readUsdReward,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
@@ -63,14 +65,23 @@ export const sub2apiProProvider: AutoCheckinProvider = {
       )
       switch (result.kind) {
         case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Applied:
-          return {
-            status: CHECKIN_RESULT_STATUS.SUCCESS,
-            messageKey:
-              AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-            reward: readUsdReward(result.data.rewardAmount),
-            data: result.data,
-          }
+          return withCheckInResponseConfirmation(
+            account as SiteAccount,
+            {
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              messageKey:
+                AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+              reward: readUsdReward(result.data.rewardAmount),
+              data: result.data,
+            },
+            { timestamp: result.data.checkedInAt },
+          )
         case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
+          if (result.statusObservation)
+            return observedSub2ApiAlreadyChecked(
+              account as SiteAccount,
+              result.statusObservation,
+            )
           return {
             status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
             messageKey:
@@ -92,7 +103,11 @@ export const sub2apiProProvider: AutoCheckinProvider = {
           )
       }
     } catch (error) {
-      return mapSub2ApiCheckInMutationError(error, context)
+      return mapSub2ApiCheckInMutationError(
+        error,
+        context,
+        account as SiteAccount,
+      )
     }
   },
 }

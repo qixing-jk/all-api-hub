@@ -120,6 +120,205 @@ describe("check-in methods compatibility activation", () => {
     ),
   })
 
+  it.each([
+    {
+      name: "uses the new day's unchecked admission after yesterday's checked response",
+      firstChecked: true,
+      secondChecked: false,
+      rollover: "once",
+    },
+    {
+      name: "skips mutation after the new day's checked admission replaces yesterday's unchecked response",
+      firstChecked: false,
+      secondChecked: true,
+      rollover: "once",
+    },
+    {
+      name: "blocks authoritative admission when both bounded reads cross midnight",
+      firstChecked: false,
+      secondChecked: false,
+      rollover: "twice",
+    },
+    {
+      name: "uses one status read when ordinary admission stays in the same day",
+      firstChecked: false,
+      secondChecked: false,
+      rollover: "none",
+    },
+  ])(
+    "ordinary status admission: $name",
+    async ({ firstChecked, secondChecked, rollover }) => {
+      const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+      const nextDayAt = startedAt + 2_000
+      vi.useFakeTimers()
+      vi.setSystemTime(startedAt)
+      try {
+        const methodId = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
+        const registration = autoCheckinMethodRegistry.resolveById(methodId)!
+        const account = buildSiteAccount({
+          site_type: SITE_TYPES.SUB2API,
+          checkIn: {
+            automaticExecutionEnabled: true,
+            selection: { mode: "manual", methodId },
+            methodKnowledge: {
+              methods: {
+                [methodId]: {
+                  detection: {
+                    outcome: "matched",
+                    evidence: { source: "probe", observedAt: startedAt },
+                  },
+                },
+              },
+            },
+          },
+        })
+        const firstStatus = {
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+          today: firstChecked
+            ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+            : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          evidence: {
+            source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+            observedAt: startedAt,
+          },
+        }
+        const secondStatus = {
+          ...firstStatus,
+          today: secondChecked
+            ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+            : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          evidence: { ...firstStatus.evidence, observedAt: nextDayAt },
+        }
+        const read = vi
+          .spyOn(registration.provider, "getStatus")
+          .mockImplementationOnce(async () => {
+            if (rollover !== "none") vi.setSystemTime(nextDayAt)
+            return firstStatus
+          })
+          .mockImplementationOnce(async () => {
+            if (rollover === "twice") vi.setSystemTime(nextDayAt + 86_400_000)
+            return secondStatus
+          })
+        const mutate = vi
+          .spyOn(registration.provider, "checkIn")
+          .mockImplementation(async (_account, context) =>
+            context.statusProof?.today ===
+            CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+              ? { status: "success" }
+              : {
+                  status: "failed",
+                  reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+                },
+          )
+        const { revalidateAccount, currentConfig } =
+          createMergingRevalidate(account)
+
+        const result = await executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          revalidateAccount,
+        })
+        if (rollover === "twice") {
+          expect(result).toMatchObject({
+            kind: "blocked",
+            reason: "status_unavailable",
+            retryable: true,
+          })
+          expect(mutate).not.toHaveBeenCalled()
+          expect(revalidateAccount).not.toHaveBeenCalled()
+        } else {
+          const admittedStatus =
+            rollover === "none" ? firstStatus : secondStatus
+          expect(
+            currentConfig().methodKnowledge.methods[methodId]?.status,
+          ).toEqual(admittedStatus)
+          if (secondChecked) {
+            expect(result).toMatchObject({
+              kind: "skipped",
+              reason: "already_checked",
+            })
+            expect(mutate).not.toHaveBeenCalled()
+          } else {
+            expect(result).toMatchObject({
+              kind: "executed",
+              result: { status: "success" },
+            })
+            expect(mutate).toHaveBeenCalledOnce()
+            expect(mutate.mock.calls[0]?.[1].statusProof).toEqual(
+              admittedStatus,
+            )
+          }
+        }
+        expect(read).toHaveBeenCalledTimes(rollover === "none" ? 1 : 2)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it.each([false, true])(
+    "preserves optional unavailable status policy after admission rollover (requires proof: %s)",
+    async (requiresProof) => {
+      const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+      vi.useFakeTimers()
+      vi.setSystemTime(startedAt)
+      try {
+        const registration = autoCheckinMethodRegistry.resolveById(
+          AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+        )!
+        const account = buildSiteAccount({
+          site_type: SITE_TYPES.VELOERA,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.VELOERA,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+        })
+        const read = vi
+          .spyOn(registration.provider, "getStatus")
+          .mockImplementationOnce(async () => {
+            vi.setSystemTime(startedAt + 2_000)
+            return {
+              outcome: "known",
+              availability: "enabled",
+              today: "checked",
+              evidence: { source: "probe", observedAt: startedAt },
+            }
+          })
+          .mockResolvedValueOnce(undefined)
+        const mutate = vi
+          .spyOn(registration.provider, "checkIn")
+          .mockResolvedValue({ status: "success" })
+        const result = await executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          requireStatusConfirmationBeforeMutation: requiresProof,
+        })
+        if (requiresProof) {
+          expect(result).toMatchObject({
+            kind: "blocked",
+            reason: "status_unavailable",
+            retryable: true,
+          })
+          expect(mutate).not.toHaveBeenCalled()
+        } else {
+          expect(result).toMatchObject({
+            kind: "executed",
+            result: { status: "success" },
+          })
+          expect(mutate).toHaveBeenCalledOnce()
+          expect(mutate.mock.calls[0]?.[1].statusProof).toBeUndefined()
+        }
+        expect(read).toHaveBeenCalledTimes(2)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it("allows Xingya to confirm status inside its configured login session", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(
       "xingya:daily-checkin",
@@ -1626,7 +1825,7 @@ describe("check-in methods compatibility activation", () => {
     })
 
     expect(result.kind).toBe("executed")
-    expect(getStatus).toHaveBeenCalledTimes(2)
+    expect(getStatus).toHaveBeenCalledTimes(1)
     expect(checkInRequest).toHaveBeenCalledOnce()
     expect(getStatus.mock.invocationCallOrder[0]).toBeLessThan(
       atIndex(checkInRequest.mock.invocationCallOrder, 0),
@@ -1990,7 +2189,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({ kind: "executed", retryable: true })
   })
 
-  it.each(["uncertain", "manual_verification"])(
+  it.each(["uncertain", "manual_verification", "upstream_rejection"])(
     "reconciles %s with one authoritative checked read",
     async (outcome) => {
       const registration = getNewApiExecutionRegistration()
@@ -2029,7 +2228,10 @@ describe("check-in methods compatibility activation", () => {
             reasonCode:
               outcome === "uncertain"
                 ? AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED
-                : AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+                : outcome === "upstream_rejection"
+                  ? AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR
+                  : AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+            rawMessage: "Turnstile 校验失败，请刷新重试！",
           }
         },
       )
@@ -2043,9 +2245,17 @@ describe("check-in methods compatibility activation", () => {
       expect(result).toMatchObject({
         kind: "executed",
         methodId: "new-api:daily-checkin",
-        result: { status: "success", reconciliation: "checked" },
+        result: {
+          status:
+            outcome === "upstream_rejection" ? "already_checked" : "success",
+          reconciliation: "checked",
+        },
         retryable: false,
       })
+      if (result.kind === "executed") {
+        expect(result.result.rawMessage).toBeUndefined()
+        expect(result.result.reasonCode).toBeUndefined()
+      }
       expect(requestOrder).toEqual([
         "status-before",
         "mutation",
@@ -2054,9 +2264,333 @@ describe("check-in methods compatibility activation", () => {
     },
   )
 
-  it.each(["checked", "not_checked", "unavailable"] as const)(
-    "preserves a confirmed grant and its reward after final readback is %s",
-    async (finalStatus) => {
+  it("reuses post-attempt confirmation from the provider without another status query", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    const eligible = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: Date.now(),
+      },
+    }
+    const read = vi
+      .spyOn(registration.provider, "getStatus")
+      .mockResolvedValue(eligible)
+    const mutate = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockImplementation(async () => ({
+        status: "failed",
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
+        rawMessage: "verification rejected",
+        confirmation: {
+          kind: "observed",
+          accountId: account.id,
+          siteUrl: account.site_url,
+          userId: String(account.account_info.id),
+          observedAt: Date.now(),
+          status: {
+            ...eligible,
+            today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+            evidence: { ...eligible.evidence, observedAt: Date.now() },
+          },
+        },
+      }))
+
+    const outcome = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+    expect(outcome).toMatchObject({
+      kind: "executed",
+      confirmation: { kind: "observed" },
+      result: {
+        status: "already_checked",
+        messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+        reconciliation: "checked",
+      },
+      retryable: false,
+    })
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(mutate).toHaveBeenCalledTimes(1)
+    if (outcome.kind === "executed") {
+      expect(outcome.result.rawMessage).toBeUndefined()
+      expect(outcome.result).not.toHaveProperty("confirmation")
+    }
+  })
+
+  it.each(
+    [
+      "identity",
+      "account",
+      "site",
+      "stale",
+      "pre_admission",
+      "future",
+      "legacy",
+    ].flatMap((invalidScope) =>
+      (["failed", "success", "already_checked"] as const).map((status) => ({
+        invalidScope,
+        status,
+      })),
+    ),
+  )(
+    "does not reuse invalid $invalidScope confirmation for $status",
+    async ({ invalidScope, status }) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createNewApiExecutionAccount()
+      const eligible = {
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt: Date.now(),
+        },
+      }
+      const read = vi
+        .spyOn(registration.provider, "getStatus")
+        .mockResolvedValue(eligible)
+      vi.spyOn(registration.provider, "checkIn").mockImplementation(
+        async () => ({
+          ...(status === "failed"
+            ? {
+                status,
+                reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
+                rawMessage: "claim rejected",
+              }
+            : {
+                status,
+                reward: { quota: 100 },
+                rawMessage: "observed completion",
+              }),
+          confirmation: {
+            kind: "observed",
+            accountId:
+              invalidScope === "account" ? "another-account" : account.id,
+            siteUrl:
+              invalidScope === "site"
+                ? "https://another.example"
+                : account.site_url,
+            userId:
+              invalidScope === "identity"
+                ? "another-user"
+                : String(account.account_info.id),
+            observedAt:
+              Date.now() +
+              (invalidScope === "stale"
+                ? -60_000
+                : invalidScope === "future"
+                  ? 60_000
+                  : 0),
+            status: {
+              ...eligible,
+              today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+              evidence:
+                invalidScope === "legacy"
+                  ? {
+                      source:
+                        CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration,
+                      legacyObservedAt: Date.now(),
+                    }
+                  : {
+                      ...eligible.evidence,
+                      observedAt:
+                        Date.now() -
+                        (invalidScope === "pre_admission" ? 60_000 : 0),
+                    },
+            },
+          },
+        }),
+      )
+      const outcome = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result:
+          status === "failed"
+            ? { status: "failed", rawMessage: "claim rejected" }
+            : {
+                status: "failed",
+                reasonCode: "checkin_unconfirmed",
+                reconciliation: "not_checked",
+              },
+      })
+      if (outcome.kind === "executed" && status !== "failed") {
+        expect(outcome.result.reward).toBeUndefined()
+        expect(outcome.result.rawMessage).toBeUndefined()
+      }
+      expect(read).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it.each([
+    {
+      methodId: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
+      siteType: SITE_TYPES.ANYROUTER,
+      siteUrl: "https://anyrouter.top",
+    },
+    {
+      methodId: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+      siteType: SITE_TYPES.NEW_API,
+      siteUrl: "https://agentrouter.org",
+    },
+  ])(
+    "records unsupported readback for $methodId without immediately replaying a mutation",
+    async ({ methodId, siteType, siteUrl }) => {
+      const registration = autoCheckinMethodRegistry.resolveById(methodId)!
+      const account = buildSiteAccount({
+        site_type: siteType,
+        site_url: siteUrl,
+        checkIn: {
+          ...createCompatibilityCheckInConfig({
+            siteType,
+            supported: true,
+            automaticExecutionEnabled: true,
+          }),
+          selection: { mode: "manual", methodId },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: Date.now() },
+                },
+              },
+            },
+          },
+        },
+      })
+      const mutate = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({
+          status: "uncertain",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+        })
+      const outcome = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        confirmation: { kind: "unsupported" },
+        result: { status: "uncertain" },
+        retryable: true,
+      })
+      expect(registration.provider.getStatus).toBeUndefined()
+      expect(mutate).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it.each(
+    [
+      {
+        methodId: AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn,
+        siteType: SITE_TYPES.WONG_GONGYI,
+      },
+      {
+        methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+        siteType: SITE_TYPES.VELOERA,
+      },
+    ].flatMap((method) =>
+      ["checked", "not_checked", "unavailable"].map((finalStatus) => ({
+        ...method,
+        finalStatus,
+      })),
+    ),
+  )(
+    "reconciles a rejected $methodId claim with $finalStatus readback",
+    async ({ methodId, siteType, finalStatus }) => {
+      const registration = autoCheckinMethodRegistry.resolveById(methodId)!
+      const account = buildSiteAccount({
+        site_type: siteType,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
+      })
+      const eligible = {
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt: Date.now(),
+        },
+      }
+      const read = vi
+        .spyOn(registration.provider, "getStatus")
+        .mockResolvedValueOnce(eligible)
+        .mockResolvedValueOnce(
+          finalStatus === "unavailable"
+            ? undefined
+            : {
+                ...eligible,
+                today:
+                  finalStatus === "checked"
+                    ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+                    : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+              },
+        )
+      const mutate = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({
+          status: "failed",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
+          rawMessage: "verification rejected",
+        })
+
+      const outcome = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      })
+      if (finalStatus === "checked") {
+        expect(outcome).toMatchObject({
+          kind: "executed",
+          methodId,
+          retryable: false,
+          result: {
+            status: "already_checked",
+            messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+            reconciliation: "checked",
+          },
+        })
+      } else {
+        expect(outcome).toMatchObject({
+          kind: "executed",
+          methodId,
+          result: {
+            status: "failed",
+            reasonCode: "upstream_rejected",
+            rawMessage: "verification rejected",
+          },
+        })
+      }
+      if (outcome.kind === "executed" && finalStatus === "checked") {
+        expect(outcome.result.reasonCode).toBeUndefined()
+        expect(outcome.result.rawMessage).toBeUndefined()
+      }
+      expect(read).toHaveBeenCalledTimes(2)
+      expect(mutate).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it.each([
+    AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+    AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+    AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE,
+  ])(
+    "confirms completion after a recoverable %s failure",
+    async (reasonCode) => {
       const registration = getNewApiExecutionRegistration()
       const eligible = {
         outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
@@ -2064,40 +2598,150 @@ describe("check-in methods compatibility activation", () => {
         today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
         evidence: {
           source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-          observedAt: 200,
+          observedAt: Date.now(),
         },
       }
-      const read = vi
-        .spyOn(registration.provider, "getStatus")
+      vi.spyOn(registration.provider, "getStatus")
         .mockResolvedValueOnce(eligible)
-      if (finalStatus === "unavailable")
-        read.mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      else read.mockResolvedValueOnce({ ...eligible, today: finalStatus })
-      const grant = {
-        status: "success" as const,
-        reward: { quota: 95000 },
-        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
-        data: { rewardAmount: 0.19 },
-      }
-      vi.spyOn(registration.provider, "checkIn").mockResolvedValue(grant)
-
-      await expect(
-        executeSelectedCheckIn({
-          account: createNewApiExecutionAccount(),
-          globalAutomaticExecutionEnabled: true,
-          context: createExecutionContext(),
-        }),
-      ).resolves.toMatchObject({
+        .mockResolvedValueOnce({
+          ...eligible,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+        })
+      const mutate = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({
+          status: "failed",
+          reasonCode,
+          rawMessage: "original transport failure",
+          messageKey: `autoCheckin:skipReasons.${reasonCode}`,
+        })
+      const execution = await executeSelectedCheckIn({
+        account: createNewApiExecutionAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      })
+      expect(execution).toMatchObject({
         kind: "executed",
-        result: grant,
+        result: {
+          status: "already_checked",
+          messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+        },
         retryable: false,
       })
-      expect(read).toHaveBeenCalledTimes(2)
+      if (execution.kind === "executed") {
+        expect(execution.result.reasonCode).toBeUndefined()
+        expect(execution.result.rawMessage).toBeUndefined()
+        expect(execution.result.reward).toBeUndefined()
+      }
+      expect(mutate).toHaveBeenCalledOnce()
     },
   )
 
+  it.each(["unchecked", "unavailable", "repeated_rollover"])(
+    "discards a final status response crossing midnight (%s)",
+    async (secondRead) => {
+      const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
+      vi.useFakeTimers()
+      vi.setSystemTime(startedAt)
+      try {
+        const registration = getNewApiExecutionRegistration()
+        const status = {
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          evidence: {
+            source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+            observedAt: startedAt,
+          },
+        }
+        const read = vi
+          .spyOn(registration.provider, "getStatus")
+          .mockResolvedValueOnce(status)
+          .mockImplementationOnce(async () => {
+            vi.setSystemTime(startedAt + 2_000)
+            return { ...status, today: CHECK_IN_METHOD_TODAY_STATUSES.Checked }
+          })
+          .mockImplementationOnce(async () => {
+            if (secondRead === "unavailable") return undefined
+            if (secondRead === "repeated_rollover")
+              vi.setSystemTime(startedAt + 86_402_000)
+            return {
+              ...status,
+              today:
+                secondRead === "unchecked"
+                  ? CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+                  : CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+              evidence: { ...status.evidence, observedAt: Date.now() },
+            }
+          })
+        const mutate = vi
+          .spyOn(registration.provider, "checkIn")
+          .mockResolvedValue({
+            status: "uncertain",
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+          })
+        const outcome = await executeSelectedCheckIn({
+          account: createNewApiExecutionAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+        })
+        expect(outcome).toMatchObject({
+          kind: "executed",
+          result: {
+            status: secondRead === "unchecked" ? "failed" : "uncertain",
+            reconciliation:
+              secondRead === "unchecked" ? "not_checked" : "unavailable",
+          },
+        })
+        expect(read).toHaveBeenCalledTimes(3)
+        expect(mutate).toHaveBeenCalledOnce()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("uses a confirmed grant and its reward without querying status again", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const eligible = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: 200,
+      },
+    }
+    const read = vi
+      .spyOn(registration.provider, "getStatus")
+      .mockResolvedValueOnce(eligible)
+    read.mockRejectedValueOnce(new TypeError("no additional query is needed"))
+    const grant = {
+      status: "success" as const,
+      reward: { quota: 95000 },
+      messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+      data: { rewardAmount: 0.19 },
+    }
+    vi.spyOn(registration.provider, "checkIn").mockResolvedValue(grant)
+
+    await expect(
+      executeSelectedCheckIn({
+        account: createNewApiExecutionAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      }),
+    ).resolves.toMatchObject({
+      kind: "executed",
+      result: grant,
+      confirmation: { kind: "response" },
+      retryable: false,
+    })
+    expect(read).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
     AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+    AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
     AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
     AUTO_CHECKIN_SKIP_REASON.ACCOUNT_STATE_WRITE_FAILED,
   ])("preserves definitive %s after a checked readback", async (reasonCode) => {

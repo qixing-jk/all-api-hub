@@ -16,6 +16,11 @@ import type {
 } from "~/types/checkIn"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
+export const CHECK_IN_STATUS_DAY_GUARD_OWNERS = {
+  Provider: "provider",
+  Caller: "caller",
+} as const
+
 /** Read-only context shared by discovery and selected status refresh. */
 export interface AutoCheckinProviderReadContext {
   account?: SiteAccount
@@ -23,6 +28,8 @@ export interface AutoCheckinProviderReadContext {
   request?: ApiServiceRequest
   signal?: AbortSignal
   observedAt: number
+  /** The caller checks the read interval and bounds rollover retries when selected. */
+  dayBoundaryGuardOwner?: (typeof CHECK_IN_STATUS_DAY_GUARD_OWNERS)[keyof typeof CHECK_IN_STATUS_DAY_GUARD_OWNERS]
 }
 
 export type AutoCheckinProviderDetectResult =
@@ -79,8 +86,8 @@ export interface AutoCheckinProvider {
    * with `getStatus` can honour it; a method without readback submits directly.
    */
   readonly requiresAuthoritativeStatusBeforeMutation?: boolean
-  /** This account's status must be confirmed inside the provider's owned login session. */
-  confirmsStatusDuringExecution?: (account: SiteAccount) => boolean
+  /** Only pre-mutation admission is owned by this account's login workflow. */
+  ownsStatusAdmission?: (account: SiteAccount) => boolean
   /**
    * This protocol has one canonical route the account may replace with its
    * deployment's own path. Declared only where the operations behind that route

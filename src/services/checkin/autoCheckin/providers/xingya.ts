@@ -29,6 +29,12 @@ import {
   API_DIRECT_REQUEST_REASONS,
   type ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import {
+  CHECK_IN_CONFIRMATION_KINDS,
+  completeSessionCheckIn,
+  confirmCheckInAttempt,
+  withCheckInConfirmation,
+} from "~/services/checkin/autoCheckin/confirmation"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
@@ -40,6 +46,7 @@ import {
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createTerminalFailureResult,
+  createUpstreamFailureResult,
   getEffectiveAuthType,
   normalizeCheckinMessage,
   readQuotaReward,
@@ -48,6 +55,7 @@ import {
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -182,6 +190,14 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
   const data =
     response.success === true ? readStatusData(response.data) : undefined
   if (!data) return undefined
+  return toXingyaMethodStatus(data, observedAt)
+}
+
+/** Map group access and today's record into the shared status model. */
+function toXingyaMethodStatus(
+  data: XingyaCheckInStatusData,
+  observedAt: number,
+) {
   return {
     outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
     availability:
@@ -266,19 +282,29 @@ async function performXingyaSessionCheckin(
   context: AutoCheckinProviderContext,
   request: ApiServiceRequest,
 ): Promise<AutoCheckinProviderOutcome> {
-  const status = await fetchXingyaSessionStatus(request)
-  if (!status)
+  const statusRead = await readDayStableCheckInObservation(() =>
+    fetchXingyaSessionStatus(request),
+  )
+  if (!statusRead)
     return createTerminalFailureResult({
       reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
     })
+  const status = statusRead.observation
   if (status.today_record.checked_in)
-    return {
-      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-      reward: readQuotaReward(status.today_record.quota_awarded),
-      data: status,
-      messageKey:
-        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
-    }
+    return withCheckInConfirmation(
+      account,
+      {
+        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+        reward: readQuotaReward(status.today_record.quota_awarded),
+        data: status,
+        messageKey:
+          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+      },
+      {
+        kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+        status: toXingyaMethodStatus(status, statusRead.observedAt),
+      },
+    )
   if (!status.claim_enabled || !status.group_accessible)
     return createTerminalFailureResult({
       reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
@@ -291,29 +317,31 @@ async function performXingyaSessionCheckin(
       reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
     })
 
+  const startedAt = Date.now()
   const outcome = await performXingyaClaim(account, context, request)
-  if (outcome.status !== CHECKIN_RESULT_STATUS.UNCERTAIN) return outcome
-  try {
-    const confirmed = await fetchXingyaSessionStatus(request)
-    if (confirmed?.today_record.checked_in)
-      return {
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-        reward: readQuotaReward(confirmed.today_record.quota_awarded),
-        data: confirmed,
-        messageKey:
-          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-      }
-  } catch {
-    // The original dispatch remains uncertain when readback is unavailable.
-  }
-  return outcome
+  const execution = await confirmCheckInAttempt({
+    account,
+    result: outcome,
+    startedAt,
+    readStatus: async () => {
+      const data = await fetchXingyaSessionStatus(request)
+      return data
+        ? {
+            status: toXingyaMethodStatus(data, Date.now()),
+            reward: data.today_record.checked_in
+              ? readQuotaReward(data.today_record.quota_awarded)
+              : undefined,
+          }
+        : undefined
+    },
+  })
+  return { ...execution.result, confirmation: execution.confirmation }
 }
 
 export const xingyaProvider: AutoCheckinProvider = {
   // The claim is not proven idempotent; today's status must gate the POST.
   requiresAuthoritativeStatusBeforeMutation: true,
-  confirmsStatusDuringExecution: (account) =>
-    Boolean(resolveAccountLogin(account)),
+  ownsStatusAdmission: (account) => Boolean(resolveAccountLogin(account)),
   getReadiness(account) {
     if (!account.account_info?.id) {
       return {
@@ -410,7 +438,11 @@ export const xingyaProvider: AutoCheckinProvider = {
   async checkIn(account, context) {
     if ("site_type" in account) {
       const login = resolveAccountLogin(account)
-      if (login) return checkInUsingLoginSession(account, context, login)
+      if (login)
+        return completeSessionCheckIn(
+          account,
+          await checkInUsingLoginSession(account, context, login),
+        )
     }
     return performXingyaClaim(account as SiteAccount, context)
   },
@@ -457,15 +489,10 @@ async function performXingyaClaim(
           data: claimResponse.data,
         })
       }
-      return {
-        status: CHECKIN_RESULT_STATUS.FAILED,
-        reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
-        rawMessage: message || undefined,
-        messageKey: message
-          ? undefined
-          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+      return createUpstreamFailureResult({
+        rawMessage: message,
         data: claimResponse.data,
-      }
+      })
     }
 
     if (
