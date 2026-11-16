@@ -59,6 +59,36 @@ describe("New API account recovery console guard", () => {
 
   it.each([
     ["token verification response", `${baseUrl}/api/user/token`, 403, false],
+    [
+      "optional Xingya status probe",
+      `${baseUrl}/api/user/xingya-checkin`,
+      403,
+      false,
+    ],
+    [
+      "Xingya claim mutation",
+      `${baseUrl}/api/user/xingya-daily-claim`,
+      403,
+      true,
+    ],
+    [
+      "Xingya status server failure",
+      `${baseUrl}/api/user/xingya-checkin`,
+      500,
+      true,
+    ],
+    [
+      "other site's Xingya probe",
+      "https://other.example.invalid/api/user/xingya-checkin",
+      403,
+      true,
+    ],
+    [
+      "unrelated Xingya endpoint",
+      `${baseUrl}/api/user/xingya-checkin/status`,
+      403,
+      true,
+    ],
     ["other account endpoint", `${baseUrl}/api/user/self`, 403, true],
     ["other site", "https://other.example.invalid/api/user/token", 403, true],
     ["token server failure", `${baseUrl}/api/user/token`, 500, true],
