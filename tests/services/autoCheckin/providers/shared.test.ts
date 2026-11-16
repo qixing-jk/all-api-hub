@@ -11,8 +11,10 @@ describe("auto-checkin provider error normalization", () => {
   it.each([
     "authentication service temporarily unavailable",
     "authenticate endpoint unavailable",
+    "Check-in unavailable: service temporarily unavailable, please retry later",
+    "checkin unavailable: please retry later",
   ])(
-    "keeps service availability failure %s distinct from rejected credentials",
+    "keeps service availability failure %s distinct from terminal refusals",
     (rawMessage) => {
       expect(createUpstreamFailureResult({ rawMessage })).toMatchObject({
         status: "failed",
@@ -21,6 +23,20 @@ describe("auto-checkin provider error normalization", () => {
       })
     },
   )
+
+  it.each([
+    "checkin disabled",
+    "check-in is disabled",
+    "checkin closed",
+    "签到功能已关闭",
+    "未开启签到",
+  ])("preserves explicit method disablement %s", (rawMessage) => {
+    expect(createUpstreamFailureResult({ rawMessage })).toMatchObject({
+      status: "failed",
+      reasonCode: "method_disabled",
+      rawMessage,
+    })
+  })
 
   it.each([
     "Unauthorized",

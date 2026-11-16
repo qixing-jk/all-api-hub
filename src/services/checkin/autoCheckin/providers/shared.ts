@@ -196,8 +196,6 @@ function isMethodDisabledMessage(message: string): boolean {
     normalized.includes("check-in is disabled") ||
     normalized.includes("checkin closed") ||
     normalized.includes("check-in closed") ||
-    normalized.includes("check-in unavailable") ||
-    normalized.includes("checkin unavailable") ||
     message.includes("签到已关闭") ||
     message.includes("签到未开放") ||
     message.includes("暂未开放签到") ||

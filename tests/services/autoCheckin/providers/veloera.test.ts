@@ -72,6 +72,24 @@ const checkInForTest = (
 ) => veloeraProvider.checkIn(account, context)
 
 describe("veloeraProvider", () => {
+  it("confirms a checked account after a temporary check-in service outage", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message:
+        "Check-in unavailable: service temporarily unavailable, please retry later",
+      data: null,
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+      can_check_in: false,
+    })
+    await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      status: "already_checked",
+      messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+    })
+    expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(1)
+  })
+
   it("confirms a checked account after an authentication-service outage", async () => {
     vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
       success: false,
