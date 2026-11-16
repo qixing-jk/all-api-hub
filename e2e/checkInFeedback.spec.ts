@@ -122,7 +122,7 @@ for (const { width, language } of [
       })
       .click()
     let feedback = page.getByRole("dialog", {
-      name: copy.request,
+      name: copy.title,
       exact: true,
     })
     await expect(feedback.getByLabel(copy.notes)).toBeVisible()
@@ -159,7 +159,24 @@ for (const { width, language } of [
     const issueUrl = await page.evaluate(() =>
       sessionStorage.getItem("feedback-github-url"),
     )
-    expect(new URL(issueUrl!).searchParams.get("feedback")).toBe(report)
+    const issueParams = new URL(issueUrl!).searchParams
+    const browserInfo = issueParams.get("browser-info")
+    expect(browserInfo).toMatch(/^(Chrome|Chromium|Headless Chrome) \d+/)
+    expect(report).toContain(`browser</th><td>${browserInfo}</td>`)
+    expect(issueParams.get("summary")).toBe(
+      "Website check-in works; extension cannot detect it.",
+    )
+    expect(issueParams.get("title")).toBe(
+      `${copy.issueTitle} Website check-in works; extension cannot detect it.`,
+    )
+    expect(issueParams.get("site-url")).toBe(baseUrl)
+    const issueFeedback = issueParams.get("feedback")!
+    expect(issueFeedback).not.toContain(
+      "Website check-in works; extension cannot detect it.",
+    )
+    expect(issueFeedback).not.toContain(`## ${copy.reportSite}`)
+    expect(issueFeedback).toContain("route hint</th><td>/custom/checkin</td>")
+    expect(report).toContain(issueFeedback)
     const exitSample = await feedback.evaluate(async (dialog) => {
       return new Promise<{
         duration: number
@@ -234,7 +251,7 @@ for (const { width, language } of [
     })
     await requestButton.click()
     feedback = page.getByRole("dialog", {
-      name: copy.request,
+      name: copy.title,
       exact: true,
     })
     await expect(feedback.getByLabel(copy.notes)).toHaveValue("")
@@ -350,7 +367,8 @@ for (const { width, language } of [
       "checkin_adaptation.yml",
     )
     expect(longIssueUrl.searchParams.has("feedback")).toBe(false)
-    expect(longIssueUrl.searchParams.get("site-url")).toBe(baseUrl)
+    expect(longIssueUrl.searchParams.has("site-url")).toBe(false)
+    expect(longIssueUrl.searchParams.has("summary")).toBe(false)
     expect(longIssueUrl.searchParams.get("extension-version")).toBeTruthy()
     expect(
       await page.evaluate(() => sessionStorage.getItem("feedback-copy")),
@@ -419,9 +437,9 @@ test("extension guidance follows its feedback tab through login, reload and dism
   expect(response.success).toBe(true)
   const github = await newPage
   await github.setViewportSize({ width: 390, height: 850 })
-  await github.waitForURL("https://github.com/login")
-  // The extension can navigate before Playwright attaches the new target.
-  // Explicitly load the controlled document once attached; subsequent navigations stay routed.
+  // Extension navigation can precede Playwright attaching routes to the new tab.
+  // Load the controlled login document immediately; do not depend on GitHub's
+  // real redirect finishing or its query parameters before applying this fallback.
   await github.goto("https://github.com/login?aah-test=1")
   await expect(
     github.getByRole("link", { name: "Continue after login" }),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { FEEDBACK_EXECUTION_SOURCES } from "~/services/checkin/feedback/executionTypes"
 import {
   buildCheckInFeedbackDetails,
   buildCheckInFeedbackIssue,
@@ -11,6 +12,85 @@ import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { CheckInConfig } from "~/types/checkIn"
 
 describe("check-in feedback report", () => {
+  it("includes browser version in diagnostics and the optional GitHub form field", () => {
+    const body = buildCheckInFeedbackDetails(
+      { siteType: SITE_TYPES.NEW_API, baseUrl: "https://example.com", checkIn },
+      {
+        version: "4.10.1",
+        platform: "firefox",
+        browserInfo: "Firefox 132.0.2",
+      },
+    )
+    expect(body).toContain("browser: Firefox 132.0.2")
+    const url = new URL(
+      buildCheckInFeedbackIssue(body, "[Check-in]", {
+        origin: null,
+        version: "4.10.1",
+        notes: "",
+        browserInfo: "Firefox 132.0.2",
+      }).url,
+    )
+    expect(url.searchParams.get("browser-info")).toBe("Firefox 132.0.2")
+  })
+  it("prefills the form once per section and uses the user's summary in its title", () => {
+    const issue = buildCheckInFeedbackIssue(
+      "## What happened\n\nWebsite works\n\n## Site\n\nhttps://example.com\n\nDetails",
+      "[Check-in]",
+      {
+        origin: "https://example.com",
+        version: "4.10.1",
+        notes: "Website works",
+        feedbackBody: "Details",
+      },
+    )
+    const url = new URL(issue.url)
+    expect(url.searchParams.get("title")).toBe("[Check-in] Website works")
+    expect(url.searchParams.get("site-url")).toBe("https://example.com")
+    expect(url.searchParams.get("summary")).toBe("Website works")
+    expect(url.searchParams.get("feedback")).toBe("Details")
+    expect(issue.needsCopy).toBe(false)
+  })
+
+  it("keeps the description in the required feedback field when diagnostics were removed", () => {
+    const body = "## What happened\n\nWebsite works"
+    const issue = buildCheckInFeedbackIssue(body, "[Check-in]", {
+      origin: null,
+      version: "4.10.1",
+      notes: "Website works",
+      feedbackBody: "",
+    })
+    const url = new URL(issue.url)
+    expect(url.searchParams.get("feedback")).toBe(body)
+    expect(url.searchParams.has("summary")).toBe(false)
+    expect(issue.needsCopy).toBe(false)
+  })
+
+  it.each(["description", "diagnostics"] as const)(
+    "preserves the full report without duplicate form sections for a long %s",
+    (section) => {
+      const notes =
+        section === "description"
+          ? "Full description ".repeat(30)
+          : "Website works"
+      const details =
+        section === "diagnostics" ? "Evidence ".repeat(1000) : "Details"
+      const fullReport = `## What happened\n\n${notes}\n\n## Site\n\nhttps://example.com\n\n${details}`
+      const issue = buildCheckInFeedbackIssue(fullReport, "[Check-in]", {
+        origin: "https://example.com",
+        version: "4.10.1",
+        notes,
+        feedbackBody: details,
+      })
+      const url = new URL(issue.url)
+      expect(url.searchParams.has("site-url")).toBe(false)
+      expect(url.searchParams.has("summary")).toBe(false)
+      expect(url.searchParams.get("feedback")).toBe(
+        section === "diagnostics" ? null : fullReport,
+      )
+      expect(issue.needsCopy).toBe(section === "diagnostics")
+    },
+  )
+
   const labels = {
     site: "Site",
     problem: "What happened",
@@ -22,6 +102,33 @@ describe("check-in feedback report", () => {
     selection: { mode: "automatic" },
     methodKnowledge: { methods: {} },
   }
+
+  it("collects saved execution facts without adding quick-checkin command diagnostics", () => {
+    const input = {
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://example.com",
+      checkIn,
+      executionSource: FEEDBACK_EXECUTION_SOURCES.SavedHistory,
+      execution: { status: "success" as const, timestamp: 1 },
+      commandAttempt: {
+        startedAt: 2,
+        finishedAt: 3,
+        stage: "request",
+        outcome: "unconfirmed",
+        reason: "no_response",
+      },
+    }
+    const report = buildCheckInFeedbackDetails(input, {
+      version: "1",
+      platform: "chromium",
+    })
+    expect(report).toContain("executionRecord: available")
+    expect(report).toContain("execution: success")
+    expect(report).not.toContain("commandOutcome:")
+    expect(report).not.toContain("commandStage:")
+    expect(report).not.toContain("commandReason:")
+    expect(report).not.toContain("commandStartedAt:")
+  })
 
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN])(
     "groups diagnosis before execution, refresh and environment for %s",
@@ -192,7 +299,8 @@ describe("check-in feedback report", () => {
     expect(report).toContain(
       "savedStatus: known; availability: enabled; today: checked; recordedAt: 1970-01-01T00:00:00.003Z",
     )
-    expect(report).toContain("execution: unavailable")
+    expect(report).toContain("executionRecord: not_linked")
+    expect(report).not.toContain("execution: unavailable")
     expect(report).not.toContain("private.example")
     expect(
       buildCheckInFeedbackDetails(

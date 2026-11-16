@@ -6,6 +6,7 @@ export const CHECKIN_FEEDBACK_ISSUE_LIMITS = {
   urlLength: 6000,
   titleLength: 200,
   versionLength: 100,
+  browserInfoLength: 200,
   summaryLength: 300,
   hintTextLength: 2000,
   hintLifetimeMs: 30 * 60 * 1000,
@@ -17,6 +18,7 @@ export const CHECKIN_FEEDBACK_ISSUE_FIELDS = {
   TITLE: "title",
   SITE_URL: "site-url",
   VERSION: "extension-version",
+  BROWSER_INFO: "browser-info",
   SUMMARY: "summary",
   FEEDBACK: "feedback",
 } as const

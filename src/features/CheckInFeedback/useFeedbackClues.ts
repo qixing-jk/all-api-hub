@@ -8,6 +8,19 @@ import {
 } from "~/services/checkin/feedback/report"
 import { formatCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
+import {
+  FEEDBACK_SCAN_STATUSES,
+  type FeedbackScanStatus,
+} from "~/services/checkin/feedback/scanTypes"
+
+const FEEDBACK_COLLECTION_STATUSES = {
+  Idle: "idle",
+  Running: "running",
+} as const
+
+export type FeedbackCollectionStatus =
+  | FeedbackScanStatus
+  | (typeof FEEDBACK_COLLECTION_STATUSES)[keyof typeof FEEDBACK_COLLECTION_STATUSES]
 
 /** Collects editable clues while the feedback session is mounted. */
 export function useFeedbackClues(
@@ -15,18 +28,18 @@ export function useFeedbackClues(
   auth?: AuthConfig,
 ) {
   const [clues, setClues] = useState("")
-  const [scanStatus, setScanStatus] = useState<
-    "idle" | "running" | "completed" | "partial" | "empty"
-  >("idle")
+  const [scanStatus, setScanStatus] = useState<FeedbackCollectionStatus>(
+    FEEDBACK_COLLECTION_STATUSES.Idle,
+  )
   const [authUnavailable, setAuthUnavailable] = useState(false)
   const origin = getFeedbackOrigin(snapshot.baseUrl)
   useEffect(() => {
     if (!origin) {
-      setScanStatus("empty")
+      setScanStatus(FEEDBACK_SCAN_STATUSES.Empty)
       return
     }
     const run = new AbortController()
-    setScanStatus("running")
+    setScanStatus(FEEDBACK_COLLECTION_STATUSES.Running)
     const collect = async () => {
       try {
         const result = await collectFeedbackCluesInBrowser(
@@ -45,7 +58,7 @@ export function useFeedbackClues(
         setScanStatus(result.status)
         setAuthUnavailable(result.authenticatedQueriesUnavailable)
       } catch {
-        if (!run.signal.aborted) setScanStatus("empty")
+        if (!run.signal.aborted) setScanStatus(FEEDBACK_SCAN_STATUSES.Empty)
       }
     }
     void collect()
@@ -56,6 +69,8 @@ export function useFeedbackClues(
     setClues,
     scanStatus,
     authUnavailable,
-    scanning: scanStatus === "running" || scanStatus === "idle",
+    scanning:
+      scanStatus === FEEDBACK_COLLECTION_STATUSES.Running ||
+      scanStatus === FEEDBACK_COLLECTION_STATUSES.Idle,
   }
 }

@@ -1,6 +1,6 @@
 ---
-name: Check-in support (legacy link) / 签到适配（旧版链接）
-about: Request site check-in support or share check-in clues / 申请站点签到支持或补充线索
+name: Check-in feedback (legacy link) / 签到反馈（旧版链接）
+about: Report check-in problems, request site support, or share clues / 反馈签到问题、申请站点支持或补充线索
 title: "[Check-in] "
 labels: "site-support, check-in"
 assignees: ""

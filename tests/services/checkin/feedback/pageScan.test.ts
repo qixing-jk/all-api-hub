@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { handlePageFeedbackScan } from "~/services/checkin/feedback/pageScan"
+import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/feedback/scanTypes"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -110,7 +111,9 @@ describe("rendered feedback scan", () => {
       },
       result.resolve,
     )
-    expect((await result.promise).data.status).toBe("partial")
+    expect((await result.promise).data.status).toBe(
+      FEEDBACK_SCAN_STATUSES.Partial,
+    )
     expect(fetch).toHaveBeenCalledOnce()
   })
 
@@ -144,7 +147,7 @@ describe("rendered feedback scan", () => {
     )
     const reply = await result.promise
     expect(reply.success).toBe(true)
-    expect(reply.data.status).toBe("partial")
+    expect(reply.data.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(fetch).toHaveBeenCalledWith(
       origin + "/api/status",

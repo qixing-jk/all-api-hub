@@ -1,39 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Storage } from "@plasmohq/storage"
-
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-const { mockWithExtensionStorageWriteLock, trackStorageWriteFailureMock } =
-  vi.hoisted(() => ({
-    mockWithExtensionStorageWriteLock: vi.fn(
-      async (_key: string, work: () => Promise<unknown>) => await work(),
-    ),
-    trackStorageWriteFailureMock: vi.fn(),
-  }))
+const {
+  storageMocks,
+  mockWithExtensionStorageWriteLock,
+  trackStorageWriteFailureMock,
+} = vi.hoisted(() => ({
+  storageMocks: { get: vi.fn(), set: vi.fn(), remove: vi.fn() },
+  mockWithExtensionStorageWriteLock: vi.fn(
+    async (_key: string, work: () => Promise<unknown>) => await work(),
+  ),
+  trackStorageWriteFailureMock: vi.fn(),
+}))
 
-vi.mock("@plasmohq/storage", () => {
-  const set = vi.fn()
-  const get = vi.fn()
-  const remove = vi.fn()
-
-  /**
-   * Minimal mock implementation of the Plasmo Storage class used in tests.
-   */
-  function Storage(this: any) {
-    this.set = set
-    this.get = get
-    this.remove = remove
-  }
-
-  ;(Storage as any).__mocks = { set, get, remove }
-
-  return { Storage, __esModule: true }
-})
+vi.mock("@plasmohq/storage", () => ({
+  Storage: class {
+    get = storageMocks.get
+    set = storageMocks.set
+    remove = storageMocks.remove
+  },
+}))
 
 vi.mock("~/services/core/storageWriteLock", () => ({
   withExtensionStorageWriteLock: mockWithExtensionStorageWriteLock,
@@ -50,11 +41,7 @@ describe("autoCheckinStorage", () => {
 
   it("getStatus should return stored status when present", async () => {
     const status = { lastRunResult: "success" }
-    const { get } = (Storage as any).__mocks as {
-      set: ReturnType<typeof vi.fn>
-      get: ReturnType<typeof vi.fn>
-      remove: ReturnType<typeof vi.fn>
-    }
+    const { get } = storageMocks
     get.mockResolvedValueOnce(status)
 
     const result = await autoCheckinStorage.getStatus()
@@ -64,7 +51,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("getStatus should return null and log error on failure", async () => {
-    const { get } = (Storage as any).__mocks as any
+    const { get } = storageMocks
     get.mockRejectedValueOnce(new Error("read error"))
 
     const result = await autoCheckinStorage.getStatus()
@@ -72,8 +59,20 @@ describe("autoCheckinStorage", () => {
     expect(result).toBeNull()
   })
 
+  it("lets diagnostic readers distinguish a read failure from empty storage", async () => {
+    const { get } = storageMocks
+    get.mockResolvedValueOnce(undefined)
+    await expect(
+      autoCheckinStorage.getStatus({ throwOnError: true }),
+    ).resolves.toBeNull()
+    get.mockRejectedValueOnce(new Error("read error"))
+    await expect(
+      autoCheckinStorage.getStatus({ throwOnError: true }),
+    ).rejects.toThrow("read error")
+  })
+
   it("updateStatus should merge the patch into the stored status", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       lastRunResult: "success",
       perAccount: { a: 1 },
@@ -92,7 +91,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("updateStatus should skip the write when the patch is null", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({ lastRunResult: "success" })
 
     const result = await autoCheckinStorage.updateStatus(() => ({
@@ -104,7 +103,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("updateStatus should hand the derived value back to the caller", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({ lastRunResult: "success" })
     set.mockResolvedValueOnce(undefined)
 
@@ -117,7 +116,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("updateStatus should read the stored status, not a caller snapshot", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({ perAccount: { a: 1 } })
     set.mockResolvedValueOnce(undefined)
 
@@ -131,7 +130,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("updateStatus should not write when the read fails", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockRejectedValueOnce(new Error("read error"))
 
     const result = await autoCheckinStorage.updateStatus(() => ({
@@ -150,7 +149,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("updateStatus should report failure on write error", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({ lastRunResult: "success" })
     set.mockRejectedValueOnce(new Error("write error"))
 
@@ -169,7 +168,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("updateStatus should not write when deriving the patch throws", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({ lastRunResult: "success" })
 
     const result = await autoCheckinStorage.updateStatus(() => {
@@ -188,7 +187,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("clearStatus should remove key and return true", async () => {
-    const { remove } = (Storage as any).__mocks as any
+    const { remove } = storageMocks
     remove.mockResolvedValueOnce(undefined)
 
     const ok = await autoCheckinStorage.clearStatus()
@@ -198,7 +197,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("clearStatus should return false on error", async () => {
-    const { remove } = (Storage as any).__mocks as any
+    const { remove } = storageMocks
     remove.mockRejectedValueOnce(new Error("remove error"))
 
     const ok = await autoCheckinStorage.clearStatus()
@@ -207,7 +206,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("prunes deleted account ids from per-account, snapshots, and retry state", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         keep: {
@@ -278,7 +277,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("clears invalid shapes and resets retry scheduling when nothing valid remains", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: "broken",
       accountsSnapshot: "broken",
@@ -308,7 +307,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("returns true without persisting when there is nothing to prune", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         keep: { status: "success" },
@@ -334,7 +333,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("returns true without persisting when there is no stored status to prune", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce(null)
 
     await expect(
@@ -345,7 +344,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("marks a disabled account as skipped and removes it from retry state", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         keep: {
@@ -439,7 +438,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("does not synthesize disabled rows for accounts missing from status history and snapshots", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         keep: {
@@ -480,7 +479,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("preserves snapshot-derived totalEligible when current summary is missing", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       accountsSnapshot: [
         {
@@ -521,7 +520,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("preserves the remaining retry schedule and resolves disabled account names", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         drop: {
@@ -584,7 +583,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("preserves retry state attempts ledger when pruning leaves pending accounts empty", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         keep: {
@@ -627,7 +626,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("clears malformed retry queue fields when disabling a queued account", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         drop: {
@@ -658,7 +657,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("returns true without persisting when disabled-account marking receives no usable ids or status", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
 
     await expect(
       autoCheckinStorage.markAccountsDisabledInStatus([
@@ -680,7 +679,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("returns false when disabled-account marking cannot persist the updated status", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         failed: {
@@ -710,7 +709,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("clears malformed retry state when pruning the last stored account", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockResolvedValueOnce({
       perAccount: {
         drop: {
@@ -744,7 +743,7 @@ describe("autoCheckinStorage", () => {
   })
 
   it("reports pruning failure without writing when status cannot be read", async () => {
-    const { get, set } = (Storage as any).__mocks as any
+    const { get, set } = storageMocks
     get.mockRejectedValueOnce(new Error("read failed"))
 
     await expect(

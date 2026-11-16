@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import {
@@ -23,7 +23,9 @@ import autoCheckinLocale from "~/locales/en/autoCheckin.json"
 import commonLocale from "~/locales/en/common.json"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { FEEDBACK_EXECUTION_RECORDS } from "~/services/checkin/feedback/executionTypes"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
+import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/feedback/scanTypes"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { CheckinAccountResult } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
@@ -82,7 +84,7 @@ afterAll(() => {
 })
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue(null)
+  vi.mocked(autoCheckinStorage.getStatus).mockReset().mockResolvedValue(null)
   vi.mocked(collectFeedbackCluesInBrowser).mockRejectedValue(
     new Error("unavailable"),
   )
@@ -91,9 +93,463 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 describe("check-in feedback workflow", () => {
+  it("automatically adds the browser version to the report and GitHub form", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal("browser", {
+      ...browser,
+      runtime: {
+        ...browser.runtime,
+        getBrowserInfo: vi
+          .fn()
+          .mockResolvedValue({ name: "Firefox", version: "132.0.2" }),
+      },
+    })
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    await screen.findByLabelText("What happened? (optional)")
+    await user.click(screen.getByText("Review and edit submission"))
+    const report = screen.getByLabelText(
+      "Full submission (select to copy)",
+    ) as HTMLTextAreaElement
+    await waitFor(() =>
+      expect(report.value).toContain("browser</th><td>Firefox 132.0.2</td>"),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.open,
+      }),
+    )
+    expect(
+      new URL(vi.mocked(createTab).mock.calls.at(-1)![0]!).searchParams.get(
+        "browser-info",
+      ),
+    ).toBe("Firefox 132.0.2")
+  })
+  it.each(["pending", "unavailable"] as const)(
+    "keeps report editing and GitHub navigation available when browser information is %s",
+    async (state) => {
+      const user = userEvent.setup()
+      vi.stubGlobal("browser", {
+        ...browser,
+        runtime: {
+          ...browser.runtime,
+          getBrowserInfo:
+            state === "pending"
+              ? vi.fn(() => new Promise(() => {}))
+              : vi.fn().mockRejectedValue(new Error("unavailable")),
+        },
+      })
+      vi.stubGlobal("navigator", { userAgent: "UnknownBrowser/1.0" })
+      render(
+        wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+      )
+      const notes = await screen.findByLabelText("What happened? (optional)")
+      await user.type(notes, "Website check-in did not complete")
+      await user.click(screen.getByText("Review and edit submission"))
+      const report = screen.getByLabelText(
+        "Full submission (select to copy)",
+      ) as HTMLTextAreaElement
+      expect(report.value).toContain("browser</th><td>unavailable</td>")
+      const open = screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.open,
+      })
+      expect(open).toBeEnabled()
+      await user.click(open)
+      const url = new URL(vi.mocked(createTab).mock.calls.at(-1)![0]!)
+      expect(url.searchParams.has("browser-info")).toBe(false)
+      expect(url.searchParams.get("summary")).toBe(
+        "Website check-in did not complete",
+      )
+    },
+  )
+  it("explains that collection updates the report while leaving description and navigation optional", async () => {
+    const user = userEvent.setup()
+    let finishScan!: (
+      value: Awaited<ReturnType<typeof collectFeedbackCluesInBrowser>>,
+    ) => void
+    vi.mocked(collectFeedbackCluesInBrowser).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishScan = resolve
+        }),
+    )
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    const notes = await screen.findByLabelText("What happened? (optional)")
+    expect(notes).not.toBeRequired()
+    expect(notes).toHaveAccessibleDescription(/steps.*browser version/i)
+    expect(
+      screen.getByText(
+        "Collecting supporting information. The report will update when collection finishes.",
+      ),
+    ).toBeVisible()
+    const open = screen.getByRole("button", { name: "Review report on GitHub" })
+    expect(open).toBeEnabled()
+    await act(async () =>
+      finishScan({
+        status: FEEDBACK_SCAN_STATUSES.Completed,
+        routes: [],
+        statusQueries: [],
+        authenticatedQueriesUnavailable: false,
+      }),
+    )
+    await user.click(open)
+    expect(
+      new URL(vi.mocked(createTab).mock.calls.at(-1)![0]!).searchParams.has(
+        "summary",
+      ),
+    ).toBe(false)
+  })
+
+  it("prefills the user's description once while keeping the copied report complete", async () => {
+    const user = userEvent.setup()
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    await user.type(
+      await screen.findByLabelText("What happened? (optional)"),
+      "Website works",
+    )
+    await screen.findByText(accountDialogLocale.checkInFeedback.scanEmpty)
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.open,
+      }),
+    )
+    const url = new URL(vi.mocked(createTab).mock.calls.at(-1)![0]!)
+    expect(url.searchParams.get("title")).toBe("[Check-in] Website works")
+    expect(url.searchParams.get("summary")).toBe("Website works")
+    expect(url.searchParams.get("feedback")).not.toContain("Website works")
+    expect(url.searchParams.get("feedback")).not.toContain("## Site")
+    await user.click(screen.getByText("Review and edit submission"))
+    const fullReport = screen.getByLabelText(
+      "Full submission (select to copy)",
+    ) as HTMLTextAreaElement
+    expect(fullReport.value).toContain("## What happened\n\nWebsite works")
+    expect(fullReport.value).toContain("## Site\n\nhttps://example.com")
+  })
+
+  it.each(["saved", "draft"] as const)(
+    "keeps absent %s history in the report without an empty-state notice or reload action",
+    async (sourceKind) => {
+      const user = userEvent.setup()
+      vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+        buildSiteAccount(),
+      )
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={
+              sourceKind === "saved" ? { accountId: "account" } : { snapshot }
+            }
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await screen.findByLabelText("What happened? (optional)")
+      expect(
+        screen.queryByText(
+          /No saved execution record|This draft is not linked/,
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: accountDialogLocale.checkInFeedback.retryExecution,
+        }),
+      ).not.toBeInTheDocument()
+      await user.click(screen.getByText("Review and edit submission"))
+      const report = screen.getByLabelText(
+        "Full submission (select to copy)",
+      ) as HTMLTextAreaElement
+      expect(report.value).toContain(
+        `execution record</th><td>${sourceKind === "saved" ? "no_history" : "not_linked"}</td>`,
+      )
+    },
+  )
+
+  it("keeps technical details stable while the user edits notes after time has passed", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount(),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account" }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    await screen.findByLabelText("What happened? (optional)")
+    await user.click(screen.getByText("Review and edit submission"))
+    const details = screen.getByLabelText(
+      accountDialogLocale.checkInFeedback.details,
+    ) as HTMLTextAreaElement
+    const initial = details.value
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60000)
+    await user.type(
+      screen.getByLabelText("What happened? (optional)"),
+      "My description",
+    )
+    expect(details).toHaveValue(initial)
+  })
+  it("distinguishes missing execution history from a failed history read", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount(),
+    )
+    const view = render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account" }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    await screen.findByLabelText("What happened? (optional)")
+    await user.click(screen.getByText("Review and edit submission"))
+    expect(
+      (
+        screen.getByLabelText(
+          "Full submission (select to copy)",
+        ) as HTMLTextAreaElement
+      ).value,
+    ).toContain("execution record</th><td>no_history</td>")
+    view.unmount()
+
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account" }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    await screen.findByLabelText("What happened? (optional)")
+    await user.click(screen.getByText("Review and edit submission"))
+    expect(
+      (
+        screen.getByLabelText(
+          "Full submission (select to copy)",
+        ) as HTMLTextAreaElement
+      ).value,
+    ).toContain("execution record</th><td>read_failed</td>")
+  })
+
+  it.each([
+    FEEDBACK_EXECUTION_RECORDS.ReadFailed,
+    FEEDBACK_EXECUTION_RECORDS.Invalid,
+  ] as const)(
+    "presents %s as a distinct recoverable status with its own retry action",
+    async (state) => {
+      vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+        buildSiteAccount(),
+      )
+      if (state === FEEDBACK_EXECUTION_RECORDS.ReadFailed) {
+        vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+          new Error("read error"),
+        )
+      } else {
+        vi.mocked(autoCheckinStorage.getStatus).mockResolvedValueOnce({
+          perAccount: {
+            account: {
+              accountId: "account",
+              accountName: "Account",
+              status: "unknown-status",
+              timestamp: 1,
+            },
+          },
+        } as never)
+      }
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{ accountId: "account" }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      const message =
+        state === FEEDBACK_EXECUTION_RECORDS.ReadFailed
+          ? accountDialogLocale.checkInFeedback.executionReadFailed
+          : accountDialogLocale.checkInFeedback.executionInvalid
+      const notice = await screen.findByRole("status", { name: message })
+      const retry = within(notice).getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.retryExecution,
+      })
+      expect(retry).toHaveAccessibleDescription(message)
+      expect(retry).toBeEnabled()
+      expect(
+        screen.getByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
+      ).toBeEnabled()
+    },
+  )
+
+  it("retries execution history without discarding the user's problem description", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount(),
+    )
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+      new Error("read error"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account" }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    await user.type(
+      await screen.findByLabelText("What happened? (optional)"),
+      "Keep my description",
+    )
+    vi.mocked(autoCheckinStorage.getStatus).mockResolvedValueOnce({
+      perAccount: {
+        account: {
+          accountId: "account",
+          accountName: "Account",
+          status: "failed",
+          timestamp: 1,
+        },
+      },
+    })
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.retryExecution,
+      }),
+    )
+    await user.click(screen.getByText("Review and edit submission"))
+    const report = screen.getByLabelText(
+      "Full submission (select to copy)",
+    ) as HTMLTextAreaElement
+    expect(report.value).toContain("execution</th><td>failed</td>")
+    expect(report.value).toContain("Keep my description")
+    expect(report.value).not.toContain("read_failed")
+    expect(
+      screen.queryByRole("status", {
+        name: accountDialogLocale.checkInFeedback.executionReadFailed,
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it.each(["site", "user", "type", "removed"] as const)(
+    "does not load another identity's history when the saved account changes: %s",
+    async (change) => {
+      const user = userEvent.setup()
+      const account = buildSiteAccount()
+      vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+        new Error("read failed"),
+      )
+      vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(account)
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{ accountId: "account" }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await user.type(
+        await screen.findByLabelText("What happened? (optional)"),
+        "Original account",
+      )
+      const changed =
+        change === "removed"
+          ? null
+          : {
+              ...account,
+              ...(change === "site"
+                ? { site_url: "https://different.example.com" }
+                : {}),
+              ...(change === "user"
+                ? { account_info: { ...account.account_info, id: "different" } }
+                : {}),
+              ...(change === "type" ? { site_type: SITE_TYPES.ONE_API } : {}),
+            }
+      vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(changed)
+      vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue({
+        perAccount: {
+          account: {
+            accountId: "account",
+            accountName: "Other identity",
+            status: "success",
+            timestamp: 1,
+          },
+        },
+      })
+      await user.click(
+        screen.getByRole("button", {
+          name: accountDialogLocale.checkInFeedback.retryExecution,
+        }),
+      )
+      await user.click(screen.getByText("Review and edit submission"))
+      const report = screen.getByLabelText(
+        "Full submission (select to copy)",
+      ) as HTMLTextAreaElement
+      expect(report.value).toContain("execution record</th><td>not_linked</td>")
+      expect(report.value).not.toContain("execution</th><td>success</td>")
+      expect(report.value).toContain("Original account")
+      expect(autoCheckinStorage.getStatus).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("keeps reload available after another read failure and coalesces pending reloads", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount(),
+    )
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+      new Error("first read failed"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account" }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    await user.type(
+      await screen.findByLabelText("What happened? (optional)"),
+      "Keep this",
+    )
+    let rejectRead!: (error: Error) => void
+    vi.mocked(autoCheckinStorage.getStatus).mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectRead = reject
+        }),
+    )
+    const button = screen.getByRole("button", {
+      name: accountDialogLocale.checkInFeedback.retryExecution,
+    })
+    await user.click(button)
+    expect(button).toBeDisabled()
+    await user.click(button)
+    expect(autoCheckinStorage.getStatus).toHaveBeenCalledTimes(2)
+    await act(async () => rejectRead(new Error("second read failed")))
+    expect(button).toBeEnabled()
+    expect(
+      screen.getByText(accountDialogLocale.checkInFeedback.executionReadFailed),
+    ).toBeVisible()
+    expect(screen.getByLabelText("What happened? (optional)")).toHaveValue(
+      "Keep this",
+    )
+  })
+
   it("opens a snapshot with execution without waiting for execution storage", async () => {
     vi.mocked(accountQueries.getAccountById).mockResolvedValue(
       buildSiteAccount(),
@@ -395,7 +851,7 @@ describe("check-in feedback workflow", () => {
   it("lets users edit completed clues and retry a failed GitHub opening", async () => {
     const user = userEvent.setup()
     vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValue({
-      status: "completed",
+      status: FEEDBACK_SCAN_STATUSES.Completed,
       routes: ["/api/checkin"],
       statusQueries: [],
       authenticatedQueriesUnavailable: false,
@@ -414,11 +870,19 @@ describe("check-in feedback workflow", () => {
     )
     await user.clear(clues)
     await user.type(clues, "Manually corrected clue")
-    await user.click(screen.getByRole("button", { name: "Continue to GitHub" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.open,
+      }),
+    )
     expect(
       await screen.findByText(accountDialogLocale.checkInFeedback.openFailed),
     ).toBeVisible()
-    await user.click(screen.getByRole("button", { name: "Continue to GitHub" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.open,
+      }),
+    )
     expect(
       await screen.findByText(accountDialogLocale.checkInFeedback.opened),
     ).toBeVisible()
@@ -441,7 +905,7 @@ describe("check-in feedback workflow", () => {
   it("presents collected information without an incomplete-query warning and retains diagnostic notes", async () => {
     const user = userEvent.setup()
     vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValue({
-      status: "partial",
+      status: FEEDBACK_SCAN_STATUSES.Partial,
       statusQueries: [
         { path: "/api/user/check_in_status", status: 403, keys: ["success"] },
       ],
@@ -454,7 +918,7 @@ describe("check-in feedback workflow", () => {
       wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
     )
     expect(
-      await screen.findByText("Supporting information collected."),
+      await screen.findByText(accountDialogLocale.checkInFeedback.scanPartial),
     ).toBeVisible()
     expect(
       screen.queryByText(/other queries did not complete/i),
@@ -713,7 +1177,9 @@ describe("check-in feedback workflow", () => {
     expect(autoCheckinStorage.getStatus).toHaveBeenCalledOnce()
     expect(collectFeedbackCluesInBrowser).toHaveBeenCalledOnce()
     expect(
-      screen.getByRole("button", { name: "Continue to GitHub" }),
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.open,
+      }),
     ).toBeEnabled()
     await user.click(screen.getByText("Review and edit submission"))
     const report = (
@@ -780,13 +1246,19 @@ describe("check-in feedback workflow", () => {
       await user.click(screen.getByRole("button", { name: "Copy content" }))
       expect(await navigator.clipboard.readText()).toBe(preview.value)
       await user.click(
-        screen.getByRole("button", { name: "Continue to GitHub" }),
+        screen.getByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
       )
-      expect(
-        new URL(
-          atIndex(vi.mocked(createTab).mock.calls, 0)[0],
-        ).searchParams.get("feedback"),
-      ).toBe(preview.value)
+      const issueParams = new URL(
+        atIndex(vi.mocked(createTab).mock.calls, 0)[0],
+      ).searchParams
+      expect(issueParams.get("summary")).toBe("Website works")
+      expect(issueParams.get("feedback")).toContain(
+        '<td colspan="2">My edited details</td>',
+      )
+      expect(issueParams.get("feedback")).not.toContain("Website works")
+      expect(issueParams.has("site-url")).toBe(false)
       expect(screen.getByLabelText("What happened? (optional)")).toHaveValue(
         "Website works",
       )
@@ -839,7 +1311,8 @@ describe("check-in feedback workflow", () => {
       atIndex(vi.mocked(sendRuntimeActionMessage).mock.calls, 0)[0]
         .url as string,
     )
-    expect(url.searchParams.get("site-url")).toBe("https://example.com")
+    expect(url.searchParams.has("site-url")).toBe(false)
+    expect(url.searchParams.has("summary")).toBe(false)
     expect(url.searchParams.get("template")).toBe("checkin_adaptation.yml")
     expect(url.searchParams.has("feedback")).toBe(false)
     expect(
@@ -995,13 +1468,17 @@ describe("check-in feedback workflow", () => {
           }),
       )
       await user.click(
-        screen.getByRole("button", { name: "Continue to GitHub" }),
+        screen.getByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
       )
       await user.type(notes, "new draft")
       await act(async () => finish())
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
       expect(
-        screen.getByRole("button", { name: "Continue to GitHub" }),
+        screen.getByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
       ).toBeEnabled()
       expect(notes).toHaveValue("new draft")
     },
@@ -1040,10 +1517,12 @@ describe("check-in feedback workflow", () => {
     )
     await screen.findByLabelText("What happened? (optional)")
     expect(
-      screen.getByRole("button", { name: "Continue to GitHub" }),
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.open,
+      }),
     ).toBeEnabled()
     expect(
-      screen.getByText("Collecting clues. You can still submit now."),
+      screen.getByText(accountDialogLocale.checkInFeedback.scanning),
     ).toBeVisible()
     expect(collectFeedbackCluesInBrowser).toHaveBeenCalledOnce()
     await user.type(
@@ -1052,7 +1531,7 @@ describe("check-in feedback workflow", () => {
     )
     await act(async () =>
       complete({
-        status: "partial",
+        status: FEEDBACK_SCAN_STATUSES.Partial,
         statusQueries: [],
         routes: ["/api/checkin"],
         authenticatedQueriesUnavailable: false,
@@ -1099,7 +1578,7 @@ describe("check-in feedback workflow", () => {
     expect(accountQueries.getAccountById).toHaveBeenCalledWith("deleted")
     expect(
       within(screen.getByRole("dialog")).queryByRole("button", {
-        name: "Continue to GitHub",
+        name: accountDialogLocale.checkInFeedback.open,
       }),
     ).not.toBeInTheDocument()
   })

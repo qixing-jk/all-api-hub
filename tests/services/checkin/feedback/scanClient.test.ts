@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { collectCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
-import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
+import {
+  FEEDBACK_SCAN_SESSION_TIMEOUT_MS,
+  FEEDBACK_SCAN_STATUSES,
+} from "~/services/checkin/feedback/scanTypes"
 import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
@@ -28,7 +31,7 @@ const input = {
   siteType: SITE_TYPES.NEW_API,
 }
 const clues = {
-  status: "completed" as const,
+  status: FEEDBACK_SCAN_STATUSES.Completed,
   statusQueries: [],
   routes: ["/api/checkin"],
   authenticatedQueriesUnavailable: false,
