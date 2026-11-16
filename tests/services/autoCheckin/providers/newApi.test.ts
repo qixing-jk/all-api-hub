@@ -197,6 +197,152 @@ function prepareAccountSession(
 }
 
 describe("newApiProvider", () => {
+  it("retains a rate-limit refusal with its final not-checked observation", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "too many requests",
+      data: null,
+    })
+    mockCheckInStatusSequence(false)
+    await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_error",
+      rawMessage: "too many requests",
+      confirmation: { kind: "observed", status: { today: "not_checked" } },
+    })
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
+  it("explains a message-less refusal when check-in has been disabled", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "",
+      data: null,
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "method_disabled",
+    })
+    expect(result.rawMessage).toBeUndefined()
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+  })
+
+  it("keeps a message-less refusal failed when its final status is unavailable", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "",
+      data: null,
+    })
+    vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce(undefined)
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_error",
+      messageKey: "autoCheckin:providerFallback.checkinFailed",
+    })
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
+  it.each(["not_present", "token_obtained"] as const)(
+    "retains the upstream verification message after assistance omits its own error (%s)",
+    async (status) => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      mockCheckInStatusSequence(false, false)
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(false)
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: false,
+        error: "",
+        turnstile: { status, hasTurnstile: status === "token_obtained" },
+      })
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: status === "not_present" ? "failed" : "uncertain",
+        rawMessage: "Turnstile token invalid",
+      })
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("reports an unavailable check-in route before attempting verification assistance", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "Turnstile token invalid",
+      data: null,
+    })
+    mockCheckInStatusSequence(false)
+    vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(null)
+    await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "checkin_page_unavailable",
+    })
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
+  it("discards the initial observation when fallback verification cannot read status", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "Turnstile token invalid",
+      data: null,
+    })
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+    vi.mocked(tempWindowTurnstileFetch)
+      .mockResolvedValueOnce({
+        success: false,
+        error: "initial verification error",
+        turnstile: { status: "not_present", hasTurnstile: false },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        error: "fallback verification error",
+        turnstile: { status: "not_present", hasTurnstile: false },
+      })
+    mockCheckInStatusSequence(false, false)
+    vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
+      new Error("final read failed"),
+    )
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      rawMessage: "initial verification error",
+    })
+    expect(result).toMatchObject({ confirmation: { kind: "unavailable" } })
+    expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(3)
+  })
+
+  it("discards the initial observation when the fallback window returns no reply", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+      success: false,
+      message: "Turnstile token invalid",
+      data: null,
+    })
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+    vi.mocked(tempWindowTurnstileFetch)
+      .mockResolvedValueOnce({
+        success: false,
+        error: "initial verification error",
+        turnstile: { status: "not_present", hasTurnstile: false },
+      })
+      // The browser message boundary can return no usable payload.
+      .mockResolvedValueOnce(null as unknown as TempWindowTurnstileFetch)
+    mockCheckInStatusSequence(false, false)
+    const result = await checkInForTest(mockAccount)
+    expect(result).toMatchObject({
+      status: "failed",
+      rawMessage: "initial verification error",
+    })
+    expect(result).not.toHaveProperty("confirmation")
+    expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+    expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
+  })
+
   it.each(["checked", "repeated_rollover"])(
     "uses one rollover guard for lost-response final readback (%s)",
     async (finalRead) => {

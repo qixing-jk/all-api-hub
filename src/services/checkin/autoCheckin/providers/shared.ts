@@ -158,8 +158,9 @@ function isAuthenticationFailureMessage(message: string): boolean {
     invalidAccessToken ||
     normalized.includes("unauthorized") ||
     normalized.includes("unauthenticated") ||
-    normalized.includes("authentication") ||
-    normalized.includes("authenticate") ||
+    /\bauthentication (?:is )?(?:required|failed)\b/.test(normalized) ||
+    /\b(?:please|must) authenticate\b/.test(normalized) ||
+    /\bfailed to authenticate\b/.test(normalized) ||
     normalized.includes("auth required") ||
     normalized.includes("invalid auth") ||
     normalized.includes("not logged") ||

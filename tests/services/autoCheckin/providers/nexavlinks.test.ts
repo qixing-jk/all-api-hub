@@ -145,6 +145,29 @@ const checkInWithStatusProof = () =>
   })
 
 describe("NexaVlinks check-in integration", () => {
+  it("keeps a native click unconfirmed when both final reads cross a day boundary", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
+    try {
+      vi.mocked(fetchNexaVlinksDailyCheckInStatus).mockImplementation(
+        async () => {
+          vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1_000)
+          return { enabled: true, checkedInToday: true }
+        },
+      )
+      const result = await checkInWithStatusProof()
+      expect(result).toMatchObject({
+        status: "failed",
+        reasonCode: "checkin_unconfirmed",
+      })
+      expect(result).not.toHaveProperty("confirmation")
+      expect(fetchNexaVlinksDailyCheckInStatus).toHaveBeenCalledTimes(2)
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("rereads native completion delivered across month-end without clicking again", async () => {
     const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
     vi.useFakeTimers()

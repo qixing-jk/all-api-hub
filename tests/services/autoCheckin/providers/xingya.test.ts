@@ -477,6 +477,44 @@ describe("xingyaProvider", () => {
     },
   )
 
+  it("keeps an ambiguous session claim unconfirmed when the final status envelope is rejected", async () => {
+    prepareLoginSession()
+    const requests = await requestModule()
+    vi.mocked(requests.envelope)
+      .mockReset()
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { id: "7451" },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: {
+          ...liveStatusData,
+          today_record: { checked_in: false, quota_awarded: 0 },
+        },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "verification rejected",
+        data: undefined,
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "status temporarily unavailable",
+        data: liveStatusData,
+      })
+    await expect(
+      xingyaProvider.checkIn(sessionAccount(), DEFAULT_PROVIDER_CONTEXT),
+    ).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_rejected",
+      confirmation: { kind: "unavailable" },
+    })
+    expect(requests.envelope).toHaveBeenCalledTimes(4)
+  })
+
   it.each([
     ["permission denied", "permission_denied"],
     ["authentication required", "authentication_required"],

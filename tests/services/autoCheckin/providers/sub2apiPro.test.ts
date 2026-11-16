@@ -20,6 +20,7 @@ import {
   performSub2ApiProDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/proCheckInExecution"
 import { fetchToolcodeDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
+import { Sub2ApiCheckInRecoveryBlockedError } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import {
   probeXiaobaiCodeCheckInStatus,
   XIAOBAI_CODE_STATUS_OUTCOMES,
@@ -225,6 +226,53 @@ const notCheckedStatus = {
 }
 
 describe("Sub2API Pro daily check-in method Adapter", () => {
+  it("retains the identity and time of a recovered already-checked observation", async () => {
+    const account = createAccount()
+    const observedAt = Date.now()
+    vi.mocked(performSub2ApiProDailyCheckIn).mockRejectedValueOnce(
+      new Sub2ApiCheckInRecoveryBlockedError("already_checked", {
+        siteUrl: account.site_url,
+        userId: String(account.account_info.id),
+        observedAt,
+        observation: { enabled: true, checkedInToday: true },
+      }),
+    )
+    await expect(
+      sub2apiProProvider.checkIn(account, {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: "already_checked",
+      confirmation: {
+        kind: "observed",
+        siteUrl: account.site_url,
+        userId: String(account.account_info.id),
+        observedAt,
+        status: { today: "checked", evidence: { observedAt } },
+      },
+    })
+    expect(performSub2ApiProDailyCheckIn).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not accept recovered already-checked without the observation that established it", async () => {
+    vi.mocked(performSub2ApiProDailyCheckIn).mockRejectedValueOnce(
+      new Sub2ApiCheckInRecoveryBlockedError("already_checked"),
+    )
+    await expect(
+      sub2apiProProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: "uncertain",
+      reasonCode: "status_unavailable",
+      confirmation: { kind: "unavailable" },
+    })
+    expect(performSub2ApiProDailyCheckIn).toHaveBeenCalledTimes(1)
+    expect(fetchSub2ApiProDailyCheckInStatus).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     // This fixture's host does not serve the daily rewards module.

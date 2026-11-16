@@ -83,6 +83,50 @@ const run = () =>
   })
 
 describe("registered DaiGua daily check-in", () => {
+  it("does not replay a verification rejection when both assisted admission reads cross midnight", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
+    try {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockImplementation(async () => {
+          vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1_000)
+          return response(statusData(true))
+        })
+      await expect(
+        daiguaProvider.checkIn(account(), {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+          statusProof: {
+            outcome: "known",
+            availability: "enabled",
+            today: "not_checked",
+            evidence: { source: "probe", observedAt: Date.now() },
+          },
+        }),
+      ).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: "manual_verification_required",
+      })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(3)
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    } finally {
+      vi.mocked(fetchApiResponse).mockReset()
+      vi.useRealTimers()
+    }
+  })
+
   it("rereads the assisted admission gate delivered across month-end without replaying a claim", async () => {
     const startedAt = new Date(2026, 0, 31, 23, 59, 59).getTime()
     vi.useFakeTimers()

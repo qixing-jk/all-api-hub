@@ -2,11 +2,47 @@ import { describe, expect, it } from "vitest"
 
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
+  createUpstreamFailureResult,
   resolveCheckinLoginFailure,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 
 describe("auto-checkin provider error normalization", () => {
+  it.each([
+    "authentication service temporarily unavailable",
+    "authenticate endpoint unavailable",
+  ])(
+    "keeps service availability failure %s distinct from rejected credentials",
+    (rawMessage) => {
+      expect(createUpstreamFailureResult({ rawMessage })).toMatchObject({
+        status: "failed",
+        reasonCode: "upstream_rejected",
+        rawMessage,
+      })
+    },
+  )
+
+  it.each([
+    "Unauthorized",
+    "Unauthenticated",
+    "Not logged in",
+    "Login required",
+    "Authentication required",
+    "Authentication is required",
+    "Authentication failed",
+    "Please authenticate",
+    "You must authenticate",
+    "Failed to authenticate",
+    "access token expired",
+    "未登录",
+  ])("preserves explicit authentication refusal %s", (rawMessage) => {
+    expect(createUpstreamFailureResult({ rawMessage })).toMatchObject({
+      status: "failed",
+      reasonCode: "authentication_required",
+      rawMessage,
+    })
+  })
+
   it.each([
     { status: "interaction_required", reason: "session_conflict" },
     { status: "identity_mismatch" },
