@@ -109,7 +109,7 @@ export function FeedbackForm({
       size="lg"
       panelClassName="sm:max-w-xl"
       closeOnBackdropClick={false}
-      focusFallbackKey={`${opening}:${scanStatus}`}
+      focusFallbackKey={`${opening}:${scanStatus}:${reloading}:${recordState}`}
       footer={
         <FeedbackFormFooter
           submission={submission}

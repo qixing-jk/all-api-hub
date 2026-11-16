@@ -387,6 +387,34 @@ describe("KeyManagement empty-state actions", () => {
     sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
   })
 
+  it("retries both association links and key inventory when a deep link cannot be loaded", async () => {
+    const user = userEvent.setup()
+    const reload = vi.fn()
+    const refresh = vi.fn()
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        refreshServiceCredentials: refresh,
+      }),
+    )
+    useApiCredentialProfileLinksMock.mockReturnValue({
+      links: [],
+      isLoading: false,
+      error: new Error("unavailable"),
+      reload,
+    })
+    render(
+      <KeyManagement routeParams={{ associationId: "unavailable-link" }} />,
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:credentialAssociation.target.retry",
+      }),
+    )
+    expect(reload).toHaveBeenCalledOnce()
+    await waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+  })
+
   it("resolves an association deep link to its account and passes the exact target to the list", async () => {
     const account = createAccount({ id: "account-example", name: "Example" })
     const setSelectedAccount = vi.fn()

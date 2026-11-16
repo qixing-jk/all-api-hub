@@ -97,6 +97,99 @@ afterEach(() => {
 })
 
 describe("check-in feedback workflow", () => {
+  it("discloses unavailable authenticated queries while retaining public scan results", async () => {
+    vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValueOnce({
+      status: FEEDBACK_SCAN_STATUSES.Partial,
+      routes: [],
+      statusQueries: [],
+      authenticatedQueriesUnavailable: true,
+    })
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    expect(
+      await screen.findByText(
+        accountDialogLocale.checkInFeedback.authUnavailable,
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByText(accountDialogLocale.checkInFeedback.scanPartial),
+    ).toBeVisible()
+  })
+
+  it.each(["provided", "saved"] as const)(
+    "distinguishes the success label for %s execution evidence",
+    async (source) => {
+      const execution = {
+        status: "success" as const,
+        timestamp: 1,
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+      }
+      vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+        buildSiteAccount(),
+      )
+      vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue({
+        perAccount: {
+          account: {
+            ...execution,
+            accountId: "account",
+            accountName: "Saved account",
+          },
+        },
+      })
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={
+              source === "provided"
+                ? { snapshot: { ...snapshot, execution } }
+                : { accountId: "account" }
+            }
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      const label =
+        source === "saved"
+          ? autoCheckinLocale.providerFallback.checkinSuccessful
+          : autoCheckinLocale.execution.status.success
+      expect(await screen.findByText(label, { selector: "span" })).toBeVisible()
+      expect(autoCheckinStorage.getStatus).toHaveBeenCalledTimes(
+        source === "saved" ? 1 : 0,
+      )
+    },
+  )
+
+  it("unlinks a draft on retry when its saved identity could not be read", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(null)
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+      new Error("history unavailable"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ snapshot, accountId: "account" }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: accountDialogLocale.checkInFeedback.retryExecution,
+      }),
+    )
+    await user.click(screen.getByText("Review and edit submission"))
+    expect(
+      (
+        screen.getByLabelText(
+          "Full submission (select to copy)",
+        ) as HTMLTextAreaElement
+      ).value,
+    ).toContain("execution record</th><td>not_linked</td>")
+    expect(autoCheckinStorage.getStatus).toHaveBeenCalledTimes(1)
+  })
+
   it("automatically adds the browser version to the report and GitHub form", async () => {
     const user = userEvent.setup()
     vi.stubGlobal("browser", {
@@ -445,6 +538,61 @@ describe("check-in feedback workflow", () => {
     ).not.toBeInTheDocument()
   })
 
+  it.each(["site", "user", "type"] as const)(
+    "does not merge saved history into a draft with a changed %s identity",
+    async (change) => {
+      const user = userEvent.setup()
+      const account = buildSiteAccount({
+        site_url: snapshot.baseUrl,
+        site_type: snapshot.siteType,
+      })
+      vi.mocked(accountQueries.getAccountById).mockResolvedValue(account)
+      vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue({
+        perAccount: {
+          account: {
+            accountId: "account",
+            accountName: "Saved identity",
+            status: "success",
+            timestamp: 1,
+          },
+        },
+      })
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{
+              accountId: "account",
+              snapshot: {
+                ...snapshot,
+                ...(change === "site"
+                  ? { baseUrl: "https://different.example.com" }
+                  : {}),
+                ...(change === "type" ? { siteType: SITE_TYPES.ONE_API } : {}),
+              },
+              auth: {
+                authType: AuthTypeEnum.AccessToken,
+                userId:
+                  change === "user" ? "different" : account.account_info.id,
+              },
+            }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await screen.findByLabelText("What happened? (optional)")
+      await user.click(screen.getByText("Review and edit submission"))
+      const report = screen.getByLabelText(
+        "Full submission (select to copy)",
+      ) as HTMLTextAreaElement
+      expect(report.value).toContain("execution record</th><td>not_linked</td>")
+      expect(report.value).toContain(
+        "execution source</th><td>unlinked_draft</td>",
+      )
+      expect(report.value).not.toContain("execution</th><td>success</td>")
+      expect(autoCheckinStorage.getStatus).not.toHaveBeenCalled()
+    },
+  )
+
   it.each(["site", "user", "type", "removed"] as const)(
     "does not load another identity's history when the saved account changes: %s",
     async (change) => {
@@ -548,6 +696,38 @@ describe("check-in feedback workflow", () => {
     expect(screen.getByLabelText("What happened? (optional)")).toHaveValue(
       "Keep this",
     )
+  })
+
+  it("keeps retry available when the saved account lookup fails during reload", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(
+      buildSiteAccount(),
+    )
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+      new Error("history unavailable"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account" }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    const retry = await screen.findByRole("button", {
+      name: accountDialogLocale.checkInFeedback.retryExecution,
+    })
+    vi.mocked(accountQueries.getAccountById).mockRejectedValueOnce(
+      new Error("account unavailable"),
+    )
+    await user.click(retry)
+    await waitFor(() => expect(retry).toBeEnabled())
+    expect(
+      screen.getByRole("status", {
+        name: accountDialogLocale.checkInFeedback.executionReadFailed,
+      }),
+    ).toBeVisible()
+    expect(autoCheckinStorage.getStatus).toHaveBeenCalledTimes(1)
   })
 
   it("opens a snapshot with execution without waiting for execution storage", async () => {
@@ -663,6 +843,8 @@ describe("check-in feedback workflow", () => {
       const user = userEvent.setup()
       vi.mocked(accountQueries.getAccountById).mockResolvedValue(
         buildSiteAccount({
+          site_url: snapshot.baseUrl,
+          site_type: snapshot.siteType,
           health: {
             status: SiteHealthStatus.Error,
             reason:
@@ -1051,6 +1233,12 @@ describe("check-in feedback workflow", () => {
 
   it("includes saved execution for an editor snapshot while retaining unsaved configuration", async () => {
     const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount({
+        site_url: snapshot.baseUrl,
+        site_type: snapshot.siteType,
+      }),
+    )
     vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue({
       perAccount: {
         edited: {

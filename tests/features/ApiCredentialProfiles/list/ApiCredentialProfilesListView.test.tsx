@@ -3,6 +3,7 @@ import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import ApiCredentialProfiles from "~/features/ApiCredentialProfiles/ApiCredentialProfiles"
+import { API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY } from "~/features/ApiCredentialProfiles/contracts"
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesListView"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import {
@@ -534,6 +535,69 @@ describe("ApiCredentialProfilesListView", () => {
         "apiCredentialProfiles:controls.searchPlaceholder",
       ),
     ).toHaveValue("Target")
+  })
+
+  it.each([true, false])(
+    "shows association load failures with retry availability %s",
+    async (canRetry) => {
+      const user = userEvent.setup()
+      const retry = vi.fn()
+      const controller = {
+        profiles: [],
+        isLoading: false,
+        tags: [],
+        tagNameById: new Map<string, string>(),
+        openAddDialog: vi.fn(),
+      } as any
+      render(
+        <ApiCredentialProfilesListView
+          controller={controller}
+          associationAvailability={
+            API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Error
+          }
+          onRetryAssociatedKeys={canRetry ? retry : undefined}
+        />,
+      )
+      expect(
+        await screen.findByText("apiCredentialProfiles:association.loadFailed"),
+      ).toBeVisible()
+      if (canRetry) {
+        await user.click(
+          screen.getByRole("button", { name: "common:actions.retry" }),
+        )
+        expect(retry).toHaveBeenCalledOnce()
+      } else {
+        expect(
+          screen.queryByRole("button", { name: "common:actions.retry" }),
+        ).not.toBeInTheDocument()
+      }
+    },
+  )
+
+  it("shows a missing target without a clear action when its caller provides none", async () => {
+    const controller = {
+      profiles: [],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+    render(
+      <ApiCredentialProfilesListView
+        controller={controller}
+        targetProfileId="missing-profile"
+      />,
+    )
+    expect(
+      await screen.findByText(
+        "apiCredentialProfiles:target.missingDescription",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "apiCredentialProfiles:target.clear",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("waits for loading to finish before reporting a missing target", async () => {

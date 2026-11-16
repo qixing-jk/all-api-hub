@@ -6,6 +6,21 @@ import { NoticeActionButton } from "~/components/ui/NoticeActionButton"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("InlineMessage", () => {
+  it("keeps text-only guidance readable when its icon is intentionally omitted", () => {
+    render(
+      <InlineMessage icon={null} role="note">
+        Read the instructions.
+      </InlineMessage>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+    const note = screen.getByRole("note")
+    expect(note).toHaveTextContent("Read the instructions.")
+    expect(note.querySelector("[aria-hidden=true]")).toBeNull()
+  })
   it("announces an error assertively and leaves static notes outside live announcements", () => {
     const { rerender } = render(
       <InlineMessage role="alert" tone="destructive">

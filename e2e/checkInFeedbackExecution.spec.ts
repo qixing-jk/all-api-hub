@@ -187,6 +187,14 @@ for (const scenario of cases) {
                   : Object.keys(keys ?? {})
             if (
               targets.includes("autoCheckin_status") &&
+              sessionStorage.getItem("pause-execution-read")
+            ) {
+              await new Promise<void>((resolve) => {
+                ;(globalThis as any).resumeExecutionRead = resolve
+              })
+            }
+            if (
+              targets.includes("autoCheckin_status") &&
               !sessionStorage.getItem("execution-read-restored")
             )
               throw new Error("Fixture execution storage unavailable")
@@ -359,10 +367,34 @@ for (const scenario of cases) {
       await dialog
         .getByLabel(copy.clues, { exact: true })
         .fill("Keep my manually edited clue")
+      const retry = dialog.getByRole("button", { name: copy.retryExecution })
+      await page.evaluate(() =>
+        sessionStorage.setItem("pause-execution-read", "1"),
+      )
+      await retry.focus()
+      await page.keyboard.press("Enter")
+      await expect(retry).toBeDisabled()
+      await expect
+        .poll(() =>
+          dialog.evaluate((element) => {
+            const focused = document.activeElement
+            return element.contains(focused) && !focused?.matches(":disabled")
+          }),
+        )
+        .toBe(true)
+      await page.evaluate(() => {
+        sessionStorage.removeItem("pause-execution-read")
+        ;(globalThis as any).resumeExecutionRead()
+      })
+      await expect(retry).toBeEnabled()
+      await expect(
+        dialog.getByRole("status", { name: copy.executionReadFailed }),
+      ).toBeVisible()
       await page.evaluate(() =>
         sessionStorage.setItem("execution-read-restored", "1"),
       )
-      await dialog.getByRole("button", { name: copy.retryExecution }).click()
+      await retry.focus()
+      await page.keyboard.press("Enter")
       await expect
         .poll(() => dialog.getByLabel(copy.fullReport).inputValue())
         .toContain("execution record</th><td>available</td>")
@@ -374,6 +406,13 @@ for (const scenario of cases) {
       await expect(
         dialog.getByRole("status", { name: copy.executionReadFailed }),
       ).toHaveCount(0)
+      await expect
+        .poll(() =>
+          dialog.evaluate((element) =>
+            element.contains(document.activeElement),
+          ),
+        )
+        .toBe(true)
       await writeFile(testInfo.outputPath("feedback-reloaded.md"), reloaded)
       await dialog.getByText(copy.preview, { exact: true }).click()
       await dialog.screenshot({

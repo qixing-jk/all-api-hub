@@ -5,6 +5,13 @@ import { getBrowserVersionInfo } from "~/utils/browser/userAgent"
 afterEach(() => vi.unstubAllGlobals())
 
 describe("browser version information", () => {
+  it("falls back when runtime metadata is absent", async () => {
+    vi.stubGlobal("browser", {
+      runtime: { getBrowserInfo: vi.fn().mockResolvedValue(null) },
+    })
+    vi.stubGlobal("navigator", { userAgent: "Firefox/132.0" })
+    expect(await getBrowserVersionInfo()).toBe("Firefox 132.0")
+  })
   it("marks a client-hint value that contains only the major version", async () => {
     vi.stubGlobal("browser", { runtime: {} })
     vi.stubGlobal("navigator", {

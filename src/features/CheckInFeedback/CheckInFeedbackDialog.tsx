@@ -108,6 +108,27 @@ export default function CheckInFeedbackDialog({
           .getAccountById(accountId)
           .catch(() => null)
           .then(async (account) => {
+            if (!active) return
+            const draftUserId = normalizeAccountIdentity(source.auth?.userId)
+            if (
+              account &&
+              (account.site_url !== source.snapshot.baseUrl ||
+                account.site_type !== source.snapshot.siteType ||
+                (draftUserId !== null &&
+                  normalizeAccountIdentity(account.account_info.id) !==
+                    draftUserId))
+            ) {
+              setData({
+                ...source,
+                snapshot: {
+                  ...source.snapshot,
+                  execution: undefined,
+                  executionRecord: FEEDBACK_EXECUTION_RECORDS.NotLinked,
+                  executionSource: FEEDBACK_EXECUTION_SOURCES.UnlinkedDraft,
+                },
+              })
+              return
+            }
             const execution = await readFeedbackExecution(
               accountId,
               source.snapshot.execution,
