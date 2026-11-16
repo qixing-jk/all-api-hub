@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/Card"
+import { InlineMessage } from "~/components/ui/InlineMessage"
 import { BodySmall } from "~/components/ui/Typography"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { IncognitoAccessNotice } from "~/features/Permissions/components/IncognitoAccessNotice"
@@ -36,9 +36,11 @@ export default function PermissionSettings() {
       description={t("permissions.description")}
       className="space-y-density-4"
     >
-      <Alert variant="default" description={t("permissions.helper")} />
+      <InlineMessage tone="neutral" role="note">
+        {t("permissions.helper")}
+      </InlineMessage>
 
-      <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-density-3">
         <BodySmall className="text-muted-foreground">
           {t("permissions.statusCaption")}
         </BodySmall>
@@ -69,7 +71,7 @@ export default function PermissionSettings() {
               status: permission.granted,
               statusLabel: permission.statusLabel,
               rightContent: (
-                <div className="gap-y-density-3 flex flex-col items-start gap-x-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
+                <div className="flex flex-col items-start gap-x-3 gap-y-density-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
                   <Button
                     size="sm"
                     variant={permission.granted ? "outline" : "default"}

@@ -1,7 +1,13 @@
 import { useContext, useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button, CollapsibleSection, Textarea } from "~/components/ui"
+import {
+  Button,
+  CollapsibleSection,
+  InlineMessage,
+  NoticeActionButton,
+  Textarea,
+} from "~/components/ui"
 import { DEFAULT_QUESTION_ANSWER_SETTINGS } from "~/services/verification/modelQuality/questionAnswerSettings"
 
 import { VERIFICATION_SETTINGS_ERROR_PHASES } from "./types"
@@ -147,13 +153,11 @@ export function QuestionAnswerComposer({
         }}
       />
       {controller.saveError ? (
-        <Alert variant="warning">
+        <InlineMessage tone="warning" role="alert">
           {controller.saveError === VERIFICATION_SETTINGS_ERROR_PHASES.Load
             ? t("verifyDialog.tools.questionAnswer.loadFailed")
-            : t("verifyDialog.tools.questionAnswer.saveFailed")}
-          <Button
-            variant="outline"
-            size="sm"
+            : t("verifyDialog.tools.questionAnswer.saveFailed")}{" "}
+          <NoticeActionButton
             onClick={() =>
               void (controller.ready
                 ? controller.saveSettings()
@@ -161,8 +165,8 @@ export function QuestionAnswerComposer({
             }
           >
             {t("verifyDialog.actions.retry")}
-          </Button>
-        </Alert>
+          </NoticeActionButton>
+        </InlineMessage>
       ) : null}
     </>
   )

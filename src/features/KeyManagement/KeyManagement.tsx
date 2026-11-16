@@ -3,8 +3,7 @@ import { useCallback, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  Alert,
-  Notice,
+  InlineMessage,
   NoticeActionButton,
   SearchableSelect,
 } from "~/components/ui"
@@ -172,7 +171,7 @@ export default function KeyManagement(props: {
   }, [setIsAccountSelectorOpen])
 
   return (
-    <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
+    <div className="px-4 py-density-4 sm:px-6 sm:py-density-6">
       <Header
         onProvisionKeys={
           provisioningAccount
@@ -214,29 +213,30 @@ export default function KeyManagement(props: {
       ) : null}
 
       {showAssociationRouteNotice ? (
-        <Notice
+        <InlineMessage
           tone={isAssociationRoutePending ? "info" : "warning"}
           className="mb-density-4"
-          description={
-            <span>
-              {associationTargetStatusMessage}{" "}
-              {isAssociationRouteUnavailable ? (
-                <NoticeActionButton
-                  onClick={() => {
-                    void reloadCredentialProfileLinks()
-                    void handleRefreshTokens()
-                  }}
-                >
-                  {t("keyManagement:credentialAssociation.target.retry")}
-                </NoticeActionButton>
-              ) : canClearAssociationRoute ? (
-                <NoticeActionButton onClick={clearAssociationTarget}>
-                  {t("keyManagement:credentialAssociation.target.clear")}
-                </NoticeActionButton>
-              ) : null}
-            </span>
-          }
-        />
+          role="status"
+          size="sm"
+        >
+          <span>
+            {associationTargetStatusMessage}{" "}
+            {isAssociationRouteUnavailable ? (
+              <NoticeActionButton
+                onClick={() => {
+                  void reloadCredentialProfileLinks()
+                  void handleRefreshTokens()
+                }}
+              >
+                {t("keyManagement:credentialAssociation.target.retry")}
+              </NoticeActionButton>
+            ) : canClearAssociationRoute ? (
+              <NoticeActionButton onClick={clearAssociationTarget}>
+                {t("keyManagement:credentialAssociation.target.clear")}
+              </NoticeActionButton>
+            ) : null}
+          </span>
+        </InlineMessage>
       ) : null}
 
       <AccountSelectorPanel
@@ -294,17 +294,15 @@ export default function KeyManagement(props: {
             }}
           />
           {nativeKeys.notice ? (
-            <Alert
-              variant="warning"
-              compact
-              title={
+            <InlineMessage tone="warning" role="alert">
+              {
                 getAccountKeyScopeMessages(
                   displayData.find((account) => account.id === selectedAccount)
                     ?.siteType,
                   t,
                 ).fallback
               }
-            />
+            </InlineMessage>
           ) : null}
         </div>
       ) : null}
@@ -395,26 +393,25 @@ export default function KeyManagement(props: {
       />
 
       {!isManagedSiteConfigComplete ? (
-        <Notice
+        <InlineMessage
           tone="default"
-          className="mt-density-6 mx-auto max-w-2xl text-left"
-          description={
-            <span>
-              {t("keyManagement:managedSiteSetupRecovery.description")}{" "}
-              <NoticeActionButton
-                onClick={() =>
-                  void openSettingsTab(BASIC_SETTINGS_TAB_IDS.ManagedSite, {
-                    preserveHistory: true,
-                  })
-                }
-              >
-                {t(
-                  "keyManagement:managedSiteSetupRecovery.configureManagedSite",
-                )}
-              </NoticeActionButton>
-            </span>
-          }
-        />
+          className="mx-auto mt-density-6 max-w-2xl text-left"
+          role="status"
+          size="sm"
+        >
+          <span>
+            {t("keyManagement:managedSiteSetupRecovery.description")}{" "}
+            <NoticeActionButton
+              onClick={() =>
+                void openSettingsTab(BASIC_SETTINGS_TAB_IDS.ManagedSite, {
+                  preserveHistory: true,
+                })
+              }
+            >
+              {t("keyManagement:managedSiteSetupRecovery.configureManagedSite")}
+            </NoticeActionButton>
+          </span>
+        </InlineMessage>
       ) : null}
 
       <Footer />

@@ -6,8 +6,8 @@ import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { PopupTabOnboarding } from "~/components/PopupTabOnboarding"
 import {
   EmptyState,
+  InlineMessage,
   Input,
-  Notice,
   NoticeActionButton,
   SearchableSelect,
   Spinner,
@@ -302,7 +302,7 @@ export function ApiCredentialProfilesListView({
   )
   const resolvedTargetProfile = targetProfile
     ? { profileId: targetProfile.id, request: targetProfileRequest || 1 }
-    : localFocusTarget ?? undefined
+    : (localFocusTarget ?? undefined)
 
   const targetStatusMessage = isTargetPending
     ? t("apiCredentialProfiles:target.loading")
@@ -331,19 +331,16 @@ export function ApiCredentialProfilesListView({
       <ApiCredentialProfilesDialogs controller={controller} />
 
       {hasAssociationAvailabilityError ? (
-        <Notice
-          tone="warning"
-          description={
-            <span>
-              {t("apiCredentialProfiles:association.loadFailed")}{" "}
-              {onRetryAssociatedKeys ? (
-                <NoticeActionButton onClick={onRetryAssociatedKeys}>
-                  {t("common:actions.retry")}
-                </NoticeActionButton>
-              ) : null}
-            </span>
-          }
-        />
+        <InlineMessage tone="warning" role="status" size="sm">
+          <span>
+            {t("apiCredentialProfiles:association.loadFailed")}{" "}
+            {onRetryAssociatedKeys ? (
+              <NoticeActionButton onClick={onRetryAssociatedKeys}>
+                {t("common:actions.retry")}
+              </NoticeActionButton>
+            ) : null}
+          </span>
+        </InlineMessage>
       ) : null}
 
       {targetProfileId && !isTargetMissing ? (
@@ -353,28 +350,23 @@ export function ApiCredentialProfilesListView({
       ) : null}
 
       {isTargetMissing ? (
-        <Notice
-          tone="warning"
-          description={
-            <span
-              data-testid={
-                API_CREDENTIAL_PROFILES_TEST_IDS.targetMissingMessage
-              }
-            >
-              {t("apiCredentialProfiles:target.missingDescription")}{" "}
-              {onClearTargetProfile ? (
-                <NoticeActionButton onClick={onClearTargetProfile}>
-                  {t("apiCredentialProfiles:target.clear")}
-                </NoticeActionButton>
-              ) : null}
-            </span>
-          }
-        />
+        <InlineMessage tone="warning" role="status" size="sm">
+          <span
+            data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.targetMissingMessage}
+          >
+            {t("apiCredentialProfiles:target.missingDescription")}{" "}
+            {onClearTargetProfile ? (
+              <NoticeActionButton onClick={onClearTargetProfile}>
+                {t("apiCredentialProfiles:target.clear")}
+              </NoticeActionButton>
+            ) : null}
+          </span>
+        </InlineMessage>
       ) : null}
 
       {showFilters && (
         <>
-          <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-3 gap-y-density-3 sm:grid-cols-3">
             <div className="sm:col-span-2">
               <Input
                 autoFocus={autoFocusSearch}
@@ -443,9 +435,9 @@ export function ApiCredentialProfilesListView({
       )}
 
       {controller.isLoading && !isInitialLoading ? (
-        <div className="gap-y-density-2 py-density-1 flex items-center gap-x-2">
+        <div className="flex items-center gap-x-2 gap-y-density-2 py-density-1">
           <Spinner size="sm" />
-          <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
+          <div className="text-sm text-muted-foreground dark:text-secondary-foreground">
             {t("common:status.refreshing")}
           </div>
         </div>
@@ -460,11 +452,11 @@ export function ApiCredentialProfilesListView({
 
       {isInitialLoading ? (
         <div
-          className="gap-y-density-2 py-density-6 flex items-center gap-x-2"
+          className="flex items-center gap-x-2 gap-y-density-2 py-density-6"
           data-options-page-pending
         >
           <Spinner size="sm" />
-          <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
+          <div className="text-sm text-muted-foreground dark:text-secondary-foreground">
             {t("common:status.loading")}
           </div>
         </div>
@@ -483,28 +475,28 @@ export function ApiCredentialProfilesListView({
             }}
             extra={
               showKeyManagementImportHint && (
-                <Notice
+                <InlineMessage
                   tone="neutral"
                   size="sm"
                   className="text-left"
                   icon={
                     <KeyRound
                       aria-hidden="true"
-                      className="text-primary/70 size-3.5"
+                      className="size-3.5 text-primary/70"
                     />
                   }
-                  description={
-                    <span>
-                      {t("apiCredentialProfiles:empty.keyManagementImportHint")}{" "}
-                      <NoticeActionButton
-                        onClick={handleOpenKeyManagement}
-                        className="text-primary hover:text-primary-hover font-medium underline underline-offset-2"
-                      >
-                        {t("apiCredentialProfiles:empty.keyManagementLink")}
-                      </NoticeActionButton>
-                    </span>
-                  }
-                />
+                  role="status"
+                >
+                  <span>
+                    {t("apiCredentialProfiles:empty.keyManagementImportHint")}{" "}
+                    <NoticeActionButton
+                      onClick={handleOpenKeyManagement}
+                      className="hover:text-primary-hover font-medium text-primary underline underline-offset-2"
+                    >
+                      {t("apiCredentialProfiles:empty.keyManagementLink")}
+                    </NoticeActionButton>
+                  </span>
+                </InlineMessage>
               )
             }
             sponsors={
@@ -514,7 +506,7 @@ export function ApiCredentialProfilesListView({
             }
           />
         ) : (
-          <div className="gap-y-density-4 mx-auto flex max-w-md flex-col gap-x-4">
+          <div className="mx-auto flex max-w-md flex-col gap-x-4 gap-y-density-4">
             <EmptyState
               icon={<ApiCredentialLibraryIcon className="h-8 w-8" />}
               title={t("apiCredentialProfiles:empty.filteredTitle")}

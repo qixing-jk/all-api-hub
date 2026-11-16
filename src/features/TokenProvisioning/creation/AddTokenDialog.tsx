@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, FormField, Modal, SearchableSelect } from "~/components/ui"
+import {
+  FormField,
+  InlineMessage,
+  Modal,
+  SearchableSelect,
+} from "~/components/ui"
 import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
 import { useAccountKeyCreation } from "~/features/TokenProvisioning/creation/useAccountKeyCreation"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
@@ -61,7 +66,7 @@ function AccountKeyCreateSession({
     hasPreselectedAccount
       ? preSelectedAccountId!
       : accounts.length === 1
-        ? accounts[0]?.id ?? ""
+        ? (accounts[0]?.id ?? "")
         : "",
   )
   const [completed, setCompleted] = useState(false)
@@ -140,7 +145,9 @@ function AccountKeyCreateSession({
           </FormField>
         ) : null}
         {!accounts.length ? (
-          <Alert description={t("ui:dialog.copyKey.createNotSupported")} />
+          <InlineMessage role="note">
+            {t("ui:dialog.copyKey.createNotSupported")}
+          </InlineMessage>
         ) : null}
       </Modal>
       <AccountKeyResourceEditorDialog

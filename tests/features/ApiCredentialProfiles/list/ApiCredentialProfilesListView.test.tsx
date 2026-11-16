@@ -77,7 +77,8 @@ vi.mock("~/components/PageHeader", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
+vi.mock("~/components/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/components/ui")>()),
   Badge: ({ children, size: _size, variant: _variant, ...props }: any) => (
     <span {...props}>{children}</span>
   ),

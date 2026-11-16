@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert } from "~/components/ui"
+import { InlineMessage } from "~/components/ui"
 import type { VerificationToolsController } from "~/features/Verification/api/useVerificationTools"
 import { getApiVerificationProbeLabel } from "~/services/verification/aiApiVerification/i18n"
 import { PELICAN_TEST_PROMPT } from "~/services/verification/modelQuality/constants"
@@ -58,11 +58,11 @@ export function VerificationPromptEditor({
         action={action}
       />
       {controller.promptSaveError ? (
-        <Alert variant="warning">
+        <InlineMessage tone="warning" role="alert">
           {t("verifyDialog.tools.prompts.saveFailed", {
             message: controller.promptSaveError,
           })}
-        </Alert>
+        </InlineMessage>
       ) : null}
     </>
   )

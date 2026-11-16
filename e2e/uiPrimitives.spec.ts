@@ -49,6 +49,119 @@ test.afterAll(async () => {
   await server?.close()
 })
 
+test("report feedback and pricing guidance preserve their content and copy action", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 560, height: 900 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto(baseUrl)
+  const report = page.getByRole("region", { name: "Report sharing" })
+  await expect(report.getByRole("alert")).toContainText("复制失败")
+  await expect(report.getByRole("alert")).toHaveCSS("border-top-width", "0px")
+  await expect(report.getByRole("alert")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  )
+  await report.screenshot({
+    path: testInfo.outputPath("report-sharing.png"),
+    animations: "disabled",
+  })
+  await report.getByRole("button", { name: "复制内容", exact: true }).click()
+  await expect(report.getByRole("alert")).toHaveCount(0)
+  await expect(
+    report.getByText("已复制，可粘贴到已有 issue 或发给维护者。"),
+  ).toBeVisible()
+  const pricing = page.getByRole("region", { name: "Pricing guidance" })
+  await expect(pricing).toContainText("实际扣费以站点为准")
+  await pricing.screenshot({
+    path: testInfo.outputPath("pricing-guidance.png"),
+    animations: "disabled",
+  })
+})
+
+test("inline feedback aligns icons with the first line and wraps its text actions", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto(baseUrl)
+  const examples = page.getByRole("region", { name: "Inline feedback" })
+  await expect(examples).toBeVisible()
+  const retry = examples.getByRole("button", {
+    name: "Retry loading execution history",
+  })
+  await expect(retry).toBeDisabled()
+  for (const width of [320, 560]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const textSize of ["default", "extra-large"]) {
+      for (const density of ["compact", "default", "comfortable"]) {
+        for (const dark of [false, true]) {
+          await page.evaluate(
+            ({ textSize, density, dark }) => {
+              document.documentElement.setAttribute(
+                "data-theme-text-size",
+                textSize,
+              )
+              document.documentElement.setAttribute(
+                "data-theme-density",
+                density,
+              )
+              document.documentElement.classList.toggle("dark", dark)
+            },
+            { textSize, density, dark },
+          )
+          const metrics = await examples.evaluate((element) =>
+            Array.from(
+              element.querySelectorAll('[data-slot="inline-message"]'),
+            ).map((message) => {
+              const copy = message.querySelector("p")
+              const icon = message.querySelector('[aria-hidden="true"]')
+              const bounds = message.getBoundingClientRect()
+              const style = getComputedStyle(message)
+              const copyBounds = copy?.getBoundingClientRect()
+              const iconBounds = icon?.getBoundingClientRect()
+              const button = message.querySelector("button")
+              const buttonBounds = button?.getBoundingClientRect()
+              return {
+                overflow: message.scrollWidth > message.clientWidth,
+                background: style.backgroundColor,
+                border: style.borderTopWidth,
+                shadow: style.boxShadow,
+                alignment:
+                  copyBounds && iconBounds
+                    ? Math.abs(
+                        iconBounds.y +
+                          iconBounds.height / 2 -
+                          (copyBounds.y +
+                            parseFloat(getComputedStyle(copy!).lineHeight) / 2),
+                      )
+                    : 0,
+                actionFits:
+                  !buttonBounds ||
+                  (buttonBounds.left >= bounds.left &&
+                    buttonBounds.right <= bounds.right &&
+                    button!.scrollHeight <= button!.clientHeight),
+              }
+            }),
+          )
+          for (const metric of metrics) {
+            expect(metric.overflow).toBe(false)
+            expect(metric.background).toBe("rgba(0, 0, 0, 0)")
+            expect(metric.border).toBe("0px")
+            expect(metric.shadow).toBe("none")
+            expect(metric.alignment).toBeLessThanOrEqual(1)
+            expect(metric.actionFits).toBe(true)
+          }
+        }
+      }
+    }
+  }
+  await examples.getByRole("button", { name: "Finish loading" }).click()
+  await expect(retry).toBeEnabled()
+  await retry.focus()
+  await page.keyboard.press("Enter")
+  await expect(examples.getByText("Retry requested")).toBeVisible()
+})
+
 test("a failed save restores Escape dismissal after disabling the focused button", async ({
   page,
 }, testInfo) => {

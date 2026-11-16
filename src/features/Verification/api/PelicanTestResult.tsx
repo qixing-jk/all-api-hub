@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, CollapsibleSection } from "~/components/ui"
+import { Alert, CollapsibleSection, InlineMessage } from "~/components/ui"
 import { AgentTestResult } from "~/features/Verification/api/AgentTestResult"
 import type { PelicanTestResult as PelicanResult } from "~/services/verification/modelQuality/pelican"
 
@@ -18,9 +18,9 @@ function PelicanSvgPreview({ svg }: { svg: string }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
   if (failedSrc === src) {
     return (
-      <Alert variant="warning">
+      <InlineMessage tone="warning" role="alert">
         <p>{t("verifyDialog.tools.pelican.previewFailed")}</p>
-      </Alert>
+      </InlineMessage>
     )
   }
 

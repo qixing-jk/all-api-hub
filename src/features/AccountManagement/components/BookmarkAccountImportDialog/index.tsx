@@ -16,6 +16,7 @@ import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { InlineMessage } from "~/components/ui/InlineMessage"
 import { cn } from "~/lib/utils"
 
 import type { BookmarkAccountImportFailureCategory } from "../../bookmarkImport/types"
@@ -132,15 +133,15 @@ export default function BookmarkAccountImportDialog({
   ]
 
   const header = (
-    <div className="gap-y-density-3 flex min-w-0 items-start gap-x-3 pr-8">
-      <div className="bg-primary-soft text-primary-soft-foreground py-density-2 mt-0.5 rounded-lg px-2">
+    <div className="flex min-w-0 items-start gap-x-3 gap-y-density-3 pr-8">
+      <div className="mt-0.5 rounded-lg bg-primary-soft px-2 py-density-2 text-primary-soft-foreground">
         <BookmarkPlus className="h-5 w-5" aria-hidden="true" />
       </div>
-      <div className="space-y-density-1 min-w-0">
-        <h2 className="text-foreground text-base font-semibold">
+      <div className="min-w-0 space-y-density-1">
+        <h2 className="text-base font-semibold text-foreground">
           {t("ui:dialog.bookmarkAccountImport.title")}
         </h2>
-        <p className="dark:text-secondary-foreground text-muted-foreground text-sm leading-5">
+        <p className="text-sm leading-5 text-muted-foreground dark:text-secondary-foreground">
           {t("ui:dialog.bookmarkAccountImport.description")}
         </p>
       </div>
@@ -209,24 +210,24 @@ export default function BookmarkAccountImportDialog({
             />
           ) : (
             <div className="space-y-density-3">
-              <p className="dark:text-secondary-foreground text-muted-foreground text-sm leading-6">
+              <p className="text-sm leading-6 text-muted-foreground dark:text-secondary-foreground">
                 {t("ui:dialog.bookmarkAccountImport.initialValue")}
               </p>
-              <div className="gap-y-density-2 grid gap-x-2 sm:grid-cols-3">
+              <div className="grid gap-x-2 gap-y-density-2 sm:grid-cols-3">
                 {batchImportSteps.map(({ icon: Icon, label }) => (
                   <div
                     key={label}
-                    className="dark:bg-card border-border bg-surface-subtle gap-y-density-2 py-density-3 flex items-center gap-x-2 rounded-lg border px-3 text-sm"
+                    className="flex items-center gap-x-2 gap-y-density-2 rounded-lg border border-border bg-surface-subtle px-3 py-density-3 text-sm dark:bg-card"
                   >
                     <Icon
-                      className="text-theme-600 dark:text-theme-300 size-4 shrink-0"
+                      className="size-4 shrink-0 text-theme-600 dark:text-theme-300"
                       aria-hidden="true"
                     />
                     <span className="text-secondary-foreground">{label}</span>
                   </div>
                 ))}
               </div>
-              <p className="text-muted-foreground text-xs leading-5">
+              <p className="text-xs leading-5 text-muted-foreground">
                 {t("ui:dialog.bookmarkAccountImport.permissionNeeded")}
               </p>
             </div>
@@ -247,26 +248,22 @@ export default function BookmarkAccountImportDialog({
       )}
 
       {dialog.stage === "scanning" && (
-        <div className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground gap-y-density-3 py-density-4 flex items-center gap-x-3 rounded-lg border px-4 text-sm">
+        <div className="flex items-center gap-x-3 gap-y-density-3 rounded-lg border border-primary-soft-border bg-primary-soft px-4 py-density-4 text-sm text-primary-soft-foreground">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           <span>{t("ui:dialog.bookmarkAccountImport.scanning")}</span>
         </div>
       )}
 
       {dialog.stage === "select-scope" && (
-        <div className="gap-y-density-4 flex min-h-0 flex-1 flex-col gap-x-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-x-4 gap-y-density-4">
           {dialog.error === "no-candidates" && (
-            <Alert
-              compact
-              variant="warning"
-              description={t(errorMessageKeys["no-candidates"])}
-            />
+            <InlineMessage tone="warning" role="alert">
+              {t(errorMessageKeys["no-candidates"])}
+            </InlineMessage>
           )}
-          <Alert
-            compact
-            variant="default"
-            description={t("ui:dialog.bookmarkAccountImport.scopeHelp")}
-          />
+          <InlineMessage tone="neutral" role="note">
+            {t("ui:dialog.bookmarkAccountImport.scopeHelp")}
+          </InlineMessage>
           <BookmarkTreeSelector
             tree={dialog.bookmarkTree}
             selectedNodeIds={dialog.selectedBookmarkNodeIds}
@@ -274,8 +271,8 @@ export default function BookmarkAccountImportDialog({
             onSetNodeSelection={dialog.setBookmarkNodeSelection}
             className="min-h-0 flex-1"
           />
-          <div className="gap-y-density-2 flex shrink-0 flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-muted-foreground text-sm">
+          <div className="flex shrink-0 flex-col gap-x-2 gap-y-density-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
               {translateSelectedBookmarkCount(
                 t,
                 dialog.selectedBookmarkUrlCount,
@@ -297,11 +294,9 @@ export default function BookmarkAccountImportDialog({
 
       {dialog.stage === "review" && (
         <div className="space-y-density-4">
-          <Alert
-            compact
-            variant="default"
-            description={t("ui:dialog.bookmarkAccountImport.bestEffortHelp")}
-          />
+          <InlineMessage tone="neutral" role="note">
+            {t("ui:dialog.bookmarkAccountImport.bestEffortHelp")}
+          </InlineMessage>
           {dialog.error === "import-failed" && (
             <Alert
               compact
@@ -309,7 +304,7 @@ export default function BookmarkAccountImportDialog({
               description={t(errorMessageKeys["import-failed"])}
             />
           )}
-          <label className="border-border gap-y-density-3 py-density-3 flex items-start gap-x-3 rounded-lg border px-3 text-sm">
+          <label className="flex items-start gap-x-3 gap-y-density-3 rounded-lg border border-border px-3 py-density-3 text-sm">
             <Checkbox
               checked={dialog.includeExisting}
               onCheckedChange={(checked) =>
@@ -319,7 +314,7 @@ export default function BookmarkAccountImportDialog({
                 ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportIncludeExistingCheckbox
               }
             />
-            <span className="text-secondary-foreground leading-5">
+            <span className="leading-5 text-secondary-foreground">
               {t("ui:dialog.bookmarkAccountImport.includeExisting")}
             </span>
           </label>
@@ -337,7 +332,7 @@ export default function BookmarkAccountImportDialog({
                     ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportCandidateRow
                   }
                   className={cn(
-                    "gap-y-density-3 py-density-3 flex items-start gap-x-3 rounded-lg border px-3",
+                    "flex items-start gap-x-3 gap-y-density-3 rounded-lg border px-3 py-density-3",
                     disabled
                       ? "border-warning-border bg-warning-soft"
                       : "border-border bg-card",
@@ -350,9 +345,9 @@ export default function BookmarkAccountImportDialog({
                     aria-label={candidate.url}
                     className="mt-density-1"
                   />
-                  <div className="space-y-density-2 min-w-0 flex-1">
-                    <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
-                      <span className="text-foreground min-w-0 text-sm font-medium break-all">
+                  <div className="min-w-0 flex-1 space-y-density-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-density-2">
+                      <span className="min-w-0 text-sm font-medium break-all text-foreground">
                         {candidate.url}
                       </span>
                       <CandidateStatusBadge
@@ -369,7 +364,7 @@ export default function BookmarkAccountImportDialog({
       )}
 
       {dialog.stage === "importing" && (
-        <div className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground gap-y-density-3 py-density-4 flex items-center gap-x-3 rounded-lg border px-4 text-sm">
+        <div className="flex items-center gap-x-3 gap-y-density-3 rounded-lg border border-primary-soft-border bg-primary-soft px-4 py-density-4 text-sm text-primary-soft-foreground">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           <span>
             {t("ui:dialog.bookmarkAccountImport.importing", {
@@ -403,39 +398,40 @@ export default function BookmarkAccountImportDialog({
               description={t(errorMessageKeys["reload-failed"])}
             />
           )}
-          <Alert
-            compact
-            variant={dialog.result.failureCount > 0 ? "warning" : "success"}
-            description={t("ui:dialog.bookmarkAccountImport.resultSummary", {
+          <InlineMessage
+            tone={dialog.result.failureCount > 0 ? "warning" : "success"}
+            role="alert"
+          >
+            {t("ui:dialog.bookmarkAccountImport.resultSummary", {
               success: dialog.result.successCount,
               failed: dialog.result.failureCount,
               skipped: dialog.result.skippedCount,
             })}
-          />
+          </InlineMessage>
           <div className="space-y-density-2">
             {dialog.result.rows.map((row) => (
               <div
                 key={row.candidateId}
-                className="border-border gap-y-density-3 py-density-3 flex items-start justify-between gap-x-3 rounded-lg border px-3"
+                className="flex items-start justify-between gap-x-3 gap-y-density-3 rounded-lg border border-border px-3 py-density-3"
               >
-                <div className="space-y-density-1 min-w-0">
-                  <div className="gap-y-density-2 flex items-center gap-x-2">
+                <div className="min-w-0 space-y-density-1">
+                  <div className="flex items-center gap-x-2 gap-y-density-2">
                     {row.status === "success" ? (
                       <CircleCheck
-                        className="text-success-text h-4 w-4"
+                        className="h-4 w-4 text-success-text"
                         aria-hidden="true"
                       />
                     ) : (
                       <CircleAlert
-                        className="text-warning-text h-4 w-4"
+                        className="h-4 w-4 text-warning-text"
                         aria-hidden="true"
                       />
                     )}
-                    <span className="text-foreground text-sm font-medium break-all">
+                    <span className="text-sm font-medium break-all text-foreground">
                       {row.url}
                     </span>
                   </div>
-                  <p className="dark:text-secondary-foreground text-muted-foreground text-xs">
+                  <p className="text-xs text-muted-foreground dark:text-secondary-foreground">
                     {row.status === "success"
                       ? t("ui:dialog.bookmarkAccountImport.status.imported")
                       : translateFailureCategory(t, row.failureCategory)}

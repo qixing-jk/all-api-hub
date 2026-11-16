@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Alert, CollapsibleSection } from "~/components/ui"
+import { CollapsibleSection, InlineMessage } from "~/components/ui"
 import { AGENT_TEST_OUTCOMES } from "~/services/verification/modelQuality/constants"
 import type { PelicanTestResult } from "~/services/verification/modelQuality/pelican"
 
@@ -29,9 +29,9 @@ export function AgentTestResult({
           {t("verifyDialog.tools.agent.completed")}
         </div>
       ) : (
-        <Alert variant="warning">
+        <InlineMessage tone="warning" role="alert">
           <p>{t("verifyDialog.tools.agent.noArtifact")}</p>
-        </Alert>
+        </InlineMessage>
       )}
       {showCalls ? (
         <CollapsibleSection

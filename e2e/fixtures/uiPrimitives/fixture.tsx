@@ -34,13 +34,29 @@ import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { Textarea } from "~/components/ui/Textarea"
 import ChannelFilterDialog from "~/features/ManagedSiteChannels/filters/ChannelFilterDialog"
+import accountDialogZh from "~/locales/zh-CN/accountDialog.json"
+import commonZh from "~/locales/zh-CN/common.json"
+import modelListZh from "~/locales/zh-CN/modelList.json"
 import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
+
+import {
+  FeedbackPresentation,
+  InlineFeedbackExamples,
+} from "./FeedbackPresentation"
 
 import "~/styles/style.css"
 
-await i18next
-  .use(initReactI18next)
-  .init({ lng: "en", resources: { en: { translation: {} } } })
+await i18next.use(initReactI18next).init({
+  lng: "en",
+  resources: {
+    en: {
+      translation: {},
+      accountDialog: accountDialogZh,
+      common: commonZh,
+      modelList: modelListZh,
+    },
+  },
+})
 
 /** Render real shared components with the application's stylesheet. */
 function Fixtures() {
@@ -49,6 +65,8 @@ function Fixtures() {
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
       <h1 className="text-xl">Shared controls</h1>
+      <FeedbackPresentation />
+      <InlineFeedbackExamples />
       <Button onClick={() => setRulesOpen(true)}>Edit channel rules</Button>
       <ChannelFilterDialog
         channel={fixtureChannel}

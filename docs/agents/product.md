@@ -11,6 +11,9 @@ Read the section that matches the change.
 - Use the configured shadcn CLI as the baseline for a new supported primitive (`pnpm shadcn add <component> --yes`), then adapt aliases, exports, design tokens, floating layers, i18n, and project lint requirements. Overwrite an existing baseline only when replacement is in scope.
 - Preserve needed generated dependencies; lockfile noise alone is not a reason to reimplement the component.
 
+- Use `InlineMessage` for short contextual guidance, local status and operation results. Keep ordinary text muted and express status tone in the icon; put an inline action in `NoticeActionButton`. Use `role="note"` for static guidance and `role="alert"` for errors that need immediate announcement.
+- Keep `Alert`/`Notice` for substantial warnings, grouped details, multi-step recovery or multiple actions; do not select a container solely from its tone. Field-bound descriptions/errors belong to `FormField`, and floating page notices belong to `ContentNotice`.
+
 ## Options page motion
 
 - Sidebar pages already share `src/features/OptionsMenu/OptionsPageTransition.tsx`. Reuse that boundary instead of adding entrance/exit animations to each page. Direction follows the sidebar order; timing, reduced motion, and loading transitions stay centralized.

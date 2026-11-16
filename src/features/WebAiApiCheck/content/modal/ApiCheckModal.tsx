@@ -6,7 +6,7 @@ import type {
   RefObject,
 } from "react"
 
-import { ActionGroup, Button, IconButton, Notice } from "~/components/ui"
+import { ActionGroup, Button, IconButton, InlineMessage } from "~/components/ui"
 import {
   Popover,
   PopoverContent,
@@ -172,7 +172,9 @@ function ApiCheckModalContent({ t, view, actions, refs }: ApiCheckModalProps) {
                   ) : null}
 
                   {view.testStoppedMessage ? (
-                    <Notice tone="info" description={view.testStoppedMessage} />
+                    <InlineMessage tone="info" role="status" size="sm">
+                      {view.testStoppedMessage}
+                    </InlineMessage>
                   ) : null}
                 </div>
               ) : null}
