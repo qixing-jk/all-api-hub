@@ -50,6 +50,7 @@
 - [随想AI中转站](https://sui-xiang.com/)：提供 Claude、Codex、Gemini 等 API 中继服务，按量付费，支持每日签到测试额度、多线路冗余和自动故障切换。[使用教程](./service-guides/suixiang.md)
 - [88API Token聚合平台](https://88api.ai/register?aff=XcTj)：由香港企业运营的一站式多模型 API 平台，通过统一接口接入文本、图片、语音和视频模型，支持在 CC Switch 中添加并切换 Provider、国际主流付款方式及开票。通过专属链接注册可获取赠送额度。
 - [ccccccapi](https://dzhsmartai.com/)：支持 ChatGPT、Claude、Gemini、Deepseek 等，全网最低价，用的不烧心，是兄弟就来砍我！
+- [noonoo.ai](https://noonoo.ai/login?aff=Y3u6)：面向开发者与企业的一站式 AI API 服务平台，接入 Claude、GPT、Gemini 等模型，兼容 OpenAI 与 Anthropic API 协议。多款 Claude 模型价格低至官方标价约 0.75 折，部分 GPT 模型输入或输出单价低至官方标价约 0.7 折。
 - [火山引擎方舟 Coding-Plan](https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html)：Lite 套餐 9.9 元/月起，并有邀请返利及首单优惠。
 :::
 

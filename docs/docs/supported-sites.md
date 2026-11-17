@@ -138,6 +138,17 @@
 
   <hr>
 
+  <section class="sponsor-item">
+    <a class="sponsor-logo" href="https://noonoo.ai/login?aff=Y3u6">
+      <img src="../../resources/partners/noonoo-ai.jpg" alt="noonoo.ai">
+    </a>
+    <p>
+      noonoo.ai 是面向开发者与企业的一站式 AI API 服务平台，提供 Claude、GPT、Gemini 等主流模型接入，兼容 OpenAI 与 Anthropic API 协议。平台以低价、稳定、易接入为核心，多款 Claude 模型价格低至官方标价约 0.75 折，部分 GPT 模型输入或输出单价低至官方标价约 0.7 折，帮助用户降低调用成本，为智能编程、AI 应用与自动化工作流提供稳定可靠的模型服务。欢迎访问 <a href="https://noonoo.ai/login?aff=Y3u6">noonoo.ai</a> 了解和使用。
+    </p>
+  </section>
+
+  <hr>
+
   <section class="sponsor-item sponsor-item-featured">
     <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
       <img src="../../resources/partners/volcengine.png" alt="火山引擎方舟 Coding-Plan">

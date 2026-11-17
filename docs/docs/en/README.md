@@ -201,6 +201,19 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 
 <hr class="readme-sponsor-divider">
 
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://noonoo.ai/login?aff=Y3u6">
+      <img src="../../../resources/partners/noonoo-ai.jpg" alt="noonoo.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    noonoo.ai is a one-stop AI API platform for developers and businesses, offering Claude, GPT, Gemini, and other leading models through OpenAI- and Anthropic-compatible APIs. With low prices, stability, and easy integration, several Claude models cost as little as approximately 7.5% of official list prices, while input or output rates for some GPT models are as low as approximately 7%. It helps reduce API costs and provides reliable model services for AI-assisted coding, AI applications, and automated workflows. Visit <a href="https://noonoo.ai/login?aff=Y3u6">noonoo.ai</a> to learn more and get started.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
 <div class="readme-sponsor readme-sponsor-featured">
   <p class="readme-sponsor-banner">
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">

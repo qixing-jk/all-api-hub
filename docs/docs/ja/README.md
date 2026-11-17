@@ -200,6 +200,19 @@ AI の時代には、節約したり別のモデルを試したりするため�
 
 <hr class="readme-sponsor-divider">
 
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://noonoo.ai/login?aff=Y3u6">
+      <img src="../../../resources/partners/noonoo-ai.jpg" alt="noonoo.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    noonoo.ai は開発者と企業向けのワンストップ AI API サービスプラットフォームです。Claude、GPT、Gemini などの主要モデルを提供し、OpenAI と Anthropic の API プロトコルに対応しています。低価格、安定性、導入のしやすさを重視し、複数の Claude モデルは公式定価の約 7.5% から、一部の GPT モデルの入力または出力単価は公式定価の約 7% から利用できます。API 利用コストを抑え、AI コーディング、AI アプリ、自動化ワークフローに安定した信頼性の高いモデルサービスを提供します。詳しくは <a href="https://noonoo.ai/login?aff=Y3u6">noonoo.ai</a> をご覧ください。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
 <div class="readme-sponsor readme-sponsor-featured">
   <p class="readme-sponsor-banner">
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">

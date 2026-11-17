@@ -50,6 +50,7 @@
 - [Suixiang AI Relay](https://sui-xiang.com/)：Claude、Codex、Gemini などの API 中継サービスを提供し、従量課金、毎日のチェックインによるテストクレジット、複数回線冗長、自動フェイルオーバーに対応します。[設定ガイド](./service-guides/suixiang.md)
 - [88API Token集約プラットフォーム](https://88api.ai/register?aff=XcTj)：香港企業が運営するマルチモデル API プラットフォーム。統一 API でテキスト・画像・音声・動画モデルに接続し、CC Switch での Provider 追加・切り替え、主要な国際決済、請求書発行に対応します。専用リンクから登録すると特典クレジットを受け取れます。
 - [ccccccapi](https://dzhsmartai.com/)：ChatGPT、Claude、Gemini、Deepseek などに対応。ネット最安値で、お財布にもやさしい。仲間なら、お得に使い倒そう！
+- [noonoo.ai](https://noonoo.ai/login?aff=Y3u6)：開発者と企業向けのワンストップ AI API プラットフォーム。Claude、GPT、Gemini などを提供し、OpenAI と Anthropic の API に対応。複数の Claude モデルは公式定価の約 7.5% から、一部の GPT モデルの入力または出力単価は公式定価の約 7% から利用できます。
 - [Dola Seed on BytePlus ModelArk](https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub)：BytePlus ModelArk から登録すると、各モデルにつき 500,000 トークン分の無料推論枠を受け取れます。
 :::
 

@@ -5,6 +5,7 @@ import api88Icon from "~~/resources/partners/icons/88api.jpg"
 import ccccccapiIcon from "~~/resources/partners/icons/ccccccapi.jpg"
 import defaultSponsorIcon from "~~/resources/partners/icons/default.png"
 import fennoIcon from "~~/resources/partners/icons/fenno-ai.png"
+import noonooIcon from "~~/resources/partners/icons/noonoo-ai.jpg"
 import packycodeIcon from "~~/resources/partners/icons/packycode.png"
 import qiniuIcon from "~~/resources/partners/icons/qiniu-cloud-ai.png"
 import suixiangIcon from "~~/resources/partners/icons/suixiang.png"
@@ -46,6 +47,7 @@ const LOCAL_SPONSOR_ICONS: Record<string, string> = {
   "volcengine-coding-plan": volcengineIcon,
   "88api": api88Icon,
   ccccccapi: ccccccapiIcon,
+  "noonoo-ai": noonooIcon,
 }
 
 export const DEFAULT_SPONSOR_ICON = defaultSponsorIcon

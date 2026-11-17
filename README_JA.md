@@ -217,6 +217,17 @@ GitHub Stable と Nightly は手動インストール用チャネルです。Git
 <hr>
 
 <div>
+  <a href="https://noonoo.ai/login?aff=Y3u6">
+    <img src="resources/partners/noonoo-ai.jpg" alt="noonoo.ai" width="128" align="left" hspace="10" vspace="4">
+  </a>
+  <p>
+    noonoo.ai は開発者と企業向けのワンストップ AI API サービスプラットフォームです。Claude、GPT、Gemini などの主要モデルを提供し、OpenAI と Anthropic の API プロトコルに対応しています。低価格、安定性、導入のしやすさを重視し、複数の Claude モデルは公式定価の約 7.5% から、一部の GPT モデルの入力または出力単価は公式定価の約 7% から利用できます。API 利用コストを抑え、AI コーディング、AI アプリ、自動化ワークフローに安定した信頼性の高いモデルサービスを提供します。詳しくは <a href="https://noonoo.ai/login?aff=Y3u6">noonoo.ai</a> をご覧ください。
+  </p>
+</div>
+
+<hr>
+
+<div>
   <p>
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
       <img src="resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk" width="100%">

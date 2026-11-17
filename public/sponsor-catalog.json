@@ -325,6 +325,53 @@
       }
     },
     {
+      "id": "noonoo-ai",
+      "enabled": true,
+      "rank": 119.875,
+      "supportStatus": "supported",
+      "urls": {
+        "primaryAffiliate": "https://noonoo.ai/login?aff=Y3u6",
+        "website": "https://noonoo.ai"
+      },
+      "locales": {
+        "zh-CN": {
+          "name": "noonoo.ai",
+          "tagline": "面向开发者与企业的一站式 AI API 服务平台，提供 Claude、GPT、Gemini 等主流模型接入，兼容 OpenAI 与 Anthropic API 协议。平台以低价、稳定、易接入为核心，为智能编程、AI 应用与自动化工作流提供稳定可靠的模型服务。",
+          "postClickNote": "多款 Claude 模型价格低至官方标价约 0.75 折，部分 GPT 模型输入或输出单价低至官方标价约 0.7 折。"
+        },
+        "zh-TW": {
+          "name": "noonoo.ai",
+          "tagline": "面向開發者與企業的一站式 AI API 服務平台，提供 Claude、GPT、Gemini 等主流模型接入，相容 OpenAI 與 Anthropic API 協議。平台以低價、穩定、易接入為核心，為智慧程式開發、AI 應用與自動化工作流程提供穩定可靠的模型服務。",
+          "postClickNote": "多款 Claude 模型價格低至官方標價約 0.75 折，部分 GPT 模型輸入或輸出單價低至官方標價約 0.7 折。"
+        },
+        "en": {
+          "name": "noonoo.ai",
+          "tagline": "A one-stop AI API platform for developers and businesses, offering Claude, GPT, Gemini, and other leading models through OpenAI- and Anthropic-compatible APIs. With low prices, stability, and easy integration, it provides reliable model services for AI-assisted coding, AI applications, and automated workflows.",
+          "postClickNote": "Several Claude models cost as little as approximately 7.5% of official list prices; input or output rates for some GPT models are as low as approximately 7% of official list prices."
+        },
+        "ja": {
+          "name": "noonoo.ai",
+          "tagline": "開発者と企業向けのワンストップ AI API サービスプラットフォームです。Claude、GPT、Gemini などの主要モデルを提供し、OpenAI と Anthropic の API プロトコルに対応しています。低価格、安定性、導入のしやすさを重視し、AI コーディング、AI アプリ、自動化ワークフローに安定した信頼性の高いモデルサービスを提供します。",
+          "postClickNote": "複数の Claude モデルは公式定価の約 7.5% から、一部の GPT モデルの入力または出力単価は公式定価の約 7% から利用できます。"
+        },
+        "pt-BR": {
+          "name": "noonoo.ai",
+          "tagline": "Plataforma completa de API de IA para desenvolvedores e empresas, com Claude, GPT, Gemini e outros modelos populares, compatível com os protocolos de API da OpenAI e da Anthropic. Com preços baixos, estabilidade e integração simples, oferece serviços confiáveis para programação assistida por IA, aplicações de IA e fluxos de trabalho automatizados.",
+          "postClickNote": "Vários modelos Claude custam a partir de aproximadamente 7,5% dos preços oficiais; as tarifas de entrada ou saída de alguns modelos GPT chegam a aproximadamente 7% dos preços oficiais."
+        },
+        "vi": {
+          "name": "noonoo.ai",
+          "tagline": "Nền tảng API AI toàn diện dành cho nhà phát triển và doanh nghiệp, cung cấp Claude, GPT, Gemini và các mô hình phổ biến khác, tương thích với giao thức API của OpenAI và Anthropic. Với giá thấp, tính ổn định và khả năng tích hợp dễ dàng, nền tảng cung cấp dịch vụ mô hình đáng tin cậy cho lập trình hỗ trợ bởi AI, ứng dụng AI và quy trình tự động hóa.",
+          "postClickNote": "Nhiều mô hình Claude có giá chỉ từ khoảng 7,5% giá niêm yết chính thức; đơn giá đầu vào hoặc đầu ra của một số mô hình GPT chỉ từ khoảng 7% giá niêm yết chính thức."
+        }
+      },
+      "accountPrefill": {
+        "siteType": "new-api",
+        "siteUrl": "https://noonoo.ai",
+        "authType": "access_token"
+      }
+    },
+    {
       "id": "volcengine-coding-plan",
       "enabled": true,
       "rank": 120,
