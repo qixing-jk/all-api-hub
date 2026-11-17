@@ -212,6 +212,7 @@ GitHub Stable 和 Nightly 属于手动安装通道。必须从 GitHub 安装时�
   <p>
     ccccccapi 支持 ChatGPT、Claude、Gemini、Deepseek 等，全网最低价，用的不烧心，<a href="https://dzhsmartai.com/">是兄弟就来砍我！</a>
   </p>
+  <br clear="all">
 </div>
 
 <hr>

@@ -216,6 +216,7 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
   <p>
     ccccccapi Supports ChatGPT, Claude, Gemini, Deepseek, and more at the lowest prices online. Use AI without burning a hole in your wallet—<a href="https://dzhsmartai.com/">come grab a bargain!</a>
   </p>
+  <br clear="all">
 </div>
 
 <hr>

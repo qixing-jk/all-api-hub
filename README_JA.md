@@ -212,6 +212,7 @@ GitHub Stable と Nightly は手動インストール用チャネルです。Git
   <p>
     ccccccapi ChatGPT、Claude、Gemini、Deepseek などに対応。ネット最安値で、お財布にもやさしい。<a href="https://dzhsmartai.com/">仲間なら、お得に使い倒そう！</a>
   </p>
+  <br clear="all">
 </div>
 
 <hr>
