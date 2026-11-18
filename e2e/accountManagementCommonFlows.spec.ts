@@ -33,7 +33,6 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
-import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY =
   "__aah_account_quick_checkin_e2e_state__"
@@ -230,8 +229,7 @@ test("keeps account management controls reachable across constrained widths", as
   extensionId,
   page,
 }) => {
-  const viewportSizes = [DESKTOP_VIEWPORT_SIZE, MOBILE_VIEWPORT_SIZE]
-  await page.setViewportSize(atIndex(viewportSizes, 0))
+  await page.setViewportSize(DESKTOP_VIEWPORT_SIZE)
 
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccounts(serviceWorker, [
@@ -273,10 +271,10 @@ test("keeps account management controls reachable across constrained widths", as
   const contentCard = page.getByTestId(OPTIONS_TEST_IDS.contentCard)
   await expect(contentCard).toBeVisible()
 
-  async function expectHeaderActionsContained(viewportSize: {
-    width: number
-    height: number
-  }) {
+  async function expectHeaderActionsContained(
+    viewportSize: { width: number; height: number },
+    alignment: "left" | "right",
+  ) {
     await page.setViewportSize(viewportSize)
 
     await expect
@@ -286,9 +284,7 @@ test("keeps account management controls reachable across constrained widths", as
         const boxes = await readElementBounds(headerActions)
 
         const rowEdges = new Map<number, number>()
-        const alignsRight = await headerActionGroup.evaluate(
-          (element) => getComputedStyle(element).justifyContent === "flex-end",
-        )
+        const alignsRight = alignment === "right"
         for (const box of boxes) {
           const rowCenter = Math.round(box.y + box.height / 2)
           rowEdges.set(
@@ -312,9 +308,7 @@ test("keeps account management controls reachable across constrained widths", as
           hasLayout: Boolean(contentCardBox && headerActionGroupBox),
           actionsContained: Boolean(
             contentCardBox &&
-              boxes.every((box) =>
-                isHorizontallyContained(box, contentCardBox),
-              ),
+            boxes.every((box) => isHorizontallyContained(box, contentCardBox)),
           ),
           actionsWrapped: rowEdges.size > 1,
           rowsAligned: rowAlignmentError <= 1,
@@ -336,9 +330,8 @@ test("keeps account management controls reachable across constrained widths", as
     ).toBe(true)
   }
 
-  for (const viewportSize of viewportSizes) {
-    await expectHeaderActionsContained(viewportSize)
-  }
+  await expectHeaderActionsContained(DESKTOP_VIEWPORT_SIZE, "right")
+  await expectHeaderActionsContained(MOBILE_VIEWPORT_SIZE, "left")
 
   const accountList = page.getByTestId(
     ACCOUNT_MANAGEMENT_TEST_IDS.accountListView,
@@ -403,9 +396,7 @@ test("keeps account management controls reachable across constrained widths", as
           ),
           buttonsContained: Boolean(
             listBox &&
-              controlBoxes.every((box) =>
-                isHorizontallyContained(box, listBox),
-              ),
+            controlBoxes.every((box) => isHorizontallyContained(box, listBox)),
           ),
           hasOverlappingControls,
         }
@@ -462,7 +453,7 @@ test("keeps account management controls reachable across constrained widths", as
       exact: true,
     }),
   ).toBeVisible()
-  await expectHeaderActionsContained(MOBILE_VIEWPORT_SIZE)
+  await expectHeaderActionsContained(MOBILE_VIEWPORT_SIZE, "left")
 })
 
 test("keeps the add account dialog open when text selection ends over its backdrop", async ({
@@ -803,8 +794,7 @@ test("runs quick check-in for the selected eligible account from account managem
       patchRuntime(globalThis.chrome?.runtime)
 
       const browserRuntime = globalThis.browser?.runtime as
-        | RuntimeLike
-        | undefined
+        RuntimeLike | undefined
 
       if (browserRuntime && browserRuntime !== globalThis.chrome?.runtime) {
         patchRuntime(browserRuntime)
