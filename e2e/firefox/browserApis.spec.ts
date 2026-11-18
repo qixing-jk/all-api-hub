@@ -1,11 +1,72 @@
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
 import { createStoredApiCredentialProfile } from "~~/e2e/utils/commonUserFlows"
 
 import { expect, test } from "./extensionTest"
+
+test("Firefox enables Turnstile notifications after granting permission", async ({
+  firefoxExtension,
+}, testInfo) => {
+  const options = firefoxExtension.page("options.html")
+  const sectionId = SHIELD_SETTINGS_TARGET_IDS.turnstileAssist
+  await options.openInTab(
+    `?tab=${BASIC_SETTINGS_TAB_IDS.Refresh}&anchor=${sectionId}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  const toggle = `#${sectionId} [role="switch"][aria-label="Browser notifications"]`
+  const status = `#${sectionId} [role="status"]`
+  const checked = () =>
+    options.evaluate<string | null>(
+      `document.querySelector(${JSON.stringify(toggle)})?.getAttribute('aria-checked') ?? null`,
+    )
+  const granted = () =>
+    options.evaluateAsync<boolean>(
+      "browser.permissions.contains({permissions: ['notifications']})",
+    )
+  const statusText = () =>
+    options.evaluate<string | null>(
+      `document.querySelector(${JSON.stringify(status)})?.textContent?.trim() ?? null`,
+    )
+  const permissionDialogOpen = () =>
+    options.evaluate<boolean>(
+      "Boolean(document.querySelector('[role=dialog]'))",
+    )
+  const expectNotificationsEnabled = async () => {
+    await expect.poll(checked).toBe("true")
+    await expect.poll(permissionDialogOpen).toBe(false)
+    await expect
+      .poll(statusText)
+      .toContain("System notifications: permission granted.")
+  }
+
+  expect(await granted()).toBe(false)
+  await expect.poll(checked).toBe("false")
+  await options.clickSelector(toggle)
+  await options.nativeClickSelector(
+    `[data-testid="${BASIC_SETTINGS_TEST_IDS.turnstileNotificationPermissionConfirmButton}"]`,
+  )
+  await options.respondToPermissionPrompt(true)
+  await expect.poll(granted).toBe(true)
+  await expectNotificationsEnabled()
+  await options.evaluate(
+    `document.getElementById(${JSON.stringify(sectionId)}).scrollIntoView({block: 'center', behavior: 'instant'}) ?? null`,
+  )
+  await options.screenshot(
+    testInfo.outputPath("turnstile-notification-grant.png"),
+  )
+
+  await options.clickSelector(toggle)
+  await expect.poll(checked).toBe("false")
+  expect(await granted()).toBe(true)
+  await options.clickSelector(toggle)
+  await expectNotificationsEnabled()
+})
 
 test("Firefox grants all onboarding permissions after denial and retry", async ({
   firefoxExtension,

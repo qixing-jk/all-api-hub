@@ -9,11 +9,13 @@ import {
   Muted,
   Switch,
 } from "~/components/ui"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import {
   resolveTurnstileAssistPresentation,
   type TurnstileAssistPresentation,
 } from "~/services/checkin/turnstile/assistPresentation"
 import {
+  BROWSER_NOTIFICATION_AVAILABILITY,
   getBrowserNotificationAvailability,
   type BrowserNotificationAvailability,
 } from "~/services/notifications/browserNotificationAvailability"
@@ -49,13 +51,21 @@ export function TurnstileNotificationStatus({
     onChange(page ? (system ? "both" : "page") : system ? "notify" : "quiet")
   const statusText = {
     loading: t("refresh.turnstileNotificationStatus.loading"),
-    permission_required: t(
+    [BROWSER_NOTIFICATION_AVAILABILITY.PermissionRequired]: t(
       "refresh.turnstileNotificationStatus.permission_required",
     ),
-    unavailable: t("refresh.turnstileNotificationStatus.unavailable"),
-    blocked: t("refresh.turnstileNotificationStatus.blocked"),
-    available: t("refresh.turnstileNotificationStatus.available"),
-    unknown: t("refresh.turnstileNotificationStatus.unknown"),
+    [BROWSER_NOTIFICATION_AVAILABILITY.Unavailable]: t(
+      "refresh.turnstileNotificationStatus.unavailable",
+    ),
+    [BROWSER_NOTIFICATION_AVAILABILITY.Blocked]: t(
+      "refresh.turnstileNotificationStatus.blocked",
+    ),
+    [BROWSER_NOTIFICATION_AVAILABILITY.Available]: t(
+      "refresh.turnstileNotificationStatus.available",
+    ),
+    [BROWSER_NOTIFICATION_AVAILABILITY.Unknown]: t(
+      "refresh.turnstileNotificationStatus.unknown",
+    ),
   }
   useEffect(() => {
     let active = true
@@ -77,9 +87,9 @@ export function TurnstileNotificationStatus({
   }, [])
   return (
     <div className="flex w-full flex-col gap-3 text-left">
-      <div className="border-border/60 bg-muted/20 flex items-start gap-4 rounded-lg border p-3.5">
+      <div className="flex items-start gap-4 rounded-lg border border-border/60 bg-muted/20 p-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <BodySmall className="text-foreground font-medium">
+          <BodySmall className="font-medium text-foreground">
             {t("refresh.shieldTurnstileAssistPage")}
           </BodySmall>
           <BodySmall className="text-muted-foreground">
@@ -93,9 +103,9 @@ export function TurnstileNotificationStatus({
           onChange={(checked) => changeChannels(checked, channels.notify)}
         />
       </div>
-      <div className="border-border/60 bg-muted/20 flex items-start gap-4 rounded-lg border p-3.5">
+      <div className="flex items-start gap-4 rounded-lg border border-border/60 bg-muted/20 p-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <BodySmall className="text-foreground font-medium">
+          <BodySmall className="font-medium text-foreground">
             {t("refresh.shieldTurnstileAssistNotify")}
           </BodySmall>
           <BodySmall className="text-muted-foreground">
@@ -115,7 +125,8 @@ export function TurnstileNotificationStatus({
             try {
               const current = await getBrowserNotificationAvailability()
               setStatus(current)
-              if (current === "available") changeChannels(channels.page, true)
+              if (current === BROWSER_NOTIFICATION_AVAILABILITY.Available)
+                changeChannels(channels.page, true)
               else setPermissionDialog(true)
             } finally {
               setPending(false)
@@ -129,15 +140,17 @@ export function TurnstileNotificationStatus({
         </Muted>
       )}
       {channels.notify && <Muted role="status">{statusText[status]}</Muted>}
-      {channels.notify && status !== "loading" && status !== "available" && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setPermissionDialog(true)}
-        >
-          {t("refresh.turnstileNotificationManage")}
-        </Button>
-      )}
+      {channels.notify &&
+        status !== "loading" &&
+        status !== BROWSER_NOTIFICATION_AVAILABILITY.Available && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPermissionDialog(true)}
+          >
+            {t("refresh.turnstileNotificationManage")}
+          </Button>
+        )}
       <ConfirmDialog
         intent="confirm"
         icon={Bell}
@@ -148,13 +161,16 @@ export function TurnstileNotificationStatus({
         size="md"
         isWorking={pending}
         cancelLabel={t("common:actions.cancel")}
+        confirmButtonTestId={
+          BASIC_SETTINGS_TEST_IDS.turnstileNotificationPermissionConfirmButton
+        }
         confirmLabel={
-          status === "permission_required"
+          status === BROWSER_NOTIFICATION_AVAILABILITY.PermissionRequired
             ? t("refresh.turnstileNotificationEnable")
             : t("refresh.turnstileNotificationManage")
         }
         onConfirm={async () => {
-          if (status !== "permission_required") {
+          if (status !== BROWSER_NOTIFICATION_AVAILABILITY.PermissionRequired) {
             void openSettingsTab("permissions", { preserveHistory: true })
             setPermissionDialog(false)
             return
@@ -166,12 +182,12 @@ export function TurnstileNotificationStatus({
             )
             const current = await getBrowserNotificationAvailability()
             setStatus(current)
-            if (current === "available") {
+            if (current === BROWSER_NOTIFICATION_AVAILABILITY.Available) {
               changeChannels(channels.page, true)
               setPermissionDialog(false)
             }
           } catch {
-            setStatus("unknown")
+            setStatus(BROWSER_NOTIFICATION_AVAILABILITY.Unknown)
           } finally {
             setPending(false)
           }

@@ -6,6 +6,8 @@ export const BASIC_SETTINGS_TEST_IDS = {
   taskNotificationsBrowserTestButton: "task-notifications-browser-test-button",
   taskNotificationsPermissionGrantButton:
     "task-notifications-permission-grant-button",
+  turnstileNotificationPermissionConfirmButton:
+    "turnstile-notification-permission-confirm-button",
   autoCheckinRunNowButton: "auto-checkin-run-now-button",
   managedSiteModelRedirectBulkClearButton:
     "managed-site-model-redirect-bulk-clear-button",

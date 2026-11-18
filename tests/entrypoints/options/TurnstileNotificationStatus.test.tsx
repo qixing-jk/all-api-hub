@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest"
 
 import { TurnstileNotificationStatus } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypass/TurnstileNotificationStatus"
+import { BROWSER_NOTIFICATION_AVAILABILITY } from "~/services/notifications/browserNotificationAvailability"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { availability, request, openSettings } = vi.hoisted(() => ({
@@ -12,21 +13,33 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/navigation")>()),
   openSettingsTab: openSettings,
 }))
-vi.mock("~/services/notifications/browserNotificationAvailability", () => ({
-  getBrowserNotificationAvailability: availability,
-}))
+vi.mock(
+  "~/services/notifications/browserNotificationAvailability",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/notifications/browserNotificationAvailability")
+    >()),
+    getBrowserNotificationAvailability: availability,
+  }),
+)
 vi.mock("~/services/permissions/permissionManager", () => ({
   OPTIONAL_PERMISSION_IDS: { Notifications: "notifications" },
   requestPermissionDetailed: request,
 }))
 
 beforeEach(() => {
-  availability.mockReset().mockResolvedValue("permission_required")
+  availability
+    .mockReset()
+    .mockResolvedValue(BROWSER_NOTIFICATION_AVAILABILITY.PermissionRequired)
   request.mockReset()
   openSettings.mockReset()
 })
 
-it.each(["blocked", "unavailable", "unknown"])(
+it.each([
+  BROWSER_NOTIFICATION_AVAILABILITY.Blocked,
+  BROWSER_NOTIFICATION_AVAILABILITY.Unavailable,
+  BROWSER_NOTIFICATION_AVAILABILITY.Unknown,
+])(
   "closes the %s permission dialog after opening permission settings",
   async (status) => {
     availability.mockResolvedValue(status)
@@ -54,7 +67,7 @@ it.each(["blocked", "unavailable", "unknown"])(
 it("offers permission in a dialog and enables system reminders only after grant", async () => {
   const change = vi.fn()
   request.mockImplementation(async () => {
-    availability.mockResolvedValue("available")
+    availability.mockResolvedValue(BROWSER_NOTIFICATION_AVAILABILITY.Available)
     return { success: true }
   })
   render(<TurnstileNotificationStatus preference="page" onChange={change} />)
@@ -105,7 +118,7 @@ it("keeps system reminders off after refusal and allows cancellation", async () 
 })
 
 it("changes the in-page channel independently of system reminders", async () => {
-  availability.mockResolvedValue("available")
+  availability.mockResolvedValue(BROWSER_NOTIFICATION_AVAILABILITY.Available)
   const change = vi.fn()
   render(<TurnstileNotificationStatus preference="both" onChange={change} />)
   fireEvent.click(
@@ -119,7 +132,7 @@ it("changes the in-page channel independently of system reminders", async () => 
 })
 
 it("enables immediately with permission and guides blocked users to settings", async () => {
-  availability.mockResolvedValue("available")
+  availability.mockResolvedValue(BROWSER_NOTIFICATION_AVAILABILITY.Available)
   const change = vi.fn()
   const view = render(
     <TurnstileNotificationStatus preference="page" onChange={change} />,
@@ -130,7 +143,7 @@ it("enables immediately with permission and guides blocked users to settings", a
   await waitFor(() => expect(change).toHaveBeenCalledWith("both"))
   expect(screen.queryByRole("dialog")).toBeNull()
   view.unmount()
-  availability.mockResolvedValue("blocked")
+  availability.mockResolvedValue(BROWSER_NOTIFICATION_AVAILABILITY.Blocked)
   render(<TurnstileNotificationStatus preference="page" onChange={change} />)
   fireEvent.click(
     await screen.findByRole("switch", { name: /shieldTurnstileAssistNotify/ }),
@@ -152,7 +165,7 @@ it("renders a quiet mode notice when all reminders are disabled", async () => {
 })
 
 it("opens permission dialog when manage button in the row is clicked", async () => {
-  availability.mockResolvedValue("blocked")
+  availability.mockResolvedValue(BROWSER_NOTIFICATION_AVAILABILITY.Blocked)
   render(<TurnstileNotificationStatus preference="notify" onChange={vi.fn()} />)
   const manageButton = await screen.findByRole("button", {
     name: /turnstileNotificationManage/,
@@ -162,7 +175,6 @@ it("opens permission dialog when manage button in the row is clicked", async () 
 })
 
 it("sets status to unknown when permission request throws", async () => {
-  availability.mockResolvedValue("permission_required")
   request.mockRejectedValue(new Error("Permission request crashed"))
   render(<TurnstileNotificationStatus preference="page" onChange={vi.fn()} />)
   fireEvent.click(
