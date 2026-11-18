@@ -1,6 +1,7 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
-import { test } from "~~/e2e/fixtures/extensionTest"
+import { test as extensionTest } from "~~/e2e/fixtures/extensionTest"
+import { test as cleanupTest } from "~~/e2e/fixtures/newApiSessionCleanup"
 import {
   buildManagedSiteE2ePrefix,
   runManagedSiteChannelsCrudScenario,
@@ -29,6 +30,11 @@ import {
 } from "~~/e2e/utils/realSite/managedSiteConfig"
 import { readEnv } from "~~/e2e/utils/realSite/shared"
 import { resolveRealSiteUpstream } from "~~/scripts/utils/real-site-upstream.mjs"
+
+const test = extensionTest
+const newApiTest = cleanupTest.extend({
+  newApiSessionCleanupOrigin: resolveNewApiManagedSiteConfig().config?.baseUrl,
+})
 
 // Authenticated channel details must not enter diagnostic artifacts.
 test.use({ trace: "off", video: "off", screenshot: "off" })
@@ -117,6 +123,8 @@ test.describe("real-site E2E: managed-site channel management", () => {
   })
 
   for (const target of selectedManagedSiteTargets) {
+    const test =
+      target.siteType === SITE_TYPES.NEW_API ? newApiTest : extensionTest
     const managedSite = target.resolveConfig()
     const credentialImportTestName = `${target.label} imports standalone credentials and detects duplicates`
 
@@ -228,8 +236,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
           page,
           extensionId,
           siteType: target.siteType as
-            | typeof SITE_TYPES.AXON_HUB
-            | typeof SITE_TYPES.OCTOPUS,
+            typeof SITE_TYPES.AXON_HUB | typeof SITE_TYPES.OCTOPUS,
           baseUrl: config.baseUrl,
         })
         test.skip(
