@@ -27,7 +27,8 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Give active runs time to clean up their remote resources and login sessions.
+  cancel-in-progress: false
 
 jobs:
   real-site-matrix:
