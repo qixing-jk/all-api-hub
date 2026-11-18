@@ -13,15 +13,25 @@ export function hasNotificationsAPI(): boolean {
   return !!browser.notifications
 }
 
-/** Reads the notification-level grant without confusing it with API access permission. */
-export async function getNotificationPermissionLevel(): Promise<
-  "granted" | "denied" | null
-> {
-  if (typeof browser.notifications?.getPermissionLevel !== "function")
-    return null
+export const NOTIFICATION_PERMISSION_LEVELS = {
+  Granted: "granted",
+  Denied: "denied",
+  Unsupported: "unsupported",
+} as const
+
+type NotificationPermissionLevel =
+  (typeof NOTIFICATION_PERMISSION_LEVELS)[keyof typeof NOTIFICATION_PERMISSION_LEVELS]
+
+/** Distinguishes an unsupported level query from a failed query. */
+export async function getNotificationPermissionLevel(): Promise<NotificationPermissionLevel | null> {
+  const notifications = browser.notifications
+  if (typeof notifications?.getPermissionLevel !== "function")
+    return typeof notifications?.create === "function"
+      ? NOTIFICATION_PERMISSION_LEVELS.Unsupported
+      : null
   try {
     return await runBrowserAsyncApi(
-      () => browser.notifications.getPermissionLevel(),
+      () => notifications.getPermissionLevel(),
       (callback) =>
         (globalThis as any).chrome.notifications.getPermissionLevel(callback),
     )

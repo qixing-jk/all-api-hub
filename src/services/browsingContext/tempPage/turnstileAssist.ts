@@ -4,7 +4,10 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { VerificationContext } from "~/services/browserLogin/verificationContexts"
 import { deliverTurnstileAssistNotice } from "~/services/checkin/turnstile/assistDelivery"
 import { probeTurnstilePageApi } from "~/services/checkin/turnstile/pageApi"
-import { getBrowserNotificationAvailability } from "~/services/notifications/browserNotificationAvailability"
+import {
+  BROWSER_NOTIFICATION_AVAILABILITY,
+  getBrowserNotificationAvailability,
+} from "~/services/notifications/browserNotificationAvailability"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -110,7 +113,10 @@ export function createTempContextTurnstileAssist({
 
   /** Reports whether a system notification can be created for this assist. */
   async function canNotifyTurnstileAssist() {
-    return (await getBrowserNotificationAvailability()) === "available"
+    return (
+      (await getBrowserNotificationAvailability()) ===
+      BROWSER_NOTIFICATION_AVAILABILITY.Available
+    )
   }
 
   /** Sends one clickable notification for the waiting Turnstile window. */

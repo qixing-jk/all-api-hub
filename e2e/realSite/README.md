@@ -173,7 +173,7 @@ pnpm e2e:real-site:webdav-provider
 
 The GitHub Actions workflow has a `category` input with `all`, `account`, `cloud-sync`, `managed-site`, and `webdav`. Scheduled runs still use `all`; manual runs can select a single category so the CI job list and artifacts are visibly grouped as `Account / ...`, `Cloud Sync / ...`, `Managed Site / ...`, or `WebDAV / ...`.
 
-Playwright loads shared defaults from the primary worktree's `.env.local`, then this checkout's `.env` and `.env.local`. Shell or CI environment variables take precedence; CI never reads another worktree's env files. See [local tooling environment configuration](../../CONTRIBUTING.md#local-tooling-environment-configuration) for shared-source overrides and `pnpm env:diagnostics`. Each block is optional; specs skip when that site's required variables are missing. Use dedicated low-privilege test accounts.
+See [local tooling environment configuration](../../docs/development/setup.md#local-tooling-environment-configuration) for Playwright's shared environment loading and `pnpm env:diagnostics`. Each block is optional; specs skip when that site's required variables are missing. Use dedicated low-privilege test accounts.
 
 ## GitHub Secret Gist Cloud Sync
 
