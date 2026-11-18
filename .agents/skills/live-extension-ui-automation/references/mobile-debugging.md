@@ -2,7 +2,7 @@
 
 Use the repo CLI rather than rebuilding socket discovery or reusing remembered device serials, forwarded ports, target IDs, or dev extension IDs. Run from the current checkout. `node scripts/mobile-browser.mjs --help` describes the available options; `pnpm browser:mobile` is the package-script alias.
 
-Local tooling uses the shared `.env.local` loader, including `ADB_PATH`. See [local tooling configuration](../../../../CONTRIBUTING.md#local-tooling-environment-configuration).
+Local tooling uses the shared `.env.local` loader, including `ADB_PATH`. See [local tooling configuration](../../../../docs/development/setup.md#local-tooling-environment-configuration).
 
 ## Choose diagnostics or development
 

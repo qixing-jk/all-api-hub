@@ -23,9 +23,9 @@ Read only the guidance relevant to the current task; reuse unchanged material al
 - Persistent stores, storage keys, or writes that cross extension contexts: [storage guidance](docs/agents/storage.md).
 - Translation keys, resources, or language behavior: [i18n guidance](docs/agents/i18n.md). Use `add-app-language` only when adding a supported application language.
 - Sponsor catalog changes or audits use the project `sponsor-catalog` skill, not ordinary documentation edits.
-- Live extension UI automation, real accounts, desktop CDP, or Android Firefox/Edge/Lemur diagnostics and hot updates: use project skill `live-extension-ui-automation`.
-- Development setup, test harnesses, or hook troubleshooting: [CONTRIBUTING.md](CONTRIBUTING.md). Commands and versions belong to `package.json`, `.nvmrc`, and hooks.
-- For local E2E, live E2E, or CDP environment configuration, use the shared Node loader in `scripts/utils/local-env.mjs`: primary worktree `.env.local` supplies defaults below current-worktree files and explicit environment variables. Locate the primary checkout through Git rather than its branch name; do not duplicate shared credentials into linked worktrees. See [local tooling configuration](CONTRIBUTING.md#local-tooling-environment-configuration) for overrides and diagnostics. WXT retains its native mode/browser env loading.
+- Live extension UI automation, real accounts, desktop CDP, or Android Firefox/Edge/Lemur diagnostics and hot updates: use the [`live-extension-ui-automation` skill](.agents/skills/live-extension-ui-automation/SKILL.md).
+- Development setup or shared `.env.local` configuration: [local development](docs/development/setup.md). Use the [shared environment loader](docs/development/setup.md#local-tooling-environment-configuration) for local E2E, live E2E, and CDP. Keep shared credentials in the primary checkout.
+- Test harnesses: [unit and component tests](docs/development/testing.md) or [browser and extension tests](e2e/README.md).
 
 ## Project boundaries
 
@@ -35,11 +35,12 @@ Read only the guidance relevant to the current task; reuse unchanged material al
 
 ## Development and validation
 
+- Use Chrome as the default browser for development and browser tests. Before implementing changes that depend on extension APIs or permission prompts, check for relevant differences in Firefox, Safari, and other supported browser targets. When the change exposes a compatibility risk, design for it and test the affected behavior in that browser. Use the [browser test guide](e2e/README.md) to select the runner and report the browsers actually tested.
 - Before non-trivial implementation on a feature branch, fetch and check its intended base; refresh the current branch before dependent work using `refresh-stale-branch` when needed. Reuse a current check within the task. Reviews and small edits need no refresh; report refresh blockers and continue independent work.
 - Keep incidental cleanup local and low-risk. Explicit cleanup is complete when the agreed surface has no further behavior-preserving improvements with concrete benefit and proportionate validation cost, including newly discovered qualifying work. Report changes requiring expanded scope separately.
 - Use targeted or related Vitest checks for affected behavior; use browser E2E when lower-level tests cannot establish the relevant risk. The commit hook does not replace affected-behavior tests. Full suites normally belong to CI; count only workflows that actually ran as validation evidence.
 - Before completing implementation, follow [automated task acceptance](docs/agents/task-acceptance.md): account for every task-owned behavior change, run the applicable checks, and provide linked evidence. Retain before/after evidence for developer review when a comparable baseline is available. Agents prioritize representative final results, reuse prior review, and open baseline/comparison/diff images only to answer a concrete question; do not reload images after every small edit. Report evidence gaps explicitly.
-- Let [Git hooks](CONTRIBUTING.md#git-hooks) run their gates once on unchanged relevant state; scripts own their trigger rules.
+- Let [Git hooks](.husky/README.md) run their gates once on unchanged relevant state. Hook scripts own their trigger rules.
 - Requested PR reconciliation must account for checks and feedback on the current head. Pending remote evidence, including a waiting-cycle timeout, leaves that delivery incomplete.
 
 ## Documentation
