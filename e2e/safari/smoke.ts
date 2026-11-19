@@ -28,7 +28,12 @@ export async function runSafariSmoke({
       file === "osascript" ? ["e2e/safari/authorization.ts", ...args] : args,
       {
         encoding: "utf8",
-        timeout: file === "osascript" ? 30000 : 600000,
+        timeout:
+          file === "screencapture"
+            ? 10000
+            : file === "osascript"
+              ? 30000
+              : 600000,
         maxBuffer: 16 * 1024 * 1024,
       },
     ),
@@ -50,6 +55,28 @@ export async function runSafariSmoke({
       path.join(output, "report.json"),
       JSON.stringify(report, null, 2),
     )
+  const capture = async (filename: string) => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        command("screencapture", ["-x", path.join(output, filename)])
+        return
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        fs.appendFileSync(
+          path.join(output, `${filename}.log`),
+          `Attempt ${attempt}: ${message}\n`,
+        )
+        // Display capture can briefly fail while Safari restarts. Keep the
+        // screenshot required and retain every failure even after recovery.
+        if (
+          attempt >= 3 ||
+          !message.includes("could not create image from display")
+        )
+          throw error
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
+    }
+  }
   const check = async (name: string, action: () => unknown) => {
     const row: Check = { name, status: "running" }
     console.log(`[Safari] ${name}`)
@@ -204,7 +231,7 @@ export async function runSafariSmoke({
         JSON.stringify(identity, null, 2),
       )
     })
-    await check("Safari settings accessibility", () => {
+    await check("Safari settings accessibility", async () => {
       openSettings()
       fs.writeFileSync(
         path.join(output, "settings-before.json"),
@@ -230,7 +257,7 @@ export async function runSafariSmoke({
         "Safari",
       ])
       fs.writeFileSync(path.join(output, "safari-settings.txt"), tree)
-      command("screencapture", ["-x", path.join(output, "safari-settings.png")])
+      await capture("safari-settings.png")
     })
     await check("Trial extension activation", async () => {
       allowUnsigned()
@@ -314,10 +341,7 @@ export async function runSafariSmoke({
         path.join(output, "extension-settings.json"),
         command(path.join(output, "accessibility"), ["dialogs", "Safari"]),
       )
-      command("screencapture", [
-        "-x",
-        path.join(output, "extension-settings.png"),
-      ])
+      await capture("extension-settings.png")
     })
     await check("Native Cookie evidence", async () => {
       const deadline = Date.now() + 90000
@@ -422,7 +446,7 @@ export async function runSafariSmoke({
           )
         ) {
           fs.writeFileSync(path.join(output, "popup.json"), snapshot)
-          command("screencapture", ["-x", path.join(output, "popup.png")])
+          await capture("popup.png")
           return
         }
         await new Promise((resolve) => setTimeout(resolve, 250))
@@ -444,7 +468,7 @@ export async function runSafariSmoke({
             path.join(output, "options-ui.json"),
             command(driver, ["dialogs", "Safari"]),
           )
-          command("screencapture", ["-x", path.join(output, "options.png")])
+          await capture("options.png")
           return
         }
         await new Promise((resolve) => setTimeout(resolve, 250))
@@ -484,7 +508,7 @@ export async function runSafariSmoke({
           )
         ) {
           fs.writeFileSync(path.join(output, "options-ui.json"), snapshot)
-          command("screencapture", ["-x", path.join(output, "options.png")])
+          await capture("options.png")
           return
         }
         await new Promise((resolve) => setTimeout(resolve, 250))
@@ -501,7 +525,7 @@ export async function runSafariSmoke({
           path.join(output, "failure-ui.json"),
           command(path.join(output, "accessibility"), ["dialogs"]),
         )
-        command("screencapture", ["-x", path.join(output, "failure.png")])
+        await capture("failure.png")
       } catch {
         // Preserve the original failed check when screenshot capture also fails.
       }
