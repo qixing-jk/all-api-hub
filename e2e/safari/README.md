@@ -18,7 +18,7 @@ The compiled accessibility driver is checked for a usage error on missing argume
 
 ## Evidence
 
-The `safari-smoke-<attempt>` artifact retains `test-results/safari` reports, observations, UI snapshots, screenshots and build logs, plus generated project and entitlement metadata. The fixture publishes observations by atomic replacement, and active waits read its complete HTTP status snapshots. Derived build caches are excluded. Failed attempts retain their own evidence.
+The `safari-smoke-<attempt>` artifact retains `test-results/safari` reports, observations, UI snapshots, screenshots and build logs, plus generated project and entitlement metadata. A screen capture that reports `could not create image from display` is retried up to three attempts, 250 ms apart; each capture command has a ten-second timeout. Each failed attempt is retained in `<screenshot>.png.log`, including failures followed by a successful capture. Other capture errors fail immediately, and an exhausted required capture still fails the smoke. The fixture publishes observations by atomic replacement, and active waits read its complete HTTP status snapshots. Derived build caches are excluded. Failed attempts retain their own evidence.
 
 For local driver regressions:
 

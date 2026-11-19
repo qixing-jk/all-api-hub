@@ -118,17 +118,36 @@ it("rejects an untrusted native driver even when System Events reports UI automa
   })
 })
 
+const readySafariScenario = {
+  popupAvailable: true,
+  navigationAvailable: true,
+  optionsRendered: true,
+  shutdownAvailable: true,
+  activationPendingChecks: 0,
+  uiSetupPending: false,
+  fixtureReady: true,
+  reportBeingWritten: false,
+}
+
 it.each(
   [
+    readySafariScenario,
     {
-      popupAvailable: true,
-      navigationAvailable: true,
-      optionsRendered: true,
-      shutdownAvailable: true,
-      activationPendingChecks: 0,
-      uiSetupPending: false,
-      fixtureReady: true,
-      reportBeingWritten: false,
+      ...readySafariScenario,
+      screenshotFailures: { "extension-settings.png": 1 },
+    },
+    ...["safari-settings.png", "popup.png", "options.png"].map((filename) => ({
+      ...readySafariScenario,
+      screenshotFailures: { [filename]: 2 },
+    })),
+    {
+      ...readySafariScenario,
+      screenshotFailures: { "extension-settings.png": 3 },
+    },
+    {
+      ...readySafariScenario,
+      screenshotFailures: { "extension-settings.png": 1 },
+      screenshotError: "permission denied",
     },
     {
       popupAvailable: false,
@@ -319,7 +338,11 @@ it.each(
     invalidNativeEvidence: false,
     staleNativePayload: false,
     staleNativeCompletion: false,
+    screenshotError: "could not create image from display",
     ...scenario,
+    screenshotFailures: ("screenshotFailures" in scenario
+      ? scenario.screenshotFailures
+      : {}) as Record<string, number>,
   })),
 )(
   "accepts latest native evidence and requires the Popup flow (%j)",
@@ -341,7 +364,12 @@ it.each(
     invalidNativeEvidence,
     staleNativePayload,
     staleNativeCompletion,
+    screenshotFailures,
+    screenshotError,
   }) => {
+    const captureFailed =
+      Object.values(screenshotFailures).some((failures) => failures >= 3) ||
+      screenshotError !== "could not create image from display"
     if (
       !optionsRendered ||
       activationPendingChecks ||
@@ -351,7 +379,8 @@ it.each(
       stalledControl ||
       fixtureReplyMissing ||
       staleNativeEvidence ||
-      staleNativeCompletion
+      staleNativeCompletion ||
+      Object.keys(screenshotFailures).length
     )
       vi.useFakeTimers()
     let activationChecks = 0
@@ -359,6 +388,7 @@ it.each(
     let optionsVisited = false
     let welcomePrompt = uiSetupPending
     const controlRequests: { method: string | undefined; body: unknown }[] = []
+    const captureAttempts: Record<string, number> = {}
     const appName = "Trial"
     const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
     const projectRoot = path.join(output, "project")
@@ -394,6 +424,12 @@ it.each(
       platform: "darwin",
       output,
       command: withUsableDriver((file, args) => {
+        if (file === "screencapture") {
+          const filename = path.basename(args.at(-1)!)
+          captureAttempts[filename] = (captureAttempts[filename] ?? 0) + 1
+          if (captureAttempts[filename]! <= (screenshotFailures[filename] ?? 0))
+            throw new Error(screenshotError)
+        }
         if (
           systemEventsUiDenied &&
           file === "osascript" &&
@@ -535,7 +571,12 @@ it.each(
         return "true"
       }),
     })
-    if (!shutdownAvailable)
+    if (captureFailed)
+      await Promise.all([
+        expect(result).rejects.toThrow(screenshotError),
+        vi.runAllTimersAsync(),
+      ])
+    else if (!shutdownAvailable)
       await expect(result).rejects.toThrow("Safari did not quit")
     else if (stalledStatus)
       await expect(result).rejects.toThrow("Fixture status request timed out")
@@ -570,13 +611,45 @@ it.each(
         ),
         vi.runAllTimersAsync(),
       ])
-    else if (activationPendingChecks || uiSetupPending)
+    else if (
+      activationPendingChecks ||
+      uiSetupPending ||
+      Object.keys(screenshotFailures).length
+    )
       await Promise.all([
         result.then((report) => expect(report.status).toBe("passed")),
         vi.runAllTimersAsync(),
       ])
     else expect((await result).status).toBe("passed")
+    for (const [filename, failures] of Object.entries(screenshotFailures)) {
+      expect(captureAttempts[filename]).toBe(
+        screenshotError === "could not create image from display"
+          ? failures >= 3
+            ? 3
+            : failures + (filename === "options.png" ? 2 : 1)
+          : 1,
+      )
+      expect(
+        readFileSync(path.join(output, `${filename}.log`), "utf8"),
+      ).toContain(screenshotError)
+    }
+    if (captureFailed) {
+      expect(
+        JSON.parse(readFileSync(path.join(output, "report.json"), "utf8")),
+      ).toMatchObject({
+        status: "failed",
+        checks: expect.arrayContaining([
+          {
+            name: "Trial extension activation",
+            status: "failed",
+            error: screenshotError,
+          },
+        ]),
+      })
+      expect(controlRequests).toEqual([])
+    }
     if (
+      !captureFailed &&
       shutdownAvailable &&
       !stalledStatus &&
       !staleNativeEvidence &&
@@ -600,6 +673,45 @@ it.each(
       ).toBe("26.0")
   },
 )
+
+it("preserves the failed prerequisite when diagnostic screen capture also exhausts its retries", async () => {
+  vi.useFakeTimers()
+  const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
+  let captureAttempts = 0
+  const result = runSafariSmoke({
+    platform: "darwin",
+    output,
+    command: withUsableDriver((file, args) => {
+      if (file.endsWith("accessibility") && args[0] === "trusted")
+        return "false"
+      if (file === "screencapture") {
+        captureAttempts++
+        throw new Error("could not create image from display")
+      }
+      return "[]"
+    }),
+  })
+  await Promise.all([
+    expect(result).rejects.toThrow("Accessibility access unavailable"),
+    vi.runAllTimersAsync(),
+  ])
+  expect(captureAttempts).toBe(3)
+  expect(
+    JSON.parse(readFileSync(path.join(output, "report.json"), "utf8")),
+  ).toMatchObject({
+    status: "failed",
+    checks: expect.arrayContaining([
+      {
+        name: "Safari UI automation access",
+        status: "failed",
+        error: "Accessibility access unavailable for the native driver",
+      },
+    ]),
+  })
+  expect(readFileSync(path.join(output, "failure.png.log"), "utf8")).toContain(
+    "Attempt 3: could not create image from display",
+  )
+})
 
 it("reactivates Safari after the native host takes foreground before opening settings", async () => {
   const output = mkdtempSync(path.join(os.tmpdir(), "safari-smoke-"))
