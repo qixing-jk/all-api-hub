@@ -182,12 +182,14 @@ async function continueFromLoggedInSession(
     let generatedCode = ""
 
     try {
-      generatedCode = generateNewApiTotpCode(config.totpSecret!)
       const result = await verifyNewApiSession(
         verificationConfig,
         {
           method: NEW_API_VERIFICATION_METHODS.TwoFactor,
-          code: generatedCode,
+          code: () => {
+            generatedCode = generateNewApiTotpCode(config.totpSecret!)
+            return generatedCode
+          },
         },
         methods,
         config.channelId === undefined ? "settings" : "channel",

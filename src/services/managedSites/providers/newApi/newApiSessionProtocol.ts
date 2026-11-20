@@ -601,7 +601,7 @@ export function createNewApiSessionProtocol(
     config: Pick<NewApiConfig, "baseUrl" | "userId"> & { channelId?: number },
     params: {
       method: typeof NEW_API_VERIFICATION_METHODS.TwoFactor
-      code: string
+      code: string | (() => string)
     },
     // Only the automatic path supplies methods fetched live in this operation.
     // Manual verification has no such evidence and must probe after submission.
@@ -612,6 +612,12 @@ export function createNewApiSessionProtocol(
       config.baseUrl,
       config.channelId,
       async () => {
+        // Automatic codes must be current after any queued verification wait.
+        // Manual codes remain the exact value entered by the user.
+        const submittedParams = {
+          ...params,
+          code: typeof params.code === "function" ? params.code() : params.code,
+        }
         const request = createManagedSessionRequest(
           config.baseUrl,
           config.userId,
@@ -620,7 +626,7 @@ export function createNewApiSessionProtocol(
           request.auth.authType === AuthTypeEnum.AccessToken
         const requestParams = usesDashboardAuth
           ? {
-              ...params,
+              ...submittedParams,
               // New API stateless dashboard auth issues a proof scoped to the
               // sensitive channel-key read. Older Cookie-auth deployments do not
               // receive this field, preserving their original request contract.
@@ -629,7 +635,7 @@ export function createNewApiSessionProtocol(
                 ? { context: { channel_id: config.channelId } }
                 : {}),
             }
-          : params
+          : submittedParams
         let response: NewApiVerifyResponse
         try {
           response = await newApiFamilyRequests.data<NewApiVerifyResponse>(

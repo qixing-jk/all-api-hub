@@ -165,6 +165,93 @@ const mockModernSessionTestLogin = () => {
 }
 
 describe("newApiSession", () => {
+  it("rejects an expired queued manual code and accepts only a newly entered code", async () => {
+    mockModernSessionTestLogin()
+    const started = createDeferred<void>()
+    const release = createDeferred<void>()
+    const list = vi.fn(() => jsonData({ items: [{ id: 47 }], total: 1 }))
+    const codes: string[] = []
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, list),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async ({ request }) => {
+        const body = (await request.json()) as { code: string }
+        codes.push(body.code)
+        if (body.code === "000000") {
+          started.resolve()
+          await release.promise
+        } else if (body.code === "111111") {
+          return HttpResponse.json({ success: false, message: "Code expired" })
+        }
+        return jsonData({ proof_token: "channel-47-proof" })
+      }),
+    )
+    await ensureNewApiManagedSession({ ...BASE_CONFIG, totpSecret: "" })
+    const channelVerification = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 47 },
+      "000000",
+    )
+    await started.promise
+    const manualVerification = submitNewApiSecureVerificationCode(
+      BASE_CONFIG,
+      "111111",
+    )
+    const rejected = expect(manualVerification).rejects.toThrow("Code expired")
+    await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(2))
+    release.resolve()
+    await expect(channelVerification).resolves.toMatchObject({
+      status: "verified",
+    })
+    await rejected
+    await expect(
+      submitNewApiSecureVerificationCode(BASE_CONFIG, "222222"),
+    ).resolves.toMatchObject({ status: "verified" })
+    expect(codes).toEqual(["000000", "111111", "222222"])
+    expect(generateNewApiTotpCodeMock).not.toHaveBeenCalled()
+  })
+
+  it("generates a current automatic code when queued settings verification is dispatched", async () => {
+    mockModernSessionTestLogin()
+    const started = createDeferred<void>()
+    const release = createDeferred<void>()
+    const codes: string[] = []
+    let currentCode = "111111"
+    const list = vi.fn(() => jsonData({ items: [{ id: 47 }], total: 1 }))
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, list),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async ({ request }) => {
+        const body = (await request.json()) as { code: string }
+        codes.push(body.code)
+        if (body.code === "000000") {
+          started.resolve()
+          await release.promise
+        } else if (body.code !== currentCode) {
+          return HttpResponse.json({ success: false, message: "Code expired" })
+        }
+        return jsonData({ proof_token: "channel-47-proof" })
+      }),
+    )
+    await ensureNewApiManagedSession({ ...BASE_CONFIG, totpSecret: "" })
+    const channelVerification = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 47 },
+      "000000",
+    )
+    await started.promise
+    generateNewApiTotpCodeMock.mockImplementation(() => currentCode)
+    const settingsVerification = ensureNewApiManagedSession(BASE_CONFIG)
+    await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(2))
+    expect(codes).toEqual(["000000"])
+    currentCode = "222222"
+    release.resolve()
+    await expect(channelVerification).resolves.toMatchObject({
+      status: "verified",
+    })
+    await expect(settingsVerification).resolves.toMatchObject({
+      status: "verified",
+    })
+    expect(codes).toEqual(["000000", "222222"])
+    expect(generateNewApiTotpCodeMock).toHaveBeenCalledOnce()
+  })
+
   it.each([
     {
       code: "AUTH_SESSION_LIMIT",
@@ -243,10 +330,9 @@ describe("newApiSession", () => {
     const started = createDeferred<void>()
     const release = createDeferred<void>()
     const codes: string[] = []
+    const list = vi.fn(() => jsonData({ items: [{ id: 47 }], total: 1 }))
     server.use(
-      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, () =>
-        jsonData({ items: [{ id: 47 }], total: 1 }),
-      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, list),
       http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async ({ request }) => {
         const body = (await request.json()) as { code: string }
         codes.push(body.code)
@@ -272,9 +358,7 @@ describe("newApiSession", () => {
       ...BASE_CONFIG,
       totpSecret: "MZXW6YTBOI======",
     })
-    await vi.waitFor(() =>
-      expect(generateNewApiTotpCodeMock).toHaveBeenCalledOnce(),
-    )
+    await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(2))
     expect(codes).toEqual(["111111"])
     release.resolve()
     await expect(channelVerification).resolves.toMatchObject({

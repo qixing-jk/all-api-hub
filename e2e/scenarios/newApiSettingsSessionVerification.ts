@@ -2,10 +2,15 @@ import type { Page, Response } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { hasNewApiLoginAssistCredentials } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import {
+  getServiceWorker,
+  getStoredUserPreferences,
+} from "~~/e2e/utils/extensionState"
 
 /** Exercise the settings entry against native responses without reading a channel key. */
 export async function runNewApiSettingsSessionVerificationScenario(params: {
@@ -22,6 +27,11 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
     })
     return
   }
+  const worker = await getServiceWorker(page.context())
+  const preferences = await getStoredUserPreferences(worker)
+  const originalTotpSecret = (
+    preferences.newApi as Partial<NewApiConfig> | undefined
+  )?.totpSecret
   const origin = new URL(config.baseUrl).origin
   const observedChannels = new Set<number>()
   let secureRequests = 0
@@ -145,5 +155,32 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
     }
   } finally {
     page.context().off("response", observeResponse)
+    await worker.evaluate(
+      async ({ key, lock, original, scenarioSecret }) => {
+        await navigator.locks.request(lock, async () => {
+          const raw = (await chrome.storage.local.get(key))[key]
+          const current = typeof raw === "string" ? JSON.parse(raw) : raw
+          if (!current?.newApi) return
+          // Restore only this scenario's writes; retain unrelated/operator changes.
+          if (
+            current.newApi.totpSecret !== "" &&
+            current.newApi.totpSecret !== scenarioSecret
+          )
+            return
+          if (original === undefined) delete current.newApi.totpSecret
+          else current.newApi.totpSecret = original
+          current.lastUpdated = Date.now()
+          await chrome.storage.local.set({
+            [key]: typeof raw === "string" ? JSON.stringify(current) : current,
+          })
+        })
+      },
+      {
+        key: STORAGE_KEYS.USER_PREFERENCES,
+        lock: STORAGE_LOCKS.USER_PREFERENCES,
+        original: originalTotpSecret,
+        scenarioSecret: config.totpSecret,
+      },
+    )
   }
 }
