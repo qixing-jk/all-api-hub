@@ -55,6 +55,8 @@ Managed-site coverage includes New API, AxonHub, and Octopus multi-key persisten
 
 The New API multi-key scenario also tests the settings page's login and two-factor verification entry with automatic TOTP and manual codes when administrator login and TOTP credentials are configured. Its temporary channel remains available during these checks. Native inventory and verification responses must confirm that modern verification binds an existing channel and receives a scoped proof; the settings check must not read any channel secret. Legacy Cookie verification is reported separately. Without administrator login/TOTP credentials, these settings checks are not exercised. The existing channel and owned-session teardown still runs after failures. Empty inventories and retry after channel creation are covered by `e2e/newApiSessionVerification.spec.ts` with a local protocol fixture.
 
+Use a test-only browser profile for this scenario. When `AAH_E2E_USER_DATA_DIR` selects a reusable profile, reserve it exclusively for the test run and keep other extension views closed. The scenario temporarily changes the TOTP setting and restores its prior value after success or failure. Value comparison cannot distinguish another view's intentional clear from the scenario's own clear, so concurrent use of this profile is unsupported.
+
 Run only these persistence checks with the existing `.env.local` configuration:
 
 ```bash

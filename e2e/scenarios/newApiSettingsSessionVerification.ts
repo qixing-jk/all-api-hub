@@ -1,4 +1,4 @@
-import type { Page, Response } from "@playwright/test"
+import type { Page, Request, Response } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -6,6 +6,7 @@ import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { hasNewApiLoginAssistCredentials } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import type { NewApiConfig } from "~/types/newApiConfig"
+import { joinUrl } from "~/utils/core/url"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   getServiceWorker,
@@ -34,6 +35,9 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
     preferences.newApi as Partial<NewApiConfig> | undefined
   )?.totpSecret
   const origin = new URL(config.baseUrl).origin
+  const channelsPath = new URL(joinUrl(config.baseUrl, "/api/channel/"))
+    .pathname
+  const verifyPath = new URL(joinUrl(config.baseUrl, "/api/verify")).pathname
   const observedChannels = new Set<number>()
   let secureRequests = 0
   let keyReads = 0
@@ -41,19 +45,27 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
   let hasValidContext = false
   let isLegacy = false
   let selectedChannel: number | undefined
+  const observeRequest = (request: Request) => {
+    const url = new URL(request.url())
+    if (
+      url.origin === origin &&
+      url.pathname.startsWith(channelsPath) &&
+      /^\d+\/key$/.test(url.pathname.slice(channelsPath.length))
+    )
+      keyReads++
+  }
   const observeResponse = async (response: Response) => {
     const url = new URL(response.url())
     if (url.origin !== origin) return
-    if (/\/api\/channel\/\d+\/key$/.test(url.pathname)) keyReads++
     if (!response.ok()) return
-    if (url.pathname === "/api/channel/") {
+    if (url.pathname === channelsPath) {
       const data = (await response.json()).data
       for (const channel of data?.items ?? []) {
         if (Number.isSafeInteger(channel.id) && channel.id > 0)
           observedChannels.add(channel.id)
       }
     }
-    if (url.pathname !== "/api/verify") return
+    if (url.pathname !== verifyPath) return
     const body = response.request().postDataJSON()
     const result = await response.json()
     if (result.success !== true) return
@@ -73,6 +85,7 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
   }
   // Keep authenticated bodies in memory; only boolean evidence reaches assertions.
   page.context().on("response", observeResponse)
+  page.context().on("request", observeRequest)
   await runScenarioWithCleanup({
     run: async () => {
       for (const mode of ["automatic", "manual"] as const) {
@@ -90,6 +103,13 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
           const totp = page.locator("#new-api-totp-secret input")
           await totp.fill(mode === "automatic" ? config.totpSecret! : "")
           await totp.blur()
+          await expect
+            .poll(async () => {
+              const current = await getStoredUserPreferences(worker)
+              return (current.newApi as Partial<NewApiConfig> | undefined)
+                ?.totpSecret
+            })
+            .toBe(mode === "automatic" ? config.totpSecret! : "")
           await page
             .locator("#new-api-session-test")
             .getByRole("button")
@@ -100,10 +120,10 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
           if (mode === "manual") {
             const dialog = page.getByRole("dialog")
             const code = dialog.getByLabel("Verification code", { exact: true })
+            let secureCodeSubmitted = false
             // A fresh session may require login 2FA before secure verification.
             for (let stage = 0; stage < 2; stage++) {
-              await expect(code.or(success)).toBeVisible({ timeout: 45_000 })
-              if (await success.isVisible()) break
+              await expect(code).toBeVisible({ timeout: 45_000 })
               await code.fill(generateNewApiTotpCode(config.totpSecret!))
               const login = dialog.getByRole("button", {
                 name: "Submit login code",
@@ -119,9 +139,14 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
                     exact: true,
                   })
                   .click()
+                secureCodeSubmitted = true
                 break
               }
             }
+            expect(
+              secureCodeSubmitted,
+              "Manual mode submitted a secure verification code",
+            ).toBe(true)
           }
           await expect(success).toBeVisible({ timeout: 45_000 })
           await expect(page.getByRole("dialog")).toHaveCount(0)
@@ -163,6 +188,9 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
     finalizers: [
       async () => {
         page.context().off("response", observeResponse)
+      },
+      async () => {
+        page.context().off("request", observeRequest)
       },
       async () =>
         worker.evaluate(

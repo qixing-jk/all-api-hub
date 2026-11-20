@@ -34,6 +34,92 @@ const config = {
   totpSecret: "JBSWY3DPEHPK3PXP",
 }
 
+function createObservedScenario(baseUrl: string, readChannelKey = false) {
+  const listeners = new Map<string, (event: unknown) => Promise<void>>()
+  const context = {
+    on: vi.fn((event: string, listener: (value: unknown) => Promise<void>) =>
+      listeners.set(event, listener),
+    ),
+    off: vi.fn((event: string) => listeners.delete(event)),
+  }
+  let secret: string | undefined = config.totpSecret
+  storedPreferences.mockImplementation(async () => ({
+    newApi: { ...config, totpSecret: secret },
+  }))
+  worker.evaluate.mockResolvedValue(undefined)
+  playwrightExpect.mockImplementation((value) => ({
+    toBe: (expected: unknown) => expect(value).toBe(expected),
+    toBeVisible: async () => {},
+    toBeHidden: async () => {},
+    toHaveCount: async () => {},
+  }))
+  playwrightExpect.poll.mockImplementation((read) => ({
+    toBe: async (expected: unknown) => expect(await read()).toBe(expected),
+  }))
+  const verify = async () => {
+    if (readChannelKey)
+      await listeners.get("request")?.({
+        url: () => `${baseUrl}/api/channel/47/key`,
+      })
+    await listeners.get("response")?.({
+      url: () => `${baseUrl}/api/channel/`,
+      ok: () => true,
+      json: async () => ({ data: { items: [{ id: 47 }] } }),
+    })
+    await listeners.get("response")?.({
+      url: () => `${baseUrl}/api/verify`,
+      ok: () => true,
+      request: () => ({
+        postDataJSON: () => ({
+          scope: "channel.key.read",
+          context: { channel_id: 47 },
+        }),
+      }),
+      json: async () => ({
+        success: true,
+        data: { proof_token: "fixture-proof" },
+      }),
+    })
+  }
+  const totp = {
+    fill: async (value: string) => {
+      secret = value
+    },
+    blur: vi.fn(),
+  }
+  const code = { fill: vi.fn() }
+  const submit = { click: verify }
+  const dialog = {
+    getByLabel: () => code,
+    getByRole: (_role: string, options?: { name?: string }) =>
+      options?.name === "Submit login code"
+        ? { isVisible: async () => false }
+        : submit,
+  }
+  const page = {
+    context: () => context,
+    url: () => "about:blank",
+    goto: vi.fn(),
+    locator: (selector: string) =>
+      selector === "#new-api-totp-secret input"
+        ? totp
+        : {
+            getByRole: () => ({
+              click: async () => {
+                if (secret) await verify()
+              },
+            }),
+          },
+    getByText: () => ({ isVisible: async () => true }),
+    getByRole: () => dialog,
+  }
+  return {
+    page: page as unknown as Page,
+    context,
+    config: { ...config, baseUrl },
+  }
+}
+
 describe("New API settings real-site verification prerequisites", () => {
   beforeEach(() => {
     annotations.length = 0
@@ -41,10 +127,48 @@ describe("New API settings real-site verification prerequisites", () => {
 
   afterEach(() => vi.unstubAllGlobals())
 
+  it.each(["https://managed.example", "https://managed.example/gateway"])(
+    "observes live inventory and proof relative to base URL %s",
+    async (baseUrl) => {
+      const fixture = createObservedScenario(baseUrl)
+      await expect(
+        runNewApiSettingsSessionVerificationScenario({
+          ...fixture,
+          extensionId: "fixture-extension",
+        }),
+      ).resolves.toBeUndefined()
+      for (const registration of fixture.context.on.mock.calls) {
+        expect(fixture.context.off).toHaveBeenCalledWith(...registration)
+      }
+    },
+  )
+
+  it.each(["https://managed.example", "https://managed.example/gateway"])(
+    "rejects channel-key dispatch before its response at %s",
+    async (baseUrl) => {
+      const fixture = createObservedScenario(baseUrl, true)
+      await expect(
+        runNewApiSettingsSessionVerificationScenario({
+          ...fixture,
+          extensionId: "fixture-extension",
+        }),
+      ).rejects.toThrow()
+      for (const registration of fixture.context.on.mock.calls) {
+        expect(fixture.context.off).toHaveBeenCalledWith(...registration)
+      }
+    },
+  )
+
   it.each([
     { fail: false, originalSecret: "original-saved-secret" },
     { fail: true, originalSecret: "original-saved-secret" },
     { fail: false, originalSecret: undefined },
+    { fail: true, originalSecret: "original-saved-secret", delayedSave: true },
+    {
+      fail: false,
+      originalSecret: "original-saved-secret",
+      earlyManualSuccess: true,
+    },
     { fail: true, originalSecret: "original-saved-secret", cleanupFails: true },
     {
       fail: false,
@@ -53,13 +177,25 @@ describe("New API settings real-site verification prerequisites", () => {
     },
   ])(
     "restores only the scenario's TOTP changes: %j",
-    async ({ fail, originalSecret, operatorSecret, cleanupFails }) => {
+    async ({
+      fail,
+      originalSecret,
+      operatorSecret,
+      cleanupFails,
+      delayedSave,
+      earlyManualSuccess,
+    }) => {
       const prefs = {
         newApi: { ...config, totpSecret: originalSecret },
         unrelated: "before",
       }
       let raw: unknown = fail ? JSON.stringify(prefs) : prefs
-      storedPreferences.mockImplementation(async () => structuredClone(prefs))
+      let pendingSave: (() => void) | undefined
+      storedPreferences.mockImplementation(async () => {
+        pendingSave?.()
+        pendingSave = undefined
+        return structuredClone(typeof raw === "string" ? JSON.parse(raw) : raw)
+      })
       worker.evaluate.mockImplementation(async (fn, arg) => fn(arg))
       if (cleanupFails)
         worker.evaluate.mockRejectedValue(
@@ -85,18 +221,33 @@ describe("New API settings real-site verification prerequisites", () => {
         toHaveCount: async () => {},
         toBe: () => {},
       }
-      playwrightExpect.mockReturnValue(matcher)
-      playwrightExpect.poll.mockReturnValue(matcher)
+      playwrightExpect.mockImplementation((value) => ({
+        ...matcher,
+        toBeVisible: async () => {
+          if (earlyManualSuccess && value?.manualCode)
+            throw new Error("Manual verification form is missing")
+        },
+      }))
+      playwrightExpect.poll.mockImplementation((read) => ({
+        toBe: async (expected: unknown) => {
+          if (typeof expected === "string") expect(await read()).toBe(expected)
+        },
+      }))
       let draft = originalSecret
       const locator = {
         fill: vi.fn(async (value: string) => {
           draft = value
         }),
         blur: vi.fn(async () => {
-          const current = typeof raw === "string" ? JSON.parse(raw) : raw
-          current.newApi.totpSecret = draft
-          current.unrelated = "edited during scenario"
-          raw = fail ? JSON.stringify(current) : current
+          const value = draft
+          const save = () => {
+            const current = typeof raw === "string" ? JSON.parse(raw) : raw
+            current.newApi.totpSecret = value
+            current.unrelated = "edited during scenario"
+            raw = fail ? JSON.stringify(current) : current
+          }
+          if (delayedSave && value === "") pendingSave = save
+          else save()
         }),
         click: vi.fn(async () => {
           if (draft === "") {
@@ -108,8 +259,11 @@ describe("New API settings real-site verification prerequisites", () => {
             }
           }
         }),
-        getByRole: () => locator,
-        getByLabel: () => locator,
+        getByRole: (_role: string, options?: { name?: string }) =>
+          options?.name === "Submit login code"
+            ? { ...locator, isVisible: async () => false }
+            : locator,
+        getByLabel: () => ({ ...locator, manualCode: true }),
         or: () => locator,
         isVisible: async () => true,
       }
@@ -134,11 +288,16 @@ describe("New API settings real-site verification prerequisites", () => {
             new Error("Preference restoration failed"),
           ],
         })
-        expect(context.off).toHaveBeenCalledOnce()
+        expect(context.off).toHaveBeenCalledTimes(context.on.mock.calls.length)
+        for (const registration of context.on.mock.calls)
+          expect(context.off).toHaveBeenCalledWith(...registration)
         return
       }
       if (fail) await expect(run).rejects.toThrow("Manual mode failed")
+      else if (earlyManualSuccess)
+        await expect(run).rejects.toThrow("Manual verification form is missing")
       else await expect(run).resolves.toBeUndefined()
+      pendingSave?.()
       const finalPrefs =
         typeof raw === "string" ? JSON.parse(raw) : (raw as typeof prefs)
       expect(finalPrefs.newApi.totpSecret).toBe(
@@ -147,7 +306,9 @@ describe("New API settings real-site verification prerequisites", () => {
       if (originalSecret === undefined)
         expect(finalPrefs.newApi).not.toHaveProperty("totpSecret")
       expect(finalPrefs.unrelated).toBe("edited during scenario")
-      expect(context.off).toHaveBeenCalledOnce()
+      expect(context.off).toHaveBeenCalledTimes(context.on.mock.calls.length)
+      for (const registration of context.on.mock.calls)
+        expect(context.off).toHaveBeenCalledWith(...registration)
     },
   )
 
