@@ -22,8 +22,9 @@
       "sessionActiveLimitCleanup": "New API has reached its active-session limit. The extension can revoke only the sessions it created, then retry this action.",
       "sessionIssuanceLimit": "New API has reached its 24-hour session issuance limit. Removing active sessions will not reset it; wait for the issuance window to recover.",
       "successChannel": "Verification succeeded for {{label}}. The real channel key has been loaded.",
-      "successSettings": "The New API login and verification flow completed successfully. You can now continue with actions that require login and verification.",
-      "successToken": "Verification succeeded for {{label}}. The managed-site status has been refreshed."
+      "successSettings": "The New API login session and this two-factor verification test passed. Reading a channel key still requires verification for the target channel.",
+      "successToken": "Verification succeeded for {{label}}. The managed-site status has been refreshed.",
+      "verificationChannelMissing": "The New API login session is available, but there are no channels to test, so secondary verification has not been tested. Create a channel on the site, then retry."
     },
     "fields": {
       "codeLabel": "Verification code"

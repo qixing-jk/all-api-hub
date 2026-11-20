@@ -172,6 +172,37 @@ function render(ui: ReactElement) {
 }
 
 describe("NewApiManagedVerificationDialog", () => {
+  it("explains missing channels and offers recovery without requesting a verification code", async () => {
+    const user = userEvent.setup()
+    const props = createProps({
+      step: NEW_API_MANAGED_VERIFICATION_STEPS.VERIFICATION_CHANNEL_MISSING,
+      request: { ...BASE_REQUEST, kind: "settings" },
+    })
+    render(<NewApiManagedVerificationDialog {...props} />)
+    expect(
+      screen.getByText(
+        "newApiManagedVerification:dialog.body.verificationChannelMissing",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByLabelText(
+        "newApiManagedVerification:dialog.fields.codeLabel",
+      ),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.openSite",
+      }),
+    )
+    expect(props.onOpenSite).toHaveBeenCalledOnce()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.retry",
+      }),
+    )
+    expect(props.onRetry).toHaveBeenCalledOnce()
+  })
+
   it("opens TOTP settings separately while keeping the verification workflow open", async () => {
     const user = userEvent.setup()
     const props = createProps({

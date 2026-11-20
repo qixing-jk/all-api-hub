@@ -37,6 +37,7 @@ const {
   createManagedSessionRequest,
   readNewApiVerificationMethodsWithRefresh,
   ensureNewApiLoginSession,
+  resolveNewApiVerificationConfig,
   verifyNewApiSession,
   sanitizeNewApiErrorForOrigin,
   isUnauthorizedError,
@@ -112,6 +113,7 @@ const getNewApiChannelKeyRequirementKind = (
 ): NewApiChannelKeyErrorKind => {
   switch (result.status) {
     case NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED:
+    case NEW_API_MANAGED_SESSION_STATUSES.VERIFICATION_CHANNEL_MISSING:
     case NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED:
       return NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED
     case NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING:
@@ -160,6 +162,14 @@ async function continueFromLoggedInSession(
   },
   methods: NewApiVerificationMethods,
 ): Promise<EnsureNewApiManagedSessionResult> {
+  const verificationConfig = await resolveNewApiVerificationConfig(config)
+  if (!verificationConfig) {
+    return {
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFICATION_CHANNEL_MISSING,
+    }
+  }
+  // Selecting a channel for a general settings test must not turn a previous
+  // channel proof into evidence that the currently configured TOTP was tested.
   if (hasVerifiedChannelAccess(config.baseUrl, config.channelId)) {
     return {
       status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
@@ -174,7 +184,7 @@ async function continueFromLoggedInSession(
     try {
       generatedCode = generateNewApiTotpCode(config.totpSecret!)
       const result = await verifyNewApiSession(
-        config,
+        verificationConfig,
         {
           method: NEW_API_VERIFICATION_METHODS.TwoFactor,
           code: generatedCode,
@@ -335,7 +345,13 @@ export async function submitNewApiSecureVerificationCode(
   code: string,
 ): Promise<EnsureNewApiManagedSessionResult> {
   const trimmedCode = code.trim()
-  const result = await verifyNewApiSession(config, {
+  const verificationConfig = await resolveNewApiVerificationConfig(config)
+  if (!verificationConfig) {
+    return {
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFICATION_CHANNEL_MISSING,
+    }
+  }
+  const result = await verifyNewApiSession(verificationConfig, {
     method: NEW_API_VERIFICATION_METHODS.TwoFactor,
     code: trimmedCode,
   })

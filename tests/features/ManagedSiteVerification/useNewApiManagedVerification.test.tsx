@@ -101,6 +101,38 @@ async function createVerificationI18n() {
 }
 
 describe("useNewApiManagedVerification", () => {
+  it("keeps missing-channel verification open and retries after a channel is created", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValueOnce({
+      status: "verification-channel-missing",
+    })
+    const onVerified = vi.fn()
+    const { result } = renderHook(() => useNewApiManagedVerification())
+    act(() =>
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        kind: "settings",
+        onVerified,
+      }),
+    )
+    await waitFor(() =>
+      expect(result.current.dialogState.step).toBe(
+        "verification-channel-missing",
+      ),
+    )
+    expect(result.current.dialogState.isOpen).toBe(true)
+    expect(result.current.dialogState.isBusy).toBe(false)
+    expect(onVerified).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+
+    ensureNewApiManagedSessionMock.mockResolvedValueOnce({
+      status: "verified",
+      methods: { twoFactorEnabled: true, passkeyEnabled: false },
+    })
+    await act(async () => result.current.retryVerification())
+    expect(result.current.dialogState.isOpen).toBe(false)
+    expect(onVerified).toHaveBeenCalledTimes(1)
+  })
+
   it("retranslates busy and validation states without restarting login or losing the code", async () => {
     const i18n = await createVerificationI18n()
     const pending = createDeferred<{ status: "login-2fa-required" }>()

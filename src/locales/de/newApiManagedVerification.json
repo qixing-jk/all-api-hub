@@ -22,8 +22,9 @@
       "sessionActiveLimitCleanup": "New API hat das Limit aktiver Sitzungen erreicht. Die Erweiterung kann gezielt nur die von ihr erstellten Sitzungen widerrufen und den Vorgang erneut versuchen.",
       "sessionIssuanceLimit": "New API hat das 24-Stunden-Limit für neue Sitzungen erreicht. Das Entfernen aktiver Sitzungen setzt dieses Limit nicht zurück; warten Sie, bis sich das Zeitfenster erholt.",
       "successChannel": "Verifizierung für {{label}} erfolgreich. Der echte Kanalschlüssel wurde geladen.",
-      "successSettings": "Der New API-Anmelde- und Verifizierungsvorgang wurde erfolgreich abgeschlossen. Sie können nun mit Aktionen fortfahren, die eine Anmeldung und Verifizierung erfordern.",
-      "successToken": "Die Überprüfung für {{label}} war erfolgreich. Der Status der verwalteten Website wurde aktualisiert."
+      "successSettings": "Die New API-Anmeldesitzung und dieser Zwei-Faktor-Verifizierungstest waren erfolgreich. Zum Lesen eines Kanalschlüssels ist weiterhin eine Verifizierung für den Zielkanal erforderlich.",
+      "successToken": "Die Überprüfung für {{label}} war erfolgreich. Der Status der verwalteten Website wurde aktualisiert.",
+      "verificationChannelMissing": "Die New API-Anmeldesitzung ist verfügbar, aber es gibt keine Kanäle für den Test. Die zusätzliche Verifizierung wurde daher noch nicht getestet. Erstelle auf der Website einen Kanal und versuche es erneut."
     },
     "fields": {
       "codeLabel": "Bestätigungscode"

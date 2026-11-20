@@ -22,8 +22,9 @@
       "sessionActiveLimitCleanup": "A New API atingiu o limite de sessões ativas. A extensão pode revogar somente as sessões que criou e então tentar novamente.",
       "sessionIssuanceLimit": "A New API atingiu o limite de emissão de sessões em 24 horas. Remover sessões ativas não redefine esse limite; aguarde a recuperação da janela de emissão.",
       "successChannel": "Verificação de {{label}} concluída. A chave real do canal foi carregada.",
-      "successSettings": "O fluxo de login e verificação do New API foi concluído com sucesso. Agora você pode continuar com as ações que exigem login e verificação.",
-      "successToken": "Verificação de {{label}} concluída. O status do site gerenciado foi atualizado."
+      "successSettings": "A sessão de login do New API e este teste de verificação de dois fatores foram aprovados. A leitura da chave de um canal ainda exige verificação para o canal de destino.",
+      "successToken": "Verificação de {{label}} concluída. O status do site gerenciado foi atualizado.",
+      "verificationChannelMissing": "A sessão de login do New API está disponível, mas não há canais para testar, então a verificação adicional ainda não foi testada. Crie um canal no site e tente novamente."
     },
     "fields": {
       "codeLabel": "Código de verificação"

@@ -461,7 +461,7 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "description": "Test whether the entered login username, password, and TOTP secret are correct and usable. After a successful check, you can continue with actions that require login and 2FA.",
+      "description": "Check the New API login session and two-factor verification using the configured login details and TOTP secret when needed. Existing sessions are reused; secondary verification automatically selects an existing channel.",
       "testing": "Testing config...",
       "title": "Test login & 2FA config"
     },

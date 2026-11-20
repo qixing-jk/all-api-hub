@@ -461,7 +461,7 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "description": "Testen Sie, ob der eingegebene Login-Benutzername, das Passwort und das TOTP-Geheimnis korrekt und verwendbar sind. Nach erfolgreicher Prüfung können Sie mit Aktionen fortfahren, die eine Anmeldung und 2FA erfordern.",
+      "description": "Prüfe die New API-Anmeldesitzung und die Zwei-Faktor-Verifizierung bei Bedarf mit den konfigurierten Anmeldedaten und dem TOTP-Geheimnis. Bestehende Sitzungen werden wiederverwendet; die zusätzliche Verifizierung wählt automatisch einen vorhandenen Kanal aus.",
       "testing": "Konfiguration testen...",
       "title": "Login und 2FA-Konfiguration testen"
     },

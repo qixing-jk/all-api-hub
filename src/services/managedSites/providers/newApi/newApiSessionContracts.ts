@@ -15,6 +15,7 @@ export const NEW_API_MANAGED_SESSION_STATUSES = {
   CREDENTIALS_MISSING: "credentials-missing",
   LOGIN_2FA_REQUIRED: "login-2fa-required",
   SECURE_VERIFICATION_REQUIRED: "secure-verification-required",
+  VERIFICATION_CHANNEL_MISSING: "verification-channel-missing",
   PASSKEY_MANUAL_REQUIRED: "passkey-manual-required",
   SESSION_ACTIVE_LIMIT: "session-active-limit",
   SESSION_ISSUANCE_LIMIT: "session-issuance-limit",
@@ -37,6 +38,9 @@ export const NEW_API_LOGIN_STATUSES = {
 } as const
 
 export type EnsureNewApiManagedSessionResult =
+  | {
+      status: typeof NEW_API_MANAGED_SESSION_STATUSES.VERIFICATION_CHANNEL_MISSING
+    }
   | {
       status: typeof NEW_API_MANAGED_SESSION_STATUSES.VERIFIED
       methods: NewApiVerificationMethods

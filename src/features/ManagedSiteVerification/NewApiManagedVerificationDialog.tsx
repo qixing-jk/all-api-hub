@@ -53,6 +53,10 @@ const getStepBodyCopy = (
       return t("newApiManagedVerification:dialog.body.loginTwoFactor")
     case NEW_API_MANAGED_VERIFICATION_STEPS.SECURE_VERIFICATION:
       return t("newApiManagedVerification:dialog.body.secureVerification")
+    case NEW_API_MANAGED_VERIFICATION_STEPS.VERIFICATION_CHANNEL_MISSING:
+      return t(
+        "newApiManagedVerification:dialog.body.verificationChannelMissing",
+      )
     case NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL:
       return t("newApiManagedVerification:dialog.body.passkeyManual")
     case NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT:
@@ -135,11 +139,11 @@ export function NewApiManagedVerificationDialog(
   const [isSavingQuickConfig, setIsSavingQuickConfig] = useState(false)
 
   const header = (
-    <div className="gap-y-density-1 flex flex-col gap-x-1 pr-8">
-      <div className="text-foreground text-lg font-semibold">
+    <div className="flex flex-col gap-x-1 gap-y-density-1 pr-8">
+      <div className="text-lg font-semibold text-foreground">
         {getDialogTitle(t, props.request)}
       </div>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         {getStepBodyCopy(t, props.request, props.step)}
       </p>
     </div>
@@ -159,11 +163,15 @@ export function NewApiManagedVerificationDialog(
     (props.step === NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE &&
       !props.request?.config.baseUrl.trim())
   const shouldShowRetryAction =
+    props.step ===
+      NEW_API_MANAGED_VERIFICATION_STEPS.VERIFICATION_CHANNEL_MISSING ||
     (props.step === NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE &&
       !shouldShowSettingsAction) ||
     props.step ===
       NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP
-  const shouldShowLimitOpenSiteAction =
+  const shouldShowOpenSiteAction =
+    props.step ===
+      NEW_API_MANAGED_VERIFICATION_STEPS.VERIFICATION_CHANNEL_MISSING ||
     props.step === NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT ||
     props.step ===
       NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP ||
@@ -297,7 +305,7 @@ export function NewApiManagedVerificationDialog(
         </Button>
       ) : null}
 
-      {shouldShowLimitOpenSiteAction ? (
+      {shouldShowOpenSiteAction ? (
         <WorkflowTransitionButton
           variant="outline"
           onClick={props.onOpenSite}
@@ -343,7 +351,7 @@ export function NewApiManagedVerificationDialog(
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground py-density-2 rounded-lg border px-3 text-sm"
+            className="rounded-lg border border-primary-soft-border bg-primary-soft px-3 py-density-2 text-sm text-primary-soft-foreground"
           >
             {props.busyMessage || t("dialog.messages.starting")}
           </div>
@@ -354,15 +362,15 @@ export function NewApiManagedVerificationDialog(
             role="alert"
             aria-live="assertive"
             aria-atomic="true"
-            className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-2 rounded-lg border px-3 text-sm"
+            className="rounded-lg border border-destructive-border bg-destructive-soft px-3 py-density-2 text-sm text-destructive-soft-foreground"
           >
             {props.errorMessage}
           </div>
         ) : null}
 
         {shouldShowSettingsAction ? (
-          <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 py-density-6 flex min-h-32 flex-col items-center justify-center rounded-xl border border-dashed px-4 text-center">
-            <p className="text-muted-foreground dark:text-secondary-foreground text-sm">
+          <div className="flex min-h-32 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface-subtle/80 px-4 py-density-6 text-center dark:border-border-subtle dark:bg-background/40">
+            <p className="text-sm text-muted-foreground dark:text-secondary-foreground">
               {t("dialog.hints.openSettingsShortcut")}
             </p>
             {quickConfigError ? (
@@ -370,18 +378,18 @@ export function NewApiManagedVerificationDialog(
                 role="alert"
                 aria-live="assertive"
                 aria-atomic="true"
-                className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground mt-density-4 py-density-2 w-full rounded-lg border px-3 text-left text-sm"
+                className="mt-density-4 w-full rounded-lg border border-destructive-border bg-destructive-soft px-3 py-density-2 text-left text-sm text-destructive-soft-foreground"
               >
                 {quickConfigError}
               </div>
             ) : null}
             {shouldShowQuickConfig ? (
-              <div className="mt-density-4 space-y-density-3 w-full max-w-md text-left">
+              <div className="mt-density-4 w-full max-w-md space-y-density-3 text-left">
                 {needsBaseUrl ? (
                   <div className="space-y-density-2">
                     <label
                       htmlFor="new-api-quick-base-url"
-                      className="text-secondary-foreground block text-sm font-medium"
+                      className="block text-sm font-medium text-secondary-foreground"
                     >
                       {t("settings:newApi.fields.baseUrlLabel")}
                     </label>
@@ -401,7 +409,7 @@ export function NewApiManagedVerificationDialog(
                     <div className="space-y-density-2">
                       <label
                         htmlFor="new-api-quick-username"
-                        className="text-secondary-foreground block text-sm font-medium"
+                        className="block text-sm font-medium text-secondary-foreground"
                       >
                         {t("settings:newApi.fields.usernameLabel")}
                       </label>
@@ -420,7 +428,7 @@ export function NewApiManagedVerificationDialog(
                     <div className="space-y-density-2">
                       <label
                         htmlFor="new-api-quick-password"
-                        className="text-secondary-foreground block text-sm font-medium"
+                        className="block text-sm font-medium text-secondary-foreground"
                       >
                         {t("settings:newApi.fields.passwordLabel")}
                       </label>
@@ -443,7 +451,7 @@ export function NewApiManagedVerificationDialog(
                     </div>
                   </>
                 ) : null}
-                <div className="gap-y-density-2 pt-density-1 flex flex-wrap justify-center gap-x-2">
+                <div className="flex flex-wrap justify-center gap-x-2 gap-y-density-2 pt-density-1">
                   <Button
                     onClick={() => void handleSaveQuickConfig()}
                     disabled={props.isBusy}
@@ -463,11 +471,11 @@ export function NewApiManagedVerificationDialog(
           <div className="space-y-density-2">
             <label
               htmlFor="new-api-verification-code"
-              className="text-secondary-foreground block text-sm font-medium"
+              className="block text-sm font-medium text-secondary-foreground"
             >
               {t("dialog.fields.codeLabel")}
             </label>
-            <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 py-density-4 rounded-xl border px-4">
+            <div className="rounded-xl border border-border bg-surface-subtle/80 px-4 py-density-4 dark:border-border-subtle dark:bg-background/40">
               <div className="flex justify-center">
                 <InputOTP
                   id="new-api-verification-code"
@@ -501,7 +509,7 @@ export function NewApiManagedVerificationDialog(
             </div>
             <p
               id="new-api-verification-code-hint"
-              className="text-muted-foreground text-xs"
+              className="text-xs text-muted-foreground"
             >
               {props.request?.config.totpSecret?.trim()
                 ? t("dialog.hints.manualFallback")
@@ -529,7 +537,7 @@ export function NewApiManagedVerificationDialog(
         ) : null}
 
         {props.step === NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL ? (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {t("dialog.hints.passkey")}
           </p>
         ) : null}
