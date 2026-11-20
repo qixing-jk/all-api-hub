@@ -1,5 +1,30 @@
 # Changelog
 
+## [4.11.0](https://github.com/qixing-jk/all-api-hub/compare/v4.10.1...v4.11.0) (2026-11-20)
+
+
+### Features
+
+* **checkin:** add Xingya claims and New API session fallback ([#1881](https://github.com/qixing-jk/all-api-hub/issues/1881)) ([e19d6d1](https://github.com/qixing-jk/all-api-hub/commit/e19d6d15eb419e78809dc04c1dd6da0d17c927cb))
+* **checkin:** share endpoint metadata and localize method sources ([#1883](https://github.com/qixing-jk/all-api-hub/issues/1883)) ([20d7837](https://github.com/qixing-jk/all-api-hub/commit/20d783705d14c5526056fefbaf1ff6b607c1dc21))
+* **verification:** stream results in a responsive test workspace ([#1876](https://github.com/qixing-jk/all-api-hub/issues/1876)) ([65ae160](https://github.com/qixing-jk/all-api-hub/commit/65ae1609a6cbbd5c3bac2a3c662444b2e01866e9))
+
+
+### Bug Fixes
+
+* **checkin:** confirm outcomes within account and day boundaries ([#1888](https://github.com/qixing-jk/all-api-hub/issues/1888)) ([510d14e](https://github.com/qixing-jk/all-api-hub/commit/510d14e7a2c796d50a330ae2c66df6315cc58bd8))
+* clarify check-in reports and simplify contextual feedback ([#1886](https://github.com/qixing-jk/all-api-hub/issues/1886)) ([3896b25](https://github.com/qixing-jk/all-api-hub/commit/3896b25e2cd756648e1c07327a6849c000ce3cde))
+* **e2e:** retry transient Safari screen capture failures ([#1899](https://github.com/qixing-jk/all-api-hub/issues/1899)) ([6126068](https://github.com/qixing-jk/all-api-hub/commit/612606832c93af5b3b4ae3cc4b455742acfedc90))
+* **new-api:** bind session verification to an existing channel ([#1901](https://github.com/qixing-jk/all-api-hub/issues/1901)) ([ce9b664](https://github.com/qixing-jk/all-api-hub/commit/ce9b6646b9cabf15ae97d59f444c8378534e3260))
+* preserve verification focus and stabilize browser compatibility checks ([#1884](https://github.com/qixing-jk/all-api-hub/issues/1884)) ([17830de](https://github.com/qixing-jk/all-api-hub/commit/17830de3474e3f0100f23b31943314c1c043539c))
+* recognize Firefox notification grants and organize contributor guides ([#1894](https://github.com/qixing-jk/all-api-hub/issues/1894)) ([5c4101d](https://github.com/qixing-jk/all-api-hub/commit/5c4101d93143df6b3b112ccd819a29f3f4ada78c))
+* **updates:** retry changelog reminders after notes are published ([#1870](https://github.com/qixing-jk/all-api-hub/issues/1870)) ([6dca549](https://github.com/qixing-jk/all-api-hub/commit/6dca5496b495f74c33186cecb1d885a617864157))
+
+
+### Performance Improvements
+
+* reduce extension loading footprint and preserve dialog recovery ([#1878](https://github.com/qixing-jk/all-api-hub/issues/1878)) ([145ca3a](https://github.com/qixing-jk/all-api-hub/commit/145ca3a01a621021234fd3c9551a692475bcf926))
+
 ## [4.10.1](https://github.com/qixing-jk/all-api-hub/compare/v4.10.0...v4.10.1) (2026-11-11)
 
 
