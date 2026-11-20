@@ -162,6 +162,7 @@ for (const mode of ["automatic", "missing-channel-manual-retry"] as const) {
         dialog.getByText(/登录会话可用.*尚未完成二次验证/),
       ).toBeVisible()
       await expect(dialog.getByLabel("验证码", { exact: true })).toHaveCount(0)
+      await expect(dialog.locator('[data-slot="modal-body"]')).toHaveCount(0)
       expect(sessionSite.verifications).toEqual([])
       await testInfo.attach("missing-channel", {
         body: await dialog.screenshot({

@@ -7,6 +7,79 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 describe("Modal", () => {
+  it.each([
+    { label: "null", children: null },
+    { label: "false", children: false },
+    { label: "empty string", children: "" },
+    { label: "empty array", children: [] },
+    { label: "nested empty children", children: [null, [false, undefined]] },
+    { label: "empty fragment", children: <>{[null, false]}</> },
+  ])("omits the body for $label", async ({ children }) => {
+    render(
+      <Modal
+        isOpen
+        onClose={() => {}}
+        title="Empty content"
+        header={<p>Header only</p>}
+      >
+        {children}
+      </Modal>,
+    )
+    const dialog = await screen.findByRole("dialog", { name: "Empty content" })
+    expect(dialog.querySelector('[data-slot="modal-body"]')).toBeNull()
+  })
+
+  it("omits an empty body by default while keeping header and footer actions", async () => {
+    const onClose = vi.fn()
+    render(
+      <Modal
+        isOpen
+        onClose={onClose}
+        title="Notice"
+        header={<p>No channels available</p>}
+        footer={<button onClick={onClose}>Dismiss</button>}
+      />,
+    )
+    const dialog = await screen.findByRole("dialog", { name: "Notice" })
+    expect(dialog).toHaveTextContent("No channels available")
+    expect(dialog.querySelector('[data-slot="modal-body"]')).toBeNull()
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("keeps zero and fragment content visible when the body is replaced", async () => {
+    const props = { isOpen: true, onClose: vi.fn(), title: "Changing body" }
+    const { rerender } = render(
+      <Modal {...props} header={<p>Summary</p>}>
+        {0}
+      </Modal>,
+    )
+    const dialog = await screen.findByRole("dialog", { name: "Changing body" })
+    expect(dialog.querySelector('[data-slot="modal-body"]')).toHaveTextContent(
+      "0",
+    )
+    rerender(
+      <Modal {...props} header={<p>Summary</p>}>
+        {[null, false]}
+      </Modal>,
+    )
+    expect(dialog.querySelector('[data-slot="modal-body"]')).toBeNull()
+    rerender(
+      <Modal {...props} header={<p>Summary</p>}>
+        <>
+          <input aria-label="Restored draft" />
+        </>
+      </Modal>,
+    )
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Restored draft" }),
+      "Available",
+    )
+    expect(screen.getByRole("textbox", { name: "Restored draft" })).toHaveValue(
+      "Available",
+    )
+  })
+
   it("lets a focused inline pane handle Escape without closing the containing dialog", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

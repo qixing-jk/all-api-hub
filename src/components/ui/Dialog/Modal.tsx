@@ -1,6 +1,9 @@
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import {
+  Children,
+  Fragment,
+  isValidElement,
   useCallback,
   useContext,
   useLayoutEffect,
@@ -55,6 +58,19 @@ const sizeMap: Record<Size, string> = {
   md: "max-w-md",
   lg: "max-w-2xl",
   xl: "max-w-5xl",
+}
+
+/** Empty fragments and conditional children do not need a padded scroll region. */
+function hasModalBodyContent(children: ReactNode): boolean {
+  return Children.toArray(children).some((child) => {
+    if (
+      isValidElement<{ children?: ReactNode }>(child) &&
+      child.type === Fragment
+    ) {
+      return hasModalBodyContent(child.props.children)
+    }
+    return typeof child !== "string" || child.length > 0
+  })
 }
 
 type FocusSession = {
@@ -216,6 +232,7 @@ export function Modal({
   restoreDeferredFocus = false,
   onCloseComplete,
 }: ModalProps) {
+  const hasBody = hasModalBodyContent(children)
   const contentRef = useRef<HTMLDivElement>(null)
   const [tooltipPortalContainer, setTooltipPortalContainer] =
     useState<HTMLDivElement | null>(null)
@@ -482,7 +499,11 @@ export function Modal({
                   {header && (
                     <div
                       data-testid={headerTestId}
-                      className="shrink-0 border-b border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
+                      className={cn(
+                        "shrink-0 px-4 py-density-3 sm:px-6 sm:py-density-4",
+                        hasBody &&
+                          "border-b border-border-subtle dark:border-border",
+                      )}
                     >
                       <div className="flex items-start justify-between">
                         {header}
@@ -490,17 +511,19 @@ export function Modal({
                     </div>
                   )}
 
-                  <div
-                    data-slot="modal-body"
-                    className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
-                  >
-                    {/* Keep hints outside body scrolling and sticky pane layers. */}
-                    <TooltipPortalContext.Provider
-                      value={tooltipPortalContainer}
+                  {hasBody && (
+                    <div
+                      data-slot="modal-body"
+                      className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
                     >
-                      {children}
-                    </TooltipPortalContext.Provider>
-                  </div>
+                      {/* Keep hints outside body scrolling and sticky pane layers. */}
+                      <TooltipPortalContext.Provider
+                        value={tooltipPortalContainer}
+                      >
+                        {children}
+                      </TooltipPortalContext.Provider>
+                    </div>
+                  )}
 
                   {footer && (
                     <div

@@ -109,24 +109,6 @@ vi.mock("~/components/ui", async () => {
     InputOTPSeparator: ({ ...props }: { [key: string]: unknown }) => (
       <div data-slot="input-otp-separator" {...props} />
     ),
-    Modal: ({
-      isOpen,
-      header,
-      footer,
-      children,
-    }: {
-      isOpen: boolean
-      header?: ReactNode
-      footer?: ReactNode
-      children?: ReactNode
-    }) =>
-      isOpen ? (
-        <div role="dialog">
-          <div>{header}</div>
-          <div>{children}</div>
-          <div>{footer}</div>
-        </div>
-      ) : null,
   }
 })
 
@@ -189,6 +171,9 @@ describe("NewApiManagedVerificationDialog", () => {
         "newApiManagedVerification:dialog.fields.codeLabel",
       ),
     ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("dialog").querySelector('[data-slot="modal-body"]'),
+    ).toBeNull()
     await user.click(
       screen.getByRole("button", {
         name: "newApiManagedVerification:dialog.actions.openSite",
@@ -702,13 +687,14 @@ describe("NewApiManagedVerificationDialog", () => {
   })
 
   it("renders a shadcn-style otp input for verification code entry", () => {
-    const { container } = render(
+    render(
       <NewApiManagedVerificationDialog
         {...createProps({
           step: NEW_API_MANAGED_VERIFICATION_STEPS.LOGIN_2FA,
         })}
       />,
     )
+    const dialog = screen.getByRole("dialog")
 
     expect(
       screen.getByLabelText(
@@ -716,10 +702,10 @@ describe("NewApiManagedVerificationDialog", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      container.querySelectorAll('[data-slot="input-otp-slot"]'),
+      dialog.querySelectorAll('[data-slot="input-otp-slot"]'),
     ).toHaveLength(6)
     expect(
-      container.querySelector('[data-slot="input-otp-separator"]'),
+      dialog.querySelector('[data-slot="input-otp-separator"]'),
     ).not.toBeNull()
   })
 
