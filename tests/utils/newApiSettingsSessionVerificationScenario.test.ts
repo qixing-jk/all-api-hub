@@ -35,6 +35,8 @@ const config = {
 }
 
 function createObservedScenario(baseUrl: string, readChannelKey = false) {
+  const pollArguments: unknown[] = []
+  const pollResults: unknown[] = []
   const listeners = new Map<string, (event: unknown) => Promise<void>>()
   const context = {
     on: vi.fn((event: string, listener: (value: unknown) => Promise<void>) =>
@@ -54,7 +56,12 @@ function createObservedScenario(baseUrl: string, readChannelKey = false) {
     toHaveCount: async () => {},
   }))
   playwrightExpect.poll.mockImplementation((read) => ({
-    toBe: async (expected: unknown) => expect(await read()).toBe(expected),
+    toBe: async (expected: unknown) => {
+      const result = await read()
+      pollArguments.push(expected)
+      pollResults.push(result)
+      expect(result).toBe(expected)
+    },
   }))
   const verify = async () => {
     if (readChannelKey)
@@ -117,6 +124,8 @@ function createObservedScenario(baseUrl: string, readChannelKey = false) {
     page: page as unknown as Page,
     context,
     config: { ...config, baseUrl },
+    pollArguments,
+    pollResults,
   }
 }
 
@@ -126,6 +135,21 @@ describe("New API settings real-site verification prerequisites", () => {
   })
 
   afterEach(() => vi.unstubAllGlobals())
+
+  it("keeps administrator TOTP values out of recorded poll results and matcher arguments", async () => {
+    const fixture = createObservedScenario("https://managed.example")
+    await runNewApiSettingsSessionVerificationScenario({
+      ...fixture,
+      extensionId: "fixture-extension",
+    })
+    expect(fixture.pollArguments).not.toContain(config.totpSecret)
+    expect(fixture.pollResults).not.toContain(config.totpSecret)
+    expect(
+      fixture.pollResults.every(
+        (value) => typeof value === "boolean" || typeof value === "number",
+      ),
+    ).toBe(true)
+  })
 
   it.each(["https://managed.example", "https://managed.example/gateway"])(
     "observes live inventory and proof relative to base URL %s",
@@ -230,7 +254,7 @@ describe("New API settings real-site verification prerequisites", () => {
       }))
       playwrightExpect.poll.mockImplementation((read) => ({
         toBe: async (expected: unknown) => {
-          if (typeof expected === "string") expect(await read()).toBe(expected)
+          if (typeof expected !== "number") expect(await read()).toBe(expected)
         },
       }))
       let draft = originalSecret

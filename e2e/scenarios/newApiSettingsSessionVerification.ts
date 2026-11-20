@@ -106,10 +106,12 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
           await expect
             .poll(async () => {
               const current = await getStoredUserPreferences(worker)
-              return (current.newApi as Partial<NewApiConfig> | undefined)
-                ?.totpSecret
+              const stored = (
+                current.newApi as Partial<NewApiConfig> | undefined
+              )?.totpSecret
+              return stored === (mode === "automatic" ? config.totpSecret! : "")
             })
-            .toBe(mode === "automatic" ? config.totpSecret! : "")
+            .toBe(true)
           await page
             .locator("#new-api-session-test")
             .getByRole("button")
