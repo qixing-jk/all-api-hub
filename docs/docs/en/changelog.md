@@ -8,6 +8,26 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.11.0
+This release brings real-time streaming responses and thinking process display to `API Test`, letting you test and tweak prompts side-by-side in a more spacious layout; adds daily check-in for Xingya API along with webpage check-in fallback for New API sites; automatically selects the best check-in method and prevents duplicate claims around midnight; fixes New API two-factor authentication checks and Firefox verification notifications; and trims extension size for a lighter, smoother experience.
+
+- **New Features:**
+  - **Real-time streaming and thinking process display in `API Test`**: Testing models now streams responses word-by-word like a live chat, letting you see the model's thinking process and generation time in real time; the more spacious layout lets you tweak prompts and switch models right beside the conversation for faster testing. See [Model List](./model-list.md) and [API Credential Profiles](./api-credential-profiles.md).
+  - **`Xingya API` daily check-in**: Added daily automatic check-in support for Xingya API, claiming rewards automatically once account login is configured. See [Automatic Check-in](./auto-checkin.md).
+  - **New API webpage check-in fallback**: When standard API check-in is blocked by security verifications on New API sites, the extension can automatically open the webpage to complete check-in, verifying the active user session to avoid claiming on the wrong account. See [Automatic Check-in](./auto-checkin.md).
+
+- **Experience Improvements:**
+  - **Smart check-in method recommendations**: When a site supports multiple check-in methods, the extension automatically identifies and recommends the best option so you don't have to guess; method names and descriptions are also clearer and easier to understand. See [Automatic Check-in](./auto-checkin.md).
+  - **Easier check-in troubleshooting**: When reporting a check-in problem, the form automatically packages diagnostic information for one-click submission; if reading check-in history fails, you can retry instantly without losing your drafted message. See [Automatic Check-in](./auto-checkin.md).
+  - **Lighter extension and more reliable popups**: Streamlined startup resources and compressed built-in images for faster everyday operation; popups that load dynamic features (like exporting configurations) can now be canceled at any time during slow network loading without freezing the interface.
+
+- **Bug Fixes:**
+  - **Fixed New API two-factor authentication checks**: Fixed an issue where New API accounts with two-factor authentication (authenticator codes) failed session checks with "The action details are invalid", now verifying login status smoothly.
+  - **Accurate midnight check-in and duplicate prevention**: Improved check-in detection around midnight and month-ends to prevent duplicate check-in attempts caused by time differences; successfully recorded check-ins automatically clear previous error messages. See [Automatic Check-in](./auto-checkin.md).
+  - **Fixed Firefox verification notifications**: Fixed an issue in Firefox where granting notification permissions did not properly activate verification reminder alerts. See [Automatic Check-in](./auto-checkin.md).
+  - **Reliable update log reminders**: If newly published release notes couldn't be loaded right after an automatic extension update due to network delays, the unread reminder is preserved and will pop up the next time you visit settings so you don't miss new features.
+  - **Smoother dropdowns and mobile editing**: Pressing Esc inside dropdown menus now reliably closes the menu without getting blocked by hovering tooltips; resizing the window on narrow or mobile screens no longer drops what you've typed in the test input. See [Model List](./model-list.md).
+
 ## 4.10.1
 
 ::: info Firefox release fix
