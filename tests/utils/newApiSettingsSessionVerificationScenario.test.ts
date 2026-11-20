@@ -45,6 +45,7 @@ describe("New API settings real-site verification prerequisites", () => {
     { fail: false, originalSecret: "original-saved-secret" },
     { fail: true, originalSecret: "original-saved-secret" },
     { fail: false, originalSecret: undefined },
+    { fail: true, originalSecret: "original-saved-secret", cleanupFails: true },
     {
       fail: false,
       originalSecret: "original-saved-secret",
@@ -52,7 +53,7 @@ describe("New API settings real-site verification prerequisites", () => {
     },
   ])(
     "restores only the scenario's TOTP changes: %j",
-    async ({ fail, originalSecret, operatorSecret }) => {
+    async ({ fail, originalSecret, operatorSecret, cleanupFails }) => {
       const prefs = {
         newApi: { ...config, totpSecret: originalSecret },
         unrelated: "before",
@@ -60,6 +61,10 @@ describe("New API settings real-site verification prerequisites", () => {
       let raw: unknown = fail ? JSON.stringify(prefs) : prefs
       storedPreferences.mockImplementation(async () => structuredClone(prefs))
       worker.evaluate.mockImplementation(async (fn, arg) => fn(arg))
+      if (cleanupFails)
+        worker.evaluate.mockRejectedValue(
+          new Error("Preference restoration failed"),
+        )
       vi.stubGlobal("navigator", {
         locks: {
           request: async (_name: string, run: () => Promise<void>) => run(),
@@ -122,6 +127,16 @@ describe("New API settings real-site verification prerequisites", () => {
         extensionId: "fixture-extension",
         config,
       })
+      if (cleanupFails) {
+        await expect(run).rejects.toMatchObject({
+          errors: [
+            new Error("Manual mode failed"),
+            new Error("Preference restoration failed"),
+          ],
+        })
+        expect(context.off).toHaveBeenCalledOnce()
+        return
+      }
       if (fail) await expect(run).rejects.toThrow("Manual mode failed")
       else await expect(run).resolves.toBeUndefined()
       const finalPrefs =

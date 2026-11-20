@@ -8,6 +8,7 @@ import SiteAnnouncementsSettings, {
 } from "~/features/BasicSettings/components/tabs/SiteAnnouncements/SiteAnnouncementsSettings"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -358,9 +359,8 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("resets the polling interval input when the update fails", async () => {
-    updateSiteAnnouncementNotificationsMock.mockResolvedValue({
-      success: false,
-    })
+    const update = createDeferred<{ success: boolean }>()
+    updateSiteAnnouncementNotificationsMock.mockReturnValue(update.promise)
 
     render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
@@ -380,17 +380,18 @@ describe("SiteAnnouncementNotificationSettings", () => {
       })
     })
 
+    expect(intervalInput).toHaveValue(120)
+    update.resolve({ success: false })
+    await waitFor(() => expect(intervalInput).toHaveValue(360))
     expect(showUpdateToastMock).toHaveBeenCalledWith(
       { success: false },
       "settings:siteAnnouncementNotifications.polling.interval",
     )
-    expect(intervalInput).toHaveValue(360)
   })
 
   it("resets the polling interval input when the update rejects", async () => {
-    updateSiteAnnouncementNotificationsMock.mockRejectedValue(
-      new Error("runtime failed"),
-    )
+    const update = createDeferred<{ success: boolean }>()
+    updateSiteAnnouncementNotificationsMock.mockReturnValue(update.promise)
 
     render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
@@ -410,11 +411,13 @@ describe("SiteAnnouncementNotificationSettings", () => {
       })
     })
 
+    expect(intervalInput).toHaveValue(120)
+    update.reject(new Error("runtime failed"))
+    await waitFor(() => expect(intervalInput).toHaveValue(360))
     expect(showUpdateToastMock).toHaveBeenCalledWith(
       { success: false },
       "settings:siteAnnouncementNotifications.polling.interval",
     )
-    expect(intervalInput).toHaveValue(360)
   })
 })
 
