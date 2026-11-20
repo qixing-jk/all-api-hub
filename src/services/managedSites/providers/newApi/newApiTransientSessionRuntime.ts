@@ -3,6 +3,7 @@ import type {
   EnsureNewApiLoginResult,
   NewApiDashboardRefreshResult,
   NewApiVerificationMethods,
+  NewApiVerificationPurpose,
   VerifyNewApiSessionResult,
 } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
@@ -32,6 +33,7 @@ interface NewApiSessionState {
   refreshPromise?: Promise<NewApiDashboardRefreshResult>
   methodsPromise?: Promise<NewApiVerificationMethods | null>
   verificationChannelId?: number
+  verificationPurpose?: NewApiVerificationPurpose
   verificationPromise?: Promise<VerifyNewApiSessionResult>
 }
 
@@ -254,15 +256,21 @@ export class NewApiTransientSessionRuntime {
     baseUrl: string,
     channelId: number | undefined,
     execute: () => Promise<VerifyNewApiSessionResult>,
+    purpose: NewApiVerificationPurpose = "channel",
   ): Promise<VerifyNewApiSessionResult> {
     const state = this.getSessionState(baseUrl)
     if (state.verificationPromise) {
-      if (state.verificationChannelId === channelId)
+      if (
+        purpose === "channel" &&
+        state.verificationPurpose === purpose &&
+        state.verificationChannelId === channelId
+      )
         return state.verificationPromise
       await state.verificationPromise.catch(() => undefined)
-      return await this.runVerification(baseUrl, channelId, execute)
+      return await this.runVerification(baseUrl, channelId, execute, purpose)
     }
     state.verificationChannelId = channelId
+    state.verificationPurpose = purpose
     state.verificationPromise = execute()
     try {
       return await state.verificationPromise

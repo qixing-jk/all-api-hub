@@ -461,7 +461,7 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "description": "Teste se o nome de usuário de login, a senha e o segredo TOTP inseridos estão corretos e utilizáveis. Após uma verificação bem-sucedida, você pode continuar com ações que exigem login e 2FA.",
+      "description": "Verifique a sessão de login do New API e a verificação de dois fatores usando os dados de login e o segredo TOTP configurados quando necessário. As sessões existentes são reutilizadas; a verificação adicional seleciona automaticamente um canal existente.",
       "testing": "Testando configuração...",
       "title": "Teste de login e configuração 2FA"
     },

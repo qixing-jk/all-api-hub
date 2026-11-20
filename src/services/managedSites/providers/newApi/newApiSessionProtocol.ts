@@ -19,6 +19,7 @@ import {
   type EnsureNewApiLoginResult,
   type NewApiDashboardRefreshResult,
   type NewApiVerificationMethods,
+  type NewApiVerificationPurpose,
   type VerifyNewApiSessionResult,
 } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import {
@@ -542,22 +543,81 @@ export function createNewApiSessionProtocol(
   }
 
   /**
+   * General modern verification still authorizes one concrete channel. Read only
+   * the first inventory entry; channel type and enabled state do not affect 2FA.
+   * Explicit channel operations and legacy Cookie verification keep their target.
+   */
+  async function resolveNewApiVerificationConfig<
+    Config extends Pick<NewApiConfig, "baseUrl" | "userId"> & {
+      channelId?: number
+    },
+  >(config: Config): Promise<Config | null> {
+    if (
+      config.channelId ||
+      !sessionRuntime.getActiveDashboardAuth(config.baseUrl)
+    ) {
+      return config
+    }
+
+    const endpoint = "/api/channel/?p=1&page_size=1"
+    let data: unknown
+    try {
+      data = await newApiFamilyRequests.data<unknown>(
+        createManagedSessionRequest(config.baseUrl, config.userId),
+        { endpoint },
+      )
+    } catch (error) {
+      throw sanitizeNewApiErrorForOrigin(error, config.baseUrl)
+    }
+    if (
+      isRecord(data) &&
+      Array.isArray(data.items) &&
+      data.items.length === 0
+    ) {
+      return null
+    }
+    const channel =
+      isRecord(data) && Array.isArray(data.items) ? data.items[0] : null
+    if (
+      !isRecord(channel) ||
+      typeof channel.id !== "number" ||
+      !Number.isSafeInteger(channel.id) ||
+      channel.id <= 0
+    ) {
+      throw new ApiError(
+        t("messages:errors.api.invalidResponseFormat"),
+        undefined,
+        endpoint,
+        API_ERROR_CODES.JSON_PARSE_ERROR,
+      )
+    }
+    return { ...config, channelId: channel.id }
+  }
+
+  /**
    * Runs the secure-verification request that unlocks hidden channel-key reads.
    */
   async function verifyNewApiSession(
     config: Pick<NewApiConfig, "baseUrl" | "userId"> & { channelId?: number },
     params: {
       method: typeof NEW_API_VERIFICATION_METHODS.TwoFactor
-      code: string
+      code: string | (() => string)
     },
     // Only the automatic path supplies methods fetched live in this operation.
     // Manual verification has no such evidence and must probe after submission.
     knownMethods?: NewApiVerificationMethods,
+    purpose: NewApiVerificationPurpose = "channel",
   ): Promise<VerifyNewApiSessionResult> {
     return sessionRuntime.runVerification(
       config.baseUrl,
       config.channelId,
       async () => {
+        // Automatic codes must be current after any queued verification wait.
+        // Manual codes remain the exact value entered by the user.
+        const submittedParams = {
+          ...params,
+          code: typeof params.code === "function" ? params.code() : params.code,
+        }
         const request = createManagedSessionRequest(
           config.baseUrl,
           config.userId,
@@ -566,7 +626,7 @@ export function createNewApiSessionProtocol(
           request.auth.authType === AuthTypeEnum.AccessToken
         const requestParams = usesDashboardAuth
           ? {
-              ...params,
+              ...submittedParams,
               // New API stateless dashboard auth issues a proof scoped to the
               // sensitive channel-key read. Older Cookie-auth deployments do not
               // receive this field, preserving their original request contract.
@@ -575,7 +635,7 @@ export function createNewApiSessionProtocol(
                 ? { context: { channel_id: config.channelId } }
                 : {}),
             }
-          : params
+          : submittedParams
         let response: NewApiVerifyResponse
         try {
           response = await newApiFamilyRequests.data<NewApiVerifyResponse>(
@@ -617,6 +677,7 @@ export function createNewApiSessionProtocol(
           verifiedUntil,
         }
       },
+      purpose,
     )
   }
   /** Accepts login 2FA and its owned authentication bundle before probing verification methods. */
@@ -696,6 +757,7 @@ export function createNewApiSessionProtocol(
     createManagedSessionRequest,
     readNewApiVerificationMethodsWithRefresh,
     ensureNewApiLoginSession,
+    resolveNewApiVerificationConfig,
     verifyNewApiSession,
     sanitizeNewApiErrorForOrigin,
     isUnauthorizedError,

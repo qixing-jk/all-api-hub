@@ -37,6 +37,7 @@ const {
   createManagedSessionRequest,
   readNewApiVerificationMethodsWithRefresh,
   ensureNewApiLoginSession,
+  resolveNewApiVerificationConfig,
   verifyNewApiSession,
   sanitizeNewApiErrorForOrigin,
   isUnauthorizedError,
@@ -112,6 +113,7 @@ const getNewApiChannelKeyRequirementKind = (
 ): NewApiChannelKeyErrorKind => {
   switch (result.status) {
     case NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED:
+    case NEW_API_MANAGED_SESSION_STATUSES.VERIFICATION_CHANNEL_MISSING:
     case NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED:
       return NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED
     case NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING:
@@ -160,6 +162,14 @@ async function continueFromLoggedInSession(
   },
   methods: NewApiVerificationMethods,
 ): Promise<EnsureNewApiManagedSessionResult> {
+  const verificationConfig = await resolveNewApiVerificationConfig(config)
+  if (!verificationConfig) {
+    return {
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFICATION_CHANNEL_MISSING,
+    }
+  }
+  // Selecting a channel for a general settings test must not turn a previous
+  // channel proof into evidence that the currently configured TOTP was tested.
   if (hasVerifiedChannelAccess(config.baseUrl, config.channelId)) {
     return {
       status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
@@ -172,14 +182,17 @@ async function continueFromLoggedInSession(
     let generatedCode = ""
 
     try {
-      generatedCode = generateNewApiTotpCode(config.totpSecret!)
       const result = await verifyNewApiSession(
-        config,
+        verificationConfig,
         {
           method: NEW_API_VERIFICATION_METHODS.TwoFactor,
-          code: generatedCode,
+          code: () => {
+            generatedCode = generateNewApiTotpCode(config.totpSecret!)
+            return generatedCode
+          },
         },
         methods,
+        config.channelId === undefined ? "settings" : "channel",
       )
 
       return {
@@ -259,13 +272,14 @@ export async function ensureNewApiManagedSession(
     }
 
     let generatedCode = ""
+    let methods: NewApiVerificationMethods
 
     try {
       generatedCode = generateNewApiTotpCode(config.totpSecret!)
-      return await submitNewApiLoginTwoFactorCode(config, generatedCode, {
-        automaticAttempted: true,
-      })
+      methods = await submitLoginTwoFactorCode(config, generatedCode)
     } catch (error) {
+      const limit = await classifyNewApiSessionLimit(error, config.baseUrl)
+      if (limit) return limit
       const errorMessage = sanitizeNewApiSessionError(error, [
         config.totpSecret ?? "",
         generatedCode,
@@ -283,6 +297,9 @@ export async function ensureNewApiManagedSession(
         errorMessage,
       }
     }
+    // The login challenge is accepted. Discovery/verification failures belong
+    // to their own recovery path and must not request another login code.
+    return continueFromLoggedInSession(config, methods)
   }
 
   return continueFromLoggedInSession(config, loginResult.methods)
@@ -335,10 +352,18 @@ export async function submitNewApiSecureVerificationCode(
   code: string,
 ): Promise<EnsureNewApiManagedSessionResult> {
   const trimmedCode = code.trim()
-  const result = await verifyNewApiSession(config, {
-    method: NEW_API_VERIFICATION_METHODS.TwoFactor,
-    code: trimmedCode,
-  })
+  const verificationConfig = await resolveNewApiVerificationConfig(config)
+  if (!verificationConfig) {
+    return {
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFICATION_CHANNEL_MISSING,
+    }
+  }
+  const result = await verifyNewApiSession(
+    verificationConfig,
+    { method: NEW_API_VERIFICATION_METHODS.TwoFactor, code: trimmedCode },
+    undefined,
+    config.channelId === undefined ? "settings" : "channel",
+  )
 
   return {
     status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,

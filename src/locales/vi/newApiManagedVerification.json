@@ -22,8 +22,9 @@
       "sessionActiveLimitCleanup": "New API đã đạt giới hạn phiên đang hoạt động. Tiện ích chỉ có thể thu hồi phiên do chính nó tạo rồi thử lại thao tác này.",
       "sessionIssuanceLimit": "New API đã đạt giới hạn cấp phiên trong 24 giờ. Xóa phiên đang hoạt động không đặt lại giới hạn này; hãy chờ cửa sổ cấp phiên phục hồi.",
       "successChannel": "Xác minh cho {{label}} đã thành công và key kênh thực đã được tải.",
-      "successSettings": "Quy trình đăng nhập và xác minh New API đã hoàn tất thành công. Bây giờ bạn có thể tiếp tục thực hiện các thao tác liên quan yêu cầu đăng nhập và xác minh.",
-      "successToken": "Xác minh cho {{label}} đã thành công và trạng thái trang web quản lý đã được làm mới."
+      "successSettings": "Phiên đăng nhập New API và lần kiểm tra xác minh hai yếu tố này đã thành công. Việc đọc khóa kênh vẫn yêu cầu xác minh cho kênh đích.",
+      "successToken": "Xác minh cho {{label}} đã thành công và trạng thái trang web quản lý đã được làm mới.",
+      "verificationChannelMissing": "Phiên đăng nhập New API khả dụng, nhưng không có kênh để kiểm tra nên xác minh bổ sung chưa được kiểm tra. Hãy tạo một kênh trên trang web rồi thử lại."
     },
     "fields": {
       "codeLabel": "Mã xác minh"

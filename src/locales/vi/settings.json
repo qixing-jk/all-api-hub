@@ -461,7 +461,7 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "description": "Kiểm tra tên đăng nhập, mật khẩu và TOTP secret đã điền có chính xác và khả dụng hay không. Sau khi xác minh thành công, bạn có thể tiếp tục thực hiện các thao tác cần đăng nhập và xác minh hai bước.",
+      "description": "Kiểm tra phiên đăng nhập New API và xác minh hai yếu tố bằng thông tin đăng nhập và mã bí mật TOTP đã cấu hình khi cần. Phiên hiện có được sử dụng lại; xác minh bổ sung tự động chọn một kênh hiện có.",
       "testing": "Đang kiểm tra cấu hình...",
       "title": "Kiểm tra đăng nhập và xác minh hai bước"
     },

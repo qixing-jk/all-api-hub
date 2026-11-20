@@ -22,8 +22,9 @@
       "sessionActiveLimitCleanup": "New API 的作用中會話已達上限。擴充功能可以先精確撤銷自己建立的會話，再重試目前操作。",
       "sessionIssuanceLimit": "New API 已達到 24 小時會話簽發上限。清理現有會話不會解除此限制，請等待限制視窗恢復。",
       "successChannel": "{{label}} 的驗證已成功，真實渠道 key 已載入。",
-      "successSettings": "New API 登入與驗證流程已成功完成。現在可以繼續執行需要登入與驗證的相關操作。",
-      "successToken": "{{label}} 的驗證已成功，管理站點狀態已重新整理。"
+      "successSettings": "New API 登入工作階段和本次兩步驗證檢測通過。讀取渠道金鑰時，仍會依目標渠道進行驗證。",
+      "successToken": "{{label}} 的驗證已成功，管理站點狀態已重新整理。",
+      "verificationChannelMissing": "New API 登入工作階段可用，但目前沒有可用於檢測的渠道，尚未完成二次驗證。請在站點建立渠道後重試。"
     },
     "fields": {
       "codeLabel": "驗證碼"

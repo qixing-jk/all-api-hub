@@ -109,24 +109,6 @@ vi.mock("~/components/ui", async () => {
     InputOTPSeparator: ({ ...props }: { [key: string]: unknown }) => (
       <div data-slot="input-otp-separator" {...props} />
     ),
-    Modal: ({
-      isOpen,
-      header,
-      footer,
-      children,
-    }: {
-      isOpen: boolean
-      header?: ReactNode
-      footer?: ReactNode
-      children?: ReactNode
-    }) =>
-      isOpen ? (
-        <div role="dialog">
-          <div>{header}</div>
-          <div>{children}</div>
-          <div>{footer}</div>
-        </div>
-      ) : null,
   }
 })
 
@@ -172,6 +154,88 @@ function render(ui: ReactElement) {
 }
 
 describe("NewApiManagedVerificationDialog", () => {
+  it.each(["Checking configuration", ""])(
+    "shows busy feedback and hides quick configuration until work finishes: %j",
+    (busyMessage) => {
+      const props = createProps({ isBusy: true, busyMessage })
+      const { rerender } = render(
+        <NewApiManagedVerificationDialog {...props} />,
+      )
+      expect(screen.getByRole("status")).toHaveTextContent(
+        busyMessage || "newApiManagedVerification:dialog.messages.starting",
+      )
+      expect(
+        screen.queryByLabelText("settings:newApi.fields.usernameLabel"),
+      ).not.toBeInTheDocument()
+      rerender(<NewApiManagedVerificationDialog {...props} isBusy={false} />)
+      expect(
+        screen.getByLabelText("settings:newApi.fields.usernameLabel"),
+      ).toBeVisible()
+    },
+  )
+
+  it("keeps manual Passkey guidance and recovery actions visible", async () => {
+    const user = userEvent.setup()
+    const props = createProps({
+      step: NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL,
+    })
+    render(<NewApiManagedVerificationDialog {...props} />)
+    expect(
+      screen.getByText("newApiManagedVerification:dialog.hints.passkey"),
+    ).toBeVisible()
+    expect(
+      screen.queryByLabelText(
+        "newApiManagedVerification:dialog.fields.codeLabel",
+      ),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.openSite",
+      }),
+    )
+    expect(props.onOpenSite).toHaveBeenCalledOnce()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.retryAfterPasskey",
+      }),
+    )
+    expect(props.onRetry).toHaveBeenCalledOnce()
+  })
+
+  it("explains missing channels and offers recovery without requesting a verification code", async () => {
+    const user = userEvent.setup()
+    const props = createProps({
+      step: NEW_API_MANAGED_VERIFICATION_STEPS.VERIFICATION_CHANNEL_MISSING,
+      request: { ...BASE_REQUEST, kind: "settings" },
+    })
+    render(<NewApiManagedVerificationDialog {...props} />)
+    expect(
+      screen.getByText(
+        "newApiManagedVerification:dialog.body.verificationChannelMissing",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByLabelText(
+        "newApiManagedVerification:dialog.fields.codeLabel",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("dialog").querySelector('[data-slot="modal-body"]'),
+    ).toBeNull()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.openSite",
+      }),
+    )
+    expect(props.onOpenSite).toHaveBeenCalledOnce()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.retry",
+      }),
+    )
+    expect(props.onRetry).toHaveBeenCalledOnce()
+  })
+
   it("opens TOTP settings separately while keeping the verification workflow open", async () => {
     const user = userEvent.setup()
     const props = createProps({
@@ -671,13 +735,14 @@ describe("NewApiManagedVerificationDialog", () => {
   })
 
   it("renders a shadcn-style otp input for verification code entry", () => {
-    const { container } = render(
+    render(
       <NewApiManagedVerificationDialog
         {...createProps({
           step: NEW_API_MANAGED_VERIFICATION_STEPS.LOGIN_2FA,
         })}
       />,
     )
+    const dialog = screen.getByRole("dialog")
 
     expect(
       screen.getByLabelText(
@@ -685,10 +750,10 @@ describe("NewApiManagedVerificationDialog", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      container.querySelectorAll('[data-slot="input-otp-slot"]'),
+      dialog.querySelectorAll('[data-slot="input-otp-slot"]'),
     ).toHaveLength(6)
     expect(
-      container.querySelector('[data-slot="input-otp-separator"]'),
+      dialog.querySelector('[data-slot="input-otp-separator"]'),
     ).not.toBeNull()
   })
 

@@ -9,6 +9,7 @@ import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/t
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
+import { runNewApiSettingsSessionVerificationScenario } from "~~/e2e/scenarios/newApiSettingsSessionVerification"
 import { runScenarioWithCleanup } from "~~/e2e/utils/scenarioErrors"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -233,6 +234,11 @@ export async function runNewApiMultiKeyRealSiteScenario(params: {
           .toBe(true)
         expect(secretReads).toBe(2)
         await dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton).click()
+      })
+      await runNewApiSettingsSessionVerificationScenario({
+        page,
+        extensionId,
+        config,
       })
     },
     finalizers: [

@@ -461,7 +461,7 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "description": "測試已填寫的登入使用者名稱、密碼和 TOTP 金鑰是否正確可用。驗證成功後，即可繼續執行需要登入和兩步驗證的相關操作。",
+      "description": "檢測 New API 登入工作階段與兩步驗證，可使用填寫的登入資訊和 TOTP 金鑰。已有工作階段時會直接重用；二次驗證會自動選擇一個已有渠道。",
       "testing": "正在測試配置...",
       "title": "測試登入與兩步驗證配置"
     },
