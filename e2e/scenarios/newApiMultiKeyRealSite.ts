@@ -187,11 +187,6 @@ export async function runNewApiMultiKeyRealSiteScenario(params: {
             description:
               "Native save/readback verified; secret reveal and in-place editing need administrator login and TOTP credentials.",
           })
-          test.info().annotations.push({
-            type: "session-verification-not-tested",
-            description:
-              "Settings session checks need administrator login and TOTP credentials.",
-          })
           return
         }
         await open()

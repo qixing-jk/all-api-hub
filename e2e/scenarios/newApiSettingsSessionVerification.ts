@@ -2,6 +2,7 @@ import type { Page, Response } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { hasNewApiLoginAssistCredentials } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -13,6 +14,14 @@ export async function runNewApiSettingsSessionVerificationScenario(params: {
   config: NewApiConfig
 }) {
   const { page, extensionId, config } = params
+  if (!hasNewApiLoginAssistCredentials(config) || !config.totpSecret?.trim()) {
+    test.info().annotations.push({
+      type: "session-verification-not-tested",
+      description:
+        "Settings session checks need administrator login and TOTP credentials.",
+    })
+    return
+  }
   const origin = new URL(config.baseUrl).origin
   const observedChannels = new Set<number>()
   let secureRequests = 0

@@ -26,6 +26,9 @@ export interface NewApiVerificationMethods {
   passkeyEnabled: boolean
 }
 
+/** Settings tests submit their own code; channel operations may share a proof. */
+export type NewApiVerificationPurpose = "channel" | "settings"
+
 export const NEW_API_VERIFICATION_METHODS = {
   TwoFactor: "2fa",
 } as const

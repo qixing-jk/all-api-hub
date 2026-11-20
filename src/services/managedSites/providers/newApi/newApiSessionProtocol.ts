@@ -19,6 +19,7 @@ import {
   type EnsureNewApiLoginResult,
   type NewApiDashboardRefreshResult,
   type NewApiVerificationMethods,
+  type NewApiVerificationPurpose,
   type VerifyNewApiSessionResult,
 } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import {
@@ -605,6 +606,7 @@ export function createNewApiSessionProtocol(
     // Only the automatic path supplies methods fetched live in this operation.
     // Manual verification has no such evidence and must probe after submission.
     knownMethods?: NewApiVerificationMethods,
+    purpose: NewApiVerificationPurpose = "channel",
   ): Promise<VerifyNewApiSessionResult> {
     return sessionRuntime.runVerification(
       config.baseUrl,
@@ -669,6 +671,7 @@ export function createNewApiSessionProtocol(
           verifiedUntil,
         }
       },
+      purpose,
     )
   }
   /** Accepts login 2FA and its owned authentication bundle before probing verification methods. */

@@ -25,6 +25,7 @@ import {
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const MANAGE_API_KEYS_EXECUTION = userCommandExecution(
@@ -164,6 +165,179 @@ const mockModernSessionTestLogin = () => {
 }
 
 describe("newApiSession", () => {
+  it.each([
+    {
+      code: "AUTH_SESSION_LIMIT",
+      status: 409,
+      expected: { status: "session-active-limit", cleanupAvailable: true },
+    },
+    {
+      code: "AUTH_SESSION_ISSUANCE_LIMIT",
+      status: 429,
+      expected: { status: "session-issuance-limit" },
+    },
+  ])(
+    "preserves session-limit recovery during automatic login 2FA: $code",
+    async ({ code, status, expected }) => {
+      mockModernSessionTestLogin()
+      getOwnedSessionStatusMock.mockResolvedValue({ owned: true })
+      server.use(
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+          jsonData({ require_2fa: true }),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login/2fa`, () =>
+          HttpResponse.json({ code, message: "Session limit" }, { status }),
+        ),
+      )
+      generateNewApiTotpCodeMock.mockReturnValue("111111")
+      await expect(ensureNewApiManagedSession(BASE_CONFIG)).resolves.toEqual(
+        expected,
+      )
+    },
+  )
+
+  it("does not share an unsuccessful settings test with a queued channel verification", async () => {
+    mockModernSessionTestLogin()
+    const started = createDeferred<void>()
+    const release = createDeferred<void>()
+    const codes: string[] = []
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, () =>
+        jsonData({ items: [{ id: 47 }], total: 1 }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async ({ request }) => {
+        const body = (await request.json()) as { code: string }
+        codes.push(body.code)
+        if (body.code === "999999") {
+          started.resolve()
+          await release.promise
+          return HttpResponse.json({
+            success: false,
+            message: "Verification failed",
+          })
+        }
+        return jsonData({ proof_token: "channel-47-proof" })
+      }),
+    )
+    await ensureNewApiManagedSession({ ...BASE_CONFIG, totpSecret: "" })
+    generateNewApiTotpCodeMock.mockReturnValue("999999")
+    const settingsVerification = ensureNewApiManagedSession(BASE_CONFIG)
+    await started.promise
+    const channelVerification = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 47 },
+      "111111",
+    )
+    await Promise.resolve()
+    release.resolve()
+    await expect(settingsVerification).resolves.toMatchObject({
+      status: "secure-verification-required",
+    })
+    await expect(channelVerification).resolves.toMatchObject({
+      status: "verified",
+    })
+    expect(codes).toEqual(["999999", "111111"])
+  })
+
+  it("submits a settings test's own code after an in-flight channel verification", async () => {
+    mockModernSessionTestLogin()
+    const started = createDeferred<void>()
+    const release = createDeferred<void>()
+    const codes: string[] = []
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, () =>
+        jsonData({ items: [{ id: 47 }], total: 1 }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async ({ request }) => {
+        const body = (await request.json()) as { code: string }
+        codes.push(body.code)
+        if (body.code === "111111") {
+          started.resolve()
+          await release.promise
+          return jsonData({ proof_token: "channel-47-proof" })
+        }
+        return HttpResponse.json({
+          success: false,
+          message: "Verification failed",
+        })
+      }),
+    )
+    await ensureNewApiManagedSession({ ...BASE_CONFIG, totpSecret: "" })
+    const channelVerification = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 47 },
+      "111111",
+    )
+    await started.promise
+    generateNewApiTotpCodeMock.mockReturnValue("999999")
+    const settingsVerification = ensureNewApiManagedSession({
+      ...BASE_CONFIG,
+      totpSecret: "MZXW6YTBOI======",
+    })
+    await vi.waitFor(() =>
+      expect(generateNewApiTotpCodeMock).toHaveBeenCalledOnce(),
+    )
+    expect(codes).toEqual(["111111"])
+    release.resolve()
+    await expect(channelVerification).resolves.toMatchObject({
+      status: "verified",
+    })
+    await expect(settingsVerification).resolves.toMatchObject({
+      status: "secure-verification-required",
+      errorMessage: "Verification failed",
+      automaticAttempted: true,
+    })
+    expect(codes).toEqual(["111111", "999999"])
+  })
+
+  it("retries channel discovery after accepted login 2FA without asking for another login code", async () => {
+    const token = mockModernSessionTestLogin()
+    const login = vi.fn(() =>
+      jsonData({
+        require_verification: true,
+        flow_token: "fixture-login-flow",
+        methods: [{ method: "2fa", available: true }],
+      }),
+    )
+    const loginVerification = vi.fn(() =>
+      jsonData(createDashboardAuthBundle(token)),
+    )
+    const verify = vi.fn(() => jsonData({ proof_token: "channel-47-proof" }))
+    server.use(
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, login),
+      http.post(
+        `${BASE_CONFIG.baseUrl}/api/user/login/verify`,
+        loginVerification,
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, () =>
+        HttpResponse.json({
+          success: false,
+          message: "Channel list unavailable",
+        }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, verify),
+    )
+    generateNewApiTotpCodeMock
+      .mockReturnValueOnce("111111")
+      .mockReturnValue("222222")
+
+    await expect(ensureNewApiManagedSession(BASE_CONFIG)).rejects.toThrow(
+      "Channel list unavailable",
+    )
+    expect(loginVerification).toHaveBeenCalledOnce()
+    expect(verify).not.toHaveBeenCalled()
+
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/channel/`, () =>
+        jsonData({ items: [{ id: 47 }], total: 1 }),
+      ),
+    )
+    await expect(
+      ensureNewApiManagedSession(BASE_CONFIG),
+    ).resolves.toMatchObject({ status: "verified" })
+    expect(login).toHaveBeenCalledOnce()
+    expect(loginVerification).toHaveBeenCalledOnce()
+    expect(verify).toHaveBeenCalledOnce()
+  })
+
   it("keeps a channel-less modern session test incomplete without submitting a code", async () => {
     mockModernSessionTestLogin()
     const verify = vi.fn(() => jsonData({ verified: true }))

@@ -154,6 +154,54 @@ function render(ui: ReactElement) {
 }
 
 describe("NewApiManagedVerificationDialog", () => {
+  it.each(["Checking configuration", ""])(
+    "shows busy feedback and hides quick configuration until work finishes: %j",
+    (busyMessage) => {
+      const props = createProps({ isBusy: true, busyMessage })
+      const { rerender } = render(
+        <NewApiManagedVerificationDialog {...props} />,
+      )
+      expect(screen.getByRole("status")).toHaveTextContent(
+        busyMessage || "newApiManagedVerification:dialog.messages.starting",
+      )
+      expect(
+        screen.queryByLabelText("settings:newApi.fields.usernameLabel"),
+      ).not.toBeInTheDocument()
+      rerender(<NewApiManagedVerificationDialog {...props} isBusy={false} />)
+      expect(
+        screen.getByLabelText("settings:newApi.fields.usernameLabel"),
+      ).toBeVisible()
+    },
+  )
+
+  it("keeps manual Passkey guidance and recovery actions visible", async () => {
+    const user = userEvent.setup()
+    const props = createProps({
+      step: NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL,
+    })
+    render(<NewApiManagedVerificationDialog {...props} />)
+    expect(
+      screen.getByText("newApiManagedVerification:dialog.hints.passkey"),
+    ).toBeVisible()
+    expect(
+      screen.queryByLabelText(
+        "newApiManagedVerification:dialog.fields.codeLabel",
+      ),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.openSite",
+      }),
+    )
+    expect(props.onOpenSite).toHaveBeenCalledOnce()
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.retryAfterPasskey",
+      }),
+    )
+    expect(props.onRetry).toHaveBeenCalledOnce()
+  })
+
   it("explains missing channels and offers recovery without requesting a verification code", async () => {
     const user = userEvent.setup()
     const props = createProps({
