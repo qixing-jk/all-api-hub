@@ -132,6 +132,44 @@ export function ApiCredentialProfileQuotaMeters({
                   {formatLocaleDateTime(window.observedAt)}
                 </time>
               )}
+            {(["limit", "used", "remaining", "remainingPercent"] as const).map(
+              (field) => {
+                const amount = window.retainedAmounts?.[field]
+                if (!amount) return null
+                const values = { value: amount.value.toLocaleString() }
+                const label =
+                  field === "limit"
+                    ? t(
+                        "apiCredentialProfiles:telemetry.quotaWindows.retainedLimit",
+                        values,
+                      )
+                    : field === "used"
+                      ? t(
+                          "apiCredentialProfiles:telemetry.quotaWindows.retainedUsed",
+                          values,
+                        )
+                      : field === "remaining"
+                        ? t(
+                            "apiCredentialProfiles:telemetry.quotaWindows.retainedRemaining",
+                            values,
+                          )
+                        : t(
+                            "apiCredentialProfiles:telemetry.quotaWindows.retainedPercent",
+                            values,
+                          )
+                return (
+                  <div
+                    key={field}
+                    className="mt-1 flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground"
+                  >
+                    <span className="text-warning-text">{label}</span>
+                    <time dateTime={new Date(amount.observedAt).toISOString()}>
+                      {formatLocaleDateTime(amount.observedAt)}
+                    </time>
+                  </div>
+                )
+              },
+            )}
           </div>
         )
       })}

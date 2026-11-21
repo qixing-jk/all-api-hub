@@ -199,7 +199,7 @@ export default function ApiCredentialProfilesStatsSection() {
               : t("shareSnapshots:financial.partial")}
           </Caption>
           {portfolio.potentialDuplicateCount > 0 ? (
-            <Caption>
+            <Caption className="block">
               {t("account:financial.potentialDuplicates", {
                 count: portfolio.potentialDuplicateCount,
               })}

@@ -146,7 +146,7 @@
     "lastKnown": "Giá trị đã biết gần nhất",
     "manual": "Số dư nhập tay",
     "olderRecord": "Được ghi lại bởi phiên bản cũ",
-    "potentialDuplicates_other": "account:financial.potentialDuplicates",
+    "potentialDuplicates_other": "Số dư có thể bị trùng: {{count}}",
     "reported": "Trang web báo cáo",
     "scopeUnknown": "Phạm vi sử dụng chưa xác minh",
     "technicalDetails": "Thông tin kỹ thuật (gỡ lỗi)",

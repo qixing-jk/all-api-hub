@@ -18,6 +18,7 @@ import {
 type TelemetryUsageResult = {
   source: ApiCredentialTelemetrySource
   data: TelemetryPatch
+  attempts?: ApiCredentialTelemetryAttempt[]
 }
 
 type BuildTelemetrySnapshotParams = {
@@ -38,6 +39,10 @@ export function buildTelemetrySnapshot({
 }: BuildTelemetrySnapshotParams): ApiCredentialTelemetrySnapshot {
   const modelSucceeded = Boolean(models && models.count > 0)
   const usageSucceeded = Boolean(usageResult)
+  const partialFailure = usageResult?.attempts?.find(
+    (attempt) =>
+      attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
+  )
   const usageFacts: ApiCredentialTelemetryFacts = usageResult
     ? normalizeTelemetryPatchToFacts(
         usageResult.data,
@@ -58,24 +63,27 @@ export function buildTelemetrySnapshot({
       attempt.source ===
         API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
   )?.message
-  const lastError = usageSucceeded
-    ? undefined
-    : customEndpointError ||
-      attempts.find(
-        (attempt) =>
-          attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
-      )?.message ||
-      undefined
+  const lastError =
+    partialFailure?.message ??
+    (usageSucceeded
+      ? undefined
+      : customEndpointError ||
+        attempts.find(
+          (attempt) =>
+            attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
+        )?.message ||
+        undefined)
 
   return {
     schemaVersion: 2,
-    health:
-      usageSucceeded ||
-      (modelSucceeded &&
-        !attempts.some(
-          (attempt) =>
-            attempt.source !== API_CREDENTIAL_TELEMETRY_SOURCES.Models,
-        ))
+    health: partialFailure
+      ? { status: SiteHealthStatus.Warning }
+      : usageSucceeded ||
+          (modelSucceeded &&
+            !attempts.some(
+              (attempt) =>
+                attempt.source !== API_CREDENTIAL_TELEMETRY_SOURCES.Models,
+            ))
         ? usageUnavailable
           ? {
               status: SiteHealthStatus.Warning,

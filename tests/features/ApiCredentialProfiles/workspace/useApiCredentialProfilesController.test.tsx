@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfilesController"
+import { TelemetryRefreshSupersededError } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
@@ -186,6 +187,39 @@ function renderScopedController(entrypoint: ProductAnalyticsEntrypoint) {
 }
 
 describe("useApiCredentialProfilesController", () => {
+  it("reports a superseded refresh as skipped without a refreshed notification", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    refreshTelemetryMock.mockRejectedValueOnce(
+      new TelemetryRefreshSupersededError(),
+    )
+    toastPromiseMock.mockImplementation(
+      async (
+        promise: Promise<unknown>,
+        options: { error: (error: unknown) => string },
+      ) => {
+        try {
+          await promise
+        } catch (error) {
+          expect(options.error(error)).toBe(
+            "apiCredentialProfiles:telemetry.messages.refreshSuperseded",
+          )
+          throw error
+        }
+      },
+    )
+    const { result } = renderHook(() => useApiCredentialProfilesController(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    await act(async () => {
+      await result.current.handleRefreshTelemetry(buildProfile())
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
+    expect(result.current.refreshingTelemetryProfileIds).toEqual([])
+  })
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
     createProfileMock.mockReset()

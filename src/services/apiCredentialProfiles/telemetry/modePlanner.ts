@@ -1,3 +1,4 @@
+import { parseDecimal } from "~/services/amounts/decimal"
 import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import { TELEMETRY_PROVIDER_PROTOCOL } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import type {
@@ -107,7 +108,11 @@ export function resolveTelemetryModes(
 export function hasTelemetryUsageData(data: TelemetryPatch): boolean {
   return (
     data.kimiInference !== undefined ||
-    data.budget !== undefined ||
+    (data.budget !== undefined &&
+      (data.budget.unlimited === true ||
+        [data.budget.limit, data.budget.used, data.budget.remaining].some(
+          (value) => parseDecimal(value) !== undefined,
+        ))) ||
     data.balance !== undefined ||
     data.balances !== undefined ||
     data.quota !== undefined ||

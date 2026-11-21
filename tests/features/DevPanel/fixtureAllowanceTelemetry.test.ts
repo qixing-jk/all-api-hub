@@ -17,7 +17,7 @@ describe("dev allowance fixtures", () => {
         return [
           fixture.id,
           snapshot
-            ? getPrimaryAllowanceSignal(snapshot.facts)?.level ?? "none"
+            ? (getPrimaryAllowanceSignal(snapshot.facts)?.level ?? "none")
             : "no-telemetry",
         ]
       }),
@@ -69,6 +69,23 @@ describe("dev allowance fixtures", () => {
 
     expect(runwaySignal("balance-runway-critical")).toBeCloseTo(2.5, 5)
     expect(runwaySignal("balance-without-spend")).toBeUndefined()
+  })
+
+  it("keeps the critical wallet runway after the persisted snapshot is read back", () => {
+    const fixture = DEV_ALLOWANCE_FIXTURES.find(
+      (item) => item.id === "balance-runway-critical",
+    )!
+    const stored = coerceTelemetrySnapshot(
+      fixture.buildSnapshot(NOW, "persisted-fixture"),
+    )!
+    expect(stored.facts?.balanceSnapshot?.subject).toEqual({
+      kind: "credential",
+      profileId: "persisted-fixture",
+    })
+    expect(getPrimaryAllowanceSignal(stored.facts)).toMatchObject({
+      level: API_CREDENTIAL_ALLOWANCE_LEVELS.Critical,
+      runwayDays: 2.5,
+    })
   })
 
   it("labels every fixture as inert local sample data", () => {

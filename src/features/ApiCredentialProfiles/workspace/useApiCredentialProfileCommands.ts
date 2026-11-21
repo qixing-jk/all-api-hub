@@ -5,6 +5,7 @@ import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContex
 import { type useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
 import toast from "~/lib/notify"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
+import { TelemetryRefreshSupersededError } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionCompleted,
@@ -335,6 +336,10 @@ export function useApiCredentialProfileCommands({
           loading: t("apiCredentialProfiles:telemetry.messages.refreshing"),
           success: t("apiCredentialProfiles:telemetry.messages.refreshed"),
           error: (error) => {
+            if (error instanceof TelemetryRefreshSupersededError)
+              return t(
+                "apiCredentialProfiles:telemetry.messages.refreshSuperseded",
+              )
             logger.warn("Telemetry refresh failed", error)
             return t("apiCredentialProfiles:telemetry.messages.refreshFailed")
           },
@@ -355,6 +360,10 @@ export function useApiCredentialProfileCommands({
           })
         }
       } catch (error) {
+        if (error instanceof TelemetryRefreshSupersededError) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          return
+        }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })

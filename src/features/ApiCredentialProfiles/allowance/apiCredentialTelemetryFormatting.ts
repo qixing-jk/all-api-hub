@@ -14,6 +14,7 @@ import {
   type ApiCredentialAllowanceCountdown,
   type ApiCredentialAllowanceSignal,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialAllowance"
+import { parseDecimal } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
   BUDGET_LIMIT_STATES,
@@ -24,11 +25,48 @@ import {
 import {
   API_CREDENTIAL_TELEMETRY_FACT_UNITS,
   API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
+  type ApiCredentialTelemetryAmount,
   type ApiCredentialTelemetryBalanceFact,
   type ApiCredentialTelemetryQuotaWindowFact,
   type ApiCredentialTelemetryQuotaWindowType,
 } from "~/types/apiCredentialProfiles"
+import { formatExactDecimal } from "~/utils/core/decimalFormatting"
 import { formatAssetAmount } from "~/utils/core/money"
+
+/** Spending uses the source decimal and its own unit at the display boundary. */
+export function formatTelemetryAmount(
+  amount: ApiCredentialTelemetryAmount,
+  t: TFunction,
+): string {
+  const value = parseDecimal(amount.value)
+  if (value === undefined)
+    return t("apiCredentialProfiles:telemetry.notProvided")
+  const unit = amount.unit
+  if (unit.kind === MEASUREMENT_UNIT_KINDS.Money) {
+    try {
+      return formatAssetAmount({
+        asset: { kind: ASSET_KINDS.Currency, code: unit.currency },
+        value,
+      })
+    } catch {
+      return `${unit.currency} ${formatExactDecimal(value)}`
+    }
+  }
+  if (unit.kind === MEASUREMENT_UNIT_KINDS.Crypto)
+    return formatAssetAmount({ asset: unit, value })
+  if (unit.kind === MEASUREMENT_UNIT_KINDS.Quota)
+    return formatAssetAmount({
+      asset: {
+        kind: ASSET_KINDS.Quota,
+        id: unit.code,
+        label: unit.label,
+        displayLabel: unit.displayLabel ?? unit.label,
+        displayScale: unit.displayScale ?? 1,
+      },
+      value,
+    })
+  return formatExactDecimal(value)
+}
 
 /** Returns the localized name of a quota window slot. */
 export function formatQuotaWindowLabel(

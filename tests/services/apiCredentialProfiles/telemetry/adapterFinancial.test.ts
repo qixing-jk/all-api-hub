@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import { acceptTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/acceptance"
@@ -11,6 +11,7 @@ import type {
   ApiCredentialProfile,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
+import { API_CREDENTIAL_TELEMETRY_MODES } from "~/types/apiCredentialProfiles"
 
 vi.mock("~/services/apiCredentialProfiles/telemetry/transport", () => ({
   fetchTelemetryJson: vi.fn(),
@@ -28,6 +29,58 @@ const profile: ApiCredentialProfile = {
 }
 
 describe("billing adapters retain financial contracts", () => {
+  beforeEach(() => vi.mocked(fetchTelemetryJson).mockReset())
+  it("keeps the subscription limit and usage failure from the same billing refresh", async () => {
+    vi.mocked(fetchTelemetryJson)
+      .mockResolvedValueOnce({
+        endpoint: "/dashboard/billing/subscription",
+        json: { hard_limit_usd: "30" },
+      })
+      .mockRejectedValueOnce(new Error("usage unavailable"))
+    const result = await runUsageAdapter(
+      profile,
+      API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+      { mode: API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling },
+    )
+    const facts = normalizeTelemetryPatchToFacts(result.data, result.source, {
+      profileId: profile.id,
+      baseUrl: profile.baseUrl,
+      observedAt: 2000,
+    })
+    expect(facts.budgets?.[0]).toMatchObject({
+      limit: { value: "30", observedAt: 2000 },
+      remaining: { status: "unknown" },
+      used: { status: "unknown" },
+    })
+    expect(result.attempts).toContainEqual(
+      expect.objectContaining({
+        source: API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+        status: "error",
+        message: "usage unavailable",
+      }),
+    )
+  })
+  it("retains the documented USD unit for Sub2API balances", async () => {
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/v1/usage",
+      json: { balance: "12.50" },
+    })
+    const result = await runUsageAdapter(
+      profile,
+      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+      { mode: API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage },
+    )
+    expect(
+      normalizeTelemetryPatchToFacts(result.data, result.source, {
+        profileId: profile.id,
+        baseUrl: profile.baseUrl,
+        observedAt: 1000,
+      }).balanceSnapshot?.positions[0],
+    ).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "12.5" },
+    })
+  })
   it("leaves an unrelated New API endpoint response unsupported so Auto can continue", async () => {
     vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
       endpoint: "/api/usage/token",

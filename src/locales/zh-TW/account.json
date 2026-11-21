@@ -146,7 +146,7 @@
     "lastKnown": "最後已知值",
     "manual": "手填餘額",
     "olderRecord": "舊版儲存的記錄",
-    "potentialDuplicates_other": "account:financial.potentialDuplicates",
+    "potentialDuplicates_other": "可能重複的餘額：{{count}} 項",
     "reported": "站點回報",
     "scopeUnknown": "使用範圍未核實",
     "technicalDetails": "技術資訊（偵錯）",

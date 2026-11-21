@@ -71,7 +71,7 @@ export const cloneConfig = (config: ApiCredentialProfilesConfig) =>
   clonePersistedValue(config)
 
 /** A corrupt admission counter must never restart at an earlier generation. */
-function coerceTelemetryRefreshGeneration(value: unknown): number {
+export function coerceTelemetryRefreshGeneration(value: unknown): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
     throw new Error("Invalid telemetry refresh generation")
   return value

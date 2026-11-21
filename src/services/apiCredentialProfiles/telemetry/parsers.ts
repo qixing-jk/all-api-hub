@@ -1,6 +1,6 @@
 import { CURRENCIES } from "~/constants/money"
 import {
-  divideDecimalByInteger,
+  normalizeDecimalUnits,
   parseDecimal,
   scaleDecimal,
   subtractDecimal,
@@ -109,7 +109,10 @@ export function parseDeepSeekBalance(json: unknown): TelemetryPatch {
       ? { availability: record.is_available }
       : {}),
     balanceCoverage:
-      infos.length === record.balance_infos.length
+      infos.length === record.balance_infos.length &&
+      balances.every((balance) => /^[A-Z]{3}$/.test(balance.currency)) &&
+      new Set(balances.map((balance) => balance.currency)).size ===
+        balances.length
         ? FINANCIAL_COVERAGE.Complete
         : FINANCIAL_COVERAGE.Partial,
   }
@@ -173,7 +176,9 @@ function buildQuotaWindow(input: QuotaWindowInput) {
     ...(normalizedRemaining !== undefined
       ? { remaining: normalizedRemaining }
       : {}),
-    ...(percentRemaining !== undefined ? { percentRemaining } : {}),
+    ...(percentRemaining !== undefined
+      ? { percentRemaining: Math.max(0, Math.min(100, percentRemaining)) }
+      : {}),
     ...(resetTime !== undefined ? { resetTime } : {}),
   }
 }
@@ -369,17 +374,17 @@ export function parseKimiQuota(json: unknown): TelemetryPatch {
       : ""
   const boosterBalance =
     boosterWallet && isRecord(boosterWallet.balance)
-      ? parseDecimal(boosterWallet.balance.amountLeft)
+      ? normalizeDecimalUnits(
+          boosterWallet.balance.amountLeft,
+          TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterCreditsPerUnit,
+        )
       : undefined
   const balance = TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterStatuses.includes(
     boosterStatus as (typeof TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterStatuses)[number],
   )
     ? boosterBalance !== undefined
       ? {
-          amount: divideDecimalByInteger(
-            boosterBalance,
-            TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterCreditsPerUnit,
-          ),
+          amount: boosterBalance,
           currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny,
           isAvailable: true,
         }
@@ -469,6 +474,12 @@ export function parseKimiOpenPlatformBalance(
     return {}
   }
   const available = parseDecimal(record.available_balance)
+  if (
+    available === undefined &&
+    parseDecimal(record.cash_balance) === undefined &&
+    parseDecimal(record.voucher_balance) === undefined
+  )
+    return {}
   return {
     kimiInference: { payload: json, currency },
     balanceCoverage: FINANCIAL_COVERAGE.Complete,
@@ -609,13 +620,17 @@ export function mapCustomJson(
             },
           }
         : {
-            balance: {
-              amount: mappedBalance,
-              currency:
-                financialMapping.asset.kind === ASSET_KINDS.Currency
-                  ? financialMapping.asset.code
-                  : "",
-            },
+            ...(mappedBalance !== undefined
+              ? {
+                  balance: {
+                    amount: mappedBalance,
+                    currency:
+                      financialMapping.asset.kind === ASSET_KINDS.Currency
+                        ? financialMapping.asset.code
+                        : "",
+                  },
+                }
+              : {}),
             balanceAsset: financialMapping.asset,
             totalUsedUsd: mappedUsed,
             totalGrantedUsd: mappedLimit,

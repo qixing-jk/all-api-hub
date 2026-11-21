@@ -27,7 +27,7 @@ describe("api credential telemetry parsers", () => {
       }),
     ).toEqual({
       availability: true,
-      balanceCoverage: "complete",
+      balanceCoverage: "partial",
       balances: [
         {
           amount: "12.5",
@@ -49,7 +49,7 @@ describe("api credential telemetry parsers", () => {
       }),
     ).toEqual({
       availability: false,
-      balanceCoverage: "complete",
+      balanceCoverage: "partial",
       balances: [
         expect.objectContaining({
           amount: "3.5",

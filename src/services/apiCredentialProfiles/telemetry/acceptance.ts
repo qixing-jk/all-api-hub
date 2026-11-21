@@ -51,6 +51,8 @@ export function acceptTelemetrySnapshot(
       ...balance,
       semantics: API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy,
       status: OBSERVATION_STATUSES.Stale,
+      observedAt:
+        balance.observedAt ?? previous.lastSuccessTime ?? previous.lastSyncTime,
     }))
   }
   if (previous?.facts?.usage) {
@@ -65,7 +67,12 @@ export function acceptTelemetrySnapshot(
     ] as const) {
       const old = previous.facts.usage[field]
       if (!currentUsage?.[field] && old)
-        facts.usage[field] = { ...old, status: OBSERVATION_STATUSES.Stale }
+        facts.usage[field] = {
+          ...old,
+          status: OBSERVATION_STATUSES.Stale,
+          observedAt:
+            old.observedAt ?? previous.lastSuccessTime ?? previous.lastSyncTime,
+        }
     }
   }
   if (previous?.facts?.quota) {
@@ -79,13 +86,58 @@ export function acceptTelemetrySnapshot(
         window.scope && usageScopeKey(window.scope),
       ])
     const fresh = facts.quota?.windows ?? []
+    const priorWindows = new Map(
+      previous.facts.quota.windows.map((window) => [key(window), window]),
+    )
+    const merged = fresh.map((window) => {
+      const prior = priorWindows.get(key(window))
+      if (
+        !prior ||
+        prior.resetTime === undefined ||
+        prior.resetTime !== window.resetTime
+      )
+        return window
+      const retainedAmounts: NonNullable<
+        ApiCredentialTelemetryQuotaWindowFact["retainedAmounts"]
+      > = {}
+      for (const field of [
+        "used",
+        "limit",
+        "remaining",
+        "remainingPercent",
+      ] as const) {
+        if (window[field] !== undefined) continue
+        const old = prior.retainedAmounts?.[field]
+        if (old) retainedAmounts[field] = old
+        else if (prior[field] !== undefined)
+          retainedAmounts[field] = {
+            status: OBSERVATION_STATUSES.Stale,
+            value: prior[field],
+            observedAt:
+              prior.observedAt ??
+              previous.lastSuccessTime ??
+              previous.lastSyncTime,
+            ...(prior.source ? { source: prior.source } : {}),
+          }
+      }
+      return Object.keys(retainedAmounts).length
+        ? { ...window, retainedAmounts }
+        : window
+    })
     const known = new Set(fresh.map(key))
     const stale = previous.facts.quota.windows
       .filter((window) => !known.has(key(window)))
-      .map((window) => ({ ...window, status: OBSERVATION_STATUSES.Stale }))
+      .map((window) => ({
+        ...window,
+        status: OBSERVATION_STATUSES.Stale,
+        observedAt:
+          window.observedAt ??
+          previous.lastSuccessTime ??
+          previous.lastSyncTime,
+      }))
     facts.quota = {
       ...(facts.quota ?? previous.facts.quota),
-      windows: [...fresh, ...stale],
+      windows: [...merged, ...stale],
     }
   }
   if (previous?.facts?.budgets) {

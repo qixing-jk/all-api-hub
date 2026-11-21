@@ -189,7 +189,12 @@ test("shows a reported Sub2API cost separately in the credential popup", async (
     await page.reload()
     await waitForExtensionRoot(page)
     await page.getByTestId(POPUP_TEST_IDS.apiCredentialProfilesTab).click()
-    await expect(page.getByText(amount, { exact: true })).toBeVisible()
+    await expect(
+      page.getByRole("listitem").getByText(amount, { exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage),
+    ).toHaveText(/USD\s*2\.5/)
     await page.screenshot({
       path: testInfo.outputPath(`popup-reported-credential-cost-${mode}.png`),
       animations: "disabled",

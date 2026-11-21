@@ -140,13 +140,13 @@
     "income": "今日收入"
   },
   "financial": {
-    "availableTotal": "account:financial.availableTotal",
+    "availableTotal": "可用余额",
     "derived": "基于站点字段派生",
     "expires": "到期：{{date}}",
     "lastKnown": "最后已知值",
     "manual": "手填余额",
     "olderRecord": "旧版保存的记录",
-    "potentialDuplicates": "account:financial.potentialDuplicates",
+    "potentialDuplicates": "可能重复的余额：{{count}} 项",
     "reported": "站点报告",
     "scopeUnknown": "使用范围未核实",
     "technicalDetails": "技术信息（调试）",

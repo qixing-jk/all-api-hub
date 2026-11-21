@@ -11,7 +11,7 @@ import { parseDecimal } from "~/services/amounts/decimal"
 import {
   FINANCIAL_COVERAGE,
   MEASUREMENT_UNIT_KINDS,
-  type OBSERVATION_STATUSES,
+  OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
 import { SiteHealthStatus } from "~/types"
 import type {
@@ -250,6 +250,38 @@ function coerceTelemetryFacts(
           typeof unit?.code === "string" &&
           typeof unit.label === "string")
       const remainingPercent = toOptionalFiniteNumber(item.remainingPercent)
+      const retainedAmounts: NonNullable<
+        import("~/types/apiCredentialProfiles").ApiCredentialTelemetryQuotaWindowFact["retainedAmounts"]
+      > = {}
+      if (item.retainedAmounts && typeof item.retainedAmounts === "object") {
+        const retained = item.retainedAmounts as Record<string, unknown>
+        for (const field of [
+          "used",
+          "limit",
+          "remaining",
+          "remainingPercent",
+        ] as const) {
+          const rawAmount = retained[field]
+          if (!rawAmount || typeof rawAmount !== "object") continue
+          const amount = rawAmount as Record<string, unknown>
+          const value = toOptionalFiniteNumber(amount.value)
+          const observedAt = toOptionalFiniteNumber(amount.observedAt)
+          if (
+            amount.status !== OBSERVATION_STATUSES.Stale ||
+            value === undefined ||
+            observedAt === undefined ||
+            (field === "remainingPercent" && (value < 0 || value > 100))
+          )
+            continue
+          const source = evidenceSchema.safeParse(amount.source)
+          retainedAmounts[field] = {
+            status: OBSERVATION_STATUSES.Stale,
+            value,
+            observedAt,
+            ...(source.success ? { source: source.data } : {}),
+          }
+        }
+      }
       if (
         !validType ||
         !validUnit ||
@@ -283,6 +315,7 @@ function coerceTelemetryFacts(
           ? { remaining: toOptionalFiniteNumber(item.remaining) }
           : {}),
         ...(remainingPercent !== undefined ? { remainingPercent } : {}),
+        ...(Object.keys(retainedAmounts).length ? { retainedAmounts } : {}),
         ...(evidenceSchema.safeParse(item.source).success
           ? { source: evidenceSchema.parse(item.source) }
           : {}),
@@ -391,6 +424,15 @@ function coerceTelemetryFacts(
             kind: MEASUREMENT_UNIT_KINDS.Quota,
             code: unit.code,
             label: unit.label,
+            ...(typeof unit.displayScale === "number" &&
+            Number.isFinite(unit.displayScale) &&
+            unit.displayScale > 0
+              ? { displayScale: unit.displayScale }
+              : {}),
+            ...(typeof unit.displayLabel === "string" &&
+            unit.displayLabel.trim()
+              ? { displayLabel: unit.displayLabel.trim() }
+              : {}),
           },
         }
       }

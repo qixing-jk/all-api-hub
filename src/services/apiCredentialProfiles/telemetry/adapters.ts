@@ -48,6 +48,8 @@ export type AdapterSuccess = {
   reportingAuthority?: string
   endpoint: string
   data: TelemetryPatch
+  /** Independent read failures retained alongside usable partial financial data. */
+  attempts?: ApiCredentialTelemetryAttempt[]
 }
 
 /**
@@ -99,12 +101,31 @@ async function queryOpenAiBilling(
   const end = formatUtcDayKey(now)
   const start = `${end.slice(0, 4)}-01-01`
   const usageEndpoint = createOpenAiBillingUsageEndpoint(start, end)
-  const usage = await fetchTelemetryJson({
-    baseUrl: profile.baseUrl,
-    endpoint: usageEndpoint,
-    bearerToken: profile.apiKey,
-    requestHeaders: profile.requestHeaders,
-  })
+  let usage
+  try {
+    usage = await fetchTelemetryJson({
+      baseUrl: profile.baseUrl,
+      endpoint: usageEndpoint,
+      bearerToken: profile.apiKey,
+      requestHeaders: profile.requestHeaders,
+    })
+  } catch (error) {
+    const data = parseOpenAiBillingUsage(subscription.json, {})
+    if (!data.budget) throw error
+    return {
+      source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
+      endpoint: subscription.endpoint,
+      data,
+      attempts: [
+        attemptFromError(
+          API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
+          usageEndpoint,
+          error,
+          [profile.apiKey, ...Object.values(profile.requestHeaders ?? {})],
+        ),
+      ],
+    }
+  }
 
   return {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
@@ -326,7 +347,14 @@ async function querySub2ApiUsage(
     source: API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage,
     endpoint: result.endpoint,
     data: {
-      ...(balance !== undefined ? { balanceUsd: balance } : {}),
+      ...(balance !== undefined
+        ? {
+            balance: {
+              amount: balance,
+              currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
+            },
+          }
+        : {}),
       ...(parseDecimal(today.cost) !== undefined
         ? { todayCostUsd: parseDecimal(today.cost) }
         : {}),

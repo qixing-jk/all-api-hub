@@ -109,7 +109,7 @@ export function selectTelemetryBalances(
     status: p.amount.status,
     ...("observedAt" in p.amount ? { observedAt: p.amount.observedAt } : {}),
   })
-  const balances = facts?.balanceSnapshot
+  const canonical = facts?.balanceSnapshot
     ? positions
         .filter((p) => !p.parentId && p.role === BALANCE_ROLES.Available)
         .map((p) => ({
@@ -123,7 +123,31 @@ export function selectTelemetryBalances(
             )
             .map(project),
         }))
-    : (facts?.balances ?? [])
+    : []
+  const unitKey = (unit: ApiCredentialTelemetryBalanceFact["unit"]) =>
+    unit.kind === MEASUREMENT_UNIT_KINDS.Money
+      ? `${unit.kind}:${unit.currency}`
+      : unit.kind === MEASUREMENT_UNIT_KINDS.Quota
+        ? `${unit.kind}:${unit.code}`
+        : unit.kind === MEASUREMENT_UNIT_KINDS.Crypto
+          ? `${unit.kind}:${unit.id}`
+          : unit.kind
+  const legacy = (facts?.balances ?? []).filter(
+    (balance) =>
+      !canonical.some(
+        (current) =>
+          unitKey(current.unit) === unitKey(balance.unit) &&
+          (current.status === OBSERVATION_STATUSES.Known ||
+            current.status === OBSERVATION_STATUSES.Stale),
+      ),
+  )
+  const balances = [
+    ...canonical.filter(
+      (balance) =>
+        !legacy.some((old) => unitKey(old.unit) === unitKey(balance.unit)),
+    ),
+    ...legacy,
+  ]
   return [
     ...balances,
     ...(facts?.budgets ?? []).map(
@@ -356,22 +380,23 @@ export function normalizeTelemetryPatchToFacts(
             kind: MEASUREMENT_UNIT_KINDS.Quota,
             code: asset.id,
             label: asset.label,
+            displayScale: asset.displayScale,
+            displayLabel: asset.displayLabel,
           }
         : asset?.kind === ASSET_KINDS.Crypto
           ? { kind: MEASUREMENT_UNIT_KINDS.Crypto, id: asset.id }
-          : source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage ||
-              (source ===
-                API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint &&
-                !data.financialMapping)
+          : source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
             ? {
                 kind: MEASUREMENT_UNIT_KINDS.Money,
                 currency: API_CREDENTIAL_TELEMETRY_FACT_UNITS.currencies.Usd,
                 decimalPlaces: 2,
               }
             : { kind: MEASUREMENT_UNIT_KINDS.Unknown }
-  const usageEvidence = data.financialMapping
-    ? evidence
-    : { ...evidence, kind: EVIDENCE_KINDS.Legacy }
+  const usageEvidence =
+    data.financialMapping ||
+    source === API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint
+      ? evidence
+      : { ...evidence, kind: EVIDENCE_KINDS.Legacy }
   const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
   if (data.todayCostUsd !== undefined) {
     usage.todayCost = {

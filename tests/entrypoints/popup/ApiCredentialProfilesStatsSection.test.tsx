@@ -281,8 +281,8 @@ describe("ApiCredentialProfilesStatsSection", () => {
       withUserPreferencesProvider: false,
     })
 
-    expect(screen.queryByText("$14.50")).not.toBeInTheDocument()
-    expect(screen.queryByText("$1.25")).not.toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*14\.50/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*1\.25/)).not.toBeInTheDocument()
     expect(
       screen.getByText(
         "apiCredentialProfiles:telemetry.balanceSemantics.legacy",
@@ -359,7 +359,7 @@ describe("ApiCredentialProfilesStatsSection", () => {
       withUserPreferencesProvider: false,
     })
 
-    expect(screen.queryByText("$10.00")).not.toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*10\.00/)).not.toBeInTheDocument()
   })
 
   it("does not present refreshed snapshots without balance as a zero balance", () => {
@@ -388,7 +388,7 @@ describe("ApiCredentialProfilesStatsSection", () => {
       withUserPreferencesProvider: false,
     })
 
-    expect(screen.queryByText("$0.00")).not.toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*0\.00/)).not.toBeInTheDocument()
     const placeholders = screen.getAllByText(
       "apiCredentialProfiles:telemetry.notProvided",
     )

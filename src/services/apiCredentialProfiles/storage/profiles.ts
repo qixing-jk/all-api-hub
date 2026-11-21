@@ -28,7 +28,10 @@ import {
   isSameTelemetryConfig,
   mergeApiCredentialProfilesConfigsWithRemap,
 } from "~/services/apiCredentialProfiles/storage/configCodec"
-import { readApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/storage/configReader"
+import {
+  readApiCredentialProfilesConfig,
+  readApiCredentialProfilesTelemetryGeneration,
+} from "~/services/apiCredentialProfiles/storage/configReader"
 import type {
   ApiCredentialProfileCaptureInput,
   ApiCredentialProfileCaptureResult,
@@ -193,14 +196,8 @@ class ApiCredentialProfilesStorageService {
         // merges rather than removals; the remap keeps their results reachable.
         const { config: coerced, profileIdRemap } =
           coerceApiCredentialProfilesConfigWithRemap(raw, { now })
-        const current = await readApiCredentialProfilesConfig()
         const generation = await this.reserveTelemetryGeneration(
-          Math.max(
-            0,
-            ...current.profiles.map(
-              (profile) => profile.telemetryRefreshGeneration ?? 0,
-            ),
-          ),
+          await readApiCredentialProfilesTelemetryGeneration(),
         )
         const next: ApiCredentialProfilesConfig = {
           version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -485,7 +482,7 @@ class ApiCredentialProfilesStorageService {
     snapshot: ApiCredentialTelemetrySnapshot,
     expectedProfile?: ApiCredentialProfile,
     balanceEnumeration?: BalanceRefreshPart["enumeration"],
-  ): Promise<ApiCredentialProfile> {
+  ): Promise<{ accepted: boolean; profile: ApiCredentialProfile }> {
     return this.withStorageWriteLock(async () => {
       const config = cloneConfig(await readApiCredentialProfilesConfig())
       const profiles = Array.isArray(config.profiles) ? config.profiles : []
@@ -508,7 +505,7 @@ class ApiCredentialProfilesStorageService {
             coerceApiCredentialTelemetryConfig(expectedProfile.telemetryConfig),
           ))
       )
-        return current
+        return { accepted: false, profile: current }
 
       const telemetrySnapshot = coerceTelemetrySnapshot(snapshot)
       if (!telemetrySnapshot) {
@@ -536,7 +533,7 @@ class ApiCredentialProfilesStorageService {
         }),
       )
 
-      return nextProfile
+      return { accepted: true, profile: nextProfile }
     })
   }
 

@@ -4,8 +4,8 @@
     "shareOverviewSnapshot": "分享总览快照"
   },
   "financial": {
-    "complete": "shareSnapshots:financial.complete",
-    "partial": "shareSnapshots:financial.partial"
+    "complete": "完整覆盖",
+    "partial": "部分覆盖"
   },
   "labels": {
     "accounts": "账号数",

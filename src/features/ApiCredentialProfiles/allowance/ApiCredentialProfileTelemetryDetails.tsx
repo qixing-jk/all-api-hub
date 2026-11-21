@@ -9,6 +9,7 @@ import {
 import { ApiCredentialProfileQuotaMeters } from "~/features/ApiCredentialProfiles/allowance/ApiCredentialProfileQuotaMeters"
 import {
   formatProviderBalance,
+  formatTelemetryAmount,
   getBalanceSemanticsLabel,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialTelemetryFormatting"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
@@ -16,8 +17,6 @@ import {
   BALANCE_CASH_CLASSIFICATIONS,
   BALANCE_FUNDING,
   BALANCE_INSTRUMENTS,
-  EVIDENCE_KINDS,
-  MEASUREMENT_UNIT_KINDS,
   OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
 import { selectTelemetryBalances } from "~/services/apiCredentialProfiles/telemetry/facts"
@@ -26,7 +25,6 @@ import type {
   ApiCredentialTelemetryBalanceFact,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
-import { API_CREDENTIAL_TELEMETRY_FACT_UNITS } from "~/types/apiCredentialProfiles"
 import { formatLocaleDateTime, formatTokenCount } from "~/utils/core/formatters"
 
 type ApiCredentialProfileTelemetryDetailsProps = {
@@ -61,7 +59,7 @@ function BalanceObservationNotice({
   balance,
   t,
 }: {
-  balance: ApiCredentialTelemetryBalanceFact
+  balance: Pick<ApiCredentialTelemetryBalanceFact, "status" | "observedAt">
   t: TFunction
 }) {
   if (balance.status !== OBSERVATION_STATUSES.Stale) return null
@@ -193,29 +191,12 @@ export function ApiCredentialProfileTelemetryDetails({
               data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage}
             >
               {facts?.usage?.todayCost !== undefined
-                ? formatProviderBalance(
-                    {
-                      amount: Number(facts.usage.todayCost.value),
-                      unit:
-                        facts.usage.todayCost.unit.kind ===
-                          MEASUREMENT_UNIT_KINDS.Money ||
-                        facts.usage.todayCost.unit.kind ===
-                          MEASUREMENT_UNIT_KINDS.Quota ||
-                        facts.usage.todayCost.unit.kind ===
-                          MEASUREMENT_UNIT_KINDS.Crypto
-                          ? facts.usage.todayCost.unit
-                          : { kind: MEASUREMENT_UNIT_KINDS.Unknown },
-                      semantics:
-                        facts.usage.todayCost.source?.kind ===
-                        EVIDENCE_KINDS.Legacy
-                          ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy
-                          : API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics
-                              .ProviderWallet,
-                    },
-                    t,
-                  )
+                ? formatTelemetryAmount(facts.usage.todayCost, t)
                 : missingTelemetryValue}
             </div>
+            {facts?.usage?.todayCost ? (
+              <BalanceObservationNotice balance={facts.usage.todayCost} t={t} />
+            ) : null}
           </section>
           <section className="min-w-0">
             <div className="mb-density-1 text-muted-foreground">

@@ -137,11 +137,6 @@ export function coerceApiCredentialTelemetryCustomEndpoint(
       ? obj.bearerToken.trim()
       : ""
   const jsonPaths = coerceApiCredentialTelemetryJsonPathMap(obj.jsonPaths)
-  const financialMapping =
-    obj.financialMapping === undefined
-      ? undefined
-      : telemetryFinancialMappingSchema.parse(obj.financialMapping)
-
   if (
     !endpoint ||
     Object.keys(jsonPaths).length === 0 ||
@@ -149,6 +144,11 @@ export function coerceApiCredentialTelemetryCustomEndpoint(
   ) {
     return undefined
   }
+
+  const financialMapping =
+    obj.financialMapping === undefined
+      ? undefined
+      : telemetryFinancialMappingSchema.parse(obj.financialMapping)
 
   return {
     endpoint,

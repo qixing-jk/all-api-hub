@@ -16,6 +16,7 @@ import {
   createAttempt,
   prepareTelemetrySecrets,
 } from "~/services/apiCredentialProfiles/telemetry/attempts"
+import { TelemetryRefreshSupersededError } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import {
   hasTelemetryUsageData,
   resolveTelemetryModes,
@@ -58,6 +59,7 @@ export async function refreshApiCredentialProfileTelemetry(
       const result = await runUsageAdapter(profile, mode, config)
       if (hasTelemetryUsageData(result.data)) {
         usageResult = result
+        attempts.push(...(result.attempts ?? []))
         attempts.push(
           createAttempt(
             result.source,
@@ -110,7 +112,8 @@ export async function refreshApiCredentialProfileTelemetry(
       ? FINANCIAL_ENUMERATION.Complete
       : FINANCIAL_ENUMERATION.Partial,
   )
-  if (!accepted.telemetrySnapshot)
+  if (!accepted.accepted) throw new TelemetryRefreshSupersededError()
+  if (!accepted.profile.telemetrySnapshot)
     throw new Error("Telemetry context changed before acceptance")
-  return accepted.telemetrySnapshot
+  return accepted.profile.telemetrySnapshot
 }

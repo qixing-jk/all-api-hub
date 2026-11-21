@@ -15,12 +15,148 @@ import {
 } from "~/services/amounts/financialConstants"
 import { acceptTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/acceptance"
 import { normalizeTelemetryPatchToFacts } from "~/services/apiCredentialProfiles/telemetry/facts"
-import { parseDeepSeekBalance } from "~/services/apiCredentialProfiles/telemetry/parsers"
+import {
+  mapCustomJson,
+  parseDeepSeekBalance,
+} from "~/services/apiCredentialProfiles/telemetry/parsers"
+import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/snapshotCodec"
 import { SiteHealthStatus } from "~/types"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("credential financial details", () => {
+  it("preserves custom quota spending scale through persistence and display", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { apiCredentialProfiles: en },
+    })
+    const facts = normalizeTelemetryPatchToFacts(
+      mapCustomJson(
+        { cost: "250" },
+        { todayCostUsd: "cost" },
+        {
+          asset: {
+            kind: "quota",
+            id: "credits",
+            label: "Raw credits",
+            displayScale: 100,
+            displayLabel: "Credits",
+          },
+          role: "available",
+          scope: "credential",
+        },
+      ),
+      "customReadOnlyEndpoint",
+      {
+        profileId: "fixture",
+        baseUrl: "https://fixture.example",
+        observedAt: 1000,
+      },
+    )
+    const snapshot = coerceTelemetrySnapshot({
+      schemaVersion: 2,
+      lastSyncTime: 1000,
+      attempts: [],
+      facts,
+    })!
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ApiCredentialProfileTelemetryDetails
+          snapshot={snapshot}
+          missingTelemetryValue="-"
+        />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("2.5 Credits")).toBeVisible()
+  })
+  it("marks retained spending with its original observation time", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { apiCredentialProfiles: en },
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ApiCredentialProfileTelemetryDetails
+          snapshot={{
+            lastSyncTime: 2000,
+            health: { status: SiteHealthStatus.Warning },
+            attempts: [],
+            facts: {
+              usage: {
+                todayCost: {
+                  value: "3",
+                  unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
+                  status: "stale",
+                  observedAt: 1000,
+                },
+              },
+            },
+          }}
+          missingTelemetryValue="-"
+        />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("Last known")).toBeVisible()
+    expect(
+      document.querySelector('time[datetime="1970-01-01T00:00:01.000Z"]'),
+    ).toBeVisible()
+    expect(
+      document.querySelector('time[datetime="1970-01-01T00:00:02.000Z"]'),
+    ).toBeNull()
+  })
+  it("formats spending from its original decimal string", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { apiCredentialProfiles: en },
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ApiCredentialProfileTelemetryDetails
+          snapshot={{
+            lastSyncTime: 2000,
+            health: { status: SiteHealthStatus.Healthy },
+            attempts: [],
+            facts: {
+              usage: {
+                todayCost: {
+                  value: "9007199254740993.00000001",
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                },
+              },
+            },
+          }}
+          missingTelemetryValue="-"
+        />
+      </I18nextProvider>,
+    )
+    expect(
+      await screen.findByText(/9,007,199,254,740,993\.00000001/),
+    ).toBeVisible()
+  })
+  it("shows omitted quota limits separately with their original observation time", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { apiCredentialProfiles: en },
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ApiCredentialProfileQuotaMeters
+          windows={[
+            {
+              type: "weekly",
+              remaining: 20,
+              unit: { kind: "quota", code: "requests", label: "Requests" },
+              retainedAmounts: {
+                limit: { value: 100, status: "stale", observedAt: 1000 },
+              },
+            },
+          ]}
+        />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("20 Requests left")).toBeVisible()
+    expect(screen.getByText("Last known limit: 100")).toBeVisible()
+    expect(
+      document.querySelector('time[datetime="1970-01-01T00:00:01.000Z"]'),
+    ).toBeVisible()
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
+  })
   it("localizes the generic provider quota label for ordinary details", async () => {
     const i18n = await createResourceTestI18n({
       en: { apiCredentialProfiles: en },
@@ -86,10 +222,9 @@ describe("credential financial details", () => {
     )
     expect(await screen.findByText("62% left")).toBeVisible()
     expect(screen.getByText(/Last known/)).toBeVisible()
-    expect(screen.getByText(/1970/, { selector: "time" })).toHaveAttribute(
-      "datetime",
-      "1970-01-01T00:00:01.000Z",
-    )
+    expect(
+      document.querySelector('time[datetime="1970-01-01T00:00:01.000Z"]'),
+    ).toHaveAttribute("datetime", "1970-01-01T00:00:01.000Z")
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
   })
 

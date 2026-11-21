@@ -15,10 +15,185 @@ import {
 } from "~/services/amounts/financialConstants"
 import { normalizeTelemetryPatchToFacts } from "~/services/apiCredentialProfiles/telemetry/facts"
 import { SiteHealthStatus } from "~/types"
+import type { ApiCredentialTelemetryAmount } from "~/types/apiCredentialProfiles"
 import {
   API_CREDENTIAL_TELEMETRY_SOURCES,
   type ApiCredentialProfile,
 } from "~/types/apiCredentialProfiles"
+
+const CLOCK = Date.UTC(2026, 5, 1, 12)
+function reportedCost(
+  overrides: Partial<ApiCredentialTelemetryAmount> = {},
+): ApiCredentialProfile {
+  return {
+    id: "reported",
+    name: "Reported",
+    baseUrl: "https://reported.example",
+    apiKey: "synthetic",
+    apiType: "openai-compatible",
+    createdAt: 1,
+    updatedAt: 1,
+    tagIds: [],
+    notes: "",
+    telemetrySnapshot: {
+      health: { status: SiteHealthStatus.Healthy },
+      lastSyncTime: CLOCK,
+      attempts: [],
+      facts: {
+        usage: {
+          todayCost: {
+            value: "3",
+            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            status: "known",
+            observedAt: CLOCK,
+            coverage: "complete",
+            source: {
+              kind: "reported",
+              adapter: "fixture",
+              operation: "usage",
+              contractVersion: "1",
+            },
+            scope: {
+              subject: { kind: "credential", profileId: "reported" },
+              authority: "https://reported.example",
+              walletId: "wallet",
+              projects: { kind: "all" },
+              keys: { kind: "all" },
+              models: { kind: "all" },
+              groups: { kind: "all" },
+            },
+            window: { start: CLOCK - 3600000, end: CLOCK, timeZone: "UTC" },
+            ...overrides,
+          },
+        },
+      },
+    },
+  }
+}
+
+it("sums complete distinct-wallet spending only for a common reporting interval", () => {
+  const first = reportedCost()
+  const second = reportedCost({ value: "2" })
+  second.id = "second"
+  second.telemetrySnapshot!.facts!.usage!.todayCost!.scope!.walletId = "other"
+  expect(
+    projectCredentialFinancialStats([first, second], CLOCK).telemetryStats
+      .todayUsageUsd,
+  ).toBe("5")
+  second.telemetrySnapshot!.facts!.usage!.todayCost!.scope!.walletId = "wallet"
+  expect(
+    projectCredentialFinancialStats([first, second], CLOCK).telemetryStats
+      .todayUsageUsd,
+  ).toBeUndefined()
+})
+
+it.each([
+  {
+    unit: { kind: "crypto", id: "XNO" } as const,
+    asset: { kind: "crypto", id: "XNO" },
+  },
+  {
+    unit: {
+      kind: "quota",
+      code: "credits",
+      label: "Raw",
+      displayScale: 100,
+      displayLabel: "Credits",
+    } as const,
+    asset: {
+      kind: "quota",
+      id: "credits",
+      label: "Raw",
+      displayScale: 100,
+      displayLabel: "Credits",
+    },
+  },
+])(
+  "keeps native $unit.kind spending rows outside the USD aggregate",
+  ({ unit, asset }) => {
+    const result = projectCredentialFinancialStats(
+      [reportedCost({ unit })],
+      CLOCK,
+    )
+    expect(result.telemetryStats.reportedTodayCosts[0]?.amount).toEqual({
+      asset,
+      value: "3",
+    })
+    expect(result.telemetryStats.todayUsageUsd).toBeUndefined()
+  },
+)
+
+it("keeps historical unverified USD spending readable without assigning that unit to new custom data", () => {
+  const source = {
+    kind: "legacy",
+    adapter: "customReadOnlyEndpoint",
+    operation: "legacy",
+    contractVersion: "1",
+  } as const
+  expect(
+    projectCredentialFinancialStats(
+      [reportedCost({ unit: { kind: "unknown" }, source })],
+      CLOCK,
+    ).telemetryStats.reportedTodayCosts[0]?.amount.asset,
+  ).toEqual({ kind: "currency", code: "USD" })
+  expect(
+    projectCredentialFinancialStats(
+      [
+        reportedCost({
+          unit: { kind: "unknown" },
+          source: { ...source, kind: "reported" },
+        }),
+      ],
+      CLOCK,
+    ).telemetryStats.reportedTodayCosts,
+  ).toEqual([])
+})
+
+it.each([
+  { status: "stale" as const },
+  { value: "invalid" },
+  { unit: { kind: "count", code: "requests" } as const },
+  { window: { start: CLOCK - 3600000, end: CLOCK, timeZone: "Invalid/Zone" } },
+  { window: { start: CLOCK - 86400000, end: CLOCK, timeZone: "UTC" } },
+  { window: undefined, observedAt: CLOCK + 1 },
+  { window: undefined, observedAt: CLOCK - 86400000 },
+])(
+  "excludes stale, invalid or out-of-day cost observations %j",
+  (overrides) => {
+    expect(
+      projectCredentialFinancialStats([reportedCost(overrides)], CLOCK)
+        .telemetryStats.reportedTodayCosts,
+    ).toEqual([])
+  },
+)
+
+it("leaves overflowed spending totals unavailable without losing the reported rows", () => {
+  const first = reportedCost({ value: "9".repeat(256) })
+  const second = reportedCost({ value: "1" })
+  second.telemetrySnapshot!.facts!.usage!.todayCost!.scope!.walletId = "other"
+  const result = projectCredentialFinancialStats(
+    [first, second],
+    CLOCK,
+  ).telemetryStats
+  expect(result.reportedTodayCosts).toHaveLength(2)
+  expect(result.todayUsageUsd).toBeUndefined()
+})
+
+it("keeps route-restricted spending in its own row and excludes it from the all-scope total", () => {
+  const profile = reportedCost()
+  profile.telemetrySnapshot!.facts!.usage!.todayCost!.scope!.routes = {
+    kind: "restricted",
+    ids: ["chat"],
+  }
+  expect(
+    projectCredentialFinancialStats([profile], CLOCK).telemetryStats
+      .todayUsageUsd,
+  ).toBeUndefined()
+  expect(
+    projectCredentialFinancialStats([profile], CLOCK).telemetryStats
+      .reportedTodayCosts[0]?.amount.value,
+  ).toBe("3")
+})
 
 it.each([CURRENCIES.USD, CURRENCIES.CNY])(
   "shows custom %s spend and the same-observation balance runway",
@@ -39,17 +214,15 @@ it.each([CURRENCIES.USD, CURRENCIES.CNY])(
         lastSyncTime: now,
         attempts: [],
         facts: normalizeTelemetryPatchToFacts(
-          currency === CURRENCIES.USD
-            ? { todayCostUsd: "3", balanceUsd: "30" }
-            : {
-                todayCostUsd: "3",
-                balance: { amount: "30", currency },
-                financialMapping: {
-                  asset: { kind: ASSET_KINDS.Currency, code: currency },
-                  role: BALANCE_ROLES.Available,
-                  scope: "credential",
-                },
-              },
+          {
+            todayCostUsd: "3",
+            balance: { amount: "30", currency },
+            financialMapping: {
+              asset: { kind: ASSET_KINDS.Currency, code: currency },
+              role: BALANCE_ROLES.Available,
+              scope: "credential",
+            },
+          },
           API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
           {
             profileId: "fixture",

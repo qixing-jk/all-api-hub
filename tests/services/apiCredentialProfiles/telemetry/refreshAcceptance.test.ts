@@ -59,6 +59,224 @@ const create = () =>
   })
 
 describe("credential refresh acceptance", () => {
+  it("does not replace profiles when the current admission state cannot be read", async () => {
+    await create()
+    const backup = await storage.exportConfig()
+    const read = vi.spyOn(storageData, "get").mockImplementation(() => {
+      throw new Error("storage unavailable")
+    })
+    try {
+      await expect(storage.importConfig(backup)).rejects.toThrow(
+        "storage unavailable",
+      )
+    } finally {
+      read.mockRestore()
+    }
+    expect(await storage.exportConfig()).toEqual(backup)
+  })
+  it("does not replace an unsupported outer config while bypassing corrupt telemetry", async () => {
+    await create()
+    const backup = await storage.exportConfig()
+    const future = { version: 999, profiles: [], financialState: "keep" }
+    storageData.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      future,
+    )
+    await expect(storage.importConfig(backup)).rejects.toThrow(/version/i)
+    expect(
+      storageData.get(
+        API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      ),
+    ).toEqual(future)
+  })
+  it("records a new subscription limit and the usage failure without deriving a fresh remaining amount", async () => {
+    const profile = await storage.createProfile({
+      name: "Billing",
+      baseUrl: "https://billing.example",
+      apiKey: "synthetic",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      telemetryConfig: { mode: "openaiBilling" },
+    })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (input: RequestInfo | URL) =>
+          new Response(
+            JSON.stringify(
+              String(input).includes("subscription")
+                ? { hard_limit_usd: "20" }
+                : { total_usage: "1000" },
+            ),
+            { headers: { "content-type": "application/json" } },
+          ),
+      ),
+    )
+    const original = await refresh(profile.id)
+    const old = original.facts!.budgets![0]!.remaining
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).includes("subscription")
+          ? new Response(JSON.stringify({ hard_limit_usd: "30" }), {
+              headers: { "content-type": "application/json" },
+            })
+          : new Response("unavailable", { status: 503 }),
+      ),
+    )
+    const partial = await refresh(profile.id)
+    expect(partial.facts?.budgets?.[0]).toMatchObject({
+      limit: { status: "known", value: "30" },
+      remaining: {
+        status: "stale",
+        value: "10",
+        observedAt: "observedAt" in old ? old.observedAt : undefined,
+      },
+    })
+    expect(partial.health.status).toBe(SiteHealthStatus.Warning)
+    expect(partial.lastError).toContain("503")
+    expect(partial.attempts).toContainEqual(
+      expect.objectContaining({ source: "openaiBilling", status: "error" }),
+    )
+  })
+  it("keeps the old finite budget state separately from a fresh used-only reading", async () => {
+    const profile = await storage.createProfile({
+      name: "Budget",
+      baseUrl: "https://budget.example",
+      apiKey: "synthetic",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      telemetryConfig: { mode: "newApiTokenUsage" },
+    })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              data: {
+                total_granted: "50000000",
+                total_used: "15000000",
+                total_available: "35000000",
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          ),
+      ),
+    )
+    const original = await refresh(profile.id)
+    const state = original.facts!.budgets![0]!.stateObservation
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ data: { total_used: "20000000" } }), {
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    )
+    const partial = await refresh(profile.id)
+    expect(partial.facts?.budgets?.[0]).toMatchObject({
+      limitState: "finite",
+      stateObservation: {
+        status: "stale",
+        observedAt: "observedAt" in state ? state.observedAt : undefined,
+      },
+      used: { status: "known", value: "40" },
+      remaining: { status: "stale", value: "70" },
+    })
+  })
+  it.each([-1, 1.5, "bad"])(
+    "does not decode a corrupt persisted profile admission generation %s",
+    async (generation) => {
+      const profile = await create()
+      const raw = await storage.exportConfig()
+      raw.profiles[0]!.telemetryRefreshGeneration = generation as never
+      storageData.set(
+        API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+        raw,
+      )
+      await expect(storage.getProfileById(profile.id)).rejects.toThrow(
+        "Invalid telemetry refresh generation",
+      )
+    },
+  )
+  it.each([
+    { balance_infos: [{ total_balance: "120" }] },
+    {
+      balance_infos: [
+        { currency: "CNY", total_balance: "120" },
+        { currency: "CNY", total_balance: "130" },
+      ],
+    },
+  ])(
+    "retains identified wallets when the next enumeration loses usable identities",
+    async (response) => {
+      const profile = await create()
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => wallet("110")),
+      )
+      const original = await refresh(profile.id)
+      const old = original.facts!.balanceSnapshot!.positions[0]!.amount
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          async () =>
+            new Response(JSON.stringify(response), {
+              headers: { "content-type": "application/json" },
+            }),
+        ),
+      )
+      const partial = await refresh(profile.id)
+      expect(partial.facts?.balanceSnapshot?.positions).toContainEqual(
+        expect.objectContaining({
+          id: "available:CNY",
+          amount: expect.objectContaining({
+            status: "stale",
+            value: "110",
+            observedAt: "observedAt" in old ? old.observedAt : undefined,
+          }),
+        }),
+      )
+    },
+  )
+  it.each([-1, 1.5, "bad", Number.MAX_SAFE_INTEGER])(
+    "rejects corrupt or overflowing admission clocks %s without changing saved profiles",
+    async (clock) => {
+      const profile = await create()
+      const before = await storage.exportConfig()
+      storageData.set(
+        API_CREDENTIAL_PROFILES_STORAGE_KEYS.TELEMETRY_GENERATION,
+        clock,
+      )
+      await expect(storage.beginTelemetryRefresh(profile.id)).rejects.toThrow(
+        /clock|overflow/i,
+      )
+      expect(await storage.exportConfig()).toEqual(before)
+    },
+  )
+  it("replaces corrupt financial telemetry while keeping admission newer than prior requests", async () => {
+    const profile = await create()
+    const backup = await storage.exportConfig()
+    const admitted = await storage.beginTelemetryRefresh(profile.id)
+    const raw = await storage.exportConfig()
+    raw.profiles[0]!.telemetrySnapshot = {
+      lastSyncTime: 1000,
+      attempts: [],
+      facts: { balanceSnapshot: { schemaVersion: 999 } },
+    } as never
+    storageData.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      raw,
+    )
+    await expect(storage.exportConfig()).rejects.toThrow(/canonical.*balance/i)
+    const restored = await storage.importConfig(backup)
+    expect(restored.profiles[0]?.telemetryRefreshGeneration).toBeGreaterThan(
+      admitted.telemetryRefreshGeneration!,
+    )
+    expect(await storage.getProfileById(profile.id)).toMatchObject({
+      id: profile.id,
+    })
+  })
   it.each([BUDGET_LIMIT_STATES.Unlimited, BUDGET_LIMIT_STATES.Unconfigured])(
     "does not retain finite limit or remaining amounts when the budget becomes %s",
     async (limitState) => {
@@ -320,12 +538,12 @@ describe("credential refresh acceptance", () => {
     })
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ remaining: "12" }), {
-            headers: { "content-type": "application/json" },
-          }),
-      ),
+      vi.fn(async (input: RequestInfo | URL) => {
+        expect(String(input)).toBe("https://billing-b.example/usage")
+        return new Response(JSON.stringify({ remaining: "12" }), {
+          headers: { "content-type": "application/json" },
+        })
+      }),
     )
     const result = await refresh(profile.id)
     expect(result.facts?.balanceSnapshot?.positions[0]?.scope).toMatchObject({
@@ -462,10 +680,12 @@ describe("credential refresh acceptance", () => {
       amount: 20,
       semantics: "legacy",
       status: "stale",
+      observedAt: 1000,
     })
     expect(stored.facts?.usage?.totalUsed).toMatchObject({
       value: 30,
       status: "stale",
+      observedAt: 1000,
     })
   })
   it("keeps admission order across restoring a pre-refresh backup", async () => {
@@ -494,7 +714,9 @@ describe("credential refresh acceptance", () => {
     await storage.importConfig(backup)
     const current = await refresh(profile.id)
     release(wallet("10"))
-    expect(await old).toEqual(current)
+    await expect(old).rejects.toMatchObject({
+      name: "TelemetryRefreshSupersededError",
+    })
     expect(
       (await storage.getProfileById(profile.id))?.telemetrySnapshot,
     ).toEqual(current)
@@ -582,7 +804,9 @@ describe("credential refresh acceptance", () => {
     await firstStarted
     const current = await refresh(profile.id)
     release(wallet("10"))
-    expect(await old).toEqual(current)
+    await expect(old).rejects.toMatchObject({
+      name: "TelemetryRefreshSupersededError",
+    })
     expect(
       (await storage.getProfileById(profile.id))?.telemetrySnapshot,
     ).toEqual(current)
@@ -671,6 +895,10 @@ describe("credential refresh acceptance", () => {
     expect(failed.facts?.budgets?.[0]?.remaining).toMatchObject({
       status: "stale",
       value: "70",
+      observedAt:
+        "observedAt" in priorBudget.remaining
+          ? priorBudget.remaining.observedAt
+          : undefined,
     })
     expect(failed.facts?.budgets?.[0]?.usedIncludesByok).toMatchObject({
       status: "stale",
@@ -782,9 +1010,9 @@ describe("credential refresh acceptance", () => {
         ],
       },
     })
-    expect(updated.telemetrySnapshot?.facts?.budgets).toHaveLength(2)
+    expect(updated.profile.telemetrySnapshot?.facts?.budgets).toHaveLength(2)
     expect(
-      updated.telemetrySnapshot?.facts?.budgets?.find(
+      updated.profile.telemetrySnapshot?.facts?.budgets?.find(
         (item) => item.window.kind === budget.window.kind,
       )?.remaining,
     ).toMatchObject({ status: "stale", value: "70" })

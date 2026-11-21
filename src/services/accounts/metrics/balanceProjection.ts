@@ -15,6 +15,7 @@ import { sumDecimals } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
   BALANCE_NATURES,
+  BALANCE_RELATIONS,
   BALANCE_ROLES,
   BALANCE_VALIDITY_KINDS,
   EVIDENCE_KINDS,
@@ -74,6 +75,15 @@ function positionCollectionKey(position: BalancePosition): string {
 
 /** Native assets group only by identity; this projection never invents exchange rates. */
 function sumPositions(positions: BalancePosition[]) {
+  const scopedAsset = (p: BalancePosition) =>
+    p.asset.kind === ASSET_KINDS.Quota
+      ? {
+          ...p.asset,
+          id: p.asset.id.startsWith(`${p.scope.authority}:`)
+            ? p.asset.id
+            : `${p.scope.authority}:${p.asset.id}`,
+        }
+      : p.asset
   const groups = new Map<string, BalancePosition[]>()
   for (const p of positions) {
     if (
@@ -81,17 +91,20 @@ function sumPositions(positions: BalancePosition[]) {
       p.asset.kind === ASSET_KINDS.Unknown
     )
       continue
-    const key = assetIdentity(p.asset)
-    groups.set(key, [...(groups.get(key) ?? []), p])
+    const key = assetIdentity(scopedAsset(p))
+    const group = groups.get(key)
+    if (group) group.push(p)
+    else groups.set(key, [p])
   }
   const amounts: Amount[] = [],
     overflows: BalanceConflict[] = []
   for (const positions of groups.values()) {
     try {
       const first = positions[0]!
-      if (first.asset.kind !== ASSET_KINDS.Unknown)
+      const asset = scopedAsset(first)
+      if (asset.kind !== ASSET_KINDS.Unknown)
         amounts.push({
-          asset: first.asset,
+          asset,
           value: sumDecimals(
             positions.flatMap((position) =>
               isKnownOrStaleObservation(position.amount)
@@ -150,6 +163,11 @@ function projectBalance(
     else if (position.asset.kind === ASSET_KINDS.Unknown)
       reason = BALANCE_EXCLUSION_REASONS.Asset
     else if (
+      purpose === BALANCE_PURPOSES.Available &&
+      position.relation === BALANCE_RELATIONS.Component
+    )
+      reason = BALANCE_EXCLUSION_REASONS.Overlap
+    else if (
       purpose === BALANCE_PURPOSES.Prepaid
         ? position.role !== BALANCE_ROLES.Ledger &&
           position.role !== BALANCE_ROLES.Available
@@ -203,6 +221,10 @@ function projectBalance(
       candidates.some(
         (other) =>
           other.role === BALANCE_ROLES.Ledger &&
+          !(
+            other.parentId &&
+            selected.has(balancePositionKey(other, other.parentId))
+          ) &&
           assetIdentity(other.asset) === assetIdentity(position.asset) &&
           balanceScopeKey(other.scope) === balanceScopeKey(position.scope) &&
           positionCollectionKey(other) === positionCollectionKey(position),
@@ -326,7 +348,14 @@ export function aggregateBalances(
           : index
       const key = JSON.stringify([
         localOwner,
-        balanceScopeKey(p.scope),
+        ...(localOwner === undefined
+          ? [
+              p.scope.authority,
+              p.scope.walletId,
+              p.scope.organizationId,
+              p.scope.workspaceId,
+            ]
+          : [balanceScopeKey(p.scope)]),
         assetIdentity(p.asset),
       ])
       const observations =
@@ -355,7 +384,19 @@ export function aggregateBalances(
   }
   const potentialDuplicateCount = possibleDuplicates.size
   const signature = (observation: WalletObservation) =>
-    JSON.stringify(observation.positions.map(balanceMetricKey).sort())
+    JSON.stringify(
+      observation.positions
+        .map((position) => [
+          balanceMetricKey(position),
+          balanceScopeKey({
+            ...position.scope,
+            routes: position.scope.routes ?? {
+              kind: SCOPE_SELECTION_KINDS.All,
+            },
+          }),
+        ])
+        .sort(),
+    )
   const observedAt = (observation: WalletObservation) =>
     Math.min(
       ...observation.positions.map((p) =>

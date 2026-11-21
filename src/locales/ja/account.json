@@ -146,7 +146,7 @@
     "lastKnown": "最終確認値",
     "manual": "手入力残高",
     "olderRecord": "旧バージョンで記録された値",
-    "potentialDuplicates_other": "account:financial.potentialDuplicates",
+    "potentialDuplicates_other": "重複の可能性がある残高：{{count}} 件",
     "reported": "サイト報告値",
     "scopeUnknown": "利用範囲は未確認",
     "technicalDetails": "技術情報（デバッグ）",

@@ -22,7 +22,13 @@ export type MeasurementUnit =
       decimalPlaces: number
     }
   | { kind: typeof MEASUREMENT_UNIT_KINDS.Crypto; id: "XNO" }
-  | { kind: typeof MEASUREMENT_UNIT_KINDS.Quota; code: string; label: string }
+  | {
+      kind: typeof MEASUREMENT_UNIT_KINDS.Quota
+      code: string
+      label: string
+      displayScale?: number
+      displayLabel?: string
+    }
   | { kind: typeof MEASUREMENT_UNIT_KINDS.Count; code: string }
   | { kind: typeof MEASUREMENT_UNIT_KINDS.Percent }
 

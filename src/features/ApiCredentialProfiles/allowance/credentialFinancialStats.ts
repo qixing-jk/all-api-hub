@@ -66,8 +66,8 @@ export function projectCredentialFinancialStats(
                 kind: ASSET_KINDS.Quota,
                 id: unit.code,
                 label: unit.label,
-                displayLabel: unit.label,
-                displayScale: 1,
+                displayLabel: unit.displayLabel ?? unit.label,
+                displayScale: unit.displayScale ?? 1,
               }
       } else if (unit.kind === MEASUREMENT_UNIT_KINDS.Crypto) {
         asset = unit
@@ -119,6 +119,7 @@ export function projectCredentialFinancialStats(
           todayCost.scope.keys,
           todayCost.scope.models,
           todayCost.scope.groups,
+          ...(todayCost.scope.routes ? [todayCost.scope.routes] : []),
         ].every((selection) => selection.kind === SCOPE_SELECTION_KINDS.All)
       ) {
         acc.todayUsageWindows.add(

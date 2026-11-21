@@ -7,7 +7,15 @@ import {
   floorDecimal,
   normalizeDecimalUnits,
   parseDecimal,
+  scaleDecimal,
 } from "~/services/amounts/decimal"
+
+it.each([0.5, 101, -101, NaN])(
+  "rejects invalid decimal scale %s before changing an amount",
+  (places) => {
+    expect(() => scaleDecimal("10", places)).toThrow("invalid_decimal_scale")
+  },
+)
 
 it("parses small and large serialized amounts without lossy Number conversion", () => {
   expect(parseDecimal("1e-9")).toBe("0.000000001")

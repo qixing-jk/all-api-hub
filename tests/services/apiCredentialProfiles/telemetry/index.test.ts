@@ -1075,13 +1075,13 @@ describe("api credential profile telemetry", () => {
     expect(snapshot.source).toBe("sub2apiUsage")
     expect(snapshot.facts?.balanceSnapshot?.positions).toEqual([
       expect.objectContaining({
-        asset: { kind: "unknown" },
+        asset: { kind: "currency", code: "USD" },
         amount: expect.objectContaining({
           status: "known",
           value: "12",
           observedAt: Date.now(),
           source: expect.objectContaining({
-            kind: "legacy",
+            kind: "reported",
             adapter: "sub2apiUsage",
           }),
         }),
@@ -1283,8 +1283,8 @@ describe("api credential profile telemetry", () => {
             expiresAt: 1776556800000,
             totalUsed: expect.objectContaining({
               value: "8.75",
-              unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
-              source: expect.objectContaining({ kind: "legacy" }),
+              unit: { kind: "unknown" },
+              source: expect.objectContaining({ kind: "reported" }),
             }),
           },
         }),

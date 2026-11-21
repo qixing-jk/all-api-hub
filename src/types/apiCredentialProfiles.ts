@@ -299,6 +299,18 @@ export type ApiCredentialTelemetryQuotaWindowFact = {
   source?: EvidenceRef
   scope?: UsageScope
   observedAt?: number
+  /** Omitted operands retained for reference, never used as fresh quota inputs. */
+  retainedAmounts?: Partial<
+    Record<
+      "used" | "limit" | "remaining" | "remainingPercent",
+      {
+        status: typeof OBSERVATION_STATUSES.Stale
+        value: number
+        observedAt: number
+        source?: EvidenceRef
+      }
+    >
+  >
 }
 
 /** Token counters normalized from provider telemetry payloads. */

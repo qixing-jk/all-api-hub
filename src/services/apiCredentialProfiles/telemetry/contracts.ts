@@ -10,6 +10,14 @@ import type {
   ApiCredentialTelemetryTokenUsage,
 } from "~/types/apiCredentialProfiles"
 
+/** A completed request whose result was invalidated by newer credential work. */
+export class TelemetryRefreshSupersededError extends Error {
+  constructor() {
+    super("Telemetry refresh superseded by a newer request or configuration")
+    this.name = "TelemetryRefreshSupersededError"
+  }
+}
+
 /** Provider protocol values shared by telemetry adapters and parsers. */
 export const TELEMETRY_PROVIDER_PROTOCOL = {
   currencies: { Cny: CURRENCIES.CNY, Usd: CURRENCIES.USD, Jpy: "JPY" },

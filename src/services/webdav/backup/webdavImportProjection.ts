@@ -69,7 +69,7 @@ export function createWebdavImportPayloadBySelection(input: {
     selection.preferences && presence.hasPreferences
 
   const remoteApiCredentialProfiles = coerceApiCredentialProfilesConfig(
-    normalizedRemote.apiCredentialProfiles,
+    normalizedRemote.apiCredentialProfiles ?? undefined,
   )
   const localApiCredentialProfiles = coerceApiCredentialProfilesConfig(
     localState.apiCredentialProfiles,
@@ -104,8 +104,7 @@ export function createWebdavImportPayloadBySelection(input: {
           localAccounts: migratedLocal.accounts,
           remoteAccounts: migratedRemote.accounts,
           localBookmarks: (localState.accountsConfig.bookmarks || []) as
-            | SiteBookmark[]
-            | undefined,
+            SiteBookmark[] | undefined,
           remoteBookmarks: normalizedRemote.bookmarks as SiteBookmark[],
           localTaggables: localApiCredentialProfiles.profiles,
           remoteTaggables: importApiCredentialProfilesFromRemote

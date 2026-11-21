@@ -15,6 +15,37 @@ import {
 
 afterEach(() => vi.restoreAllMocks())
 describe("Kimi inference financial contract across account and credential consumers", () => {
+  it.each([
+    { cur: "200000" },
+    { voucher_cur: "300000" },
+    { cur: "invalid", voucher_cur: "300000" },
+  ])(
+    "keeps console components when one operand is missing or invalid",
+    (data) => {
+      const scope: UsageScope = {
+        subject: { kind: "account", accountId: "fixture" },
+        authority: "https://platform.kimi.com",
+        projects: { kind: "unknown" },
+        keys: { kind: "unknown" },
+        models: { kind: "unknown" },
+        groups: { kind: "unknown" },
+      }
+      const result = parseKimiFinancialData(
+        { code: 0, data },
+        scope,
+        "CNY",
+        KIMI_FINANCIAL_SOURCES.Console,
+        1000,
+      ).balance
+      expect(result.positions[0]?.amount.status).toBe("unavailable")
+      expect(
+        result.positions.some(
+          (position) => position.parentId && position.amount.status === "known",
+        ),
+      ).toBe(true)
+      expect(result.coverage).toBe("partial")
+    },
+  )
   it.each([CURRENCIES.CNY, CURRENCIES.USD] as const)(
     "preserves the same %s amount roles, funding, nature and field evidence",
     (currency) => {
