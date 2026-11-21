@@ -51,8 +51,6 @@ const BALANCE_CONFLICT_REASONS = {
   AmountOutOfRange: "amount-out-of-range",
 } as const
 
-export type BalancePurpose =
-  (typeof BALANCE_PURPOSES)[keyof typeof BALANCE_PURPOSES]
 export type BalanceExclusion = {
   position: BalancePosition
   reason: (typeof BALANCE_EXCLUSION_REASONS)[keyof typeof BALANCE_EXCLUSION_REASONS]
