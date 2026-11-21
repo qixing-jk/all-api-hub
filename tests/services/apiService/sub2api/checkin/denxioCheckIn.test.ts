@@ -129,7 +129,7 @@ describe("Denxio daily check-in protocol parsing", () => {
     },
   )
 
-  it("accepts the observed claim record and retains only the reward amount", () => {
+  it("accepts the observed claim record and retains its reward and event identity", () => {
     expect(
       parseDenxioDailyCheckInClaimResponse(
         response(200, {
@@ -144,7 +144,7 @@ describe("Denxio daily check-in protocol parsing", () => {
           },
         }),
       ),
-    ).toEqual({ rewardAmount: 0.5 })
+    ).toEqual({ rewardAmount: 0.5, rewardRecordId: "123" })
   })
 
   it("preserves stable deployment error codes for provider policy", () => {

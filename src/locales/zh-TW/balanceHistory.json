@@ -20,7 +20,7 @@
     },
     "title": "帳戶分佈"
   },
-  "description": "查看每日餘額與收支趨勢，了解帳號資金變化。",
+  "description": "查看各帳戶的餘額與額度變化。",
   "empty": {
     "description": "啟用餘額歷史並重新整理任意帳戶，即可記錄第一條快照。",
     "title": "暫無快照"
@@ -88,10 +88,20 @@
   },
   "metrics": {
     "balance": "餘額",
-    "estimatedIncome": "估算收入",
+    "estimatedIncome": "估算淨流入",
     "income": "收入",
     "net": "淨變化",
     "outcome": "支出"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "群組",
+      "keys": "金鑰",
+      "models": "模型",
+      "projects": "專案",
+      "routes": "路由"
+    },
+    "restrictions": "{{dimension}}：{{value}}"
   },
   "overview": {
     "kpis": {
@@ -117,8 +127,8 @@
     "enabledHint": "關閉後不會記錄快照，也不會安排日終抓取。",
     "endOfDayCapture": "日終抓取",
     "endOfDayCaptureHint": "在每天 {{time}} 左右盡力抓取一次（需要瀏覽器支援 Alarms API）。",
-    "estimatedTodayIncome": "顯示估算今日收入",
-    "estimatedTodayIncomeHint": "基於餘額歷史估算未進入站點收入記錄的獎勵；缺少前一日基準快照時不可用。",
+    "estimatedTodayIncome": "顯示估算淨流入",
+    "estimatedTodayIncomeHint": "以接近當天零點的餘額和大致涵蓋同一時段的已結算消耗估算淨流入。",
     "retentionDays": "保留天數"
   },
   "summary": {
@@ -129,7 +139,7 @@
       "account": "帳戶",
       "cashflowCoverage": "收支覆蓋",
       "endBalance": "結束餘額",
-      "estimatedIncomeTotal": "估算收入合計",
+      "estimatedIncomeTotal": "估算淨流入",
       "incomeTotal": "區間收入",
       "outcomeTotal": "區間支出",
       "rangeNet": "區間淨變化",
@@ -152,7 +162,7 @@
       "scope": "檢視"
     },
     "emptyMetric": "該時間範圍內暫無{{metric}}資料。",
-    "gapBridge": "虛線表示中間日期沒有記錄。",
+    "gapBridge": "無記錄",
     "scopes": {
       "accounts": "按帳戶",
       "total": "彙總"

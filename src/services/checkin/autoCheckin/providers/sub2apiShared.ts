@@ -5,7 +5,14 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
+import { CURRENCIES } from "~/constants/money"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
 import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
@@ -15,11 +22,11 @@ import {
   Sub2ApiCheckInRecoveryBlockedError,
   type Sub2ApiCheckInRecoveryObservation,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
-import { convertUsdBalanceToQuota } from "~/services/apiService/sub2api/parsing"
 import { ApiError } from "~/services/apiTransport/errors"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   withCheckInConfirmation,
@@ -31,7 +38,6 @@ import {
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createTerminalFailureResult,
-  readPositiveDecimalAmount,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
@@ -39,7 +45,6 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinSkipReason,
-  type CheckInReward,
 } from "~/types/autoCheckin"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
@@ -112,18 +117,24 @@ export const failedSub2ApiCheckIn = (
   messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
 })
 
-/**
- * Read an award a Sub2API-family deployment reports as a USD decimal amount.
- *
- * This family quotes balances in USD (`convertUsdBalanceToQuota`), so its
- * check-in award needs the same conversion before it can be stored or shown
- * next to the account's quota.
- */
-export function readUsdReward(value: unknown): CheckInReward | undefined {
-  const usd = readPositiveDecimalAmount(value)
-  if (usd === undefined) return undefined
-  const quota = convertUsdBalanceToQuota(usd)
-  return Number.isFinite(quota) && quota > 0 ? { quota } : undefined
+/** Preserve the verified USD grant without a product-quota round trip. */
+export function readUsdAwards(
+  account: SiteAccount,
+  value: unknown,
+  source: { operation: string; field: string; event?: ConfirmedAward["event"] },
+) {
+  return value === undefined
+    ? undefined
+    : [
+        accountAward(account, {
+          id: source.field,
+          ...source,
+          value,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          target: AWARD_TARGETS.Wallet,
+          fulfillment: AWARD_FULFILLMENT.Credited,
+        }),
+      ]
 }
 
 /** Shared fallback for single-step methods; Denxio owns its upstream error codes. */

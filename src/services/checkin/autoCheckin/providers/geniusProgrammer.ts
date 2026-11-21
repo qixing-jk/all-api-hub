@@ -5,6 +5,7 @@ import {
 import { isForeignCheckInContract } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
   fetchGeniusProgrammerDailyCheckInStatus,
+  GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
   GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS,
   performGeniusProgrammerDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
@@ -27,7 +28,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -74,7 +75,14 @@ export const geniusProgrammerProvider: AutoCheckinProvider = {
             status: CHECKIN_RESULT_STATUS.SUCCESS,
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-            reward: readUsdReward(result.data.rewardAmount),
+            awards: readUsdAwards(
+              account as SiteAccount,
+              result.data.rewardAmount,
+              {
+                operation: GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
+                field: "reward_amount",
+              },
+            ),
             data: result.data,
           }
         case GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:

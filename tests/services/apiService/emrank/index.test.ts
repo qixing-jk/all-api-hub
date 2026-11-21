@@ -183,7 +183,12 @@ describe("EMRank response and capability boundaries", () => {
         emRankProvider.checkIn(saved, claimContext),
       ).resolves.toMatchObject({
         status: "already_checked",
-        reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+        awards: [
+          {
+            asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+            amount: { status: "known", value: "2000000" },
+          },
+        ],
         confirmation: {
           kind: "observed",
           accountId: saved.id,
@@ -195,7 +200,12 @@ describe("EMRank response and capability boundaries", () => {
             today: "checked",
             evidence: { source: "probe", observedAt: startedAt + 2_000 },
           },
-          reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+          awards: [
+            {
+              asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+              amount: { status: "known", value: "2000000" },
+            },
+          ],
         },
       })
       expect(reads).toBe(2)
@@ -257,7 +267,12 @@ describe("EMRank response and capability boundaries", () => {
         emRankProvider.checkIn(storedAccount(), claimContext),
       ).resolves.toMatchObject({
         status: "success",
-        reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+        awards: [
+          {
+            asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+            amount: { status: "known", value: "2000000" },
+          },
+        ],
         confirmation: {
           kind: "response",
           observedAt: startedAt + 2_000,
@@ -348,7 +363,19 @@ describe("EMRank response and capability boundaries", () => {
         request,
         code: " voucher ",
       }),
-    ).resolves.toBe(2500000)
+    ).resolves.toMatchObject({
+      awards: [
+        {
+          asset: { kind: "quota", id: "https://emrank.tech/token" },
+          amount: {
+            status: "known",
+            value: "2500000",
+            source: { inputs: ["delta"] },
+          },
+          fulfillment: "credited",
+        },
+      ],
+    })
     expect(write).toHaveBeenCalledTimes(1)
     server.use(
       http.post(`${origin}/api/user/topup`, () => HttpResponse.json({})),
@@ -509,7 +536,16 @@ describe("EMRank response and capability boundaries", () => {
       emRankProvider.checkIn(storedAccount(), claimContext),
     ).resolves.toMatchObject({
       status: "success",
-      reward: { amount: 2000000 },
+      awards: [
+        {
+          asset: { kind: "quota", id: EMRANK_TOKEN_ASSET.id },
+          amount: {
+            status: "known",
+            value: "2000000",
+            source: { inputs: ["record.reward"] },
+          },
+        },
+      ],
       rawMessage: undefined,
     })
   })
@@ -526,7 +562,7 @@ describe("EMRank response and capability boundaries", () => {
       emRankProvider.checkIn(storedAccount(), claimContext),
     ).resolves.toMatchObject({
       status: "already_checked",
-      reward: undefined,
+      awards: [],
       data: undefined,
     })
     server.use(
@@ -964,7 +1000,12 @@ describe("EMRank console contract", () => {
     )
     expect(result).toMatchObject({
       status: "already_checked",
-      reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+      awards: [
+        {
+          asset: { kind: "quota", id: EMRANK_TOKEN_ASSET.id },
+          amount: { status: "known", value: "2000000" },
+        },
+      ],
     })
     expect(write).not.toHaveBeenCalled()
   })

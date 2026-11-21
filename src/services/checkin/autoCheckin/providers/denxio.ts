@@ -7,6 +7,7 @@ import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
 } from "~/services/apiService/sub2api/auth/authSession"
 import {
+  DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
   DENXIO_DAILY_CHECK_IN_ERROR_CODES,
   DENXIO_DAILY_CHECK_IN_RESULT_KINDS,
   fetchDenxioDailyCheckInStatus,
@@ -41,6 +42,7 @@ import {
   createSub2ApiCheckInReadRequest,
   getSub2ApiCheckInReadiness,
   observedSub2ApiAlreadyChecked,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -172,6 +174,18 @@ export const denxioProvider: AutoCheckinProvider = {
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
             data: { rewardAmount: result.rewardAmount },
+            awards: readUsdAwards(account as SiteAccount, result.rewardAmount, {
+              operation: DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
+              field: "record.amount",
+              ...(result.rewardRecordId
+                ? {
+                    event: {
+                      namespace: "denxio-checkin-record",
+                      id: result.rewardRecordId,
+                    },
+                  }
+                : {}),
+            }),
           }
         case DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
           if (result.statusObservation)

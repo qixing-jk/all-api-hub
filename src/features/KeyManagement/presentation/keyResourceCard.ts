@@ -1,12 +1,21 @@
 import type { ComponentProps } from "react"
 
 import type { Badge } from "~/components/ui/badge"
+import type { BudgetConstraint } from "~/services/amounts/budgets"
 import type { InventorySecretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
+
+export const KEY_RESOURCE_CARD_STATUSES = {
+  Active: "active",
+  Inactive: "inactive",
+  Unknown: "unknown",
+} as const
 
 export type KeyResourceFact = {
   id: string
   label: string
   value: string
+  /** Full typed budget for aligned metrics; value remains the exact fallback. */
+  budget?: BudgetConstraint
 }
 
 /** Highlighted metadata shown next to the key status, never a plain fact. */
@@ -32,7 +41,7 @@ export type KeyResourceCardPresentation = {
   id: string
   title: string
   accountLabel: string
-  status: "active" | "inactive" | "unknown"
+  status: (typeof KEY_RESOURCE_CARD_STATUSES)[keyof typeof KEY_RESOURCE_CARD_STATUSES]
   statusLabel: string
   secretAvailability: InventorySecretAvailability
   maskedLabel?: string

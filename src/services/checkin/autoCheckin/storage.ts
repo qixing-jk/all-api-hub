@@ -1,5 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
+import { confirmedAwardSchema } from "~/services/amounts/awards"
+import { readCheckinAwards } from "~/services/checkin/autoCheckin/awards"
 import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import {
   AUTO_CHECKIN_STORAGE_KEYS as STORAGE_KEYS,
@@ -26,6 +28,50 @@ import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
 
 const logger = createLogger("AutoCheckinStorage")
+
+/** Future status formats must not be treated as an empty result set. */
+function assertSupportedStatus(
+  stored: unknown,
+): asserts stored is AutoCheckinStatus | null | undefined {
+  if (stored === undefined || stored === null) return
+  if (!isPlainObject(stored)) throw new Error("invalid_checkin_status")
+  if (stored.schemaVersion !== undefined && stored.schemaVersion !== 2)
+    throw new Error("unsupported_checkin_status_version")
+  const rows = [
+    ...(isPlainObject(stored.perAccount)
+      ? Object.values(stored.perAccount)
+      : []),
+    ...(Array.isArray(stored.accountsSnapshot)
+      ? stored.accountsSnapshot.map((snapshot) =>
+          isPlainObject(snapshot) ? snapshot.lastResult : undefined,
+        )
+      : []),
+  ]
+  for (const row of rows) {
+    if (
+      isPlainObject(row) &&
+      row.executionReceiptId !== undefined &&
+      (typeof row.executionReceiptId !== "string" ||
+        !row.executionReceiptId.trim())
+    )
+      throw new Error("invalid_checkin_receipt")
+    if (
+      isPlainObject(row) &&
+      row.awardExecutionReceiptIds !== undefined &&
+      (!Array.isArray(row.awardExecutionReceiptIds) ||
+        row.awardExecutionReceiptIds.some(
+          (id) => typeof id !== "string" || !id.trim(),
+        ))
+    )
+      throw new Error("invalid_checkin_award_receipts")
+    if (
+      isPlainObject(row) &&
+      row.awards !== undefined &&
+      !confirmedAwardSchema.array().safeParse(row.awards).success
+    )
+      throw new Error("invalid_checkin_awards")
+  }
+}
 
 /** Reports a failed status storage operation as throttled telemetry. */
 function trackStatusStorageFailure(
@@ -181,21 +227,20 @@ class AutoCheckinStorage {
   async getStatus(options?: {
     throwOnError?: boolean
   }): Promise<AutoCheckinStatus | null> {
+    let stored: unknown
     try {
-      const stored = (await this.storage.get(
-        STORAGE_KEYS.AUTO_CHECKIN_STATUS,
-      )) as AutoCheckinStatus | undefined
-
-      return stored || null
+      stored = await this.storage.get(STORAGE_KEYS.AUTO_CHECKIN_STATUS)
     } catch (error) {
       logger.error("Failed to get status", error)
       trackStatusStorageFailure(
         PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Read,
         error,
       )
-      if (options?.throwOnError) throw error
-      return null
+      if (options?.throwOnError === false) return null
+      throw error
     }
+    assertSupportedStatus(stored)
+    return stored ?? null
   }
 
   /**
@@ -218,6 +263,7 @@ class AutoCheckinStorage {
           const stored = (await this.storage.get(
             STORAGE_KEYS.AUTO_CHECKIN_STATUS,
           )) as AutoCheckinStatus | undefined
+          assertSupportedStatus(stored)
           current = stored || null
         } catch (error) {
           // Without a trustworthy read there is no base to patch, and writing
@@ -249,8 +295,11 @@ class AutoCheckinStorage {
         const next = {
           ...(current ?? {}),
           ...applied.patch,
+          schemaVersion: 2,
         } as AutoCheckinStatus
         try {
+          assertSupportedStatus(applied.patch)
+          assertSupportedStatus(next)
           await this.storage.set(STORAGE_KEYS.AUTO_CHECKIN_STATUS, next)
           logger.debug("Status updated")
           return { ok: true, result: applied.result ?? null }
@@ -331,6 +380,10 @@ class AutoCheckinStorage {
           snapshotMatch?.accountName ||
           account.accountId
 
+        const historicalResult = previousResult ?? snapshotMatch?.lastResult
+        const historicalAwards = historicalResult
+          ? readCheckinAwards(historicalResult)
+          : []
         const disabledResult: CheckinAccountResult = {
           accountId: account.accountId,
           accountName: resolvedAccountName,
@@ -339,7 +392,17 @@ class AutoCheckinStorage {
             AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
           ),
           reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
-          timestamp: Date.now(),
+          // Disabling changes availability, not the historical execution's day.
+          timestamp: historicalResult?.timestamp ?? Date.now(),
+          ...(historicalResult
+            ? {
+                methodId: historicalResult.methodId,
+                executionReceiptId: historicalResult.executionReceiptId,
+                awardExecutionReceiptIds:
+                  historicalResult.awardExecutionReceiptIds,
+                awards: historicalAwards,
+              }
+            : {}),
         }
 
         perAccount[account.accountId] = disabledResult

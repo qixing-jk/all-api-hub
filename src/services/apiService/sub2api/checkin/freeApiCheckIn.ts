@@ -1,4 +1,6 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
@@ -22,7 +24,7 @@ import type {
 } from "~/services/apiTransport/type"
 
 export const FREE_API_DAILY_CHECK_IN_RESULT_KINDS = {
-  Applied: "applied",
+  Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
 } as const
 
 /**
@@ -79,18 +81,17 @@ export function parseFreeApiDailyCheckInMutationResponse(
 ) {
   const data = parseEnvelopeData(response, FREE_API_CHECK_IN_ENDPOINT)
   const amount = data.amount
-  const parsed =
-    typeof amount === "number"
-      ? amount
-      : typeof amount === "string" && /^\d+(?:\.\d+)?$/.test(amount)
-        ? Number(amount)
-        : Number.NaN
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  const parsed = parseDecimal(amount)
+  if (
+    parsed === undefined ||
+    compareDecimal(parsed, "0") < 0 ||
+    (typeof amount === "string" && !/^\d+(?:\.\d+)?$/.test(amount))
+  ) {
     throw invalidResponse(FREE_API_CHECK_IN_ENDPOINT)
   }
   return {
     kind: FREE_API_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-    data: { rewardAmount: parsed },
+    data: { rewardAmount: amount as number | string },
   }
 }
 

@@ -1,13 +1,17 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
 import { fetchModels } from "~/services/apiService/dahl"
-import { DAHL_USD_PER_TOKEN } from "~/services/apiService/dahl/constants"
+import { DAHL_TOKEN_ASSET } from "~/services/apiService/dahl/constants"
+import { MODEL_LIST_PRICING_KINDS } from "~/services/modelList/pricingModel"
+import {
+  QUOTA_COMPARISON_SCOPES,
+  QUOTA_ROUNDING_MODES,
+} from "~/services/modelPricing/quotaPricing"
 
 export const dahlModelPricing: ModelPricingCapability = {
   runtimeKeyFallback: "account-pricing",
   async fetchPricing(request) {
     const models = await fetchModels(request)
-    const price = DAHL_USD_PER_TOKEN * 1000000
     return {
       success: true,
       groupAccess: { kind: "not-applicable" },
@@ -20,22 +24,30 @@ export const dahlModelPricing: ModelPricingCapability = {
         completion_ratio: 1,
         enable_groups: [],
         supported_endpoint_types: ["openai"],
-        token_price_usd_per_million: {
-          input: price,
-          output: price,
-          cache_read: price,
+        quotaPricing: {
+          unit: DAHL_TOKEN_ASSET,
+          // Successful requests deduct upstream input plus output Token usage.
+          // Package purchase prices do not establish a USD billing rate.
+          rates: {
+            input: { amount: 1, per: 1 },
+            output: { amount: 1, per: 1 },
+          },
+          adjustments: [],
+          comparisonScope: QUOTA_COMPARISON_SCOPES.Unit,
+          rounding: QUOTA_ROUNDING_MODES.None,
+          sourceUrl: "https://inference.dahl.global/docs/tokens/",
         },
         price_metadata: {
           source: "provider-catalog",
           precision: "exact",
-          source_date: "2026-10-11",
-          source_url: "https://inference.dahl.global/pricing/",
+          source_url: "https://inference.dahl.global/docs/tokens/",
         },
       })),
       model_list_source: {
         kind: "provider-catalog",
         provider: SITE_TYPES.DAHL,
         supportsPricing: true,
+        pricingKind: MODEL_LIST_PRICING_KINDS.Quota,
         actionPolicy: {
           supportsGroupFiltering: false,
           supportsAccountSummary: true,

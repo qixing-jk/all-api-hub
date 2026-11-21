@@ -1,9 +1,22 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyProtocolAmount,
+  keyRestrictionScope,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   keyExpiryDisplayFact,
   keyLastUsedDisplayFacts,
@@ -12,8 +25,11 @@ import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accou
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_GROUP_EMPTY_VALUES,
   ACCOUNT_KEY_MUTATION_CERTAINTIES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failureCodes,
@@ -121,6 +137,7 @@ const toFactStatus = (key: PmApiKey) =>
 const facts = (
   key: PmApiKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: key.name || `PM-API #${key.id}`,
@@ -138,26 +155,26 @@ const facts = (
   },
   fields: [],
   displayFacts: [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: "quota",
-      kind: "money",
-      role: "remaining",
-      amountUsd: key.unlimited
-        ? 0
-        : Math.max(0, key.remainQuota) / QUOTA_PER_USD,
-      unlimited: key.unlimited,
-    },
-    {
-      fieldId: "used",
-      kind: "money",
-      role: "used",
-      amountUsd: key.usedQuota / QUOTA_PER_USD,
-    },
+      operation: "tokens",
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      limitState: key.unlimited
+        ? BUDGET_LIMIT_STATES.Unlimited
+        : BUDGET_LIMIT_STATES.Finite,
+      remaining: keyProtocolAmount(key.remainQuota, QUOTA_PER_USD),
+      used: keyProtocolAmount(key.usedQuota, QUOTA_PER_USD),
+      scope: keyRestrictionScope({
+        models: key.models ? key.models.split(",") : null,
+        groups: key.grp ? [key.grp] : undefined,
+      }),
+      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+    }),
     keyExpiryDisplayFact("expiry", key.expiredAt),
     ...keyLastUsedDisplayFacts(key.accessedAt),
     {
       fieldId: factFields.Group,
-      kind: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
       value: key.grp,
       emptyValue: ACCOUNT_KEY_GROUP_EMPTY_VALUES.AccountGroup,
     },
@@ -165,8 +182,8 @@ const facts = (
       ? [
           {
             fieldId: factFields.Models,
-            kind: "restriction" as const,
-            role: "models" as const,
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+            role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
             value: key.models.split(","),
           },
         ]
@@ -175,8 +192,8 @@ const facts = (
       ? [
           {
             fieldId: factFields.Subnet,
-            kind: "restriction" as const,
-            role: "subnet" as const,
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+            role: ACCOUNT_KEY_RESTRICTION_ROLES.Subnet,
             value: key.subnet.split(","),
           },
         ]
@@ -185,7 +202,7 @@ const facts = (
       ? [
           {
             fieldId: factFields.Rpm,
-            kind: "rate-limit" as const,
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.RateLimit,
             rpm: key.rpm,
             concurrency: 0,
           },
@@ -280,10 +297,13 @@ export const pmApiKeyResources = defineAccountKeyResourceCapability({
       )
       if (!hasUsableApiTokenKey(key.key))
         return {
-          kind: "unavailable" as const,
+          kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
           failure: { code: failureCodes.Unavailable },
         }
-      return { kind: "resolved" as const, secret: key.key }
+      return {
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+        secret: key.key,
+      }
     },
   },
   createEditor: async (config, _scope, options, _inventory, intent) => {

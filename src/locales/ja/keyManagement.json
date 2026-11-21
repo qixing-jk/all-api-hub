@@ -235,6 +235,34 @@
       "gateways": "ゲートウェイとルーティングツール"
     }
   },
+  "financial": {
+    "alertOnly": "通知のみ",
+    "allocation": "割当残高",
+    "budget": "利用予算",
+    "disabled": "予算無効",
+    "excludesByok": "BYOK を除外",
+    "hardLimit": "強制上限",
+    "includesByok": "BYOK を含む",
+    "inherited": "アカウント予算を継承",
+    "lifetime": "全期間",
+    "limit": "上限",
+    "nativeQuota": "ネイティブクォータ",
+    "period": {
+      "5h": "5 時間",
+      "day": "日次",
+      "month": "月次",
+      "week": "週次",
+      "year": "毎年"
+    },
+    "remaining": "残り",
+    "reserved": "予約済み",
+    "reset": "リセット",
+    "rolling": "ローリング",
+    "stale": "古い値",
+    "unconfigured": "予算未設定",
+    "unknownWindow": "期間不明",
+    "used": "使用済み"
+  },
   "keyDetails": {
     "channels": "チャネル",
     "createResponseOnlySecret": "このサイトで完全なキーが表示されるのは作成時だけです。保存していない場合は、キー管理を開いて新しいキーを作成してください。",
@@ -249,11 +277,8 @@
     "models": "モデル制限:",
     "neverExpires": "期限なし",
     "note": "メモ:",
-    "remainingQuota": "残りクォータ:",
     "tools": "許可するツール",
-    "totalQuota": "合計クォータ：",
     "ungrouped": "グループなし",
-    "usedQuota": "使用済みクォータ:",
     "websiteVerificationSecret": "管理 API は完全なキーを返しません。NanoGPT の API ページで必要なログイン認証を完了すると、既存のキーを再表示またはコピーできます。"
   },
   "knownTotalKeys_other": "{{count}} 件のキーを読み込み済み",
@@ -442,11 +467,8 @@
       "budget5h": "5 時間の予算（USD）",
       "budgetDay": "1 日の予算（USD）",
       "budgetMonth": "月間予算（USD）",
-      "budgetNextReset": "リセット {{time}}（UTC+8）",
       "budgetResetHelp": "0 は無制限。5 時間枠はローリング方式、日・週・月は北京時間でリセットされ、週は月曜日に始まります。",
-      "budgetRolling": "ローリング期間",
       "budgetsAndLimits": "予算とアクセス制限",
-      "budgetUsage": "使用 ${{used}} / ${{limit}} · 残り ${{remaining}} · 予約 ${{reserved}}",
       "budgetWeek": "週間予算（USD）",
       "channel": "チャネル",
       "dahl": {
@@ -651,13 +673,9 @@
         "budgetAlerts": "以下の割合に達したらキー作成者にメール通知",
         "budgetEnabled": "利用予算",
         "budgetHelp": "米ドルで上限を設定します。無効にするとチームの既定予算が適用されます（設定済みの場合）。新規予算に BYOK 利用額は含まれません。",
-        "budgetInactive": "予算は無効",
         "budgetLimit": "利用上限（米ドル、最低 $1）",
         "budgetPeriod": "予算の更新周期",
-        "budgetUnavailable": "予算を読み取れませんでした。再試行してから編集してください。",
         "consoleFailed": "チームコンソールを開けませんでした。アクセストークンを確認して再試行してください。",
-        "inheritedBudget": "チームの既定予算",
-        "noBudget": "キー固有の予算なし",
         "openConsole": "Vercel コンソールを開く",
         "period": {
           "daily": "毎日",
@@ -855,7 +873,6 @@
       "values": {
         "missing": "利用不可",
         "no": "いいえ",
-        "unlimited": "無制限",
         "yes": "はい"
       }
     },

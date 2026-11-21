@@ -40,8 +40,8 @@ export type EmRankKey = {
   status: EmRankKeyStatus
   createdAt: number
   expiresAt: number | null
-  totalQuota: number | null
-  remainingQuota: number | null
+  totalQuota: number | null | undefined
+  remainingQuota: number | null | undefined
   usedQuota: number
 }
 
@@ -62,7 +62,7 @@ function parseKey(value: unknown, endpoint: string): EmRankKey {
     invalidEmRankResponse(endpoint)
   const quotaCount = (field: "total_quota" | "remaining_quota") =>
     value[field] === null || value[field] === undefined
-      ? null
+      ? value[field]
       : emRankCount(value[field], endpoint)
   return {
     id: String(value.id),

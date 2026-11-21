@@ -142,10 +142,11 @@ export function useAutoCheckinViewModel(props: {
   const {
     status,
     siteTypeMismatches,
-    exchangeRateByAccountId,
     accountSetupState,
     isLoading,
+    statusLoadFailed,
     accountInfoById,
+    exchangeRateByAccountId,
     loadStatus,
     resolveAutoCheckinAccount,
   } = useAutoCheckinStatusWorkspace(autoCheckinEnabled)
@@ -162,7 +163,7 @@ export function useAutoCheckinViewModel(props: {
   const [uiOpenPretriggerDiagnostics, setUiOpenPretriggerDiagnostics] =
     useState<{
       isOpen: boolean
-      payload: any | null
+      payload: unknown
     }>({ isOpen: false, payload: null })
 
   const [uiOpenPretriggerCompletion, setUiOpenPretriggerCompletion] = useState<{
@@ -484,15 +485,16 @@ export function useAutoCheckinViewModel(props: {
   const isInitialLoading = isLoading && status === null
 
   return {
-    currencyType,
     autoCheckinPreferences,
+    currencyType,
+    exchangeRateByAccountId,
     autoCheckinEnabled,
     status,
     siteTypeMismatches,
-    exchangeRateByAccountId,
     accountSetupState,
     accountInfoById,
     isLoading,
+    statusLoadFailed,
     isRunning,
     isManualRefreshing,
     isOpeningFailedManualSignIns,

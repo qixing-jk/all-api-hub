@@ -6,12 +6,14 @@ import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accou
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
+  NATIVE_RESOURCE_MUTATION_CERTAINTIES,
   RESOURCE_DISPLAY_FACT_KINDS,
   RESOURCE_FIELD_ISSUE_CODES,
   RESOURCE_FIELD_TYPES,
@@ -140,7 +142,7 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
       "",
     runtimeKey: {
       resolve: async () => ({
-        kind: "unavailable",
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
         failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
       }),
     },
@@ -195,7 +197,7 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
         project_name: scope.displayName,
       })
       return {
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail,
           createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
@@ -220,7 +222,10 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
     },
     update: async (config, scope, { current: detail }, command) => {
       if (command.name === detail.name)
-        return { certainty: "applied" as const, value: detail }
+        return {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: detail,
+        }
       await renameKimiKey(
         config.request,
         scope.scopeKey,
@@ -228,13 +233,16 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
         command.name,
       )
       return {
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { ...detail, name: command.name },
       }
     },
     delete: async (config, scope, id) => {
       await deleteKimiKey(config.request, scope.scopeKey, id)
-      return { certainty: "applied" as const, value: undefined }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: undefined,
+      }
     },
     mapFailure: mapAccountKeyResourceFailure,
   })

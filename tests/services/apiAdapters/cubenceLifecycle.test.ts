@@ -150,7 +150,11 @@ describe("Cubence account capabilities", () => {
     expect(await collection.get(ref)).toMatchObject({
       status: "disabled",
       displayFacts: expect.arrayContaining([
-        expect.objectContaining({ fieldId: "quota", unlimited: true }),
+        expect.objectContaining({
+          fieldId: "quota",
+          kind: "budget-constraint",
+          budget: expect.objectContaining({ limitState: "unlimited" }),
+        }),
       ]),
     })
     await collection.delete(ref)
@@ -256,7 +260,15 @@ describe("Cubence account capabilities", () => {
     expect(write).not.toHaveBeenCalled()
     expect((await collection.get(ref)).displayFacts).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ fieldId: "quota", amountUsd: 20 }),
+        expect.objectContaining({
+          fieldId: "quota",
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            asset: { kind: "currency", code: "USD" },
+            limitState: "finite",
+            limit: expect.objectContaining({ status: "known", value: "20" }),
+          }),
+        }),
       ]),
     )
   })
@@ -330,7 +342,15 @@ describe("Cubence account capabilities", () => {
       facts: {
         status: "disabled",
         displayFacts: expect.arrayContaining([
-          expect.objectContaining({ fieldId: "quota", amountUsd: 20 }),
+          expect.objectContaining({
+            fieldId: "quota",
+            kind: "budget-constraint",
+            budget: expect.objectContaining({
+              asset: { kind: "currency", code: "USD" },
+              limitState: "finite",
+              limit: expect.objectContaining({ status: "known", value: "20" }),
+            }),
+          }),
         ]),
       },
     })

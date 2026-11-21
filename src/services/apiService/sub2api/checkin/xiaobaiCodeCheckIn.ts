@@ -1,4 +1,6 @@
 import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
+import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -19,9 +21,10 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
  */
 const STATUS_ENDPOINT = "/checkin/api/status"
 const CHECK_IN_ENDPOINT = "/checkin/api/checkin"
+export { CHECK_IN_ENDPOINT as XIAOBAI_CODE_DAILY_CHECK_IN_ENDPOINT }
 
 export const XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS = {
-  Applied: "applied",
+  Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
   AlreadyChecked: "already_checked",
 } as const
 
@@ -42,9 +45,7 @@ export type XiaobaiCodeStatusProbe =
   | {
       outcome: typeof XIAOBAI_CODE_STATUS_OUTCOMES.Unknown
       reason:
-        | "authentication_required"
-        | "permission_denied"
-        | "invalid_response"
+        "authentication_required" | "permission_denied" | "invalid_response"
     }
 
 const toRecord = (value: unknown): Record<string, unknown> | null =>
@@ -176,11 +177,21 @@ export async function performXiaobaiCodeDailyCheckIn(
           kind: XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
         }
       }
-      const rewardAmount = toAmount(toRecord(data.record)?.reward_amount)
+      const record = toRecord(data.record)
+      const rewardAmount = toAmount(record?.reward_amount)
       if (rewardAmount === null) throw invalidCheckInResponse()
+      const recordId = record?.id
+      const rewardRecordId =
+        typeof recordId === "string" && recordId.trim()
+          ? recordId.trim()
+          : typeof recordId === "number" &&
+              Number.isSafeInteger(recordId) &&
+              recordId >= 0
+            ? String(recordId)
+            : undefined
       return {
         kind: XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-        data: { rewardAmount },
+        data: { rewardAmount, ...(rewardRecordId ? { rewardRecordId } : {}) },
       }
     },
     async (recoveredRequest) => {
@@ -194,13 +205,15 @@ export async function performXiaobaiCodeDailyCheckIn(
 }
 
 /** Reads the deployment's decimal amounts, which mix numbers and strings. */
-function toAmount(value: unknown): number | null {
+function toAmount(value: unknown): number | string | null {
   if (typeof value === "number") {
-    return Number.isFinite(value) && value >= 0 ? value : null
+    return parseDecimal(value) !== undefined && value >= 0 ? value : null
   }
   if (typeof value === "string" && /^\d+(?:\.\d+)?$/.test(value)) {
-    const amount = Number(value)
-    return Number.isFinite(amount) ? amount : null
+    const amount = parseDecimal(value)
+    return amount !== undefined && compareDecimal(amount, "0") >= 0
+      ? value
+      : null
   }
   return null
 }

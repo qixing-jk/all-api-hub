@@ -239,7 +239,15 @@ class AutoCheckinAlarmSchedule {
       dailyNotBefore?: number
     },
   ) {
-    const currentStatus = await autoCheckinStorage.getStatus()
+    const existingAlarm = options?.preserveExisting
+      ? await getAlarm(AUTO_CHECKIN_ALARM_NAMES.Daily)
+      : undefined
+    // Restore a missing daily alarm on a transient read error. Status validation
+    // still rejects malformed data, and admission rechecks the stored run day.
+    const currentStatus = await autoCheckinStorage.getStatus({
+      throwOnError:
+        !options?.preserveExisting || !!existingAlarm?.scheduledTime,
+    })
     // A failed result write leaves the recorded daily day stale. Plan from
     // the end of its cooldown so random scheduling cannot replay it early.
     const now = new Date(Math.max(Date.now(), options?.dailyNotBefore ?? 0))
@@ -249,9 +257,6 @@ class AutoCheckinAlarmSchedule {
       now,
       { allowCatchUp: options?.allowCatchUp },
     )
-    const existingAlarm = options?.preserveExisting
-      ? await getAlarm(AUTO_CHECKIN_ALARM_NAMES.Daily)
-      : undefined
 
     if (options?.preserveExisting && existingAlarm?.scheduledTime) {
       const scheduledTime = new Date(existingAlarm.scheduledTime)

@@ -166,7 +166,7 @@ describe("小白Code check-in", () => {
     vi.mocked(fetchApiResponse).mockReset()
   })
 
-  it.each([0.25, "0.25", "1.75000000"])(
+  it.each([0, 0.25, "0.25", "1.75000000", "0.1234567890123456789"])(
     "reads a new award of %s without keeping the record",
     async (rewardAmount) => {
       vi.mocked(fetchApiResponse).mockResolvedValue(
@@ -187,7 +187,7 @@ describe("小白Code check-in", () => {
       )
       await expect(performXiaobaiCodeDailyCheckIn(request)).resolves.toEqual({
         kind: XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-        data: { rewardAmount: Number(rewardAmount) },
+        data: { rewardAmount, rewardRecordId: "120662" },
       })
     },
   )

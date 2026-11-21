@@ -1,11 +1,18 @@
 import { z } from "zod"
 
+import { quotaAssetSchema } from "~/services/amounts/assets"
+import {
+  addDecimal,
+  divideDecimalByInteger,
+  floorDecimal,
+  multiplyDecimal,
+  parseDecimal,
+} from "~/services/amounts/decimal"
 import {
   PRICING_METERS,
   QUOTE_STATUSES,
   TOKENS_PER_MILLION,
 } from "~/services/modelPricing/pricingConstants"
-import { quotaAssetSchema } from "~/services/quotaAssets/quotaAsset"
 
 /** Runtime values shared by quota plan validation, evaluation and presentation. */
 export const QUOTA_QUOTE_STATUSES = {
@@ -107,6 +114,9 @@ export function quoteQuotaUsage(
   const plan = parsed.data
   let total = 0
   let quantity = 0
+  // Retain exact terminating native arithmetic until the provider's final floor.
+  // Weighted comparisons and other denominators remain approximate quotes.
+  let exactTotal: string | undefined = options.comparison ? undefined : "0"
   for (const meter of quotaMeters) {
     const value = usage[meter] === undefined ? 0 : usage[meter]
     if (options.comparison && value == null) continue
@@ -122,6 +132,19 @@ export function quoteQuotaUsage(
     if (!rate) return { ...result, reason: QUOTA_QUOTE_REASONS.MissingRate }
     total += (value * rate.amount) / rate.per
     quantity += value
+    if (exactTotal !== undefined) {
+      try {
+        exactTotal = addDecimal(
+          exactTotal,
+          divideDecimalByInteger(
+            multiplyDecimal(String(value), parseDecimal(rate.amount) ?? ""),
+            rate.per,
+          ),
+        )
+      } catch {
+        exactTotal = undefined
+      }
+    }
   }
   if (options.comparison) {
     if (!(quantity > 0) || !Number.isFinite(quantity))
@@ -139,7 +162,16 @@ export function quoteQuotaUsage(
     if (value === undefined) result.missingAdjustments.push(adjustment.id)
     else if (!Number.isFinite(value) || value < 0)
       return { ...result, reason: QUOTA_QUOTE_REASONS.InvalidUsage }
-    else multiplier *= value
+    else {
+      multiplier *= value
+      if (exactTotal !== undefined) {
+        try {
+          exactTotal = multiplyDecimal(exactTotal, parseDecimal(value) ?? "")
+        } catch {
+          exactTotal = undefined
+        }
+      }
+    }
   }
   const amount = total * multiplier
   if (
@@ -155,7 +187,9 @@ export function quoteQuotaUsage(
     amount: result.missingAdjustments.length
       ? null
       : !options.comparison && plan.rounding === QUOTA_ROUNDING_MODES.Floor
-        ? Math.floor(amount)
+        ? exactTotal === undefined
+          ? Math.floor(amount)
+          : Number(floorDecimal(exactTotal))
         : amount,
     missingAdjustments: result.missingAdjustments,
   }

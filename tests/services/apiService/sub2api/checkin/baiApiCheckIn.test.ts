@@ -184,7 +184,12 @@ describe("柏API check-in protocol", () => {
           qualification_id: 12,
         }),
       ),
-    ).toEqual({ rewardAmount: 0.1, checkinDate: "2026-11-03", streakDays: 1 })
+    ).toEqual({
+      rewardField: "cash_amount_usd",
+      rewardAmount: 0.1,
+      checkinDate: "2026-11-03",
+      streakDays: 1,
+    })
   })
 
   it("lets a blind-box draw award win over the record amount", () => {
@@ -194,11 +199,11 @@ describe("柏API check-in protocol", () => {
     ).toBe(0.8)
     expect(
       readBaiApiAward({ cash_amount_usd: 0.1, draw: { cash_amount_usd: 0 } }),
-    ).toBeUndefined()
+    ).toBe(0)
     expect(readBaiApiAward({ cash_amount_usd: 0.1, draw: null })).toBe(0.1)
     expect(
       readBaiApiAward({ cash_amount_usd: 0.1, draw: { cash_amount_usd: "1" } }),
-    ).toBe(1)
+    ).toBe("1")
   })
 
   it.each([0, "0", "0.00"])(
@@ -212,7 +217,11 @@ describe("柏API check-in protocol", () => {
             draw: { cash_amount_usd: drawAmount },
           }),
         ),
-      ).toEqual({ checkinDate: "2026-11-03" })
+      ).toEqual({
+        checkinDate: "2026-11-03",
+        rewardField: "draw.cash_amount_usd",
+        rewardAmount: drawAmount,
+      })
     },
   )
 
@@ -227,7 +236,11 @@ describe("柏API check-in protocol", () => {
             draw: { cash_amount_usd: drawAmount },
           }),
         ),
-      ).toEqual({ checkinDate: "2026-11-03", rewardAmount: 0.1 })
+      ).toEqual({
+        checkinDate: "2026-11-03",
+        rewardField: "cash_amount_usd",
+        rewardAmount: "0.1",
+      })
     },
   )
 
@@ -246,13 +259,23 @@ describe("柏API check-in protocol", () => {
     },
   )
 
-  it("accepts a decimal-string award from the same field", () => {
-    expect(
-      parseBaiApiCheckInMutationResponse(
-        response({ checkin_date: "2026-11-03", cash_amount_usd: "0.25" }),
-      ),
-    ).toEqual({ rewardAmount: 0.25, checkinDate: "2026-11-03" })
-  })
+  it.each(["0.25", "0.1234567890123456789"])(
+    "preserves decimal-string award %s",
+    (rewardAmount) => {
+      expect(
+        parseBaiApiCheckInMutationResponse(
+          response({
+            checkin_date: "2026-11-03",
+            cash_amount_usd: rewardAmount,
+          }),
+        ),
+      ).toEqual({
+        rewardAmount,
+        rewardField: "cash_amount_usd",
+        checkinDate: "2026-11-03",
+      })
+    },
+  )
 
   it.each([
     {},
@@ -263,12 +286,16 @@ describe("柏API check-in protocol", () => {
     expect(() => parseBaiApiCheckInMutationResponse(response(data))).toThrow()
   })
 
-  it("leaves a missing or zero award unset rather than reporting zero", () => {
+  it("preserves a known zero award", () => {
     expect(
       parseBaiApiCheckInMutationResponse(
         response({ checkin_date: "2026-11-03", cash_amount_usd: 0 }),
       ),
-    ).toEqual({ checkinDate: "2026-11-03" })
+    ).toEqual({
+      checkinDate: "2026-11-03",
+      rewardField: "cash_amount_usd",
+      rewardAmount: 0,
+    })
   })
 
   it("sends an authenticated uncached GET with the browser timezone", async () => {
@@ -331,6 +358,7 @@ describe("柏API check-in protocol", () => {
     )
     await expect(performBaiApiCheckIn(request)).resolves.toEqual({
       rewardAmount: 0.1,
+      rewardField: "cash_amount_usd",
       checkinDate: "2026-11-03",
     })
     expect(fetchApiResponse).toHaveBeenCalledTimes(1)

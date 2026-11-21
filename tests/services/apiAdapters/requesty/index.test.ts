@@ -812,13 +812,15 @@ describe("requesty inference eligibility", () => {
 
   it("reports the monthly cap as a total instead of a remaining balance", async () => {
     const item = await listWith("none")
-    expect(item.displayFacts).toContainEqual({
-      fieldId: "monthly_limit",
-      kind: "money",
-      role: "total",
-      amountUsd: 10,
-      unlimited: false,
-    })
+    expect(item.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "finite",
+          limit: expect.objectContaining({ status: "known", value: "10" }),
+        }),
+      }),
+    )
   })
 
   it("reports a key with an elapsed expiry as expired", async () => {
@@ -1033,8 +1035,13 @@ describe("Requesty key lifecycle through resource sessions", () => {
     const editor = await collection.openEditEditor(ref)
     await editor.submit({ ...editor.initialValues, monthly_limit: 9 })
     expect(await collection.get(ref)).toMatchObject({
-      fields: expect.arrayContaining([
-        { fieldId: "monthly_limit", kind: "number", value: 9 },
+      displayFacts: expect.arrayContaining([
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            limit: expect.objectContaining({ status: "known", value: "9" }),
+          }),
+        }),
       ]),
     })
   })

@@ -738,13 +738,20 @@ test("exports a SharedChat service credential to CC Switch", async ({
 
 test("updates an existing token from key management and reloads the visible list", async ({
   context,
+  extensionDir,
   extensionId,
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccounts(serviceWorker, [createStoredAccount()])
   await stubNewApiSiteRoutes(context, {
-    initialTokens: [createStubApiToken()],
+    initialTokens: [
+      createStubApiToken({
+        unlimited_quota: false,
+        remain_quota: 2_345_678,
+        used_quota: 321,
+      }),
+    ],
   })
 
   await page.goto(
@@ -760,14 +767,91 @@ test("updates an existing token from key management and reloads the visible list
   await page.getByRole("button", { name: "Edit Key" }).click()
   const editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
   await editor.getByRole("textbox", { name: "Token Name" }).fill("Updated Key")
+  const quotaUsd = editor.getByLabel("Quota (USD)", { exact: true })
+  await expect(quotaUsd).toHaveValue("4.691356")
+  await quotaUsd.fill("2.469134")
+  const updateRequest = context.waitForEvent("request", {
+    predicate: (request) =>
+      request.method() === "PUT" &&
+      new URL(request.url()).pathname === "/api/token/",
+  })
   await editor
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
     .click()
+  expect((await updateRequest).postDataJSON()).toMatchObject({
+    id: 1,
+    name: "Updated Key",
+    remain_quota: 1_234_567,
+    unlimited_quota: false,
+  })
 
   await expect(page.getByRole("heading", { name: "Updated Key" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Existing Key" })).toHaveCount(
     0,
   )
+  await page.reload()
+  await waitForExtensionRoot(page)
+  const updatedRow = getAccountKeyResourceRow(page, "Updated Key")
+  await expect(updatedRow).toBeVisible()
+  await expect(updatedRow).toContainText(/USD\s*2\.47/u)
+  await expect(updatedRow).toContainText(/<USD\s*0\.01/u)
+  await expect(updatedRow).not.toContainText("N/A")
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await captureVisualViews({
+    page,
+    ready: updatedRow,
+    captureTarget: updatedRow,
+    id: "new-api-native-quota-readback",
+    extensionDir,
+    views: [
+      { id: "compact-light", width: 320, height: 900, theme: "light" },
+      { id: "narrow-dark", width: 390, height: 900, theme: "dark" },
+      { id: "desktop-light", width: 1280, height: 900, theme: "light" },
+      { id: "desktop-dark", width: 1280, height: 900, theme: "dark" },
+    ],
+  })
+  await updatedRow
+    .getByRole("button", { name: "View details for Updated Key", exact: true })
+    .click()
+  await expect(updatedRow).toContainText(/USD\s*2\.469134/u)
+  await expect(updatedRow).toContainText(/USD\s*0\.000642/u)
+  const budgetDetails = updatedRow.getByRole("region", {
+    name: "View details for Updated Key",
+    exact: true,
+  })
+  const exactRemaining = budgetDetails.getByText(/USD\s*2\.469134/u, {
+    exact: true,
+  })
+  await page.setViewportSize({ width: 390, height: 900 })
+  await expect(exactRemaining).toBeVisible()
+  expect(
+    await exactRemaining.evaluate(
+      (element) =>
+        element.scrollHeight <
+        parseFloat(getComputedStyle(element).lineHeight) * 1.5,
+    ),
+    "The exact remaining amount is readable on one line",
+  ).toBe(true)
+  await captureVisualViews({
+    page,
+    ready: updatedRow,
+    captureTarget: updatedRow,
+    id: "new-api-native-budget-details",
+    extensionDir,
+    views: [
+      { id: "narrow-dark", width: 390, height: 900, theme: "dark" },
+      { id: "desktop-light", width: 1280, height: 900, theme: "light" },
+    ],
+  })
+  await updatedRow.getByRole("button", { name: "Edit Key" }).click()
+  await expect(quotaUsd).toHaveValue("2.469134")
+  await captureVisualViews({
+    page,
+    ready: quotaUsd,
+    captureTarget: editor,
+    id: "new-api-usd-budget-editor",
+    extensionDir,
+  })
 })
 
 test("deletes an existing token from key management and shows the empty state", async ({
@@ -1731,7 +1815,10 @@ for (const siteType of [SITE_TYPES.DONE_HUB, SITE_TYPES.VELOERA]) {
       ) {
         const body = request.postDataJSON()
         requests.push(`update-${body.id}`)
-        Object.assign(channels.find((channel) => channel.id === body.id)!, body)
+        Object.assign(
+          channels.find((channel) => channel.id === body.id)!,
+          body,
+        )
         await route.fulfill({ json: { success: true } })
       } else if (
         request.method() === "GET" &&

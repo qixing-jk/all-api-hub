@@ -1,9 +1,27 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { CUBENCE_API_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyProtocolAmount,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
+import { classifyResourceChangedMutation } from "~/services/apiAdapters/accountKeyResources/operationErrors"
 import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceRef,
@@ -38,6 +56,7 @@ const findKey = async (request: ApiServiceRequest, id: string) => {
 const facts = (
   key: CubenceKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: key.name,
@@ -54,22 +73,28 @@ const facts = (
   },
   fields: [],
   displayFacts: [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: "quota",
-      kind: "money",
-      role: "total",
-      amountUsd: Math.max(0, key.quota_limit) / CUBENCE_UNITS_PER_USD,
-      unlimited: key.quota_limit === -1,
-    },
-    {
-      fieldId: "used",
-      kind: "money",
-      role: "used",
-      amountUsd: key.quota_used / CUBENCE_UNITS_PER_USD,
-    },
+      operation: "key/list",
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      limitState:
+        key.quota_limit === -1
+          ? BUDGET_LIMIT_STATES.Unlimited
+          : BUDGET_LIMIT_STATES.Finite,
+      limit: keyProtocolAmount(key.quota_limit, CUBENCE_UNITS_PER_USD),
+      used: keyProtocolAmount(key.quota_used, CUBENCE_UNITS_PER_USD),
+      scope: {
+        models: { kind: SCOPE_SELECTION_KINDS.All },
+        groups: {
+          kind: SCOPE_SELECTION_KINDS.Restricted,
+          ids: [String(key.share_group_id)],
+        },
+      },
+      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+    }),
     {
       fieldId: "group",
-      kind: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
       value: String(key.share_group_id),
       emptyValue: "ungrouped",
     },
@@ -117,8 +142,14 @@ export const cubenceKeyResources = defineAccountKeyResourceCapability({
         ref.resourceId,
       )
       if (!key.key.trim() || /[*•…]/.test(key.key))
-        return { kind: "unavailable", failure: { code: "unavailable" } }
-      return { kind: "resolved", secret: key.key }
+        return {
+          kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+          failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
+        }
+      return {
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+        secret: key.key,
+      }
     },
   },
   createEditor: async (config, _scope, _options, _inventory, intent) =>
@@ -149,11 +180,7 @@ export const cubenceKeyResources = defineAccountKeyResourceCapability({
       request: withSignal(config.request, options),
       execute: (request) => updateKey(request, baseline, command, detail),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        error instanceof AccountKeyResourceError &&
-        error.failure.code === "resource_changed"
-          ? "not-applied"
-          : undefined,
+      classifyError: classifyResourceChangedMutation,
     }),
   delete: (config, _scope, id, options) =>
     runNativeResourceMutation({

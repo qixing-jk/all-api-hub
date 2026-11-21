@@ -427,7 +427,7 @@ describe("openRouterAccountKeyResources", () => {
     expect(atIndex(first.items, 0).searchValues).not.toContain("hash-0")
     expect(atIndex(first.items, 0).searchValues).toContain("disabled")
     expect(
-      atIndex(first.items, 0).fields.map((field) => field.fieldId),
+      atIndex(first.items, 0).displayFacts?.map((field) => field.fieldId),
     ).toContain(OPENROUTER_KEY_FIELD_IDS.Usage)
 
     fetchOpenRouterKeys.mockReset().mockResolvedValue([key(), key()])
@@ -1343,10 +1343,22 @@ describe("openRouterAccountKeyResources", () => {
     const [facts] = [atIndex(destructuredSource0, 0)]
     const fields = new Map(facts.fields.map((field) => [field.fieldId, field]))
     const safeFieldIds = Object.values(OPENROUTER_KEY_FIELD_IDS)
-    expect([...fields.keys()]).toEqual(expect.arrayContaining(safeFieldIds))
-    expect(fields.get(OPENROUTER_KEY_FIELD_IDS.Limit)).toMatchObject({
-      kind: "number",
-      value: 0,
+    expect([
+      ...fields.keys(),
+      ...(facts.displayFacts ?? []).map((fact) => fact.fieldId),
+    ]).toEqual(expect.arrayContaining(safeFieldIds))
+    expect(
+      facts.displayFacts?.find(
+        (fact) => fact.fieldId === OPENROUTER_KEY_FIELD_IDS.Limit,
+      ),
+    ).toMatchObject({
+      kind: "budget-constraint",
+      budget: {
+        limitState: "finite",
+        limit: { status: "known", value: "0" },
+        remaining: { status: "known", value: "0" },
+        scope: { workspaceId: "workspace-default-id" },
+      },
     })
     expect(fields.get(OPENROUTER_KEY_FIELD_IDS.LimitMode)).toMatchObject({
       value: "limited",
@@ -2159,14 +2171,22 @@ describe("openRouterAccountKeyResources", () => {
       facts: {
         displayName: "Reconciled",
         status: "disabled",
+        displayFacts: expect.arrayContaining([
+          expect.objectContaining({
+            kind: "budget-constraint",
+            budget: expect.objectContaining({
+              limit: expect.objectContaining({ status: "known", value: "25" }),
+              includesByok: expect.objectContaining({
+                status: "known",
+                value: true,
+              }),
+            }),
+          }),
+        ]),
         fields: expect.arrayContaining([
           expect.objectContaining({
             fieldId: OPENROUTER_KEY_FIELD_IDS.LimitMode,
             value: OPENROUTER_KEY_LIMIT_MODES.Limited,
-          }),
-          expect.objectContaining({
-            fieldId: OPENROUTER_KEY_FIELD_IDS.Limit,
-            value: 25,
           }),
           expect.objectContaining({
             fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,

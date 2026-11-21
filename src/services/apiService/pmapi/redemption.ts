@@ -12,7 +12,7 @@ import { fetchPmApiData, invalidPmApiResponse } from "./transport"
 export async function redeemPmApiCode(
   request: ApiServiceRequest,
   code: string,
-): Promise<{ quotaGranted: number }> {
+): Promise<{ quotaGranted: unknown }> {
   const trimmed = code.trim()
   if (!trimmed) return invalidPmApiResponse(PMAPI_ENDPOINTS.Redeem)
   await fetchPmApiIdentity(request)
@@ -21,7 +21,6 @@ export async function redeemPmApiCode(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code: trimmed }),
   })
-  if (!isRecord(granted) || typeof granted.quota !== "number")
-    return invalidPmApiResponse(PMAPI_ENDPOINTS.Redeem)
-  return { quotaGranted: granted.quota }
+  // fetchPmApiData already verified success:true. Missing grant details cannot revoke it.
+  return { quotaGranted: isRecord(granted) ? granted.quota : undefined }
 }

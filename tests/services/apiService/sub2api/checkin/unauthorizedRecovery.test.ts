@@ -8,6 +8,7 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
 import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { performAiRouterDailyCheckIn } from "~/services/apiService/sub2api/checkin/aiRouterCheckIn"
@@ -540,7 +541,7 @@ describe("recovery outcome mapping", () => {
     {
       provider: sub2apiProProvider,
       dto: {
-        message: "applied",
+        message: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         reward_amount: 0.1,
         new_balance: 1,
         checked_in_at: "invalid",
@@ -549,7 +550,7 @@ describe("recovery outcome mapping", () => {
     {
       provider: sub2apiProProvider,
       dto: {
-        message: "applied",
+        message: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         reward_amount: 0.1,
         new_balance: 1,
         checked_in_at: "2026-02-31T12:00:00Z",
@@ -558,7 +559,7 @@ describe("recovery outcome mapping", () => {
     {
       provider: sub2apiProProvider,
       dto: {
-        message: "applied",
+        message: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         reward_amount: 0.1,
         new_balance: 1,
         checked_in_at: "2026-02-02T12:00:00Z",
@@ -589,7 +590,12 @@ describe("recovery outcome mapping", () => {
       })
       expect(result).toMatchObject({
         status: "success",
-        reward: { quota: 50_000 },
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.1" },
+          },
+        ],
         confirmation: {
           kind: CHECK_IN_CONFIRMATION_KINDS.Response,
           observedAt: Date.now(),
@@ -676,7 +682,12 @@ describe("recovery outcome mapping", () => {
       })
       expect(result).toMatchObject({
         status: "success",
-        reward: { quota: 50_000 },
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.1" },
+          },
+        ],
         confirmation: {
           kind: CHECK_IN_CONFIRMATION_KINDS.Response,
           observedAt: startedAt + 2_000,

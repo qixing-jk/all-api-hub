@@ -25,6 +25,8 @@ pnpm test:ci
 
 During normal development, run the smallest relevant test set and let the pull request CI run the full sharded suite with coverage. Run `pnpm test` or `pnpm test:ci` locally when changing test infrastructure, Vitest or coverage configuration, widely shared runtime behavior, or when reproducing a CI-only failure. Documentation, copy, formatting, type-only, and similarly narrow changes do not require the full local suite unless they affect executable behavior.
 
+When testing an earlier revision, prepare its dependencies separately from the active checkout. Avoid junctions or symlinks between their `node_modules` directories: a package manager can synchronize dependencies before executing a command and alter the shared installation. If a source archive uses the current checkout's test executable directly, record both source and dependency revisions so the baseline result can be interpreted correctly.
+
 ## Test coverage
 
 Coverage reports are automatically generated when running `pnpm test:ci`. You can view detailed coverage reports in the `coverage/` directory after running tests.

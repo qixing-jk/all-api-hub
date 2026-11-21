@@ -16,7 +16,7 @@ import { type PricingCostContext, type PricingScenario } from "./pricingPlan"
 import { quoteModelPrice } from "./quoteModelPrice"
 
 /** Converts existing flat adapters at the migration boundary without changing their multiplier ownership. */
-export function quoteCanonicalModelPrice(
+function calculateCanonicalModelPrice(
   model: ModelPricing,
   scenario: PricingScenario,
   cost: PricingCostContext,
@@ -78,7 +78,8 @@ export function quoteCanonicalModelPrice(
   const plan = resolveCanonicalPricingPlan(model, cost.groupMultiplier ?? NaN)
   // Flat token adapters do not publish all independent request fees.
   if (
-    calculated.kind === CALCULATED_PRICE_KINDS.TOKEN &&
+    (calculated.kind === CALCULATED_PRICE_KINDS.TOKEN ||
+      calculated.perMillionTokens !== undefined) &&
     scenario.purpose === PRICING_PURPOSES.REQUEST
   )
     plan.issues.push({ code: PRICING_ISSUE_CODES.UNKNOWN_FEES })
@@ -88,4 +89,16 @@ export function quoteCanonicalModelPrice(
       ? { request: scenario.usage.request }
       : scenario.usage
   return quoteModelPrice(plan, { ...scenario, usage }, cost)
+}
+
+/** Preserve caller intent when fixed-call comparisons normalize to request quantities. */
+export function quoteCanonicalModelPrice(
+  model: ModelPricing,
+  scenario: PricingScenario,
+  cost: PricingCostContext,
+) {
+  return {
+    ...calculateCanonicalModelPrice(model, scenario, cost),
+    purpose: scenario.purpose,
+  }
 }

@@ -5,8 +5,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
+import {
   buildAccountSnapshot,
   recalculateSummaryFromResults,
+  selectCurrentRunResults,
   updateSnapshotWithResult,
 } from "~/services/checkin/autoCheckin/execution/runResults"
 import {
@@ -15,10 +22,82 @@ import {
   resolveProviderForTest,
   runnableCheckIn,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("execution/runResults", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+  it("keeps confirmed awards from a partial attempt when the next same-day result has no grant details", () => {
+    const timestamp = Date.UTC(2026, 10, 11, 5)
+    const award = accountAward(buildSiteAccount({ id: "a" }), {
+      id: "daily",
+      operation: "/checkin",
+      field: "award",
+      value: "2",
+      asset: { kind: ASSET_KINDS.Currency, code: "USD" },
+      fulfillment: AWARD_FULFILLMENT.Credited,
+      target: AWARD_TARGETS.Wallet,
+      observedAt: timestamp,
+    })
+    const previous = {
+      accountId: "a",
+      accountName: "A",
+      status: "failed",
+      timestamp,
+      awards: [award],
+    } as const
+    const incoming = {
+      accountId: "a",
+      accountName: "A",
+      status: "success",
+      timestamp: timestamp + 1,
+    } as const
+    const results = selectCurrentRunResults(
+      { a: { ...previous, awards: [award] } },
+      { a: incoming },
+    )
+    expect(results.a).toMatchObject({ status: "success", awards: [award] })
+    expect(results.a?.awards?.[0]?.amount).toMatchObject({
+      observedAt: timestamp,
+      value: "2",
+    })
+  })
+  it("deduplicates a reliably identified award while retaining a different equal-amount grant", () => {
+    const timestamp = Date.UTC(2026, 10, 11, 5)
+    const account = buildSiteAccount({ id: "a" })
+    const first = accountAward(account, {
+      id: "daily",
+      operation: "/checkin",
+      field: "award",
+      value: "2",
+      asset: { kind: ASSET_KINDS.Currency, code: "USD" },
+      event: { namespace: "site-grant", id: "entry-1" },
+      observedAt: timestamp,
+    })
+    const second = {
+      ...first,
+      event: { namespace: "site-grant", id: "entry-2" },
+    }
+    const previous = {
+      accountId: "a",
+      accountName: "A",
+      status: "success",
+      timestamp,
+      awards: [first],
+    } as const
+    const incoming = {
+      accountId: "a",
+      accountName: "A",
+      status: "success",
+      timestamp: timestamp + 1,
+      awards: [first, second],
+    } as const
+    const result = selectCurrentRunResults(
+      { a: { ...previous, awards: [first] } },
+      { a: { ...incoming, awards: [first, second] } },
+    ).a
+    expect(result?.awards).toEqual([first, second])
   })
   it("updates snapshots only when the matching account result exists", () => {
     const originalSnapshots = [

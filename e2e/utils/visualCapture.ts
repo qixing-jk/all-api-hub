@@ -7,17 +7,21 @@ import type { Locator, Page } from "@playwright/test"
 async function captureVisualCheckpoint({
   page,
   ready,
+  captureTarget,
   directory,
   id,
   extensionDir,
   animations = "disabled",
+  isContext = false,
 }: {
   page: Page
   ready: Locator
+  captureTarget?: Locator
   directory: string
   id: string
   extensionDir: string
   animations?: "disabled" | "allow"
+  isContext?: boolean
 }) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u.test(id))
     throw new Error("Visual checkpoint ID must be a safe filename")
@@ -41,8 +45,10 @@ async function captureVisualCheckpoint({
     await readFile(path.join(extensionDir, ".aah-e2e-build.json"), "utf8"),
   )
   await mkdir(directory, { recursive: true })
-  const image = `${id}.png`
-  const bytes = await page.screenshot({
+  // Dots are reserved for generated artifacts and cannot occur in caller IDs.
+  const artifactId = isContext ? `${id}.context` : id
+  const image = `${artifactId}.png`
+  const bytes = await (captureTarget ?? page).screenshot({
     animations,
     caret: "hide",
     scale: "css",
@@ -50,13 +56,14 @@ async function captureVisualCheckpoint({
   // A broad grep must not silently overwrite another test's checkpoint.
   await writeFile(path.join(directory, image), bytes, { flag: "wx" })
   await writeFile(
-    path.join(directory, `${id}.json`),
+    path.join(directory, `${artifactId}.json`),
     JSON.stringify(
       {
-        id,
+        id: artifactId,
         image,
         capturedAt: new Date().toISOString(),
         source,
+        capture: captureTarget ? "element" : "viewport",
         environment: {
           ...environment,
           browser: page.context().browser()?.version() ?? "unknown",
@@ -68,6 +75,17 @@ async function captureVisualCheckpoint({
     ),
     { flag: "wx" },
   )
+  if (captureTarget && process.env.AAH_VISUAL_CAPTURE_CONTEXT === "1") {
+    await captureVisualCheckpoint({
+      page,
+      ready,
+      directory,
+      id,
+      isContext: true,
+      extensionDir,
+      animations,
+    })
+  }
 }
 
 type VisualView = {
@@ -81,6 +99,7 @@ type VisualView = {
 export async function captureVisualViews({
   page,
   ready,
+  captureTarget,
   id,
   extensionDir,
   directory = process.env.AAH_VISUAL_CAPTURE_DIR,
@@ -89,6 +108,8 @@ export async function captureVisualViews({
 }: {
   page: Page
   ready: Locator
+  /** Focus an asserted panel while retaining the same build and environment evidence. */
+  captureTarget?: Locator
   id: string
   extensionDir: string
   directory?: string
@@ -108,6 +129,7 @@ export async function captureVisualViews({
     await captureVisualCheckpoint({
       page,
       ready,
+      captureTarget,
       directory,
       id,
       extensionDir,
@@ -141,6 +163,7 @@ export async function captureVisualViews({
       await captureVisualCheckpoint({
         page,
         ready,
+        captureTarget,
         directory,
         id: `${id}-${view.id}`,
         extensionDir,

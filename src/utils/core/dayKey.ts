@@ -117,7 +117,11 @@ export function getDayKeyFromUnixSeconds(
   unixSeconds: number,
   timeZone?: string,
 ): string {
-  const date = new Date(unixSeconds * 1000)
+  return createUnixDayKeyFormatter(timeZone)(unixSeconds)
+}
+
+/** Reuse a zone formatter when reading many timestamps in one operation. */
+function createUnixDayKeyFormatter(timeZone?: string) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -125,23 +129,25 @@ export function getDayKeyFromUnixSeconds(
     day: "2-digit",
   })
 
-  const parts = formatter.formatToParts(date)
-  let year = ""
-  let month = ""
-  let day = ""
+  return (unixSeconds: number): string => {
+    const parts = formatter.formatToParts(new Date(unixSeconds * 1000))
+    let year = ""
+    let month = ""
+    let day = ""
 
-  for (const part of parts) {
-    if (part.type === "year") year = part.value
-    if (part.type === "month") month = part.value
-    if (part.type === "day") day = part.value
+    for (const part of parts) {
+      if (part.type === "year") year = part.value
+      if (part.type === "month") month = part.value
+      if (part.type === "day") day = part.value
+    }
+
+    const dayKey = `${year}-${month}-${day}`
+    if (!parseDayKey(dayKey)) {
+      throw new Error(`Failed to format dayKey for unixSeconds=${unixSeconds}`)
+    }
+
+    return dayKey
   }
-
-  const dayKey = `${year}-${month}-${day}`
-  if (!parseDayKey(dayKey)) {
-    throw new Error(`Failed to format dayKey for unixSeconds=${unixSeconds}`)
-  }
-
-  return dayKey
 }
 
 /**

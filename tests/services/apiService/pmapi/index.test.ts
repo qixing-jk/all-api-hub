@@ -566,7 +566,7 @@ describe("PM-API reported error and capability coverage", () => {
       code: "JSON_PARSE_ERROR",
     })
   })
-  it("rejects malformed rotation and redemption grants", async () => {
+  it("requires key and check-in details but preserves an acknowledged redemption", async () => {
     server.use(
       http.post(`${origin}/api/tokens/1/regenerate`, () =>
         HttpResponse.json(envelope(null)),
@@ -583,7 +583,7 @@ describe("PM-API reported error and capability coverage", () => {
     ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
     await expect(
       redeemPmApiCode(accountRequest(), "CODE"),
-    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    ).resolves.toMatchObject({ quotaGranted: undefined })
     await expect(performPmApiCheckIn(accountRequest())).rejects.toMatchObject({
       code: "JSON_PARSE_ERROR",
     })
@@ -660,7 +660,15 @@ describe("PM-API reported error and capability coverage", () => {
         request: accountRequest(),
         code: "CODE",
       } as never),
-    ).toBe(123)
+    ).toMatchObject({
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "0.000246" },
+          fulfillment: "credited",
+        },
+      ],
+    })
     expect(
       await pmApiCapabilities.site!.announcements!.fetch(accountRequest()),
     ).toBeDefined()

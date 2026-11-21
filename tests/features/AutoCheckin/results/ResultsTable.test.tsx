@@ -1,10 +1,27 @@
 import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { I18nextProvider } from "react-i18next"
+import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import ResultsTable from "~/features/AutoCheckin/results/ResultsTable"
+import accountLocale from "~/locales/en/account.json"
+import autoCheckinLocale from "~/locales/en/autoCheckin.json"
+import balanceHistoryLocale from "~/locales/en/balanceHistory.json"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import { observeAmount } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { EMRANK_TOKEN_ASSET } from "~/services/apiService/emrank/constants"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -18,11 +35,13 @@ import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
+import { toggleDevUnlocked } from "~/utils/core/devMode"
 import { openTargetedOptionsPage } from "~/utils/navigation/optionsPage"
 import {
   buildCheckInConfig,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => ({
@@ -92,7 +111,269 @@ const failedResult: CheckinAccountResult = {
   timestamp: Date.UTC(2026, 4, 13, 1, 0, 0),
 }
 
+const confirmedAward = (
+  overrides: Partial<ConfirmedAward> = {},
+): ConfirmedAward => ({
+  id: "daily",
+  asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+  amount: {
+    status: OBSERVATION_STATUSES.Known,
+    value: "2",
+    observedAt: 1000,
+    source: {
+      adapter: "test-site",
+      operation: "/claim",
+      contractVersion: "1",
+      kind: EVIDENCE_KINDS.Reported,
+      inputs: ["grant"],
+    },
+  },
+  scope: {
+    subject: {
+      kind: FINANCIAL_SUBJECT_KINDS.Account,
+      accountId: failedResult.accountId,
+    },
+    authority: "https://award.example",
+    walletId: "welfare",
+    models: { kind: SCOPE_SELECTION_KINDS.Restricted, ids: ["model-a"] },
+    keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
+    projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
+    groups: { kind: SCOPE_SELECTION_KINDS.Unknown },
+  },
+  validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+  target: AWARD_TARGETS.Wallet,
+  fulfillment: AWARD_FULFILLMENT.Credited,
+  ...overrides,
+})
+
 describe("AutoCheckin ResultsTable", () => {
+  it.each([
+    { currency: undefined, expected: "+CNY 7" },
+    { currency: CURRENCIES.USD, expected: "+$1.00" },
+  ])(
+    "shows a yuan award as $expected in the selected display mode",
+    async ({ currency, expected }) => {
+      const native = confirmedAward({
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+        amount: observeAmount("7", confirmedAward().amount.source, 1000),
+      })
+      render(
+        <ResultsTable
+          results={[{ ...failedResult, awards: [native] }]}
+          currencyType={currency}
+          accountInfoById={{
+            [failedResult.accountId]: buildDisplaySiteData({
+              id: failedResult.accountId,
+              exchangeRate: 7,
+            }),
+          }}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      expect(await screen.findByText(expected)).toBeVisible()
+    },
+  )
+  it("reveals exact native amount, source, restrictions and expiry without implying redemption", async () => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({
+      en: {
+        account: accountLocale,
+        autoCheckin: autoCheckinLocale,
+        balanceHistory: balanceHistoryLocale,
+      },
+    })
+    const precise = "0.1234567890123456789012345"
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ResultsTable
+          results={[
+            {
+              ...failedResult,
+              awards: [
+                confirmedAward({
+                  amount: {
+                    status: OBSERVATION_STATUSES.Known,
+                    value: precise,
+                    observedAt: 1000,
+                    source: {
+                      adapter: "test-site",
+                      operation: "/claim",
+                      contractVersion: "1",
+                      kind: EVIDENCE_KINDS.Reported,
+                      inputs: ["grant"],
+                    },
+                  },
+                  validity: {
+                    kind: BALANCE_VALIDITY_KINDS.Expires,
+                    at: Date.UTC(2026, 10, 12),
+                  },
+                  fulfillment: AWARD_FULFILLMENT.PendingRedemption,
+                }),
+              ],
+            },
+          ]}
+        />
+      </I18nextProvider>,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    await user.click(
+      await screen.findByText(i18n.t("autoCheckin:execution.awards.details")),
+    )
+    expect(screen.getByText(`${precise} USD`)).toBeVisible()
+    expect(screen.queryByText(/test-site\/\/claim@1/)).not.toBeInTheDocument()
+    expect(screen.getByText(i18n.t("account:financial.reported"))).toBeVisible()
+    expect(screen.getAllByText(/model-a/)[0]).toBeVisible()
+    expect(
+      screen.queryByText(/https:\/\/award.example/),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(new RegExp(i18n.t("account:financial.scopeUnknown"))),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText(/Expires:/)).toBeVisible()
+    expect(
+      screen.getByText(
+        i18n.t("autoCheckin:execution.awards.pendingRedemption"),
+      ),
+    ).toBeVisible()
+  })
+  it.each([false, true])(
+    "keeps unknown metadata and redemption references in collapsed developer details (unlocked=%s)",
+    async (unlocked) => {
+      if (unlocked) {
+        toggleDevUnlocked()
+        onTestFinished(() => {
+          toggleDevUnlocked()
+        })
+      }
+      const user = userEvent.setup()
+      const i18n = await createResourceTestI18n({
+        en: {
+          account: accountLocale,
+          autoCheckin: autoCheckinLocale,
+          balanceHistory: balanceHistoryLocale,
+        },
+      })
+      render(
+        <I18nextProvider i18n={i18n}>
+          <ResultsTable
+            results={[
+              {
+                ...failedResult,
+                awards: [
+                  confirmedAward({
+                    exchangedFrom: { namespace: "campaign", id: "raw-event" },
+                    fulfillment: AWARD_FULFILLMENT.Redeemed,
+                  }),
+                ],
+              },
+            ]}
+          />
+        </I18nextProvider>,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      await user.click(
+        await screen.findByText(i18n.t("autoCheckin:execution.awards.details")),
+      )
+      expect(screen.getAllByText(/model-a/)[0]).toBeVisible()
+      expect(
+        screen.getByText(i18n.t("autoCheckin:execution.awards.redeemed")),
+      ).toBeVisible()
+      if (unlocked) {
+        expect(screen.getByText(/https:\/\/award.example/)).not.toBeVisible()
+        expect(screen.getByText(/campaign\/raw-event/)).not.toBeVisible()
+        await user.click(
+          screen.getByText(i18n.t("account:financial.technicalDetails")),
+        )
+        expect(screen.getByText(/https:\/\/award.example/)).toBeVisible()
+        expect(screen.getByText(/campaign\/raw-event/)).toBeVisible()
+        expect(
+          screen.getByText(i18n.t("account:financial.validityUnknown")),
+        ).toBeVisible()
+        expect(
+          screen.getAllByText(
+            new RegExp(i18n.t("account:financial.scopeUnknown")),
+          ).length,
+        ).toBeGreaterThan(0)
+      } else {
+        expect(
+          screen.queryByText(
+            /https:\/\/award.example|campaign\/raw-event|Usage scope unverified/,
+          ),
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText(i18n.t("account:financial.validityUnknown")),
+        ).not.toBeInTheDocument()
+      }
+    },
+  )
+
+  it("retains a reported no-expiry award without unknown scope placeholders", async () => {
+    const user = userEvent.setup()
+    render(
+      <ResultsTable
+        results={[
+          {
+            ...failedResult,
+            awards: [
+              confirmedAward({
+                validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+              }),
+            ],
+          },
+        ]}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    await user.click(
+      await screen.findByText("autoCheckin:execution.awards.details"),
+    )
+    expect(
+      screen.getByText("autoCheckin:execution.awards.noExpiry"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("account:financial.validityUnknown"),
+    ).not.toBeInTheDocument()
+  })
+  it("keeps multiple original-asset grants visible after a later campaign fails", async () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            ...failedResult,
+            awards: [
+              confirmedAward(),
+              confirmedAward({
+                id: "points",
+                asset: {
+                  kind: ASSET_KINDS.Quota,
+                  id: "site:welfare",
+                  label: "credits",
+                  displayScale: 1,
+                  displayLabel: "credits",
+                },
+                amount: {
+                  ...confirmedAward().amount,
+                  status: OBSERVATION_STATUSES.Known,
+                  value: "42",
+                  observedAt: 1000,
+                },
+                fulfillment: AWARD_FULFILLMENT.PendingRedemption,
+              }),
+            ],
+          },
+        ]}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(await screen.findByText("+USD 2")).toBeVisible()
+    expect(screen.getByText("+42 credits")).toBeVisible()
+    expect(
+      screen.getByText("autoCheckin:execution.status.failed"),
+    ).toBeVisible()
+    expect(
+      screen.getByText("autoCheckin:execution.awards.pendingRedemption"),
+    ).toBeVisible()
+  })
   it.each([undefined, AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn])(
     "guides a credential-blocked account using current selection over historical %s",
     async (methodId) => {
@@ -451,7 +732,6 @@ describe("AutoCheckin ResultsTable", () => {
             reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
           },
         ]}
-        currencyType="CNY"
       />,
       {
         withReleaseUpdateStatusProvider: false,
@@ -463,174 +743,171 @@ describe("AutoCheckin ResultsTable", () => {
     expect(screen.queryByText(/¥|\$/)).not.toBeInTheDocument()
   })
 
-  it("shows the reported reward in the selected currency", () => {
+  it("preserves a legacy quota reward without implying a current currency value", () => {
     render(
       <ResultsTable
         results={[
           {
-            accountId: "rewarded",
-            accountName: "Rewarded Account",
-            status: CHECKIN_RESULT_STATUS.SUCCESS,
-            reward: { quota: 500_000 },
-            timestamp: 2,
-          },
-          {
-            accountId: "no-reward",
-            accountName: "No Reward Account",
-            status: CHECKIN_RESULT_STATUS.SUCCESS,
-            timestamp: 1,
-          },
-          {
-            // A deleted account has no exchange rate to convert with.
-            accountId: "missing-rate",
-            accountName: "Missing Rate Account",
+            accountId: "legacy",
+            accountName: "Legacy account",
             status: CHECKIN_RESULT_STATUS.SUCCESS,
             reward: { quota: 500_000 },
             timestamp: 1,
           },
         ]}
-        currencyType="CNY"
-        exchangeRateByAccountId={{ rewarded: 7.2 }}
       />,
-      {
-        withReleaseUpdateStatusProvider: false,
-        withThemeProvider: false,
-        withUserPreferencesProvider: false,
-      },
+      { withUserPreferencesProvider: false, withThemeProvider: false },
     )
-
-    const reward = screen.getByText("+¥7.20")
-    expect(reward).toBeVisible()
-    expect(reward).toHaveAttribute(
-      "title",
-      "autoCheckin:execution.reward.title",
-    )
-
-    // The amount reads as part of the message line, separated from it, and the
-    // status cell stays a bare result badge.
-    const row = reward.closest("tr")
-    expect(row).not.toBeNull()
-    const cells = within(row as HTMLElement).getAllByRole("cell")
-    expect(cells[1]).not.toHaveTextContent("+¥7.20")
-    expect(cells[1]).toHaveTextContent("autoCheckin:execution.status.success")
-    expect(cells[2]).toHaveTextContent("+¥7.20")
-
-    expect(screen.queryAllByText("+¥0.00")).toHaveLength(0)
+    expect(screen.getByText("+500,000 quota")).toBeVisible()
+    expect(screen.getByText("account:financial.olderRecord")).toBeVisible()
+    expect(
+      screen.getByText("autoCheckin:execution.awards.fulfillmentUnknown"),
+    ).toBeVisible()
+    expect(screen.queryByText(/¥|\$/)).not.toBeInTheDocument()
   })
 
-  it.each([
-    { quota: 500_000, rate: Number.NaN },
-    { quota: 500_000, rate: Number.POSITIVE_INFINITY },
-    { quota: 500_000, rate: -1 },
-    { quota: Number.NaN, rate: 7.2 },
-    { quota: Number.POSITIVE_INFINITY, rate: 7.2 },
-    { quota: -1, rate: 7.2 },
-    { quota: Number.MAX_VALUE, rate: Number.MAX_VALUE },
-  ])("omits an invalid reward conversion: %j", ({ quota, rate }) => {
+  it("lets users inspect an older successful reward without asking them to refresh immutable history", async () => {
+    const i18n = await createResourceTestI18n({
+      en: {
+        account: accountLocale,
+        autoCheckin: autoCheckinLocale,
+        balanceHistory: balanceHistoryLocale,
+      },
+    })
+    const user = userEvent.setup()
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ResultsTable
+          results={[
+            {
+              accountId: "old-result",
+              accountName: "Older successful account",
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              reward: { quota: 500_000 },
+              timestamp: Date.parse("2026-11-17T03:00:00Z"),
+            },
+          ]}
+        />
+      </I18nextProvider>,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(screen.getByText("+500,000 quota")).toBeVisible()
+    expect(screen.getByText("Recorded by an older version")).toBeVisible()
+    expect(
+      screen.queryByText("Older record; refresh to confirm"),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByText(autoCheckinLocale.execution.awards.details),
+    )
+    expect(screen.getByText("500000 quota")).toBeVisible()
+    expect(screen.queryByText(/refresh to confirm/i)).not.toBeInTheDocument()
+  })
+
+  it("shows a saved monetary reward at the selected account's yuan rate", () => {
     render(
       <ResultsTable
+        currencyType="CNY"
+        accountInfoById={{
+          legacy: buildDisplaySiteData({ id: "legacy", exchangeRate: 6.5 }),
+        }}
         results={[
           {
-            accountId: "invalid-reward",
-            accountName: "Invalid Reward Account",
+            accountId: "legacy",
+            accountName: "Legacy account",
             status: CHECKIN_RESULT_STATUS.SUCCESS,
-            reward: { quota },
+            reward: { quota: 500_000 },
             timestamp: 1,
           },
         ]}
-        currencyType="CNY"
-        exchangeRateByAccountId={{ "invalid-reward": rate }}
       />,
-      {
-        withReleaseUpdateStatusProvider: false,
-        withThemeProvider: false,
-        withUserPreferencesProvider: false,
-      },
+      { withUserPreferencesProvider: false, withThemeProvider: false },
     )
-    expect(
-      screen.queryByTitle("autoCheckin:execution.reward.title"),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.getByText("autoCheckin:execution.status.success"),
-    ).toBeVisible()
+    expect(screen.getByText("+¥6.50")).toBeVisible()
+    expect(screen.getByText("account:financial.olderRecord")).toBeVisible()
   })
 
   it.each([
     CHECKIN_RESULT_STATUS.FAILED,
     CHECKIN_RESULT_STATUS.SKIPPED,
     CHECKIN_RESULT_STATUS.UNCERTAIN,
-  ])("hides a stored reward on a %s result", (status) => {
-    const storedResult = {
-      accountId: "invalid-status",
-      accountName: "Invalid Status Account",
-      status,
-      reward: { quota: 500_000 },
-      timestamp: 1,
-    } as unknown as CheckinAccountResult
+    CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+  ])(
+    "preserves legacy award evidence alongside a %s execution result",
+    (status) => {
+      const result = {
+        accountId: "legacy",
+        accountName: "Legacy account",
+        status,
+        reward: { quota: 500_000 },
+        timestamp: 1,
+      } as CheckinAccountResult
+      render(<ResultsTable results={[result]} />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      expect(screen.getByText("+500,000 quota")).toBeVisible()
+      expect(screen.getByText("account:financial.olderRecord")).toBeVisible()
+    },
+  )
+
+  it("distinguishes a confirmed zero award from an unknown award amount", () => {
     render(
       <ResultsTable
-        results={[storedResult]}
-        exchangeRateByAccountId={{ "invalid-status": 7.2 }}
+        results={[
+          {
+            ...failedResult,
+            awards: [
+              confirmedAward({
+                id: "zero",
+                amount: {
+                  ...confirmedAward().amount,
+                  status: OBSERVATION_STATUSES.Known,
+                  value: "0",
+                  observedAt: 1000,
+                },
+              }),
+              confirmedAward({
+                id: "missing",
+                amount: {
+                  status: OBSERVATION_STATUSES.Unknown,
+                  reason: "missing-field",
+                  source: confirmedAward().amount.source,
+                },
+              }),
+            ],
+          },
+        ]}
       />,
-      {
-        withReleaseUpdateStatusProvider: false,
-        withThemeProvider: false,
-        withUserPreferencesProvider: false,
-      },
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(screen.getByText("+USD 0")).toBeVisible()
+    expect(
+      screen.getByText("autoCheckin:execution.awards.amountUnknown"),
+    ).toBeVisible()
+  })
+
+  it("does not resurrect a legacy reward after canonical awards explicitly replace it", () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            ...failedResult,
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            retryable: undefined,
+            reconciliation: undefined,
+            awards: [],
+            reward: { quota: 500_000 },
+          },
+        ]}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
     )
     expect(
-      screen.queryByTitle("autoCheckin:execution.reward.title"),
+      screen.queryByRole("list", {
+        name: "autoCheckin:execution.awards.title",
+      }),
     ).not.toBeInTheDocument()
-  })
-
-  it("shows an already-checked row's award too", () => {
-    render(
-      <ResultsTable
-        results={[
-          {
-            accountId: "already",
-            accountName: "Already Checked Account",
-            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-            reward: { quota: 500_000 },
-            timestamp: 1,
-          },
-        ]}
-        currencyType="USD"
-        exchangeRateByAccountId={{ already: 7.2 }}
-      />,
-      {
-        withReleaseUpdateStatusProvider: false,
-        withThemeProvider: false,
-        withUserPreferencesProvider: false,
-      },
-    )
-
-    expect(screen.getByText("+$1.00")).toBeVisible()
-  })
-
-  it("shows a USD reward without converting it", () => {
-    render(
-      <ResultsTable
-        results={[
-          {
-            accountId: "rewarded",
-            accountName: "Rewarded Account",
-            status: CHECKIN_RESULT_STATUS.SUCCESS,
-            reward: { quota: 125_000 },
-            timestamp: 1,
-          },
-        ]}
-        currencyType="USD"
-        exchangeRateByAccountId={{ rewarded: 7.2 }}
-      />,
-      {
-        withReleaseUpdateStatusProvider: false,
-        withThemeProvider: false,
-        withUserPreferencesProvider: false,
-      },
-    )
-
-    expect(screen.getByText("+$0.25")).toBeVisible()
+    expect(screen.queryByText(/quota/)).not.toBeInTheDocument()
   })
 
   it("prioritizes failed, uncertain, and not-executed results", () => {

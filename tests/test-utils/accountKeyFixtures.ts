@@ -1,9 +1,14 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import {
   buildAccountKeyResourceRuntimeKey,
   buildAccountKeyResourceRuntimeKeyId,
 } from "~/services/accounts/keys/accountRuntimeKeys"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
 import {
   keyExpiryDisplayFact,
   keyLastUsedDisplayFacts,
@@ -11,6 +16,7 @@ import {
 import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { projectTokenCreatedAt } from "~/services/apiAdapters/newApi/keys/tokenCreatedAt"
 import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/keys/tokenModelAccess"
+import { newApiQuotaAsset } from "~/services/apiService/newApiFamily/quotaAsset"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
@@ -49,19 +55,29 @@ export function buildNewApiKeyFacts<T extends NewApiToken>(
       notes: token.note,
     },
     displayFacts: [
-      {
-        fieldId: "remainingQuota",
-        kind: "money",
-        role: "remaining",
-        amountUsd: token.remain_quota / QUOTA_PER_USD,
-        unlimited: token.unlimited_quota,
-      },
-      {
-        fieldId: "usedQuota",
-        kind: "money",
-        role: "used",
-        amountUsd: token.used_quota / QUOTA_PER_USD,
-      },
+      keyBudgetFact(
+        {
+          accountId: account.id,
+          siteType: account.siteType,
+          scopeKey: "account",
+          resourceId: String(token.id),
+        },
+        { authority: "https://fixture.example", observedAt: 1 },
+        {
+          fieldId: "remainingQuota",
+          operation: "token",
+          asset: {
+            kind: ASSET_KINDS.Quota,
+            ...newApiQuotaAsset("https://fixture.example"),
+          },
+          limitState: token.unlimited_quota
+            ? BUDGET_LIMIT_STATES.Unlimited
+            : BUDGET_LIMIT_STATES.Finite,
+          remaining: token.remain_quota,
+          used: token.used_quota,
+          window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+        },
+      ),
       keyExpiryDisplayFact("expired_time", token.expired_time),
       ...keyLastUsedDisplayFacts(token.accessed_time),
     ],

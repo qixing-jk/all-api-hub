@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
-import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { rightCodeAccountKeyResources } from "~/services/apiAdapters/rightcode/keys/accountKeyResource"
 import type { RightCodeApiKey } from "~/services/apiService/rightcode/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -145,19 +149,23 @@ describe("rightCodeAccountKeyResources", () => {
       0,
     )
     expect(facts.displayFacts).toEqual([
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "finite",
+          limit: expect.objectContaining({ status: "known", value: "12.5" }),
+          used: expect.objectContaining({ status: "known", value: "2.5" }),
+        }),
+      }),
       {
-        fieldId: "quotaUsd",
-        kind: "money",
-        role: "total",
-        amountUsd: 12.5,
-        unlimited: false,
+        fieldId: "expires_at",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+        timestampMs: 1893456000000,
       },
-      { fieldId: "used_quota", kind: "money", role: "used", amountUsd: 2.5 },
-      { fieldId: "expires_at", kind: "expiry", timestampMs: 1893456000000 },
       {
         fieldId: "models",
-        kind: "restriction",
-        role: "models",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+        role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
         value: ["gpt-5.5"],
       },
     ])

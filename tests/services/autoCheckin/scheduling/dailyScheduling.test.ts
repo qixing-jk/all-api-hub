@@ -14,6 +14,7 @@ import {
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
+  mockedAutoCheckinStorage,
   mockedBrowserApi,
   mockedProductAnalytics,
   mockedUserPreferences,
@@ -26,6 +27,42 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     await browser.storage.session.clear()
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
+  })
+
+  it("restores a missing daily alarm when its initial status read is temporarily unavailable", async () => {
+    vi.useFakeTimers()
+    const now = new Date(2024, 0, 1, 8)
+    vi.setSystemTime(now)
+    const random = vi.spyOn(Math, "random").mockReturnValue(0)
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin,
+        globalEnabled: true,
+        windowStart: "09:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        retryStrategy: {
+          ...DEFAULT_PREFERENCES.autoCheckin.retryStrategy,
+          enabled: false,
+        },
+      },
+    })
+    mockedAutoCheckinStorage.getStatus.mockImplementationOnce(
+      async (options) => {
+        if (options?.throwOnError === false) return null
+        throw new Error("temporary storage error")
+      },
+    )
+    try {
+      await autoCheckinScheduler.scheduleNextRun({ preserveExisting: true })
+      expect(
+        schedulerTestState.alarmStore.autoCheckinDaily?.scheduledTime,
+      ).toBe(new Date(2024, 0, 1, 9).getTime())
+      expect(schedulerTestState.alarmStore.autoCheckinRetry).toBeUndefined()
+    } finally {
+      random.mockRestore()
+      vi.useRealTimers()
+    }
   })
 
   it.each([

@@ -6,7 +6,6 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchBaiApiCheckInStatus,
@@ -235,7 +234,7 @@ describe("柏API check-in integration", () => {
     expect(performBaiApiCheckIn).toHaveBeenCalledOnce()
   })
 
-  it("reports the awarded USD amount as a quota reward", async () => {
+  it("reports the awarded USD amount as a native USD award", async () => {
     await expect(
       baiApiProvider.checkIn(createAccount(), {
         ...executionContext(),
@@ -243,9 +242,43 @@ describe("柏API check-in integration", () => {
       }),
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
-      reward: { quota: 0.1 * QUOTA_PER_USD },
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "0.1" },
+        },
+      ],
     })
   })
+
+  it.each(["0", "0.1234567890123456789"])(
+    "preserves draw award %s with the selected field",
+    async (amount) => {
+      vi.mocked(performBaiApiCheckIn).mockResolvedValue({
+        checkinDate: "2026-11-03",
+        rewardAmount: amount,
+        rewardField: "draw.cash_amount_usd",
+      })
+      const result = await baiApiProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      })
+      expect(result).toMatchObject({
+        status: "success",
+        awards: [
+          {
+            amount: {
+              status: "known",
+              value: amount,
+              source: { inputs: ["draw.cash_amount_usd"] },
+            },
+          },
+        ],
+      })
+      expect(result.reward).toBeUndefined()
+      expect(performBaiApiCheckIn).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("keeps a granted day without an authoritative amount reward-free", async () => {
     vi.mocked(performBaiApiCheckIn).mockResolvedValue({
@@ -257,6 +290,7 @@ describe("柏API check-in integration", () => {
     })
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
     expect(result).not.toHaveProperty("reward")
+    expect(result.awards ?? []).toEqual([])
   })
 
   it.each([

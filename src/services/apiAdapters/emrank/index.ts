@@ -1,7 +1,15 @@
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
-import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import { readAccountRefreshResult } from "~/services/accounts/refresh/accountRefreshResult"
 import { EMRANK_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
+import { confirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  EVIDENCE_KINDS,
+} from "~/services/amounts/financialConstants"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import { fetchAccountData } from "~/services/apiService/emrank/accountData"
 import { fetchAnnouncements } from "~/services/apiService/emrank/announcements"
@@ -12,8 +20,7 @@ import {
   redeemCode,
 } from "~/services/apiService/emrank/surfaces"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import { t } from "~/utils/i18n/core"
+import { AuthTypeEnum } from "~/types"
 
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
 import { emRankKeyResources } from "./keyResources"
@@ -90,26 +97,35 @@ export const emRankCapabilities: SiteTypeCapabilities = {
     },
     data: { fetchData: fetchAccountData },
     refresh: {
-      async refreshAccount(request) {
-        try {
-          return {
-            success: true,
-            data: await fetchAccountData(request),
-            healthStatus: {
-              status: SiteHealthStatus.Healthy,
-              message: t("account:healthStatus.normal"),
-            },
-          }
-        } catch (error) {
-          return { success: false, healthStatus: determineHealthStatus(error) }
-        }
-      },
+      refreshAccount: (request) =>
+        readAccountRefreshResult(() => fetchAccountData(request)),
     },
     keyResourceManagement: emRankKeyResources,
     modelPricing: { fetchPricing: fetchEmRankPricing },
     redemption: {
-      quotaAsset: EMRANK_TOKEN_ASSET,
-      redeem: async ({ request, code }) => redeemCode(request, code),
+      async redeem({ request, code }) {
+        const delta = await redeemCode(request, code)
+        return {
+          awards: [
+            confirmedAward({
+              id: "credit",
+              asset: { kind: ASSET_KINDS.Quota, ...EMRANK_TOKEN_ASSET },
+              value: delta,
+              source: {
+                adapter: "emrank",
+                operation: "redeem",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+                inputs: ["delta"],
+              },
+              scope: accountBalanceScope(request),
+              observedAt: Date.now(),
+              fulfillment: AWARD_FULFILLMENT.Credited,
+              target: AWARD_TARGETS.Wallet,
+            }),
+          ],
+        }
+      },
     },
   },
 }

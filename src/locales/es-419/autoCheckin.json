@@ -10,6 +10,22 @@
       "retryAccount": "Reintentar",
       "verifyStatus": "Verificar estado"
     },
+    "awards": {
+      "amountUnknown": "Monto desconocido · {{asset}}",
+      "credited": "Acreditada",
+      "details": "Detalles de la recompensa",
+      "entitlement": "Recompensa de derechos de uso",
+      "exchangedFrom": "Canjeada a partir de {{event}}",
+      "fulfillmentUnknown": "Estado de entrega desconocido",
+      "noExpiry": "Sin vencimiento",
+      "observedAt": "Observado el {{date}}",
+      "pendingRedemption": "Pendiente de canje",
+      "redeemed": "Canjeada",
+      "targetUnknown": "Destino de la recompensa desconocido",
+      "title": "Recompensas confirmadas",
+      "unknownAsset": "Activo desconocido",
+      "wallet": "Recompensa en billetera"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "Dev: Evaluar si se cumplen las condiciones de 'Preactivar el check-in de hoy al abrir la UI'",
       "resetLastDailyRunDay": "Dev: Borrar marca de 'El check-in diario ya se ejecutó hoy'",
@@ -80,9 +96,7 @@
       "summary": "Mostrando {{start}}–{{end}} de {{total}}"
     },
     "refresh": "Actualizar",
-    "reward": {
-      "title": "Recompensa de este check-in"
-    },
+    "retryStatusLoad": "Volver a cargar resultados",
     "runNow": "Ejecutar ahora",
     "statistics": {
       "result": "Resultado"
@@ -94,6 +108,7 @@
       "success": "Registro en esta ejecución",
       "uncertain": "Confirmación pendiente"
     },
+    "statusLoadError": "No se pudieron cargar los resultados del registro. Vuelve a intentarlo; los resultados que se muestran son de la última carga exitosa.",
     "table": {
       "accountName": "Nombre de cuenta",
       "actions": "Acciones",

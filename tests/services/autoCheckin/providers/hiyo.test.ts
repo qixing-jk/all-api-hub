@@ -116,7 +116,15 @@ describe("registered Hiyo daily check-in", () => {
     await expect(run()).resolves.toMatchObject({
       kind: "executed",
       methodId: METHOD_ID,
-      result: { status: "success", reward: { quota: 213750 } },
+      result: {
+        status: "success",
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.4275" },
+          },
+        ],
+      },
       retryable: false,
     })
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)

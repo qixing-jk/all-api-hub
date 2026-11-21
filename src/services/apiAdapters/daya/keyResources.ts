@@ -1,14 +1,28 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { DAYA_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_MUTATION_CERTAINTIES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failureCodes,
   ACCOUNT_KEY_RESOURCE_STATUSES as statuses,
@@ -60,6 +74,7 @@ const toFactStatus = (status: DayaKeyStatus) =>
 const facts = (
   key: DayaKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
@@ -78,39 +93,67 @@ const facts = (
   },
   fields: [],
   displayFacts: [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: "quota",
-      kind: "money",
-      role: "remaining",
-      amountUsd:
-        key.quotaUsd === 0 ? 0 : Math.max(0, key.quotaUsd - key.quotaUsedUsd),
-      unlimited: key.quotaUsd === 0,
-    },
-    {
-      fieldId: "used",
-      kind: "money",
-      role: "used",
-      amountUsd: Math.max(0, key.quotaUsedUsd),
-    },
+      operation: "keys",
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      limitState:
+        key.quotaUsd === 0
+          ? BUDGET_LIMIT_STATES.Unlimited
+          : BUDGET_LIMIT_STATES.Finite,
+      limit: key.quotaUsd,
+      used: key.quotaUsedUsd,
+      scope: {
+        models: { kind: SCOPE_SELECTION_KINDS.All },
+        groups: {
+          kind: SCOPE_SELECTION_KINDS.Restricted,
+          ids: key.groupIds.map(String),
+        },
+      },
+      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+    }),
     {
       fieldId: "expiry",
-      kind: "expiry",
-      timestampMs: key.expiresAt ? normalizeToMs(key.expiresAt) ?? null : null,
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+      timestampMs: key.expiresAt
+        ? (normalizeToMs(key.expiresAt) ?? null)
+        : null,
     },
     ...(key.lastUsedAt && normalizeToMs(key.lastUsedAt)
       ? [
           {
             fieldId: "accessed_time",
-            kind: "last-used" as const,
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
             timestampMs: normalizeToMs(key.lastUsedAt)!,
           },
         ]
       : []),
     ...ipFacts(factFields.IpWhitelist, key.ipWhitelist, "ip"),
     ...ipFacts(factFields.IpBlacklist, key.ipBlacklist, "subnet"),
-    ...rateLimitFact(factFields.RateLimit5h, key.rateLimits.hours5Usd),
-    ...rateLimitFact(factFields.RateLimit1d, key.rateLimits.dayUsd),
-    ...rateLimitFact(factFields.RateLimit7d, key.rateLimits.days7Usd),
+    rateLimitFact(
+      ref,
+      context,
+      factFields.RateLimit5h,
+      key.rateLimits.hours5Usd,
+      BUDGET_PERIODS.FiveHours,
+      key.groupIds,
+    ),
+    rateLimitFact(
+      ref,
+      context,
+      factFields.RateLimit1d,
+      key.rateLimits.dayUsd,
+      BUDGET_PERIODS.Day,
+      key.groupIds,
+    ),
+    rateLimitFact(
+      ref,
+      context,
+      factFields.RateLimit7d,
+      key.rateLimits.days7Usd,
+      BUDGET_PERIODS.Week,
+      key.groupIds,
+    ),
   ],
   actions: {
     canUpdate: true,
@@ -128,20 +171,43 @@ function ipFacts(
   role: "ip" | "subnet",
 ) {
   if (!entries || entries.length === 0) return []
-  return [{ fieldId, kind: "restriction" as const, role, value: entries }]
-}
-
-/** A zero limit means no configured limit, so nothing is displayed. */
-function rateLimitFact(fieldId: string, amountUsd: number) {
-  if (amountUsd <= 0) return []
   return [
     {
       fieldId,
-      kind: "money" as const,
-      role: "total" as const,
-      amountUsd,
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+      role,
+      value: entries,
     },
   ]
+}
+
+/** These are rolling spending limits, independent of the lifetime limit. */
+function rateLimitFact(
+  ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
+  fieldId: string,
+  limit: number,
+  period: (typeof BUDGET_PERIODS)["FiveHours" | "Day" | "Week"],
+  groupIds: readonly number[],
+) {
+  return keyBudgetFact(ref, context, {
+    fieldId,
+    operation: "keys/rate-limits",
+    asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+    limitState:
+      limit === 0
+        ? BUDGET_LIMIT_STATES.Unconfigured
+        : BUDGET_LIMIT_STATES.Finite,
+    limit,
+    scope: {
+      models: { kind: SCOPE_SELECTION_KINDS.All },
+      groups: {
+        kind: SCOPE_SELECTION_KINDS.Restricted,
+        ids: groupIds.map(String),
+      },
+    },
+    window: { kind: BUDGET_WINDOW_KINDS.Rolling, period },
+  })
 }
 
 export const dayaKeyResources = defineAccountKeyResourceCapability({
@@ -188,11 +254,11 @@ export const dayaKeyResources = defineAccountKeyResourceCapability({
       )
       if (!hasUsableApiTokenKey(key.key))
         return {
-          kind: "unavailable" as const,
+          kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
           failure: { code: failureCodes.Unavailable },
         }
       return {
-        kind: "resolved" as const,
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
         secret: key.key,
       }
     },

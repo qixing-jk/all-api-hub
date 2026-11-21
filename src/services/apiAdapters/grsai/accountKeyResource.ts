@@ -1,13 +1,28 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
   mapAccountKeyResourceUncertainFailure,
 } from "~/services/apiAdapters/accountKeyResources/failure"
-import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { accountKeyDefaultScopes } from "~/services/apiAdapters/accountKeyResources/scopeInventory"
+import {
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceOpenInput,
@@ -15,7 +30,10 @@ import type {
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
-import { RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  NATIVE_RESOURCE_MUTATION_CERTAINTIES,
+  RESOURCE_FAILURE_CODES,
+} from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
   resourceValuesEqual,
@@ -29,6 +47,7 @@ import {
 } from "~/services/apiService/grsai"
 import {
   GRSAI_API_BASE_URL,
+  GRSAI_CREDIT_ASSET,
   GRSAI_KEY_TYPE_LIMITED,
   GRSAI_KEY_TYPE_UNLIMITED,
 } from "~/services/apiService/grsai/constants"
@@ -82,6 +101,7 @@ const keyStatus = (key: GrsaiApiKey): AccountKeyResourceFacts["status"] => {
 const toFacts = (
   key: GrsaiApiKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const snapshot = toGrsaiKeySnapshot(key)
   const createdAt = Date.parse(key.createTime ?? "")
@@ -102,22 +122,27 @@ const toFacts = (
       ...(Number.isFinite(createdAt) ? { createdAt } : {}),
     },
     displayFacts: [
-      {
+      keyBudgetFact(ref, context, {
         fieldId: field.Credits,
-        kind: "credits",
-        value: snapshot.credits,
-        unlimited: snapshot.unlimited,
-      },
+        operation: "/client/grsai/getAPIKeyList",
+        scope: {
+          models: { kind: SCOPE_SELECTION_KINDS.All },
+          groups: { kind: SCOPE_SELECTION_KINDS.All },
+        },
+        asset: { kind: ASSET_KINDS.Quota, ...GRSAI_CREDIT_ASSET },
+        limitState:
+          key.type === GRSAI_KEY_TYPE_UNLIMITED
+            ? BUDGET_LIMIT_STATES.Unlimited
+            : key.type === GRSAI_KEY_TYPE_LIMITED
+              ? BUDGET_LIMIT_STATES.Finite
+              : BUDGET_LIMIT_STATES.Unknown,
+        remaining: key.credits,
+        used: key.totalCost,
+        window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+      }),
       keyExpiryDisplayFact(field.ExpiresAt, snapshot.expiresAt ?? ""),
     ],
     fields: [
-      { fieldId: field.Unlimited, kind: "boolean", value: snapshot.unlimited },
-      { fieldId: field.Credits, kind: "number", value: snapshot.credits },
-      {
-        fieldId: "totalCost",
-        kind: "number",
-        value: toOptionalFiniteNumber(key.totalCost) ?? 0,
-      },
       {
         fieldId: field.ExpiresAt,
         kind: "text",
@@ -169,14 +194,8 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
     account: input.account,
     request: input.request,
   }),
-  listScopes: async (config) => [
-    {
-      scopeKey: ACCOUNT_SCOPE_KEY,
-      routeKey: ACCOUNT_SCOPE_KEY,
-      displayName: config.account.name?.trim() || config.request.baseUrl,
-      isDefault: true,
-    },
-  ],
+  listScopes: async (config) =>
+    accountKeyDefaultScopes(ACCOUNT_SCOPE_KEY, config),
   defaultScopeKey: () => ACCOUNT_SCOPE_KEY,
   encodeLocator: (id: string) => requireId(id),
   decodeLocator: (id: string) => requireId(id),
@@ -194,8 +213,8 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
     if (!found) throw new Error("grsai_key_not_found")
     return found
   },
-  toListFacts: (key, ref) => toFacts(key, ref),
-  toDetailFacts: (key, ref) => toFacts(key, ref),
+  toListFacts: (key, ref, context) => toFacts(key, ref, context),
+  toDetailFacts: (key, ref, context) => toFacts(key, ref, context),
   runtimeKey: {
     resolve: async (config, ref, options) => {
       try {
@@ -203,11 +222,14 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
         const found = keys.find((key) => key.id === ref.resourceId)
         const secret = found?.key?.trim()
         return secret
-          ? { kind: "resolved", secret }
-          : { kind: "unavailable", failure: { code: "unavailable" } }
+          ? { kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved, secret }
+          : {
+              kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+              failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
+            }
       } catch (error) {
         return {
-          kind: "unavailable",
+          kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
           failure: mapAccountKeyResourceFailure(error),
         }
       }
@@ -234,11 +256,15 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
         }),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    if (result.certainty !== "applied") return result
+    if (result.certainty !== NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied)
+      return result
 
     // No one-time secret: the inventory re-reveals the key on every read, so
     // the value belongs to the inventory rather than to the dialog.
-    return { certainty: "applied" as const, value: { detail: result.value } }
+    return {
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+      value: { detail: result.value },
+    }
   },
   update: async (
     config,
@@ -251,14 +277,17 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
     const merged = mergeResourceEdits(command.baseline, command.values, latest)
     if (!merged) {
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: RESOURCE_FAILURE_CODES.ResourceChanged },
       }
     }
 
     const changed = changedKeys(latest, merged)
     if (changed.length === 0) {
-      return { certainty: "applied" as const, value: detail }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: detail,
+      }
     }
 
     const request = withOptions(config.request, options)
@@ -268,7 +297,8 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
         updateGrsaiKey(mutationRequest, snapshotToWire(detail, merged)),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    if (result.certainty === "not-applied") return result
+    if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+      return result
 
     try {
       const keys = await fetchGrsaiKeys(request)
@@ -278,16 +308,19 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
         if (
           changed.every((key) => resourceValuesEqual(applied[key], merged[key]))
         ) {
-          return { certainty: "applied" as const, value: actual }
+          return {
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+            value: actual,
+          }
         }
       }
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(undefined),
       }
     } catch (error) {
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(error),
       }
     }
@@ -298,8 +331,11 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
       execute: (request) => deleteGrsaiKey(request, id),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    return result.certainty === "applied"
-      ? { certainty: "applied", value: undefined }
+    return result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
+      ? {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: undefined,
+        }
       : result
   },
   mapFailure: mapAccountKeyResourceFailure,

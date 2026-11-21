@@ -10,6 +10,22 @@
       "retryAccount": "再試行",
       "verifyStatus": "状態を確認"
     },
+    "awards": {
+      "amountUnknown": "金額不明 · {{asset}}",
+      "credited": "入金済み",
+      "details": "報酬の詳細",
+      "entitlement": "利用権の報酬",
+      "exchangedFrom": "交換元：{{event}}",
+      "fulfillmentUnknown": "受取状況不明",
+      "noExpiry": "有効期限なし",
+      "observedAt": "確認日時：{{date}}",
+      "pendingRedemption": "交換待ち",
+      "redeemed": "交換済み",
+      "targetUnknown": "報酬の受取先不明",
+      "title": "確認済みの報酬",
+      "unknownAsset": "不明な資産",
+      "wallet": "ウォレット報酬"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "開発用: 「UI を開いた時に今日のチェックインを事前起動」の条件を評価",
       "resetLastDailyRunDay": "開発用: 「本日のデイリーチェックイン実行済み」フラグをクリア",
@@ -76,9 +92,7 @@
       "summary": "{{total}} 件中 {{start}}–{{end}} 件を表示"
     },
     "refresh": "更新",
-    "reward": {
-      "title": "今回のチェックイン報酬"
-    },
+    "retryStatusLoad": "結果の読み込みを再試行",
     "runNow": "今すぐ実行",
     "statistics": {
       "result": "結果"
@@ -90,6 +104,7 @@
       "success": "今回チェックイン成功",
       "uncertain": "確認待ち"
     },
+    "statusLoadError": "チェックイン結果を読み込めませんでした。再試行してください。表示中の結果は前回正常に読み込まれたものです。",
     "table": {
       "accountName": "アカウント名",
       "actions": "操作",

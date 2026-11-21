@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
@@ -24,6 +25,14 @@ import {
 } from "~/services/models/utils/modelPricing"
 
 describe("modelPricing utils", () => {
+  it("does not flatten different published currencies into one currency label", () => {
+    expect(
+      projectTokenPrices({
+        input: { amount: 7, currency: "CNY" },
+        output: { amount: 1, currency: "USD" },
+      }),
+    ).toBeUndefined()
+  })
   it("projects partial native-currency token facts without inventing missing prices", () => {
     expect(projectTokenPrices({})).toBeUndefined()
     for (const key of ["input", "output", "cacheRead", "cacheWrite"] as const) {
@@ -69,7 +78,7 @@ describe("modelPricing utils", () => {
     it("keeps native CNY cache-write prices without relabeling them as USD", () => {
       const rate = (amount: number) => ({
         amount,
-        currency: "CNY" as const,
+        currency: CURRENCIES.CNY,
         unit: PRICE_RATE_UNITS.TOKEN,
         per: TOKENS_PER_MILLION,
       })
@@ -104,13 +113,13 @@ describe("modelPricing utils", () => {
           rates: {
             input: {
               amount: 0,
-              currency: "USD",
+              currency: CURRENCIES.USD,
               unit: PRICE_RATE_UNITS.TOKEN,
               per: 1,
             },
             output: {
               amount: 25,
-              currency: "USD",
+              currency: CURRENCIES.USD,
               unit: PRICE_RATE_UNITS.TOKEN,
               per: TOKENS_PER_MILLION,
             },
@@ -130,7 +139,7 @@ describe("modelPricing utils", () => {
       model.pricingPlan!.rates = {
         request: {
           amount: 0.02,
-          currency: "USD",
+          currency: CURRENCIES.USD,
           unit: PRICE_RATE_UNITS.REQUEST,
           per: 1,
         },
@@ -141,18 +150,18 @@ describe("modelPricing utils", () => {
       })
     })
 
-    it("preserves zero and normalizes non-finite group multipliers", () => {
+    it("preserves zero and keeps non-finite group multipliers unavailable", () => {
       expect(calculateModelPrice(tokenModel, 0)).toMatchObject({
         usdPerMillionTokens: { input: 0, output: 0 },
       })
       expect(calculateModelPrice(tokenModel, Number.NaN)).toMatchObject({
-        usdPerMillionTokens: { input: 30, output: 60 },
+        kind: "unavailable",
       })
     })
 
-    it("normalizes negative group multipliers without producing negative prices", () => {
+    it("keeps negative group multipliers unavailable", () => {
       expect(calculateModelPrice(tokenModel, -1)).toMatchObject({
-        usdPerMillionTokens: { input: 30, output: 60 },
+        kind: "unavailable",
       })
     })
 

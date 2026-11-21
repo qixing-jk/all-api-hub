@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import type { Asset } from "~/services/amounts/assets"
+import { confirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  EVIDENCE_KINDS,
+} from "~/services/amounts/financialConstants"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   redeemService,
@@ -28,9 +38,52 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
 }))
 
+const grant = (
+  value: unknown,
+  asset: Asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+) =>
+  confirmedAward({
+    id: "credit",
+    asset,
+    value,
+    source: {
+      adapter: "fixture",
+      operation: "redeem",
+      contractVersion: "1",
+      kind: EVIDENCE_KINDS.Reported,
+    },
+    scope: accountBalanceScope({
+      baseUrl: "https://example.com",
+      accountId: "account-1",
+    }),
+    observedAt: 1,
+    fulfillment: AWARD_FULFILLMENT.Credited,
+    target: AWARD_TARGETS.Wallet,
+  })
+
 describe("redeemService.redeemCodeForAccount", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("keeps confirmed awards when the post-redemption display read fails", async () => {
+    const account = buildSiteAccount({ id: "account-1", site_type: "new-api" })
+    const display = buildDisplaySiteData({ id: "account-1" })
+    const awards = [grant("2")]
+    const redeem = vi.fn().mockResolvedValue({ awards })
+    vi.mocked(accountStorage.getAccountById).mockResolvedValueOnce(account)
+    vi.mocked(accountStorage.getDisplayDataById).mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+    ;(
+      accountStorage.convertToDisplayData as ReturnType<typeof vi.fn>
+    ).mockReturnValueOnce(display)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      account: { redemption: { redeem } },
+    } as any)
+    const result = await redeemService.redeemCodeForAccount("account-1", "CODE")
+    expect(result).toMatchObject({ success: true, awards, account: display })
+    expect(redeem).toHaveBeenCalledTimes(1)
   })
 
   it("returns a localized error when the account is missing", async () => {
@@ -83,7 +136,8 @@ describe("redeemService.redeemCodeForAccount", () => {
       id: "account-1",
       site_name: "Example Site",
     }
-    const redeem = vi.fn().mockResolvedValue(12345)
+    const awards = [grant("0.02469")]
+    const redeem = vi.fn().mockResolvedValue({ awards })
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
@@ -126,13 +180,16 @@ describe("redeemService.redeemCodeForAccount", () => {
     expect(result).toEqual({
       success: true,
       message: "redemptionAssist:messages.redeemSuccess",
-      creditedAmount: 12345,
+      awards,
       account: displayData,
     })
   })
 
   it("preserves confirmed non-cash RelayFor benefits in shared redemption feedback", async () => {
-    const benefits = { message: "Monthly subscription · expires 2099-01-01" }
+    const benefits = {
+      message: "Monthly subscription · expires 2099-01-01",
+      awards: [grant(undefined, { kind: "unknown" })],
+    }
     vi.mocked(accountStorage.getAccountById).mockResolvedValueOnce({
       id: "relayfor",
       site_type: SITE_TYPES.RELAYFOR,
@@ -153,10 +210,10 @@ describe("redeemService.redeemCodeForAccount", () => {
     )
     expect(result.success).toBe(true)
     expect(result.message).toBe(benefits.message)
-    expect(result.creditedAmount).toEqual(benefits)
+    expect(result.awards).toEqual(benefits.awards)
   })
 
-  it("falls back to converted display data and supports non-numeric credited amounts", async () => {
+  it("falls back to converted display data and preserves unknown grant amounts", async () => {
     const account = {
       id: "account-2",
       disabled: false,
@@ -172,7 +229,8 @@ describe("redeemService.redeemCodeForAccount", () => {
       id: "account-2",
       site_name: "Converted Site",
     }
-    const redeem = vi.fn().mockResolvedValue("unexpected")
+    const awards = [grant(undefined)]
+    const redeem = vi.fn().mockResolvedValue({ awards })
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
@@ -216,7 +274,7 @@ describe("redeemService.redeemCodeForAccount", () => {
     expect(result).toEqual({
       success: true,
       message: "redemptionAssist:messages.redeemSuccess",
-      creditedAmount: "unexpected",
+      awards,
       account: convertedDisplayData,
     })
   })
@@ -377,20 +435,24 @@ it("shows a redeemed native asset in its own units rather than the monetary quot
       siteType: SITE_TYPES.EMRANK,
       account: {
         redemption: {
-          quotaAsset: {
-            id: "test:points",
-            label: "Points",
-            displayScale: 1000,
-            displayLabel: "K Points",
-          },
-          redeem: vi.fn().mockResolvedValue(2000),
+          redeem: vi.fn().mockResolvedValue({
+            awards: [
+              grant("2000", {
+                kind: ASSET_KINDS.Quota,
+                id: "test:points",
+                label: "Points",
+                displayScale: 1000,
+                displayLabel: "K Points",
+              }),
+            ],
+          }),
         },
       },
     })
     const result = await redeemService.redeemCodeForAccount("points", "CODE")
     expect(result).toMatchObject({
       success: true,
-      creditedAmount: 2000,
+      awards: [{ amount: { status: "known", value: "2000" } }],
       message: "Credited: 2 K Points",
     })
   } finally {

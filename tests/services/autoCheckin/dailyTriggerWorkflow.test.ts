@@ -45,6 +45,33 @@ beforeEach(async () => {
 
 afterEach(() => vi.useRealTimers())
 
+it("reports no UI pretrigger execution when today's batch finishes during the alarm lookup", async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2024, 0, 1, 9))
+  vi.mocked(autoCheckinStorage.getStatus)
+    .mockResolvedValueOnce({ dailyAlarmTargetDay: "2024-01-01" })
+    .mockResolvedValue({
+      dailyAlarmTargetDay: "2024-01-01",
+      lastDailyRunDay: "2024-01-01",
+    })
+  const deps = {
+    dailyAlarmName: "daily",
+    runCheckins: vi.fn().mockResolvedValue({ persisted: true }),
+    scheduleNextRun: vi.fn().mockResolvedValue(undefined),
+  }
+  await expect(
+    new DailyTriggerWorkflow(deps).pretriggerDailyOnUiOpen({
+      protectionBypassExecution: automaticExecution("checkin", "scheduled"),
+    }),
+  ).resolves.toMatchObject({
+    started: false,
+    eligible: false,
+    ineligibleReason: "already_ran_today",
+  })
+  expect(deps.runCheckins).not.toHaveBeenCalled()
+  expect(deps.scheduleNextRun).toHaveBeenCalledOnce()
+})
+
 it("restores the failed-write cooldown after the worker creates a new workflow", async () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))

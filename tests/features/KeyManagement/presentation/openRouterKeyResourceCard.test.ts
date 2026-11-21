@@ -1,26 +1,62 @@
 import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import {
   buildOpenRouterKeyResourceCardPresentation,
   buildOpenRouterKeyResourceDetailFacts,
 } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
+import {
+  ASSET_KINDS,
+  BUDGET_AMOUNT_FIELDS,
+  BUDGET_LIMIT_STATES,
+  FINANCIAL_OBSERVATION_REASONS,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
+import { formatAssetAmount } from "~/utils/core/money"
 
 const t = ((key: string) => key) as TFunction
 const formatUsd = (value: number) =>
-  new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    currencyDisplay: "code",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 8,
-  }).format(value)
+  formatAssetAmount({
+    asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+    value: String(value),
+  })
+const financialFact = (
+  fieldId: string,
+  metric: (typeof BUDGET_AMOUNT_FIELDS)[
+    "Limit" | "Remaining" | "Used" | "ByokUsed"],
+  value: unknown,
+  limitState: (typeof BUDGET_LIMIT_STATES)["Finite" | "Unlimited"],
+) =>
+  keyBudgetFact(
+    {
+      accountId: "account-example",
+      siteType: "openrouter",
+      scopeKey: "workspace-example",
+      resourceId: "hash-example",
+    },
+    { authority: "https://openrouter.ai", observedAt: 1 },
+    {
+      fieldId,
+      operation: "fixture",
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      limitState:
+        metric === BUDGET_AMOUNT_FIELDS.Limit ||
+        metric === BUDGET_AMOUNT_FIELDS.Remaining
+          ? limitState
+          : BUDGET_LIMIT_STATES.Unknown,
+      [metric]: value,
+      metric,
+    },
+  )
 
 const row: NativeKeyManagementRow = {
   kind: "account-key-resource",
@@ -38,6 +74,32 @@ const row: NativeKeyManagementRow = {
     displayName: "Example key",
     maskedLabel: "sk-or-v1-••••example",
     status: "enabled",
+    displayFacts: [
+      financialFact(
+        "limit",
+        BUDGET_AMOUNT_FIELDS.Limit,
+        20,
+        BUDGET_LIMIT_STATES.Finite,
+      ),
+      financialFact(
+        "limit_remaining",
+        BUDGET_AMOUNT_FIELDS.Remaining,
+        -2,
+        BUDGET_LIMIT_STATES.Finite,
+      ),
+      financialFact(
+        "usage",
+        BUDGET_AMOUNT_FIELDS.Used,
+        22,
+        BUDGET_LIMIT_STATES.Finite,
+      ),
+      financialFact(
+        "byok_usage",
+        BUDGET_AMOUNT_FIELDS.ByokUsed,
+        7,
+        BUDGET_LIMIT_STATES.Finite,
+      ),
+    ],
     fields: [
       { fieldId: "name", kind: "text", value: "Example key" },
       {
@@ -51,10 +113,6 @@ const row: NativeKeyManagementRow = {
         value: "Example member",
       },
       { fieldId: "limit_mode", kind: "text", value: "limited" },
-      { fieldId: "limit", kind: "number", value: 20 },
-      { fieldId: "limit_remaining", kind: "number", value: -2 },
-      { fieldId: "usage", kind: "number", value: 22 },
-      { fieldId: "byok_usage", kind: "number", value: 7 },
       { fieldId: "include_byok_in_limit", kind: "boolean", value: true },
       { fieldId: "unknown_provider_field", kind: "text", value: "private" },
     ],
@@ -63,6 +121,40 @@ const row: NativeKeyManagementRow = {
 }
 
 describe("buildOpenRouterKeyResourceCardPresentation", () => {
+  it.each([OBSERVATION_STATUSES.Stale, OBSERVATION_STATUSES.Unknown] as const)(
+    "qualifies %s unlimited state in summaries and details",
+    (status) => {
+      const fact = financialFact(
+        "limit",
+        BUDGET_AMOUNT_FIELDS.Limit,
+        undefined,
+        BUDGET_LIMIT_STATES.Unlimited,
+      )
+      fact.budget.stateObservation =
+        status === OBSERVATION_STATUSES.Stale
+          ? {
+              status,
+              source: fact.budget.limit.source,
+              observedAt: 1,
+              reason: FINANCIAL_OBSERVATION_REASONS.RefreshUnavailable,
+            }
+          : { status, source: fact.budget.limit.source, reason: "not-reported" }
+      const presentation = buildOpenRouterKeyResourceCardPresentation(
+        { ...row, facts: { ...row.facts, displayFacts: [fact] } },
+        t,
+      )
+      const expected =
+        status === OBSERVATION_STATUSES.Stale
+          ? "keyManagement:dialog.unlimitedQuota (keyManagement:financial.stale)"
+          : "common:labels.notAvailable"
+      expect(
+        presentation.summaryFacts.find(({ id }) => id === "limit")?.value,
+      ).toBe(expected)
+      expect(
+        presentation.detailFacts.find(({ id }) => id === "limit")?.value,
+      ).toBe(expected)
+    },
+  )
   it("projects native keys into the shared card without secret-dependent actions", () => {
     const presentation = buildOpenRouterKeyResourceCardPresentation(row, t)
 
@@ -139,6 +231,44 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
     const facts = buildOpenRouterKeyResourceDetailFacts(
       {
         ...row.facts,
+        displayFacts: [
+          financialFact(
+            OPENROUTER_KEY_FIELD_IDS.UsageDaily,
+            BUDGET_AMOUNT_FIELDS.Used,
+            1,
+            BUDGET_LIMIT_STATES.Finite,
+          ),
+          financialFact(
+            OPENROUTER_KEY_FIELD_IDS.UsageWeekly,
+            BUDGET_AMOUNT_FIELDS.Used,
+            2,
+            BUDGET_LIMIT_STATES.Finite,
+          ),
+          financialFact(
+            OPENROUTER_KEY_FIELD_IDS.UsageMonthly,
+            BUDGET_AMOUNT_FIELDS.Used,
+            3,
+            BUDGET_LIMIT_STATES.Finite,
+          ),
+          financialFact(
+            OPENROUTER_KEY_FIELD_IDS.ByokUsageDaily,
+            BUDGET_AMOUNT_FIELDS.ByokUsed,
+            4,
+            BUDGET_LIMIT_STATES.Finite,
+          ),
+          financialFact(
+            OPENROUTER_KEY_FIELD_IDS.ByokUsageWeekly,
+            BUDGET_AMOUNT_FIELDS.ByokUsed,
+            5,
+            BUDGET_LIMIT_STATES.Finite,
+          ),
+          financialFact(
+            OPENROUTER_KEY_FIELD_IDS.ByokUsageMonthly,
+            BUDGET_AMOUNT_FIELDS.ByokUsed,
+            6,
+            BUDGET_LIMIT_STATES.Finite,
+          ),
+        ],
         fields: [
           {
             fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
@@ -164,36 +294,6 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
             fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
             kind: "text",
             value: "provider-unknown",
-          },
-          {
-            fieldId: OPENROUTER_KEY_FIELD_IDS.UsageDaily,
-            kind: "number",
-            value: 1,
-          },
-          {
-            fieldId: OPENROUTER_KEY_FIELD_IDS.UsageWeekly,
-            kind: "number",
-            value: 2,
-          },
-          {
-            fieldId: OPENROUTER_KEY_FIELD_IDS.UsageMonthly,
-            kind: "number",
-            value: 3,
-          },
-          {
-            fieldId: OPENROUTER_KEY_FIELD_IDS.ByokUsageDaily,
-            kind: "number",
-            value: 4,
-          },
-          {
-            fieldId: OPENROUTER_KEY_FIELD_IDS.ByokUsageWeekly,
-            kind: "number",
-            value: 5,
-          },
-          {
-            fieldId: OPENROUTER_KEY_FIELD_IDS.ByokUsageMonthly,
-            kind: "number",
-            value: 6,
           },
           {
             fieldId: OPENROUTER_KEY_FIELD_IDS.Disabled,
@@ -262,7 +362,10 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
       t,
     )
     const unknown = buildOpenRouterKeyResourceCardPresentation(
-      { ...row, facts: { ...row.facts, status: "unknown" } },
+      {
+        ...row,
+        facts: { ...row.facts, status: KEY_RESOURCE_CARD_STATUSES.Unknown },
+      },
       t,
     )
 
@@ -283,10 +386,27 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
         facts: {
           ...row.facts,
           status: "expired",
-          fields: [
-            { fieldId: "limit_mode", kind: "text", value: "unlimited" },
-            { fieldId: "usage", kind: "number", value: 4 },
+          displayFacts: [
+            financialFact(
+              "limit_remaining",
+              BUDGET_AMOUNT_FIELDS.Remaining,
+              undefined,
+              BUDGET_LIMIT_STATES.Unlimited,
+            ),
+            financialFact(
+              "limit",
+              BUDGET_AMOUNT_FIELDS.Limit,
+              undefined,
+              BUDGET_LIMIT_STATES.Unlimited,
+            ),
+            financialFact(
+              "usage",
+              BUDGET_AMOUNT_FIELDS.Used,
+              4,
+              BUDGET_LIMIT_STATES.Unlimited,
+            ),
           ],
+          fields: [{ fieldId: "limit_mode", kind: "text", value: "unlimited" }],
         },
       },
       t,
@@ -296,8 +416,8 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
     expect(unlimited.statusLabel).toBe("keyManagement:native.status.expired")
     expect(unlimited.summaryFacts.map(({ value }) => value)).toEqual([
       "Example workspace",
-      "keyManagement:openRouter.list.values.unlimited",
-      "keyManagement:openRouter.list.values.unlimited",
+      "keyManagement:dialog.unlimitedQuota",
+      "keyManagement:dialog.unlimitedQuota",
       formatUsd(4),
     ])
 
@@ -306,10 +426,27 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
         ...row,
         facts: {
           ...row.facts,
-          fields: [
-            { fieldId: "limit_mode", kind: "text", value: "limited" },
-            { fieldId: "usage", kind: "number", value: 4 },
+          displayFacts: [
+            financialFact(
+              "limit_remaining",
+              BUDGET_AMOUNT_FIELDS.Remaining,
+              undefined,
+              BUDGET_LIMIT_STATES.Finite,
+            ),
+            financialFact(
+              "limit",
+              BUDGET_AMOUNT_FIELDS.Limit,
+              undefined,
+              BUDGET_LIMIT_STATES.Finite,
+            ),
+            financialFact(
+              "usage",
+              BUDGET_AMOUNT_FIELDS.Used,
+              4,
+              BUDGET_LIMIT_STATES.Finite,
+            ),
           ],
+          fields: [{ fieldId: "limit_mode", kind: "text", value: "limited" }],
         },
       },
       t,
@@ -317,8 +454,8 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
 
     expect(limited.summaryFacts.map(({ value }) => value)).toEqual([
       "Example workspace",
-      "keyManagement:openRouter.list.values.missing",
-      "keyManagement:openRouter.list.values.missing",
+      "common:labels.notAvailable",
+      "common:labels.notAvailable",
       formatUsd(4),
     ])
   })

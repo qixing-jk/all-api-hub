@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/features/KeyManagement/inventory/TokenList"
 import { buildServiceCredentialKeyManagementEntry } from "~/features/KeyManagement/utils"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_PERMISSION_ROLES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { nativeRowFromSeed } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
@@ -194,8 +198,8 @@ it("explains mixed batch eligibility on demand while keeping selection usable", 
     displayFacts: [
       {
         fieldId: "permissions",
-        kind: "permission",
-        role: "manage",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Permission,
+        role: ACCOUNT_KEY_PERMISSION_ROLES.Manage,
         granted: true,
       },
     ],

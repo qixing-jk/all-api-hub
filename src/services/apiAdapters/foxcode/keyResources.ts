@@ -1,13 +1,28 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyProtocolAmount,
+  keyRestrictionScope,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
+import { classifyResourceChangedMutation } from "~/services/apiAdapters/accountKeyResources/operationErrors"
 import {
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES,
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_GROUP_EMPTY_VALUES,
-  ACCOUNT_KEY_MUTATION_CERTAINTIES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failureCodes,
@@ -59,6 +74,7 @@ const editorSnapshots = new WeakMap<AccountKeyResourceRef, FoxCodeKey>()
 const facts = (
   key: FoxCodeKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const runtimeGroup = key.canonicalChannelKey ?? key.channelKey
   editorSnapshots.set(ref, structuredClone(key))
@@ -81,22 +97,28 @@ const facts = (
     },
     fields: [],
     displayFacts: [
-      {
+      keyBudgetFact(ref, context, {
         fieldId: "quota",
-        kind: "money",
-        role: "total",
-        amountUsd: Math.max(0, key.quotaLimit) / FOXCODE_UNITS_PER_USD,
-        unlimited: key.quotaLimit === FOXCODE_UNLIMITED_QUOTA,
-      },
-      {
-        fieldId: "used",
-        kind: "money",
-        role: "used",
-        amountUsd: key.quotaUsed / FOXCODE_UNITS_PER_USD,
-      },
+        operation: "keys",
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState:
+          key.quotaLimit === FOXCODE_UNLIMITED_QUOTA
+            ? BUDGET_LIMIT_STATES.Unlimited
+            : BUDGET_LIMIT_STATES.Finite,
+        limit: keyProtocolAmount(key.quotaLimit, FOXCODE_UNITS_PER_USD),
+        used: keyProtocolAmount(key.quotaUsed, FOXCODE_UNITS_PER_USD),
+        scope: keyRestrictionScope({
+          models:
+            key.canonicalChannelKey || key.channelKey === null
+              ? key.modelIds
+              : undefined,
+          groups: runtimeGroup ? [runtimeGroup] : null,
+        }),
+        window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+      }),
       {
         fieldId: "channel",
-        kind: "group",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
         value: key.channelKey ?? "",
         emptyValue: ACCOUNT_KEY_GROUP_EMPTY_VALUES.Ungrouped,
       },
@@ -215,11 +237,7 @@ export const foxCodeKeyResources = defineAccountKeyResourceCapability({
       request: withSignal(config.request, options),
       execute: (request) => updateKey(request, baseline, command, detail),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        error instanceof AccountKeyResourceError &&
-        error.failure.code === failureCodes.ResourceChanged
-          ? ACCOUNT_KEY_MUTATION_CERTAINTIES.NotApplied
-          : undefined,
+      classifyError: classifyResourceChangedMutation,
     }),
   delete: (config, _scope, id, options) =>
     runNativeResourceMutation({

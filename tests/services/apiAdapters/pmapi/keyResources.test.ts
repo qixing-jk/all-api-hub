@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { PMAPI_KEY_EDITOR_FIELDS as pmFields } from "~/services/apiAdapters/pmapi/keyResourceFields"
 import { pmApiKeyResources } from "~/services/apiAdapters/pmapi/keyResources"
 import { PMAPI_KEY_STATUSES } from "~/services/apiService/pmapi/constants"
@@ -144,16 +148,15 @@ describe("PM-API key resources", () => {
     const enabled = await collection.get(ref)
     expect(enabled.status).toBe("enabled")
     expect(enabled.maskedLabel).toBeTypeOf("string")
-    expect(enabled.displayFacts).toContainEqual({
-      fieldId: "quota",
-      kind: "money",
-      role: "remaining",
-      amountUsd: 0,
-      unlimited: true,
-    })
+    expect(enabled.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({ limitState: "unlimited" }),
+      }),
+    )
     expect(enabled.displayFacts).toContainEqual({
       fieldId: "grp",
-      kind: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
       value: "default",
       emptyValue: "account-group",
     })
@@ -335,11 +338,17 @@ describe("PM-API key resources", () => {
     expect(key.displayFacts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          role: "models",
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
           value: ["glm-5.3", "grok-4.7"],
         }),
-        expect.objectContaining({ role: "subnet", value: ["1.2.3.4", "::1"] }),
-        expect.objectContaining({ kind: "rate-limit", rpm: 7 }),
+        expect.objectContaining({
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Subnet,
+          value: ["1.2.3.4", "::1"],
+        }),
+        expect.objectContaining({
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.RateLimit,
+          rpm: 7,
+        }),
       ]),
     )
   })

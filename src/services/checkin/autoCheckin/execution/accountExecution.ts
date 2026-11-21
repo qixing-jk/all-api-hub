@@ -70,9 +70,12 @@ export async function executeAccountCheckin(
         | "reasonCode"
         | "retryable"
         | "methodId"
+        | "executionReceiptId"
+        | "awardExecutionReceiptIds"
         | "reconciliation"
         | "accountStateDurability"
         | "reward"
+        | "awards"
         | "timestamp"
       >
     >,
@@ -179,8 +182,13 @@ export async function executeAccountCheckin(
       rawMessage: providerResult.rawMessage,
       reasonCode: providerResult.reasonCode,
       methodId: execution.methodId,
+      executionReceiptId: execution.executionReceiptId,
+      ...(providerResult.awards?.length && execution.executionReceiptId
+        ? { awardExecutionReceiptIds: [execution.executionReceiptId] }
+        : {}),
       reconciliation: providerResult.reconciliation,
       reward: providerResult.reward,
+      awards: providerResult.awards,
       timestamp:
         execution.confirmation?.observedAt ??
         execution.completedAt ??

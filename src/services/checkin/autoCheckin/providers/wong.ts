@@ -13,7 +13,6 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type {
@@ -31,16 +30,16 @@ import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   createUpstreamFailureResult,
+  getAccountIdentityCheckinReadiness,
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
-  readQuotaReward,
+  readQuotaAwards,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { createConfirmedCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
 import type { SiteAccount } from "~/types"
-import { AuthTypeEnum } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
@@ -157,7 +156,10 @@ async function checkinWongGongyi(
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         // The deployment answers with the day's awarded quota; its own console
         // renders it as "恭喜获得额度：{quota}".
-        reward: readQuotaReward(checkinResponse.data?.quota),
+        awards: readQuotaAwards(account, checkinResponse.data?.quota, {
+          operation: ENDPOINT,
+          field: "quota",
+        }),
         data: checkinResponse.data,
       }
     }
@@ -172,31 +174,6 @@ async function checkinWongGongyi(
       mutationDispatched: context.mutationLifecycle?.dispatched,
     })
   }
-}
-
-/**
- * Determine whether this account has the required configuration for WONG check-in.
- */
-function getReadiness(account: SiteAccount) {
-  if (!account.account_info?.id) {
-    return {
-      ready: false,
-      reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
-    } as const
-  }
-
-  const authType = getEffectiveAuthType(account)
-
-  if (authType === AuthTypeEnum.AccessToken) {
-    return account.account_info?.access_token
-      ? ({ ready: true } as const)
-      : ({
-          ready: false,
-          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
-        } as const)
-  }
-
-  return { ready: true } as const
 }
 
 /**
@@ -253,7 +230,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
 }
 
 export const wongGongyiProvider: AutoCheckinProvider = {
-  getReadiness,
+  getReadiness: getAccountIdentityCheckinReadiness,
   detect: (context) => detectWithStatusReadback(context, getStatus),
   getStatus,
   checkIn: checkinWongGongyi,

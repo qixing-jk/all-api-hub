@@ -37,7 +37,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -49,10 +49,13 @@ const readStatus = async (context: AutoCheckinProviderReadContext) =>
     context.observedAt,
   )
 
-const success = (data: { rewardAmount: number }) => ({
+const success = (account: SiteAccount, data: { rewardAmount: number }) => ({
   status: CHECKIN_RESULT_STATUS.SUCCESS,
   messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-  reward: readUsdReward(data.rewardAmount),
+  awards: readUsdAwards(account, data.rewardAmount, {
+    operation: DAIGUA_CHECK_IN_ENDPOINT,
+    field: "reward_amount",
+  }),
   data,
 })
 
@@ -144,7 +147,7 @@ async function assistTurnstile(
     headers: response.headers ?? {},
     body: response.data,
   })
-  return success(result)
+  return success(account, result)
 }
 
 export const daiguaProvider: AutoCheckinProvider = {
@@ -165,7 +168,7 @@ export const daiguaProvider: AutoCheckinProvider = {
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
         { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
-      return success(data)
+      return success(account as SiteAccount, data)
     } catch (error) {
       // The native verifier posts a body token, unlike New API's query token.
       // An explicit verification rejection is the only safe assisted retry.

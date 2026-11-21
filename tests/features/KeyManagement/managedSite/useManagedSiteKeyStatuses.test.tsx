@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useManagedSiteKeyStatuses } from "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses"
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import {
   buildAccountKeyResourceRuntimeKey,
   buildServiceCredentialRuntimeKey,
@@ -332,7 +333,10 @@ describe("managed-site status for runtime keys", () => {
     await act(async () =>
       view.result.current.confirm(
         source,
-        { status: "unknown", reason: "exact-verification-unavailable" },
+        {
+          status: KEY_RESOURCE_CARD_STATUSES.Unknown,
+          reason: "exact-verification-unavailable",
+        },
         { resourceRef, channelKey: "verified-secret" },
       ),
     )
@@ -361,7 +365,10 @@ describe("managed-site status for runtime keys", () => {
     act(() => {
       confirmation = view.result.current.confirm(
         source,
-        { status: "unknown", reason: "exact-verification-unavailable" },
+        {
+          status: KEY_RESOURCE_CARD_STATUSES.Unknown,
+          reason: "exact-verification-unavailable",
+        },
         {
           resourceRef: matchingResourceRef("channel-1"),
           channelKey: "verified",

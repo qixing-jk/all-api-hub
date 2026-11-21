@@ -1,5 +1,18 @@
+import { CURRENCIES } from "~/constants/money"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import type { BudgetWindow } from "~/services/amounts/budgets"
+import {
+  ASSET_KINDS,
+  BUDGET_AMOUNT_FIELDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   type AccountKeyResourceFacts,
   type AccountKeyScope,
@@ -58,6 +71,7 @@ export const toDetail = (
 export const toFacts = (
   detail: OpenRouterKeyDetail,
   ref: AccountKeyResourceFacts["ref"],
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const key = detail.key
   const expired = key.expires_at
@@ -65,6 +79,28 @@ export const toFacts = (
     : false
   const status = expired ? "expired" : key.disabled ? "disabled" : "enabled"
   const field = OPENROUTER_KEY_FIELD_IDS
+  const window: BudgetWindow =
+    key.limit_reset === "daily"
+      ? { kind: BUDGET_WINDOW_KINDS.Periodic, period: BUDGET_PERIODS.Day }
+      : key.limit_reset === "weekly"
+        ? { kind: BUDGET_WINDOW_KINDS.Periodic, period: BUDGET_PERIODS.Week }
+        : key.limit_reset === "monthly"
+          ? { kind: BUDGET_WINDOW_KINDS.Periodic, period: BUDGET_PERIODS.Month }
+          : { kind: BUDGET_WINDOW_KINDS.Lifetime }
+  const budget = keyBudgetFact(ref, context, {
+    fieldId: field.Limit,
+    operation: "keys/limit",
+    asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+    limitState:
+      key.limit === null
+        ? BUDGET_LIMIT_STATES.Unlimited
+        : BUDGET_LIMIT_STATES.Finite,
+    limit: key.limit,
+    remaining: key.limit_remaining,
+    includesByok: key.include_byok_in_limit,
+    window,
+    scope: { workspaceId: key.workspace_id },
+  })
   return {
     ref,
     displayName: key.name,
@@ -75,6 +111,66 @@ export const toFacts = (
       modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
       createdAt: Date.parse(key.created_at),
     },
+    displayFacts: [
+      { ...budget, metric: BUDGET_AMOUNT_FIELDS.Limit },
+      {
+        ...budget,
+        fieldId: field.LimitRemaining,
+        metric: BUDGET_AMOUNT_FIELDS.Remaining,
+      },
+      ...(
+        [
+          [
+            field.Usage,
+            field.ByokUsage,
+            key.usage,
+            key.byok_usage,
+            { kind: BUDGET_WINDOW_KINDS.Lifetime },
+          ],
+          [
+            field.UsageDaily,
+            field.ByokUsageDaily,
+            key.usage_daily,
+            key.byok_usage_daily,
+            { kind: BUDGET_WINDOW_KINDS.Periodic, period: "day" },
+          ],
+          [
+            field.UsageWeekly,
+            field.ByokUsageWeekly,
+            key.usage_weekly,
+            key.byok_usage_weekly,
+            { kind: BUDGET_WINDOW_KINDS.Periodic, period: "week" },
+          ],
+          [
+            field.UsageMonthly,
+            field.ByokUsageMonthly,
+            key.usage_monthly,
+            key.byok_usage_monthly,
+            { kind: BUDGET_WINDOW_KINDS.Periodic, period: "month" },
+          ],
+        ] as const
+      ).flatMap(([fieldId, byokFieldId, used, byokUsed, window]) => {
+        const fact = keyBudgetFact(ref, context, {
+          fieldId,
+          operation: `keys/${fieldId}`,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          limitState: BUDGET_LIMIT_STATES.Unknown,
+          used,
+          byokUsed,
+          usedIncludesByok: false,
+          window,
+          scope: { workspaceId: key.workspace_id },
+        })
+        return [
+          { ...fact, metric: BUDGET_AMOUNT_FIELDS.Used },
+          {
+            ...fact,
+            fieldId: byokFieldId,
+            metric: BUDGET_AMOUNT_FIELDS.ByokUsed,
+          },
+        ]
+      }),
+    ],
     fields: [
       { fieldId: field.Name, kind: "text", value: key.name },
       {
@@ -88,20 +184,6 @@ export const toFacts = (
         value: detail.creatorDisplay,
       },
       { fieldId: field.LimitMode, kind: "text", value: toLimitMode(key.limit) },
-      ...(key.limit === null
-        ? []
-        : [
-            { fieldId: field.Limit, kind: "number" as const, value: key.limit },
-          ]),
-      ...(key.limit_remaining === null
-        ? []
-        : [
-            {
-              fieldId: field.LimitRemaining,
-              kind: "number" as const,
-              value: key.limit_remaining,
-            },
-          ]),
       {
         fieldId: field.LimitReset,
         kind: "text",
@@ -112,38 +194,6 @@ export const toFacts = (
         fieldId: field.IncludeByokInLimit,
         kind: "boolean",
         value: key.include_byok_in_limit,
-      },
-      { fieldId: field.Usage, kind: "number", value: key.usage },
-      {
-        fieldId: field.UsageDaily,
-        kind: "number",
-        value: key.usage_daily,
-      },
-      {
-        fieldId: field.UsageWeekly,
-        kind: "number",
-        value: key.usage_weekly,
-      },
-      {
-        fieldId: field.UsageMonthly,
-        kind: "number",
-        value: key.usage_monthly,
-      },
-      { fieldId: field.ByokUsage, kind: "number", value: key.byok_usage },
-      {
-        fieldId: field.ByokUsageDaily,
-        kind: "number",
-        value: key.byok_usage_daily,
-      },
-      {
-        fieldId: field.ByokUsageWeekly,
-        kind: "number",
-        value: key.byok_usage_weekly,
-      },
-      {
-        fieldId: field.ByokUsageMonthly,
-        kind: "number",
-        value: key.byok_usage_monthly,
       },
       { fieldId: field.CreatedAt, kind: "text", value: key.created_at },
       ...(key.updated_at

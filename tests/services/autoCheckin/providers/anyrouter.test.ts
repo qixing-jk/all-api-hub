@@ -40,6 +40,11 @@ vi.mock("~/services/accountLogin", () => ({ loginAccount: recoveryDeps.login }))
 
 const mockEnvelope = newApiFamilyRequests.envelope as unknown as Mock
 
+// Load the real recovery module with the suite, before timing the behavior test.
+const actualCredentialRecovery = await vi.importActual<
+  typeof import("~/services/accountCredentialRecovery")
+>("~/services/accountCredentialRecovery")
+
 const mockAccount: SiteAccount = {
   id: "test-id",
   site_name: "AnyRouter",
@@ -115,11 +120,8 @@ describe("anyrouterProvider", () => {
 
   describe("checkIn", () => {
     it("never recovers or replays a rejected POST with the real recovery wrapper", async () => {
-      const actual = await vi.importActual<
-        typeof import("~/services/accountCredentialRecovery")
-      >("~/services/accountCredentialRecovery")
       vi.mocked(executeWithAccountCredentialRecovery).mockImplementationOnce(
-        actual.executeWithAccountCredentialRecovery,
+        actualCredentialRecovery.executeWithAccountCredentialRecovery,
       )
       const account = {
         ...mockAccount,

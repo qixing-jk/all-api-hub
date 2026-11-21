@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   resolveAccountCredentialIdentity,
@@ -9,18 +10,32 @@ import {
   REQUESTY_DISPLAY_NAME,
 } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_PERMISSION_ROLES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceOpenInput,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   createRequestyApiKey,
   deleteRequestyApiKey,
@@ -102,6 +117,7 @@ const createdSecret = (
 const facts = (
   row: RequestyKeyRow,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const key = row.key
   const expiresAtMs = key.expiresAt ? normalizeToMs(key.expiresAt) : null
@@ -121,23 +137,29 @@ const facts = (
         // Management access outranks spend facts: it decides what this key can
         // do to the rest of the organization, not only how much it may spend.
         fieldId: REQUESTY_KEY_FIELDS.Permissions,
-        kind: "permission",
-        role: "manage",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Permission,
+        role: ACCOUNT_KEY_PERMISSION_ROLES.Manage,
         granted: key.permissions.manage !== REQUESTY_KEY_PERMISSIONS.None,
       },
-      {
+      keyBudgetFact(ref, context, {
         fieldId: REQUESTY_KEY_FIELDS.MonthlyLimit,
-        kind: "money",
-        role: "total",
-        amountUsd: key.monthlyLimit,
-        unlimited: key.monthlyLimit === 0,
-      },
-      {
-        fieldId: REQUESTY_KEY_FIELDS.MonthlySpend,
-        kind: "money",
-        role: "used",
-        amountUsd: key.monthlySpend,
-      },
+        operation: "api-keys/monthly-budget",
+        scope: {
+          models: { kind: SCOPE_SELECTION_KINDS.All },
+          groups: { kind: SCOPE_SELECTION_KINDS.All },
+        },
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState:
+          key.monthlyLimit === 0
+            ? BUDGET_LIMIT_STATES.Unlimited
+            : BUDGET_LIMIT_STATES.Finite,
+        limit: key.monthlyLimit,
+        used: key.monthlySpend,
+        window: {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period: BUDGET_PERIODS.Month,
+        },
+      }),
       keyExpiryDisplayFact(REQUESTY_KEY_FIELDS.ExpiresAt, key.expiresAt ?? ""),
     ],
     runtimeSecret: undefined,
@@ -157,16 +179,6 @@ const facts = (
     },
     fields: [
       {
-        fieldId: REQUESTY_KEY_FIELDS.MonthlyLimit,
-        kind: "number",
-        value: key.monthlyLimit,
-      },
-      {
-        fieldId: REQUESTY_KEY_FIELDS.MonthlySpend,
-        kind: "number",
-        value: key.monthlySpend,
-      },
-      {
         fieldId: REQUESTY_KEY_FIELDS.ExpiresAt,
         kind: "text",
         value: key.expiresAt ?? "",
@@ -185,11 +197,14 @@ const facts = (
 
 /** A rejected write is a definitive 4xx; anything else stays uncertain. */
 const classifyMutationFailure = (error: unknown) => {
-  if (error instanceof RequestyMutationReadbackError) return "possibly-applied"
+  if (error instanceof RequestyMutationReadbackError)
+    return NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
   const status = error instanceof ApiError ? error.statusCode : undefined
   const rejected =
     status !== undefined && status >= 400 && status < 500 && status !== 408
-  return rejected ? "not-applied" : ("possibly-applied" as const)
+  return rejected
+    ? NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+    : NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
 }
 
 export const requestyAccountKeyResources = defineAccountKeyResourceCapability({
@@ -226,10 +241,10 @@ export const requestyAccountKeyResources = defineAccountKeyResourceCapability({
     }
   },
   get: (config, _scope, id) => fetchRequestyApiKey(config.request, id),
-  toListFacts: (row, ref) => facts(row, ref),
+  toListFacts: (row, ref, context) => facts(row, ref, context),
   // Detail reads are per-key and carry no credential correlation; the listed
   // row already owns that marker.
-  toDetailFacts: (key, ref) => facts(toRow(key, null), ref),
+  toDetailFacts: (key, ref, context) => facts(toRow(key, null), ref, context),
   createEditor: async (_config, _scope, _options, _inventory, intent) =>
     createRequestyKeyEditor(intent?.nameHint),
   editEditor: (_config, _scope, detail: RequestyApiKey) =>
@@ -250,7 +265,7 @@ export const requestyAccountKeyResources = defineAccountKeyResourceCapability({
           : {}),
       })
       return {
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail: key,
           createdSecret: createdSecret(
@@ -292,11 +307,14 @@ export const requestyAccountKeyResources = defineAccountKeyResourceCapability({
           command.expiresAt === "" ? undefined : command.expiresAt,
         )
       }
-      return { certainty: "applied", value: updated }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: updated,
+      }
     } catch (error) {
       return {
         certainty: hasAppliedWrite
-          ? "possibly-applied"
+          ? NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
           : classifyMutationFailure(error),
         failure: error,
       }
@@ -309,7 +327,10 @@ export const requestyAccountKeyResources = defineAccountKeyResourceCapability({
     }
     try {
       await deleteRequestyApiKey(request, id)
-      return { certainty: "applied", value: undefined }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: undefined,
+      }
     } catch (error) {
       return {
         certainty: classifyMutationFailure(error),

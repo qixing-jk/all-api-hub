@@ -31,6 +31,7 @@ import {
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 import * as capabilityRegistry from "~/services/apiAdapters/registry"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -42,6 +43,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { AuthTypeEnum } from "~/types"
 import * as browserTabs from "~/utils/browser/tabs"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -50,6 +52,27 @@ import {
   createAccount,
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
+
+const newApiEditorForAccount = (account: ReturnType<typeof createAccount>) =>
+  createNewApiKeyEditor(
+    {
+      ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
+      transport: {
+        fetchUserGroups: vi.fn().mockResolvedValue({}),
+        fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+      } as never,
+    },
+    {
+      baseUrl: account.baseUrl,
+      siteType: SITE_TYPES.NEW_API,
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: account.token,
+        userId: account.userId,
+      },
+    },
+  )
 
 const {
   accountKeyResourceControllerOptionsSpy,
@@ -1682,16 +1705,7 @@ describe("KeyManagement native page integration", () => {
         submit: vi.fn(),
       })
       if (siteType === SITE_TYPES.NEW_API) {
-        const nativeEditor = createNewApiKeyEditor(
-          {
-            ...resolveNewApiKeyVariant(siteType),
-            transport: {
-              fetchUserGroups: vi.fn().mockResolvedValue({}),
-              fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
-            } as never,
-          },
-          {} as never,
-        )
+        const nativeEditor = newApiEditorForAccount(account)
         Object.assign(createEditor, nativeEditor)
       }
       const { session } = createNativeSession({
@@ -1860,16 +1874,7 @@ describe("KeyManagement native page integration", () => {
       siteType: SITE_TYPES.NEW_API,
     })
     const scope = createScope("account", "account", "Account", true)
-    const createEditor = createNewApiKeyEditor(
-      {
-        ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
-        transport: {
-          fetchUserGroups: vi.fn().mockResolvedValue({}),
-          fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
-        } as never,
-      },
-      {} as never,
-    )
+    const createEditor = newApiEditorForAccount(account)
     const { session } = createNativeSession({
       scopes: [scope],
       createEditor: { ...createEditor, submit: vi.fn() },

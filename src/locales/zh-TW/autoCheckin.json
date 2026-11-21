@@ -10,6 +10,22 @@
       "retryAccount": "重新嘗試",
       "verifyStatus": "驗證狀態"
     },
+    "awards": {
+      "amountUnknown": "金額未知 · {{asset}}",
+      "credited": "已入帳",
+      "details": "獎勵詳情",
+      "entitlement": "權益獎勵",
+      "exchangedFrom": "兌換來源：{{event}}",
+      "fulfillmentUnknown": "兌現狀態未知",
+      "noExpiry": "無到期時間",
+      "observedAt": "觀測於 {{date}}",
+      "pendingRedemption": "待兌換",
+      "redeemed": "已兌換",
+      "targetUnknown": "獎勵去向未知",
+      "title": "已確認獎勵",
+      "unknownAsset": "未知資產",
+      "wallet": "錢包獎勵"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "開發：解釋“開啟介面時提前觸發今日簽到”是否滿足條件",
       "resetLastDailyRunDay": "開發：清除“今天已執行過每日簽到”標記",
@@ -76,9 +92,7 @@
       "summary": "顯示第 {{start}}–{{end}} 筆，共 {{total}} 筆"
     },
     "refresh": "重新整理",
-    "reward": {
-      "title": "本次簽到獎勵"
-    },
+    "retryStatusLoad": "重新讀取結果",
     "runNow": "立即執行",
     "statistics": {
       "result": "執行結果"
@@ -90,6 +104,7 @@
       "success": "本次簽到成功",
       "uncertain": "待確認"
     },
+    "statusLoadError": "無法讀取簽到結果。請重試重新整理；仍顯示的結果來自上次成功讀取。",
     "table": {
       "accountName": "帳號名稱",
       "actions": "操作",

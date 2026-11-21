@@ -91,7 +91,7 @@ export async function compare(options) {
   )
   await writeFile(
     path.join(directory, "report.md"),
-    `# Visual comparison\n\nStatus: ${report.status}. Agents prioritize the final after image when visual judgment is needed. Baseline, comparison and diff artifacts primarily serve developer review; open them only for a concrete unresolved question. Generating this report does not require opening every image or repeating an unchanged review.\n\n${before ? "![Before / After](comparison.png)\n\n[Before](before.png) · " : "![After](after.png)\n\n"}[After](after.png) · [Sources and hashes](report.json)${report.difference ? " · [Exact RGBA difference](diff.png)" : ""}\n\nPixel differences are descriptive, not a visual acceptance result. Sources are caller-declared.\n`,
+    `# Visual comparison\n\nStatus: ${report.status}. This comparison is supporting evidence for the maintained acceptance report. Review the related panel and focused before/after views at a readable scale, then record the manual result in that report. Image generation does not establish visual acceptance.\n\n${before ? "![Before / After](comparison.png)\n\n[Before](before.png) · " : "![After](after.png)\n\n"}[After](after.png) · [Sources and hashes](report.json)${report.difference ? " · [Exact RGBA difference](diff.png)" : ""}\n\nPixel differences are descriptive, not a visual acceptance result. Sources are caller-declared.\n`,
   )
   return {
     directory,

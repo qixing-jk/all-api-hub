@@ -6,6 +6,7 @@ import {
   fetchHiyoDailyCheckInStatus,
   performHiyoDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckIn"
+import { HIYO_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
@@ -24,7 +25,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -56,7 +57,10 @@ export const hiyoProvider: AutoCheckinProvider = {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
         messageKey:
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        reward: readUsdReward(data.rewardAmount),
+        awards: readUsdAwards(account as SiteAccount, data.rewardAmount, {
+          operation: HIYO_CHECK_IN_ENDPOINT,
+          field: "amount",
+        }),
         data,
       }
     } catch (error) {

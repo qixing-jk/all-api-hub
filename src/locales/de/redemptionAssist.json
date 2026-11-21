@@ -45,6 +45,7 @@
     "success": {
       "settingsSaved": "Die Einstellungen für die Einlösungshilfe wurden gespeichert"
     },
+    "totalAllowance": "Gesamtkontingent: {{amount}}",
     "unsupportedSiteType": "Der Website-Typ dieses Kontos unterstützt keine automatische Einlösung. Wähle ein anderes Konto oder löse den Code manuell auf der Website ein."
   },
   "settings": {

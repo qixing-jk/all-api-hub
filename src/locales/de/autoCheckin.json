@@ -10,6 +10,22 @@
       "retryAccount": "Wiederholen",
       "verifyStatus": "Status prüfen"
     },
+    "awards": {
+      "amountUnknown": "Betrag unbekannt · {{asset}}",
+      "credited": "Gutgeschrieben",
+      "details": "Prämiendetails",
+      "entitlement": "Nutzungsrecht als Prämie",
+      "exchangedFrom": "Eingetauscht aus {{event}}",
+      "fulfillmentUnknown": "Einlösungsstatus unbekannt",
+      "noExpiry": "Kein Ablaufdatum",
+      "observedAt": "Erfasst am {{date}}",
+      "pendingRedemption": "Einlösung ausstehend",
+      "redeemed": "Eingelöst",
+      "targetUnknown": "Prämienziel unbekannt",
+      "title": "Bestätigte Prämien",
+      "unknownAsset": "Unbekannter Vermögenswert",
+      "wallet": "Wallet-Prämie"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "Entwickler: Bewerten Sie, ob die Bedingungen „Heutigen Check-in vorab auslösen, wenn die Benutzeroberfläche geöffnet wird“ erfüllt sind",
       "resetLastDailyRunDay": "Entwickler: Markierung „Täglicher Check-in bereits heute ausgeführt“ löschen",
@@ -78,9 +94,7 @@
       "summary": "{{start}}–{{end}} von {{total}}"
     },
     "refresh": "Aktualisieren",
-    "reward": {
-      "title": "Belohnung für diesen Check-in"
-    },
+    "retryStatusLoad": "Ergebnisse erneut laden",
     "runNow": "Jetzt ausführen",
     "statistics": {
       "result": "Ergebnis"
@@ -92,6 +106,7 @@
       "success": "In diesem Lauf eingecheckt",
       "uncertain": "Bestätigung ausstehend"
     },
+    "statusLoadError": "Die Check-in-Ergebnisse konnten nicht geladen werden. Versuche es erneut. Angezeigte Ergebnisse stammen vom letzten erfolgreichen Laden.",
     "table": {
       "accountName": "Kontoname",
       "actions": "Aktionen",

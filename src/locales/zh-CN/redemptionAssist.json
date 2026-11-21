@@ -44,6 +44,7 @@
     "success": {
       "settingsSaved": "兑换助手设置已保存"
     },
+    "totalAllowance": "总额度：{{amount}}",
     "unsupportedSiteType": "此账号的站点类型暂不支持自动兑换，请选择其他账号或前往对应站点手动兑换。"
   },
   "settings": {

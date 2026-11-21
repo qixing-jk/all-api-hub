@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
@@ -5,12 +6,24 @@ import {
   NANOGPT_DISPLAY_NAME,
   NANOGPT_INFERENCE_BASE_URL,
 } from "~/services/accountSiteDefinitions/identifiers"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES,
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_EXPIRY_STATES,
   AccountKeyResourceError,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failures,
   type AccountKeyResourceRef,
@@ -36,6 +49,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 const facts = (
   key: NanoGptKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
@@ -50,20 +64,49 @@ const facts = (
   },
   fields: [
     { fieldId: "zdr_policy", kind: "text", value: key.zdr_policy },
-    ...NANOGPT_KEY_LIMIT_FIELDS.filter((field) => key[field] !== null).map(
-      (field) => ({
-        fieldId: field,
-        kind: "number" as const,
-        value: key[field]!,
-      }),
-    ),
+    ...NANOGPT_KEY_LIMIT_FIELDS.filter(
+      (field) =>
+        key[field] !== null &&
+        !["daily_usd_limit", "weekly_usd_limit", "monthly_usd_limit"].includes(
+          field,
+        ),
+    ).map((field) => ({
+      fieldId: field,
+      kind: "number" as const,
+      value: key[field]!,
+    })),
   ],
   displayFacts: [
+    ...(
+      [
+        ["daily_usd_limit", "day"],
+        ["weekly_usd_limit", "week"],
+        ["monthly_usd_limit", "month"],
+      ] as const
+    ).map(([field, period]) =>
+      keyBudgetFact(ref, context, {
+        fieldId: field,
+        operation: "management/keys",
+        scope: {
+          models: { kind: SCOPE_SELECTION_KINDS.All },
+          groups: { kind: SCOPE_SELECTION_KINDS.All },
+        },
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState:
+          key[field] === null
+            ? BUDGET_LIMIT_STATES.Unlimited
+            : BUDGET_LIMIT_STATES.Finite,
+        limit: key[field],
+        window: { kind: BUDGET_WINDOW_KINDS.Periodic, period },
+      }),
+    ),
     {
       fieldId: "expires_at",
-      kind: "expiry",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
       timestampMs:
-        key.expires_at === null ? "never" : Date.parse(key.expires_at),
+        key.expires_at === null
+          ? ACCOUNT_KEY_EXPIRY_STATES.Never
+          : Date.parse(key.expires_at),
     },
   ],
   actions: { canUpdate: true, canDelete: true },

@@ -91,7 +91,12 @@ describe("pmApiProvider", () => {
         pmApiProvider.checkIn(account, executionContext()),
       ).resolves.toMatchObject({
         status: CHECKIN_RESULT_STATUS.SUCCESS,
-        reward: { quota: 50_000 },
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.1" },
+          },
+        ],
         confirmation: { kind: "response" },
       })
       expect(claim).toHaveBeenCalledOnce()
@@ -750,7 +755,12 @@ describe("pmApiProvider", () => {
       }),
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
-      reward: { quota: 50_000 },
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "0.1" },
+        },
+      ],
       confirmation: { kind: "response" },
     })
     expect(claim).toHaveBeenCalledOnce()

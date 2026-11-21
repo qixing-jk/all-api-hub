@@ -3,31 +3,39 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
+import { CURRENCIES } from "~/constants/money"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
+import { DAYA_ENDPOINTS } from "~/services/apiService/daya/constants"
 import {
   fetchDayaCheckInOverview,
   performDayaCheckIn,
   type DayaCheckInOverview,
 } from "~/services/apiService/daya/rewards"
 import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   createUnconfirmedCheckInResult,
   withCheckInConfirmation,
 } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { CheckInMethodStatus } from "~/types/checkIn"
+import { isRecord } from "~/utils/core/object"
 
 import { createAccountCheckInRequest } from "./accountRequest"
 import type { AutoCheckinProvider } from "./contracts"
 import { detectWithStatusReadback } from "./detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  getCookieAccountCheckinReadiness,
   resolveProviderErrorResult,
 } from "./shared"
 
@@ -78,14 +86,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
 
 export const dayaProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
-  getReadiness(account) {
-    return account.authType === AuthTypeEnum.Cookie && !!account.account_info.id
-      ? { ready: true }
-      : {
-          ready: false,
-          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
-        }
-  },
+  getReadiness: getCookieAccountCheckinReadiness,
   detect: (context) => detectWithStatusReadback(context, getStatus),
   getStatus,
   async checkIn(account, context) {
@@ -121,6 +122,23 @@ export const dayaProvider: AutoCheckinProvider = {
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
           rawMessage: result.message,
           data: result.data,
+          ...(isRecord(result.data) &&
+          result.data.currency === CURRENCIES.USD &&
+          Object.hasOwn(result.data, "amount")
+            ? {
+                awards: [
+                  accountAward(account as SiteAccount, {
+                    id: "daily-checkin",
+                    operation: DAYA_ENDPOINTS.CheckIn,
+                    field: "amount",
+                    asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+                    value: result.data.amount,
+                    target: AWARD_TARGETS.Wallet,
+                    fulfillment: AWARD_FULFILLMENT.Credited,
+                  }),
+                ],
+              }
+            : {}),
         },
         { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
       )

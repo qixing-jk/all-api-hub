@@ -249,6 +249,34 @@
       "gateways": "Gateways y herramientas de enrutamiento"
     }
   },
+  "financial": {
+    "alertOnly": "Solo aviso",
+    "allocation": "Saldo asignado",
+    "budget": "Presupuesto de consumo",
+    "disabled": "Presupuesto inactivo",
+    "excludesByok": "Excluye BYOK",
+    "hardLimit": "Límite estricto",
+    "includesByok": "Incluye BYOK",
+    "inherited": "Presupuesto de cuenta heredado",
+    "lifetime": "Todo el tiempo",
+    "limit": "Límite",
+    "nativeQuota": "Cuota nativa",
+    "period": {
+      "5h": "5 horas",
+      "day": "Diario",
+      "month": "Mensual",
+      "week": "Semanal",
+      "year": "Anual"
+    },
+    "remaining": "Restante",
+    "reserved": "Reservado",
+    "reset": "Restablece",
+    "rolling": "Móvil",
+    "stale": "Desactualizado",
+    "unconfigured": "Sin presupuesto configurado",
+    "unknownWindow": "Período desconocido",
+    "used": "Usado"
+  },
   "keyDetails": {
     "channels": "Canales",
     "createResponseOnlySecret": "Este sitio muestra la clave completa solo al crearla. Si no la guardaste, abre Gestión de claves y crea una clave de reemplazo.",
@@ -263,11 +291,8 @@
     "models": "Restricciones de modelos:",
     "neverExpires": "Nunca expira",
     "note": "Nota:",
-    "remainingQuota": "Cuota restante:",
     "tools": "Herramientas permitidas",
-    "totalQuota": "Cuota total:",
     "ungrouped": "Sin grupo",
-    "usedQuota": "Cuota usada:",
     "websiteVerificationSecret": "La API de administración no proporciona claves completas. Visita la página API de NanoGPT y completa la verificación de inicio de sesión requerida para volver a ver o copiar una clave existente."
   },
   "knownTotalKeys_one": "{{count}} clave leída",
@@ -462,11 +487,8 @@
       "budget5h": "Presupuesto de 5 horas (USD)",
       "budgetDay": "Presupuesto diario (USD)",
       "budgetMonth": "Presupuesto mensual (USD)",
-      "budgetNextReset": "Se restablece {{time}} (UTC+8)",
       "budgetResetHelp": "0 significa sin límite. El presupuesto de 5 horas es móvil; los demás se reinician según la hora de Pekín. La semana empieza el lunes.",
-      "budgetRolling": "Ventana móvil",
       "budgetsAndLimits": "Presupuestos y límites de acceso",
-      "budgetUsage": "Usado ${{used}} / ${{limit}} · restante ${{remaining}} · reservado ${{reserved}}",
       "budgetWeek": "Presupuesto semanal (USD)",
       "channel": "Canal",
       "dahl": {
@@ -671,13 +693,9 @@
         "budgetAlerts": "Enviar correo al creador de la clave al alcanzar estos umbrales",
         "budgetEnabled": "Presupuesto de gasto",
         "budgetHelp": "Establece un límite en USD. Al desactivarlo se aplica el presupuesto predeterminado del equipo, si existe. Los presupuestos nuevos excluyen el gasto de BYOK.",
-        "budgetInactive": "Presupuesto inactivo",
         "budgetLimit": "Límite de gasto (USD, mínimo $1)",
         "budgetPeriod": "Renovación del presupuesto",
-        "budgetUnavailable": "No se pudo leer el presupuesto. Reintenta antes de editar.",
         "consoleFailed": "No se pudo abrir la consola del equipo. Revisa el token de acceso y reintenta.",
-        "inheritedBudget": "Presupuesto predeterminado del equipo",
-        "noBudget": "Sin presupuesto propio de la clave",
         "openConsole": "Abrir consola de Vercel",
         "period": {
           "daily": "Diaria",
@@ -875,7 +893,6 @@
       "values": {
         "missing": "No disponible",
         "no": "No",
-        "unlimited": "Sin límite",
         "yes": "Sí"
       }
     },

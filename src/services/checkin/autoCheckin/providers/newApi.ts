@@ -33,6 +33,7 @@ import {
   getProviderErrorMessage,
   isCheckInDisabled,
   probeCheckInRoute,
+  readNewApiAwards,
   resolveCheckInEndpoint,
   resolveNewApiCheckInReadback,
   resolveStandardCheckinResult,
@@ -52,7 +53,6 @@ import {
   isPermissionFailureMessage,
   matchTerminalFailureReason,
   normalizeCheckinMessage,
-  readQuotaReward,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
@@ -257,7 +257,12 @@ async function checkinNewApi(
           account,
           {
             status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-            reward: readQuotaReward(status.todayQuotaAwarded),
+            awards: readNewApiAwards(
+              account,
+              status.todayQuotaAwarded,
+              status.todayCheckinDate,
+              "stats.records[].quota_awarded",
+            ),
           },
           status,
         )

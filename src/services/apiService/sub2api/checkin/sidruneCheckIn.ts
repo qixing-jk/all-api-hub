@@ -11,7 +11,7 @@ import type {
 } from "~/services/apiTransport/type"
 
 const SIDRUNE_CHECK_IN_STATUS_ENDPOINT = "/api/v1/welfare/profile"
-const SIDRUNE_CHECK_IN_ENDPOINT = "/api/v1/welfare/checkin"
+export const SIDRUNE_CHECK_IN_ENDPOINT = "/api/v1/welfare/checkin"
 
 const record = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)

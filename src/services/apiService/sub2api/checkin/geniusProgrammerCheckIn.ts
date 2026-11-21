@@ -1,4 +1,5 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
@@ -21,10 +22,10 @@ import type {
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 
-const GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
+export const GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
 export const GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS = {
-  Applied: "applied",
+  Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
   AlreadyChecked: "already_checked",
 } as const
 

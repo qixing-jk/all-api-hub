@@ -1,5 +1,5 @@
+import type { ConfirmedAward } from "~/services/amounts/awards"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 
 export type RedeemCodeRequest = {
   request: ApiServiceRequest
@@ -7,7 +7,9 @@ export type RedeemCodeRequest = {
 }
 
 export type RedemptionCapability = {
-  /** Numeric redemption results use this native asset instead of monetary quota. */
-  quotaAsset?: QuotaAsset
-  redeem(request: RedeemCodeRequest): Promise<unknown>
+  redeem(request: RedeemCodeRequest): Promise<{
+    awards: ConfirmedAward[]
+    /** Native detail may explain benefits whose amount is not reported. */
+    message?: string
+  }>
 }

@@ -44,6 +44,7 @@
     "success": {
       "settingsSaved": "Redemption Assist の設定を保存しました"
     },
+    "totalAllowance": "総利用枠：{{amount}}",
     "unsupportedSiteType": "このアカウントのサイトタイプは自動引き換えに対応していません。別のアカウントを選択するか、サイトで手動で引き換えてください。"
   },
   "settings": {

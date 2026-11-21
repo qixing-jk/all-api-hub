@@ -7,6 +7,7 @@ import {
   fetchFreeApiDailyCheckInStatus,
   performFreeApiDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
+import { FREE_API_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -26,7 +27,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -72,7 +73,11 @@ export const freeApiProvider: AutoCheckinProvider = {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
         messageKey:
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        reward: readUsdReward(result.data.rewardAmount),
+        awards: readUsdAwards(
+          account as SiteAccount,
+          result.data.rewardAmount,
+          { operation: FREE_API_CHECK_IN_ENDPOINT, field: "amount" },
+        ),
         data: result.data,
       }
     } catch (error) {

@@ -118,10 +118,9 @@ export interface AutoCheckinProvider {
   /**
    * Executes the daily check-in.
    *
-   * A success whose response carries the award the deployment granted must also
-   * set `reward` as internal monetary quota or an explicitly identified native
-   * asset. A method whose response carries no authoritative amount leaves it unset rather
-   * than report a constant or an estimate. See `docs/agents/site-integrations.md`
+   * Publish confirmed grants as `awards` with their native asset and source,
+   * including grants from a partially successful operation. Missing amounts
+   * stay unknown; never substitute a constant or an estimate. See `docs/agents/site-integrations.md`
    * for the per-family helpers and the coverage table.
    */
   checkIn(

@@ -44,6 +44,7 @@
     "success": {
       "settingsSaved": "兌換助手設定已儲存"
     },
+    "totalAllowance": "總額度：{{amount}}",
     "unsupportedSiteType": "此帳號的站點類型暫不支援自動兌換，請選擇其他帳號或前往對應站點手動兌換。"
   },
   "settings": {

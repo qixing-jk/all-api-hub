@@ -66,11 +66,9 @@ interface ResultsTableProps extends ResultsTableActionsProps {
    * still applies, keyed by account id.
    */
   siteTypeMismatches?: SiteTypeMismatchMap
-  /** Currency a check-in reward is shown in. */
-  currencyType?: CurrencyType
-  /** Each account's USD-to-CNY rate, keyed by account id. */
-  exchangeRateByAccountId?: Record<string, number>
   accountInfoById?: Record<string, DisplaySiteData>
+  exchangeRateByAccountId?: Record<string, number>
+  currencyType?: CurrencyType
 }
 
 const RESULT_STATUS_SORT_RANK: Record<CheckinResultStatus, number> = {
@@ -87,9 +85,9 @@ const RESULT_STATUS_SORT_RANK: Record<CheckinResultStatus, number> = {
 export default function ResultsTable({
   results,
   siteTypeMismatches,
-  currencyType,
-  exchangeRateByAccountId,
   accountInfoById,
+  exchangeRateByAccountId,
+  currencyType,
   ...actionProps
 }: ResultsTableProps) {
   const { t } = useTranslation(["autoCheckin", "account"])
@@ -247,7 +245,7 @@ export default function ResultsTable({
         onKeywordChange={setSearchKeyword}
       />
       {forceShowActions && (
-        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 border-b px-6 text-xs">
+        <div className="border-b border-warning-border bg-warning-soft px-6 py-density-2 text-xs text-warning-soft-foreground">
           {t("execution.actions.devModeHint")}
         </div>
       )}
@@ -268,13 +266,13 @@ export default function ResultsTable({
               <TableRow className="border-border hover:bg-transparent">
                 {sortableHeader("accountName")}
                 {sortableHeader("status")}
-                <TableHead className="text-muted-foreground py-density-3 h-auto px-6 text-xs font-medium tracking-wider uppercase">
+                <TableHead className="h-auto px-6 py-density-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                   {t("execution.table.message")}
                 </TableHead>
                 {sortableHeader("timestamp")}
                 <TableHead
                   className={cn(
-                    "border-border bg-surface-subtle text-muted-foreground dark:bg-card py-density-3 sticky right-0 h-auto w-12 min-w-12 border-l px-2 text-right text-xs font-medium tracking-wider uppercase [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
+                    "sticky right-0 h-auto w-12 min-w-12 border-l border-border bg-surface-subtle px-2 py-density-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase dark:bg-card [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
                     Z_INDEX.tableStickyHeader,
                   )}
                 >
@@ -288,9 +286,13 @@ export default function ResultsTable({
                   key={result.accountId}
                   result={result}
                   account={accountInfoById?.[result.accountId]}
-                  siteTypeMismatch={siteTypeMismatches?.[result.accountId]}
+                  exchangeRate={
+                    exchangeRateByAccountId
+                      ? exchangeRateByAccountId[result.accountId]
+                      : accountInfoById?.[result.accountId]?.exchangeRate
+                  }
                   currencyType={currencyType}
-                  exchangeRateByAccountId={exchangeRateByAccountId}
+                  siteTypeMismatch={siteTypeMismatches?.[result.accountId]}
                   {...actionProps}
                 />
               ))}

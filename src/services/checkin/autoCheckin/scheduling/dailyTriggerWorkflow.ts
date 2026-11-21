@@ -89,10 +89,19 @@ interface AutoCheckinUiOpenPretriggerResult {
   pendingRetry?: boolean
 }
 
+type DailyAlarmExecutionOutcome =
+  | { started: true }
+  | {
+      started: false
+      ineligibleReason:
+        "daily_run_in_flight" | "daily_alarm_not_today" | "already_ran_today"
+    }
+
 /** Owns daily admission and in-flight work shared by alarm and UI triggers. */
 export class DailyTriggerWorkflow {
   private dailyRunInFlightDay: string | null = null
-  private dailyRunInFlightPromise: Promise<void> | null = null
+  private dailyRunInFlightPromise: Promise<DailyAlarmExecutionOutcome> | null =
+    null
   private lastDailyRunPersistFailedAt: number | null = null
   private persistFailureGuardLoaded = false
   constructor(
@@ -109,16 +118,17 @@ export class DailyTriggerWorkflow {
     alarm: browser.alarms.Alarm,
     tempWindowRequestSource: TempWindowRequestSource,
     protectionBypassExecution: ProtectionBypassExecution,
-  ) {
+    onStarted?: () => Promise<void>,
+  ): Promise<DailyAlarmExecutionOutcome> {
     const now = new Date()
     const today = formatLocalDayKey(now)
 
     if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
       logger.warn("Daily run already in-flight; ignoring trigger")
-      return
+      return { started: false, ineligibleReason: "daily_run_in_flight" }
     }
 
-    const runPromise = (async () => {
+    const runPromise = (async (): Promise<DailyAlarmExecutionOutcome> => {
       const currentStatus = await autoCheckinStorage.getStatus()
       const targetDay =
         currentStatus?.dailyAlarmTargetDay ??
@@ -133,9 +143,17 @@ export class DailyTriggerWorkflow {
           today,
         })
         await this.deps.scheduleNextRun()
-        return
+        return { started: false, ineligibleReason: "daily_alarm_not_today" }
       }
 
+      // A restored alarm can target today even when today's batch already ran.
+      if (currentStatus?.lastDailyRunDay === today) {
+        logger.info("Daily run already completed today; rescheduling alarm")
+        await this.deps.scheduleNextRun()
+        return { started: false, ineligibleReason: "already_ran_today" }
+      }
+
+      await onStarted?.()
       logger.info("Daily alarm triggered; starting check-in execution")
       let persisted = true
       try {
@@ -171,13 +189,14 @@ export class DailyTriggerWorkflow {
               },
         )
       }
+      return { started: true }
     })()
 
     this.dailyRunInFlightDay = today
     this.dailyRunInFlightPromise = runPromise
 
     try {
-      await runPromise
+      return await runPromise
     } finally {
       if (this.dailyRunInFlightPromise === runPromise) {
         this.dailyRunInFlightDay = null
@@ -374,7 +393,8 @@ export class DailyTriggerWorkflow {
       }
     }
 
-    if (params?.requestId) {
+    const notifyStarted = async () => {
+      if (!params?.requestId) return
       try {
         await sendRuntimeMessage(
           {
@@ -388,14 +408,17 @@ export class DailyTriggerWorkflow {
       }
     }
 
-    await this.handleDailyAlarm(
+    const outcome = await this.handleDailyAlarm(
       {
         name: this.deps.dailyAlarmName,
         scheduledTime: dailyAlarm.scheduledTime,
       } as browser.alarms.Alarm,
       params.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background,
       params.protectionBypassExecution,
+      notifyStarted,
     )
+
+    if (!outcome.started) return returnIneligible(outcome.ineligibleReason)
 
     const updatedStatus = await autoCheckinStorage.getStatus()
     const summary =

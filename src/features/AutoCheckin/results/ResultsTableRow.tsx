@@ -4,6 +4,7 @@ import AccountLinkButton from "~/components/AccountLinkButton"
 import { TableCell, TableRow } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
 import { AccountCredentialRecoveryGuidance } from "~/features/AccountManagement/credentialRecovery/AccountCredentialRecoveryGuidance"
+import CheckinAwards from "~/features/AutoCheckin/results/CheckinAwards"
 import type { ResultsTableActionsProps } from "~/features/AutoCheckin/results/ResultsTable.types"
 import ResultsTableRowActions from "~/features/AutoCheckin/results/ResultsTableRowActions"
 import ResultStatusBadge from "~/features/AutoCheckin/results/ResultStatusBadge"
@@ -17,7 +18,6 @@ import {
 import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import { cn } from "~/lib/utils"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
-import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import type { CurrencyType, DisplaySiteData } from "~/types"
 import {
@@ -25,69 +25,27 @@ import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
-import { getCurrencySymbol } from "~/utils/core/formatters"
-import {
-  convertQuotaToCurrencyAmounts,
-  formatMoneyFixed,
-} from "~/utils/core/money"
 import { openProtectionBypassHistory } from "~/utils/navigation"
 
 interface ResultsTableRowProps extends ResultsTableActionsProps {
   result: CheckinAccountResult
   account?: DisplaySiteData
-  siteTypeMismatch?: SiteTypeMismatch
-  /** Currency the reward line is shown in. */
+  exchangeRate?: number
   currencyType?: CurrencyType
-  /**
-   * Each account's USD-to-CNY rate, keyed by account id. Only accounts that can
-   * convert are shown an amount: a deleted account has no rate to convert with,
-   * and guessing one would misstate the award.
-   */
-  exchangeRateByAccountId?: Record<string, number>
+  siteTypeMismatch?: SiteTypeMismatch
 }
 
 /** Renders one execution result while keeping table orchestration in the parent. */
 export default function ResultsTableRow({
   result,
   account,
+  exchangeRate,
+  currencyType,
   siteTypeMismatch,
-  currencyType = "USD",
-  exchangeRateByAccountId = {},
   ...actionProps
 }: ResultsTableRowProps) {
   const { t } = useTranslation(["autoCheckin", "account"])
   const message = getAutoCheckinResultMessage(t, result)
-  const exchangeRate = exchangeRateByAccountId[result.accountId]
-  // Only a hint from the site itself is shown; a method without an
-  // authoritative amount renders nothing rather than a zero.
-  const rewardAmount =
-    (result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-      result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) &&
-    result.reward &&
-    typeof result.reward.quota === "number" &&
-    Number.isFinite(result.reward.quota) &&
-    result.reward.quota > 0 &&
-    typeof exchangeRate === "number" &&
-    Number.isFinite(exchangeRate) &&
-    exchangeRate > 0
-      ? convertQuotaToCurrencyAmounts(result.reward.quota, exchangeRate)[
-          currencyType
-        ]
-      : undefined
-  const monetaryRewardText =
-    rewardAmount !== undefined &&
-    Number.isFinite(rewardAmount) &&
-    rewardAmount > 0
-      ? `+${getCurrencySymbol(currencyType)}${formatMoneyFixed(rewardAmount)}`
-      : null
-  const rewardText =
-    (result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-      result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) &&
-    result.reward?.asset &&
-    Number.isFinite(result.reward.amount) &&
-    result.reward.amount > 0
-      ? `+${formatQuotaAmount(result.reward.amount, result.reward.asset)}`
-      : monetaryRewardText
   const troubleshootingHintKey = resolveAutoCheckinTroubleshootingHintKey({
     status: result.status,
     reasonCode: result.reasonCode,
@@ -132,22 +90,13 @@ export default function ResultsTableRow({
       </TableCell>
       <TableCell className="max-w-lg min-w-64 px-6 py-density-3 text-sm break-words text-muted-foreground">
         <div className="space-y-density-1">
-          {/* The amount trails the message as its own node: the search and the
-              status filter read the message string alone. */}
-          <div className="flex flex-wrap items-baseline gap-density-1">
-            <span>{message}</span>
-            {rewardText && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span
-                  className="font-medium text-success-text"
-                  title={t("execution.reward.title")}
-                >
-                  {rewardText}
-                </span>
-              </>
-            )}
-          </div>
+          <p>{message}</p>
+          <CheckinAwards
+            result={result}
+            currencyType={currencyType}
+            exchangeRate={exchangeRate}
+          />
+
           {troubleshootingHintKey && (
             <div className="text-xs text-faint-foreground">
               {getTroubleshootingHintLabel(troubleshootingHintKey)}

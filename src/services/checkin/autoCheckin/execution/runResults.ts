@@ -1,5 +1,6 @@
 import { type AccountLoginProvider } from "~/constants/accountLogin"
 import { buildAutoCheckinAccountSnapshot } from "~/services/checkin/autoCheckin/accountSnapshot"
+import { preserveCheckinAwards } from "~/services/checkin/autoCheckin/awards"
 import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { type SiteAccount } from "~/types"
 import {
@@ -39,7 +40,10 @@ export function selectCurrentRunResults(
           (previous.timestamp === result.timestamp &&
             isSuccessfulCheckinStatus(previous.status) &&
             !isSuccessfulCheckinStatus(result.status)))
-      return [accountId, keepPrevious ? previous : result]
+      const accepted = preserveCheckinAwards(previous, result, {
+        preferPreviousResult: Boolean(keepPrevious),
+      })
+      return [accountId, accepted]
     }),
   )
 }

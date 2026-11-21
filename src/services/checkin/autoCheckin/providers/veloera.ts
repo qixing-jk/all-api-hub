@@ -9,7 +9,6 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
@@ -23,17 +22,17 @@ import {
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createUpstreamFailureResult,
+  getAccountIdentityCheckinReadiness,
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
-  readQuotaReward,
+  readQuotaAwards,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { reconcileCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
 import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
-import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
@@ -162,7 +161,10 @@ async function checkinVeloera(
         messageKey: responseMessage
           ? undefined
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        reward: readQuotaReward(readAwardedQuota(response.data)),
+        awards: readQuotaAwards(account, readAwardedQuota(response.data), {
+          operation: ENDPOINT,
+          field: "quota",
+        }),
         data: response.data,
       }
     }
@@ -199,33 +201,6 @@ async function checkinVeloera(
       mutationDispatched: context.mutationLifecycle?.dispatched,
     })
   }
-}
-
-/**
- * Check if an account can be checked in
- * @param account - The site account to check
- * @returns true if account meets check-in requirements
- */
-function getReadiness(account: SiteAccount) {
-  if (!account.account_info?.id) {
-    return {
-      ready: false,
-      reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
-    } as const
-  }
-
-  const authType = getEffectiveAuthType(account)
-
-  if (authType === AuthTypeEnum.AccessToken) {
-    return account.account_info?.access_token
-      ? ({ ready: true } as const)
-      : ({
-          ready: false,
-          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
-        } as const)
-  }
-
-  return { ready: true } as const
 }
 
 const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
@@ -284,7 +259,7 @@ function toVeloeraMethodStatus(
 }
 
 export const veloeraProvider: AutoCheckinProvider = {
-  getReadiness,
+  getReadiness: getAccountIdentityCheckinReadiness,
   detect: (context) => detectWithStatusReadback(context, getStatus),
   getStatus,
   checkIn: checkinVeloera,

@@ -267,6 +267,7 @@ for (const status of [400, 409, 503]) {
 
 test("manages an OpenRouter key through its native one-time-secret lifecycle", async ({
   context,
+  extensionDir,
   extensionId,
   page,
 }) => {
@@ -318,6 +319,36 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
         .map((request) => request.offset),
     )
     .toEqual(expect.arrayContaining([0, 100]))
+
+  const finiteBudgetRow = page
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow)
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Paged disabled key",
+        exact: true,
+      }),
+    })
+  const finiteBudgetSummary = finiteBudgetRow.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts,
+  )
+  await expect(finiteBudgetSummary).toContainText(/USD\s*25(?:\.00)?/u)
+  // This source reports 8 remaining while lifetime usage is 101; do not derive 25 - 101.
+  await expect(finiteBudgetSummary).toContainText(/USD\s*8(?:\.00)?/u)
+  await expect(finiteBudgetSummary).toContainText(/USD\s*101(?:\.00)?/u)
+  await finiteBudgetRow
+    .getByRole("button", { name: "View details for Paged disabled key" })
+    .click()
+  await expect(finiteBudgetRow).toContainText("BYOK usage")
+  await expect(finiteBudgetRow).toContainText("Monthly")
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await captureVisualViews({
+    page,
+    ready: finiteBudgetRow,
+    captureTarget: finiteBudgetRow,
+    id: "openrouter-budget-authoritative-remaining",
+    extensionDir,
+    views: [{ id: "desktop", width: 1280, height: 900, theme: "light" }],
+  })
 
   await page.reload()
   await waitForExtensionRoot(page)

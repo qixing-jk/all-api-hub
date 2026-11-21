@@ -1,3 +1,4 @@
+import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   BAI_API_CHECK_IN_ENDPOINT,
@@ -15,7 +16,6 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
-import { readPositiveDecimalAmount } from "~/services/checkin/autoCheckin/providers/shared"
 
 /**
  * The 柏API deployment serves its daily rewards module from the host's own
@@ -62,8 +62,8 @@ export function parseBaiApiCheckInStatusResponse(
  * it carries `checkin_date` and `streak_days`, and names the award
  * `cash_amount_usd` (the header card reads `draw.cash_amount_usd` first and
  * falls back to this field). A malformed success is not a confirmed grant; an
- * absent or zero award is still a granted day without an authoritative amount,
- * so the reward stays unset instead of becoming a shown zero.
+ * absent award is still a granted day without an authoritative amount. A zero
+ * is a known grant amount, and decimal strings retain their exact precision.
  */
 export function parseBaiApiCheckInMutationResponse(
   response: ApiTransportResponse<unknown>,
@@ -76,25 +76,31 @@ export function parseBaiApiCheckInMutationResponse(
   return {
     checkinDate: data.checkin_date,
     ...readStreakDays(data),
-    ...(rewardAmount === undefined ? {} : { rewardAmount }),
+    ...(rewardAmount === undefined
+      ? {}
+      : { rewardAmount, rewardField: selectBaiApiAward(data).field }),
   }
 }
 
-/**
- * Reads the awarded USD amount from the record's fields. The header card
- * prefers a blind-box draw amount over the plain record amount, so the same
- * precedence applies here; an absent or zero amount stays unset instead of
- * becoming a shown zero.
- */
-export function readBaiApiAward(data: Record<string, unknown>) {
+/** Select the exact dashboard field before validating its amount. */
+function selectBaiApiAward(data: Record<string, unknown>) {
   const draw = data.draw
   const drawAmount =
     draw !== null && typeof draw === "object" && !Array.isArray(draw)
       ? (draw as Record<string, unknown>).cash_amount_usd
       : undefined
-  // Select the authoritative field before filtering zero/malformed amounts.
-  // A zero draw is a result, not evidence that the record should take precedence.
-  return readPositiveDecimalAmount(drawAmount ?? data.cash_amount_usd)
+  return drawAmount !== null && drawAmount !== undefined
+    ? { value: drawAmount, field: "draw.cash_amount_usd" as const }
+    : { value: data.cash_amount_usd, field: "cash_amount_usd" as const }
+}
+
+/** Preserve exact USD amounts, including zero; malformed grants stay unknown. */
+export function readBaiApiAward(data: Record<string, unknown>) {
+  const { value } = selectBaiApiAward(data)
+  const amount = parseDecimal(value)
+  return amount !== undefined && compareDecimal(amount, "0") >= 0
+    ? (value as number | string)
+    : undefined
 }
 
 /** Keeps a valid whole-day streak; a malformed one is simply not reported. */

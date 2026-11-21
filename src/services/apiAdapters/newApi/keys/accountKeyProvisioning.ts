@@ -16,6 +16,7 @@ import {
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import { tokenCoverage } from "~/services/apiAdapters/newApi/keys/accountKeyDisplayFacts"
@@ -136,9 +137,15 @@ export const provisionRequirement = async (
   const createResult = await runNativeResourceMutation({
     request: requestWithOptions(config, options),
     execute: async (request) => {
-      const editor = createNewApiKeyEditor(config.variant, request, undefined, {
-        preferredGroup: group,
-      })
+      const editor = createNewApiKeyEditor(
+        config.variant,
+        request,
+        undefined,
+        {
+          preferredGroup: group,
+        },
+        config.account.siteType,
+      )
       return config.transport.createApiToken(
         request,
         editor.buildCommand(editor.initialValues).values,
@@ -146,12 +153,17 @@ export const provisionRequirement = async (
     },
     mapFailure,
   })
-  if (createResult.certainty === "not-applied") {
+  if (
+    createResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+  ) {
     return createResult
   }
-  if (createResult.certainty === "applied" && createResult.value === false) {
+  if (
+    createResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied &&
+    createResult.value === false
+  ) {
     return {
-      certainty: "not-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
     }
   }
@@ -161,9 +173,10 @@ export const provisionRequirement = async (
     after = await collectValidatedInventoryTokens(config, options)
   } catch (error) {
     return {
-      certainty: "possibly-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        createResult.certainty === "possibly-applied"
+        createResult.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
           ? createResult.failure
           : error,
       ),
@@ -174,9 +187,10 @@ export const provisionRequirement = async (
   const [createdToken] = created
   if (created.length !== 1 || !createdToken) {
     return {
-      certainty: "possibly-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        createResult.certainty === "possibly-applied"
+        createResult.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
           ? createResult.failure
           : undefined,
       ),
@@ -188,9 +202,10 @@ export const provisionRequirement = async (
   )
   if (!placementMatches) {
     return {
-      certainty: "possibly-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        createResult.certainty === "possibly-applied"
+        createResult.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
           ? createResult.failure
           : undefined,
       ),
@@ -198,7 +213,7 @@ export const provisionRequirement = async (
   }
 
   return {
-    certainty: "applied",
+    certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
     value: { ref: createRef(config, createdToken.id) },
   }
 }
@@ -220,7 +235,7 @@ export const renameProvisionedResource = async (
   )
   if (!listed) {
     return {
-      certainty: "not-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
     }
   }
@@ -237,14 +252,14 @@ export const renameProvisionedResource = async (
   const requirements = await loadRequirements(config, options)
   if (!requirements.some((requirement) => requirement.displayName === group)) {
     return {
-      certainty: "not-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     }
   }
   const targetDisplayName = resolveAutoTemplateRenameTarget(current, group)
   if (!targetDisplayName) {
     return {
-      certainty: "not-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     }
   }
@@ -259,11 +274,14 @@ export const renameProvisionedResource = async (
       ),
     mapFailure,
   })
-  if (updateResult.certainty === "not-applied") return updateResult
-  if (updateResult.certainty === "applied") {
+  if (
+    updateResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+  )
+    return updateResult
+  if (updateResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied) {
     if (updateResult.value === false) {
       return {
-        certainty: "not-applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
       }
     }
@@ -274,20 +292,25 @@ export const renameProvisionedResource = async (
       await collectValidatedInventoryTokens(config, options)
     ).find((token) => token.id === tokenId)
     return refreshed?.name?.trim() === targetDisplayName
-      ? { certainty: "applied", value: undefined }
+      ? {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: undefined,
+        }
       : {
-          certainty: "possibly-applied",
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
           failure: mapAccountKeyResourceUncertainFailure(
-            updateResult.certainty === "possibly-applied"
+            updateResult.certainty ===
+              NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
               ? updateResult.failure
               : undefined,
           ),
         }
   } catch (error) {
     return {
-      certainty: "possibly-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        updateResult.certainty === "possibly-applied"
+        updateResult.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
           ? updateResult.failure
           : error,
       ),

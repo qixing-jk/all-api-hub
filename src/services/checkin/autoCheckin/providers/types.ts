@@ -1,3 +1,4 @@
+import type { ConfirmedAward } from "~/services/amounts/awards"
 import type { CheckInConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import {
   type AutoCheckinSkipReason,
@@ -32,12 +33,12 @@ export interface AutoCheckinProviderResult<
   rawMessage?: string
   reconciliation?: CheckinReconciliationOutcome
   /**
-   * The award the site itself reported for this check-in, already normalized to
-   * internal monetary quota or an explicitly identified native asset. Only
-   * methods whose response carries an authoritative amount set it; otherwise the UI
-   * shows no amount instead of a guessed or zeroed value.
+   * Read-only compatibility for previously persisted execution receipts.
+   * Current providers publish source-aware awards instead.
    */
   reward?: CheckInReward
+  /** Confirmed grants survive a later failure in a multi-activity operation. */
+  awards?: ConfirmedAward[]
   data?: TData
 }
 
@@ -66,6 +67,6 @@ export type AutoCheckinProviderOutcome<
         | typeof CHECKIN_RESULT_STATUS.UNCERTAIN
         | typeof CHECKIN_RESULT_STATUS.SKIPPED
       reasonCode: AutoCheckinSkipReason
-      /** Only a success can carry an award the site confirmed. */
+      /** The legacy shape only allowed rewards on successful outcomes. */
       reward?: never
     })

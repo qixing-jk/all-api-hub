@@ -68,7 +68,7 @@ export type VercelAiGatewayKey = {
 
 export type VercelKeyBudget = VercelKeyBudgetInput & {
   currentSpend: number
-  active: boolean
+  active?: boolean
   archived: boolean
   includeByokInQuota?: boolean
 }

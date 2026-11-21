@@ -250,6 +250,18 @@ describe("ToolCode check-in integration", () => {
     })
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
     expect(result).not.toHaveProperty("reward")
+    expect(result.awards).toMatchObject([
+      {
+        asset: { kind: "quota", id: "toolcode:https://toolcode.top:points" },
+        amount: { status: "known", value: "10" },
+        fulfillment: "credited",
+      },
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "known", value: "0" },
+        validity: { kind: "unknown" },
+      },
+    ])
   })
   it("marks a dispatched malformed or lost response uncertain", async () => {
     const mutationLifecycle = createAutoCheckinMutationLifecycle()

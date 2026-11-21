@@ -8,6 +8,17 @@ import {
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { CHECK_IN_CONFIRMATION_KINDS } from "~/services/checkin/autoCheckin/confirmation"
 import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import { selectCurrentRunResults } from "~/services/checkin/autoCheckin/execution/runResults"
@@ -35,6 +46,86 @@ describe("execution/runAccountWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
+
+  it.each(["success", "already_checked", "failed", "uncertain"] as const)(
+    "retains confirmed native awards when selected execution returns %s",
+    async (status) => {
+      const awards: ConfirmedAward[] = [
+        {
+          id: "first-campaign",
+          asset: { kind: ASSET_KINDS.Currency, code: "CNY" },
+          amount: {
+            status: OBSERVATION_STATUSES.Known,
+            value: "0",
+            observedAt: 1234,
+            source: {
+              adapter: "campaigns",
+              operation: "claim",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+              inputs: ["reward"],
+            },
+          },
+          scope: {
+            subject: {
+              kind: FINANCIAL_SUBJECT_KINDS.Account,
+              accountId: "awarded-account",
+            },
+            authority: "https://example.test",
+            models: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            groups: {
+              kind: SCOPE_SELECTION_KINDS.Restricted,
+              ids: ["premium"],
+            },
+            projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
+          },
+          validity: { kind: BALANCE_VALIDITY_KINDS.Expires, at: 5678 },
+          target: AWARD_TARGETS.Entitlement,
+          fulfillment: AWARD_FULFILLMENT.PendingRedemption,
+          event: { namespace: "checkin", id: "event-1" },
+        },
+      ]
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "executed",
+        methodId: "new-api:daily-checkin",
+        completedAt: 2345,
+        executionReceiptId: "completed-receipt",
+        reused: true,
+        retryable: false,
+        result: { status, awards },
+      })
+      const outcome = await accountCheckinRunWorkflow.runAccountCheckin(
+        {
+          id: "awarded-account",
+          site_name: "Awarded Account",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+        } as any,
+        "Awarded Account",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
+      )
+      expect(outcome).toMatchObject({
+        reused: true,
+        result: {
+          status,
+          awards,
+          timestamp: 2345,
+          executionReceiptId: "completed-receipt",
+        },
+      })
+      expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
+      if (status === "failed" || status === "uncertain") {
+        expect(
+          mockedAccountStorage.markAccountAsSiteCheckedIn,
+        ).not.toHaveBeenCalled()
+        expect(outcome.result).toMatchObject({ retryable: false })
+      }
+    },
+  )
   it.each([false, true])(
     "orders and persists a same-day dated grant by observation (reused=%s)",
     async (reused) => {

@@ -1,4 +1,6 @@
 import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
+import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
@@ -67,14 +69,14 @@ export type AiRouterStatusProbe =
     }
 
 export const AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS = {
-  Applied: "applied",
+  Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
   AlreadyChecked: "already_checked",
 } as const
 
 export type AiRouterDailyCheckInResult =
   | {
       kind: typeof AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied
-      data: { rewardAmount: number; checkinDate?: string }
+      data: { rewardAmount: number | string; checkinDate?: string }
     }
   | {
       kind: typeof AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked
@@ -94,13 +96,15 @@ const tryParseJson = (body: string): unknown => {
 }
 
 /** Reads the deployment's decimal amounts, which mix numbers and strings. */
-const toAmount = (value: unknown): number | null => {
+const toAmount = (value: unknown): number | string | null => {
   if (typeof value === "number") {
-    return Number.isFinite(value) && value >= 0 ? value : null
+    return parseDecimal(value) !== undefined && value >= 0 ? value : null
   }
   if (typeof value === "string" && /^\d+(?:\.\d+)?$/.test(value.trim())) {
-    const amount = Number(value.trim())
-    return Number.isFinite(amount) ? amount : null
+    const amount = parseDecimal(value)
+    return amount !== undefined && compareDecimal(amount, "0") >= 0
+      ? value.trim()
+      : null
   }
   return null
 }

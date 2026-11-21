@@ -156,7 +156,7 @@ async function capture(scenario, baseline, diff) {
         .filter((file) => file.endsWith(".json"))
         .map((file) => file.slice(0, -5))
         .sort()
-    validateIds(ids)
+    validateIds(ids, { allowContext: true })
     if (
       baseline &&
       JSON.stringify([...ids].sort()) !==
@@ -305,7 +305,7 @@ async function readBaseline(directory, scenario) {
     throw new Error("Incompatible baseline capture")
   const ids =
     scenario.checkpoints ?? capture.checkpoints.map((state) => state.id)
-  validateIds(ids)
+  validateIds(ids, { allowContext: true })
   for (const id of ids) {
     const state = capture.checkpoints.find((entry) => entry.id === id)
     if (
@@ -325,14 +325,14 @@ async function readBaseline(directory, scenario) {
   return { directory, capture }
 }
 
-function validateIds(ids) {
+function validateIds(ids, { allowContext = false } = {}) {
+  const safeId = allowContext
+    ? /^[a-zA-Z0-9][a-zA-Z0-9_-]*(?:\.context)?$/u
+    : /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u
   if (
     !ids.length ||
     new Set(ids).size !== ids.length ||
-    ids.some(
-      (id) =>
-        typeof id !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u.test(id),
-    )
+    ids.some((id) => typeof id !== "string" || !safeId.test(id))
   )
     throw new Error(
       "Capture requires unique safe checkpoint IDs; call captureVisualViews in the selected workflow",

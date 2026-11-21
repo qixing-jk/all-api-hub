@@ -307,7 +307,12 @@ describe("wongGongyiProvider", () => {
 
         const result = await checkInForTest(mockAccount)
         expect(result.status).toBe("success")
-        expect(result.reward).toEqual({ quota: 500000 })
+        expect(result.awards).toMatchObject([
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "1" },
+          },
+        ])
       }
     })
 

@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { prepareAccountKeyProvisioning } from "~/services/accounts/keys/accountKeyProvisioning"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
+import { ACCOUNT_KEY_DISPLAY_FACT_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { grsaiAccountKeyResources } from "~/services/apiAdapters/grsai/accountKeyResource"
+import { GRSAI_CREDIT_ASSET } from "~/services/apiService/grsai/constants"
 import type { GrsaiApiKey } from "~/services/apiService/grsai/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
@@ -100,8 +102,19 @@ describe("grsaiAccountKeyResources", () => {
       0,
     )
     expect(facts.displayFacts).toEqual([
-      { fieldId: "credits", kind: "credits", value: 250, unlimited: false },
-      { fieldId: "expires_at", kind: "expiry", timestampMs: 1893456000000 },
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "finite",
+          asset: { kind: "quota", ...GRSAI_CREDIT_ASSET },
+          remaining: expect.objectContaining({ status: "known", value: "250" }),
+        }),
+      }),
+      {
+        fieldId: "expires_at",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+        timestampMs: 1893456000000,
+      },
     ])
   })
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import { fetchSidruneDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/sidruneCheckIn"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
@@ -138,6 +139,28 @@ describe("Sidrune welfare check-in", () => {
       result: {
         status: "success",
         data: { rewardAmount: 0.04, milestoneBonus: 0.1, streakDay: 7 },
+        awards: [
+          {
+            amount: {
+              status: "known",
+              value: "0.04",
+              source: { inputs: ["reward_amount"] },
+            },
+            asset: { kind: "unknown" },
+            fulfillment: "pending-redemption",
+            target: "wallet",
+          },
+          {
+            amount: {
+              status: "known",
+              value: "0.1",
+              source: { inputs: ["milestone_bonus"] },
+            },
+            asset: { kind: "unknown" },
+            fulfillment: "pending-redemption",
+            target: "wallet",
+          },
+        ],
       },
     })
     if (result.kind === "executed") expect(result.result.reward).toBeUndefined()
@@ -194,10 +217,10 @@ describe("Sidrune welfare check-in", () => {
   )
 
   it.each([
-    [401, "unknown"],
-    [403, "unknown"],
-    [404, "unsupported"],
-    [405, "unsupported"],
+    [401, OBSERVATION_STATUSES.Unknown],
+    [403, OBSERVATION_STATUSES.Unknown],
+    [404, OBSERVATION_STATUSES.Unsupported],
+    [405, OBSERVATION_STATUSES.Unsupported],
   ] as const)(
     "classifies HTTP %i without recovering or submitting",
     async (status, outcome) => {

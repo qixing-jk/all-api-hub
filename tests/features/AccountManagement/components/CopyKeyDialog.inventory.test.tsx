@@ -380,13 +380,13 @@ describe("CopyKeyDialog inventory", () => {
       screen.getByText("keyManagement:native.status.disabled"),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText("keyManagement:keyDetails.usedQuota"),
+      screen.queryByText("keyManagement:financial.used"),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByText("keyManagement:keyDetails.remainingQuota"),
+      screen.queryByText("keyManagement:financial.remaining"),
     ).not.toBeInTheDocument()
 
     const detailsButton = screen.getByRole("button", {
@@ -401,20 +401,23 @@ describe("CopyKeyDialog inventory", () => {
         name: "keyManagement:actions.detailsFor",
       }),
     ).toBeVisible()
-    expect(screen.getByText("keyManagement:keyDetails.usedQuota")).toBeVisible()
-    expect(screen.getByText("$4")).toBeVisible()
-    expect(screen.getByText("$0")).toBeVisible()
+    const budget = screen.getByRole("region", {
+      name: "keyManagement:actions.detailsFor",
+    })
+    expect(
+      within(budget).getByText("keyManagement:financial.used"),
+    ).toBeVisible()
+    expect(within(budget).getByText("0 quota")).toBeVisible()
+    expect(
+      within(budget).getByText("keyManagement:financial.remaining"),
+    ).toBeVisible()
+    expect(within(budget).getByText("2,000,000 quota")).toBeVisible()
     expect(
       screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
-    ).toBeVisible()
-    expect(
-      screen.getByText("keyManagement:keyDetails.remainingQuota"),
     ).toBeVisible()
 
     await user.click(detailsButton)
     expect(detailsButton).toHaveAttribute("aria-expanded", "false")
-    expect(
-      screen.queryByText("keyManagement:keyDetails.remainingQuota"),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText("2,000,000 quota")).not.toBeInTheDocument()
   })
 })

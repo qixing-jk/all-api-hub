@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   isProviderConfirmedAccountCredential,
@@ -10,11 +11,27 @@ import {
   AIMLAPI_DISPLAY_NAME,
 } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_AMOUNT_FIELDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyRestrictionScope,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   ACCOUNT_KEY_RESOURCE_STATUSES as statuses,
   type AccountKeyDisplayFact,
@@ -129,55 +146,36 @@ function nextBudgetResetAt(
 }
 
 /** Publish observed counters only; a configured ceiling cannot establish remaining funds. */
-function budgetFacts(limit: AimlApiKey["limit"]): AccountKeyDisplayFact[] {
-  if (!limit) return []
-  const retention = limit.retention
-  if (
-    retention !== null &&
-    retention !== AIMLAPI_KEY_LIMIT_PERIODS.Never &&
-    limit.spentUsd !== undefined &&
-    limit.remainingUsd !== undefined
-  ) {
-    const nextResetAt = nextBudgetResetAt(limit)
-    return [
-      {
-        fieldId: factFields.Limit,
-        kind: "budget",
-        window: retention,
-        limitUsd: limit.thresholdUsd,
-        usedUsd: limit.spentUsd,
-        remainingUsd: limit.remainingUsd,
-        reservedUsd: 0,
-        ...(nextResetAt ? { nextResetAt } : {}),
-      },
-    ]
-  }
+function budgetFacts(
+  limit: AimlApiKey["limit"],
+  ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
+  scope: ReturnType<typeof keyRestrictionScope>,
+): AccountKeyDisplayFact[] {
+  const nextResetAt = limit ? nextBudgetResetAt(limit) : undefined
+  const retention = limit?.retention
   return [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: factFields.Limit,
-      kind: "spend-budget",
-      source: "custom",
-      period:
-        limit.retention === AIMLAPI_KEY_LIMIT_PERIODS.Day
-          ? "daily"
-          : limit.retention === AIMLAPI_KEY_LIMIT_PERIODS.Week
-            ? "weekly"
-            : limit.retention === AIMLAPI_KEY_LIMIT_PERIODS.Month
-              ? "monthly"
-              : "none",
-      limitUsd: limit.thresholdUsd,
-      ...(limit.spentUsd === undefined ? {} : { usedUsd: limit.spentUsd }),
-    },
-    ...(limit.spentUsd === undefined && limit.remainingUsd !== undefined
-      ? [
-          {
-            fieldId: factFields.Remaining,
-            kind: "money" as const,
-            role: "remaining" as const,
-            amountUsd: limit.remainingUsd,
-          },
-        ]
-      : []),
+      operation: "key/limit",
+      scope,
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      limitState: limit
+        ? BUDGET_LIMIT_STATES.Finite
+        : BUDGET_LIMIT_STATES.Unconfigured,
+      limit: limit?.thresholdUsd,
+      used: limit?.spentUsd,
+      remaining: limit?.remainingUsd,
+      window:
+        retention && retention !== AIMLAPI_KEY_LIMIT_PERIODS.Never
+          ? {
+              kind: BUDGET_WINDOW_KINDS.Periodic,
+              period: retention,
+              timeZone: "UTC",
+              ...(nextResetAt ? { resetsAt: Date.parse(nextResetAt) } : {}),
+            }
+          : { kind: BUDGET_WINDOW_KINDS.Lifetime },
+    }),
   ]
 }
 
@@ -192,6 +190,7 @@ function budgetFacts(limit: AimlApiKey["limit"]): AccountKeyDisplayFact[] {
 const facts = (
   key: AimlApiKeyRow,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const expiry = key.expiresAt ? normalizeToMs(key.expiresAt) : null
   const createdAt = normalizeToMs(key.createdAt)
@@ -221,28 +220,37 @@ const facts = (
     },
     fields: [],
     displayFacts: [
-      ...budgetFacts(key.limit),
-      ...(key.monthlyUsageUsd > 0
-        ? [
-            {
-              fieldId: factFields.MonthlyUsage,
-              kind: "money" as const,
-              role: "used" as const,
-              amountUsd: key.monthlyUsageUsd,
-            },
-          ]
-        : []),
+      ...budgetFacts(
+        key.limit,
+        ref,
+        context,
+        keyRestrictionScope({ models: key.allowedModels }),
+      ),
+      keyBudgetFact(ref, context, {
+        fieldId: factFields.MonthlyUsage,
+        operation: "key/monthly-usage",
+        scope: keyRestrictionScope({ models: key.allowedModels }),
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Unknown,
+        used: key.monthlyUsageUsd,
+        metric: BUDGET_AMOUNT_FIELDS.Used,
+        window: {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period: BUDGET_PERIODS.Month,
+          timeZone: "UTC",
+        },
+      }),
       {
         fieldId: factFields.Expiry,
-        kind: "expiry" as const,
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
         timestampMs: expiry ?? null,
       },
       ...(key.scopes
         ? [
             {
               fieldId: factFields.Scopes,
-              kind: "restriction" as const,
-              role: "models" as const,
+              kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+              role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
               value: [...key.scopes],
             },
           ]
@@ -251,8 +259,8 @@ const facts = (
         ? [
             {
               fieldId: factFields.Models,
-              kind: "restriction" as const,
-              role: "models" as const,
+              kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+              role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
               value: [...key.allowedModels],
             },
           ]
@@ -261,8 +269,8 @@ const facts = (
         ? [
             {
               fieldId: "tools",
-              kind: "restriction" as const,
-              role: "tools" as const,
+              kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+              role: ACCOUNT_KEY_RESTRICTION_ROLES.Tools,
               value: [...key.allowedTools],
             },
           ]

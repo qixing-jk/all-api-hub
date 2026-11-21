@@ -139,6 +139,17 @@
     "consumption": "本日の消費",
     "income": "本日の収入"
   },
+  "financial": {
+    "derived": "サイトの項目から算出",
+    "expires": "有効期限：{{date}}",
+    "lastKnown": "最終確認値",
+    "manual": "手入力残高",
+    "olderRecord": "旧バージョンで記録された値",
+    "reported": "サイト報告値",
+    "scopeUnknown": "利用範囲は未確認",
+    "technicalDetails": "技術情報（デバッグ）",
+    "validityUnknown": "有効期間は未確認"
+  },
   "healthStatus": {
     "apiError": "API エラー",
     "error": "エラー",
@@ -317,7 +328,7 @@
     "prompt": "プロンプト",
     "scopedAllowances": "グループやプランの利用枠には利用制限がある場合があります。ネイティブ利用枠は残高合計・残高履歴・収入推計に含まれません。",
     "subscriptionRemainingCount": "サブスクリプション残り回数",
-    "subscriptionRemainingTokens": "残りのトークン（プールとキーの合計）。ドル残高は無料分を含む公式価格での換算額です。",
+    "subscriptionRemainingTokens": "残りのトークン",
     "subscriptionState": {
       "active": "サブスクリプション有効",
       "expired": "サブスクリプション期限切れ",

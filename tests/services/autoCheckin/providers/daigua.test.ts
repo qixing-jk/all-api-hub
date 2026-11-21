@@ -330,7 +330,15 @@ describe("registered DaiGua daily check-in", () => {
       await expect(run()).resolves.toMatchObject({
         kind: "executed",
         retryable: false,
-        result: { status: "success", reward: { quota: 95000 } },
+        result: {
+          status: "success",
+          awards: [
+            {
+              asset: { kind: "currency", code: "USD" },
+              amount: { status: "known", value: "0.19" },
+            },
+          ],
+        },
         confirmation: { kind: "response" },
       })
       expect(
@@ -389,7 +397,15 @@ describe("registered DaiGua daily check-in", () => {
     })
     await expect(run()).resolves.toMatchObject({
       kind: "executed",
-      result: { status: "success", reward: { quota: 145000 } },
+      result: {
+        status: "success",
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.29" },
+          },
+        ],
+      },
     })
     expect(tempWindowTurnstileFetch).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
@@ -423,7 +439,15 @@ describe("registered DaiGua daily check-in", () => {
       )
     await expect(run()).resolves.toMatchObject({
       kind: "executed",
-      result: { status: "success", reward: { quota: 145000 } },
+      result: {
+        status: "success",
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.29" },
+          },
+        ],
+      },
     })
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
   })

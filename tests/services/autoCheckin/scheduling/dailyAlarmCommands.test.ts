@@ -71,7 +71,10 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
     )
     await expect(
       (autoCheckinScheduler as any).handleDailyAlarm(alarm),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      started: false,
+      ineligibleReason: "daily_run_in_flight",
+    })
     expect(runSpy).toHaveBeenCalledTimes(1)
     finish()
     await activeRun
@@ -83,6 +86,30 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
     )
     expect(runSpy).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
+  })
+
+  it("reschedules a restored same-day alarm after the daily batch already completed", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 0, 23, 9))
+    schedulerTestState.storedStatus = {
+      lastDailyRunDay: "2026-01-23",
+      dailyAlarmTargetDay: "2026-01-23",
+    }
+    const run = vi
+      .spyOn(autoCheckinScheduler, "runCheckins")
+      .mockResolvedValue({
+        persisted: true,
+      })
+    const reschedule = vi
+      .spyOn(autoCheckinScheduler, "scheduleNextRun")
+      .mockResolvedValue(undefined)
+    try {
+      await autoCheckinScheduler.debugTriggerDailyAlarmNow()
+      expect(run).not.toHaveBeenCalled()
+      expect(reschedule).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("treats stale daily alarms as no-ops and reschedules instead of running", async () => {
@@ -100,7 +127,10 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
         name: "autoCheckinDaily",
         scheduledTime: Date.now(),
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      started: false,
+      ineligibleReason: "daily_alarm_not_today",
+    })
 
     expect(runSpy).not.toHaveBeenCalled()
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
@@ -136,7 +166,10 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
         name: "autoCheckinDaily",
         scheduledTime: new Date(2026, 0, 22, 23, 30, 0).getTime(),
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      started: false,
+      ineligibleReason: "daily_alarm_not_today",
+    })
 
     expect(runSpy).not.toHaveBeenCalled()
     expect(scheduleSpy).toHaveBeenCalledTimes(1)

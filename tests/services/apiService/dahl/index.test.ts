@@ -809,10 +809,10 @@ describe("Dahl account contract", () => {
     )
     const account = getSiteTypeCapabilities(SITE_TYPES.DAHL).account!
     const pricing = await account.modelPricing!.fetchPricing(request)
-    expect(pricing.data[0]!.token_price_usd_per_million).toEqual({
-      input: 0.03,
-      output: 0.03,
-      cache_read: 0.03,
+    expect(pricing.data[0]!.token_price_usd_per_million).toBeUndefined()
+    expect(pricing.data[0]!.quotaPricing).toMatchObject({
+      unit: { id: "dahl:tokens" },
+      rates: { input: { amount: 1, per: 1 }, output: { amount: 1, per: 1 } },
     })
     expect(pricing.model_list_source?.kind).toBe("provider-catalog")
     const capability = account.keyResourceManagement!

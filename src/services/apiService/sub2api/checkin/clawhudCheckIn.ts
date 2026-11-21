@@ -1,4 +1,5 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
@@ -22,7 +23,7 @@ import {
   SIBLING_DTO_VERDICTS,
 } from "./siblingStatusContracts"
 
-const CLAWHUD_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
+export const CLAWHUD_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
 /** Upstream reason carried by the duplicate-mutation error envelope. */
 export const CLAWHUD_DAILY_CHECK_IN_ERROR_CODES = {
@@ -30,7 +31,7 @@ export const CLAWHUD_DAILY_CHECK_IN_ERROR_CODES = {
 } as const
 
 export const CLAWHUD_DAILY_CHECK_IN_RESULT_KINDS = {
-  Applied: "applied",
+  Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
 } as const
 
 /**

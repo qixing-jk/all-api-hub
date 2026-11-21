@@ -170,3 +170,18 @@ export function createAccountKeyScopeInventory({
     },
   }
 }
+
+/** Single-account inventories share the same name fallback; native scope IDs stay with each adapter. */
+export function accountKeyDefaultScopes(
+  scopeKey: string,
+  config: { account: { name?: string }; request: { baseUrl: string } },
+): readonly AccountKeyScope[] {
+  return [
+    {
+      scopeKey,
+      routeKey: scopeKey,
+      displayName: config.account.name?.trim() || config.request.baseUrl,
+      isDefault: true,
+    },
+  ]
+}

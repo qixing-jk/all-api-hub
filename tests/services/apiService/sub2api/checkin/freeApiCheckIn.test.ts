@@ -230,14 +230,19 @@ describe("FreeAPI check-in protocol", () => {
     })
   })
 
-  it("accepts a decimal string award from the same field", () => {
-    expect(
-      parseFreeApiDailyCheckInMutationResponse(response({ amount: "0.5" })),
-    ).toEqual({
-      kind: FREE_API_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-      data: { rewardAmount: 0.5 },
-    })
-  })
+  it.each(["0.5", "0.1234567890123456789", "0"])(
+    "preserves decimal string award %s",
+    (rewardAmount) => {
+      expect(
+        parseFreeApiDailyCheckInMutationResponse(
+          response({ amount: rewardAmount }),
+        ),
+      ).toEqual({
+        kind: FREE_API_DAILY_CHECK_IN_RESULT_KINDS.Applied,
+        data: { rewardAmount },
+      })
+    },
+  )
 
   it.each([
     {},

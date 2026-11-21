@@ -51,6 +51,59 @@ describe("relayForProvider", () => {
     i18n.addResourceBundle("en", "autoCheckin", autoCheckin, true, true)
   })
 
+  it("retains a confirmed native award when a later campaign fails without repeating either claim", async () => {
+    const campaign = {
+      name: "Daily",
+      start_date: "2026-10-01",
+      end_date: "2026-10-31",
+      makeups_used: 0,
+      makeup_limit: 0,
+      days: [
+        {
+          date: "2026-10-19",
+          can_claim: true,
+          claimed: false,
+          can_makeup: false,
+        },
+      ],
+    }
+    vi.mocked(fetchRelayForCheckInCampaigns).mockResolvedValueOnce([
+      { ...campaign, id: 1 },
+      { ...campaign, id: 2 },
+    ])
+    vi.mocked(claimRelayForCheckIn)
+      .mockResolvedValueOnce({
+        is_makeup: false,
+        reward_type: "quota",
+        quota_awarded: 1000000,
+      })
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+
+    const result = await relayForProvider.checkIn(mockAccount, {} as never)
+
+    expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+    expect(result.awards).toMatchObject([
+      {
+        asset: { kind: "currency", code: "USD" },
+        amount: {
+          status: "known",
+          value: "2",
+          source: {
+            adapter: "relayfor",
+            kind: "reported",
+            inputs: ["quota_awarded"],
+          },
+        },
+        scope: {
+          authority: "https://relayfor.xyz",
+          subject: { kind: "account", accountId: mockAccount.id },
+        },
+        fulfillment: "credited",
+      },
+    ])
+    expect(claimRelayForCheckIn).toHaveBeenCalledTimes(2)
+  })
+
   it.each([undefined, null])(
     "skips campaigns with absent days without attempting makeup: %j",
     async (days) => {
@@ -250,7 +303,13 @@ describe("relayForProvider", () => {
     const result = await relayForProvider.checkIn(mockAccount, {} as never)
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
-    expect(result.reward).toEqual({ quota: 50000 })
+    expect(result.awards).toHaveLength(1)
+    expect(result.awards?.[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "0.1" },
+      target: "wallet",
+    })
+    expect(result.reward).toBeUndefined()
     expect(claimRelayForCheckIn).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://relayfor.xyz" }),
       1,
@@ -345,7 +404,18 @@ describe("relayForProvider", () => {
       })
     const result = await relayForProvider.checkIn(mockAccount, {} as never)
     expect(claimRelayForCheckIn).toHaveBeenCalledTimes(2)
-    expect(result.reward).toEqual({ quota: 50000 })
+    expect(result.awards).toHaveLength(2)
+    expect(result.awards?.[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "0.1" },
+      target: "wallet",
+    })
+    expect(result.awards?.[1]).toMatchObject({
+      asset: { kind: "unknown" },
+      amount: { status: "unknown" },
+      target: "entitlement",
+    })
+    expect(result.reward).toBeUndefined()
     expect(result.rawMessage).toContain("Monthly gift")
   })
 
@@ -467,6 +537,14 @@ describe("relayForProvider", () => {
       expect(mutationLifecycle.responseReceived).toBe(false)
       expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
       expect(result.reward).toBeUndefined()
+      expect(result.awards).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { value: "0.1" },
+          target: "wallet",
+        },
+        { asset: { kind: "unknown" }, target: "entitlement" },
+      ])
       expect(result.rawMessage).toContain("1 of 2")
       expect(result.rawMessage).toContain("Monthly gift")
       expect(result.rawMessage).toContain("0.1 USD")

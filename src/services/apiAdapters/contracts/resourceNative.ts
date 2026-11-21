@@ -172,8 +172,7 @@ export type ResourceFieldIssue = {
 }
 
 export type ResourceValidationResult =
-  | { valid: true }
-  | { valid: false; issues: readonly ResourceFieldIssue[] }
+  { valid: true } | { valid: false; issues: readonly ResourceFieldIssue[] }
 
 export type ResourceFieldOption = {
   value: string
@@ -247,8 +246,24 @@ export type ResourceFailure = {
   fieldIssues?: readonly ResourceFieldIssue[]
 }
 
+export const NATIVE_RESOURCE_MUTATION_CERTAINTIES = {
+  Applied: "applied",
+  NotApplied: "not-applied",
+  PossiblyApplied: "possibly-applied",
+  PartiallyApplied: "partially-applied",
+} as const
+
 export type NativeResourceMutationResult<T, TFailure> =
-  | { certainty: "applied"; value: T }
-  | { certainty: "not-applied"; failure: TFailure }
-  | { certainty: "possibly-applied"; failure: TFailure }
-  | { certainty: "partially-applied"; failure: TFailure }
+  | { certainty: typeof NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied; value: T }
+  | {
+      certainty: typeof NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+      failure: TFailure
+    }
+  | {
+      certainty: typeof NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+      failure: TFailure
+    }
+  | {
+      certainty: typeof NATIVE_RESOURCE_MUTATION_CERTAINTIES.PartiallyApplied
+      failure: TFailure
+    }

@@ -20,7 +20,7 @@
     },
     "title": "Account breakdown"
   },
-  "description": "View daily balance and cashflow trends to track changes in account funds.",
+  "description": "See how your balances and allowances change over time.",
   "empty": {
     "description": "Enable Balance History and refresh an account to record the first snapshot.",
     "title": "No snapshots yet"
@@ -89,10 +89,20 @@
   },
   "metrics": {
     "balance": "Balance",
-    "estimatedIncome": "Estimated income",
+    "estimatedIncome": "Estimated net inflow",
     "income": "Income",
     "net": "Net change",
     "outcome": "Outcome"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "Groups",
+      "keys": "Keys",
+      "models": "Models",
+      "projects": "Projects",
+      "routes": "Routes"
+    },
+    "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {
     "kpis": {
@@ -118,8 +128,8 @@
     "enabledHint": "When disabled, no snapshots are recorded and scheduled capture is turned off.",
     "endOfDayCapture": "End-of-day capture",
     "endOfDayCaptureHint": "Best-effort daily capture near {{time}} (requires Alarms API).",
-    "estimatedTodayIncome": "Show estimated today income",
-    "estimatedTodayIncomeHint": "Uses balance history to estimate rewards that do not appear in site income logs. Unavailable when the previous-day baseline is missing.",
+    "estimatedTodayIncome": "Show estimated net inflow",
+    "estimatedTodayIncomeHint": "Estimate net inflow from comparable balances near the start of the day and settled usage over roughly the same period.",
     "retentionDays": "Retention (days)"
   },
   "summary": {
@@ -130,7 +140,7 @@
       "account": "Account",
       "cashflowCoverage": "Cashflow coverage",
       "endBalance": "End balance",
-      "estimatedIncomeTotal": "Estimated income total",
+      "estimatedIncomeTotal": "Estimated net inflow",
       "incomeTotal": "Income total",
       "outcomeTotal": "Outcome total",
       "rangeNet": "Range net",
@@ -153,7 +163,7 @@
       "scope": "View"
     },
     "emptyMetric": "No {{metric}} data in this range.",
-    "gapBridge": "Dashed segments indicate missing days.",
+    "gapBridge": "No records",
     "scopes": {
       "accounts": "By account",
       "total": "Total"

@@ -139,6 +139,17 @@
     "consumption": "今日消耗",
     "income": "今日收入"
   },
+  "financial": {
+    "derived": "根據站點欄位推算",
+    "expires": "到期：{{date}}",
+    "lastKnown": "最後已知值",
+    "manual": "手填餘額",
+    "olderRecord": "舊版儲存的記錄",
+    "reported": "站點回報",
+    "scopeUnknown": "使用範圍未核實",
+    "technicalDetails": "技術資訊（偵錯）",
+    "validityUnknown": "有效期未核實"
+  },
   "healthStatus": {
     "apiError": "API錯誤",
     "error": "錯誤",
@@ -317,7 +328,7 @@
     "prompt": "提示",
     "scopedAllowances": "群組和套餐額度可能有使用限制。原生額度不計入總餘額、餘額歷史和收入估算。",
     "subscriptionRemainingCount": "訂閱剩餘次數",
-    "subscriptionRemainingTokens": "剩餘 Token 額度（帳戶池 + 金鑰）；美元餘額是按官方價格換算的等值，包含免費額度。",
+    "subscriptionRemainingTokens": "剩餘 Token",
     "subscriptionState": {
       "active": "訂閱生效中",
       "expired": "訂閱已過期",

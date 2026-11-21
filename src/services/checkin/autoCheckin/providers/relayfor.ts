@@ -5,14 +5,27 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
-import { formatRelayForBenefit } from "~/services/apiAdapters/relayfor/benefits"
+import { CURRENCIES } from "~/constants/money"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
+import {
+  formatRelayForBenefit,
+  relayForBenefitAward,
+} from "~/services/apiAdapters/relayfor/benefits"
 import {
   claimRelayForCheckIn,
   fetchRelayForCheckInCampaigns,
 } from "~/services/apiService/relayfor"
+import { RELAYFOR_ENDPOINTS } from "~/services/apiService/relayfor/constants"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import type {
   AnyrouterCheckInParams,
   AutoCheckinProvider,
@@ -22,7 +35,6 @@ import type {
 } from "~/services/checkin/autoCheckin/providers/contracts"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
-  readQuotaReward,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
@@ -162,6 +174,7 @@ export const relayForProvider: AutoCheckinProvider = {
         }
       }
       const names: string[] = []
+      const awards: ConfirmedAward[] = []
       let quota = 0
       let hasQuota = false
       for (const [index, { campaign, day }] of targets.entries()) {
@@ -182,6 +195,24 @@ export const relayForProvider: AutoCheckinProvider = {
             campaign.id,
             day.date,
           )
+          if (claimResult.reward_type === "quota") {
+            awards.push(
+              accountAward(siteAccount, {
+                id: "quota",
+                operation: RELAYFOR_ENDPOINTS.checkinClaim(campaign.id),
+                field: "quota_awarded",
+                asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+                value: claimResult.quota_awarded,
+                nativeUnitsPerAsset: 500000,
+                target: AWARD_TARGETS.Wallet,
+                fulfillment: AWARD_FULFILLMENT.Credited,
+                event: {
+                  namespace: "relayfor-checkin-campaign",
+                  id: `${campaign.id}:${day.date}`,
+                },
+              }),
+            )
+          }
           if (
             typeof claimResult.quota_awarded === "number" &&
             Number.isFinite(claimResult.quota_awarded) &&
@@ -196,6 +227,26 @@ export const relayForProvider: AutoCheckinProvider = {
               : []),
             ...(claimResult.subscription ? [claimResult.subscription] : []),
           ]
+          for (const [benefitIndex, benefit] of benefits.entries()) {
+            const isSubscription =
+              benefitIndex === benefits.length - 1 && !!claimResult.subscription
+            awards.push(
+              relayForBenefitAward(
+                isSubscription
+                  ? { type: "subscription", subscription: benefit }
+                  : benefit,
+                {
+                  scope: accountBalanceScope(request),
+                  operation: RELAYFOR_ENDPOINTS.checkinClaim(campaign.id),
+                  field: isSubscription
+                    ? "subscription"
+                    : `benefits[${benefitIndex}]`,
+                  id: `${campaign.id}:${day.date}:${isSubscription ? "subscription" : `benefit:${benefitIndex}`}`,
+                  observedAt: Date.now(),
+                },
+              ),
+            )
+          }
           names.push(...benefits.map(formatRelayForBenefit).filter(Boolean))
         } catch (error) {
           const failure = resolveProviderErrorResult({
@@ -215,6 +266,7 @@ export const relayForProvider: AutoCheckinProvider = {
           ]
           return {
             ...failure,
+            awards,
             rawMessage: [
               t("autoCheckin:providerFallback.relayForPartial", {
                 completed: index,
@@ -234,9 +286,9 @@ export const relayForProvider: AutoCheckinProvider = {
       }
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
+        awards,
         messageKey:
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        reward: hasQuota ? readQuotaReward(quota) : undefined,
         ...(names.length
           ? {
               rawMessage: t("autoCheckin:providerFallback.relayForBenefits", {

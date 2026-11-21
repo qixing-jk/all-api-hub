@@ -6,6 +6,7 @@ import {
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
+import { preserveCheckinAwards } from "~/services/checkin/autoCheckin/awards"
 import {
   getSelectedCheckInStatus,
   resolveSelectedCheckInMethod,
@@ -264,12 +265,6 @@ export async function verifyAccountStatus(
     let updatedResult: CheckinAccountResult | undefined
 
     if (isCheckedInToday) {
-      const sameDayReward =
-        currentResult &&
-        isSuccessfulCheckinStatus(currentResult.status) &&
-        formatLocalDayKey(new Date(currentResult.timestamp)) === today
-          ? currentResult.reward
-          : undefined
       updatedResult = {
         accountId: account.id,
         accountName,
@@ -278,7 +273,6 @@ export async function verifyAccountStatus(
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
         methodId: selectedMethodId ?? currentResult?.methodId,
-        ...(sameDayReward !== undefined ? { reward: sameDayReward } : {}),
         timestamp: now,
       }
     } else if (isNotCheckedInToday) {
@@ -312,6 +306,7 @@ export async function verifyAccountStatus(
     if (!updatedResult) {
       return { patch: null, result: false }
     }
+    updatedResult = preserveCheckinAwards(currentResult, updatedResult)
 
     const perAccount: Record<string, CheckinAccountResult> = {
       ...(current.perAccount ?? {}),

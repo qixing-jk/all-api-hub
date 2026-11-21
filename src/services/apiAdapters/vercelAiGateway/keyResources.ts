@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
@@ -5,11 +6,24 @@ import {
   VERCEL_AI_GATEWAY_API_BASE_URL,
   VERCEL_AI_GATEWAY_DISPLAY_NAME,
 } from "~/services/accountSiteDefinitions/identifiers"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failures,
@@ -150,7 +164,7 @@ const lastUsedFact = (key: VercelAiGatewayKey) =>
     ? [
         {
           fieldId: "accessed_time",
-          kind: "last-used" as const,
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
           timestampMs: key.activeAt,
         },
       ]
@@ -159,8 +173,10 @@ const lastUsedFact = (key: VercelAiGatewayKey) =>
 const facts = (
   key: VercelAiGatewayKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
-  const effectiveBudget = key.budget ?? key.defaultBudget
+  const effectiveBudget =
+    key.budget === undefined ? undefined : (key.budget ?? key.defaultBudget)
   return {
     ref,
     displayName: key.name || `Key ${key.partialKey}`,
@@ -178,33 +194,52 @@ const facts = (
     displayFacts: [
       ...lastUsedFact(key),
       keyExpiryDisplayFact(vercelKeyFields.ExpiresAt, key.expiresAt ?? 0),
-      {
+      keyBudgetFact(ref, context, {
         fieldId: "spend_budget",
-        kind: "spend-budget",
-        source:
+        operation: "key-budget",
+        scope: {
+          organizationId: key.teamId,
+          projects: key.projectId
+            ? { kind: SCOPE_SELECTION_KINDS.Restricted, ids: [key.projectId] }
+            : { kind: SCOPE_SELECTION_KINDS.Unknown },
+          models: { kind: SCOPE_SELECTION_KINDS.All },
+        },
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState:
           key.budget === undefined
-            ? "unavailable"
+            ? BUDGET_LIMIT_STATES.Unknown
             : key.budget
-              ? "custom"
+              ? BUDGET_LIMIT_STATES.Finite
               : key.defaultBudget
-                ? "inherited"
-                : "none",
-        ...(effectiveBudget
-          ? {
-              limitUsd: effectiveBudget.limitAmount,
-              period: effectiveBudget.refreshPeriod,
-            }
-          : {}),
-        ...(key.budget
-          ? { usedUsd: key.budget.currentSpend, active: key.budget.active }
-          : {}),
-      },
+                ? BUDGET_LIMIT_STATES.Inherited
+                : BUDGET_LIMIT_STATES.Unconfigured,
+        limit: effectiveBudget?.limitAmount,
+        used: key.budget?.currentSpend,
+        enabled: effectiveBudget?.active,
+        includesByok: effectiveBudget?.includeByokInQuota,
+        window:
+          effectiveBudget?.refreshPeriod === "daily"
+            ? { kind: BUDGET_WINDOW_KINDS.Periodic, period: BUDGET_PERIODS.Day }
+            : effectiveBudget?.refreshPeriod === "weekly"
+              ? {
+                  kind: BUDGET_WINDOW_KINDS.Periodic,
+                  period: BUDGET_PERIODS.Week,
+                }
+              : effectiveBudget?.refreshPeriod === "monthly"
+                ? {
+                    kind: BUDGET_WINDOW_KINDS.Periodic,
+                    period: BUDGET_PERIODS.Month,
+                  }
+                : effectiveBudget?.refreshPeriod === "none"
+                  ? { kind: BUDGET_WINDOW_KINDS.Lifetime }
+                  : { kind: BUDGET_WINDOW_KINDS.Unknown },
+      }),
       ...(key.spendAttribution
         ? [
             {
               fieldId: vercelKeyFields.SpendAttribution,
               // Spend attribution is billing metadata, not a model-access group.
-              kind: "attribution" as const,
+              kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution,
               value: key.spendAttribution,
             },
           ]
@@ -268,7 +303,7 @@ export const vercelAiGatewayKeyResources = defineAccountKeyResourceCapability({
   // A created key's secret is shown once; later reads only expose the suffix.
   runtimeKey: {
     resolve: async () => ({
-      kind: "unavailable",
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: { code: failures.Unavailable },
     }),
   },

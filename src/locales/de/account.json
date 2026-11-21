@@ -150,6 +150,17 @@
     "consumption": "Heutiger Verbrauch",
     "income": "Heutiges Einkommen"
   },
+  "financial": {
+    "derived": "Aus gemeldeten Feldern berechnet",
+    "expires": "Läuft ab: {{date}}",
+    "lastKnown": "Letzter bekannter Wert",
+    "manual": "Manueller Kontostand",
+    "olderRecord": "Von einer älteren Version aufgezeichnet",
+    "reported": "Vom Anbieter gemeldet",
+    "scopeUnknown": "Nutzungsumfang ungeprüft",
+    "technicalDetails": "Technische Details (Debug)",
+    "validityUnknown": "Gültigkeit ungeprüft"
+  },
   "healthStatus": {
     "apiError": "API-Fehler",
     "error": "Fehler",
@@ -341,7 +352,7 @@
     "prompt": "Eingabe",
     "scopedAllowances": "Gruppen- und Abonnementkontingente können Nutzungsbeschränkungen haben. Native Kontingente werden nicht in Gesamtsaldo, Saldoverlauf und Einkommensschätzungen einbezogen.",
     "subscriptionRemainingCount": "Verbleibende Abonnementanfragen",
-    "subscriptionRemainingTokens": "Verbleibende Tokens (Pool und Schlüssel); der Dollarbetrag entspricht dem veröffentlichten Preis, einschließlich kostenloser Tokens.",
+    "subscriptionRemainingTokens": "Verbleibende Tokens",
     "subscriptionState": {
       "active": "Abonnement aktiv",
       "expired": "Abonnement abgelaufen",

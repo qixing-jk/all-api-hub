@@ -10,6 +10,22 @@
       "retryAccount": "Thử lại",
       "verifyStatus": "Xác minh trạng thái"
     },
+    "awards": {
+      "amountUnknown": "Chưa rõ số lượng · {{asset}}",
+      "credited": "Đã ghi có",
+      "details": "Chi tiết phần thưởng",
+      "entitlement": "Phần thưởng quyền sử dụng",
+      "exchangedFrom": "Quy đổi từ {{event}}",
+      "fulfillmentUnknown": "Chưa rõ trạng thái nhận",
+      "noExpiry": "Không hết hạn",
+      "observedAt": "Ghi nhận lúc {{date}}",
+      "pendingRedemption": "Chờ quy đổi",
+      "redeemed": "Đã quy đổi",
+      "targetUnknown": "Chưa rõ nơi nhận phần thưởng",
+      "title": "Phần thưởng đã xác nhận",
+      "unknownAsset": "Tài sản chưa rõ",
+      "wallet": "Phần thưởng vào ví"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "Phát triển: Giải thích xem \"Kích hoạt sớm điểm danh hôm nay khi mở giao diện\" có đáp ứng điều kiện không",
       "resetLastDailyRunDay": "Phát triển: Xóa dấu \"Đã thực hiện điểm danh hàng ngày hôm nay\"",
@@ -76,9 +92,7 @@
       "summary": "Hiển thị {{start}}–{{end}} / {{total}}"
     },
     "refresh": "Làm mới",
-    "reward": {
-      "title": "Phần thưởng của lần điểm danh này"
-    },
+    "retryStatusLoad": "Tải lại kết quả",
     "runNow": "Thực hiện ngay",
     "statistics": {
       "result": "Kết quả thực hiện"
@@ -90,6 +104,7 @@
       "success": "Điểm danh trong lần này",
       "uncertain": "Đang chờ xác nhận"
     },
+    "statusLoadError": "Không thể tải kết quả điểm danh. Hãy thử lại; kết quả đang hiển thị là từ lần tải thành công gần nhất.",
     "table": {
       "accountName": "Tên tài khoản",
       "actions": "Thao tác",

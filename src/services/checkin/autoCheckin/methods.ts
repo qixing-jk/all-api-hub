@@ -73,6 +73,7 @@ import type {
   CheckInMethodStatus,
   CheckInMethodUnknownReason,
 } from "~/types/checkIn"
+import { safeRandomUUID } from "~/utils/core/identifier"
 
 /**
  * A provider outcome plus the retry decision the policy derived from it. The
@@ -94,6 +95,8 @@ type ExecuteSelectedCheckInResult =
        * `confirmation.observedAt` determines freshness, including for waiters.
        */
       completedAt?: number
+      /** Identifies this local execution independently of upstream award events. */
+      executionReceiptId?: string
       /** A waiter observed this attempt without executing another mutation. */
       reused?: true
     }
@@ -725,11 +728,18 @@ export async function executeSelectedCheckIn(
     })
   }
   const execute = (next: ExecuteSelectedCheckInInput) => {
+    const executionReceiptId = safeRandomUUID("checkin-execution")
     const attempt = {
       input: next,
-      promise: executeSelectedCheckInOnce(next).catch((error) => {
-        throw new CheckInExecutionError(error)
-      }),
+      promise: executeSelectedCheckInOnce(next)
+        .then((result) =>
+          result.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed
+            ? { ...result, executionReceiptId }
+            : result,
+        )
+        .catch((error) => {
+          throw new CheckInExecutionError(error)
+        }),
     }
     group.attempt = attempt
     return attempt.promise

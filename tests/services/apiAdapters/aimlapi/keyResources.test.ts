@@ -7,6 +7,11 @@ import {
   AIMLAPI_KEY_EDITOR_FIELDS as fields,
 } from "~/services/apiAdapters/aimlapi/keyResourceFields"
 import { aimlApiKeyResources } from "~/services/apiAdapters/aimlapi/keyResources"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_FINANCIAL_FACT_KINDS,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { AIMLAPI_KEY_LIMIT_PERIODS } from "~/services/apiService/aimlapi/constants"
 import {
   AIMLAPI_KEY_PREFIX,
@@ -94,7 +99,12 @@ describe("AI/ML API key resources", () => {
       status: "expired",
       runtimeKey: { modelAccess: { allowedModelIds: null } },
       displayFacts: expect.arrayContaining([
-        expect.objectContaining({ kind: "money", amountUsd: 2 }),
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            used: expect.objectContaining({ status: "known", value: "2" }),
+          }),
+        }),
         expect.objectContaining({ fieldId: "tools", value: ["web/search"] }),
       ]),
     })
@@ -134,11 +144,16 @@ describe("AI/ML API key resources", () => {
       const collection = await session.openCollection(scope.scopeKey)
       const page = await collection.list()
       const budget = page.items[0]!.displayFacts?.find(
-        (fact) => fact.kind === "budget",
+        (fact) =>
+          fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint,
       )
-      expect(budget?.kind === "budget" ? budget.nextResetAt : null).toBe(
-        expected,
-      )
+      expect(
+        budget?.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint &&
+          budget.budget.window.kind === "periodic" &&
+          budget.budget.window.resetsAt !== undefined
+          ? new Date(budget.budget.window.resetsAt).toISOString()
+          : undefined,
+      ).toBe(expected)
     },
   )
 
@@ -273,13 +288,20 @@ describe("AI/ML API key resources", () => {
     expect(facts.displayFacts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: "budget",
-          window: "month",
-          limitUsd: 9,
-          usedUsd: 1,
-          remainingUsd: 8,
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            limit: expect.objectContaining({ status: "known", value: "9" }),
+            used: expect.objectContaining({ status: "known", value: "1" }),
+            remaining: expect.objectContaining({ status: "known", value: "8" }),
+            window: expect.objectContaining({
+              kind: "periodic",
+              period: "month",
+            }),
+          }),
         }),
-        expect.objectContaining({ kind: "expiry" }),
+        expect.objectContaining({
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+        }),
       ]),
     )
   })
@@ -353,19 +375,29 @@ describe("AI/ML API key resources", () => {
       const detail = await collection.get(listed.ref)
       for (const item of [listed, detail]) {
         const facts = item.displayFacts ?? []
-        expect(facts).not.toEqual(
-          expect.arrayContaining([expect.objectContaining({ kind: "budget" })]),
+        const fact = facts.find(
+          (fact) =>
+            fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint,
         )
-        const limit = facts.find((fact) => fact.kind === "spend-budget")
-        expect(limit).toMatchObject({ limitUsd: 9, period: "monthly" })
-        expect(limit && "usedUsd" in limit ? limit.usedUsd : undefined).toBe(
-          used,
+        expect(fact).toMatchObject({
+          budget: {
+            limit: { status: "known", value: "9" },
+            window: { kind: "periodic", period: "month" },
+            reserved: { status: "unknown" },
+          },
+        })
+        if (fact?.kind !== ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint)
+          throw new Error("missing budget")
+        expect(fact.budget.used).toMatchObject(
+          used === undefined
+            ? { status: "unknown" }
+            : { status: "known", value: String(used) },
         )
-        const balance = facts.find(
-          (fact) => fact.kind === "money" && fact.role === "remaining",
+        expect(fact.budget.remaining).toMatchObject(
+          remaining === undefined
+            ? { status: "unknown" }
+            : { status: "known", value: String(remaining) },
         )
-        if (remaining === undefined) expect(balance).toBeUndefined()
-        else expect(balance).toMatchObject({ amountUsd: remaining })
       }
     },
   )
@@ -391,9 +423,17 @@ describe("AI/ML API key resources", () => {
       const page = await collection.list()
       expect(page.items[0]!.displayFacts).toContainEqual(
         expect.objectContaining({
-          kind: "budget",
-          usedUsd: counters.spent_usd,
-          remainingUsd: counters.remaining_usd,
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            used: expect.objectContaining({
+              status: "known",
+              value: String(counters.spent_usd),
+            }),
+            remaining: expect.objectContaining({
+              status: "known",
+              value: String(counters.remaining_usd),
+            }),
+          }),
         }),
       )
     },
@@ -435,7 +475,12 @@ describe("AI/ML API key resources", () => {
       const collection = await session.openCollection(scope.scopeKey)
       const page = await collection.list()
       expect(page.items[0]!.displayFacts).toContainEqual(
-        expect.objectContaining({ kind: "budget", nextResetAt: next }),
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            window: expect.objectContaining({ resetsAt: Date.parse(next) }),
+          }),
+        }),
       )
     },
   )
@@ -500,10 +545,21 @@ describe("AI/ML API key resources", () => {
       const collection = await session.openCollection(scope.scopeKey)
       const page = await collection.list()
       const fact = page.items[0]!.displayFacts?.find(
-        (item) => item.kind === "spend-budget",
+        (item) =>
+          item.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint,
       )
-      expect(fact).toMatchObject({ period, limitUsd: 9 })
-      expect(fact).not.toHaveProperty("usedUsd")
+      expect(fact).toMatchObject({
+        budget: {
+          limit: { status: "known", value: "9" },
+          used: { status: "unknown" },
+          window:
+            period === "daily"
+              ? { kind: "periodic", period: "day" }
+              : period === "weekly"
+                ? { kind: "periodic", period: "week" }
+                : { kind: "lifetime" },
+        },
+      })
     },
   )
 
@@ -586,7 +642,7 @@ describe("AI/ML API key resources", () => {
     ).rejects.toMatchObject({ failure: { code: "upstream_rejected" } })
   })
 
-  it("keeps keys without a limit unlimited and shows no budget fact", async () => {
+  it("keeps an unconfigured key budget distinct from finite and unknown budgets", async () => {
     server.use(
       http.get(`${origin}/v1/keys`, () =>
         HttpResponse.json({
@@ -600,12 +656,23 @@ describe("AI/ML API key resources", () => {
     const collection = await session.openCollection(scope.scopeKey)
     const page = await collection.list()
     const facts = page.items[0]!
-    expect(facts.displayFacts?.some((fact) => fact.kind === "budget")).toBe(
-      false,
+    expect(facts.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "unconfigured",
+          limit: expect.objectContaining({ status: "unknown" }),
+        }),
+      }),
     )
     expect(facts.displayFacts).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ kind: "money", amountUsd: 3 }),
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            used: expect.objectContaining({ status: "known", value: "3" }),
+          }),
+        }),
       ]),
     )
   })
@@ -630,13 +697,15 @@ describe("AI/ML API key resources", () => {
     expect(page.items[0]?.displayFacts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: "spend-budget",
-          period: "none",
-          limitUsd: 9,
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            limit: expect.objectContaining({ status: "known", value: "9" }),
+            window: expect.objectContaining({ kind: "lifetime" }),
+          }),
         }),
         expect.objectContaining({
-          kind: "restriction",
-          role: "tools",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Tools,
           value: ["search/web"],
         }),
       ]),

@@ -3,6 +3,10 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import {
+  mergeConfirmedAwards,
+  type ConfirmedAward,
+} from "~/services/amounts/awards"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type {
   AutoCheckinProviderOutcome,
@@ -34,6 +38,7 @@ type ConfirmedCheckInResult = Extract<
 export function createConfirmedCheckInResult(input: {
   status: ConfirmedCheckInResult["status"]
   reward?: CheckInReward
+  awards?: ConfirmedAward[]
   data?: unknown
 }): ConfirmedCheckInResult {
   return {
@@ -43,6 +48,7 @@ export function createConfirmedCheckInResult(input: {
         ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
     ...(input.reward ? { reward: input.reward } : {}),
+    ...(input.awards?.length ? { awards: input.awards } : {}),
     data: input.data,
   }
 }
@@ -58,6 +64,7 @@ export function reconcileCheckInResult<
   result: T
   status: CheckInMethodStatus | undefined
   reward?: CheckInReward
+  awards?: ConfirmedAward[]
 }): T | AutoCheckinProviderOutcome {
   const { result, status } = input
   const uncertain = result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
@@ -91,6 +98,7 @@ export function reconcileCheckInResult<
           : CHECKIN_RESULT_STATUS.SUCCESS,
         data: result.data,
         reward: input.reward,
+        awards: mergeConfirmedAwards(result.awards ?? [], input.awards ?? []),
       }),
       reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
     }

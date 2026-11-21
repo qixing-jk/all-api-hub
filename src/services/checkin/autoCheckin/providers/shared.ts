@@ -9,11 +9,20 @@ import {
   BROWSER_LOGIN_FAILURE_REASONS,
   BROWSER_LOGIN_STATUS,
 } from "~/constants/browserLogin"
+import { CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
+import { CURRENCIES } from "~/constants/money"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
 import type { AccountLoginResult } from "~/services/apiAdapters/contracts/accountLogin"
 import {
   API_ERROR_CODES,
   hasUnattributedMessage,
 } from "~/services/apiTransport/errors"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
@@ -25,12 +34,44 @@ import {
   CHECKIN_RESULT_STATUS,
   getAutoCheckinSkipReasonTranslationKey,
   type AutoCheckinSkipReason,
-  type CheckInReward,
 } from "~/types/autoCheckin"
 import {
   TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
   type TempWindowCheckinPageAction,
 } from "~/types/tempWindowFetch"
+
+/** Require account identity and an access token only for token authentication. */
+export function getAccountIdentityCheckinReadiness(account: SiteAccount) {
+  if (!account.account_info?.id) {
+    return {
+      ready: false,
+      reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
+    } as const
+  }
+
+  const authType = getEffectiveAuthType(account)
+
+  if (authType === AuthTypeEnum.AccessToken) {
+    return account.account_info?.access_token
+      ? ({ ready: true } as const)
+      : ({
+          ready: false,
+          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
+        } as const)
+  }
+
+  return { ready: true } as const
+}
+
+/** Require Cookie authentication and a saved account identity for Cookie-only check-in. */
+export function getCookieAccountCheckinReadiness(account: SiteAccount) {
+  return account.authType === AuthTypeEnum.Cookie && !!account.account_info.id
+    ? ({ ready: true } as const)
+    : ({
+        ready: false,
+        reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
+      } as const)
+}
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   alreadyCheckedToday: "autoCheckin:providerFallback.alreadyCheckedToday",
@@ -105,33 +146,30 @@ export function normalizeCheckinMessage(message: unknown): string {
   return typeof message === "string" ? message : ""
 }
 
-const DECIMAL_AMOUNT_PATTERN = /^\d+(?:\.\d+)?$/
-
-/**
- * Read a strictly positive decimal amount from a backend field.
- *
- * Deployments in these families report the same field as a number or as a
- * decimal string, so both shapes are accepted. Anything else — missing, empty,
- * zero, negative, signed, non-decimal, or non-finite — yields `undefined`: a
- * zero or malformed award carries no information and must not become a shown
- * "0" amount.
- */
-export function readPositiveDecimalAmount(value: unknown): number | undefined {
-  const parsed =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && DECIMAL_AMOUNT_PATTERN.test(value.trim())
-        ? Number(value.trim())
-        : Number.NaN
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
-}
-
-/**
- * Read an award a deployment already reports in the internal quota unit.
- */
-export function readQuotaReward(value: unknown): CheckInReward | undefined {
-  const quota = readPositiveDecimalAmount(value)
-  return quota === undefined ? undefined : { quota }
+/** Known 500,000/USD protocol grants normalize once at the adapter boundary. */
+export function readQuotaAwards(
+  account: SiteAccount,
+  value: unknown,
+  source: {
+    operation: string
+    field: string
+    event?: ConfirmedAward["event"]
+    id?: string
+  },
+) {
+  return value === undefined
+    ? undefined
+    : [
+        accountAward(account, {
+          id: source.id ?? source.field,
+          ...source,
+          value,
+          nativeUnitsPerAsset: 500000,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          target: AWARD_TARGETS.Wallet,
+          fulfillment: AWARD_FULFILLMENT.Credited,
+        }),
+      ]
 }
 
 /**

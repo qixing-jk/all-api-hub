@@ -1,3 +1,5 @@
+import { CURRENCIES } from "~/constants/money"
+
 // Install shared mocks before loading scheduler dependencies.
 import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
@@ -10,6 +12,17 @@ import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { NON_REPEAT_SAFE_CHECKIN_METHOD_IDS } from "~/services/checkin/autoCheckin/providers/registry"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
@@ -42,6 +55,155 @@ describe("execution/statusVerification", () => {
     site_type: SITE_TYPES.NEW_API,
     checkIn: runnableCheckIn(),
   } as any
+
+  it.each([
+    {
+      status: "failed",
+      checked: true,
+      sameDay: true,
+      sameMethod: true,
+      keep: true,
+    },
+    {
+      status: "uncertain",
+      checked: false,
+      sameDay: true,
+      sameMethod: true,
+      keep: true,
+    },
+    {
+      status: "failed",
+      checked: false,
+      sameDay: true,
+      sameMethod: true,
+      keep: true,
+    },
+    {
+      status: "uncertain",
+      checked: true,
+      sameDay: true,
+      sameMethod: true,
+      keep: true,
+    },
+    {
+      status: "failed",
+      checked: true,
+      sameDay: false,
+      sameMethod: true,
+      keep: false,
+    },
+    {
+      status: "failed",
+      checked: true,
+      sameDay: true,
+      sameMethod: false,
+      keep: false,
+    },
+  ])(
+    "keeps confirmed partial awards across read-only verification within their run identity: %j",
+    async ({ status, checked, sameDay, sameMethod, keep }) => {
+      const account = {
+        ...verificationAccount,
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+      }
+      const timestamp = sameDay
+        ? Date.now() - 1000
+        : Date.now() - 48 * 60 * 60 * 1000
+      const awards: ConfirmedAward[] = [
+        {
+          id: "partial-grant",
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          amount: {
+            status: OBSERVATION_STATUSES.Known,
+            value: "2",
+            observedAt: timestamp,
+            source: {
+              adapter: "campaigns",
+              operation: "claim",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          },
+          scope: {
+            subject: {
+              kind: FINANCIAL_SUBJECT_KINDS.Account,
+              accountId: account.id,
+            },
+            authority: "https://example.test",
+            models: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            groups: { kind: SCOPE_SELECTION_KINDS.Unknown },
+          },
+          validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+          target: AWARD_TARGETS.Wallet,
+          fulfillment: AWARD_FULFILLMENT.Credited,
+        },
+      ]
+      const previous = {
+        accountId: account.id,
+        accountName: "Verify Account",
+        status,
+        timestamp,
+        awards,
+        executionReceiptId: "partial-receipt",
+        awardExecutionReceiptIds: ["partial-receipt"],
+        methodId: sameMethod
+          ? AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+          : AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+      }
+      let storedStatus: any = {
+        perAccount: { [account.id]: previous },
+        accountsSnapshot: [{ accountId: account.id, lastResult: previous }],
+      }
+      mockedAutoCheckinStorage.getStatus.mockImplementation(
+        async () => storedStatus,
+      )
+      mockedAutoCheckinStorage.updateStatus.mockImplementation(
+        async (updater: any) => {
+          const applied = updater(storedStatus)
+          if (applied.patch)
+            storedStatus = { ...storedStatus, ...applied.patch }
+          return { ok: true, result: applied.result ?? null }
+        },
+      )
+      mockedAccountStorage.getAccountById.mockResolvedValue(account)
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+        account,
+      )
+      mockedRefreshSelectedStatus.mockImplementation(
+        async ({ onOutcome, config }: any) => {
+          onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+          return config
+        },
+      )
+      mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        today: checked
+          ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+          : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        observedAt: Date.now(),
+      })
+      await expect(
+        autoCheckinScheduler.verifyAccountStatus(account.id),
+      ).resolves.toMatchObject({
+        outcome: "verified",
+        verifiedStatus: checked ? "checked" : "not_checked",
+      })
+      const updated = await autoCheckinStorage.getStatus()
+      expect(updated?.perAccount?.[account.id]?.awards).toEqual(
+        keep ? awards : undefined,
+      )
+      expect(updated?.accountsSnapshot?.[0]?.lastResult?.awards).toEqual(
+        keep ? awards : undefined,
+      )
+      expect(
+        updated?.perAccount?.[account.id]?.awardExecutionReceiptIds,
+      ).toEqual(keep ? ["partial-receipt"] : undefined)
+      expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
+    },
+  )
   it("verifies status before persisting the selected method", async () => {
     mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
     mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
@@ -143,35 +305,30 @@ describe("execution/statusVerification", () => {
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       sameDay: true,
       checked: true,
-      keepsReward: true,
     },
     {
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
       sameDay: true,
       checked: true,
-      keepsReward: true,
     },
     {
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       sameDay: false,
       checked: true,
-      keepsReward: false,
     },
     {
       status: CHECKIN_RESULT_STATUS.UNCERTAIN,
       sameDay: true,
       checked: true,
-      keepsReward: false,
     },
     {
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       sameDay: true,
       checked: false,
-      keepsReward: false,
     },
   ])(
-    "retains a reward only after confirming a same-day successful result: %j",
-    async ({ status, sameDay, checked, keepsReward }) => {
+    "retains the original legacy award observation across same-day verification: %j",
+    async ({ status, sameDay, checked }) => {
       const now = Date.now()
       let storedStatus: any = {
         perAccount: {
@@ -180,7 +337,7 @@ describe("execution/statusVerification", () => {
             accountName: "Verify Account",
             status,
             reward: { quota: 250_000 },
-            timestamp: sameDay ? now : now - 48 * 60 * 60 * 1000,
+            timestamp: sameDay ? now - 1000 : now - 48 * 60 * 60 * 1000,
           },
         },
       }
@@ -226,9 +383,20 @@ describe("execution/statusVerification", () => {
         verifiedStatus: checked ? "checked" : "not_checked",
       })
       const updated = await autoCheckinStorage.getStatus()
-      expect(updated?.perAccount?.[verificationAccount.id]?.reward).toEqual(
-        keepsReward ? { quota: 250_000 } : undefined,
-      )
+      const result = updated?.perAccount?.[verificationAccount.id]
+      expect(result?.reward).toBeUndefined()
+      if (sameDay)
+        expect(result?.awards).toMatchObject([
+          {
+            asset: { kind: "quota", id: "legacy:checkin:quota" },
+            amount: {
+              value: "250000",
+              observedAt: now - 1000,
+              source: { kind: "legacy" },
+            },
+          },
+        ])
+      else expect(result?.awards).toBeUndefined()
     },
   )
 

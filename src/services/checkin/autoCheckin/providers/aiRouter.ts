@@ -6,6 +6,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import {
+  AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
   AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS,
   AI_ROUTER_STATUS_OUTCOMES,
   performAiRouterDailyCheckIn,
@@ -31,7 +32,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -148,7 +149,14 @@ export const aiRouterProvider: AutoCheckinProvider = {
               status: CHECKIN_RESULT_STATUS.SUCCESS,
               messageKey:
                 AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-              reward: readUsdReward(result.data.rewardAmount),
+              awards: readUsdAwards(
+                account as SiteAccount,
+                result.data.rewardAmount,
+                {
+                  operation: AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
+                  field: "reward_amount",
+                },
+              ),
               data: { rewardAmount: result.data.rewardAmount },
             },
             { day: result.data.checkinDate },

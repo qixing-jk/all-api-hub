@@ -3,8 +3,9 @@
 ## Core principle
 
 Visual regression evidence must be legible, reliable, and immediately reviewable by developers.
-Raw full-page viewports shrink fine-grained UI details into illegible blur; micro-cropping strips spatial context; arbitrary sleeps and uncontrolled animations produce flaky, blank, or unstable captures.
-Capture the **focused component with its immediate surrounding context**, stabilize DOM state and animations with explicit waits, and stitch Before and After into **side-by-side composite views** with clear status badges.
+Capture the complete related panel or window and readable focused views of changed controls and details. Micro-cropping loses layout context; shrinking a whole-page capture loses detail. Keep both scopes at a readable scale, stabilize DOM state and animations with explicit waits, and stitch matching Before and After views into labelled comparisons.
+
+For branch-wide or multi-turn work, use the [maintained reviewer entry point](../../../../docs/agents/task-acceptance.md#maintain-one-reviewer-entry-point). Update that report around the fixed baseline and final product areas; keep per-run files below it as evidence. Generated images and manual visual acceptance are separate statuses.
 
 ## Result presentation and comparison
 
@@ -39,10 +40,12 @@ Select the capture boundary that maximizes readability and preserves spatial con
 
 | Target scope | Suitability | Why |
 | :--- | :--- | :--- |
-| **Full-page viewport** (`page.screenshot()`) | ❌ Unsuitable for component changes | In 1280×800 or 1920×1080 captures, small UI elements (icons, badges, row buttons) shrink to ~8px unreadable dots when scaled down in PRs or review tables. |
+| **Panel/window context** (`page.screenshot()` or whole-panel locator) | ✅ Companion to focused views | Shows surrounding controls, hierarchy and layout; retain readable scale and add focused views for small details. |
 | **Micro-cropped element** (`icon.screenshot()`) | ❌ Unsuitable for layout assessment | Capturing only a 16×16 icon or single button removes all spatial context: vertical alignment, text proximity, card margins, and visual balance cannot be judged. |
 | **Focused container with context** (`container.screenshot()`) | ✅ Recommended | Captures the immediate semantic parent (e.g., table row `tr`, card `.card`, action group, dialog section, or toolbar). Preserves 100% natural pixel scale while providing enough context to assess layout harmony. |
 | **Modal / Dialog** (`dialog.screenshot()`) | ✅ Recommended for modal flows | Capture the dialog container (`[role="dialog"]`) rather than the entire dimmed browser window. |
+
+For a horizontally scrolling table wider than the viewport, retain a wide-view row capture and a narrow viewport scrolled to the changed cell. Verify the captured pixels contain the intended details: a successful oversized locator screenshot can still show the wrong clipped region. Capture expanded developer details at a width that contains them, beside the narrow interaction state.
 
 ```javascript
 // Good: Capture the table row or card with its surrounding context

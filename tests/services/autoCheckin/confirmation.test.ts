@@ -129,7 +129,7 @@ describe("check-in confirmation", () => {
         { status: "uncertain", reasonCode: "checkin_unconfirmed" },
         {
           kind: "observed",
-        status: { outcome: "unknown", reason: "network", attemptedAt },
+          status: { outcome: "unknown", reason: "network", attemptedAt },
         },
       )
       const readStatus = vi.fn().mockResolvedValue(undefined)

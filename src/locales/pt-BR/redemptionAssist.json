@@ -46,6 +46,7 @@
     "success": {
       "settingsSaved": "As configurações de assistência de resgate foram salvas"
     },
+    "totalAllowance": "Cota total: {{amount}}",
     "unsupportedSiteType": "O tipo de site desta conta não oferece resgate automático. Escolha outra conta ou resgate o código manualmente no site."
   },
   "settings": {

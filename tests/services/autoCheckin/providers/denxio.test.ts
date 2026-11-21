@@ -6,6 +6,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
 import { fetchBaiApiCheckInStatus } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { fetchClawhudDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
@@ -219,7 +220,7 @@ describe("Denxio daily check-in method Adapter", () => {
       checkedInToday: false,
     })
     vi.mocked(performDenxioDailyCheckIn).mockResolvedValue({
-      kind: "applied",
+      kind: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       rewardAmount: 0.5,
     })
     vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockRejectedValue(
@@ -351,6 +352,19 @@ describe("Denxio daily check-in method Adapter", () => {
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       data: { rewardAmount: 0.5 },
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: {
+            status: "known",
+            value: "0.5",
+            source: {
+              operation: "/api/v1/tbe-sponsor-checkin/normal/claim",
+              inputs: ["record.amount"],
+            },
+          },
+        },
+      ],
     })
     expect(performDenxioDailyCheckIn).toHaveBeenCalledWith(
       expect.objectContaining({

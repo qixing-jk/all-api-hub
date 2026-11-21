@@ -20,7 +20,7 @@
     },
     "title": "Kontoaufschlüsselung"
   },
-  "description": "Tägliche Guthaben- und Zahlungsströme verfolgen, um Änderungen am Kontoguthaben zu sehen.",
+  "description": "Sieh dir an, wie sich Guthaben und Kontingente ändern.",
   "empty": {
     "description": "Aktivieren Sie den Kontostandverlauf und aktualisieren Sie ein Konto, um den ersten Schnappschuss aufzuzeichnen.",
     "title": "Noch keine Schnappschüsse"
@@ -89,10 +89,20 @@
   },
   "metrics": {
     "balance": "Kontostand",
-    "estimatedIncome": "Geschätztes Einkommen",
+    "estimatedIncome": "Geschätzter Nettozufluss",
     "income": "Einkommen",
     "net": "Nettoveränderung",
     "outcome": "Ausgaben"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "Gruppen",
+      "keys": "Schlüssel",
+      "models": "Modelle",
+      "projects": "Projekte",
+      "routes": "Routen"
+    },
+    "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {
     "kpis": {
@@ -118,8 +128,8 @@
     "enabledHint": "Wenn deaktiviert, werden keine Schnappschüsse aufgezeichnet und die geplante Erfassung ist deaktiviert.",
     "endOfDayCapture": "Tagesabschlussaufnahme",
     "endOfDayCaptureHint": "Die tägliche Erfassung wird möglichst nahe an {{time}} durchgeführt (erfordert die Alarm-API).",
-    "estimatedTodayIncome": "Geschätztes heutiges Einkommen anzeigen",
-    "estimatedTodayIncomeHint": "Verwendet den Kontostandverlauf, um Prämien zu schätzen, die nicht in den Einkommensprotokollen der Website erscheinen. Nicht verfügbar, wenn die Basislinie des Vortages fehlt.",
+    "estimatedTodayIncome": "Geschätzten Nettozufluss anzeigen",
+    "estimatedTodayIncomeHint": "Den Nettozufluss anhand vergleichbarer Salden nahe dem Tagesbeginn und abgerechneter Nutzung im ungefähr gleichen Zeitraum schätzen.",
     "retentionDays": "Aufbewahrung (Tage)"
   },
   "summary": {
@@ -130,7 +140,7 @@
       "account": "Konto",
       "cashflowCoverage": "Cashflow-Abdeckung",
       "endBalance": "Endbilanz",
-      "estimatedIncomeTotal": "Geschätztes Gesamteinkommen",
+      "estimatedIncomeTotal": "Geschätzter Nettozufluss",
       "incomeTotal": "Gesamteinkommen",
       "outcomeTotal": "Gesamtausgaben",
       "rangeNet": "Netto im Zeitraum",
@@ -153,7 +163,7 @@
       "scope": "Ansicht"
     },
     "emptyMetric": "Keine {{metric}}-Daten in diesem Bereich.",
-    "gapBridge": "Gestrichelte Abschnitte kennzeichnen Tage ohne Daten.",
+    "gapBridge": "Keine Daten",
     "scopes": {
       "accounts": "Nach Konto",
       "total": "Gesamt"

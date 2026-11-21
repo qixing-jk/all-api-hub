@@ -1,4 +1,13 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import { confirmedAward } from "~/services/amounts/awards"
+import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  EVIDENCE_KINDS,
+} from "~/services/amounts/financialConstants"
 import type { RedemptionCapability } from "~/services/apiAdapters/contracts/redemption"
 import { DAYA_ENDPOINTS } from "~/services/apiService/daya/constants"
 import { redeemDayaCode } from "~/services/apiService/daya/redemption"
@@ -39,28 +48,95 @@ export const dayaRedemption: RedemptionCapability = {
           .filter(Boolean)
           .join(" "),
       )
-    const hasBenefits =
-      Array.isArray(result.benefits) && result.benefits.length > 0
+    const benefits: unknown[] = Array.isArray(result.benefits)
+      ? result.benefits
+      : []
+    const hasBenefits = benefits.length > 0
+    const deliveryConfirmed = result.delivery_status === "success"
+    const scope = accountBalanceScope(request)
+    const observedAt = Date.now()
     if (
       (["concurrency", "subscription", "quota_reset"].includes(
         String(result.type),
       ) ||
         hasBenefits) &&
-      message
+      (message || deliveryConfirmed)
     ) {
       attempts.delete(attempt)
-      return { message }
+      const grants = hasBenefits
+        ? [
+            ...(result.type === "balance"
+              ? [{ benefit: result, field: "value" }]
+              : []),
+            ...benefits.map((benefit: unknown, index: number) => ({
+              benefit,
+              field: `benefits.${index}`,
+            })),
+          ]
+        : [{ benefit: result, field: "value" }]
+      return {
+        ...(message ? { message } : {}),
+        awards: grants.map(
+          ({ benefit, field }: { benefit: unknown; field: string }) => {
+            const item = isRecord(benefit) ? benefit : {}
+            return confirmedAward({
+              id: field,
+              asset:
+                item.type === "balance"
+                  ? { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
+                  : { kind: ASSET_KINDS.Unknown },
+              value: item.value,
+              source: {
+                adapter: "daya",
+                operation: "redeem",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+                inputs: [field],
+              },
+              scope,
+              observedAt,
+              target:
+                item.type === "balance"
+                  ? AWARD_TARGETS.Wallet
+                  : ["concurrency", "subscription", "quota_reset"].includes(
+                        String(item.type),
+                      )
+                    ? AWARD_TARGETS.Entitlement
+                    : AWARD_TARGETS.Unknown,
+              fulfillment: AWARD_FULFILLMENT.Credited,
+            })
+          },
+        ),
+      }
     }
+    const value = parseDecimal(result.value)
     if (
       result.type !== "balance" ||
       hasBenefits ||
-      typeof result.value !== "number" ||
-      !Number.isFinite(result.value) ||
-      result.value < 0 ||
-      !Number.isFinite(result.value * QUOTA_PER_USD)
+      (!deliveryConfirmed &&
+        (value === undefined || compareDecimal(value, "0") < 0))
     )
       return invalidDayaResponse(DAYA_ENDPOINTS.Redeem)
     attempts.delete(attempt)
-    return result.value * QUOTA_PER_USD
+    return {
+      awards: [
+        confirmedAward({
+          id: "credit",
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          value: result.value,
+          source: {
+            adapter: "daya",
+            operation: "redeem",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+            inputs: ["value"],
+          },
+          scope,
+          observedAt,
+          target: AWARD_TARGETS.Wallet,
+          fulfillment: AWARD_FULFILLMENT.Credited,
+        }),
+      ],
+    }
   },
 }

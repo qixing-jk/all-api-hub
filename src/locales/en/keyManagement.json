@@ -242,6 +242,34 @@
       "gateways": "Gateways and routing tools"
     }
   },
+  "financial": {
+    "alertOnly": "Alert only",
+    "allocation": "Allocated balance",
+    "budget": "Spending budget",
+    "disabled": "Budget inactive",
+    "excludesByok": "BYOK excluded",
+    "hardLimit": "Hard limit",
+    "includesByok": "BYOK included",
+    "inherited": "Inherited account budget",
+    "lifetime": "All time",
+    "limit": "Limit",
+    "nativeQuota": "Native quota",
+    "period": {
+      "5h": "5 hours",
+      "day": "Daily",
+      "month": "Monthly",
+      "week": "Weekly",
+      "year": "Yearly"
+    },
+    "remaining": "Remaining",
+    "reserved": "Reserved",
+    "reset": "Resets",
+    "rolling": "Rolling",
+    "stale": "Stale",
+    "unconfigured": "No budget configured",
+    "unknownWindow": "Window unknown",
+    "used": "Used"
+  },
   "keyDetails": {
     "channels": "Channels",
     "createResponseOnlySecret": "This site shows the full key only when it is created. If you did not save it, open Key Management and create a replacement key.",
@@ -256,11 +284,8 @@
     "models": "Model Restrictions:",
     "neverExpires": "Never Expires",
     "note": "Note:",
-    "remainingQuota": "Remaining Quota:",
     "tools": "Allowed tools",
-    "totalQuota": "Total Quota:",
     "ungrouped": "Ungrouped",
-    "usedQuota": "Used Quota:",
     "websiteVerificationSecret": "The management API does not provide full keys. Visit the NanoGPT API page and complete the required sign-in verification to view or copy an existing key again."
   },
   "knownTotalKeys_one": "{{count}} key read",
@@ -452,11 +477,8 @@
       "budget5h": "5-hour budget (USD)",
       "budgetDay": "Daily budget (USD)",
       "budgetMonth": "Monthly budget (USD)",
-      "budgetNextReset": "Resets {{time}} (UTC+8)",
       "budgetResetHelp": "0 means unlimited. The 5-hour budget rolls forward; daily, weekly and monthly budgets reset in Beijing time, with weeks starting Monday.",
-      "budgetRolling": "Rolling window",
       "budgetsAndLimits": "Budgets and access limits",
-      "budgetUsage": "Used ${{used}} / ${{limit}} · remaining ${{remaining}} · reserved ${{reserved}}",
       "budgetWeek": "Weekly budget (USD)",
       "channel": "Channel",
       "dahl": {
@@ -661,13 +683,9 @@
         "budgetAlerts": "Email the key creator at these thresholds",
         "budgetEnabled": "Spend budget",
         "budgetHelp": "Set a custom cap in USD. Turning this off uses the team default, if one exists. BYOK spend is excluded from new budgets.",
-        "budgetInactive": "Budget inactive",
         "budgetLimit": "Spending limit (USD, minimum $1)",
         "budgetPeriod": "Budget refresh",
-        "budgetUnavailable": "Budget could not be read. Retry before editing.",
         "consoleFailed": "Could not open the team console. Check your access token and try again.",
-        "inheritedBudget": "Team default budget",
-        "noBudget": "No key-specific budget",
         "openConsole": "Open Vercel console",
         "period": {
           "daily": "Daily",
@@ -865,7 +883,6 @@
       "values": {
         "missing": "Not available",
         "no": "No",
-        "unlimited": "Unlimited",
         "yes": "Yes"
       }
     },

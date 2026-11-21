@@ -16,6 +16,7 @@ import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/
 import {
   fetchCheckedInTodayStatus,
   getProviderErrorMessage,
+  readNewApiAwards,
   resolveCheckInUrl,
   resolveNewApiCheckInReadback,
   resolveTurnstilePreTrigger,
@@ -24,7 +25,6 @@ import {
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   getEffectiveAuthType,
-  readQuotaReward,
   resolveCheckinLoginFailure,
   resolveNativePageFailureResult,
   resolveProviderErrorResult,
@@ -206,7 +206,12 @@ async function performNativeSessionCheckin(
             params.account,
             {
               status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-              reward: readQuotaReward(status.todayQuotaAwarded),
+              awards: readNewApiAwards(
+                params.account,
+                status.todayQuotaAwarded,
+                status.todayCheckinDate,
+                "stats.records[].quota_awarded",
+              ),
             },
             status,
           )

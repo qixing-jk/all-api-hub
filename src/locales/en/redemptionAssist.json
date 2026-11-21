@@ -45,6 +45,7 @@
     "success": {
       "settingsSaved": "Redemption assist settings have been saved"
     },
+    "totalAllowance": "Total allowance: {{amount}}",
     "unsupportedSiteType": "This account's site type does not support automatic redemption. Choose another account or redeem the code manually on the site."
   },
   "settings": {

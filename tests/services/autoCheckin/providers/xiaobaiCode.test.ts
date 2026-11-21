@@ -6,7 +6,6 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   performXiaobaiCodeDailyCheckIn,
@@ -108,7 +107,7 @@ describe("小白Code check-in integration", () => {
     vi.mocked(probeXiaobaiCodeCheckInStatus).mockResolvedValue(matched())
     vi.mocked(performXiaobaiCodeDailyCheckIn).mockResolvedValue({
       kind: XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-      data: { rewardAmount: 0.25 },
+      data: { rewardAmount: 0.25, rewardRecordId: "120662" },
     })
   })
   afterEach(() => vi.restoreAllMocks())
@@ -260,7 +259,7 @@ describe("小白Code check-in integration", () => {
   ] as const)("maps %s from the deployment", async (kind) => {
     vi.mocked(performXiaobaiCodeDailyCheckIn).mockResolvedValue(
       kind === XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied
-        ? { kind, data: { rewardAmount: 0.25 } }
+        ? { kind, data: { rewardAmount: 0.25, rewardRecordId: "120662" } }
         : { kind },
     )
     await expect(
@@ -276,10 +275,10 @@ describe("小白Code check-in integration", () => {
     })
   })
 
-  it("reports the awarded decimal amount as a quota reward", async () => {
+  it("reports the awarded decimal amount as a native USD award", async () => {
     vi.mocked(performXiaobaiCodeDailyCheckIn).mockResolvedValue({
       kind: XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-      data: { rewardAmount: 0.25 },
+      data: { rewardAmount: 0.25, rewardRecordId: "120662" },
     })
 
     await expect(
@@ -289,7 +288,13 @@ describe("小白Code check-in integration", () => {
       }),
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
-      reward: { quota: 0.25 * QUOTA_PER_USD },
+      awards: [
+        {
+          event: { namespace: "xiaobai-code-checkin-record", id: "120662" },
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "0.25" },
+        },
+      ],
     })
   })
 

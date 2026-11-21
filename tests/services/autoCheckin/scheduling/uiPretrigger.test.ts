@@ -90,6 +90,36 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     vi.useRealTimers()
   })
 
+  it("does not announce a pretrigger after the daily batch finishes during alarm lookup", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 0, 23, 9))
+    schedulerTestState.storedStatus = { dailyAlarmTargetDay: "2026-01-23" }
+    mockedBrowserApi.getAlarm.mockImplementationOnce(async () => {
+      schedulerTestState.storedStatus = {
+        dailyAlarmTargetDay: "2026-01-23",
+        lastDailyRunDay: "2026-01-23",
+      }
+      return { name: "autoCheckinDaily", scheduledTime: Date.now() + 60_000 }
+    })
+    const run = vi.spyOn(autoCheckinScheduler, "runCheckins")
+    vi.spyOn(autoCheckinScheduler, "scheduleNextRun").mockResolvedValue(
+      undefined,
+    )
+    try {
+      const result = await pretriggerDailyOnUiOpenForTest({
+        requestId: "skipped-pretrigger",
+      })
+      expect(result).toMatchObject({
+        started: false,
+        ineligibleReason: "already_ran_today",
+      })
+      expect(run).not.toHaveBeenCalled()
+      expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("still starts when the pretrigger notification broadcast fails and recalculates summary from per-account results", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-01-23T09:00:00"))

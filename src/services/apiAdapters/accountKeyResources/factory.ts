@@ -8,6 +8,7 @@ import type {
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   assertNativeResourceFacts,
   createNativeResourceRefBoundary,
@@ -64,13 +65,7 @@ export function defineAccountKeyResourceCapability<
         secret && hasUsableApiTokenKey(secret) ? secret : undefined,
     }
   }
-  const definition = {
-    ...source,
-    toListFacts: (item: TListItem, ref: AccountKeyResourceRef) =>
-      projectSecret(source.toListFacts(item, ref), item),
-    toDetailFacts: (detail: TDetail, ref: AccountKeyResourceRef) =>
-      projectSecret(source.toDetailFacts(detail, ref), detail),
-  }
+  const definition = source
   const mapFailure = (error: unknown) => definition.mapFailure(error)
   const siteType = definition.siteType
 
@@ -85,6 +80,17 @@ export function defineAccountKeyResourceCapability<
     open: (input, options) =>
       mapOperation(async () => {
         assertOpenInput(input, siteType)
+        const context = () => ({
+          authority: new URL(input.request.baseUrl).origin,
+          observedAt: Date.now(),
+        })
+        const definition = {
+          ...source,
+          toListFacts: (item: TListItem, ref: AccountKeyResourceRef) =>
+            projectSecret(source.toListFacts(item, ref, context()), item),
+          toDetailFacts: (detail: TDetail, ref: AccountKeyResourceRef) =>
+            projectSecret(source.toDetailFacts(detail, ref, context()), detail),
+        }
         const accountId = input.account.id
         const config = await definition.openConfig(input, options)
         const provisioningDefinition = definition.provisioning
@@ -156,7 +162,10 @@ export function defineAccountKeyResourceCapability<
                         requirementKey,
                         provisioningOptions,
                       )
-                      if (result.certainty === "applied") {
+                      if (
+                        result.certainty ===
+                        NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
+                      ) {
                         return {
                           certainty: result.certainty,
                           value: assertProvisionedResource(result.value),
@@ -180,7 +189,8 @@ export function defineAccountKeyResourceCapability<
                               ref,
                               renameOptions,
                             )
-                            return result.certainty === "applied"
+                            return result.certainty ===
+                              NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
                               ? result
                               : {
                                   certainty: result.certainty,

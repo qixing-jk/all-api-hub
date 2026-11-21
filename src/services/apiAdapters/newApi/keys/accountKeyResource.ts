@@ -2,7 +2,7 @@ import type { AccountSiteType } from "~/constants/siteType"
 import type { AccountKeyResourcePage } from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure as mapFailure } from "~/services/apiAdapters/accountKeyResources/failure"
-import { type AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { accountKeyDefaultScopes } from "~/services/apiAdapters/accountKeyResources/scopeInventory"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { resourceValuesEqual } from "~/services/apiAdapters/nativeResources/editableChanges"
 import { toFacts } from "~/services/apiAdapters/newApi/keys/accountKeyDisplayFacts"
@@ -82,14 +82,8 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
         variant,
       }
     },
-    listScopes: async (config): Promise<readonly AccountKeyScope[]> => [
-      {
-        scopeKey: ACCOUNT_SCOPE_KEY,
-        routeKey: ACCOUNT_SCOPE_KEY,
-        displayName: config.account.name?.trim() || config.request.baseUrl,
-        isDefault: true,
-      },
-    ],
+    listScopes: async (config) =>
+      accountKeyDefaultScopes(ACCOUNT_SCOPE_KEY, config),
     provisioning: {
       inspect: inspectProvisioning,
       provision: provisionRequirement,
@@ -120,9 +114,21 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
     toListFacts: toFacts,
     toDetailFacts: toFacts,
     createEditor: async (config, _scope, _options, _inventory, intent) =>
-      createNewApiKeyEditor(config.variant, config.request, undefined, intent),
+      createNewApiKeyEditor(
+        config.variant,
+        config.request,
+        undefined,
+        intent,
+        siteType,
+      ),
     editEditor: (config, _scope, detail) =>
-      createNewApiKeyEditor(config.variant, config.request, detail),
+      createNewApiKeyEditor(
+        config.variant,
+        config.request,
+        detail,
+        undefined,
+        siteType,
+      ),
     create: createNewApiAccountToken,
     update: updateNewApiAccountToken,
     delete: deleteNewApiAccountToken,

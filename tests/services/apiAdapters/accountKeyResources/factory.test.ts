@@ -19,6 +19,7 @@ import {
   type ResourceFailure,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -115,17 +116,17 @@ const createDefinition = (overrides: Partial<Definition> = {}): Definition => ({
     }),
   })),
   create: vi.fn<Definition["create"]>(async (_config, _scope, command) => ({
-    certainty: "applied",
+    certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
     value: { detail: { id: "created-key", name: command.name } },
   })),
   update: vi.fn<Definition["update"]>(
     async (_config, _scope, _detail, command) => ({
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: { id: "opaque-key-example", name: command.name },
     }),
   ),
   delete: vi.fn(async () => ({
-    certainty: "applied" as const,
+    certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
     value: undefined,
   })),
   mapFailure: (error): ResourceFailure =>
@@ -291,13 +292,13 @@ describe("defineAccountKeyResourceCapability", () => {
           throw "denied"
         }
       if (kind === "foreign-facts")
-        definition.toListFacts = (item, ref) => ({
-          ...project(item, ref),
+        definition.toListFacts = (item, ref, context) => ({
+          ...project(item, ref, context),
           ref: { ...ref, resourceId: "foreign" },
         })
       if (kind === "facts-throw")
-        definition.toListFacts = (item, ref) => ({
-          ...project(item, ref),
+        definition.toListFacts = (item, ref, context) => ({
+          ...project(item, ref, context),
           get ref(): AccountKeyResourceRef {
             throw "denied"
           },
@@ -468,7 +469,7 @@ describe("defineAccountKeyResourceCapability", () => {
     const provisioning = {
       inspect: vi.fn(async () => snapshot),
       provision: vi.fn(async () => ({
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { ref: REF },
       })),
     }
@@ -496,7 +497,7 @@ describe("defineAccountKeyResourceCapability", () => {
     const provisioning = {
       inspect: vi.fn(async () => ({ requirements: [], items: [] })),
       provision: vi.fn(async () => ({
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { ref: { ...REF, accountId: "other-account" } },
       })),
     }
@@ -544,7 +545,7 @@ describe("defineAccountKeyResourceCapability", () => {
       const provisioning = {
         inspect: vi.fn(async () => ({ requirements: [], items: [] })),
         provision: vi.fn(async () => ({
-          certainty: "applied" as const,
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
           value: {
             ref: REF,
             createdSecret: {
@@ -678,7 +679,7 @@ describe("defineAccountKeyResourceCapability", () => {
     expect(first).toBe(duplicate)
 
     deferred.resolve({
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: { detail: { id: "created-key", name: "Created" } },
     })
     await expect(first).resolves.toEqual({
@@ -697,7 +698,7 @@ describe("defineAccountKeyResourceCapability", () => {
   it("rejects an edit response whose native locator changes", async () => {
     const definition = createDefinition({
       update: vi.fn(async () => ({
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { id: "other-opaque-key", name: "Other key" },
       })),
     })
@@ -988,13 +989,13 @@ describe("defineAccountKeyResourceCapability", () => {
   it("passes canonical scope, commands, details, and options to mutations", async () => {
     const create = vi.fn<Definition["create"]>(
       async (_config, _scope, command) => ({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { detail: { id: "created-key", name: command.name } },
       }),
     )
     const update = vi.fn<Definition["update"]>(
       async (_config, _scope, { current: detail }, command) => ({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { ...detail, name: command.name },
       }),
     )
@@ -1068,7 +1069,7 @@ describe("defineAccountKeyResourceCapability", () => {
     async (_, correlation) => {
       const definition = createDefinition({
         create: vi.fn<Definition["create"]>(async () => ({
-          certainty: "applied",
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
           value: {
             detail: { id: "created-key", name: "Created" },
             createdSecret: {
@@ -1099,7 +1100,7 @@ describe("defineAccountKeyResourceCapability", () => {
   it("keeps a created secret correlated to the resulting resource", async () => {
     const definition = createDefinition({
       create: vi.fn<Definition["create"]>(async () => ({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail: { id: "created-key", name: "Created" },
           createdSecret: {
@@ -1149,7 +1150,7 @@ describe("defineAccountKeyResourceCapability", () => {
     const definition = createDefinition({
       listScopes: vi.fn(async () => [SCOPE, destinationScope]),
       create: vi.fn<Definition["create"]>(async () => ({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail: { id: "created-key", name: "Created" },
           scopeKey: "workspace-destination",
@@ -1218,7 +1219,7 @@ describe("defineAccountKeyResourceCapability", () => {
     const definition = createDefinition({
       listScopeInventory,
       create: vi.fn<Definition["create"]>(async () => ({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail: { id: "created-key", name: "Created" },
           scopeKey: SCOPE.scopeKey,
@@ -1249,7 +1250,7 @@ describe("defineAccountKeyResourceCapability", () => {
       isDefault: false,
     }
     const create = vi.fn<Definition["create"]>(async () => ({
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: { detail: { id: "created-key", name: "Created" } },
     }))
     const definition = createDefinition({
@@ -1282,7 +1283,7 @@ describe("defineAccountKeyResourceCapability", () => {
 
   it("rejects an unvalidated command destination before create dispatch", async () => {
     const create = vi.fn<Definition["create"]>(async () => ({
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: { detail: { id: "created-key", name: "Created" } },
     }))
     const definition = createDefinition({
@@ -1320,7 +1321,7 @@ describe("defineAccountKeyResourceCapability", () => {
   it("preserves an applied resource when the provider reports another scope", async () => {
     const definition = createDefinition({
       create: vi.fn<Definition["create"]>(async () => ({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail: { id: "created-key", name: "Created" },
           scopeKey: "workspace-unvalidated",
@@ -1344,9 +1345,12 @@ describe("defineAccountKeyResourceCapability", () => {
   it("retries definite mutation rejection but closes after uncertain state", async () => {
     const retryingCreate = vi
       .fn<Definition["create"]>()
-      .mockResolvedValueOnce({ certainty: "not-applied", failure: "denied" })
       .mockResolvedValueOnce({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
+        failure: "denied",
+      })
+      .mockResolvedValueOnce({
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { detail: { id: "created-key", name: "Recovered" } },
       })
     const retryingEditor = await (
@@ -1367,7 +1371,7 @@ describe("defineAccountKeyResourceCapability", () => {
     expect(retryingCreate).toHaveBeenCalledTimes(2)
 
     const uncertainCreate = vi.fn<Definition["create"]>(async () => ({
-      certainty: "possibly-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: "denied",
     }))
     const uncertainEditor = await (
@@ -1424,11 +1428,11 @@ describe("defineAccountKeyResourceCapability", () => {
   it("preserves the mapped upstream code for uncertain editor and delete mutations", async () => {
     const definition = createDefinition({
       create: vi.fn<Definition["create"]>(async () => ({
-        certainty: "possibly-applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: "denied",
       })),
       delete: vi.fn<Definition["delete"]>(async () => ({
-        certainty: "partially-applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PartiallyApplied,
         failure: "denied",
       })),
       mapFailure: () => ({
@@ -1519,7 +1523,7 @@ it("does not reread details before a snapshot-based update", async () => {
 it("rejects a revoke result attributed to another resource", async () => {
   const definition = createDefinition({
     revoke: async () => ({
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: { id: "foreign-key", name: "Foreign" },
     }),
   })
@@ -1551,7 +1555,7 @@ it.each([false, true])(
     }
     const definition = createDefinition({
       update: async () => ({
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { id: REF.resourceId, name: "Rotated" },
         createdSecret,
       }),

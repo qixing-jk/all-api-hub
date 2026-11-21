@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button } from "~/components/ui"
+import { Alert, Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
@@ -25,15 +25,15 @@ export default function AutoCheckin(props: {
 }) {
   const { t } = useTranslation(["autoCheckin", "messages", "account", "common"])
   const {
-    currencyType,
     autoCheckinPreferences,
     autoCheckinEnabled,
     status,
     siteTypeMismatches,
-    exchangeRateByAccountId,
     accountInfoById,
+    exchangeRateByAccountId,
     accountSetupState,
     isLoading,
+    statusLoadFailed,
     isRunning,
     isManualRefreshing,
     isOpeningFailedManualSignIns,
@@ -56,6 +56,7 @@ export default function AutoCheckin(props: {
     handleRunNow,
     showDebugButtons,
     accountResults,
+    currencyType,
     failedManualAccountIds,
     canOpenExternalCheckIns,
     externalCheckInAccountIds,
@@ -82,9 +83,9 @@ export default function AutoCheckin(props: {
     <ResultsTable
       results={accountResults}
       siteTypeMismatches={siteTypeMismatches}
-      currencyType={currencyType}
-      exchangeRateByAccountId={exchangeRateByAccountId}
       accountInfoById={accountInfoById}
+      exchangeRateByAccountId={exchangeRateByAccountId}
+      currencyType={currencyType}
       showDevActions={showDebugButtons}
       retryingAccountId={retryingAccountId}
       verifyingAccountId={verifyingAccountId}
@@ -129,7 +130,7 @@ export default function AutoCheckin(props: {
   )
 
   return (
-    <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
+    <div className="px-4 py-density-4 sm:px-6 sm:py-density-6">
       <PageHeader
         icon={CalendarCheck2}
         title={
@@ -151,6 +152,21 @@ export default function AutoCheckin(props: {
       />
 
       <div className="space-y-density-4" data-page-motion-group>
+        {statusLoadFailed && (
+          <Alert
+            variant="destructive"
+            description={t("execution.statusLoadError")}
+            action={
+              <Button
+                variant="secondary"
+                disabled={isLoading}
+                onClick={() => void loadStatus()}
+              >
+                {t("execution.retryStatusLoad")}
+              </Button>
+            }
+          />
+        )}
         {status ? (
           <StatusCard
             status={status}
@@ -204,7 +220,7 @@ export default function AutoCheckin(props: {
           setUiOpenPretriggerDiagnostics({ isOpen: false, payload: null })
         }
         header={
-          <div className="text-foreground text-lg font-semibold">
+          <div className="text-lg font-semibold text-foreground">
             {t("execution.debug.uiOpenPretriggerDiagnosticsTitle")}
           </div>
         }
@@ -223,10 +239,10 @@ export default function AutoCheckin(props: {
         }
       >
         <div className="space-y-density-3">
-          <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground dark:text-secondary-foreground">
             {t("execution.debug.uiOpenPretriggerDiagnosticsDesc")}
           </p>
-          <pre className="dark:bg-secondary border-border bg-surface-subtle text-secondary-foreground py-density-3 max-h-[60vh] overflow-auto rounded-lg border px-3 text-xs md:max-h-[min(70vh,48rem)]">
+          <pre className="max-h-[60vh] overflow-auto rounded-lg border border-border bg-surface-subtle px-3 py-density-3 text-xs text-secondary-foreground md:max-h-[min(70vh,48rem)] dark:bg-secondary">
             {uiOpenPretriggerDiagnostics.payload
               ? JSON.stringify(uiOpenPretriggerDiagnostics.payload, null, 2)
               : ""}

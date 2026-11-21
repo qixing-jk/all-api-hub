@@ -1,23 +1,37 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
 import type {
+  AccountKeyFactContext,
   AccountKeyResourcePage,
   AccountKeyResourceProviderFacts,
 } from "~/services/apiAdapters/accountKeyResources/definition"
-import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
+import {
+  keyExpiryDisplayFact,
+  keyProvisioningCoverage,
+} from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
   mapAccountKeyResourceUncertainFailure,
 } from "~/services/apiAdapters/accountKeyResources/failure"
+import { accountKeyDefaultScopes } from "~/services/apiAdapters/accountKeyResources/scopeInventory"
 import {
-  ACCOUNT_KEY_PROVISIONING_COVERAGE,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESOURCE_STATUSES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
@@ -25,12 +39,12 @@ import {
   type AccountKeyProvisioningSnapshot,
   type AccountKeyResourceFacts,
   type AccountKeyResourceOpenInput,
-  type AccountKeyScope,
   type AccountRuntimeKeyResolution,
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
@@ -127,12 +141,13 @@ const toCanonicalGroupKey = (value: unknown): string | null => {
 }
 
 const keyStatus = (key: VoApiV2Key): AccountKeyResourceFacts["status"] => {
-  if (typeof key.enable !== "boolean") return "unknown"
+  if (typeof key.enable !== "boolean")
+    return ACCOUNT_KEY_RESOURCE_STATUSES.Unknown
   if (
     key.expireTime !== undefined &&
     (typeof key.expireTime !== "number" || !Number.isFinite(key.expireTime))
   ) {
-    return "unknown"
+    return ACCOUNT_KEY_RESOURCE_STATUSES.Unknown
   }
   if (typeof key.expireTime === "number" && key.expireTime > 0) {
     // VoAPI v2 deployments may return epoch seconds or milliseconds.
@@ -140,20 +155,11 @@ const keyStatus = (key: VoApiV2Key): AccountKeyResourceFacts["status"] => {
       key.expireTime > 1_000_000_000_000
         ? Date.now()
         : Math.floor(Date.now() / 1000)
-    if (key.expireTime <= now) return "expired"
+    if (key.expireTime <= now) return ACCOUNT_KEY_RESOURCE_STATUSES.Expired
   }
-  return key.enable ? "enabled" : "disabled"
-}
-
-const keyCoverage = (
-  key: VoApiV2Key,
-): (typeof ACCOUNT_KEY_PROVISIONING_COVERAGE)[keyof typeof ACCOUNT_KEY_PROVISIONING_COVERAGE] => {
-  const status = keyStatus(key)
-  if (status === "enabled") return ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable
-  if (status === "disabled" || status === "expired") {
-    return ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable
-  }
-  return ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown
+  return key.enable
+    ? ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
+    : ACCOUNT_KEY_RESOURCE_STATUSES.Disabled
 }
 
 const createRef = (config: VoApiV2AccountKeyResourceConfig, keyId: number) => ({
@@ -166,6 +172,7 @@ const createRef = (config: VoApiV2AccountKeyResourceConfig, keyId: number) => ({
 const toFacts = (
   key: VoApiV2Key & { runtimeGroupNames?: readonly string[] },
   ref: AccountKeyResourceFacts["ref"],
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: key.name?.trim() || `Key ${key.id}`,
@@ -175,7 +182,7 @@ const toFacts = (
   runtimeKey: {
     modelAccess: {
       groups: key.groups?.length
-        ? key.runtimeGroupNames ?? key.groups.map(String)
+        ? (key.runtimeGroupNames ?? key.groups.map(String))
         : ["default"],
       allowedModelIds: null,
       suggestedModelIds: [],
@@ -184,23 +191,30 @@ const toFacts = (
     notes: key.note,
   },
   displayFacts: [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: "amount",
-      kind: "money",
-      role: "remaining",
-      amountUsd: Number(key.amount) || 0,
-      unlimited: key.boundlessAmount === true,
-    },
-    {
-      fieldId: "used",
-      kind: "money",
-      role: "used",
-      amountUsd: Number(key.used) || 0,
-    },
+      operation: "keys",
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      limitState:
+        key.boundlessAmount === true
+          ? BUDGET_LIMIT_STATES.Unlimited
+          : BUDGET_LIMIT_STATES.Finite,
+      remaining: key.amount,
+      used: key.used,
+      scope: {
+        groups: key.groups
+          ? {
+              kind: SCOPE_SELECTION_KINDS.Restricted,
+              ids: key.groups.map(String),
+            }
+          : { kind: SCOPE_SELECTION_KINDS.Unknown },
+      },
+      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+    }),
     keyExpiryDisplayFact("expireTime", key.expireTime ?? -1),
     {
       fieldId: "groups",
-      kind: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
       value: key.runtimeGroupNames ?? (key.groups ?? []).map(String),
       emptyValue: "ungrouped",
     },
@@ -211,13 +225,6 @@ const toFacts = (
       kind: "list",
       value: key.runtimeGroupNames ?? (key.groups ?? []).map(String),
     },
-    {
-      fieldId: "boundlessAmount",
-      kind: "boolean",
-      value: key.boundlessAmount === true,
-    },
-    { fieldId: "amount", kind: "number", value: Number(key.amount) || 0 },
-    { fieldId: "used", kind: "number", value: Number(key.used) || 0 },
     { fieldId: "expireTime", kind: "number", value: key.expireTime ?? -1 },
   ],
   searchValues: [
@@ -314,7 +321,7 @@ const inspectProvisioning = async (
           ? { displayName: currentName || `Key ${key.id}` }
           : {}),
         placement,
-        coverage: keyCoverage(key),
+        coverage: keyProvisioningCoverage(keyStatus(key)),
         ...(renameSuggested ? { renameSuggestion: { targetDisplayName } } : {}),
       }
     }),
@@ -358,7 +365,7 @@ const renameProvisionedResource = async (
   const key = keys.find((candidate) => candidate.id === keyId)
   if (!key) {
     return {
-      certainty: "not-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
     }
   }
@@ -369,7 +376,7 @@ const renameProvisionedResource = async (
     !groups.some((group) => group.requirementKey === groupKeys[0])
   ) {
     return {
-      certainty: "not-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     }
   }
@@ -383,7 +390,7 @@ const renameProvisionedResource = async (
     !isAutomaticAccountKeyName(currentName)
   ) {
     return {
-      certainty: "not-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     }
   }
@@ -394,11 +401,14 @@ const renameProvisionedResource = async (
       await renameVoApiV2Key(mutationRequest, keyId, targetDisplayName),
     mapFailure,
   })
-  if (renameResult.certainty === "not-applied") return renameResult
-  if (renameResult.certainty === "applied") {
+  if (
+    renameResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+  )
+    return renameResult
+  if (renameResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied) {
     if (renameResult.value === false) {
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
       }
     }
@@ -409,20 +419,25 @@ const renameProvisionedResource = async (
       (candidate) => candidate.id === keyId,
     )
     return refreshed?.name?.trim() === targetDisplayName
-      ? { certainty: "applied" as const, value: undefined }
+      ? {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: undefined,
+        }
       : {
-          certainty: "possibly-applied" as const,
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
           failure: mapAccountKeyResourceUncertainFailure(
-            renameResult.certainty === "possibly-applied"
+            renameResult.certainty ===
+              NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
               ? renameResult.failure
               : undefined,
           ),
         }
   } catch (error) {
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        renameResult.certainty === "possibly-applied"
+        renameResult.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
           ? renameResult.failure
           : error,
       ),
@@ -447,10 +462,11 @@ const createNativeKey = async (
       createVoApiV2Key(mutationRequest, command.values),
     mapFailure,
   })
-  if (result.certainty === "not-applied") return result
-  if (result.certainty === "possibly-applied")
+  if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+    return result
+  if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied)
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(result.failure),
     }
   try {
@@ -459,15 +475,18 @@ const createNativeKey = async (
     )
     const [createdKey] = created
     if (created.length === 1 && createdKey)
-      return { certainty: "applied" as const, value: { detail: createdKey } }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: { detail: createdKey },
+      }
   } catch (error) {
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(error),
     }
   }
   return {
-    certainty: "possibly-applied" as const,
+    certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
     failure: mapAccountKeyResourceUncertainFailure(),
   }
 }
@@ -501,9 +520,9 @@ const provisionRequirement = async (
     editor.buildCommand(editor.initialValues),
     options,
   )
-  return result.certainty === "applied"
+  return result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
     ? {
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { ref: createRef(config, result.value.detail.id) },
       }
     : result
@@ -520,14 +539,8 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
     account: input.account,
     request: input.request,
   }),
-  listScopes: async (config): Promise<readonly AccountKeyScope[]> => [
-    {
-      scopeKey: ACCOUNT_SCOPE_KEY,
-      routeKey: ACCOUNT_SCOPE_KEY,
-      displayName: config.account.name?.trim() || config.request.baseUrl,
-      isDefault: true,
-    },
-  ],
+  listScopes: async (config) =>
+    accountKeyDefaultScopes(ACCOUNT_SCOPE_KEY, config),
   provisioning: {
     supportsEditor: true,
     inspect: inspectProvisioning,
@@ -605,11 +618,14 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
     const merged = mergeResourceEdits(command.baseline, command.values, latest)
     if (!merged)
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
       }
     if (resourceValuesEqual(merged, latest))
-      return { certainty: "applied" as const, value: detail }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: detail,
+      }
     const request = requestWithOptions(config, options)
     const result = await runNativeResourceMutation({
       request,
@@ -617,23 +633,30 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
         updateVoApiV2Key(mutationRequest, detail.id, merged),
       mapFailure,
     })
-    if (result.certainty === "not-applied") return result
+    if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+      return result
     try {
       const updated = (await fetchKeysWithRuntimeGroups(request)).find(
         (key) => key.id === detail.id,
       )
       if (updated && matchesVoApiKeyWrite(updated, merged))
-        return { certainty: "applied" as const, value: updated }
+        return {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: updated,
+        }
     } catch (error) {
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(error),
       }
     }
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        result.certainty === "possibly-applied" ? result.failure : undefined,
+        result.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+          ? result.failure
+          : undefined,
       ),
     }
   },
@@ -644,15 +667,18 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
         await deleteVoApiV2Token(mutationRequest, keyId),
       mapFailure,
     })
-    return result.certainty === "applied"
+    return result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
       ? result.value === false
         ? {
-            certainty: "not-applied" as const,
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
             failure: {
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
             },
           }
-        : { certainty: "applied" as const, value: undefined }
+        : {
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+            value: undefined,
+          }
       : result
   },
   mapFailure,

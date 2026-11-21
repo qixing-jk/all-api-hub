@@ -5,6 +5,7 @@ import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import {
   fetchCheckedInTodayStatus,
   NEW_API_MESSAGE_KEYS,
+  readNewApiAwards,
   resolveCheckInEndpoint,
   resolveCheckInUrl,
   resolveNewApiCheckInReadback,
@@ -19,7 +20,6 @@ import {
   getEffectiveAuthType,
   matchTerminalFailureReason,
   normalizeCheckinMessage,
-  readQuotaReward,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { reconcileCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
@@ -230,8 +230,13 @@ async function runTurnstileAssistedAttempt(input: {
     const reconciled = reconcileCheckInResult({
       result,
       status: toNewApiMethodStatus(observation, Date.now()),
-      reward: observation?.checkedInToday
-        ? readQuotaReward(observation.todayQuotaAwarded)
+      awards: observation?.checkedInToday
+        ? readNewApiAwards(
+            input.account,
+            observation.todayQuotaAwarded,
+            observation.todayCheckinDate,
+            "stats.records[].quota_awarded",
+          )
         : undefined,
     })
     if (reconciled.status !== CHECKIN_RESULT_STATUS.FAILED) {

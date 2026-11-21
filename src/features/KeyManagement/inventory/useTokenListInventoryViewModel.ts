@@ -6,6 +6,7 @@ import {
 } from "~/features/CredentialExport/DeeplinkExportDialog"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import type { TokenListProps } from "~/features/KeyManagement/inventory/TokenList.types"
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { isBatchSelectableEntry } from "~/features/KeyManagement/runtimeKeyExportEligibility"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
@@ -133,24 +134,20 @@ export function useTokenListInventoryViewModel({
 
   const displayRows = useMemo<readonly KeyManagementDisplayRow[]>(
     () => [
-      ...entries.map(
-        (entry): KeyManagementDisplayRow => ({
-          kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
-          entry,
-        }),
-      ),
+      ...entries.map((entry): KeyManagementDisplayRow => ({
+        kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
+        entry,
+      })),
       ...nativeUnfilteredRows,
     ],
     [entries, nativeUnfilteredRows],
   )
   const filteredDisplayRows = useMemo<readonly KeyManagementDisplayRow[]>(
     () => [
-      ...filteredEntries.map(
-        (entry): KeyManagementDisplayRow => ({
-          kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
-          entry,
-        }),
-      ),
+      ...filteredEntries.map((entry): KeyManagementDisplayRow => ({
+        kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
+        entry,
+      })),
       ...nativeRows,
     ],
     [filteredEntries, nativeRows],
@@ -290,8 +287,10 @@ export function useTokenListInventoryViewModel({
             filteredAccountRows.length,
           ),
           enabledCount:
-            total.filter((entry) => entry.runtimeKey.status === "active")
-              .length + totalEnabledNativeRows,
+            total.filter(
+              (entry) =>
+                entry.runtimeKey.status === KEY_RESOURCE_CARD_STATUSES.Active,
+            ).length + totalEnabledNativeRows,
           showingCount: filteredAccountRows.length,
         }
       })

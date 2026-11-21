@@ -139,6 +139,17 @@
     "consumption": "今日消耗",
     "income": "今日收入"
   },
+  "financial": {
+    "derived": "基于站点字段派生",
+    "expires": "到期：{{date}}",
+    "lastKnown": "最后已知值",
+    "manual": "手填余额",
+    "olderRecord": "旧版保存的记录",
+    "reported": "站点报告",
+    "scopeUnknown": "使用范围未核实",
+    "technicalDetails": "技术信息（调试）",
+    "validityUnknown": "有效期未核实"
+  },
   "healthStatus": {
     "apiError": "API错误",
     "error": "错误",
@@ -317,7 +328,7 @@
     "prompt": "提示",
     "scopedAllowances": "分组和套餐额度可能有使用限制。原生额度不计入总余额、余额历史和收入估算。",
     "subscriptionRemainingCount": "订阅剩余次数",
-    "subscriptionRemainingTokens": "剩余 Token 额度（账户池 + 密钥）；美元余额是按官方价格折算的等值，包含免费额度。",
+    "subscriptionRemainingTokens": "剩余 Token",
     "subscriptionState": {
       "active": "订阅生效中",
       "expired": "订阅已过期",

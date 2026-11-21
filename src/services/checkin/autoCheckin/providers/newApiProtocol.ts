@@ -9,17 +9,23 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
+import {
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
 import type {
   NewApiCheckInRecord,
   NewApiCheckInResponse,
   NewApiCheckInStatus,
 } from "~/services/apiService/newApiFamily/checkInDto"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import { readCheckInRoutePath } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
@@ -33,8 +39,6 @@ import {
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
-  readPositiveDecimalAmount,
-  readQuotaReward,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { createConfirmedCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
@@ -45,7 +49,11 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { CheckInMethodStatus } from "~/types/checkIn"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
-import { formatLocalDayKey, formatLocalMonthKey } from "~/utils/core/dayKey"
+import {
+  formatLocalDayKey,
+  formatLocalMonthKey,
+  parseDayKey,
+} from "~/utils/core/dayKey"
 
 export const NEW_API_MESSAGE_KEYS = {
   turnstileIncognitoAccessRequired:
@@ -101,13 +109,13 @@ export function createCheckInRequest(
  *
  * The comparison uses the local calendar day, the same boundary the rest of the
  * extension keys days by. A deployment that resolves its own day differently
- * simply yields no match, and a record without a positive award yields none
- * either, so the row stays without an amount instead of showing a neighbouring
- * day's value or a meaningless zero.
+ * simply yields no match. Preserve the matching record's original amount and
+ * date so zero stays known and event identity never depends on a later clock
+ * read after network work.
  */
-function resolveTodayQuotaAwarded(
+function resolveTodayCheckinRecord(
   records: NewApiCheckInRecord[] | undefined,
-): number | undefined {
+): NewApiCheckInRecord | undefined {
   if (!Array.isArray(records)) return undefined
   const today = formatLocalDayKey()
   const todayRecord = records.find(
@@ -116,7 +124,40 @@ function resolveTodayQuotaAwarded(
       typeof record.checkin_date === "string" &&
       record.checkin_date.trim() === today,
   )
-  return readPositiveDecimalAmount(todayRecord?.quota_awarded)
+  return todayRecord
+}
+
+/** Daily records identify one grant; a missing date never becomes an invented event ID. */
+export function readNewApiAwards(
+  account: SiteAccount,
+  value: unknown,
+  date?: string,
+  field: "quota_awarded" | "stats.records[].quota_awarded" = "quota_awarded",
+) {
+  const day = date?.trim()
+  if (value === undefined) return undefined
+  const amount = newApiFinancialAmount(
+    value,
+    account.site_url,
+    account.site_type,
+  )
+  return [
+    accountAward(account, {
+      id: "daily-checkin",
+      operation: resolveCheckInEndpoint(account),
+      field,
+      value,
+      nativeUnitsPerAsset: amount.nativeUnitsPerAsset,
+      amountInputs: amount.amountInputs,
+      asset: amount.asset,
+      contractVersion: amount.contractVersion,
+      target: AWARD_TARGETS.Wallet,
+      fulfillment: AWARD_FULFILLMENT.Credited,
+      ...(day && parseDayKey(day)
+        ? { event: { namespace: "new-api-checkin-day", id: day } }
+        : {}),
+    }),
+  ]
 }
 
 /** Read the canonical public site flag instead of matching backend copy. */
@@ -166,8 +207,11 @@ export function resolveStandardCheckinResult(params: {
       rawMessage: message || undefined,
       // A repeat answer may carry the day's record; the day-match guard keeps
       // any other day's record from being shown as today's award.
-      reward: readQuotaReward(
-        resolveTodayQuotaAwarded(payload.data ? [payload.data] : undefined),
+      awards: readNewApiAwards(
+        params.account,
+        resolveTodayCheckinRecord(payload.data ? [payload.data] : undefined)
+          ?.quota_awarded,
+        payload.data?.checkin_date,
       ),
       data: payload.data,
     })
@@ -182,7 +226,11 @@ export function resolveStandardCheckinResult(params: {
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
       // The mutation answers with the day's record, whose `quota_awarded` is
       // already an internal quota amount.
-      reward: readQuotaReward(payload.data?.quota_awarded),
+      awards: readNewApiAwards(
+        params.account,
+        payload.data?.quota_awarded,
+        payload.data?.checkin_date,
+      ),
       data: payload.data ?? undefined,
     })
   }
@@ -252,7 +300,8 @@ export async function fetchSingleNewApiCheckInStatus(
        * set this call already fetched. Absent when the deployment returns no
        * records or none of them is the caller's local day.
        */
-      todayQuotaAwarded?: number
+      todayQuotaAwarded?: number | string
+      todayCheckinDate?: string
     }
   | undefined
 > {
@@ -289,9 +338,8 @@ export async function fetchSingleNewApiCheckInStatus(
         typeof checkInData?.enabled === "boolean" ||
         usesRouteOverride)
     ) {
-      const todayQuotaAwarded = resolveTodayQuotaAwarded(
-        checkInData.stats.records,
-      )
+      const todayRecord = resolveTodayCheckinRecord(checkInData.stats.records)
+      const todayQuotaAwarded = todayRecord?.quota_awarded
       const enabled = await resolveAvailability(
         checkInData.enabled,
         request,
@@ -301,7 +349,12 @@ export async function fetchSingleNewApiCheckInStatus(
       return {
         ...(enabled !== undefined ? { enabled } : {}),
         checkedInToday: checkInData.stats.checked_in_today,
-        ...(todayQuotaAwarded !== undefined ? { todayQuotaAwarded } : {}),
+        ...(todayQuotaAwarded !== undefined
+          ? {
+              todayQuotaAwarded,
+              todayCheckinDate: todayRecord!.checkin_date.trim(),
+            }
+          : {}),
       }
     }
 
@@ -345,7 +398,12 @@ export function resolveNewApiCheckInReadback(
   if (observation?.checkedInToday !== true) return null
   const result = createConfirmedCheckInResult({
     status: input.status ?? CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-    reward: readQuotaReward(observation.todayQuotaAwarded),
+    awards: readNewApiAwards(
+      input.account,
+      observation.todayQuotaAwarded,
+      observation.todayCheckinDate,
+      "stats.records[].quota_awarded",
+    ),
     data: input.data,
   })
   return withNewApiStatusConfirmation(input.account, result, observation)
@@ -368,8 +426,13 @@ export function withNewApiStatusConfirmation<
       ? {
           kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
           status,
-          reward: observation?.checkedInToday
-            ? readQuotaReward(observation.todayQuotaAwarded)
+          awards: observation?.checkedInToday
+            ? readNewApiAwards(
+                account,
+                observation.todayQuotaAwarded,
+                observation.todayCheckinDate,
+                "stats.records[].quota_awarded",
+              )
             : undefined,
         }
       : { kind: CHECK_IN_CONFIRMATION_KINDS.Unavailable },

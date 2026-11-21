@@ -47,8 +47,8 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
     locatorFromDetail: (detail: OpenRouterKeyDetail) => detail.key.hash,
     list: listOpenRouterKeyResources,
     get: getOpenRouterKeyResource,
-    toListFacts: (item, ref) => toFacts(item, ref),
-    toDetailFacts: (detail, ref) => toFacts(detail, ref),
+    toListFacts: (item, ref, context) => toFacts(item, ref, context),
+    toDetailFacts: (detail, ref, context) => toFacts(detail, ref, context),
     createEditor: async (config, scope, options, scopeInventory, intent) => {
       const scopeEntries =
         scopeInventory?.scopes ??

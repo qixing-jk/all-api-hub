@@ -26,6 +26,10 @@ import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageType
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 function createDeferred<T>() {
@@ -323,6 +327,87 @@ describe("AutoCheckin quick run", () => {
     expect(
       screen.queryByText("autoCheckin:execution.empty.noAccounts"),
     ).not.toBeInTheDocument()
+  })
+
+  it("lets the user retry an unavailable check-in status", async () => {
+    const user = userEvent.setup()
+    sendAutoCheckinMessageMock.mockImplementationOnce(async () => ({
+      success: false,
+    }))
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus)
+        return {
+          success: true,
+          data: {
+            perAccount: {
+              alpha: {
+                accountId: "alpha",
+                accountName: "Recovered account",
+                status: CHECKIN_RESULT_STATUS.SUCCESS,
+                timestamp: 1700000000000,
+              },
+            },
+          },
+        }
+      return { success: true }
+    })
+    render(<AutoCheckin routeParams={{}} />)
+
+    const retry = await screen.findByRole("button", {
+      name: "autoCheckin:execution.retryStatusLoad",
+    })
+    await user.click(retry)
+    expect(await screen.findByText("Recovered account")).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "autoCheckin:execution.retryStatusLoad",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("refreshes the displayed CNY reward when the saved account rate changes", async () => {
+    const user = userEvent.setup()
+    const usePreferences = userPreferencesContext.useUserPreferencesContext
+    vi.spyOn(
+      userPreferencesContext,
+      "useUserPreferencesContext",
+    ).mockImplementation(() => ({ ...usePreferences(), currencyType: "CNY" }))
+    const savedAccount = buildSiteAccount({ id: "alpha", exchange_rate: 6.5 })
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([savedAccount])
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetAccountInfo)
+        return {
+          success: true,
+          data: buildDisplaySiteData({ id: "alpha", exchangeRate: 6.5 }),
+        }
+      if (type === AutoCheckinMessageTypes.GetStatus)
+        return {
+          success: true,
+          data: {
+            perAccount: {
+              alpha: {
+                accountId: "alpha",
+                accountName: "Alpha",
+                status: CHECKIN_RESULT_STATUS.SUCCESS,
+                timestamp: 1700000000000,
+                reward: { quota: 500000 },
+              },
+            },
+          },
+        }
+      return { success: true }
+    })
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(await screen.findByText("+¥6.50")).toBeVisible()
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
+      { ...savedAccount, exchange_rate: 7.25 },
+    ])
+    await user.click(
+      screen.getByRole("button", { name: "autoCheckin:execution.runNow" }),
+    )
+    expect(await screen.findByText("+¥7.25")).toBeVisible()
+    expect(screen.queryByText("+¥6.50")).not.toBeInTheDocument()
   })
 
   it("captures the popup source when routeParams.runNow triggers a run", async () => {

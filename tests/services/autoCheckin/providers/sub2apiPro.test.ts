@@ -6,8 +6,8 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
 import { fetchBaiApiCheckInStatus } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { fetchClawhudDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
@@ -306,7 +306,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       checkedInToday: false,
     })
     vi.mocked(performSub2ApiProDailyCheckIn).mockResolvedValue({
-      kind: "applied",
+      kind: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       data: {
         rewardAmount: 2,
         newBalance: 10,
@@ -994,7 +994,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
 
   it("omits an overflowing reward without failing the check-in", async () => {
     vi.mocked(performSub2ApiProDailyCheckIn).mockResolvedValue({
-      kind: "applied",
+      kind: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       data: {
         rewardAmount: Number.MAX_VALUE,
         newBalance: 10,
@@ -1009,9 +1009,9 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     expect(result.reward).toBeUndefined()
   })
 
-  it("reports the awarded USD amount as a quota reward", async () => {
+  it("reports the awarded USD amount as a native USD award", async () => {
     vi.mocked(performSub2ApiProDailyCheckIn).mockResolvedValue({
-      kind: "applied",
+      kind: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       data: {
         rewardAmount: 1.5,
         newBalance: 10,
@@ -1026,7 +1026,12 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       }),
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
-      reward: { quota: 1.5 * QUOTA_PER_USD },
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "1.5" },
+        },
+      ],
     })
   })
 

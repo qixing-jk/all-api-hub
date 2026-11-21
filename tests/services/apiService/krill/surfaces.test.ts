@@ -310,6 +310,14 @@ describe("Krill AI console surfaces", () => {
         request,
         code: "code",
       } as never),
-    ).resolves.toBeUndefined()
+    ).resolves.toMatchObject({
+      awards: [
+        {
+          asset: { kind: "unknown" },
+          amount: { status: "unknown" },
+          fulfillment: "credited",
+        },
+      ],
+    })
   })
 })
