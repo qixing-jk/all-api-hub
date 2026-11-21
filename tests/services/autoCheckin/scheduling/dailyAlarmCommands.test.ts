@@ -71,7 +71,10 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
     )
     await expect(
       (autoCheckinScheduler as any).handleDailyAlarm(alarm),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      started: false,
+      ineligibleReason: "daily_run_in_flight",
+    })
     expect(runSpy).toHaveBeenCalledTimes(1)
     finish()
     await activeRun
@@ -124,7 +127,10 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
         name: "autoCheckinDaily",
         scheduledTime: Date.now(),
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      started: false,
+      ineligibleReason: "daily_alarm_not_today",
+    })
 
     expect(runSpy).not.toHaveBeenCalled()
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
@@ -160,7 +166,10 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
         name: "autoCheckinDaily",
         scheduledTime: new Date(2026, 0, 22, 23, 30, 0).getTime(),
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      started: false,
+      ineligibleReason: "daily_alarm_not_today",
+    })
 
     expect(runSpy).not.toHaveBeenCalled()
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
