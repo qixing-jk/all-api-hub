@@ -143,6 +143,23 @@ export function compareDecimal(left: string, right: string): number {
   return first < second ? -1 : first > second ? 1 : 0
 }
 
+/** Compare two exact cross-products without serializing an intermediate as a stored amount. */
+export function compareDecimalProducts(
+  left: readonly [string, string],
+  right: readonly [string, string],
+): number {
+  const a = parts(left[0]),
+    b = parts(left[1])
+  const c = parts(right[0]),
+    d = parts(right[1])
+  const leftScale = a.scale + b.scale
+  const rightScale = c.scale + d.scale
+  const scale = Math.max(leftScale, rightScale)
+  const first = a.integer * b.integer * 10n ** BigInt(scale - leftScale)
+  const second = c.integer * d.integer * 10n ** BigInt(scale - rightScale)
+  return first < second ? -1 : first > second ? 1 : 0
+}
+
 /** Positive places multiply by powers of ten; negative places divide exactly. */
 export function scaleDecimal(value: string, places: number): string {
   if (

@@ -51,6 +51,47 @@ afterEach(() => {
 })
 
 describe("AutoCheckin status view refresh", () => {
+  it.each(["rejected", "thrown"])(
+    "keeps the last accepted results visible and offers retry after a %s status load",
+    async (failure) => {
+      const user = userEvent.setup()
+      let calls = 0
+      vi.mocked(sendAutoCheckinMessage).mockImplementation(
+        async (type: string) => {
+          if (type !== "autoCheckin:getStatus") return { success: true }
+          calls += 1
+          if (calls === 2) {
+            if (failure === "thrown")
+              throw new Error("Unsupported stored award schema")
+            return { success: false, error: "Unsupported stored award schema" }
+          }
+          return createStatusResponse(
+            calls === 1 ? "saved" : "reloaded",
+            calls === 1 ? "Saved account" : "Reloaded account",
+          )
+        },
+      )
+      render(<AutoCheckin routeParams={{}} />)
+      expect(await screen.findByText("Saved account")).toBeVisible()
+      await user.click(
+        screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
+      )
+      expect(
+        await screen.findByText("autoCheckin:execution.statusLoadError"),
+      ).toBeVisible()
+      expect(screen.getByText("Saved account")).toBeVisible()
+      await user.click(
+        screen.getByRole("button", {
+          name: "autoCheckin:execution.retryStatusLoad",
+        }),
+      )
+      expect(await screen.findByText("Reloaded account")).toBeVisible()
+      expect(
+        screen.queryByText("autoCheckin:execution.statusLoadError"),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   it("reloads status when autoCheckin:runCompleted is received", async () => {
     const browserApi = await import("~/utils/browser/runtimeMessages")
 

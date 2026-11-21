@@ -6,7 +6,7 @@
   },
   "breakdown": {
     "chartTypes": {
-      "histogram": "Histogramm",
+      "bars": "Balken",
       "pie": "Kreisdiagramm"
     },
     "controls": {
@@ -19,6 +19,9 @@
       "pieDisabledForNegative": "Kreisdiagramme sind für negative Werte nicht verfügbar."
     },
     "title": "Kontoaufschlüsselung"
+  },
+  "charts": {
+    "view": "Diagrammansicht"
   },
   "description": "Sieh dir an, wie sich Guthaben und Kontingente ändern.",
   "empty": {
@@ -69,8 +72,24 @@
       "title": "Die Gesamtsumme ist möglicherweise unvollständig"
     }
   },
+  "legacy": {
+    "accountDetails": "Umgerechnete Kontobeträge",
+    "columnsHint": "Die Beträge verwenden die unter Filter gewählte Referenzwährung. Wähle eine Spaltenüberschrift, um die Konten zu sortieren.",
+    "coverage": "Tage mit Referenzwerten",
+    "currency": "Referenzwährung",
+    "currencyHint": "Beträge in CNY werden zum aktuellen Wechselkurs des Kontos umgerechnet.",
+    "referenceRate": "{{account}} · Referenz am {{date}}: 1 USD = {{rate}} CNY",
+    "referenceRates": "Referenzwechselkurse",
+    "showColumns": "Umgerechnete Beträge einblenden",
+    "title": "Umgerechnete ältere Aufzeichnungen",
+    "totalsHint": "Ältere Aufzeichnungen werden in die gewählte Referenzwährung umgerechnet."
+  },
   "messages": {
     "error": {
+      "captureResultUnavailable": "Erfassungsergebnis nicht verfügbar.",
+      "lastLoadedDescription": "Die zuletzt geladene Historie wird angezeigt. Erneutes Laden fehlgeschlagen; zum Aktualisieren erneut versuchen.",
+      "loadDescription": "Gespeicherte Daten wurden nicht ersetzt. Erneut versuchen oder eine kompatible App-Version verwenden.",
+      "loadTitle": "Historie konnte nicht geladen werden",
       "pruneFailed": "Beschneiden fehlgeschlagen: {{error}}",
       "refreshFailed": "Aktualisierung fehlgeschlagen: {{error}}",
       "settingsSaveFailed": "Einstellungen konnten nicht gespeichert werden: {{error}}"
@@ -85,7 +104,30 @@
       "pruneCompleted": "Beschneiden abgeschlossen",
       "refreshCompleted": "Aktualisierung abgeschlossen",
       "settingsSaved": "Einstellungen gespeichert"
+    },
+    "warning": {
+      "refreshIncomplete": "Historie unvollständig erfasst. Erfasst: {{captured}}; nicht erfasst: {{uncaptured}}."
     }
+  },
+  "metricHelp": {
+    "allowanceHint": "Verbleibendes Kontingent laut Anbieter. Der Anbieter legt fest, wofür und wie lange es gilt.",
+    "bonusHint": "Vom Anbieter gewährtes Guthaben, teils als Bonus credits bezeichnet. Der Anbieter bestimmt, wofür und wie lange es gilt.",
+    "convertedHint": "Historischer Kontostand in der im Filter gewählten Referenzwährung, umgerechnet zum aktuellen Kurs des Kontos.",
+    "estimatedHint": "Referenzschätzung aus zwei gespeicherten Salden und dem erfassten Verbrauch des Tages. Die Zeiträume können voneinander abweichen.",
+    "incomeHint": "Vom Anbieter erfasste Gutschriften auf dem Konto.",
+    "ledgerHint": "Der vom Anbieter gemeldete Kontostand in seiner ursprünglichen Einheit.",
+    "nativeHint": "Der vom Anbieter gemeldete Betrag in seiner ursprünglichen Einheit.",
+    "netHint": "Erfasste Einnahmen abzüglich erfasster Ausgaben.",
+    "outcomeHint": "Vom Anbieter erfasste Ausgaben.",
+    "quotaHint": "Saldo oder Restkontingent in {{unit}}. Der Anbieter legt die Regeln für den Abzug fest.",
+    "title": "Kennzahlen erklärt",
+    "trigger": "Kennzahlen erklärt für {{chart}}"
+  },
+  "metricMenu": {
+    "allowances": "Kontingente",
+    "balances": "Guthaben",
+    "cashflow": "Einnahmen und Ausgaben",
+    "convertedBalance": "Umgerechnetes Guthaben"
   },
   "metrics": {
     "balance": "Kontostand",
@@ -95,6 +137,11 @@
     "outcome": "Ausgaben"
   },
   "native": {
+    "activityCoverage": "{{covered}}/{{total}} Tage mit Aufzeichnungen",
+    "activityHint": "Einnahmen und Ausgaben in Originalwährung richten sich nach den Meldedaten des Anbieters.",
+    "activityTitle": "Zeitraumübersicht",
+    "amountsTitle": "Guthaben und Kontingente",
+    "coverage": "{{covered}} von {{total}} Konten mit Einträgen",
     "dimensions": {
       "groups": "Gruppen",
       "keys": "Schlüssel",
@@ -102,7 +149,30 @@
       "projects": "Projekte",
       "routes": "Routen"
     },
-    "restrictions": "{{dimension}}: {{value}}"
+    "ended": "Beendet",
+    "expired": "Abgelaufen",
+    "firstRecord": "Erster Eintrag",
+    "gaps": "Lücken zeigen Tage ohne verfügbaren Wert.",
+    "latest": "Letzter Eintrag",
+    "netInflow": "Geschätzter Nettozufluss",
+    "netInflowHint": "— bedeutet, dass für eine Schätzung des Nettozuflusses Daten fehlen.",
+    "originalObservation": "Wert vom {{date}}",
+    "recordedIncome": "Erfasste Einnahmen",
+    "recordedRange": "Tage mit Aufzeichnungen: {{range}}",
+    "recordedSpending": "Erfasste Ausgaben",
+    "reset": "Zurückgesetzt",
+    "restrictions": "{{dimension}}: {{value}}",
+    "scope": "Anbieter · Organisation · Wallet",
+    "sources": {
+      "console": "Konsole",
+      "inference": "Inferenz-API",
+      "numbered": "Quelle {{number}}"
+    },
+    "status": "Status",
+    "time": "Zeit",
+    "unknown": "Unbekannt",
+    "unknownAsset": "Unbekannte Einheit",
+    "unsupported": "Nicht unterstützt"
   },
   "overview": {
     "kpis": {
@@ -120,7 +190,7 @@
         "label": "Netto im Zeitraum"
       }
     },
-    "title": "Übersicht"
+    "viewTrend": "Verlauf anzeigen: {{metric}}, {{amount}}"
   },
   "settings": {
     "alarmUnsupported": "Die Alarm-API ist in diesem Browser nicht verfügbar. Die Erfassung am Tagesende kann nicht aktiviert werden.",
@@ -164,6 +234,7 @@
     },
     "emptyMetric": "Keine {{metric}}-Daten in diesem Bereich.",
     "gapBridge": "Keine Daten",
+    "noRecordForDay": "Keine Daten für diesen Tag",
     "scopes": {
       "accounts": "Nach Konto",
       "total": "Gesamt"

@@ -3,21 +3,20 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
-import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import { readAccountRefreshResult } from "~/services/accounts/refresh/accountRefreshResult"
 import { normalizeApiTokenKeyValue } from "~/services/accountTokens/apiTokenKey"
 import { resolveApiTokenKeyWithFetcher } from "~/services/accountTokens/tokenKeyResolver"
 import {
-  fetchAccountQuota,
+  fetchAccountBalance,
   fetchTodayIncome,
   fetchTodayUsage,
 } from "~/services/apiService/newApiFamily/default/accountData"
-import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
+import { collectAccountData } from "~/services/apiService/newApiFamily/default/accountDataCollection"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamily.Wong")
 const ENDPOINT = "/api/user/checkin"
@@ -134,32 +133,11 @@ export async function fetchCheckInStatus(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const timestampRange = getTodayTimestampRange()
-
-  const quotaPromise = fetchAccountQuota(request)
-  const todayUsagePromise = fetchTodayUsage(request, undefined, timestampRange)
-  const todayIncomePromise = fetchTodayIncome(
-    request,
-    undefined,
-    timestampRange,
-  )
-
-  const [quota, todayUsage, todayIncome] = await Promise.all([
-    quotaPromise,
-    todayUsagePromise,
-    todayIncomePromise,
-  ])
-
-  return {
-    quota,
-    ...todayUsage,
-    ...todayIncome,
-    todayStatsAvailability: {
-      ...todayUsage.todayStatsAvailability,
-      ...todayIncome.todayStatsAvailability,
-    },
-    checkIn: request.checkIn,
-  }
+  return collectAccountData(request, {
+    balance: () => fetchAccountBalance(request),
+    usage: (range) => fetchTodayUsage(request, undefined, range),
+    income: (range) => fetchTodayIncome(request, undefined, range),
+  })
 }
 
 /**
@@ -168,23 +146,10 @@ export async function fetchAccountData(
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<RefreshAccountResult> {
-  try {
-    const data = await fetchAccountData(request)
-    return {
-      success: true,
-      data,
-      healthStatus: {
-        status: SiteHealthStatus.Healthy,
-        message: t("account:healthStatus.normal"),
-      },
-    }
-  } catch (error) {
-    logger.error("Failed to refresh account data", error)
-    return {
-      success: false,
-      healthStatus: determineHealthStatus(error),
-    }
-  }
+  return readAccountRefreshResult(
+    () => fetchAccountData(request),
+    (error) => logger.error("Failed to refresh account data", error),
+  )
 }
 
 /**

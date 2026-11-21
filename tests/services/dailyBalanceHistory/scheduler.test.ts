@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "~/services/history/dailyBalanceHistory/constants"
 import {
   dailyBalanceHistoryScheduler,
-  handleDailyBalanceHistoryMessage,
   resolveBalanceHistoryPruneMessage,
   resolveBalanceHistoryRefreshNowMessage,
   resolveBalanceHistoryUpdateSettingsMessage,
@@ -12,10 +10,6 @@ import {
 } from "~/services/history/dailyBalanceHistory/scheduler"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import {
-  ACCOUNT_TODAY_METRIC_REASONS,
-  ACCOUNT_TODAY_METRIC_STATUSES,
-} from "~/types/accountTodayStats"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import {
   TASK_NOTIFICATION_STATUSES,
@@ -30,10 +24,8 @@ const {
   mockGetPreferences,
   mockSavePreferences,
   mockGetEnabledAccounts,
-  mockResolveAccountTodayStatsAvailability,
   mockRefreshAccount,
   mockRefreshAllAccounts,
-  mockUpsertSnapshot,
   mockPruneAll,
   mockCreateAlarm,
   mockClearAlarm,
@@ -46,10 +38,8 @@ const {
   mockGetPreferences: vi.fn(),
   mockSavePreferences: vi.fn(),
   mockGetEnabledAccounts: vi.fn(),
-  mockResolveAccountTodayStatsAvailability: vi.fn(),
   mockRefreshAccount: vi.fn(),
   mockRefreshAllAccounts: vi.fn(),
-  mockUpsertSnapshot: vi.fn(),
   mockPruneAll: vi.fn(),
   mockCreateAlarm: vi.fn(),
   mockClearAlarm: vi.fn(),
@@ -100,14 +90,9 @@ vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
     refreshAllAccounts: mockRefreshAllAccounts,
   },
 }))
-vi.mock("~/services/accounts/metrics/accountTodayStatsResolver", () => ({
-  resolveAccountTodayStatsAvailability: (...args: unknown[]) =>
-    mockResolveAccountTodayStatsAvailability(...args),
-}))
 
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: {
-    upsertSnapshot: mockUpsertSnapshot,
     pruneAll: mockPruneAll,
   },
 }))
@@ -163,22 +148,16 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
     mockSavePreferences.mockResolvedValue(true)
     mockGetEnabledAccounts.mockResolvedValue([])
-    mockResolveAccountTodayStatsAvailability.mockImplementation(
-      (account: any) =>
-        account.account_info?.todayStatsAvailability ?? {
-          consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-          requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-          tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-          income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-        },
-    )
     mockRefreshAllAccounts.mockResolvedValue({
       success: 2,
       failed: 1,
       refreshedCount: 1,
+      balanceHistoryCapturedCount: 2,
     })
-    mockRefreshAccount.mockResolvedValue({ refreshed: true })
-    mockUpsertSnapshot.mockResolvedValue(true)
+    mockRefreshAccount.mockResolvedValue({
+      refreshed: true,
+      balanceHistoryCaptured: true,
+    })
     mockPruneAll.mockResolvedValue(true)
     mockHasAlarmsAPI.mockReturnValue(true)
     mockGetAlarm.mockResolvedValue(undefined)
@@ -312,9 +291,56 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
   })
 
+  it("counts only persisted history receipts in a bulk refresh", async () => {
+    mockRefreshAllAccounts.mockResolvedValueOnce({
+      success: 2,
+      failed: 1,
+      refreshedCount: 2,
+      balanceHistoryCapturedCount: 1,
+    })
+    expect(
+      await dailyBalanceHistoryScheduler.refreshNow(refreshAllExecution),
+    ).toEqual({ success: 1, failed: 2, refreshedCount: 2 })
+  })
+
+  it("keeps account refresh counts independent from missing or failed history captures", async () => {
+    mockRefreshAccount
+      .mockResolvedValueOnce({ refreshed: true, balanceHistoryCaptured: true })
+      .mockResolvedValueOnce({ refreshed: true, balanceHistoryCaptured: false })
+      .mockResolvedValueOnce({ refreshed: false })
+    expect(
+      await dailyBalanceHistoryScheduler.refreshNow(refreshAllExecution, [
+        "captured",
+        "write-failed",
+        "legacy",
+      ]),
+    ).toEqual({ success: 1, failed: 2, refreshedCount: 2 })
+  })
+
+  it("reports alarm coverage gaps even when both accounts refreshed successfully", async () => {
+    let handler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mockOnAlarm.mockImplementation((value) => {
+      handler = value
+    })
+    mockGetEnabledAccounts.mockResolvedValue([
+      { id: "captured" },
+      { id: "legacy" },
+    ])
+    mockRefreshAccount
+      .mockResolvedValueOnce({ refreshed: true, balanceHistoryCaptured: true })
+      .mockResolvedValueOnce({ refreshed: true, balanceHistoryCaptured: false })
+    await dailyBalanceHistoryScheduler.initialize()
+    await handler?.({ name: DAILY_BALANCE_HISTORY_ALARM_NAME })
+    expect(mockNotifyTaskResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        counts: { total: 2, success: 1, failed: 1, skipped: 0 },
+      }),
+    )
+  })
+
   it("refreshes only valid requested ids and counts failures separately", async () => {
     mockRefreshAccount
-      .mockResolvedValueOnce({ refreshed: true })
+      .mockResolvedValueOnce({ refreshed: true, balanceHistoryCaptured: true })
       .mockResolvedValueOnce({ refreshed: false })
       .mockRejectedValueOnce(new Error("boom"))
 
@@ -334,8 +360,8 @@ describe("dailyBalanceHistoryScheduler", () => {
       protectionBypassExecution: refreshAllExecution,
     })
     expect(result).toEqual({
-      success: 2,
-      failed: 1,
+      success: 1,
+      failed: 2,
       refreshedCount: 1,
     })
   })
@@ -378,7 +404,7 @@ describe("dailyBalanceHistoryScheduler", () => {
       { id: "c" },
     ])
     mockRefreshAccount
-      .mockResolvedValueOnce({ refreshed: true })
+      .mockResolvedValueOnce({ refreshed: true, balanceHistoryCaptured: true })
       .mockResolvedValueOnce({ refreshed: false })
       .mockRejectedValueOnce(new Error("failed"))
 
@@ -399,8 +425,8 @@ describe("dailyBalanceHistoryScheduler", () => {
       started: true,
       trigger: "alarm",
       totals: {
-        success: 2,
-        failed: 1,
+        success: 1,
+        failed: 2,
         refreshed: 1,
       },
     })
@@ -421,7 +447,10 @@ describe("dailyBalanceHistoryScheduler", () => {
     expect(first).toBeNull()
 
     mockGetEnabledAccounts.mockResolvedValue([{ id: "a" }])
-    mockRefreshAccount.mockResolvedValueOnce({ refreshed: true })
+    mockRefreshAccount.mockResolvedValueOnce({
+      refreshed: true,
+      balanceHistoryCaptured: true,
+    })
     const second = await dailyBalanceHistoryScheduler.runEndOfDayCapture({
       trigger: "refresh",
     })
@@ -475,16 +504,6 @@ describe("dailyBalanceHistoryScheduler", () => {
     await expect(resolveBalanceHistoryPruneMessage()).resolves.toEqual({
       success: true,
       data: undefined,
-    })
-
-    const unknownResponse = vi.fn()
-    await handleDailyBalanceHistoryMessage(
-      { action: "balanceHistory:unknown" },
-      unknownResponse,
-    )
-    expect(unknownResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "Unknown action",
     })
   })
 
@@ -583,317 +602,6 @@ describe("dailyBalanceHistoryScheduler", () => {
     expect(mockRefreshAccount).not.toHaveBeenCalled()
   })
 
-  it("seeds development snapshots for enabled accounts that can be estimated", async () => {
-    mockGetEnabledAccounts.mockResolvedValue([
-      {
-        id: "native-allowances",
-        account_info: {
-          quota: 1000000,
-          today_income: 0,
-          today_quota_consumption: 250000,
-          nativeBalance: { unit: "USD", total: 8, permanent: 2, daily: 3 },
-        },
-      },
-      {
-        id: "included",
-        account_info: {
-          quota: 12_000_000,
-          today_income: 500_000,
-          today_quota_consumption: 1_000_000,
-        },
-        exchange_rate: 7,
-      },
-      {
-        id: "excluded",
-        excludeFromTodayIncome: true,
-        account_info: {
-          quota: 20_000_000,
-          today_income: 1_000_000,
-          today_quota_consumption: 2_000_000,
-        },
-        exchange_rate: 7,
-      },
-      {
-        id: "manual",
-        manualBalanceUsd: "12.34",
-        account_info: {
-          quota: 30_000_000,
-          today_income: 1_000_000,
-          today_quota_consumption: 2_000_000,
-        },
-        exchange_rate: 7,
-      },
-    ])
-
-    const result =
-      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
-
-    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(2)
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(1, {
-      accountId: "included",
-      dayKey: "2026-03-27",
-      retentionDays: 30,
-      snapshot: {
-        quota: 11_500_000,
-        today_income: 0,
-        today_quota_consumption: 0,
-        capturedAt: Date.now() - 24 * 60 * 60 * 1000,
-        source: "refresh",
-      },
-    })
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(2, {
-      accountId: "included",
-      dayKey: "2026-03-28",
-      retentionDays: 30,
-      snapshot: {
-        quota: 12_000_000,
-        today_income: 500_000,
-        today_quota_consumption: 1_000_000,
-        capturedAt: Date.now(),
-        source: "refresh",
-      },
-    })
-    expect(result).toEqual({
-      seeded: 1,
-      skipped: 3,
-      todayKey: "2026-03-28",
-      yesterdayKey: "2026-03-27",
-    })
-  })
-
-  it("does not synthesize complete seed cashflow from invalid values and skips invalid quotas", async () => {
-    mockGetEnabledAccounts.mockResolvedValue([
-      {
-        id: "defaulted",
-        account_info: {
-          quota: 12_000_000,
-          today_income: Number.NaN,
-          today_quota_consumption: Number.NaN,
-        },
-        exchange_rate: 7,
-      },
-      {
-        id: "invalid",
-        account_info: {
-          quota: 0,
-          today_income: 500_000,
-          today_quota_consumption: 1_000_000,
-        },
-        exchange_rate: 7,
-      },
-    ])
-
-    const result =
-      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
-
-    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(2)
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        accountId: "defaulted",
-        snapshot: expect.objectContaining({
-          quota: 12_000_000,
-          today_income: 0,
-          today_quota_consumption: 0,
-        }),
-      }),
-    )
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        accountId: "defaulted",
-        snapshot: expect.objectContaining({
-          quota: 12_000_000,
-          today_income: null,
-          today_quota_consumption: null,
-        }),
-      }),
-    )
-    expect(result).toEqual({
-      seeded: 1,
-      skipped: 1,
-      todayKey: "2026-03-28",
-      yesterdayKey: "2026-03-27",
-    })
-  })
-
-  it("preserves income and consumption coverage independently when seeding development snapshots", async () => {
-    mockGetEnabledAccounts.mockResolvedValue([
-      {
-        id: "income-unavailable",
-        account_info: {
-          quota: 12_000_000,
-          today_income: 500_000,
-          today_quota_consumption: 1_000_000,
-          todayStatsAvailability: {
-            consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-            requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-            tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-            income: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-            },
-          },
-        },
-        exchange_rate: 7,
-      },
-      {
-        id: "consumption-partial",
-        account_info: {
-          quota: 12_000_000,
-          today_income: 500_000,
-          today_quota_consumption: 1_000_000,
-          todayStatsAvailability: {
-            consumption: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
-            },
-            requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-            tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-            income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-          },
-        },
-        exchange_rate: 7,
-      },
-    ])
-
-    await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
-
-    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(4)
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        accountId: "income-unavailable",
-        snapshot: expect.objectContaining({
-          today_income: null,
-          today_quota_consumption: 1_000_000,
-        }),
-      }),
-    )
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
-      4,
-      expect.objectContaining({
-        accountId: "consumption-partial",
-        snapshot: expect.objectContaining({
-          today_income: 500_000,
-          today_quota_consumption: null,
-        }),
-      }),
-    )
-  })
-
-  it("counts failed snapshot writes as skipped during development seeding", async () => {
-    mockGetEnabledAccounts.mockResolvedValue([
-      {
-        id: "failed",
-        account_info: {
-          quota: 12_000_000,
-          today_income: 500_000,
-          today_quota_consumption: 1_000_000,
-        },
-        exchange_rate: 7,
-      },
-    ])
-    mockUpsertSnapshot.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
-
-    const result =
-      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
-
-    expect(result).toEqual({
-      seeded: 0,
-      skipped: 1,
-      todayKey: "2026-03-28",
-      yesterdayKey: "2026-03-27",
-    })
-  })
-
-  it("keeps both seeded days even when the configured retention is one day", async () => {
-    mockGetPreferences.mockResolvedValue({
-      balanceHistory: {
-        ...DEFAULT_BALANCE_HISTORY_PREFERENCES,
-        enabled: true,
-        endOfDayCapture: { enabled: true },
-        retentionDays: 1,
-      },
-    })
-    mockGetEnabledAccounts.mockResolvedValue([
-      {
-        id: "included",
-        account_info: {
-          quota: 12_000_000,
-          today_income: 500_000,
-          today_quota_consumption: 1_000_000,
-        },
-        exchange_rate: 7,
-      },
-    ])
-
-    const result =
-      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
-
-    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(2)
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ retentionDays: 2 }),
-    )
-    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ retentionDays: 2 }),
-    )
-    expect(result).toEqual({
-      seeded: 1,
-      skipped: 0,
-      todayKey: "2026-03-28",
-      yesterdayKey: "2026-03-27",
-    })
-  })
-
-  it("routes the development snapshot seed runtime message", async () => {
-    vi.stubEnv("MODE", "development")
-    mockGetEnabledAccounts.mockResolvedValue([
-      {
-        id: "included",
-        account_info: {
-          quota: 12_000_000,
-          today_income: 500_000,
-          today_quota_consumption: 1_000_000,
-        },
-        exchange_rate: 7,
-      },
-    ])
-
-    const response = vi.fn()
-    await handleDailyBalanceHistoryMessage(
-      {
-        action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
-      },
-      response,
-    )
-
-    expect(response).toHaveBeenCalledWith({
-      success: true,
-      data: expect.objectContaining({ seeded: 1, skipped: 0 }),
-    })
-  })
-
-  it("rejects the snapshot seed runtime message outside development mode", async () => {
-    vi.stubEnv("MODE", "production")
-
-    const response = vi.fn()
-    await handleDailyBalanceHistoryMessage(
-      {
-        action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
-      },
-      response,
-    )
-
-    expect(mockUpsertSnapshot).not.toHaveBeenCalled()
-    expect(response).toHaveBeenCalledWith({
-      success: false,
-      error: "Debug action unavailable",
-    })
-  })
-
   it("returns null immediately when a capture run is already active", async () => {
     ;(dailyBalanceHistoryScheduler as any).isRunning = true
 
@@ -939,7 +647,10 @@ describe("dailyBalanceHistoryScheduler", () => {
       alarmHandler = handler
     })
     mockGetEnabledAccounts.mockResolvedValue([{ id: "a" }])
-    mockRefreshAccount.mockResolvedValue({ refreshed: true })
+    mockRefreshAccount.mockResolvedValue({
+      refreshed: true,
+      balanceHistoryCaptured: true,
+    })
 
     await dailyBalanceHistoryScheduler.initialize()
     await alarmHandler?.({ name: DAILY_BALANCE_HISTORY_ALARM_NAME })

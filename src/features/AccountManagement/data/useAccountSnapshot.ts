@@ -7,16 +7,13 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
+import { buildNetInflowTotals } from "~/services/accounts/metrics/netInflowTotals"
 import {
   AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
   AUTO_REFRESH_UPDATE_TYPES,
 } from "~/services/accounts/refresh/constants"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
-import {
-  buildEstimatedTodayIncomeMoneyTotals,
-  convertQuotaToMoney,
-  estimateTodayIncomeForAccount,
-} from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
+import { estimateTodayIncomeForAccount } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type {
   AccountStats,
@@ -28,13 +25,26 @@ import type {
   Tag,
   TagStore,
 } from "~/types"
-import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
+import type { TodayIncomeEstimateResult } from "~/types/dailyBalanceHistory"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
 /** Account reads, visible projections and per-account reload ordering share one owner. */
 const logger = createLogger("AccountDataContext")
+
+/** Optional history failure must not prevent current saved-account data from loading. */
+async function readBalanceHistoryForEstimates(enabled: boolean) {
+  try {
+    return {
+      store: enabled ? await dailyBalanceHistoryStorage.getStore() : null,
+      unavailable: false,
+    }
+  } catch (error) {
+    logger.warn("Balance history unavailable for net inflow estimates", error)
+    return { store: null, unavailable: true }
+  }
+}
 
 /** Load and project saved-account facts while preserving reload ordering. */
 export function useAccountSnapshot({
@@ -52,14 +62,10 @@ export function useAccountSnapshot({
   const [hasLoadedAccountData, setHasLoadedAccountData] = useState(false)
   const [prevTotalConsumption, setPrevTotalConsumption] =
     useState<CurrencyAmount>({ USD: 0, CNY: 0 })
-  const [todayIncomeEstimateTotals, setTodayIncomeEstimateTotals] = useState<
-    ReturnType<typeof buildEstimatedTodayIncomeMoneyTotals>
-  >({
-    trusted: { USD: 0, CNY: 0 },
-    estimated: null,
-    availableAccounts: 0,
-    totalAccounts: 0,
-  })
+  const netInflowTotals = useMemo(
+    () => buildNetInflowTotals(displayData),
+    [displayData],
+  )
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
   const [tagStore, setTagStore] = useState<TagStore>({
     version: 1,
@@ -94,9 +100,13 @@ export function useAccountSnapshot({
       balanceHistoryStore: Awaited<
         ReturnType<typeof dailyBalanceHistoryStorage.getStore>
       > | null
+      balanceHistoryUnavailable: boolean
       todayKey: string
     }) => {
-      const estimatedByAccountId = new Map<string, CurrencyAmount | null>()
+      const estimatesByAccountId = new Map<
+        string,
+        Pick<TodayIncomeEstimateResult, "status" | "estimates">
+      >()
 
       for (const account of params.nextAccounts) {
         const estimate = estimateTodayIncomeForAccount({
@@ -105,20 +115,15 @@ export function useAccountSnapshot({
             account.disabled !== true &&
             account.excludeFromTodayIncome !== true,
           store: params.balanceHistoryStore,
+          historyUnavailable: params.balanceHistoryUnavailable,
           account,
           currentDayKey: params.todayKey,
         })
 
-        estimatedByAccountId.set(
-          account.id,
-          estimate.status === TODAY_INCOME_ESTIMATE_STATUS.available &&
-            estimate.estimatedTodayIncome !== null
-            ? convertQuotaToMoney({
-                quota: estimate.estimatedTodayIncome,
-                exchangeRate: account.exchange_rate,
-              })
-            : null,
-        )
+        estimatesByAccountId.set(account.id, {
+          status: estimate.status,
+          estimates: estimate.estimates,
+        })
       }
 
       return buildDisplayDataWithResolvedTags(
@@ -126,7 +131,8 @@ export function useAccountSnapshot({
         params.currentTagStore,
       ).map((site) => ({
         ...site,
-        estimatedTodayIncome: estimatedByAccountId.get(site.id) ?? null,
+        estimatedTodayIncome: null,
+        netInflowEstimate: estimatesByAccountId.get(site.id),
       }))
     },
     [buildDisplayDataWithResolvedTags, estimatedTodayIncomeEnabled],
@@ -145,13 +151,11 @@ export function useAccountSnapshot({
     try {
       logger.debug("Loading account data")
       await accountCheckInState.resetExpiredCheckIns()
-      const [accountSnapshot, currentTagStore, balanceHistoryStore] =
+      const [accountSnapshot, currentTagStore, balanceHistory] =
         await Promise.all([
           accountReadModels.getAccountManagementSnapshot(),
           tagStorage.getTagStore(),
-          estimatedTodayIncomeEnabled
-            ? dailyBalanceHistoryStorage.getStore()
-            : null,
+          readBalanceHistoryForEstimates(estimatedTodayIncomeEnabled),
         ])
       const {
         accounts: allAccounts,
@@ -164,7 +168,8 @@ export function useAccountSnapshot({
       const displaySiteData = buildDisplayDataWithBalanceHistory({
         nextAccounts: allAccounts,
         currentTagStore,
-        balanceHistoryStore,
+        balanceHistoryStore: balanceHistory.store,
+        balanceHistoryUnavailable: balanceHistory.unavailable,
         todayKey,
       })
 
@@ -184,19 +189,6 @@ export function useAccountSnapshot({
       setBookmarks(allBookmarks)
       setStats(accountStats)
       setDisplayData(displaySiteData)
-      const enabledAccounts = allAccounts.filter(
-        (account) =>
-          account.disabled !== true && account.excludeFromTodayIncome !== true,
-      )
-      setTodayIncomeEstimateTotals(
-        buildEstimatedTodayIncomeMoneyTotals({
-          enabled: estimatedTodayIncomeEnabled,
-          store: balanceHistoryStore,
-          accounts: enabledAccounts,
-          currentDayKey: todayKey,
-        }),
-      )
-
       const entryIdSet = new Set<string>([
         ...displaySiteData.map((site) => site.id),
         ...allBookmarks.map((bookmark) => bookmark.id),
@@ -332,9 +324,9 @@ export function useAccountSnapshot({
 
         accountsRef.current = mergedAccounts
         setAccounts(mergedAccounts)
-        const balanceHistoryStore = estimatedTodayIncomeEnabled
-          ? await dailyBalanceHistoryStorage.getStore()
-          : null
+        const balanceHistory = await readBalanceHistoryForEstimates(
+          estimatedTodayIncomeEnabled,
+        )
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
         const latestActiveReloadedAccounts = activeReloadedAccounts.filter(
           (account) =>
@@ -367,21 +359,9 @@ export function useAccountSnapshot({
           buildDisplayDataWithBalanceHistory({
             nextAccounts: latestMergedAccounts,
             currentTagStore: tagStore,
-            balanceHistoryStore,
+            balanceHistoryStore: balanceHistory.store,
+            balanceHistoryUnavailable: balanceHistory.unavailable,
             todayKey,
-          }),
-        )
-        const enabledAccounts = latestMergedAccounts.filter(
-          (account) =>
-            account.disabled !== true &&
-            account.excludeFromTodayIncome !== true,
-        )
-        setTodayIncomeEstimateTotals(
-          buildEstimatedTodayIncomeMoneyTotals({
-            enabled: estimatedTodayIncomeEnabled,
-            store: balanceHistoryStore,
-            accounts: enabledAccounts,
-            currentDayKey: todayKey,
           }),
         )
         for (const account of latestActiveReloadedAccounts) {
@@ -471,7 +451,7 @@ export function useAccountSnapshot({
     lastUpdateTime,
     hasLoadedAccountData,
     prevTotalConsumption,
-    todayIncomeEstimateTotals,
+    netInflowTotals,
     prevBalances,
     tagStore,
     tags,

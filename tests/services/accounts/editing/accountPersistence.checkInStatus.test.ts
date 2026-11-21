@@ -1,10 +1,21 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+} from "~/services/accounts/balanceSnapshot"
 import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreation"
 import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+} from "~/services/amounts/financialConstants"
 import * as adapterRegistry from "~/services/apiAdapters/registry"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
@@ -32,8 +43,28 @@ describe("account saving through the shared check-in update", () => {
       vi.useFakeTimers()
       const fetchData = vi.fn(async (request: ApiServiceAccountRequest) => {
         await new Promise((resolve) => setTimeout(resolve, 18_000))
+        const scope = accountBalanceScope(request)
         return {
-          quota: 123,
+          balance: accountBalanceSnapshot(
+            scope,
+            [
+              balancePosition({
+                id: "wallet",
+                scope,
+                value: "0.000246",
+                asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+                observedAt: 100,
+                source: {
+                  adapter: "fixture",
+                  operation: "wallet",
+                  contractVersion: "1",
+                  kind: EVIDENCE_KINDS.Reported,
+                },
+              }),
+            ],
+            100,
+            FINANCIAL_COVERAGE.Complete,
+          ),
           today_prompt_tokens: 7,
           today_completion_tokens: 8,
           today_quota_consumption: 9,
@@ -95,7 +126,16 @@ describe("account saving through the shared check-in update", () => {
       const account = await accounts.getAccountById(result.accountId!)
       expect(account?.health.status).toBe(SiteHealthStatus.Healthy)
       expect(account?.account_info).toMatchObject({
-        quota: 123,
+        balance: {
+          positions: [
+            expect.objectContaining({
+              amount: expect.objectContaining({
+                status: "known",
+                value: "0.000246",
+              }),
+            }),
+          ],
+        },
         today_prompt_tokens: 7,
         today_completion_tokens: 8,
         today_quota_consumption: 9,
@@ -163,7 +203,14 @@ describe("account saving through the shared check-in update", () => {
     expect(created.success).toBe(true)
     expect(readStatus).toHaveBeenCalledTimes(1)
     const saved = await accounts.getAccountById(created.accountId!)
-    expect(saved?.account_info.quota).toBe(123)
+    expect(saved?.account_info.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "0.000246",
+    })
+    expect(saved?.account_info.balance?.positions[0]?.asset).toEqual({
+      kind: "currency",
+      code: "USD",
+    })
     expect(
       getSelectedCheckInStatus({
         config: saved!.checkIn,

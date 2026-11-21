@@ -28,6 +28,7 @@ import { getAccountSiteProductProfile } from "~/services/accounts/accountSitePro
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { withManualAccountDataFetchTimeout } from "~/services/accounts/editing/accountCreationTimeout"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
+import { readLegacyAdapterFinancialPatch } from "~/services/accounts/refresh/accountRefreshUpdate"
 import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -37,6 +38,30 @@ import { SiteHealthStatus, type SiteAccount } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
+
+/** Normalize persistence failures consistently across immediate and deferred account saves. */
+function resolveAccountSaveFailure(
+  siteType: Parameters<typeof getAccountOperationLogDetails>[0],
+  error: unknown,
+): AccountSaveResponse {
+  logger.error(
+    "Failed to save account",
+    getAccountOperationLogDetails(siteType, error, {
+      siteType,
+      status: ACCOUNT_PERSISTENCE_LOG_STATUSES.PersistFailed,
+    }),
+  )
+  if (error instanceof LoginProviderClaimConflictError) {
+    return { success: false, message: error.message }
+  }
+  const errorMessage = getErrorMessage(error)
+  return {
+    success: false,
+    message: t("messages:errors.operation.saveFailed", {
+      error: errorMessage,
+    }),
+  }
+}
 
 /** Validates form data and persists an account addition. */
 export async function validateAndSaveAccount(
@@ -162,8 +187,7 @@ export async function validateAndSaveAccount(
     kimiOpenPlatformAuth: options.kimiOpenPlatformAuth,
     accountIdentity,
   })
-  const { fields, manualQuota, requestAccountIdentity, requestBaseUrl } =
-    persistenceContext
+  const { fields, requestAccountIdentity, requestBaseUrl } = persistenceContext
 
   if (options.deferDataRefresh === true) {
     const accountData: Omit<
@@ -176,8 +200,6 @@ export async function validateAndSaveAccount(
       health: { status: SiteHealthStatus.Unknown },
       account_info: {
         ...fields.account_info,
-        quota: manualQuota ?? 0,
-        balanceUnavailable: manualQuota === undefined,
         ...EMPTY_ACCOUNT_INFO_METRICS,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,
@@ -219,23 +241,7 @@ export async function validateAndSaveAccount(
         feedbackLevel: ACCOUNT_SAVE_FEEDBACK_LEVELS.Success,
       }
     } catch (saveError) {
-      logger.error(
-        "Failed to save account",
-        getAccountOperationLogDetails(normalizedSiteType, saveError, {
-          siteType: normalizedSiteType,
-          status: ACCOUNT_PERSISTENCE_LOG_STATUSES.PersistFailed,
-        }),
-      )
-      if (saveError instanceof LoginProviderClaimConflictError) {
-        return { success: false, message: saveError.message }
-      }
-      const errorMessage = getErrorMessage(saveError)
-      return {
-        success: false,
-        message: t("messages:errors.operation.saveFailed", {
-          error: errorMessage,
-        }),
-      }
+      return resolveAccountSaveFailure(normalizedSiteType, saveError)
     }
   }
 
@@ -295,7 +301,10 @@ export async function validateAndSaveAccount(
       checkIn: freshAccountData.checkIn,
       account_info: {
         ...fields.account_info,
-        quota: manualQuota ?? freshAccountData.quota,
+        balance: freshAccountData.balance,
+        allowances: freshAccountData.allowances,
+        settledConsumption: freshAccountData.settledConsumption,
+        reportedIncome: freshAccountData.reportedIncome,
         today_prompt_tokens: freshAccountData.today_prompt_tokens,
         today_completion_tokens: freshAccountData.today_completion_tokens,
         today_quota_consumption: freshAccountData.today_quota_consumption,
@@ -303,12 +312,15 @@ export async function validateAndSaveAccount(
         today_income: freshAccountData.today_income,
         todayStatsAvailability: freshAccountData.todayStatsAvailability,
         usage: freshAccountData.usage,
+        usageObservations: freshAccountData.usageObservations,
         subscription: freshAccountData.subscription,
-        nativeBalance: freshAccountData.nativeBalance,
-        balanceUnavailable:
-          manualQuota === undefined &&
-          freshAccountData.balanceUnavailable === true,
         recentUsageRecords: freshAccountData.recentUsageRecords,
+        ...readLegacyAdapterFinancialPatch(freshAccountData, {
+          accountId: "",
+          siteUrl: requestBaseUrl,
+          siteType: normalizedSiteType,
+          capturedAt: Date.now(),
+        }),
       },
       last_sync_time: Date.now(),
     }
@@ -373,8 +385,6 @@ export async function validateAndSaveAccount(
       },
       account_info: {
         ...fields.account_info,
-        quota: manualQuota ?? 0,
-        balanceUnavailable: manualQuota === undefined,
         ...EMPTY_ACCOUNT_INFO_METRICS,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,
@@ -418,23 +428,7 @@ export async function validateAndSaveAccount(
         feedbackLevel: ACCOUNT_SAVE_FEEDBACK_LEVELS.Warning,
       }
     } catch (saveError) {
-      logger.error(
-        "Failed to save account",
-        getAccountOperationLogDetails(normalizedSiteType, saveError, {
-          siteType: normalizedSiteType,
-          status: ACCOUNT_PERSISTENCE_LOG_STATUSES.PersistFailed,
-        }),
-      )
-      if (saveError instanceof LoginProviderClaimConflictError) {
-        return { success: false, message: saveError.message }
-      }
-      const errorMessage = getErrorMessage(saveError)
-      return {
-        success: false,
-        message: t("messages:errors.operation.saveFailed", {
-          error: errorMessage,
-        }),
-      }
+      return resolveAccountSaveFailure(normalizedSiteType, saveError)
     }
   }
 }

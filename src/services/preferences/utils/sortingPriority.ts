@@ -13,16 +13,31 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { CURRENCIES } from "~/constants/money"
+import { projectAllowancePosition } from "~/services/accounts/allowances"
+import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
+import { getDisplayBalancePositions } from "~/services/accounts/metrics/balanceProjection"
 import {
-  isAccountTodayMetricAvailable,
-  isAccountTodayMetricComplete,
-} from "~/services/accounts/metrics/accountTodayStats"
-import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
+  getDisplayConsumptionProjection,
+  getDisplayIncomeProjection,
+  selectDisplayCashflow,
+} from "~/services/accounts/metrics/consumptionProjection"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
+import { assetIdentity } from "~/services/amounts/assets"
+import {
+  isKnownOrStaleObservation,
+  type Amount,
+} from "~/services/amounts/balance"
+import { compareDecimalProducts } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_ROLES,
+} from "~/services/amounts/financialConstants"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import type {
-  AccountTodayMetricAvailability,
   ActiveSortField,
+  CurrencyDisplay,
   CurrencyType,
   DisplaySiteData,
   SiteAccount,
@@ -30,10 +45,12 @@ import type {
   SortOrder,
 } from "~/types"
 import { SiteHealthStatus } from "~/types"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
+import { convertUsdToCny } from "~/utils/core/money"
 
 /**
  * This constant defines the default sorting priority configuration.
@@ -61,9 +78,21 @@ export const CONFIGURABLE_SORTING_CRITERIA = [
   SortingCriteriaType.MATCHED_OPEN_TABS,
 ] as const
 
-export type AccountSortGroup = "pinned" | "normal" | "disabled"
+export const ACCOUNT_SORT_GROUPS = {
+  Pinned: "pinned",
+  Normal: "normal",
+  Disabled: "disabled",
+} as const
+export type AccountSortGroup =
+  (typeof ACCOUNT_SORT_GROUPS)[keyof typeof ACCOUNT_SORT_GROUPS]
 
-export type AccountContextBoost = "current-site" | "active-tab" | "open-tabs"
+export const ACCOUNT_CONTEXT_BOOSTS = {
+  CurrentSite: "current-site",
+  ActiveTab: "active-tab",
+  OpenTabs: "open-tabs",
+} as const
+export type AccountContextBoost =
+  (typeof ACCOUNT_CONTEXT_BOOSTS)[keyof typeof ACCOUNT_CONTEXT_BOOSTS]
 
 /**
  * Strength of a related-page match found among open tabs. The tab the user is
@@ -84,9 +113,9 @@ export type OpenTabMatchTiers = Record<string, OpenTabMatchTier>
 
 /** Browsing-context tiers in display order; each tier splits into pinned then normal. */
 const CONTEXT_BOOST_RANKS: Record<AccountContextBoost | "none", number> = {
-  "current-site": 0,
-  "active-tab": 1,
-  "open-tabs": 2,
+  [ACCOUNT_CONTEXT_BOOSTS.CurrentSite]: 0,
+  [ACCOUNT_CONTEXT_BOOSTS.ActiveTab]: 1,
+  [ACCOUNT_CONTEXT_BOOSTS.OpenTabs]: 2,
   none: 3,
 }
 
@@ -113,11 +142,13 @@ export function createAccountContextBoostResolver(
       enabled.has(SortingCriteriaType.CURRENT_SITE) &&
       accountId === detectedAccountId
     )
-      return "current-site"
+      return ACCOUNT_CONTEXT_BOOSTS.CurrentSite
     if (!enabled.has(SortingCriteriaType.MATCHED_OPEN_TABS)) return undefined
     const tier = matchedTabTiers[accountId]
-    if (tier === OPEN_TAB_MATCH_TIER.ACTIVE) return "active-tab"
-    if (tier === OPEN_TAB_MATCH_TIER.BACKGROUND) return "open-tabs"
+    if (tier === OPEN_TAB_MATCH_TIER.ACTIVE)
+      return ACCOUNT_CONTEXT_BOOSTS.ActiveTab
+    if (tier === OPEN_TAB_MATCH_TIER.BACKGROUND)
+      return ACCOUNT_CONTEXT_BOOSTS.OpenTabs
     return undefined
   }
 }
@@ -127,9 +158,9 @@ export function getAccountSortGroup(
   account: DisplaySiteData,
   pinnedAccountIds: ReadonlySet<string>,
 ): AccountSortGroup {
-  if (account.disabled === true) return "disabled"
-  if (pinnedAccountIds.has(account.id)) return "pinned"
-  return "normal"
+  if (account.disabled === true) return ACCOUNT_SORT_GROUPS.Disabled
+  if (pinnedAccountIds.has(account.id)) return ACCOUNT_SORT_GROUPS.Pinned
+  return ACCOUNT_SORT_GROUPS.Normal
 }
 
 /** Shared display tiers: browsing context before pins, with disabled accounts last. */
@@ -139,10 +170,10 @@ export function getAccountDisplayPriority(
   boost?: AccountContextBoost,
 ): number {
   const group = getAccountSortGroup(account, pinnedAccountIds)
-  if (group === "disabled") return DISABLED_ACCOUNT_PRIORITY
+  if (group === ACCOUNT_SORT_GROUPS.Disabled) return DISABLED_ACCOUNT_PRIORITY
   return (
     CONTEXT_BOOST_RANKS[boost ?? "none"] * CONTEXT_TIER_GROUPS +
-    (group === "pinned" ? 0 : 1)
+    (group === ACCOUNT_SORT_GROUPS.Pinned ? 0 : 1)
   )
 }
 
@@ -221,14 +252,130 @@ function compareAccountNames(
   )
 }
 
+/** The row's primary amount defines ordering independently of subtotal eligibility. */
+function getBalanceSortValue(account: DisplaySiteData) {
+  const snapshot = account.manualBalanceSnapshot ?? account.balanceSnapshot
+  const displayed = getDisplayBalancePositions(snapshot)
+  let primary = displayed[0]
+  if (
+    (!primary ||
+      primary.asset.kind === ASSET_KINDS.Unknown ||
+      !isKnownOrStaleObservation(primary.amount)) &&
+    displayed.length < 2 &&
+    account.allowances?.entries[0]
+  )
+    primary = projectAllowancePosition(account.allowances.entries[0])
+  return primary &&
+    primary.asset.kind !== ASSET_KINDS.Unknown &&
+    isKnownOrStaleObservation(primary.amount)
+    ? {
+        amount: {
+          asset: primary.asset,
+          value: primary.amount.value,
+        } satisfies Amount,
+        allowance: primary.role === BALANCE_ROLES.Allowance,
+      }
+    : undefined
+}
+
+/** Compare dollars using the same per-account conversion used for display. */
+function amountForSort(
+  amount: Amount,
+  account: DisplaySiteData,
+  currencyType: CurrencyType,
+): Amount {
+  if (
+    currencyType !== CURRENCIES.CNY ||
+    amount.asset.kind !== ASSET_KINDS.Currency ||
+    amount.asset.code !== CURRENCIES.USD
+  )
+    return amount
+  try {
+    return {
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+      value: convertUsdToCny(amount.value, account.exchangeRate),
+    }
+  } catch {
+    return amount
+  }
+}
+
+/** Compare USD and CNY at each account's configured rate without rounding a division. */
+function compareFinancialAmounts(
+  firstAmount: Amount,
+  firstAccount: DisplaySiteData,
+  secondAmount: Amount,
+  secondAccount: DisplaySiteData,
+  currencyType: CurrencyType,
+  sortOrder: SortOrder,
+): number {
+  const comparable = (amount: Amount, account: DisplaySiteData) => {
+    const displayed = amountForSort(amount, account, currencyType)
+    if (
+      currencyType === CURRENCIES.USD &&
+      displayed.asset.kind === ASSET_KINDS.Currency &&
+      displayed.asset.code === CURRENCIES.CNY
+    ) {
+      try {
+        return {
+          assetKey: assetIdentity({
+            kind: ASSET_KINDS.Currency,
+            code: CURRENCIES.USD,
+          }),
+          numerator: displayed.value,
+          denominator: convertUsdToCny("1", account.exchangeRate),
+        }
+      } catch {
+        // Without a usable rate, keep the original currency's comparison group.
+      }
+    }
+    return {
+      assetKey: assetIdentity(displayed.asset),
+      numerator: displayed.value,
+      denominator: "1",
+    }
+  }
+  const first = comparable(firstAmount, firstAccount)
+  const second = comparable(secondAmount, secondAccount)
+  if (first.assetKey !== second.assetKey)
+    return first.assetKey < second.assetKey ? -1 : 1
+  return applySortDirection(
+    compareDecimalProducts(
+      [first.numerator, second.denominator],
+      [second.numerator, first.denominator],
+    ),
+    sortOrder,
+  )
+}
+
+/** Wallets and plans retain their groups; comparable monetary values share an order. */
+function compareBalances(
+  a: DisplaySiteData,
+  b: DisplaySiteData,
+  currencyType: CurrencyType,
+  sortOrder: SortOrder,
+): number {
+  const aValue = getBalanceSortValue(a)
+  const bValue = getBalanceSortValue(b)
+  if (!aValue || !bValue) return aValue ? -1 : bValue ? 1 : 0
+  if (aValue.allowance !== bValue.allowance) return aValue.allowance ? 1 : -1
+  return compareFinancialAmounts(
+    aValue.amount,
+    a,
+    bValue.amount,
+    b,
+    currencyType,
+    sortOrder,
+  )
+}
+
 /**
  * Compare two display records using the user-selected sort field.
- * Keeps currency-aware ordering logic in a single place so every criteria can
- * reuse the same implementation.
+ * USD and CNY share a converted monetary order; other asset groups remain separate.
  * @param a First account entry to compare.
  * @param b Second account entry to compare.
  * @param sortField Field selected by the user for comparison.
- * @param currencyType Currency used when comparing numeric balances.
+ * @param currencyType Display currency for comparable monetary amounts.
  * @param sortOrder Sort direction (`asc` or `desc`).
  */
 function compareByUserSortField(
@@ -237,6 +384,7 @@ function compareByUserSortField(
   sortField: SortField,
   currencyType: CurrencyType,
   sortOrder: SortOrder,
+  currencyDisplay: CurrencyDisplay,
 ) {
   switch (sortField) {
     case DATA_TYPE_NAME:
@@ -257,36 +405,25 @@ function compareByUserSortField(
     case DATA_TYPE_HEALTH_STATUS:
       return applySortDirection(compareHealthStatus(a, b), sortOrder)
     case DATA_TYPE_BALANCE: {
-      const aComparable = supportsMonetaryBalance(
-        a.nativeBalance,
-        a.balanceUnavailable,
-      )
-      const bComparable = supportsMonetaryBalance(
-        b.nativeBalance,
-        b.balanceUnavailable,
-      )
-      if (aComparable !== bComparable) return aComparable ? -1 : 1
-      if (!aComparable) return 0
-      return applySortDirection(
-        a.balance[currencyType] - b.balance[currencyType],
-        sortOrder,
-      )
+      return compareBalances(a, b, currencyType, sortOrder)
     }
     case DATA_TYPE_CONSUMPTION:
-      return compareTodayMetric(
-        a.todayConsumption[currencyType],
-        a.todayStatsAvailability.consumption,
-        b.todayConsumption[currencyType],
-        b.todayStatsAvailability.consumption,
+      return compareNativePeriodMetric(
+        a,
+        b,
+        currencyType,
         sortOrder,
+        getDisplayConsumptionProjection,
+        currencyDisplay,
       )
     case DATA_TYPE_INCOME:
-      return compareTodayMetric(
-        a.todayIncome[currencyType],
-        a.todayStatsAvailability.income,
-        b.todayIncome[currencyType],
-        b.todayStatsAvailability.income,
+      return compareNativePeriodMetric(
+        a,
+        b,
+        currencyType,
         sortOrder,
+        getDisplayIncomeProjection,
+        currencyDisplay,
       )
     case DATA_TYPE_CREATED_AT: {
       const aCreatedAt =
@@ -305,34 +442,89 @@ function compareByUserSortField(
 }
 
 /**
- * Sorts available today statistics numerically while keeping unavailable
- * compatibility values at the end in either direction.
+ * Orders displayed local-day and provider-day readings in their own asset groups;
+ * retained values follow current readings and missing values stay last.
  */
-function compareTodayMetric(
-  aValue: number,
-  aAvailability: AccountTodayMetricAvailability,
-  bValue: number,
-  bAvailability: AccountTodayMetricAvailability,
+function compareNativePeriodMetric(
+  a: DisplaySiteData,
+  b: DisplaySiteData,
+  currencyType: CurrencyType,
   sortOrder: SortOrder,
+  project:
+    typeof getDisplayConsumptionProjection | typeof getDisplayIncomeProjection,
+  currencyDisplay: CurrencyDisplay,
 ): number {
-  const aAvailable = isAccountTodayMetricAvailable(aAvailability)
-  const bAvailable = isAccountTodayMetricAvailable(bAvailability)
-
-  if (aAvailable !== bAvailable) {
-    return aAvailable ? -1 : 1
+  const value = (account: DisplaySiteData) => {
+    const individualAccount: DisplaySiteData = {
+      ...account,
+      disabled: false,
+      excludeFromTodayIncome: false,
+    }
+    const projection = project([individualAccount])
+    const displayed = selectDisplayCashflow(
+      projection,
+      getDisplayCurrency(currencyDisplay, currencyType),
+      account.exchangeRate,
+    )
+    const nativeAmount =
+      displayed.comparisonAmount ??
+      displayed.nativeAmount ??
+      displayed.displayAmount ??
+      (displayed.coverage.status !== ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+        ? ({
+            asset: { kind: ASSET_KINDS.Currency, code: displayed.currency },
+            value: String(displayed.value),
+          } satisfies Amount)
+        : undefined)
+    if (nativeAmount) {
+      return {
+        siteDay: false,
+        lastKnown: false,
+        amount: nativeAmount,
+      }
+    }
+    const reference = projection.references?.[0]
+    if (!reference) {
+      if (project !== getDisplayConsumptionProjection) return undefined
+      const reading = getSiteDayReadings(account)[0]
+      const cost = reading?.usage.cost
+      return reading &&
+        cost &&
+        cost.asset.kind !== ASSET_KINDS.Unknown &&
+        isKnownOrStaleObservation(cost.amount)
+        ? {
+            siteDay: true,
+            lastKnown: reading.lastKnown,
+            amount: {
+              asset: cost.asset,
+              value: cost.amount.value,
+            } satisfies Amount,
+          }
+        : undefined
+    }
+    const amount: Amount = {
+      asset: { kind: ASSET_KINDS.Currency, code: currencyType },
+      value: String(reference.amount[currencyType]),
+    }
+    return {
+      siteDay: false,
+      lastKnown: reference.lastKnown,
+      amount,
+    }
   }
-  if (!aAvailable) {
-    return 0
-  }
-
-  const numericComparison = applySortDirection(aValue - bValue, sortOrder)
-  if (numericComparison !== 0) {
-    return numericComparison
-  }
-
-  const aComplete = isAccountTodayMetricComplete(aAvailability)
-  const bComplete = isAccountTodayMetricComplete(bAvailability)
-  return aComplete === bComplete ? 0 : aComplete ? -1 : 1
+  const first = value(a),
+    second = value(b)
+  if (!first || !second) return first ? -1 : second ? 1 : 0
+  if (first.lastKnown !== second.lastKnown) return first.lastKnown ? 1 : -1
+  if (first.siteDay !== second.siteDay) return first.siteDay ? 1 : -1
+  return compareFinancialAmounts(
+    first.amount,
+    a,
+    second.amount,
+    b,
+    currencyType,
+    sortOrder,
+  )
 }
 /** Compares saved manual positions, leaving unlisted accounts after listed ones. */
 function compareManualOrder(
@@ -370,7 +562,10 @@ export function createDynamicSortComparator(
   matchedTabTiers: OpenTabMatchTiers = {},
   pinnedAccountIds: string[] = [],
   manualOrderIndices: Record<string, number> = {},
+  currencyDisplay: CurrencyDisplay = currencyType,
 ) {
+  const comparisonCurrency =
+    getDisplayCurrency(currencyDisplay, currencyType) ?? CURRENCIES.USD
   const pinnedAccountIdSet = new Set(pinnedAccountIds)
   const getContextBoost = createAccountContextBoostResolver(
     config,
@@ -388,8 +583,9 @@ export function createDynamicSortComparator(
         a,
         b,
         userSortField,
-        currencyType,
+        comparisonCurrency,
         sortOrder,
+        currencyDisplay,
       )
       if (userComparison !== 0) return userComparison
     }

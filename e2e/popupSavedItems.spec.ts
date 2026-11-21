@@ -16,8 +16,20 @@ import {
   SITE_BOOKMARKS_TEST_IDS,
 } from "~/features/SiteBookmarks/testIds"
 import enAccount from "~/locales/en/account.json" with { type: "json" }
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import type { SiteAccount, SiteBookmark } from "~/types"
+import { AuthTypeEnum, type SiteAccount, type SiteBookmark } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -33,10 +45,12 @@ import {
   waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
 import {
+  getPlasmoStorageJsonValue,
   getPlasmoStorageRawValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const SHARE_SNAPSHOT_CAPTION_WRITES_KEY =
   "__aah_e2e_share_snapshot_caption_writes__"
@@ -471,11 +485,142 @@ test("virtualizes long popup account lists while keeping the final account reach
     .toBe(true)
 })
 
+test("keeps equal raw quota IDs separate in account rows and the popup balance details", async ({
+  context,
+  page,
+  extensionId,
+  extensionDir,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const worker = await getServiceWorker(context)
+  const now = Date.now()
+  await seedUserPreferences(worker, {
+    showTodayCashflow: false,
+    themeMode: "light",
+  })
+  const accounts = [
+    { id: "native-alpha", name: "Alpha wallet", value: "20" },
+    { id: "native-beta", name: "Beta wallet", value: "30" },
+  ].map(({ id, name, value }) => {
+    const authority = `https://${id}.example.invalid`
+    const scope = {
+      ...accountBalanceScope({
+        baseUrl: authority,
+        accountId: id,
+        auth: { authType: AuthTypeEnum.AccessToken, userId: id },
+      }),
+      projects: { kind: SCOPE_SELECTION_KINDS.All },
+      keys: { kind: SCOPE_SELECTION_KINDS.All },
+      models: { kind: SCOPE_SELECTION_KINDS.All },
+      groups: { kind: SCOPE_SELECTION_KINDS.All },
+    }
+    return createStoredAccount({
+      id,
+      site_name: name,
+      site_url: authority,
+      last_sync_time: now,
+      account_info: {
+        id,
+        balance: accountBalanceSnapshot(
+          scope,
+          [
+            balancePosition({
+              id: "available",
+              value,
+              scope,
+              observedAt: now,
+              asset: {
+                kind: ASSET_KINDS.Quota,
+                id: "shared-quota",
+                label: "credits",
+                displayScale: 1,
+                displayLabel: "Credits",
+              },
+              source: {
+                adapter: "fixture",
+                operation: "balance",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+              },
+              nature: BALANCE_NATURES.Prepaid,
+              validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+            }),
+          ],
+          now,
+          "complete",
+        ),
+      },
+    })
+  })
+  await seedStoredAccounts(worker, accounts)
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+  )
+  await waitForExtensionRoot(page)
+  for (const { id, value } of [
+    { id: "native-alpha", value: "20 Credits" },
+    { id: "native-beta", value: "30 Credits" },
+  ]) {
+    await expect(
+      page.getByTestId(getAccountManagementListItemTestId(id)),
+    ).toContainText(value)
+  }
+  const list = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListView)
+  await captureVisualViews({
+    page,
+    ready: list,
+    captureTarget: list,
+    extensionDir,
+    id: "native-account-list",
+  })
+  await page.setViewportSize({ width: 430, height: 900 })
+  await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
+  await waitForExtensionRoot(page)
+  const totals = page.getByRole("region", { name: "Financial totals" })
+  await expect(totals).toContainText("20 Credits")
+  await expect(totals).toContainText("Alpha wallet")
+  await expect(totals).not.toContainText("50 Credits")
+  await captureVisualViews({
+    page,
+    ready: totals,
+    captureTarget: totals,
+    extensionDir,
+    id: "native-account-popup",
+  })
+  await totals
+    .getByRole("button", { name: "Financial totals", exact: true })
+    .click()
+  const dialog = page.getByRole("dialog")
+  await dialog.getByRole("button", { name: "Assets · 2", exact: true }).click()
+  await expect(dialog).toContainText("Alpha wallet")
+  await expect(dialog).toContainText("Beta wallet")
+  await expect(dialog).toContainText("30 Credits")
+  await captureVisualViews({
+    page,
+    ready: dialog,
+    captureTarget: dialog,
+    extensionDir,
+    id: "native-account-balance-details",
+  })
+  const saved = await getPlasmoStorageJsonValue<{ accounts: SiteAccount[] }>(
+    worker,
+    STORAGE_KEYS.ACCOUNTS,
+  )
+  expect(
+    saved?.accounts.map((account) => {
+      const asset = account.account_info.balance?.positions[0]?.asset
+      return asset?.kind === ASSET_KINDS.Quota ? asset.id : undefined
+    }),
+  ).toEqual(["shared-quota", "shared-quota"])
+})
+
 test("downloads an overview share snapshot from the popup and copies the fallback caption", async ({
   context,
   extensionId,
+  extensionDir,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
     currencyType: "USD",
@@ -538,6 +683,15 @@ test("downloads an overview share snapshot from the popup and copies the fallbac
     page.getByRole("button", { name: "Popup Share Included" }),
   ).toBeVisible()
 
+  const totals = page.getByRole("region", { name: "Financial totals" })
+  await captureVisualViews({
+    page,
+    ready: totals,
+    captureTarget: totals,
+    extensionDir,
+    id: "account-share-overview",
+  })
+
   const downloadPromise = page.waitForEvent("download")
   await page.getByRole("button", { name: "Share overview snapshot" }).click()
   const download = await downloadPromise
@@ -553,6 +707,7 @@ test("downloads an overview share snapshot from the popup and copies the fallbac
   expect([...pngBytes.subarray(0, 8)]).toEqual([
     0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
   ])
+  await download.saveAs(testInfo.outputPath("overview-share-snapshot.png"))
 
   await expect(page.getByText("Snapshot downloaded")).toBeVisible()
   await expect(
@@ -563,10 +718,21 @@ test("downloads an overview share snapshot from the popup and copies the fallbac
     SHARE_SNAPSHOT_TEST_IDS.captionTextarea,
   )
   await expect(captionTextArea).toHaveValue(/All API Hub.*Overview/s)
-  await expect(captionTextArea).toHaveValue(/Total balance: \$1\.00/)
+  await expect(captionTextArea).toHaveValue(
+    /Balance: Last known value · \$1\.00/,
+  )
+  await expect(captionTextArea).toHaveValue(/Partial coverage/)
+  await expect(captionTextArea).toHaveValue(/Included 0 of 1 accounts/)
   await expect(captionTextArea).toHaveValue(/Accounts: 2/)
   await expect(captionTextArea).not.toHaveValue(/Popup Share Included/)
   await expect(captionTextArea).not.toHaveValue(/share-included\.example/)
+  await captureVisualViews({
+    page,
+    ready: captionTextArea,
+    captureTarget: captionTextArea.locator(".."),
+    extensionDir,
+    id: "account-share-caption",
+  })
 
   await page.getByRole("button", { name: "Copy caption" }).click()
   await expect(page.getByText("Caption copied")).toBeVisible()

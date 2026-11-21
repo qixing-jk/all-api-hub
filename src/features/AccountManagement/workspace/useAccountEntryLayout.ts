@@ -44,6 +44,7 @@ export function useAccountEntryLayout({
 }) {
   const {
     currencyType,
+    currencyDisplay = currencyType,
     showTodayCashflow,
     sortField: initialSortField,
     sortOrder: initialSortOrder,
@@ -332,6 +333,7 @@ export function useAccountEntryLayout({
       matchedTabTiers,
       pinnedAccountIds,
       manualOrderIndices,
+      currencyDisplay,
     )
     return [...displayData].sort(comparator)
   }, [
@@ -340,6 +342,7 @@ export function useAccountEntryLayout({
     detectedAccount,
     sortField,
     currencyType,
+    currencyDisplay,
     sortOrder,
     matchedTabTiers,
     pinnedAccountIds,

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { FINANCIAL_COVERAGE } from "~/services/amounts/financialConstants"
 import { fetchAccountData as fetchAnyRouterAccountData } from "~/services/apiService/newApiFamily/variants/anyrouter"
 import { fetchAccountData as fetchDoneHubAccountData } from "~/services/apiService/newApiFamily/variants/doneHub"
 import { fetchAccountData as fetchVeloeraAccountData } from "~/services/apiService/newApiFamily/variants/veloera"
@@ -10,20 +11,20 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   mockRefreshSelectedStatus,
-  mockFetchAccountQuota,
+  mockFetchAccountBalance,
   mockFetchTodayIncome,
   mockFetchTodayUsage,
   mockGetTodayTimestampRange,
 } = vi.hoisted(() => ({
   mockRefreshSelectedStatus: vi.fn(),
-  mockFetchAccountQuota: vi.fn(),
+  mockFetchAccountBalance: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
   mockFetchTodayUsage: vi.fn(),
   mockGetTodayTimestampRange: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
-  fetchAccountQuota: mockFetchAccountQuota,
+  fetchAccountBalance: mockFetchAccountBalance,
   fetchCheckInStatus: vi.fn(),
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
@@ -55,7 +56,15 @@ describe("New API-family account-data variants", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetTodayTimestampRange.mockReturnValue(timestampRange)
-    mockFetchAccountQuota.mockResolvedValue(100)
+    mockFetchAccountBalance.mockResolvedValue({
+      balance: {
+        schemaVersion: 2,
+        subject: { kind: "account", accountId: request.accountId },
+        capturedAt: 111,
+        positions: [],
+        coverage: FINANCIAL_COVERAGE.Unknown,
+      },
+    })
     mockFetchTodayUsage.mockResolvedValue({
       today_quota_consumption: 1,
       today_prompt_tokens: 2,

@@ -2,6 +2,7 @@ import { accountDataTransfer } from "~/services/accounts/accountStorage/accountD
 import {
   canonicalizeLegacyAccountConfigs,
   normalizeV2BackupForMerge,
+  readBackupAccountConfig,
 } from "~/services/importExport/backupCodec"
 import {
   type BackupAccountsPartialV2,
@@ -15,6 +16,7 @@ import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 
 /** Imports V2 accounts by replacing the current account/bookmark collection. */
 export async function importV2AccountsWithReplace(data: BackupV2) {
+  readBackupAccountConfig(data)
   if ("tagStore" in (data as any) && (data as any).tagStore) {
     await tagStorage.importTagStore((data as any).tagStore)
   }

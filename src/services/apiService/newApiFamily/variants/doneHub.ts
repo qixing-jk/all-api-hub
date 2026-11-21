@@ -3,20 +3,19 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
-import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import { readAccountRefreshResult } from "~/services/accounts/refresh/accountRefreshResult"
 import {
-  fetchAccountQuota,
+  fetchAccountBalance,
   fetchTodayIncome as fetchTodayIncomeFromNewApiFamily,
   fetchTodayUsage as fetchTodayUsageFromNewApiFamily,
 } from "~/services/apiService/newApiFamily/default/accountData"
+import { collectAccountData } from "~/services/apiService/newApiFamily/default/accountDataCollection"
 import {
   getTodayTimestampRange,
   type TodayTimestampRange,
 } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import type { TodayLogQueryConfig } from "~/services/history/usageHistory/usageLogModel"
-import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamily.DoneHub")
 
@@ -67,28 +66,15 @@ export async function fetchTodayIncome(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const resolvedCheckIn: CheckInConfig = request.checkIn
-  const timestampRange = getTodayTimestampRange()
-
-  const quotaPromise = fetchAccountQuota(request)
-  const todayUsagePromise = fetchTodayUsage(request, timestampRange)
-  const todayIncomePromise = fetchTodayIncome(request, timestampRange)
-  const [quota, todayUsage, todayIncome] = await Promise.all([
-    quotaPromise,
-    todayUsagePromise,
-    todayIncomePromise,
-  ])
-
-  return {
-    quota,
-    ...todayUsage,
-    ...todayIncome,
-    todayStatsAvailability: {
-      ...todayUsage.todayStatsAvailability,
-      ...todayIncome.todayStatsAvailability,
+  // DoneHub captures the check-in configuration before starting its reads.
+  return collectAccountData(
+    { ...request },
+    {
+      balance: () => fetchAccountBalance(request),
+      usage: (range) => fetchTodayUsage(request, range),
+      income: (range) => fetchTodayIncome(request, range),
     },
-    checkIn: resolvedCheckIn,
-  }
+  )
 }
 
 /**
@@ -97,21 +83,8 @@ export async function fetchAccountData(
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<RefreshAccountResult> {
-  try {
-    const data = await fetchAccountData(request)
-    return {
-      success: true,
-      data,
-      healthStatus: {
-        status: SiteHealthStatus.Healthy,
-        message: t("account:healthStatus.normal"),
-      },
-    }
-  } catch (error) {
-    logger.error("DoneHub 刷新账号数据失败", error)
-    return {
-      success: false,
-      healthStatus: determineHealthStatus(error),
-    }
-  }
+  return readAccountRefreshResult(
+    () => fetchAccountData(request),
+    (error) => logger.error("DoneHub 刷新账号数据失败", error),
+  )
 }

@@ -123,7 +123,7 @@ describe("New API family account data utilities", () => {
       expect(Number.isFinite(result.today_quota_consumption)).toBe(true)
       expect(Number.isFinite(result.today_prompt_tokens)).toBe(true)
       expect(Number.isFinite(result.today_completion_tokens)).toBe(true)
-      expect(result.coverage.consumption.invalidCount).toBe(1)
+      expect(result.coverage.consumption.invalidCount).toBe(2)
       expect(result.coverage.promptTokens.invalidCount).toBe(1)
       expect(result.coverage.completionTokens.invalidCount).toBe(1)
     })
@@ -132,6 +132,7 @@ describe("New API family account data utilities", () => {
       const result = aggregateUsageData([])
 
       expect(result).toEqual({
+        nativeQuotaConsumption: "0",
         today_quota_consumption: 0,
         today_prompt_tokens: 0,
         today_completion_tokens: 0,

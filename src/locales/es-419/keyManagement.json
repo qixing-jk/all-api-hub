@@ -261,6 +261,7 @@
     "lifetime": "Todo el tiempo",
     "limit": "Límite",
     "nativeQuota": "Cuota nativa",
+    "partial": "Parcial",
     "period": {
       "5h": "5 horas",
       "day": "Diario",

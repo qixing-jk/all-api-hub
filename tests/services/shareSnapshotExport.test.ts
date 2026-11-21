@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { exportShareSnapshot } from "~/services/sharing/shareSnapshots"
+import {
+  SHARE_SNAPSHOT_EXPORT_METHODS,
+  SHARE_SNAPSHOT_KINDS,
+} from "~/services/sharing/shareSnapshots/constants"
 import { MESH_GRADIENT_NOISE_TILE_SIZE } from "~/services/sharing/shareSnapshots/meshGradient"
 import { buildShareSnapshotPayload } from "~~/tests/test-utils/factories"
 
@@ -88,7 +92,7 @@ describe("exportShareSnapshot", () => {
   const originalClipboardItem = (window as any).ClipboardItem
   const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
     navigator,
-    "clipboard",
+    SHARE_SNAPSHOT_EXPORT_METHODS.Clipboard,
   )
 
   let lastAnchor: HTMLAnchorElement | null = null
@@ -139,14 +143,18 @@ describe("exportShareSnapshot", () => {
     document.createElement = originalCreateElement as any
     ;(window as any).ClipboardItem = originalClipboardItem
     if (originalClipboardDescriptor) {
-      Object.defineProperty(navigator, "clipboard", originalClipboardDescriptor)
+      Object.defineProperty(
+        navigator,
+        SHARE_SNAPSHOT_EXPORT_METHODS.Clipboard,
+        originalClipboardDescriptor,
+      )
     } else {
-      Reflect.deleteProperty(navigator, "clipboard")
+      Reflect.deleteProperty(navigator, SHARE_SNAPSHOT_EXPORT_METHODS.Clipboard)
     }
   })
 
   const payload = buildShareSnapshotPayload({
-    kind: "account",
+    kind: SHARE_SNAPSHOT_KINDS.Account,
     currencyType: "USD",
     siteName: "Example Site",
     originUrl: "https://example.com",
@@ -159,7 +167,7 @@ describe("exportShareSnapshot", () => {
     ;(window as any).ClipboardItem = ClipboardItemMock
 
     const write = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(navigator, "clipboard", {
+    Object.defineProperty(navigator, SHARE_SNAPSHOT_EXPORT_METHODS.Clipboard, {
       configurable: true,
       value: { write },
     })
@@ -184,7 +192,7 @@ describe("exportShareSnapshot", () => {
       return undefined
     })
 
-    Object.defineProperty(navigator, "clipboard", {
+    Object.defineProperty(navigator, SHARE_SNAPSHOT_EXPORT_METHODS.Clipboard, {
       configurable: true,
       value: { write },
     })
@@ -201,12 +209,16 @@ describe("exportShareSnapshot", () => {
   it("falls back to download when clipboard image write is unsupported and still copies caption when possible", async () => {
     vi.useFakeTimers()
     try {
-      Object.defineProperty(navigator, "clipboard", {
-        configurable: true,
-        value: {
-          writeText: vi.fn().mockResolvedValue(undefined),
+      Object.defineProperty(
+        navigator,
+        SHARE_SNAPSHOT_EXPORT_METHODS.Clipboard,
+        {
+          configurable: true,
+          value: {
+            writeText: vi.fn().mockResolvedValue(undefined),
+          },
         },
-      })
+      )
 
       const result = await exportShareSnapshot(payload)
 
@@ -227,7 +239,7 @@ describe("exportShareSnapshot", () => {
   })
 
   it("returns a download result without caption copy when text clipboard support is unavailable", async () => {
-    Object.defineProperty(navigator, "clipboard", {
+    Object.defineProperty(navigator, SHARE_SNAPSHOT_EXPORT_METHODS.Clipboard, {
       configurable: true,
       value: {},
     })

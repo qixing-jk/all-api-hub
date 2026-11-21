@@ -20,9 +20,16 @@ import {
   prepareAccountPersistenceIdentity,
   requireAccountDataCapability,
 } from "~/services/accounts/accountPersistence/shared"
+import {
+  ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
+  getAccountSiteProductProfile,
+} from "~/services/accounts/accountSiteProfile"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
+import {
+  AccountUpdateUserTimestampMode,
+  applySiteAccountUpdates,
+} from "~/services/accounts/editing/accountDefaults"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
 import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -198,17 +205,13 @@ export async function validateAndUpdateAccount(
     kimiOpenPlatformAuth: options.kimiOpenPlatformAuth,
     accountIdentity,
   })
-  const { fields, manualQuota, requestAccountIdentity, requestBaseUrl } =
-    persistenceContext
+  const { fields, requestAccountIdentity, requestBaseUrl } = persistenceContext
 
   if (options.deferDataRefresh === true) {
     const updateData = {
       ...fields,
       account_info: {
         ...fields.account_info,
-        ...(manualQuota === undefined
-          ? {}
-          : { quota: manualQuota, balanceUnavailable: false }),
       },
     }
 
@@ -248,6 +251,9 @@ export async function validateAndUpdateAccount(
     }
   }
 
+  let balanceRefresh: Parameters<
+    typeof accountMutations.updateAccountWithCheckInDraft
+  >[3]["balanceRefresh"]
   try {
     // 获取账号余额和今日使用情况
     logger.debug(
@@ -274,6 +280,33 @@ export async function validateAndUpdateAccount(
       normalizedSiteType,
       getSiteTypeCapabilities(normalizedSiteType).account?.data,
     )
+    const beforeRefresh = (await accountQueries.getAllAccountsOrThrow()).find(
+      (account) => account.id === accountId,
+    )
+    if (!beforeRefresh) throw new Error("account_not_found")
+    const generation = await accountMutations.beginBalanceRefresh(
+      accountId,
+      beforeRefresh,
+    )
+    if (generation === null) throw new Error("account_identity_changed")
+    balanceRefresh = {
+      generation,
+      requestSnapshot: applySiteAccountUpdates({
+        account: beforeRefresh,
+        updates: fields,
+        now: Date.now(),
+        userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+      }),
+    }
+    // The console transport resolves organization from the saved session until
+    // this draft commits. Do not attribute that observation to an edited org.
+    if (
+      getAccountSiteProductProfile(normalizedSiteType).authSession.kind ===
+      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.KimiRefreshToken
+    ) {
+      balanceRefresh.requestSnapshot.kimiOpenPlatformAuth =
+        beforeRefresh.kimiOpenPlatformAuth
+    }
     const freshAccountData = await fetchAccountDataWithCheckInStatus(
       accountData,
       {
@@ -292,14 +325,13 @@ export async function validateAndUpdateAccount(
         },
       },
     )
-    const updateData: Partial<
+    const updateData: DeepPartial<
       Omit<SiteAccount, "id" | "created_at" | "updated_at" | "user_updated_at">
     > = {
       ...fields,
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       account_info: {
         ...fields.account_info,
-        quota: manualQuota ?? freshAccountData.quota,
         today_prompt_tokens: freshAccountData.today_prompt_tokens,
         today_completion_tokens: freshAccountData.today_completion_tokens,
         today_quota_consumption: freshAccountData.today_quota_consumption,
@@ -307,11 +339,8 @@ export async function validateAndUpdateAccount(
         today_income: freshAccountData.today_income,
         todayStatsAvailability: freshAccountData.todayStatsAvailability,
         usage: freshAccountData.usage,
+        usageObservations: freshAccountData.usageObservations,
         subscription: freshAccountData.subscription,
-        nativeBalance: freshAccountData.nativeBalance,
-        balanceUnavailable:
-          manualQuota === undefined &&
-          freshAccountData.balanceUnavailable === true,
         recentUsageRecords: freshAccountData.recentUsageRecords,
       },
       last_sync_time: Date.now(),
@@ -325,6 +354,7 @@ export async function validateAndUpdateAccount(
       guard: loginProviderGuard,
       loadedKimiAuth: options.loadedKimiAuth,
       loadedSub2ApiAuth: options.loadedSub2ApiAuth,
+      balanceRefresh: { ...balanceRefresh, data: freshAccountData },
     })
     if (!save.ok) {
       return { success: false, message: save.message }
@@ -375,9 +405,6 @@ export async function validateAndUpdateAccount(
       },
       account_info: {
         ...fields.account_info,
-        ...(manualQuota === undefined
-          ? {}
-          : { quota: manualQuota, balanceUnavailable: false }),
       },
       last_sync_time: Date.now(),
     }
@@ -394,6 +421,7 @@ export async function validateAndUpdateAccount(
         guard: loginProviderGuard,
         loadedKimiAuth: options.loadedKimiAuth,
         loadedSub2ApiAuth: options.loadedSub2ApiAuth,
+        balanceRefresh,
       },
     )
     if (!save.ok) {

@@ -38,5 +38,3 @@ export function formatQuotaAmount(
     return `${(compact ? formatCompactDecimal : formatExactDecimal)(value, locale, options)} ${asset.label}`
   }
 }
-
-export { quotaAssetSchema } from "~/services/amounts/assets"

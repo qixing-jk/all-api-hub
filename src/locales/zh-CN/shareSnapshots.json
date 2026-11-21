@@ -5,7 +5,10 @@
   },
   "financial": {
     "complete": "完整覆盖",
-    "partial": "部分覆盖"
+    "detailsInCaption": "更多详情见完整配文",
+    "partial": "部分覆盖",
+    "unavailable": "不可用",
+    "unknown": "覆盖范围未知"
   },
   "labels": {
     "accounts": "账号数",

@@ -37,16 +37,16 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
     return (
       <CardItem
         padding="none"
-        className="group touch-manipulation transition-all"
+        className="group @container/account-row touch-manipulation transition-all"
         data-testid={getAccountManagementListItemTestId(site.id)}
         data-site-url={site.baseUrl}
         data-site-type={site.siteType}
         data-disabled={site.disabled ? "true" : undefined}
       >
-        <div className="gap-density-1 sm:gap-density-2 flex w-full min-w-0 items-center">
+        <div className="grid w-full min-w-0 grid-cols-[0.5rem_minmax(0,1fr)_minmax(0,1.35fr)] items-center gap-x-2 gap-y-1 @sm/account-row:flex @sm/account-row:gap-density-2">
           {/* 左侧：站点信息 - 可压缩 */}
           {/* Clip long names horizontally without creating a vertical scroll container for status/pin controls. */}
-          <div className="min-w-[60px] flex-1 overflow-x-clip sm:min-w-[80px]">
+          <div className="contents @sm/account-row:block @sm/account-row:min-w-[80px] @sm/account-row:flex-1 @sm/account-row:overflow-x-clip">
             <SiteInfo
               site={site}
               highlights={highlights}
@@ -57,9 +57,10 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
 
           {/* 中间：操作按钮 */}
           <div
-            className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}
+            className={`col-start-3 row-start-2 min-w-0 shrink-0 justify-self-end transition-opacity duration-200 @max-sm/account-row:self-start ${revealButtonsClass}`}
           >
             <AccountActionButtons
+              className="@max-sm/account-row:flex @max-sm/account-row:flex-nowrap @max-sm/account-row:gap-x-1 @max-sm/account-row:gap-y-0 @max-sm/account-row:[&_button]:text-muted-foreground @max-sm/account-row:[&_button:hover]:text-foreground"
               site={site}
               onDeleteAccount={onDeleteWithDialog}
               onCopyKey={onCopyKey}
@@ -67,7 +68,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
           </div>
 
           {/* 右侧：余额显示 - 可压缩 */}
-          <div className="min-w-[60px] flex-1 sm:min-w-[80px]">
+          <div className="contents @sm/account-row:block @sm/account-row:min-w-[80px] @sm/account-row:flex-1">
             <BalanceDisplay site={site} />
           </div>
         </div>

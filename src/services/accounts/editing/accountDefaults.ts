@@ -6,24 +6,51 @@ import {
   resolveAccountLogin,
 } from "~/services/accountLogin/configCodec"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
-import { parseManualQuotaFromUsd } from "~/services/accounts/editing/accountFormValidation"
-import { coerceAccountIdentity } from "~/services/accounts/identity/accountIdentity"
+import {
+  accountAllowanceSnapshotSchema,
+  bindAccountAllowances,
+} from "~/services/accounts/allowances"
+import { bindAccountBalance } from "~/services/accounts/balanceSnapshot"
+import { normalizeManualBalanceUsd } from "~/services/accounts/editing/accountFormValidation"
+import {
+  coerceAccountIdentity,
+  hasSameAccountRequestIdentity,
+} from "~/services/accounts/identity/accountIdentity"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import {
   CURRENT_CONFIG_VERSION,
   migrateAccountsConfig,
 } from "~/services/accounts/migrations/accountDataMigration"
+import { migrateAccountFinancialInfo } from "~/services/accounts/migrations/accountFinancialMigration"
+import {
+  BALANCE_IDENTITY_CHANGED_REASON,
+  staleBalancePosition,
+} from "~/services/accounts/refresh/balanceAcceptance"
+import { staleUsageSummary } from "~/services/accounts/refresh/usageAcceptance"
+import {
+  balanceSnapshotSchema,
+  staleObservation,
+  type UsageScope,
+} from "~/services/amounts/balance"
+import { staleBudgetConstraint } from "~/services/amounts/budgets"
+import {
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+} from "~/services/amounts/financialConstants"
+import { financialIncomeFactSchema } from "~/services/amounts/income"
+import {
+  financialConsumptionFactSchema,
+  reportedUsageCostSchema,
+} from "~/services/amounts/usage"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
-import { quotaAssetSchema } from "~/services/quotaAssets/quotaAsset"
 import {
   ACCOUNT_SUBSCRIPTION_STATUSES,
   ACCOUNT_USAGE_SUMMARY_SCOPES,
   AuthTypeEnum,
   DELETED_ENTRY_KINDS,
+  MANUAL_BALANCE_OBSERVATION_KINDS,
   SiteHealthStatus,
-  type AccountBalanceComponent,
   type AccountInfo,
-  type AccountNativeBalance,
   type AccountStorageConfig,
   type AccountSubscriptionSummary,
   type AccountUsageRecord,
@@ -35,12 +62,12 @@ import {
 } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
+import { parseDayKey } from "~/utils/core/dayKey"
 
 const DEFAULT_ACCOUNT_INFO: AccountInfo = {
   id: "",
   access_token: "",
   username: "",
-  quota: 0,
   today_prompt_tokens: 0,
   today_completion_tokens: 0,
   today_quota_consumption: 0,
@@ -124,9 +151,23 @@ const normalizeAccountUsageSummary = (
 
   return {
     scope,
-    totalRequests: coerceNumber(raw.totalRequests, 0),
-    totalTokens: coerceNumber(raw.totalTokens, 0),
-    totalCost: coerceNumber(raw.totalCost, 0),
+    ...(typeof raw.observedAt === "number" &&
+    raw.observedAt > 0 &&
+    Number.isFinite(new Date(raw.observedAt).getTime())
+      ? { observedAt: raw.observedAt }
+      : {}),
+    ...(typeof raw.lastKnown === "boolean" ? { lastKnown: raw.lastKnown } : {}),
+    ...(raw.reportedDay && parseDayKey(raw.reportedDay)
+      ? { reportedDay: raw.reportedDay }
+      : {}),
+    totalRequests: coerceOptionalNumber(raw.totalRequests),
+    totalTokens: coerceOptionalNumber(raw.totalTokens),
+    totalCost: coerceOptionalNumber(raw.totalCost),
+    ...(raw.cost === undefined
+      ? {}
+      : {
+          cost: reportedUsageCostSchema.parse(raw.cost),
+        }),
     lastRequestTime: coerceOptionalString(raw.lastRequestTime),
   }
 }
@@ -155,83 +196,6 @@ const normalizeAccountSubscriptionSummary = (
     ).includes(raw.status ?? "")
       ? raw.status
       : undefined,
-  }
-}
-
-/** Validate both allowance summaries and detailed grants at the storage boundary. */
-const normalizeBalanceComponents = (
-  raw: AccountBalanceComponent[] | undefined,
-): AccountBalanceComponent[] | undefined => {
-  if (!Array.isArray(raw)) return undefined
-  return raw
-    .filter(
-      (item) =>
-        item &&
-        ["permanent", "timed", "subscription", "group"].includes(item.kind) &&
-        typeof item.amount === "number" &&
-        Number.isFinite(item.amount),
-    )
-    .map((item) => ({
-      kind: item.kind,
-      amount: item.amount,
-      name: coerceOptionalString(item.name),
-      scope: coerceOptionalString(item.scope),
-      unlockedModels: Array.isArray(item.unlockedModels)
-        ? item.unlockedModels.filter(
-            (model): model is string => typeof model === "string",
-          )
-        : undefined,
-      unlimited: coerceOptionalBoolean(item.unlimited),
-      expiresAt: coerceOptionalString(item.expiresAt),
-      resetAt: coerceOptionalString(item.resetAt),
-    }))
-}
-
-const normalizeNativeBalance = (
-  raw: AccountNativeBalance | undefined,
-): AccountNativeBalance | undefined => {
-  if (raw?.unit === "USD_XNO") {
-    return [raw.total, raw.nanoBalance].every(
-      (value) =>
-        typeof value === "number" && Number.isFinite(value) && value >= 0,
-    )
-      ? { unit: "USD_XNO", total: raw.total, nanoBalance: raw.nanoBalance }
-      : undefined
-  }
-  if (raw?.unit === "quota") {
-    const asset = quotaAssetSchema.safeParse(raw.asset)
-    return asset.success && Number.isSafeInteger(raw.total)
-      ? { unit: "quota", asset: asset.data, total: raw.total }
-      : undefined
-  }
-  if (
-    !raw ||
-    (raw.unit !== "credits" && raw.unit !== "USD") ||
-    [raw.total, raw.permanent, raw.daily].some(
-      (value) =>
-        typeof value !== "number" ||
-        !Number.isFinite(value) ||
-        (raw.unit === "credits" && value < 0),
-    ) ||
-    (raw.unit === "credits" && raw.total !== raw.permanent + raw.daily)
-  )
-    return undefined
-  return {
-    unit: raw.unit,
-    ...(raw.unit === "USD"
-      ? {
-          timedDetails: normalizeBalanceComponents(raw.timedDetails),
-          timedDetailsUnavailable: raw.timedDetailsUnavailable === true,
-        }
-      : {}),
-    ...(raw.unit === "USD" && Array.isArray(raw.components)
-      ? {
-          components: normalizeBalanceComponents(raw.components),
-        }
-      : {}),
-    total: raw.total,
-    permanent: raw.permanent,
-    daily: raw.daily,
   }
 }
 
@@ -324,6 +288,7 @@ export function createDefaultAccountStorageConfig(
   now: number = Date.now(),
 ): AccountStorageConfig {
   return {
+    schemaVersion: 1,
     accounts: [],
     bookmarks: [],
     pinnedAccountIds: [],
@@ -343,7 +308,18 @@ export function normalizeAccountStorageConfigForRead(
   raw: AccountStorageConfig | undefined,
   now: number = Date.now(),
 ): AccountStorageConfig {
+  if (
+    raw !== undefined &&
+    (raw === null ||
+      typeof raw !== "object" ||
+      Array.isArray(raw) ||
+      (raw.schemaVersion !== undefined && raw.schemaVersion !== 1) ||
+      !Array.isArray(raw.accounts) ||
+      (raw.bookmarks !== undefined && !Array.isArray(raw.bookmarks)))
+  )
+    throw new Error("unsupported_or_invalid_account_storage")
   return {
+    schemaVersion: 1,
     accounts: Array.isArray(raw?.accounts) ? raw.accounts : [],
     bookmarks: Array.isArray(raw?.bookmarks) ? raw.bookmarks : [],
     pinnedAccountIds: Array.isArray(raw?.pinnedAccountIds)
@@ -367,10 +343,11 @@ export function normalizeAccountStorageConfigForWrite(
   config: AccountStorageConfig,
   now: number = Date.now(),
 ): AccountStorageConfig {
+  normalizeAccountStorageConfigForRead(config, now)
   return {
     ...createDefaultAccountStorageConfig(now),
     ...config,
-    accounts: Array.isArray(config.accounts) ? config.accounts : [],
+    accounts: config.accounts.map(normalizeSiteAccount),
     bookmarks: Array.isArray(config.bookmarks) ? config.bookmarks : [],
     pinnedAccountIds: Array.isArray(config.pinnedAccountIds)
       ? config.pinnedAccountIds
@@ -397,8 +374,27 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
     id: coerceAccountIdentity(merged.id, ""),
     access_token: coerceString(merged.access_token, ""),
     username: coerceString(merged.username, ""),
-    quota: coerceNumber(merged.quota, 0),
-    ...(raw?.balanceUnavailable === true ? { balanceUnavailable: true } : {}),
+    ...(raw?.allowances === undefined
+      ? {}
+      : { allowances: accountAllowanceSnapshotSchema.parse(raw.allowances) }),
+    ...(raw?.legacyFinancial ? { legacyFinancial: raw.legacyFinancial } : {}),
+    ...(raw?.reportedIncome === undefined
+      ? {}
+      : {
+          reportedIncome: financialIncomeFactSchema
+            .array()
+            .parse(raw.reportedIncome),
+        }),
+    ...(raw?.settledConsumption === undefined
+      ? {}
+      : {
+          settledConsumption: financialConsumptionFactSchema
+            .array()
+            .parse(raw.settledConsumption),
+        }),
+    ...(raw?.balance === undefined
+      ? {}
+      : { balance: balanceSnapshotSchema.parse(raw.balance) }),
     today_prompt_tokens: coerceNumber(merged.today_prompt_tokens, 0),
     today_completion_tokens: coerceNumber(merged.today_completion_tokens, 0),
     today_quota_consumption: coerceNumber(merged.today_quota_consumption, 0),
@@ -409,8 +405,17 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
         ? undefined
         : normalizeAccountTodayStatsAvailability(raw.todayStatsAvailability),
     usage: normalizeAccountUsageSummary(merged.usage),
+    ...(raw?.usageObservations === undefined
+      ? {}
+      : {
+          usageObservations: raw.usageObservations.map((usage) => {
+            const normalized = normalizeAccountUsageSummary(usage)
+            if (!normalized)
+              throw new Error("invalid_account_usage_observation")
+            return normalized
+          }),
+        }),
     subscription: normalizeAccountSubscriptionSummary(merged.subscription),
-    nativeBalance: normalizeNativeBalance(merged.nativeBalance),
     recentUsageRecords: normalizeAccountUsageRecords(merged.recentUsageRecords),
   }
 }
@@ -499,11 +504,32 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
       url: coerceString(merged.site_url, ""),
     }),
     exchange_rate: coerceNumber(merged.exchange_rate, DEFAULT_USD_TO_CNY_RATE),
-    account_info: normalizeAccountInfo(merged.account_info),
+    account_info: normalizeAccountInfo(
+      migrateAccountFinancialInfo(raw.account_info, {
+        accountId: coerceString(merged.id, ""),
+        siteUrl: coerceString(merged.site_url, ""),
+        siteType: merged.site_type,
+        capturedAt: coerceNumber(merged.last_sync_time, 0),
+      }),
+    ),
     health: normalizeHealthStatus(merged.health),
     last_sync_time: coerceNumber(merged.last_sync_time, 0),
     updated_at: updatedAt,
     user_updated_at: coerceNumber(rawUserUpdatedAt, updatedAt),
+    manualBalanceObservation:
+      normalizeManualBalanceUsd(raw.manualBalanceUsd) === undefined
+        ? undefined
+        : raw.manualBalanceObservation &&
+            Number.isFinite(raw.manualBalanceObservation.at) &&
+            [
+              MANUAL_BALANCE_OBSERVATION_KINDS.Edit,
+              MANUAL_BALANCE_OBSERVATION_KINDS.LegacyReference,
+            ].includes(raw.manualBalanceObservation.kind)
+          ? raw.manualBalanceObservation
+          : {
+              at: coerceNumber(rawUserUpdatedAt, updatedAt),
+              kind: MANUAL_BALANCE_OBSERVATION_KINDS.LegacyReference,
+            },
     created_at: coerceNumber(merged.created_at, 0),
     notes: coerceString(merged.notes, ""),
     tagIds: coerceStringArray(merged.tagIds),
@@ -520,11 +546,6 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     login: resolveAccountLogin(merged),
   }
 
-  // Older Requesty adapters duplicated the organization's monetary balance as
-  // a scoped allowance. Discard that projection on read as well as refresh.
-  if (normalized.site_type === SITE_TYPES.REQUESTY) {
-    delete normalized.account_info.nativeBalance
-  }
   delete normalized.passwordAuth
   delete normalized.checkIn.loginCheckIn
   delete (normalized as SiteAccount & { can_check_in?: unknown }).can_check_in
@@ -559,6 +580,49 @@ export function createPersistedSiteAccount(params: {
     } as DeepPartial<SiteAccount>,
   )
 
+  if (merged.account_info.balance)
+    merged.account_info.balance = bindAccountBalance(
+      merged.account_info.balance,
+      params.id,
+    )
+  if (merged.account_info.allowances)
+    merged.account_info.allowances = bindAccountAllowances(
+      merged.account_info.allowances,
+      params.id,
+    )
+  const bindFinancialScope = (scope: UsageScope): UsageScope => ({
+    ...scope,
+    subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: params.id },
+  })
+  const bindScopedFacts = <T extends { scope: UsageScope }>(
+    facts?: T[],
+  ): T[] | undefined =>
+    facts?.map((fact) => ({ ...fact, scope: bindFinancialScope(fact.scope) }))
+  const bindUsage = (usage: AccountUsageSummary): AccountUsageSummary =>
+    usage.cost?.scope
+      ? {
+          ...usage,
+          cost: {
+            ...usage.cost,
+            scope: bindFinancialScope(usage.cost.scope),
+          },
+        }
+      : usage
+  if (merged.account_info.usage)
+    merged.account_info.usage = bindUsage(merged.account_info.usage)
+  merged.account_info.usageObservations =
+    merged.account_info.usageObservations?.map(bindUsage)
+  merged.account_info.settledConsumption = bindScopedFacts(
+    merged.account_info.settledConsumption,
+  )
+  merged.account_info.reportedIncome = bindScopedFacts(
+    merged.account_info.reportedIncome,
+  )
+  if (normalizeManualBalanceUsd(merged.manualBalanceUsd) !== undefined)
+    merged.manualBalanceObservation = {
+      at: params.now,
+      kind: MANUAL_BALANCE_OBSERVATION_KINDS.Edit,
+    }
   return normalizeSiteAccount(merged)
 }
 
@@ -599,18 +663,42 @@ export function applySiteAccountUpdates(params: {
       ? {}
       : { user_updated_at: params.now }),
   } as DeepPartial<SiteAccount>)
-
-  // Removing an override cannot reveal the provider balance it replaced. Apply
-  // this inside the storage update so deferred and failed-refresh saves agree.
+  const previousManual = normalizeManualBalanceUsd(normalized.manualBalanceUsd)
+  const nextManual = normalizeManualBalanceUsd(merged.manualBalanceUsd)
+  merged.manualBalanceObservation =
+    nextManual === undefined
+      ? undefined
+      : previousManual === nextManual
+        ? normalized.manualBalanceObservation
+        : { at: params.now, kind: MANUAL_BALANCE_OBSERVATION_KINDS.Edit }
   if (
-    Object.prototype.hasOwnProperty.call(params.updates, "manualBalanceUsd") &&
-    parseManualQuotaFromUsd(normalized.manualBalanceUsd) !== undefined &&
-    parseManualQuotaFromUsd(merged.manualBalanceUsd) === undefined &&
-    params.updates.account_info?.quota === undefined
+    params.updates.account_info &&
+    Object.hasOwn(params.updates.account_info, "balance")
   ) {
-    merged.account_info.quota = 0
-    merged.account_info.balanceUnavailable = true
+    merged.account_info.balance = params.updates.account_info
+      .balance as AccountInfo["balance"]
   }
+  if (
+    params.updates.account_info &&
+    Object.hasOwn(params.updates.account_info, "settledConsumption")
+  ) {
+    merged.account_info.settledConsumption = params.updates.account_info
+      .settledConsumption as AccountInfo["settledConsumption"]
+  }
+  if (
+    params.updates.account_info &&
+    Object.hasOwn(params.updates.account_info, "allowances")
+  )
+    merged.account_info.allowances = params.updates.account_info
+      .allowances as AccountInfo["allowances"]
+  for (const field of ["usage", "usageObservations", "reportedIncome"] as const)
+    if (
+      params.updates.account_info &&
+      Object.hasOwn(params.updates.account_info, field)
+    )
+      Object.assign(merged.account_info, {
+        [field]: params.updates.account_info[field],
+      })
 
   if (
     params.updates.account_info &&
@@ -645,6 +733,58 @@ export function applySiteAccountUpdates(params: {
     ).routeOverrides
   }
   const result = normalizeSiteAccount(merged)
+  if (!hasSameAccountRequestIdentity(result, normalized)) {
+    if (result.account_info.legacyFinancial?.cashflow)
+      result.account_info.legacyFinancial = {
+        ...result.account_info.legacyFinancial,
+        identityInvalidated: true,
+      }
+    if (
+      params.updates.account_info?.allowances === undefined &&
+      result.account_info.allowances
+    )
+      result.account_info.allowances = {
+        ...result.account_info.allowances,
+        coverage: FINANCIAL_COVERAGE.Partial,
+        entries: result.account_info.allowances.entries.map((entry) => ({
+          ...entry,
+          constraint: staleBudgetConstraint(entry.constraint),
+        })),
+      }
+    if (
+      params.updates.account_info?.usage === undefined &&
+      result.account_info.usage
+    )
+      result.account_info.usage = staleUsageSummary(result.account_info.usage)
+    if (params.updates.account_info?.usageObservations === undefined)
+      result.account_info.usageObservations =
+        result.account_info.usageObservations?.map(staleUsageSummary)
+    if (params.updates.account_info?.settledConsumption === undefined)
+      result.account_info.settledConsumption =
+        result.account_info.settledConsumption?.map((fact) => ({
+          ...fact,
+          amount: staleObservation(fact.amount),
+        }))
+    if (params.updates.account_info?.reportedIncome === undefined)
+      result.account_info.reportedIncome =
+        result.account_info.reportedIncome?.map((fact) => ({
+          ...fact,
+          amount: staleObservation(fact.amount),
+        }))
+  }
+  if (
+    !hasSameAccountRequestIdentity(result, normalized) &&
+    params.updates.account_info?.balance === undefined &&
+    result.account_info.balance
+  ) {
+    result.account_info.balance = {
+      ...result.account_info.balance,
+      coverage: FINANCIAL_COVERAGE.Partial,
+      positions: result.account_info.balance.positions.map((position) =>
+        staleBalancePosition(position, BALANCE_IDENTITY_CHANGED_REASON),
+      ),
+    }
+  }
   if (
     !Object.prototype.hasOwnProperty.call(params.updates, "login") &&
     (result.site_url !== normalized.site_url ||
@@ -652,17 +792,6 @@ export function applySiteAccountUpdates(params: {
       result.account_info.id !== normalized.account_info.id)
   ) {
     delete result.login
-  }
-
-  if (
-    params.updates.account_info &&
-    Object.prototype.hasOwnProperty.call(
-      params.updates.account_info,
-      "nativeBalance",
-    ) &&
-    params.updates.account_info.nativeBalance === undefined
-  ) {
-    delete result.account_info.nativeBalance
   }
 
   if (

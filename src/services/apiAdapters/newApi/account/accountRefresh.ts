@@ -13,6 +13,7 @@ export function createNewApiAccountRefresh(
   return {
     fetchCheckInSupport: (request) =>
       implementation.fetchSupportCheckIn(request),
-    refreshAccount: (request) => implementation.refreshAccountData(request),
+    refreshAccount: (request) =>
+      implementation.refreshAccountData({ ...request, siteType }),
   }
 }

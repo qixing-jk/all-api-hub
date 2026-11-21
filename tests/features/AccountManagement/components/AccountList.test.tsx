@@ -10,6 +10,7 @@ import {
   DATA_TYPE_HEALTH_STATUS,
 } from "~/constants"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { CURRENCIES } from "~/constants/money"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import * as accountListDndRuntimeLoader from "~/features/AccountManagement/components/AccountList/ordering/loadAccountListDndRuntime"
 import * as inviteLinkCopyWorkflow from "~/features/AccountManagement/inviteLinkCopyWorkflow"
@@ -19,6 +20,19 @@ import {
   getAccountManagementSortButtonTestId,
 } from "~/features/AccountManagement/testIds"
 import enAccount from "~/locales/en/account.json"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import {
@@ -41,7 +55,11 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
 import { openSettingsTab } from "~/utils/navigation"
-import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import {
+  buildCompleteTodayStatsAvailability,
+  buildFinancialIncomeFact,
+  buildFinancialPeriodFact,
+} from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -208,7 +226,16 @@ vi.mock("@dnd-kit/sortable", () => ({
   },
 }))
 
-vi.mock("~/components/ui", async () => {
+vi.mock("~/components/ui", async (importOriginal) => {
+  const {
+    ToggleButton,
+    Caption,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } = await importOriginal<typeof import("~/components/ui")>()
   const { Modal } = await import("~/components/ui/Dialog/Modal")
   interface MockInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     clearButtonLabel?: string
@@ -283,6 +310,13 @@ vi.mock("~/components/ui", async () => {
   }
 
   return {
+    ToggleButton,
+    Caption,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
     Modal,
     Button: ({
       children,
@@ -697,6 +731,12 @@ async function getBulkAction(
 describe("AccountList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    testI18n.addResourceBundle("en", "account", {
+      filter: {
+        summary_one: enAccount.filter.summary_one,
+        summary_other: enAccount.filter.summary_other,
+      },
+    })
     dndState.onDragEnd = undefined
     sortableReturnState.current = {
       attributes: {},
@@ -1866,6 +1906,10 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(4)
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
+    ).toHaveTextContent("common:total: 4")
+    expect(screen.queryByRole("region", { name: "4 accounts" })).toBeNull()
 
     await user.click(
       screen.getByRole("button", { name: "common:status.enabled" }),
@@ -1877,8 +1921,11 @@ describe("AccountList", () => {
     expect(screen.getByText("Unsynced Delta")).toBeInTheDocument()
     expect(screen.queryByText("Disabled Beta")).not.toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 3")
+      within(screen.getByRole("region", { name: "3 accounts" })).getByText(
+        "3 accounts",
+        { exact: true },
+      ),
+    ).toBeVisible()
 
     await user.click(screen.getByRole("button", { name: "Team A" }))
 
@@ -1888,8 +1935,11 @@ describe("AccountList", () => {
     expect(screen.queryByText("Enabled Gamma")).not.toBeInTheDocument()
     expect(screen.queryByText("Unsynced Delta")).not.toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 1")
+      within(screen.getByRole("region", { name: "1 account" })).getByText(
+        "1 account",
+        { exact: true },
+      ),
+    ).toBeVisible()
   })
 
   it("toggles the compact filter panel without changing the displayed accounts", async () => {
@@ -2018,8 +2068,11 @@ describe("AccountList", () => {
     expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(1)
     expect(screen.getByText("Disabled Beta")).toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 1")
+      within(screen.getByRole("region", { name: "1 account" })).getByText(
+        "1 account",
+        { exact: true },
+      ),
+    ).toBeVisible()
 
     await user.click(
       screen.getByRole("button", { name: "common:status.enabled" }),
@@ -2029,8 +2082,11 @@ describe("AccountList", () => {
     expect(screen.queryAllByTestId(TEST_IDS.accountRow)).toHaveLength(0)
     expect(screen.getByText("account:search.noResults")).toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 0")
+      within(screen.getByRole("region", { name: "0 accounts" })).getByText(
+        "0 accounts",
+        { exact: true },
+      ),
+    ).toBeVisible()
 
     await user.click(
       screen.getByRole("button", { name: "common:status.disabled" }),
@@ -2042,8 +2098,11 @@ describe("AccountList", () => {
       screen.queryByText("account:search.noResults"),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 1")
+      within(screen.getByRole("region", { name: "1 account" })).getByText(
+        "1 account",
+        { exact: true },
+      ),
+    ).toBeVisible()
   })
 
   it("filters accounts by site type and refresh status together", async () => {
@@ -2067,8 +2126,11 @@ describe("AccountList", () => {
     expect(screen.getByText("Enabled Gamma")).toBeInTheDocument()
     expect(screen.queryByText("Enabled Alpha")).not.toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 1")
+      within(screen.getByRole("region", { name: "1 account" })).getByText(
+        "1 account",
+        { exact: true },
+      ),
+    ).toBeVisible()
   })
 
   it("filters unsynced accounts by refresh status", async () => {
@@ -2088,8 +2150,11 @@ describe("AccountList", () => {
     expect(screen.queryByText("Disabled Beta")).not.toBeInTheDocument()
     expect(screen.queryByText("Enabled Gamma")).not.toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 1")
+      within(screen.getByRole("region", { name: "1 account" })).getByText(
+        "1 account",
+        { exact: true },
+      ),
+    ).toBeVisible()
   })
 
   it("filters accounts by check-in status", async () => {
@@ -2107,8 +2172,11 @@ describe("AccountList", () => {
     expect(screen.getByText("Enabled Gamma")).toBeInTheDocument()
     expect(screen.queryByText("Enabled Alpha")).not.toBeInTheDocument()
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
-    ).toHaveTextContent("common:total: 1")
+      within(screen.getByRole("region", { name: "1 account" })).getByText(
+        "1 account",
+        { exact: true },
+      ),
+    ).toBeVisible()
   })
 
   it("offers a separate filter for check-in methods without readable status", () => {
@@ -2141,7 +2209,7 @@ describe("AccountList", () => {
     )
   })
 
-  it("shows filtered balance, consumption, and income totals for visible accounts", async () => {
+  it("shows filtered balance, consumption and income immediately for visible accounts", async () => {
     const user = userEvent.setup()
     const includedAccount = buildDisplaySiteData({
       id: "included",
@@ -2169,6 +2237,57 @@ describe("AccountList", () => {
       todayIncome: { USD: 100, CNY: 700 },
     })
 
+    for (const [account, value] of [
+      [includedAccount, "10"],
+      [incomeOptOutAccount, "20"],
+      [disabledAccount, "100"],
+    ] as const) {
+      account.settledConsumption = [
+        buildFinancialPeriodFact({
+          accountId: account.id,
+          value: String(account.todayConsumption.USD),
+        }),
+      ]
+      account.reportedIncome = [
+        buildFinancialIncomeFact({
+          accountId: account.id,
+          value: String(account.todayIncome.USD),
+        }),
+      ]
+      const scope = accountBalanceScope({
+        baseUrl: `https://${account.id}.example`,
+        accountId: account.id,
+        auth: { authType: "access_token" },
+      } as never)
+      scope.models =
+        scope.keys =
+        scope.projects =
+        scope.groups =
+          { kind: SCOPE_SELECTION_KINDS.All }
+      account.balanceSnapshot = accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "wallet",
+            value,
+            scope,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            nature: BALANCE_NATURES.Prepaid,
+            validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+            observedAt: 1,
+            source: {
+              adapter: "fixture",
+              operation: "wallet",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        1,
+        FINANCIAL_COVERAGE.Complete,
+      )
+    }
+
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
         sortedData: [includedAccount, incomeOptOutAccount, disabledAccount],
@@ -2183,24 +2302,36 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "common:status.enabled" }),
     )
-
     expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(2)
     expect(screen.getByText("Included Account")).toBeInTheDocument()
     expect(screen.getByText("Income Opt Out")).toBeInTheDocument()
     expect(screen.queryByText("Disabled Account")).not.toBeInTheDocument()
+    const summary = screen.getByRole("region", {
+      name: "2 accounts",
+    })
+    expect(within(summary).getByText("$30.00")).toBeVisible()
     expect(
-      screen.getByText(
-        "account:filteredTotals.balance: USD 30.00 / CNY 210.00",
+      within(summary).getByText("2 accounts", { exact: true }),
+    ).toBeVisible()
+    const listHeader = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader,
+    )
+    expect(within(listHeader).queryByText("common:total:")).toBeNull()
+    expect(
+      within(listHeader).getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortControls,
       ),
-    ).toBeInTheDocument()
+    ).toBeVisible()
     expect(
-      screen.getByText(
-        "account:filteredTotals.consumption: USD 4.00 / CNY 28.00",
-      ),
-    ).toBeInTheDocument()
+      within(summary).getByRole("group", {
+        name: "account:filteredTotals.consumption",
+      }),
+    ).toHaveTextContent("USD 4")
     expect(
-      screen.getByText("account:filteredTotals.income: USD 2.00 / CNY 14.00"),
-    ).toBeInTheDocument()
+      within(summary).getByRole("group", {
+        name: "account:filteredTotals.income",
+      }),
+    ).toHaveTextContent("USD 2")
   })
 
   it("uses ordinary coverage copy for filtered partial totals without legacy accounts", async () => {
@@ -2209,6 +2340,13 @@ describe("AccountList", () => {
       id: "partial",
       name: "Partial Account",
       todayConsumption: { USD: 4, CNY: 28 },
+      settledConsumption: [
+        buildFinancialPeriodFact({
+          accountId: "partial",
+          value: "4",
+          coverage: FINANCIAL_COVERAGE.Partial,
+        }),
+      ],
       todayStatsAvailability: buildCompleteTodayStatsAvailability({
         consumption: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
@@ -2229,17 +2367,21 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "common:status.enabled" }),
     )
-
-    const consumptionSummary = screen.getByText(
-      "account:filteredTotals.consumption",
-      { exact: false },
+    await user.click(
+      screen.getByRole("button", { name: "account:financial.summaryDetails" }),
     )
-    expect(consumptionSummary).toHaveTextContent("USD 4.00 / CNY 28.00")
-    expect(
-      within(consumptionSummary).getByText(
-        "account:todayMetricAvailability.coverage",
-      ),
-    ).toBeInTheDocument()
+
+    const consumptionSummary = within(
+      screen.getByRole("dialog", {
+        name: "account:financial.filteredSubtotal",
+      }),
+    ).getByRole("group", {
+      name: "account:filteredTotals.consumption",
+    })
+    expect(consumptionSummary).toHaveTextContent("USD 4")
+    expect(consumptionSummary).toHaveTextContent(
+      "account:todayMetricAvailability.coverage",
+    )
     expect(consumptionSummary).not.toHaveTextContent(
       "account:todayMetricAvailability.includesPendingRefresh",
     )
@@ -2254,6 +2396,13 @@ describe("AccountList", () => {
       id: "partial",
       name: "Partial Account",
       todayConsumption: { USD: 4, CNY: 28 },
+      settledConsumption: [
+        buildFinancialPeriodFact({
+          accountId: "partial",
+          value: "4",
+          coverage: FINANCIAL_COVERAGE.Partial,
+        }),
+      ],
       todayIncome: { USD: 999, CNY: 6993 },
       todayStatsAvailability: buildCompleteTodayStatsAvailability({
         consumption: {
@@ -2295,18 +2444,27 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "common:status.enabled" }),
     )
+    await user.click(
+      screen.getByRole("button", { name: "account:financial.summaryDetails" }),
+    )
 
-    const consumptionSummary = screen
-      .getByText("account:filteredTotals.consumption", { exact: false })
-      .closest("span")
-    const incomeSummary = screen
-      .getByText("account:filteredTotals.income", { exact: false })
-      .closest("span")
-    expect(consumptionSummary).toHaveTextContent("USD 4.00 / CNY 28.00")
-    const partialMetric = within(
-      consumptionSummary as HTMLElement,
-    ).getByLabelText(
-      /USD 4\.00.*account:todayMetricAvailability\.includesPendingRefresh/,
+    const consumptionSummary = within(
+      screen.getByRole("dialog", {
+        name: "account:financial.filteredSubtotal",
+      }),
+    ).getByRole("group", {
+      name: "account:filteredTotals.consumption",
+    })
+    const incomeSummary = within(
+      screen.getByRole("dialog", {
+        name: "account:financial.filteredSubtotal",
+      }),
+    ).getByRole("group", {
+      name: "account:filteredTotals.income",
+    })
+    expect(consumptionSummary).toHaveTextContent("USD 4")
+    const partialMetric = within(consumptionSummary).getByLabelText(
+      /USD 4.*account:todayMetricAvailability\.includesPendingRefresh/,
     )
     expect(partialMetric).toHaveTextContent(
       "account:todayMetricAvailability.includesPendingRefresh",
@@ -2315,13 +2473,13 @@ describe("AccountList", () => {
       /account:todayMetricAvailability\.coverageWithRefresh/,
     )
     expect(partialMetric).toHaveAccessibleDescription(
-      "account:todayMetricAvailability.coverageWithRefresh",
+      /account:todayMetricAvailability.coverageWithRefresh/,
     )
     await user.hover(partialMetric)
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "account:todayMetricAvailability.coverageWithRefresh",
     )
-    const pendingMetric = within(incomeSummary as HTMLElement).getByLabelText(
+    const pendingMetric = within(incomeSummary).getByLabelText(
       "account:todayMetricAvailability.pendingRefresh",
     )
     expect(pendingMetric).toHaveTextContent(
@@ -2356,9 +2514,18 @@ describe("AccountList", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "common:status.enabled" }))
-    const label = screen.getByText(
-      "account:todayMetricAvailability.unavailable",
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "account:financial.summaryDetails",
+      }),
     )
+    const label = within(
+      within(
+        screen.getByRole("dialog", {
+          name: "account:financial.filteredSubtotal",
+        }),
+      ).getByRole("group", { name: "account:filteredTotals.consumption" }),
+    ).getByText("account:todayMetricAvailability.unavailable")
     expect(label).toHaveClass("sr-only")
     expect(label.closest('[aria-hidden="true"]')).toBeNull()
     expect(label.parentElement).toHaveTextContent("—")
@@ -2375,6 +2542,49 @@ describe("AccountList", () => {
       "data-count",
       "1",
     )
+  })
+
+  it("opens filtered spendable totals on request without a financial-purpose selector", async () => {
+    const user = userEvent.setup()
+    render(<AccountList initialSearchQuery="beta" />)
+    expect(
+      screen.queryByRole("combobox", {
+        name: "account:financial.totalPurpose",
+      }),
+    ).not.toBeInTheDocument()
+    const trigger = screen.getByRole("button", {
+      name: "account:financial.summaryDetails",
+    })
+    await user.click(trigger)
+    const details = screen.getByRole("dialog", {
+      name: "account:financial.filteredSubtotal",
+    })
+    expect(
+      screen.queryByRole("combobox", {
+        name: "account:financial.totalPurpose",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("account:filteredTotals.balance", { exact: false }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(details).getByText("account:financial.unavailable"),
+    ).toBeVisible()
+    expect(details).not.toHaveTextContent(
+      "account:financial.subtotalPurposeHelp",
+    )
+    await user.keyboard("{Escape}")
+    expect(
+      screen.queryByRole("dialog", {
+        name: "account:financial.filteredSubtotal",
+      }),
+    ).not.toBeInTheDocument()
+    await user.click(trigger)
+    expect(
+      screen.queryByRole("combobox", {
+        name: "account:financial.totalPurpose",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("tracks entering and exiting bulk mode without per-selection telemetry", async () => {

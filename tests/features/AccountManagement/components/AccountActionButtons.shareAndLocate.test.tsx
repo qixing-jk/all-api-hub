@@ -2,7 +2,7 @@ import "./accountActionButtonsMocks"
 
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
@@ -26,6 +26,10 @@ import {
 } from "~/types/accountTodayStats"
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import {
+  buildPeriodConsumption,
+  buildPeriodIncome,
+} from "~~/tests/test-utils/financialPeriod"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { act, render, renderHook } from "~~/tests/test-utils/render"
 
@@ -209,6 +213,53 @@ describe("AccountActionButtons", () => {
     )
   })
 
+  it("keeps the original display preference when sharing an account", async () => {
+    const previous = { ...userPreferencesContextValue }
+    Object.assign(userPreferencesContextValue, {
+      currencyType: "CNY",
+      currencyDisplay: "original",
+    })
+    onTestFinished(() => {
+      Object.assign(userPreferencesContextValue, previous, {
+        currencyDisplay: "USD",
+      })
+    })
+    const user = userEvent.setup({ skipHover: true })
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          disabled: false,
+          name: "Original account",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
+    const menu = await screen.findByRole("menu", {
+      name: "account:actions.share",
+    })
+    await user.click(
+      await within(menu).findByRole("menuitem", {
+        name: "shareSnapshots:actions.shareAccountSnapshot",
+      }),
+    )
+    await waitFor(() =>
+      expect(exportShareSnapshotWithToastMock).toHaveBeenCalled(),
+    )
+    expect(
+      exportShareSnapshotWithToastMock.mock.calls[0]?.[0]?.payload,
+    ).toMatchObject({
+      currencyType: "CNY",
+      currencyDisplay: "original",
+    })
+  })
+
   it("shares a sanitized snapshot using only visible cashflow data", async () => {
     userPreferencesContextValue.showTodayCashflow = false
     const user = userEvent.setup({ skipHover: true })
@@ -256,7 +307,10 @@ describe("AccountActionButtons", () => {
         siteName: "Share Site",
         originUrl: "https://api.example.com",
         currencyType: "USD",
-        balance: 12,
+        balanceSummary: expect.objectContaining({
+          entries: [],
+          coverage: "unknown",
+        }),
       }),
     )
     expect(payload).not.toHaveProperty("todayIncome")
@@ -280,51 +334,76 @@ describe("AccountActionButtons", () => {
     )
   })
 
-  it("includes the full cashflow bundle when the preference and both metrics are complete", async () => {
-    const user = userEvent.setup({ skipHover: true })
+  it.each([false, true])(
+    "shares native income even when excluded from aggregate totals (%s)",
+    async (excludeFromTodayIncome) => {
+      const user = userEvent.setup({ skipHover: true })
 
-    render(
-      <AccountActionButtons
-        site={buildDisplaySiteData({
-          id: "acc-share-complete",
-          disabled: false,
-          todayIncome: { USD: 8, CNY: 0 },
-          todayConsumption: { USD: 4, CNY: 0 },
-          todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-        })}
-        onCopyKey={vi.fn()}
-        onDeleteAccount={vi.fn()}
-      />,
-    )
+      render(
+        <AccountActionButtons
+          site={buildDisplaySiteData({
+            id: "acc-share-complete",
+            excludeFromTodayIncome,
+            settledConsumption: [
+              buildPeriodConsumption("acc-share-complete", "4"),
+            ],
+            reportedIncome: [buildPeriodIncome("acc-share-complete", "8")],
+            disabled: false,
+            todayIncome: { USD: 8, CNY: 0 },
+            todayConsumption: { USD: 4, CNY: 0 },
+            todayStatsAvailability: buildCompleteTodayStatsAvailability(),
+          })}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
 
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.more" }),
-    )
-    await user.click(
-      screen.getByRole("menuitem", { name: "account:actions.share" }),
-    )
-    const menu = await screen.findByRole("menu", {
-      name: "account:actions.share",
-    })
-    await user.click(
-      within(menu).getByRole("menuitem", {
-        name: "shareSnapshots:actions.shareAccountSnapshot",
-      }),
-    )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.more" }),
+      )
+      await user.click(
+        screen.getByRole("menuitem", { name: "account:actions.share" }),
+      )
+      const menu = await screen.findByRole("menu", {
+        name: "account:actions.share",
+      })
+      await user.click(
+        within(menu).getByRole("menuitem", {
+          name: "shareSnapshots:actions.shareAccountSnapshot",
+        }),
+      )
 
-    await waitFor(() => {
-      expect(exportShareSnapshotWithToastMock).toHaveBeenCalledTimes(1)
-    })
-    expect(
-      exportShareSnapshotWithToastMock.mock.calls[0]?.[0]?.payload,
-    ).toEqual(
-      expect.objectContaining({
-        todayIncome: 8,
-        todayOutcome: 4,
-        todayNet: 4,
-      }),
-    )
-  })
+      await waitFor(() => {
+        expect(exportShareSnapshotWithToastMock).toHaveBeenCalledTimes(1)
+      })
+      expect(
+        exportShareSnapshotWithToastMock.mock.calls[0]?.[0]?.payload,
+      ).toEqual(
+        expect.objectContaining({
+          incomeSummary: expect.objectContaining({
+            groups: [
+              expect.objectContaining({
+                amount: {
+                  asset: { kind: "currency", code: "USD" },
+                  value: "8",
+                },
+              }),
+            ],
+          }),
+          consumptionSummary: expect.objectContaining({
+            groups: [
+              expect.objectContaining({
+                amount: {
+                  asset: { kind: "currency", code: "USD" },
+                  value: "4",
+                },
+              }),
+            ],
+          }),
+        }),
+      )
+    },
+  )
 
   it.each([
     {

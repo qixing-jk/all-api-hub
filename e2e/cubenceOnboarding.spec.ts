@@ -1,4 +1,3 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { runAccountAutoDetectScenario } from "~~/e2e/scenarios/accountAutoDetect"
@@ -85,6 +84,7 @@ test("Cubence defaults to Cookie, saves live identity and refreshes after the co
           code: 200,
           range: "today",
           window_start: `${day}T00:00:00+08:00`,
+          as_of: new Date().toISOString(),
           summary: { cost: 1000000, calls: 2, tokens: 100, output_tokens: 30 },
         },
       })
@@ -128,12 +128,30 @@ test("Cubence defaults to Cookie, saves live identity and refreshes after the co
     serviceWorker: worker,
     siteType: "cubence",
     baseUrl: origin,
-    predicate: (account) => account.account_info.quota > 0,
+    predicate: (account) =>
+      account.account_info.balance?.positions.some(
+        (position) => position.amount.status === "known",
+      ) === true,
   })
   expect(saved.authType).toBe("cookie")
   expect(saved.account_info.access_token).toBe("")
-  expect(saved.account_info.quota).toBe(12.5 * QUOTA_PER_USD)
-  expect(saved.account_info.today_quota_consumption).toBe(QUOTA_PER_USD)
+  expect(saved.account_info.balance?.positions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        asset: { kind: "currency", code: "USD" },
+        amount: expect.objectContaining({ status: "known", value: "12.5" }),
+      }),
+    ]),
+  )
+  expect(saved.account_info.settledConsumption).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        asset: { kind: "currency", code: "USD" },
+        amount: expect.objectContaining({ status: "known", value: "1" }),
+        window: expect.objectContaining({ timeZone: "Asia/Shanghai" }),
+      }),
+    ]),
+  )
   expect(saved.account_info.today_prompt_tokens).toBe(70)
   expect(context.pages().some((tab) => tab.url().startsWith(origin))).toBe(
     false,
@@ -144,7 +162,9 @@ test("Cubence defaults to Cookie, saves live identity and refreshes after the co
     page,
     serviceWorker: worker,
     accountIds: [saved.id],
-    expectedQuotas: [15 * QUOTA_PER_USD],
+    expectedBalances: [
+      { asset: { kind: "currency", code: "USD" }, value: "15" },
+    ],
   })
   expect(requests).toContain("/api/v1/auth/me")
   await fixture.cleanup()

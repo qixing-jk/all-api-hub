@@ -5,7 +5,10 @@
   },
   "financial": {
     "complete": "Phạm vi đầy đủ",
-    "partial": "Phạm vi một phần"
+    "detailsInCaption": "Xem thêm chi tiết trong chú thích đầy đủ",
+    "partial": "Phạm vi một phần",
+    "unavailable": "Không khả dụng",
+    "unknown": "Chưa rõ phạm vi"
   },
   "labels": {
     "accounts": "Số tài khoản",

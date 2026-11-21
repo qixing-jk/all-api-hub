@@ -1,8 +1,24 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnavailableTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { normalizeDecimalUnits, parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -15,15 +31,40 @@ import { fetchPmApiIdentity } from "./identity"
 import { fetchPmApiEnvelope, invalidPmApiResponse } from "./transport"
 
 /**
- * Balance is the console's stored credit in its own New API quota unit; the
- * extension keeps that unit and converts at display time.
+ * Retain the wallet as exact USD using the verified quota-per-unit contract.
+ * Server-day activity remains separate from globally comparable today totals.
  */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const identity = await fetchPmApiIdentity(request)
+  const scope = accountBalanceScope(request)
+  const observedAt = Date.now()
+  const quota = parseDecimal(identity.quota)
   const result: AccountData = {
-    quota: identity.quota,
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "quota",
+          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+          scope,
+          observedAt,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          // The verified PM-API status contract declares quota_per_unit=500000 and display_unit=USD.
+          value: normalizeDecimalUnits(quota, 500_000),
+          nature: BALANCE_NATURES.Prepaid,
+          source: {
+            adapter: SITE_TYPES.PMAPI,
+            operation: `${PMAPI_ENDPOINTS.Identity}:quota`,
+            contractVersion: "usd-quota-500000/v1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      observedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
     today_quota_consumption: 0,
     today_requests_count: 0,
     today_prompt_tokens: 0,
@@ -52,21 +93,54 @@ export async function fetchAccountData(
     const today = stats.today
     if (!isRecord(today))
       return invalidPmApiResponse(PMAPI_ENDPOINTS.TodayStats)
-    const number = (key: string) => {
+    const count = (key: string) => {
       const value = today[key]
       if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
-        return invalidPmApiResponse(PMAPI_ENDPOINTS.TodayStats)
+        return undefined
       return value
     }
-    result.today_quota_consumption = number("quota")
-    result.today_requests_count = number("requests")
+    const nativeCost = parseDecimal(today.quota)
+    const requests = count("requests")
+    const tokens = count("tokens")
+    result.today_quota_consumption =
+      nativeCost === undefined ? 0 : Number(nativeCost)
+    result.today_requests_count = requests ?? 0
     // The console reports one combined token total without a prompt/output
     // split; it is carried whole in the prompt field.
-    result.today_prompt_tokens = number("tokens")
+    result.today_prompt_tokens = tokens ?? 0
     result.today_completion_tokens = 0
-    for (const key of ["consumption", "requests", "tokens"] as const)
+    const usageObservedAt = Date.now()
+    result.usage = {
+      scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+      totalRequests: requests,
+      totalTokens: tokens,
+      cost: {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        scope,
+        amount: observeAmount(
+          normalizeDecimalUnits(nativeCost, 500_000),
+          {
+            adapter: SITE_TYPES.PMAPI,
+            operation: `${PMAPI_ENDPOINTS.TodayStats}:today.quota`,
+            contractVersion: "usd-quota-500000/v1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          usageObservedAt,
+        ),
+      },
+    }
+    // The endpoint names a server day without its zone or boundaries. Keep it out of global today totals.
+    for (const [key, value] of [
+      ["consumption", nativeCost],
+      ["requests", requests],
+      ["tokens", tokens],
+    ] as const)
       result.todayStatsAvailability![key] = {
-        status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason:
+          value === undefined
+            ? ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload
+            : ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
       }
   } catch (error) {
     if (

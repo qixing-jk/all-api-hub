@@ -1,3 +1,13 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
+import { assetIdentity } from "~/services/amounts/assets"
+import { isKnownOrStaleObservation } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
 import type {
   AccountMetricCoverage,
   AccountStats,
@@ -5,11 +15,151 @@ import type {
   AccountTodayMetricReason,
   AccountTodayStatsAvailability,
   AccountTodayStatsCoverage,
+  AccountUsageSummary,
 } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
+
+/** The provider's day can coexist with lifetime usage on the same account. */
+export function getSiteDayUsages(account: {
+  usage?: AccountUsageSummary
+  usageObservations?: AccountUsageSummary[]
+  settledConsumption?: FinancialConsumptionFact[]
+}): AccountUsageSummary[] {
+  const observations = [account.usage, ...(account.usageObservations ?? [])]
+  const facts = account.settledConsumption ?? []
+  const accountId =
+    facts[0]?.scope.subject.kind === FINANCIAL_SUBJECT_KINDS.Account
+      ? (facts[0].scope.subject.accountId ?? "")
+      : ""
+  const projected = getDisplayConsumptionProjection([
+    { id: accountId, settledConsumption: facts },
+  ])
+  const seen = new Set<string>()
+  return [
+    ...observations,
+    ...facts.map((fact): AccountUsageSummary => ({
+      scope: ACCOUNT_USAGE_SCOPES.Today,
+      cost: {
+        asset: fact.asset,
+        amount: fact.amount,
+        scope: fact.scope,
+        window: fact.window,
+        coverage: fact.coverage,
+      },
+    })),
+  ].flatMap((usage) => {
+    if (
+      !usage ||
+      (usage.scope !== ACCOUNT_USAGE_SCOPES.Today &&
+        usage.scope !== ACCOUNT_USAGE_SCOPES.SiteToday)
+    )
+      return []
+    const originalCost = usage.cost
+    const duplicateCost =
+      usage.scope === ACCOUNT_USAGE_SCOPES.Today &&
+      originalCost &&
+      projected.groups.some(
+        ({ amount, window }) =>
+          assetIdentity(amount.asset) === assetIdentity(originalCost.asset) &&
+          JSON.stringify(window) === JSON.stringify(originalCost.window),
+      )
+    const cost = duplicateCost ? undefined : originalCost
+    const hasCounters =
+      usage.totalRequests !== undefined || usage.totalTokens !== undefined
+    if (
+      usage.scope !== ACCOUNT_USAGE_SCOPES.SiteToday &&
+      (!cost ||
+        cost.asset.kind === ASSET_KINDS.Unknown ||
+        !isKnownOrStaleObservation(cost.amount)) &&
+      !hasCounters
+    )
+      return []
+    const key =
+      cost && isKnownOrStaleObservation(cost.amount)
+        ? JSON.stringify([
+            assetIdentity(cost.asset),
+            cost.amount.value,
+            cost.amount.observedAt,
+            cost.window,
+            usage.reportedDay,
+          ])
+        : JSON.stringify([
+            usage.totalRequests,
+            usage.totalTokens,
+            usage.reportedDay,
+            originalCost?.window,
+          ])
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [
+      {
+        ...usage,
+        scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+        ...(duplicateCost
+          ? {
+              cost: undefined,
+              observedAt:
+                usage.observedAt ??
+                (isKnownOrStaleObservation(originalCost.amount)
+                  ? originalCost.amount.observedAt
+                  : undefined),
+            }
+          : {}),
+      },
+    ]
+  })
+}
+
+/** Preserve the original single-reading API for account-row callers. */
+export function getSiteDayUsage(
+  account: Parameters<typeof getSiteDayUsages>[0],
+): AccountUsageSummary | undefined {
+  return getSiteDayUsages(account)[0]
+}
+
+export interface SiteDayReading {
+  usage: AccountUsageSummary
+  observedAt?: number
+  lastKnown: boolean
+}
+
+/** Shared freshness for rows, totals and exports; observation dates never redefine the provider's billing day. */
+export function getSiteDayReadings(
+  account: Parameters<typeof getSiteDayUsages>[0] & { last_sync_time?: number },
+  asOf = Date.now(),
+): SiteDayReading[] {
+  return getSiteDayUsages(account).map((usage) => {
+    const amount = usage.cost?.amount
+    const at =
+      usage.observedAt ??
+      (isKnownOrStaleObservation(amount)
+        ? amount.observedAt
+        : usage.lastKnown
+          ? undefined
+          : account.last_sync_time)
+    const observedAt =
+      typeof at === "number" &&
+      at > 0 &&
+      Number.isFinite(new Date(at).getTime())
+        ? at
+        : undefined
+    return {
+      usage,
+      ...(observedAt === undefined ? {} : { observedAt }),
+      lastKnown:
+        usage.lastKnown === true ||
+        amount?.status === OBSERVATION_STATUSES.Stale ||
+        observedAt === undefined ||
+        observedAt > asOf ||
+        formatLocalDayKey(new Date(observedAt)) !==
+          formatLocalDayKey(new Date(asOf)),
+    }
+  })
+}
 
 const PARTIAL_REASONS = new Set<AccountTodayMetricReason>([
   ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
@@ -149,7 +299,7 @@ export const isAccountTodayMetricAvailable = (
   availability: AccountTodayMetricAvailability,
 ): boolean => availability.status !== ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
 
-export const isAccountTodayMetricComplete = (
+const isAccountTodayMetricComplete = (
   availability: AccountTodayMetricAvailability,
 ): boolean => availability.status === ACCOUNT_TODAY_METRIC_STATUSES.Complete
 

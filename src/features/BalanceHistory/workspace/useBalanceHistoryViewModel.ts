@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { FINANCIAL_METRIC_KINDS } from "~/components/financialMetricKinds"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useBalanceAsOf } from "~/features/AccountManagement/data/useBalanceAsOf"
 import {
   BALANCE_HISTORY_BREAKDOWN_CHART_TYPES,
+  BALANCE_HISTORY_TREND_CHART_TYPES,
   BALANCE_HISTORY_TREND_SERIES_SCOPES,
   QUICK_RANGES,
   type BalanceHistoryBreakdownChartType,
   type BalanceHistoryTrendSeriesScope,
   type BalanceHistoryVisibleMetric,
 } from "~/features/BalanceHistory/contracts"
+import type { createBalanceHistoryPreview } from "~/features/BalanceHistory/data/createBalanceHistoryPreview"
 import { useBalanceHistoryData } from "~/features/BalanceHistory/data/useBalanceHistoryData"
 import { type BalanceHistoryTrendChartType } from "~/features/BalanceHistory/reporting/echartsOptions"
 import { useBalanceHistoryReporting } from "~/features/BalanceHistory/reporting/useBalanceHistoryReporting"
@@ -20,10 +25,13 @@ import {
   buildAccountDisplayNameMap,
   compareAccountDisplayNames,
 } from "~/services/accounts/utils/accountDisplayName"
+import { buildFinancialHistoryActivity } from "~/services/history/dailyBalanceHistory/activity"
+import { DAILY_BALANCE_HISTORY_METRICS } from "~/services/history/dailyBalanceHistory/constants"
 import {
   computeRetentionCutoffDayKey,
   listDayKeysInRange,
 } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { buildFinancialHistorySeries } from "~/services/history/dailyBalanceHistory/selectors"
 import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { listTagsSorted } from "~/services/tags/tagStoreUtils"
 import type { CurrencyType } from "~/types"
@@ -43,8 +51,9 @@ function resolveVisibleMetric(
   metric: BalanceHistoryVisibleMetric,
   estimatedTodayIncomeEnabled: boolean,
 ): BalanceHistoryVisibleMetric {
-  return metric === "estimatedIncome" && !estimatedTodayIncomeEnabled
-    ? "income"
+  return metric === DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome &&
+    !estimatedTodayIncomeEnabled
+    ? DAILY_BALANCE_HISTORY_METRICS.Income
     : metric
 }
 
@@ -58,38 +67,76 @@ function clampRetentionDays(value: unknown): number {
 const DEFAULT_RANGE_DAYS = 30
 
 /** Compose history query state and report facts for the options view. */
-export function useBalanceHistoryViewModel() {
+export function useBalanceHistoryViewModel(
+  preview?: ReturnType<typeof createBalanceHistoryPreview>,
+) {
   const { t } = useTranslation("balanceHistory")
 
-  const { preferences, currencyType, updateCurrencyType } =
-    useUserPreferencesContext()
+  const {
+    preferences,
+    currencyType: savedCurrency,
+    updateCurrencyType,
+  } = useUserPreferencesContext()
+  const [previewCurrency, setPreviewCurrency] = useState<CurrencyType>()
+  const currencyType = preview
+    ? (previewCurrency ?? savedCurrency)
+    : savedCurrency
   const estimatedTodayIncomeEnabled =
+    Boolean(preview) ||
     preferences.balanceHistory?.estimatedTodayIncome?.enabled === true
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
   const {
-    accounts,
-    tagStore,
-    store,
-    isLoading,
+    accounts: savedAccounts,
+    tagStore: savedTags,
+    store: savedStore,
+    isLoading: loadingSaved,
+    loadError: savedError,
+    retryLoad,
+    hasLoadedData: hasLoadedSaved,
     handleRefreshNow,
     handlePruneNow,
   } = useBalanceHistoryData(selectedAccountIds)
+  const accounts = preview?.accounts ?? savedAccounts
+  const store = preview?.store ?? savedStore
+  const tagStore = preview ? null : savedTags
+  const isLoading = !preview && loadingSaved
+  const loadError = preview ? null : savedError
+  const hasLoadedData = Boolean(preview) || hasLoadedSaved
+  const historyTimeSources = useMemo(
+    () =>
+      Object.values(store?.financialSnapshotsByAccountId ?? {}).flatMap(
+        (snapshots) =>
+          snapshots.map((snapshot) => ({
+            balanceSnapshot: snapshot.balance,
+            allowances: snapshot.allowances,
+          })),
+      ),
+    [store],
+  )
+  const asOf = useBalanceAsOf(historyTimeSources)
 
-  const [trendMetric, setTrendMetric] =
-    useState<BalanceHistoryVisibleMetric>("balance")
+  const [trendMetric, setTrendMetric] = useState<BalanceHistoryVisibleMetric>(
+    DAILY_BALANCE_HISTORY_METRICS.Balance,
+  )
   const [trendChartType, setTrendChartType] =
-    useState<BalanceHistoryTrendChartType>("line")
+    useState<BalanceHistoryTrendChartType>(
+      BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+    )
   const [trendScope, setTrendScope] = useState<BalanceHistoryTrendSeriesScope>(
     BALANCE_HISTORY_TREND_SERIES_SCOPES.Accounts,
   )
 
   const [breakdownMetric, setBreakdownMetric] =
-    useState<BalanceHistoryVisibleMetric>("balance")
+    useState<BalanceHistoryVisibleMetric>(DAILY_BALANCE_HISTORY_METRICS.Balance)
+  const [trendBalanceKey, setTrendBalanceKey] = useState<string | null>()
+  const [breakdownBalanceKey, setBreakdownBalanceKey] = useState<
+    string | null
+  >()
   const [breakdownChartType, setBreakdownChartType] =
     useState<BalanceHistoryBreakdownChartType>(
-      BALANCE_HISTORY_BREAKDOWN_CHART_TYPES.Pie,
+      BALANCE_HISTORY_BREAKDOWN_CHART_TYPES.Bar,
     )
   const [breakdownBalanceDayKey, setBreakdownBalanceDayKey] =
     useState<string>("")
@@ -150,14 +197,20 @@ export function useBalanceHistoryViewModel() {
   )
 
   useEffect(() => {
-    if (!estimatedTodayIncomeEnabled && trendMetric === "estimatedIncome") {
-      setTrendMetric("income")
+    if (
+      !estimatedTodayIncomeEnabled &&
+      trendMetric === DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome
+    ) {
+      setTrendMetric(DAILY_BALANCE_HISTORY_METRICS.Income)
     }
   }, [estimatedTodayIncomeEnabled, trendMetric])
 
   useEffect(() => {
-    if (!estimatedTodayIncomeEnabled && breakdownMetric === "estimatedIncome") {
-      setBreakdownMetric("income")
+    if (
+      !estimatedTodayIncomeEnabled &&
+      breakdownMetric === DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome
+    ) {
+      setBreakdownMetric(DAILY_BALANCE_HISTORY_METRICS.Income)
     }
   }, [breakdownMetric, estimatedTodayIncomeEnabled])
 
@@ -248,12 +301,6 @@ export function useBalanceHistoryViewModel() {
     setStartDayKey(defaultStartDayKey)
   }, [defaultStartDayKey, endDayKey, maxDayKey, startDayKey])
 
-  // Initialize the breakdown reference day once the range is ready.
-  useEffect(() => {
-    if (breakdownBalanceDayKey || !endDayKey) return
-    setBreakdownBalanceDayKey(endDayKey)
-  }, [breakdownBalanceDayKey, endDayKey])
-
   // Keep manually entered dates in sync with the bounded range used by reports.
   useEffect(() => {
     if (startDayKey && startDayKey !== effectiveRange.startDayKey)
@@ -269,13 +316,30 @@ export function useBalanceHistoryViewModel() {
   }, [accounts])
 
   const currencySymbol = getCurrencySymbol(currencyType)
+  const legacyReferenceRates = effectiveAccountIds.map((accountId) => {
+    const storedRate = exchangeRateByAccountId.get(accountId)
+    return {
+      accountId,
+      label: accountDisplayLabelById.get(accountId) ?? accountId,
+      rate:
+        typeof storedRate === "number" &&
+        Number.isFinite(storedRate) &&
+        storedRate > 0
+          ? storedRate
+          : DEFAULT_USD_TO_CNY_RATE,
+    }
+  })
 
   const handleCurrencyChange = useCallback(
     (next: CurrencyType) => {
       if (next === currencyType) return
+      if (preview) {
+        setPreviewCurrency(next)
+        return
+      }
       void updateCurrencyType(next)
     },
-    [currencyType, updateCurrencyType],
+    [currencyType, preview, updateCurrencyType],
   )
 
   const formatAxisMoneyValue = useCallback(
@@ -307,6 +371,22 @@ export function useBalanceHistoryViewModel() {
       startDayKey: effectiveRange.startDayKey,
       endDayKey: effectiveRange.endDayKey,
     })
+    const accountIds = accountsForSelectedTags.map((account) => account.id)
+    const financialAccountIds = new Set([
+      ...buildFinancialHistorySeries({
+        store,
+        asOf,
+        accountIds,
+        startDayKey: effectiveRange.startDayKey,
+        endDayKey: effectiveRange.endDayKey,
+      }).series.map((series) => series.accountId),
+      ...buildFinancialHistoryActivity({
+        store,
+        asOf,
+        accountIds,
+        dayKeys,
+      }).map((activity) => activity.accountId),
+    ])
 
     type SortableOption = {
       option: {
@@ -324,7 +404,7 @@ export function useBalanceHistoryViewModel() {
     const sortable: SortableOption[] = accountsForSelectedTags.map(
       (account) => {
         const label = accountDisplayLabelById.get(account.id) ?? account.id
-        const perDay = store?.snapshotsByAccountId?.[account.id]
+        const perDay = store?.referenceSnapshotsByAccountId?.[account.id]
 
         let snapshotDays = 0
         if (perDay) {
@@ -333,7 +413,8 @@ export function useBalanceHistoryViewModel() {
           }
         }
 
-        const hasSnapshotData = snapshotDays > 0
+        const hasFinancialData = financialAccountIds.has(account.id)
+        const hasSnapshotData = snapshotDays > 0 || hasFinancialData
         const isSelected = selected.has(account.id)
         const noDataInRange = hasStore && !hasSnapshotData
 
@@ -381,6 +462,7 @@ export function useBalanceHistoryViewModel() {
 
     return sortable.map((item) => item.option)
   }, [
+    asOf,
     accountDisplayLabelById,
     accountsForSelectedTags,
     effectiveRange.endDayKey,
@@ -406,16 +488,29 @@ export function useBalanceHistoryViewModel() {
   ])
 
   const {
+    financialHistory,
     perAccountSeries,
     totalTrendValues,
     totalTrendCoverageSummary,
     trendOption,
+    nativeTrendPresentation,
+    nativeTrendCanSum,
     breakdownData,
+    breakdownReferenceDayKey,
     breakdownOption,
     overviewTotals,
     tableRows,
+    nativeMetrics,
+    nativeBalanceMetrics,
+    nativeTrendMetrics,
+    nativeActivity,
+    nativeTrend,
+    nativeBreakdown,
+    hasReferenceBalance,
+    referenceMetrics,
   } = useBalanceHistoryReporting({
     store,
+    asOf,
     effectiveAccountIds,
     effectiveRange,
     currencyType,
@@ -432,30 +527,81 @@ export function useBalanceHistoryViewModel() {
     effectiveBreakdownMetric,
     breakdownBalanceDayKey,
     breakdownChartType,
+    trendBalanceKey,
+    breakdownBalanceKey,
   })
 
-  useEffect(() => {
-    if (breakdownChartType === "pie" && breakdownData.hasNegativeValues) {
-      setBreakdownChartType("bar")
+  const visibleNativeMetric = (value: string): BalanceHistoryVisibleMetric => {
+    const option = nativeMetrics.find(({ key }) => key === value)
+    if (option && "estimated" in option && option.estimated)
+      return DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome
+    if (option?.kind === FINANCIAL_METRIC_KINDS.Income)
+      return DAILY_BALANCE_HISTORY_METRICS.Income
+    if (option?.kind === FINANCIAL_METRIC_KINDS.Consumption)
+      return DAILY_BALANCE_HISTORY_METRICS.Outcome
+    if (option?.kind === FINANCIAL_METRIC_KINDS.Change)
+      return DAILY_BALANCE_HISTORY_METRICS.Net
+    return DAILY_BALANCE_HISTORY_METRICS.Balance
+  }
+  const selectTrendMetric = (value: string) => {
+    if (value.startsWith("native:")) {
+      setTrendBalanceKey(value)
+      setTrendMetric(visibleNativeMetric(value))
+    } else {
+      setTrendBalanceKey(value.startsWith("reference:") ? value : null)
+      setTrendMetric(
+        value.replace(/^reference:/, "") as BalanceHistoryVisibleMetric,
+      )
     }
-  }, [breakdownChartType, breakdownData.hasNegativeValues])
+  }
+  const selectBreakdownMetric = (value: string) => {
+    if (value.startsWith("native:")) {
+      setBreakdownBalanceKey(value)
+      setBreakdownMetric(visibleNativeMetric(value))
+    } else {
+      setBreakdownBalanceKey(value.startsWith("reference:") ? value : null)
+      setBreakdownMetric(
+        value.replace(/^reference:/, "") as BalanceHistoryVisibleMetric,
+      )
+    }
+  }
+
+  useEffect(() => {
+    if (
+      breakdownChartType === BALANCE_HISTORY_BREAKDOWN_CHART_TYPES.Pie &&
+      breakdownData.entries.length > 1 &&
+      !breakdownData.canUsePie
+    ) {
+      setBreakdownChartType(BALANCE_HISTORY_TREND_CHART_TYPES.Bar)
+    }
+  }, [
+    breakdownChartType,
+    breakdownData.entries.length,
+    breakdownData.canUsePie,
+  ])
 
   const enabled =
-    preferences.balanceHistory?.enabled ??
-    DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled
+    Boolean(preview) ||
+    (preferences.balanceHistory?.enabled ??
+      DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled)
   const endOfDayCaptureEnabled =
     preferences.balanceHistory?.endOfDayCapture?.enabled ?? false
 
   const shouldShowCashflowWarning =
+    !preview &&
     enabled &&
     (preferences.showTodayCashflow ?? true) === false &&
     !endOfDayCaptureEnabled
 
-  const isStoreEmpty = (
-    store?.snapshotsByAccountId
-      ? Object.keys(store.snapshotsByAccountId).length === 0
-      : true
-  ) as boolean
+  const hasStoredFinancialHistory = Object.values(
+    store?.financialSnapshotsByAccountId ?? {},
+  ).some((snapshots) => snapshots.length > 0)
+  const isStoreEmpty =
+    !hasStoredFinancialHistory &&
+    ((store?.referenceSnapshotsByAccountId
+      ? Object.keys(store.referenceSnapshotsByAccountId).length === 0
+      : true) as boolean)
+  const hasFinancialHistory = financialHistory.series.length > 0
 
   const snapshotCompleteDays = useMemo(() => {
     const totals = perAccountSeries.coverageByDay.reduce(
@@ -507,13 +653,13 @@ export function useBalanceHistoryViewModel() {
   }, [perAccountSeries.coverageByDay])
 
   const hasAnyPerAccountTrendMetricData =
-    effectiveTrendMetric === "balance"
+    effectiveTrendMetric === DAILY_BALANCE_HISTORY_METRICS.Balance
       ? snapshotAvailableDays > 0
-      : effectiveTrendMetric === "estimatedIncome"
+      : effectiveTrendMetric === DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome
         ? estimatedIncomeAvailableDays > 0
-        : effectiveTrendMetric === "income"
+        : effectiveTrendMetric === DAILY_BALANCE_HISTORY_METRICS.Income
           ? incomeAvailableDays > 0
-          : effectiveTrendMetric === "outcome"
+          : effectiveTrendMetric === DAILY_BALANCE_HISTORY_METRICS.Outcome
             ? outcomeAvailableDays > 0
             : cashflowAvailableDays > 0
 
@@ -523,13 +669,15 @@ export function useBalanceHistoryViewModel() {
     )
   }, [totalTrendValues])
 
-  const hasAnyTrendMetricData =
-    trendScope === "total"
+  const hasAnyTrendMetricData = nativeTrend
+    ? true
+    : trendScope === BALANCE_HISTORY_TREND_SERIES_SCOPES.Total
       ? hasAnyTotalTrendMetricData
       : hasAnyPerAccountTrendMetricData
 
   const shouldShowIncompleteTotalHint =
-    trendScope === "total" &&
+    !nativeTrend &&
+    trendScope === BALANCE_HISTORY_TREND_SERIES_SCOPES.Total &&
     hasAnyTotalTrendMetricData &&
     totalTrendCoverageSummary.partialDays > 0 &&
     totalTrendCoverageSummary.totalAccounts > 1
@@ -542,6 +690,13 @@ export function useBalanceHistoryViewModel() {
   const shouldShowEnableBalanceHistoryHint = !enabled && !isInitialLoading
 
   return {
+    loadError,
+    retryLoad,
+    hasLoadedData,
+    financialHistory,
+    hasFinancialHistory,
+    accountDisplayLabelById,
+    legacyReferenceRates,
     isInitialLoading,
     handleRefreshNow,
     handlePruneNow,
@@ -581,7 +736,7 @@ export function useBalanceHistoryViewModel() {
     breakdownData,
     breakdownChartType,
     setBreakdownChartType,
-    breakdownBalanceDayKey,
+    breakdownBalanceDayKey: breakdownReferenceDayKey,
     effectiveRange,
     setBreakdownBalanceDayKey,
     breakdownOption,
@@ -593,9 +748,21 @@ export function useBalanceHistoryViewModel() {
     setTrendChartType,
     hasAnyTrendMetricData,
     trendOption,
+    nativeTrendPresentation,
+    nativeTrendCanSum,
     shouldShowIncompleteTotalHint,
     totalTrendCoverageSummary,
     tableRows,
+    nativeMetrics,
+    nativeBalanceMetrics,
+    nativeTrendMetrics,
+    nativeActivity,
+    nativeTrend,
+    nativeBreakdown,
+    hasReferenceBalance,
+    referenceMetrics,
+    selectTrendMetric,
+    selectBreakdownMetric,
     isLoading,
   }
 }

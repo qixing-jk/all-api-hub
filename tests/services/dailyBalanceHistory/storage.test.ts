@@ -1,11 +1,63 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
+import { BALANCE_HISTORY_TREND_CHART_TYPES } from "~/features/BalanceHistory/contracts"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
-import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import {
+  DAILY_BALANCE_HISTORY_CAPTURE_SOURCES,
+  DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+} from "~/types/dailyBalanceHistory"
+import type { FinancialHistorySnapshot } from "~/types/dailyBalanceHistory"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 const storageData = new Map<string, any>()
+
+function createNativeSnapshot(
+  accountId: string,
+  capturedAt: number,
+): FinancialHistorySnapshot {
+  const scope = {
+    subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId } as const,
+    authority: "https://fixture.invalid",
+    models: { kind: SCOPE_SELECTION_KINDS.All } as const,
+    projects: { kind: SCOPE_SELECTION_KINDS.All } as const,
+    keys: { kind: SCOPE_SELECTION_KINDS.All } as const,
+    groups: { kind: SCOPE_SELECTION_KINDS.All } as const,
+  }
+  return {
+    source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+    balance: {
+      schemaVersion: 2,
+      subject: scope.subject,
+      capturedAt,
+      coverage: FINANCIAL_COVERAGE.Complete,
+      positions: [
+        balancePosition({
+          id: "wallet",
+          scope,
+          value: "10",
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+          observedAt: capturedAt,
+          source: {
+            adapter: "fixture",
+            operation: "wallet",
+            contractVersion: "2",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+    },
+  }
+}
 
 vi.mock("@plasmohq/storage", () => {
   class Storage {
@@ -31,19 +83,96 @@ describe("dailyBalanceHistoryStorage", () => {
     vi.restoreAllMocks()
   })
 
-  it("sanitizes invalid stored payloads", async () => {
-    storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, { foo: "bar" })
+  it("rejects unversioned stored payloads", async () => {
+    storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
+      foo: BALANCE_HISTORY_TREND_CHART_TYPES.Bar,
+    })
 
-    const store = await dailyBalanceHistoryStorage.getStore()
-    expect(store.schemaVersion).toBe(DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION)
-    expect(store.snapshotsByAccountId).toEqual({})
+    await expect(dailyBalanceHistoryStorage.getStore()).rejects.toThrow(
+      "unsupported_balance_history_version",
+    )
+  })
+
+  it("compacts repeated intraday refreshes while retaining day boundaries and removal events", async () => {
+    const start = Date.UTC(2026, 1, 7)
+    vi.setSystemTime(start + 86_399_000)
+    try {
+      const entries = Array.from({ length: 96 }, (_, index) => ({
+        ...createNativeSnapshot("a1", start + index * 900_000),
+        generation: index,
+      }))
+      entries[48]!.balance!.positions = []
+      storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
+        schemaVersion: 4,
+        referenceSnapshotsByAccountId: {},
+        financialSnapshotsByAccountId: { a1: entries },
+      })
+      await dailyBalanceHistoryStorage.appendFinancialSnapshot({
+        accountId: "a1",
+        snapshot: { ...createNativeSnapshot("a1", Date.now()), generation: 96 },
+        retentionDays: 30,
+        timeZone: "UTC",
+      })
+      const history = (await dailyBalanceHistoryStorage.getStore())
+        .financialSnapshotsByAccountId!.a1!
+      expect(history.map(({ generation }) => generation)).toEqual([
+        0, 1, 47, 48, 49, 96,
+      ])
+      expect(
+        history.find(({ generation }) => generation === 48)?.endedPositionKeys,
+      ).toHaveLength(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("persists USD reference snapshots alongside existing native history", async () => {
+    const at = Date.UTC(2026, 1, 7, 12)
+    const native = createNativeSnapshot("a1", at)
+    storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
+      schemaVersion: 3,
+      snapshotsByAccountId: {
+        a1: {
+          "2026-02-07": {
+            quota: 1_250_000,
+            today_income: 750_000,
+            today_quota_consumption: null,
+            capturedAt: at,
+            source: "refresh",
+          },
+        },
+      },
+      financialSnapshotsByAccountId: { a1: [native] },
+    })
+
+    const migrated = await dailyBalanceHistoryStorage.getStore()
+    expect(migrated).toMatchObject({
+      schemaVersion: 4,
+      referenceSnapshotsByAccountId: {
+        a1: {
+          "2026-02-07": {
+            balanceUsd: 2.5,
+            incomeUsd: 1.5,
+            consumptionUsd: null,
+            capturedAt: at,
+            source: "refresh",
+          },
+        },
+      },
+      financialSnapshotsByAccountId: { a1: [native] },
+    })
+    expect(migrated).not.toHaveProperty("snapshotsByAccountId")
+    expect(storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)).toEqual(
+      migrated,
+    )
+    expect(await dailyBalanceHistoryStorage.getStore()).toEqual(migrated)
   })
 
   it.each([
     { retentionDays: 2, expiredDay: "2026-02-05", cutoffDay: "2026-02-06" },
     { retentionDays: 7300, expiredDay: "2006-02-12", cutoffDay: "2006-02-13" },
   ])(
-    "prunes snapshots outside a $retentionDays-day window on upsert",
+    "prunes retained history on native append without creating a legacy daily row ($retentionDays days)",
     async ({ retentionDays, expiredDay, cutoffDay }) => {
       vi.useFakeTimers()
       const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
@@ -51,7 +180,7 @@ describe("dailyBalanceHistoryStorage", () => {
 
       try {
         storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
-          schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+          schemaVersion: 3,
           snapshotsByAccountId: {
             a1: {
               [expiredDay]: {
@@ -75,16 +204,10 @@ describe("dailyBalanceHistoryStorage", () => {
         const nowUnixSeconds = Math.floor(Date.now() / 1000)
         const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds, "UTC")
 
-        const ok = await dailyBalanceHistoryStorage.upsertSnapshot({
+        const snapshot = createNativeSnapshot("a1", fixedNow.getTime())
+        const ok = await dailyBalanceHistoryStorage.appendFinancialSnapshot({
           accountId: "a1",
-          dayKey: todayKey,
-          snapshot: {
-            quota: 10,
-            today_income: 1,
-            today_quota_consumption: 2,
-            capturedAt: fixedNow.getTime(),
-            source: "refresh",
-          },
+          snapshot,
           retentionDays,
           timeZone: "UTC",
         })
@@ -92,16 +215,16 @@ describe("dailyBalanceHistoryStorage", () => {
         expect(ok).toBe(true)
 
         const store = await dailyBalanceHistoryStorage.getStore()
-        expect(store.snapshotsByAccountId.a1?.[expiredDay]).toBeUndefined()
-        expect(store.snapshotsByAccountId.a1?.[cutoffDay]?.quota).toBe(2)
-        expect(store.snapshotsByAccountId.a1?.[todayKey]).toEqual(
-          expect.objectContaining({
-            quota: 10,
-            today_income: 1,
-            today_quota_consumption: 2,
-            source: "refresh",
-          }),
-        )
+        expect(
+          store.referenceSnapshotsByAccountId.a1?.[expiredDay],
+        ).toBeUndefined()
+        expect(
+          store.referenceSnapshotsByAccountId.a1?.[cutoffDay]?.balanceUsd,
+        ).toBe(0.000004)
+        expect(
+          store.referenceSnapshotsByAccountId.a1?.[todayKey],
+        ).toBeUndefined()
+        expect(store.financialSnapshotsByAccountId?.a1).toEqual([snapshot])
       } finally {
         vi.useRealTimers()
       }
@@ -110,7 +233,7 @@ describe("dailyBalanceHistoryStorage", () => {
 
   it("drops malformed account buckets and snapshot rows while preserving null optional fields", async () => {
     storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
-      schemaVersion: 999,
+      schemaVersion: 1,
       snapshotsByAccountId: {
         "": {
           "2026-02-07": {
@@ -163,12 +286,13 @@ describe("dailyBalanceHistoryStorage", () => {
 
     expect(store).toEqual({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {
+      financialSnapshotsByAccountId: {},
+      referenceSnapshotsByAccountId: {
         accountValid: {
           "2026-02-11": {
-            quota: 8,
-            today_income: null,
-            today_quota_consumption: null,
+            balanceUsd: 0.000016,
+            incomeUsd: null,
+            consumptionUsd: null,
             capturedAt: 123,
             source: "alarm",
           },
@@ -177,14 +301,14 @@ describe("dailyBalanceHistoryStorage", () => {
     })
   })
 
-  it("prunes all accounts that become empty and returns false for invalid day keys", async () => {
+  it("prunes expired legacy rows and rejects native observations for another account", async () => {
     vi.useFakeTimers()
     const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
     vi.setSystemTime(fixedNow)
 
     try {
       storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
-        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        schemaVersion: 3,
         snapshotsByAccountId: {
           pruneMe: {
             "2026-02-04": {
@@ -215,36 +339,51 @@ describe("dailyBalanceHistoryStorage", () => {
       ).resolves.toBe(true)
 
       const prunedStore = await dailyBalanceHistoryStorage.getStore()
-      expect(prunedStore.snapshotsByAccountId.pruneMe).toBeUndefined()
-      expect(prunedStore.snapshotsByAccountId.keepMe?.["2026-02-07"]).toEqual(
+      expect(prunedStore.referenceSnapshotsByAccountId.pruneMe).toBeUndefined()
+      expect(
+        prunedStore.referenceSnapshotsByAccountId.keepMe?.["2026-02-07"],
+      ).toEqual(
         expect.objectContaining({
-          quota: 2,
+          balanceUsd: 0.000004,
           source: "alarm",
         }),
       )
 
       await expect(
-        dailyBalanceHistoryStorage.upsertSnapshot({
+        dailyBalanceHistoryStorage.appendFinancialSnapshot({
           accountId: "keepMe",
-          dayKey: "not-a-day-key",
-          snapshot: {
-            quota: 10,
-            today_income: 2,
-            today_quota_consumption: 3,
-            capturedAt: fixedNow.getTime(),
-            source: "refresh",
-          },
+          snapshot: createNativeSnapshot("another-account", fixedNow.getTime()),
           retentionDays: 1,
           timeZone: "UTC",
         }),
       ).resolves.toBe(false)
 
       expect(
-        (await dailyBalanceHistoryStorage.getStore()).snapshotsByAccountId
-          .keepMe,
-      ).not.toHaveProperty("not-a-day-key")
+        (await dailyBalanceHistoryStorage.getStore())
+          .referenceSnapshotsByAccountId.keepMe,
+      ).toEqual(prunedStore.referenceSnapshotsByAccountId.keepMe)
     } finally {
       vi.useRealTimers()
     }
   })
 })
+
+it.each([null, 0, false, "unrecognized-data"])(
+  "preserves existing non-object history payload %j",
+  async (payload) => {
+    storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, payload)
+    await expect(dailyBalanceHistoryStorage.getStore()).rejects.toThrow(
+      "invalid_balance_history_store",
+    )
+    expect(
+      await dailyBalanceHistoryStorage.appendFinancialSnapshot({
+        accountId: "a",
+        snapshot: createNativeSnapshot("a", Date.now()),
+        retentionDays: 30,
+      }),
+    ).toBe(false)
+    expect(storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)).toBe(
+      payload,
+    )
+  },
+)

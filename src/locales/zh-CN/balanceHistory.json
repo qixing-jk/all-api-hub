@@ -6,7 +6,7 @@
   },
   "breakdown": {
     "chartTypes": {
-      "histogram": "直方图",
+      "bars": "条形图",
       "pie": "饼图"
     },
     "controls": {
@@ -19,6 +19,9 @@
       "pieDisabledForNegative": "存在负值时无法使用饼图。"
     },
     "title": "账户分布"
+  },
+  "charts": {
+    "view": "图表视图"
   },
   "description": "查看各账户的余额和额度变化。",
   "empty": {
@@ -68,8 +71,24 @@
       "title": "汇总可能不完整"
     }
   },
+  "legacy": {
+    "accountDetails": "账户折算明细",
+    "columnsHint": "这些金额使用筛选中选定的参考币种。点击列标题可排序。",
+    "coverage": "参考金额覆盖",
+    "currency": "参考货币",
+    "currencyHint": "人民币金额按账户当前汇率换算。",
+    "referenceRate": "{{account}} · {{date}} 参考：1 USD = {{rate}} CNY",
+    "referenceRates": "参考汇率",
+    "showColumns": "显示折算金额列",
+    "title": "旧快照折算",
+    "totalsHint": "旧快照按参考币种折算。"
+  },
   "messages": {
     "error": {
+      "captureResultUnavailable": "采集结果不可用。",
+      "lastLoadedDescription": "正在显示上次读取的历史。重新读取失败，可重试更新。",
+      "loadDescription": "已保存的历史未被替换。请重试，或使用支持此数据的应用版本。",
+      "loadTitle": "无法读取历史记录",
       "pruneFailed": "清理失败：{{error}}",
       "refreshFailed": "刷新失败：{{error}}",
       "settingsSaveFailed": "保存设置失败：{{error}}"
@@ -84,7 +103,30 @@
       "pruneCompleted": "清理完成",
       "refreshCompleted": "刷新完成",
       "settingsSaved": "设置已保存"
+    },
+    "warning": {
+      "refreshIncomplete": "历史采集不完整。已记录：{{captured}}；未记录：{{uncaptured}}。"
     }
+  },
+  "metricHelp": {
+    "allowanceHint": "站点记录的剩余额度，可用范围和有效期由站点决定。",
+    "bonusHint": "部分站点显示为 Bonus credits。可抵扣的消费和有效期由站点决定。",
+    "convertedHint": "历史余额按筛选中的参考货币显示，换算使用账户当前汇率。",
+    "estimatedHint": "用两次历史余额与当天已记录的消耗作参考估算。余额区间和消耗区间可能不同。",
+    "incomeHint": "站点记录的入账金额。",
+    "ledgerHint": "站点记录的账户余额，按原单位显示。",
+    "nativeHint": "站点记录的这一分项，按原单位显示。",
+    "netHint": "记录的收入减去支出。",
+    "outcomeHint": "站点记录的消费金额。",
+    "quotaHint": "站点以 {{unit}} 记录的余额或剩余额度，扣减按站点规则。",
+    "title": "指标说明",
+    "trigger": "{{chart}}指标说明"
+  },
+  "metricMenu": {
+    "allowances": "额度",
+    "balances": "余额",
+    "cashflow": "收支与变化",
+    "convertedBalance": "折算余额"
   },
   "metrics": {
     "balance": "余额",
@@ -94,6 +136,11 @@
     "outcome": "支出"
   },
   "native": {
+    "activityCoverage": "{{covered}}/{{total}} 天有记录",
+    "activityHint": "原币收支按站点记录日期统计。",
+    "activityTitle": "区间统计",
+    "amountsTitle": "余额与额度",
+    "coverage": "{{total}} 个账户中有 {{covered}} 个有记录",
     "dimensions": {
       "groups": "分组",
       "keys": "密钥",
@@ -101,7 +148,30 @@
       "projects": "项目",
       "routes": "路由"
     },
-    "restrictions": "{{dimension}}：{{value}}"
+    "ended": "已结束",
+    "expired": "已过期",
+    "firstRecord": "首笔记录",
+    "gaps": "折线断开表示当天没有可显示的数值。",
+    "latest": "最近一笔",
+    "netInflow": "估算净流入",
+    "netInflowHint": "— 表示数据不足，暂无法估算净流入。",
+    "originalObservation": "数值记录于 {{date}}",
+    "recordedIncome": "已记录收入",
+    "recordedRange": "有记录的日期 · {{range}}",
+    "recordedSpending": "已记录支出",
+    "reset": "已重置",
+    "restrictions": "{{dimension}}：{{value}}",
+    "scope": "站点 · 组织 · 钱包",
+    "sources": {
+      "console": "控制台",
+      "inference": "推理 API",
+      "numbered": "来源 {{number}}"
+    },
+    "status": "状态",
+    "time": "时间",
+    "unknown": "未知",
+    "unknownAsset": "未知资产",
+    "unsupported": "不支持"
   },
   "overview": {
     "kpis": {
@@ -119,7 +189,7 @@
         "label": "区间净变化"
       }
     },
-    "title": "概览"
+    "viewTrend": "查看趋势：{{metric}}，{{amount}}"
   },
   "settings": {
     "alarmUnsupported": "当前浏览器不支持 Alarms API，无法启用日终抓取。",
@@ -163,6 +233,7 @@
     },
     "emptyMetric": "该时间范围内暂无{{metric}}数据。",
     "gapBridge": "无记录",
+    "noRecordForDay": "当天无记录",
     "scopes": {
       "accounts": "按账户",
       "total": "汇总"

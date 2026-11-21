@@ -1,8 +1,31 @@
-import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
+import type {
+  AccountData,
+  RefreshAccountResult,
+} from "~/services/accounts/accountDataModel"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
-import { parseManualQuotaFromUsd } from "~/services/accounts/editing/accountFormValidation"
+import { migrateAccountFinancialInfo } from "~/services/accounts/migrations/accountFinancialMigration"
 import type { SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
+
+/** Preserve data from adapters still returning the release wire format. */
+export function readLegacyAdapterFinancialPatch(
+  data: AccountData,
+  context: Parameters<typeof migrateAccountFinancialInfo>[1],
+) {
+  if (
+    data.balance !== undefined ||
+    data.balanceRefreshParts !== undefined ||
+    (data.quota === undefined &&
+      data.nativeBalance === undefined &&
+      data.balanceUnavailable === undefined)
+  )
+    return {}
+  const { balance, legacyFinancial } = migrateAccountFinancialInfo(
+    { ...data, id: "", username: "", access_token: "" },
+    context,
+  )
+  return { balance, legacyFinancial }
+}
 
 /** Projects adapter data into a refresh patch without writing stored account state. */
 export function buildAccountRefreshUpdate(
@@ -10,19 +33,22 @@ export function buildAccountRefreshUpdate(
   result: RefreshAccountResult,
   reEnableOnSuccess: boolean,
 ): DeepPartial<SiteAccount> {
+  const capturedAt = Date.now()
   const updateData: DeepPartial<SiteAccount> = {
     health: {
       status: result.healthStatus.status,
       reason: result.healthStatus.message,
       code: result.healthStatus.code,
     },
-    last_sync_time: Date.now(),
+    last_sync_time: capturedAt,
   }
   if (!result.success) return updateData
 
-  const manualQuota = parseManualQuotaFromUsd(account.manualBalanceUsd)
   updateData.account_info = {
-    quota: manualQuota ?? result.data.quota,
+    settledConsumption: result.data.settledConsumption,
+    reportedIncome: result.data.reportedIncome,
+    balance: result.data.balance,
+    allowances: result.data.allowances,
     today_prompt_tokens: result.data.today_prompt_tokens,
     today_completion_tokens: result.data.today_completion_tokens,
     today_quota_consumption: result.data.today_quota_consumption,
@@ -30,13 +56,15 @@ export function buildAccountRefreshUpdate(
     today_income: result.data.today_income,
     todayStatsAvailability: result.data.todayStatsAvailability,
     usage: result.data.usage,
+    usageObservations: result.data.usageObservations,
     subscription: result.data.subscription,
-    nativeBalance: result.data.nativeBalance,
-    balanceUnavailable:
-      manualQuota === undefined
-        ? result.data.balanceUnavailable === true
-        : false,
     recentUsageRecords: result.data.recentUsageRecords,
+    ...readLegacyAdapterFinancialPatch(result.data, {
+      accountId: account.id,
+      siteUrl: account.site_url,
+      siteType: account.site_type,
+      capturedAt,
+    }),
   }
   if (reEnableOnSuccess) updateData.disabled = false
 

@@ -1,5 +1,9 @@
-import { BALANCE_IDENTITY_CHANGED_REASON } from "~/services/accounts/refresh/balanceAcceptance"
-import { assetIdentity } from "~/services/amounts/assets"
+import { CURRENCIES } from "~/constants/money"
+import {
+  BALANCE_IDENTITY_CHANGED_REASON,
+  LEGACY_BALANCE_SUPERSEDED_REASON,
+} from "~/services/accounts/refresh/balanceAcceptance"
+import { assetIdentity, type Asset } from "~/services/amounts/assets"
 import {
   balanceMetricKey,
   balancePositionKey,
@@ -19,10 +23,13 @@ import {
   BALANCE_ROLES,
   BALANCE_VALIDITY_KINDS,
   EVIDENCE_KINDS,
+  FINANCIAL_ACCOUNT_EXCLUSION_REASONS,
   FINANCIAL_COVERAGE,
   OBSERVATION_STATUSES,
   SCOPE_SELECTION_KINDS,
 } from "~/services/amounts/financialConstants"
+import type { CurrencyType, DisplaySiteData } from "~/types"
+import { convertCnyToUsd, convertUsdToCny } from "~/utils/core/money"
 
 export const BALANCE_PURPOSES = {
   Card: "card",
@@ -60,6 +67,90 @@ type BalanceConflict = {
   reason: (typeof BALANCE_CONFLICT_REASONS)[keyof typeof BALANCE_CONFLICT_REASONS]
 }
 
+/** Selects the account row's primary amounts without adding independent balances together. */
+export function getDisplayBalancePositions(
+  snapshot?: BalanceSnapshot,
+): BalancePosition[] {
+  const positions = snapshot?.positions ?? []
+  const primaryPositions = positions.filter(
+    (position) =>
+      !(
+        position.amount.status === OBSERVATION_STATUSES.Stale &&
+        position.amount.reason === LEGACY_BALANCE_SUPERSEDED_REASON
+      ),
+  )
+  const roots = primaryPositions.filter(
+    (position) =>
+      (!position.parentId ||
+        (position.relation === BALANCE_RELATIONS.Summary &&
+          positions.some(
+            (parent) =>
+              parent.role === BALANCE_ROLES.Ledger &&
+              balancePositionKey(parent) ===
+                balancePositionKey(position, position.parentId),
+          ))) &&
+      (position.role === BALANCE_ROLES.Available ||
+        position.role === BALANCE_ROLES.Allowance),
+  )
+  const priority = (position: BalancePosition) =>
+    position.asset.kind === ASSET_KINDS.Unknown
+      ? 3
+      : position.amount.status === OBSERVATION_STATUSES.Known
+        ? 0
+        : position.amount.status === OBSERVATION_STATUSES.Stale
+          ? position.amount.source.kind === EVIDENCE_KINDS.Legacy
+            ? 2
+            : 1
+          : 3
+  const readable = (position: BalancePosition) =>
+    position.asset.kind !== ASSET_KINDS.Unknown &&
+    isKnownOrStaleObservation(position.amount)
+  return (
+    roots.length
+      ? roots
+      : primaryPositions.filter((position) => !position.parentId)
+  )
+    .flatMap((root) => {
+      if (readable(root) && root.amount.status === OBSERVATION_STATUSES.Known)
+        return [root]
+      const components = primaryPositions.filter(
+        (position) =>
+          position.relation === BALANCE_RELATIONS.Component &&
+          position.parentId !== undefined &&
+          balancePositionKey(root) ===
+            balancePositionKey(position, position.parentId) &&
+          readable(position),
+      )
+      if (readable(root)) {
+        const current = components.filter(
+          ({ amount }) => amount.status === OBSERVATION_STATUSES.Known,
+        )
+        return current.length ? current : [root]
+      }
+      return components.length ? components : [root]
+    })
+    .sort((left, right) => priority(left) - priority(right))
+}
+
+/** Recorded legacy USD totals remain references independently of their details. */
+function getReferenceUsdBalance(snapshot: BalanceSnapshot): string | undefined {
+  const positions = snapshot.positions.filter(
+    ({ id, parentId, asset }) =>
+      id === "legacy" &&
+      parentId === undefined &&
+      asset.kind === ASSET_KINDS.Currency &&
+      asset.code === CURRENCIES.USD,
+  )
+  if (positions.length !== 1) return undefined
+  const { amount } = positions[0]!
+  return amount.status === OBSERVATION_STATUSES.Stale &&
+    amount.reason !== BALANCE_IDENTITY_CHANGED_REASON &&
+    amount.reason !== LEGACY_BALANCE_SUPERSEDED_REASON &&
+    amount.source.kind === EVIDENCE_KINDS.Legacy
+    ? amount.value
+    : undefined
+}
+
 /** Scope selections are sets, while unknown and explicitly empty stay distinct. */
 function balanceScopeKey(scope: UsageScope): string {
   return usageScopeKey(scope, false)
@@ -71,15 +162,20 @@ function positionCollectionKey(position: BalancePosition): string {
   return financialCollectionKey(position.collectionKey, source)
 }
 
+/** Portfolio quota identities include their authority without changing stored assets. */
+export function getPortfolioAsset(asset: Asset, authority: string): Asset {
+  return asset.kind === ASSET_KINDS.Quota
+    ? {
+        ...asset,
+        id: JSON.stringify([authority, asset.id]),
+      }
+    : asset
+}
+
 /** Native assets group only by identity; this projection never invents exchange rates. */
 function sumPositions(positions: BalancePosition[]) {
   const scopedAsset = (p: BalancePosition) =>
-    p.asset.kind === ASSET_KINDS.Quota
-      ? {
-          ...p.asset,
-          id: JSON.stringify([p.scope.authority, p.asset.id]),
-        }
-      : p.asset
+    getPortfolioAsset(p.asset, p.scope.authority)
   const groups = new Map<string, BalancePosition[]>()
   for (const p of positions) {
     if (
@@ -120,7 +216,7 @@ function sumPositions(positions: BalancePosition[]) {
 }
 
 /** A projection chooses one product purpose without erasing upstream facts. */
-function projectBalance(
+export function projectBalance(
   snapshot: BalanceSnapshot,
   purpose: (typeof BALANCE_PURPOSES)["Prepaid" | "Available"],
   asOf = Date.now(),
@@ -460,5 +556,165 @@ export function aggregateBalances(
       partial || potentialDuplicateCount > 0 || conflicts.length > 0
         ? FINANCIAL_COVERAGE.Partial
         : FINANCIAL_COVERAGE.Complete,
+  }
+}
+
+/** All account entry points share selection, exclusion and coverage policy. */
+export function getDisplayBalancePortfolio(
+  sites: DisplaySiteData[],
+  purpose: (typeof BALANCE_PURPOSES)[
+    "Prepaid" | "Available"] = BALANCE_PURPOSES.Available,
+  asOf = Date.now(),
+) {
+  const eligible = sites.filter(
+    (site) => !site.disabled && !site.excludeFromTotalBalance,
+  )
+  const observations = eligible.flatMap((site) => {
+    const snapshot = site.manualBalanceSnapshot ?? site.balanceSnapshot
+    return snapshot ? [{ site, snapshot }] : []
+  })
+  const snapshots = observations.map((observation) => observation.snapshot)
+  const includeLastKnown = purpose === BALANCE_PURPOSES.Available
+  const { duplicateSnapshotIndices, ...portfolio } = aggregateBalances(
+    snapshots,
+    purpose,
+    asOf,
+    includeLastKnown,
+  )
+  const included = new Set(
+    portfolio.contributions
+      .filter(({ positions }) => positions.length > 0)
+      .map(({ snapshotIndex }) => observations[snapshotIndex]!.site.id),
+  )
+  const conflictPositions = new Set(
+    portfolio.conflicts.flatMap(({ positions }) => positions),
+  )
+  const snapshotIndices = new Map(
+    observations.map(({ site }, index) => [site.id, index]),
+  )
+  const omissionReasons = (site: DisplaySiteData) => {
+    if (site.disabled)
+      return [FINANCIAL_ACCOUNT_EXCLUSION_REASONS.Disabled] as const
+    if (site.excludeFromTotalBalance)
+      return [FINANCIAL_ACCOUNT_EXCLUSION_REASONS.Settings] as const
+    const index = snapshotIndices.get(site.id)
+    if (index === undefined)
+      return [FINANCIAL_ACCOUNT_EXCLUSION_REASONS.NoBalance] as const
+    const snapshot = snapshots[index]!
+    const reasons = new Set<
+      | BalanceExclusion["reason"]
+      | typeof FINANCIAL_ACCOUNT_EXCLUSION_REASONS.Duplicate
+    >(
+      projectBalance(snapshot, purpose, asOf, includeLastKnown).excluded.map(
+        ({ reason }) => reason,
+      ),
+    )
+    if (duplicateSnapshotIndices.has(index))
+      reasons.add(FINANCIAL_ACCOUNT_EXCLUSION_REASONS.Duplicate)
+    if (snapshot.positions.some((position) => conflictPositions.has(position)))
+      reasons.add(BALANCE_EXCLUSION_REASONS.Conflict)
+    return reasons.size > 0
+      ? [...reasons]
+      : ([FINANCIAL_ACCOUNT_EXCLUSION_REASONS.NoBalance] as const)
+  }
+  const excludedAccounts = sites
+    .filter((site) => !included.has(site.id))
+    .map((site) => ({ accountId: site.id, reasons: omissionReasons(site) }))
+  const contributions = portfolio.contributions.map(
+    ({ snapshotIndex, positions }) => ({
+      site: observations[snapshotIndex]!.site,
+      positions,
+    }),
+  )
+  const lastKnownCount = contributions.filter(({ positions }) =>
+    positions.some(
+      ({ amount }) => amount.status === OBSERVATION_STATUSES.Stale,
+    ),
+  ).length
+  let referenceUsd: { USD: string; CNY: string } | undefined
+  const convertedSubtotal = (currency: "USD" | "CNY") => {
+    try {
+      const converted = contributions.flatMap(({ site, positions }) =>
+        positions.flatMap(({ asset, amount }) =>
+          asset.kind === ASSET_KINDS.Currency &&
+          asset.code === currency &&
+          isKnownOrStaleObservation(amount)
+            ? [
+                currency === CURRENCIES.USD
+                  ? convertUsdToCny(amount.value, site.exchangeRate)
+                  : convertCnyToUsd(amount.value, site.exchangeRate),
+              ]
+            : [],
+        ),
+      )
+      return converted.length ? sumDecimals(converted) : undefined
+    } catch {
+      // If display conversion exceeds the decimal bounds, keep the native subtotal.
+      return undefined
+    }
+  }
+  const usdInCny = convertedSubtotal(CURRENCIES.USD)
+  const cnyInUsd = convertedSubtotal(CURRENCIES.CNY)
+  const nativeCurrencyTotal = (currency: CurrencyType) =>
+    portfolio.amounts.find(
+      ({ asset }) =>
+        asset.kind === ASSET_KINDS.Currency && asset.code === currency,
+    )?.value
+  const convertedCurrencyTotals: Partial<Record<CurrencyType, string>> = {}
+  for (const currency of [CURRENCIES.USD, CURRENCIES.CNY] as const) {
+    const otherCurrency =
+      currency === CURRENCIES.USD ? CURRENCIES.CNY : CURRENCIES.USD
+    const convertedOther = currency === CURRENCIES.USD ? cnyInUsd : usdInCny
+    if (
+      nativeCurrencyTotal(otherCurrency) !== undefined &&
+      convertedOther === undefined
+    )
+      continue
+    const values = [nativeCurrencyTotal(currency), convertedOther].filter(
+      (value): value is string => value !== undefined,
+    )
+    try {
+      if (values.length) convertedCurrencyTotals[currency] = sumDecimals(values)
+    } catch {
+      // Native groups remain readable when a reference total exceeds decimal bounds.
+    }
+  }
+  if (purpose === BALANCE_PURPOSES.Available) {
+    const references = observations.flatMap(({ site, snapshot }) => {
+      const value = getReferenceUsdBalance(snapshot)
+      return value === undefined
+        ? []
+        : [{ value, exchangeRate: site.exchangeRate }]
+    })
+    if (references.length) {
+      try {
+        referenceUsd = {
+          USD: sumDecimals(references.map(({ value }) => value)),
+          CNY: sumDecimals(
+            references.map(({ value, exchangeRate }) =>
+              convertUsdToCny(value, exchangeRate),
+            ),
+          ),
+        }
+      } catch {
+        // A reference subtotal is optional when decimal bounds are exceeded.
+      }
+    }
+  }
+  return {
+    ...portfolio,
+    contributions,
+    convertedCurrencyTotals,
+    lastKnownCount,
+    ...(usdInCny === undefined ? {} : { usdInCny }),
+    ...(cnyInUsd === undefined ? {} : { cnyInUsd }),
+    ...(referenceUsd === undefined ? {} : { referenceUsd }),
+    eligibleCount: eligible.length,
+    coverage:
+      snapshots.length === eligible.length
+        ? portfolio.coverage
+        : FINANCIAL_COVERAGE.Partial,
+    manualCount: eligible.filter((site) => site.manualBalanceSnapshot).length,
+    excludedAccounts,
   }
 }

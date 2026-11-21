@@ -2,14 +2,12 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
-import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import { readAccountRefreshResult } from "~/services/accounts/refresh/accountRefreshResult"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { fetchAccountData } from "~/services/apiService/newApiFamily/default/accountData"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { TodayLogQueryConfig } from "~/services/history/usageHistory/usageLogModel"
-import { SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamilyAccountRefresh")
 
@@ -29,23 +27,10 @@ export async function refreshAccountData(
   request: ApiServiceAccountRequest,
   queryConfig?: TodayLogQueryConfig,
 ): Promise<RefreshAccountResult> {
-  try {
-    const data = await fetchAccountData(request, queryConfig)
-    return {
-      success: true,
-      data,
-      healthStatus: {
-        status: SiteHealthStatus.Healthy,
-        message: t("account:healthStatus.normal"),
-      },
-    }
-  } catch (error) {
-    logger.error("刷新账号数据失败", error)
-    return {
-      success: false,
-      healthStatus: determineHealthStatus(error),
-    }
-  }
+  return readAccountRefreshResult(
+    () => fetchAccountData(request, queryConfig),
+    (error) => logger.error("刷新账号数据失败", error),
+  )
 }
 
 export const defaultAccountRefreshImplementation: AccountRefreshImplementation =

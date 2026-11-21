@@ -33,6 +33,7 @@ vi.mock("~/services/history/dailyBalanceHistory/capture", () => ({
 }))
 vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
   accountMutations: {
+    beginBalanceRefresh: vi.fn().mockResolvedValue(1),
     updateAccountFromRefresh: vi.fn(),
     updateAccount: vi.fn().mockResolvedValue(true),
   },

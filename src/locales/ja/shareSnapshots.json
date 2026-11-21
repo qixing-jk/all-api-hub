@@ -5,7 +5,10 @@
   },
   "financial": {
     "complete": "全件を網羅",
-    "partial": "一部のみ取得"
+    "detailsInCaption": "詳細はキャプション全文をご覧ください",
+    "partial": "一部のみ取得",
+    "unavailable": "取得不可",
+    "unknown": "対象範囲不明"
   },
   "labels": {
     "accounts": "アカウント",

@@ -185,7 +185,10 @@ describe("createNewApiAccountRefresh", () => {
       )
 
       expect(supportProbe).toHaveBeenCalledWith(supportRequest)
-      expect(refreshLoader).toHaveBeenCalledWith(refreshRequest)
+      expect(refreshLoader).toHaveBeenCalledWith({
+        ...refreshRequest,
+        siteType,
+      })
       expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
       expect(mockRefreshAccountData).not.toHaveBeenCalled()
     },
@@ -210,7 +213,10 @@ describe("createNewApiAccountRefresh", () => {
       )
 
       expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
-      expect(refreshLoader).toHaveBeenCalledWith(refreshRequest)
+      expect(refreshLoader).toHaveBeenCalledWith({
+        ...refreshRequest,
+        siteType,
+      })
       expect(mockRefreshAccountData).not.toHaveBeenCalled()
     },
   )
@@ -228,7 +234,7 @@ describe("createNewApiAccountRefresh", () => {
     )
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
-      refreshRequest,
+      { ...refreshRequest, siteType: SITE_TYPES.LAOZHANG },
       LAOZHANG_TODAY_LOG_QUERY_CONFIG,
     )
   })

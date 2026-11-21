@@ -1,3 +1,4 @@
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 
 // Initialize provider registrations before measuring the shared snapshot queries.
@@ -33,7 +34,10 @@ import {
 } from "~/services/apiService/pmapi/rewards"
 import { fetchPmApiCheckInSupport } from "~/services/apiService/pmapi/status"
 import { AuthTypeEnum } from "~/types"
-import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import { server } from "~~/tests/msw/server"
 
 const origin = "https://pmcat.top"
@@ -118,7 +122,7 @@ const keyRow = {
 describe("PM-API account data", () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it("keeps the console's New API quota unit untouched", async () => {
+  it("retains verified wallet USD and identifies the server-day usage", async () => {
     mockIdentity([
       http.get(`${origin}/api/me/stats`, () =>
         HttpResponse.json(
@@ -136,14 +140,18 @@ describe("PM-API account data", () => {
       ),
     ])
     const data = await fetchAccountData(accountRequest())
-    expect(data.quota).toBe(1_250_000)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "2.5",
+    })
     expect(data.today_quota_consumption).toBe(125_000)
     expect(data.today_requests_count).toBe(4)
     // The console reports one combined token total without a prompt split.
     expect(data.today_prompt_tokens).toBe(300)
     expect(data.today_completion_tokens).toBe(0)
     expect(data.todayStatsAvailability?.consumption).toMatchObject({
-      status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
     })
   })
 
@@ -154,7 +162,10 @@ describe("PM-API account data", () => {
       ),
     ])
     const data = await fetchAccountData(accountRequest())
-    expect(data.quota).toBe(1_250_000)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "2.5",
+    })
     expect(data.todayStatsAvailability?.consumption).toMatchObject({
       status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
     })
@@ -427,6 +438,57 @@ describe("PM-API redemption", () => {
     const result = await redeemPmApiCode(accountRequest(), "TESTCODE")
     expect(result.quotaGranted).toBe(250_000)
   })
+
+  it.each([
+    {
+      data: { quota: "0.5" },
+      amount: { status: OBSERVATION_STATUSES.Known, value: "0.000001" },
+    },
+    {
+      data: { quota: 0 },
+      amount: { status: OBSERVATION_STATUSES.Known, value: "0" },
+    },
+    { data: {}, amount: { status: "unknown" } },
+    { data: null, amount: { status: "unknown" } },
+    { data: { quota: "invalid" }, amount: { status: "unavailable" } },
+    { data: { quota: -1 }, amount: { status: "unavailable" } },
+  ])(
+    "keeps confirmed redemption with reported amount facts: $data",
+    async ({ data, amount }) => {
+      const redeem = vi.fn(() => HttpResponse.json(envelope(data)))
+      mockIdentity([http.post(`${origin}/api/me/redeem`, redeem)])
+      const result = await pmApiCapabilities.account!.redemption!.redeem({
+        request: accountRequest(),
+        code: "CONFIRMED",
+      })
+      expect(result.awards).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount,
+          fulfillment: "credited",
+        },
+      ])
+      expect(redeem).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each([
+    { success: false, data: { quota: 250000 }, message: "Rejected" },
+    { data: { quota: 250000 } },
+  ])(
+    "rejects unconfirmed redemption without replay: $success",
+    async (body) => {
+      const redeem = vi.fn(() => HttpResponse.json(body))
+      mockIdentity([http.post(`${origin}/api/me/redeem`, redeem)])
+      await expect(
+        pmApiCapabilities.account!.redemption!.redeem({
+          request: accountRequest(),
+          code: "UNCONFIRMED",
+        }),
+      ).rejects.toThrow()
+      expect(redeem).toHaveBeenCalledOnce()
+    },
+  )
 })
 
 describe("PM-API aff", () => {
@@ -711,7 +773,13 @@ describe("PM-API reported error and capability coverage", () => {
       ),
     )
     expect(await fetchAccountData(accountRequest())).toMatchObject({
-      quota: 1250000,
+      balance: {
+        positions: [
+          expect.objectContaining({
+            amount: expect.objectContaining({ status: "known", value: "2.5" }),
+          }),
+        ],
+      },
     })
   })
   it("loads fallback bootstrap names and exchange rates and probes support when uncached", async () => {
@@ -806,7 +874,10 @@ describe("PM-API reported error and capability coverage", () => {
       ),
     )
     const result = await fetchAccountData(accountRequest())
-    expect(result.quota).toBe(1250000)
+    expect(result.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "2.5",
+    })
     expect(result.todayStatsAvailability!.consumption).toMatchObject({
       status: "unavailable",
     })

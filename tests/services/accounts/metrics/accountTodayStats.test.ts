@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
+import { accountReportingScope } from "~/services/accounts/balanceSnapshot"
 import {
   collectAccountMetricContributors,
   createEmptyAccountTodayStatsCoverage,
   createUnavailableTodayStatsAvailability,
+  getSiteDayReadings,
+  getSiteDayUsage,
+  getSiteDayUsages,
   isAccountTodayMetricLegacyUnclassified,
   normalizeAccountTodayMetricAvailability,
   normalizeAccountTodayStatsAvailability,
 } from "~/services/accounts/metrics/accountTodayStats"
+import { observeAmount } from "~/services/amounts/balance"
+import { EVIDENCE_KINDS } from "~/services/amounts/financialConstants"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -54,6 +62,199 @@ const PROFILE_FALLBACK = {
 } as const
 
 describe("accountTodayStats", () => {
+  it("retains partial cost coverage in the provider-day reading", () => {
+    const fact = {
+      scope: accountReportingScope({
+        baseUrl: "https://site.example",
+        accountId: "partial",
+      }),
+      asset: { kind: "currency" as const, code: CURRENCIES.USD },
+      amount: observeAmount(
+        "2.5",
+        {
+          kind: EVIDENCE_KINDS.Reported,
+          adapter: "fixture",
+          operation: "cost",
+          contractVersion: "1",
+        },
+        1000,
+      ),
+      window: { start: 0, end: 1000, timeZone: "UTC" },
+      settlement: "settled" as const,
+      coverage: "partial" as const,
+    }
+    expect(
+      getSiteDayReadings({ settledConsumption: [fact] }, 2000)[0]?.usage.cost,
+    ).toMatchObject({ coverage: "partial" })
+  })
+
+  it("suppresses an already projected local cost without dropping its provider-day counters", () => {
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    const fact = {
+      asset: { kind: "currency" as const, code: CURRENCIES.USD },
+      amount: observeAmount(
+        "1.75",
+        {
+          adapter: "daya",
+          operation: "today",
+          contractVersion: "1",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+        Date.now(),
+      ),
+      scope: accountReportingScope({
+        baseUrl: "https://daya.example",
+        accountId: "daya",
+      }),
+      window: {
+        start: start.getTime(),
+        end: Date.now() + 1,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      coverage: "complete" as const,
+      settlement: "settled" as const,
+    }
+    const usage = {
+      scope: "today" as const,
+      totalRequests: 4,
+      totalTokens: 330,
+      cost: {
+        asset: fact.asset,
+        amount: fact.amount,
+        scope: fact.scope,
+        window: fact.window,
+      },
+    }
+    const reading = getSiteDayUsages({ usage, settledConsumption: [fact] })[0]
+    expect(reading).toMatchObject({ totalRequests: 4, totalTokens: 330 })
+    expect(reading?.cost).toBeUndefined()
+  })
+  it("preserves provider-day requests and tokens when only the cost is unavailable", () => {
+    const usage = {
+      scope: "today" as const,
+      totalRequests: 4,
+      totalTokens: 330,
+      cost: {
+        asset: { kind: "currency" as const, code: CURRENCIES.USD },
+        amount: observeAmount(
+          undefined,
+          {
+            adapter: "daya",
+            operation: "dashboard",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          Date.now(),
+        ),
+      },
+    }
+    expect(getSiteDayUsages({ usage })[0]).toMatchObject({
+      scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+      totalRequests: 4,
+      totalTokens: 330,
+    })
+  })
+  it("preserves the original provider day and marks yesterday's known amount as last-known", () => {
+    const now = Date.now()
+    const yesterday = now - 86400000
+    const usage = {
+      scope: "site_today" as const,
+      reportedDay: "2026-11-18",
+      totalRequests: 4,
+      cost: {
+        asset: { kind: "currency" as const, code: CURRENCIES.USD },
+        amount: observeAmount(
+          "2.5",
+          {
+            adapter: "fixture",
+            operation: "daily",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          yesterday,
+        ),
+      },
+    }
+    expect(getSiteDayReadings({ usage }, now)).toEqual([
+      { usage, observedAt: yesterday, lastKnown: true },
+    ])
+  })
+  it("retains every provider-day asset alongside an already displayed local-day cost", () => {
+    const now = Date.now()
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    const scope = accountReportingScope({
+      baseUrl: "https://usage.example",
+      accountId: "usage",
+    })
+    const source = {
+      adapter: "fixture",
+      operation: "daily",
+      contractVersion: "1",
+      kind: "reported" as const,
+    }
+    const fact = (code: string, value: string, offset: number) => ({
+      asset: { kind: "currency" as const, code },
+      scope,
+      amount: observeAmount(value, source, now),
+      window: {
+        start: start.getTime() + offset,
+        end: now + 1,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      settlement: "settled" as const,
+      coverage: "complete" as const,
+      cumulative: true as const,
+    })
+    const account = {
+      settledConsumption: [
+        fact(CURRENCIES.USD, "1.23", 0),
+        fact("EUR", "12", -3600000),
+        fact("JPY", "25", -3600000),
+      ],
+    }
+    expect(getSiteDayUsages(account).map((usage) => usage.cost?.asset)).toEqual(
+      [
+        { kind: "currency", code: "EUR" },
+        { kind: "currency", code: "JPY" },
+      ],
+    )
+  })
+  it("keeps a known provider-day cost readable when its interval crosses the local day", () => {
+    const now = Date.now()
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    const scope = accountReportingScope({
+      baseUrl: "https://usage.example",
+      accountId: "usage",
+    })
+    const fact = {
+      asset: { kind: "currency" as const, code: CURRENCIES.USD },
+      scope,
+      amount: observeAmount(
+        "2.5",
+        {
+          adapter: "fixture",
+          operation: "daily",
+          contractVersion: "1",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+        now,
+      ),
+      window: {
+        start: start.getTime() - 3600000,
+        end: now + 1,
+        timeZone: "UTC",
+      },
+      settlement: "settled" as const,
+      coverage: "complete" as const,
+      cumulative: true as const,
+    }
+    expect(
+      getSiteDayUsage({ settledConsumption: [fact] })?.cost?.amount,
+    ).toMatchObject({ status: "known", value: "2.5" })
+  })
   it("creates independent unavailable availability groups for the supplied reason", () => {
     const first = createUnavailableTodayStatsAvailability(
       ACCOUNT_TODAY_METRIC_REASONS.Unsupported,

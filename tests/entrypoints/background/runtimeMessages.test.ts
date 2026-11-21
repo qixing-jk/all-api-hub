@@ -159,7 +159,6 @@ describe("setupRuntimeMessageListeners routing", () => {
     )
     vi.doMock("~/services/history/dailyBalanceHistory/scheduler", () => ({
       setupDailyBalanceHistoryMessagingListeners: vi.fn(),
-      handleDailyBalanceHistoryMessage: vi.fn(),
     }))
     vi.doMock("~/services/integrations/ldohSiteLookup/background", () => ({
       setupLdohSiteLookupMessagingListeners: vi.fn(),
@@ -242,9 +241,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("routes editor recovery and cancellation and sanitizes handler failures", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     const call = (action: string) =>
       new Promise((resolve) => {
@@ -288,9 +286,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("opens guided feedback only for extension-page requests and dismisses only the sender tab", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     const request = {
       action: RuntimeActionIds.OpenCheckInFeedbackIssue,
@@ -324,9 +321,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("reports guided feedback failures and rejects dismissal without a sender tab", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     openFeedback.mockRejectedValueOnce(new Error("navigation failed"))
     const opened = vi.fn()
@@ -360,9 +356,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("acknowledges relayed history only after persistence and reports write failures", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     let persist!: () => void
     appendLogHistory.mockReturnValueOnce(
@@ -397,9 +392,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("clears the background producer queue before acknowledging and reports failures", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     let finish!: () => void
     clearLogHistory.mockReturnValueOnce(
@@ -423,9 +417,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("executes developer API methods with their receiver and returns properties or errors", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     const receiver = {
       id: "test-extension",
       getPlatformInfo: vi.fn(function (this: unknown) {
@@ -464,9 +457,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("keeps the runtime channel open for a temp-context debug response", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     const request = { action: RuntimeActionIds.TempContextDebugListMarkers }
     const sendResponse = vi.fn()
@@ -479,9 +471,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("keeps relayed account summaries visible at the normal info log level", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     const { setLoggingPreferences } = await import("~/utils/core/logger")
     setupRuntimeMessageListeners()
     const log = vi.spyOn(console, "info").mockImplementation(() => {})
@@ -516,9 +507,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("routes OpenRouter page mutation through protection-bypass authorization", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     const sendResponse = vi.fn()
     const sender = { url: "chrome-extension://test/popup.html" }
@@ -560,9 +550,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("rejects malformed Firefox-popup OpenRouter tasks before the Coordinator", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     const sendResponse = vi.fn()
 
@@ -596,12 +585,10 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("exposes internal tab ownership to account browsing-context consumers", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
-    const { registerInternalTab, unregisterInternalTab } = await import(
-      "~/services/browsingContext/internalTabsBackground"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
+    const { registerInternalTab, unregisterInternalTab } =
+      await import("~/services/browsingContext/internalTabsBackground")
     await registerInternalTab(901, { windowScope: "shared", createdAt: 1 })
     setupRuntimeMessageListeners()
     const response = new Promise<{ tabIds: number[] }>((resolve) => {
@@ -618,9 +605,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("reports ownership lookup failure instead of an empty confirmed result", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     const read = vi
       .spyOn(browser.storage.local, "get")
@@ -642,9 +628,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   it.each([undefined, ["901"], [-1], [1.5]])(
     "rejects invalid ownership candidates: %j",
     async (tabIds) => {
-      const { setupRuntimeMessageListeners } = await import(
-        "~/entrypoints/background/runtimeMessages"
-      )
+      const { setupRuntimeMessageListeners } =
+        await import("~/entrypoints/background/runtimeMessages")
       setupRuntimeMessageListeners()
       const response = await new Promise((resolve) =>
         runtimeMessageListener?.(
@@ -664,12 +649,10 @@ describe("setupRuntimeMessageListeners routing", () => {
   ])(
     "classifies content using the actual sender, ignoring claimed tab IDs: %j",
     async (sender, pageContext, success) => {
-      const { setupRuntimeMessageListeners } = await import(
-        "~/entrypoints/background/runtimeMessages"
-      )
-      const { registerInternalTab, unregisterInternalTab } = await import(
-        "~/services/browsingContext/internalTabsBackground"
-      )
+      const { setupRuntimeMessageListeners } =
+        await import("~/entrypoints/background/runtimeMessages")
+      const { registerInternalTab, unregisterInternalTab } =
+        await import("~/services/browsingContext/internalTabsBackground")
       await registerInternalTab(951, { windowScope: "shared", createdAt: 1 })
       setupRuntimeMessageListeners()
       try {
@@ -692,9 +675,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   )
 
   it("reports unknown sender context when ownership storage cannot be read", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
     setupRuntimeMessageListeners()
     const read = vi
       .spyOn(browser.storage.local, "get")
@@ -714,9 +696,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("sets up typed preferences messaging listeners", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -724,9 +705,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("does not route typed-only preferences actions through the raw listener", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -751,9 +731,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("sets up typed model-sync messaging listeners", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -761,9 +740,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("sets up typed redemption assist messaging listeners", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -771,9 +749,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("sets up typed product analytics messaging listeners", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -781,9 +758,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("sets up typed product announcement messaging listeners", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -791,9 +767,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("does not route typed-only product analytics actions through the raw listener", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -816,9 +791,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("returns undefined when action is missing", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -831,9 +805,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   it("returns undefined when action is unknown", async () => {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -852,9 +825,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   it("returns a structured no-cookie failure for cookie import requests", async () => {
     getCookieHeaderForUrlResult.mockResolvedValueOnce({ header: "" })
 
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -889,9 +861,8 @@ describe("setupRuntimeMessageListeners routing", () => {
       header: "session=incognito",
     })
 
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -937,9 +908,8 @@ describe("setupRuntimeMessageListeners routing", () => {
       getAllCookieStores,
     }
 
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -986,9 +956,8 @@ describe("setupRuntimeMessageListeners routing", () => {
       getAllCookieStores,
     }
 
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -1024,9 +993,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   it("returns a permission failure before reading cookies when access is missing", async () => {
     hasCookieReadPermissionForUrl.mockResolvedValueOnce(false)
 
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -1061,9 +1029,8 @@ describe("setupRuntimeMessageListeners routing", () => {
       errorMessage: "Missing host permission for the tab",
     })
 
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -1095,9 +1062,8 @@ describe("setupRuntimeMessageListeners routing", () => {
       errorMessage: "storage backend failed",
     })
 
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")

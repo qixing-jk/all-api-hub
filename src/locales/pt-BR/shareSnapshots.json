@@ -5,7 +5,10 @@
   },
   "financial": {
     "complete": "Cobertura completa",
-    "partial": "Cobertura parcial"
+    "detailsInCaption": "Mais detalhes na legenda completa",
+    "partial": "Cobertura parcial",
+    "unavailable": "Indisponível",
+    "unknown": "Cobertura desconhecida"
   },
   "labels": {
     "accounts": "Contas",

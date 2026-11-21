@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -7,8 +8,24 @@ import {
   type AccountManagementSnapshot,
   type AccountOverviewSnapshot,
 } from "~/services/accounts/accountStorage/accountReadModels"
+import { accountBalanceSnapshot } from "~/services/accounts/balanceSnapshot"
 import { createDefaultAccountStorageConfig } from "~/services/accounts/editing/accountDefaults"
-import type { AccountNativeBalance, SiteAccount, SiteBookmark } from "~/types"
+import {
+  BALANCE_EXCLUSION_REASONS,
+  BALANCE_PURPOSES,
+  projectBalance,
+} from "~/services/accounts/metrics/balanceProjection"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import type { SiteAccount, SiteBookmark } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const buildNamedAccount = (
@@ -17,60 +34,111 @@ const buildNamedAccount = (
   quota = 1_000,
 ): SiteAccount => {
   const account = buildSiteAccount({ id, site_name: "Shared" })
+  const scope = {
+    subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: id },
+    authority: account.site_url,
+    walletId: id,
+    projects: { kind: SCOPE_SELECTION_KINDS.All },
+    keys: { kind: SCOPE_SELECTION_KINDS.All },
+    models: { kind: SCOPE_SELECTION_KINDS.All },
+    groups: { kind: SCOPE_SELECTION_KINDS.All },
+  }
   return {
     ...account,
-    account_info: { ...account.account_info, username, quota },
+    account_info: {
+      ...account.account_info,
+      username,
+      balance: accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "wallet",
+            scope,
+            value: String(quota / 500000),
+            observedAt: 100,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            nature: BALANCE_NATURES.Prepaid,
+            validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+            source: {
+              adapter: "fixture",
+              operation: "wallet",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      ),
+    },
   }
 }
 
 describe("accountReadModels", () => {
   it("preserves independent XNO while counting only USD in overview totals", async () => {
     const account = buildNamedAccount("nano", "nano", 500000)
-    account.account_info.nativeBalance = {
-      unit: "USD_XNO",
-      total: 1,
-      nanoBalance: 26.71801147,
-    }
+    const usd = account.account_info.balance!.positions[0]!
+    const xno = balancePosition({
+      id: "nano",
+      scope: usd.scope,
+      asset: { kind: ASSET_KINDS.Crypto, id: "XNO" },
+      value: "26.71801147",
+      observedAt: 100,
+      nature: BALANCE_NATURES.Prepaid,
+      validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+      source: usd.amount.source,
+    })
+    account.account_info.balance!.positions.push(xno)
     vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValue([account])
     const snapshot = await accountReadModels.getAccountOverviewSnapshot()
     expect(snapshot.stats.total_quota).toBe(500000)
     expect(snapshot.displayAccounts[0]).toMatchObject({
-      nativeBalance: account.account_info.nativeBalance,
-      balance: { USD: 1 },
+      balanceSnapshot: account.account_info.balance,
       excludeFromTotalBalance: false,
     })
+    expect(snapshot.stats.balancePortfolio?.amounts).toEqual(
+      expect.arrayContaining([
+        { asset: { kind: "currency", code: "USD" }, value: "1" },
+        { asset: { kind: "crypto", id: "XNO" }, value: "26.71801147" },
+      ]),
+    )
   })
-  it.each<AccountNativeBalance>([
-    { unit: "USD", total: 8, permanent: 2, daily: 3 },
-    { unit: "credits", total: 10, permanent: 8, daily: 2 },
-    {
-      unit: "quota",
-      total: 10,
-      asset: {
-        id: "https://emrank.tech/token",
-        label: "Token",
-        displayScale: 1000000,
-        displayLabel: "M Token",
-      },
-    },
-  ])(
-    "excludes native $unit balances from both overview totals and display eligibility",
-    async (nativeBalance) => {
+  it.each([
+    BALANCE_EXCLUSION_REASONS.Restricted,
+    BALANCE_EXCLUSION_REASONS.ScopeUnknown,
+    BALANCE_EXCLUSION_REASONS.Nature,
+  ] as const)(
+    "uses reported available balances while preserving strict prepaid exclusions for %s",
+    async (reason) => {
       const ordinary = buildNamedAccount("ordinary", "ordinary", 500000)
       const scoped = buildNamedAccount("scoped", "scoped", 1000000)
-      scoped.account_info.nativeBalance = nativeBalance
+      const position = scoped.account_info.balance!.positions[0]!
+      if (reason === BALANCE_EXCLUSION_REASONS.Restricted)
+        position.scope.models = {
+          kind: SCOPE_SELECTION_KINDS.Restricted,
+          ids: ["model-a"],
+        }
+      else if (reason === BALANCE_EXCLUSION_REASONS.ScopeUnknown)
+        position.scope.models = { kind: "unknown" }
+      else position.nature = BALANCE_NATURES.Subscription
       vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValue([
         ordinary,
         scoped,
       ])
       const snapshot = await accountReadModels.getAccountOverviewSnapshot()
-      expect(snapshot.stats.total_quota).toBe(500000)
+      expect(snapshot.stats.total_quota).toBe(
+        reason === BALANCE_EXCLUSION_REASONS.Restricted ? 500000 : 1500000,
+      )
       expect(
         snapshot.displayAccounts.find((item) => item.id === "scoped"),
       ).toMatchObject({
-        nativeBalance,
-        excludeFromTotalBalance: true,
+        balanceSnapshot: scoped.account_info.balance,
+        excludeFromTotalBalance: false,
       })
+      expect(
+        projectBalance(scoped.account_info.balance!, BALANCE_PURPOSES.Prepaid)
+          .excluded,
+      ).toEqual([{ position, reason }])
       expect(scoped.excludeFromTotalBalance).not.toBe(true)
     },
   )

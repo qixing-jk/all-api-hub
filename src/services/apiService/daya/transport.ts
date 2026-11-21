@@ -35,15 +35,6 @@ export function invalidDayaResponse(endpoint: string): never {
 }
 
 /**
- * Console amounts are plain USD dollar numbers; coercion hides bad data.
- */
-export function dayaNumber(value: unknown, endpoint: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value))
-    return invalidDayaResponse(endpoint)
-  return value
-}
-
-/**
  * Account routes answer `{code, message, data}` with `code === 0` on success.
  * Business failures report a non-zero `code` (observed: HTTP 404 with
  * `{code:404, message:"api key not found", reason:"API_KEY_NOT_FOUND"}`);

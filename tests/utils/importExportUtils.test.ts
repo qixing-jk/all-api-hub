@@ -215,7 +215,7 @@ describe("parseBackupSummary", () => {
     const payload: RawBackupData = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
-      accounts: {},
+      accounts: { accounts: [] },
       preferences: {},
       channelConfigs: { schemaVersion: 1, configs: {} },
     }
@@ -433,7 +433,7 @@ describe("importFromBackupObject", () => {
   })
 
   it.each(["1.0", "2.0", "3.0"])(
-    "imports V6 accounts from a V%s envelope as canonical V8",
+    "imports V6 accounts from a V%s envelope as canonical V9",
     async (version) => {
       await importFromBackupObject({
         version,
@@ -458,7 +458,7 @@ describe("importFromBackupObject", () => {
         .accounts[0] as any
       expect(imported).toMatchObject({
         id: `legacy-${version}`,
-        configVersion: 8,
+        configVersion: 9,
         checkIn: {
           automaticExecutionEnabled: false,
           selection: { methodId: "new-api:daily-checkin" },
@@ -1688,7 +1688,7 @@ describe("importFromBackupObject", () => {
 })
 
 describe("normalizeBackupForMerge", () => {
-  it("upgrades V6/V7 accounts for WebDAV arbitration without rewriting V8 accounts", () => {
+  it("upgrades V6/V7 accounts for WebDAV arbitration without rewriting V9 accounts", () => {
     const currentCheckIn = {
       automaticExecutionEnabled: true,
       methodKnowledge: {
@@ -1708,7 +1708,7 @@ describe("normalizeBackupForMerge", () => {
     }
     const currentAccount = {
       id: "current-account",
-      configVersion: 8,
+      configVersion: 9,
       checkIn: currentCheckIn,
     }
 
@@ -1751,7 +1751,7 @@ describe("normalizeBackupForMerge", () => {
 
     expect(result.accounts[0]).toMatchObject({
       id: "legacy-account",
-      configVersion: 8,
+      configVersion: 9,
       checkIn: {
         automaticExecutionEnabled: false,
         selection: {
@@ -1774,7 +1774,7 @@ describe("normalizeBackupForMerge", () => {
     expect(result.accounts[1]).toBe(currentAccount)
     expect(result.accounts[1].checkIn).toBe(currentCheckIn)
     expect(result.accounts[2]).toMatchObject({
-      configVersion: 8,
+      configVersion: 9,
       user_updated_at: 15,
       login: {
         methodId: ACCOUNT_LOGIN_METHODS.Password,

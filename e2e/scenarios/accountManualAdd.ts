@@ -5,6 +5,7 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
+import type { Asset } from "~/services/amounts/assets"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   AuthTypeEnum,
@@ -38,8 +39,7 @@ type CookieManualAccountInput = ManualAccountInput & {
 }
 
 type ManualAccountAddInput =
-  | AccessTokenManualAccountInput
-  | CookieManualAccountInput
+  AccessTokenManualAccountInput | CookieManualAccountInput
 
 export async function readStoredAccounts(
   serviceWorker: Worker,
@@ -109,9 +109,9 @@ export async function refreshAccountRowsAndReadStorage(params: {
   page: Page
   serviceWorker: Worker
   accountIds: string[]
-  expectedQuotas: number[]
+  expectedBalances: { value: string; asset: Partial<Asset> }[]
 }) {
-  expect(params.accountIds.length).toBe(params.expectedQuotas.length)
+  expect(params.accountIds.length).toBe(params.expectedBalances.length)
 
   for (const [index, accountId] of params.accountIds.entries()) {
     const row = params.page.getByTestId(
@@ -124,10 +124,10 @@ export async function refreshAccountRowsAndReadStorage(params: {
       )
       .click()
 
-    await waitForStoredAccountQuota({
+    await waitForStoredAccountBalance({
       serviceWorker: params.serviceWorker,
       accountId,
-      expectedQuota: atIndex(params.expectedQuotas, index),
+      expectedBalance: atIndex(params.expectedBalances, index),
     })
   }
 
@@ -141,10 +141,10 @@ export async function refreshAccountRowsAndReadStorage(params: {
   })
 }
 
-async function waitForStoredAccountQuota(params: {
+async function waitForStoredAccountBalance(params: {
   serviceWorker: Worker
   accountId: string
-  expectedQuota: number
+  expectedBalance: { value: string; asset: Partial<Asset> }
 }) {
   await expect
     .poll(async () => {
@@ -152,9 +152,19 @@ async function waitForStoredAccountQuota(params: {
       const account = accounts.find(
         (candidate) => candidate.id === params.accountId,
       )
-      return account?.account_info.quota ?? null
+      return account?.account_info.balance?.positions ?? []
     })
-    .toEqual(params.expectedQuota)
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          asset: expect.objectContaining(params.expectedBalance.asset),
+          amount: expect.objectContaining({
+            status: "known",
+            value: params.expectedBalance.value,
+          }),
+        }),
+      ]),
+    )
 }
 
 async function openAccountRowActionsMenu(row: Locator) {

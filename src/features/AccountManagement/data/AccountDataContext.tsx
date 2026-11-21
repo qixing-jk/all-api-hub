@@ -17,6 +17,7 @@ import { getAccountRefreshFeedback } from "~/features/AccountManagement/refreshF
 import { useAccountEntryLayout } from "~/features/AccountManagement/workspace/useAccountEntryLayout"
 import toast from "~/lib/notify"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
+import type { NetInflowTotals } from "~/services/accounts/metrics/netInflowTotals"
 import { type AccountContextBoost } from "~/services/preferences/utils/sortingPriority"
 import {
   createAutomaticProtectionBypassExecution,
@@ -62,12 +63,7 @@ interface AccountDataContextType {
   isRefreshing: boolean
   isRefreshingDisabledAccounts: boolean
   prevTotalConsumption: CurrencyAmount
-  todayIncomeEstimateTotals: {
-    trusted: CurrencyAmount
-    estimated: CurrencyAmount | null
-    availableAccounts: number
-    totalAccounts: number
-  }
+  netInflowTotals: NetInflowTotals
   prevBalances: CurrencyAmountMap
   /**
    * Accounts that share the same origin with the current active tab (site-level match).
@@ -157,7 +153,7 @@ export const AccountDataProvider = ({
     lastUpdateTime,
     hasLoadedAccountData,
     prevTotalConsumption,
-    todayIncomeEstimateTotals,
+    netInflowTotals,
     prevBalances,
     tagStore,
     tags,
@@ -380,7 +376,7 @@ export const AccountDataProvider = ({
       isRefreshing,
       isRefreshingDisabledAccounts,
       prevTotalConsumption,
-      todayIncomeEstimateTotals,
+      netInflowTotals,
       prevBalances,
       detectedSiteAccounts,
       detectedAccount,
@@ -422,7 +418,7 @@ export const AccountDataProvider = ({
       isRefreshing,
       isRefreshingDisabledAccounts,
       prevTotalConsumption,
-      todayIncomeEstimateTotals,
+      netInflowTotals,
       prevBalances,
       detectedSiteAccounts,
       detectedAccount,

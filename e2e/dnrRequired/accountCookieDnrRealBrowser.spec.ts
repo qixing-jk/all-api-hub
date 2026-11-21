@@ -219,7 +219,18 @@ test("isolates same-site cookie and access-token accounts through account refres
           ...account,
           account_info: {
             ...account.account_info,
-            quota: 1_000 + index,
+            balance: account.account_info.balance && {
+              ...account.account_info.balance,
+              positions: account.account_info.balance.positions.map(
+                (position) => ({
+                  ...position,
+                  amount:
+                    position.amount.status === "known"
+                      ? { ...position.amount, value: String(1_000 + index) }
+                      : position.amount,
+                }),
+              ),
+            },
           },
         })),
       )
@@ -230,7 +241,10 @@ test("isolates same-site cookie and access-token accounts through account refres
         page,
         serviceWorker,
         accountIds: savedAccounts.map((account) => account.id),
-        expectedQuotas: [33_000, 44_000, 55_000, 66_000],
+        expectedBalances: ["33000", "44000", "55000", "66000"].map((value) => ({
+          asset: { kind: "quota" },
+          value,
+        })),
       })
 
       expect(refreshedAccounts).toEqual(
@@ -240,7 +254,6 @@ test("isolates same-site cookie and access-token accounts through account refres
             account_info: expect.objectContaining({
               id: "201",
               username: "cookie-user-a",
-              quota: 33_000,
             }),
           }),
           expect.objectContaining({
@@ -248,7 +261,6 @@ test("isolates same-site cookie and access-token accounts through account refres
             account_info: expect.objectContaining({
               id: "202",
               username: "cookie-user-b",
-              quota: 44_000,
             }),
           }),
           expect.objectContaining({
@@ -256,7 +268,6 @@ test("isolates same-site cookie and access-token accounts through account refres
             account_info: expect.objectContaining({
               id: "301",
               username: "token-user-a",
-              quota: 55_000,
             }),
           }),
           expect.objectContaining({
@@ -264,7 +275,6 @@ test("isolates same-site cookie and access-token accounts through account refres
             account_info: expect.objectContaining({
               id: "302",
               username: "token-user-b",
-              quota: 66_000,
             }),
           }),
         ]),
@@ -740,9 +750,12 @@ async function waitForStoredAccountQuota(
     .poll(async () => {
       const accounts = await readStoredAccounts(serviceWorker)
       const account = accounts.find((candidate) => candidate.id === accountId)
-      return account?.account_info.quota ?? null
+      const amount = account?.account_info.balance?.positions.find(
+        (position) => position.asset.kind === "quota",
+      )?.amount
+      return amount?.status === "known" ? amount.value : null
     })
-    .toBe(expectedQuota)
+    .toBe(String(expectedQuota))
 }
 
 type CapturedSelfRequest = {

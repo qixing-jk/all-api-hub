@@ -1,6 +1,15 @@
+import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import type { CurrencyType } from "~/types"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
+
+import type { BaseShareSnapshotPayload } from "./types"
+
+/** Resolve visible currency independently from a retained reference preference. */
+export const getShareDisplayCurrency = (
+  payload: Pick<BaseShareSnapshotPayload, "currencyType" | "currencyDisplay">,
+): CurrencyType | undefined =>
+  getDisplayCurrency(payload.currencyDisplay, payload.currencyType)
 
 const JWT_PATTERN = /\beyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b/g
 const BEARER_PATTERN = /\bBearer\s+([a-zA-Z0-9._-]+)\b/gi

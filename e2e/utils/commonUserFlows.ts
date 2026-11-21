@@ -43,10 +43,7 @@ import type {
   AutoCheckinStatus,
   CheckinAccountResult,
 } from "~/types/autoCheckin"
-import {
-  DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-  type DailyBalanceHistoryStore,
-} from "~/types/dailyBalanceHistory"
+import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
 import type { SiteAnnouncementStoreState } from "~/types/siteAnnouncements"
 import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
@@ -271,7 +268,12 @@ export function createStoredAccount(
     },
   }
 
-  return normalizeSiteAccount(deepOverride(baseAccount, overrides))
+  const account = deepOverride(baseAccount, overrides)
+  for (const [field, value] of Object.entries(overrides.account_info ?? {})) {
+    if (value === undefined)
+      delete account.account_info[field as keyof typeof account.account_info]
+  }
+  return normalizeSiteAccount(account)
 }
 
 /**
@@ -361,17 +363,32 @@ export async function seedTagStore(
 /**
  * Persist daily balance snapshots for Balance History E2E scenarios.
  */
+export type ArchivedBalanceHistorySeed = Record<
+  string,
+  Record<
+    string,
+    {
+      quota: number
+      today_income: number | null
+      today_quota_consumption: number | null
+      capturedAt: number
+      source: DailyBalanceHistoryCaptureSource
+    }
+  >
+>
+
 export async function seedDailyBalanceHistoryStore(
   serviceWorker: Worker,
-  snapshotsByAccountId: DailyBalanceHistoryStore["snapshotsByAccountId"],
+  snapshotsByAccountId: ArchivedBalanceHistorySeed,
 ) {
   await setPlasmoStorageValue(
     serviceWorker,
     STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
     {
-      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      schemaVersion: 3,
       snapshotsByAccountId,
-    } satisfies DailyBalanceHistoryStore,
+    },
+    { lock: STORAGE_LOCKS.DAILY_BALANCE_HISTORY },
   )
 }
 
@@ -419,10 +436,15 @@ export async function seedUsageHistoryStore(
   serviceWorker: Worker,
   accounts: Record<string, UsageHistoryAccountStore>,
 ) {
-  await setPlasmoStorageValue(serviceWorker, USAGE_HISTORY_STORAGE_KEYS.STORE, {
-    schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
-    accounts,
-  } satisfies UsageHistoryStore)
+  await setPlasmoStorageValue(
+    serviceWorker,
+    USAGE_HISTORY_STORAGE_KEYS.STORE,
+    {
+      schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
+      accounts,
+    } satisfies UsageHistoryStore,
+    { lock: STORAGE_LOCKS.USAGE_HISTORY },
+  )
 }
 
 /**
@@ -539,6 +561,7 @@ export async function seedApiCredentialProfiles(
       profiles,
       lastUpdated: Date.now(),
     },
+    { lock: STORAGE_LOCKS.API_CREDENTIAL_PROFILES },
   )
 }
 

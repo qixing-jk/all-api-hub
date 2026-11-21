@@ -150,7 +150,7 @@ describe("createNewApiAccountData", () => {
 
       await expect(capability.fetchData(request)).resolves.toBe(accountData)
 
-      expect(loader).toHaveBeenCalledWith(request)
+      expect(loader).toHaveBeenCalledWith({ ...request, siteType })
       expect(mockFetchAccountData).not.toHaveBeenCalled()
     },
   )
@@ -162,7 +162,7 @@ describe("createNewApiAccountData", () => {
       createNewApiAccountData(SITE_TYPES.LAOZHANG).fetchData(request),
     ).resolves.toBe(accountData)
     expect(mockFetchAccountData).toHaveBeenCalledWith(
-      request,
+      { ...request, siteType: SITE_TYPES.LAOZHANG },
       LAOZHANG_TODAY_LOG_QUERY_CONFIG,
     )
   })

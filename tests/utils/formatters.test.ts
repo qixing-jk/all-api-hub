@@ -1,6 +1,19 @@
 import { describe, expect, it, vi } from "vitest"
 
-import type { CurrencyType } from "~/types"
+import { CURRENCIES } from "~/constants/money"
+import { accountBalanceSnapshot } from "~/services/accounts/balanceSnapshot"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+  FINANCIAL_SUBJECT_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import type { CurrencyType, DisplaySiteData } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -24,7 +37,42 @@ import {
   normalizeToMs,
 } from "~/utils/core/formatters"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { buildDisplaySiteData as buildBaseDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  buildPeriodConsumption,
+  buildPeriodIncome,
+} from "~~/tests/test-utils/financialPeriod"
+
+/** Existing explicit currency examples represent independently reported facts. */
+function buildDisplaySiteData(overrides: Partial<DisplaySiteData> = {}) {
+  const site = buildBaseDisplaySiteData(overrides)
+  const consumption = site.todayStatsAvailability.consumption.status
+  const income = site.todayStatsAvailability.income.status
+  if (
+    overrides.todayConsumption &&
+    consumption !== FINANCIAL_ENUMERATION.Unavailable
+  )
+    site.settledConsumption = ([CURRENCIES.USD, CURRENCIES.CNY] as const).map(
+      (code) =>
+        buildPeriodConsumption(
+          site.id,
+          String(overrides.todayConsumption![code]),
+          code,
+          consumption,
+        ),
+    )
+  if (overrides.todayIncome && income !== FINANCIAL_ENUMERATION.Unavailable)
+    site.reportedIncome = ([CURRENCIES.USD, CURRENCIES.CNY] as const).map(
+      (code) =>
+        buildPeriodIncome(
+          site.id,
+          String(overrides.todayIncome![code]),
+          code,
+          income,
+        ),
+    )
+  return site
+}
 
 describe("formatters utilities", () => {
   describe("formatLocaleDateTime", () => {
@@ -306,7 +354,7 @@ describe("formatters utilities", () => {
         }),
       ])
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         amount: { USD: 30, CNY: 210 },
         coverage: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
@@ -340,7 +388,7 @@ describe("formatters utilities", () => {
         }),
       })
 
-      expect(calculateTotalConsumption([partial, unavailable])).toEqual({
+      expect(calculateTotalConsumption([partial, unavailable])).toMatchObject({
         amount: { USD: 20, CNY: 140 },
         coverage: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
@@ -357,42 +405,72 @@ describe("formatters utilities", () => {
   })
 
   describe("calculateTotalBalance", () => {
-    it("excludes native allowances even when a caller has not projected the exclusion flag", () => {
+    const site = (id: string, value: string, exchangeRate: number) => {
+      const scope = {
+        subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: id },
+        authority: `https://${id}.example`,
+        walletId: id,
+        projects: { kind: SCOPE_SELECTION_KINDS.All },
+        keys: { kind: SCOPE_SELECTION_KINDS.All },
+        models: { kind: SCOPE_SELECTION_KINDS.All },
+        groups: { kind: SCOPE_SELECTION_KINDS.All },
+      }
+      return buildDisplaySiteData({
+        id,
+        exchangeRate,
+        balanceSnapshot: accountBalanceSnapshot(
+          scope,
+          [
+            balancePosition({
+              id: "wallet",
+              scope,
+              value,
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              observedAt: 100,
+              nature: BALANCE_NATURES.Prepaid,
+              validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+              source: {
+                adapter: "fixture",
+                operation: "wallet",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+              },
+            }),
+          ],
+          100,
+          FINANCIAL_COVERAGE.Complete,
+        ),
+      })
+    }
+    it("excludes legacy allowances without inferring eligibility from a numeric projection", () => {
       expect(
         calculateTotalBalance([
-          buildDisplaySiteData({ balance: { USD: 2, CNY: 14 } }),
+          site("current", "2", 7),
           buildDisplaySiteData({
+            id: "legacy",
             nativeBalance: { unit: "USD", total: 8, permanent: 2, daily: 3 },
             balance: { USD: 2, CNY: 14 },
             excludeFromTotalBalance: false,
           }),
         ]),
-      ).toEqual({ USD: 2, CNY: 14 })
+      ).toMatchObject({ USD: 2, CNY: 0 })
     })
-
-    it("should sum balances across sites and round to 2 decimals", () => {
-      const data = [
-        { balance: { USD: 1.234, CNY: 7.89 } },
-        { balance: { USD: 2.345, CNY: 8.11 } },
-      ] as any
-
-      const result = calculateTotalBalance(data)
-
+    it("sums original USD amounts without converting them through display exchange rates", () => {
+      const result = calculateTotalBalance([
+        site("first", "1.234", 7.89 / 1.234),
+        site("second", "2.345", 8.11 / 2.345),
+      ])
       expect(result.USD).toBeCloseTo(3.58, 2)
-      expect(result.CNY).toBeCloseTo(16.0, 1)
+      expect(result.CNY).toBe(0)
     })
-
-    it("should exclude disabled and explicitly excluded accounts", () => {
-      const data = [
-        { balance: { USD: 10, CNY: 20 }, disabled: false },
-        { balance: { USD: 1, CNY: 2 }, excludeFromTotalBalance: true },
-        { balance: { USD: 5, CNY: 10 }, disabled: true },
-      ] as any
-
-      const result = calculateTotalBalance(data)
-
+    it("excludes disabled and explicitly excluded accounts", () => {
+      const result = calculateTotalBalance([
+        site("included", "10", 2),
+        { ...site("excluded", "1", 2), excludeFromTotalBalance: true },
+        { ...site("disabled", "5", 2), disabled: true },
+      ])
       expect(result.USD).toBe(10)
-      expect(result.CNY).toBe(20)
+      expect(result.CNY).toBe(0)
     })
   })
 
@@ -425,7 +503,7 @@ describe("formatters utilities", () => {
     })
 
     it("reports an empty eligible subset as unavailable", () => {
-      expect(calculateTotalIncomeForSites([])).toEqual({
+      expect(calculateTotalIncomeForSites([])).toMatchObject({
         amount: { USD: 0, CNY: 0 },
         coverage: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,

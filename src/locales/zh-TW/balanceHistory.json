@@ -6,7 +6,7 @@
   },
   "breakdown": {
     "chartTypes": {
-      "histogram": "直方圖",
+      "bars": "長條圖",
       "pie": "餅圖"
     },
     "controls": {
@@ -19,6 +19,9 @@
       "pieDisabledForNegative": "存在負值時無法使用餅圖。"
     },
     "title": "帳戶分佈"
+  },
+  "charts": {
+    "view": "圖表檢視"
   },
   "description": "查看各帳戶的餘額與額度變化。",
   "empty": {
@@ -68,8 +71,24 @@
       "title": "彙總可能不完整"
     }
   },
+  "legacy": {
+    "accountDetails": "帳戶換算明細",
+    "columnsHint": "這些金額使用篩選中選定的參考貨幣。點選欄標題即可排序。",
+    "coverage": "參考金額覆蓋",
+    "currency": "參考貨幣",
+    "currencyHint": "人民幣金額按帳戶目前的匯率換算。",
+    "referenceRate": "{{account}} · {{date}} 參考：1 USD = {{rate}} CNY",
+    "referenceRates": "參考匯率",
+    "showColumns": "顯示換算金額欄",
+    "title": "舊快照換算",
+    "totalsHint": "舊快照按參考幣別換算。"
+  },
   "messages": {
     "error": {
+      "captureResultUnavailable": "擷取結果無法取得。",
+      "lastLoadedDescription": "正在顯示上次讀取的歷史。重新讀取失敗，可重試更新。",
+      "loadDescription": "已儲存的歷史未被取代。請重試，或使用支援此資料的應用程式版本。",
+      "loadTitle": "無法讀取歷史記錄",
       "pruneFailed": "清理失敗：{{error}}",
       "refreshFailed": "重新整理失敗：{{error}}",
       "settingsSaveFailed": "儲存設定失敗：{{error}}"
@@ -84,7 +103,30 @@
       "pruneCompleted": "清理完成",
       "refreshCompleted": "重新整理完成",
       "settingsSaved": "設定已儲存"
+    },
+    "warning": {
+      "refreshIncomplete": "歷史擷取不完整。已記錄：{{captured}}；未記錄：{{uncaptured}}。"
     }
+  },
+  "metricHelp": {
+    "allowanceHint": "站點記錄的剩餘額度，適用範圍和有效期限由站點決定。",
+    "bonusHint": "部分站點顯示為 Bonus credits。適用的消費和有效期限由站點決定。",
+    "convertedHint": "歷史餘額以篩選中的參考貨幣顯示，換算使用帳戶目前的匯率。",
+    "estimatedHint": "用兩次歷史餘額與當天已記錄的消耗作參考估算。餘額區間和消耗區間可能不同。",
+    "incomeHint": "站點記錄的入帳金額。",
+    "ledgerHint": "站點記錄的帳戶餘額，依原單位顯示。",
+    "nativeHint": "站點記錄的這個項目，依原單位顯示。",
+    "netHint": "記錄的收入減去支出。",
+    "outcomeHint": "站點記錄的消費金額。",
+    "quotaHint": "站點以 {{unit}} 記錄的餘額或剩餘額度，扣減依站點規則。",
+    "title": "指標說明",
+    "trigger": "{{chart}}指標說明"
+  },
+  "metricMenu": {
+    "allowances": "額度",
+    "balances": "餘額",
+    "cashflow": "收支與變化",
+    "convertedBalance": "折算餘額"
   },
   "metrics": {
     "balance": "餘額",
@@ -94,6 +136,11 @@
     "outcome": "支出"
   },
   "native": {
+    "activityCoverage": "{{covered}}/{{total}} 天有記錄",
+    "activityHint": "原幣收支按站點記錄日期統計。",
+    "activityTitle": "區間統計",
+    "amountsTitle": "餘額與額度",
+    "coverage": "{{total}} 個帳戶中有 {{covered}} 個有記錄",
     "dimensions": {
       "groups": "群組",
       "keys": "金鑰",
@@ -101,7 +148,30 @@
       "projects": "專案",
       "routes": "路由"
     },
-    "restrictions": "{{dimension}}：{{value}}"
+    "ended": "已結束",
+    "expired": "已到期",
+    "firstRecord": "首筆記錄",
+    "gaps": "折線中斷表示當天沒有可顯示的數值。",
+    "latest": "最近一筆",
+    "netInflow": "估算淨流入",
+    "netInflowHint": "— 表示資料不足，暫時無法估算淨流入。",
+    "originalObservation": "數值記錄於 {{date}}",
+    "recordedIncome": "已記錄收入",
+    "recordedRange": "有記錄的日期 · {{range}}",
+    "recordedSpending": "已記錄支出",
+    "reset": "已重設",
+    "restrictions": "{{dimension}}：{{value}}",
+    "scope": "站點 · 組織 · 錢包",
+    "sources": {
+      "console": "控制台",
+      "inference": "推論 API",
+      "numbered": "來源 {{number}}"
+    },
+    "status": "狀態",
+    "time": "時間",
+    "unknown": "未知",
+    "unknownAsset": "未知資產",
+    "unsupported": "不支援"
   },
   "overview": {
     "kpis": {
@@ -119,7 +189,7 @@
         "label": "區間淨變化"
       }
     },
-    "title": "概覽"
+    "viewTrend": "查看趨勢：{{metric}}，{{amount}}"
   },
   "settings": {
     "alarmUnsupported": "當前瀏覽器不支援 Alarms API，無法啟用日終抓取。",
@@ -163,6 +233,7 @@
     },
     "emptyMetric": "該時間範圍內暫無{{metric}}資料。",
     "gapBridge": "無記錄",
+    "noRecordForDay": "當天無記錄",
     "scopes": {
       "accounts": "按帳戶",
       "total": "彙總"

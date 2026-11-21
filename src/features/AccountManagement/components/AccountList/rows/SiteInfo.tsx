@@ -16,6 +16,7 @@ import { useAccountDataContext } from "~/features/AccountManagement/data/Account
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
 import toast from "~/lib/notify"
+import { ACCOUNT_CONTEXT_BOOSTS } from "~/services/preferences/utils/sortingPriority"
 import type { DisplaySiteData } from "~/types"
 import { createTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
@@ -73,9 +74,10 @@ export default function SiteInfo({
     : undefined
   // Both related-page tiers share one badge; the viewed tab only changes ordering.
   const isRelatedPageOpen =
-    contextBoost === "open-tabs" || contextBoost === "active-tab"
+    contextBoost === ACCOUNT_CONTEXT_BOOSTS.OpenTabs ||
+    contextBoost === ACCOUNT_CONTEXT_BOOSTS.ActiveTab
   const contextHint =
-    contextBoost === "current-site"
+    contextBoost === ACCOUNT_CONTEXT_BOOSTS.CurrentSite
       ? t("list.site.currentSiteBoostHint")
       : isRelatedPageOpen
         ? t("list.site.openTabsBoostHint")
@@ -157,8 +159,8 @@ export default function SiteInfo({
   }
 
   return (
-    <div className="gap-y-density-2 flex w-full min-w-0 items-center gap-x-2">
-      <div className="gap-y-density-2 flex shrink-0 flex-col items-center justify-center gap-x-2 self-stretch">
+    <div className="flex w-full min-w-0 items-center gap-x-2 gap-y-density-2 @max-sm/account-row:contents">
+      <div className="flex shrink-0 flex-col items-center justify-center gap-x-2 gap-y-density-2 self-stretch @max-sm/account-row:col-start-1 @max-sm/account-row:row-span-2 @max-sm/account-row:row-start-1 @max-sm/account-row:self-start @max-sm/account-row:pt-1">
         <SiteInfoHealthIndicator
           site={site}
           isRefreshing={isRefreshing}
@@ -178,7 +180,7 @@ export default function SiteInfo({
               aria-label={pinTooltipLabel}
             >
               <Pin
-                className="dark:text-muted-foreground text-faint-foreground h-3 w-3 -rotate-12 transition-colors"
+                className="h-3 w-3 -rotate-12 text-faint-foreground transition-colors dark:text-muted-foreground"
                 aria-hidden="true"
               />
             </IconButton>
@@ -186,9 +188,9 @@ export default function SiteInfo({
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
-        <div className="gap-y-density-1 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
-          <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5">
+      <div className="min-w-0 flex-1 @max-sm/account-row:contents">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-density-1 sm:gap-x-2 @max-sm/account-row:col-start-2 @max-sm/account-row:row-start-1 @max-sm/account-row:flex-col @max-sm/account-row:items-start @max-sm/account-row:self-start @max-sm/account-row:overflow-x-clip">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-density-1-5">
             {(contextBoost || isDetectedAccount) && (
               <Tooltip content={contextHint} anchorAsChild position="top">
                 <Badge
@@ -226,7 +228,7 @@ export default function SiteInfo({
             </Tooltip>
           </div>
 
-          <div className="gap-y-density-1 flex min-w-0 items-center gap-x-0.5 sm:gap-x-1">
+          <div className="flex min-w-0 items-center gap-x-0.5 gap-y-density-1 sm:gap-x-1 @max-sm/account-row:order-first @max-sm/account-row:w-full">
             {/* Keep the site URL clickable even when the account is disabled so users can still open the provider site. */}
             {/* Avoid `bleed`/non-shrinking button layout that can overflow into the action buttons column. */}
             <Button
@@ -240,7 +242,7 @@ export default function SiteInfo({
             >
               <BodySmall
                 weight="medium"
-                className="group-hover/site-link:text-primary min-w-0 truncate transition-colors"
+                className="min-w-0 truncate transition-colors group-hover/site-link:text-primary"
               >
                 <SiteInfoHighlightedText
                   fragments={highlights?.name}
@@ -248,7 +250,7 @@ export default function SiteInfo({
                 />
               </BodySmall>
               <WorkflowTransitionIcon
-                className="text-muted-foreground group-hover/site-link:text-primary group-focus-visible/site-link:text-primary h-3 w-3 shrink-0 opacity-40 transition-all group-hover/site-link:opacity-100 group-focus-visible/site-link:opacity-100"
+                className="h-3 w-3 shrink-0 text-muted-foreground opacity-40 transition-all group-hover/site-link:text-primary group-hover/site-link:opacity-100 group-focus-visible/site-link:text-primary group-focus-visible/site-link:opacity-100"
                 aria-hidden="true"
               />
             </Button>
@@ -286,11 +288,13 @@ export default function SiteInfo({
           </div>
         </div>
 
-        <SiteInfoDetails
-          site={site}
-          highlights={highlights}
-          showCreatedAt={showCreatedAt}
-        />
+        <div className="min-w-0 @max-sm/account-row:col-start-2 @max-sm/account-row:row-start-2 @max-sm/account-row:self-start">
+          <SiteInfoDetails
+            site={site}
+            highlights={highlights}
+            showCreatedAt={showCreatedAt}
+          />
+        </div>
       </div>
     </div>
   )

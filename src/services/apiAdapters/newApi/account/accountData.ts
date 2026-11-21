@@ -11,6 +11,6 @@ export function createNewApiAccountData(
   const { fetchAccountData } = resolveNewApiAccountDataVariant(siteType)
 
   return {
-    fetchData: (request) => fetchAccountData(request),
+    fetchData: (request) => fetchAccountData({ ...request, siteType }),
   }
 }

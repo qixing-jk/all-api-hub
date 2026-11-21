@@ -42,7 +42,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
 import {
-  calculateTotalBalanceForSites,
   calculateTotalConsumption,
   calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
@@ -315,11 +314,6 @@ export function useAccountListViewModel({
     onEnterBulkMode: resetReorderMode,
   })
 
-  const filteredBalance = useMemo(
-    () => calculateTotalBalanceForSites(filteredSites),
-    [filteredSites],
-  )
-
   const filteredConsumption = useMemo(
     () => calculateTotalConsumption(filteredSites),
     [filteredSites],
@@ -434,8 +428,8 @@ export function useAccountListViewModel({
       onCheckInChange,
     },
     totals: {
+      filteredSites,
       showFilteredSummary,
-      filteredBalance,
       filteredConsumption,
       filteredIncome,
     },

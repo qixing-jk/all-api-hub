@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getOrCreateAccessToken as fetchRixApiAccessToken,
+  fetchAccountBalance as fetchRixApiAccountBalance,
   fetchAccountData as fetchRixApiAccountData,
-  fetchAccountQuota as fetchRixApiAccountQuota,
   fetchUserInfo as fetchRixApiUserInfo,
   refreshAccountData as refreshRixApiAccountData,
 } from "~/services/apiService/newApiFamily/variants/rixApi"
@@ -79,12 +78,15 @@ describe("Rix API account data variant", () => {
     mockRefreshSelectedStatus.mockResolvedValue({ enabled: false })
   })
 
-  it("converts a US dollar balance into quota units", async () => {
+  it("preserves the reported US dollar balance", async () => {
     mockData.mockResolvedValue({ balance: "2.5" })
 
-    await expect(fetchRixApiAccountQuota(request)).resolves.toBe(
-      Math.round(2.5 * QUOTA_PER_USD),
-    )
+    expect(
+      (await fetchRixApiAccountBalance(request)).balance.positions[0],
+    ).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "2.5" },
+    })
     expect(mockData).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: request.baseUrl }),
       { endpoint: "/api/user/self" },
@@ -94,26 +96,42 @@ describe("Rix API account data variant", () => {
   it("accepts a numeric balance as well as the string form", async () => {
     mockData.mockResolvedValue({ balance: 1.25 })
 
-    await expect(fetchRixApiAccountQuota(request)).resolves.toBe(
-      Math.round(1.25 * QUOTA_PER_USD),
-    )
+    expect(
+      (await fetchRixApiAccountBalance(request)).balance.positions[0]?.amount,
+    ).toMatchObject({ value: "1.25" })
   })
 
   it("keeps an integer quota for deployments that still report one", async () => {
     mockData.mockResolvedValue({ quota: 4242, balance: "9.99" })
 
-    await expect(fetchRixApiAccountQuota(request)).resolves.toBe(4242)
+    expect(
+      (await fetchRixApiAccountBalance(request)).balance.positions[0],
+    ).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: {
+        value: "0.008484",
+        source: { amountInputs: { quota: "4242" } },
+      },
+    })
   })
 
-  it("falls back to zero when neither field is usable", async () => {
+  it("retains unavailable amounts and signed debt independently", async () => {
     mockData.mockResolvedValue({ balance: "not-a-number" })
-    await expect(fetchRixApiAccountQuota(request)).resolves.toBe(0)
+    expect(
+      (await fetchRixApiAccountBalance(request)).balance.positions[0]?.amount
+        .status,
+    ).toBe("unavailable")
 
     mockData.mockResolvedValue({})
-    await expect(fetchRixApiAccountQuota(request)).resolves.toBe(0)
+    expect(
+      (await fetchRixApiAccountBalance(request)).balance.positions[0]?.amount
+        .status,
+    ).toBe("unavailable")
 
     mockData.mockResolvedValue({ balance: "-1" })
-    await expect(fetchRixApiAccountQuota(request)).resolves.toBe(0)
+    expect(
+      (await fetchRixApiAccountBalance(request)).balance.positions[0]?.amount,
+    ).toMatchObject({ value: "-1" })
   })
 
   it("composes the Rix quota with the shared today metrics and check-in state", async () => {
@@ -125,7 +143,7 @@ describe("Rix API account data variant", () => {
       checkIn: buildCheckInConfig(),
     })
 
-    expect(data.quota).toBe(0)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({ value: "0" })
     expect(data.today_quota_consumption).toBe(1)
     expect(data.today_income).toBe(5)
     expect(data.checkIn).toEqual(buildCheckInConfig())

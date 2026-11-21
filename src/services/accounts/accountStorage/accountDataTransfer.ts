@@ -3,7 +3,7 @@ import {
   filterKnownUniqueEntryIds,
 } from "~/services/accounts/accountEntryLayoutPolicy"
 import {
-  normalizeAccountStorageConfigForWrite,
+  normalizeAccountStorageConfigForRead,
   normalizeSiteAccount,
 } from "~/services/accounts/editing/accountDefaults"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
@@ -33,23 +33,34 @@ class AccountDataTransfer {
 
   async exportData(): Promise<AccountStorageConfig> {
     await accountConfigStore.ensureTagsMigrated()
-    return accountConfigStore.readOrDefault()
+    return accountConfigStore.read()
   }
 
   async importData(data: {
+    schemaVersion?: 1
     accounts?: SiteAccount[]
     bookmarks?: SiteBookmark[]
     pinnedAccountIds?: string[]
     orderedAccountIds?: string[]
     deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
   }): Promise<{ migratedCount: number }> {
+    if (!data || typeof data !== "object" || Array.isArray(data))
+      throw new Error("unsupported_or_invalid_account_storage")
+    const incoming = normalizeAccountStorageConfigForRead({
+      ...data,
+      accounts: data.accounts === undefined ? [] : data.accounts,
+    } as AccountStorageConfig)
     return accountConfigStore.runExclusive(async (transaction) => {
       const backupConfig = accountConfigStore.clone(await transaction.read())
       try {
         const { accounts, migratedCount } = migrateAccountsConfig(
-          data.accounts || [],
+          incoming.accounts,
         )
-        const normalizedAccounts = accounts.map(normalizeSiteAccount)
+        const generation = await transaction.reserveFinancialGeneration()
+        const normalizedAccounts = accounts.map((account) => ({
+          ...normalizeSiteAccount(account),
+          balanceRefreshGeneration: generation,
+        }))
         const bookmarks = data.bookmarks
           ? sanitizeBookmarks(data.bookmarks)
           : backupConfig.bookmarks
@@ -98,11 +109,12 @@ class AccountDataTransfer {
         }
         return { migratedCount }
       } catch (error) {
-        logger.error("Import migration failed; restoring from backup", error)
-        await transaction.write(
-          normalizeAccountStorageConfigForWrite(backupConfig),
+        // Validation happens before the single storage write. Rewriting a
+        // normalized backup here would modify data after a rejected import.
+        logger.error(
+          "Import migration failed; existing accounts retained",
+          error,
         )
-        logger.warn("Safety fallback applied: restored accounts from backup")
         throw error
       }
     })

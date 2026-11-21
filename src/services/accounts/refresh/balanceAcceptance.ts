@@ -1,6 +1,7 @@
 import { assetIdentity } from "~/services/amounts/assets"
 import {
   balancePositionKey,
+  balanceSnapshotParts,
   balanceSnapshotSchema,
   financialCollectionKey,
   staleObservation,
@@ -18,9 +19,18 @@ import {
 
 export const BALANCE_IDENTITY_CHANGED_REASON =
   FINANCIAL_OBSERVATION_REASONS.IdentityChanged
+export const LEGACY_BALANCE_SUPERSEDED_REASON =
+  FINANCIAL_OBSERVATION_REASONS.LegacySuperseded
+
+/** Snapshot-only adapters do not prove omitted collection members were removed. */
+export function snapshotRefreshParts(
+  snapshot: BalanceSnapshot,
+): BalanceRefreshPart[] {
+  return balanceSnapshotParts(snapshot, FINANCIAL_ENUMERATION.Partial)
+}
 
 /** Failure preserves the original observation time and value, never a new zero. */
-function staleBalancePosition(
+export function staleBalancePosition(
   position: BalancePosition,
   reason: string,
 ): BalancePosition {
