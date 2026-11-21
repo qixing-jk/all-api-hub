@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.12.0](https://github.com/qixing-jk/all-api-hub/compare/v4.11.0...v4.12.0) (2026-11-21)
+
+
+### Features
+
+* **finance:** preserve native key budgets, prices and rewards ([#1911](https://github.com/qixing-jk/all-api-hub/issues/1911)) ([5acf84b](https://github.com/qixing-jk/all-api-hub/commit/5acf84b5c34334252fe9b8489b1fee4149a9dd11))
+
 ## [4.11.0](https://github.com/qixing-jk/all-api-hub/compare/v4.10.1...v4.11.0) (2026-11-20)
 
 
