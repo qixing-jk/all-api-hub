@@ -17,6 +17,7 @@ import {
   type NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
 import enKeyManagement from "~/locales/en/keyManagement.json"
+import { balancePosition } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
   BUDGET_AMOUNT_FIELDS,
@@ -68,6 +69,69 @@ it("renders a localized budget period from the extracted application resources",
     limit: 25,
   })
   expect(formatKeyFinancialFact(fact, i18n.t)).toContain("Monthly")
+})
+
+it("labels Dahl's funded key Tokens as an allocation", () => {
+  const ref = {
+    accountId: "a",
+    siteType: SITE_TYPES.DAHL,
+    scopeKey: "account",
+    resourceId: "1",
+  }
+  const basis = fixtureBudget({
+    fieldId: "test",
+    asset: { kind: "currency", code: "USD" },
+    limitState: BUDGET_LIMIT_STATES.Finite,
+    limit: "1",
+  }).budget
+  const source = basis.limit.source
+  const position = balancePosition({
+    id: "funded-key",
+    asset: {
+      kind: "quota",
+      id: "dahl:tokens",
+      label: "Token",
+      displayScale: 1,
+      displayLabel: "Token",
+    },
+    scope: basis.scope,
+    value: "25.5",
+    observedAt: 1,
+    source,
+  })
+
+  expect(
+    getAccountKeyResourceCardAdapter(SITE_TYPES.DAHL).buildDetailFacts(
+      {
+        ref,
+        displayName: "Funded key",
+        maskedLabel: "masked",
+        status: "enabled",
+        actions: { canUpdate: true, canDelete: true },
+        fields: [],
+        displayFacts: [
+          {
+            kind: "allocation",
+            fieldId: "available_tokens",
+            position,
+            parent: {
+              id: "total",
+              collectionKey: "/v1/account",
+              scope: basis.scope,
+              source,
+            },
+          },
+        ],
+      },
+      t,
+    ),
+  ).toEqual([
+    {
+      id: "available_tokens",
+      label: "keyManagement:financial.allocation",
+      value: "25.5 Token",
+    },
+  ])
 })
 
 it("labels NanoGPT provider limits in key details and explains missing management configuration", () => {

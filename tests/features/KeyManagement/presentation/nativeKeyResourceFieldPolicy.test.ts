@@ -53,6 +53,7 @@ const request = {
 
 it.each([
   [SITE_TYPES.NEW_API, "quotaUsd", "额度（美元）"],
+  [SITE_TYPES.UNKNOWN, "quota", "原生额度"],
   [SITE_TYPES.GRSAI, "credits", "剩余积分"],
 ] as const)(
   "presents %s quota in the declared editor unit",

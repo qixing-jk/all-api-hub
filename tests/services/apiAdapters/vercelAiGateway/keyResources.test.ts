@@ -795,40 +795,49 @@ describe("Vercel AI Gateway key resources", () => {
       )
     },
   )
-  it("shows a team's inherited budget separately from a custom key budget", async () => {
-    server.use(
-      listHandler([keyRow]),
-      http.get("https://api.vercel.com/ai-gateway/budgets/defaults/list", () =>
-        HttpResponse.json({
-          defaults: [
-            {
-              scopeType: "api-key",
-              limitAmount: 8,
-              refreshPeriod: "monthly",
-              alertThresholds: [],
-            },
-          ],
-        }),
-      ),
-    )
-    const session = await openSession()
-    const collection = await session.openCollection("account")
-    const page = await collection.list()
-    expect(page.items[0]?.displayFacts).toContainEqual(
-      expect.objectContaining({
-        kind: "budget-constraint",
-        budget: expect.objectContaining({
-          limitState: "inherited",
-          limit: expect.objectContaining({ status: "known", value: "8" }),
-          enabled: expect.objectContaining({ status: "unknown" }),
-          window: expect.objectContaining({
-            kind: "periodic",
-            period: "month",
+  it.each([
+    ["daily", { kind: "periodic", period: "day" }],
+    ["monthly", { kind: "periodic", period: "month" }],
+    ["none", { kind: "lifetime" }],
+  ])(
+    "shows a team's inherited %s budget and its restricted project",
+    async (refreshPeriod, window) => {
+      server.use(
+        listHandler([{ ...keyRow, projectId: "project-fixture" }]),
+        http.get(
+          "https://api.vercel.com/ai-gateway/budgets/defaults/list",
+          () =>
+            HttpResponse.json({
+              defaults: [
+                {
+                  scopeType: "api-key",
+                  limitAmount: 8,
+                  refreshPeriod,
+                  alertThresholds: [],
+                },
+              ],
+            }),
+        ),
+      )
+      const session = await openSession()
+      const collection = await session.openCollection("account")
+      const page = await collection.list()
+      expect(page.items[0]?.displayFacts).toContainEqual(
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            limitState: "inherited",
+            limit: expect.objectContaining({ status: "known", value: "8" }),
+            enabled: expect.objectContaining({ status: "unknown" }),
+            scope: expect.objectContaining({
+              projects: { kind: "restricted", ids: ["project-fixture"] },
+            }),
+            window,
           }),
         }),
-      }),
-    )
-  })
+      )
+    },
+  )
 
   it("reports a partial update as uncertain when its second write is rejected", async () => {
     server.use(
