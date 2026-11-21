@@ -173,6 +173,37 @@ function renderDialog(
 }
 
 describe("ApiCredentialProfileDialog", () => {
+  it("preserves an older custom endpoint without adding a financial mapping on unrelated save", async () => {
+    const telemetryConfig = {
+      mode: "customReadOnlyEndpoint" as const,
+      customEndpoint: {
+        endpoint: "/usage",
+        bearerToken: "synthetic-telemetry",
+        jsonPaths: { balanceUsd: "balance" },
+      },
+    }
+    const { onSave } = renderDialog({
+      profile: buildProfile({ telemetryConfig }),
+    })
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.name",
+      ),
+      { target: { value: "Renamed legacy profile" } },
+    )
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Renamed legacy profile",
+          telemetryConfig,
+        }),
+      ),
+    )
+    expect(
+      vi.mocked(onSave).mock.calls[0]?.[0]?.telemetryConfig?.customEndpoint,
+    ).not.toHaveProperty("financialMapping")
+  })
   it.each([
     { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
     {

@@ -429,6 +429,65 @@ describe("balance aggregation by confirmed financial meaning", () => {
         BALANCE_PURPOSES.Prepaid,
       ).amounts,
     ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "5" }])
+    const available = position("12")
+    const ledger = position("5", { id: "ledger", role: "ledger" })
+    expect(
+      aggregateBalances(
+        [snapshot([available, ledger])],
+        BALANCE_PURPOSES.Prepaid,
+      ).amounts,
+    ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "5" }])
+    expect(
+      aggregateBalances(
+        [snapshot([available, ledger])],
+        BALANCE_PURPOSES.Available,
+      ).amounts,
+    ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "12" }])
+    expect(
+      aggregateBalances(
+        [
+          snapshot([
+            available,
+            { ...ledger, scope: { ...ledger.scope, walletId: "other" } },
+          ]),
+        ],
+        BALANCE_PURPOSES.Prepaid,
+      ).amounts,
+    ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "17" }])
+    expect(
+      aggregateBalances(
+        [
+          snapshot([
+            available,
+            { ...ledger, asset: { kind: "currency", code: "CNY" } },
+          ]),
+        ],
+        BALANCE_PURPOSES.Prepaid,
+      ).amounts,
+    ).toEqual([
+      { asset: { kind: "currency", code: "USD" }, value: "12" },
+      { asset: { kind: "currency", code: "CNY" }, value: "5" },
+    ])
+    expect(
+      aggregateBalances(
+        [
+          snapshot([
+            available,
+            {
+              ...ledger,
+              amount: {
+                ...ledger.amount,
+                source: {
+                  ...ledger.amount.source,
+                  operation: "other-contract",
+                },
+              },
+            },
+          ]),
+        ],
+        BALANCE_PURPOSES.Prepaid,
+      ),
+    ).toMatchObject({ amounts: [], conflictCount: 1 })
   })
   it("keeps quota codes local to their reporting authority while summing currencies", () => {
     const asset = {

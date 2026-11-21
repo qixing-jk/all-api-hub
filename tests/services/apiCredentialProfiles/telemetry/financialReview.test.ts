@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   buildAllowanceSignals,
@@ -38,6 +38,59 @@ const context = {
 }
 
 describe("financial observations from partial provider responses", () => {
+  it("derives a quota limit only from both fresh used and remaining operands", () => {
+    const parsed = parseKimiQuota({ usage: { used: 10, remaining: 20 } })
+    expect(parsed.quota?.windows[0]).toMatchObject({
+      used: 10,
+      remaining: 20,
+      limit: 30,
+    })
+    expect(parsed.quota?.windows[0]?.percentRemaining).toBeCloseTo(200 / 3)
+    const partial = parseKimiQuota({ usage: { remaining: 20 } })
+    expect(partial.quota?.windows[0]?.limit).toBeUndefined()
+    expect(partial.quota?.windows[0]?.percentRemaining).toBeUndefined()
+  })
+  it("keeps only documented historical USD runway compatibility, without assigning USD to new unmapped values", () => {
+    const now = Date.UTC(2026, 10, 22, 12)
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now)
+    try {
+      const facts = normalizeTelemetryPatchToFacts(
+        { balanceUsd: 30, todayCostUsd: 3 },
+        "customReadOnlyEndpoint",
+        { ...context, observedAt: now },
+      )
+      const balance = selectTelemetryBalances(facts)[0]!
+      expect(
+        getBalanceRunwayDays(balance, facts.usage!.todayCost),
+      ).toBeUndefined()
+      const historicalCost = {
+        ...facts.usage!.todayCost!,
+        unit: { kind: "money" as const, currency: "USD", decimalPlaces: 2 },
+        source: balance.position!.amount.source,
+      }
+      expect(getBalanceRunwayDays(balance, historicalCost)).toBe(10)
+      expect(
+        getBalanceRunwayDays(balance, {
+          ...historicalCost,
+          unit: { ...historicalCost.unit, currency: "CNY" },
+        }),
+      ).toBeUndefined()
+      expect(
+        getBalanceRunwayDays(balance, {
+          ...historicalCost,
+          observedAt: now - 1,
+        }),
+      ).toBeUndefined()
+      expect(
+        getBalanceRunwayDays(balance, {
+          ...historicalCost,
+          source: { ...historicalCost.source, adapter: "other-source" },
+        }),
+      ).toBeUndefined()
+    } finally {
+      clock.mockRestore()
+    }
+  })
   it("keeps an unmapped canonical legacy reading visible without assigning a currency or aggregating it", () => {
     const stored = coerceTelemetrySnapshot({
       lastSyncTime: 1000,

@@ -15,6 +15,46 @@ import {
 
 afterEach(() => vi.restoreAllMocks())
 describe("Kimi inference financial contract across account and credential consumers", () => {
+  it("sums complete console ledger and voucher operands without classifying the ledger as cash", () => {
+    const scope: UsageScope = {
+      subject: { kind: "account", accountId: "fixture" },
+      authority: "https://platform.kimi.com",
+      projects: { kind: "unknown" },
+      keys: { kind: "unknown" },
+      models: { kind: "unknown" },
+      groups: { kind: "unknown" },
+    }
+    const result = parseKimiFinancialData(
+      { code: 0, data: { cur: "200000", voucher_cur: "300000" } },
+      scope,
+      "CNY",
+      KIMI_FINANCIAL_SOURCES.Console,
+      1000,
+    ).balance
+    expect(result.positions[0]?.amount).toMatchObject({
+      value: "5",
+      status: "known",
+      observedAt: 1000,
+    })
+    expect(
+      result.positions.find((position) => position.id === "cur"),
+    ).toMatchObject({
+      cashClassification: "unknown",
+      amount: { value: "2", observedAt: 1000 },
+    })
+    expect(
+      result.positions.find((position) => position.id === "voucher")?.amount,
+    ).toMatchObject({ value: "3", observedAt: 1000 })
+    expect(result.coverage).toBe("complete")
+    expect(result.positions[0]?.asset).toEqual({
+      kind: "currency",
+      code: "CNY",
+    })
+    expect(result.positions[0]?.amount.source).toMatchObject({
+      kind: "derived",
+      inputs: ["cur", "voucher_cur"],
+    })
+  })
   it.each([
     { cur: "200000" },
     { voucher_cur: "300000" },

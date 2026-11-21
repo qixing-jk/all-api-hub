@@ -59,6 +59,29 @@ const create = () =>
   })
 
 describe("credential refresh acceptance", () => {
+  it("merges a legacy profile without an admission field while keeping the local clock newer", async () => {
+    const profile = await create()
+    const legacy = await storage.exportConfig()
+    delete legacy.profiles[0]!.telemetryRefreshGeneration
+    storageData.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      legacy,
+    )
+    const merged = await storage.mergeConfig({
+      profiles: [
+        {
+          ...legacy.profiles[0]!,
+          notes: "Merged legacy notes",
+          updatedAt: profile.updatedAt + 1,
+        },
+      ],
+    })
+    expect(merged.profiles[0]?.id).toBe(profile.id)
+    expect(merged.profiles[0]?.notes).toBe("Merged legacy notes")
+    expect(merged.profiles[0]?.telemetryRefreshGeneration).toBeGreaterThan(
+      profile.telemetryRefreshGeneration ?? 0,
+    )
+  })
   it("admits only the requested owner and leaves stored profiles unchanged for a missing owner", async () => {
     const first = await create()
     const second = await storage.createProfile({

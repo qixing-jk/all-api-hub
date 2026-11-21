@@ -28,6 +28,40 @@ function wallet(
 }
 
 describe("balance collection acceptance", () => {
+  it("retains an unrequested source collection while refreshing another collection", () => {
+    const usd = wallet("USD", "10")
+    const cny = wallet("CNY", "20")
+    for (const position of cny.positions)
+      position.amount.source = {
+        ...position.amount.source,
+        adapter: "other-source",
+        operation: "other-wallet",
+      }
+    const previous: BalanceSnapshot = {
+      ...usd,
+      positions: [...usd.positions, ...cny.positions],
+    }
+    const accepted = acceptBalanceRefresh(
+      previous,
+      balanceSnapshotParts(wallet("USD", "12", 2000), "complete"),
+      previous.subject,
+      2000,
+    )
+    expect(
+      accepted.positions.find((position) => position.id === "available:USD")
+        ?.amount,
+    ).toMatchObject({ value: "12", status: "known", observedAt: 2000 })
+    expect(
+      accepted.positions.find((position) => position.id === "available:CNY")
+        ?.amount,
+    ).toMatchObject({ value: "20", status: "stale", observedAt: 1000 })
+    expect(
+      accepted.positions.filter(
+        (position) => position.amount.source.adapter === "other-source",
+      ),
+    ).toHaveLength(cny.positions.length)
+    expect(accepted.coverage).toBe("partial")
+  })
   it.each(["partial", "unavailable", "not-requested"] as const)(
     "retains omitted balances with original times on %s enumeration",
     (enumeration) => {
