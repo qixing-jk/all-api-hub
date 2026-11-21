@@ -136,6 +136,13 @@ export class DailyTriggerWorkflow {
         return
       }
 
+      // A restored alarm can target today even when today's batch already ran.
+      if (currentStatus?.lastDailyRunDay === today) {
+        logger.info("Daily run already completed today; rescheduling alarm")
+        await this.deps.scheduleNextRun()
+        return
+      }
+
       logger.info("Daily alarm triggered; starting check-in execution")
       let persisted = true
       try {

@@ -133,4 +133,21 @@ describe("native financial display", () => {
       ),
     ).toMatch(/^EUR\s14\.00$/)
   })
+
+  it.each([
+    ["0." + "0".repeat(253) + "1", "<¥0.01"],
+    ["-0." + "0".repeat(252) + "1", ">-¥0.01"],
+  ])(
+    "retains the original nonzero balance when conversion underflows: %s",
+    (value, expected) => {
+      expect(
+        formatBalanceAmount(
+          { value, asset: { kind: "currency", code: "CNY" } },
+          "en-US",
+          "USD",
+          7,
+        ),
+      ).toBe(expected)
+    },
+  )
 })
