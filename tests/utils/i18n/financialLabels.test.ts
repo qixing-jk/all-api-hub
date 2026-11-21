@@ -29,12 +29,16 @@ describe("financial labels in supported locale resources", () => {
         "shareSnapshots:financial.complete",
         "shareSnapshots:financial.partial",
       ]) {
-        expect(i18n.t(key)).not.toContain(":financial.")
+        expect(i18n.exists(key)).toBe(true)
+        expect(i18n.t(key)).not.toBe(key.split(":")[1])
       }
       for (const count of [1, 2, 5]) {
         expect(
+          i18n.exists("account:financial.potentialDuplicates", { count }),
+        ).toBe(true)
+        expect(
           i18n.t("account:financial.potentialDuplicates", { count }),
-        ).not.toContain(":financial.")
+        ).not.toBe("financial.potentialDuplicates")
         expect(
           i18n.t("account:financial.potentialDuplicates", { count }),
         ).toContain(String(count))

@@ -22,6 +22,104 @@ import {
 } from "~/types/apiCredentialProfiles"
 
 const CLOCK = Date.UTC(2026, 5, 1, 12)
+it("uses captured quota spending metadata after the current mapping changes", () => {
+  const profile = reportedCost({
+    unit: {
+      kind: "quota",
+      code: "credits",
+      label: "Raw",
+      displayScale: 100,
+      displayLabel: "Captured credits",
+    },
+  })
+  profile.telemetryConfig = {
+    mode: "customReadOnlyEndpoint",
+    customEndpoint: {
+      endpoint: "/usage",
+      jsonPaths: { todayCostUsd: "cost" },
+      financialMapping: {
+        role: "available",
+        scope: "credential",
+        asset: {
+          kind: "quota",
+          id: "credits",
+          label: "New label",
+          displayScale: 10,
+          displayLabel: "New credits",
+        },
+      },
+    },
+  }
+  expect(
+    projectCredentialFinancialStats([profile], CLOCK).telemetryStats
+      .reportedTodayCosts[0]?.amount,
+  ).toEqual({
+    value: "3",
+    asset: {
+      kind: "quota",
+      id: "credits",
+      label: "Raw",
+      displayScale: 100,
+      displayLabel: "Captured credits",
+    },
+  })
+})
+it("keeps old quota units usable when captured display metadata is absent or the current mapping names a different asset", () => {
+  const profile = reportedCost({
+    unit: { kind: "quota", code: "credits", label: "Credits" },
+  })
+  profile.telemetryConfig = {
+    mode: "customReadOnlyEndpoint",
+    customEndpoint: {
+      endpoint: "/usage",
+      jsonPaths: { todayCostUsd: "cost" },
+      financialMapping: {
+        role: "available",
+        scope: "credential",
+        asset: {
+          kind: "quota",
+          id: "other",
+          label: "Other",
+          displayScale: 10,
+          displayLabel: "Other",
+        },
+      },
+    },
+  }
+  expect(
+    projectCredentialFinancialStats([profile], CLOCK).telemetryStats
+      .reportedTodayCosts[0]?.amount,
+  ).toEqual({
+    value: "3",
+    asset: {
+      kind: "quota",
+      id: "credits",
+      label: "Credits",
+      displayScale: 1,
+      displayLabel: "Credits",
+    },
+  })
+  profile.telemetryConfig.customEndpoint!.financialMapping!.asset = {
+    kind: "quota",
+    id: "credits",
+    label: "Raw",
+    displayScale: 10,
+    displayLabel: "Historical credits",
+  }
+  expect(
+    projectCredentialFinancialStats([profile], CLOCK).telemetryStats
+      .reportedTodayCosts[0]?.amount,
+  ).toEqual({
+    value: "3",
+    asset: {
+      kind: "quota",
+      id: "credits",
+      label: "Credits",
+      displayScale: 10,
+      displayLabel: "Historical credits",
+    },
+  })
+})
 function reportedCost(
   overrides: Partial<ApiCredentialTelemetryAmount> = {},
 ): ApiCredentialProfile {

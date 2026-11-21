@@ -174,6 +174,7 @@ function renderDialog(
 
 describe("ApiCredentialProfileDialog", () => {
   it.each([
+    { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
     {
       kind: ASSET_KINDS.Quota,
       id: "native-credit",
@@ -206,6 +207,85 @@ describe("ApiCredentialProfileDialog", () => {
       await waitFor(() =>
         expect(onSave).toHaveBeenCalledWith(
           expect.objectContaining({ telemetryConfig }),
+        ),
+      )
+    },
+  )
+  it.each([
+    {
+      kind: "crypto",
+      asset: { kind: "crypto", id: "XNO" },
+      role: "available",
+      scope: "unknown",
+    },
+    {
+      kind: "quota",
+      asset: {
+        kind: "quota",
+        id: "credits",
+        label: "credits",
+        displayScale: 1,
+        displayLabel: "credits",
+      },
+      role: "budget-remaining",
+      scope: "credential",
+    },
+  ] as const)(
+    "saves a newly selected $kind mapping from an existing currency mapping",
+    async ({ kind, asset, role, scope }) => {
+      const { onSave } = renderDialog({
+        profile: buildProfile({
+          telemetryConfig: {
+            mode: "customReadOnlyEndpoint",
+            customEndpoint: {
+              endpoint: "/usage",
+              jsonPaths: { balanceUsd: "balance" },
+              financialMapping: {
+                asset: { kind: "currency", code: "USD" },
+                role: "available",
+                scope: "credential",
+              },
+            },
+          },
+        }),
+      })
+      fireEvent.change(
+        screen.getByLabelText(
+          "apiCredentialProfiles:dialog.financialMapping.asset",
+        ),
+        { target: { value: kind } },
+      )
+      if (kind === "quota")
+        fireEvent.change(
+          screen.getByLabelText(
+            "apiCredentialProfiles:dialog.financialMapping.code",
+          ),
+          { target: { value: "credits" } },
+        )
+      fireEvent.change(
+        screen.getByLabelText(
+          "apiCredentialProfiles:dialog.financialMapping.role",
+        ),
+        { target: { value: role } },
+      )
+      fireEvent.change(
+        screen.getByLabelText(
+          "apiCredentialProfiles:dialog.financialMapping.scope",
+        ),
+        { target: { value: scope } },
+      )
+      fireEvent.click(
+        screen.getByRole("button", { name: "common:actions.save" }),
+      )
+      await waitFor(() =>
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            telemetryConfig: expect.objectContaining({
+              customEndpoint: expect.objectContaining({
+                financialMapping: { asset, role, scope },
+              }),
+            }),
+          }),
         ),
       )
     },

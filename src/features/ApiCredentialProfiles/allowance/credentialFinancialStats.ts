@@ -59,16 +59,18 @@ export function projectCredentialFinancialStats(
       } else if (storedUsd) {
         asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
       } else if (unit.kind === MEASUREMENT_UNIT_KINDS.Quota) {
-        asset =
+        const legacyMapping =
           mapping?.kind === ASSET_KINDS.Quota && mapping.id === unit.code
             ? mapping
-            : {
-                kind: ASSET_KINDS.Quota,
-                id: unit.code,
-                label: unit.label,
-                displayLabel: unit.displayLabel ?? unit.label,
-                displayScale: unit.displayScale ?? 1,
-              }
+            : undefined
+        asset = {
+          kind: ASSET_KINDS.Quota,
+          id: unit.code,
+          label: unit.label,
+          displayLabel:
+            unit.displayLabel ?? legacyMapping?.displayLabel ?? unit.label,
+          displayScale: unit.displayScale ?? legacyMapping?.displayScale ?? 1,
+        }
       } else if (unit.kind === MEASUREMENT_UNIT_KINDS.Crypto) {
         asset = unit
       } else {

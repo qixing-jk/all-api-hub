@@ -5,6 +5,7 @@ import { CURRENCIES } from "~/constants/money"
 import {
   budgetConstraint,
   budgetConstraintSchema,
+  staleBudgetConstraint,
 } from "~/services/amounts/budgets"
 import {
   ASSET_KINDS,
@@ -50,6 +51,37 @@ const base = {
 }
 
 describe("source-backed key budgets", () => {
+  it("does not invent a clock for unknown budget state and keeps confirmed clocks across repeated failures", () => {
+    const unknown = budgetConstraint({
+      ...base,
+      limitState: BUDGET_LIMIT_STATES.Unknown,
+    })
+    expect(staleBudgetConstraint(unknown).stateObservation).toEqual(
+      unknown.stateObservation,
+    )
+    expect(staleBudgetConstraint(unknown).stateObservation).not.toHaveProperty(
+      "observedAt",
+    )
+    const finite = budgetConstraint({
+      ...base,
+      limitState: BUDGET_LIMIT_STATES.Finite,
+      limit: "10",
+      used: "3",
+    })
+    const first = staleBudgetConstraint(finite)
+    const repeated = staleBudgetConstraint(first)
+    expect(repeated.stateObservation).toEqual(first.stateObservation)
+    expect(repeated.limit).toMatchObject({
+      value: "10",
+      status: "stale",
+      observedAt: 1,
+    })
+    expect(repeated.used).toMatchObject({
+      value: "3",
+      status: "stale",
+      observedAt: 1,
+    })
+  })
   it("keeps value observations strict across freshness states without widening budget-state observations", () => {
     const budget = budgetConstraint({
       ...base,

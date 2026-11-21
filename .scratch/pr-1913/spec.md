@@ -48,6 +48,16 @@ Controlled fixtures establish these behaviors. No live-provider financial acquis
 
 Producer adaptation points: WebDAV projection converts an absent normalized profile section to undefined while retaining V1 envelope behavior; DevPanel fixtures now carry matching scope, evidence and full-day cost windows. updateTelemetrySnapshot now returns { accepted, profile }; the telemetry caller rejects superseded writes distinctly. Quota snapshots optionally retain per-field stale observations, and quota spending units retain display scale/label. Later slices and all producer branches remain untouched.
 
+## Follow-up review and coverage batch
+
+CodeRabbit's terminal review 6008267270 and edited status comment covered exact head 055c0ac0c3354db81bde21679eca81efdcc89e05 with no processing marker. Fresh collection found three new inline findings: 4655086598 (distinct authority-prefix quota IDs), 4655086599 (fresh components alongside legacy total), and 4655086605 (namespace-free i18n missing-key fallbacks). All are handled in the next normal commit; the component regression was independently found before that review arrived. The review body adds no distinct outside-diff finding.
+
+The quota-ID collision reproduced before implementation. Aggregated quota IDs now encode the complete authority/raw-ID pair, with display metadata unchanged. Fresh components remain separate from the stale legacy reference and never become an inferred total. Translation tests now assert resource existence and reject the namespace-free fallback for financial and coverage labels and duplicate plurals.
+
+Coverage exposed another data-integrity case: editing a current mapping's display scale could reinterpret an earlier cost. A failing behavior test preceded the repair, and summaries now prefer captured scale/label, falling back to a matching mapping only for older absent metadata. Expanded behavior coverage and all remaining report dispositions are in coverage.md. Final remote gates and thread acceptance remain pending until publication/reconciliation.
+
+Additional producer adaptation: quota IDs in aggregated amounts are now a JSON-encoded authority/raw-ID pair rather than a colon-prefix heuristic; persisted raw asset IDs are unchanged. Historical captured spending metadata takes precedence over current editor mappings. The private balance projector now accepts only the existing aggregate caller's prepaid/available purposes. No producer or child branch was edited.
+
 ## Retention
 
 Raw snapshots, provider line coverage, reproduction logs, and final evidence stay local in artifacts/ through Xing's review. They are task-owned, ignored outputs. This worklist is the reviewer entry point; code/tests retain regression protection.

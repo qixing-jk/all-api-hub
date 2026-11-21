@@ -37,6 +37,277 @@ const context = {
 }
 
 describe("financial observations from partial provider responses", () => {
+  it("uses an independently mapped remaining budget when the balance path is absent", () => {
+    const patch = mapCustomJson(
+      { remaining: "7", limit: "10" },
+      {
+        balanceUsd: "wallet.missing",
+        totalAvailableUsd: "remaining",
+        totalGrantedUsd: "limit",
+      },
+      {
+        asset: { kind: "currency", code: "USD" },
+        role: "budget-remaining",
+        scope: "credential",
+      },
+    )
+    const stored = coerceTelemetrySnapshot({
+      lastSyncTime: 1000,
+      facts: normalizeTelemetryPatchToFacts(
+        patch,
+        "customReadOnlyEndpoint",
+        context,
+      ),
+    })!
+    expect(stored.facts?.budgets?.[0]).toMatchObject({
+      remaining: { value: "7", observedAt: 1000 },
+      limit: { value: "10", observedAt: 1000 },
+    })
+    expect(stored.facts?.balanceSnapshot).toBeUndefined()
+  })
+  it.each([
+    {
+      asset: { kind: "crypto", id: "XNO" } as const,
+      unit: { kind: "crypto", id: "XNO" } as const,
+      other: { kind: "crypto", id: "BTC" } as const,
+    },
+    {
+      asset: {
+        kind: "quota",
+        id: "credits",
+        label: "Credits",
+        displayScale: 1,
+        displayLabel: "Credits",
+      } as const,
+      unit: { kind: "quota", code: "credits", label: "Credits" } as const,
+      other: { kind: "quota", code: "requests", label: "Requests" } as const,
+    },
+  ])(
+    "supersedes only matching legacy $asset.kind assets with usable canonical amounts",
+    ({ asset, unit, other }) => {
+      const old = {
+        amount: 42,
+        unit,
+        semantics: "legacy" as const,
+        observedAt: 1000,
+      }
+      const unrelated = { ...old, amount: 5, unit: other }
+      const facts = normalizeTelemetryPatchToFacts(
+        { balance: { currency: "", amount: "50" }, balanceAsset: asset },
+        "customReadOnlyEndpoint",
+        context,
+      )
+      facts.balances = [old, unrelated]
+      const selected = selectTelemetryBalances(facts)
+      expect(selected).toHaveLength(2)
+      expect(selected.map((balance) => balance.amount)).toEqual([50, 5])
+      const unavailable = normalizeTelemetryPatchToFacts(
+        { balance: { currency: "" }, balanceAsset: asset },
+        "customReadOnlyEndpoint",
+        context,
+      )
+      unavailable.balances = [old, unrelated]
+      expect(
+        selectTelemetryBalances(unavailable).map((balance) => balance.amount),
+      ).toEqual([42, 5])
+    },
+  )
+  it.each([
+    { originalClock: 800, successClock: 900, expected: 800 },
+    { originalClock: undefined, successClock: 900, expected: 900 },
+    { originalClock: undefined, successClock: undefined, expected: 1000 },
+  ])(
+    "preserves the best available historical clock $expected across repeated failed refreshes",
+    ({ originalClock, successClock, expected }) => {
+      const previous: ApiCredentialTelemetrySnapshot = {
+        lastSyncTime: 1000,
+        lastSuccessTime: successClock,
+        attempts: [],
+        facts: {
+          balances: [
+            {
+              amount: 42,
+              unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+              semantics: "legacy",
+              observedAt: originalClock,
+            },
+          ],
+          usage: {
+            todayCost: {
+              value: 3,
+              unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+              observedAt: originalClock,
+            },
+          },
+          quota: {
+            windows: [
+              {
+                type: "weekly",
+                unit: { kind: "quota", code: "requests", label: "Requests" },
+                remaining: 30,
+                observedAt: originalClock,
+              },
+            ],
+          },
+        },
+      }
+      const first = acceptTelemetrySnapshot(previous, {
+        lastSyncTime: 2000,
+        attempts: [],
+      })
+      const repeated = acceptTelemetrySnapshot(first, {
+        lastSyncTime: 3000,
+        attempts: [],
+      })
+      expect(repeated.facts?.balances?.[0]).toMatchObject({
+        amount: 42,
+        status: "stale",
+        observedAt: expected,
+      })
+      expect(repeated.facts?.usage?.todayCost).toMatchObject({
+        value: 3,
+        status: "stale",
+        observedAt: expected,
+      })
+      expect(repeated.facts?.quota?.windows[0]).toMatchObject({
+        remaining: 30,
+        status: "stale",
+        observedAt: expected,
+      })
+    },
+  )
+  it.each([900, undefined])(
+    "retains omitted quota fields with historical clock %s and stops retention when fresh fields return",
+    (lastSuccessTime) => {
+      const window = {
+        type: "weekly" as const,
+        unit: { kind: "quota" as const, code: "requests", label: "Requests" },
+        resetTime: 10000,
+        used: 70,
+        limit: 100,
+        remaining: 30,
+        remainingPercent: 30,
+      }
+      const previous: ApiCredentialTelemetrySnapshot = {
+        lastSyncTime: 1000,
+        lastSuccessTime,
+        attempts: [],
+        facts: { quota: { windows: [window] } },
+      }
+      const partial = acceptTelemetrySnapshot(previous, {
+        lastSyncTime: 2000,
+        attempts: [],
+        facts: {
+          quota: {
+            windows: [
+              {
+                ...window,
+                used: undefined,
+                remaining: undefined,
+                remainingPercent: undefined,
+              },
+            ],
+          },
+        },
+      })
+      const retained = partial.facts!.quota!.windows[0]!.retainedAmounts!
+      expect(retained.used).toEqual({
+        value: 70,
+        status: "stale",
+        observedAt: lastSuccessTime ?? 1000,
+      })
+      expect(retained.remaining).toEqual({
+        value: 30,
+        status: "stale",
+        observedAt: lastSuccessTime ?? 1000,
+      })
+      expect(retained.remainingPercent).toEqual({
+        value: 30,
+        status: "stale",
+        observedAt: lastSuccessTime ?? 1000,
+      })
+      const recovered = acceptTelemetrySnapshot(partial, {
+        lastSyncTime: 3000,
+        attempts: [],
+        facts: { quota: { windows: [window] } },
+      })
+      expect(
+        recovered.facts!.quota!.windows[0]!.retainedAmounts,
+      ).toBeUndefined()
+      expect(recovered.facts!.quota!.windows[0]!.remaining).toBe(30)
+    },
+  )
+  it.each([
+    { granted: "3", purchased: undefined },
+    { granted: "10", purchased: "30" },
+  ])(
+    "keeps fresh wallet components alongside a retained legacy amount ($granted/$purchased)",
+    ({ granted, purchased }) => {
+      const previous: ApiCredentialTelemetrySnapshot = {
+        lastSyncTime: 1000,
+        health: { status: SiteHealthStatus.Healthy },
+        attempts: [],
+        facts: {
+          balances: [
+            {
+              amount: 42,
+              unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+              semantics: "legacy",
+              observedAt: 1000,
+            },
+          ],
+        },
+      }
+      const next: ApiCredentialTelemetrySnapshot = {
+        lastSyncTime: 2000,
+        health: { status: SiteHealthStatus.Healthy },
+        attempts: [],
+        facts: normalizeTelemetryPatchToFacts(
+          parseDeepSeekBalance({
+            balance_infos: [
+              {
+                currency: "USD",
+                granted_balance: granted,
+                topped_up_balance: purchased,
+              },
+            ],
+          }),
+          "deepSeekBalance",
+          { ...context, observedAt: 2000 },
+        ),
+      }
+      const balances = selectTelemetryBalances(
+        acceptTelemetrySnapshot(previous, next).facts,
+      )
+      expect(balances).toContainEqual(
+        expect.objectContaining({
+          amount: 42,
+          status: "stale",
+          observedAt: 1000,
+        }),
+      )
+      expect(
+        balances.flatMap((balance) => balance.components ?? []),
+      ).toContainEqual(
+        expect.objectContaining({
+          amount: Number(granted),
+          status: "known",
+          observedAt: 2000,
+        }),
+      )
+      if (purchased)
+        expect(
+          balances.flatMap((balance) => balance.components ?? []),
+        ).toContainEqual(
+          expect.objectContaining({
+            amount: Number(purchased),
+            status: "known",
+            observedAt: 2000,
+          }),
+        )
+      expect(balances.find((balance) => balance.position)?.amount).toBeNaN()
+    },
+  )
   it("preserves independently mapped grant and remaining counters with native units", () => {
     const facts = normalizeTelemetryPatchToFacts(
       mapCustomJson(

@@ -12,6 +12,7 @@ import {
   formatProviderBalance,
   formatQuotaWindowAmount,
   formatQuotaWindowLabel,
+  formatTelemetryAmount,
   getBalanceSemanticsLabel,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialTelemetryFormatting"
 import en from "~/locales/en/apiCredentialProfiles.json"
@@ -46,6 +47,74 @@ const quota = {
 } as const
 
 describe("credential telemetry presentation", () => {
+  it("formats quota spending in its native units when old display metadata is absent", () => {
+    expect(
+      formatTelemetryAmount(
+        {
+          value: "25",
+          unit: { kind: "quota", code: "credits", label: "Credits" },
+        },
+        t,
+      ),
+    ).toBe("25 Credits")
+  })
+  it("identifies manually mapped wallets and budgets without implying reported cash", () => {
+    const context = {
+      profileId: "manual",
+      baseUrl: "https://manual.example",
+      observedAt: 1000,
+    }
+    const wallet = selectTelemetryBalances(
+      normalizeTelemetryPatchToFacts(
+        {
+          balance: { currency: "USD", amount: "3" },
+          financialMapping: {
+            asset: { kind: "currency", code: "USD" },
+            role: "available",
+            scope: "credential",
+          },
+        },
+        "customReadOnlyEndpoint",
+        context,
+      ),
+    )[0]!
+    const budget = selectTelemetryBalances(
+      normalizeTelemetryPatchToFacts(
+        {
+          budget: { asset: { kind: "currency", code: "USD" }, remaining: "5" },
+          financialMapping: {
+            asset: { kind: "currency", code: "USD" },
+            role: "budget-remaining",
+            scope: "credential",
+          },
+        },
+        "customReadOnlyEndpoint",
+        context,
+      ),
+    )[0]!
+    expect(getBalanceSemanticsLabel(wallet, t)).toBe(
+      en.telemetry.balanceSemantics.manual,
+    )
+    expect(getBalanceSemanticsLabel(budget, t)).toBe(
+      en.telemetry.balanceSemantics.manual,
+    )
+    expect(
+      getBalanceSemanticsLabel(
+        { amount: 42, unit: money, semantics: "legacy" },
+        t,
+      ),
+    ).toBe(en.telemetry.balanceSemantics.legacy)
+    expect(
+      formatProviderBalance(
+        {
+          amount: 0.125,
+          unit: { kind: "crypto", id: "XNO" },
+          semantics: "legacy",
+        },
+        t,
+      ),
+    ).toBe("0.125 XNO")
+  })
   it("qualifies a retained unlimited state as last known in the allowance badge", () => {
     const facts = normalizeTelemetryPatchToFacts(
       {

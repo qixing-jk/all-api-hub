@@ -59,6 +59,55 @@ const create = () =>
   })
 
 describe("credential refresh acceptance", () => {
+  it("admits only the requested owner and leaves stored profiles unchanged for a missing owner", async () => {
+    const first = await create()
+    const second = await storage.createProfile({
+      name: "Second wallet",
+      baseUrl: "https://api.deepseek.com",
+      apiKey: "synthetic-second",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      telemetryConfig: { mode: "deepSeekBalance" },
+    })
+    const before = await storage.exportConfig()
+    await expect(
+      storage.beginTelemetryRefresh("missing-owner"),
+    ).rejects.toThrow("Profile not found")
+    expect(await storage.exportConfig()).toEqual(before)
+    const admitted = await storage.beginTelemetryRefresh(first.id)
+    const after = await storage.exportConfig()
+    expect(admitted.telemetryRefreshGeneration).toBeGreaterThan(0)
+    expect(after.profiles.find((profile) => profile.id === second.id)).toEqual(
+      before.profiles.find((profile) => profile.id === second.id),
+    )
+  })
+  it("restores over malformed profile rows without rewinding the readable admission clock", async () => {
+    await create()
+    const backup = await storage.exportConfig()
+    storageData.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      {
+        version: backup.version,
+        profiles: [null, 7, { telemetryRefreshGeneration: 13 }],
+      },
+    )
+    await storage.importConfig(backup)
+    const restored = await storage.exportConfig()
+    expect(restored.profiles[0]?.telemetryRefreshGeneration).toBeGreaterThan(13)
+    expect(restored.profiles[0]?.id).toBe(backup.profiles[0]?.id)
+  })
+  it.each([null, 7, { version: 2 }, { version: 2, profiles: {} }])(
+    "does not overwrite malformed outer admission state %j during explicit restore",
+    async (raw) => {
+      await create()
+      const backup = await storage.exportConfig()
+      const key = API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES
+      storageData.set(key, raw)
+      await expect(storage.importConfig(backup)).rejects.toThrow(
+        /Invalid API credential profiles config/,
+      )
+      expect(storageData.get(key)).toEqual(raw)
+    },
+  )
   it("does not replace profiles when the current admission state cannot be read", async () => {
     await create()
     const backup = await storage.exportConfig()

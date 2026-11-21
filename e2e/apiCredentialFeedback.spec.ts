@@ -30,6 +30,96 @@ const views = [
   { id: "dark", width: 390, height: 900, theme: "dark" },
 ] as const
 
+test("keeps a fresh native component visible beside a retained legacy wallet reading", async ({
+  page,
+  context,
+  extensionId,
+  extensionDir,
+}) => {
+  installExtensionPageGuards(page)
+  await forceExtensionLanguage(page, "en")
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await stubLlmMetadataIndex(context)
+  const worker = await getServiceWorker(context)
+  const now = Date.now()
+  const observedAt = now - 3600000
+  const baseUrl = "https://legacy-components.invalid"
+  const previous = {
+    lastSyncTime: observedAt,
+    health: { status: SiteHealthStatus.Healthy },
+    attempts: [],
+    facts: {
+      balances: [
+        {
+          amount: 42,
+          unit: { kind: "money" as const, currency: "USD", decimalPlaces: 2 },
+          semantics: "legacy" as const,
+          observedAt,
+        },
+      ],
+    },
+  }
+  const snapshot = acceptTelemetrySnapshot(previous, {
+    schemaVersion: 2,
+    lastSyncTime: now,
+    health: { status: SiteHealthStatus.Warning },
+    attempts: [],
+    facts: normalizeTelemetryPatchToFacts(
+      parseDeepSeekBalance({
+        balance_infos: [{ currency: "USD", granted_balance: "3" }],
+      }),
+      "deepSeekBalance",
+      { profileId: "legacy-components", baseUrl, observedAt: now },
+    ),
+  })
+  await seedApiCredentialProfiles(worker, [
+    createStoredApiCredentialProfile({
+      id: "legacy-components",
+      name: "Legacy and native observations",
+      baseUrl,
+      telemetryConfig: { mode: "disabled" },
+      telemetrySnapshot: snapshot,
+    }),
+  ])
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+  )
+  await waitForExtensionRoot(page)
+  const row = page.getByTestId(
+    getApiCredentialProfileRowTestId("legacy-components"),
+  )
+  const toggle = row.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.telemetryToggle,
+  )
+  if ((await toggle.getAttribute("aria-expanded")) !== "true")
+    await toggle.click()
+  const panel = row.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel)
+  await expect(panel).toContainText("$42.00")
+  await expect(panel).toContainText(/USD\s*3/)
+  await expect(panel).toContainText("Gift")
+  await expect(panel).toContainText("Last known")
+  await expect(
+    panel.locator(`time[datetime="${new Date(observedAt).toISOString()}"]`),
+  ).toBeVisible()
+  const raw = await getPlasmoStorageRawValue<string>(
+    worker,
+    STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+  )
+  const stored = typeof raw === "string" ? JSON.parse(raw) : raw
+  expect(
+    stored.profiles[0].telemetrySnapshot.facts.balanceSnapshot.positions[0]
+      .amount,
+  ).toMatchObject({ status: "unavailable" })
+  await captureVisualViews({
+    page,
+    ready: panel,
+    captureTarget: panel,
+    id: "feedback-legacy-components",
+    extensionDir,
+    views: [...views],
+  })
+})
+
 test("retains omitted quota operands with original times after an actual partial refresh", async ({
   page,
   context,

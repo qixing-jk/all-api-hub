@@ -30,6 +30,34 @@ const profile: ApiCredentialProfile = {
 
 describe("billing adapters retain financial contracts", () => {
   beforeEach(() => vi.mocked(fetchTelemetryJson).mockReset())
+  it("propagates usage failure when the subscription contains no financial limit", async () => {
+    vi.mocked(fetchTelemetryJson)
+      .mockResolvedValueOnce({
+        endpoint: "/dashboard/billing/subscription",
+        json: {},
+      })
+      .mockRejectedValueOnce(new Error("usage unavailable"))
+    await expect(
+      runUsageAdapter(profile, "openaiBilling", { mode: "openaiBilling" }),
+    ).rejects.toThrow("usage unavailable")
+  })
+  it("discards malformed total spending while retaining independent Sub2API values", async () => {
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/v1/usage",
+      json: {
+        balance: "12",
+        usage: { today: { cost: "3" }, total: { cost: "invalid" } },
+      },
+    })
+    const result = await runUsageAdapter(
+      profile,
+      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+      { mode: API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage },
+    )
+    expect(result.data.balance?.amount).toBe("12")
+    expect(result.data.todayCostUsd).toBe("3")
+    expect(result.data.totalUsedUsd).toBeUndefined()
+  })
   it("keeps the subscription limit and usage failure from the same billing refresh", async () => {
     vi.mocked(fetchTelemetryJson)
       .mockResolvedValueOnce({

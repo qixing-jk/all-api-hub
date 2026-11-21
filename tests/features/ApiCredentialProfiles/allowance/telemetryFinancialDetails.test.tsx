@@ -25,6 +25,44 @@ import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("credential financial details", () => {
+  it("keeps retained quota operands distinct from fresh capacity and their own clocks", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { apiCredentialProfiles: en },
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ApiCredentialProfileQuotaMeters
+          windows={[
+            {
+              type: "weekly",
+              limit: 100,
+              unit: { kind: "quota", code: "requests", label: "Requests" },
+              retainedAmounts: {
+                used: { value: 70, status: "stale", observedAt: 1000 },
+                remaining: { value: 30, status: "stale", observedAt: 2000 },
+                remainingPercent: {
+                  value: 30,
+                  status: "stale",
+                  observedAt: 3000,
+                },
+              },
+            },
+          ]}
+        />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("Last known usage: 70")).toBeVisible()
+    expect(screen.getByText("Last known remaining: 30")).toBeVisible()
+    expect(screen.getByText("Last known remaining: 30%")).toBeVisible()
+    for (const seconds of [1, 2, 3])
+      expect(
+        document.querySelector(
+          `time[datetime="1970-01-01T00:00:0${seconds}.000Z"]`,
+        ),
+      ).toBeVisible()
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
+    expect(screen.queryByText("30 Requests left")).not.toBeInTheDocument()
+  })
   it("preserves custom quota spending scale through persistence and display", async () => {
     const i18n = await createResourceTestI18n({
       en: { apiCredentialProfiles: en },

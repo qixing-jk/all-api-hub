@@ -53,6 +53,121 @@ function snapshot(positions: BalancePosition[]): BalanceSnapshot {
 }
 
 describe("balance aggregation by confirmed financial meaning", () => {
+  it("keeps distinct raw quota IDs separate even when one begins with the authority", () => {
+    const asset = {
+      kind: "quota",
+      id: "credits",
+      label: "Credits",
+      displayScale: 10,
+      displayLabel: "Credits",
+    } as const
+    const first = position("10", { asset })
+    const second = position("20", {
+      asset: { ...asset, id: "https://wallet.example:credits" },
+      scope: { ...first.scope, walletId: "other" },
+    })
+    const result = aggregateBalances(
+      [snapshot([first]), snapshot([second])],
+      BALANCE_PURPOSES.Available,
+    )
+    expect(result.amounts.map((amount) => amount.value)).toEqual(["10", "20"])
+    expect(
+      new Set(
+        result.amounts.map(
+          (amount) => amount.asset.kind === "quota" && amount.asset.id,
+        ),
+      ).size,
+    ).toBe(2)
+    expect(
+      result.amounts.every(
+        (amount) =>
+          amount.asset.kind === "quota" &&
+          amount.asset.displayScale === 10 &&
+          amount.asset.displayLabel === "Credits",
+      ),
+    ).toBe(true)
+  })
+  it("deduplicates equivalent multi-position wallet reads independent of order and resolves ties by owner", () => {
+    const make = (owner: string, reverse = false) => {
+      const first = position("10", {
+        scope: {
+          ...position("0").scope,
+          subject: { kind: "credential", profileId: owner },
+        },
+      })
+      const second = position("3", {
+        id: "bonus",
+        funding: "granted",
+        scope: first.scope,
+      })
+      return snapshot(reverse ? [second, first] : [first, second])
+    }
+    const a = make("a")
+    const z = make("z", true)
+    for (const snapshots of [
+      [z, a],
+      [a, z],
+    ]) {
+      const result = aggregateBalances(snapshots, BALANCE_PURPOSES.Available)
+      expect(result.amounts).toEqual([
+        { asset: { kind: "currency", code: "USD" }, value: "13" },
+      ])
+      expect(result.duplicateCount).toBe(1)
+      expect(result.contributions).toHaveLength(1)
+      expect(result.contributions[0]!.positions[0]!.scope.subject).toEqual(
+        a.subject,
+      )
+    }
+  })
+  it("isolates an overflowing asset inside one snapshot while preserving another native asset", () => {
+    const first = position("9".repeat(256))
+    const second = position("1", {
+      id: "another-wallet",
+      scope: { ...first.scope, walletId: "other" },
+    })
+    const cny = position("7", {
+      id: "cny",
+      asset: { kind: "currency", code: "CNY" },
+    })
+    const result = aggregateBalances(
+      [snapshot([first, second, cny])],
+      BALANCE_PURPOSES.Available,
+    )
+    expect(result.amounts).toEqual([
+      { asset: { kind: "currency", code: "CNY" }, value: "7" },
+    ])
+    expect(result.conflicts).toHaveLength(1)
+    expect(result.conflicts[0]).toMatchObject({
+      reason: "amount-out-of-range",
+      positions: [first, second],
+    })
+    expect(result.contributions[0]?.positions).toEqual([cny])
+    expect(result.includedCount).toBe(1)
+    expect(result.coverage).toBe("partial")
+  })
+  it("preserves the full raw ID when forming the authority and quota identity pair", () => {
+    const asset = {
+      kind: "quota",
+      id: "https://wallet.example:credits",
+      label: "Credits",
+      displayScale: 1,
+      displayLabel: "Credits",
+    } as const
+    expect(
+      aggregateBalances(
+        [snapshot([position("10", { asset })])],
+        BALANCE_PURPOSES.Available,
+      ).amounts,
+    ).toEqual([
+      {
+        asset: {
+          ...asset,
+          id: JSON.stringify(["https://wallet.example", asset.id]),
+        },
+        value: "10",
+      },
+    ])
+  })
   it.each([
     {
       name: "legacy observations",
@@ -335,9 +450,18 @@ describe("balance aggregation by confirmed financial meaning", () => {
     expect(result.amounts).toEqual([
       {
         value: "10",
-        asset: { ...asset, id: "https://wallet.example:credits" },
+        asset: {
+          ...asset,
+          id: JSON.stringify(["https://wallet.example", "credits"]),
+        },
       },
-      { value: "20", asset: { ...asset, id: "https://other.example:credits" } },
+      {
+        value: "20",
+        asset: {
+          ...asset,
+          id: JSON.stringify(["https://other.example", "credits"]),
+        },
+      },
     ])
     expect(
       aggregateBalances(

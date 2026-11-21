@@ -144,7 +144,12 @@ export function selectTelemetryBalances(
   const balances = [
     ...canonical.filter(
       (balance) =>
-        !legacy.some((old) => unitKey(old.unit) === unitKey(balance.unit)),
+        !legacy.some((old) => unitKey(old.unit) === unitKey(balance.unit)) ||
+        balance.components?.some(
+          (component) =>
+            component.status === OBSERVATION_STATUSES.Known ||
+            component.status === OBSERVATION_STATUSES.Stale,
+        ),
     ),
     ...legacy,
   ]

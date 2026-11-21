@@ -63,6 +63,64 @@ const quotaUnit = {
 } as const
 const percentUnit = { kind: MEASUREMENT_UNIT_KINDS.Percent } as const
 
+describe("qualified spending intervals", () => {
+  it.each([
+    {
+      name: "short day",
+      window: { ...costEvidence.window, start: observedAt - 3600000 },
+    },
+    {
+      name: "future end",
+      window: { ...costEvidence.window, end: observedAt + 1 },
+    },
+    { name: "missing spending clock", observedAt: undefined },
+  ])("leaves $name runway unavailable", (overrides) => {
+    const balance: ApiCredentialTelemetryBalanceFact = {
+      amount: 30,
+      unit: usdMoney,
+      semantics: "provider-wallet",
+      scope,
+      status: "known",
+      observedAt,
+    }
+    expect(
+      getBalanceRunwayDays(balance, {
+        ...costEvidence,
+        value: 3,
+        unit: usdMoney,
+      }),
+    ).toBe(10)
+    expect(
+      getBalanceRunwayDays(balance, {
+        ...costEvidence,
+        value: 3,
+        unit: usdMoney,
+        ...overrides,
+      }),
+    ).toBeUndefined()
+  })
+  it.each([undefined, observedAt - 1])(
+    "requires balance clock %s to cover the spending interval",
+    (balanceClock) => {
+      const balance: ApiCredentialTelemetryBalanceFact = {
+        amount: 30,
+        unit: usdMoney,
+        semantics: "provider-wallet",
+        scope,
+        status: "known",
+        observedAt: balanceClock,
+      }
+      expect(
+        getBalanceRunwayDays(balance, {
+          ...costEvidence,
+          value: 3,
+          unit: usdMoney,
+        }),
+      ).toBeUndefined()
+    },
+  )
+})
+
 /** Builds a quota window fact with sane defaults for the fields under test. */
 function buildWindow(
   overrides: Partial<ApiCredentialTelemetryQuotaWindowFact> = {},

@@ -79,9 +79,7 @@ function sumPositions(positions: BalancePosition[]) {
     p.asset.kind === ASSET_KINDS.Quota
       ? {
           ...p.asset,
-          id: p.asset.id.startsWith(`${p.scope.authority}:`)
-            ? p.asset.id
-            : `${p.scope.authority}:${p.asset.id}`,
+          id: JSON.stringify([p.scope.authority, p.asset.id]),
         }
       : p.asset
   const groups = new Map<string, BalancePosition[]>()
@@ -126,20 +124,12 @@ function sumPositions(positions: BalancePosition[]) {
 /** A projection chooses one product purpose without erasing upstream facts. */
 function projectBalance(
   snapshot: BalanceSnapshot,
-  purpose: BalancePurpose,
+  purpose: (typeof BALANCE_PURPOSES)["Prepaid" | "Available"],
   asOf = Date.now(),
   includeLastKnown = false,
 ) {
   const excluded: BalanceExclusion[] = []
   const conflicts: BalanceConflict[] = []
-  if (purpose === BALANCE_PURPOSES.Card || purpose === BALANCE_PURPOSES.History)
-    return {
-      positions: snapshot.positions,
-      amounts: [] as Amount[],
-      excluded,
-      conflicts,
-      coverage: snapshot.coverage,
-    }
   const candidates = snapshot.positions.filter((position) => {
     let reason: BalanceExclusion["reason"] | undefined
     const scopes = [

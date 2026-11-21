@@ -18,6 +18,9 @@ it.each([0.5, 101, -101, NaN])(
 )
 
 it("parses small and large serialized amounts without lossy Number conversion", () => {
+  expect(scaleDecimal("0.125", 3)).toBe("125")
+  expect(scaleDecimal("1.25", 4)).toBe("12500")
+  expect(scaleDecimal("12500", -4)).toBe("1.25")
   expect(parseDecimal("1e-9")).toBe("0.000000001")
   expect(parseDecimal("-0.000e2")).toBe("0")
   expect(parseDecimal("9007199254740993")).toBe("9007199254740993")
