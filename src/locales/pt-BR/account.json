@@ -162,11 +162,15 @@
     "income": "Renda de hoje"
   },
   "financial": {
+    "availableTotal": "Saldo",
     "derived": "Derivado dos campos informados",
     "expires": "Expira: {{date}}",
     "lastKnown": "Último valor conhecido",
     "manual": "Saldo manual",
     "olderRecord": "Registrado por uma versão anterior",
+    "potentialDuplicates_one": "account:financial.potentialDuplicates",
+    "potentialDuplicates_many": "account:financial.potentialDuplicates",
+    "potentialDuplicates_other": "account:financial.potentialDuplicates",
     "reported": "Informado pelo site",
     "scopeUnknown": "Escopo de uso não verificado",
     "technicalDetails": "Detalhes técnicos (depuração)",

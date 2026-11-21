@@ -1,3 +1,7 @@
+import {
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import { coerceApiCredentialTelemetryConfig } from "~/services/apiCredentialProfiles/storage/configCodec"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import {
@@ -32,10 +36,8 @@ import {
 export async function refreshApiCredentialProfileTelemetry(
   profileId: string,
 ): Promise<ApiCredentialTelemetrySnapshot> {
-  const profile = await apiCredentialProfilesStorage.getProfileById(profileId)
-  if (!profile) {
-    throw new Error("Profile not found.")
-  }
+  const profile =
+    await apiCredentialProfilesStorage.beginTelemetryRefresh(profileId)
 
   const config = coerceApiCredentialTelemetryConfig(profile.telemetryConfig, {
     baseUrl: profile.baseUrl,
@@ -47,7 +49,6 @@ export async function refreshApiCredentialProfileTelemetry(
   ])
   const modes = resolveTelemetryModes(profile, config)
   const attempts: ApiCredentialTelemetryAttempt[] = []
-  const now = Date.now()
   const models =
     modes.length > 0 ? await queryModels(profile, attempts) : undefined
   let usageResult: AdapterSuccess | null = null
@@ -90,16 +91,26 @@ export async function refreshApiCredentialProfileTelemetry(
   }
 
   const snapshot = buildTelemetrySnapshot({
-    now,
+    now: Date.now(),
     attempts,
     models,
     usageResult,
+    context: {
+      profileId: profile.id,
+      baseUrl: usageResult?.reportingAuthority ?? profile.baseUrl,
+      observedAt: Date.now(),
+    },
   })
 
-  await apiCredentialProfilesStorage.updateTelemetrySnapshot(
+  const accepted = await apiCredentialProfilesStorage.updateTelemetrySnapshot(
     profile.id,
     snapshot,
     profile,
+    usageResult?.data.balanceCoverage === FINANCIAL_COVERAGE.Complete
+      ? FINANCIAL_ENUMERATION.Complete
+      : FINANCIAL_ENUMERATION.Partial,
   )
-  return snapshot
+  if (!accepted.telemetrySnapshot)
+    throw new Error("Telemetry context changed before acceptance")
+  return accepted.telemetrySnapshot
 }

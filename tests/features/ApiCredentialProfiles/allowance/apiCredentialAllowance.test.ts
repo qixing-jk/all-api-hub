@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import {
   API_CREDENTIAL_ALLOWANCE_LEVELS,
   buildAllowanceOverview,
@@ -12,6 +13,14 @@ import {
   getPrimaryAllowanceSignal,
   getQuotaAllowanceLevel,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialAllowance"
+import {
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { SiteHealthStatus } from "~/types"
 import type {
   ApiCredentialProfile,
@@ -20,13 +29,39 @@ import type {
   ApiCredentialTelemetryQuotaWindowFact,
 } from "~/types/apiCredentialProfiles"
 
-const usdMoney = { kind: "money", currency: "USD", decimalPlaces: 2 } as const
+const observedAt = 172800000
+const scope = {
+  subject: { kind: FINANCIAL_SUBJECT_KINDS.Credential, profileId: "test" },
+  authority: "https://test.example",
+  projects: { kind: SCOPE_SELECTION_KINDS.All },
+  keys: { kind: SCOPE_SELECTION_KINDS.All },
+  models: { kind: SCOPE_SELECTION_KINDS.All },
+  groups: { kind: SCOPE_SELECTION_KINDS.All },
+} as const
+const costEvidence = {
+  scope,
+  source: {
+    adapter: "test",
+    operation: "daily-billing",
+    contractVersion: "1",
+    kind: EVIDENCE_KINDS.Reported,
+  },
+  observedAt,
+  window: { start: 86400000, end: 172800000, timeZone: "UTC" },
+  coverage: FINANCIAL_COVERAGE.Complete,
+  status: OBSERVATION_STATUSES.Known,
+} as const
+const usdMoney = {
+  kind: MEASUREMENT_UNIT_KINDS.Money,
+  currency: CURRENCIES.USD,
+  decimalPlaces: 2,
+} as const
 const quotaUnit = {
-  kind: "quota",
+  kind: MEASUREMENT_UNIT_KINDS.Quota,
   code: "provider-quota",
   label: "Provider quota",
 } as const
-const percentUnit = { kind: "percent" } as const
+const percentUnit = { kind: MEASUREMENT_UNIT_KINDS.Percent } as const
 
 /** Builds a quota window fact with sane defaults for the fields under test. */
 function buildWindow(
@@ -46,6 +81,9 @@ function buildBalance(
 ): ApiCredentialTelemetryBalanceFact {
   return {
     amount: 30,
+    scope,
+    status: OBSERVATION_STATUSES.Known,
+    observedAt,
     unit: usdMoney,
     semantics: "cash",
     ...overrides,
@@ -97,6 +135,7 @@ describe("getBalanceRunwayDays", () => {
       expect(
         getBalanceRunwayDays(buildBalance({ amount }), {
           value: 3,
+          ...costEvidence,
           unit: usdMoney,
         }),
       ).toBe(0)
@@ -106,6 +145,7 @@ describe("getBalanceRunwayDays", () => {
     expect(
       getBalanceRunwayDays(buildBalance({ amount: 30 }), {
         value: 3,
+        ...costEvidence,
         unit: usdMoney,
       }),
     ).toBe(10)
@@ -114,11 +154,16 @@ describe("getBalanceRunwayDays", () => {
   it("refuses to divide balances and spend in different units", () => {
     const quotaBalance = buildBalance({ amount: 30, unit: quotaUnit })
     expect(
-      getBalanceRunwayDays(quotaBalance, { value: 3, unit: usdMoney }),
+      getBalanceRunwayDays(quotaBalance, {
+        value: 3,
+        ...costEvidence,
+        unit: usdMoney,
+      }),
     ).toBeUndefined()
     expect(
       getBalanceRunwayDays(buildBalance({ amount: 30, unit: usdMoney }), {
         value: 3,
+        ...costEvidence,
         unit: quotaUnit,
       }),
     ).toBeUndefined()
@@ -128,24 +173,28 @@ describe("getBalanceRunwayDays", () => {
     expect(
       getBalanceRunwayDays(buildBalance({ unit: quotaUnit }), {
         value: 3,
+        ...costEvidence,
         unit: quotaUnit,
       }),
     ).toBe(10)
     expect(
       getBalanceRunwayDays(buildBalance({ unit: quotaUnit }), {
         value: 3,
+        ...costEvidence,
         unit: { ...quotaUnit, code: "other" },
       }),
     ).toBeUndefined()
     expect(
       getBalanceRunwayDays(buildBalance(), {
         value: 3,
+        ...costEvidence,
         unit: { ...usdMoney, currency: "CNY" },
       }),
     ).toBeUndefined()
     expect(
       getBalanceRunwayDays(buildBalance({ amount: NaN }), {
         value: 3,
+        ...costEvidence,
         unit: usdMoney,
       }),
     ).toBeUndefined()
@@ -153,7 +202,11 @@ describe("getBalanceRunwayDays", () => {
 
   it("refuses to estimate a runway without a positive spend", () => {
     expect(
-      getBalanceRunwayDays(buildBalance(), { value: 0, unit: usdMoney }),
+      getBalanceRunwayDays(buildBalance(), {
+        value: 0,
+        ...costEvidence,
+        unit: usdMoney,
+      }),
     ).toBeUndefined()
     expect(getBalanceRunwayDays(buildBalance(), undefined)).toBeUndefined()
   })
@@ -239,7 +292,7 @@ describe("buildAllowanceSignals", () => {
       buildFacts({
         quota: { windows: [buildWindow({ remainingPercent: 90 })] },
         balances: [buildBalance({ amount: 5 })],
-        usage: { todayCost: { value: 2, unit: usdMoney } },
+        usage: { todayCost: { value: 2, ...costEvidence, unit: usdMoney } },
       }),
     )
 
@@ -255,7 +308,7 @@ describe("buildAllowanceSignals", () => {
       buildFacts({
         quota: { windows: [buildWindow({ remainingPercent: 40 })] },
         balances: [buildBalance({ amount: 300 })],
-        usage: { todayCost: { value: 1, unit: usdMoney } },
+        usage: { todayCost: { value: 1, ...costEvidence, unit: usdMoney } },
       }),
     )
 
@@ -435,7 +488,7 @@ describe("buildAllowanceOverview", () => {
       }),
       buildProfile("b", "Beta", {
         balances: [buildBalance({ amount: 300 })],
-        usage: { todayCost: { value: 1, unit: usdMoney } },
+        usage: { todayCost: { value: 1, ...costEvidence, unit: usdMoney } },
       }),
       buildProfile("c", "Gamma"),
     ])

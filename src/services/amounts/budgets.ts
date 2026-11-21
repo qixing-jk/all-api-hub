@@ -8,6 +8,7 @@ import {
   observeAmount,
   observedAmountSchema,
   observedValueSchema,
+  staleObservation,
   usageScopeSchema,
   type EvidenceRef,
   type Observed,
@@ -17,8 +18,10 @@ import { parseDecimal } from "~/services/amounts/decimal"
 import {
   BUDGET_ENFORCEMENT,
   BUDGET_LIMIT_STATES,
+  BUDGET_OBSERVATION_FIELDS,
   BUDGET_PERIODS,
   BUDGET_WINDOW_KINDS,
+  FINANCIAL_OBSERVATION_REASONS,
   OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
 
@@ -178,4 +181,27 @@ export function budgetConstraint(input: {
     enforcement: input.enforcement ?? BUDGET_ENFORCEMENT.Unknown,
     window: input.window ?? { kind: BUDGET_WINDOW_KINDS.Unknown },
   })
+}
+
+/** Retain the original observation clock and values when their source cannot refresh. */
+export function staleBudgetConstraint(
+  budget: BudgetConstraint,
+  reason: string = FINANCIAL_OBSERVATION_REASONS.RefreshUnavailable,
+): BudgetConstraint {
+  const retained: BudgetConstraint = {
+    ...budget,
+    stateObservation:
+      budget.stateObservation.status === OBSERVATION_STATUSES.Known
+        ? {
+            ...budget.stateObservation,
+            status: OBSERVATION_STATUSES.Stale,
+            reason,
+          }
+        : budget.stateObservation,
+  }
+  for (const field of BUDGET_OBSERVATION_FIELDS)
+    Object.assign(retained, {
+      [field]: staleObservation<string | boolean>(budget[field], reason),
+    })
+  return retained
 }

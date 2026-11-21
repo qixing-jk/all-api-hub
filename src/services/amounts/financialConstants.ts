@@ -5,6 +5,15 @@ export const ASSET_KINDS = {
   Unknown: "unknown",
 } as const
 
+export const MEASUREMENT_UNIT_KINDS = {
+  Money: "money",
+  Crypto: "crypto",
+  Quota: "quota",
+  Count: "count",
+  Percent: "percent",
+  Unknown: "unknown",
+} as const
+
 export const AWARD_TARGETS = {
   Wallet: "wallet",
   Entitlement: "entitlement",
@@ -42,6 +51,12 @@ export const EVIDENCE_KINDS = {
   Derived: "derived",
   Manual: "manual",
   Legacy: "legacy",
+} as const
+
+export const FINANCIAL_COVERAGE = {
+  Complete: "complete",
+  Partial: "partial",
+  Unknown: "unknown",
 } as const
 
 export const SCOPE_SELECTION_KINDS = {
@@ -118,6 +133,13 @@ export const BALANCE_VALIDITY_KINDS = {
   Unknown: "unknown",
 } as const
 
+export const FINANCIAL_ENUMERATION = {
+  Complete: "complete",
+  Partial: "partial",
+  Unavailable: "unavailable",
+  NotRequested: "not-requested",
+} as const
+
 export const BUDGET_LIMIT_STATES = {
   Finite: "finite",
   Unlimited: "unlimited",
@@ -154,3 +176,11 @@ export const BUDGET_AMOUNT_FIELDS = {
   Reserved: "reserved",
   ByokUsed: "byokUsed",
 } as const
+
+/** Fields whose value and observation clock survive a failed budget refresh. */
+export const BUDGET_OBSERVATION_FIELDS = [
+  ...Object.values(BUDGET_AMOUNT_FIELDS),
+  "enabled",
+  "includesByok",
+  "usedIncludesByok",
+] as const

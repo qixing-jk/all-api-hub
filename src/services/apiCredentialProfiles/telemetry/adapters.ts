@@ -1,3 +1,5 @@
+import { parseDecimal } from "~/services/amounts/decimal"
+import { EVIDENCE_KINDS } from "~/services/amounts/financialConstants"
 import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/modelCatalog"
 import {
   attemptFromError,
@@ -14,7 +16,6 @@ import {
   isRecord,
   mapCustomJson,
   mapTodayTokenUsage,
-  nonNegativeQuotaToUsd,
   normalizeTimestamp,
   parseDeepSeekBalance,
   parseGlmQuota,
@@ -25,6 +26,7 @@ import {
   readNumber,
 } from "~/services/apiCredentialProfiles/telemetry/parsers"
 import { fetchTelemetryJson } from "~/services/apiCredentialProfiles/telemetry/transport"
+import { newApiTokenUsageAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import { API_AUTH_TOKEN_MODES } from "~/services/apiTransport/type"
 import type {
   ApiCredentialProfile,
@@ -42,6 +44,8 @@ import { formatUtcDayKey } from "~/utils/core/dayKey"
 
 export type AdapterSuccess = {
   source: ApiCredentialTelemetrySource
+  /** Actual financial reporting origin when it differs from the credential gateway. */
+  reportingAuthority?: string
   endpoint: string
   data: TelemetryPatch
 }
@@ -80,12 +84,12 @@ async function queryOpenAiBilling(
     requestHeaders: profile.requestHeaders,
   })
   const subscriptionData = dataLike(subscription.json)
-  const directBalance = readNumber(subscriptionData.balance)
+  const directBalance = parseDecimal(subscriptionData.balance)
   if (directBalance !== undefined) {
     return {
       source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
       endpoint: subscription.endpoint,
-      data: { balanceUsd: directBalance },
+      data: parseOpenAiBillingUsage(subscription.json, {}),
     }
   }
 
@@ -227,32 +231,63 @@ async function queryNewApiTokenUsage(
     requestHeaders: profile.requestHeaders,
   })
   const data = dataLike(result.json)
-  const totalGranted = readNumber(data.total_granted)
-  const totalUsed = readNumber(data.total_used)
-  const totalAvailable = readNumber(data.total_available)
+  if (
+    ![
+      "total_granted",
+      "total_used",
+      "total_available",
+      "unlimited_quota",
+      "expires_at",
+    ].some((field) => Object.hasOwn(data, field))
+  )
+    return {
+      source: API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage,
+      endpoint: result.endpoint,
+      data: {},
+    }
+  const totalGranted = data.total_granted
+  const totalUsed = data.total_used
+  const totalAvailable = data.total_available
+  const denomination = newApiTokenUsageAmount(undefined, profile.baseUrl)
+  const monetary = (value: unknown) =>
+    value == null
+      ? value
+      : (newApiTokenUsageAmount(value, profile.baseUrl).value ?? NaN)
+  const amountInputs = Object.fromEntries(
+    Object.entries({
+      total_granted: totalGranted,
+      total_used: totalUsed,
+      total_available: totalAvailable,
+    }).flatMap(([key, value]) => {
+      const raw = parseDecimal(value)
+      return raw === undefined ? [] : [[key, raw]]
+    }),
+  )
   const unlimitedQuota =
     data.unlimited_quota === true ||
-    (totalGranted !== undefined && totalGranted < 0)
-  const balanceUsd = unlimitedQuota
-    ? undefined
-    : nonNegativeQuotaToUsd(totalAvailable)
-  const totalUsedUsd = nonNegativeQuotaToUsd(totalUsed)
-  const totalGrantedUsd = unlimitedQuota
-    ? undefined
-    : nonNegativeQuotaToUsd(totalGranted)
-  const totalAvailableUsd = unlimitedQuota
-    ? undefined
-    : nonNegativeQuotaToUsd(totalAvailable)
-
+    (totalGranted !== undefined && Number(totalGranted) < 0)
   return {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage,
     endpoint: result.endpoint,
     data: {
+      budget: {
+        asset: denomination.asset,
+        source: {
+          adapter: API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage,
+          operation: API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage,
+          contractVersion: denomination.contractVersion,
+          kind: EVIDENCE_KINDS.Reported,
+          amountInputs,
+        },
+        ...(unlimitedQuota
+          ? { unlimited: true }
+          : {
+              limit: monetary(totalGranted),
+              remaining: monetary(totalAvailable),
+            }),
+        used: monetary(totalUsed),
+      },
       ...(unlimitedQuota ? { unlimitedQuota: true } : {}),
-      ...(balanceUsd !== undefined ? { balanceUsd } : {}),
-      ...(totalUsedUsd !== undefined ? { totalUsedUsd } : {}),
-      ...(totalGrantedUsd !== undefined ? { totalGrantedUsd } : {}),
-      ...(totalAvailableUsd !== undefined ? { totalAvailableUsd } : {}),
       ...(normalizeTimestamp(data.expires_at) !== undefined
         ? { expiresAt: normalizeTimestamp(data.expires_at) }
         : {}),
@@ -276,7 +311,7 @@ async function querySub2ApiUsage(
   const usage = isRecord(data.usage) ? data.usage : {}
   const today = isRecord(usage.today) ? usage.today : {}
   const total = isRecord(usage.total) ? usage.total : {}
-  const balance = readNumber(data.balance) ?? readNumber(data.remaining)
+  const balance = parseDecimal(data.balance) ?? parseDecimal(data.remaining)
   const todayPromptTokens = readNumber(today.prompt_tokens)
   const todayCompletionTokens = readNumber(today.completion_tokens)
   const todayTotalTokens =
@@ -292,15 +327,15 @@ async function querySub2ApiUsage(
     endpoint: result.endpoint,
     data: {
       ...(balance !== undefined ? { balanceUsd: balance } : {}),
-      ...(readNumber(today.cost) !== undefined
-        ? { todayCostUsd: readNumber(today.cost) }
+      ...(parseDecimal(today.cost) !== undefined
+        ? { todayCostUsd: parseDecimal(today.cost) }
         : {}),
       ...(readNumber(today.requests) !== undefined
         ? { todayRequests: readNumber(today.requests) }
         : {}),
       ...(todayTokens ? { todayTokens } : {}),
-      ...(readNumber(total.cost) !== undefined
-        ? { totalUsedUsd: readNumber(total.cost) }
+      ...(parseDecimal(total.cost) !== undefined
+        ? { totalUsedUsd: parseDecimal(total.cost) }
         : {}),
     },
   }
@@ -334,8 +369,13 @@ async function queryCustomReadOnlyEndpoint(
 
   return {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
+    reportingAuthority: requestTarget.baseUrl,
     endpoint: result.endpoint,
-    data: mapCustomJson(result.json, config.customEndpoint.jsonPaths),
+    data: mapCustomJson(
+      result.json,
+      config.customEndpoint.jsonPaths,
+      config.customEndpoint.financialMapping,
+    ),
   }
 }
 

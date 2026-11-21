@@ -1,3 +1,14 @@
+import { CURRENCIES } from "~/constants/money"
+import { usageScopeKey } from "~/services/amounts/balance"
+import {
+  BUDGET_LIMIT_STATES,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { selectTelemetryBalances } from "~/services/apiCredentialProfiles/telemetry/facts"
 /**
  * Reduces normalized credential telemetry into a single "how much is left"
  * vocabulary shared by quota windows and monetary balances.
@@ -9,14 +20,24 @@
  * scale instead of rendering them as unrelated facts.
  */
 
-import type {
-  ApiCredentialProfile,
-  ApiCredentialTelemetryAmount,
-  ApiCredentialTelemetryBalanceFact,
-  ApiCredentialTelemetryFacts,
-  ApiCredentialTelemetryQuotaWindowFact,
-  ApiCredentialTelemetryQuotaWindowType,
+import {
+  API_CREDENTIAL_TELEMETRY_SOURCES,
+  type ApiCredentialProfile,
+  type ApiCredentialTelemetryAmount,
+  type ApiCredentialTelemetryBalanceFact,
+  type ApiCredentialTelemetryFacts,
+  type ApiCredentialTelemetryQuotaWindowFact,
+  type ApiCredentialTelemetryQuotaWindowType,
 } from "~/types/apiCredentialProfiles"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
+
+export const ALLOWANCE_COUNTDOWN_LABELS = {
+  DaysHours: "daysHours",
+  HoursMinutes: "hoursMinutes",
+  Minutes: "minutes",
+  Imminent: "imminent",
+  Elapsed: "elapsed",
+} as const
 
 export const API_CREDENTIAL_ALLOWANCE_LEVELS = {
   Critical: "critical",
@@ -50,7 +71,7 @@ export type ApiCredentialQuotaWindowAllowanceSignal = {
   urgency: number
   windowType: ApiCredentialTelemetryQuotaWindowType
   unit: ApiCredentialTelemetryQuotaWindowFact["unit"]
-  remainingPercent: number
+  remainingPercent?: number
   used?: number
   limit?: number
   remaining?: number
@@ -67,11 +88,12 @@ export type ApiCredentialBalanceAllowanceSignal = {
   unit: ApiCredentialTelemetryBalanceFact["unit"]
   semantics: ApiCredentialTelemetryBalanceFact["semantics"]
   runwayDays?: number
+  position?: ApiCredentialTelemetryBalanceFact["position"]
+  budget?: ApiCredentialTelemetryBalanceFact["budget"]
 }
 
 export type ApiCredentialAllowanceSignal =
-  | ApiCredentialQuotaWindowAllowanceSignal
-  | ApiCredentialBalanceAllowanceSignal
+  ApiCredentialQuotaWindowAllowanceSignal | ApiCredentialBalanceAllowanceSignal
 
 export type ApiCredentialAllowanceCountdown = {
   totalMs: number
@@ -124,20 +146,40 @@ function hasComparableUnits(
   left: ApiCredentialTelemetryBalanceFact["unit"],
   right: ApiCredentialTelemetryAmount["unit"],
 ): boolean {
-  if (left.kind === "money" && right.kind === "money") {
+  if (
+    left.kind === MEASUREMENT_UNIT_KINDS.Money &&
+    right.kind === MEASUREMENT_UNIT_KINDS.Money
+  ) {
     return left.currency === right.currency
   }
-  if (left.kind === "quota" && right.kind === "quota") {
+  if (
+    left.kind === MEASUREMENT_UNIT_KINDS.Quota &&
+    right.kind === MEASUREMENT_UNIT_KINDS.Quota
+  ) {
     return left.code === right.code
   }
+  if (
+    left.kind === MEASUREMENT_UNIT_KINDS.Crypto &&
+    right.kind === MEASUREMENT_UNIT_KINDS.Crypto
+  )
+    return left.id === right.id
   return false
+}
+
+/** Last-known percentages remain visible evidence but cannot establish current headroom. */
+export function getQuotaWindowRemainingPercent(
+  window: ApiCredentialTelemetryQuotaWindowFact,
+): number | undefined {
+  return window.status === OBSERVATION_STATUSES.Stale
+    ? undefined
+    : window.remainingPercent
 }
 
 /** Classifies a remaining quota percentage into an actionable level. */
 export function getQuotaAllowanceLevel(
-  remainingPercent: number,
+  remainingPercent: number | undefined,
 ): ApiCredentialAllowanceLevel {
-  if (!Number.isFinite(remainingPercent)) {
+  if (remainingPercent === undefined || !Number.isFinite(remainingPercent)) {
     return API_CREDENTIAL_ALLOWANCE_LEVELS.Unknown
   }
   if (
@@ -166,12 +208,80 @@ export function getBalanceRunwayDays(
   balance: ApiCredentialTelemetryBalanceFact,
   todayCost: ApiCredentialTelemetryAmount | undefined,
 ): number | undefined {
-  if (!todayCost || !Number.isFinite(todayCost.value) || todayCost.value <= 0) {
+  if (
+    !todayCost ||
+    !Number.isFinite(Number(todayCost.value)) ||
+    Number(todayCost.value) <= 0
+  ) {
     return undefined
   }
-  if (!hasComparableUnits(balance.unit, todayCost.unit)) return undefined
-  if (!Number.isFinite(balance.amount)) return undefined
-  return Math.max(0, balance.amount / todayCost.value)
+  if (
+    todayCost.status === OBSERVATION_STATUSES.Stale ||
+    !balance.scope ||
+    !todayCost.scope ||
+    balance.status !== OBSERVATION_STATUSES.Known ||
+    !Number.isFinite(balance.amount) ||
+    usageScopeKey(balance.scope) !== usageScopeKey(todayCost.scope)
+  )
+    return undefined
+  const matchingUnits = hasComparableUnits(balance.unit, todayCost.unit)
+  const balanceSource = balance.position?.amount.source
+  const customSource = API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint
+  const legacyUsd =
+    balance.position?.id === "legacy-balance" &&
+    balanceSource?.kind === EVIDENCE_KINDS.Legacy &&
+    todayCost.source?.kind === EVIDENCE_KINDS.Legacy &&
+    todayCost.unit.kind === MEASUREMENT_UNIT_KINDS.Money &&
+    todayCost.unit.currency === CURRENCIES.USD
+  const now = Date.now()
+  if (
+    !todayCost.window &&
+    todayCost.source?.adapter === customSource &&
+    balanceSource?.adapter === customSource &&
+    balanceSource.operation === todayCost.source.operation &&
+    balance.observedAt !== undefined &&
+    todayCost.observedAt === balance.observedAt &&
+    balance.observedAt <= now &&
+    getDayKeyFromUnixSeconds(balance.observedAt / 1000) ===
+      getDayKeyFromUnixSeconds(now / 1000) &&
+    (legacyUsd ||
+      (matchingUnits &&
+        balance.scope.keys.kind === SCOPE_SELECTION_KINDS.Restricted))
+  )
+    return Math.max(0, balance.amount / Number(todayCost.value))
+
+  if (
+    !matchingUnits ||
+    todayCost.coverage !== FINANCIAL_COVERAGE.Complete ||
+    !todayCost.window ||
+    !todayCost.source ||
+    todayCost.source.kind === EVIDENCE_KINDS.Legacy
+  )
+    return undefined
+  if (
+    [
+      balance.scope.projects,
+      balance.scope.keys,
+      balance.scope.models,
+      balance.scope.groups,
+    ].some((selection) => selection.kind === SCOPE_SELECTION_KINDS.Unknown)
+  )
+    return undefined
+  const duration = todayCost.window.end - todayCost.window.start
+  if (
+    duration < MILLISECONDS_PER_DAY ||
+    !Number.isFinite(duration) ||
+    todayCost.observedAt === undefined ||
+    todayCost.window.end > todayCost.observedAt ||
+    balance.observedAt === undefined ||
+    balance.observedAt < todayCost.window.end
+  )
+    return undefined
+  return Math.max(
+    0,
+    (balance.amount / Number(todayCost.value)) *
+      (duration / MILLISECONDS_PER_DAY),
+  )
 }
 
 /** Classifies a balance runway into an actionable level. */
@@ -197,17 +307,19 @@ function buildQuotaAllowanceSignals(
   windows: ApiCredentialTelemetryQuotaWindowFact[],
 ): ApiCredentialQuotaWindowAllowanceSignal[] {
   return windows.map((window, index) => {
-    const level = getQuotaAllowanceLevel(window.remainingPercent)
+    const remainingPercent = getQuotaWindowRemainingPercent(window)
+    const level = getQuotaAllowanceLevel(remainingPercent)
     return {
       kind: "quota-window",
       id: `quota:${window.type}:${index}`,
       level,
-      urgency: Number.isFinite(window.remainingPercent)
-        ? window.remainingPercent / 100
-        : Number.POSITIVE_INFINITY,
+      urgency:
+        remainingPercent !== undefined && Number.isFinite(remainingPercent)
+          ? remainingPercent / 100
+          : Number.POSITIVE_INFINITY,
       windowType: window.type,
       unit: window.unit,
-      remainingPercent: window.remainingPercent,
+      remainingPercent,
       ...(window.used !== undefined ? { used: window.used } : {}),
       ...(window.limit !== undefined ? { limit: window.limit } : {}),
       ...(window.remaining !== undefined
@@ -227,18 +339,33 @@ function buildBalanceAllowanceSignals(
 ): ApiCredentialBalanceAllowanceSignal[] {
   return balances.map((balance, index) => {
     const runwayDays = getBalanceRunwayDays(balance, todayCost)
+    const budget = balance.budget
+    const budgetPercent =
+      budget?.limitState === BUDGET_LIMIT_STATES.Finite &&
+      budget.stateObservation?.status !== OBSERVATION_STATUSES.Stale &&
+      budget.limit.status === OBSERVATION_STATUSES.Known &&
+      budget.remaining.status === OBSERVATION_STATUSES.Known &&
+      Number(budget.limit.value) > 0
+        ? (Number(budget.remaining.value) / Number(budget.limit.value)) * 100
+        : undefined
     return {
       kind: "balance",
       id: `balance:${index}`,
-      level: getBalanceAllowanceLevel(runwayDays),
+      level: budget
+        ? getQuotaAllowanceLevel(budgetPercent)
+        : getBalanceAllowanceLevel(runwayDays),
       urgency:
-        runwayDays === undefined
-          ? Number.POSITIVE_INFINITY
-          : runwayDays /
-            API_CREDENTIAL_ALLOWANCE_THRESHOLDS.balanceComfortableRunwayDays,
+        budgetPercent !== undefined
+          ? budgetPercent / 100
+          : runwayDays === undefined
+            ? Number.POSITIVE_INFINITY
+            : runwayDays /
+              API_CREDENTIAL_ALLOWANCE_THRESHOLDS.balanceComfortableRunwayDays,
       amount: balance.amount,
       unit: balance.unit,
       semantics: balance.semantics,
+      ...(balance.position ? { position: balance.position } : {}),
+      ...(balance.budget ? { budget: balance.budget } : {}),
       ...(runwayDays !== undefined ? { runwayDays } : {}),
     }
   })
@@ -257,7 +384,7 @@ export function buildAllowanceSignals(
   const signals: ApiCredentialAllowanceSignal[] = [
     ...buildQuotaAllowanceSignals(facts.quota?.windows ?? []),
     ...buildBalanceAllowanceSignals(
-      facts.balances ?? [],
+      selectTelemetryBalances(facts),
       facts.usage?.todayCost,
     ),
   ]
@@ -324,11 +451,7 @@ export function formatRunwayDays(runwayDays: number): number {
 }
 
 export type ApiCredentialAllowanceCountdownDisplayKey =
-  | "daysHours"
-  | "hoursMinutes"
-  | "minutes"
-  | "imminent"
-  | "elapsed"
+  (typeof ALLOWANCE_COUNTDOWN_LABELS)[keyof typeof ALLOWANCE_COUNTDOWN_LABELS]
 
 export type ApiCredentialAllowanceCountdownDisplay = {
   key: ApiCredentialAllowanceCountdownDisplayKey
@@ -342,23 +465,27 @@ export type ApiCredentialAllowanceCountdownDisplay = {
 export function getAllowanceCountdownDisplay(
   countdown: ApiCredentialAllowanceCountdown,
 ): ApiCredentialAllowanceCountdownDisplay {
-  if (countdown.isElapsed) return { key: "elapsed", values: {} }
+  if (countdown.isElapsed)
+    return { key: ALLOWANCE_COUNTDOWN_LABELS.Elapsed, values: {} }
   if (countdown.days >= 1) {
     return {
-      key: "daysHours",
+      key: ALLOWANCE_COUNTDOWN_LABELS.DaysHours,
       values: { days: countdown.days, hours: countdown.hours },
     }
   }
   if (countdown.hours >= 1) {
     return {
-      key: "hoursMinutes",
+      key: ALLOWANCE_COUNTDOWN_LABELS.HoursMinutes,
       values: { hours: countdown.hours, minutes: countdown.minutes },
     }
   }
   if (countdown.minutes >= 1) {
-    return { key: "minutes", values: { minutes: countdown.minutes } }
+    return {
+      key: ALLOWANCE_COUNTDOWN_LABELS.Minutes,
+      values: { minutes: countdown.minutes },
+    }
   }
-  return { key: "imminent", values: {} }
+  return { key: ALLOWANCE_COUNTDOWN_LABELS.Imminent, values: {} }
 }
 
 export type ApiCredentialAllowanceOverview = {

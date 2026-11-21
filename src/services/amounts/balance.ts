@@ -12,10 +12,13 @@ import {
   BALANCE_ROLES,
   BALANCE_VALIDITY_KINDS,
   EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_OBSERVATION_REASONS,
   FINANCIAL_SUBJECT_KINDS,
   OBSERVATION_STATUSES,
   SCOPE_SELECTION_KINDS,
   type ASSET_KINDS,
+  type FINANCIAL_ENUMERATION,
 } from "~/services/amounts/financialConstants"
 
 const decimalSchema = z
@@ -32,6 +35,19 @@ export const evidenceSchema = z.strictObject({
   amountInputs: z.record(z.string().min(1), decimalSchema).optional(),
 })
 export type EvidenceRef = z.infer<typeof evidenceSchema>
+
+/** Collection membership depends on the source contract, not its display or derived operands. */
+export function financialCollectionKey(
+  collection: string,
+  source: EvidenceRef,
+): string {
+  return JSON.stringify([
+    collection,
+    source.adapter,
+    source.operation,
+    source.contractVersion,
+  ])
+}
 export type Observed<T> =
   | {
       status: typeof OBSERVATION_STATUSES.Known
@@ -63,6 +79,16 @@ export function isKnownOrStaleObservation<T extends { status?: string }>(
     observation?.status === OBSERVATION_STATUSES.Known ||
     observation?.status === OBSERVATION_STATUSES.Stale
   )
+}
+
+/** A failed refresh retains the value, provenance and original observation clock. */
+export function staleObservation<T>(
+  observation: Observed<T>,
+  reason: string = FINANCIAL_OBSERVATION_REASONS.RefreshUnavailable,
+): Observed<T> {
+  return observation.status === OBSERVATION_STATUSES.Known
+    ? { ...observation, status: OBSERVATION_STATUSES.Stale, reason }
+    : observation
 }
 
 const selectionSchema = z.discriminatedUnion("kind", [
@@ -229,6 +255,104 @@ export const balancePositionSchema = z
     "Invalid observation window",
   )
 export type BalancePosition = z.infer<typeof balancePositionSchema>
+/** Field/role identity shared by balance and net-change aggregation, independent of the local credential. */
+export function balanceMetricKey(position: BalancePosition): string {
+  return JSON.stringify([
+    position.collectionKey,
+    position.id,
+    position.role,
+    position.amount.source.adapter,
+    position.amount.source.operation,
+    position.amount.source.contractVersion,
+  ])
+}
+/** Field names are local to one authority, wallet, source and collection. */
+export function balancePositionKey(
+  position: BalancePosition,
+  id = position.id,
+): string {
+  const { scope, amount, collectionKey } = position
+  return JSON.stringify([
+    scope.authority,
+    scope.walletId,
+    scope.organizationId,
+    scope.workspaceId,
+    collectionKey,
+    amount.source.adapter,
+    amount.source.operation,
+    amount.source.contractVersion,
+    id,
+  ])
+}
+export const balanceSnapshotSchema = z
+  .strictObject({
+    schemaVersion: z.literal(2),
+    subject: subjectSchema,
+    capturedAt: z.number().finite(),
+    positions: z.array(balancePositionSchema),
+    coverage: z.enum(FINANCIAL_COVERAGE),
+  })
+  .superRefine((snapshot, ctx) => {
+    const positions = new Map(
+      snapshot.positions.map((p) => [balancePositionKey(p), p]),
+    )
+    if (positions.size !== snapshot.positions.length)
+      ctx.addIssue({ code: "custom", message: "Duplicate position IDs" })
+    for (const position of snapshot.positions) {
+      if (
+        JSON.stringify(position.scope.subject) !==
+        JSON.stringify(snapshot.subject)
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Mismatched financial subject",
+        })
+      const seen = new Set([position.id])
+      let parent = position.parentId
+      while (parent) {
+        if (
+          seen.has(parent) ||
+          !positions.has(balancePositionKey(position, parent))
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Invalid balance relationship",
+          })
+          break
+        }
+        seen.add(parent)
+        parent = positions.get(balancePositionKey(position, parent))?.parentId
+      }
+    }
+  })
+export type BalanceSnapshot = z.infer<typeof balanceSnapshotSchema>
+export type BalanceRefreshPart = {
+  collectionKey: string
+  source: EvidenceRef
+  enumeration: (typeof FINANCIAL_ENUMERATION)[keyof typeof FINANCIAL_ENUMERATION]
+  positions: BalancePosition[]
+}
+
+/** Group observed members without inferring whether omitted members were removed. */
+export function balanceSnapshotParts(
+  snapshot: BalanceSnapshot,
+  enumeration: BalanceRefreshPart["enumeration"],
+): BalanceRefreshPart[] {
+  const groups = new Map<string, BalanceRefreshPart>()
+  for (const position of snapshot.positions) {
+    const source = position.amount.source
+    const key = financialCollectionKey(position.collectionKey, source)
+    const group = groups.get(key) ?? {
+      collectionKey: position.collectionKey,
+      source,
+      enumeration,
+      positions: [],
+    }
+    group.positions.push(position)
+    groups.set(key, group)
+  }
+  return [...groups.values()]
+}
 export type Amount = {
   value: string
   asset: Exclude<Asset, { kind: typeof ASSET_KINDS.Unknown }>

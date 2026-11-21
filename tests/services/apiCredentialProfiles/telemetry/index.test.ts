@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -37,6 +38,14 @@ function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json" },
+  })
+}
+
+function knownAmount(value: string) {
+  return expect.objectContaining({
+    status: OBSERVATION_STATUSES.Known,
+    value,
+    observedAt: Date.now(),
   })
 }
 
@@ -98,16 +107,37 @@ describe("api credential profile telemetry", () => {
         health: { status: SiteHealthStatus.Healthy },
         source: "deepSeekBalance",
         facts: expect.objectContaining({
-          balances: [
-            {
-              amount: 12.34,
-              unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
-              semantics: "cash",
-              grantedAmount: 2,
-              toppedUpAmount: 10.34,
-              isAvailable: true,
-            },
-          ],
+          balanceSnapshot: expect.objectContaining({
+            schemaVersion: 2,
+            subject: { kind: "credential", profileId: profile.id },
+            capturedAt: Date.now(),
+            positions: [
+              expect.objectContaining({
+                id: "available:CNY",
+                asset: { kind: "currency", code: "CNY" },
+                amount: knownAmount("12.34"),
+                cashClassification: "unknown",
+                scope: expect.objectContaining({
+                  subject: { kind: "credential", profileId: profile.id },
+                  authority: "https://api.deepseek.com",
+                }),
+              }),
+              expect.objectContaining({
+                parentId: "available:CNY",
+                relation: "component",
+                funding: "granted",
+                cashClassification: "not-cash",
+                amount: knownAmount("2"),
+              }),
+              expect.objectContaining({
+                parentId: "available:CNY",
+                relation: "component",
+                funding: "purchased",
+                cashClassification: "unknown",
+                amount: knownAmount("10.34"),
+              }),
+            ],
+          }),
         }),
       }),
     )
@@ -140,14 +170,11 @@ describe("api credential profile telemetry", () => {
         },
         source: "deepSeekBalance",
         facts: expect.objectContaining({
-          balances: [
-            {
-              amount: 0,
-              unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
-              semantics: "cash",
-              isAvailable: false,
-            },
-          ],
+          balanceSnapshot: expect.objectContaining({
+            schemaVersion: 2,
+            subject: { kind: "credential", profileId: profile.id },
+            positions: [],
+          }),
         }),
       }),
     )
@@ -170,7 +197,7 @@ describe("api credential profile telemetry", () => {
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
     expect(snapshot.source).toBeUndefined()
-    expect(snapshot.facts?.balances).toBeUndefined()
+    expect(snapshot.facts?.balanceSnapshot).toBeUndefined()
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -535,14 +562,16 @@ describe("api credential profile telemetry", () => {
         health: { status: SiteHealthStatus.Healthy },
         source: "kimiQuota",
         facts: expect.objectContaining({
-          balances: [
-            {
-              amount: 3.152507,
-              unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
-              semantics: "provider-wallet",
-              isAvailable: true,
-            },
-          ],
+          balanceSnapshot: expect.objectContaining({
+            subject: { kind: "credential", profileId: profile.id },
+            positions: [
+              expect.objectContaining({
+                asset: { kind: "currency", code: "CNY" },
+                amount: knownAmount("3.152507"),
+                cashClassification: "unknown",
+              }),
+            ],
+          }),
           quota: {
             membershipLevel: "LEVEL_PRO",
             windows: [
@@ -609,16 +638,32 @@ describe("api credential profile telemetry", () => {
         health: { status: SiteHealthStatus.Healthy },
         source: "kimiOpenPlatformBalance",
         facts: expect.objectContaining({
-          balances: [
-            {
-              amount: 49.58894,
-              unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
-              semantics: "provider-wallet",
-              grantedAmount: 46.58893,
-              toppedUpAmount: 3.00001,
-              isAvailable: true,
-            },
-          ],
+          balanceSnapshot: expect.objectContaining({
+            subject: { kind: "credential", profileId: profile.id },
+            positions: expect.arrayContaining([
+              expect.objectContaining({
+                id: "available",
+                asset: { kind: "currency", code: "CNY" },
+                amount: knownAmount("49.58894"),
+                cashClassification: "unknown",
+              }),
+              expect.objectContaining({
+                parentId: "available",
+                relation: "component",
+                funding: "unknown",
+                instrument: "voucher",
+                cashClassification: "not-cash",
+                amount: knownAmount("46.58893"),
+              }),
+              expect.objectContaining({
+                parentId: "available",
+                relation: "component",
+                funding: "unknown",
+                cashClassification: "reported-cash",
+                amount: knownAmount("3.00001"),
+              }),
+            ]),
+          }),
         }),
       }),
     )
@@ -659,16 +704,32 @@ describe("api credential profile telemetry", () => {
 
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
-    expect(snapshot.facts?.balances).toEqual([
-      {
-        amount: 4.25,
-        unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
-        semantics: "provider-wallet",
-        grantedAmount: 1.25,
-        toppedUpAmount: 3,
-        isAvailable: true,
-      },
-    ])
+    expect(snapshot.facts?.balanceSnapshot?.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "available",
+          asset: { kind: "currency", code: "USD" },
+          amount: knownAmount("4.25"),
+          cashClassification: "unknown",
+        }),
+        expect.objectContaining({
+          parentId: "available",
+          relation: "component",
+          funding: "unknown",
+          instrument: "voucher",
+          cashClassification: "not-cash",
+          amount: knownAmount("1.25"),
+        }),
+        expect.objectContaining({
+          parentId: "available",
+          relation: "component",
+          funding: "unknown",
+          cashClassification: "reported-cash",
+          amount: knownAmount("3"),
+        }),
+      ]),
+    )
+    expect(snapshot.facts?.balanceSnapshot?.positions).toHaveLength(3)
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.moonshot.ai/v1/users/me/balance",
       expect.objectContaining({
@@ -702,7 +763,7 @@ describe("api credential profile telemetry", () => {
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
     expect(snapshot.source).toBeUndefined()
-    expect(snapshot.facts?.balances).toBeUndefined()
+    expect(snapshot.facts?.balanceSnapshot).toBeUndefined()
   })
 
   it("keeps every DeepSeek currency balance in provider order", async () => {
@@ -740,14 +801,40 @@ describe("api credential profile telemetry", () => {
 
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
-    expect(snapshot.facts?.balances).toEqual([
+    expect(snapshot.facts?.balanceSnapshot?.positions).toEqual([
       expect.objectContaining({
-        amount: 0,
-        unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
+        id: "available:CNY",
+        amount: knownAmount("0"),
+        asset: { kind: "currency", code: "CNY" },
       }),
       expect.objectContaining({
-        amount: 10.5,
-        unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+        parentId: "available:CNY",
+        relation: "component",
+        funding: "granted",
+        amount: knownAmount("0"),
+      }),
+      expect.objectContaining({
+        parentId: "available:CNY",
+        relation: "component",
+        funding: "purchased",
+        amount: knownAmount("0"),
+      }),
+      expect.objectContaining({
+        id: "available:USD",
+        amount: knownAmount("10.5"),
+        asset: { kind: "currency", code: "USD" },
+      }),
+      expect.objectContaining({
+        parentId: "available:USD",
+        relation: "component",
+        funding: "granted",
+        amount: knownAmount("1.5"),
+      }),
+      expect.objectContaining({
+        parentId: "available:USD",
+        relation: "component",
+        funding: "purchased",
+        amount: knownAmount("9"),
       }),
     ])
   })
@@ -792,10 +879,24 @@ describe("api credential profile telemetry", () => {
         source: "newApiTokenUsage",
         facts: expect.objectContaining({
           models: { count: 2, preview: ["gpt-4o", "o3"] },
+          budgets: [
+            expect.objectContaining({
+              asset: {
+                kind: "currency",
+                code: "USD",
+              },
+              scope: expect.objectContaining({
+                authority: "https://newapi.example.com",
+                subject: { kind: "credential", profileId: profile.id },
+                keys: { kind: "restricted", ids: [profile.id] },
+              }),
+              limitState: "finite",
+              limit: knownAmount("10"),
+              used: knownAmount("2.5"),
+              remaining: knownAmount("7.5"),
+            }),
+          ],
           usage: {
-            totalUsed: expect.objectContaining({ value: 2.5 }),
-            totalGranted: expect.objectContaining({ value: 10 }),
-            totalAvailable: expect.objectContaining({ value: 7.5 }),
             expiresAt: 1776556800000,
           },
         }),
@@ -808,9 +909,13 @@ describe("api credential profile telemetry", () => {
       expect.objectContaining({
         telemetrySnapshot: expect.objectContaining({
           facts: expect.objectContaining({
-            usage: expect.objectContaining({
-              totalAvailable: expect.objectContaining({ value: 7.5 }),
-            }),
+            budgets: [
+              expect.objectContaining({
+                remaining: knownAmount("7.5"),
+                used: knownAmount("2.5"),
+                limit: knownAmount("10"),
+              }),
+            ],
           }),
         }),
       }),
@@ -852,15 +957,28 @@ describe("api credential profile telemetry", () => {
         health: { status: SiteHealthStatus.Healthy },
         source: "newApiTokenUsage",
         facts: expect.objectContaining({
+          budgets: [
+            expect.objectContaining({
+              asset: expect.objectContaining({
+                kind: "currency",
+                code: "USD",
+              }),
+              limitState: "unlimited",
+              limit: expect.objectContaining({ status: "unknown" }),
+              used: knownAmount("1.88131"),
+              remaining: expect.objectContaining({ status: "unknown" }),
+            }),
+          ],
           usage: {
             unlimited: true,
-            totalUsed: expect.objectContaining({ value: 1.88131 }),
           },
         }),
       }),
     )
     expect(snapshot.facts?.usage?.totalGranted).toBeUndefined()
     expect(snapshot.facts?.usage?.totalAvailable).toBeUndefined()
+    expect(snapshot.facts?.budgets?.[0]?.limit).not.toHaveProperty("value")
+    expect(snapshot.facts?.budgets?.[0]?.remaining).not.toHaveProperty("value")
 
     await expect(
       apiCredentialProfilesStorage.getProfileById(profile.id),
@@ -868,9 +986,15 @@ describe("api credential profile telemetry", () => {
       expect.objectContaining({
         telemetrySnapshot: expect.objectContaining({
           facts: expect.objectContaining({
+            budgets: [
+              expect.objectContaining({
+                limitState: "unlimited",
+                used: knownAmount("1.88131"),
+                remaining: expect.objectContaining({ status: "unknown" }),
+              }),
+            ],
             usage: expect.objectContaining({
               unlimited: true,
-              totalUsed: expect.objectContaining({ value: 1.88131 }),
             }),
           }),
         }),
@@ -878,7 +1002,7 @@ describe("api credential profile telemetry", () => {
     )
   })
 
-  it("clamps overdrawn NewAPI token balance to zero for limited tokens", async () => {
+  it("preserves signed overdrawn NewAPI quota in the credential budget", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "NewAPI Overdrawn",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -907,11 +1031,14 @@ describe("api credential profile telemetry", () => {
       expect.objectContaining({
         source: "newApiTokenUsage",
         facts: expect.objectContaining({
-          usage: {
-            totalAvailable: expect.objectContaining({ value: 0 }),
-            totalGranted: expect.objectContaining({ value: 2 }),
-            totalUsed: expect.objectContaining({ value: 2.5 }),
-          },
+          budgets: [
+            expect.objectContaining({
+              limitState: "finite",
+              remaining: knownAmount("-0.5"),
+              limit: knownAmount("2"),
+              used: knownAmount("2.5"),
+            }),
+          ],
         }),
       }),
     )
@@ -946,11 +1073,26 @@ describe("api credential profile telemetry", () => {
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
     expect(snapshot.source).toBe("sub2apiUsage")
-    expect(snapshot.facts?.balances?.[0]).toEqual(
-      expect.objectContaining({ amount: 12, semantics: "budget-equivalent" }),
-    )
+    expect(snapshot.facts?.balanceSnapshot?.positions).toEqual([
+      expect.objectContaining({
+        asset: { kind: "unknown" },
+        amount: expect.objectContaining({
+          status: "known",
+          value: "12",
+          observedAt: Date.now(),
+          source: expect.objectContaining({
+            kind: "legacy",
+            adapter: "sub2apiUsage",
+          }),
+        }),
+        cashClassification: "unknown",
+      }),
+    ])
     expect(snapshot.facts?.usage?.todayCost).toEqual(
-      expect.objectContaining({ value: 1.25 }),
+      expect.objectContaining({
+        value: "1.25",
+        unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+      }),
     )
     expect(snapshot.facts?.usage?.todayRequests).toEqual(
       expect.objectContaining({ value: 3 }),
@@ -1006,12 +1148,13 @@ describe("api credential profile telemetry", () => {
       }),
     )
     expect(snapshot.source).toBe("newApiTokenUsage")
-    expect(snapshot.facts?.usage?.totalAvailable).toEqual(
-      expect.objectContaining({ value: 7.5 }),
-    )
-    expect(snapshot.facts?.usage?.totalUsed).toEqual(
-      expect.objectContaining({ value: 2.5 }),
-    )
+    expect(snapshot.facts?.budgets).toEqual([
+      expect.objectContaining({
+        remaining: knownAmount("7.5"),
+        used: knownAmount("2.5"),
+        limit: knownAmount("10"),
+      }),
+    ])
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -1054,11 +1197,19 @@ describe("api credential profile telemetry", () => {
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
     expect(snapshot.source).toBe("openaiBilling")
-    expect(snapshot.facts?.balances).toBeUndefined()
+    expect(snapshot.facts?.balanceSnapshot).toBeUndefined()
     expect(snapshot.facts?.usage?.totalGranted).toBeUndefined()
-    expect(snapshot.facts?.usage?.totalUsed).toEqual(
-      expect.objectContaining({ value: 1.88131 }),
-    )
+    expect(snapshot.facts?.budgets).toEqual([
+      expect.objectContaining({
+        asset: { kind: "currency", code: "USD" },
+        limitState: "unknown",
+        used: knownAmount("1.88131"),
+        limit: expect.objectContaining({ status: "unknown" }),
+        remaining: expect.objectContaining({ status: "unknown" }),
+      }),
+    ])
+    expect(snapshot.facts?.budgets?.[0]?.limit).not.toHaveProperty("value")
+    expect(snapshot.facts?.budgets?.[0]?.remaining).not.toHaveProperty("value")
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -1130,7 +1281,11 @@ describe("api credential profile telemetry", () => {
         facts: expect.objectContaining({
           usage: {
             expiresAt: 1776556800000,
-            totalUsed: expect.objectContaining({ value: 8.75 }),
+            totalUsed: expect.objectContaining({
+              value: "8.75",
+              unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+              source: expect.objectContaining({ kind: "legacy" }),
+            }),
           },
         }),
       }),
@@ -1202,9 +1357,8 @@ describe("api credential profile telemetry", () => {
     await refreshApiCredentialProfileTelemetry(profile.id)
 
     const requestHeaders = new Headers(
-      (
-        fetchMock.mock.calls as unknown as Array<[string, RequestInit]>
-      )[0]?.[1]?.headers,
+      (fetchMock.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1]
+        ?.headers,
     )
     expect(requestHeaders.get("x-private")).toBeNull()
     expect(fetchMock).toHaveBeenCalledWith(

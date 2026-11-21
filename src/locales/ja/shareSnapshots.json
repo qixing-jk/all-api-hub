@@ -3,6 +3,10 @@
     "shareAccountSnapshot": "アカウントスナップショットを共有",
     "shareOverviewSnapshot": "概要スナップショットを共有"
   },
+  "financial": {
+    "complete": "全件を網羅",
+    "partial": "一部のみ取得"
+  },
   "labels": {
     "accounts": "アカウント",
     "asOf": "時点",

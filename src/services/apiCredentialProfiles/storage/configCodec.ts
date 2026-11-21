@@ -27,6 +27,7 @@ import {
   DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
 } from "~/types/apiCredentialProfiles"
 import { safeRandomUUID } from "~/utils/core/identifier"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
@@ -46,8 +47,11 @@ export function assertSupportedApiCredentialProfilesConfigVersion(
 
   const version = (raw as Record<string, unknown>).version
   if (
-    typeof version === "number" &&
-    version > API_CREDENTIAL_PROFILES_CONFIG_VERSION
+    version !== undefined &&
+    (typeof version !== "number" ||
+      !Number.isInteger(version) ||
+      version < 1 ||
+      version > API_CREDENTIAL_PROFILES_CONFIG_VERSION)
   ) {
     throw new Error(
       `Unsupported API credential profiles config version: ${version}`,
@@ -65,6 +69,13 @@ export function clonePersistedValue<T>(value: T): T {
 
 export const cloneConfig = (config: ApiCredentialProfilesConfig) =>
   clonePersistedValue(config)
+
+/** A corrupt admission counter must never restart at an earlier generation. */
+function coerceTelemetryRefreshGeneration(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
+    throw new Error("Invalid telemetry refresh generation")
+  return value
+}
 
 /**
  * Normalizes the tag ID list.
@@ -87,22 +98,10 @@ export function normalizeTagIdList(input: unknown): string[] {
 }
 
 /**
- * Coerces a numeric-like value into a finite number.
- */
-function coerceFiniteNumber(raw: unknown): number | undefined {
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw
-  if (typeof raw === "string" && raw.trim()) {
-    const parsed = Number(raw)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return undefined
-}
-
-/**
  * Coerces an optional user-maintained expiration timestamp.
  */
 export function coerceOptionalTimestamp(raw: unknown): number | undefined {
-  const value = coerceFiniteNumber(raw)
+  const value = toOptionalFiniteNumber(raw)
   if (value === undefined || value <= 0) return undefined
   return Math.round(value)
 }
@@ -367,6 +366,16 @@ export function coerceApiCredentialProfilesConfigWithRemap(
   config: ApiCredentialProfilesConfig
   profileIdRemap: Map<string, string>
 } {
+  assertSupportedApiCredentialProfilesConfigVersion(raw)
+  if (
+    raw !== undefined &&
+    (!raw ||
+      typeof raw !== "object" ||
+      Array.isArray(raw) ||
+      !Array.isArray((raw as Record<string, unknown>).profiles))
+  ) {
+    throw new Error("Invalid API credential profiles config")
+  }
   const now = typeof options?.now === "number" ? options.now : Date.now()
   const obj =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
@@ -429,6 +438,13 @@ export function coerceApiCredentialProfilesConfigWithRemap(
         { baseUrl },
       ),
       telemetrySnapshot: coerceTelemetrySnapshot(candidate.telemetrySnapshot),
+      ...(candidate.telemetryRefreshGeneration !== undefined
+        ? {
+            telemetryRefreshGeneration: coerceTelemetryRefreshGeneration(
+              candidate.telemetryRefreshGeneration,
+            ),
+          }
+        : {}),
       createdAt,
       updatedAt,
     })

@@ -1,6 +1,9 @@
 import { z } from "zod"
 
-import { ASSET_KINDS } from "~/services/amounts/financialConstants"
+import {
+  ASSET_KINDS,
+  type MEASUREMENT_UNIT_KINDS,
+} from "~/services/amounts/financialConstants"
 
 /** Provider-scoped assets never become interchangeable through their labels. */
 export const quotaAssetSchema = z.strictObject({
@@ -10,6 +13,18 @@ export const quotaAssetSchema = z.strictObject({
   displayLabel: z.string().trim().min(1),
 })
 export type QuotaAsset = z.infer<typeof quotaAssetSchema>
+
+/** Money, quota and usage measures share identity, not financial eligibility. */
+export type MeasurementUnit =
+  | {
+      kind: typeof MEASUREMENT_UNIT_KINDS.Money
+      currency: string
+      decimalPlaces: number
+    }
+  | { kind: typeof MEASUREMENT_UNIT_KINDS.Crypto; id: "XNO" }
+  | { kind: typeof MEASUREMENT_UNIT_KINDS.Quota; code: string; label: string }
+  | { kind: typeof MEASUREMENT_UNIT_KINDS.Count; code: string }
+  | { kind: typeof MEASUREMENT_UNIT_KINDS.Percent }
 
 export const assetSchema = z.discriminatedUnion("kind", [
   z.strictObject({

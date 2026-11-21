@@ -88,6 +88,34 @@ export function addDecimal(left: string, right: string): string {
   return combineDecimal(left, right, 1n)
 }
 
+/** Sum additions and subtractions exactly, applying the output bound only to the final result. */
+export function sumDecimals(
+  values: readonly string[],
+  subtrahends: readonly string[] = [],
+): string {
+  let integer = 0n,
+    scale = 0
+  for (const [terms, sign] of [
+    [values, 1n],
+    [subtrahends, -1n],
+  ] as const) {
+    for (const value of terms) {
+      const next = parts(value)
+      const nextScale = Math.max(scale, next.scale)
+      integer =
+        integer * 10n ** BigInt(nextScale - scale) +
+        sign * next.integer * 10n ** BigInt(nextScale - next.scale)
+      scale = nextScale
+    }
+  }
+  return fromParts(integer, scale)
+}
+
+/** Subtracts directly in the integer domain, preserving signed results. */
+export function subtractDecimal(left: string, right: string): string {
+  return combineDecimal(left, right, -1n)
+}
+
 /** Multiplies canonical decimals exactly before any declared settlement rounding. */
 export function multiplyDecimal(left: string, right: string): string {
   const a = parts(left),
@@ -113,6 +141,19 @@ export function compareDecimal(left: string, right: string): number {
   const first = a.integer * 10n ** BigInt(scale - a.scale)
   const second = b.integer * 10n ** BigInt(scale - b.scale)
   return first < second ? -1 : first > second ? 1 : 0
+}
+
+/** Positive places multiply by powers of ten; negative places divide exactly. */
+export function scaleDecimal(value: string, places: number): string {
+  if (
+    !Number.isInteger(places) ||
+    Math.abs(places) > DECIMAL_BOUNDS.MaxExponent
+  )
+    throw new Error(DECIMAL_ERRORS.InvalidScale)
+  const { integer, scale } = parts(value)
+  return places <= scale
+    ? fromParts(integer, scale - places)
+    : fromParts(integer * 10n ** BigInt(places - scale), 0)
 }
 
 /** Divide at an explicit display precision, rounding halfway values away from zero. */

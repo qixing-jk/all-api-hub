@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
+import { MEASUREMENT_UNIT_KINDS } from "~/services/amounts/financialConstants"
 import {
   API_CREDENTIAL_PROFILE_CAPTURE_STATUSES,
   API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES,
@@ -321,7 +323,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       const seen = await apiCredentialProfilesStorage.importConfig({
         profiles: [
           {
-            id: "original",
+            id: CURRENCY_DISPLAY_MODES.Original,
             name: "Original",
             apiType: API_TYPES.OPENAI_COMPATIBLE,
             baseUrl: "https://original.example.com",
@@ -490,7 +492,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
   it("coerces malformed rows with generated ids, fallback timestamps, and trimmed notes", () => {
     const coerced = coerceApiCredentialProfilesConfig(
       {
-        version: "bad",
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
         lastUpdated: 0,
         profiles: [
           null,
@@ -659,7 +661,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
               balanceUsd: "12.5",
               // These transient v6-development fields were never released and
               // must not be resurrected by the published v5 migration.
-              balance: { amount: 999, currency: "USD" },
+              balance: { amount: 999, currency: CURRENCIES.USD },
               quota: { windows: [{ type: "weekly", remaining: 999 }] },
               todayTokens: { upload: "100", download: 50 },
               models: { count: 2, preview: ["gpt-4o", "", 1] },
@@ -783,7 +785,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
                   windows: [
                     {
                       type: "weekly",
-                      unit: { kind: "percent" },
+                      unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
                       remainingPercent: 101,
                     },
                   ],
@@ -1490,7 +1492,11 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         balances: [
           {
             amount: 8,
-            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            unit: {
+              kind: MEASUREMENT_UNIT_KINDS.Money,
+              currency: CURRENCIES.USD,
+              decimalPlaces: 2,
+            },
             semantics: "cash",
           },
         ],
@@ -1554,7 +1560,11 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         balances: [
           {
             amount: 8,
-            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            unit: {
+              kind: MEASUREMENT_UNIT_KINDS.Money,
+              currency: CURRENCIES.USD,
+              decimalPlaces: 2,
+            },
             semantics: "cash",
           },
         ],

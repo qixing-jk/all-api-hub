@@ -1,6 +1,31 @@
+import { CURRENCIES } from "~/constants/money"
 import type { AccountRuntimeKeyLocator } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { Asset, MeasurementUnit } from "~/services/amounts/assets"
+import type {
+  BalancePosition,
+  BalanceSnapshot,
+  EvidenceRef,
+  UsageScope,
+} from "~/services/amounts/balance"
+import type { BudgetConstraint } from "~/services/amounts/budgets"
+import {
+  MEASUREMENT_UNIT_KINDS,
+  type ASSET_KINDS,
+  type FINANCIAL_COVERAGE,
+  type OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { HealthStatus } from "~/types"
+
+export const TELEMETRY_FINANCIAL_ROLES = {
+  Available: "available",
+  BudgetRemaining: "budget-remaining",
+} as const
+
+export const TELEMETRY_FINANCIAL_SCOPES = {
+  Credential: "credential",
+  Unknown: "unknown",
+} as const
 
 /**
  * Current schema version for the API credential profiles storage payload.
@@ -87,6 +112,12 @@ export type ApiCredentialTelemetryJsonPathMap = {
   expiresAt?: string
 }
 
+export type ApiCredentialTelemetryFinancialMapping = {
+  asset: Exclude<Asset, { kind: typeof ASSET_KINDS.Unknown }>
+  role: (typeof TELEMETRY_FINANCIAL_ROLES)[keyof typeof TELEMETRY_FINANCIAL_ROLES]
+  scope: (typeof TELEMETRY_FINANCIAL_SCOPES)[keyof typeof TELEMETRY_FINANCIAL_SCOPES]
+}
+
 export type ApiCredentialTelemetryCustomEndpoint = {
   /**
    * Root-relative path or absolute HTTP(S) URL for a read-only endpoint.
@@ -99,6 +130,7 @@ export type ApiCredentialTelemetryCustomEndpoint = {
    */
   bearerToken?: string
   jsonPaths: ApiCredentialTelemetryJsonPathMap
+  financialMapping?: ApiCredentialTelemetryFinancialMapping
 }
 
 export type ApiCredentialTelemetryConfig = {
@@ -137,8 +169,13 @@ export const LEGACY_INSUFFICIENT_BALANCE_REASONS: readonly string[] = [
 
 /** Runtime discriminators for normalized telemetry fact units and semantics. */
 export const API_CREDENTIAL_TELEMETRY_FACT_UNITS = {
-  kinds: { Money: "money", Quota: "quota", Count: "count", Percent: "percent" },
-  currencies: { Usd: "USD" },
+  kinds: {
+    Money: MEASUREMENT_UNIT_KINDS.Money,
+    Quota: MEASUREMENT_UNIT_KINDS.Quota,
+    Count: MEASUREMENT_UNIT_KINDS.Count,
+    Percent: MEASUREMENT_UNIT_KINDS.Percent,
+  },
+  currencies: { Usd: CURRENCIES.USD },
   codes: {
     UsdEquivalent: "usd-equivalent",
     GlmCredit: "glm-credit",
@@ -159,6 +196,12 @@ export const API_CREDENTIAL_TELEMETRY_FACT_UNITS = {
   },
 } as const
 
+/** Transient provider hints retained while adapting earlier quota payloads. */
+export const TELEMETRY_QUOTA_UNIT_HINTS = {
+  Percent: "percent",
+  Provider: "provider",
+} as const
+
 export type ApiCredentialTelemetryAttemptStatus =
   (typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES)[keyof typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES]
 
@@ -171,10 +214,10 @@ export type ApiCredentialTelemetryAttempt = {
 
 /** Provider-native balance facts whose currency is not necessarily USD. */
 export type ApiCredentialTelemetryBalance = {
-  amount: number
+  amount?: number | string
   currency: string
-  grantedAmount?: number
-  toppedUpAmount?: number
+  grantedAmount?: number | string
+  toppedUpAmount?: number | string
   isAvailable?: boolean
 }
 
@@ -192,11 +235,11 @@ export type ApiCredentialTelemetryQuotaWindowType =
 export type ApiCredentialTelemetryQuotaWindow = {
   type: ApiCredentialTelemetryQuotaWindowType
   /** @deprecated Transient provider unit hint used while adapting v5 payloads. */
-  unit?: "percent" | "provider"
-  used: number
-  limit: number
-  remaining: number
-  percentRemaining: number
+  unit?: (typeof TELEMETRY_QUOTA_UNIT_HINTS)[keyof typeof TELEMETRY_QUOTA_UNIT_HINTS]
+  used?: number
+  limit?: number
+  remaining?: number
+  percentRemaining?: number
   resetTime?: number
 }
 
@@ -206,47 +249,56 @@ export type ApiCredentialTelemetryQuota = {
   membershipLevel?: string
 }
 
-export type ApiCredentialTelemetryUnit =
-  | {
-      kind: "money"
-      currency: string
-      decimalPlaces: number
-    }
-  | {
-      kind: "quota"
-      code: string
-      label: string
-    }
-  | {
-      kind: "count"
-      code: string
-    }
-  | {
-      kind: "percent"
-    }
+/** Compatibility export; units are owned by the shared Amount module. */
+export type ApiCredentialTelemetryUnit = MeasurementUnit
 
 export type ApiCredentialTelemetryAmount = {
-  value: number
-  unit: ApiCredentialTelemetryUnit
+  status?: (typeof OBSERVATION_STATUSES)["Known" | "Stale"]
+  value: number | string
+  unit:
+    ApiCredentialTelemetryUnit | { kind: typeof MEASUREMENT_UNIT_KINDS.Unknown }
+  source?: EvidenceRef
+  scope?: UsageScope
+  observedAt?: number
+  window?: { start: number; end: number; timeZone: string }
+  coverage?: (typeof FINANCIAL_COVERAGE)[keyof typeof FINANCIAL_COVERAGE]
 }
 
 export type ApiCredentialTelemetryBalanceFact = {
+  position?: BalancePosition
+  budget?: BudgetConstraint
+  components?: ApiCredentialTelemetryBalanceFact[]
   amount: number
-  unit: Extract<ApiCredentialTelemetryUnit, { kind: "money" | "quota" }>
-  semantics: "cash" | "provider-wallet" | "budget-equivalent" | "legacy"
+  unit:
+    | Extract<
+        ApiCredentialTelemetryUnit,
+        { kind: (typeof MEASUREMENT_UNIT_KINDS)["Money" | "Quota" | "Crypto"] }
+      >
+    | { kind: typeof MEASUREMENT_UNIT_KINDS.Unknown }
+  semantics: (typeof API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics)[keyof typeof API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics]
   grantedAmount?: number
   toppedUpAmount?: number
   isAvailable?: boolean
+  scope?: UsageScope
+  observedAt?: number
+  status?: (typeof OBSERVATION_STATUSES)[keyof typeof OBSERVATION_STATUSES]
 }
 
 export type ApiCredentialTelemetryQuotaWindowFact = {
+  status?: (typeof OBSERVATION_STATUSES)["Known" | "Stale"]
   type: ApiCredentialTelemetryQuotaWindowType
-  unit: Extract<ApiCredentialTelemetryUnit, { kind: "quota" | "percent" }>
+  unit: Extract<
+    ApiCredentialTelemetryUnit,
+    { kind: (typeof MEASUREMENT_UNIT_KINDS)["Quota" | "Percent"] }
+  >
   used?: number
   limit?: number
   remaining?: number
-  remainingPercent: number
+  remainingPercent?: number
   resetTime?: number
+  source?: EvidenceRef
+  scope?: UsageScope
+  observedAt?: number
 }
 
 /** Token counters normalized from provider telemetry payloads. */
@@ -263,7 +315,10 @@ export type ApiCredentialTelemetryUsageFacts = {
     upload?: number
     download?: number
     total?: number
-    unit: Extract<ApiCredentialTelemetryUnit, { kind: "count" }>
+    unit: Extract<
+      ApiCredentialTelemetryUnit,
+      { kind: typeof MEASUREMENT_UNIT_KINDS.Count }
+    >
   }
   totalUsed?: ApiCredentialTelemetryAmount
   totalGranted?: ApiCredentialTelemetryAmount
@@ -273,6 +328,9 @@ export type ApiCredentialTelemetryUsageFacts = {
 }
 
 export type ApiCredentialTelemetryFacts = {
+  balanceSnapshot?: BalanceSnapshot
+  budgets?: BudgetConstraint[]
+  /** Read-only compatibility for snapshots predating canonical financial facts. */
   balances?: ApiCredentialTelemetryBalanceFact[]
   quota?: {
     windows: ApiCredentialTelemetryQuotaWindowFact[]
@@ -288,6 +346,7 @@ export type ApiCredentialModelTelemetry = {
 }
 
 export type ApiCredentialTelemetrySnapshot = {
+  schemaVersion?: 2
   health: HealthStatus
   lastSyncTime: number
   lastSuccessTime?: number
@@ -336,6 +395,8 @@ export type ApiCredentialProfile = {
   expiresAt?: number
   telemetryConfig?: ApiCredentialTelemetryConfig
   telemetrySnapshot?: ApiCredentialTelemetrySnapshot
+  /** Cross-context admission order, independent of request completion time. */
+  telemetryRefreshGeneration?: number
   createdAt: number
   updatedAt: number
 }

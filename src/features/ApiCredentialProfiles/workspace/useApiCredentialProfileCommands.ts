@@ -150,10 +150,12 @@ const analyticsStatusByHealthStatus: Record<
 function hasTelemetryUsageData(snapshot: ApiCredentialTelemetrySnapshot) {
   const facts = snapshot.facts
   return Boolean(
+    facts?.balanceSnapshot ||
+    facts?.budgets?.length ||
     facts?.balances?.length ||
-      facts?.quota?.windows?.length ||
-      facts?.usage ||
-      facts?.models,
+    facts?.quota?.windows?.length ||
+    facts?.usage ||
+    facts?.models,
   )
 }
 
@@ -382,6 +384,18 @@ export function useApiCredentialProfileCommands({
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingProfile) return
     const startedAt = Date.now()
+    const reportDeleteFailure = () => {
+      toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
+      void trackProductAnalyticsActionCompleted({
+        featureId: apiCredentialProfilesFeature,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+        surfaceId: apiCredentialProfilesRefreshSurface,
+        entrypoint: optionsEntrypoint,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        durationMs: Date.now() - startedAt,
+      })
+    }
     setIsDeleting(true)
     try {
       const deleted = await deleteProfile(deletingProfile.id)
@@ -396,29 +410,11 @@ export function useApiCredentialProfileCommands({
           durationMs: Date.now() - startedAt,
         })
       } else {
-        toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
-        void trackProductAnalyticsActionCompleted({
-          featureId: apiCredentialProfilesFeature,
-          actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
-          surfaceId: apiCredentialProfilesRefreshSurface,
-          entrypoint: optionsEntrypoint,
-          result: PRODUCT_ANALYTICS_RESULTS.Failure,
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          durationMs: Date.now() - startedAt,
-        })
+        reportDeleteFailure()
       }
       setDeletingProfile(null)
     } catch {
-      toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
-      void trackProductAnalyticsActionCompleted({
-        featureId: apiCredentialProfilesFeature,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
-        surfaceId: apiCredentialProfilesRefreshSurface,
-        entrypoint: optionsEntrypoint,
-        result: PRODUCT_ANALYTICS_RESULTS.Failure,
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        durationMs: Date.now() - startedAt,
-      })
+      reportDeleteFailure()
     } finally {
       setIsDeleting(false)
     }

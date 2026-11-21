@@ -151,11 +151,14 @@
     "income": "Heutiges Einkommen"
   },
   "financial": {
+    "availableTotal": "Guthaben",
     "derived": "Aus gemeldeten Feldern berechnet",
     "expires": "Läuft ab: {{date}}",
     "lastKnown": "Letzter bekannter Wert",
     "manual": "Manueller Kontostand",
     "olderRecord": "Von einer älteren Version aufgezeichnet",
+    "potentialDuplicates_one": "account:financial.potentialDuplicates",
+    "potentialDuplicates_other": "account:financial.potentialDuplicates",
     "reported": "Vom Anbieter gemeldet",
     "scopeUnknown": "Nutzungsumfang ungeprüft",
     "technicalDetails": "Technische Details (Debug)",

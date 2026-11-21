@@ -106,6 +106,8 @@ export function resolveTelemetryModes(
 /** Checks whether an adapter returned user-facing usage data. */
 export function hasTelemetryUsageData(data: TelemetryPatch): boolean {
   return (
+    data.kimiInference !== undefined ||
+    data.budget !== undefined ||
     data.balance !== undefined ||
     data.balances !== undefined ||
     data.quota !== undefined ||

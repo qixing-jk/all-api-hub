@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
+import { MEASUREMENT_UNIT_KINDS } from "~/services/amounts/financialConstants"
 import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/snapshotCodec"
 import { SiteHealthStatus } from "~/types"
 import {
@@ -38,32 +40,47 @@ describe("api credential telemetry snapshot codec", () => {
         balances: [
           {
             amount: "4.5",
-            unit: { kind: "money", currency: "USD", decimalPlaces: "2" },
+            unit: {
+              kind: MEASUREMENT_UNIT_KINDS.Money,
+              currency: CURRENCIES.USD,
+              decimalPlaces: "2",
+            },
             semantics: "cash",
             grantedAmount: "1",
             isAvailable: true,
           },
-          { amount: "bad", unit: { kind: "money" }, semantics: "cash" },
+          {
+            amount: "bad",
+            unit: { kind: MEASUREMENT_UNIT_KINDS.Money },
+            semantics: "cash",
+          },
         ],
         quota: {
           windows: [
             {
               type: "weekly",
-              unit: { kind: "percent" },
+              unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
               remainingPercent: "75",
               resetTime: "1800000000000",
             },
-            { type: "bad", unit: { kind: "percent" }, remainingPercent: 5 },
+            {
+              type: "bad",
+              unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
+              remainingPercent: 5,
+            },
           ],
         },
         usage: {
           todayCost: {
             value: "1.25",
-            unit: { kind: "money", currency: "USD" },
+            unit: {
+              kind: MEASUREMENT_UNIT_KINDS.Money,
+              currency: CURRENCIES.USD,
+            },
           },
           todayRequests: {
             value: 3,
-            unit: { kind: "count", code: "requests" },
+            unit: { kind: MEASUREMENT_UNIT_KINDS.Count, code: "requests" },
           },
           todayTokens: { upload: "10" },
           unlimited: false,
@@ -90,7 +107,7 @@ describe("api credential telemetry snapshot codec", () => {
           {
             amount: 4.5,
             unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
-            semantics: "cash",
+            semantics: "legacy",
             grantedAmount: 1,
             isAvailable: true,
           },
@@ -107,7 +124,7 @@ describe("api credential telemetry snapshot codec", () => {
         },
         usage: {
           todayCost: {
-            value: 1.25,
+            value: "1.25",
             unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
           },
           todayRequests: {
@@ -159,7 +176,7 @@ describe("api credential telemetry snapshot codec", () => {
               code: "usd-equivalent",
               label: "USD-equivalent budget",
             },
-            semantics: "budget-equivalent",
+            semantics: "legacy",
           },
         ],
         usage: {

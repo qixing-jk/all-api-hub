@@ -140,11 +140,13 @@
     "income": "今日收入"
   },
   "financial": {
+    "availableTotal": "餘額",
     "derived": "根據站點欄位推算",
     "expires": "到期：{{date}}",
     "lastKnown": "最後已知值",
     "manual": "手填餘額",
     "olderRecord": "舊版儲存的記錄",
+    "potentialDuplicates_other": "account:financial.potentialDuplicates",
     "reported": "站點回報",
     "scopeUnknown": "使用範圍未核實",
     "technicalDetails": "技術資訊（偵錯）",

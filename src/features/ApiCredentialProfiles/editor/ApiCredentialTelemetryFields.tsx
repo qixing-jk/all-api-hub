@@ -3,10 +3,18 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { FormField, Input, SearchableSelect } from "~/components/ui"
-import { type useApiCredentialProfileEditor } from "~/features/ApiCredentialProfiles/editor/useApiCredentialProfileEditor"
+import {
+  LEGACY_TELEMETRY_ASSET,
+  type useApiCredentialProfileEditor,
+} from "~/features/ApiCredentialProfiles/editor/useApiCredentialProfileEditor"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import { API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS } from "~/services/apiCredentialProfiles/telemetry/config"
 import type { ApiCredentialTelemetryCapabilityMode } from "~/types/apiCredentialProfiles"
-import { API_CREDENTIAL_TELEMETRY_MODES } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_MODES,
+  TELEMETRY_FINANCIAL_ROLES,
+  TELEMETRY_FINANCIAL_SCOPES,
+} from "~/types/apiCredentialProfiles"
 
 /** Present telemetry settings without owning draft or save lifecycle. */
 export function ApiCredentialTelemetryFields({
@@ -16,6 +24,14 @@ export function ApiCredentialTelemetryFields({
     ReturnType<typeof useApiCredentialProfileEditor>,
     | "telemetryMode"
     | "setTelemetryMode"
+    | "customAssetKind"
+    | "setCustomAssetKind"
+    | "customAssetCode"
+    | "setCustomAssetCode"
+    | "customBalanceRole"
+    | "setCustomBalanceRole"
+    | "customBalanceScope"
+    | "setCustomBalanceScope"
     | "customEndpoint"
     | "setCustomEndpoint"
     | "customBearerToken"
@@ -34,6 +50,14 @@ export function ApiCredentialTelemetryFields({
   const {
     telemetryMode,
     setTelemetryMode,
+    customAssetKind,
+    setCustomAssetKind,
+    customAssetCode,
+    setCustomAssetCode,
+    customBalanceRole,
+    setCustomBalanceRole,
+    customBalanceScope,
+    setCustomBalanceScope,
     customEndpoint,
     setCustomEndpoint,
     customBearerToken,
@@ -171,9 +195,9 @@ export function ApiCredentialTelemetryFields({
         API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint && (
         <details
           open
-          className="border-border py-density-3 rounded-lg border px-3"
+          className="rounded-lg border border-border px-3 py-density-3"
         >
-          <summary className="dark:text-foreground text-secondary-foreground cursor-pointer text-sm font-medium">
+          <summary className="cursor-pointer text-sm font-medium text-secondary-foreground dark:text-foreground">
             {t("apiCredentialProfiles:dialog.customTelemetry.title")}
           </summary>
           <div className="mt-density-3 space-y-density-4">
@@ -224,16 +248,140 @@ export function ApiCredentialTelemetryFields({
               />
             </FormField>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                label={t("apiCredentialProfiles:dialog.financialMapping.asset")}
+                htmlFor="credential-mapping-asset"
+              >
+                <SearchableSelect
+                  id="credential-mapping-asset"
+                  value={customAssetKind}
+                  onChange={setCustomAssetKind}
+                  disabled={isSaving}
+                  options={[
+                    {
+                      value: LEGACY_TELEMETRY_ASSET,
+                      label: t(
+                        "apiCredentialProfiles:dialog.financialMapping.legacy",
+                      ),
+                    },
+                    {
+                      value: ASSET_KINDS.Currency,
+                      label: t(
+                        "apiCredentialProfiles:dialog.financialMapping.currency",
+                      ),
+                    },
+                    {
+                      value: ASSET_KINDS.Quota,
+                      label: t(
+                        "apiCredentialProfiles:dialog.financialMapping.quota",
+                      ),
+                    },
+                    { value: ASSET_KINDS.Crypto, label: "XNO" },
+                  ]}
+                />
+              </FormField>
+              {customAssetKind !== LEGACY_TELEMETRY_ASSET ? (
+                <>
+                  {customAssetKind !== ASSET_KINDS.Crypto ? (
+                    <FormField
+                      label={t(
+                        "apiCredentialProfiles:dialog.financialMapping.code",
+                      )}
+                      htmlFor="credential-mapping-code"
+                    >
+                      <Input
+                        id="credential-mapping-code"
+                        value={customAssetCode}
+                        onChange={(event) =>
+                          setCustomAssetCode(event.target.value)
+                        }
+                        disabled={isSaving}
+                      />
+                    </FormField>
+                  ) : null}
+                  <FormField
+                    label={t(
+                      "apiCredentialProfiles:dialog.financialMapping.role",
+                    )}
+                    htmlFor="credential-mapping-role"
+                  >
+                    <SearchableSelect
+                      id="credential-mapping-role"
+                      value={customBalanceRole}
+                      onChange={(value) =>
+                        setCustomBalanceRole(
+                          value === TELEMETRY_FINANCIAL_ROLES.BudgetRemaining
+                            ? value
+                            : TELEMETRY_FINANCIAL_ROLES.Available,
+                        )
+                      }
+                      disabled={isSaving}
+                      options={[
+                        {
+                          value: TELEMETRY_FINANCIAL_ROLES.Available,
+                          label: t(
+                            "apiCredentialProfiles:dialog.financialMapping.available",
+                          ),
+                        },
+                        {
+                          value: TELEMETRY_FINANCIAL_ROLES.BudgetRemaining,
+                          label: t(
+                            "apiCredentialProfiles:dialog.financialMapping.budget",
+                          ),
+                        },
+                      ]}
+                    />
+                  </FormField>
+                  <FormField
+                    label={t(
+                      "apiCredentialProfiles:dialog.financialMapping.scope",
+                    )}
+                    htmlFor="credential-mapping-scope"
+                  >
+                    <SearchableSelect
+                      id="credential-mapping-scope"
+                      value={customBalanceScope}
+                      onChange={(value) =>
+                        setCustomBalanceScope(
+                          value === TELEMETRY_FINANCIAL_SCOPES.Credential
+                            ? value
+                            : TELEMETRY_FINANCIAL_SCOPES.Unknown,
+                        )
+                      }
+                      disabled={isSaving}
+                      options={[
+                        {
+                          value: TELEMETRY_FINANCIAL_SCOPES.Unknown,
+                          label: t(
+                            "apiCredentialProfiles:dialog.financialMapping.unknownScope",
+                          ),
+                        },
+                        {
+                          value: TELEMETRY_FINANCIAL_SCOPES.Credential,
+                          label: t(
+                            "apiCredentialProfiles:dialog.financialMapping.credential",
+                          ),
+                        },
+                      ]}
+                    />
+                  </FormField>
+                </>
+              ) : null}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("apiCredentialProfiles:dialog.financialMapping.hint")}
+            </p>
             <div className="space-y-density-2">
               <div>
-                <div className="dark:text-foreground text-secondary-foreground text-sm font-medium">
+                <div className="text-sm font-medium text-secondary-foreground dark:text-foreground">
                   {t("apiCredentialProfiles:dialog.customTelemetry.paths")}
                 </div>
-                <p className="dark:text-secondary-foreground text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground dark:text-secondary-foreground">
                   {t("apiCredentialProfiles:dialog.hints.telemetryJsonPaths")}
                 </p>
               </div>
-              <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
+              <div className="grid gap-x-3 gap-y-density-3 sm:grid-cols-2">
                 {telemetryJsonPathFields.map(({ field, label }) => {
                   const inputId = `api-credential-profile-telemetry-path-${field}`
                   return (
@@ -252,7 +400,7 @@ export function ApiCredentialTelemetryFields({
                 })}
               </div>
               {errors.telemetryJsonPaths && (
-                <p className="text-destructive-text text-xs">
+                <p className="text-xs text-destructive-text">
                   {errors.telemetryJsonPaths}
                 </p>
               )}

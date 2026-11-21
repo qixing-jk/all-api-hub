@@ -5,6 +5,7 @@ import {
   API_CREDENTIAL_ALLOWANCE_LEVEL_CLASSES,
   getAllowanceCountdown,
   getQuotaAllowanceLevel,
+  getQuotaWindowRemainingPercent,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialAllowance"
 import {
   formatAllowanceCountdown,
@@ -13,6 +14,7 @@ import {
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialTelemetryFormatting"
 import { useAllowanceClock } from "~/features/ApiCredentialProfiles/allowance/useAllowanceClock"
 import { cn } from "~/lib/utils"
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import type { ApiCredentialTelemetryQuotaWindowFact } from "~/types/apiCredentialProfiles"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
@@ -33,11 +35,18 @@ export function ApiCredentialProfileQuotaMeters({
   const now = useAllowanceClock()
 
   return (
-    <div className="gap-y-density-2 grid gap-x-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-x-2 gap-y-density-2 sm:grid-cols-2 lg:grid-cols-3">
       {windows.map((window, index) => {
         const windowLabel = formatQuotaWindowLabel(t, window.type)
-        const hasPercent = Number.isFinite(window.remainingPercent)
-        const level = getQuotaAllowanceLevel(window.remainingPercent)
+        const remainingPercent = getQuotaWindowRemainingPercent(window)
+        const hasPercent =
+          remainingPercent !== undefined && Number.isFinite(remainingPercent)
+        const observedPercent =
+          window.remainingPercent !== undefined &&
+          Number.isFinite(window.remainingPercent)
+            ? window.remainingPercent
+            : undefined
+        const level = getQuotaAllowanceLevel(remainingPercent)
         const levelClasses = API_CREDENTIAL_ALLOWANCE_LEVEL_CLASSES[level]
         const countdown = getAllowanceCountdown(window.resetTime, now)
         const amountLabel = formatQuotaWindowAmount(window, t)
@@ -45,44 +54,63 @@ export function ApiCredentialProfileQuotaMeters({
         return (
           <div
             key={`${window.type}-${index}`}
-            className="dark:bg-secondary/60 bg-card border-border-subtle py-density-2 rounded-md border px-2"
+            className="rounded-md border border-border-subtle bg-card px-2 py-density-2 dark:bg-secondary/60"
           >
-            <div className="gap-density-1 flex min-w-0 items-baseline justify-between">
-              <span className="text-muted-foreground truncate text-xs">
+            <div className="flex min-w-0 items-baseline justify-between gap-density-1">
+              <span className="min-w-0 text-xs break-words text-muted-foreground">
                 {windowLabel}
+                {window.status === OBSERVATION_STATUSES.Stale
+                  ? ` (${t("apiCredentialProfiles:telemetry.balanceSemantics.stale")})`
+                  : ""}
               </span>
               <span
                 className={cn(
-                  "shrink-0 text-sm font-semibold tabular-nums",
-                  levelClasses.text,
+                  "min-w-0 text-right text-sm font-semibold break-words tabular-nums",
+                  observedPercent === undefined &&
+                    amountLabel &&
+                    window.status !== OBSERVATION_STATUSES.Stale
+                    ? "text-foreground"
+                    : levelClasses.text,
                 )}
               >
-                {hasPercent
+                {observedPercent !== undefined
                   ? t(
                       "apiCredentialProfiles:telemetry.quotaWindows.remainingPercent",
-                      { percent: Math.round(window.remainingPercent) },
+                      { percent: Math.round(observedPercent) },
                     )
-                  : t("apiCredentialProfiles:telemetry.notProvided")}
+                  : (amountLabel ??
+                    t("apiCredentialProfiles:telemetry.notProvided"))}
               </span>
             </div>
 
-            <Progress
-              className="mt-density-1-5 h-1.5"
-              value={hasPercent ? window.remainingPercent : 0}
-              max={100}
-              indicatorClassName={levelClasses.indicator}
-              aria-label={t(
-                "apiCredentialProfiles:telemetry.quotaWindows.meterLabel",
-                {
-                  window: windowLabel,
-                },
-              )}
-            />
+            {hasPercent ? (
+              <Progress
+                className="mt-density-1-5 h-1.5"
+                value={remainingPercent}
+                max={100}
+                indicatorClassName={levelClasses.indicator}
+                aria-label={t(
+                  "apiCredentialProfiles:telemetry.quotaWindows.meterLabel",
+                  {
+                    window: windowLabel,
+                  },
+                )}
+              />
+            ) : null}
 
-            <div className="text-muted-foreground mt-density-1 gap-x-density-2 text-3xs flex min-w-0 flex-wrap items-center justify-between">
-              {amountLabel ? (
-                <span className="truncate tabular-nums">{amountLabel}</span>
+            <div className="mt-density-1 flex min-w-0 flex-wrap items-center justify-between gap-x-density-2 text-3xs text-muted-foreground">
+              {observedPercent !== undefined && amountLabel ? (
+                <span className="min-w-0 break-words tabular-nums">
+                  {amountLabel}
+                </span>
               ) : null}
+              {window.remaining !== undefined && window.limit === undefined && (
+                <span>
+                  {t(
+                    "apiCredentialProfiles:telemetry.quotaWindows.limitNotProvided",
+                  )}
+                </span>
+              )}
               {countdown ? (
                 <span
                   className="shrink-0 tabular-nums"
@@ -95,6 +123,15 @@ export function ApiCredentialProfileQuotaMeters({
                 </span>
               ) : null}
             </div>
+            {window.status === OBSERVATION_STATUSES.Stale &&
+              window.observedAt !== undefined && (
+                <time
+                  className="mt-1 block text-xs text-muted-foreground"
+                  dateTime={new Date(window.observedAt).toISOString()}
+                >
+                  {formatLocaleDateTime(window.observedAt)}
+                </time>
+              )}
           </div>
         )
       })}

@@ -1,5 +1,8 @@
 import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetry/contracts"
-import { normalizeTelemetryPatchToFacts } from "~/services/apiCredentialProfiles/telemetry/facts"
+import {
+  normalizeTelemetryPatchToFacts,
+  type TelemetryObservationContext,
+} from "~/services/apiCredentialProfiles/telemetry/facts"
 import { SiteHealthStatus } from "~/types"
 import {
   API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
@@ -22,6 +25,7 @@ type BuildTelemetrySnapshotParams = {
   attempts: ApiCredentialTelemetryAttempt[]
   models?: ApiCredentialModelTelemetry
   usageResult?: TelemetryUsageResult | null
+  context: TelemetryObservationContext
 }
 
 /** Builds the persisted telemetry snapshot from completed read-only attempts. */
@@ -30,14 +34,23 @@ export function buildTelemetrySnapshot({
   attempts,
   models,
   usageResult,
+  context,
 }: BuildTelemetrySnapshotParams): ApiCredentialTelemetrySnapshot {
   const modelSucceeded = Boolean(models && models.count > 0)
   const usageSucceeded = Boolean(usageResult)
   const usageFacts: ApiCredentialTelemetryFacts = usageResult
-    ? normalizeTelemetryPatchToFacts(usageResult.data, usageResult.source)
+    ? normalizeTelemetryPatchToFacts(
+        usageResult.data,
+        usageResult.source,
+        context,
+      )
     : {}
   const usageUnavailable = Boolean(
-    usageFacts.balances?.some((balance) => balance.isAvailable === false),
+    usageResult?.data.availability === false ||
+    usageResult?.data.balances?.some(
+      (balance) => balance.isAvailable === false,
+    ) ||
+    usageResult?.data.balance?.isAvailable === false,
   )
   const customEndpointError = attempts.find(
     (attempt) =>
@@ -45,19 +58,24 @@ export function buildTelemetrySnapshot({
       attempt.source ===
         API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
   )?.message
-  const lastError =
-    usageSucceeded || modelSucceeded
-      ? undefined
-      : customEndpointError ||
-        attempts.find(
-          (attempt) =>
-            attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
-        )?.message ||
-        undefined
+  const lastError = usageSucceeded
+    ? undefined
+    : customEndpointError ||
+      attempts.find(
+        (attempt) =>
+          attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
+      )?.message ||
+      undefined
 
   return {
+    schemaVersion: 2,
     health:
-      usageSucceeded || modelSucceeded
+      usageSucceeded ||
+      (modelSucceeded &&
+        !attempts.some(
+          (attempt) =>
+            attempt.source !== API_CREDENTIAL_TELEMETRY_SOURCES.Models,
+        ))
         ? usageUnavailable
           ? {
               status: SiteHealthStatus.Warning,
@@ -67,7 +85,7 @@ export function buildTelemetrySnapshot({
           : { status: SiteHealthStatus.Healthy }
         : { status: SiteHealthStatus.Warning },
     lastSyncTime: now,
-    ...(usageSucceeded || modelSucceeded ? { lastSuccessTime: now } : {}),
+    ...(usageSucceeded ? { lastSuccessTime: now } : {}),
     ...(lastError ? { lastError } : {}),
     ...(usageResult?.source ? { source: usageResult.source } : {}),
     facts: {

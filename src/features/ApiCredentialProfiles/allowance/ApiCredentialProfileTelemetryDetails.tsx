@@ -1,7 +1,6 @@
 import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   buildAllowanceSignals,
   formatRunwayDays,
@@ -13,6 +12,15 @@ import {
   getBalanceSemanticsLabel,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialTelemetryFormatting"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import {
+  BALANCE_CASH_CLASSIFICATIONS,
+  BALANCE_FUNDING,
+  BALANCE_INSTRUMENTS,
+  EVIDENCE_KINDS,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
+import { selectTelemetryBalances } from "~/services/apiCredentialProfiles/telemetry/facts"
 import type {
   ApiCredentialProfile,
   ApiCredentialTelemetryBalanceFact,
@@ -20,7 +28,6 @@ import type {
 } from "~/types/apiCredentialProfiles"
 import { API_CREDENTIAL_TELEMETRY_FACT_UNITS } from "~/types/apiCredentialProfiles"
 import { formatLocaleDateTime, formatTokenCount } from "~/utils/core/formatters"
-import { formatTelemetryMoney } from "~/utils/core/money"
 
 type ApiCredentialProfileTelemetryDetailsProps = {
   snapshot: ApiCredentialProfile["telemetrySnapshot"]
@@ -34,11 +41,11 @@ export function hasApiCredentialTelemetryDetailData(
   const facts = snapshot?.facts
   return Boolean(
     snapshot &&
-      (facts?.balances?.length ||
-        facts?.quota?.windows.length ||
-        facts?.usage ||
-        facts?.models ||
-        Boolean(snapshot.lastError)),
+    (selectTelemetryBalances(facts).length ||
+      facts?.quota?.windows.length ||
+      facts?.usage ||
+      facts?.models ||
+      Boolean(snapshot.lastError)),
   )
 }
 
@@ -50,6 +57,27 @@ function getBalanceRunwayHint(t: TFunction, days: number): string {
 }
 
 /** Renders one provider balance with its semantics label when it has one. */
+function BalanceObservationNotice({
+  balance,
+  t,
+}: {
+  balance: ApiCredentialTelemetryBalanceFact
+  t: TFunction
+}) {
+  if (balance.status !== OBSERVATION_STATUSES.Stale) return null
+  return (
+    <span className="text-warning-text">
+      <span>{t("apiCredentialProfiles:telemetry.balanceSemantics.stale")}</span>{" "}
+      {balance.observedAt !== undefined ? (
+        <time dateTime={new Date(balance.observedAt).toISOString()}>
+          {formatLocaleDateTime(balance.observedAt)}
+        </time>
+      ) : null}
+    </span>
+  )
+}
+
+/** Renders the total and each component with their own observation state. */
 function ProviderBalanceValue({
   balance,
   t,
@@ -60,12 +88,39 @@ function ProviderBalanceValue({
   const semanticsLabel = getBalanceSemanticsLabel(balance, t)
 
   return (
-    <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
-      <span className="text-foreground font-semibold">
-        {formatProviderBalance(balance, t)}
-      </span>
-      {semanticsLabel ? (
-        <span className="text-muted-foreground text-3xs">{semanticsLabel}</span>
+    <div>
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-density-1-5">
+        <span className="font-semibold text-foreground">
+          {formatProviderBalance(balance, t)}
+        </span>
+        {semanticsLabel ? (
+          <span className="text-3xs text-muted-foreground">
+            {semanticsLabel}
+          </span>
+        ) : null}
+        <BalanceObservationNotice balance={balance} t={t} />
+      </div>
+      {balance.components?.length ? (
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {balance.components.map((component, index) => (
+            <span key={index}>
+              {component.position?.instrument === BALANCE_INSTRUMENTS.Voucher
+                ? t("apiCredentialProfiles:telemetry.balanceSemantics.voucher")
+                : component.position?.funding === BALANCE_FUNDING.Granted
+                  ? t(
+                      "apiCredentialProfiles:telemetry.balanceSemantics.granted",
+                    )
+                  : component.position?.cashClassification ===
+                      BALANCE_CASH_CLASSIFICATIONS.ReportedCash
+                    ? t("apiCredentialProfiles:telemetry.balanceSemantics.cash")
+                    : t(
+                        "apiCredentialProfiles:telemetry.balanceSemantics.purchased",
+                      )}{" "}
+              {formatProviderBalance(component, t)}{" "}
+              <BalanceObservationNotice balance={component} t={t} />
+            </span>
+          ))}
+        </div>
       ) : null}
     </div>
   )
@@ -77,7 +132,6 @@ export function ApiCredentialProfileTelemetryDetails({
   missingTelemetryValue,
 }: ApiCredentialProfileTelemetryDetailsProps) {
   const { t } = useTranslation()
-  const { currencyType } = useUserPreferencesContext()
   const facts = snapshot?.facts
   const quotaWindows = facts?.quota?.windows ?? []
   const balanceRunway = buildAllowanceSignals(facts).find(
@@ -92,36 +146,32 @@ export function ApiCredentialProfileTelemetryDetails({
           <section
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota}
           >
-            <div className="text-muted-foreground mb-density-1">
+            <div className="mb-density-1 text-muted-foreground">
               {t("apiCredentialProfiles:telemetry.quota")}
             </div>
             <ApiCredentialProfileQuotaMeters windows={quotaWindows} />
           </section>
         ) : null}
-        <div className="gap-y-density-2 grid gap-x-2 sm:grid-cols-4">
+        <div className="grid gap-x-2 gap-y-density-2 sm:grid-cols-4">
           <section
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance}
           >
-            <div className="text-muted-foreground mb-density-1">
+            <div className="mb-density-1 text-muted-foreground">
               {t("apiCredentialProfiles:telemetry.balance")}
             </div>
-            <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
-              {facts?.usage?.unlimited
-                ? t("common:quota.unlimited")
-                : facts?.balances?.length
-                  ? facts.balances.map((balance, index) => (
-                      <ProviderBalanceValue
-                        balance={balance}
-                        t={t}
-                        key={`${balance.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money ? balance.unit.currency : balance.unit.code}-${index}`}
-                      />
-                    ))
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-density-1-5">
+              {selectTelemetryBalances(facts).length
+                ? selectTelemetryBalances(facts).map((balance, index) => (
+                    <ProviderBalanceValue balance={balance} t={t} key={index} />
+                  ))
+                : facts?.usage?.unlimited
+                  ? t("common:quota.unlimited")
                   : missingTelemetryValue}
             </div>
             {balanceRunway?.runwayDays !== undefined &&
             balanceRunway.runwayDays > 0 ? (
               <div
-                className="text-muted-foreground text-3xs mt-density-1"
+                className="mt-density-1 text-3xs text-muted-foreground"
                 data-testid={
                   API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalanceRunway
                 }
@@ -131,27 +181,52 @@ export function ApiCredentialProfileTelemetryDetails({
             ) : null}
           </section>
           <section className="min-w-0">
-            <div className="text-muted-foreground mb-density-1">
+            <div className="mb-density-1 text-muted-foreground">
               {t("apiCredentialProfiles:telemetry.todayUsage")}
             </div>
             <div
-              className="text-cashflow-expense font-semibold"
+              className={
+                facts?.usage?.todayCost !== undefined
+                  ? "font-semibold text-cashflow-expense"
+                  : "font-normal text-muted-foreground"
+              }
               data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage}
             >
               {facts?.usage?.todayCost !== undefined
-                ? formatTelemetryMoney(
-                    facts.usage.todayCost.value,
-                    currencyType,
+                ? formatProviderBalance(
+                    {
+                      amount: Number(facts.usage.todayCost.value),
+                      unit:
+                        facts.usage.todayCost.unit.kind ===
+                          MEASUREMENT_UNIT_KINDS.Money ||
+                        facts.usage.todayCost.unit.kind ===
+                          MEASUREMENT_UNIT_KINDS.Quota ||
+                        facts.usage.todayCost.unit.kind ===
+                          MEASUREMENT_UNIT_KINDS.Crypto
+                          ? facts.usage.todayCost.unit
+                          : { kind: MEASUREMENT_UNIT_KINDS.Unknown },
+                      semantics:
+                        facts.usage.todayCost.source?.kind ===
+                        EVIDENCE_KINDS.Legacy
+                          ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy
+                          : API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics
+                              .ProviderWallet,
+                    },
+                    t,
                   )
                 : missingTelemetryValue}
             </div>
           </section>
           <section className="min-w-0">
-            <div className="text-muted-foreground mb-density-1">
+            <div className="mb-density-1 text-muted-foreground">
               {t("apiCredentialProfiles:telemetry.todayRequests")}
             </div>
             <div
-              className="text-foreground font-semibold"
+              className={
+                facts?.usage?.todayRequests !== undefined
+                  ? "font-semibold text-foreground"
+                  : "font-normal text-muted-foreground"
+              }
               data-testid={
                 API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests
               }
@@ -162,11 +237,15 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
           <section className="min-w-0">
-            <div className="text-muted-foreground mb-density-1">
+            <div className="mb-density-1 text-muted-foreground">
               {t("apiCredentialProfiles:telemetry.models")}
             </div>
             <div
-              className="text-foreground truncate font-semibold"
+              className={
+                facts?.models
+                  ? "truncate font-semibold text-foreground"
+                  : "font-normal text-muted-foreground"
+              }
               data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels}
               title={facts?.models?.preview.join(", ")}
             >
@@ -179,7 +258,7 @@ export function ApiCredentialProfileTelemetryDetails({
           </section>
         </div>
       </div>
-      <div className="text-muted-foreground gap-y-density-1 pt-density-2 mt-auto flex flex-wrap gap-x-3 text-xs">
+      <div className="mt-auto flex flex-wrap gap-x-3 gap-y-density-1 pt-density-2 text-xs text-muted-foreground">
         <span>
           {t("apiCredentialProfiles:telemetry.lastSync")}{" "}
           {formatLocaleDateTime(

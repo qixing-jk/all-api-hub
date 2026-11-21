@@ -550,6 +550,32 @@ describe("useApiCredentialProfilesController", () => {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       durationMs: expect.any(Number),
     })
+    expect(result.current.deletingProfile).toBeNull()
+    expect(result.current.isDeleting).toBe(false)
+  })
+
+  it("keeps the delete dialog available for retry after storage throws", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    deleteProfileMock.mockRejectedValue(new Error("storage unavailable"))
+    const profile = buildProfile()
+    const { result } = renderController()
+
+    act(() => {
+      result.current.handleRequestDelete(profile)
+    })
+    await act(async () => {
+      await result.current.handleConfirmDelete()
+    })
+
+    expect(result.current.deletingProfile).toEqual(profile)
+    expect(result.current.isDeleting).toBe(false)
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      }),
+    )
   })
 
   it("tracks Cherry Studio export success after opening a profile", async () => {

@@ -4,6 +4,7 @@ import {
   getAccountRuntimeKeyLocatorIdentity,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { BalanceRefreshPart } from "~/services/amounts/balance"
 import {
   planApiCredentialProfileCapture,
   planApiCredentialProfileLink,
@@ -20,7 +21,6 @@ import {
   clonePersistedValue,
   coerceApiCredentialProfilesConfigWithRemap,
   coerceApiCredentialTelemetryConfig,
-  createDefaultConfig,
   createNextConfig,
   createNormalizedProfile,
   dedupeProfiles,
@@ -40,6 +40,7 @@ import type {
 } from "~/services/apiCredentialProfiles/storage/contracts"
 import { planApiCredentialProfileCreation } from "~/services/apiCredentialProfiles/storage/creationPlan"
 import { planApiCredentialProfileUpdate } from "~/services/apiCredentialProfiles/storage/updatePlan"
+import { acceptTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/acceptance"
 import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/snapshotCodec"
 import { normalizeHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
@@ -148,6 +149,23 @@ class ApiCredentialProfilesStorageService {
     )
   }
 
+  /** Called under the profile write lock; backups cannot rewind this local clock. */
+  private async reserveTelemetryGeneration(minimum = 0): Promise<number> {
+    const raw = await this.storage.get<number>(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.TELEMETRY_GENERATION,
+    )
+    if (raw !== undefined && (!Number.isSafeInteger(raw) || raw < 0))
+      throw new Error("Invalid telemetry admission clock")
+    const next = Math.max(raw ?? 0, minimum) + 1
+    if (!Number.isSafeInteger(next))
+      throw new Error("Telemetry refresh generation overflow")
+    await this.storage.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.TELEMETRY_GENERATION,
+      next,
+    )
+    return next
+  }
+
   /**
    * Export the persisted profiles config for backup/sync.
    */
@@ -156,15 +174,10 @@ class ApiCredentialProfilesStorageService {
   }
 
   /**
-   * Get the current profiles config with a safe default.
+   * Read the current config; unreadable or future data must never become an empty backup.
    */
   async getConfig(): Promise<ApiCredentialProfilesConfig> {
-    try {
-      return await readApiCredentialProfilesConfig()
-    } catch (error) {
-      logger.error("Failed to load API credential profiles config", error)
-      return createDefaultConfig()
-    }
+    return readApiCredentialProfilesConfig()
   }
 
   /**
@@ -180,9 +193,21 @@ class ApiCredentialProfilesStorageService {
         // merges rather than removals; the remap keeps their results reachable.
         const { config: coerced, profileIdRemap } =
           coerceApiCredentialProfilesConfigWithRemap(raw, { now })
+        const current = await readApiCredentialProfilesConfig()
+        const generation = await this.reserveTelemetryGeneration(
+          Math.max(
+            0,
+            ...current.profiles.map(
+              (profile) => profile.telemetryRefreshGeneration ?? 0,
+            ),
+          ),
+        )
         const next: ApiCredentialProfilesConfig = {
           version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
-          profiles: coerced.profiles,
+          profiles: coerced.profiles.map((profile) => ({
+            ...profile,
+            telemetryRefreshGeneration: generation,
+          })),
           links: coerced.links,
           linkTombstones: coerced.linkTombstones,
           lastUpdated: now,
@@ -204,13 +229,25 @@ class ApiCredentialProfilesStorageService {
     const { config, profileIdRemap } = await this.withStorageWriteLock(
       async () => {
         const now = Date.now()
+        const local = await readApiCredentialProfilesConfig()
         const { config: merged, profileIdRemap } =
           mergeApiCredentialProfilesConfigsWithRemap({
-            local: await readApiCredentialProfilesConfig(),
+            local,
             incoming: raw,
             now,
           })
-
+        const generation = await this.reserveTelemetryGeneration(
+          Math.max(
+            0,
+            ...local.profiles.map(
+              (profile) => profile.telemetryRefreshGeneration ?? 0,
+            ),
+          ),
+        )
+        merged.profiles = merged.profiles.map((profile) => ({
+          ...profile,
+          telemetryRefreshGeneration: generation,
+        }))
         await this.saveConfig(merged)
         return { config: merged, profileIdRemap }
       },
@@ -420,10 +457,34 @@ class ApiCredentialProfilesStorageService {
   /**
    * Persist the latest read-only telemetry query snapshot for a profile.
    */
+  async beginTelemetryRefresh(id: string): Promise<ApiCredentialProfile> {
+    return this.withStorageWriteLock(async () => {
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
+      const current = config.profiles.find((profile) => profile.id === id)
+      if (!current) throw new Error("Profile not found.")
+      const generation = await this.reserveTelemetryGeneration(
+        current.telemetryRefreshGeneration ?? 0,
+      )
+      const admitted = { ...current, telemetryRefreshGeneration: generation }
+      await this.saveConfig(
+        createNextConfig({
+          current: config,
+          profiles: config.profiles.map((profile) =>
+            profile.id === id ? admitted : profile,
+          ),
+          now: Date.now(),
+        }),
+      )
+      return admitted
+    })
+  }
+
+  /** Commit only the latest admitted observation for the same credential context. */
   async updateTelemetrySnapshot(
     id: string,
     snapshot: ApiCredentialTelemetrySnapshot,
     expectedProfile?: ApiCredentialProfile,
+    balanceEnumeration?: BalanceRefreshPart["enumeration"],
   ): Promise<ApiCredentialProfile> {
     return this.withStorageWriteLock(async () => {
       const config = cloneConfig(await readApiCredentialProfilesConfig())
@@ -435,7 +496,9 @@ class ApiCredentialProfilesStorageService {
 
       if (
         expectedProfile &&
-        (getIdentityKey(current) !== getIdentityKey(expectedProfile) ||
+        (current.telemetryRefreshGeneration !==
+          expectedProfile.telemetryRefreshGeneration ||
+          getIdentityKey(current) !== getIdentityKey(expectedProfile) ||
           JSON.stringify(normalizeHeaderOverrides(current.requestHeaders)) !==
             JSON.stringify(
               normalizeHeaderOverrides(expectedProfile.requestHeaders),
@@ -454,7 +517,11 @@ class ApiCredentialProfilesStorageService {
 
       const nextProfile: ApiCredentialProfile = {
         ...current,
-        telemetrySnapshot,
+        telemetrySnapshot: acceptTelemetrySnapshot(
+          current.telemetrySnapshot,
+          telemetrySnapshot,
+          balanceEnumeration,
+        ),
       }
 
       const nextProfiles = profiles.map((profile) =>

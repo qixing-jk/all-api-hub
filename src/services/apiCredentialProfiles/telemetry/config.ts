@@ -1,7 +1,21 @@
+import { z } from "zod"
+
+import { assetSchema } from "~/services/amounts/assets"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import type {
   ApiCredentialTelemetryCustomEndpoint,
   ApiCredentialTelemetryJsonPathMap,
 } from "~/types/apiCredentialProfiles"
+import {
+  TELEMETRY_FINANCIAL_ROLES,
+  TELEMETRY_FINANCIAL_SCOPES,
+} from "~/types/apiCredentialProfiles"
+
+export const telemetryFinancialMappingSchema = z.strictObject({
+  asset: assetSchema.refine((asset) => asset.kind !== ASSET_KINDS.Unknown),
+  role: z.enum(TELEMETRY_FINANCIAL_ROLES),
+  scope: z.enum(TELEMETRY_FINANCIAL_SCOPES),
+})
 
 export type ApiCredentialTelemetryJsonPathField =
   keyof ApiCredentialTelemetryJsonPathMap
@@ -123,6 +137,10 @@ export function coerceApiCredentialTelemetryCustomEndpoint(
       ? obj.bearerToken.trim()
       : ""
   const jsonPaths = coerceApiCredentialTelemetryJsonPathMap(obj.jsonPaths)
+  const financialMapping =
+    obj.financialMapping === undefined
+      ? undefined
+      : telemetryFinancialMappingSchema.parse(obj.financialMapping)
 
   if (
     !endpoint ||
@@ -136,5 +154,11 @@ export function coerceApiCredentialTelemetryCustomEndpoint(
     endpoint,
     ...(bearerToken ? { bearerToken } : {}),
     jsonPaths,
+    ...(financialMapping
+      ? {
+          financialMapping:
+            financialMapping as ApiCredentialTelemetryCustomEndpoint["financialMapping"],
+        }
+      : {}),
   }
 }

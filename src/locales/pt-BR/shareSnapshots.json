@@ -3,6 +3,10 @@
     "shareAccountSnapshot": "Compartilhar captura da conta",
     "shareOverviewSnapshot": "Compartilhar captura do resumo geral"
   },
+  "financial": {
+    "complete": "Cobertura completa",
+    "partial": "Cobertura parcial"
+  },
   "labels": {
     "accounts": "Contas",
     "asOf": "Em",

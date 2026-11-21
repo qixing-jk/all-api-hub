@@ -61,6 +61,7 @@ export interface UserPreferencesContextType {
   isLoading: boolean
   activeTab: DashboardTabType
   currencyType: CurrencyType
+  currencyDisplay?: import("~/types").CurrencyDisplay
   showTodayCashflow: boolean
   sortingPriorityConfig: SortingPriorityConfig
   sortField: ActiveSortField

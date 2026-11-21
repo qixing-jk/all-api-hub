@@ -1,8 +1,14 @@
 import type { ComponentProps, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
 import { ApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/editor/ApiCredentialProfileDialog"
 import toast from "~/lib/notify"
+import {
+  ASSET_KINDS,
+  BALANCE_ROLES,
+} from "~/services/amounts/financialConstants"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -167,6 +173,43 @@ function renderDialog(
 }
 
 describe("ApiCredentialProfileDialog", () => {
+  it.each([
+    {
+      kind: ASSET_KINDS.Quota,
+      id: "native-credit",
+      label: "Provider credits",
+      displayLabel: "Credits",
+      displayScale: 10,
+    },
+    { kind: ASSET_KINDS.Crypto, id: "XNO" },
+  ] as const)(
+    "preserves existing $kind mapping metadata when saving unrelated edits",
+    async (asset) => {
+      const telemetryConfig = {
+        mode: "customReadOnlyEndpoint" as const,
+        customEndpoint: {
+          endpoint: "/usage",
+          jsonPaths: { balanceUsd: "balance" },
+          financialMapping: {
+            asset,
+            role: BALANCE_ROLES.Available,
+            scope: "unknown" as const,
+          },
+        },
+      }
+      const { onSave } = renderDialog({
+        profile: buildProfile({ telemetryConfig }),
+      })
+      fireEvent.click(
+        screen.getByRole("button", { name: "common:actions.save" }),
+      )
+      await waitFor(() =>
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({ telemetryConfig }),
+        ),
+      )
+    },
+  )
   it.each([
     ["name", "nameRequired"],
     ["apiKey", "keyRequired"],
@@ -513,6 +556,30 @@ describe("ApiCredentialProfileDialog", () => {
       },
     )
     fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.financialMapping.asset",
+      ),
+      { target: { value: "currency" } },
+    )
+    fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.financialMapping.code",
+      ),
+      { target: { value: CURRENCIES.CNY } },
+    )
+    fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.financialMapping.role",
+      ),
+      { target: { value: "budget-remaining" } },
+    )
+    fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.financialMapping.scope",
+      ),
+      { target: { value: "credential" } },
+    )
+    fireEvent.change(
       screen.getAllByPlaceholderText(
         "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
       )[0]!,
@@ -536,6 +603,11 @@ describe("ApiCredentialProfileDialog", () => {
             customEndpoint: {
               endpoint: "https://telemetry.example.com/usage/read-only",
               bearerToken: "dedicated-telemetry-token",
+              financialMapping: {
+                asset: { kind: "currency", code: "CNY" },
+                role: "budget-remaining",
+                scope: "credential",
+              },
               jsonPaths: {
                 balanceUsd: "data.balance",
               },
@@ -592,6 +664,18 @@ describe("ApiCredentialProfileDialog", () => {
       { target: { value: "data.balance" } },
     )
 
+    fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.financialMapping.asset",
+      ),
+      { target: { value: "currency" } },
+    )
+    fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.financialMapping.code",
+      ),
+      { target: { value: CURRENCIES.USD } },
+    )
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
 
     await waitFor(() => {
@@ -600,6 +684,11 @@ describe("ApiCredentialProfileDialog", () => {
           telemetryConfig: {
             mode: "customReadOnlyEndpoint",
             customEndpoint: {
+              financialMapping: {
+                asset: { kind: "currency", code: "USD" },
+                role: "available",
+                scope: ACCOUNT_USAGE_SCOPES.Unknown,
+              },
               endpoint: "https://telemetry.example.com/usage",
               jsonPaths: { balanceUsd: "data.balance" },
             },

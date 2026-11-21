@@ -47,3 +47,8 @@ export function newApiFinancialAmount(
     ...(raw === undefined ? {} : { amountInputs: { quota: raw } }),
   }
 }
+
+/** A recognized New API token-usage response uses the family's standard USD scale. */
+export function newApiTokenUsageAmount(value: unknown, authority: string) {
+  return newApiFinancialAmount(value, authority, SITE_TYPES.NEW_API)
+}

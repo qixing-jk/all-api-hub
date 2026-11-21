@@ -140,11 +140,13 @@
     "income": "Thu nhập hôm nay"
   },
   "financial": {
+    "availableTotal": "Số dư",
     "derived": "Tính từ các trường được báo cáo",
     "expires": "Hết hạn: {{date}}",
     "lastKnown": "Giá trị đã biết gần nhất",
     "manual": "Số dư nhập tay",
     "olderRecord": "Được ghi lại bởi phiên bản cũ",
+    "potentialDuplicates_other": "account:financial.potentialDuplicates",
     "reported": "Trang web báo cáo",
     "scopeUnknown": "Phạm vi sử dụng chưa xác minh",
     "technicalDetails": "Thông tin kỹ thuật (gỡ lỗi)",

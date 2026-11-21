@@ -162,11 +162,15 @@
     "income": "Ingresos de hoy"
   },
   "financial": {
+    "availableTotal": "Saldo",
     "derived": "Derivado de campos reportados",
     "expires": "Vence: {{date}}",
     "lastKnown": "Último valor conocido",
     "manual": "Saldo manual",
     "olderRecord": "Registrado por una versión anterior",
+    "potentialDuplicates_one": "account:financial.potentialDuplicates",
+    "potentialDuplicates_many": "account:financial.potentialDuplicates",
+    "potentialDuplicates_other": "account:financial.potentialDuplicates",
     "reported": "Reportado por el sitio",
     "scopeUnknown": "Alcance de uso sin verificar",
     "technicalDetails": "Detalles técnicos (depuración)",
