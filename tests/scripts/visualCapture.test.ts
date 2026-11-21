@@ -226,6 +226,67 @@ it("rejects incompatible baseline captures before starting a browser", () => {
   }
 })
 
+it("accepts generated context checkpoint IDs in custom workflow baselines", () => {
+  const directory = mkdtempSync(
+    path.join(tmpdir(), "capture-context-baseline-"),
+  )
+  try {
+    const spec = "e2e/modelListQuotaBilling.spec.ts"
+    const grep = "shows native quota rates with token-based billing"
+    const id = "pricing-desktop.context"
+    const workflowId = createHash("sha256")
+      .update(JSON.stringify([spec, grep]))
+      .digest("hex")
+      .slice(0, 16)
+    const image = `${id}.png`
+    const bytes = PNG.sync.write(new PNG({ width: 1, height: 1 }))
+    writeFileSync(path.join(directory, image), bytes)
+    writeFileSync(
+      path.join(directory, "capture.json"),
+      JSON.stringify({
+        version: 1,
+        status: "captured",
+        scenario: `workflow-${workflowId}`,
+        fixture: "context-test",
+        checkpoints: [
+          {
+            id,
+            image,
+            environment: {},
+            source: {
+              gitHead: "baseline",
+              inputHash: "baseline",
+              buildVariant: "default",
+            },
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          },
+        ],
+      }),
+    )
+    const result = spawnSync(
+      process.execPath,
+      [
+        cli,
+        "--spec",
+        spec,
+        "--grep",
+        grep,
+        "--fixture",
+        "context-test",
+        "--baseline",
+        directory,
+        "--variant",
+        "dnr-required",
+      ],
+      { encoding: "utf8" },
+    )
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("Baseline build variant differs")
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
 it("rejects invalid view dimensions before launching a custom workflow", () => {
   const result = spawnSync(
     process.execPath,
