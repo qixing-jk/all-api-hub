@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildAllowanceSignals,
   getBalanceRunwayDays,
+  getPrimaryAllowanceSignal,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialAllowance"
 import {
   formatProviderBalance,
@@ -37,6 +38,171 @@ const context = {
 }
 
 describe("financial observations from partial provider responses", () => {
+  it("keeps an unmapped canonical legacy reading visible without assigning a currency or aggregating it", () => {
+    const stored = coerceTelemetrySnapshot({
+      lastSyncTime: 1000,
+      facts: normalizeTelemetryPatchToFacts(
+        { balanceUsd: 42 },
+        "customReadOnlyEndpoint",
+        context,
+      ),
+    })!
+    const balance = selectTelemetryBalances(stored.facts)[0]!
+    expect(balance).toMatchObject({
+      amount: 42,
+      unit: { kind: "unknown" },
+      semantics: "legacy",
+      observedAt: 1000,
+    })
+    expect(formatProviderBalance(balance, testI18n.t)).toBe("42")
+    const stats = projectCredentialFinancialStats(
+      [
+        {
+          id: "fixture",
+          name: "Fixture",
+          baseUrl: context.baseUrl,
+          apiKey: "synthetic",
+          apiType: "openai-compatible",
+          createdAt: 1,
+          updatedAt: 1,
+          notes: "",
+          tagIds: [],
+          telemetrySnapshot: {
+            ...stored,
+            health: { status: SiteHealthStatus.Healthy },
+          },
+        },
+      ],
+      1000,
+    )
+    expect(stats.portfolio.amounts).toEqual([])
+    const withHistoricalUsd = acceptTelemetrySnapshot(
+      {
+        lastSyncTime: 800,
+        health: { status: SiteHealthStatus.Healthy },
+        attempts: [],
+        facts: {
+          balances: [
+            {
+              amount: 12,
+              unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+              semantics: "legacy",
+              observedAt: 800,
+            },
+          ],
+        },
+      },
+      stored,
+    )
+    expect(selectTelemetryBalances(withHistoricalUsd.facts)).toContainEqual(
+      expect.objectContaining({
+        amount: 42,
+        unit: { kind: "unknown" },
+        observedAt: 1000,
+      }),
+    )
+    expect(selectTelemetryBalances(withHistoricalUsd.facts)).toContainEqual(
+      expect.objectContaining({
+        amount: 12,
+        unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+        status: "stale",
+        observedAt: 800,
+      }),
+    )
+  })
+  it("preserves a distinct known currency when another currency has duplicate wallet identities", () => {
+    const stored = coerceTelemetrySnapshot({
+      lastSyncTime: 1000,
+      facts: normalizeTelemetryPatchToFacts(
+        parseDeepSeekBalance({
+          balance_infos: [
+            { currency: "USD", total_balance: "10" },
+            { currency: "CNY", total_balance: "30" },
+            { currency: "USD", total_balance: "20" },
+          ],
+        }),
+        "deepSeekBalance",
+        context,
+      ),
+    })!
+    const balances = selectTelemetryBalances(stored.facts)
+    expect(
+      balances.find(
+        (balance) =>
+          balance.unit.kind === "money" && balance.unit.currency === "CNY",
+      ),
+    ).toMatchObject({ amount: 30, status: "known", observedAt: 1000 })
+    expect(
+      balances
+        .filter(
+          (balance) =>
+            balance.unit.kind === "money" && balance.unit.currency === "USD",
+        )
+        .every(
+          (balance) =>
+            balance.status === "unavailable" && Number.isNaN(balance.amount),
+        ),
+    ).toBe(true)
+    expect(stored.facts?.balanceSnapshot?.coverage).toBe("partial")
+  })
+  it("keeps a failed quota window stale with the original clock through storage coercion", () => {
+    const previous: ApiCredentialTelemetrySnapshot = {
+      lastSyncTime: 1000,
+      health: { status: SiteHealthStatus.Healthy },
+      attempts: [],
+      facts: normalizeTelemetryPatchToFacts(
+        {
+          quota: {
+            windows: [
+              { type: "weekly", percentRemaining: 30, unit: "percent" },
+            ],
+          },
+        },
+        "glmQuota",
+        context,
+      ),
+    }
+    const stored = coerceTelemetrySnapshot(
+      acceptTelemetrySnapshot(previous, {
+        lastSyncTime: 2000,
+        health: { status: SiteHealthStatus.Error },
+        attempts: [],
+      }),
+    )!
+    expect(stored.facts?.quota?.windows[0]).toMatchObject({
+      status: "stale",
+      remainingPercent: 30,
+      observedAt: 1000,
+    })
+    expect(buildAllowanceSignals(stored.facts)[0]).toMatchObject({
+      level: "unknown",
+    })
+  })
+  it("does not retain quota operands that were never observed", () => {
+    const window = {
+      type: "weekly" as const,
+      unit: { kind: "quota" as const, code: "requests", label: "Requests" },
+      resetTime: 10000,
+      remaining: 20,
+    }
+    const previous: ApiCredentialTelemetrySnapshot = {
+      lastSyncTime: 1000,
+      health: { status: SiteHealthStatus.Healthy },
+      attempts: [],
+      facts: { quota: { windows: [window] } },
+    }
+    const accepted = acceptTelemetrySnapshot(previous, {
+      lastSyncTime: 2000,
+      health: { status: SiteHealthStatus.Healthy },
+      attempts: [],
+      facts: { quota: { windows: [{ ...window, remaining: 15 }] } },
+    })
+    expect(accepted.facts?.quota?.windows[0]).toEqual({
+      ...window,
+      remaining: 15,
+    })
+    expect(accepted.facts?.quota?.windows[0]?.retainedAmounts).toBeUndefined()
+  })
   it("uses an independently mapped remaining budget when the balance path is absent", () => {
     const patch = mapCustomJson(
       { remaining: "7", limit: "10" },
@@ -285,6 +451,12 @@ describe("financial observations from partial provider responses", () => {
       const balances = selectTelemetryBalances(
         acceptTelemetrySnapshot(previous, next).facts,
       )
+      expect(balances).toHaveLength(1)
+      expect(
+        getPrimaryAllowanceSignal(
+          acceptTelemetrySnapshot(previous, next).facts,
+        ),
+      ).toMatchObject({ amount: 42, semantics: "legacy" })
       expect(balances).toContainEqual(
         expect.objectContaining({
           amount: 42,
@@ -311,7 +483,46 @@ describe("financial observations from partial provider responses", () => {
             observedAt: 2000,
           }),
         )
-      expect(balances.find((balance) => balance.position)?.amount).toBeNaN()
+      expect(
+        acceptTelemetrySnapshot(previous, next).facts?.balanceSnapshot
+          ?.positions[0]?.amount,
+      ).toMatchObject({ status: "unavailable" })
+      if (purchased) {
+        const repeated = acceptTelemetrySnapshot(
+          acceptTelemetrySnapshot(previous, next),
+          {
+            ...next,
+            lastSyncTime: 3000,
+            facts: normalizeTelemetryPatchToFacts(
+              parseDeepSeekBalance({
+                balance_infos: [{ currency: "USD", granted_balance: "5" }],
+              }),
+              "deepSeekBalance",
+              { ...context, observedAt: 3000 },
+            ),
+          },
+        )
+        const selected = selectTelemetryBalances(repeated.facts)[0]!
+        expect(selected).toMatchObject({
+          amount: 42,
+          status: "stale",
+          observedAt: 1000,
+        })
+        expect(selected.components).toContainEqual(
+          expect.objectContaining({
+            amount: 5,
+            status: "known",
+            observedAt: 3000,
+          }),
+        )
+        expect(selected.components).toContainEqual(
+          expect.objectContaining({
+            amount: Number(purchased),
+            status: "stale",
+            observedAt: 2000,
+          }),
+        )
+      }
     },
   )
   it("preserves independently mapped grant and remaining counters with native units", () => {

@@ -144,14 +144,14 @@ export function selectTelemetryBalances(
   const balances = [
     ...canonical.filter(
       (balance) =>
-        !legacy.some((old) => unitKey(old.unit) === unitKey(balance.unit)) ||
-        balance.components?.some(
-          (component) =>
-            component.status === OBSERVATION_STATUSES.Known ||
-            component.status === OBSERVATION_STATUSES.Stale,
-        ),
+        !legacy.some((old) => unitKey(old.unit) === unitKey(balance.unit)),
     ),
-    ...legacy,
+    ...legacy.map((balance) => {
+      const components = canonical
+        .filter((current) => unitKey(current.unit) === unitKey(balance.unit))
+        .flatMap((current) => current.components ?? [])
+      return components.length ? { ...balance, components } : balance
+    }),
   ]
   return [
     ...balances,

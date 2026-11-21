@@ -91,6 +91,11 @@ test("keeps a fresh native component visible beside a retained legacy wallet rea
   const toggle = row.getByTestId(
     API_CREDENTIAL_PROFILES_TEST_IDS.telemetryToggle,
   )
+  if ((await toggle.getAttribute("aria-expanded")) === "true")
+    await toggle.click()
+  await expect(
+    row.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge),
+  ).toContainText("42")
   if ((await toggle.getAttribute("aria-expanded")) !== "true")
     await toggle.click()
   const panel = row.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel)
