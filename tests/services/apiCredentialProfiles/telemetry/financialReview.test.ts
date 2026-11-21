@@ -69,7 +69,7 @@ describe("financial observations from partial provider responses", () => {
     {
       asset: { kind: "crypto", id: "XNO" } as const,
       unit: { kind: "crypto", id: "XNO" } as const,
-      other: { kind: "crypto", id: "BTC" } as const,
+      other: { kind: "money", currency: "USD", decimalPlaces: 2 } as const,
     },
     {
       asset: {
@@ -121,6 +121,7 @@ describe("financial observations from partial provider responses", () => {
     ({ originalClock, successClock, expected }) => {
       const previous: ApiCredentialTelemetrySnapshot = {
         lastSyncTime: 1000,
+        health: { status: SiteHealthStatus.Healthy },
         lastSuccessTime: successClock,
         attempts: [],
         facts: {
@@ -153,10 +154,12 @@ describe("financial observations from partial provider responses", () => {
       }
       const first = acceptTelemetrySnapshot(previous, {
         lastSyncTime: 2000,
+        health: { status: SiteHealthStatus.Error },
         attempts: [],
       })
       const repeated = acceptTelemetrySnapshot(first, {
         lastSyncTime: 3000,
+        health: { status: SiteHealthStatus.Error },
         attempts: [],
       })
       expect(repeated.facts?.balances?.[0]).toMatchObject({
@@ -190,12 +193,14 @@ describe("financial observations from partial provider responses", () => {
       }
       const previous: ApiCredentialTelemetrySnapshot = {
         lastSyncTime: 1000,
+        health: { status: SiteHealthStatus.Healthy },
         lastSuccessTime,
         attempts: [],
         facts: { quota: { windows: [window] } },
       }
       const partial = acceptTelemetrySnapshot(previous, {
         lastSyncTime: 2000,
+        health: { status: SiteHealthStatus.Warning },
         attempts: [],
         facts: {
           quota: {
@@ -228,6 +233,7 @@ describe("financial observations from partial provider responses", () => {
       })
       const recovered = acceptTelemetrySnapshot(partial, {
         lastSyncTime: 3000,
+        health: { status: SiteHealthStatus.Healthy },
         attempts: [],
         facts: { quota: { windows: [window] } },
       })
