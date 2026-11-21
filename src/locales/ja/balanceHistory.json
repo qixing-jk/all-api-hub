@@ -82,7 +82,7 @@
     },
     "success": {
       "pruneCompleted": "整理が完了しました",
-      "refreshCompleted": "履歴記録済み：{{captured}}、未記録：{{uncaptured}}。",
+      "refreshCompleted": "更新が完了しました",
       "settingsSaved": "設定を保存しました"
     }
   },

@@ -112,11 +112,9 @@ test("Requesty shows monetary balance and only implemented key creation options"
   await expect(keyRow).toHaveCount(1)
   await expect(keyRow).toContainText("Monthly API key")
   await expect(keyRow).toContainText("Monthly limit (USD)")
-  await expect(keyRow).toContainText("$10")
-  await expect(keyRow).toContainText("Used Quota:")
-  await expect(keyRow).toContainText("$4")
-  // The monthly ceiling remains $10; subtracting $4 spent must not turn it into $6.
-  await expect(keyRow).not.toContainText("$6")
+  await expect(keyRow).toContainText(/Remaining\s*N\/A/)
+  await expect(keyRow).toContainText(/Used\s*USD\s*4\.00/)
+  await expect(keyRow).toContainText(/Limit\s*USD\s*10\.00/)
   await expect(
     keyRow.getByRole("button", { name: "Edit key", exact: true }),
   ).toBeEnabled()

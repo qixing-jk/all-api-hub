@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  formatAssetAmount,
+  formatBalanceAmount,
+  formatCompactAssetAmount,
   formatMoneyFixed,
   formatTelemetryMoney,
+  getAssetLabel,
   getDisplayMoneyValue,
   normalizeMoneyForDisplay,
 } from "~/utils/core/money"
@@ -59,5 +63,74 @@ describe("money utils", () => {
   it("formatTelemetryMoney should format USD and CNY values", () => {
     expect(formatTelemetryMoney(12.345, "USD")).toBe("$12.35")
     expect(formatTelemetryMoney(1, "CNY")).toMatch(/^¥/)
+  })
+})
+
+describe("native financial display", () => {
+  const nanos = { kind: "crypto", id: "XNO" } as const
+  const tokens = {
+    kind: "quota",
+    id: "test:token",
+    label: "Token",
+    displayScale: 1000000,
+    displayLabel: "M Token",
+  } as const
+
+  it("preserves the unit and exact amount for native assets", () => {
+    expect(getAssetLabel(nanos)).toBe("XNO")
+    expect(getAssetLabel({ kind: "unknown" }, "Unknown")).toBe("Unknown")
+    expect(
+      formatAssetAmount({ value: "0.000001", asset: nanos }, "en-US"),
+    ).toBe("0.000001 XNO")
+    expect(
+      formatCompactAssetAmount({ value: "-0.000001", asset: nanos }, "en-US"),
+    ).toBe(">-0.01 XNO")
+    expect(
+      formatBalanceAmount({ value: "23", asset: tokens }, "en-US", "USD"),
+    ).toBe("23 Token")
+  })
+
+  it("keeps atomic units when a display scale has no exact decimal conversion", () => {
+    expect(
+      formatAssetAmount(
+        {
+          value: "10",
+          asset: { ...tokens, displayScale: 3 },
+        },
+        "en-US",
+      ),
+    ).toBe("10 Token")
+  })
+
+  it("bounds large summary labels while preserving the exact amount for display in detail", () => {
+    const asset = { kind: "currency", code: "USD" } as const
+    const options = { maximumIntegerDigits: 4 }
+    expect(
+      formatCompactAssetAmount({ value: "-1200000", asset }, "en-US", options),
+    ).toMatch(/-.*1\.2M/)
+    const huge = { value: "12345678901234567890123456.789", asset }
+    expect(formatCompactAssetAmount(huge, "en-US", options)).toMatch(/1\.23E25/)
+    expect(formatAssetAmount(huge, "en-US")).toMatch(
+      /12,345,678,901,234,567,890,123,456\.789/,
+    )
+  })
+
+  it("converts a configured monetary pair without coercing an unsupported currency", () => {
+    expect(
+      formatBalanceAmount(
+        { value: "14", asset: { kind: "currency", code: "CNY" } },
+        "en-US",
+        "USD",
+        7,
+      ),
+    ).toBe("$2.00")
+    expect(
+      formatBalanceAmount(
+        { value: "14", asset: { kind: "currency", code: "EUR" } },
+        "en-US",
+        "USD",
+        7,
+      ),
+    ).toMatch(/^EUR\s14\.00$/)
   })
 })

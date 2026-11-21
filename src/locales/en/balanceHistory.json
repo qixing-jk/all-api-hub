@@ -83,7 +83,7 @@
     },
     "success": {
       "pruneCompleted": "Prune completed",
-      "refreshCompleted": "History recorded: {{captured}}; not recorded: {{uncaptured}}.",
+      "refreshCompleted": "Refresh completed",
       "settingsSaved": "Settings saved"
     }
   },

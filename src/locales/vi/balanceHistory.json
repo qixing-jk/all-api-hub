@@ -82,7 +82,7 @@
     },
     "success": {
       "pruneCompleted": "Dọn dẹp hoàn tất",
-      "refreshCompleted": "Lịch sử đã ghi: {{captured}}; chưa ghi: {{uncaptured}}.",
+      "refreshCompleted": "Làm mới hoàn tất",
       "settingsSaved": "Đã lưu cài đặt"
     }
   },

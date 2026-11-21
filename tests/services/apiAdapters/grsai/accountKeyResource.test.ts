@@ -5,6 +5,7 @@ import { prepareAccountKeyProvisioning } from "~/services/accounts/keys/accountK
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import { ACCOUNT_KEY_DISPLAY_FACT_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { grsaiAccountKeyResources } from "~/services/apiAdapters/grsai/accountKeyResource"
+import { GRSAI_CREDIT_ASSET } from "~/services/apiService/grsai/constants"
 import type { GrsaiApiKey } from "~/services/apiService/grsai/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
@@ -105,6 +106,7 @@ describe("grsaiAccountKeyResources", () => {
         kind: "budget-constraint",
         budget: expect.objectContaining({
           limitState: "finite",
+          asset: { kind: "quota", ...GRSAI_CREDIT_ASSET },
           remaining: expect.objectContaining({ status: "known", value: "250" }),
         }),
       }),

@@ -125,7 +125,10 @@ describe("RelayFor native account workflows", () => {
         request,
         code: "fixture",
       })
-      expect(result).toEqual({ message: expect.any(String) })
+      expect(result).toMatchObject({
+        message: expect.any(String),
+        awards: expect.any(Array),
+      })
       const text = JSON.stringify(result)
       if (body.redeem_type === "prepaid") expect(text).toContain("2099")
       if (body.quota_group) expect(text).toContain("premium")
@@ -141,6 +144,42 @@ describe("RelayFor native account workflows", () => {
       expect(fetchPreparedJsonResponse).toHaveBeenCalledOnce()
     },
   )
+
+  it("keeps confirmed RelayFor benefits when detail types and amounts are incomplete", async () => {
+    respond({
+      benefits: [null, { quota: "bad" }, { type: "quota", quota: "-1" }],
+      subscriptions: [{ plan_name: "Extra plan" }],
+    })
+    const result = await relayForCapabilities.account!.redemption!.redeem({
+      request,
+      code: "fixture",
+    })
+    expect(result.awards).toMatchObject([
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "unknown" },
+        target: "unknown",
+      },
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "unknown" },
+        target: "unknown",
+      },
+      {
+        asset: { kind: "currency", code: "USD" },
+        amount: { status: "unavailable" },
+        target: "wallet",
+      },
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "unknown" },
+        target: "entitlement",
+      },
+    ])
+    expect(result.message).toContain("Extra plan")
+    expect(result.message).not.toContain("-1")
+    expect(fetchPreparedJsonResponse).toHaveBeenCalledOnce()
+  })
 
   it("keeps permanent, timed, subscription and group allowances distinct", async () => {
     respond({
@@ -269,14 +308,14 @@ describe("RelayFor native account workflows", () => {
     expect(page.items[0]?.displayFacts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: "money",
-          role: "remaining",
-          followsAccount: true,
+          kind: "budget-constraint",
+          budget: expect.objectContaining({ limitState: "inherited" }),
         }),
         expect.objectContaining({
-          kind: "money",
-          role: "used",
-          amountUsd: 0.5,
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            used: expect.objectContaining({ status: "known", value: "0.5" }),
+          }),
         }),
         expect.objectContaining({
           kind: "restriction",
@@ -284,12 +323,23 @@ describe("RelayFor native account workflows", () => {
           value: ["gpt-4o"],
         }),
         expect.objectContaining({
-          kind: "budget",
-          window: "day",
-          limitUsd: 2,
-          usedUsd: 1,
-          remainingUsd: 0.8,
-          reservedUsd: 0.2,
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            limit: expect.objectContaining({ status: "known", value: "2" }),
+            used: expect.objectContaining({ status: "known", value: "1" }),
+            remaining: expect.objectContaining({
+              status: "known",
+              value: "0.8",
+            }),
+            reserved: expect.objectContaining({
+              status: "known",
+              value: "0.2",
+            }),
+            window: expect.objectContaining({
+              kind: "periodic",
+              period: "day",
+            }),
+          }),
         }),
         expect.objectContaining({
           kind: "rate-limit",
@@ -420,7 +470,14 @@ describe("RelayFor native account workflows", () => {
         request,
         code: "fixture-code",
       }),
-    ).toBe(1000000)
+    ).toMatchObject({
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "2" },
+        },
+      ],
+    })
   })
 
   it("normalizes paginated usage with timestamps, refunds and cache meters", async () => {

@@ -108,6 +108,45 @@ describe("Daya account redemption", () => {
     ])
   })
 
+  it("retains identifiable Daya grants when a confirmed benefit is malformed", async () => {
+    const apply = vi.fn(() =>
+      HttpResponse.json(
+        envelope({
+          delivery_status: "success",
+          type: "subscription",
+          benefits: [
+            null,
+            { type: "balance", value: "2.5" },
+            { type: "quota_reset" },
+          ],
+        }),
+      ),
+    )
+    server.use(http.post(`${origin}/api/v1/code/apply`, apply))
+    const result = await dayaCapabilities.account!.redemption!.redeem({
+      request,
+      code: "CONFIRMED-DETAILS",
+    })
+    expect(result.awards).toMatchObject([
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "unknown" },
+        target: "unknown",
+      },
+      {
+        asset: { kind: "currency", code: "USD" },
+        amount: { status: "known", value: "2.5" },
+        target: "wallet",
+      },
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "unknown" },
+        target: "entitlement",
+      },
+    ])
+    expect(apply).toHaveBeenCalledOnce()
+  })
+
   it("directs referral discounts to the native checkout without claiming credit", async () => {
     server.use(
       http.post(`${origin}/api/v1/code/apply`, () =>

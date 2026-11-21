@@ -26,7 +26,7 @@ const openSession = () =>
     request,
   })
 
-it("reports Dahl's published flat rate as a published rate instead of a group estimate", async () => {
+it("reports Dahl's native Token rate without treating purchase prices as USD billing", async () => {
   server.use(
     http.get(`${origin}/v1/models`, () =>
       HttpResponse.json({ data: [{ id: "test-model" }] }),
@@ -34,13 +34,15 @@ it("reports Dahl's published flat rate as a published rate instead of a group es
   )
   const snapshot = await dahlModelPricing.fetchPricing(request)
   expect(snapshot.data[0]).toMatchObject({
-    token_price_usd_per_million: {
-      input: 0.03,
-      output: 0.03,
-      cache_read: 0.03,
+    quotaPricing: {
+      rates: {
+        input: { amount: 1, per: 1 },
+        output: { amount: 1, per: 1 },
+      },
     },
     price_metadata: { source: "provider-catalog", precision: "exact" },
   })
+  expect(snapshot.data[0]).not.toHaveProperty("token_price_usd_per_million")
 })
 
 describe("Dahl key resources", () => {

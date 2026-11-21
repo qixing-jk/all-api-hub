@@ -78,7 +78,8 @@ function calculateCanonicalModelPrice(
   const plan = resolveCanonicalPricingPlan(model, cost.groupMultiplier ?? NaN)
   // Flat token adapters do not publish all independent request fees.
   if (
-    calculated.kind === CALCULATED_PRICE_KINDS.TOKEN &&
+    (calculated.kind === CALCULATED_PRICE_KINDS.TOKEN ||
+      calculated.perMillionTokens !== undefined) &&
     scenario.purpose === PRICING_PURPOSES.REQUEST
   )
     plan.issues.push({ code: PRICING_ISSUE_CODES.UNKNOWN_FEES })

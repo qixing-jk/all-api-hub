@@ -100,6 +100,14 @@ it("keeps a missing provider catalogue output rate unknown instead of deriving a
     meter: "output",
   })
   expect(quote.publishedSchedule![0]!.rates.output).toBeUndefined()
+  expect(quote.issues).not.toContainEqual({ code: "unknown-fees" })
+  const requestQuote = quoteCanonicalModelPrice(
+    model,
+    { purpose: "request", usage: { input: 1000000, output: 0 } },
+    { groupMultiplier: 1 },
+  )
+  expect(requestQuote).toMatchObject({ status: "partial", amount: 3 })
+  expect(requestQuote.issues).toContainEqual({ code: "unknown-fees" })
 })
 
 it("does not claim a complete request quote from legacy token rates", () => {

@@ -107,6 +107,13 @@ export function confirmedAward(
   }
 }
 
+const fulfillmentPriority: Record<ConfirmedAward["fulfillment"], number> = {
+  [AWARD_FULFILLMENT.Unknown]: 0,
+  [AWARD_FULFILLMENT.PendingRedemption]: 1,
+  [AWARD_FULFILLMENT.Credited]: 2,
+  [AWARD_FULFILLMENT.Redeemed]: 3,
+}
+
 /** Merge only reliable event identities; matching values or labels alone do not identify a grant. */
 export function mergeConfirmedAwards(
   previous: ConfirmedAward[],
@@ -138,8 +145,16 @@ export function mergeConfirmedAwards(
       )
     })
     if (existing !== undefined) {
-      if (award.amount.status === OBSERVATION_STATUSES.Known) {
-        result[existing] = award
+      const prior = result[existing]!
+      const withAmount =
+        award.amount.status === OBSERVATION_STATUSES.Known ? award : prior
+      result[existing] = {
+        ...withAmount,
+        fulfillment:
+          fulfillmentPriority[award.fulfillment] >
+          fulfillmentPriority[prior.fulfillment]
+            ? award.fulfillment
+            : prior.fulfillment,
       }
     } else {
       // Preserve distinct conflicting evidence and recognize each on later readback.

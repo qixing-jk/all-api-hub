@@ -55,7 +55,10 @@ import {
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
-import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
+import {
+  readDayStableCheckInObservation,
+  type CheckInStatusObservation,
+} from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -66,6 +69,7 @@ import {
   TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
   TEMP_WINDOW_REQUEST_SOURCES,
 } from "~/types/tempWindowFetch"
+import { formatLocalDayKey, parseDayKey } from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { isRecord } from "~/utils/core/object"
 
@@ -276,6 +280,22 @@ async function fetchXingyaSessionStatus(request: ApiServiceRequest) {
   return response.success === true ? readStatusData(response.data) : undefined
 }
 
+/** A deployment day and administrator round identify one claim for this account. */
+function xingyaClaimAwardIdentity(status: XingyaCheckInStatusData) {
+  return typeof status.today === "string" &&
+    parseDayKey(status.today) &&
+    Number.isSafeInteger(status.claim_round) &&
+    status.claim_round >= 0
+    ? {
+        id: "daily-claim",
+        event: {
+          namespace: "xingya-checkin-round",
+          id: `${status.today}:${status.claim_round}`,
+        },
+      }
+    : undefined
+}
+
 /** Gate one claim with status and current intent, then reconcile with reads only. */
 async function performXingyaSessionCheckin(
   account: SiteAccount,
@@ -298,6 +318,7 @@ async function performXingyaSessionCheckin(
         awards: readQuotaAwards(account, status.today_record.quota_awarded, {
           operation: XINGYA_CHECK_IN_STATUS_ENDPOINT,
           field: "today_record.quota_awarded",
+          ...xingyaClaimAwardIdentity(status),
         }),
         data: status,
         messageKey:
@@ -321,7 +342,12 @@ async function performXingyaSessionCheckin(
     })
 
   const startedAt = Date.now()
-  const outcome = await performXingyaClaim(account, context, request)
+  const outcome = await performXingyaClaim(
+    account,
+    context,
+    request,
+    statusRead,
+  )
   const execution = await confirmCheckInAttempt({
     account,
     result: outcome,
@@ -335,6 +361,7 @@ async function performXingyaSessionCheckin(
               ? readQuotaAwards(account, data.today_record.quota_awarded, {
                   operation: XINGYA_CHECK_IN_STATUS_ENDPOINT,
                   field: "today_record.quota_awarded",
+                  ...xingyaClaimAwardIdentity(data),
                 })
               : undefined,
           }
@@ -459,6 +486,7 @@ async function performXingyaClaim(
   account: SiteAccount,
   context: AutoCheckinProviderContext,
   sessionRequest?: ApiServiceRequest,
+  admittedStatus?: CheckInStatusObservation<XingyaCheckInStatusData>,
 ): Promise<AutoCheckinProviderOutcome> {
   try {
     const claimResponse = await newApiFamilyRequests.envelope<
@@ -511,6 +539,15 @@ async function performXingyaClaim(
         data: claimResponse.data,
       }
 
+    const sameLocalDay =
+      admittedStatus &&
+      formatLocalDayKey(new Date(admittedStatus.observedAt)) ===
+        formatLocalDayKey()
+    const awards = readQuotaAwards(account, claimResponse.data.quota_awarded, {
+      operation: XINGYA_DAILY_CLAIM_ENDPOINT,
+      field: "quota_awarded",
+      ...(sameLocalDay && xingyaClaimAwardIdentity(admittedStatus.observation)),
+    })
     if (claimResponse.data.already_claimed === true) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
@@ -519,10 +556,7 @@ async function performXingyaClaim(
           ? undefined
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
         // The repeat answer still reports the day's authoritative award.
-        awards: readQuotaAwards(account, claimResponse.data.quota_awarded, {
-          operation: XINGYA_DAILY_CLAIM_ENDPOINT,
-          field: "quota_awarded",
-        }),
+        awards,
         data: claimResponse.data,
       }
     }
@@ -533,10 +567,7 @@ async function performXingyaClaim(
       messageKey: message
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-      awards: readQuotaAwards(account, claimResponse.data.quota_awarded, {
-        operation: XINGYA_DAILY_CLAIM_ENDPOINT,
-        field: "quota_awarded",
-      }),
+      awards,
       data: claimResponse.data,
     }
   } catch (error: unknown) {

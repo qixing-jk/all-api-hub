@@ -121,6 +121,7 @@ export function budgetConstraint(input: {
   limit?: unknown
   used?: unknown
   remaining?: unknown
+  remainingSource?: EvidenceRef
   reserved?: unknown
   byokUsed?: unknown
   enabled?: boolean
@@ -135,10 +136,10 @@ export function budgetConstraint(input: {
     source,
     reason: "not-reported",
   })
-  const amount = (value: unknown) =>
+  const amount = (value: unknown, amountSource = source) =>
     value === undefined || value === null
       ? unknown()
-      : observeAmount(value, source, observedAt)
+      : observeAmount(value, amountSource, observedAt)
   const boolean = (value: boolean | undefined): Observed<boolean> =>
     value === undefined
       ? unknown()
@@ -166,7 +167,9 @@ export function budgetConstraint(input: {
         : { status: OBSERVATION_STATUSES.Known, source, observedAt },
     limit: unbounded ? unknown() : amount(input.limit),
     used: amount(input.used),
-    remaining: unbounded ? unknown() : amount(input.remaining),
+    remaining: unbounded
+      ? unknown()
+      : amount(input.remaining, input.remainingSource),
     reserved: amount(input.reserved),
     byokUsed: amount(input.byokUsed),
     enabled: boolean(input.enabled),

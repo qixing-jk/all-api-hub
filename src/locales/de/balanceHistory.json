@@ -83,7 +83,7 @@
     },
     "success": {
       "pruneCompleted": "Beschneiden abgeschlossen",
-      "refreshCompleted": "Historie erfasst: {{captured}}; nicht erfasst: {{uncaptured}}.",
+      "refreshCompleted": "Aktualisierung abgeschlossen",
       "settingsSaved": "Einstellungen gespeichert"
     }
   },

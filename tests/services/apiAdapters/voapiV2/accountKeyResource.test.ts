@@ -1151,6 +1151,87 @@ describe("VoAPI v2 account key resources", () => {
     expect(mockCreateVoApiV2Key).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps a rejected VoAPI v2 editor write distinct from uncertain readback", async () => {
+    const before = rawKey({ id: 9 })
+    mockFetchAllVoApiV2RawKeys.mockResolvedValue([before])
+    mockUpdateVoApiV2Key.mockRejectedValueOnce(
+      new ApiError("Rejected", 400, "/keys/9", API_ERROR_CODES.BUSINESS_ERROR),
+    )
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Rejected edit" }),
+    ).rejects.toMatchObject({
+      mutationCertainty: "not-applied",
+      failure: { code: "upstream_rejected" },
+    })
+    expect(mockUpdateVoApiV2Key).toHaveBeenCalledOnce()
+    expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([true, false])(
+    "keeps an unconfirmed VoAPI v2 editor write uncertain without replay (acknowledged: %s)",
+    async (acknowledged) => {
+      const before = rawKey({ id: 9 })
+      mockFetchAllVoApiV2RawKeys.mockResolvedValue([before])
+      mockUpdateVoApiV2Key.mockImplementationOnce(async (mutationRequest) => {
+        mutationRequest.observer?.onDispatch()
+        if (acknowledged) return true
+        throw new Error("connection lost after dispatch")
+      })
+      const session = await voApiV2AccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+        request,
+      })
+      const editor = await (
+        await session.openCollection("account")
+      ).openEditEditor({
+        accountId: "account-example",
+        siteType: SITE_TYPES.VO_API_V2,
+        scopeKey: "account",
+        resourceId: "9",
+      })
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Unconfirmed edit" }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(mockUpdateVoApiV2Key).toHaveBeenCalledOnce()
+      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(3)
+    },
+  )
+
+  it("skips a VoAPI v2 edit when readback already matches the submitted values", async () => {
+    const before = rawKey({ id: 9 })
+    mockFetchAllVoApiV2RawKeys
+      .mockResolvedValueOnce([before])
+      .mockResolvedValueOnce([{ ...before, name: "Already renamed" }])
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Already renamed" }),
+    ).resolves.toMatchObject({ facts: { displayName: "Already renamed" } })
+    expect(mockUpdateVoApiV2Key).not.toHaveBeenCalled()
+  })
+
   it("registers native key management", () => {
     expect(voApiV2Capabilities.account?.keyResourceManagement).toBe(
       voApiV2AccountKeyResources,

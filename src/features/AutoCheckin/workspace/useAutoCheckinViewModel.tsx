@@ -146,6 +146,7 @@ export function useAutoCheckinViewModel(props: {
     isLoading,
     statusLoadFailed,
     accountInfoById,
+    exchangeRateByAccountId,
     loadStatus,
     resolveAutoCheckinAccount,
   } = useAutoCheckinStatusWorkspace(autoCheckinEnabled)
@@ -486,6 +487,7 @@ export function useAutoCheckinViewModel(props: {
   return {
     autoCheckinPreferences,
     currencyType,
+    exchangeRateByAccountId,
     autoCheckinEnabled,
     status,
     siteTypeMismatches,

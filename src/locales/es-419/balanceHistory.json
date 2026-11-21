@@ -84,7 +84,7 @@
     },
     "success": {
       "pruneCompleted": "Depuración completada",
-      "refreshCompleted": "Historial registrado: {{captured}}; sin registrar: {{uncaptured}}.",
+      "refreshCompleted": "Actualización completada",
       "settingsSaved": "Configuración guardada"
     }
   },

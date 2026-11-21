@@ -1393,12 +1393,117 @@ describe("Sub2API account key resources", () => {
       else expect(mockUpdateSub2ApiKey).not.toHaveBeenCalled()
     },
   )
+  it("keeps a rejected Sub2API editor write distinct from uncertain readback", async () => {
+    const before = token({ id: 9 })
+    mockFetchSub2ApiKey.mockResolvedValue(before)
+    mockUpdateSub2ApiKey.mockRejectedValueOnce(
+      new ApiError("Rejected", 400, "/keys/9", API_ERROR_CODES.BUSINESS_ERROR),
+    )
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.SUB2API,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Rejected edit" }),
+    ).rejects.toMatchObject({
+      mutationCertainty: "not-applied",
+      failure: { code: "upstream_rejected" },
+    })
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKey).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([true, false])(
+    "keeps an unconfirmed Sub2API editor write uncertain without replay (acknowledged: %s)",
+    async (acknowledged) => {
+      const before = token({ id: 9 })
+      mockFetchSub2ApiKey.mockResolvedValue(before)
+      mockUpdateSub2ApiKey.mockImplementationOnce(async (mutationRequest) => {
+        mutationRequest.observer?.onDispatch()
+        if (acknowledged) return true
+        throw new Error("connection lost after dispatch")
+      })
+      const session = await sub2ApiAccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+        request,
+      })
+      const editor = await (
+        await session.openCollection("account")
+      ).openEditEditor({
+        accountId: "account-example",
+        siteType: SITE_TYPES.SUB2API,
+        scopeKey: "account",
+        resourceId: "9",
+      })
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Unconfirmed edit" }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(mockUpdateSub2ApiKey).toHaveBeenCalledOnce()
+      expect(mockFetchSub2ApiKey).toHaveBeenCalledTimes(3)
+    },
+  )
+
   it("registers native resources for ordinary Key Management", () => {
     expect(sub2ApiCapabilities.account?.keyResourceManagement).toBe(
       sub2ApiAccountKeyResources,
     )
   })
 })
+
+it.each([
+  {
+    quota: "10.3",
+    used: "3.1",
+    amount: {
+      status: "known",
+      value: "7.2",
+      source: expect.objectContaining({
+        kind: "derived",
+        amountInputs: { quota: "10.3", quota_used: "3.1" },
+      }),
+    },
+  },
+  { quota: "5", used: "7", amount: { status: "known", value: "0" } },
+  { quota: "10", used: undefined, amount: { status: "unknown" } },
+  { quota: "10", used: "-3", amount: { status: "unknown" } },
+  {
+    quota: "0",
+    used: "4",
+    amount: { status: "unknown" },
+    limitState: "unlimited",
+  },
+])(
+  "reports Sub2API spendable key allowance for $quota and $used",
+  async ({ quota, used, amount, limitState }) => {
+    mockFetchSub2ApiKeys
+      .mockReset()
+      .mockResolvedValue([token({ quota, quota_used: used })])
+    mockFetchSub2ApiGroupDescriptors.mockReset().mockResolvedValue([])
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const row = (await collection.list()).items[0]!
+    expect(row.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          remaining: expect.objectContaining(amount),
+          limitState: limitState ?? "finite",
+        }),
+      }),
+    )
+  },
+)
 
 it("keeps Sub2API dollar amounts unscaled in display facts", async () => {
   mockFetchSub2ApiKeys.mockReset().mockResolvedValue([
@@ -1425,7 +1530,7 @@ it("keeps Sub2API dollar amounts unscaled in display facts", async () => {
         limitState: "finite",
         limit: expect.objectContaining({ status: "known", value: "10" }),
         used: expect.objectContaining({ status: "known", value: "3" }),
-        remaining: expect.objectContaining({ status: "unknown" }),
+        remaining: expect.objectContaining({ status: "known", value: "7" }),
       }),
     }),
     {

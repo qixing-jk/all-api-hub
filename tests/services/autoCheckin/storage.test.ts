@@ -97,6 +97,40 @@ describe("autoCheckinStorage", () => {
     },
   )
 
+  it.each([
+    { perAccount: { a: { awardExecutionReceiptIds: "receipt" } } },
+    { accountsSnapshot: [{ lastResult: { awardExecutionReceiptIds: [42] } }] },
+    { perAccount: { a: { awardExecutionReceiptIds: ["receipt", " "] } } },
+  ])(
+    "protects stored awards when a receipt list is invalid: %j",
+    async (stored) => {
+      const { get, set } = storageMocks
+      get.mockResolvedValueOnce(stored).mockResolvedValueOnce(stored)
+
+      await expect(autoCheckinStorage.getStatus()).rejects.toThrow(
+        "invalid_checkin_award_receipts",
+      )
+      await expect(
+        autoCheckinStorage.updateStatus(() => ({
+          patch: { lastRunResult: "success" },
+        })),
+      ).resolves.toMatchObject({ ok: false })
+      expect(set).not.toHaveBeenCalled()
+    },
+  )
+
+  it("returns null only when the caller opts out of status read errors", async () => {
+    storageMocks.get.mockRejectedValueOnce(new Error("storage unavailable"))
+    await expect(
+      autoCheckinStorage.getStatus({ throwOnError: false }),
+    ).resolves.toBeNull()
+
+    storageMocks.get.mockResolvedValueOnce("invalid stored status")
+    await expect(
+      autoCheckinStorage.getStatus({ throwOnError: false }),
+    ).rejects.toThrow("invalid_checkin_status")
+  })
+
   it("retains a legacy award's original observation time when disabling the account", async () => {
     const { get, set } = storageMocks
     get.mockResolvedValueOnce({

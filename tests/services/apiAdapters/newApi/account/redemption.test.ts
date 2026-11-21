@@ -30,7 +30,7 @@ describe("createNewApiRedemption", () => {
     vi.clearAllMocks()
   })
 
-  it("delegates code redemption through the New API-family implementation", async () => {
+  it("reports the confirmed native USD grant without exposing internal quota units", async () => {
     mockRedeemCode.mockResolvedValueOnce(500)
 
     const redemption = createNewApiRedemption()
@@ -40,7 +40,25 @@ describe("createNewApiRedemption", () => {
         request,
         code: "example-code",
       }),
-    ).resolves.toBe(500)
+    ).resolves.toMatchObject({
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: {
+            status: "known",
+            value: "0.001",
+            source: { adapter: "new-api", inputs: ["data"] },
+          },
+          scope: {
+            subject: { kind: "account", accountId: "account-1" },
+            authority: request.baseUrl,
+          },
+          fulfillment: "credited",
+          target: "wallet",
+          validity: { kind: "unknown" },
+        },
+      ],
+    })
 
     expect(mockRedeemCode).toHaveBeenCalledOnce()
     expect(mockRedeemCode).toHaveBeenCalledWith(request, "example-code")

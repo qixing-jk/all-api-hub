@@ -358,7 +358,7 @@ test("forwards selected redemption text from the background context-menu path to
   const contentHost = page.locator("all-api-hub-redemption-toast")
   await expect(
     contentHost.getByText(
-      /Redeemed successfully\. Credited amount: USD\s*0\.5/,
+      /^Redeemed successfully\. Credited amount: USD\s*0\.5$/,
     ),
   ).toBeVisible()
   expect(redeemedCodes).toEqual([REDEMPTION_CODE])

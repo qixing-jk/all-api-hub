@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { CURRENCIES } from "~/constants/money"
@@ -18,6 +19,10 @@ import {
   SCOPE_SELECTION_KINDS,
 } from "~/services/amounts/financialConstants"
 import { keyProtocolAmount } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import {
+  formatBudgetConstraint,
+  formatBudgetRules,
+} from "~/utils/core/budgetPresentation"
 
 // Source fixture only: TrustedRouter is not a registered integration.
 // Lore-Hex/quill-router bc244eab03508cca6e9f27894506c391672c9c4b,
@@ -189,6 +194,23 @@ describe("source-backed key budgets", () => {
     ).toBe(true)
   })
 
+  it("rejects a finite stored budget when neither its limit nor its remaining amount is known", () => {
+    const budget = budgetConstraint({
+      ...base,
+      limitState: BUDGET_LIMIT_STATES.Unknown,
+    })
+    const result = budgetConstraintSchema.safeParse({
+      ...budget,
+      limitState: BUDGET_LIMIT_STATES.Finite,
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({
+        message: "Finite budgets require an observed limit or remaining",
+      }),
+    ])
+  })
+
   it("keeps microdollar strings exact and rejects numeric sentinels in unbounded budgets", () => {
     const exact = budgetConstraint({
       ...base,
@@ -224,5 +246,59 @@ describe("source-backed key budgets", () => {
       enabled: { status: "unknown" },
       includesByok: { status: "unknown" },
     })
+  })
+})
+
+describe("key budget presentation", () => {
+  const t = ((key: string) => key.split(".").at(-1)) as TFunction
+
+  it("shows enforcement, reset, disablement and BYOK rules for a rolling budget", () => {
+    const budget = budgetConstraint({
+      ...base,
+      limitState: "finite",
+      limit: "12",
+      enabled: false,
+      enforcement: "hard",
+      includesByok: true,
+      window: { kind: "rolling", period: "5h", resetsAt: 1 },
+    })
+    expect(formatBudgetRules(budget, t)).toEqual([
+      "5h (rolling)",
+      expect.stringMatching(/^reset: /),
+      "disabled",
+      "hardLimit",
+      "includesByok",
+    ])
+    expect(
+      formatBudgetRules(
+        budgetConstraint({
+          ...base,
+          limitState: "unknown",
+          window: { kind: "unknown", period: "year" },
+        }),
+        t,
+        false,
+      ),
+    ).toEqual(["year"])
+  })
+
+  it("distinguishes absent limits from unbounded budgets without showing invented zeroes", () => {
+    const unlimited = budgetConstraint({
+      ...base,
+      limitState: "unlimited",
+      includesByok: false,
+      window: { kind: "periodic", period: "week" },
+    })
+    expect(formatBudgetConstraint(unlimited, t, false)).toBe(
+      "unlimitedQuota · week · excludesByok",
+    )
+    const inherited = budgetConstraint({
+      ...base,
+      limitState: "inherited",
+      used: "0",
+    })
+    expect(formatBudgetConstraint(inherited, t, false)).toMatch(
+      /^inherited · used: USD\s0$/,
+    )
   })
 })

@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
+  readdirSync,
   readFileSync,
   rmSync,
   unlinkSync,
@@ -13,10 +14,60 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import type { Locator, Page } from "@playwright/test"
 import { PNG } from "pngjs"
-import { expect, it } from "vitest"
+import { expect, it, vi } from "vitest"
+
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const cli = path.resolve("scripts/visual-capture.mjs")
+
+it("records a viewport and a focused artifact for each distinct view without collision", async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "capture-context-"))
+  vi.stubEnv("AAH_VISUAL_CAPTURE_CONTEXT", "1")
+  vi.stubEnv("AAH_VISUAL_CAPTURE_VIEWS", "")
+  try {
+    writeFileSync(path.join(directory, ".aah-e2e-build.json"), "{}")
+    const captureTarget = {
+      waitFor: vi.fn(),
+      scrollIntoViewIfNeeded: vi.fn(),
+      screenshot: vi.fn().mockResolvedValue(Buffer.from("element")),
+    } as unknown as Locator
+    const page = {
+      viewportSize: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      setViewportSize: vi.fn(),
+      evaluate: vi.fn().mockResolvedValue({ language: "en", theme: "light" }),
+      context: vi.fn().mockReturnValue({ browser: () => null }),
+      screenshot: vi.fn().mockResolvedValue(Buffer.from("viewport")),
+    } as unknown as Page
+    const output = path.join(directory, "images")
+    await captureVisualViews({
+      page,
+      ready: captureTarget,
+      captureTarget,
+      directory: output,
+      extensionDir: directory,
+      id: "pricing",
+      views: [
+        { id: "desktop", width: 800, height: 600, theme: "light" },
+        { id: "desktop-context", width: 400, height: 800, theme: "dark" },
+      ],
+    })
+    const records = readdirSync(output)
+      .filter((filename) => filename.endsWith(".json"))
+      .map((filename) =>
+        JSON.parse(readFileSync(path.join(output, filename), "utf8")),
+      )
+    expect(records).toHaveLength(4)
+    expect(new Set(records.map(({ image }) => image)).size).toBe(4)
+    for (const { image, capture } of records) {
+      expect(readFileSync(path.join(output, image), "utf8")).toBe(capture)
+    }
+  } finally {
+    vi.unstubAllEnvs()
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
 
 it("advertises generic workflow capture without requiring scenario discovery", () => {
   const help = execFileSync(process.execPath, [cli, "--help"], {

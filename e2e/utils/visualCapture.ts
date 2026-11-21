@@ -12,6 +12,7 @@ async function captureVisualCheckpoint({
   id,
   extensionDir,
   animations = "disabled",
+  isContext = false,
 }: {
   page: Page
   ready: Locator
@@ -20,6 +21,7 @@ async function captureVisualCheckpoint({
   id: string
   extensionDir: string
   animations?: "disabled" | "allow"
+  isContext?: boolean
 }) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u.test(id))
     throw new Error("Visual checkpoint ID must be a safe filename")
@@ -43,7 +45,9 @@ async function captureVisualCheckpoint({
     await readFile(path.join(extensionDir, ".aah-e2e-build.json"), "utf8"),
   )
   await mkdir(directory, { recursive: true })
-  const image = `${id}.png`
+  // Dots are reserved for generated artifacts and cannot occur in caller IDs.
+  const artifactId = isContext ? `${id}.context` : id
+  const image = `${artifactId}.png`
   const bytes = await (captureTarget ?? page).screenshot({
     animations,
     caret: "hide",
@@ -52,10 +56,10 @@ async function captureVisualCheckpoint({
   // A broad grep must not silently overwrite another test's checkpoint.
   await writeFile(path.join(directory, image), bytes, { flag: "wx" })
   await writeFile(
-    path.join(directory, `${id}.json`),
+    path.join(directory, `${artifactId}.json`),
     JSON.stringify(
       {
-        id,
+        id: artifactId,
         image,
         capturedAt: new Date().toISOString(),
         source,
@@ -76,7 +80,8 @@ async function captureVisualCheckpoint({
       page,
       ready,
       directory,
-      id: `${id}-context`,
+      id,
+      isContext: true,
       extensionDir,
       animations,
     })

@@ -114,6 +114,7 @@ describe("Claude Code Hub managed-site provider", () => {
             {
               id: "account-1",
               name: "Account",
+              siteType: SITE_TYPES.NEW_API,
               baseUrl: "https://api.example.com",
             } as any,
             { id: 1, name: "Token", key: "sk-real-key" } as any,
@@ -142,6 +143,7 @@ describe("Claude Code Hub managed-site provider", () => {
             {
               id: "account-1",
               name: "Account",
+              siteType: SITE_TYPES.NEW_API,
               baseUrl: "https://api.example.com",
             } as any,
             { id: 1, name: "Token", key: "sk-real-key" } as any,

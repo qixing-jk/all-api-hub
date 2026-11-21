@@ -6,6 +6,11 @@ import {
 } from "~/services/accounts/keys/accountKeyNames"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
+  addDecimal,
+  compareDecimal,
+  parseDecimal,
+} from "~/services/amounts/decimal"
+import {
   ASSET_KINDS,
   BUDGET_LIMIT_STATES,
   BUDGET_WINDOW_KINDS,
@@ -416,6 +421,58 @@ const renameProvisionedResource = async (
   }
 }
 
+/** Sub2API publishes the ceiling and used counter for the same allowance. */
+function deriveSub2ApiRemaining(quota: string | undefined, rawUsed: unknown) {
+  const used = parseDecimal(rawUsed)
+  if (
+    quota === undefined ||
+    used === undefined ||
+    compareDecimal(quota, "0") <= 0 ||
+    compareDecimal(used, "0") < 0
+  )
+    return undefined
+  try {
+    return {
+      value:
+        compareDecimal(used, quota) >= 0 ? "0" : addDecimal(quota, `-${used}`),
+      inputs: { quota, quota_used: used },
+    }
+  } catch {
+    return undefined
+  }
+}
+
+/** Project the reported ceiling and usage alongside the derived spendable allowance. */
+function toSub2ApiBudgetFact(
+  token: Sub2ApiNativeKey,
+  ref: AccountKeyResourceFacts["ref"],
+  context: AccountKeyFactContext,
+) {
+  const quota = parseDecimal(token.quota)
+  return keyBudgetFact(ref, context, {
+    fieldId: "quota",
+    operation: "keys",
+    asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+    limitState:
+      quota !== undefined && compareDecimal(quota, "0") <= 0
+        ? BUDGET_LIMIT_STATES.Unlimited
+        : BUDGET_LIMIT_STATES.Finite,
+    limit: token.quota,
+    used: token.quota_used,
+    remainingDerivation: deriveSub2ApiRemaining(quota, token.quota_used),
+    scope: {
+      groups:
+        token.group_id == null
+          ? { kind: SCOPE_SELECTION_KINDS.Unknown }
+          : {
+              kind: SCOPE_SELECTION_KINDS.Restricted,
+              ids: [String(token.group_id)],
+            },
+    },
+    window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+  })
+}
+
 const toFacts = (
   token: Sub2ApiNativeKey,
   ref: AccountKeyResourceFacts["ref"],
@@ -436,27 +493,7 @@ const toFacts = (
     createdAt: normalizeToMs(token.created_at) ?? undefined,
   },
   displayFacts: [
-    keyBudgetFact(ref, context, {
-      fieldId: "quota",
-      operation: "keys",
-      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
-      limitState:
-        token.quota != null && Number(token.quota) <= 0
-          ? BUDGET_LIMIT_STATES.Unlimited
-          : BUDGET_LIMIT_STATES.Finite,
-      limit: token.quota,
-      used: token.quota_used,
-      scope: {
-        groups:
-          token.group_id == null
-            ? { kind: SCOPE_SELECTION_KINDS.Unknown }
-            : {
-                kind: SCOPE_SELECTION_KINDS.Restricted,
-                ids: [String(token.group_id)],
-              },
-      },
-      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
-    }),
+    toSub2ApiBudgetFact(token, ref, context),
     keyExpiryDisplayFact("expires_at", toSub2ApiKeyEditable(token).expires_at),
     {
       fieldId: "group",

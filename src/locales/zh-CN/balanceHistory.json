@@ -82,7 +82,7 @@
     },
     "success": {
       "pruneCompleted": "清理完成",
-      "refreshCompleted": "历史已记录：{{captured}}；未记录：{{uncaptured}}。",
+      "refreshCompleted": "刷新完成",
       "settingsSaved": "设置已保存"
     }
   },

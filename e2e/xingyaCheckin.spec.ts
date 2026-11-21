@@ -379,7 +379,13 @@ for (const scenario of [
       typeof raw === "string" ? (JSON.parse(raw) as AutoCheckinStatus) : null
     const result = status?.perAccount?.["xingya-e2e"]
     if (scenario === "award") {
-      expect(result?.reward).toEqual({ quota: 69350 })
+      expect(result?.awards).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "0.1387" },
+          fulfillment: "credited",
+        },
+      ])
     }
 
     await expect(

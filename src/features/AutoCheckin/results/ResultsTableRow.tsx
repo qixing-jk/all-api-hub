@@ -30,6 +30,7 @@ import { openProtectionBypassHistory } from "~/utils/navigation"
 interface ResultsTableRowProps extends ResultsTableActionsProps {
   result: CheckinAccountResult
   account?: DisplaySiteData
+  exchangeRate?: number
   currencyType?: CurrencyType
   siteTypeMismatch?: SiteTypeMismatch
 }
@@ -38,6 +39,7 @@ interface ResultsTableRowProps extends ResultsTableActionsProps {
 export default function ResultsTableRow({
   result,
   account,
+  exchangeRate,
   currencyType,
   siteTypeMismatch,
   ...actionProps
@@ -92,7 +94,7 @@ export default function ResultsTableRow({
           <CheckinAwards
             result={result}
             currencyType={currencyType}
-            exchangeRate={account?.exchangeRate}
+            exchangeRate={exchangeRate}
           />
 
           {troubleshootingHintKey && (

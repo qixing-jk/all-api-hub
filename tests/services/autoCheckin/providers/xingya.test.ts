@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { mergeConfirmedAwards } from "~/services/amounts/awards"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { xingyaProvider } from "~/services/checkin/autoCheckin/providers/xingya"
@@ -394,6 +395,69 @@ describe("xingyaProvider", () => {
       expect.objectContaining({ endpoint: "/api/user/xingya-daily-claim" }),
     )
     expect(sendSiteAction).toHaveBeenCalledTimes(1)
+  })
+
+  it("merges claim and status evidence once per provider claim round", async () => {
+    const requests = await requestModule()
+    prepareLoginSession()
+    const account = {
+      ...mockAccount,
+      login: {
+        methodId: "password" as const,
+        credentials: { username: "test", password: "fixture-password" },
+      },
+    }
+    const run = (round: number, checkedIn: boolean) => {
+      vi.mocked(requests.envelope)
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { id: "7451" },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: {
+            ...liveStatusData,
+            claim_round: round,
+            today_record: {
+              ...liveStatusData.today_record,
+              checked_in: checkedIn,
+            },
+          },
+        })
+      if (!checkedIn)
+        vi.mocked(requests.envelope).mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { already_claimed: false, quota_awarded: 69350 },
+        })
+      return xingyaProvider.checkIn(account, DEFAULT_PROVIDER_CONTEXT)
+    }
+
+    const claim = await run(0, false)
+    const readback = await run(0, true)
+    const extraClaim = await run(1, false)
+    const extraReadback = await run(1, true)
+
+    expect(claim.status).toBe("success")
+    expect(readback.status).toBe("already_checked")
+    const firstRound = mergeConfirmedAwards(
+      claim.awards ?? [],
+      readback.awards ?? [],
+    )
+    const secondRound = mergeConfirmedAwards(
+      extraClaim.awards ?? [],
+      extraReadback.awards ?? [],
+    )
+    expect(firstRound).toHaveLength(1)
+    expect(secondRound).toHaveLength(1)
+    expect(mergeConfirmedAwards(firstRound, secondRound)).toHaveLength(2)
+    expect(
+      vi
+        .mocked(requests.envelope)
+        .mock.calls.filter(([, request]) => request.options?.method === "POST"),
+    ).toHaveLength(2)
   })
 
   it.each([false, true])(

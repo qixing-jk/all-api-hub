@@ -65,6 +65,9 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
   const [accountInfoById, setAccountInfoById] = useState<
     Record<string, DisplaySiteData>
   >({})
+  const [exchangeRateByAccountId, setExchangeRateByAccountId] = useState<
+    Record<string, number>
+  >({})
   const activeStatusLoadCountRef = useRef(0)
   const latestStatusLoadIdRef = useRef(0)
   const attemptedAccountInfoIdsRef = useRef<Set<string>>(new Set())
@@ -109,6 +112,14 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
         setAccountSetupState(accountSetup.state)
         setSiteTypeMismatches(siteTypeMismatches)
         setStatusLoadFailed(false)
+        setExchangeRateByAccountId(
+          Object.fromEntries(
+            accountSetup.accounts.map((account) => [
+              account.id,
+              account.exchange_rate,
+            ]),
+          ),
+        )
 
         if (response.success) {
           setStatus(
@@ -250,6 +261,7 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
     isLoading,
     statusLoadFailed,
     accountInfoById,
+    exchangeRateByAccountId,
     loadStatus,
     resolveAutoCheckinAccount,
   }

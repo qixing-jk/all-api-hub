@@ -67,6 +67,7 @@ interface ResultsTableProps extends ResultsTableActionsProps {
    */
   siteTypeMismatches?: SiteTypeMismatchMap
   accountInfoById?: Record<string, DisplaySiteData>
+  exchangeRateByAccountId?: Record<string, number>
   currencyType?: CurrencyType
 }
 
@@ -85,6 +86,7 @@ export default function ResultsTable({
   results,
   siteTypeMismatches,
   accountInfoById,
+  exchangeRateByAccountId,
   currencyType,
   ...actionProps
 }: ResultsTableProps) {
@@ -284,6 +286,11 @@ export default function ResultsTable({
                   key={result.accountId}
                   result={result}
                   account={accountInfoById?.[result.accountId]}
+                  exchangeRate={
+                    exchangeRateByAccountId
+                      ? exchangeRateByAccountId[result.accountId]
+                      : accountInfoById?.[result.accountId]?.exchangeRate
+                  }
                   currencyType={currencyType}
                   siteTypeMismatch={siteTypeMismatches?.[result.accountId]}
                   {...actionProps}

@@ -27,6 +27,7 @@ import {
   emrankKeyFields,
 } from "~/services/apiAdapters/emrank/keyResourceFields"
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
+import { createGrsaiKeyEditor } from "~/services/apiAdapters/grsai/keyResourceEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import { novitaKeyEditor } from "~/services/apiAdapters/novita/keyEditor"
@@ -61,9 +62,15 @@ it.each([
       lng: "zh-CN",
       resources: { "zh-CN": { keyManagement: zhKeyManagement } },
     })
-    const editor = createNewApiKeyEditor(
-      resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
-      request,
+    const editor =
+      siteType === SITE_TYPES.GRSAI
+        ? createGrsaiKeyEditor({})
+        : createNewApiKeyEditor(resolveNewApiKeyVariant(siteType), {
+            ...request,
+            siteType,
+          })
+    expect(editor.fields.some((field) => field.fieldId === quotaField)).toBe(
+      true,
     )
     const presentation = getPresentation(siteType, editorModes.Create, {
       fields: editor.fields,

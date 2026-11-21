@@ -66,6 +66,16 @@ it("projects scenario estimates in their quoted currency while retaining the pub
   })
   expect(quote.publishedSchedule![0]!.rates.input!.currency).toBe("CNY")
   expect(
+    projectMonetaryQuoteAmount({ ...quote, purpose: undefined }),
+  ).toMatchObject({
+    kind: "unclassified-quote",
+    amount: { value: "1" },
+  })
+  for (const amount of [null, NaN, -1])
+    expect(projectMonetaryQuoteAmount({ ...quote, amount })).not.toHaveProperty(
+      "amount",
+    )
+  expect(
     projectMonetaryQuoteAmount(
       quoteModelPrice(
         plan,
@@ -99,6 +109,14 @@ it("keeps native Token quotation distinct from measured input Tokens and unresol
     rounding: "floor",
     sourceUrl: "https://docs.emrank.tech/guide/billing.html",
   }
+  const unavailable = projectQuotaQuoteAmount(
+    plan,
+    quoteQuotaUsage(plan, { output: 1 }),
+    "scenario-estimate",
+  )
+  expect(unavailable.status).toBe("unavailable")
+  expect(unavailable).not.toHaveProperty("amount")
+
   expect(
     projectQuotaQuoteAmount(
       plan,

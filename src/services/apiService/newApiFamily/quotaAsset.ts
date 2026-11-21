@@ -31,7 +31,7 @@ export function newApiFinancialAmount(
   siteType?: SiteType | null,
 ) {
   const raw = parseDecimal(value)
-  const monetary = siteType !== null && siteType !== SITE_TYPES.UNKNOWN
+  const monetary = siteType != null && siteType !== SITE_TYPES.UNKNOWN
   const asset: Asset = monetary
     ? { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
     : { kind: ASSET_KINDS.Quota, ...newApiQuotaAsset(authority) }

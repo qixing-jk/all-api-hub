@@ -84,7 +84,7 @@
     },
     "success": {
       "pruneCompleted": "Dados antigos removidos",
-      "refreshCompleted": "Histórico registrado: {{captured}}; não registrado: {{uncaptured}}.",
+      "refreshCompleted": "Atualização concluída",
       "settingsSaved": "Configurações salvas"
     }
   },

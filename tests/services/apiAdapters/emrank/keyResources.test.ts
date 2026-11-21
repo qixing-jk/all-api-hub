@@ -80,6 +80,21 @@ describe("EMRank key resources", () => {
       }),
     )
   })
+  it("blocks editing when EMRank omits the quota needed for a complete key update", async () => {
+    const write = vi.fn(() => HttpResponse.json({ success: true }))
+    server.use(
+      list([{ ...keyRow, total_quota: undefined }]),
+      http.put(`${origin}/api/access-keys/${keyRow.id}`, write),
+    )
+    const collection = await (await openSession()).openCollection("account")
+    const row = (await collection.list()).items[0]!
+
+    await expect(collection.openEditEditor(row.ref)).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    expect(write).not.toHaveBeenCalled()
+  })
+
   it("reports key spending constraints with native assets and authoritative remaining", async () => {
     server.use(
       list([

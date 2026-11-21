@@ -65,9 +65,10 @@ export function keyBudgetFact(
   context: AccountKeyFactContext,
   input: Omit<
     Parameters<typeof budgetConstraint>[0],
-    "source" | "observedAt" | "scope"
+    "source" | "observedAt" | "scope" | "remainingSource"
   > & {
     fieldId: string
+    remainingDerivation?: { value: string; inputs: Record<string, string> }
     operation: string
     metric?: (typeof BUDGET_AMOUNT_FIELDS)[keyof typeof BUDGET_AMOUNT_FIELDS]
     scope?: Partial<UsageScope>
@@ -76,7 +77,14 @@ export function keyBudgetFact(
   AccountKeyDisplayFact,
   { kind: typeof ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint }
 > {
-  const { fieldId, metric, operation, scope, ...budget } = input
+  const { fieldId, metric, operation, scope, remainingDerivation, ...budget } =
+    input
+  const source = {
+    adapter: ref.siteType,
+    contractVersion: "key-budget/v1",
+    operation,
+    kind: EVIDENCE_KINDS.Reported,
+  }
   return {
     kind: ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint,
     fieldId,
@@ -84,12 +92,15 @@ export function keyBudgetFact(
     budget: budgetConstraint({
       ...budget,
       scope: accountKeyUsageScope(ref, context, scope),
-      source: {
-        adapter: ref.siteType,
-        contractVersion: "key-budget/v1",
-        operation,
-        kind: EVIDENCE_KINDS.Reported,
-      },
+      source,
+      ...(remainingDerivation && {
+        remaining: remainingDerivation.value,
+        remainingSource: {
+          ...source,
+          kind: EVIDENCE_KINDS.Derived,
+          amountInputs: remainingDerivation.inputs,
+        },
+      }),
       observedAt: context.observedAt,
     }),
   }
