@@ -20,7 +20,7 @@
     },
     "title": "Desglose de cuentas"
   },
-  "description": "Consulta las tendencias diarias de saldo, ingresos y gastos para seguir los cambios en los fondos de tus cuentas.",
+  "description": "Consulta cómo cambian los saldos y las cuotas de tus cuentas.",
   "empty": {
     "description": "Habilita Historial de saldo y actualiza una cuenta para registrar la primera instantánea.",
     "title": "Aún no hay instantáneas"
@@ -84,16 +84,26 @@
     },
     "success": {
       "pruneCompleted": "Depuración completada",
-      "refreshCompleted": "Actualización completada",
+      "refreshCompleted": "Historial registrado: {{captured}}; sin registrar: {{uncaptured}}.",
       "settingsSaved": "Configuración guardada"
     }
   },
   "metrics": {
     "balance": "Saldo",
-    "estimatedIncome": "Ingresos estimados",
+    "estimatedIncome": "Entrada neta estimada",
     "income": "Ingresos",
     "net": "Cambio neto",
     "outcome": "Egresos"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "Grupos",
+      "keys": "Claves",
+      "models": "Modelos",
+      "projects": "Proyectos",
+      "routes": "Rutas"
+    },
+    "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {
     "kpis": {
@@ -119,8 +129,8 @@
     "enabledHint": "Cuando está deshabilitado, no se registran instantáneas y se desactiva la captura programada.",
     "endOfDayCapture": "Captura de fin de día",
     "endOfDayCaptureHint": "Captura diaria de mejor esfuerzo cerca de {{time}} (requiere API de alarmas).",
-    "estimatedTodayIncome": "Mostrar ingresos estimados de hoy",
-    "estimatedTodayIncomeHint": "Usa el historial de saldo para estimar recompensas que no aparecen en los registros de ingresos del sitio. No disponible cuando falta la línea base del día anterior.",
+    "estimatedTodayIncome": "Mostrar entrada neta estimada",
+    "estimatedTodayIncomeHint": "Estima el flujo neto con saldos comparables cerca del inicio del día y el uso liquidado en un periodo similar.",
     "retentionDays": "Retención (días)"
   },
   "summary": {
@@ -131,7 +141,7 @@
       "account": "Cuenta",
       "cashflowCoverage": "Cobertura de flujo de caja",
       "endBalance": "Saldo final",
-      "estimatedIncomeTotal": "Ingresos estimados totales",
+      "estimatedIncomeTotal": "Entrada neta estimada",
       "incomeTotal": "Ingresos totales",
       "outcomeTotal": "Egresos totales",
       "rangeNet": "Neto del rango",
@@ -154,7 +164,7 @@
       "scope": "Vista"
     },
     "emptyMetric": "No hay datos de {{metric}} en este rango.",
-    "gapBridge": "Los tramos discontinuos indican días sin registros.",
+    "gapBridge": "Sin registros",
     "scopes": {
       "accounts": "Por cuenta",
       "total": "Total"

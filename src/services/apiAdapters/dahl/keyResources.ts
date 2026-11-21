@@ -1,9 +1,20 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import { DAHL_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_CASH_CLASSIFICATIONS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { accountKeyUsageScope } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
 import type {
+  AccountKeyFactContext,
   AccountKeyResourceEditorDefinition,
   AccountKeyResourceProviderFacts,
 } from "~/services/apiAdapters/accountKeyResources/definition"
@@ -11,7 +22,9 @@ import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accou
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_FINANCIAL_FACT_KINDS,
   ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
@@ -26,6 +39,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
+  NATIVE_RESOURCE_MUTATION_CERTAINTIES,
   RESOURCE_FIELD_ISSUE_CODES,
   RESOURCE_FIELD_TYPES,
 } from "~/services/apiAdapters/contracts/resourceNative"
@@ -44,7 +58,12 @@ import {
   type DahlKey,
   type DahlKeyTransfer,
 } from "~/services/apiService/dahl"
-import { DAHL_KEY_STATUSES } from "~/services/apiService/dahl/constants"
+import {
+  DAHL_ACCOUNT_ENDPOINT,
+  DAHL_KEY_STATUSES,
+  DAHL_KEYS_ENDPOINT,
+  DAHL_TOKEN_ASSET,
+} from "~/services/apiService/dahl/constants"
 import { parseDahlTokenAmount } from "~/services/apiService/dahl/tokenAmount"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -125,6 +144,7 @@ const keyDisplayName = (id: number, name: string) => name || `Dahl #${id}`
 const facts = (
   detail: NamedKey | RenameDetail,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   if ("kind" in detail)
     return {
@@ -160,8 +180,42 @@ const facts = (
     displayFacts: [
       {
         fieldId: "available_tokens",
-        kind: "credits",
-        value: key.available_tokens,
+        kind: ACCOUNT_KEY_FINANCIAL_FACT_KINDS.Allocation,
+        // The account total contains unallocated pool tokens and all key allocations.
+        // This is a cross-source reference, not a dangling edge inside a key snapshot.
+        parent: {
+          id: "total",
+          collectionKey: DAHL_ACCOUNT_ENDPOINT,
+          scope: accountBalanceScope({
+            baseUrl: context.authority,
+            accountId: ref.accountId,
+          }),
+          source: {
+            adapter: SITE_TYPES.DAHL,
+            contractVersion: "2",
+            operation: DAHL_ACCOUNT_ENDPOINT,
+            kind: EVIDENCE_KINDS.Derived,
+            inputs: ["token_balance", "tokens_on_keys"],
+          },
+        },
+        position: balancePosition({
+          id: `key:${key.id}`,
+          collectionKey: DAHL_KEYS_ENDPOINT,
+          scope: accountKeyUsageScope(ref, context, {
+            models: { kind: SCOPE_SELECTION_KINDS.All },
+          }),
+          asset: { kind: ASSET_KINDS.Quota, ...DAHL_TOKEN_ASSET },
+          value: key.available_tokens,
+          source: {
+            adapter: SITE_TYPES.DAHL,
+            contractVersion: "token-pool/v1",
+            operation: DAHL_KEYS_ENDPOINT,
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          observedAt: context.observedAt,
+          cashClassification: BALANCE_CASH_CLASSIFICATIONS.NotCash,
+          nature: BALANCE_NATURES.Prepaid,
+        }),
       },
     ],
     actions: {
@@ -333,7 +387,11 @@ export const dahlKeyResources = defineAccountKeyResourceCapability({
       resourceId: id,
     }
     const snapshot =
-      intent.snapshot ?? facts(await fundingDetail(config, id, options), ref)
+      intent.snapshot ??
+      facts(await fundingDetail(config, id, options), ref, {
+        authority: new URL(config.request.baseUrl).origin,
+        observedAt: Date.now(),
+      })
     if (!snapshot.actions.canUpdate)
       throw new AccountKeyResourceError({ code: failures.NotFound })
     return {
@@ -349,12 +407,15 @@ export const dahlKeyResources = defineAccountKeyResourceCapability({
         (key) => String(key.id) === ref.resourceId,
       )
       return key?.token && key.status !== DAHL_KEY_STATUSES.Revoked
-        ? { kind: "resolved", secret: key.token }
-        : { kind: "unavailable" }
+        ? {
+            kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+            secret: key.token,
+          }
+        : { kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable }
     },
   },
   toListFacts: facts,
-  toDetailFacts: (detail: Detail, ref) => facts(detail, ref),
+  toDetailFacts: (detail: Detail, ref, context) => facts(detail, ref, context),
   createEditor: async (_config, _scope, _options, _inventory, intent) => ({
     fields: [nameField],
     initialValues: { [fields.Name]: intent?.nameHint ?? "" },
@@ -440,7 +501,7 @@ export const dahlKeyResources = defineAccountKeyResourceCapability({
       )
       scheduleDahlKeyNameSync(config.request, detail.keyId)
       return {
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           ...detail,
           name: command.name,

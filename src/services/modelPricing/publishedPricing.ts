@@ -1,12 +1,17 @@
 import {
   PRICE_RATE_UNITS,
   PRICING_GROUP_MULTIPLIERS,
+  PRICING_ISSUE_CODES,
   TOKENS_PER_MILLION,
 } from "./pricingConstants"
 import type { PricingPlan } from "./pricingPlan"
 
 export type PublishedPricing = Pick<PricingPlan, "source"> & {
-  issues?: PricingPlan["issues"]
+  issues?: (Omit<PricingPlan["issues"][number], "code"> & {
+    code:
+      | PricingPlan["issues"][number]["code"]
+      | typeof PRICING_ISSUE_CODES.GROUP_RATE_MISSING
+  })[]
   schedule: PricingPlan["rules"]
 }
 
@@ -15,16 +20,22 @@ export function readPublishedPricing(
   plan: PricingPlan,
   groupMultiplier: number,
 ): PublishedPricing {
+  const missingMultiplier =
+    plan.groupMultiplier === PRICING_GROUP_MULTIPLIERS.PENDING &&
+    (!Number.isFinite(groupMultiplier) || groupMultiplier < 0)
   // Unverified rules expose the source schedule; they do not justify deriving account rates.
   const multiplier =
     plan.groupMultiplier === PRICING_GROUP_MULTIPLIERS.INCLUDED ||
     plan.issues.length > 0 ||
-    plan.source.rulesUnavailable
+    plan.source.rulesUnavailable ||
+    missingMultiplier
       ? 1
       : groupMultiplier
   return {
     source: plan.source,
-    issues: plan.issues,
+    issues: missingMultiplier
+      ? [...plan.issues, { code: PRICING_ISSUE_CODES.GROUP_RATE_MISSING }]
+      : plan.issues,
     schedule: [
       { id: "base", conditions: [], rates: plan.rates },
       ...plan.rules,

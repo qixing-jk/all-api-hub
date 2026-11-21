@@ -19,6 +19,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const REDEEM_SITE_URL = "https://redeem.example.test"
 const REDEEM_PAGE_URL = `${REDEEM_SITE_URL}/console/redeem`
@@ -109,6 +110,7 @@ test.beforeEach(async ({ page }) => {
 test("detects a redemption code on a real page, redeems it for the matched account, and refreshes popup balance", async ({
   context,
   extensionId,
+  extensionDir,
   page,
 }) => {
   const redeemedCodes: string[] = []
@@ -218,9 +220,20 @@ test("detects a redemption code on a real page, redeems it for the matched accou
   await contentHost.getByRole("button", { name: "Auto redeem" }).click()
 
   await expect(
-    contentHost.getByText("Redeemed successfully. Credited amount: 1.00"),
+    contentHost.getByText("Redeemed successfully. Credited amount: USD 1"),
   ).toBeVisible()
   expect(redeemedCodes).toEqual([REDEMPTION_CODE])
+  await captureVisualViews({
+    page,
+    ready: contentHost.getByText(
+      "Redeemed successfully. Credited amount: USD 1",
+    ),
+    captureTarget: contentHost
+      .getByText("Redeemed successfully. Credited amount: USD 1")
+      .locator(".."),
+    id: "redemption-native-award",
+    extensionDir,
+  })
 
   await expect
     .poll(async () => {
@@ -344,7 +357,9 @@ test("forwards selected redemption text from the background context-menu path to
 
   const contentHost = page.locator("all-api-hub-redemption-toast")
   await expect(
-    contentHost.getByText("Redeemed successfully. Credited amount: 0.50"),
+    contentHost.getByText(
+      /Redeemed successfully\. Credited amount: USD\s*0\.5/,
+    ),
   ).toBeVisible()
   expect(redeemedCodes).toEqual([REDEMPTION_CODE])
 

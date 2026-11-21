@@ -23,6 +23,35 @@ const plan: QuotaPricingPlan = {
 }
 
 describe("quota consumption", () => {
+  it("applies the native floor after exact decimal rates and all account multipliers", () => {
+    expect(
+      quoteQuotaUsage(
+        { ...plan, rates: { input: { amount: 0.29, per: 1 } } },
+        { input: 100 },
+        { adjustments: { tier: 1 } },
+      ),
+    ).toMatchObject({
+      status: "complete",
+      amount: 29,
+    })
+    expect(
+      quoteQuotaUsage(
+        {
+          ...plan,
+          rates: { input: { amount: 3, per: 1 } },
+          adjustments: [
+            { id: "level", label: { en: "Level" }, multiplier: 1.5 },
+            { id: "rpm", label: { en: "RPM" }, multiplier: 1 },
+          ],
+        },
+        { input: 1000 },
+      ),
+    ).toMatchObject({
+      status: "complete",
+      baseAmount: 3000,
+      amount: 4500,
+    })
+  })
   it.each([
     {},
     { input: 0 },

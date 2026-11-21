@@ -9,6 +9,10 @@ import {
   type QuotaPricingPlan,
   type QuotaQuote,
 } from "~/services/modelPricing/quotaPricing"
+import {
+  projectQuotaQuoteAmount,
+  QUOTE_AMOUNT_KINDS,
+} from "~/services/modelPricing/quoteAmount"
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 
 /** Adapts native assets to the same published-rate rows used by currency prices. */
@@ -27,11 +31,15 @@ export function ModelQuotaPricing({
   const parsed = quotaPricingPlanSchema.safeParse(plan)
   if (!parsed.success)
     return (
-      <p className="text-muted-foreground mt-density-2 text-xs">
+      <p className="mt-density-2 text-xs text-muted-foreground">
         {t("quotaBilling.invalid")}
       </p>
     )
   const current = parsed.data
+  const quoteAmount = quote
+    ? projectQuotaQuoteAmount(current, quote, QUOTE_AMOUNT_KINDS.UnitComparison)
+        .amount
+    : undefined
   const quantity = (value: number) =>
     formatQuotaAmount(value, current.unit, i18n.language)
   const meters = [
@@ -64,7 +72,7 @@ export function ModelQuotaPricing({
         names: current.adjustments
           .map((item) =>
             i18n.language.startsWith("zh")
-              ? item.label.zh ?? item.label.en
+              ? (item.label.zh ?? item.label.en)
               : item.label.en,
           )
           .join(", "),
@@ -72,25 +80,26 @@ export function ModelQuotaPricing({
     : t("quotaBilling.source")
   return (
     <div className="mt-density-2 space-y-density-2">
-      <div className="gap-y-density-2 flex flex-wrap items-center gap-x-6">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-density-2">
         <PriceRateView items={items} isAvailableForUser={isAvailableForUser} />
         <Tooltip content={rules} anchorAsChild>
           <a
             href={current.sourceUrl}
             target="_blank"
             rel="noreferrer noopener"
-            className="text-muted-foreground text-xs underline underline-offset-2"
+            className="text-xs text-muted-foreground underline underline-offset-2"
           >
             {t("quotaBilling.source")}
           </a>
         </Tooltip>
       </div>
       {isComparisonActive &&
-        quote?.baseAmount != null &&
+        quoteAmount !== undefined &&
+        quote !== undefined &&
         quote.status !== QUOTA_QUOTE_STATUSES.Unavailable && (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             {t("quotaBilling.comparison", {
-              amount: quantity(quote.amount ?? quote.baseAmount),
+              amount: quantity(Number(quoteAmount.value)),
             })}
             {quote.status === QUOTA_QUOTE_STATUSES.Reference &&
               ` ${t("quotaBilling.reference")}`}

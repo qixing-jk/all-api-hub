@@ -235,6 +235,34 @@
       "gateways": "Cổng kết nối và công cụ định tuyến"
     }
   },
+  "financial": {
+    "alertOnly": "Chỉ cảnh báo",
+    "allocation": "Số dư phân bổ",
+    "budget": "Ngân sách sử dụng",
+    "disabled": "Ngân sách chưa bật",
+    "excludesByok": "Không tính BYOK",
+    "hardLimit": "Giới hạn bắt buộc",
+    "includesByok": "Tính BYOK",
+    "inherited": "Kế thừa ngân sách tài khoản",
+    "lifetime": "Toàn thời gian",
+    "limit": "Giới hạn",
+    "nativeQuota": "Hạn mức gốc",
+    "period": {
+      "5h": "5 giờ",
+      "day": "Hằng ngày",
+      "month": "Hằng tháng",
+      "week": "Hằng tuần",
+      "year": "Hằng năm"
+    },
+    "remaining": "Còn lại",
+    "reserved": "Đã giữ",
+    "reset": "Đặt lại",
+    "rolling": "Luân phiên",
+    "stale": "Giá trị cũ",
+    "unconfigured": "Chưa đặt ngân sách",
+    "unknownWindow": "Chưa rõ chu kỳ",
+    "used": "Đã dùng"
+  },
   "keyDetails": {
     "channels": "Kênh",
     "createResponseOnlySecret": "Trang web này chỉ hiển thị khóa đầy đủ khi tạo. Nếu bạn chưa lưu khóa, hãy mở Quản lý khóa và tạo khóa thay thế.",
@@ -249,11 +277,8 @@
     "models": "Giới hạn mô hình:",
     "neverExpires": "Không bao giờ hết hạn",
     "note": "Ghi chú:",
-    "remainingQuota": "Hạn ngạch còn lại:",
     "tools": "Công cụ được phép",
-    "totalQuota": "Tổng hạn mức:",
     "ungrouped": "Chưa phân nhóm",
-    "usedQuota": "Hạn ngạch đã dùng:",
     "websiteVerificationSecret": "API quản lý không cung cấp khóa đầy đủ. Truy cập trang API của NanoGPT và hoàn tất xác minh đăng nhập theo yêu cầu để xem hoặc sao chép lại khóa hiện có."
   },
   "knownTotalKeys_other": "Đã đọc {{count}} khóa",
@@ -442,11 +467,8 @@
       "budget5h": "Ngân sách 5 giờ (USD)",
       "budgetDay": "Ngân sách hằng ngày (USD)",
       "budgetMonth": "Ngân sách hằng tháng (USD)",
-      "budgetNextReset": "Đặt lại {{time}} (UTC+8)",
       "budgetResetHelp": "0 là không giới hạn. Ngân sách 5 giờ dùng cửa sổ trượt; ngày, tuần và tháng đặt lại theo giờ Bắc Kinh, tuần bắt đầu từ thứ Hai.",
-      "budgetRolling": "Cửa sổ trượt",
       "budgetsAndLimits": "Ngân sách và giới hạn truy cập",
-      "budgetUsage": "Đã dùng ${{used}} / ${{limit}} · còn ${{remaining}} · giữ chỗ ${{reserved}}",
       "budgetWeek": "Ngân sách hằng tuần (USD)",
       "channel": "Kênh",
       "dahl": {
@@ -651,13 +673,9 @@
         "budgetAlerts": "Gửi email cho người tạo khóa khi đạt các ngưỡng này",
         "budgetEnabled": "Ngân sách chi tiêu",
         "budgetHelp": "Đặt giới hạn bằng USD. Khi tắt, áp dụng ngân sách mặc định của nhóm nếu có. Ngân sách mới không tính chi tiêu BYOK.",
-        "budgetInactive": "Ngân sách chưa bật",
         "budgetLimit": "Giới hạn chi tiêu (USD, tối thiểu $1)",
         "budgetPeriod": "Chu kỳ làm mới ngân sách",
-        "budgetUnavailable": "Không thể đọc ngân sách. Hãy thử lại trước khi chỉnh sửa.",
         "consoleFailed": "Không thể mở bảng điều khiển nhóm. Kiểm tra token truy cập rồi thử lại.",
-        "inheritedBudget": "Ngân sách mặc định của nhóm",
-        "noBudget": "Không có ngân sách riêng cho khóa",
         "openConsole": "Mở bảng điều khiển Vercel",
         "period": {
           "daily": "Hằng ngày",
@@ -855,7 +873,6 @@
       "values": {
         "missing": "Không khả dụng",
         "no": "Không",
-        "unlimited": "Không giới hạn",
         "yes": "Có"
       }
     },

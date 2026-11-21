@@ -34,6 +34,7 @@ import type {
   QuoteResult,
 } from "~/services/modelPricing/pricingPlan"
 import { normalizePublishedSchedule } from "~/services/modelPricing/publishedPricing"
+import { projectMonetaryQuoteAmount } from "~/services/modelPricing/quoteAmount"
 import { formatPrice } from "~/services/models/utils/modelPricing"
 
 /** Displays a scenario quote and its calculation details. */
@@ -59,6 +60,7 @@ export function ModelPriceQuote({
   const [showCalculation, setShowCalculation] = useState(false)
   const calculationId = useId()
   const { t, i18n } = useTranslation("modelList")
+  const quoteAmount = projectMonetaryQuoteAmount(quote).amount
   const navigation = usePricingScenarioNavigation()
   const conditionTarget = getPricingConditionTarget(quote)
   const conditionTargets = getPricingConditionTargets(quote)
@@ -289,13 +291,13 @@ export function ModelPriceQuote({
             </span>
           )}
           <span className="text-sm font-semibold tracking-tight text-foreground">
-            {quote.amount === null
+            {quoteAmount === undefined
               ? hasPublishedPrices
                 ? isPriceIndex
                   ? t("scenario.noComparisonPrice")
                   : t("scenario.noComparisonTotal")
                 : t("scenario.unavailable")
-              : formatPrice(quote.amount, quote.currency, 6)}
+              : formatPrice(Number(quoteAmount.value), quote.currency, 6)}
           </span>
           {quote.amount !== null && (
             <span>

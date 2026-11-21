@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
+import { CURRENCIES, DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountSource,
@@ -300,7 +300,7 @@ describe("useFilteredModels", () => {
       rates: {
         input: {
           amount: 1,
-          currency: "USD",
+          currency: CURRENCIES.USD,
           unit: PRICE_RATE_UNITS.TOKEN,
           per: TOKENS_PER_MILLION,
         },
@@ -521,7 +521,7 @@ describe("useFilteredModels", () => {
           rates: {
             input: {
               amount: 2,
-              currency: "USD",
+              currency: CURRENCIES.USD,
               unit: PRICE_RATE_UNITS.TOKEN,
               per: TOKENS_PER_MILLION,
             },
@@ -539,7 +539,7 @@ describe("useFilteredModels", () => {
           rates: {
             input: {
               amount: 4,
-              currency: "USD",
+              currency: CURRENCIES.USD,
               unit: PRICE_RATE_UNITS.TOKEN,
               per: TOKENS_PER_MILLION,
             },
@@ -3595,21 +3595,23 @@ describe("useFilteredModels", () => {
     })
   })
 
-  it("recomputes cheapest order and badges using real recharge amounts when enabled", async () => {
-    const lowUsdHighCny = createDisplayAccount({
+  it("recomputes cheapest order and badges using configured recharge rates even when balances are empty", async () => {
+    const higherRechargeRate = createDisplayAccount({
       id: "account-low-usd",
       name: "Low USD",
-      balance: { USD: 10, CNY: 90 },
+      balance: { USD: 0, CNY: 0 },
+      exchangeRate: 9,
     })
-    const highUsdLowCny = createDisplayAccount({
+    const lowerRechargeRate = createDisplayAccount({
       id: "account-high-usd",
       name: "High USD",
-      balance: { USD: 10, CNY: 60 },
+      balance: { USD: 0, CNY: 0 },
+      exchangeRate: 6,
     })
 
     const pricingContexts = [
       {
-        account: lowUsdHighCny,
+        account: higherRechargeRate,
         pricing: createPricingResponse([
           {
             model_name: "shared-model",
@@ -3621,7 +3623,7 @@ describe("useFilteredModels", () => {
         ]),
       },
       {
-        account: highUsdLowCny,
+        account: lowerRechargeRate,
         pricing: createPricingResponse([
           {
             model_name: "shared-model",
@@ -3684,7 +3686,8 @@ describe("useFilteredModels", () => {
     const explicitRateAccount = createDisplayAccount({
       id: "account-explicit-rate",
       name: "Explicit Rate",
-      balance: { USD: 2, CNY: DEFAULT_USD_TO_CNY_RATE },
+      balance: { USD: 0, CNY: 0 },
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE / 2,
     })
 
     const pricingContexts = [
@@ -4990,7 +4993,7 @@ describe("useFilteredModels", () => {
 it("reverses same-model rankings across context thresholds using one shared quote and preserves all available groups", async () => {
   const rate = (amount: number) => ({
     amount,
-    currency: "USD" as const,
+    currency: CURRENCIES.USD,
     unit: PRICE_RATE_UNITS.TOKEN,
     per: TOKENS_PER_MILLION,
   })
@@ -5000,7 +5003,7 @@ it("reverses same-model rankings across context thresholds using one shared quot
       output: rate(0),
       request: {
         amount: 0,
-        currency: "USD",
+        currency: CURRENCIES.USD,
         unit: PRICE_RATE_UNITS.REQUEST,
         per: 1,
       },
@@ -5113,7 +5116,7 @@ it("keeps catalog quotes out of recharge-cost comparisons without a purchase con
     rates: {
       input: {
         amount: 1,
-        currency: "USD",
+        currency: CURRENCIES.USD,
         unit: PRICE_RATE_UNITS.TOKEN,
         per: TOKENS_PER_MILLION,
       },
@@ -5150,7 +5153,7 @@ it.each([0, -2])(
       rates: {
         input: {
           amount: 0.02,
-          currency: "USD",
+          currency: CURRENCIES.USD,
           unit: PRICE_RATE_UNITS.TOKEN,
           per: TOKENS_PER_MILLION,
         },
@@ -5192,7 +5195,7 @@ it.each([
       rates: {
         input: {
           amount: 1,
-          currency: "USD",
+          currency: CURRENCIES.USD,
           unit: PRICE_RATE_UNITS.TOKEN,
           per: TOKENS_PER_MILLION,
         },
@@ -5263,7 +5266,7 @@ it("awards lowest price only within matching text or video token units", async (
             rates: {
               [id === "text" ? "input" : PRICING_METERS.VIDEO_OUTPUT]: {
                 amount: id === "video-expensive" ? 3 : 1,
-                currency: "USD",
+                currency: CURRENCIES.USD,
                 unit: PRICE_RATE_UNITS.TOKEN,
                 per: TOKENS_PER_MILLION,
               },
@@ -5309,13 +5312,13 @@ it("compares legacy and planned token prices in the same units during default br
               rates: {
                 input: {
                   amount: 10,
-                  currency: "USD",
+                  currency: CURRENCIES.USD,
                   unit: PRICE_RATE_UNITS.TOKEN,
                   per: TOKENS_PER_MILLION,
                 },
                 output: {
                   amount: 10,
-                  currency: "USD",
+                  currency: CURRENCIES.USD,
                   unit: PRICE_RATE_UNITS.TOKEN,
                   per: TOKENS_PER_MILLION,
                 },
@@ -5356,7 +5359,7 @@ it("quotes image plans through the list even when their flat display price is un
           rates: {
             image: {
               amount: 0.2,
-              currency: "USD",
+              currency: CURRENCIES.USD,
               unit: PRICE_RATE_UNITS.IMAGE,
               per: 1,
             },
@@ -5400,7 +5403,7 @@ it.each([false, true])(
                   rates: {
                     request: {
                       amount: 0.2,
-                      currency: "USD" as const,
+                      currency: CURRENCIES.USD,
                       unit: PRICE_RATE_UNITS.REQUEST,
                       per: 1,
                     },

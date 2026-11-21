@@ -2,7 +2,10 @@ import {
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
-import { SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS } from "~/services/apiService/sub2api/checkin/checkIn"
+import {
+  SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
+  SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS,
+} from "~/services/apiService/sub2api/checkin/checkIn"
 import {
   fetchSub2ApiProDailyCheckInStatus,
   performSub2ApiProDailyCheckIn,
@@ -27,7 +30,7 @@ import {
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
   observedSub2ApiAlreadyChecked,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -71,7 +74,14 @@ export const sub2apiProProvider: AutoCheckinProvider = {
               status: CHECKIN_RESULT_STATUS.SUCCESS,
               messageKey:
                 AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-              reward: readUsdReward(result.data.rewardAmount),
+              awards: readUsdAwards(
+                account as SiteAccount,
+                result.data.rewardAmount,
+                {
+                  operation: SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
+                  field: "reward_amount",
+                },
+              ),
               data: result.data,
             },
             { timestamp: result.data.checkedInAt },

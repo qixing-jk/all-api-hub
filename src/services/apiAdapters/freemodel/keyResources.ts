@@ -9,12 +9,14 @@ import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accou
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
+  NATIVE_RESOURCE_MUTATION_CERTAINTIES,
   RESOURCE_FIELD_ISSUE_CODES,
   RESOURCE_FIELD_TYPES,
 } from "~/services/apiAdapters/contracts/resourceNative"
@@ -89,7 +91,7 @@ export const freeModelKeyResources = defineAccountKeyResourceCapability({
   defaultScopeKey: () => "default",
   runtimeKey: {
     resolve: async () => ({
-      kind: "unavailable",
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
     }),
   },
@@ -128,7 +130,7 @@ export const freeModelKeyResources = defineAccountKeyResourceCapability({
       command.name,
     )
     return {
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: {
         detail: key,
         createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
@@ -159,7 +161,10 @@ export const freeModelKeyResources = defineAccountKeyResourceCapability({
   },
   delete: async (config, _scope, id) => {
     await deleteKey(config.request, id)
-    return { certainty: "applied", value: undefined }
+    return {
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+      value: undefined,
+    }
   },
   mapFailure: mapAccountKeyResourceFailure,
 })

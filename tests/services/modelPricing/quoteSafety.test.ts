@@ -1,21 +1,106 @@
 import { expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
-import { normalizePublishedSchedule } from "~/services/modelPricing/publishedPricing"
+import {
+  normalizePublishedSchedule,
+  readPublishedPricing,
+} from "~/services/modelPricing/publishedPricing"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 
 const plan: PricingPlan = {
   rates: {
-    input: { amount: 0.000001, currency: "USD", unit: "token", per: 1 },
-    output: { amount: 0, currency: "USD", unit: "token", per: 1 },
+    input: {
+      amount: 0.000001,
+      currency: CURRENCIES.USD,
+      unit: "token",
+      per: 1,
+    },
+    output: { amount: 0, currency: CURRENCIES.USD, unit: "token", per: 1 },
   },
   rules: [],
   issues: [],
   source: { kind: "account" },
   groupMultiplier: "included",
 }
+
+it("retains published rates when an account multiplier is unknown without claiming applicable prices", () => {
+  const published = readPublishedPricing(
+    { ...plan, groupMultiplier: "pending" },
+    NaN,
+  )
+  expect(published.schedule[0]!.rates).toEqual(plan.rates)
+  expect(published.issues).toContainEqual({ code: "group-rate-missing" })
+  expect(
+    quoteModelPrice(
+      { ...plan, groupMultiplier: "pending" },
+      { purpose: "request", usage: { input: 1 } },
+    ),
+  ).toMatchObject({
+    status: "unavailable",
+    amount: null,
+  })
+})
+
+it("retains catalogue estimate status and its source date through public quoting", () => {
+  const model: ModelPricing = {
+    model_name: "estimated",
+    quota_type: 0,
+    model_ratio: 0,
+    completion_ratio: 1,
+    model_price: 0,
+    enable_groups: [],
+    supported_endpoint_types: [],
+    token_price_usd_per_million: { input: 3, output: 6 },
+    price_metadata: {
+      source: "provider-catalog",
+      precision: "estimated",
+      source_date: "2026-10-11",
+      source_url: "https://example.test/pricing",
+    },
+  }
+  expect(
+    quoteCanonicalModelPrice(
+      model,
+      { purpose: "token-index", usage: { input: 1 } },
+      { groupMultiplier: 1 },
+    ),
+  ).toMatchObject({
+    amount: 3,
+    source: {
+      kind: "estimate",
+      capturedAt: "2026-10-11",
+      url: "https://example.test/pricing",
+    },
+  })
+})
+
+it("keeps a missing provider catalogue output rate unknown instead of deriving a free rate from placeholders", () => {
+  const model: ModelPricing = {
+    model_name: "partial-catalogue",
+    quota_type: 0,
+    model_ratio: 0,
+    completion_ratio: 1,
+    model_price: 0,
+    enable_groups: [],
+    supported_endpoint_types: [],
+    token_price_usd_per_million: { input: 3 },
+    price_metadata: { source: "provider-catalog", precision: "exact" },
+  }
+  const quote = quoteCanonicalModelPrice(
+    model,
+    { purpose: "token-index", usage: { input: 1, output: 1 } },
+    { groupMultiplier: 1 },
+  )
+  expect(quote).toMatchObject({ status: "partial", amount: 1.5 })
+  expect(quote.issues).toContainEqual({
+    code: "price-missing",
+    meter: "output",
+  })
+  expect(quote.publishedSchedule![0]!.rates.output).toBeUndefined()
+})
 
 it("does not claim a complete request quote from legacy token rates", () => {
   const model = {
@@ -132,7 +217,11 @@ it("requires a conversion for CNY source prices and applies its inverse once", (
   const cny: PricingPlan = {
     ...plan,
     rates: {
-      input: { ...plan.rates.input!, amount: 0.000007, currency: "CNY" },
+      input: {
+        ...plan.rates.input!,
+        amount: 0.000007,
+        currency: CURRENCIES.CNY,
+      },
     },
   }
   const scenario = { purpose: "token-index" as const, usage: { input: 1 } }
@@ -147,7 +236,12 @@ it("uses video output tokens instead of unrelated text weights", () => {
     ...plan,
     usageMode: "video",
     rates: {
-      videoOutput: { amount: 0.000002, currency: "USD", unit: "token", per: 1 },
+      videoOutput: {
+        amount: 0.000002,
+        currency: CURRENCIES.USD,
+        unit: "token",
+        per: 1,
+      },
     },
   }
   expect(
@@ -172,7 +266,7 @@ it.each(["image", "videoSeconds", "characters"] as const)(
       rates: {
         [meter]: {
           amount: 2,
-          currency: "USD",
+          currency: CURRENCIES.USD,
           unit:
             meter === "image"
               ? "image"

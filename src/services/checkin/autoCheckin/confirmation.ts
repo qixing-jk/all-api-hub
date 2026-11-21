@@ -1,4 +1,5 @@
 import { CHECK_IN_METHOD_STATUS_OUTCOMES } from "~/constants/checkIn"
+import type { ConfirmedAward } from "~/services/amounts/awards"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { reconcileCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
 import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
@@ -56,6 +57,7 @@ type ConfirmationEvidence =
       kind: typeof CHECK_IN_CONFIRMATION_KINDS.Observed
       status: CheckInMethodStatus
       reward?: CheckInReward
+      awards?: ConfirmedAward[]
     }
   | {
       kind: typeof CHECK_IN_CONFIRMATION_KINDS.Response
@@ -176,7 +178,12 @@ export async function confirmCheckInAttempt(input: {
   result: AutoCheckinProviderOutcome
   startedAt: number
   readStatus?: () => Promise<
-    { status: CheckInMethodStatus; reward?: CheckInReward } | undefined
+    | {
+        status: CheckInMethodStatus
+        reward?: CheckInReward
+        awards?: ConfirmedAward[]
+      }
+    | undefined
   >
 }): Promise<{
   result: AutoCheckinProviderOutcome
@@ -265,6 +272,10 @@ export async function confirmCheckInAttempt(input: {
       reward:
         confirmation.kind === CHECK_IN_CONFIRMATION_KINDS.Observed
           ? confirmation.reward
+          : undefined,
+      awards:
+        confirmation.kind === CHECK_IN_CONFIRMATION_KINDS.Observed
+          ? confirmation.awards
           : undefined,
     }),
     confirmation,

@@ -3,6 +3,7 @@ import { useState, type ReactElement } from "react"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import Tooltip from "~/components/Tooltip"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   KEY_RESOURCE_CONTENT_LAYOUTS,
   KeyResourceActionGroup,
@@ -12,10 +13,18 @@ import {
   KeyResourceFactList,
   KeyResourceSecretDisplay,
 } from "~/features/KeyManagement/inventory/KeyResourceCard"
+import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import enCommon from "~/locales/en/common.json"
 import enKeyManagement from "~/locales/en/keyManagement.json"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, render, screen, within } from "~~/tests/test-utils/render"
 
@@ -23,7 +32,7 @@ const presentation: KeyResourceCardPresentation = {
   id: "key-example",
   title: "Example key",
   accountLabel: "Account example",
-  status: "active",
+  status: KEY_RESOURCE_CARD_STATUSES.Active,
   statusLabel: "Active",
   secretAvailability: "recoverable",
   secretAvailabilityMessage:
@@ -52,6 +61,82 @@ function renderKeyResourceCard(ui: ReactElement) {
 }
 
 describe("KeyResourceCard", () => {
+  it("shows compact budget metrics and reveals their exact values through key details", async () => {
+    const user = userEvent.setup()
+    const ref = {
+      accountId: "account",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "key",
+    }
+    const budget = keyBudgetFact(
+      ref,
+      { authority: "https://fixture.invalid", observedAt: 1 },
+      {
+        fieldId: "spending",
+        operation: "fixture",
+        asset: { kind: ASSET_KINDS.Currency, code: "USD" },
+        limitState: BUDGET_LIMIT_STATES.Finite,
+        remaining: "2.469134",
+        used: "0.000642",
+        window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+      },
+    )
+    const card = getAccountKeyResourceCardAdapter(
+      SITE_TYPES.NEW_API,
+    ).buildPresentation(
+      {
+        kind: "account-key-resource",
+        rowKey: "key",
+        accountId: "account",
+        accountName: "Example",
+        scopeName: "Account",
+        facts: {
+          ref,
+          displayName: "Example key",
+          maskedLabel: "masked",
+          status: "enabled",
+          fields: [],
+          actions: { canUpdate: true, canDelete: true },
+          detailAvailability: "complete",
+          displayFacts: [budget],
+        },
+      },
+      testI18n.t,
+      { hasAssociatedSecret: false },
+    )
+    function BudgetCard() {
+      const [expanded, setExpanded] = useState(false)
+      return (
+        <KeyResourceCard
+          presentation={card}
+          secret="masked"
+          isDetailsExpanded={expanded}
+          onDetailsExpandedChange={setExpanded}
+        />
+      )
+    }
+    renderKeyResourceCard(<BudgetCard />)
+    const summary = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts,
+    )
+    const metrics = within(summary).getByRole("group", {
+      name: "Spending budget",
+    })
+    expect(metrics).toHaveTextContent("USD 2.47")
+    expect(metrics).toHaveTextContent("<USD 0.01")
+    expect(metrics).not.toHaveTextContent("N/A")
+    expect(metrics).not.toHaveTextContent("2.469134")
+    await user.click(
+      screen.getByRole("button", { name: "View details for Example key" }),
+    )
+    const details = screen.getByRole("region", {
+      name: "View details for Example key",
+    })
+    expect(details).toHaveTextContent("USD 2.469134")
+    expect(details).toHaveTextContent("USD 0.000642")
+    expect(details).toHaveTextContent("N/A")
+  })
   beforeAll(() => {
     testI18n.addResourceBundle(
       "en",
@@ -442,7 +527,7 @@ describe("KeyResourceCard", () => {
             ...presentation,
             id: "inactive-key",
             title: "Inactive key",
-            status: "inactive",
+            status: KEY_RESOURCE_CARD_STATUSES.Inactive,
             statusLabel: "Inactive",
           }}
         />
@@ -451,7 +536,7 @@ describe("KeyResourceCard", () => {
             ...presentation,
             id: "unknown-key",
             title: "Unknown key",
-            status: "unknown",
+            status: KEY_RESOURCE_CARD_STATUSES.Unknown,
             statusLabel: "Unknown",
           }}
         />

@@ -43,6 +43,8 @@ await captureVisualViews({
 
 Without capture output configured, the helper does nothing during ordinary tests. It handles visible-state/font/render waiting, screenshots, image hashes and build/environment metadata. With no view configuration it captures the current view; pass `views` in the workflow for defaults, or override them from the CLI:
 
+For branch reviews, set `AAH_VISUAL_CAPTURE_CONTEXT=1` to capture an uncropped viewport image and metadata named `<checkpoint>-context` alongside each focused `captureTarget` image. Include both images in the [acceptance report](../agents/task-acceptance.md#maintain-one-reviewer-entry-point). Add checkpoints for relevant content reached by scrolling.
+
 ```bash
 pnpm visual:capture --spec e2e/appearanceSettings.spec.ts --grep "changing text size keeps the appearance drawer bottom aligned at 390px$" --fixture appearance-drawer-default-text-v1 --view dark:390x900 --view light:1280x900
 # Repeat the same command after editing; add --baseline <printed-before-directory> --diff when needed.

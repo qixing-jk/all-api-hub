@@ -161,6 +161,17 @@
     "consumption": "Consumo de hoje",
     "income": "Renda de hoje"
   },
+  "financial": {
+    "derived": "Derivado dos campos informados",
+    "expires": "Expira: {{date}}",
+    "lastKnown": "Último valor conhecido",
+    "manual": "Saldo manual",
+    "olderRecord": "Registrado por uma versão anterior",
+    "reported": "Informado pelo site",
+    "scopeUnknown": "Escopo de uso não verificado",
+    "technicalDetails": "Detalhes técnicos (depuração)",
+    "validityUnknown": "Validade não verificada"
+  },
   "healthStatus": {
     "apiError": "Erro de API",
     "error": "Erro",
@@ -365,7 +376,7 @@
     "prompt": "Prompt",
     "scopedAllowances": "Cotas de grupos e assinaturas podem ter restrições de uso. As cotas nativas são excluídas do saldo total, do histórico de saldo e das estimativas de receita.",
     "subscriptionRemainingCount": "Solicitações de assinatura restantes",
-    "subscriptionRemainingTokens": "Tokens restantes (saldo da conta e chaves); o valor em dólares equivale ao preço publicado e inclui tokens gratuitos.",
+    "subscriptionRemainingTokens": "Tokens restantes",
     "subscriptionState": {
       "active": "Assinatura ativa",
       "expired": "Assinatura expirada",

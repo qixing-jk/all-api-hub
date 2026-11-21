@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_EXPIRY_STATES,
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { sub2ApiCapabilities } from "~/services/apiAdapters/sub2api"
@@ -1416,27 +1419,30 @@ it("keeps Sub2API dollar amounts unscaled in display facts", async () => {
     0,
   )
   expect(facts.displayFacts).toEqual([
+    expect.objectContaining({
+      kind: "budget-constraint",
+      budget: expect.objectContaining({
+        limitState: "finite",
+        limit: expect.objectContaining({ status: "known", value: "10" }),
+        used: expect.objectContaining({ status: "known", value: "3" }),
+        remaining: expect.objectContaining({ status: "unknown" }),
+      }),
+    }),
     {
-      fieldId: "quota",
-      kind: "money",
-      role: "total",
-      amountUsd: 10,
-      unlimited: false,
+      fieldId: "expires_at",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+      timestampMs: ACCOUNT_KEY_EXPIRY_STATES.Never,
     },
-    { fieldId: "quota_used", kind: "money", role: "used", amountUsd: 3 },
     {
-      fieldId: "remainingQuotaUsd",
-      kind: "money",
-      role: "remaining",
-      amountUsd: 7,
-      unlimited: false,
+      fieldId: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
+      value: "",
+      emptyValue: "ungrouped",
     },
-    { fieldId: "expires_at", kind: "expiry", timestampMs: "never" },
-    { fieldId: "group", kind: "group", value: "", emptyValue: "ungrouped" },
     {
       fieldId: "ip_whitelist",
-      kind: "restriction",
-      role: "ip",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+      role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
       value: ["192.0.2.1"],
     },
   ])

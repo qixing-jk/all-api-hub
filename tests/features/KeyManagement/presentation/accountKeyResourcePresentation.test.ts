@@ -1,23 +1,74 @@
-import type { TFunction } from "i18next"
+import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getAccountKeyResourceCardAdapter,
   getAccountKeyScopeMessages,
   shouldShowAccountKeyScopeSelector,
 } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
+import { formatKeyFinancialFact } from "~/features/KeyManagement/presentation/keyBudgetPresentation"
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
   type NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
-import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import enKeyManagement from "~/locales/en/keyManagement.json"
+import {
+  ASSET_KINDS,
+  BUDGET_AMOUNT_FIELDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import {
+  ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_EXPIRY_STATES,
+  ACCOUNT_KEY_PERMISSION_ROLES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+const fixtureBudget = (
+  input: Omit<Parameters<typeof keyBudgetFact>[2], "operation">,
+) =>
+  keyBudgetFact(
+    {
+      accountId: "a",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "1",
+    },
+    { authority: "https://fixture.example", observedAt: 1 },
+    { operation: "fixture", ...input },
+  )
+
 const t = ((key: string) => key) as TFunction
+
+it("renders a localized budget period from the extracted application resources", async () => {
+  const i18n = createInstance()
+  await i18n.init({
+    lng: "en",
+    resources: { en: { keyManagement: enKeyManagement } },
+  })
+  const fact = fixtureBudget({
+    fieldId: "monthly",
+    asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+    limitState: BUDGET_LIMIT_STATES.Finite,
+    window: {
+      kind: BUDGET_WINDOW_KINDS.Periodic,
+      period: BUDGET_PERIODS.Month,
+    },
+    limit: 25,
+  })
+  expect(formatKeyFinancialFact(fact, i18n.t)).toContain("Monthly")
+})
 
 it("labels NanoGPT provider limits in key details and explains missing management configuration", () => {
   const details = getAccountKeyResourceCardAdapter(
@@ -111,36 +162,61 @@ it("explains custom, inherited and unavailable Vercel spending budgets", () => {
     fields: [],
     actions: { canUpdate: true, canDelete: true },
     displayFacts: [
-      {
+      fixtureBudget({
         fieldId: "custom",
-        kind: "spend-budget",
-        source: "custom",
-        limitUsd: 10,
-        usedUsd: 3,
-        period: "monthly",
-      },
-      {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Finite,
+        limit: 10,
+        used: 3,
+        window: {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period: BUDGET_PERIODS.Month,
+        },
+      }),
+      fixtureBudget({
         fieldId: "default",
-        kind: "spend-budget",
-        source: "inherited",
-        limitUsd: 20,
-        period: "weekly",
-      },
-      { fieldId: "unknown", kind: "spend-budget", source: "unavailable" },
-      { fieldId: "none", kind: "spend-budget", source: "none" },
-      {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Inherited,
+        limit: 20,
+        window: {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period: BUDGET_PERIODS.Week,
+        },
+      }),
+      fixtureBudget({
+        fieldId: "unknown",
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Unknown,
+      }),
+      fixtureBudget({
+        fieldId: "none",
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Unconfigured,
+      }),
+      fixtureBudget({
         fieldId: "daily",
-        kind: "spend-budget",
-        source: "custom",
-        limitUsd: 5,
-        period: "daily",
-        active: false,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Finite,
+        limit: 5,
+        enabled: false,
+        window: {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period: BUDGET_PERIODS.Day,
+        },
+      }),
+      {
+        fieldId: "user",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution,
+        value: "user",
       },
-      { fieldId: "user", kind: "attribution", value: "user" },
-      { fieldId: "team", kind: "attribution", value: "team" },
+      {
+        fieldId: "team",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution,
+        value: "team",
+      },
       {
         fieldId: "custom-attribution",
-        kind: "attribution",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution,
         value: "future-value",
       },
     ],
@@ -149,22 +225,13 @@ it("explains custom, inherited and unavailable Vercel spending budgets", () => {
     SITE_TYPES.VERCEL_AI_GATEWAY,
   ).buildDetailFacts(facts, t)
   expect(details).toHaveLength(8)
-  expect(details[0]?.value).toContain("$3 / $10")
-  expect(details[1]?.value).toContain(
-    "keyManagement:native.editor.vercelAiGateway.inheritedBudget",
-  )
-  expect(details[2]?.value).toBe(
-    "keyManagement:native.editor.vercelAiGateway.budgetUnavailable",
-  )
-  expect(details[3]?.value).toBe(
-    "keyManagement:native.editor.vercelAiGateway.noBudget",
-  )
-  expect(details[4]?.value).toContain(
-    "keyManagement:native.editor.vercelAiGateway.budgetInactive",
-  )
-  expect(details[4]?.value).toContain(
-    "keyManagement:native.editor.vercelAiGateway.period.daily",
-  )
+  expect(details[0]?.value).toMatch(/USD\s+3/)
+  expect(details[0]?.value).toMatch(/USD\s+10/)
+  expect(details[1]?.value).toContain("keyManagement:financial.inherited")
+  expect(details[2]?.value).toContain("common:labels.notAvailable")
+  expect(details[3]?.value).toContain("keyManagement:financial.unconfigured")
+  expect(details[4]?.value).toContain("keyManagement:financial.disabled")
+  expect(details[4]?.value).toContain("keyManagement:financial.period.day")
   expect(details[5]?.value).toBe(
     "keyManagement:native.editor.vercelAiGateway.attribution.user",
   )
@@ -188,57 +255,65 @@ it("distinguishes account-following allowance, explicit rate limits and budget r
     fields: [],
     actions: { canUpdate: true, canDelete: true },
     displayFacts: [
-      {
+      fixtureBudget({
         fieldId: "quota",
-        kind: "money",
-        role: "remaining",
-        amountUsd: 0,
-        followsAccount: true,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Inherited,
+        metric: BUDGET_AMOUNT_FIELDS.Remaining,
+      }),
+      {
+        fieldId: "inherited",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.RateLimit,
+        rpm: 0,
+        concurrency: 0,
       },
-      { fieldId: "inherited", kind: "rate-limit", rpm: 0, concurrency: 0 },
-      { fieldId: "explicit", kind: "rate-limit", rpm: 20, concurrency: 3 },
-      ...(["5h", "day", "week", "month"] as const).map((window) => ({
-        fieldId: window,
-        kind: "budget" as const,
-        window,
-        limitUsd: 2,
-        usedUsd: 1,
-        remainingUsd: 0.8,
-        reservedUsd: 0.2,
-        nextResetAt: window === "day" ? "2027-01-01T16:00:00Z" : undefined,
-      })),
+      {
+        fieldId: "explicit",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.RateLimit,
+        rpm: 20,
+        concurrency: 3,
+      },
+      ...(["5h", "day", "week", "month"] as const).map((window) =>
+        fixtureBudget({
+          fieldId: window,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          limitState: BUDGET_LIMIT_STATES.Finite,
+          limit: 2,
+          used: 1,
+          remaining: 0.8,
+          reserved: 0.2,
+          window:
+            window === BUDGET_PERIODS.Day
+              ? {
+                  kind: BUDGET_WINDOW_KINDS.Periodic,
+                  period: window,
+                  resetsAt: Date.parse("2027-01-01T16:00:00Z"),
+                }
+              : { kind: BUDGET_WINDOW_KINDS.Rolling, period: window },
+        }),
+      ),
     ],
   }
   const details = getAccountKeyResourceCardAdapter(
     SITE_TYPES.RELAYFOR,
   ).buildDetailFacts(facts, t)
-  expect(details[0]?.value).toBe("keyManagement:native.editor.followsAccount")
+  expect(details[0]?.value).toBe("keyManagement:financial.inherited")
   expect(details[1]?.value).toBe(
     "RPM keyManagement:native.editor.followsAccount · keyManagement:native.editor.keyConcurrency: keyManagement:native.editor.followsAccount",
   )
-  expect(details[2]?.value).toBe(
+  expect(details[2]?.value).toContain(
     "RPM 20 · keyManagement:native.editor.keyConcurrency: 3",
   )
   expect(details.slice(3).map((f) => f.label)).toEqual([
-    "keyManagement:native.editor.budget5h",
-    "keyManagement:native.editor.budgetDay",
-    "keyManagement:native.editor.budgetWeek",
-    "keyManagement:native.editor.budgetMonth",
+    ...Array(4).fill("keyManagement:financial.budget"),
   ])
-  expect(details[3]?.value).toContain(
-    "keyManagement:native.editor.budgetRolling",
-  )
+  expect(details[3]?.value).toContain("keyManagement:financial.rolling")
+  expect(details[4]?.value).toContain("keyManagement:financial.reset")
   expect(details[4]?.value).toContain(
-    "keyManagement:native.editor.budgetNextReset",
+    new Date("2027-01-01T16:00:00Z").toLocaleString(undefined, {
+      timeZoneName: "short",
+    }),
   )
-  const timeLabel = ((key: string, options?: { time?: string }) =>
-    key === "keyManagement:native.editor.budgetNextReset"
-      ? options?.time
-      : key) as TFunction
-  const localized = getAccountKeyResourceCardAdapter(
-    SITE_TYPES.RELAYFOR,
-  ).buildDetailFacts(facts, timeLabel)
-  expect(localized[4]?.value).toMatch(/GMT\+8|UTC\+8|CST/)
 })
 
 it.each([true, false])(
@@ -265,7 +340,7 @@ it.each([true, false])(
         displayFacts: [
           {
             fieldId: "channels",
-            kind: "channels",
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Channels,
             value: ["Openai 官渠"],
             usesDefault,
           },
@@ -308,7 +383,7 @@ it("renders spend attribution as a billing fact without inventing a group", () =
       displayFacts: [
         {
           fieldId: "spend_attribution",
-          kind: "attribution",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution,
           value: "team",
         },
       ],
@@ -347,13 +422,35 @@ it("allocates complete inventory facts to summary or additional detail without o
     actions: { canUpdate: true, canDelete: true },
     fields: [],
     displayFacts: [
-      { fieldId: "credits", kind: "credits", value: 100 },
-      { fieldId: "used", kind: "money", role: "used", amountUsd: 1 },
-      { fieldId: "expires", kind: "expiry", timestampMs: "never" },
+      fixtureBudget({
+        fieldId: "credits",
+        asset: {
+          kind: ASSET_KINDS.Quota,
+          id: "fixture:credits",
+          label: "Credits",
+          displayLabel: "Credits",
+          displayScale: 1,
+        },
+        limitState: BUDGET_LIMIT_STATES.Finite,
+        remaining: 100,
+        metric: BUDGET_AMOUNT_FIELDS.Remaining,
+      }),
+      fixtureBudget({
+        fieldId: "used",
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Unknown,
+        used: 1,
+        metric: BUDGET_AMOUNT_FIELDS.Used,
+      }),
+      {
+        fieldId: "expires",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+        timestampMs: ACCOUNT_KEY_EXPIRY_STATES.Never,
+      },
       {
         fieldId: "models",
-        kind: "restriction",
-        role: "models",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+        role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
         value: ["model-a"],
       },
     ],
@@ -413,23 +510,28 @@ it("renders declared restriction and group semantics independently of native fie
       displayFacts: [
         {
           fieldId: "routing",
-          kind: "group",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
           value: ["alpha", "beta"],
           emptyValue: "ungrouped",
         },
         {
           fieldId: "permitted",
-          kind: "restriction",
-          role: "models",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
           value: ["model-a", "model-b"],
         },
         {
           fieldId: "network",
-          kind: "restriction",
-          role: "ip",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
           value: "192.0.2.1",
         },
-        { fieldId: "empty", kind: "restriction", role: "subnet", value: [] },
+        {
+          fieldId: "empty",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Subnet,
+          value: [],
+        },
       ],
     },
   }
@@ -458,7 +560,7 @@ it("renders declared restriction and group semantics independently of native fie
       displayFacts: [
         {
           fieldId: "routing",
-          kind: "group",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
           value: "",
           emptyValue: "ungrouped",
         },
@@ -573,9 +675,21 @@ describe("native resource card presentation", () => {
   })
 
   it.each([
-    ["disabled", "inactive", "keyManagement:native.status.disabled"],
-    ["expired", "inactive", "keyManagement:native.status.expired"],
-    ["unknown", "unknown", "keyManagement:native.status.unknown"],
+    [
+      "disabled",
+      KEY_RESOURCE_CARD_STATUSES.Inactive,
+      "keyManagement:native.status.disabled",
+    ],
+    [
+      "expired",
+      KEY_RESOURCE_CARD_STATUSES.Inactive,
+      "keyManagement:native.status.expired",
+    ],
+    [
+      KEY_RESOURCE_CARD_STATUSES.Unknown,
+      KEY_RESOURCE_CARD_STATUSES.Unknown,
+      "keyManagement:native.status.unknown",
+    ],
   ] as const)(
     "maps the %s provider status without inventing provider-specific labels",
     (status, expectedStatus, expectedStatusLabel) => {
@@ -696,45 +810,45 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
       displayFacts: [
         {
           fieldId: "provider_group",
-          kind: "group",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
           value: [],
           emptyValue:
             siteType === SITE_TYPES.NEW_API ? "account-group" : "ungrouped",
         },
         {
           fieldId: "models",
-          kind: "restriction",
-          role: "models",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
           value: ["model-a", "model-b"],
         },
         {
           fieldId: "ip_whitelist",
-          kind: "restriction",
-          role: "ip",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
           value: "192.0.2.1",
         },
         {
           fieldId: "tools",
-          kind: "restriction",
-          role: "tools",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Tools,
           value: ["search/web"],
         },
         {
           fieldId: "subnet",
-          kind: "restriction",
-          role: "subnet",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Subnet,
           value: "192.0.2.0/24",
         },
-        {
+        fixtureBudget({
           fieldId: "quota",
-          kind: "money",
-          role: "total",
-          amountUsd: 2,
-          unlimited: true,
-        },
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          limitState: BUDGET_LIMIT_STATES.Unlimited,
+          limit: 2,
+          metric: BUDGET_AMOUNT_FIELDS.Limit,
+        }),
         {
           fieldId: "expires_at",
-          kind: "expiry",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
           timestampMs: Date.parse("2030-01-01T00:00:00Z"),
         },
       ],
@@ -771,7 +885,7 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
       expect.arrayContaining([
         {
           id: "quota",
-          label: "keyManagement:native.editor.totalQuotaUsd",
+          label: "keyManagement:financial.limit",
           value: "keyManagement:dialog.unlimitedQuota",
         },
         {
@@ -807,7 +921,11 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
           ...facts,
           fields: [{ fieldId: "expires_at", kind: "text", value: "" }],
           displayFacts: [
-            { fieldId: "expires_at", kind: "expiry", timestampMs: "never" },
+            {
+              fieldId: "expires_at",
+              kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+              timestampMs: ACCOUNT_KEY_EXPIRY_STATES.Never,
+            },
           ],
         },
         t,
@@ -856,12 +974,13 @@ it("formats explicit display facts without guessing monetary or time units from 
     ],
     actions: { canUpdate: true, canDelete: true },
     displayFacts: [
-      {
+      fixtureBudget({
         fieldId: "balance",
-        kind: "money" as const,
-        role: "remaining" as const,
-        amountUsd: 2.5,
-      },
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Finite,
+        remaining: 2.5,
+        metric: BUDGET_AMOUNT_FIELDS.Remaining,
+      }),
       { fieldId: "old-expiry", kind: "expiry" as const, timestampMs: 86400000 },
       {
         fieldId: "no-expiry",
@@ -879,8 +998,8 @@ it("formats explicit display facts without guessing monetary or time units from 
   ).toEqual([
     {
       id: "balance",
-      label: "keyManagement:keyDetails.remainingQuota",
-      value: "$2.5",
+      label: "keyManagement:financial.remaining",
+      value: expect.stringMatching(/USD\s+2\.5/),
     },
     {
       id: "old-expiry",
@@ -914,13 +1033,32 @@ it("keeps credit allowances distinct from dollars and preserves unlimited allowa
     fields: [],
     actions: { canUpdate: true, canDelete: true },
     displayFacts: [
-      { fieldId: "credits", kind: "credits" as const, value: 250 },
-      {
+      fixtureBudget({
+        fieldId: "credits",
+        asset: {
+          kind: ASSET_KINDS.Quota,
+          id: "fixture:credits",
+          label: "Credits",
+          displayLabel: "Credits",
+          displayScale: 1,
+        },
+        limitState: BUDGET_LIMIT_STATES.Finite,
+        remaining: 250,
+        metric: BUDGET_AMOUNT_FIELDS.Remaining,
+      }),
+      fixtureBudget({
         fieldId: "unlimited",
-        kind: "credits" as const,
-        value: 250,
-        unlimited: true,
-      },
+        asset: {
+          kind: ASSET_KINDS.Quota,
+          id: "fixture:credits",
+          label: "Credits",
+          displayLabel: "Credits",
+          displayScale: 1,
+        },
+        limitState: BUDGET_LIMIT_STATES.Unlimited,
+        remaining: 250,
+        metric: BUDGET_AMOUNT_FIELDS.Remaining,
+      }),
     ],
   }
   expect(
@@ -931,12 +1069,12 @@ it("keeps credit allowances distinct from dollars and preserves unlimited allowa
   ).toEqual([
     {
       id: "credits",
-      label: "keyManagement:native.editor.quotaCredits",
-      value: "250",
+      label: "keyManagement:financial.remaining",
+      value: "250 Credits",
     },
     {
       id: "unlimited",
-      label: "keyManagement:native.editor.quotaCredits",
+      label: "keyManagement:financial.remaining",
       value: "keyManagement:dialog.unlimitedQuota",
     },
   ])
@@ -956,18 +1094,21 @@ it("formats native Token facts with their asset unit and quota role", () => {
     fields: [],
     actions: { canUpdate: true, canDelete: true },
     displayFacts: [
-      {
+      fixtureBudget({
         fieldId: "used",
-        kind: "quota",
-        role: "used",
-        value: 1234567,
         asset: {
-          id: "https://emrank.tech/token",
-          label: "Token",
-          displayScale: 1000000,
-          displayLabel: "M Token",
+          kind: ASSET_KINDS.Quota,
+          ...{
+            id: "https://emrank.tech/token",
+            label: "Token",
+            displayScale: 1000000,
+            displayLabel: "M Token",
+          },
         },
-      },
+        limitState: BUDGET_LIMIT_STATES.Unknown,
+        used: 1234567,
+        metric: BUDGET_AMOUNT_FIELDS.Used,
+      }),
     ],
   }
   expect(
@@ -977,7 +1118,7 @@ it("formats native Token facts with their asset unit and quota role", () => {
     ),
   ).toContainEqual({
     id: "used",
-    label: "keyManagement:keyDetails.usedQuota",
+    label: "keyManagement:financial.used",
     value: "1.234567 M Token",
   })
   expect(
@@ -985,25 +1126,28 @@ it("formats native Token facts with their asset unit and quota role", () => {
       {
         ...facts,
         displayFacts: [
-          {
+          fixtureBudget({
             fieldId: "total",
-            kind: "quota",
-            role: "total",
-            value: 1234567,
             asset: {
-              id: "token",
-              label: "Token",
-              displayScale: 1000000,
-              displayLabel: "M Token",
+              kind: "quota",
+              ...{
+                id: "token",
+                label: "Token",
+                displayScale: 1000000,
+                displayLabel: "M Token",
+              },
             },
-          },
+            limitState: "finite",
+            limit: 1234567,
+            metric: "limit",
+          }),
         ],
       },
       t,
     ),
   ).toContainEqual({
     id: "total",
-    label: "keyManagement:keyDetails.totalQuota",
+    label: "keyManagement:financial.limit",
     value: "1.234567 M Token",
   })
 })
@@ -1033,8 +1177,8 @@ describe("Requesty key highlights", () => {
       displayFacts: [
         {
           fieldId: "permissions",
-          kind: "permission",
-          role: "manage",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Permission,
+          role: ACCOUNT_KEY_PERMISSION_ROLES.Manage,
           granted: true,
         },
       ],
@@ -1075,12 +1219,13 @@ describe("Requesty key highlights", () => {
     const details = adapter.buildDetailFacts(
       requestyRow({
         displayFacts: [
-          {
+          fixtureBudget({
             fieldId: "monthly_limit",
-            kind: "money",
-            role: "total",
-            amountUsd: 10,
-          },
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            limitState: BUDGET_LIMIT_STATES.Finite,
+            limit: 10,
+            metric: BUDGET_AMOUNT_FIELDS.Limit,
+          }),
         ],
       }).facts,
       t,
@@ -1088,7 +1233,7 @@ describe("Requesty key highlights", () => {
     expect(details).toContainEqual({
       id: "monthly_limit",
       label: "keyManagement:native.editor.requestyMonthlyLimit",
-      value: "$10",
+      value: expect.stringMatching(/USD\s+10/),
     })
   })
 
@@ -1156,8 +1301,8 @@ describe("Requesty key highlights", () => {
         displayFacts: [
           {
             fieldId: "permissions",
-            kind: "permission",
-            role: "manage",
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Permission,
+            role: ACCOUNT_KEY_PERMISSION_ROLES.Manage,
             granted: false,
           },
         ],

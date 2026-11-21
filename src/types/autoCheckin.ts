@@ -7,6 +7,7 @@ import type { TFunction } from "i18next"
 
 import { type RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ConfirmedAward } from "~/services/amounts/awards"
 import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 
 /**
@@ -200,6 +201,10 @@ interface CheckinAccountResultBase {
   accountId: string
   accountName: string
   methodId?: string
+  /** Local attempt identity, shared by admission waiters; not an upstream grant ID. */
+  executionReceiptId?: string
+  /** Local executions whose confirmed awards are retained in this result. */
+  awardExecutionReceiptIds?: string[]
   message?: string
   messageKey?: string
   messageParams?: Record<string, any>
@@ -209,6 +214,7 @@ interface CheckinAccountResultBase {
   reconciliation?: CheckinReconciliationOutcome
   accountStateDurability?: CheckinAccountStateDurability
   reward?: CheckInReward
+  awards?: ConfirmedAward[]
   timestamp: number
 }
 
@@ -424,6 +430,7 @@ export interface AutoCheckinAccountSnapshot {
  * Auto check-in status stored in local storage
  */
 export interface AutoCheckinStatus {
+  schemaVersion?: 2
   lastRunAt?: string // ISO timestamp
   lastRunResult?: AutoCheckinRunResult
   perAccount?: Record<string, CheckinAccountResult>

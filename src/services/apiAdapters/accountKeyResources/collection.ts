@@ -14,10 +14,12 @@ import type {
   ResourceFailure,
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   assertNativeResourceFacts,
   createNativeResourceRefBoundary,
   isNativeResourceBoundaryError,
+  NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES,
   resolveNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/factory"
 
@@ -185,11 +187,17 @@ export function createAccountKeyResourceCollection<
                   mapFailure,
                 ),
               )
-              if (resolution.status === "not-applied")
+              if (
+                resolution.status ===
+                NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.NotApplied
+              )
                 throw new AccountKeyResourceError(
                   mapFailure(resolution.failure),
                 )
-              if (resolution.status === "uncertain")
+              if (
+                resolution.status ===
+                NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.Uncertain
+              )
                 throw new AccountKeyResourceError({
                   ...mapFailure(resolution.failure),
                   code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
@@ -295,9 +303,12 @@ export function createAccountKeyResourceCollection<
               command,
               submitOptions,
             )
-            if (result.certainty !== "applied") return result
+            if (
+              result.certainty !== NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
+            )
+              return result
             return {
-              certainty: "applied" as const,
+              certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
               value: {
                 detail: result.value,
                 createdSecret: result.createdSecret,
@@ -344,10 +355,16 @@ export function createAccountKeyResourceCollection<
             mapFailure,
           ),
         )
-        if (resolution.status === "not-applied") {
+        if (
+          resolution.status ===
+          NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.NotApplied
+        ) {
           throw new AccountKeyResourceError(mapFailure(resolution.failure))
         }
-        if (resolution.status === "uncertain") {
+        if (
+          resolution.status ===
+          NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.Uncertain
+        ) {
           const failure = mapFailure(resolution.failure)
           throw new AccountKeyResourceError({
             code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,

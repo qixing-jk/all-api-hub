@@ -1,11 +1,24 @@
+import { CURRENCIES } from "~/constants/money"
+
 // Install shared mocks before loading scheduler dependencies.
 import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { CheckInExecutionError } from "~/services/checkin/autoCheckin/errors"
 import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
@@ -83,6 +96,11 @@ describe("dailyBatch", () => {
   ] as const)(
     "does not spend another attempt or repeat effects for a reused %s (successful %s)",
     async (runKind, outcomeKind) => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date(2024, 0, 1, 9))
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
       const successful = outcomeKind === true
       const account = buildSiteAccount({
         id: "reused",
@@ -197,17 +215,57 @@ describe("dailyBatch", () => {
       resolveProviderForTest.mockReturnValue({
         getReadiness: () => ({ ready: true }),
       })
+      const awards: ConfirmedAward[] = [
+        {
+          id: "grant",
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          amount: {
+            status: OBSERVATION_STATUSES.Known,
+            value: "0.19",
+            observedAt: Date.now() - 1000,
+            source: {
+              adapter: "veloera",
+              operation: "claim",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          },
+          scope: {
+            subject: {
+              kind: FINANCIAL_SUBJECT_KINDS.Account,
+              accountId: account.id,
+            },
+            authority: account.site_url,
+            models: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            groups: { kind: SCOPE_SELECTION_KINDS.Unknown },
+          },
+          validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+          target: AWARD_TARGETS.Wallet,
+          fulfillment: AWARD_FULFILLMENT.Credited,
+        },
+      ]
       const completion = {
         kind: "executed" as const,
         methodId: "veloera:daily-checkin" as const,
-        result: { status: "success" as const, reward: { quota: 95000 } },
+        result: {
+          status: "success" as const,
+          reward: { quota: 95000 },
+          awards,
+        },
+        executionReceiptId: "shared-receipt",
         retryable: false,
         completedAt: Date.now() - 1000,
       }
       const reused = { ...completion, reused: true as const }
       mockedMethods.executeSelectedCheckIn
-        .mockResolvedValueOnce(waiterFirst ? reused : completion)
-        .mockResolvedValueOnce(waiterFirst ? completion : reused)
+        .mockResolvedValueOnce(
+          structuredClone(waiterFirst ? reused : completion),
+        )
+        .mockResolvedValueOnce(
+          structuredClone(waiterFirst ? completion : reused),
+        )
       const successes = vi
         .spyOn(accountCheckinRunWorkflow, "recordStarPromotionCheckinSuccesses")
         .mockResolvedValue()
@@ -223,6 +281,7 @@ describe("dailyBatch", () => {
       expect(status.perAccount[account.id]).toMatchObject({
         status: "success",
         reward: { quota: 95000 },
+        awards,
         timestamp: completion.completedAt,
       })
       expect(status.accountsSnapshot[0].lastResult).toEqual(

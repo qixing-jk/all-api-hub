@@ -139,6 +139,17 @@
     "consumption": "Tiêu hao hôm nay",
     "income": "Thu nhập hôm nay"
   },
+  "financial": {
+    "derived": "Tính từ các trường được báo cáo",
+    "expires": "Hết hạn: {{date}}",
+    "lastKnown": "Giá trị đã biết gần nhất",
+    "manual": "Số dư nhập tay",
+    "olderRecord": "Được ghi lại bởi phiên bản cũ",
+    "reported": "Trang web báo cáo",
+    "scopeUnknown": "Phạm vi sử dụng chưa xác minh",
+    "technicalDetails": "Thông tin kỹ thuật (gỡ lỗi)",
+    "validityUnknown": "Thời hạn chưa xác minh"
+  },
   "healthStatus": {
     "apiError": "Lỗi API",
     "error": "Lỗi",
@@ -317,7 +328,7 @@
     "prompt": "Nhắc nhở",
     "scopedAllowances": "Hạn mức nhóm và gói đăng ký có thể bị giới hạn sử dụng. Hạn mức gốc không được tính vào tổng số dư, lịch sử số dư và thu nhập ước tính.",
     "subscriptionRemainingCount": "Số lượt đăng ký còn lại",
-    "subscriptionRemainingTokens": "Token còn lại (quỹ và khóa); số dư đô la là giá trị quy đổi theo giá công bố, bao gồm token miễn phí.",
+    "subscriptionRemainingTokens": "Token còn lại",
     "subscriptionState": {
       "active": "Gói đăng ký đang hoạt động",
       "expired": "Gói đăng ký đã hết hạn",

@@ -1,13 +1,14 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
-import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import { isKnownOrStaleObservation } from "~/services/amounts/balance"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import { resolveAutomaticRedemptionAvailability } from "~/services/redemption/accountSupport"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
-import { formatMoneyFixed } from "~/utils/core/money"
+import { formatAssetAmount, getAssetLabel } from "~/utils/core/money"
 import { t } from "~/utils/i18n/core"
 
 export const REDEMPTION_RESULT_CODES = {
@@ -18,7 +19,7 @@ interface RedeemResult {
   success: boolean
   message: string
   code?: (typeof REDEMPTION_RESULT_CODES)[keyof typeof REDEMPTION_RESULT_CODES]
-  creditedAmount?: unknown
+  awards?: ConfirmedAward[]
   account?: DisplaySiteData
 }
 
@@ -64,39 +65,38 @@ class RedeemService {
         }
       }
 
-      const creditedAmount = await redemptionAvailability.capability.redeem({
+      const redemption = await redemptionAvailability.capability.redeem({
         request: createAccountApiRequestFromStoredAccount(account).request,
         code,
       })
 
       const displayAccount =
-        (await accountReadModels.getDisplayDataById(accountId)) ??
+        (await accountReadModels
+          .getDisplayDataById(accountId)
+          .catch(() => undefined)) ??
         accountPresentation.convertToDisplayData(account)
 
-      const amountStr =
-        typeof creditedAmount === "number"
-          ? redemptionAvailability.capability.quotaAsset
-            ? formatQuotaAmount(
-                creditedAmount,
-                redemptionAvailability.capability.quotaAsset,
-              )
-            : formatMoneyFixed(creditedAmount / QUOTA_PER_USD)
-          : ""
+      const amountStr = redemption.awards
+        .map(({ asset, amount }) => {
+          if (isKnownOrStaleObservation(amount))
+            return asset.kind === ASSET_KINDS.Unknown
+              ? `${amount.value} ${t("common:labels.unknown")}`
+              : formatAssetAmount({ asset, value: amount.value })
+          const unit = getAssetLabel(asset)
+          return [t("common:labels.unknown"), unit].filter(Boolean).join(" ")
+        })
+        .join(" + ")
 
-      const message =
-        creditedAmount &&
-        typeof creditedAmount === "object" &&
-        "message" in creditedAmount &&
-        typeof creditedAmount.message === "string"
-          ? creditedAmount.message
-          : t("redemptionAssist:messages.redeemSuccess", {
-              amount: amountStr,
-            })
+      const message = redemption.message
+        ? redemption.message
+        : t("redemptionAssist:messages.redeemSuccess", {
+            amount: amountStr,
+          })
 
       return {
         success: true,
         message,
-        creditedAmount,
+        awards: redemption.awards,
         account: displayAccount,
       }
     } catch (error) {

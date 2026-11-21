@@ -1,11 +1,15 @@
 import type { TFunction } from "i18next"
 
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
-import type {
-  AccountKeyResourceFacts,
-  ResourceDisplayFact,
+import {
+  ACCOUNT_KEY_FINANCIAL_FACT_KINDS,
+  ACCOUNT_KEY_RESOURCE_STATUSES,
+  type AccountKeyResourceFacts,
+  type ResourceDisplayFact,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { RESOURCE_DISPLAY_FACT_KINDS } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -14,6 +18,7 @@ import {
 import { SECRET_MASK } from "~/utils/core/formatters"
 
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
+import { formatKeyFinancialFact } from "./keyBudgetPresentation"
 import type {
   KeyResourceCardPresentation,
   KeyResourceFact,
@@ -41,51 +46,15 @@ const detailFieldIds = new Set<string>([
   OPENROUTER_KEY_FIELD_IDS.ExpiresAt,
 ])
 
-// OpenRouter defines Management Key limits and usage amounts in USD:
-// https://openrouter.ai/docs/api/api-reference/api-keys/list-api-keys
-const usdAmountFieldIds = new Set<string>([
-  OPENROUTER_KEY_FIELD_IDS.Limit,
-  OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
-  OPENROUTER_KEY_FIELD_IDS.Usage,
-  OPENROUTER_KEY_FIELD_IDS.UsageDaily,
-  OPENROUTER_KEY_FIELD_IDS.UsageWeekly,
-  OPENROUTER_KEY_FIELD_IDS.UsageMonthly,
-  OPENROUTER_KEY_FIELD_IDS.ByokUsage,
-  OPENROUTER_KEY_FIELD_IDS.ByokUsageDaily,
-  OPENROUTER_KEY_FIELD_IDS.ByokUsageWeekly,
-  OPENROUTER_KEY_FIELD_IDS.ByokUsageMonthly,
-])
-
-const usdAmountFormatter = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
-  currencyDisplay: "code",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 8,
-})
-
-const formatUsdAmount = (value: number): string =>
-  usdAmountFormatter.format(value)
-
-const findFact = (facts: AccountKeyResourceFacts, fieldId: string) =>
-  facts.fields.find((fact) => fact.fieldId === fieldId)
-
-const primitiveFactValue = (
+const financialFactValue = (
   facts: AccountKeyResourceFacts,
   fieldId: string,
-) => {
-  const fact = findFact(facts, fieldId)
-  return fact && (fact.kind === "number" || fact.kind === "text")
-    ? String(fact.value)
-    : undefined
-}
-
-const usdFactValue = (
-  facts: AccountKeyResourceFacts,
-  fieldId: string,
+  t: TFunction,
 ): string | undefined => {
-  const fact = findFact(facts, fieldId)
-  return fact?.kind === "number" ? formatUsdAmount(fact.value) : undefined
+  const fact = facts.displayFacts?.find((fact) => fact.fieldId === fieldId)
+  return fact?.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint
+    ? formatKeyFinancialFact(fact, t)
+    : undefined
 }
 
 const fieldLabel = (fieldId: string, t: TFunction) => {
@@ -135,11 +104,11 @@ const fieldLabel = (fieldId: string, t: TFunction) => {
 
 const displayFactValue = (fact: ResourceDisplayFact, t: TFunction) => {
   switch (fact.kind) {
-    case "boolean":
+    case RESOURCE_DISPLAY_FACT_KINDS.Boolean:
       return fact.value
         ? t("keyManagement:openRouter.list.values.yes")
         : t("keyManagement:openRouter.list.values.no")
-    case "text":
+    case RESOURCE_DISPLAY_FACT_KINDS.Text:
       if (fact.fieldId === OPENROUTER_KEY_FIELD_IDS.LimitMode) {
         return fact.value === OPENROUTER_KEY_LIMIT_MODES.Unlimited
           ? t("keyManagement:openRouter.editor.options.limitMode.unlimited")
@@ -166,14 +135,12 @@ const displayFactValue = (fact: ResourceDisplayFact, t: TFunction) => {
         }
       }
       return fact.value
-    case "list":
+    case RESOURCE_DISPLAY_FACT_KINDS.List:
       return fact.value.join(", ")
-    case "secret":
+    case RESOURCE_DISPLAY_FACT_KINDS.Secret:
       return SECRET_MASK
-    case "number":
-      return usdAmountFieldIds.has(fact.fieldId)
-        ? formatUsdAmount(fact.value)
-        : String(fact.value)
+    case RESOURCE_DISPLAY_FACT_KINDS.Number:
+      return String(fact.value)
   }
 }
 
@@ -182,24 +149,24 @@ const statusPresentation = (
   t: TFunction,
 ): Pick<KeyResourceCardPresentation, "status" | "statusLabel"> => {
   switch (status) {
-    case "enabled":
+    case ACCOUNT_KEY_RESOURCE_STATUSES.Enabled:
       return {
-        status: "active",
+        status: KEY_RESOURCE_CARD_STATUSES.Active,
         statusLabel: t("keyManagement:native.status.enabled"),
       }
-    case "disabled":
+    case ACCOUNT_KEY_RESOURCE_STATUSES.Disabled:
       return {
-        status: "inactive",
+        status: KEY_RESOURCE_CARD_STATUSES.Inactive,
         statusLabel: t("keyManagement:native.status.disabled"),
       }
-    case "expired":
+    case ACCOUNT_KEY_RESOURCE_STATUSES.Expired:
       return {
-        status: "inactive",
+        status: KEY_RESOURCE_CARD_STATUSES.Inactive,
         statusLabel: t("keyManagement:native.status.expired"),
       }
     default:
       return {
-        status: "unknown",
+        status: KEY_RESOURCE_CARD_STATUSES.Unknown,
         statusLabel: t("keyManagement:native.status.unknown"),
       }
   }
@@ -209,13 +176,30 @@ export const buildOpenRouterKeyResourceDetailFacts = (
   facts: AccountKeyResourceFacts,
   t: TFunction,
 ): KeyResourceFact[] =>
-  facts.fields
-    .filter((fact) => detailFieldIds.has(fact.fieldId))
-    .map((fact) => ({
-      id: fact.fieldId,
-      label: fieldLabel(fact.fieldId, t),
-      value: displayFactValue(fact, t),
-    }))
+  [
+    ...(facts.displayFacts ?? []).flatMap((fact) =>
+      fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint
+        ? [
+            {
+              id: fact.fieldId,
+              label: fieldLabel(fact.fieldId, t),
+              value: formatKeyFinancialFact(fact, t),
+            },
+          ]
+        : [],
+    ),
+    ...facts.fields
+      .filter((fact) => detailFieldIds.has(fact.fieldId))
+      .map((fact) => ({
+        id: fact.fieldId,
+        label: fieldLabel(fact.fieldId, t),
+        value: displayFactValue(fact, t),
+      })),
+  ].sort(
+    (left, right) =>
+      [...detailFieldIds].indexOf(left.id) -
+      [...detailFieldIds].indexOf(right.id),
+  )
 
 export const buildOpenRouterKeyResourceCardPresentation = (
   row: NativeKeyManagementRow,
@@ -223,19 +207,14 @@ export const buildOpenRouterKeyResourceCardPresentation = (
   options: { hasAssociatedSecret?: boolean } = {},
 ): KeyResourceCardPresentation => {
   const hasAssociatedSecret = options.hasAssociatedSecret === true
-  const limitMode = primitiveFactValue(
-    row.facts,
-    OPENROUTER_KEY_FIELD_IDS.LimitMode,
-  )
-  const unlimited = limitMode === OPENROUTER_KEY_LIMIT_MODES.Unlimited
   const missing = t("keyManagement:openRouter.list.values.missing")
-  const unlimitedLabel = t("keyManagement:openRouter.list.values.unlimited")
-  const limit = usdFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Limit)
-  const remaining = usdFactValue(
+  const limit = financialFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Limit, t)
+  const remaining = financialFactValue(
     row.facts,
     OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
+    t,
   )
-  const usage = usdFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Usage)
+  const usage = financialFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Usage, t)
   const contextFact = {
     id: OPENROUTER_KEY_FIELD_IDS.Workspace,
     label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Workspace, t),
@@ -264,12 +243,12 @@ export const buildOpenRouterKeyResourceCardPresentation = (
       {
         id: OPENROUTER_KEY_FIELD_IDS.Limit,
         label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Limit, t),
-        value: unlimited ? unlimitedLabel : limit ?? missing,
+        value: limit ?? missing,
       },
       {
         id: OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
         label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.LimitRemaining, t),
-        value: unlimited ? unlimitedLabel : remaining ?? missing,
+        value: remaining ?? missing,
       },
       {
         id: OPENROUTER_KEY_FIELD_IDS.Usage,

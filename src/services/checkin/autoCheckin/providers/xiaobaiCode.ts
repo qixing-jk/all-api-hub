@@ -8,6 +8,7 @@ import {
 import {
   performXiaobaiCodeDailyCheckIn,
   probeXiaobaiCodeCheckInStatus,
+  XIAOBAI_CODE_DAILY_CHECK_IN_ENDPOINT,
   XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS,
   XIAOBAI_CODE_STATUS_OUTCOMES,
 } from "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn"
@@ -30,7 +31,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -140,7 +141,22 @@ export const xiaobaiCodeProvider: AutoCheckinProvider = {
             status: CHECKIN_RESULT_STATUS.SUCCESS,
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-            reward: readUsdReward(result.data.rewardAmount),
+            awards: readUsdAwards(
+              account as SiteAccount,
+              result.data.rewardAmount,
+              {
+                operation: XIAOBAI_CODE_DAILY_CHECK_IN_ENDPOINT,
+                field: "record.reward_amount",
+                ...(result.data.rewardRecordId
+                  ? {
+                      event: {
+                        namespace: "xiaobai-code-checkin-record",
+                        id: result.data.rewardRecordId,
+                      },
+                    }
+                  : {}),
+              },
+            ),
             data: result.data,
           }
         case XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:

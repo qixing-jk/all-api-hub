@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_KEY_FINANCIAL_FACT_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   createEmRankKeyEditor,
   EMRANK_EXPIRATION_MODES,
@@ -62,6 +63,70 @@ const openSession = () =>
   })
 
 describe("EMRank key resources", () => {
+  it("keeps omitted quota fields unknown instead of declaring an unlimited key", async () => {
+    server.use(
+      list([{ ...keyRow, total_quota: undefined, remaining_quota: undefined }]),
+    )
+    const collection = await (await openSession()).openCollection("account")
+    const row = (await collection.list()).items[0]!
+    expect(row.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "unknown",
+          limit: expect.objectContaining({ status: "unknown" }),
+          remaining: expect.objectContaining({ status: "unknown" }),
+        }),
+      }),
+    )
+  })
+  it("reports key spending constraints with native assets and authoritative remaining", async () => {
+    server.use(
+      list([
+        {
+          ...keyRow,
+          total_quota: "2500000",
+          used_quota: "1000000",
+          remaining_quota: "1200000",
+        },
+      ]),
+    )
+    const collection = await (await openSession()).openCollection("account")
+    const row = (await collection.list()).items[0]!
+    expect(row.displayFacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+            limitState: "finite",
+            limit: expect.objectContaining({
+              status: "known",
+              value: "2500000",
+            }),
+            used: expect.objectContaining({
+              status: "known",
+              value: "1000000",
+            }),
+            remaining: expect.objectContaining({
+              status: "known",
+              value: "1200000",
+            }),
+            reserved: expect.objectContaining({ status: "unknown" }),
+            scope: expect.objectContaining({
+              authority: origin,
+              keys: { kind: "restricted", ids: [String(keyRow.id)] },
+            }),
+          }),
+        }),
+      ]),
+    )
+    expect(
+      row.displayFacts?.some(
+        (fact) => fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.Allocation,
+      ),
+    ).toBe(false)
+  })
   const ref = {
     accountId: "acc-emrank",
     siteType: SITE_TYPES.EMRANK,
@@ -218,33 +283,21 @@ describe("EMRank key resources", () => {
       runtimeSecret: undefined,
       actions: { canUpdate: true, canDelete: true },
     })
-    expect(
-      page.items[0]!.displayFacts?.filter((fact) => fact.kind === "quota"),
-    ).toEqual([
-      {
-        fieldId: "quota",
-        kind: "quota",
-        role: "total",
-        asset: EMRANK_TOKEN_ASSET,
-        value: 2500000,
-        unlimited: false,
-      },
-      {
-        fieldId: "remaining",
-        kind: "quota",
-        role: "remaining",
-        asset: EMRANK_TOKEN_ASSET,
-        value: 2500000,
-        unlimited: false,
-      },
-      {
-        fieldId: "used",
-        kind: "quota",
-        role: "used",
-        asset: EMRANK_TOKEN_ASSET,
-        value: 0,
-      },
-    ])
+    expect(page.items[0]!.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+          limitState: "finite",
+          limit: expect.objectContaining({ status: "known", value: "2500000" }),
+          remaining: expect.objectContaining({
+            status: "known",
+            value: "2500000",
+          }),
+          used: expect.objectContaining({ status: "known", value: "0" }),
+        }),
+      }),
+    )
     expect(page.items[0]!.runtimeKey?.baseUrl).toBe("https://emrank.tech/v1")
   })
 
@@ -264,11 +317,15 @@ describe("EMRank key resources", () => {
     expect(items[0]?.displayFacts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: "quota",
-          role: "remaining",
-          asset: EMRANK_TOKEN_ASSET,
-          value: 1200000,
-          unlimited: false,
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+            limitState: "finite",
+            remaining: expect.objectContaining({
+              status: "known",
+              value: "1200000",
+            }),
+          }),
         }),
       ]),
     )
@@ -300,7 +357,13 @@ describe("EMRank key resources", () => {
     expect(items.map((item) => item.status)).toEqual(["disabled", "expired"])
     expect(
       items[0]!.displayFacts?.find((fact) => fact.fieldId === "quota"),
-    ).toMatchObject({ unlimited: true, value: 0 })
+    ).toMatchObject({
+      budget: {
+        limitState: "unlimited",
+        limit: { status: "unknown" },
+        remaining: { status: "unknown" },
+      },
+    })
     // A legacy row keeps its own reveal gate; the mask never claims plaintext.
     expect(items[1]!.maskedLabel).toBe("sk-emr-••••_IvA")
     expect(items[1]!.runtimeSecret).toBeUndefined()
@@ -519,14 +582,19 @@ describe("EMRank key resources", () => {
       scopeKey: "account",
       resourceId: String(keyRow.id),
     })
-    expect(after.displayFacts).toContainEqual({
-      fieldId: "quota",
-      kind: "quota",
-      role: "total",
-      asset: EMRANK_TOKEN_ASSET,
-      value: 20000000,
-      unlimited: false,
-    })
+    expect(after.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+          limitState: "finite",
+          limit: expect.objectContaining({
+            status: "known",
+            value: "20000000",
+          }),
+        }),
+      }),
+    )
   })
 
   it("reports a console rejection as not-applied with its message", async () => {

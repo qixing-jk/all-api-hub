@@ -1,4 +1,4 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import type { SiteType } from "~/constants/siteType"
 import { getDefaultAccountKeyName } from "~/services/accounts/keys/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -10,6 +10,7 @@ import {
 import { resourceValuesEqual } from "~/services/apiAdapters/nativeResources/editableChanges"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import type { NewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
+import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import type {
   NewApiToken,
   NewApiTokenWrite,
@@ -18,7 +19,7 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 const NEW_API_KEY_FIELD_IDS = {
   Name: "name",
-  Quota: "quotaUsd",
+  Quota: "quota",
   Unlimited: "unlimited_quota",
   ExpiresAt: "expires_at",
   Group: "group",
@@ -42,7 +43,6 @@ const NEW_API_KEY_FIELD_IDS = {
 const RIX_API_STORAGE_LOCATIONS = ["global", "none"] as const
 
 const field = NEW_API_KEY_FIELD_IDS
-const quotaPerUsd = QUOTA_PER_USD
 
 /** Reads a deployment-owned boolean that this editor now presents. */
 const readOwnedBoolean = (body: NewApiTokenWriteBody, key: string): boolean =>
@@ -103,17 +103,26 @@ export const toNewApiTokenWrite = (
     : { auto_groups: token.auto_groups }),
 })
 
-/** Native New API projection: dollar quota and UTC expiry convert only here. */
+/** Use the same denomination as the displayed budget and preserve raw writes. */
 export function createNewApiKeyEditor(
   variant: NewApiKeyVariant,
   request: ApiServiceRequest,
   token?: NewApiToken,
   intent?: AccountKeyCreationIntent,
+  siteType: SiteType | undefined = request.siteType,
 ): AccountKeyResourceEditorDefinition<NewApiKeyEditCommand> {
   const { transport } = variant
+  const quotaScale = newApiFinancialAmount(
+    0,
+    request.baseUrl,
+    siteType,
+  ).nativeUnitsPerAsset
+  const quotaFieldId = quotaScale === undefined ? field.Quota : "quotaUsd"
+  const toRawQuota = (value: number) =>
+    quotaScale === undefined ? value : Math.round(value * quotaScale)
   const initialGroup =
     intent?.preferredGroup ??
-    (intent?.allowedGroups?.length === 1 ? intent.allowedGroups[0] ?? "" : "")
+    (intent?.allowedGroups?.length === 1 ? (intent.allowedGroups[0] ?? "") : "")
   const baseline: NewApiTokenWriteBody = token
     ? toNewApiTokenWrite(token, variant)
     : {
@@ -154,7 +163,10 @@ export function createNewApiKeyEditor(
     : true
   const initialValues: EditableResourceProjection = {
     [field.Name]: baseline.name,
-    [field.Quota]: Math.max(0, baseline.remain_quota) / quotaPerUsd,
+    [quotaFieldId]:
+      (baseline.unlimited_quota
+        ? Math.max(0, baseline.remain_quota)
+        : baseline.remain_quota) / (quotaScale ?? 1),
     [field.Unlimited]: baseline.unlimited_quota,
     [field.ExpiresAt]:
       baseline.expired_time === -1
@@ -179,15 +191,18 @@ export function createNewApiKeyEditor(
         }
       : {}),
   }
+  const initialQuota = initialValues[quotaFieldId] as number
+  const keepExistingQuota = (value: unknown) =>
+    token !== undefined && !baseline.unlimited_quota && value === initialQuota
   const definition: AccountKeyResourceEditorDefinition<NewApiKeyEditCommand> = {
     fields: [
       { fieldId: field.Name, type: RESOURCE_FIELD_TYPES.Text, required: true },
       { fieldId: field.Unlimited, type: RESOURCE_FIELD_TYPES.Boolean },
       {
-        fieldId: field.Quota,
+        fieldId: quotaFieldId,
         type: RESOURCE_FIELD_TYPES.Number,
-        min: 0,
-        step: 1 / quotaPerUsd,
+        min: Math.min(0, initialQuota),
+        step: 1 / (quotaScale ?? 1),
       },
       {
         fieldId: field.ExpiresAt,
@@ -257,15 +272,16 @@ export function createNewApiKeyEditor(
         if (typeof values[id] !== "boolean")
           issues.push({ fieldId: id, code: "invalid_value" })
       }
-      const quota = values[field.Quota]
+      const quota = values[quotaFieldId]
       if (
         !values[field.Unlimited] &&
+        !keepExistingQuota(quota) &&
         (typeof quota !== "number" ||
           !Number.isFinite(quota) ||
           quota < 0 ||
-          !Number.isSafeInteger(Math.round(quota * quotaPerUsd)))
+          !Number.isSafeInteger(toRawQuota(quota)))
       ) {
-        issues.push({ fieldId: field.Quota, code: "out_of_range" })
+        issues.push({ fieldId: quotaFieldId, code: "out_of_range" })
       }
       const expiry = values[field.ExpiresAt]
       if (
@@ -362,9 +378,10 @@ export function createNewApiKeyEditor(
           ...baseline,
           name: (values[field.Name] as string).trim(),
           unlimited_quota: unlimited,
-          remain_quota: unlimited
-            ? baseline.remain_quota
-            : Math.round((values[field.Quota] as number) * quotaPerUsd),
+          remain_quota:
+            unlimited || keepExistingQuota(values[quotaFieldId])
+              ? baseline.remain_quota
+              : toRawQuota(values[quotaFieldId] as number),
           expired_time: expiresAt
             ? Math.floor(Date.parse(expiresAt) / 1000)
             : -1,
@@ -381,7 +398,7 @@ export function createNewApiKeyEditor(
             unlimited_count: values[field.CountUnlimited] === true,
             remain_count:
               values[field.CountUnlimited] === true
-                ? readOwnedNumber(baseline, field.RemainingCount) ?? 0
+                ? (readOwnedNumber(baseline, field.RemainingCount) ?? 0)
                 : Math.round(values[field.RemainingCount] as number),
             exclude_ips: String(values[field.ExcludeIps] ?? ""),
             storage_location: String(values[field.StorageLocation] ?? ""),

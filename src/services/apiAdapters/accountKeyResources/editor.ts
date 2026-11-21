@@ -9,9 +9,11 @@ import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   createNativeEditorSubmitGate,
   isNativeResourceBoundaryError,
+  NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES,
   resolveNativeResourceMutation,
   type NativeResourceMutationResult,
 } from "~/services/apiAdapters/nativeResources/factory"
@@ -62,13 +64,19 @@ export function createAccountKeyResourceEditor<
       ),
     resolve: (result) => {
       const resolution = resolveNativeResourceMutation(result)
-      if (resolution.status === "applied") {
+      if (
+        resolution.status ===
+        NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.Applied
+      ) {
         return options.projectApplied(resolution.value)
       }
-      if (resolution.status === "not-applied") {
+      if (
+        resolution.status ===
+        NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.NotApplied
+      ) {
         throw new AccountKeyResourceError(
           mapFailure(resolution.failure),
-          "not-applied",
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         )
       }
       const failure = mapFailure(resolution.failure)

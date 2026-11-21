@@ -165,7 +165,10 @@ export function AccountKeyResourceListItem({
       ].filter(
         (fact) =>
           !presentation.summaryFacts.some(
-            (summary) => summary.id === fact.id && summary.value === fact.value,
+            (summary) =>
+              summary.id === fact.id &&
+              summary.value === fact.value &&
+              !summary.budget,
           ),
       )
     : []
@@ -244,7 +247,7 @@ export function AccountKeyResourceListItem({
           >
             <Pencil
               aria-hidden="true"
-              className="text-theme-500 dark:text-theme-400 h-4 w-4"
+              className="h-4 w-4 text-theme-500 dark:text-theme-400"
             />
           </IconButton>
         ) : null}

@@ -20,7 +20,7 @@
     },
     "title": "アカウント内訳"
   },
-  "description": "毎日の残高と収支の推移から、アカウントの資金の変化を確認します。",
+  "description": "アカウントごとの残高や利用枠の推移を確認できます。",
   "empty": {
     "description": "残高履歴を有効化し、アカウントを更新して最初のスナップショットを記録してください。",
     "title": "まだスナップショットがありません"
@@ -82,16 +82,26 @@
     },
     "success": {
       "pruneCompleted": "整理が完了しました",
-      "refreshCompleted": "更新が完了しました",
+      "refreshCompleted": "履歴記録済み：{{captured}}、未記録：{{uncaptured}}。",
       "settingsSaved": "設定を保存しました"
     }
   },
   "metrics": {
     "balance": "残高",
-    "estimatedIncome": "推定収入",
+    "estimatedIncome": "推定純流入",
     "income": "収入",
     "net": "純増減",
     "outcome": "支出"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "グループ",
+      "keys": "キー",
+      "models": "モデル",
+      "projects": "プロジェクト",
+      "routes": "ルート"
+    },
+    "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {
     "kpis": {
@@ -117,8 +127,8 @@
     "enabledHint": "無効にすると、スナップショットは記録されず、定期取得も停止します。",
     "endOfDayCapture": "日次終了時の記録",
     "endOfDayCaptureHint": "{{time}} 付近でベストエフォートの日次記録を行います（Alarms API が必要です）。",
-    "estimatedTodayIncome": "推定の本日収入を表示",
-    "estimatedTodayIncomeHint": "残高履歴を使って、サイトの収入ログに出ない報酬を推定します。前日の基準スナップショットがない場合は利用できません。",
+    "estimatedTodayIncome": "推定純流入を表示",
+    "estimatedTodayIncomeHint": "日付が変わる頃の比較可能な残高と、ほぼ同じ期間の確定利用量から純流入を推定します。",
     "retentionDays": "保持日数"
   },
   "summary": {
@@ -129,7 +139,7 @@
       "account": "アカウント",
       "cashflowCoverage": "キャッシュフローのカバー率",
       "endBalance": "期末残高",
-      "estimatedIncomeTotal": "推定収入合計",
+      "estimatedIncomeTotal": "推定純流入",
       "incomeTotal": "総収入",
       "outcomeTotal": "総支出",
       "rangeNet": "期間純増減",
@@ -152,7 +162,7 @@
       "scope": "表示範囲"
     },
     "emptyMetric": "この期間には {{metric}} データがありません。",
-    "gapBridge": "破線は、途中の日付に記録がないことを示します。",
+    "gapBridge": "記録なし",
     "scopes": {
       "accounts": "アカウント別",
       "total": "合計"

@@ -192,6 +192,11 @@ it.each([true, false])(
       { kind: "executed", result: { status: "success" }, reused: true },
       { kind: "executed", result: { status: "success" }, reused: true },
     ])
+    const receipts = results.map((result) =>
+      result.kind === "executed" ? result.executionReceiptId : undefined,
+    )
+    expect(receipts[0]).toEqual(expect.any(String))
+    expect(new Set(receipts).size).toBe(1)
   },
 )
 
@@ -233,8 +238,21 @@ it("keeps different accounts parallel and admits a later independent attempt", a
     result: { status: "success" },
   })
   completion.resolve({ status: "success" })
-  await first
-  await executeSelectedCheckIn(input)
+  const completed = await first
+  const independent = await executeSelectedCheckIn(input)
+  if (
+    completed.kind !== "executed" ||
+    independent.kind !== "executed" ||
+    other.kind !== "executed"
+  )
+    throw new Error("Expected completed attempts")
+  expect(
+    new Set([
+      completed.executionReceiptId,
+      independent.executionReceiptId,
+      other.executionReceiptId,
+    ]).size,
+  ).toBe(3)
   expect(checkIn).toHaveBeenCalledTimes(3)
 })
 

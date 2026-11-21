@@ -49,7 +49,7 @@ import {
   createUpstreamFailureResult,
   getEffectiveAuthType,
   normalizeCheckinMessage,
-  readQuotaReward,
+  readQuotaAwards,
   resolveCheckinLoginFailure,
   resolveNativePageFailureResult,
   resolveProviderErrorResult,
@@ -295,7 +295,10 @@ async function performXingyaSessionCheckin(
       account,
       {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        reward: readQuotaReward(status.today_record.quota_awarded),
+        awards: readQuotaAwards(account, status.today_record.quota_awarded, {
+          operation: XINGYA_CHECK_IN_STATUS_ENDPOINT,
+          field: "today_record.quota_awarded",
+        }),
         data: status,
         messageKey:
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
@@ -328,8 +331,11 @@ async function performXingyaSessionCheckin(
       return data
         ? {
             status: toXingyaMethodStatus(data, Date.now()),
-            reward: data.today_record.checked_in
-              ? readQuotaReward(data.today_record.quota_awarded)
+            awards: data.today_record.checked_in
+              ? readQuotaAwards(account, data.today_record.quota_awarded, {
+                  operation: XINGYA_CHECK_IN_STATUS_ENDPOINT,
+                  field: "today_record.quota_awarded",
+                })
               : undefined,
           }
         : undefined
@@ -513,7 +519,10 @@ async function performXingyaClaim(
           ? undefined
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
         // The repeat answer still reports the day's authoritative award.
-        reward: readQuotaReward(claimResponse.data.quota_awarded),
+        awards: readQuotaAwards(account, claimResponse.data.quota_awarded, {
+          operation: XINGYA_DAILY_CLAIM_ENDPOINT,
+          field: "quota_awarded",
+        }),
         data: claimResponse.data,
       }
     }
@@ -524,7 +533,10 @@ async function performXingyaClaim(
       messageKey: message
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-      reward: readQuotaReward(claimResponse.data.quota_awarded),
+      awards: readQuotaAwards(account, claimResponse.data.quota_awarded, {
+        operation: XINGYA_DAILY_CLAIM_ENDPOINT,
+        field: "quota_awarded",
+      }),
       data: claimResponse.data,
     }
   } catch (error: unknown) {

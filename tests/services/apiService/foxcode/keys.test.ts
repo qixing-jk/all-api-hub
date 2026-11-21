@@ -850,7 +850,15 @@ it("opens the native key editor with every ordinary field and saves USD quota wi
   )
   const saved = await editor.submit({ ...editor.initialValues, quotaUsd: 0.05 })
   expect(saved.facts?.displayFacts).toContainEqual(
-    expect.objectContaining({ kind: "money", role: "total", amountUsd: 0.05 }),
+    expect.objectContaining({
+      kind: "budget-constraint",
+      budget: expect.objectContaining({
+        limit: expect.objectContaining({ status: "known", value: "0.05" }),
+        scope: expect.objectContaining({
+          models: { kind: "restricted", ids: ["claude-sonnet"] },
+        }),
+      }),
+    }),
   )
   const reopened = await collection.openEditEditor(page.items[0]!.ref)
   expect(reopened.initialValues).toMatchObject({

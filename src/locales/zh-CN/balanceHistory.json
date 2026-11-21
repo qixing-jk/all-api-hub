@@ -20,7 +20,7 @@
     },
     "title": "账户分布"
   },
-  "description": "查看每日余额与收支趋势，了解账号资金变化。",
+  "description": "查看各账户的余额和额度变化。",
   "empty": {
     "description": "启用余额历史并刷新任意账户，即可记录第一条快照。",
     "title": "暂无快照"
@@ -82,16 +82,26 @@
     },
     "success": {
       "pruneCompleted": "清理完成",
-      "refreshCompleted": "刷新完成",
+      "refreshCompleted": "历史已记录：{{captured}}；未记录：{{uncaptured}}。",
       "settingsSaved": "设置已保存"
     }
   },
   "metrics": {
     "balance": "余额",
-    "estimatedIncome": "估算收入",
+    "estimatedIncome": "估算净流入",
     "income": "收入",
     "net": "净变化",
     "outcome": "支出"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "分组",
+      "keys": "密钥",
+      "models": "模型",
+      "projects": "项目",
+      "routes": "路由"
+    },
+    "restrictions": "{{dimension}}：{{value}}"
   },
   "overview": {
     "kpis": {
@@ -117,8 +127,8 @@
     "enabledHint": "关闭后不会记录快照，也不会安排日终抓取。",
     "endOfDayCapture": "日终抓取",
     "endOfDayCaptureHint": "在每天 {{time}} 左右尽力抓取一次（需要浏览器支持 Alarms API）。",
-    "estimatedTodayIncome": "显示估算今日收入",
-    "estimatedTodayIncomeHint": "基于余额历史估算未进入站点收入日志的奖励；缺少前一日基准快照时不可用。",
+    "estimatedTodayIncome": "显示估算净流入",
+    "estimatedTodayIncomeHint": "用接近当天零点的余额与大致覆盖同一时段的已结算消耗估算净流入。",
     "retentionDays": "保留天数"
   },
   "summary": {
@@ -129,7 +139,7 @@
       "account": "账户",
       "cashflowCoverage": "收支覆盖",
       "endBalance": "结束余额",
-      "estimatedIncomeTotal": "估算收入合计",
+      "estimatedIncomeTotal": "估算净流入",
       "incomeTotal": "区间收入",
       "outcomeTotal": "区间支出",
       "rangeNet": "区间净变化",
@@ -152,7 +162,7 @@
       "scope": "视图"
     },
     "emptyMetric": "该时间范围内暂无{{metric}}数据。",
-    "gapBridge": "虚线表示中间日期没有记录。",
+    "gapBridge": "无记录",
     "scopes": {
       "accounts": "按账户",
       "total": "汇总"

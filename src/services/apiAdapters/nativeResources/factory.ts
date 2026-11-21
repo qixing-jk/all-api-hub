@@ -1,3 +1,4 @@
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import type {
   NativeResourceMutationResult,
   ResourceDisplayFact,
@@ -125,10 +126,25 @@ export const assertNativeResourceFacts = <
   return facts
 }
 
+export const NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES = {
+  Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+  NotApplied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
+  Uncertain: "uncertain",
+} as const
+
 type NativeResourceMutationResolution<T, TFailure> =
-  | { status: "applied"; value: T }
-  | { status: "not-applied"; failure: TFailure }
-  | { status: "uncertain"; failure: TFailure }
+  | {
+      status: typeof NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.Applied
+      value: T
+    }
+  | {
+      status: typeof NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.NotApplied
+      failure: TFailure
+    }
+  | {
+      status: typeof NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.Uncertain
+      failure: TFailure
+    }
 
 const snapshotNativeResourceMutation = <T, TFailure>(
   result: unknown,
@@ -146,7 +162,7 @@ const snapshotNativeResourceMutation = <T, TFailure>(
 
   const hasOwn = (key: string) =>
     Object.prototype.hasOwnProperty.call(result, key)
-  if (certainty === "applied") {
+  if (certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied) {
     if (!hasOwn("value")) {
       throw new NativeResourceBoundaryError("Invalid native resource mutation")
     }
@@ -159,7 +175,7 @@ const snapshotNativeResourceMutation = <T, TFailure>(
       throw new NativeResourceBoundaryError("Invalid native resource mutation")
     }
   }
-  if (certainty === "not-applied") {
+  if (certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied) {
     if (!hasOwn("failure")) {
       throw new NativeResourceBoundaryError("Invalid native resource mutation")
     }
@@ -172,7 +188,10 @@ const snapshotNativeResourceMutation = <T, TFailure>(
       throw new NativeResourceBoundaryError("Invalid native resource mutation")
     }
   }
-  if (certainty === "possibly-applied" || certainty === "partially-applied") {
+  if (
+    certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied ||
+    certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.PartiallyApplied
+  ) {
     if (!hasOwn("failure")) {
       throw new NativeResourceBoundaryError("Invalid native resource mutation")
     }
@@ -192,13 +211,22 @@ export const resolveNativeResourceMutation = <T, TFailure>(
   result: NativeResourceMutationResult<T, TFailure>,
 ): NativeResourceMutationResolution<T, TFailure> => {
   const snapshot = snapshotNativeResourceMutation<T, TFailure>(result)
-  if (snapshot.certainty === "applied") {
-    return { status: "applied", value: snapshot.value }
+  if (snapshot.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied) {
+    return {
+      status: NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.Applied,
+      value: snapshot.value,
+    }
   }
-  if (snapshot.certainty === "not-applied") {
-    return { status: "not-applied", failure: snapshot.failure }
+  if (snapshot.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied) {
+    return {
+      status: NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.NotApplied,
+      failure: snapshot.failure,
+    }
   }
-  return { status: "uncertain", failure: snapshot.failure }
+  return {
+    status: NATIVE_RESOURCE_MUTATION_RESOLUTION_STATUSES.Uncertain,
+    failure: snapshot.failure,
+  }
 }
 
 /** Serializes editor mutations and closes only after applied or uncertain work. */
@@ -239,7 +267,10 @@ export function createNativeEditorSubmitGate<
         const result = snapshotNativeResourceMutation<TMutationValue, TFailure>(
           await options.mutate(command, operationOptions),
         )
-        if (result.certainty !== "not-applied") close()
+        if (
+          result.certainty !== NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+        )
+          close()
         return options.resolve(result)
       } catch (error) {
         const normalizedError = options.normalizeError?.(error) ?? error

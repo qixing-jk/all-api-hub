@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
+import { CURRENCIES, DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountSource,
@@ -230,6 +230,7 @@ const ACCOUNT_FIXTURE: DisplaySiteData = {
   name: "Account One",
   username: "example-user",
   balance: { USD: 10, CNY: 80 },
+  exchangeRate: 8,
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
@@ -722,7 +723,7 @@ describe("ModelDisplay", () => {
         rates: {
           videoOutput: {
             amount: 1,
-            currency: "USD",
+            currency: CURRENCIES.USD,
             unit: PRICE_RATE_UNITS.TOKEN,
             per: TOKENS_PER_MILLION,
           },
@@ -910,6 +911,7 @@ describe("ModelDisplay", () => {
                 ...ACCOUNT_SOURCE.account,
                 id: "account-2",
                 balance: { USD: 0, CNY: 60 },
+                exchangeRate: undefined,
               },
             },
           }),

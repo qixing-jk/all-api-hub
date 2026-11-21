@@ -342,7 +342,12 @@ describe("veloeraProvider", () => {
       const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("success")
-      expect(result.reward).toEqual({ quota: 500000 })
+      expect(result.awards).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "1" },
+        },
+      ])
     })
 
     it("returns success on successful check-in", async () => {

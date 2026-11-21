@@ -1,24 +1,28 @@
 import type { TFunction } from "i18next"
 
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { isProviderConfirmedAccountCredential } from "~/services/accounts/keys/accountCredentialIdentityFacts"
 import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/keys/accountRuntimeKeys"
+import { BUDGET_AMOUNT_FIELDS } from "~/services/amounts/financialConstants"
 import { hasAccountKeyManagementPermission } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_EXPIRY_STATES,
+  ACCOUNT_KEY_FINANCIAL_FACT_KINDS,
   ACCOUNT_KEY_RESOURCE_STATUSES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { RESOURCE_DISPLAY_FACT_KINDS } from "~/services/apiAdapters/contracts/resourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import {
-  VERCEL_KEY_SPEND_ATTRIBUTIONS as attributions,
-  VERCEL_BUDGET_REFRESH_PERIODS as budgetPeriods,
-} from "~/services/apiService/vercelAiGateway/keys"
-import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
+import { VERCEL_KEY_SPEND_ATTRIBUTIONS as attributions } from "~/services/apiService/vercelAiGateway/keys"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 import { buildAccountCredentialBadges } from "./accountCredentialBadges"
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
+import { formatKeyFinancialFact } from "./keyBudgetPresentation"
 import type {
   KeyResourceActionPolicy,
   KeyResourceBadge,
@@ -71,9 +75,9 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     const availability =
       hasAssociatedSecret || Boolean(row.facts.runtimeSecret)
         ? INVENTORY_SECRET_AVAILABILITIES.Recoverable
-        : getSiteTypeCapabilities(row.facts.ref.siteType).account
+        : (getSiteTypeCapabilities(row.facts.ref.siteType).account
             ?.keyResourceManagement?.inventorySecretAvailability ??
-          INVENTORY_SECRET_AVAILABILITIES.Unavailable
+          INVENTORY_SECRET_AVAILABILITIES.Unavailable)
     const status = row.facts.status
     const contextFact = {
       id: "scope",
@@ -88,7 +92,7 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
         status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
           ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
           : status === ACCOUNT_KEY_RESOURCE_STATUSES.Unknown
-            ? "unknown"
+            ? KEY_RESOURCE_CARD_STATUSES.Unknown
             : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
       statusLabel:
         status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
@@ -151,121 +155,49 @@ const nativeDetailFacts = (
   const details: KeyResourceFact[] = []
   for (const fact of facts.displayFacts ?? []) {
     if (
-      fact.kind === "money" ||
-      fact.kind === "credits" ||
-      fact.kind === "quota"
+      fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint ||
+      fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.Allocation
     ) {
+      const value = formatKeyFinancialFact(fact, t)
       details.push({
         id: fact.fieldId,
         label:
-          getKeyResourcePresentationPolicy(facts.ref.siteType).factLabels?.[
-            fact.fieldId
-          ]?.(t) ??
-          (fact.kind === "credits"
-            ? t("keyManagement:native.editor.quotaCredits")
-            : fact.role === "remaining"
-              ? t("keyManagement:keyDetails.remainingQuota")
-              : fact.role === "used"
-                ? t("keyManagement:keyDetails.usedQuota")
-                : fact.kind === "quota"
-                  ? t("keyManagement:keyDetails.totalQuota")
-                  : t("keyManagement:native.editor.totalQuotaUsd")),
-        value:
-          fact.kind === "money" && fact.followsAccount
-            ? t("keyManagement:native.editor.followsAccount")
-            : fact.unlimited
-              ? t("keyManagement:dialog.unlimitedQuota")
-              : fact.kind === "money"
-                ? `$${fact.amountUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
-                : fact.kind === "quota"
-                  ? formatQuotaAmount(fact.value, fact.asset)
-                  : fact.value.toLocaleString(),
+          fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.Allocation
+            ? t("keyManagement:financial.allocation")
+            : (getKeyResourcePresentationPolicy(
+                facts.ref.siteType,
+              ).factLabels?.[fact.fieldId]?.(t) ??
+              (fact.metric
+                ? t(
+                    `keyManagement:financial.${fact.metric === BUDGET_AMOUNT_FIELDS.ByokUsed ? "used" : fact.metric}`,
+                  )
+                : t("keyManagement:financial.budget"))),
+        value,
+        ...(fact.kind === ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint &&
+        !fact.metric
+          ? { budget: fact.budget }
+          : {}),
       })
-    } else if (fact.kind === "rate-limit") {
+    } else if (fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.RateLimit) {
       details.push({
         id: fact.fieldId,
         label: t("keyManagement:native.editor.budgetsAndLimits"),
         value: `RPM ${fact.rpm || t("keyManagement:native.editor.followsAccount")} · ${t("keyManagement:native.editor.keyConcurrency")}: ${fact.concurrency || t("keyManagement:native.editor.followsAccount")}`,
       })
-    } else if (fact.kind === "spend-budget") {
-      const period =
-        fact.period === budgetPeriods.Daily
-          ? t("keyManagement:native.editor.vercelAiGateway.period.daily")
-          : fact.period === budgetPeriods.Weekly
-            ? t("keyManagement:native.editor.vercelAiGateway.period.weekly")
-            : fact.period === budgetPeriods.Monthly
-              ? t("keyManagement:native.editor.vercelAiGateway.period.monthly")
-              : t("keyManagement:native.editor.vercelAiGateway.period.none")
-      details.push({
-        id: fact.fieldId,
-        label: t("keyManagement:native.editor.vercelAiGateway.budgetEnabled"),
-        value:
-          fact.source === "unavailable"
-            ? t("keyManagement:native.editor.vercelAiGateway.budgetUnavailable")
-            : fact.source === "none"
-              ? t("keyManagement:native.editor.vercelAiGateway.noBudget")
-              : [
-                  fact.source === "inherited"
-                    ? t(
-                        "keyManagement:native.editor.vercelAiGateway.inheritedBudget",
-                      )
-                    : undefined,
-                  typeof fact.usedUsd === "number"
-                    ? `$${fact.usedUsd} / $${fact.limitUsd}`
-                    : `$${fact.limitUsd}`,
-                  period,
-                  fact.active === false
-                    ? t(
-                        "keyManagement:native.editor.vercelAiGateway.budgetInactive",
-                      )
-                    : undefined,
-                ]
-                  .filter(Boolean)
-                  .join(" · "),
-      })
-    } else if (fact.kind === "budget") {
-      const budgetLabel =
-        fact.window === "5h"
-          ? t("keyManagement:native.editor.budget5h")
-          : fact.window === "day"
-            ? t("keyManagement:native.editor.budgetDay")
-            : fact.window === "week"
-              ? t("keyManagement:native.editor.budgetWeek")
-              : t("keyManagement:native.editor.budgetMonth")
-      details.push({
-        id: fact.fieldId,
-        label: budgetLabel,
-        value:
-          t("keyManagement:native.editor.budgetUsage", {
-            used: fact.usedUsd,
-            limit: fact.limitUsd,
-            remaining: fact.remainingUsd,
-            reserved: fact.reservedUsd,
-          }) +
-          " · " +
-          (fact.nextResetAt
-            ? t("keyManagement:native.editor.budgetNextReset", {
-                time: new Date(fact.nextResetAt).toLocaleString(undefined, {
-                  timeZone: "Asia/Shanghai",
-                  timeZoneName: "short",
-                }),
-              })
-            : t("keyManagement:native.editor.budgetRolling")),
-      })
-    } else if (fact.kind === "expiry") {
+    } else if (fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry) {
       const date =
         typeof fact.timestampMs === "number" ? new Date(fact.timestampMs) : null
       details.push({
         id: fact.fieldId,
         label: t("keyManagement:keyDetails.expireTime"),
         value:
-          fact.timestampMs === "never"
+          fact.timestampMs === ACCOUNT_KEY_EXPIRY_STATES.Never
             ? t("keyManagement:keyDetails.neverExpires")
             : date && Number.isFinite(date.getTime())
               ? date.toLocaleDateString()
               : t("common:labels.notAvailable"),
       })
-    } else if (fact.kind === "attribution") {
+    } else if (fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution) {
       details.push({
         id: fact.fieldId,
         label: t(
@@ -281,7 +213,7 @@ const nativeDetailFacts = (
                 )
               : fact.value,
       })
-    } else if (fact.kind === "last-used") {
+    } else if (fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed) {
       details.push({
         id: fact.fieldId,
         label: t("keyManagement:keyDetails.lastUsedTime"),
@@ -293,7 +225,7 @@ const nativeDetailFacts = (
     }
   }
   for (const fact of facts.displayFacts ?? []) {
-    if (fact.kind === "permission") {
+    if (fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Permission) {
       details.push({
         id: fact.fieldId,
         label: t("keyManagement:native.permission.manage"),
@@ -301,17 +233,17 @@ const nativeDetailFacts = (
           ? t("keyManagement:native.permission.manageGranted")
           : t("keyManagement:native.permission.manageNotGranted"),
       })
-    } else if (fact.kind === "restriction") {
+    } else if (fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction) {
       const value = displayText(fact.value)
       if (value)
         details.push({
           id: fact.fieldId,
           label:
-            fact.role === "models"
+            fact.role === ACCOUNT_KEY_RESTRICTION_ROLES.Models
               ? t("keyManagement:keyDetails.models")
-              : fact.role === "tools"
+              : fact.role === ACCOUNT_KEY_RESTRICTION_ROLES.Tools
                 ? t("keyManagement:keyDetails.tools")
-                : fact.role === "subnet"
+                : fact.role === ACCOUNT_KEY_RESTRICTION_ROLES.Subnet
                   ? t("keyManagement:dialog.subnetLimits")
                   : t("keyManagement:keyDetails.ipLimits"),
           value,
@@ -339,7 +271,8 @@ const nativeDetailFacts = (
     if (
       label &&
       !details.some((detail) => detail.id === field.fieldId) &&
-      (field.kind === "text" || field.kind === "number")
+      (field.kind === RESOURCE_DISPLAY_FACT_KINDS.Text ||
+        field.kind === RESOURCE_DISPLAY_FACT_KINDS.Number)
     )
       details.push({
         id: field.fieldId,
@@ -358,10 +291,12 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       options,
     )
     const group = row.facts.displayFacts?.find(
-      (fact) => fact.kind === "group" || fact.kind === "channels",
+      (fact) =>
+        fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group ||
+        fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Channels,
     )
     const contextFact = group
-      ? group.kind === "channels"
+      ? group.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Channels
         ? {
             id: "channels",
             label: t("keyManagement:keyDetails.channels"),
@@ -400,7 +335,12 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       detailFacts:
         row.facts.detailAvailability ===
         ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
-          ? details.slice(summaryDetailCount)
+          ? [
+              ...details
+                .slice(0, summaryDetailCount)
+                .filter((fact) => fact.budget),
+              ...details.slice(summaryDetailCount),
+            ]
           : details,
       actions: {
         ...base.actions,

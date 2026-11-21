@@ -1,38 +1,53 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
 import type {
+  AccountKeyFactContext,
   AccountKeyResourcePage,
   AccountKeyResourceProviderFacts,
 } from "~/services/apiAdapters/accountKeyResources/definition"
-import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
+import {
+  keyExpiryDisplayFact,
+  keyProvisioningCoverage,
+} from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
   mapAccountKeyResourceUncertainFailure,
 } from "~/services/apiAdapters/accountKeyResources/failure"
+import { accountKeyDefaultScopes } from "~/services/apiAdapters/accountKeyResources/scopeInventory"
 import {
-  ACCOUNT_KEY_PROVISIONING_COVERAGE,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+  type ACCOUNT_KEY_PROVISIONING_COVERAGE,
   type AccountKeyProvisionedResource,
   type AccountKeyProvisioningRequirement,
   type AccountKeyProvisioningSnapshot,
   type AccountKeyResourceFacts,
   type AccountKeyResourceOpenInput,
   type AccountKeyResourceRef,
-  type AccountKeyScope,
   type AccountRuntimeKeyResolution,
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
@@ -135,12 +150,7 @@ const tokenStatus = (
 const tokenCoverage = (
   token: Sub2ApiNativeKey,
 ): (typeof ACCOUNT_KEY_PROVISIONING_COVERAGE)[keyof typeof ACCOUNT_KEY_PROVISIONING_COVERAGE] => {
-  const status = tokenStatus(token)
-  if (status === "enabled") return ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable
-  if (status === "disabled" || status === "expired") {
-    return ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable
-  }
-  return ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown
+  return keyProvisioningCoverage(tokenStatus(token))
 }
 
 const createRef = (
@@ -269,14 +279,22 @@ const provisionRequirement = async (
       }),
     mapFailure,
   })
-  if (createResult.certainty === "not-applied") return createResult
-  if (createResult.certainty === "possibly-applied")
+  if (
+    createResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+  )
+    return createResult
+  if (
+    createResult.certainty ===
+    NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+  )
     return {
-      certainty: "possibly-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(createResult.failure),
     }
   const created =
-    createResult.certainty === "applied" ? createResult.value : undefined
+    createResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
+      ? createResult.value
+      : undefined
   const createdToken =
     created && typeof created === "object" ? created : undefined
   const createdId = toPositiveSafeInteger(createdToken?.id)
@@ -287,7 +305,7 @@ const provisionRequirement = async (
     createdToken.group_id === groupId
   ) {
     return {
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: { ref: createRef(config, createdId) },
     }
   }
@@ -304,7 +322,7 @@ const provisionRequirement = async (
       Boolean(newToken.group_name?.trim())
     ) {
       return {
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: { ref: createRef(config, newToken.id) },
       }
     }
@@ -314,7 +332,7 @@ const provisionRequirement = async (
   }
 
   return {
-    certainty: "possibly-applied",
+    certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
     failure: mapAccountKeyResourceUncertainFailure(reconciliationError),
   }
 }
@@ -329,7 +347,7 @@ const renameProvisionedResource = async (
   const current = await fetchSub2ApiKey(request, tokenId)
   if (current.id !== tokenId) {
     return {
-      certainty: "not-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
     }
   }
@@ -340,7 +358,7 @@ const renameProvisionedResource = async (
   const requirement = groupKey ? requirementByKey.get(groupKey) : undefined
   if (!requirement || !groupName) {
     return {
-      certainty: "not-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     }
   }
@@ -350,7 +368,7 @@ const renameProvisionedResource = async (
   )
   if (!targetDisplayName) {
     return {
-      certainty: "not-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     }
   }
@@ -363,26 +381,34 @@ const renameProvisionedResource = async (
       }),
     mapFailure,
   })
-  if (updateResult.certainty === "not-applied") return updateResult
+  if (
+    updateResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+  )
+    return updateResult
 
   try {
     const refreshed = await fetchSub2ApiKey(request, tokenId)
     return refreshed.id === tokenId &&
       refreshed.name.trim() === targetDisplayName
-      ? { certainty: "applied", value: undefined }
+      ? {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: undefined,
+        }
       : {
-          certainty: "possibly-applied",
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
           failure: mapAccountKeyResourceUncertainFailure(
-            updateResult.certainty === "possibly-applied"
+            updateResult.certainty ===
+              NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
               ? updateResult.failure
               : undefined,
           ),
         }
   } catch (error) {
     return {
-      certainty: "possibly-applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        updateResult.certainty === "possibly-applied"
+        updateResult.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
           ? updateResult.failure
           : error,
       ),
@@ -393,6 +419,7 @@ const renameProvisionedResource = async (
 const toFacts = (
   token: Sub2ApiNativeKey,
   ref: AccountKeyResourceFacts["ref"],
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: token.name?.trim() || `Key ${token.id}`,
@@ -409,60 +436,43 @@ const toFacts = (
     createdAt: normalizeToMs(token.created_at) ?? undefined,
   },
   displayFacts: [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: "quota",
-      kind: "money",
-      role: "total",
-      amountUsd: Number(token.quota) || 0,
-      unlimited: Number(token.quota) <= 0,
-    },
-    {
-      fieldId: "quota_used",
-      kind: "money",
-      role: "used",
-      amountUsd: Number(token.quota_used) || 0,
-    },
-    {
-      fieldId: "remainingQuotaUsd",
-      kind: "money",
-      role: "remaining",
-      amountUsd:
-        Math.max(0, Number(token.quota) - Number(token.quota_used ?? 0)) || 0,
-      unlimited: Number(token.quota) <= 0,
-    },
+      operation: "keys",
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      limitState:
+        token.quota != null && Number(token.quota) <= 0
+          ? BUDGET_LIMIT_STATES.Unlimited
+          : BUDGET_LIMIT_STATES.Finite,
+      limit: token.quota,
+      used: token.quota_used,
+      scope: {
+        groups:
+          token.group_id == null
+            ? { kind: SCOPE_SELECTION_KINDS.Unknown }
+            : {
+                kind: SCOPE_SELECTION_KINDS.Restricted,
+                ids: [String(token.group_id)],
+              },
+      },
+      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+    }),
     keyExpiryDisplayFact("expires_at", toSub2ApiKeyEditable(token).expires_at),
     {
       fieldId: "group",
-      kind: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
       value: token.group_name?.trim() || "",
       emptyValue: "ungrouped",
     },
     {
       fieldId: "ip_whitelist",
-      kind: "restriction",
-      role: "ip",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+      role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
       value: toSub2ApiKeyEditable(token).ip_whitelist,
     },
   ],
   fields: [
     { fieldId: "group", kind: "text", value: token.group_name?.trim() || "" },
-    {
-      fieldId: "unlimitedQuota",
-      kind: "boolean",
-      value: Number(token.quota) <= 0,
-    },
-    { fieldId: "quota", kind: "number", value: Number(token.quota) || 0 },
-    {
-      fieldId: "quota_used",
-      kind: "number",
-      value: Number(token.quota_used) || 0,
-    },
-    {
-      fieldId: "remainingQuotaUsd",
-      kind: "number",
-      value:
-        Math.max(0, Number(token.quota) - Number(token.quota_used ?? 0)) || 0,
-    },
     {
       fieldId: "ip_whitelist",
       kind: "list",
@@ -524,27 +534,38 @@ async function createNativeKey(
     execute: (mutationRequest) => createSub2ApiKey(mutationRequest, payload),
     mapFailure,
   })
-  if (result.certainty === "not-applied") return result
-  if (result.certainty === "possibly-applied")
+  if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+    return result
+  if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied)
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(result.failure),
     }
-  if (result.certainty === "applied" && result.value && matches(result.value))
-    return { certainty: "applied" as const, value: { detail: result.value } }
+  if (
+    result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied &&
+    result.value &&
+    matches(result.value)
+  )
+    return {
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+      value: { detail: result.value },
+    }
   try {
     const candidates = (await fetchSub2ApiKeys(request)).filter(matches)
     const [candidate] = candidates
     if (candidates.length === 1 && candidate)
-      return { certainty: "applied" as const, value: { detail: candidate } }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: { detail: candidate },
+      }
   } catch (error) {
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(error),
     }
   }
   return {
-    certainty: "possibly-applied" as const,
+    certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
     failure: mapAccountKeyResourceUncertainFailure(),
   }
 }
@@ -587,14 +608,8 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
     account: input.account,
     request: input.request,
   }),
-  listScopes: async (config): Promise<readonly AccountKeyScope[]> => [
-    {
-      scopeKey: ACCOUNT_SCOPE_KEY,
-      routeKey: ACCOUNT_SCOPE_KEY,
-      displayName: config.account.name?.trim() || config.request.baseUrl,
-      isDefault: true,
-    },
-  ],
+  listScopes: async (config) =>
+    accountKeyDefaultScopes(ACCOUNT_SCOPE_KEY, config),
   provisioning: {
     inspect: inspectProvisioning,
     provision: provisionRequirement,
@@ -646,7 +661,7 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
     const merged = mergeResourceEdits(command.baseline, command.values, latest)
     if (!merged)
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
       }
     const changed = Object.fromEntries(
@@ -656,7 +671,10 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
       ),
     ) as Partial<Sub2ApiUpdateKeyPayload>
     if (!Object.keys(changed).length)
-      return { certainty: "applied" as const, value: detail }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: detail,
+      }
     const request = requestWithOptions(config, options)
     const result = await runNativeResourceMutation({
       request,
@@ -664,7 +682,8 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
         updateSub2ApiKey(mutationRequest, detail.id, changed),
       mapFailure,
     })
-    if (result.certainty === "not-applied") return result
+    if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+      return result
     try {
       const updated = await fetchSub2ApiKey(request, detail.id)
       const actual = toSub2ApiKeyEditable(updated)
@@ -673,17 +692,23 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
           resourceValuesEqual(value, actual[key as keyof typeof actual]),
         )
       )
-        return { certainty: "applied" as const, value: updated }
+        return {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: updated,
+        }
     } catch (error) {
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(error),
       }
     }
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        result.certainty === "possibly-applied" ? result.failure : undefined,
+        result.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+          ? result.failure
+          : undefined,
       ),
     }
   },
@@ -694,15 +719,18 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
         await deleteApiToken(mutationRequest, tokenId),
       mapFailure,
     })
-    return result.certainty === "applied"
+    return result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
       ? result.value === false
         ? {
-            certainty: "not-applied" as const,
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
             failure: {
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
             },
           }
-        : { certainty: "applied" as const, value: undefined }
+        : {
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+            value: undefined,
+          }
       : result
   },
   mapFailure,

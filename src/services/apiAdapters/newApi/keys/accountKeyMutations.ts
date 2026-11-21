@@ -3,6 +3,7 @@ import {
   mapAccountKeyResourceFailure as mapFailure,
 } from "~/services/apiAdapters/accountKeyResources/failure"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
   resourceValuesEqual,
@@ -53,22 +54,28 @@ export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
         config.transport.createApiToken(request, command.values),
       mapFailure,
     })
-    if (result.certainty === "not-applied") return result
-    if (result.certainty === "possibly-applied")
+    if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+      return result
+    if (
+      result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+    )
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(result.failure),
       }
-    if (result.certainty === "applied" && result.value === false) {
+    if (
+      result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied &&
+      result.value === false
+    ) {
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: {
           code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
         },
       }
     }
     if (
-      result.certainty === "applied" &&
+      result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied &&
       typeof result.value === "object" &&
       result.value &&
       Number.isSafeInteger(result.value.id) &&
@@ -76,7 +83,10 @@ export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
       !beforeIds.has(result.value.id) &&
       matchesNewApiTokenWrite(config.variant, result.value, command.values)
     )
-      return { certainty: "applied" as const, value: { detail: result.value } }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: { detail: result.value },
+      }
     try {
       const after = await collectValidatedInventoryTokens(config, options)
       const candidates = await Promise.all(
@@ -93,17 +103,17 @@ export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
       const [createdToken] = created
       if (created.length === 1 && createdToken)
         return {
-          certainty: "applied" as const,
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
           value: { detail: createdToken },
         }
     } catch (error) {
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(error),
       }
     }
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(),
     }
   }
@@ -120,7 +130,7 @@ export const updateNewApiAccountToken: NewApiAccountTokenDefinition["update"] =
     const values = mergeResourceEdits(command.baseline, command.values, latest)
     if (!values)
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
       }
     if (latest.group === "auto" && values.group !== "auto") {
@@ -129,17 +139,26 @@ export const updateNewApiAccountToken: NewApiAccountTokenDefinition["update"] =
       if (values.auto_groups !== undefined) values.auto_groups = null
     }
     if (resourceValuesEqual(values, latest))
-      return { certainty: "applied" as const, value: detail }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: detail,
+      }
     const updateResult = await runNativeResourceMutation({
       request: requestWithOptions(config, options),
       execute: async (request) =>
         await config.transport.updateApiToken(request, detail.id, values),
       mapFailure,
     })
-    if (updateResult.certainty === "not-applied") return updateResult
-    if (updateResult.certainty === "applied" && updateResult.value === false) {
+    if (
+      updateResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+    )
+      return updateResult
+    if (
+      updateResult.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied &&
+      updateResult.value === false
+    ) {
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: {
           code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
         },
@@ -155,7 +174,8 @@ export const updateNewApiAccountToken: NewApiAccountTokenDefinition["update"] =
       // Quota can decrease between the write and this read. A lost response
       // still requires exact evidence when the user changed the quota itself.
       const allowQuotaConsumption =
-        updateResult.certainty === "applied" ||
+        updateResult.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied ||
         values.remain_quota === latest.remain_quota
       return updated &&
         matchesNewApiTokenWrite(
@@ -164,20 +184,25 @@ export const updateNewApiAccountToken: NewApiAccountTokenDefinition["update"] =
           values,
           allowQuotaConsumption,
         )
-        ? { certainty: "applied" as const, value: updated }
+        ? {
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+            value: updated,
+          }
         : {
-            certainty: "possibly-applied" as const,
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
             failure: mapAccountKeyResourceUncertainFailure(
-              updateResult.certainty === "possibly-applied"
+              updateResult.certainty ===
+                NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
                 ? updateResult.failure
                 : undefined,
             ),
           }
     } catch (error) {
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(
-          updateResult.certainty === "possibly-applied"
+          updateResult.certainty ===
+            NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
             ? updateResult.failure
             : error,
         ),
@@ -193,14 +218,17 @@ export const deleteNewApiAccountToken: NewApiAccountTokenDefinition["delete"] =
         await config.transport.deleteApiToken(request, tokenId),
       mapFailure,
     })
-    return result.certainty === "applied"
+    return result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
       ? result.value === false
         ? {
-            certainty: "not-applied" as const,
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
             failure: {
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
             },
           }
-        : { certainty: "applied" as const, value: undefined }
+        : {
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+            value: undefined,
+          }
       : result
   }

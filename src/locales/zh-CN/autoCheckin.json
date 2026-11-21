@@ -10,6 +10,22 @@
       "retryAccount": "重新尝试",
       "verifyStatus": "验证状态"
     },
+    "awards": {
+      "amountUnknown": "金额未知 · {{asset}}",
+      "credited": "已入账",
+      "details": "奖励详情",
+      "entitlement": "权益奖励",
+      "exchangedFrom": "兑换来源：{{event}}",
+      "fulfillmentUnknown": "兑现状态未知",
+      "noExpiry": "无到期时间",
+      "observedAt": "观测于 {{date}}",
+      "pendingRedemption": "待兑换",
+      "redeemed": "已兑换",
+      "targetUnknown": "奖励去向未知",
+      "title": "已确认奖励",
+      "unknownAsset": "未知资产",
+      "wallet": "钱包奖励"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "开发：解释“打开界面时提前触发今日签到”是否满足条件",
       "resetLastDailyRunDay": "开发：清除“今天已执行过每日签到”标记",
@@ -76,9 +92,7 @@
       "summary": "显示第 {{start}}–{{end}} 条，共 {{total}} 条"
     },
     "refresh": "刷新",
-    "reward": {
-      "title": "本次签到奖励"
-    },
+    "retryStatusLoad": "重新读取结果",
     "runNow": "立即执行",
     "statistics": {
       "result": "执行结果"
@@ -90,6 +104,7 @@
       "success": "本次签到成功",
       "uncertain": "待确认"
     },
+    "statusLoadError": "无法读取签到结果。请重试刷新；仍显示的结果来自上次成功读取。",
     "table": {
       "accountName": "账号名称",
       "actions": "操作",

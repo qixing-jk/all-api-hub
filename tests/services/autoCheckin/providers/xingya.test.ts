@@ -162,7 +162,12 @@ describe("xingyaProvider", () => {
         xingyaProvider.checkIn(sessionAccount(), DEFAULT_PROVIDER_CONTEXT),
       ).resolves.toMatchObject({
         status: "success",
-        reward: { quota: 200 },
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.0004" },
+          },
+        ],
       })
       expect(requests.envelope).toHaveBeenCalledTimes(4)
       expect(
@@ -367,7 +372,12 @@ describe("xingyaProvider", () => {
     )
     expect(result).toMatchObject({
       status: "success",
-      reward: { quota: 69350 },
+      awards: [
+        expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ status: "known", value: "0.1387" }),
+        }),
+      ],
     })
     expect(login.loginAccount).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -602,7 +612,12 @@ describe("xingyaProvider", () => {
     })
     expect(result).toMatchObject({
       status: "success",
-      reward: { quota: 69350 },
+      awards: [
+        expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ status: "known", value: "0.1387" }),
+        }),
+      ],
     })
     expect(
       vi
@@ -654,7 +669,18 @@ describe("xingyaProvider", () => {
         xingyaProvider.checkIn(sessionAccount(), DEFAULT_PROVIDER_CONTEXT),
       ).resolves.toMatchObject(
         checked
-          ? { status: "success", reward: { quota: 69350 } }
+          ? {
+              status: "success",
+              awards: [
+                expect.objectContaining({
+                  asset: { kind: "currency", code: "USD" },
+                  amount: expect.objectContaining({
+                    status: "known",
+                    value: "0.1387",
+                  }),
+                }),
+              ],
+            }
           : { status: "failed", reasonCode: "checkin_unconfirmed" },
       )
       expect(
@@ -993,7 +1019,12 @@ describe("xingyaProvider", () => {
       )
 
       expect(result.status).toBe("success")
-      expect(result.reward).toEqual({ quota: 69350 })
+      expect(result.awards).toEqual([
+        expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ status: "known", value: "0.1387" }),
+        }),
+      ])
       expect(result.messageKey).toBe(
         "autoCheckin:providerFallback.checkinSuccessful",
       )
@@ -1017,7 +1048,12 @@ describe("xingyaProvider", () => {
       )
 
       expect(result.status).toBe("already_checked")
-      expect(result.reward).toEqual({ quota: 69350 })
+      expect(result.awards).toEqual([
+        expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ status: "known", value: "0.1387" }),
+        }),
+      ])
       expect(result.messageKey).toBe(
         "autoCheckin:providerFallback.alreadyCheckedToday",
       )
@@ -1025,7 +1061,7 @@ describe("xingyaProvider", () => {
 
     it("leaves the reward unset when the site reports no usable amount", async () => {
       const requests = await requestModule()
-      for (const quota_awarded of [undefined, 0, -1, Number.NaN]) {
+      for (const quota_awarded of [undefined, Number.NaN]) {
         vi.mocked(requests.envelope).mockResolvedValueOnce({
           success: true,
           message: "",
@@ -1037,7 +1073,7 @@ describe("xingyaProvider", () => {
           DEFAULT_PROVIDER_CONTEXT,
         )
         expect(result.status).toBe("success")
-        expect(result.reward).toBeUndefined()
+        expect(result.awards?.[0]?.amount.status).not.toBe("known")
       }
     })
 

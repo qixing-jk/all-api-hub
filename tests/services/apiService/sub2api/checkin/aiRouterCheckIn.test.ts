@@ -214,18 +214,21 @@ describe("AI-ROUTER daily check-in", () => {
     vi.mocked(fetchApiResponse).mockReset()
   })
 
-  it.each([1, "1", 1.75])("reads a new award of %s", async (rewardAmount) => {
-    vi.mocked(fetchApiResponse).mockResolvedValue(
-      textResponse(
-        statusEnvelope({ checked_today: true, reward_amount: rewardAmount }),
-      ),
-    )
+  it.each([0, 1, "1", 1.75, "0.1234567890123456789"])(
+    "reads a new award of %s",
+    async (rewardAmount) => {
+      vi.mocked(fetchApiResponse).mockResolvedValue(
+        textResponse(
+          statusEnvelope({ checked_today: true, reward_amount: rewardAmount }),
+        ),
+      )
 
-    await expect(performAiRouterDailyCheckIn(request)).resolves.toEqual({
-      kind: AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-      data: { rewardAmount: Number(rewardAmount), checkinDate: "2026-09-27" },
-    })
-  })
+      await expect(performAiRouterDailyCheckIn(request)).resolves.toEqual({
+        kind: AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
+        data: { rewardAmount, checkinDate: "2026-09-27" },
+      })
+    },
+  )
 
   // The deployment's own dashboard omits the fingerprint header whenever its
   // fingerprint lookup misses, so the extension submits without one.

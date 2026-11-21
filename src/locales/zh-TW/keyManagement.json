@@ -235,6 +235,34 @@
       "gateways": "閘道與路由工具"
     }
   },
+  "financial": {
+    "alertOnly": "僅提醒",
+    "allocation": "分配餘額",
+    "budget": "消費預算",
+    "disabled": "預算未啟用",
+    "excludesByok": "不計 BYOK",
+    "hardLimit": "硬限制",
+    "includesByok": "計入 BYOK",
+    "inherited": "繼承帳號預算",
+    "lifetime": "累計",
+    "limit": "上限",
+    "nativeQuota": "原生額度",
+    "period": {
+      "5h": "5 小時",
+      "day": "每日",
+      "month": "每月",
+      "week": "每週",
+      "year": "每年"
+    },
+    "remaining": "剩餘",
+    "reserved": "預留",
+    "reset": "重設時間",
+    "rolling": "滾動視窗",
+    "stale": "舊值",
+    "unconfigured": "未設定預算",
+    "unknownWindow": "週期未知",
+    "used": "已用"
+  },
   "keyDetails": {
     "channels": "渠道",
     "createResponseOnlySecret": "此站點僅在建立時顯示完整金鑰。如果當時沒有儲存，請前往金鑰管理建立替代金鑰。",
@@ -249,11 +277,8 @@
     "models": "模型限制：",
     "neverExpires": "永不過期",
     "note": "備註：",
-    "remainingQuota": "剩餘額度：",
     "tools": "允許的工具",
-    "totalQuota": "總額度：",
     "ungrouped": "未分組",
-    "usedQuota": "已用額度：",
     "websiteVerificationSecret": "管理介面不提供完整金鑰。你可以前往 NanoGPT 的 API 頁面，依站點要求完成登入驗證後再次查看或複製現有金鑰。"
   },
   "knownTotalKeys_other": "已讀取 {{count}} 個金鑰",
@@ -442,11 +467,8 @@
       "budget5h": "5 小時預算（USD）",
       "budgetDay": "單日預算（USD）",
       "budgetMonth": "每月預算（USD）",
-      "budgetNextReset": "重設 {{time}}（北京時間）",
       "budgetResetHelp": "0 表示不限。5 小時滾動恢復；日、週、月按北京時間重設，每週從週一開始。",
-      "budgetRolling": "滾動視窗",
       "budgetsAndLimits": "預算與存取限制",
-      "budgetUsage": "已用 ${{used}} / ${{limit}} · 剩餘 ${{remaining}} · 預留 ${{reserved}}",
       "budgetWeek": "每週預算（USD）",
       "channel": "管道",
       "dahl": {
@@ -651,13 +673,9 @@
         "budgetAlerts": "達到以下比例時寄信給金鑰建立者",
         "budgetEnabled": "消費預算",
         "budgetHelp": "設定美元消費上限。關閉後使用團隊預設預算（如有）。新預算不計入 BYOK 消費。",
-        "budgetInactive": "預算未啟用",
         "budgetLimit": "消費上限（美元，最低 $1）",
         "budgetPeriod": "預算重設週期",
-        "budgetUnavailable": "無法讀取預算，請重試後再編輯。",
         "consoleFailed": "無法開啟團隊控制台，請檢查存取權杖後重試。",
-        "inheritedBudget": "團隊預設預算",
-        "noBudget": "未設定金鑰專屬預算",
         "openConsole": "開啟 Vercel 控制台",
         "period": {
           "daily": "每天",
@@ -855,7 +873,6 @@
       "values": {
         "missing": "無可用資料",
         "no": "否",
-        "unlimited": "不限額",
         "yes": "是"
       }
     },

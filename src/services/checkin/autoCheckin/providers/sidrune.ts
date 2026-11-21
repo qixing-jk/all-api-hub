@@ -3,9 +3,16 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
+import {
   fetchSidruneDailyCheckInStatus,
   performSidruneDailyCheckIn,
+  SIDRUNE_CHECK_IN_ENDPOINT,
 } from "~/services/apiService/sub2api/checkin/sidruneCheckIn"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -60,6 +67,25 @@ export const sidruneProvider: AutoCheckinProvider = {
         // Native rules credit a separate welfare wallet; conversion to account
         // balance requires another user action. Do not report quota income.
         data,
+        // The welfare response supplies no currency or redemption rate. Preserve its
+        // quantities without relabeling this separate wallet as main-account USD.
+        awards: (
+          [
+            ["reward_amount", data.rewardAmount],
+            ["milestone_bonus", data.milestoneBonus],
+          ] as const
+        ).map(([field, value]) =>
+          accountAward(account as SiteAccount, {
+            id: field,
+            operation: SIDRUNE_CHECK_IN_ENDPOINT,
+            field,
+            adapter: "sidrune-welfare",
+            asset: { kind: ASSET_KINDS.Unknown },
+            value,
+            target: AWARD_TARGETS.Wallet,
+            fulfillment: AWARD_FULFILLMENT.PendingRedemption,
+          }),
+        ),
       }
     } catch (error) {
       return mapSub2ApiCheckInMutationError(

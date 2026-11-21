@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
+import { SCOPE_SELECTION_KINDS } from "~/services/amounts/financialConstants"
 import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
   ACCOUNT_KEY_PROVISIONING_UNKNOWN_PLACEMENT_REASONS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
@@ -120,6 +123,76 @@ const token = (overrides: Partial<NewApiToken>): NewApiToken => ({
 })
 
 describe("New API account key resources", () => {
+  it.each([
+    [false, "model-a", { kind: SCOPE_SELECTION_KINDS.All }],
+    [
+      true,
+      "model-a,model-b",
+      { kind: SCOPE_SELECTION_KINDS.Restricted, ids: ["model-a", "model-b"] },
+    ],
+    [true, "", { kind: SCOPE_SELECTION_KINDS.Restricted, ids: [] }],
+  ])(
+    "retains explicit key model restrictions in the budget scope (%s, %s)",
+    async (model_limits_enabled, model_limits, models) => {
+      mockFetchAccountTokens.mockResolvedValue([
+        token({ model_limits_enabled, model_limits, group: "vip" }),
+      ])
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+      const row = (await (await session.openCollection("account")).list())
+        .items[0]!
+      expect(row.displayFacts).toContainEqual(
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            scope: expect.objectContaining({
+              models,
+              groups: { kind: "restricted", ids: ["vip"] },
+            }),
+          }),
+        }),
+      )
+    },
+  )
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.WONG_GONGYI])(
+    "displays and edits the common %s key budget in USD",
+    async (siteType) => {
+      mockFetchAccountTokens.mockResolvedValue([
+        token({
+          remain_quota: 123456,
+          used_quota: 234,
+          unlimited_quota: false,
+        }),
+      ])
+      const session = await createNewApiAccountKeyResources(siteType).open({
+        account: { id: "account-1", siteType },
+        request,
+      })
+      const collection = await session.openCollection("account")
+      const row = (await collection.list()).items[0]!
+      expect(row.displayFacts).toContainEqual(
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            asset: {
+              kind: "currency",
+              code: "USD",
+            },
+            remaining: expect.objectContaining({
+              status: "known",
+              value: "0.246912",
+            }),
+          }),
+        }),
+      )
+      const editor = await collection.openEditEditor(row.ref)
+      expect(editor.initialValues.quotaUsd).toBe(0.246912)
+    },
+  )
   it.each([false, true])(
     "uses the recovered Cookie for the subsequent create and preserves lifecycle observers (private: %s)",
     async (privateSession) => {
@@ -2679,27 +2752,43 @@ it("projects native quota, time, group and restrictions to explicit display fact
   })
   const page = await (await session.openCollection("account")).list()
   expect(atIndex(page.items, 0).displayFacts).toEqual([
+    expect.objectContaining({
+      kind: "budget-constraint",
+      budget: expect.objectContaining({
+        limitState: "finite",
+        remaining: expect.objectContaining({
+          status: "known",
+          value: "2",
+        }),
+        used: expect.objectContaining({ status: "known", value: "1" }),
+      }),
+    }),
     {
-      fieldId: "remainingQuota",
-      kind: "money",
-      role: "remaining",
-      amountUsd: 2,
-      unlimited: false,
+      fieldId: "expired_time",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+      timestampMs: 1893456000000,
     },
-    { fieldId: "usedQuota", kind: "money", role: "used", amountUsd: 1 },
-    { fieldId: "expired_time", kind: "expiry", timestampMs: 1893456000000 },
-    { fieldId: "accessed_time", kind: "last-used", timestampMs: 1750000000000 },
-    { fieldId: "group", kind: "group", value: "", emptyValue: "account-group" },
+    {
+      fieldId: "accessed_time",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
+      timestampMs: 1750000000000,
+    },
+    {
+      fieldId: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
+      value: "",
+      emptyValue: "account-group",
+    },
     {
       fieldId: "models",
-      kind: "restriction",
-      role: "models",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+      role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
       value: ["model-a", "model-b"],
     },
     {
       fieldId: "allow_ips",
-      kind: "restriction",
-      role: "ip",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+      role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
       value: "192.0.2.1",
     },
   ])

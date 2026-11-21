@@ -1,3 +1,4 @@
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   executeSub2ApiCheckInWithRecovery,
@@ -32,7 +33,7 @@ export const DENXIO_DAILY_CHECK_IN_ERROR_CODES = {
 } as const
 
 export const DENXIO_DAILY_CHECK_IN_RESULT_KINDS = {
-  Applied: "applied",
+  Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
   AlreadyChecked: "already_checked",
   Disabled: "disabled",
   RecoveryStatusUnavailable: "recovery_status_unavailable",
@@ -55,6 +56,7 @@ type DenxioDailyCheckInOperationResult =
   | {
       kind: typeof DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Applied
       rewardAmount: number
+      rewardRecordId?: string
     }
   | {
       kind: typeof DENXIO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked
@@ -186,13 +188,24 @@ export function parseDenxioDailyCheckInBeginResponse(
 /** Parses the claim result and keeps only the product-relevant reward amount. */
 export function parseDenxioDailyCheckInClaimResponse(
   response: ApiTransportResponse<unknown>,
-): { rewardAmount: number } {
+): { rewardAmount: number; rewardRecordId?: string } {
   const data = parseEnvelopeData(response, DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT)
   const record = toRecord(data.record)
   if (typeof record?.amount !== "number" || !Number.isFinite(record.amount)) {
     throw createInvalidResponseError(DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT)
   }
-  return { rewardAmount: record.amount }
+  const rewardRecordId =
+    typeof record.id === "string" && record.id.trim()
+      ? record.id.trim()
+      : typeof record.id === "number" &&
+          Number.isSafeInteger(record.id) &&
+          record.id >= 0
+        ? String(record.id)
+        : undefined
+  return {
+    rewardAmount: record.amount,
+    ...(rewardRecordId ? { rewardRecordId } : {}),
+  }
 }
 
 const resolveTimezone = (): string => {
@@ -337,7 +350,7 @@ export async function performDenxioDailyCheckIn(
 
     return {
       kind: DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-      rewardAmount: claim.rewardAmount,
+      ...claim,
     }
   } catch (error) {
     if (error instanceof DenxioRecoveredMutationBlockedError) {

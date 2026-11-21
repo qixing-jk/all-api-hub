@@ -41,7 +41,71 @@ describe("Daya account redemption", () => {
         request,
         code: "DELIVERED",
       }),
-    ).resolves.toBe(1_000_000)
+    ).resolves.toMatchObject({
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "2" },
+          target: "wallet",
+          fulfillment: "credited",
+        },
+      ],
+    })
+  })
+
+  it.each([
+    { value: undefined, status: "unknown" },
+    { value: null, status: "unknown" },
+    { value: "not-an-amount", status: "unavailable" },
+    { value: -1, status: "unavailable" },
+  ])(
+    "keeps confirmed delivery successful when its amount is $status ($value)",
+    async ({ value, status }) => {
+      const apply = vi.fn(() =>
+        HttpResponse.json(
+          envelope({ delivery_status: "success", type: "balance", value }),
+        ),
+      )
+      server.use(http.post(`${origin}/api/v1/code/apply`, apply))
+      const result = await dayaCapabilities.account!.redemption!.redeem({
+        request,
+        code: "CONFIRMED-AMOUNT",
+      })
+      expect(result.awards).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status },
+          fulfillment: "credited",
+        },
+      ])
+      expect(apply).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("preserves confirmed mixed grants without requiring a display message", async () => {
+    server.use(
+      http.post(`${origin}/api/v1/code/apply`, () =>
+        HttpResponse.json(
+          envelope({
+            delivery_status: "success",
+            type: "balance",
+            benefits: [
+              { type: "subscription" },
+              { type: "concurrency", value: 5 },
+            ],
+          }),
+        ),
+      ),
+    )
+    const result = await dayaCapabilities.account!.redemption!.redeem({
+      request,
+      code: "CONFIRMED-MIXED",
+    })
+    expect(result.awards).toMatchObject([
+      { amount: { status: "unknown" }, target: "wallet" },
+      { amount: { status: "unknown" }, target: "entitlement" },
+      { amount: { status: "known", value: "5" }, target: "entitlement" },
+    ])
   })
 
   it("directs referral discounts to the native checkout without claiming credit", async () => {
@@ -104,7 +168,9 @@ describe("Daya account redemption", () => {
     ).rejects.toThrow()
     await expect(
       dayaCapabilities.account!.redemption!.redeem({ request, code: "RETRY" }),
-    ).resolves.toBe(500_000)
+    ).resolves.toMatchObject({
+      awards: [{ amount: { status: "known", value: "1" } }],
+    })
     expect(keys).toHaveLength(2)
     expect(keys[0]).toBe(keys[1])
   })
@@ -113,7 +179,6 @@ describe("Daya account redemption", () => {
     null,
     {},
     { type: "balance", value: -1 },
-    { type: "balance", value: "2" },
     { type: "balance", value: 1, benefits: [{ kind: "api_subscription" }] },
   ])("rejects unconfirmed or mixed monetary results %#", async (result) => {
     server.use(
@@ -197,7 +262,19 @@ describe("Daya account redemption", () => {
       )
       await expect(
         dayaCapabilities.account!.redemption!.redeem({ request, code: "CODE" }),
-      ).resolves.toEqual({ message: result.message })
+      ).resolves.toMatchObject({
+        message: result.message,
+        awards: [
+          {
+            asset: { kind: "unknown" },
+            amount:
+              result.type === "concurrency"
+                ? { status: "known", value: "5" }
+                : { status: "unknown" },
+            target: "entitlement",
+          },
+        ],
+      })
     },
   )
 
@@ -219,12 +296,53 @@ describe("Daya account redemption", () => {
       request,
       code: "  CaseSensitiveCode  ",
     })
-    expect(amount).toBe(1_250_000)
+    expect(amount).toMatchObject({
+      awards: [{ amount: { status: "known", value: "2.5" } }],
+    })
     expect(submitted).toEqual({
       code: "CaseSensitiveCode",
       channel: "purchase",
       ref: "console-topup",
       idempotency_key: expect.any(String),
     })
+  })
+
+  it("preserves a precise USD grant alongside separately reported entitlements", async () => {
+    server.use(
+      http.post(`${origin}/api/v1/code/apply`, () =>
+        HttpResponse.json(
+          envelope({
+            type: "balance",
+            value: "0.00000001",
+            message: "Balance and subscription applied",
+            benefits: [
+              { type: "subscription" },
+              { type: "concurrency", value: 5 },
+            ],
+          }),
+        ),
+      ),
+    )
+    const result = await dayaCapabilities.account!.redemption!.redeem({
+      request,
+      code: "MIXED",
+    })
+    expect(result.awards).toMatchObject([
+      {
+        asset: { kind: "currency", code: "USD" },
+        amount: { status: "known", value: "0.00000001" },
+        target: "wallet",
+      },
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "unknown" },
+        target: "entitlement",
+      },
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "known", value: "5" },
+        target: "entitlement",
+      },
+    ])
   })
 })

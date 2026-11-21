@@ -242,6 +242,34 @@
       "gateways": "Gateways und Routing-Tools"
     }
   },
+  "financial": {
+    "alertOnly": "Nur Hinweis",
+    "allocation": "Zugewiesenes Guthaben",
+    "budget": "Ausgabenbudget",
+    "disabled": "Budget inaktiv",
+    "excludesByok": "BYOK ausgeschlossen",
+    "hardLimit": "Harte Grenze",
+    "includesByok": "BYOK eingeschlossen",
+    "inherited": "Kontobudget übernommen",
+    "lifetime": "Gesamtzeit",
+    "limit": "Limit",
+    "nativeQuota": "Native Quote",
+    "period": {
+      "5h": "5 Stunden",
+      "day": "Täglich",
+      "month": "Monatlich",
+      "week": "Wöchentlich",
+      "year": "Jährlich"
+    },
+    "remaining": "Verbleibend",
+    "reserved": "Reserviert",
+    "reset": "Zurücksetzen",
+    "rolling": "Rollierend",
+    "stale": "Veraltet",
+    "unconfigured": "Kein Budget konfiguriert",
+    "unknownWindow": "Zeitraum unbekannt",
+    "used": "Verbraucht"
+  },
   "keyDetails": {
     "channels": "Kanäle",
     "createResponseOnlySecret": "Diese Website zeigt den vollständigen Schlüssel nur an, wenn er erstellt wird. Wenn Sie ihn nicht gespeichert haben, öffnen Sie die Schlüsselverwaltung und erstellen Sie einen Ersatzschlüssel.",
@@ -256,11 +284,8 @@
     "models": "Modellbeschränkungen:",
     "neverExpires": "Läuft nie ab",
     "note": "Hinweis:",
-    "remainingQuota": "Verbleibendes Kontingent:",
     "tools": "Erlaubte Tools",
-    "totalQuota": "Gesamtkontingent:",
     "ungrouped": "Nicht gruppiert",
-    "usedQuota": "Verwendetes Kontingent:",
     "websiteVerificationSecret": "Die Verwaltungs-API liefert keine vollständigen Schlüssel. Öffnen Sie die API-Seite von NanoGPT und schließen Sie die erforderliche Anmeldeprüfung ab, um einen vorhandenen Schlüssel erneut anzuzeigen oder zu kopieren."
   },
   "knownTotalKeys_one": "{{count}} Schlüssel gelesen",
@@ -452,11 +477,8 @@
       "budget5h": "5-Stunden-Budget (USD)",
       "budgetDay": "Tagesbudget (USD)",
       "budgetMonth": "Monatsbudget (USD)",
-      "budgetNextReset": "Zurücksetzung {{time}} (UTC+8)",
       "budgetResetHelp": "0 bedeutet unbegrenzt. Das 5-Stunden-Budget ist gleitend; Tages-, Wochen- und Monatsbudgets werden nach Pekinger Zeit zurückgesetzt. Wochen beginnen montags.",
-      "budgetRolling": "Rollierendes Fenster",
       "budgetsAndLimits": "Budgets und Zugriffslimits",
-      "budgetUsage": "Verbraucht ${{used}} / ${{limit}} · übrig ${{remaining}} · reserviert ${{reserved}}",
       "budgetWeek": "Wochenbudget (USD)",
       "channel": "Kanal",
       "dahl": {
@@ -661,13 +683,9 @@
         "budgetAlerts": "E-Mail an den Schlüsselersteller bei diesen Schwellen",
         "budgetEnabled": "Ausgabenbudget",
         "budgetHelp": "Eigenes Limit in USD festlegen. Ohne eigenes Budget gilt das Team-Standardbudget, falls vorhanden. Neue Budgets schließen BYOK-Ausgaben aus.",
-        "budgetInactive": "Budget inaktiv",
         "budgetLimit": "Ausgabenlimit (USD, mindestens $1)",
         "budgetPeriod": "Budget erneuern",
-        "budgetUnavailable": "Budget konnte nicht gelesen werden. Vor dem Bearbeiten erneut versuchen.",
         "consoleFailed": "Teamkonsole konnte nicht geöffnet werden. Zugriffstoken prüfen und erneut versuchen.",
-        "inheritedBudget": "Team-Standardbudget",
-        "noBudget": "Kein eigenes Schlüsselbudget",
         "openConsole": "Vercel-Konsole öffnen",
         "period": {
           "daily": "Täglich",
@@ -865,7 +883,6 @@
       "values": {
         "missing": "Nicht verfügbar",
         "no": "Nein",
-        "unlimited": "Unbegrenzt",
         "yes": "Ja"
       }
     },

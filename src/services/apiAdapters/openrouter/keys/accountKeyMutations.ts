@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { type AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { toDetail } from "~/services/apiAdapters/openrouter/keys/accountKeyDisplayFacts"
 import {
   assertKeyCorrelation,
@@ -59,7 +60,7 @@ export const createOpenRouterKeyResource: OpenRouterAccountKeyDefinition["create
       resourceId: created.key.hash,
     }
     return {
-      certainty: "applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: {
         detail,
         scopeKey: appliedScopeKey,
@@ -82,10 +83,13 @@ export const createOpenRouterKeyResource: OpenRouterAccountKeyDefinition["create
 export const updateOpenRouterKeyResource: OpenRouterAccountKeyDefinition["update"] =
   async (config, scope, { current: detail }, command, options) => {
     if (Object.keys(command.input).length === 0)
-      return { certainty: "applied" as const, value: detail }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: detail,
+      }
     try {
       return {
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: toDetail(
           config,
           assertKeyScope(
@@ -131,7 +135,10 @@ export const updateOpenRouterKeyResource: OpenRouterAccountKeyDefinition["update
             current.key.include_byok_in_limit ===
               command.requested.includeByokInLimit)
         return matches
-          ? { certainty: "applied" as const, value: current }
+          ? {
+              certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+              value: current,
+            }
           : mutationFailure(error, config, [detail.key.hash])
       } catch {
         return mutationFailure(error, config, [detail.key.hash])
@@ -153,7 +160,10 @@ export const deleteOpenRouterKeyResource: OpenRouterAccountKeyDefinition["delete
     )
     try {
       await deleteOpenRouterKey(requestWithOptions(config, options), hash)
-      return { certainty: "applied" as const, value: undefined }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: undefined,
+      }
     } catch (error) {
       if (isKnownRejection(error)) {
         return mutationFailure(error, config, [hash])
@@ -166,7 +176,10 @@ export const deleteOpenRouterKeyResource: OpenRouterAccountKeyDefinition["delete
         return mutationFailure(error, config, [hash])
       } catch (readError) {
         if (getStructuredStatus(readError) === 404)
-          return { certainty: "applied" as const, value: undefined }
+          return {
+            certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+            value: undefined,
+          }
         return mutationFailure(error, config, [hash])
       }
     }

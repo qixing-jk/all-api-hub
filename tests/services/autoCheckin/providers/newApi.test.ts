@@ -6,6 +6,7 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
@@ -523,7 +524,15 @@ describe("newApiProvider", () => {
       })
       expect(outcome).toMatchObject({
         kind: "executed",
-        result: { status: "success", reward: { quota: 500 } },
+        result: {
+          status: "success",
+          awards: [
+            {
+              asset: { kind: "currency", code: "USD" },
+              amount: { status: "known", value: "0.001" },
+            },
+          ],
+        },
       })
       if (outcome.kind === "executed")
         expect(formatLocalDayKey(new Date(outcome.completedAt!))).toBe(
@@ -766,7 +775,12 @@ describe("newApiProvider", () => {
         result: {
           status: "success",
           rawMessage: message,
-          reward: { quota: 500 },
+          awards: [
+            {
+              asset: { kind: "currency", code: "USD" },
+              amount: { status: "known", value: "0.001" },
+            },
+          ],
           retryable: false,
         },
       })
@@ -1900,7 +1914,14 @@ describe("newApiProvider", () => {
         data: { quota_awarded: 10, checkin_date: formatLocalDayKey() },
       })
 
-      await newApiProvider.checkIn(accountWithRoute, DEFAULT_PROVIDER_CONTEXT)
+      const result = await newApiProvider.checkIn(
+        accountWithRoute,
+        DEFAULT_PROVIDER_CONTEXT,
+      )
+      expect(result.awards?.[0]?.amount.source).toMatchObject({
+        operation: "/api/user/daily-9f3k",
+        inputs: ["quota_awarded"],
+      })
 
       expect(
         vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[1],
@@ -2156,7 +2177,16 @@ describe("newApiProvider", () => {
         } as any)
         const result = await checkInForTest(mockAccount)
         expect(result.status).toBe(CHECKIN_RESULT_STATUS.ALREADY_CHECKED)
-        expect(result.reward).toEqual(isToday ? { quota: 500_000 } : undefined)
+        expect(result.awards ?? []).toMatchObject(
+          isToday
+            ? [
+                {
+                  asset: { kind: "currency", code: "USD" },
+                  amount: { status: "known", value: "1" },
+                },
+              ]
+            : [],
+        )
         expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
       },
     )
@@ -2706,7 +2736,17 @@ describe("newApiProvider", () => {
 
       expect(result.status).toBe("already_checked")
       // Only today's record counts; an older day's award must not be shown.
-      expect(result.reward).toEqual({ quota: 500_000 })
+      expect(result.awards).toMatchObject([
+        {
+          id: "daily-checkin",
+          asset: { kind: "currency", code: "USD" },
+          amount: {
+            status: "known",
+            value: "1",
+            source: { inputs: ["stats.records[].quota_awarded"] },
+          },
+        },
+      ])
     })
 
     it("omits the reward on an already-checked row without a record for today", async () => {
@@ -2788,7 +2828,12 @@ describe("newApiProvider", () => {
         status: "success",
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinSuccessful",
-        reward: { quota: 1 },
+        awards: [
+          {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "0.000002" },
+          },
+        ],
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
       })
       expect(
@@ -2796,6 +2841,55 @@ describe("newApiProvider", () => {
       ).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       })
+    })
+
+    it.each([
+      ["0", { status: OBSERVATION_STATUSES.Known, value: "0" }],
+      [
+        "0.1234567890123456789",
+        {
+          status: OBSERVATION_STATUSES.Known,
+          value: "0.0000002469135780246913578",
+        },
+      ],
+      [-1, { status: "unavailable", reason: "negative-grant" }],
+      ["invalid", { status: "unavailable" }],
+      [null, { status: "unknown" }],
+      [`0.${"0".repeat(254)}1`, { status: "unavailable" }],
+    ])("preserves grant semantics for raw quota %s", async (quota, amount) => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: true,
+        message: "ok",
+        data: { checkin_date: "2026-01-01", quota_awarded: quota },
+      })
+      const result = await checkInForTest(mockAccount)
+      expect(result).toMatchObject({
+        status: "success",
+        awards: [
+          {
+            amount,
+            event: { namespace: "new-api-checkin-day", id: "2026-01-01" },
+            validity: { kind: "unknown" },
+          },
+        ],
+      })
+      expect(result.reward).toBeUndefined()
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not assign event identity to an invalid upstream calendar date", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: true,
+        message: "ok",
+        data: { checkin_date: "2026-02-31", quota_awarded: 0 },
+      })
+      const result = await checkInForTest(mockAccount)
+      expect(result.status).toBe("success")
+      expect(result.awards?.[0]?.amount).toMatchObject({
+        status: "known",
+        value: "0",
+      })
+      expect(result.awards?.[0]?.event).toBeUndefined()
     })
 
     it("treats upstream already-checked responses as already_checked results", async () => {
@@ -2973,7 +3067,12 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("success")
-      expect(result.reward).toEqual({ quota: 500000 })
+      expect(result.awards).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "1" },
+        },
+      ])
     })
 
     it("omits the reward when the success payload carries no awarded quota", async () => {

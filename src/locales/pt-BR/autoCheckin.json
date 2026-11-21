@@ -10,6 +10,22 @@
       "retryAccount": "Tentar novamente",
       "verifyStatus": "Verificar status"
     },
+    "awards": {
+      "amountUnknown": "Valor desconhecido · {{asset}}",
+      "credited": "Creditada",
+      "details": "Detalhes da recompensa",
+      "entitlement": "Recompensa de direito de uso",
+      "exchangedFrom": "Trocada a partir de {{event}}",
+      "fulfillmentUnknown": "Status de entrega desconhecido",
+      "noExpiry": "Sem expiração",
+      "observedAt": "Observado em {{date}}",
+      "pendingRedemption": "Resgate pendente",
+      "redeemed": "Resgatada",
+      "targetUnknown": "Destino da recompensa desconhecido",
+      "title": "Recompensas confirmadas",
+      "unknownAsset": "Ativo desconhecido",
+      "wallet": "Recompensa na carteira"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "Dev: Avaliar se as condições de 'Pré-acionar o check-in de hoje quando a UI abrir' são atendidas",
       "resetLastDailyRunDay": "Desenvolvedor: Desmarque o sinalizador 'Check-in diário já realizado hoje'",
@@ -80,9 +96,7 @@
       "summary": "Mostrando {{start}}–{{end}} de {{total}}"
     },
     "refresh": "Atualizar",
-    "reward": {
-      "title": "Recompensa deste check-in"
-    },
+    "retryStatusLoad": "Carregar resultados novamente",
     "runNow": "Executar agora",
     "statistics": {
       "result": "Resultado"
@@ -94,6 +108,7 @@
       "success": "Check-in nesta execução",
       "uncertain": "Confirmação pendente"
     },
+    "statusLoadError": "Não foi possível carregar os resultados do check-in. Tente novamente; os resultados exibidos são do último carregamento bem-sucedido.",
     "table": {
       "accountName": "Nome da conta",
       "actions": "Ações",

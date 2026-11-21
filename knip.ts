@@ -57,6 +57,8 @@ const config: KnipConfig = {
     "plugins/**/*.{ts,mjs}",
     "*.{js,mjs,ts}",
   ],
+  // Retained UI evidence and dependency snapshots are generated review outputs.
+  ignore: [".scratch/**/artifacts/**"],
   ignoreDependencies: [
     // @lobehub/ui 5 requires this compatible peer provider, while application
     // code consumes the Lobe stack only through @lobehub/icons.

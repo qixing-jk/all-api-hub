@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
+import {
+  preserveCheckinAwards,
+  readCheckinAwards,
+} from "~/services/checkin/autoCheckin/awards"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -39,6 +44,158 @@ describe("autoCheckinStorage", () => {
     vi.clearAllMocks()
   })
 
+  it.each([true, false])(
+    "retains confirmed grants when disabling a historical row (perAccount=%s)",
+    async (inPerAccount) => {
+      const { get, set } = storageMocks
+      const awards = readCheckinAwards({
+        accountId: "partial",
+        timestamp: 1234,
+        reward: { quota: 500000 },
+      })
+      const prior = {
+        accountId: "partial",
+        accountName: "Partial",
+        status: "failed",
+        reasonCode: "network_error",
+        retryable: true,
+        awards,
+        timestamp: 1234,
+      }
+      get.mockResolvedValueOnce({
+        perAccount: inPerAccount ? { partial: prior } : {},
+        accountsSnapshot: [
+          { accountId: "partial", accountName: "Partial", lastResult: prior },
+        ],
+      })
+      await expect(
+        autoCheckinStorage.markAccountDisabledInStatus("partial"),
+      ).resolves.toBe(true)
+      const written = set.mock.calls[0]![1]
+      expect(written.perAccount.partial).toMatchObject({
+        status: "skipped",
+        awards,
+      })
+      expect(written.perAccount.partial.retryable).toBeUndefined()
+      expect(written.accountsSnapshot[0].lastResult.awards).toEqual(awards)
+    },
+  )
+
+  it.each(["", 42])(
+    "refuses malformed local execution receipt identity %s",
+    async (executionReceiptId) => {
+      const { get, set } = storageMocks
+      get.mockResolvedValueOnce({
+        schemaVersion: 2,
+        perAccount: { a: { executionReceiptId } },
+      })
+      const outcome = await autoCheckinStorage.updateStatus(() => ({
+        patch: { lastRunResult: "success" },
+      }))
+      expect(outcome.ok).toBe(false)
+      expect(set).not.toHaveBeenCalled()
+    },
+  )
+
+  it("retains a legacy award's original observation time when disabling the account", async () => {
+    const { get, set } = storageMocks
+    get.mockResolvedValueOnce({
+      perAccount: {
+        a: {
+          accountId: "a",
+          accountName: "A",
+          status: "success",
+          timestamp: 1234,
+          reward: { quota: 500000 },
+        },
+      },
+    })
+    await autoCheckinStorage.markAccountDisabledInStatus("a")
+    const written = set.mock.calls[0]![1].perAccount.a
+    expect(readCheckinAwards(written)[0]?.amount).toMatchObject({
+      status: "known",
+      observedAt: 1234,
+      source: { kind: "legacy" },
+    })
+  })
+
+  it("does not carry yesterday's grants into today's execution after disabling", async () => {
+    const { get, set } = storageMocks
+    const today = new Date(2026, 10, 11, 12).getTime()
+    const yesterday = today - 86400000
+    get.mockResolvedValueOnce({
+      perAccount: {
+        a: {
+          accountId: "a",
+          accountName: "A",
+          status: "success",
+          timestamp: yesterday,
+          reward: { quota: 500000 },
+        },
+      },
+    })
+    const clock = vi.spyOn(Date, "now").mockReturnValue(today)
+    try {
+      await autoCheckinStorage.markAccountDisabledInStatus("a")
+      const disabled = set.mock.calls[0]![1].perAccount.a
+      const next = {
+        accountId: "a",
+        accountName: "A",
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        timestamp: today,
+      }
+      expect(readCheckinAwards(preserveCheckinAwards(disabled, next))).toEqual(
+        [],
+      )
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  it("refuses an unknown award status version without overwriting saved results", async () => {
+    const { get, set } = storageMocks
+    const future = {
+      schemaVersion: 999,
+      perAccount: { future: { awards: "future format" } },
+    }
+    get.mockResolvedValueOnce(future).mockResolvedValueOnce(future)
+    const outcome = await autoCheckinStorage.updateStatus(() => ({
+      patch: { lastRunResult: "success" },
+    }))
+    expect(outcome.ok).toBe(false)
+    expect(set).not.toHaveBeenCalled()
+    await expect(autoCheckinStorage.getStatus()).rejects.toThrow(
+      "unsupported_checkin_status_version",
+    )
+  })
+
+  it("does not overwrite the last result when a new confirmed award is malformed", async () => {
+    const { get, set } = storageMocks
+    get.mockResolvedValueOnce({
+      perAccount: { account: { status: "success", timestamp: 1 } },
+    })
+    const outcome = await autoCheckinStorage.updateStatus(() => ({
+      patch: {
+        perAccount: {
+          account: {
+            accountId: "account",
+            accountName: "Account",
+            timestamp: 2,
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            awards: [
+              {
+                id: "broken",
+                amount: { status: OBSERVATION_STATUSES.Known, value: "NaN" },
+              } as never,
+            ],
+          },
+        },
+      },
+    }))
+    expect(outcome.ok).toBe(false)
+    expect(set).not.toHaveBeenCalled()
+  })
+
   it("getStatus should return stored status when present", async () => {
     const status = { lastRunResult: "success" }
     const { get } = storageMocks
@@ -50,13 +207,11 @@ describe("autoCheckinStorage", () => {
     expect(result).toEqual(status)
   })
 
-  it("getStatus should return null and log error on failure", async () => {
-    const { get } = storageMocks
+  it("getStatus reports a failed read without presenting stored awards as absent", async () => {
+    const { get } = storageMocks as any
     get.mockRejectedValueOnce(new Error("read error"))
 
-    const result = await autoCheckinStorage.getStatus()
-
-    expect(result).toBeNull()
+    await expect(autoCheckinStorage.getStatus()).rejects.toThrow("read error")
   })
 
   it("lets diagnostic readers distinguish a read failure from empty storage", async () => {
@@ -84,6 +239,7 @@ describe("autoCheckinStorage", () => {
     }))
 
     expect(set).toHaveBeenCalledWith("autoCheckin_status", {
+      schemaVersion: 2,
       lastRunResult: "failed",
       perAccount: { a: 1 },
     })
@@ -245,6 +401,7 @@ describe("autoCheckinStorage", () => {
     expect(ok).toBe(true)
     expect(mockWithExtensionStorageWriteLock).toHaveBeenCalled()
     expect(set).toHaveBeenCalledWith("autoCheckin_status", {
+      schemaVersion: 2,
       perAccount: {
         keep: {
           accountId: "keep",
@@ -295,6 +452,7 @@ describe("autoCheckinStorage", () => {
 
     expect(ok).toBe(true)
     expect(set).toHaveBeenCalledWith("autoCheckin_status", {
+      schemaVersion: 2,
       perAccount: undefined,
       accountsSnapshot: undefined,
       summary: undefined,

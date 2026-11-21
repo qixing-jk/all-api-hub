@@ -1,17 +1,31 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { readEdgeKeyMask } from "~/services/accountTokens/keyMaskEvidence"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyRestrictionScope,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   keyExpiryDisplayFact,
   keyLastUsedDisplayFacts,
+  keyProvisioningCoverage,
 } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {
-  ACCOUNT_KEY_PROVISIONING_COVERAGE,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  type ACCOUNT_KEY_PROVISIONING_COVERAGE,
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { projectTokenCreatedAt } from "~/services/apiAdapters/newApi/keys/tokenCreatedAt"
 import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/keys/tokenModelAccess"
+import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
@@ -30,17 +44,13 @@ const tokenStatus = (token: NewApiToken): AccountKeyResourceFacts["status"] => {
 export const tokenCoverage = (
   token: NewApiToken,
 ): (typeof ACCOUNT_KEY_PROVISIONING_COVERAGE)[keyof typeof ACCOUNT_KEY_PROVISIONING_COVERAGE] => {
-  const status = tokenStatus(token)
-  if (status === "enabled") return ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable
-  if (status === "disabled" || status === "expired") {
-    return ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable
-  }
-  return ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown
+  return keyProvisioningCoverage(tokenStatus(token))
 }
 
 export const toFacts = (
   token: NewApiToken,
   ref: AccountKeyResourceFacts["ref"],
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: token.name?.trim() || `Token ${token.id}`,
@@ -61,53 +71,56 @@ export const toFacts = (
     notes: token.note,
   },
   displayFacts: [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: "remainingQuota",
-      kind: "money",
-      role: "remaining",
-      amountUsd: token.remain_quota / QUOTA_PER_USD,
-      unlimited: token.unlimited_quota,
-    },
-    {
-      fieldId: "usedQuota",
-      kind: "money",
-      role: "used",
-      amountUsd: token.used_quota / QUOTA_PER_USD,
-    },
+      operation: "token",
+      asset: newApiFinancialAmount(
+        token.remain_quota,
+        context.authority,
+        ref.siteType,
+      ).asset,
+      limitState: token.unlimited_quota
+        ? BUDGET_LIMIT_STATES.Unlimited
+        : BUDGET_LIMIT_STATES.Finite,
+      remaining: newApiFinancialAmount(
+        token.remain_quota,
+        context.authority,
+        ref.siteType,
+      ).value,
+      used: newApiFinancialAmount(
+        token.used_quota,
+        context.authority,
+        ref.siteType,
+      ).value,
+      scope: keyRestrictionScope({
+        models: projectNewApiTokenModelAccess(token).allowedModelIds,
+        groups: token.group?.trim() ? [token.group.trim()] : undefined,
+      }),
+      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+    }),
     keyExpiryDisplayFact("expired_time", token.expired_time),
     ...keyLastUsedDisplayFacts(token.accessed_time),
     {
       fieldId: "group",
-      kind: "group",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
       value: token.group?.trim() || "",
       emptyValue: "account-group",
     },
     {
       fieldId: "models",
-      kind: "restriction",
-      role: "models",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+      role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
       value: projectNewApiTokenModelAccess(token).allowedModelIds ?? [],
     },
     {
       fieldId: "allow_ips",
-      kind: "restriction",
-      role: "ip",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+      role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
       value: token.allow_ips ?? "",
     },
   ],
   fields: [
     { fieldId: "group", kind: "text", value: token.group?.trim() || "" },
-    {
-      fieldId: "unlimitedQuota",
-      kind: "boolean",
-      value: token.unlimited_quota,
-    },
-    {
-      fieldId: "remainingQuota",
-      kind: "number",
-      value: token.remain_quota,
-    },
-    { fieldId: "usedQuota", kind: "number", value: token.used_quota },
     { fieldId: "expired_time", kind: "number", value: token.expired_time },
     ...(Number.isFinite(token.accessed_time) && token.accessed_time > 0
       ? [

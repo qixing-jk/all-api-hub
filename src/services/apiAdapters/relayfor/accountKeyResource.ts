@@ -1,20 +1,38 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyProtocolAmount,
+  keyRestrictionScope,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceOpenInput,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   createRelayForToken,
   deleteRelayForToken,
@@ -66,8 +84,17 @@ const createdSecret = (
 const facts = (
   token: RelayForToken,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const isEnabled = token.status === KEY_STATUSES.Enabled
+  const scope = keyRestrictionScope({
+    models:
+      token.model_limits === undefined
+        ? undefined
+        : token.model_limits?.length
+          ? token.model_limits
+          : null,
+  })
   return {
     ref,
     displayName: token.name,
@@ -77,49 +104,64 @@ const facts = (
       : ACCOUNT_KEY_RESOURCE_STATUSES.Disabled,
     detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
     displayFacts: [
-      {
+      keyBudgetFact(ref, context, {
         fieldId: "remain_quota",
-        kind: "money",
-        role: "remaining",
-        amountUsd: Math.max(0, token.remain_quota) / RELAYFOR_QUOTA_PER_USD,
-        unlimited: token.unlimited_quota,
-        followsAccount: !token.unlimited_quota && token.remain_quota < 0,
-      },
-      {
-        fieldId: "used_quota",
-        kind: "money",
-        role: "used",
-        amountUsd: token.used_quota / RELAYFOR_QUOTA_PER_USD,
-      },
+        operation: "tokens/quota",
+        scope,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: token.unlimited_quota
+          ? BUDGET_LIMIT_STATES.Unlimited
+          : token.remain_quota < 0
+            ? BUDGET_LIMIT_STATES.Inherited
+            : BUDGET_LIMIT_STATES.Finite,
+        remaining:
+          token.remain_quota < 0
+            ? undefined
+            : keyProtocolAmount(token.remain_quota, RELAYFOR_QUOTA_PER_USD),
+        used: keyProtocolAmount(token.used_quota, RELAYFOR_QUOTA_PER_USD),
+        window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+      }),
       keyExpiryDisplayFact("expired_at", token.expired_at ?? ""),
       {
         fieldId: "model_limits",
-        kind: "restriction",
-        role: "models",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+        role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
         value: token.model_limits ?? [],
       },
       {
         fieldId: "ip_limits",
-        kind: "restriction",
-        role: "ip",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+        role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
         value: readStringList(token.ip_limits),
       },
       {
         fieldId: "access_limits",
-        kind: "rate-limit",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.RateLimit,
         rpm: token.limits?.requests_per_minute ?? 0,
         concurrency: token.limits?.concurrent_requests ?? 0,
       },
-      ...(token.budget_usage ?? []).map((item) => ({
-        fieldId: `budget_${item.window}`,
-        kind: "budget" as const,
-        window: item.window,
-        limitUsd: item.limit / RELAYFOR_QUOTA_PER_USD,
-        usedUsd: item.used / RELAYFOR_QUOTA_PER_USD,
-        remainingUsd: item.remaining / RELAYFOR_QUOTA_PER_USD,
-        reservedUsd: (item.reserved ?? 0) / RELAYFOR_QUOTA_PER_USD,
-        nextResetAt: item.next_reset_at,
-      })),
+      ...(token.budget_usage ?? []).map((item) =>
+        keyBudgetFact(ref, context, {
+          fieldId: `budget_${item.window}`,
+          operation: `tokens/budget-usage/${item.window}`,
+          scope,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          limitState: BUDGET_LIMIT_STATES.Finite,
+          window:
+            item.next_reset_at &&
+            Number.isFinite(Date.parse(item.next_reset_at))
+              ? {
+                  kind: BUDGET_WINDOW_KINDS.Periodic,
+                  period: item.window,
+                  resetsAt: Date.parse(item.next_reset_at),
+                }
+              : { kind: BUDGET_WINDOW_KINDS.Unknown, period: item.window },
+          limit: keyProtocolAmount(item.limit, RELAYFOR_QUOTA_PER_USD),
+          used: keyProtocolAmount(item.used, RELAYFOR_QUOTA_PER_USD),
+          remaining: keyProtocolAmount(item.remaining, RELAYFOR_QUOTA_PER_USD),
+          reserved: keyProtocolAmount(item.reserved, RELAYFOR_QUOTA_PER_USD),
+        }),
+      ),
     ],
     runtimeSecret: undefined,
     runtimeKey: {
@@ -131,21 +173,6 @@ const facts = (
       createdAt: normalizeToMs(token.created_at) ?? undefined,
     },
     fields: [
-      {
-        fieldId: "unlimited_quota",
-        kind: "boolean",
-        value: token.unlimited_quota,
-      },
-      {
-        fieldId: "remain_quota",
-        kind: "number",
-        value: token.remain_quota / RELAYFOR_QUOTA_PER_USD,
-      },
-      {
-        fieldId: "used_quota",
-        kind: "number",
-        value: token.used_quota / RELAYFOR_QUOTA_PER_USD,
-      },
       {
         fieldId: "expired_at",
         kind: "text",
@@ -210,7 +237,7 @@ export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
   defaultScopeKey: () => "default",
   runtimeKey: {
     resolve: async () => ({
-      kind: "unavailable",
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
     }),
   },
@@ -245,7 +272,7 @@ export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
     }
     const token = await createRelayForToken(request, command)
     return {
-      certainty: "applied",
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
       value: {
         detail: token,
         createdSecret: createdSecret(
@@ -278,7 +305,7 @@ export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
           : {}),
       }
       return {
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: updated,
         ...(rotated
           ? {
@@ -304,7 +331,9 @@ export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
         status !== 408 &&
         status !== 499
       return {
-        certainty: rejected ? "not-applied" : "possibly-applied",
+        certainty: rejected
+          ? NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+          : NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: error,
       }
     }
@@ -315,7 +344,10 @@ export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
       ...(options?.signal ? { abortSignal: options.signal } : {}),
     }
     await deleteRelayForToken(request, id)
-    return { certainty: "applied", value: undefined }
+    return {
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+      value: undefined,
+    }
   },
   mapFailure: mapAccountKeyResourceFailure,
 })

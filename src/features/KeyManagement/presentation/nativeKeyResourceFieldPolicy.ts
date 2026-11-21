@@ -120,6 +120,8 @@ const quotaField = (
   unlimitedId: string,
   resolveLabel: (t: TFunction) => string,
   resolveHelp?: (t: TFunction) => string,
+  resolvePlaceholder = (t: TFunction) =>
+    t("keyManagement:dialog.quotaPlaceholder"),
 ): ResourceFieldPresentation[] => [
   {
     fieldId: unlimitedId,
@@ -135,7 +137,7 @@ const quotaField = (
     order: 10,
     renderer: "number",
     resolveLabel,
-    resolvePlaceholder: (t) => t("keyManagement:dialog.quotaPlaceholder"),
+    resolvePlaceholder,
     ...(resolveHelp ? { resolveHelp } : {}),
     visibleWhen: (values) => values[unlimitedId] !== true,
     issueLabelResolvers: issues,
@@ -428,6 +430,7 @@ const buildGrsaiFields = (): {
       "unlimited_credits",
       (t) => t("keyManagement:native.editor.quotaCredits"),
       (t) => t("keyManagement:native.editor.quotaCreditsHelp"),
+      (t) => t("keyManagement:native.editor.quotaCredits"),
     ),
     expiry,
   ],
@@ -468,7 +471,15 @@ const buildNewApiFamilyFields = (
   const candidateFields: ResourceFieldPresentation[] = [
     name,
     group("group", false, true),
-    ...quota("quotaUsd", "unlimited_quota"),
+    ...(descriptorsById.has("quotaUsd")
+      ? quota("quotaUsd", "unlimited_quota")
+      : quotaField(
+          "quota",
+          "unlimited_quota",
+          (t) => t("keyManagement:financial.nativeQuota"),
+          undefined,
+          (t) => t("keyManagement:financial.nativeQuota"),
+        )),
     expiry,
     {
       fieldId: "model_limits_enabled",

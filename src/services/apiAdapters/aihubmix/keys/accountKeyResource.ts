@@ -1,11 +1,24 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
   createUnattributedAccountCreatedRuntimeSecret,
 } from "~/services/accounts/keys/createdRuntimeSecret"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyProtocolAmount,
+  keyRestrictionScope,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   keyExpiryDisplayFact,
   keyLastUsedDisplayFacts,
@@ -20,7 +33,13 @@ import {
   toAIHubMixKeyWrite,
   type AIHubMixKeyEditCommand,
 } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
-import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceOpenInput,
@@ -28,6 +47,7 @@ import type {
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
   resourceValuesEqual,
@@ -88,6 +108,7 @@ const keyStatus = (key: AIHubMixKey): AccountKeyResourceFacts["status"] =>
 const toFacts = (
   key: AIHubMixKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const values = toAIHubMixKeyWrite(key)
   const models = values.models
@@ -111,41 +132,38 @@ const toFacts = (
       notes: key.note,
     },
     displayFacts: [
-      {
+      keyBudgetFact(ref, context, {
         fieldId: "remain_quota",
-        kind: "money",
-        role: "remaining",
-        amountUsd: values.remain_quota / QUOTA_PER_USD,
-        unlimited: values.unlimited_quota,
-      },
-      {
-        fieldId: "used_quota",
-        kind: "money",
-        role: "used",
-        amountUsd: (Number(key.used_quota) || 0) / QUOTA_PER_USD,
-      },
+        operation: "token",
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState:
+          key.unlimited_quota === true
+            ? BUDGET_LIMIT_STATES.Unlimited
+            : BUDGET_LIMIT_STATES.Finite,
+        remaining: keyProtocolAmount(key.remain_quota, QUOTA_PER_USD),
+        used: keyProtocolAmount(key.used_quota, QUOTA_PER_USD),
+        scope: keyRestrictionScope({
+          models: models.length ? models : null,
+          groups: null,
+        }),
+        window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+      }),
       keyExpiryDisplayFact("expired_time", values.expired_time),
       ...keyLastUsedDisplayFacts(key.accessed_time),
-      { fieldId: "models", kind: "restriction", role: "models", value: models },
+      {
+        fieldId: "models",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+        role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
+        value: models,
+      },
       {
         fieldId: "subnet",
-        kind: "restriction",
-        role: "subnet",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+        role: ACCOUNT_KEY_RESTRICTION_ROLES.Subnet,
         value: values.subnet,
       },
     ],
     fields: [
-      {
-        fieldId: "unlimited_quota",
-        kind: "boolean",
-        value: values.unlimited_quota,
-      },
-      { fieldId: "remain_quota", kind: "number", value: values.remain_quota },
-      {
-        fieldId: "used_quota",
-        kind: "number",
-        value: Number(key.used_quota) || 0,
-      },
       { fieldId: "expired_time", kind: "number", value: values.expired_time },
       ...(typeof key.accessed_time === "number" &&
       Number.isFinite(key.accessed_time) &&
@@ -226,8 +244,8 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
   toDetailFacts: toFacts,
   runtimeKey: {
     resolve: async () => ({
-      kind: "unavailable",
-      failure: { code: "unavailable" },
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
     }),
   },
   createEditor: async (config, _scope, options, _inventory, intent) =>
@@ -250,13 +268,19 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
         createAIHubMixKey(mutationRequest, command.values),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    if (result.certainty === "not-applied") return result
-    if (result.certainty === "possibly-applied")
+    if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+      return result
+    if (
+      result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+    )
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(result.failure),
       }
-    const response = result.certainty === "applied" ? result.value : undefined
+    const response =
+      result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
+        ? result.value
+        : undefined
     const secret = readSecret(response)
     const responseId = Number(response?.id ?? response?.token_id)
     const hasResponseId = Number.isSafeInteger(responseId) && responseId > 0
@@ -279,7 +303,7 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
     }
     if (detail)
       return {
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail,
           ...(secret
@@ -296,14 +320,14 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
       }
     if (secret)
       return {
-        certainty: "applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail: null,
           createdSecret: createdSecret(config, command.values.name, secret),
         },
       }
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(reconciliationFailure),
     }
   },
@@ -318,11 +342,14 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
     const merged = mergeResourceEdits(command.baseline, command.values, latest)
     if (!merged)
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: "resource_changed" as const },
       }
     if (resourceValuesEqual(merged, latest))
-      return { certainty: "applied" as const, value: detail }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: detail,
+      }
     const request = requestWithOptions(config, options)
     const result = await runNativeResourceMutation({
       request,
@@ -330,14 +357,15 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
         updateAIHubMixKey(mutationRequest, detail.id, merged),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    if (result.certainty === "not-applied") return result
+    if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+      return result
     try {
       const updated = await fetchAIHubMixKey(request, detail.id)
       const actual = toAIHubMixKeyWrite(updated)
       // Acknowledged writes or an untouched quota permit subsequent consumption.
       // An uncertain quota edit must still match exactly before confirming it.
       const allowQuotaConsumption =
-        result.certainty === "applied" ||
+        result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied ||
         merged.remain_quota === latest.remain_quota
       if (
         (Object.keys(merged) as (keyof typeof merged)[]).every(
@@ -348,17 +376,23 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
               actual.remain_quota < merged.remain_quota),
         )
       )
-        return { certainty: "applied" as const, value: updated }
+        return {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: updated,
+        }
     } catch (error) {
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(error),
       }
     }
     return {
-      certainty: "possibly-applied" as const,
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
       failure: mapAccountKeyResourceUncertainFailure(
-        result.certainty === "possibly-applied" ? result.failure : undefined,
+        result.certainty ===
+          NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+          ? result.failure
+          : undefined,
       ),
     }
   },
@@ -368,8 +402,11 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
       execute: (request) => deleteApiToken(request, id),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    return result.certainty === "applied"
-      ? { certainty: "applied", value: undefined }
+    return result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
+      ? {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: undefined,
+        }
       : result
   },
   mapFailure: mapAccountKeyResourceFailure,

@@ -1,3 +1,4 @@
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type {
@@ -10,7 +11,9 @@ type NativeResourceMutationEvidence = {
   readonly responseReceived: boolean
 }
 
-type NativeResourceMutationErrorDisposition = "not-applied" | "possibly-applied"
+type NativeResourceMutationErrorDisposition =
+  (typeof NATIVE_RESOURCE_MUTATION_CERTAINTIES)[
+    "NotApplied" | "PossiblyApplied"]
 
 const appendObserver = <TRequest extends ApiTransportRequest>(
   request: TRequest,
@@ -99,13 +102,16 @@ export async function runNativeResourceMutation<TValue, TFailure>(options: {
   })
 
   try {
-    return { certainty: "applied", value: await options.execute(request) }
+    return {
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+      value: await options.execute(request),
+    }
   } catch (error) {
     // A later rejected request cannot undo an earlier accepted write.
     // Keep partial writes and failed readbacks out of the retryable branch.
     if (mutationAccepted) {
       return {
-        certainty: "possibly-applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: options.mapFailure(error),
       }
     }
@@ -116,15 +122,17 @@ export async function runNativeResourceMutation<TValue, TFailure>(options: {
     const disposition =
       options.classifyError?.(error, evidence) ??
       (isApiBusinessError(error) || isConfirmedRejection(error)
-        ? "not-applied"
+        ? NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
         : undefined)
     return {
       certainty:
-        disposition === "not-applied"
-          ? "not-applied"
-          : disposition === "possibly-applied" || dispatched
-            ? "possibly-applied"
-            : "not-applied",
+        disposition === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+          ? NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+          : disposition ===
+                NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied ||
+              dispatched
+            ? NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
+            : NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
       failure: options.mapFailure(error),
     }
   }

@@ -20,7 +20,7 @@
     },
     "title": "Phân bổ tài khoản"
   },
-  "description": "Xem xu hướng số dư và thu chi hằng ngày để theo dõi biến động tài khoản.",
+  "description": "Xem số dư và hạn mức của từng tài khoản thay đổi theo thời gian.",
   "empty": {
     "description": "Bật lịch sử số dư và làm mới bất kỳ tài khoản nào để ghi lại ảnh chụp nhanh đầu tiên.",
     "title": "Chưa có ảnh chụp nhanh"
@@ -82,16 +82,26 @@
     },
     "success": {
       "pruneCompleted": "Dọn dẹp hoàn tất",
-      "refreshCompleted": "Làm mới hoàn tất",
+      "refreshCompleted": "Lịch sử đã ghi: {{captured}}; chưa ghi: {{uncaptured}}.",
       "settingsSaved": "Đã lưu cài đặt"
     }
   },
   "metrics": {
     "balance": "Số dư",
-    "estimatedIncome": "Thu nhập ước tính",
+    "estimatedIncome": "Dòng vào ròng ước tính",
     "income": "Thu nhập",
     "net": "Thay đổi ròng",
     "outcome": "Chi phí"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "Nhóm",
+      "keys": "Khóa",
+      "models": "Mô hình",
+      "projects": "Dự án",
+      "routes": "Tuyến"
+    },
+    "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {
     "kpis": {
@@ -117,8 +127,8 @@
     "enabledHint": "Sau khi đóng, sẽ không ghi lại ảnh chụp nhanh và cũng không lên lịch thu thập cuối ngày.",
     "endOfDayCapture": "Thu thập cuối ngày",
     "endOfDayCaptureHint": "Cố gắng thu thập một lần mỗi ngày vào khoảng {{time}} (yêu cầu trình duyệt hỗ trợ Alarms API).",
-    "estimatedTodayIncome": "Hiển thị thu nhập hôm nay ước tính",
-    "estimatedTodayIncomeHint": "Dùng lịch sử số dư để ước tính phần thưởng không xuất hiện trong nhật ký thu nhập của trang. Không khả dụng khi thiếu ảnh chụp số dư chuẩn của ngày trước.",
+    "estimatedTodayIncome": "Hiện dòng vào ròng ước tính",
+    "estimatedTodayIncomeHint": "Ước tính dòng tiền ròng từ số dư có thể so sánh gần đầu ngày và mức sử dụng đã quyết toán trong khoảng thời gian tương đương.",
     "retentionDays": "Số ngày lưu giữ"
   },
   "summary": {
@@ -129,7 +139,7 @@
       "account": "Tài khoản",
       "cashflowCoverage": "Độ bao phủ thu chi",
       "endBalance": "Số dư cuối kỳ",
-      "estimatedIncomeTotal": "Tổng thu nhập ước tính",
+      "estimatedIncomeTotal": "Dòng vào ròng ước tính",
       "incomeTotal": "Thu nhập trong kỳ",
       "outcomeTotal": "Chi phí trong kỳ",
       "rangeNet": "Thay đổi ròng trong kỳ",
@@ -152,7 +162,7 @@
       "scope": "Chế độ xem"
     },
     "emptyMetric": "Không có dữ liệu {{metric}} trong khoảng thời gian này.",
-    "gapBridge": "Đoạn nét đứt biểu thị những ngày không có bản ghi.",
+    "gapBridge": "Không có bản ghi",
     "scopes": {
       "accounts": "Theo tài khoản",
       "total": "Tổng hợp"

@@ -19,6 +19,9 @@ import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyR
 import {
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES,
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failures,
   ACCOUNT_KEY_RESOURCE_STATUSES as statuses,
@@ -26,7 +29,10 @@ import {
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
-import { RESOURCE_DISPLAY_FACT_KINDS } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  NATIVE_RESOURCE_MUTATION_CERTAINTIES,
+  RESOURCE_DISPLAY_FACT_KINDS,
+} from "~/services/apiAdapters/contracts/resourceNative"
 import { getNovitaSafeErrorMessage } from "~/services/apiAdapters/novita/accountPersistence"
 import { novitaKeyEditor } from "~/services/apiAdapters/novita/keyEditor"
 import {
@@ -109,7 +115,7 @@ const mutationCertainty = (
   dispatched: boolean,
   accepted = false,
 ) => {
-  if (!dispatched) return "not-applied" as const
+  if (!dispatched) return NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
   const status = error instanceof ApiError ? error.statusCode : undefined
   return !accepted &&
     status !== undefined &&
@@ -117,8 +123,8 @@ const mutationCertainty = (
     status < 500 &&
     status !== 408 &&
     status !== 499
-    ? ("not-applied" as const)
-    : ("possibly-applied" as const)
+    ? NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied
+    : NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied
 }
 
 /** Hydrates writable policies separately from the lightweight inventory. */
@@ -185,8 +191,8 @@ const keyFacts = (
       ? [
           {
             fieldId: "allowed_ips",
-            kind: "restriction" as const,
-            role: "ip" as const,
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+            role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
             value: key.allowedIps,
           },
         ]
@@ -227,7 +233,7 @@ export const novitaAccountKeyResources = defineAccountKeyResourceCapability({
   defaultScopeKey: () => "default",
   runtimeKey: {
     resolve: async () => ({
-      kind: "unavailable",
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: { code: failures.Unavailable },
     }),
   },
@@ -334,7 +340,7 @@ export const novitaAccountKeyResources = defineAccountKeyResourceCapability({
         tagIds: [],
       }
       return {
-        certainty: "applied",
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
         value: {
           detail: key
             ? {
@@ -373,7 +379,10 @@ export const novitaAccountKeyResources = defineAccountKeyResourceCapability({
           await verifyNovitaManagementIdentity(cleanup, true)
           await deleteNovitaKey(cleanup, createdId)
           if (!(await findNovitaKey(cleanup, createdId)))
-            return { certainty: "not-applied", failure: error }
+            return {
+              certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
+              failure: error,
+            }
         } catch {
           /* The original failure remains uncertain. */
         }
@@ -441,7 +450,10 @@ export const novitaAccountKeyResources = defineAccountKeyResourceCapability({
         (changeIps && !same(updated.allowedIps, command.allowedIps))
       )
         throw uncertainReadback()
-      return { certainty: "applied", value: updated }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: updated,
+      }
     } catch (error) {
       return {
         certainty: mutationCertainty(error, dispatched, accepted),
@@ -463,7 +475,10 @@ export const novitaAccountKeyResources = defineAccountKeyResourceCapability({
       await deleteNovitaKey(request, id)
       accepted = true
       if (await findNovitaKey(request, id)) throw uncertainReadback()
-      return { certainty: "applied", value: undefined }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: undefined,
+      }
     } catch (error) {
       return {
         certainty: mutationCertainty(error, dispatched, accepted),

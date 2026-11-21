@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { prepareDefaultAccountKeyCreation } from "~/services/accounts/keys/accountKeyCreation"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_EXPIRY_STATES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
 import { novitaKeyEditor } from "~/services/apiAdapters/novita/keyEditor"
 import { novitaAccountKeyResources } from "~/services/apiAdapters/novita/keyResources"
@@ -848,8 +852,8 @@ describe("Novita key resources", () => {
     // Permanent keys (`""` live / `"never"` documented) render as never expiring.
     expect(facts.displayFacts).toContainEqual({
       fieldId: "expire_time",
-      kind: "expiry",
-      timestampMs: "never",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+      timestampMs: ACCOUNT_KEY_EXPIRY_STATES.Never,
     })
   })
 
@@ -871,7 +875,7 @@ describe("Novita key resources", () => {
     const facts = await collection.get({ ...ref, resourceId: "key_expiring" })
     expect(facts.displayFacts).toContainEqual({
       fieldId: "expire_time",
-      kind: "expiry",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
       timestampMs: 1767225600000,
     })
   })
@@ -888,7 +892,7 @@ describe("Novita key resources", () => {
     expect(facts.status).toBe("expired")
     expect(facts.displayFacts).toContainEqual({
       fieldId: "expire_time",
-      kind: "expiry",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
       timestampMs: 1577836800000,
     })
   })

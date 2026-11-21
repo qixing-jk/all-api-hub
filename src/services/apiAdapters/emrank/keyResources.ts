@@ -4,11 +4,24 @@ import {
   EMRANK_API_BASE_URL,
   EMRANK_DISPLAY_NAME,
 } from "~/services/accountSiteDefinitions/identifiers"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_ENFORCEMENT,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
+import { classifyResourceChangedMutation } from "~/services/apiAdapters/accountKeyResources/operationErrors"
 import {
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failures,
@@ -74,6 +87,7 @@ const hasKeyChanges = (command: EmRankKeyCommand, baseline: EmRankKey) =>
 const facts = (
   key: EmRankKey,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: key.name || `Key ${key.suffix}`,
@@ -96,29 +110,23 @@ const facts = (
   },
   fields: [],
   displayFacts: [
-    {
+    keyBudgetFact(ref, context, {
       fieldId: emrankKeyFields.Quota,
-      kind: "quota",
-      role: "total",
-      asset: EMRANK_TOKEN_ASSET,
-      value: key.totalQuota ?? 0,
-      unlimited: key.totalQuota === null,
-    },
-    {
-      fieldId: emrankKeyFields.Remaining,
-      kind: "quota",
-      role: "remaining",
-      asset: EMRANK_TOKEN_ASSET,
-      value: key.remainingQuota ?? 0,
-      unlimited: key.remainingQuota === null,
-    },
-    {
-      fieldId: emrankKeyFields.Used,
-      kind: "quota",
-      role: "used",
-      asset: EMRANK_TOKEN_ASSET,
-      value: key.usedQuota,
-    },
+      operation: "access-keys",
+      asset: { kind: ASSET_KINDS.Quota, ...EMRANK_TOKEN_ASSET },
+      limitState:
+        key.totalQuota === null
+          ? BUDGET_LIMIT_STATES.Unlimited
+          : key.totalQuota === undefined
+            ? BUDGET_LIMIT_STATES.Unknown
+            : BUDGET_LIMIT_STATES.Finite,
+      limit: key.totalQuota,
+      remaining: key.remainingQuota,
+      used: key.usedQuota,
+      enforcement: BUDGET_ENFORCEMENT.Hard,
+      window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+      scope: { models: { kind: SCOPE_SELECTION_KINDS.All } },
+    }),
     keyExpiryDisplayFact(emrankKeyFields.ExpiresAt, key.expiresAt ?? 0),
   ],
   searchValues: [key.name, key.suffix],
@@ -166,7 +174,7 @@ export const emRankKeyResources = defineAccountKeyResourceCapability({
         )
         if (!key.canCopy)
           return {
-            kind: "unavailable",
+            kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
             failure: { code: failures.Unavailable },
           }
         const secrets = await revealKeySecrets(
@@ -175,14 +183,14 @@ export const emRankKeyResources = defineAccountKeyResourceCapability({
         )
         const secret = secrets.get(key.id)
         return secret?.trim()
-          ? { kind: "resolved", secret }
+          ? { kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved, secret }
           : {
-              kind: "unavailable",
+              kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
               failure: { code: failures.Unavailable },
             }
       } catch (error) {
         return {
-          kind: "unavailable",
+          kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
           failure: mapAccountKeyResourceFailure(error),
         }
       }
@@ -190,13 +198,16 @@ export const emRankKeyResources = defineAccountKeyResourceCapability({
   },
   createEditor: async (_config, _scope, _options, _inventory, intent) =>
     createEmRankKeyEditor(undefined, intent),
-  editEditor: (_config, _scope, key) =>
-    createEmRankKeyEditor({
+  editEditor: (_config, _scope, key) => {
+    if (key.totalQuota === undefined)
+      throw new AccountKeyResourceError({ code: failures.Unavailable })
+    return createEmRankKeyEditor({
       name: key.name,
       totalQuota: key.totalQuota,
       expiresAt: key.expiresAt,
       enabled: key.enabled,
-    }),
+    })
+  },
   create: (config, _scope, command: EmRankKeyCommand, options) =>
     runNativeResourceMutation({
       request: withSignal(config.request, options),
@@ -259,11 +270,7 @@ export const emRankKeyResources = defineAccountKeyResourceCapability({
       },
       mapFailure: mapAccountKeyResourceFailure,
 
-      classifyError: (error) =>
-        error instanceof AccountKeyResourceError &&
-        error.failure.code === failures.ResourceChanged
-          ? "not-applied"
-          : undefined,
+      classifyError: classifyResourceChangedMutation,
     }),
   delete: (config, _scope, id, options) =>
     runNativeResourceMutation({

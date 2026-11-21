@@ -11,7 +11,10 @@ import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accou
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -61,7 +64,13 @@ const lastUsedFacts = (token: KrillToken) => {
     token.lastUsedAt === null ? null : normalizeToMs(token.lastUsedAt)
   return timestampMs === null || timestampMs <= 0
     ? []
-    : [{ fieldId: "accessed_time", kind: "last-used" as const, timestampMs }]
+    : [
+        {
+          fieldId: "accessed_time",
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
+          timestampMs,
+        },
+      ]
 }
 
 const ipFacts = (token: KrillToken) =>
@@ -70,8 +79,8 @@ const ipFacts = (token: KrillToken) =>
     : [
         {
           fieldId: krillKeyFields.IpWhitelist,
-          kind: "restriction" as const,
-          role: "ip" as const,
+          kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+          role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
           value: token.ipWhitelist,
         },
       ]
@@ -121,7 +130,7 @@ const facts = (
       ? [
           {
             fieldId: krillKeyFields.Channels,
-            kind: "channels" as const,
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Channels,
             value: channelNames(detail),
             usesDefault: detail.channelIds.length === 0,
           },
@@ -183,7 +192,7 @@ export const krillKeyResources = defineAccountKeyResourceCapability({
   runtimeKey: {
     // The inventory carries only the prefix and no reveal route exists.
     resolve: async () => ({
-      kind: "unavailable",
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
     }),
   },

@@ -1,26 +1,165 @@
 import {
+  CURRENCIES,
   CURRENCY_SYMBOLS,
   DEFAULT_USD_TO_CNY_RATE,
+  isSupportedCurrency,
   QUOTA_PER_USD,
 } from "~/constants/money"
-import type { CurrencyAmount, CurrencyType } from "~/types"
+import type { Asset } from "~/services/amounts/assets"
+import type { Amount } from "~/services/amounts/balance"
+import {
+  DECIMAL_BOUNDS,
+  DECIMAL_ERRORS,
+  divideDecimal,
+  multiplyDecimal,
+  parseDecimal,
+} from "~/services/amounts/decimal"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
+import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
+import type { CurrencyType } from "~/types"
+import {
+  formatCompactDecimal,
+  formatExactDecimal,
+  type CompactDecimalOptions,
+} from "~/utils/core/decimalFormatting"
+
+/** Unscaled labels describe missing amounts; display scales belong to amount formatting. */
+export function getAssetLabel(asset: Asset, unknownLabel = ""): string {
+  switch (asset.kind) {
+    case ASSET_KINDS.Currency:
+      return asset.code
+    case ASSET_KINDS.Quota:
+      return asset.label
+    case ASSET_KINDS.Crypto:
+      return asset.id
+    case ASSET_KINDS.Unknown:
+      return unknownLabel
+  }
+}
+
+/** Formats the native asset at the display boundary without changing its value. */
+export function formatAssetAmount(amount: Amount, locale?: string): string {
+  if (amount.asset.kind === ASSET_KINDS.Quota)
+    return formatQuotaAmount(amount.value, amount.asset, locale)
+  if (amount.asset.kind === ASSET_KINDS.Crypto)
+    return `${formatExactDecimal(amount.value, locale)} ${amount.asset.id}`
+  return formatExactDecimal(amount.value, locale, {
+    style: "currency",
+    currency: amount.asset.code,
+    currencyDisplay: "code",
+  })
+}
+
+/** Bounded native summaries; details and pricing keep the exact formatter. */
+export function formatCompactAssetAmount(
+  amount: Amount,
+  locale?: string,
+  options: CompactDecimalOptions = {},
+): string {
+  if (amount.asset.kind === ASSET_KINDS.Quota)
+    return formatQuotaAmount(amount.value, amount.asset, locale, true, options)
+  if (amount.asset.kind === ASSET_KINDS.Crypto)
+    return `${formatCompactDecimal(amount.value, locale, options)} ${amount.asset.id}`
+  return formatCompactDecimal(amount.value, locale, {
+    ...options,
+    style: "currency",
+    currency: amount.asset.code,
+    currencyDisplay: "code",
+  })
+}
+
+/** Convert using the configured approximate rate, without treating it as an upstream integer observation. */
+function convertUsdToCny(
+  value: string,
+  exchangeRate = DEFAULT_USD_TO_CNY_RATE,
+) {
+  const rate = parseDecimal(
+    String(
+      exchangeRate > 0 && Number.isFinite(exchangeRate)
+        ? exchangeRate
+        : DEFAULT_USD_TO_CNY_RATE,
+    ),
+  )!
+  return multiplyDecimal(value, rate)
+}
+
+/** Display-only conversion keeps enough fractional places for small native amounts. */
+function convertCnyToUsd(
+  value: string,
+  exchangeRate = DEFAULT_USD_TO_CNY_RATE,
+): string {
+  const rate = convertUsdToCny("1", exchangeRate)
+  const normalized = parseDecimal(value)
+  if (normalized === undefined) throw new Error(DECIMAL_ERRORS.Invalid)
+  const wholeLength = Math.max(
+    divideDecimal(normalized, rate, 0).length,
+    normalized.startsWith("-") ? 2 : 1,
+  )
+  // A large divisor shifts an already fractional amount further right; budget for both operands.
+  const fractionalPlaces = Math.min(
+    (normalized.split(".")[1] ?? "").length + rate.split(".")[0]!.length + 18,
+    Math.max(0, DECIMAL_BOUNDS.MaxLength - wholeLength - 1),
+  )
+  const converted = divideDecimal(normalized, rate, fractionalPlaces)
+  if (converted === "0" && normalized !== "0")
+    throw new Error(DECIMAL_ERRORS.Underflow)
+  return converted
+}
+
+/** Only the supported monetary pair is converted; original and noncurrency units stay intact. */
+function convertCurrencyAmount(
+  amount: Amount,
+  currencyType?: CurrencyType,
+  exchangeRate = DEFAULT_USD_TO_CNY_RATE,
+): Amount {
+  if (
+    !currencyType ||
+    amount.asset.kind !== ASSET_KINDS.Currency ||
+    amount.asset.code === currencyType ||
+    !isSupportedCurrency(amount.asset.code)
+  )
+    return amount
+  try {
+    return {
+      asset: { kind: ASSET_KINDS.Currency, code: currencyType },
+      value:
+        amount.asset.code === CURRENCIES.USD
+          ? convertUsdToCny(amount.value, exchangeRate)
+          : convertCnyToUsd(amount.value, exchangeRate),
+    }
+  } catch {
+    return amount
+  }
+}
+
+/** A selected currency converts monetary amounts; omission preserves the original currency. */
+export function formatBalanceAmount(
+  amount: Amount,
+  locale?: string,
+  currencyType?: CurrencyType,
+  exchangeRate = DEFAULT_USD_TO_CNY_RATE,
+  options: CompactDecimalOptions = {},
+): string {
+  if (amount.asset.kind !== ASSET_KINDS.Currency)
+    return formatCompactAssetAmount(amount, locale, options)
+  const converted = convertCurrencyAmount(amount, currencyType, exchangeRate)
+  const currency =
+    converted.asset.kind === ASSET_KINDS.Currency
+      ? converted.asset.code
+      : amount.asset.code
+  return formatCompactDecimal(converted.value, locale, {
+    ...options,
+    style: "currency",
+    currency,
+    currencyDisplay:
+      currency === CURRENCIES.USD || currency === CURRENCIES.CNY
+        ? "narrowSymbol"
+        : "code",
+  })
+}
 
 /** Decimal precision shared by static and animated money displays. */
 export const MONEY_DECIMAL_PLACES = 2
-
-/**
- * Converts an internal quota amount into both display currencies.
- *
- * The account owns the USD-to-CNY rate used elsewhere in the UI, so callers
- * pass their own account's `exchange_rate`.
- */
-export const convertQuotaToCurrencyAmounts = (
-  quota: number,
-  exchangeRate: number,
-): CurrencyAmount => {
-  const USD = quota / QUOTA_PER_USD
-  return { USD, CNY: USD * exchangeRate }
-}
 
 /**
  * Formatting options for money-like numeric values used across the UI.
@@ -98,9 +237,25 @@ export const formatTelemetryMoney = (
   if (typeof valueUsd !== "number" || !Number.isFinite(valueUsd)) return "-"
 
   const value =
-    currencyType === "CNY" ? valueUsd * DEFAULT_USD_TO_CNY_RATE : valueUsd
+    currencyType === CURRENCIES.CNY
+      ? valueUsd * DEFAULT_USD_TO_CNY_RATE
+      : valueUsd
 
   return `${CURRENCY_SYMBOLS[currencyType]}${getDisplayMoneyValue(
     value,
   ).toFixed(MONEY_DECIMAL_PLACES)}`
+}
+
+/**
+ * Converts an internal quota amount into both display currencies.
+ *
+ * The account owns the USD-to-CNY rate used elsewhere in the UI, so callers
+ * pass their own account's `exchange_rate`.
+ */
+export const convertQuotaToCurrencyAmounts = (
+  quota: number,
+  exchangeRate: number,
+): import("~/types").CurrencyAmount => {
+  const USD = quota / QUOTA_PER_USD
+  return { USD, CNY: USD * exchangeRate }
 }

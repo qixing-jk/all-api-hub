@@ -3,10 +3,13 @@ import type { AccountCredentialIdentity } from "~/services/accounts/keys/account
 import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
+import type { BalancePosition, EvidenceRef } from "~/services/amounts/balance"
+import type { BudgetConstraint } from "~/services/amounts/budgets"
+import { type BUDGET_AMOUNT_FIELDS } from "~/services/amounts/financialConstants"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 
 import type { InventorySecretAvailability } from "./inventorySecret"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "./resourceNative"
 import type {
   EditableResourceProjection,
   NativeResourceMutationResult,
@@ -18,6 +21,33 @@ import type {
   ResourceOperationOptions,
   ResourceValidationResult,
 } from "./resourceNative"
+
+export const ACCOUNT_KEY_FINANCIAL_FACT_KINDS = {
+  BudgetConstraint: "budget-constraint",
+  Allocation: "allocation",
+} as const
+
+export const ACCOUNT_KEY_DISPLAY_FACT_KINDS = {
+  ...ACCOUNT_KEY_FINANCIAL_FACT_KINDS,
+  RateLimit: "rate-limit",
+  Expiry: "expiry",
+  LastUsed: "last-used",
+  Restriction: "restriction",
+  Permission: "permission",
+  Channels: "channels",
+  Group: "group",
+  Attribution: "attribution",
+} as const
+
+export const ACCOUNT_KEY_RESTRICTION_ROLES = {
+  Models: "models",
+  Tools: "tools",
+  Ip: "ip",
+  Subnet: "subnet",
+} as const
+
+export const ACCOUNT_KEY_PERMISSION_ROLES = { Manage: "manage" } as const
+export const ACCOUNT_KEY_EXPIRY_STATES = { Never: "never" } as const
 
 export {
   RESOURCE_FAILURE_CODES as ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
@@ -207,88 +237,67 @@ export const ACCOUNT_KEY_GROUP_EMPTY_VALUES = {
 export type AccountKeyGroupEmptyValue =
   (typeof ACCOUNT_KEY_GROUP_EMPTY_VALUES)[keyof typeof ACCOUNT_KEY_GROUP_EMPTY_VALUES]
 
-/** Adapter-owned display semantics. Monetary amounts are USD; timestamps are milliseconds. */
+/** Adapter-owned financial facts retain their assets, sources and scopes; timestamps are milliseconds. */
 export type AccountKeyDisplayFact =
   | {
       readonly fieldId: string
-      readonly kind: "spend-budget"
-      readonly source: "custom" | "inherited" | "none" | "unavailable"
-      readonly limitUsd?: number
-      readonly usedUsd?: number
-      readonly active?: boolean
-      readonly period?: "none" | "daily" | "weekly" | "monthly"
+      readonly kind: typeof ACCOUNT_KEY_FINANCIAL_FACT_KINDS.BudgetConstraint
+      readonly budget: BudgetConstraint
+      readonly metric?: (typeof BUDGET_AMOUNT_FIELDS)[keyof typeof BUDGET_AMOUNT_FIELDS]
     }
   | {
       readonly fieldId: string
-      readonly kind: "money"
-      readonly role: "remaining" | "used" | "total"
-      readonly amountUsd: number
-      readonly unlimited?: boolean
-      readonly followsAccount?: boolean
+      readonly kind: typeof ACCOUNT_KEY_FINANCIAL_FACT_KINDS.Allocation
+      readonly position: BalancePosition
+      readonly parent: Pick<
+        BalancePosition,
+        "id" | "scope" | "collectionKey"
+      > & { source: EvidenceRef }
     }
   | {
       readonly fieldId: string
-      readonly kind: "budget"
-      readonly window: "5h" | "day" | "week" | "month"
-      readonly limitUsd: number
-      readonly usedUsd: number
-      readonly remainingUsd: number
-      readonly reservedUsd: number
-      readonly nextResetAt?: string
-    }
-  | {
-      readonly fieldId: string
-      readonly kind: "rate-limit"
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.RateLimit
       readonly rpm: number
       readonly concurrency: number
     }
   | {
       readonly fieldId: string
-      readonly kind: "quota"
-      readonly role: "remaining" | "used" | "total"
-      readonly value: number
-      readonly asset: QuotaAsset
-      readonly unlimited?: boolean
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry
+      readonly timestampMs:
+        number | typeof ACCOUNT_KEY_EXPIRY_STATES.Never | null
     }
   | {
       readonly fieldId: string
-      readonly kind: "credits"
-      readonly value: number
-      readonly unlimited?: boolean
-    }
-  | {
-      readonly fieldId: string
-      readonly kind: "expiry"
-      readonly timestampMs: number | "never" | null
-    }
-  | {
-      readonly fieldId: string
-      readonly kind: "last-used"
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed
       readonly timestampMs: number
     }
   | {
       readonly fieldId: string
-      readonly kind: "restriction"
-      readonly role: "models" | "tools" | "ip" | "subnet"
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction
+      readonly role:
+        | typeof ACCOUNT_KEY_RESTRICTION_ROLES.Models
+        | typeof ACCOUNT_KEY_RESTRICTION_ROLES.Tools
+        | typeof ACCOUNT_KEY_RESTRICTION_ROLES.Ip
+        | typeof ACCOUNT_KEY_RESTRICTION_ROLES.Subnet
       readonly value: string | readonly string[]
     }
   | {
       readonly fieldId: string
       /** Key capability, not a restriction on models, networks or groups. */
-      readonly kind: "permission"
-      readonly role: "manage"
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.Permission
+      readonly role: typeof ACCOUNT_KEY_PERMISSION_ROLES.Manage
       readonly granted: boolean
     }
   | {
       readonly fieldId: string
       /** Billing-route permissions, independent of account/model access groups. */
-      readonly kind: "channels"
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.Channels
       readonly value: readonly string[]
       readonly usesDefault: boolean
     }
   | {
       readonly fieldId: string
-      readonly kind: "group"
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group
       readonly value: string | readonly string[]
       /** The provider decides whether an empty group inherits the account group. */
       readonly emptyValue: AccountKeyGroupEmptyValue
@@ -296,7 +305,7 @@ export type AccountKeyDisplayFact =
   | {
       readonly fieldId: string
       /** Billing attribution target; independent of account/model access groups. */
-      readonly kind: "attribution"
+      readonly kind: typeof ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution
       /** Provider-declared attribution key, resolved through the provider's copy. */
       readonly value: string
     }
@@ -381,8 +390,8 @@ export type AccountKeyResourcePage = {
 }
 
 export const ACCOUNT_KEY_MUTATION_CERTAINTIES = {
-  NotApplied: "not-applied",
-  PossiblyApplied: "possibly-applied",
+  NotApplied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
+  PossiblyApplied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
 } as const
 
 export type AccountKeyMutationCertainty =

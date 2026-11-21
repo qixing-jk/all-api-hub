@@ -5,11 +5,7 @@ import type { DisplaySiteData } from "~/types"
 export function resolveKnownAccountExchangeRate(
   account?: DisplaySiteData,
 ): number | undefined {
-  const rate =
-    account?.exchangeRate ??
-    (account?.balance && account.balance.USD !== 0
-      ? account.balance.CNY / account.balance.USD
-      : undefined)
+  const rate = account?.exchangeRate
   return rate !== undefined && Number.isFinite(rate) && rate > 0
     ? rate
     : undefined

@@ -3,8 +3,13 @@ import type { ComponentProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { KEY_RESOURCE_CARD_STATUSES } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { AccountKeyResourceDeleteDialog } from "~/features/KeyManagement/resources/AccountKeyResourceDeleteDialog"
-import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_PERMISSION_ROLES,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -200,8 +205,8 @@ describe("account credential deletion guard", () => {
         displayFacts: [
           {
             fieldId: "permissions",
-            kind: "permission",
-            role: "manage",
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Permission,
+            role: ACCOUNT_KEY_PERMISSION_ROLES.Manage,
             granted: true,
           },
         ],
@@ -236,7 +241,10 @@ describe("account credential deletion guard", () => {
     props.nativeKeys.allRows = [
       {
         ...props.nativeKeys.allRows[0]!,
-        accountCredentialIdentity: { status: "unknown", source: "none" },
+        accountCredentialIdentity: {
+          status: KEY_RESOURCE_CARD_STATUSES.Unknown,
+          source: "none",
+        },
       },
     ]
     props.getProfileForLocator = vi

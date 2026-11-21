@@ -10,6 +10,22 @@
       "retryAccount": "Retry",
       "verifyStatus": "Verify status"
     },
+    "awards": {
+      "amountUnknown": "Amount unknown · {{asset}}",
+      "credited": "Credited",
+      "details": "Award details",
+      "entitlement": "Entitlement award",
+      "exchangedFrom": "Exchanged from {{event}}",
+      "fulfillmentUnknown": "Fulfillment unknown",
+      "noExpiry": "No expiry",
+      "observedAt": "Observed {{date}}",
+      "pendingRedemption": "Pending redemption",
+      "redeemed": "Redeemed",
+      "targetUnknown": "Award destination unknown",
+      "title": "Confirmed awards",
+      "unknownAsset": "Unknown asset",
+      "wallet": "Wallet award"
+    },
     "debug": {
       "evaluateUiOpenPretrigger": "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       "resetLastDailyRunDay": "Dev: Clear 'Daily check-in already run today' flag",
@@ -78,9 +94,7 @@
       "summary": "Showing {{start}}–{{end}} of {{total}}"
     },
     "refresh": "Refresh",
-    "reward": {
-      "title": "Reward for this check-in"
-    },
+    "retryStatusLoad": "Retry loading results",
     "runNow": "Run now",
     "statistics": {
       "result": "Result"
@@ -92,6 +106,7 @@
       "success": "Checked in this run",
       "uncertain": "Pending confirmation"
     },
+    "statusLoadError": "Could not load check-in results. Retry to refresh; any results still shown are from the last successful load.",
     "table": {
       "accountName": "Account Name",
       "actions": "Actions",

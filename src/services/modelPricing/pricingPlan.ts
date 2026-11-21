@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { CURRENCIES } from "~/constants/money"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,
@@ -108,7 +109,7 @@ const rateSchema = z.strictObject({
   /** Published rate cannot represent the whole meter without a usage split. */
   unverifiedReason: z.literal(PRICING_ISSUE_CODES.OUTPUT_TOKEN_MIX).optional(),
   amount: nonnegative,
-  currency: z.enum(["USD", "CNY"]),
+  currency: z.enum([CURRENCIES.USD, CURRENCIES.CNY]),
   unit: z.enum(PRICE_RATE_UNITS),
   per: z.number().finite().positive(),
   /** Allowance per task, deducted from measured quantity before applying the rate. */
@@ -270,7 +271,7 @@ export const pricingPlanSchema = z.strictObject({
     capturedAt: z.string().optional(),
     conversion: z
       .strictObject({
-        originalCurrency: z.literal("CNY"),
+        originalCurrency: z.literal(CURRENCIES.CNY),
         cnyPerUsd: z.number().finite().positive(),
       })
       .optional(),
@@ -324,6 +325,8 @@ export interface PricingCostContext {
   cnyPerUsd?: number
 }
 export interface QuoteResult {
+  /** The caller's intent; a one-request comparison is still a comparison. */
+  purpose?: PricingScenario["purpose"]
   /** Safe numeric/time context for explaining quote failures, not request payloads. */
   requirementDetails?: {
     axis:

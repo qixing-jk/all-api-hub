@@ -50,6 +50,33 @@ const request = {
   },
 }
 
+it.each([
+  [SITE_TYPES.NEW_API, "quotaUsd", "额度（美元）"],
+  [SITE_TYPES.GRSAI, "credits", "剩余积分"],
+] as const)(
+  "presents %s quota in the declared editor unit",
+  async (siteType, quotaField, label) => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: "zh-CN",
+      resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+    })
+    const editor = createNewApiKeyEditor(
+      resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
+      request,
+    )
+    const presentation = getPresentation(siteType, editorModes.Create, {
+      fields: editor.fields,
+    })
+    const quota = presentation.policy.fields.find(
+      (field) => field.fieldId === quotaField,
+    )!
+    expect(quota.resolveLabel(i18n.t)).toBe(label)
+    const placeholder = quota.resolvePlaceholder?.(i18n.t) ?? ""
+    expect(/USD|美元/.test(placeholder)).toBe(siteType === SITE_TYPES.NEW_API)
+  },
+)
+
 it("provides localized AIMLAPI restrictions, caps, reset periods and validation messages", async () => {
   const i18n = createInstance()
   await i18n.init({
@@ -721,7 +748,7 @@ describe("native key editor field policies", () => {
           resolveNewApiKeyVariant(SITE_TYPES.RIX_API),
           request,
         ).fields.filter((field) =>
-          ["name", "group", "quotaUsd"].includes(field.fieldId),
+          ["name", "group", "quota"].includes(field.fieldId),
         ),
       },
     ).policy.fields.map((field) => field.fieldId)

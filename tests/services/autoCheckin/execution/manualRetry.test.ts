@@ -1,9 +1,22 @@
+import { CURRENCIES } from "~/constants/money"
+
 // Install shared mocks before loading scheduler dependencies.
 import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ConfirmedAward } from "~/services/amounts/awards"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { autoCheckinAlarmSchedule } from "~/services/checkin/autoCheckin/scheduling/alarmSchedule"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -25,6 +38,297 @@ describe("autoCheckinScheduler.retryAccount", () => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
   })
+
+  it.each([{ order: ["A1", "A2", "A1"] }, { order: ["A2", "A1", "A1"] }])(
+    "keeps award-bearing receipt provenance across out-of-order results: $order",
+    async ({ order }) => {
+      const account = buildSiteAccount({
+        id: "receipt-order",
+        site_type: SITE_TYPES.VELOERA,
+        checkIn: runnableCheckIn(),
+      })
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      const timestamp = Date.now() - 1000
+      for (const receipt of order) {
+        const isLater = receipt === "A2"
+        const awards: ConfirmedAward[] = [
+          {
+            id: "grant",
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            amount: {
+              status: OBSERVATION_STATUSES.Known,
+              value: isLater ? "2" : "1",
+              observedAt: timestamp,
+              source: {
+                adapter: "veloera",
+                operation: "claim",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+              },
+            },
+            scope: {
+              subject: {
+                kind: FINANCIAL_SUBJECT_KINDS.Account,
+                accountId: account.id,
+              },
+              authority: account.site_url,
+              models: { kind: SCOPE_SELECTION_KINDS.Unknown },
+              keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
+              projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
+              groups: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            },
+            validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+            target: AWARD_TARGETS.Wallet,
+            fulfillment: AWARD_FULFILLMENT.Credited,
+          },
+        ]
+        mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+          kind: "executed",
+          methodId: "veloera:daily-checkin",
+          executionReceiptId: receipt,
+          completedAt: timestamp + (isLater ? 1 : 0),
+          retryable: false,
+          result: {
+            status: isLater ? "success" : "failed",
+            awards: structuredClone(awards),
+          },
+        })
+        await retryAccountForTest(account.id)
+        schedulerTestState.storedStatus = structuredClone(
+          schedulerTestState.storedStatus,
+        )
+      }
+      const result = schedulerTestState.storedStatus.perAccount[account.id]
+      expect(result).toMatchObject({
+        status: "success",
+        executionReceiptId: "A2",
+        timestamp: timestamp + 1,
+      })
+      expect(
+        result.awards
+          .map((award: ConfirmedAward) =>
+            award.amount.status === "known" ? award.amount.value : "unknown",
+          )
+          .sort(),
+      ).toEqual(["1", "2"])
+      expect(result.awardExecutionReceiptIds.sort()).toEqual(["A1", "A2"])
+    },
+  )
+
+  it.each([
+    { timestampLead: 0, alreadyIncluded: false },
+    { timestampLead: 1, alreadyIncluded: false },
+    { timestampLead: 1, alreadyIncluded: true },
+  ])(
+    "keeps confirmed partial awards when a fresher successful result wins: %j",
+    async ({ timestampLead, alreadyIncluded }) => {
+      const account = buildSiteAccount({
+        id: "late-awards",
+        site_type: SITE_TYPES.VELOERA,
+        checkIn: runnableCheckIn(),
+      })
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      const timestamp = Date.now() - 1000
+      const awards: ConfirmedAward[] = [
+        {
+          id: "partial-grant",
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+          amount: {
+            status: OBSERVATION_STATUSES.Known,
+            value: "0",
+            observedAt: timestamp,
+            source: {
+              adapter: "veloera",
+              operation: "claim",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          },
+          scope: {
+            subject: {
+              kind: FINANCIAL_SUBJECT_KINDS.Account,
+              accountId: account.id,
+            },
+            authority: account.site_url,
+            models: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            groups: { kind: SCOPE_SELECTION_KINDS.Unknown },
+          },
+          validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+          target: AWARD_TARGETS.Wallet,
+          fulfillment: AWARD_FULFILLMENT.Credited,
+        },
+      ]
+      const retainedAwards = alreadyIncluded
+        ? [
+            {
+              ...awards[0]!,
+              id: "legacy-reward",
+              asset: {
+                kind: ASSET_KINDS.Quota,
+                id: "legacy:checkin:quota",
+                label: "quota",
+                displayScale: 1,
+                displayLabel: "quota",
+              } as const,
+              amount: {
+                ...awards[0]!.amount,
+                status: OBSERVATION_STATUSES.Known,
+                value: "95000",
+                observedAt: timestamp - 1000,
+                source: {
+                  adapter: "legacy",
+                  operation: "stored-checkin-reward",
+                  contractVersion: "1",
+                  kind: EVIDENCE_KINDS.Legacy,
+                },
+              },
+            },
+            ...awards,
+          ]
+        : awards
+      const success = {
+        accountId: account.id,
+        accountName: "Late Awards",
+        methodId: "veloera:daily-checkin",
+        status: "success",
+        timestamp: timestamp + timestampLead,
+        ...(alreadyIncluded
+          ? {
+              awards: structuredClone(retainedAwards),
+              awardExecutionReceiptIds: ["late-partial-receipt"],
+            }
+          : {}),
+      }
+      schedulerTestState.storedStatus = {
+        perAccount: { [account.id]: success },
+        accountsSnapshot: [{ accountId: account.id, lastResult: success }],
+      }
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "executed",
+        methodId: "veloera:daily-checkin",
+        completedAt: timestamp,
+        executionReceiptId: "late-partial-receipt",
+        retryable: false,
+        result: { status: "failed", awards },
+      })
+      const response = await retryAccountForTest(account.id)
+      expect(response.result).toMatchObject({
+        ...success,
+        awards: retainedAwards,
+      })
+      expect(
+        schedulerTestState.storedStatus.perAccount[account.id],
+      ).toMatchObject({ ...success, awards: retainedAwards })
+      expect(
+        schedulerTestState.storedStatus.accountsSnapshot[0].lastResult,
+      ).toMatchObject({ ...success, awards: retainedAwards })
+      expect(response.summary).toMatchObject({
+        successCount: 1,
+        failedCount: 0,
+        needsRetry: false,
+      })
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "executed",
+        methodId: "veloera:daily-checkin",
+        completedAt: timestamp,
+        executionReceiptId: "late-partial-receipt",
+        retryable: false,
+        reused: true,
+        result: { status: "failed", awards: structuredClone(awards) },
+      })
+      const repeated = await retryAccountForTest(account.id)
+      expect(repeated.result).toMatchObject({
+        ...success,
+        awards: retainedAwards,
+      })
+    },
+  )
+
+  it.each([
+    { reused: true, sameReceipt: true, expectedCount: 1 },
+    { reused: false, sameReceipt: true, expectedCount: 1 },
+    { reused: false, sameReceipt: false, expectedCount: 2 },
+    { reused: true, sameReceipt: false, expectedCount: 2 },
+  ])(
+    "uses admission receipt identity to preserve uncorrelated grants during retry: %j",
+    async ({ reused, sameReceipt, expectedCount }) => {
+      const account = buildSiteAccount({
+        id: "awarded-retry",
+        site_type: SITE_TYPES.VELOERA,
+        checkIn: runnableCheckIn(),
+      })
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      const timestamp = Date.now() - 1000
+      const awards: ConfirmedAward[] = [
+        {
+          id: "grant",
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          amount: {
+            status: OBSERVATION_STATUSES.Known,
+            value: "2",
+            observedAt: timestamp,
+            source: {
+              adapter: "veloera",
+              operation: "claim",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          },
+          scope: {
+            subject: {
+              kind: FINANCIAL_SUBJECT_KINDS.Account,
+              accountId: account.id,
+            },
+            authority: account.site_url,
+            models: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
+            groups: { kind: SCOPE_SELECTION_KINDS.Unknown },
+          },
+          validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+          target: AWARD_TARGETS.Wallet,
+          fulfillment: AWARD_FULFILLMENT.Credited,
+        },
+      ]
+      const storedResult = {
+        accountId: account.id,
+        accountName: "Awarded Retry",
+        methodId: "veloera:daily-checkin",
+        executionReceiptId: "stored-receipt",
+        status: "failed",
+        timestamp,
+        awards: structuredClone(awards),
+      }
+      schedulerTestState.storedStatus = {
+        perAccount: { [account.id]: storedResult },
+        accountsSnapshot: [
+          { accountId: account.id, lastResult: structuredClone(storedResult) },
+        ],
+      }
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "executed",
+        methodId: "veloera:daily-checkin",
+        executionReceiptId: sameReceipt ? "stored-receipt" : "other-receipt",
+        ...(reused ? { reused: true } : {}),
+        retryable: false,
+        completedAt: timestamp,
+        result: { status: "failed", awards: structuredClone(awards) },
+      })
+      const response = await retryAccountForTest(account.id)
+      const expectedAwards =
+        expectedCount === 1 ? awards : [...awards, ...awards]
+      expect(response.result).toMatchObject({ awards: expectedAwards })
+      expect(
+        schedulerTestState.storedStatus.perAccount[account.id].awards,
+      ).toEqual(expectedAwards)
+      expect(
+        schedulerTestState.storedStatus.accountsSnapshot[0].lastResult.awards,
+      ).toEqual(expectedAwards)
+      expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("keeps a newer result when a single-account retry finishes persistence late", async () => {
     const account = buildSiteAccount({

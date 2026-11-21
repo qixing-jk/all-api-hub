@@ -1,9 +1,11 @@
+import { CURRENCIES } from "~/constants/money"
 /**
  * 模型定价计算工具
  */
 
 import {
   isModelPriceUnavailable,
+  MODEL_PRICE_SOURCE_KINDS,
   type ModelPricing,
   type ModelUnavailablePriceReason,
   type PerCallPrice,
@@ -26,9 +28,7 @@ import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
 
 export type CalculatedPrice = (
-  | CalculatedTokenPrice
-  | CalculatedPerCallPrice
-  | UnavailableCalculatedPrice
+  CalculatedTokenPrice | CalculatedPerCallPrice | UnavailableCalculatedPrice
 ) & {
   publishedPricing?: PublishedPricing
   quote?: QuoteResult
@@ -81,7 +81,7 @@ type PartialTokenPricesUSD = Partial<TokenPricesUSD>
  * Returns true when the provider supplied a finite direct USD price value.
  */
 const isFiniteTokenPrice = (value: number | undefined): value is number =>
-  typeof value === "number" && Number.isFinite(value)
+  typeof value === "number" && Number.isFinite(value) && value >= 0
 
 const isFiniteNonnegativeCachePrice = (
   value: number | undefined,
@@ -166,7 +166,8 @@ const publishedTokenRates = (
     return undefined
   // Complete USD rates use the canonical field. Partial rates and other
   // currencies stay here without inventing prices for absent meters.
-  if (input?.currency === "USD" && output?.currency === "USD") return undefined
+  if (input?.currency === CURRENCIES.USD && output?.currency === CURRENCIES.USD)
+    return undefined
   if (
     !input &&
     !output &&
@@ -201,7 +202,7 @@ export const calculateModelPrice = (
   const effectiveGroupMultiplier =
     Number.isFinite(groupMultiplier) && groupMultiplier >= 0
       ? groupMultiplier
-      : 1
+      : NaN
 
   // Browse the same independent base prices used by the scenario evaluator.
   const plan = model.pricingPlan
@@ -226,7 +227,7 @@ export const calculateModelPrice = (
     return { kind: CALCULATED_PRICE_KINDS.UNAVAILABLE, billingMode: "per-call" }
   const basePrice = (meter: PriceMeter) => {
     const rate = plan?.rates[meter]
-    if (!rate || rate.currency !== "USD") return undefined
+    if (!rate || rate.currency !== CURRENCIES.USD) return undefined
     const amount =
       (rate.amount / rate.per) *
       (rate.unit === PRICE_RATE_UNITS.TOKEN ? TOKENS_PER_MILLION : 1) *
@@ -276,7 +277,15 @@ export const calculateModelPrice = (
       effectiveGroupMultiplier,
     )
     const directPrice = resolveDirectTokenPriceUSD(model)
-    const input = directPrice.input ?? ratioPrice.input
+    const isIndependentCatalogue =
+      model.price_metadata?.source ===
+        MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG ||
+      model.price_metadata?.source ===
+        MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE
+    const input =
+      directPrice.input ?? (isIndependentCatalogue ? NaN : ratioPrice.input)
+    const output =
+      directPrice.output ?? (isIndependentCatalogue ? NaN : ratioPrice.output)
     const cacheRead = resolveOptionalCachePrice(
       model.token_price_usd_per_million?.cache_read,
       model.token_price_ratios_to_input?.cache_read,
@@ -288,11 +297,27 @@ export const calculateModelPrice = (
       input,
     )
 
+    if (!isFiniteTokenPrice(input) || !isFiniteTokenPrice(output)) {
+      const rates = { input, output, cacheRead, cacheWrite }
+      const perMillionTokens = Object.fromEntries(
+        Object.entries(rates).flatMap(([meter, amount]) =>
+          isFiniteTokenPrice(amount)
+            ? [[meter, { amount, currency: CURRENCIES.USD }]]
+            : [],
+        ),
+      )
+      return {
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+        billingMode,
+        ...(Object.keys(perMillionTokens).length ? { perMillionTokens } : {}),
+      }
+    }
+
     return {
       kind: CALCULATED_PRICE_KINDS.TOKEN,
       usdPerMillionTokens: {
         input,
-        output: directPrice.output ?? ratioPrice.output,
+        output,
         ...(cacheRead !== undefined ? { cacheRead } : {}),
         ...(cacheWrite !== undefined ? { cacheWrite } : {}),
       },
@@ -303,6 +328,15 @@ export const calculateModelPrice = (
       model.model_price,
       effectiveGroupMultiplier,
     )
+
+    if (
+      !(
+        typeof perCallPrice === "number"
+          ? [perCallPrice]
+          : [perCallPrice.input, perCallPrice.output]
+      ).every(isFiniteTokenPrice)
+    )
+      return { kind: CALCULATED_PRICE_KINDS.UNAVAILABLE, billingMode }
 
     return {
       kind: CALCULATED_PRICE_KINDS.PER_CALL,
@@ -316,7 +350,7 @@ export const resolvePriceAmount = (
   usdAmount: number,
   currency: CurrencyType,
   cnyPerUsd: number,
-): number => (currency === "CNY" ? usdAmount * cnyPerUsd : usdAmount)
+): number => (currency === CURRENCIES.CNY ? usdAmount * cnyPerUsd : usdAmount)
 
 /**
  * Projects one currency-stamped per-million rate set onto the display shape.
@@ -330,6 +364,9 @@ export const projectTokenPrices = (
   const first =
     rates.input ?? rates.output ?? rates.cacheRead ?? rates.cacheWrite
   if (!first) return undefined
+  // A single-currency row cannot represent a mixed published schedule.
+  if (Object.values(rates).some((rate) => rate?.currency !== first.currency))
+    return undefined
   return {
     currency: first.currency,
     prices: {
@@ -371,10 +408,10 @@ const calculateModelPerCallPrice = (
  */
 export const formatPrice = (
   price: number,
-  currency: CurrencyType = "USD",
+  currency: CurrencyType = CURRENCIES.USD,
   precision: number = 4,
 ): string => {
-  const symbol = currency === "USD" ? "$" : "¥"
+  const symbol = currency === CURRENCIES.USD ? "$" : "¥"
 
   if (price === 0) return `${symbol}0`
 
@@ -392,9 +429,9 @@ export const formatPrice = (
  */
 export const formatPriceCompact = (
   price: number,
-  currency: CurrencyType = "USD",
+  currency: CurrencyType = CURRENCIES.USD,
 ): string => {
-  const symbol = currency === "USD" ? "$" : "¥"
+  const symbol = currency === CURRENCIES.USD ? "$" : "¥"
 
   if (price === 0) return `${symbol}0`
 

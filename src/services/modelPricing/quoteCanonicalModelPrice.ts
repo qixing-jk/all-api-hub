@@ -16,7 +16,7 @@ import { type PricingCostContext, type PricingScenario } from "./pricingPlan"
 import { quoteModelPrice } from "./quoteModelPrice"
 
 /** Converts existing flat adapters at the migration boundary without changing their multiplier ownership. */
-export function quoteCanonicalModelPrice(
+function calculateCanonicalModelPrice(
   model: ModelPricing,
   scenario: PricingScenario,
   cost: PricingCostContext,
@@ -88,4 +88,16 @@ export function quoteCanonicalModelPrice(
       ? { request: scenario.usage.request }
       : scenario.usage
   return quoteModelPrice(plan, { ...scenario, usage }, cost)
+}
+
+/** Preserve caller intent when fixed-call comparisons normalize to request quantities. */
+export function quoteCanonicalModelPrice(
+  model: ModelPricing,
+  scenario: PricingScenario,
+  cost: PricingCostContext,
+) {
+  return {
+    ...calculateCanonicalModelPrice(model, scenario, cost),
+    purpose: scenario.purpose,
+  }
 }

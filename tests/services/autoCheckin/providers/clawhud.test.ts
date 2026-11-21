@@ -6,7 +6,6 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   CLAWHUD_DAILY_CHECK_IN_ERROR_CODES,
@@ -248,7 +247,7 @@ describe("Clawhud check-in integration", () => {
       status: CHECKIN_RESULT_STATUS.SUCCESS,
     })
   })
-  it("reports the awarded USD amount as a quota reward", async () => {
+  it("reports the awarded USD amount without a quota round trip and retains its source", async () => {
     vi.mocked(performClawhudDailyCheckIn).mockResolvedValue({
       kind: CLAWHUD_DAILY_CHECK_IN_RESULT_KINDS.Applied,
       data: { rewardAmount: 1.14 },
@@ -260,7 +259,24 @@ describe("Clawhud check-in integration", () => {
       }),
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
-      reward: { quota: 1.14 * QUOTA_PER_USD },
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: {
+            status: "known",
+            value: "1.14",
+            source: {
+              operation: "/api/v1/user/checkin",
+              inputs: ["today_amount"],
+            },
+          },
+          scope: {
+            authority: "https://api.clawhud.com",
+            subject: { accountId: "clawhud-account" },
+          },
+          fulfillment: "credited",
+        },
+      ],
     })
   })
   it("maps the duplicate-mutation upstream reason to already checked", async () => {

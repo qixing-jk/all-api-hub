@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { prepareDefaultAccountKeyCreation } from "~/services/accounts/keys/accountKeyCreation"
 import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
@@ -1173,18 +1174,22 @@ it.each([1893456000, 1893456000000])(
       0,
     )
     expect(facts.displayFacts).toEqual([
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "finite",
+          remaining: expect.objectContaining({ status: "known", value: "10" }),
+          used: expect.objectContaining({ status: "known", value: "3" }),
+        }),
+      }),
       {
-        fieldId: "amount",
-        kind: "money",
-        role: "remaining",
-        amountUsd: 10,
-        unlimited: false,
+        fieldId: "expireTime",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Expiry,
+        timestampMs: 1893456000000,
       },
-      { fieldId: "used", kind: "money", role: "used", amountUsd: 3 },
-      { fieldId: "expireTime", kind: "expiry", timestampMs: 1893456000000 },
       {
         fieldId: "groups",
-        kind: "group",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
         value: ["9"],
         emptyValue: "ungrouped",
       },

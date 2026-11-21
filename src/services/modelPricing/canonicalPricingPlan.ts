@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 import {
   isModelPriceUnavailable,
   MODEL_PRICE_PRECISION_KINDS,
@@ -40,30 +41,38 @@ export function resolveCanonicalPricingPlan(
       ...(model.price_metadata?.source_url
         ? { url: model.price_metadata.source_url }
         : {}),
+      ...(model.price_metadata?.source_date
+        ? { capturedAt: model.price_metadata.source_date }
+        : {}),
       kind:
-        model.price_metadata?.source ===
-        MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG
-          ? PRICING_SOURCE_KINDS.CATALOG
-          : model.price_metadata?.precision ===
-              MODEL_PRICE_PRECISION_KINDS.ESTIMATED
-            ? PRICING_SOURCE_KINDS.ESTIMATE
+        model.price_metadata?.precision ===
+        MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+          ? PRICING_SOURCE_KINDS.ESTIMATE
+          : model.price_metadata?.source ===
+              MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG
+            ? PRICING_SOURCE_KINDS.CATALOG
             : PRICING_SOURCE_KINDS.ACCOUNT,
     },
     issues: [],
   }
-  if (calculated.kind === CALCULATED_PRICE_KINDS.TOKEN) {
+  if (
+    calculated.kind === CALCULATED_PRICE_KINDS.TOKEN ||
+    calculated.perMillionTokens
+  ) {
     for (const meter of TOKEN_METERS) {
       const amount =
         meter === PRICING_METERS.INPUT ||
         meter === PRICING_METERS.OUTPUT ||
         meter === PRICING_METERS.CACHE_READ ||
         meter === PRICING_METERS.CACHE_WRITE
-          ? calculated.usdPerMillionTokens[meter]
+          ? calculated.kind === CALCULATED_PRICE_KINDS.TOKEN
+            ? calculated.usdPerMillionTokens[meter]
+            : calculated.perMillionTokens?.[meter]?.amount
           : undefined
       if (amount !== undefined && Number.isFinite(amount) && amount >= 0)
         plan.rates[meter] = {
           amount,
-          currency: "USD",
+          currency: CURRENCIES.USD,
           unit: PRICE_RATE_UNITS.TOKEN,
           per: TOKENS_PER_MILLION,
         }
@@ -74,7 +83,7 @@ export function resolveCanonicalPricingPlan(
   ) {
     plan.rates.request = {
       amount: calculated.usdPerCall,
-      currency: "USD",
+      currency: CURRENCIES.USD,
       unit: PRICE_RATE_UNITS.REQUEST,
       per: 1,
     }
@@ -89,7 +98,7 @@ export function resolveCanonicalPricingPlan(
       ] as const) {
         plan.rates[meter] = {
           amount: calculated.usdPerCall[meter],
-          currency: "USD",
+          currency: CURRENCIES.USD,
           unit: PRICE_RATE_UNITS.REQUEST,
           per: 1,
         }

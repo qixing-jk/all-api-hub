@@ -4,7 +4,7 @@ export interface NewApiCheckInRecord {
    * @example "2026-01-03"
    */
   checkin_date: string
-  quota_awarded: number
+  quota_awarded: number | string
 }
 
 export interface NewApiCheckInStatus {

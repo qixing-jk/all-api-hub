@@ -150,6 +150,17 @@
     "consumption": "Today's consumption",
     "income": "Today's income"
   },
+  "financial": {
+    "derived": "Derived from reported fields",
+    "expires": "Expires: {{date}}",
+    "lastKnown": "Last known value",
+    "manual": "Manual balance",
+    "olderRecord": "Recorded by an older version",
+    "reported": "Reported by site",
+    "scopeUnknown": "Usage scope unverified",
+    "technicalDetails": "Technical details (debug)",
+    "validityUnknown": "Validity unverified"
+  },
   "healthStatus": {
     "apiError": "API error",
     "error": "Error",
@@ -341,7 +352,7 @@
     "prompt": "Prompt",
     "scopedAllowances": "Group and subscription allowances may have usage restrictions. Native allowances are excluded from balance totals, balance history and income estimates.",
     "subscriptionRemainingCount": "Remaining subscription requests",
-    "subscriptionRemainingTokens": "Remaining token credit (pool + keys); dollar balance is the published price equivalent, including free tokens.",
+    "subscriptionRemainingTokens": "Remaining tokens",
     "subscriptionState": {
       "active": "Subscription active",
       "expired": "Subscription expired",

@@ -7,6 +7,7 @@ import {
   fetchBaiApiCheckInStatus,
   performBaiApiCheckIn,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
+import { BAI_API_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
@@ -31,7 +32,7 @@ import {
   createSub2ApiCheckInReadRequest,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -88,14 +89,21 @@ export const baiApiProvider: AutoCheckinProvider = {
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
         { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
-      const reward = readUsdReward(result.rewardAmount)
+      const awards = readUsdAwards(
+        account as SiteAccount,
+        result.rewardAmount,
+        {
+          operation: BAI_API_CHECK_IN_ENDPOINT,
+          field: result.rewardField ?? "cash_amount_usd",
+        },
+      )
       return withCheckInResponseConfirmation(
         account as SiteAccount,
         {
           status: CHECKIN_RESULT_STATUS.SUCCESS,
           messageKey:
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-          ...(reward ? { reward } : {}),
+          awards,
           data: result,
         },
         { day: result.checkinDate },

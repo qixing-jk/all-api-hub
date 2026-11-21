@@ -4,6 +4,13 @@ import {
 } from "~/services/accountSiteDefinitions/identifiers"
 
 export { GRSAI_API_BASE_URL, GRSAI_CONSOLE_API_ORIGIN }
+/** Native credits are a provider asset; purchase quotes do not make them USD. */
+export const GRSAI_CREDIT_ASSET = {
+  id: "grsai:credits",
+  label: "Credits",
+  displayLabel: "Credits",
+  displayScale: 1,
+} as const
 
 /**
  * Console API routes, verified against the deployment on 2026-09-29.

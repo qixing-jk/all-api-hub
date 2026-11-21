@@ -198,7 +198,7 @@ it.each(["global", "none", null])(
 )
 
 it.each([NaN, Infinity, -1, "1", Number.MAX_VALUE])(
-  "rejects invalid limited dollar quota %s",
+  "rejects invalid limited quota in the editor's declared unit %s",
   (quotaUsd) => {
     for (const editor of [
       createAIHubMixKeyEditor(request),
@@ -210,16 +210,21 @@ it.each([NaN, Infinity, -1, "1", Number.MAX_VALUE])(
         request,
       ),
     ]) {
+      const quotaField = editor.fields.some(
+        (field) => field.fieldId === "quota",
+      )
+        ? "quota"
+        : "quotaUsd"
       expect(
         editor.validate({
           ...editor.initialValues,
           unlimited_quota: false,
-          quotaUsd,
+          [quotaField]: quotaUsd,
         }),
       ).toMatchObject({
         valid: false,
         issues: expect.arrayContaining([
-          { fieldId: "quotaUsd", code: "out_of_range" },
+          { fieldId: quotaField, code: "out_of_range" },
         ]),
       })
     }

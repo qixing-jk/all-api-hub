@@ -20,7 +20,7 @@
     },
     "title": "Detalhamento da conta"
   },
-  "description": "Consulte tendências diárias de saldo, receitas e despesas para acompanhar os fundos das contas.",
+  "description": "Veja como os saldos e as cotas das suas contas mudam.",
   "empty": {
     "description": "Ative o histórico de saldo e atualize uma conta para registrar o primeiro instantâneo.",
     "title": "Nenhum instantâneo ainda"
@@ -84,16 +84,26 @@
     },
     "success": {
       "pruneCompleted": "Dados antigos removidos",
-      "refreshCompleted": "Atualização concluída",
+      "refreshCompleted": "Histórico registrado: {{captured}}; não registrado: {{uncaptured}}.",
       "settingsSaved": "Configurações salvas"
     }
   },
   "metrics": {
     "balance": "Saldo",
-    "estimatedIncome": "Renda estimada",
+    "estimatedIncome": "Entrada líquida estimada",
     "income": "Renda",
     "net": "Variação líquida",
     "outcome": "Gastos"
+  },
+  "native": {
+    "dimensions": {
+      "groups": "Grupos",
+      "keys": "Chaves",
+      "models": "Modelos",
+      "projects": "Projetos",
+      "routes": "Rotas"
+    },
+    "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {
     "kpis": {
@@ -119,8 +129,8 @@
     "enabledHint": "Quando desativado, nenhum instantâneo é gravado e a captura agendada é desativada.",
     "endOfDayCapture": "Captura de fim de dia",
     "endOfDayCaptureHint": "Tenta fazer uma captura diária por volta de {{time}} (requer a API de alarmes).",
-    "estimatedTodayIncome": "Mostrar renda estimada hoje",
-    "estimatedTodayIncomeHint": "Usa o histórico de saldo para estimar recompensas que não aparecem nos registros de receitas do site. Indisponível quando falta a linha de base do dia anterior.",
+    "estimatedTodayIncome": "Mostrar entrada líquida estimada",
+    "estimatedTodayIncomeHint": "Estima o fluxo líquido com saldos comparáveis próximos ao início do dia e uso liquidado em um período semelhante.",
     "retentionDays": "Retenção (dias)"
   },
   "summary": {
@@ -131,7 +141,7 @@
       "account": "Conta",
       "cashflowCoverage": "Cobertura de fluxo de caixa",
       "endBalance": "Saldo final",
-      "estimatedIncomeTotal": "Renda total estimada",
+      "estimatedIncomeTotal": "Entrada líquida estimada",
       "incomeTotal": "Renda total",
       "outcomeTotal": "Gastos totais",
       "rangeNet": "Variação líquida no período",
@@ -154,7 +164,7 @@
       "scope": "Ver"
     },
     "emptyMetric": "Não há dados {{metric}} neste intervalo.",
-    "gapBridge": "Os trechos tracejados indicam dias sem registros.",
+    "gapBridge": "Sem registros",
     "scopes": {
       "accounts": "Por conta",
       "total": "Total"

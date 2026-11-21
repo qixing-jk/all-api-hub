@@ -109,7 +109,7 @@ function parseVercelKeyBudget(
     currentSpend: currentSpend ?? 0,
     refreshPeriod: value.refreshPeriod as VercelKeyBudgetInput["refreshPeriod"],
     alertThresholds: alerts,
-    active: value.active !== false,
+    ...(typeof value.active === "boolean" ? { active: value.active } : {}),
     archived: value.archived === true,
     ...(typeof value.includeByokInQuota === "boolean"
       ? { includeByokInQuota: value.includeByokInQuota }

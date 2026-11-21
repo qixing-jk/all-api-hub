@@ -15,10 +15,12 @@ import {
 import { CredentialAssociationMenu } from "~/features/ApiCredentialProfiles/associations/CredentialAssociationMenu"
 import type { KeyCredentialAssociationStatus } from "~/features/KeyManagement/associations/credentialAssociations"
 import { BatchSelectionControl } from "~/features/KeyManagement/inventory/BatchSelectionControl"
-import type {
-  KeyResourceCardPresentation,
-  KeyResourceDetailState,
-  KeyResourceFact,
+import { KeyBudgetDetails } from "~/features/KeyManagement/inventory/KeyBudgetDetails"
+import {
+  KEY_RESOURCE_CARD_STATUSES,
+  type KeyResourceCardPresentation,
+  type KeyResourceDetailState,
+  type KeyResourceFact,
 } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { cn } from "~/lib/utils"
@@ -91,6 +93,7 @@ export type KeyResourceFactListProps = {
   facts: KeyResourceFact[]
   testId?: string
   layout?: KeyResourceContentLayout
+  compact?: boolean
 }
 
 export type KeyResourceSecretDisplayProps = {
@@ -106,11 +109,11 @@ export type KeyResourceSecretDisplayProps = {
  */
 function getStatusBadgeVariant(status: KeyResourceCardPresentation["status"]) {
   switch (status) {
-    case "active":
+    case KEY_RESOURCE_CARD_STATUSES.Active:
       return "success"
-    case "inactive":
+    case KEY_RESOURCE_CARD_STATUSES.Inactive:
       return "destructive"
-    case "unknown":
+    case KEY_RESOURCE_CARD_STATUSES.Unknown:
       return "outline"
   }
 }
@@ -130,8 +133,8 @@ export function KeyResourceCardHeader({
   const actionsRef = useKeyResourceActionRows()
 
   return (
-    <div className="gap-y-density-2 flex min-w-0 flex-col gap-x-2 sm:flex-row sm:items-start sm:justify-between">
-      <div className="gap-y-density-2 flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
+    <div className="flex min-w-0 flex-col gap-x-2 gap-y-density-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-density-2">
         {selection}
         <Heading6 className="min-w-0 text-sm break-words sm:text-base">
           {presentation.title}
@@ -172,7 +175,7 @@ export function KeyResourceCardHeader({
       </div>
       <div
         ref={actionsRef}
-        className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5 [--key-action-separator-left:-0.1875rem]"
+        className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-density-1-5 [--key-action-separator-left:-0.1875rem]"
       >
         {association ? (
           <KeyResourceActionGroup
@@ -279,7 +282,7 @@ export function KeyResourceActionToolbar({
       role="toolbar"
       aria-label={label}
       data-testid={testId}
-      className="gap-y-density-1 flex w-full flex-wrap items-center justify-start gap-x-4 [--key-action-separator-left:-0.5rem] sm:w-auto sm:shrink-0 sm:justify-end"
+      className="flex w-full flex-wrap items-center justify-start gap-x-4 gap-y-density-1 [--key-action-separator-left:-0.5rem] sm:w-auto sm:shrink-0 sm:justify-end"
     >
       {children}
     </div>
@@ -298,7 +301,7 @@ function KeyResourceActionSeparator() {
   return (
     <span
       aria-hidden="true"
-      className="bg-border absolute top-1/2 left-[var(--key-action-separator-left,-0.5rem)] h-4 w-px -translate-y-1/2 group-data-[row-start=true]/key-actions:invisible"
+      className="absolute top-1/2 left-[var(--key-action-separator-left,-0.5rem)] h-4 w-px -translate-y-1/2 bg-border group-data-[row-start=true]/key-actions:invisible"
     />
   )
 }
@@ -335,6 +338,7 @@ export function KeyResourceFactList({
   facts,
   testId,
   layout = KEY_RESOURCE_CONTENT_LAYOUTS.Default,
+  compact = false,
 }: KeyResourceFactListProps) {
   return (
     <div
@@ -342,21 +346,31 @@ export function KeyResourceFactList({
       className={cn(
         "grid",
         layout === KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive
-          ? "gap-y-density-3-5 grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-3.5"
-          : "xs:grid-cols-2 gap-y-density-2-5 sm:gap-y-density-3-5 grid-cols-1 gap-x-2.5 sm:grid-cols-4 sm:gap-x-3.5",
+          ? "grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-3.5 gap-y-density-3-5"
+          : "grid-cols-1 gap-x-2.5 gap-y-density-2-5 xs:grid-cols-2 sm:grid-cols-4 sm:gap-x-3.5 sm:gap-y-density-3-5",
       )}
     >
       {facts.map((fact) => (
         <div
           key={fact.id}
-          className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words"
+          role={fact.budget ? "group" : undefined}
+          aria-label={fact.budget ? fact.label : undefined}
+          className={
+            fact.budget
+              ? cn("min-w-0 space-y-2", !compact && "col-span-full")
+              : "flex min-w-0 flex-wrap items-baseline gap-x-2 break-words"
+          }
         >
-          <span className="text-muted-foreground text-xs sm:text-sm">
+          <span className="text-xs text-muted-foreground sm:text-sm">
             {fact.label}
           </span>
-          <span className="text-foreground min-w-0 text-xs font-medium break-words sm:text-sm">
-            {fact.value}
-          </span>
+          {fact.budget ? (
+            <KeyBudgetDetails budget={fact.budget} compact={compact} />
+          ) : (
+            <span className="min-w-0 text-xs font-medium break-words text-foreground sm:text-sm">
+              {fact.value}
+            </span>
+          )}
         </div>
       ))}
     </div>
@@ -378,7 +392,7 @@ export function KeyResourceSecretDisplay({
   }
 
   const labelContent = label ? (
-    <span className="text-muted-foreground shrink-0 whitespace-nowrap">
+    <span className="shrink-0 whitespace-nowrap text-muted-foreground">
       {label}
     </span>
   ) : null
@@ -388,16 +402,16 @@ export function KeyResourceSecretDisplay({
     </div>
   ) : null
   const controlsContent = controls ? (
-    <div className="gap-y-density-1-5 flex flex-wrap items-center gap-x-1.5">
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-density-1-5">
       {controls}
     </div>
   ) : null
   const messageContent = message ? (
-    <span className="text-muted-foreground gap-y-density-1-5 inline-flex min-w-0 items-center gap-x-1.5 text-xs">
+    <span className="inline-flex min-w-0 items-center gap-x-1.5 gap-y-density-1-5 text-xs text-muted-foreground">
       <IconButton
         type="button"
         aria-label={message}
-        className="dark:hover:bg-secondary text-muted-foreground hover:bg-muted hover:text-secondary-foreground shrink-0"
+        className="shrink-0 text-muted-foreground hover:bg-muted hover:text-secondary-foreground dark:hover:bg-secondary"
         size="xs"
         tooltip={message}
         variant="ghost"
@@ -414,9 +428,9 @@ export function KeyResourceSecretDisplay({
     return (
       <div
         data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay}
-        className="gap-y-density-2 grid min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+        className="grid min-w-0 grid-cols-1 gap-x-2 gap-y-density-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
       >
-        <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-density-2">
           {labelContent}
           {secretContent}
           {messageContent}
@@ -431,7 +445,7 @@ export function KeyResourceSecretDisplay({
   return (
     <div
       data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay}
-      className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2"
+      className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-density-2"
     >
       {labelContent}
       {secretContent}
@@ -522,7 +536,7 @@ export function KeyResourceCard({
       tabIndex={targetId ? -1 : undefined}
       className={cn(
         isNavigationTarget &&
-          "ring-theme-500 dark:ring-offset-surface-subtle ring-offset-background ring-2 ring-offset-2",
+          "ring-2 ring-theme-500 ring-offset-2 ring-offset-background dark:ring-offset-surface-subtle",
         embedded && "ring-offset-0 ring-inset",
       )}
     >
@@ -531,7 +545,7 @@ export function KeyResourceCard({
         spacing="default"
         className={embedded ? "px-3" : undefined}
       >
-        <div className="gap-density-3 flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-col gap-density-3">
           {renderHeader ? (
             renderHeader(headerProps)
           ) : (
@@ -546,18 +560,19 @@ export function KeyResourceCard({
           <KeyResourceFactList
             facts={presentation.summaryFacts}
             testId={KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts}
+            compact
           />
           {showDetails && isDetailsExpanded ? (
             <div
               id={detailsPanelId}
               role="region"
               aria-labelledby={detailsTriggerId}
-              className="border-border gap-density-3 pt-density-3 flex min-w-0 flex-col border-t"
+              className="flex min-w-0 flex-col gap-density-3 border-t border-border pt-density-3"
             >
               {detailState.status === "loading" ? (
                 <div
                   role="status"
-                  className="gap-y-density-2 flex items-center gap-x-2 text-sm"
+                  className="flex items-center gap-x-2 gap-y-density-2 text-sm"
                 >
                   <Spinner aria-hidden="true" size="sm" />
                   <span>{t("details.loading")}</span>
@@ -566,7 +581,7 @@ export function KeyResourceCard({
               {detailState.status === "error" ? (
                 <div
                   role="alert"
-                  className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2 text-sm"
+                  className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-density-2 text-sm"
                 >
                   <span className="min-w-0 break-words">
                     {detailState.message || t("details.unavailable")}
@@ -587,7 +602,7 @@ export function KeyResourceCard({
                 detailState.facts.length > 0 ? (
                   <KeyResourceFactList facts={detailState.facts} />
                 ) : (
-                  <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+                  <p className="text-sm text-muted-foreground dark:text-secondary-foreground">
                     {t("details.empty")}
                   </p>
                 )

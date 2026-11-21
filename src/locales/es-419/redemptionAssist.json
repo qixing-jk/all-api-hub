@@ -46,6 +46,7 @@
     "success": {
       "settingsSaved": "La configuración del asistente de canje se guardó"
     },
+    "totalAllowance": "Cupo total: {{amount}}",
     "unsupportedSiteType": "El tipo de sitio de esta cuenta no admite el canje automático. Elige otra cuenta o canjea el código manualmente en el sitio."
   },
   "settings": {

@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 import {
   PRICE_RATE_UNITS,
   PRICING_GROUP_MULTIPLIERS,
@@ -37,7 +38,7 @@ function getCurrencyConversion(
 ) {
   return source === target
     ? 1
-    : target === "CNY"
+    : target === CURRENCIES.CNY
       ? cnyPerUsd
       : cnyPerUsd === undefined
         ? undefined
@@ -61,7 +62,7 @@ function calculateQuote(
     scenario.purpose === PRICING_PURPOSES.TOKEN_INDEX
   const comparisonQuantity = isUnitIndex
     ? scenario.taskUsage && Object.hasOwn(scenario.taskUsage, comparison.meter)
-      ? scenario.taskUsage[comparison.meter] ?? NaN
+      ? (scenario.taskUsage[comparison.meter] ?? NaN)
       : comparison.meter === PRICING_METERS.CHARACTERS
         ? 1000
         : 1
@@ -103,7 +104,7 @@ function calculateQuote(
             : scenario.usage.videoOutput,
       },
     }
-  const currency = cost.currency ?? "USD"
+  const currency = cost.currency ?? CURRENCIES.USD
   const publishedSchedule = [
     { id: "base", conditions: [], rates: plan.rates },
     ...plan.rules,
@@ -489,6 +490,7 @@ export function quoteModelPrice(
   cost: PricingCostContext = {},
 ): QuoteResult {
   const quote = calculateQuote(plan, scenario, cost)
+  quote.purpose = scenario.purpose
   const details = getQuoteRequirementDetails(plan, scenario, quote)
   if (details) quote.requirementDetails = details
   return quote

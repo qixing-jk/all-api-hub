@@ -7,6 +7,7 @@ import type { Locator, Page } from "@playwright/test"
 async function captureVisualCheckpoint({
   page,
   ready,
+  captureTarget,
   directory,
   id,
   extensionDir,
@@ -14,6 +15,7 @@ async function captureVisualCheckpoint({
 }: {
   page: Page
   ready: Locator
+  captureTarget?: Locator
   directory: string
   id: string
   extensionDir: string
@@ -42,7 +44,7 @@ async function captureVisualCheckpoint({
   )
   await mkdir(directory, { recursive: true })
   const image = `${id}.png`
-  const bytes = await page.screenshot({
+  const bytes = await (captureTarget ?? page).screenshot({
     animations,
     caret: "hide",
     scale: "css",
@@ -57,6 +59,7 @@ async function captureVisualCheckpoint({
         image,
         capturedAt: new Date().toISOString(),
         source,
+        capture: captureTarget ? "element" : "viewport",
         environment: {
           ...environment,
           browser: page.context().browser()?.version() ?? "unknown",
@@ -68,6 +71,16 @@ async function captureVisualCheckpoint({
     ),
     { flag: "wx" },
   )
+  if (captureTarget && process.env.AAH_VISUAL_CAPTURE_CONTEXT === "1") {
+    await captureVisualCheckpoint({
+      page,
+      ready,
+      directory,
+      id: `${id}-context`,
+      extensionDir,
+      animations,
+    })
+  }
 }
 
 type VisualView = {
@@ -81,6 +94,7 @@ type VisualView = {
 export async function captureVisualViews({
   page,
   ready,
+  captureTarget,
   id,
   extensionDir,
   directory = process.env.AAH_VISUAL_CAPTURE_DIR,
@@ -89,6 +103,8 @@ export async function captureVisualViews({
 }: {
   page: Page
   ready: Locator
+  /** Focus an asserted panel while retaining the same build and environment evidence. */
+  captureTarget?: Locator
   id: string
   extensionDir: string
   directory?: string
@@ -108,6 +124,7 @@ export async function captureVisualViews({
     await captureVisualCheckpoint({
       page,
       ready,
+      captureTarget,
       directory,
       id,
       extensionDir,
@@ -141,6 +158,7 @@ export async function captureVisualViews({
       await captureVisualCheckpoint({
         page,
         ready,
+        captureTarget,
         directory,
         id: `${id}-${view.id}`,
         extensionDir,

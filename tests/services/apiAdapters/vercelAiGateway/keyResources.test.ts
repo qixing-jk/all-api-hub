@@ -8,6 +8,7 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceCapability,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -113,7 +114,10 @@ describe("Vercel AI Gateway key resources", () => {
       signal: new AbortController().signal,
     })
     expect(listed.items[0]?.displayFacts).toContainEqual(
-      expect.objectContaining({ kind: "spend-budget", source: "unavailable" }),
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({ limitState: "unknown" }),
+      }),
     )
     const editor = await session.openCreateEditor("account")
     const created = await editor.submit(editor.initialValues)
@@ -397,7 +401,9 @@ describe("Vercel AI Gateway key resources", () => {
     const page = await collection.list()
     expect(page.items[0]?.displayName).toBe("Key abc123")
     expect(
-      page.items[0]?.displayFacts?.some((fact) => fact.kind === "attribution"),
+      page.items[0]?.displayFacts?.some(
+        (fact) => fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution,
+      ),
     ).toBe(false)
   })
 
@@ -460,11 +466,13 @@ describe("Vercel AI Gateway key resources", () => {
       ACCOUNT_KEY_RESOURCE_STATUSES.Enabled,
     ])
     expect(page.items[0]!.displayFacts).not.toContainEqual(
-      expect.objectContaining({ kind: "last-used" }),
+      expect.objectContaining({
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
+      }),
     )
     expect(page.items[1]!.displayFacts).toContainEqual({
       fieldId: "accessed_time",
-      kind: "last-used",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
       timestampMs: keyRow.createdAt + 60_000,
     })
   })
@@ -480,11 +488,11 @@ describe("Vercel AI Gateway key resources", () => {
     const page = await (await session.openCollection(scope!.scopeKey)).list()
     expect(page.items[0]!.displayFacts).toContainEqual({
       fieldId: "spend_attribution",
-      kind: "attribution",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Attribution,
       value: "team",
     })
     expect(page.items[0]!.displayFacts).not.toContainEqual(
-      expect.objectContaining({ kind: "group" }),
+      expect.objectContaining({ kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group }),
     )
   })
 
@@ -551,10 +559,12 @@ describe("Vercel AI Gateway key resources", () => {
     const created = await editor.submit({ ...values, budget_limit: 10 })
     expect(created.facts?.displayFacts).toContainEqual(
       expect.objectContaining({
-        kind: "spend-budget",
-        source: "custom",
-        limitUsd: 10,
-        period: "weekly",
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "finite",
+          limit: expect.objectContaining({ status: "known", value: "10" }),
+          window: expect.objectContaining({ kind: "periodic", period: "week" }),
+        }),
       }),
     )
     expect(submitted).toMatchObject({
@@ -742,6 +752,49 @@ describe("Vercel AI Gateway key resources", () => {
     ).rejects.toBeDefined()
   })
 
+  it.each([false, true])(
+    "retains effective budget activation and BYOK policy (custom=%s)",
+    async (custom) => {
+      const budget = {
+        scopeType: "api-key",
+        scopeId: "key_1",
+        limitAmount: 8,
+        currentSpend: 3,
+        refreshPeriod: "monthly",
+        alertThresholds: [],
+        active: false,
+        includeByokInQuota: true,
+      }
+      server.use(
+        listHandler([keyRow]),
+        http.get("https://api.vercel.com/ai-gateway/budgets/list", () =>
+          HttpResponse.json({ budgets: custom ? [budget] : [] }),
+        ),
+        http.get(
+          "https://api.vercel.com/ai-gateway/budgets/defaults/list",
+          () => HttpResponse.json({ defaults: custom ? [] : [budget] }),
+        ),
+      )
+      const collection = await (await openSession()).openCollection("account")
+      const row = (await collection.list()).items[0]!
+      expect(row.displayFacts).toContainEqual(
+        expect.objectContaining({
+          kind: "budget-constraint",
+          budget: expect.objectContaining({
+            limitState: custom ? "finite" : "inherited",
+            enabled: expect.objectContaining({ status: "known", value: false }),
+            includesByok: expect.objectContaining({
+              status: "known",
+              value: true,
+            }),
+            used: expect.objectContaining(
+              custom ? { status: "known", value: "3" } : { status: "unknown" },
+            ),
+          }),
+        }),
+      )
+    },
+  )
   it("shows a team's inherited budget separately from a custom key budget", async () => {
     server.use(
       listHandler([keyRow]),
@@ -763,10 +816,16 @@ describe("Vercel AI Gateway key resources", () => {
     const page = await collection.list()
     expect(page.items[0]?.displayFacts).toContainEqual(
       expect.objectContaining({
-        kind: "spend-budget",
-        source: "inherited",
-        limitUsd: 8,
-        period: "monthly",
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "inherited",
+          limit: expect.objectContaining({ status: "known", value: "8" }),
+          enabled: expect.objectContaining({ status: "unknown" }),
+          window: expect.objectContaining({
+            kind: "periodic",
+            period: "month",
+          }),
+        }),
       }),
     )
   })

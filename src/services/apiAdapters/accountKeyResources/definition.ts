@@ -63,6 +63,8 @@ export type AccountKeyCreateMutation<TDetail> = {
   createdSecret?: AccountKeyEditorSubmitResult["createdSecret"]
 }
 
+export type AccountKeyFactContext = { authority: string; observedAt: number }
+
 export type AccountKeyResourceDefinition<
   TConfig,
   TLocator,
@@ -152,10 +154,12 @@ export type AccountKeyResourceDefinition<
   toListFacts(
     item: TListItem,
     ref: AccountKeyResourceRef,
+    context: AccountKeyFactContext,
   ): AccountKeyResourceProviderFacts
   toDetailFacts(
     detail: TDetail,
     ref: AccountKeyResourceRef,
+    context: AccountKeyFactContext,
   ): AccountKeyResourceProviderFacts
   createEditor(
     config: TConfig,

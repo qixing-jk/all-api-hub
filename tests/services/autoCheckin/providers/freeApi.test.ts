@@ -11,7 +11,6 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
@@ -281,7 +280,7 @@ describe("FreeAPI check-in integration", () => {
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
   })
 
-  it("reports the awarded USD amount as a quota reward", async () => {
+  it("reports the awarded USD amount as a native USD award", async () => {
     vi.mocked(performFreeApiDailyCheckIn).mockResolvedValue({
       kind: FREE_API_DAILY_CHECK_IN_RESULT_KINDS.Applied,
       data: { rewardAmount: 12.5 },
@@ -293,7 +292,12 @@ describe("FreeAPI check-in integration", () => {
       }),
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
-      reward: { quota: 12.5 * QUOTA_PER_USD },
+      awards: [
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "12.5" },
+        },
+      ],
     })
   })
 

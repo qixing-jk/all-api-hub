@@ -3,9 +3,17 @@ import type {
   ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
+  ACCOUNT_KEY_MUTATION_CERTAINTIES,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+
+/** A rejected baseline comparison proves that this update did not write anything. */
+export const classifyResourceChangedMutation = (error: unknown) =>
+  error instanceof AccountKeyResourceError &&
+  error.failure.code === ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged
+    ? ACCOUNT_KEY_MUTATION_CERTAINTIES.NotApplied
+    : undefined
 
 export const validationFailure = (
   fieldIssues?: readonly ResourceFieldIssue[],
@@ -15,7 +23,7 @@ export const validationFailure = (
       code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
       ...(fieldIssues === undefined ? {} : { fieldIssues }),
     },
-    "not-applied",
+    ACCOUNT_KEY_MUTATION_CERTAINTIES.NotApplied,
   )
 
 export const unexpectedFailure = () =>
@@ -55,13 +63,16 @@ export const mapMutationOperation = async <T>(
     return await operation()
   } catch (error) {
     const mapped = toAccountKeyResourceError(error, mapFailure)
-    if (mapped.mutationCertainty === "not-applied") throw mapped
+    if (
+      mapped.mutationCertainty === ACCOUNT_KEY_MUTATION_CERTAINTIES.NotApplied
+    )
+      throw mapped
     throw new AccountKeyResourceError(
       {
         ...mapped.failure,
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
       },
-      "possibly-applied",
+      ACCOUNT_KEY_MUTATION_CERTAINTIES.PossiblyApplied,
     )
   }
 }

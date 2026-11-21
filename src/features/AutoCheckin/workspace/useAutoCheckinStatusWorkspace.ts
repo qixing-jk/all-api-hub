@@ -57,18 +57,11 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
   const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
   const [siteTypeMismatches, setSiteTypeMismatches] =
     useState<SiteTypeMismatchMap>({})
-  /**
-   * Each account's own USD-to-CNY rate, so a reported reward can be shown in
-   * the display currency. Accounts missing here are ones this page could not
-   * load; their reward stays hidden rather than converted with a guessed rate.
-   */
-  const [exchangeRateByAccountId, setExchangeRateByAccountId] = useState<
-    Record<string, number>
-  >({})
   const [accountSetupState, setAccountSetupState] = useState<
     "ready" | "no_accounts" | "no_detection_accounts" | null
   >(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [statusLoadFailed, setStatusLoadFailed] = useState(false)
   const [accountInfoById, setAccountInfoById] = useState<
     Record<string, DisplaySiteData>
   >({})
@@ -88,6 +81,9 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
         loadAutoCheckinAccountSetup(),
         loginProviderEvidence.readAll(),
       ])
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load check-in status")
+      }
       // Read through the account, so an observation a later site-type edit
       // retired is not named on a result row.
       const siteTypeMismatches = await siteTypeObservations.readForAccounts(
@@ -99,9 +95,8 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
 
       let displayStatus = response.success ? response.data : null
       if (import.meta.env.DEV && response.success) {
-        const { appendDevCheckInFixtureSnapshots } = await import(
-          "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"
-        )
+        const { appendDevCheckInFixtureSnapshots } =
+          await import("~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures")
         const snapshots = await appendDevCheckInFixtureSnapshots(
           displayStatus?.accountsSnapshot ?? [],
           accountSetup.accounts,
@@ -113,14 +108,7 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
       if (loadId === latestStatusLoadIdRef.current) {
         setAccountSetupState(accountSetup.state)
         setSiteTypeMismatches(siteTypeMismatches)
-        setExchangeRateByAccountId(
-          Object.fromEntries(
-            accountSetup.accounts.map((account) => [
-              account.id,
-              account.exchange_rate,
-            ]),
-          ),
-        )
+        setStatusLoadFailed(false)
 
         if (response.success) {
           setStatus(
@@ -144,6 +132,7 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
       }
     } catch (error) {
       logger.error("Failed to load status", error)
+      if (loadId === latestStatusLoadIdRef.current) setStatusLoadFailed(true)
     } finally {
       activeStatusLoadCountRef.current -= 1
       if (activeStatusLoadCountRef.current === 0) {
@@ -257,9 +246,9 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
   return {
     status,
     siteTypeMismatches,
-    exchangeRateByAccountId,
     accountSetupState,
     isLoading,
+    statusLoadFailed,
     accountInfoById,
     loadStatus,
     resolveAutoCheckinAccount,

@@ -3,10 +3,17 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
+import {
   fetchToolcodeDailyCheckInStatus,
   performToolcodeDailyCheckIn,
   TOOLCODE_DAILY_CHECK_IN_RESULT_KINDS,
 } from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
+import { TOOLCODE_DAILY_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/toolcodeCheckInProtocol"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
@@ -68,6 +75,35 @@ export const toolcodeProvider: AutoCheckinProvider = {
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
             // Points and expiring bonus grants are separate from account balance quota.
             data: result.data,
+            awards: [
+              accountAward(account as SiteAccount, {
+                id: "points_reward",
+                operation: TOOLCODE_DAILY_CHECK_IN_ENDPOINT,
+                field: "points_reward",
+                adapter: "toolcode-engagement",
+                asset: {
+                  kind: ASSET_KINDS.Quota,
+                  id: `toolcode:${new URL((account as SiteAccount).site_url).origin}:points`,
+                  label: "points",
+                  displayScale: 1,
+                  displayLabel: "points",
+                },
+                value: result.data.pointsReward,
+                target: AWARD_TARGETS.Wallet,
+                fulfillment: AWARD_FULFILLMENT.Credited,
+              }),
+              accountAward(account as SiteAccount, {
+                id: "reward_amount",
+                operation: TOOLCODE_DAILY_CHECK_IN_ENDPOINT,
+                field: "reward_amount",
+                adapter: "toolcode-engagement",
+                // The response does not supply the bonus currency or expiry timestamp.
+                asset: { kind: ASSET_KINDS.Unknown },
+                value: result.data.bonusAmount,
+                target: AWARD_TARGETS.Entitlement,
+                fulfillment: AWARD_FULFILLMENT.Credited,
+              }),
+            ],
           }
         case TOOLCODE_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
           return {

@@ -44,6 +44,7 @@
     "success": {
       "settingsSaved": "Đã lưu cài đặt Trợ lý đổi mã"
     },
+    "totalAllowance": "Tổng hạn mức: {{amount}}",
     "unsupportedSiteType": "Loại trang của tài khoản này không hỗ trợ đổi mã tự động. Hãy chọn tài khoản khác hoặc đổi mã thủ công trên trang."
   },
   "settings": {

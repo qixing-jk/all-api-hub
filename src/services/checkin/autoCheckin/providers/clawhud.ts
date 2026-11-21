@@ -3,6 +3,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import {
+  CLAWHUD_DAILY_CHECK_IN_ENDPOINT,
   CLAWHUD_DAILY_CHECK_IN_ERROR_CODES,
   fetchClawhudDailyCheckInStatus,
   performClawhudDailyCheckIn,
@@ -31,7 +32,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
-  readUsdReward,
+  readUsdAwards,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -100,7 +101,14 @@ export const clawhudProvider: AutoCheckinProvider = {
           status: CHECKIN_RESULT_STATUS.SUCCESS,
           messageKey:
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-          reward: readUsdReward(result.data.rewardAmount),
+          awards: readUsdAwards(
+            account as SiteAccount,
+            result.data.rewardAmount,
+            {
+              operation: CLAWHUD_DAILY_CHECK_IN_ENDPOINT,
+              field: "today_amount",
+            },
+          ),
           data: { rewardAmount: result.data.rewardAmount },
         },
         { day: result.data.checkinDate, timestamp: result.data.checkedInAt },

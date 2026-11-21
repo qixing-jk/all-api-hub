@@ -3,9 +3,13 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
 import {
   fetchCheckInState,
   performCheckIn,
@@ -13,9 +17,11 @@ import {
 } from "~/services/apiService/emrank/checkIn"
 import {
   EMRANK_CHECK_IN_STATUSES,
+  EMRANK_ENDPOINTS,
   EMRANK_TOKEN_ASSET,
 } from "~/services/apiService/emrank/constants"
 import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   createUnconfirmedCheckInResult,
@@ -23,16 +29,17 @@ import {
   withCheckInResponseConfirmation,
 } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { CheckInMethodStatus } from "~/types/checkIn"
+import { parseDayKey } from "~/utils/core/dayKey"
 
 import { createAccountCheckInRequest } from "./accountRequest"
 import type { AutoCheckinProvider } from "./contracts"
 import { detectWithStatusReadback } from "./detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  getCookieAccountCheckinReadiness,
   resolveProviderErrorResult,
 } from "./shared"
 
@@ -87,14 +94,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
 
 export const emRankProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
-  getReadiness(account) {
-    return account.authType === AuthTypeEnum.Cookie && !!account.account_info.id
-      ? { ready: true }
-      : {
-          ready: false,
-          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
-        }
-  },
+  getReadiness: getCookieAccountCheckinReadiness,
   detect: (context) => detectWithStatusReadback(context, getStatus),
   getStatus,
   async checkIn(account, context) {
@@ -104,9 +104,6 @@ export const emRankProvider: AutoCheckinProvider = {
       )
       if ("statusObservation" in result && !result.statusObservation)
         return createUnconfirmedCheckInResult(account as SiteAccount)
-      const reward = result.record
-        ? { amount: result.record.reward, asset: EMRANK_TOKEN_ASSET }
-        : undefined
       const outcome = {
         status: result.alreadyChecked
           ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED
@@ -114,7 +111,29 @@ export const emRankProvider: AutoCheckinProvider = {
         messageKey: result.alreadyChecked
           ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        reward,
+        awards: result.record
+          ? [
+              accountAward(account as SiteAccount, {
+                id: "reward",
+                operation: EMRANK_ENDPOINTS.CheckIn,
+                field: result.alreadyChecked
+                  ? "state.record.reward"
+                  : "record.reward",
+                value: result.record.reward,
+                asset: { kind: ASSET_KINDS.Quota, ...EMRANK_TOKEN_ASSET },
+                target: AWARD_TARGETS.Wallet,
+                fulfillment: AWARD_FULFILLMENT.Credited,
+                ...(parseDayKey(result.record.day)
+                  ? {
+                      event: {
+                        namespace: "emrank-checkin-day",
+                        id: result.record.day,
+                      },
+                    }
+                  : {}),
+              }),
+            ]
+          : [],
         rawMessage: result.message || undefined,
         data: result.record ? { ...result.record, unit: "token" } : undefined,
       }
@@ -125,7 +144,7 @@ export const emRankProvider: AutoCheckinProvider = {
             result.statusObservation.observation,
             result.statusObservation.observedAt,
           ),
-          reward,
+          awards: outcome.awards,
         })
       return withCheckInResponseConfirmation(account as SiteAccount, outcome, {
         day: result.record?.day,

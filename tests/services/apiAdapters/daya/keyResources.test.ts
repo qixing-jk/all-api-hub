@@ -2,6 +2,10 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { RESOURCE_SECRET_EDIT_INTENT_KINDS } from "~/services/apiAdapters/contracts/resourceNative"
 import { dayaKeyResources } from "~/services/apiAdapters/daya/keyResources"
 import { DAYA_KEY_STATUSES } from "~/services/apiService/daya/constants"
@@ -64,7 +68,7 @@ describe("Daya key resources", () => {
     const detail = await (await openCollection()).get(ref)
     expect(detail.displayFacts).toContainEqual({
       fieldId: "accessed_time",
-      kind: "last-used",
+      kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
       timestampMs: Date.parse("2026-10-19T02:00:00Z"),
     })
   })
@@ -83,9 +87,11 @@ describe("Daya key resources", () => {
     )
     const collection = await openCollection()
     const detail = await collection.get(ref)
-    expect(detail.displayFacts?.some((fact) => fact.kind === "last-used")).toBe(
-      false,
-    )
+    expect(
+      detail.displayFacts?.some(
+        (fact) => fact.kind === ACCOUNT_KEY_DISPLAY_FACT_KINDS.LastUsed,
+      ),
+    ).toBe(false)
     const editor = await collection.openEditEditor(ref)
     const result = await editor.submit({
       ...editor.initialValues,
@@ -211,13 +217,13 @@ describe("Daya key resources", () => {
       expect(listed.displayFacts).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            kind: "restriction",
-            role: "ip",
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+            role: ACCOUNT_KEY_RESTRICTION_ROLES.Ip,
             value: ["192.0.2.1"],
           }),
           expect.objectContaining({
-            kind: "restriction",
-            role: "subnet",
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+            role: ACCOUNT_KEY_RESTRICTION_ROLES.Subnet,
             value: ["203.0.113.0/24"],
           }),
         ]),
@@ -550,7 +556,7 @@ describe("Daya key resources", () => {
       expires_at: "2026-11-20T00:10:29.545096+08:00",
     })
   })
-  it("shows a finite cap minus used spending as remaining", async () => {
+  it("keeps a finite cap and spend without inventing unreported remaining", async () => {
     server.use(
       http.get(`${origin}/api/v1/keys`, () =>
         HttpResponse.json(
@@ -564,9 +570,13 @@ describe("Daya key resources", () => {
     const items = (await (await openCollection()).list()).items
     expect(items[0]?.displayFacts).toContainEqual(
       expect.objectContaining({
-        role: "remaining",
-        amountUsd: 7,
-        unlimited: false,
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          limitState: "finite",
+          limit: expect.objectContaining({ status: "known", value: "10" }),
+          used: expect.objectContaining({ status: "known", value: "3" }),
+          remaining: expect.objectContaining({ status: "unknown" }),
+        }),
       }),
     )
   })

@@ -1,12 +1,32 @@
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+} from "~/services/amounts/financialConstants"
+import {
+  keyBudgetFact,
+  keyRestrictionScope,
+} from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import type {
+  AccountKeyFactContext,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
   mapAccountKeyResourceUncertainFailure,
 } from "~/services/apiAdapters/accountKeyResources/failure"
-import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { accountKeyDefaultScopes } from "~/services/apiAdapters/accountKeyResources/scopeInventory"
+import {
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESTRICTION_ROLES,
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceOpenInput,
@@ -15,6 +35,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
+  NATIVE_RESOURCE_MUTATION_CERTAINTIES,
   RESOURCE_FAILURE_CODES,
   RESOURCE_FIELD_ISSUE_CODES,
 } from "~/services/apiAdapters/contracts/resourceNative"
@@ -129,6 +150,7 @@ const keyStatus = (key: RightCodeApiKey): AccountKeyResourceFacts["status"] => {
 const toFacts = (
   entry: RightCodeKeyEntry,
   ref: AccountKeyResourceRef,
+  context: AccountKeyFactContext,
 ): AccountKeyResourceProviderFacts => {
   const snapshot = toRightCodeKeySnapshot(entry.key)
   const createdAt = Date.parse(entry.key.created_at ?? "")
@@ -151,24 +173,31 @@ const toFacts = (
       ...(Number.isFinite(createdAt) ? { createdAt } : {}),
     },
     displayFacts: [
-      {
-        fieldId: field.QuotaUsd,
-        kind: "money",
-        role: "total",
-        amountUsd: snapshot.quotaLimit ?? 0,
-        unlimited: snapshot.quotaLimit === null,
-      },
-      {
-        fieldId: "used_quota",
-        kind: "money",
-        role: "used",
-        amountUsd: toOptionalFiniteNumber(entry.key.used_quota) ?? 0,
-      },
+      keyBudgetFact(ref, context, {
+        fieldId: "quota",
+        operation: "keys",
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState:
+          entry.key.quota_limit === null
+            ? BUDGET_LIMIT_STATES.Unlimited
+            : BUDGET_LIMIT_STATES.Finite,
+        limit: entry.key.quota_limit,
+        used: entry.key.used_quota,
+        scope: keyRestrictionScope({
+          models:
+            entry.key.allowed_models === undefined
+              ? undefined
+              : snapshot.allowedModels.length
+                ? snapshot.allowedModels
+                : null,
+        }),
+        window: { kind: BUDGET_WINDOW_KINDS.Lifetime },
+      }),
       keyExpiryDisplayFact(field.ExpiresAt, snapshot.expiresAt ?? ""),
       {
         fieldId: field.Models,
-        kind: "restriction",
-        role: "models",
+        kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Restriction,
+        role: ACCOUNT_KEY_RESTRICTION_ROLES.Models,
         value: snapshot.allowedModels,
       },
     ],
@@ -182,21 +211,6 @@ const toFacts = (
             },
           ]
         : []),
-      {
-        fieldId: field.Unlimited,
-        kind: "boolean",
-        value: snapshot.quotaLimit === null,
-      },
-      {
-        fieldId: field.QuotaUsd,
-        kind: "number",
-        value: snapshot.quotaLimit ?? 0,
-      },
-      {
-        fieldId: "used_quota",
-        kind: "number",
-        value: toOptionalFiniteNumber(entry.key.used_quota) ?? 0,
-      },
       {
         fieldId: field.ExpiresAt,
         kind: "text",
@@ -268,14 +282,8 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
       },
     }
   },
-  listScopes: async (config) => [
-    {
-      scopeKey: ACCOUNT_SCOPE_KEY,
-      routeKey: ACCOUNT_SCOPE_KEY,
-      displayName: config.account.name?.trim() || config.request.baseUrl,
-      isDefault: true,
-    },
-  ],
+  listScopes: async (config) =>
+    accountKeyDefaultScopes(ACCOUNT_SCOPE_KEY, config),
   defaultScopeKey: () => ACCOUNT_SCOPE_KEY,
   encodeLocator: (id: number) => String(requireId(id)),
   decodeLocator: (id: string) => {
@@ -298,8 +306,8 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
       await config.readChannels(options),
       await fetchRightCodeKey(withOptions(config.request, options), id),
     ),
-  toListFacts: (entry, ref) => toFacts(entry, ref),
-  toDetailFacts: (entry, ref) => toFacts(entry, ref),
+  toListFacts: (entry, ref, context) => toFacts(entry, ref, context),
+  toDetailFacts: (entry, ref, context) => toFacts(entry, ref, context),
   runtimeKey: {
     resolve: async (config, ref, options) => {
       try {
@@ -309,11 +317,14 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
         )
         const secret = key.key?.trim()
         return secret
-          ? { kind: "resolved", secret }
-          : { kind: "unavailable", failure: { code: "unavailable" } }
+          ? { kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved, secret }
+          : {
+              kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+              failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
+            }
       } catch (error) {
         return {
-          kind: "unavailable",
+          kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
           failure: mapAccountKeyResourceFailure(error),
         }
       }
@@ -331,7 +342,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
     const values = command.values
     if (values.channelId === null) {
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: {
           code: RESOURCE_FAILURE_CODES.ValidationFailed,
           fieldIssues: [
@@ -357,7 +368,8 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
         }),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    if (result.certainty !== "applied") return result
+    if (result.certainty !== NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied)
+      return result
 
     const created = result.value
     // Expiry lives behind its own endpoint; a failure there still leaves a
@@ -367,7 +379,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
         await setRightCodeKeyExpiry(request, created.id, values.expiresAt)
       } catch (error) {
         return {
-          certainty: "partially-applied" as const,
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PartiallyApplied,
           failure: mapAccountKeyResourceUncertainFailure(error),
         }
       }
@@ -383,7 +395,10 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
     // No one-time secret: Right Code re-reveals the key on every read, so the
     // inventory owns the value and the create response must not imply that
     // closing the dialog would lose it.
-    return { certainty: "applied" as const, value: { detail: entry } }
+    return {
+      certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+      value: { detail: entry },
+    }
   },
   update: async (
     config,
@@ -396,7 +411,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
     const merged = mergeResourceEdits(command.baseline, command.values, latest)
     if (!merged) {
       return {
-        certainty: "not-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied,
         failure: { code: RESOURCE_FAILURE_CODES.ResourceChanged },
       }
     }
@@ -408,7 +423,10 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
       latest.expiresAt,
     )
     if (changed.length === 0 && !expiryChanged) {
-      return { certainty: "applied" as const, value: detail }
+      return {
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+        value: detail,
+      }
     }
 
     if (changed.length > 0) {
@@ -422,7 +440,8 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
           ),
         mapFailure: mapAccountKeyResourceFailure,
       })
-      if (result.certainty === "not-applied") return result
+      if (result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.NotApplied)
+        return result
     }
 
     if (expiryChanged && merged.expiresAt) {
@@ -430,7 +449,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
         await setRightCodeKeyExpiry(request, detail.key.id, merged.expiresAt)
       } catch (error) {
         return {
-          certainty: "partially-applied" as const,
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PartiallyApplied,
           failure: mapAccountKeyResourceUncertainFailure(error),
         }
       }
@@ -450,15 +469,18 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
         !expiryChanged ||
         resourceValuesEqual(actual.expiresAt, merged.expiresAt)
       if (applied && expiryApplied) {
-        return { certainty: "applied" as const, value: entry }
+        return {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: entry,
+        }
       }
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(undefined),
       }
     } catch (error) {
       return {
-        certainty: "possibly-applied" as const,
+        certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
         failure: mapAccountKeyResourceUncertainFailure(error),
       }
     }
@@ -469,8 +491,11 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
       execute: (request) => deleteRightCodeKey(request, id),
       mapFailure: mapAccountKeyResourceFailure,
     })
-    return result.certainty === "applied"
-      ? { certainty: "applied", value: undefined }
+    return result.certainty === NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied
+      ? {
+          certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+          value: undefined,
+        }
       : result
   },
   mapFailure: mapAccountKeyResourceFailure,

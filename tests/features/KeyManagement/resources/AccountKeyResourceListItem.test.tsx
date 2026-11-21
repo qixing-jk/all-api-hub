@@ -3,6 +3,7 @@ import { Tag } from "lucide-react"
 import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import * as presentationPolicy from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
@@ -13,7 +14,14 @@ import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import toast from "~/lib/notify"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
+  ASSET_KINDS,
+  BUDGET_AMOUNT_FIELDS,
+  BUDGET_LIMIT_STATES,
+} from "~/services/amounts/financialConstants"
+import { keyBudgetFact } from "~/services/apiAdapters/accountKeyResources/budgetFacts"
+import {
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_DISPLAY_FACT_KINDS,
   ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { server } from "~~/tests/msw/server"
@@ -54,11 +62,35 @@ const row: NativeKeyManagementRow = {
     displayName: "Example key",
     maskedLabel: "sk-or-v1-••••example",
     status: "disabled",
-    fields: [
-      { fieldId: "limit", kind: "number", value: 20 },
-      { fieldId: "limit_remaining", kind: "number", value: -2 },
-      { fieldId: "usage", kind: "number", value: 22 },
-    ],
+    fields: [],
+    displayFacts: (
+      [
+        ["limit", "limit", 20],
+        ["limit_remaining", "remaining", -2],
+        ["usage", "used", 22],
+      ] as const
+    ).map(([fieldId, metric, value]) =>
+      keyBudgetFact(
+        {
+          accountId: "account-example",
+          siteType: "openrouter",
+          scopeKey: "workspace-example",
+          resourceId: "hash-example",
+        },
+        { authority: "https://openrouter.ai", observedAt: 1 },
+        {
+          fieldId,
+          metric,
+          operation: "fixture",
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          limitState:
+            metric === BUDGET_AMOUNT_FIELDS.Used
+              ? BUDGET_LIMIT_STATES.Unknown
+              : BUDGET_LIMIT_STATES.Finite,
+          [metric]: value,
+        },
+      ),
+    ),
     actions: { canUpdate: true, canDelete: true },
   },
 }
@@ -565,7 +597,21 @@ describe("AccountKeyResourceListItem", () => {
               kind: "text",
               value: "Loaded workspace",
             },
-            { fieldId: "byok_usage", kind: "number", value: 7 },
+          ],
+          displayFacts: [
+            ...(row.facts.displayFacts ?? []),
+            keyBudgetFact(
+              row.facts.ref,
+              { authority: "https://openrouter.ai", observedAt: 1 },
+              {
+                fieldId: "byok_usage",
+                metric: BUDGET_AMOUNT_FIELDS.ByokUsed,
+                operation: "fixture",
+                asset: { kind: ASSET_KINDS.Currency, code: "USD" },
+                limitState: BUDGET_LIMIT_STATES.Unknown,
+                byokUsed: 7,
+              },
+            ),
           ],
         }}
       />,
@@ -584,10 +630,27 @@ describe("AccountKeyResourceListItem", () => {
           ...row,
           facts: {
             ...row.facts,
-            fields: [
-              { fieldId: "limit_mode", kind: "text", value: "limited" },
-              { fieldId: "usage", kind: "number", value: 4 },
-            ],
+            fields: [{ fieldId: "limit_mode", kind: "text", value: "limited" }],
+            displayFacts: (
+              [
+                ["limit", "limit", undefined],
+                ["limit_remaining", "remaining", undefined],
+                ["usage", "used", 4],
+              ] as const
+            ).map(([fieldId, metric, value]) =>
+              keyBudgetFact(
+                row.facts.ref,
+                { authority: "https://openrouter.ai", observedAt: 1 },
+                {
+                  fieldId,
+                  metric,
+                  operation: "fixture",
+                  asset: { kind: ASSET_KINDS.Currency, code: "USD" },
+                  limitState: BUDGET_LIMIT_STATES.Unknown,
+                  [metric]: value,
+                },
+              ),
+            ),
           },
         }}
         onExpandedChange={vi.fn()}
@@ -597,9 +660,7 @@ describe("AccountKeyResourceListItem", () => {
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
 
-    expect(
-      screen.getAllByText("keyManagement:openRouter.list.values.missing"),
-    ).toHaveLength(2)
+    expect(screen.getAllByText("common:labels.notAvailable")).toHaveLength(2)
     expect(
       screen.queryByText("keyManagement:openRouter.list.values.unlimited"),
     ).toBeNull()
@@ -931,12 +992,34 @@ it.each(["foxcode", "dahl", "new-api", "sub2api"] as const)(
         displayFacts: [
           {
             fieldId: "channel",
-            kind: "group",
+            kind: ACCOUNT_KEY_DISPLAY_FACT_KINDS.Group,
             value: "Official",
             emptyValue: "ungrouped",
           },
-          { fieldId: "quota", kind: "money", role: "total", amountUsd: 1 },
-          { fieldId: "used", kind: "money", role: "used", amountUsd: 0.1 },
+          keyBudgetFact(
+            row.facts.ref,
+            { authority: "https://fixture.example", observedAt: 1 },
+            {
+              fieldId: "quota",
+              operation: "fixture",
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              limitState: BUDGET_LIMIT_STATES.Finite,
+              limit: 1,
+              metric: BUDGET_AMOUNT_FIELDS.Limit,
+            },
+          ),
+          keyBudgetFact(
+            row.facts.ref,
+            { authority: "https://fixture.example", observedAt: 1 },
+            {
+              fieldId: "used",
+              operation: "fixture",
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              limitState: BUDGET_LIMIT_STATES.Unknown,
+              used: 0.1,
+              metric: BUDGET_AMOUNT_FIELDS.Used,
+            },
+          ),
         ],
         runtimeKey: {
           createdAt: Date.parse("2026-10-01T00:00:00Z"),

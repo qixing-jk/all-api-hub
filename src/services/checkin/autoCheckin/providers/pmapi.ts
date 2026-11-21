@@ -10,6 +10,7 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
+import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { fetchPmApiIdentity } from "~/services/apiService/pmapi/identity"
 import { performPmApiCheckIn } from "~/services/apiService/pmapi/rewards"
 import { fetchPmApiStatus } from "~/services/apiService/pmapi/status"
@@ -20,6 +21,7 @@ import {
   withCheckInConfirmation,
 } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
+import { readQuotaAwards } from "~/services/checkin/autoCheckin/providers/shared"
 import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
 import {
@@ -169,7 +171,11 @@ export const pmApiProvider: AutoCheckinProvider = {
           ? {
               // The console reports the grant in its New API quota unit,
               // which is the extension's internal monetary quota.
-              reward: { quota: result.quotaGranted },
+              awards: readQuotaAwards(
+                account as SiteAccount,
+                result.quotaGranted,
+                { operation: PMAPI_ENDPOINTS.CheckIn, field: "quota" },
+              ),
               data: result.raw,
             }
           : {}),
