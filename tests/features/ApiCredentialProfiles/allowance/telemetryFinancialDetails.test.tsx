@@ -341,10 +341,9 @@ describe("credential financial details", () => {
         "apiCredentialProfiles:telemetry.balanceSemantics.stale",
       ),
     ).toBeVisible()
-    expect(screen.getByText(/1970/, { selector: "time" })).toHaveAttribute(
-      "datetime",
-      "1970-01-01T00:00:01.000Z",
-    )
+    expect(
+      document.querySelector('time[datetime="1970-01-01T00:00:01.000Z"]'),
+    ).toBeVisible()
   })
   it("labels a retained stale component with its original observation time beside the fresh total", async () => {
     const facts = normalizeTelemetryPatchToFacts(
@@ -389,10 +388,9 @@ describe("credential financial details", () => {
         "apiCredentialProfiles:telemetry.balanceSemantics.stale",
       ),
     ).toBeVisible()
-    expect(screen.getByText(/1970/, { selector: "time" })).toHaveAttribute(
-      "datetime",
-      "1970-01-01T00:00:01.000Z",
-    )
+    expect(
+      document.querySelector('time[datetime="1970-01-01T00:00:01.000Z"]'),
+    ).toBeVisible()
   })
   it("keeps a wallet visible alongside an unlimited key budget", async () => {
     const facts = normalizeTelemetryPatchToFacts(
