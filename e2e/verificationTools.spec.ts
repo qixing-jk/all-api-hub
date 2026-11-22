@@ -51,6 +51,10 @@ import {
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 
+// Each case owns its extension context and dynamic-port server. Keep this large
+// suite from occupying one worker after the other specs in its shard finish.
+test.describe.configure({ mode: "parallel" })
+
 for (const source of ["profile", "account"] as const) {
   test(`mobile ${source} toolbar titles and composer fit without wasted space`, async ({
     context,
