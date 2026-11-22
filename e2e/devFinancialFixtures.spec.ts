@@ -2206,7 +2206,12 @@ for (const phase of [
       const directory = process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR
       await mkdir(directory, { recursive: true })
       await writeFile(
-        path.join(directory, "native-scenarios.json"),
+        path.join(
+          directory,
+          phase === "native units and periods"
+            ? "native-scenarios.json"
+            : "currency-scenarios.json",
+        ),
         JSON.stringify(
           config.accounts.map((account) => ({
             siteType: account.site_type,
