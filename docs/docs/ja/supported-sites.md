@@ -62,28 +62,6 @@
 
 <div class="sponsor-list">
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://s.qiniu.com/qE3eai">
-      <img src="../../../resources/partners/qiniu.png" alt="Qiniu Cloud AI">
-    </a>
-    <p>
-      <strong>Qiniu Cloud AI</strong> は Qiniu Cloud のエンタープライズ向け MaaS プラットフォームで、世界の主要 150 以上のモデルへワンストップでアクセスでき、主要モデルプロバイダーのプロトコルと互換性があります。テキスト、画像、音声、動画、ファイル処理まで対応します。エンタープライズユーザーは <a href="https://s.qiniu.com/qE3eai">こちらのリンク</a> から <strong>1,200 万 Token</strong> を無料で受け取れ、紹介特典では最大で百億 Token 規模の報酬を獲得できます。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://api.fenno.ai/s/DCGC">
-      <img src="../../../resources/partners/fennoai.jpg" alt="FennoAI">
-    </a>
-    <p>
-      <strong>FennoAI</strong> は、Codex 中継サービスを中心に提供する安定性と効率性に優れた API 中継サービスプロバイダーです。OpenAI と Anthropic のプロトコルに対応し、Codex、Claude Code、OpenCode などの主要なコーディングツールへ接続できます。1 日あたり 1,000 億 Token 規模の企業利用を安定して支え、中国国内および海外法人との企業間決済と請求書発行にも対応しています。<a href="https://api.fenno.ai/s/DCGC">専用リンク</a>からわずか <strong>1.99 ドル</strong>で、50 ドル相当の Coding Plan クレジットを購入できます。友人の購入に対して最大 20% の紹介報酬を受け取ることができ、紹介人数に応じて報酬も増えます（<a href="./service-guides/fenno.md">設定ガイド</a>）。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
     <a class="sponsor-logo" href="https://www.packyapi.ai/register?aff=all-api-hub">
       <img src="../../../resources/partners/packycode.png" alt="PackyCode">
     </a>

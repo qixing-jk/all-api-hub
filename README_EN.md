@@ -140,30 +140,6 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 > [Want to appear here?](mailto:street-anime-olive@duck.com)
 
 <div>
-  <a href="https://s.qiniu.com/qE3eai">
-    <img src="resources/partners/qiniu.png" alt="Qiniu Cloud AI" width="180" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    Qiniu Cloud AI is Qiniu Cloud's enterprise MaaS platform, offering one-stop access to 150+ mainstream models worldwide with compatibility across major provider protocols and full-modal capabilities for text, image, audio, video, and file processing.
-    Enterprise users can claim 12 million free tokens via <a href="https://s.qiniu.com/qE3eai">this link</a>, with referral rewards up to tens of billions of tokens.
-  </p>
-</div>
-
-<hr>
-
-<div>
-  <a href="https://api.fenno.ai/s/DCGC">
-    <img src="resources/partners/fennoai.jpg" alt="FennoAI" width="180" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    FennoAI is a stable and efficient API relay provider focused on Codex relay services. It supports the OpenAI and Anthropic protocols, integrates flexibly with popular coding tools such as Codex, Claude Code, and OpenCode, and reliably handles enterprise demand at the scale of 100 billion tokens per day. It also supports business-to-business settlement and invoicing for entities in China and overseas.
-    FennoAI offers an exclusive benefit for All API Hub users: subscribe through <a href="https://api.fenno.ai/s/DCGC">the dedicated link</a> for just $1.99 to receive $50 in Coding Plan credits. Its referral program offers up to 20% commission on friends' purchases, with higher rewards as you invite more people (<a href="https://all-api-hub.qixing1217.top/en/service-guides/fenno.html">setup guide</a>).
-  </p>
-</div>
-
-<hr>
-
-<div>
   <a href="https://www.packyapi.ai/register?aff=all-api-hub">
     <img src="resources/partners/packycode.png" alt="PackyCode" width="128" align="left" hspace="10" vspace="4">
   </a>

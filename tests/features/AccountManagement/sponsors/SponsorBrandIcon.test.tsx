@@ -10,18 +10,16 @@ import {
 
 describe("SponsorBrandIcon component", () => {
   it("renders local brand icon for known sponsorId", () => {
-    render(<SponsorBrandIcon sponsorId="qiniu-cloud-ai" name="七牛云AI" />)
+    render(<SponsorBrandIcon sponsorId="packycode" name="PackyCode" />)
 
     const img = screen.getByTestId("sponsor-brand-image")
     expect(img).toBeInTheDocument()
     expect(img).toHaveAttribute("src")
-    expect(img.getAttribute("src")).toContain("qiniu-cloud-ai")
+    expect(img.getAttribute("src")).toContain("packycode")
   })
 
   it("resolves all bundled sponsor icons properly", () => {
     const sponsorIds = [
-      "qiniu-cloud-ai",
-      "fenno-ai",
       "packycode",
       "xingchen-ai",
       "suixiang",
@@ -41,24 +39,24 @@ describe("SponsorBrandIcon component", () => {
   it("prioritizes explicit iconUrl when provided", () => {
     render(
       <SponsorBrandIcon
-        sponsorId="qiniu-cloud-ai"
-        name="七牛云AI"
-        iconUrl="https://cdn.example.com/custom-qiniu.png"
+        sponsorId="packycode"
+        name="PackyCode"
+        iconUrl="https://cdn.example.com/custom-packycode.png"
       />,
     )
 
     const img = screen.getByTestId("sponsor-brand-image")
     expect(img).toHaveAttribute(
       "src",
-      "https://cdn.example.com/custom-qiniu.png",
+      "https://cdn.example.com/custom-packycode.png",
     )
   })
 
   it("falls back from failing explicit iconUrl to local bundled icon", () => {
     render(
       <SponsorBrandIcon
-        sponsorId="qiniu-cloud-ai"
-        name="七牛云AI"
+        sponsorId="packycode"
+        name="PackyCode"
         iconUrl="https://cdn.example.com/broken-custom.png"
       />,
     )
@@ -71,7 +69,7 @@ describe("SponsorBrandIcon component", () => {
 
     fireEvent.error(img)
 
-    expect(img.getAttribute("src")).toContain("qiniu-cloud-ai")
+    expect(img.getAttribute("src")).toContain("packycode")
   })
 
   it("attempts remote convention URLs (.png then .jpg) for unbundled sponsorId before default fallback", () => {
@@ -108,10 +106,10 @@ describe("SponsorBrandIcon component", () => {
   })
 
   it("falls back to default icon when primary local image fails to load", () => {
-    render(<SponsorBrandIcon sponsorId="qiniu-cloud-ai" name="七牛云AI" />)
+    render(<SponsorBrandIcon sponsorId="packycode" name="PackyCode" />)
 
     const img = screen.getByTestId("sponsor-brand-image")
-    expect(img.getAttribute("src")).toContain("qiniu-cloud-ai")
+    expect(img.getAttribute("src")).toContain("packycode")
 
     fireEvent.error(img)
 
@@ -121,8 +119,8 @@ describe("SponsorBrandIcon component", () => {
   it("resets candidate fallback index when sponsorId or iconUrl prop changes", () => {
     const { rerender } = render(
       <SponsorBrandIcon
-        sponsorId="qiniu-cloud-ai"
-        name="七牛云AI"
+        sponsorId="packycode"
+        name="PackyCode"
         iconUrl="https://cdn.example.com/broken-custom.png"
       />,
     )
@@ -134,7 +132,7 @@ describe("SponsorBrandIcon component", () => {
     )
 
     fireEvent.error(img)
-    expect(img.getAttribute("src")).toContain("qiniu-cloud-ai")
+    expect(img.getAttribute("src")).toContain("packycode")
 
     rerender(
       <SponsorBrandIcon

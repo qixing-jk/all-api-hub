@@ -10,7 +10,6 @@ All API Hub をまだインストールしていない場合は、先に[はじ�
 
 | サービス | 用途 | ガイド |
 | --- | --- | --- |
-| FennoAI | FennoAI アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/fenno.md) |
 | PackyCode | PackyCode アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/packycode.md) |
 | Xingchen AI | Xingchen AI アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/xingchen.md) |
 | Suixiang AI Relay | Suixiang AI Relay アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/suixiang.md) |

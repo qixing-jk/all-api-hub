@@ -4,10 +4,8 @@ import { cn } from "~/lib/utils"
 import api88Icon from "~~/resources/partners/icons/88api.jpg"
 import ccccccapiIcon from "~~/resources/partners/icons/ccccccapi.jpg"
 import defaultSponsorIcon from "~~/resources/partners/icons/default.png"
-import fennoIcon from "~~/resources/partners/icons/fenno-ai.png"
 import noonooIcon from "~~/resources/partners/icons/noonoo-ai.jpg"
 import packycodeIcon from "~~/resources/partners/icons/packycode.png"
-import qiniuIcon from "~~/resources/partners/icons/qiniu-cloud-ai.png"
 import suixiangIcon from "~~/resources/partners/icons/suixiang.png"
 import volcengineIcon from "~~/resources/partners/icons/volcengine-coding-plan.png"
 import xingchenIcon from "~~/resources/partners/icons/xingchen-ai.png"
@@ -39,8 +37,6 @@ export interface SponsorBrandIconProps {
  * Bundled statically to ensure instant, offline-capable display.
  */
 const LOCAL_SPONSOR_ICONS: Record<string, string> = {
-  "qiniu-cloud-ai": qiniuIcon,
-  "fenno-ai": fennoIcon,
   packycode: packycodeIcon,
   "xingchen-ai": xingchenIcon,
   suixiang: suixiangIcon,
