@@ -571,6 +571,26 @@ describe("apiService SharedChat", () => {
     })
   })
 
+  it.each([true, "active", []])(
+    "keeps subscription coverage unavailable for %j",
+    async (subscriptions) => {
+      server.use(
+        http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+          HttpResponse.json({
+            code: 1,
+            msg: "success",
+            data: { codex: { subscriptions } },
+          }),
+        ),
+      )
+
+      const data = await fetchAccountData(accountRequest)
+      expect(data.allowanceRefreshParts).toMatchObject([
+        { enumeration: "unavailable", entries: [] },
+      ])
+    },
+  )
+
   it("rejects malformed SharedChat quota envelopes", async () => {
     server.use(
       http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>

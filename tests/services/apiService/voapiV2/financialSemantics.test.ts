@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { expect, it } from "vitest"
+import { expect, it, onTestFinished, vi } from "vitest"
 
 import {
   aggregateBalances,
@@ -9,6 +9,7 @@ import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/con
 import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import { fetchVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { buildFinancialHistoryActivity } from "~/services/history/dailyBalanceHistory/activity"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -29,6 +30,11 @@ it.each([
 ])(
   "preserves wallet and exact derived consumption without legacy sum failures ($status)",
   async ({ basic, bound, status, value }) => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(2026, 10, 19, 12))
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
     server.use(
       http.get("https://voapi.example.invalid/api/user/info", () =>
         HttpResponse.json({
@@ -74,6 +80,28 @@ it.each([
     expect(projection.groups.map((group) => group.amount.value)).toEqual(
       value ? [value] : [],
     )
+    expect(result.today_quota_consumption).toBeUndefined()
+    expect(result.todayStatsAvailability?.consumption.status).toBe(
+      value ? "complete" : "unavailable",
+    )
+    const history = buildFinancialHistoryActivity({
+      store: {
+        schemaVersion: 4,
+        referenceSnapshotsByAccountId: {},
+        financialSnapshotsByAccountId: {
+          a: [
+            {
+              source: "refresh",
+              settledConsumption: result.settledConsumption,
+            },
+          ],
+        },
+      },
+      accountIds: ["a"],
+      dayKeys: ["2026-11-19"],
+      asOf: Date.now(),
+    })
+    expect(history.map(({ total }) => total)).toEqual(value ? [value] : [])
   },
 )
 

@@ -389,9 +389,11 @@ export function buildFinancialHistoryActivity({
               accountId,
               asset: first.asset,
               total,
-              recordedDays: [...costs.keys()],
-              values,
-              dailyPartial: dayKeys.map((day) => costs.has(day)),
+              recordedDays: first.dayKey ? [...costs.keys()] : [],
+              values: first.dayKey ? values : dayKeys.map(() => null),
+              dailyPartial: dayKeys.map(
+                (day) => !!first.dayKey && costs.has(day),
+              ),
               scopes: [first.scope],
             },
           ]

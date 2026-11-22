@@ -691,7 +691,12 @@ export function applySiteAccountUpdates(params: {
   )
     merged.account_info.allowances = params.updates.account_info
       .allowances as AccountInfo["allowances"]
-  for (const field of ["usage", "usageObservations", "reportedIncome"] as const)
+  for (const field of [
+    "usage",
+    "usageObservations",
+    "reportedIncome",
+    "legacyFinancial",
+  ] as const)
     if (
       params.updates.account_info &&
       Object.hasOwn(params.updates.account_info, field)

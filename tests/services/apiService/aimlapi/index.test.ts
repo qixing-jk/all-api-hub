@@ -185,11 +185,16 @@ it("includes unfiltered UTC billed costs in financial reporting without broadeni
   const projection = getDisplayConsumptionProjection([
     { id: "acc-aimlapi", settledConsumption: data.settledConsumption },
   ])
-  const providerCost = getSiteDayUsages(data)[0]?.cost?.amount
-  expect(
-    projection.groups[0]?.amount.value ??
-      (providerCost?.status === "known" ? providerCost.value : undefined),
-  ).toBe("2.5")
+  const matchesViewerDay =
+    new Date(2026, 10, 19).getTime() === Date.parse("2026-11-19T00:00:00Z")
+  expect(projection.groups.map(({ amount }) => amount.value)).toEqual(
+    matchesViewerDay ? ["2.5"] : [],
+  )
+  if (!matchesViewerDay)
+    expect(getSiteDayUsages(data)[0]?.cost?.amount).toMatchObject({
+      status: "known",
+      value: "2.5",
+    })
   expect(data.settledConsumption?.[0]).toMatchObject({
     cumulative: true,
     scope: {

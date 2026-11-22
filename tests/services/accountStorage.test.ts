@@ -7221,6 +7221,38 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  it("preserves a committed editor update when history capture fails", async () => {
+    const account = createAccount({ id: "editor-history-failure" })
+    seedStorage([account])
+    const requestSnapshot = (await accountStorage.getAccountById(account.id))!
+    const generation = (await accountMutations.beginBalanceRefresh(
+      account.id,
+      requestSnapshot,
+    ))!
+    const capture = vi
+      .spyOn(dailyBalanceCapture, "maybeCaptureDailyBalanceSnapshot")
+      .mockRejectedValueOnce(new Error("history write failed"))
+    try {
+      expect(
+        await accountMutations.updateAccountWithCheckInDraft(
+          account.id,
+          { notes: "Saved from editor" },
+          requestSnapshot.checkIn,
+          {
+            userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+            balanceRefresh: { generation, requestSnapshot },
+          },
+        ),
+      ).toBe(true)
+      expect(capture).toHaveBeenCalledOnce()
+      expect((await accountStorage.getAccountById(account.id))?.notes).toBe(
+        "Saved from editor",
+      )
+    } finally {
+      capture.mockRestore()
+    }
+  })
+
   it("refreshAccount succeeds when daily balance snapshot persistence fails", async () => {
     const account = createAccount({ id: "balance-history-write-failure" })
     seedStorage([account])

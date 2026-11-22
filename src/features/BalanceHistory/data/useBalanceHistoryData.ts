@@ -65,7 +65,7 @@ export function useBalanceHistoryData(
     } catch (error) {
       if (isCurrent()) {
         logger.error("Failed to load data", error)
-        setLoadError(getErrorMessage(error))
+        setLoadError(getErrorMessage(error, "balance_history_load_failed"))
       }
     } finally {
       if (isCurrent()) setIsLoading(false)

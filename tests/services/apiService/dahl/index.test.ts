@@ -200,6 +200,25 @@ describe("Dahl account contract", () => {
     ])
     expect(result.usage?.totalTokens).toBeUndefined()
   })
+  it("does not complete the account read if the caller aborts the optional usage read", async () => {
+    const controller = new AbortController()
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/usage`, () => {
+        controller.abort()
+        return new HttpResponse(null, { status: 503 })
+      }),
+    )
+    await expect(
+      fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.DAHL),
+        abortSignal: controller.signal,
+      }),
+    ).rejects.toBeDefined()
+    expect(controller.signal.aborted).toBe(true)
+  })
+
   it("reuses verified optional inventory tokens without repeating account and key requests", async () => {
     server.use(
       http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),

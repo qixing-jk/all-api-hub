@@ -265,6 +265,43 @@ describe("relayForAccountData", () => {
     )
   })
 
+  it("retains the lifetime token total and reconstructs the missing daily input split", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, username: "alice", quota: "500000" },
+      timed_quota: 0,
+      token_count: 150,
+      input_tokens: 0,
+      output_tokens: 0,
+      today: { tokens: 100, output_tokens: 20 },
+    })
+    const data = await relayForAccountData.fetchData(createRequest())
+    expect(data).toMatchObject({
+      usage: { totalTokens: 150 },
+      today_prompt_tokens: 80,
+      today_completion_tokens: 20,
+      balance: { positions: [{ amount: { value: "1" } }, expect.any(Object)] },
+    })
+  })
+
+  it("keeps timed grants partial when a grant has no readable status", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, username: "alice", quota: 0 },
+      timed_quota: 500000,
+    })
+    vi.mocked(fetchRelayForTimedQuotas).mockResolvedValueOnce([
+      { id: 1, quota_remaining: 500000 },
+    ])
+    const data = await relayForAccountData.fetchData(createRequest())
+
+    expect(data.balanceRefreshParts).toContainEqual(
+      expect.objectContaining({
+        collectionKey: "timed-grants",
+        enumeration: "partial",
+        positions: [],
+      }),
+    )
+  })
+
   it("maps balance, lifetime usage and today's activity from /api/user/overview", async () => {
     vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
       user: { id: 1, username: "relayuser", quota: 1000000, role: 1 },

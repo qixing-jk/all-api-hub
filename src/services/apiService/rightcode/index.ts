@@ -444,7 +444,7 @@ export async function fetchAccountData(
         partialSubscriptions = true
         return []
       }
-      const planId = String(plan.item_id)
+      const planId = String(plan.item_id).trim()
       if (seenPlans.has(planId)) {
         partialSubscriptions = true
         return []
@@ -491,7 +491,7 @@ export async function fetchAccountData(
       return [
         {
           ...base,
-          id: `${plan.item_id}:total`,
+          id: `${planId}:total`,
           constraint: constraint(plan.remaining_quota, false),
         },
         ...(plan.available_today_quota === undefined ||
@@ -500,7 +500,7 @@ export async function fetchAccountData(
           : [
               {
                 ...base,
-                id: `${plan.item_id}:day`,
+                id: `${planId}:day`,
                 constraint: constraint(plan.available_today_quota, true),
               },
             ]),

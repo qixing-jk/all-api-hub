@@ -14,7 +14,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRefreshUpdate"
 import {
   FINANCIAL_ENUMERATION,
@@ -221,7 +220,13 @@ describe("Krill AI account console", () => {
         status: "known",
         value: "12.5",
       })
-      expect(display.todayConsumption.USD).toBe(1.5)
+      expect(display.settledConsumption).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "1.5" },
+          window: { timeZone: "Asia/Shanghai" },
+        },
+      ])
       if (!retainPlans) {
         expect(saved.account_info.allowances?.entries).toEqual([])
         return
@@ -468,17 +473,11 @@ describe("Krill AI account console", () => {
       ...request,
       accountId: "krill-account",
     } as never)
-    expect(
-      getDisplayConsumptionProjection([
-        { id: "krill-account", settledConsumption: data.settledConsumption },
-      ]).groups,
-    ).toEqual([
-      expect.objectContaining({
-        amount: { asset: { kind: "currency", code: "USD" }, value: "1.75" },
-      }),
-    ])
+    expect(data.settledConsumption).toHaveLength(1)
     expect(data.settledConsumption?.[0]).toMatchObject({
       cumulative: true,
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "1.75" },
       scope: {
         projects: { kind: "all" },
         keys: { kind: "all" },

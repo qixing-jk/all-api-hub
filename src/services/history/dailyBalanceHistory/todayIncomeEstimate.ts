@@ -22,7 +22,7 @@ import type {
 } from "~/types/dailyBalanceHistory"
 import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
 import {
-  getDayKeyFromUnixSeconds,
+  createUnixDayKeyFormatter,
   parseDayKey,
   subtractDaysFromDayKey,
 } from "~/utils/core/dayKey"
@@ -63,21 +63,20 @@ function hasManualBalance(
 /** Accepts a nearby observation on either side of midnight. */
 function startsDay(
   position: BalancePosition,
-  dayKey: string,
-  timeZone: string,
+  currentDayKey: string,
+  previousDayKey: string,
+  dayKeyFor: (seconds: number) => string,
 ): boolean {
   if (position.amount.status !== OBSERVATION_STATUSES.Known) return false
   const at = position.amount.observedAt
-  return (
-    getDayKeyFromUnixSeconds(
-      (at + NET_INFLOW_MAX_CLOCK_SKEW_MS) / 1000,
-      timeZone,
-    ) === dayKey &&
-    getDayKeyFromUnixSeconds(
-      (at - NET_INFLOW_MAX_CLOCK_SKEW_MS) / 1000,
-      timeZone,
-    ) === subtractDaysFromDayKey(dayKey, 1)
-  )
+  try {
+    return (
+      dayKeyFor((at + NET_INFLOW_MAX_CLOCK_SKEW_MS) / 1000) === currentDayKey &&
+      dayKeyFor((at - NET_INFLOW_MAX_CLOCK_SKEW_MS) / 1000) === previousDayKey
+    )
+  } catch {
+    return false
+  }
 }
 
 /** Estimates native net change only when balance and settled-use intervals prove today's coverage. */
@@ -102,11 +101,17 @@ export function estimateTodayIncomeForAccount(params: {
     return unavailable(TODAY_INCOME_ESTIMATE_STATUS.manualBalance)
   if (!parseDayKey(currentDayKey))
     return unavailable(TODAY_INCOME_ESTIMATE_STATUS.invalidEstimate)
+  let dayKeyFor: ReturnType<typeof createUnixDayKeyFormatter>
+  let canonicalTimeZone: string
   try {
-    new Intl.DateTimeFormat("en", { timeZone })
+    dayKeyFor = createUnixDayKeyFormatter(timeZone)
+    canonicalTimeZone = new Intl.DateTimeFormat("en", {
+      timeZone,
+    }).resolvedOptions().timeZone
   } catch {
     return unavailable(TODAY_INCOME_ESTIMATE_STATUS.invalidEstimate)
   }
+  const previousDayKey = subtractDaysFromDayKey(currentDayKey, 1)
   const entries = store?.financialSnapshotsByAccountId?.[account.id] ?? []
   const missingStatus = historyUnavailable
     ? TODAY_INCOME_ESTIMATE_STATUS.historyUnavailable
@@ -134,27 +139,33 @@ export function estimateTodayIncomeForAccount(params: {
       status,
     })
     if (historyUnavailable) return item(missingStatus)
-    if (
-      end.amount.status !== OBSERVATION_STATUSES.Known ||
-      getDayKeyFromUnixSeconds(end.amount.observedAt / 1000, timeZone) !==
-        currentDayKey
-    )
+    if (end.amount.status !== OBSERVATION_STATUSES.Known)
       return item(missingStatus)
     const currentAmount = end.amount
-    const latest = newestFirst.find((entry) =>
-      entry.balance?.positions.some(
-        (position) =>
-          getFinancialSeriesKey(position) === seriesKey &&
-          position.amount.status === OBSERVATION_STATUSES.Known &&
-          position.amount.observedAt === currentAmount.observedAt &&
-          position.amount.value === currentAmount.value &&
-          JSON.stringify(position.amount.source.inputs) ===
-            JSON.stringify(currentAmount.source.inputs),
-      ),
+    try {
+      if (dayKeyFor(currentAmount.observedAt / 1000) !== currentDayKey)
+        return item(missingStatus)
+    } catch {
+      return item(missingStatus)
+    }
+    const latestIndex = newestFirst.findIndex(
+      (entry) =>
+        entry.endedPositionKeys?.includes(seriesKey) ||
+        entry.balance?.positions.some(
+          (position) =>
+            getFinancialSeriesKey(position) === seriesKey &&
+            position.amount.status === OBSERVATION_STATUSES.Known &&
+            position.amount.observedAt === currentAmount.observedAt &&
+            position.amount.value === currentAmount.value &&
+            JSON.stringify(position.amount.source.inputs) ===
+              JSON.stringify(currentAmount.source.inputs),
+        ),
     )
-    if (!latest) return item(missingStatus)
-    let start: BalancePosition | undefined
-    for (const entry of newestFirst.slice(newestFirst.indexOf(latest))) {
+    const latest = newestFirst[latestIndex]
+    if (!latest || latest.endedPositionKeys?.includes(seriesKey))
+      return item(missingStatus)
+    let failed: NetInflowEstimateItem | undefined
+    for (const entry of newestFirst.slice(latestIndex)) {
       // Reappearance starts a new series segment even when the upstream reuses its ID.
       if (entry.endedPositionKeys?.includes(seriesKey)) break
       if (
@@ -163,37 +174,37 @@ export function estimateTodayIncomeForAccount(params: {
         !getSoleAccountBalance(entry.balance.positions)
       )
         break
-      start = entry.balance?.positions.find(
+      const start = entry.balance?.positions.find(
         (position) =>
           getFinancialSeriesKey(position) === seriesKey &&
-          startsDay(position, currentDayKey, timeZone) &&
           position.amount.status === OBSERVATION_STATUSES.Known &&
-          position.amount.observedAt < currentAmount.observedAt,
+          position.amount.observedAt < currentAmount.observedAt &&
+          startsDay(position, currentDayKey, previousDayKey, dayKeyFor),
       )
-      if (start) break
+      if (!start) continue
+      if (!latest.settledConsumption?.length)
+        return item(TODAY_INCOME_ESTIMATE_STATUS.missingCashflow)
+      const netInflow = estimateNetInflow({
+        start,
+        end,
+        consumption: latest.settledConsumption,
+        allowAccountBalance,
+      })
+      if (netInflow.status === NET_INFLOW_STATUSES.Available) {
+        const observationZone = new Intl.DateTimeFormat("en", {
+          timeZone: netInflow.window.timeZone,
+        }).resolvedOptions().timeZone
+        if (observationZone === canonicalTimeZone)
+          return { ...item(TODAY_INCOME_ESTIMATE_STATUS.available), netInflow }
+        failed ??= item(TODAY_INCOME_ESTIMATE_STATUS.intervalMismatch)
+      } else {
+        failed ??= {
+          ...item(TODAY_INCOME_ESTIMATE_STATUS.invalidEstimate),
+          netInflow,
+        }
+      }
     }
-    if (!start) return item(TODAY_INCOME_ESTIMATE_STATUS.missingBaseline)
-    if (!latest.settledConsumption?.length)
-      return item(TODAY_INCOME_ESTIMATE_STATUS.missingCashflow)
-    const netInflow = estimateNetInflow({
-      start,
-      end,
-      consumption: latest.settledConsumption,
-      allowAccountBalance,
-    })
-    if (
-      netInflow.status === NET_INFLOW_STATUSES.Available &&
-      netInflow.window.timeZone !== timeZone
-    )
-      return item(TODAY_INCOME_ESTIMATE_STATUS.intervalMismatch)
-    return {
-      ...item(
-        netInflow.status === NET_INFLOW_STATUSES.Available
-          ? TODAY_INCOME_ESTIMATE_STATUS.available
-          : TODAY_INCOME_ESTIMATE_STATUS.invalidEstimate,
-      ),
-      netInflow,
-    }
+    return failed ?? item(TODAY_INCOME_ESTIMATE_STATUS.missingBaseline)
   })
   return {
     ...unavailable(

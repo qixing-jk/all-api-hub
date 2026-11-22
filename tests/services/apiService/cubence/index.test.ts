@@ -154,16 +154,11 @@ describe("Cubence account protocol", () => {
       ...accountRequest,
       accountId: "cubence-account",
     })
-    const projection = getDisplayConsumptionProjection([
-      { id: "cubence-account", settledConsumption: data.settledConsumption },
-    ])
-    expect(projection.groups).toEqual([
-      expect.objectContaining({
-        amount: { asset: { kind: "currency", code: "USD" }, value: "1.5" },
-      }),
-    ])
+    expect(data.settledConsumption).toHaveLength(1)
     expect(data.settledConsumption?.[0]).toMatchObject({
       cumulative: true,
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "1.5" },
       scope: {
         subject: { kind: "account", accountId: "cubence-account" },
         projects: { kind: "all" },

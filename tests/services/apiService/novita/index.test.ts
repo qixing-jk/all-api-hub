@@ -421,6 +421,26 @@ describe("novita api service", () => {
     )
   })
 
+  it.each(["9".repeat(256), "9".repeat(257)])(
+    "keeps a padded valid balance when an optional invoice exceeds decimal precision",
+    async (outstandingInvoices) => {
+      vi.mocked(
+        requestExecution.fetchPreparedJsonResponse,
+      ).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        body: {
+          ...BALANCE_FIXTURE,
+          availableBalance: " 125000 ",
+          outstandingInvoices,
+        },
+      } as never)
+      await expect(fetchNovitaBalanceDetail(request)).resolves.toMatchObject({
+        amounts: { available: "12.5", cash: "80", debt: undefined },
+      })
+    },
+  )
+
   it("keeps non-numeric balance fields unavailable instead of coercing them to zero", async () => {
     vi.mocked(requestExecution.fetchPreparedJsonResponse).mockResolvedValueOnce(
       {

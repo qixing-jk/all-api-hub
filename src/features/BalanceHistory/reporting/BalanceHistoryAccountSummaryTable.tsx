@@ -339,7 +339,9 @@ export default function BalanceHistoryAccountSummaryTable({
               t("table.columns.startBalance"),
             ),
             {
-              accessorKey: BALANCE_HISTORY_SUMMARY_COLUMNS.EndBalance,
+              id: BALANCE_HISTORY_SUMMARY_COLUMNS.EndBalance,
+              accessorFn: ({ endBalance }) => endBalance ?? undefined,
+              sortUndefined: "last",
               header: t("table.columns.endBalance"),
               cell: ({
                 row,
@@ -358,7 +360,7 @@ export default function BalanceHistoryAccountSummaryTable({
                   <span>{formatMoney(row.original.endBalance)}</span>
                 </div>
               ),
-              sortingFn: sortNullableNumber,
+              sortingFn: "basic",
             },
             referenceMoneyColumn(
               BALANCE_HISTORY_SUMMARY_COLUMNS.NetTotal,

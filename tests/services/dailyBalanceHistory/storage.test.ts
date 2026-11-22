@@ -97,7 +97,24 @@ describe("dailyBalanceHistoryStorage", () => {
   })
 
   it("keeps the original ledger on migration write failure and can retry it", async () => {
-    const legacy = { schemaVersion: 3, snapshotsByAccountId: {} }
+    const at = Date.UTC(2026, 1, 7)
+    const native = createNativeSnapshot("a1", at)
+    const legacy = {
+      schemaVersion: 3,
+      snapshotsByAccountId: {
+        a1: {
+          "2026-02-07": {
+            quota: 1_250_000,
+            today_income: 750_000,
+            today_quota_consumption: null,
+            capturedAt: at,
+            source: "refresh",
+          },
+        },
+      },
+      financialSnapshotsByAccountId: { a1: [native] },
+    }
+    const original = structuredClone(legacy)
     storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, legacy)
     failWrites = true
     try {
@@ -105,13 +122,24 @@ describe("dailyBalanceHistoryStorage", () => {
         "balance_history_write_failed",
       )
       expect(storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)).toEqual(
-        legacy,
+        original,
       )
     } finally {
       failWrites = false
     }
     await expect(dailyBalanceHistoryStorage.getStore()).resolves.toMatchObject({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      referenceSnapshotsByAccountId: {
+        a1: {
+          "2026-02-07": {
+            balanceUsd: 2.5,
+            incomeUsd: 1.5,
+            consumptionUsd: null,
+            capturedAt: at,
+          },
+        },
+      },
+      financialSnapshotsByAccountId: original.financialSnapshotsByAccountId,
     })
   })
 
@@ -140,16 +168,36 @@ describe("dailyBalanceHistoryStorage", () => {
         referenceSnapshotsByAccountId: {},
         financialSnapshotsByAccountId: { a1: entries },
       })
+      const snapshot = {
+        ...createNativeSnapshot("a1", Date.now()),
+        generation: 96,
+      }
+      const wallet = snapshot.balance!.positions[0]!
+      snapshot.settledConsumption = [
+        {
+          asset: wallet.asset,
+          scope: wallet.scope,
+          amount: observeAmount(
+            "5",
+            { ...wallet.amount.source, operation: "spending" },
+            Date.now(),
+          ),
+          window: { start, end: Date.now(), timeZone: "UTC" },
+          settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+          coverage: FINANCIAL_COVERAGE.Complete,
+          cumulative: true,
+        },
+      ]
       await dailyBalanceHistoryStorage.appendFinancialSnapshot({
         accountId: "a1",
-        snapshot: { ...createNativeSnapshot("a1", Date.now()), generation: 96 },
+        snapshot,
         retentionDays: 30,
         timeZone: "UTC",
       })
       const history = (await dailyBalanceHistoryStorage.getStore())
         .financialSnapshotsByAccountId!.a1!
       expect(history.map(({ generation }) => generation)).toEqual([
-        0, 1, 47, 48, 49, 96,
+        0, 1, 47, 48, 49, 95, 96,
       ])
       expect(
         history.find(({ generation }) => generation === 48)?.endedPositionKeys,
@@ -201,7 +249,7 @@ describe("dailyBalanceHistoryStorage", () => {
     expect(await dailyBalanceHistoryStorage.getStore()).toEqual(migrated)
   })
 
-  it("keeps the balance closest to a recorded provider billing boundary", async () => {
+  it("keeps the balance closest to a provider billing boundary reported after earlier writes", async () => {
     const boundary = Date.UTC(2026, 1, 7, 9)
     const observedAt = boundary + 3_600_000
     vi.setSystemTime(observedAt)
@@ -209,11 +257,16 @@ describe("dailyBalanceHistoryStorage", () => {
       const entries = [-30, -5, 0, 4, 20].map((minutes) =>
         createNativeSnapshot("a1", boundary + minutes * 60_000),
       )
-      storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
-        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        referenceSnapshotsByAccountId: {},
-        financialSnapshotsByAccountId: { a1: entries },
-      })
+      for (const snapshot of entries) {
+        await expect(
+          dailyBalanceHistoryStorage.appendFinancialSnapshot({
+            accountId: "a1",
+            snapshot,
+            retentionDays: 30,
+            timeZone: "UTC",
+          }),
+        ).resolves.toBe(true)
+      }
       const snapshot = createNativeSnapshot("a1", observedAt)
       const [wallet] = snapshot.balance!.positions
       snapshot.settledConsumption = [

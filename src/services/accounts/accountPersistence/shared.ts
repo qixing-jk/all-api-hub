@@ -71,7 +71,7 @@ export async function prepareAccountPersistenceIdentity(
     ?.persistence
   return persistence
     ? persistence.prepareIdentity(params)
-    : normalizeAccountIdentity(params.userId) ?? ""
+    : (normalizeAccountIdentity(params.userId) ?? "")
 }
 
 /** Returns provider-controlled validation feedback when configured. */
@@ -161,7 +161,10 @@ export function buildAccountPersistenceContext(
     sessionCookieHeader: input.sessionCookieHeader,
     manualQuota,
     requestBaseUrl: input.url.trim(),
-    requestAccountIdentity: normalizeAccountIdentity(input.userId) ?? "",
+    requestAccountIdentity: getSiteTypeCapabilities(input.siteType).account
+      ?.persistence?.usePreparedIdentityForRequests
+      ? input.accountIdentity
+      : (normalizeAccountIdentity(input.userId) ?? ""),
     fields: {
       ...(input.loginChange !== undefined
         ? { login: normalizeAccountLogin(input.loginChange) }

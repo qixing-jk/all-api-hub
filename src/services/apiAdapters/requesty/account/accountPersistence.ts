@@ -9,6 +9,7 @@ import { getErrorMessage } from "~/utils/core/error"
 
 /** Account identity follows the organization; credential ownership remains key-scoped. */
 export const requestyAccountPersistence: AccountPersistenceCapability = {
+  usePreparedIdentityForRequests: true,
   async prepareIdentity({ accessToken, userId, existingAccount }) {
     const credential = accessToken.trim()
     const credentialUnchanged =

@@ -166,7 +166,9 @@ export async function fetchRelayForAccountData(
     enumeration:
       grants === undefined
         ? FINANCIAL_ENUMERATION.Unavailable
-        : grants.every(isRecord)
+        : grants.every(
+              (grant) => isRecord(grant) && Number.isSafeInteger(grant.status),
+            )
           ? FINANCIAL_ENUMERATION.Complete
           : FINANCIAL_ENUMERATION.Partial,
     positions: (grants ?? []).flatMap((raw, index) => {
@@ -257,17 +259,28 @@ export async function fetchRelayForAccountData(
       },
     ]
   })
-  const today = overview.today
+  const today = isRecord(overview.today) ? overview.today : undefined
+  const count = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0
+      ? value
+      : undefined
+  const todayRequests = count(today?.requests)
+  const todayTokens = count(today?.tokens)
+  const todayInput = count(today?.input_tokens)
+  const todayOutput = count(today?.output_tokens)
+  const lifetimeInput = count(overview.input_tokens)
+  const lifetimeOutput = count(overview.output_tokens)
   const unsupported: AccountTodayMetricAvailability = {
     status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
     reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
   }
   const positions = parts.flatMap((part) => part.positions)
+  const splitLifetimeTokens =
+    lifetimeInput !== undefined && lifetimeOutput !== undefined
+      ? lifetimeInput + lifetimeOutput
+      : undefined
   const totalTokens =
-    typeof overview.input_tokens === "number" &&
-    typeof overview.output_tokens === "number"
-      ? overview.input_tokens + overview.output_tokens
-      : overview.token_count
+    splitLifetimeTokens || (count(overview.token_count) ?? splitLifetimeTokens)
   return {
     balance: accountBalanceSnapshot(
       scope,
@@ -302,27 +315,29 @@ export async function fetchRelayForAccountData(
       observedAt,
     ),
     today_quota_consumption: 0,
-    today_prompt_tokens: today?.input_tokens ?? 0,
+    today_prompt_tokens:
+      todayInput ??
+      (todayOutput === undefined
+        ? 0
+        : Math.max(0, (todayTokens ?? 0) - todayOutput)),
     today_completion_tokens:
-      today?.output_tokens ??
-      Math.max(0, (today?.tokens ?? 0) - (today?.input_tokens ?? 0)),
-    today_requests_count: today?.requests ?? 0,
+      todayOutput ?? Math.max(0, (todayTokens ?? 0) - (todayInput ?? 0)),
+    today_requests_count: todayRequests ?? 0,
     today_income: 0,
     todayStatsAvailability: {
       consumption: unsupported,
       income: unsupported,
-      requests: metric(today?.requests),
+      requests: metric(todayRequests),
       tokens: metric(
-        today?.tokens ??
-          (typeof today?.input_tokens === "number" &&
-          typeof today?.output_tokens === "number"
-            ? today.input_tokens + today.output_tokens
+        todayTokens ??
+          (todayInput !== undefined && todayOutput !== undefined
+            ? todayInput + todayOutput
             : undefined),
       ),
     },
     usage: {
       scope: ACCOUNT_USAGE_SCOPES.Lifetime,
-      totalRequests: overview.requests,
+      totalRequests: count(overview.requests),
       totalTokens,
       cost: {
         scope,

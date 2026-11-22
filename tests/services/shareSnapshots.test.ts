@@ -101,7 +101,7 @@ describe("public native financial sharing boundaries", () => {
     )
   })
 
-  it.each(["disabled", "expired", "reset", "unreadable"] as const)(
+  it.each(["disabled", "expired", "reset", "unreadable", "future"] as const)(
     "keeps an ineligible %s allowance out of shared entries without hiding its coverage gap",
     (state) => {
       const scope = accountBalanceScope({
@@ -141,6 +141,9 @@ describe("public native financial sharing boundaries", () => {
             collectionKey: "plans",
             identityKind: "upstream" as const,
             constraint,
+            ...(state === "future"
+              ? { reportedTiming: { startsAt: new Date(101).toISOString() } }
+              : {}),
             validity:
               state === "expired"
                 ? { kind: BALANCE_VALIDITY_KINDS.Expires, at: 100 }
@@ -167,6 +170,10 @@ describe("public native financial sharing boundaries", () => {
       expect(summary.entries).toHaveLength(1)
       expect(summary.entries[0]?.amount?.value).toBe("20")
       expect(summary.coverage).toBe(FINANCIAL_COVERAGE.Partial)
+      if (state === "future")
+        expect(
+          accountShareBalanceSummary(snapshot, allowances, 101).entries,
+        ).toHaveLength(2)
     },
   )
 

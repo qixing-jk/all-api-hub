@@ -58,8 +58,8 @@ async function readDailyBalanceHistoryStore(
   )
 }
 
-function createBalanceSnapshots(): ArchivedBalanceHistorySeed {
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+function createBalanceSnapshots(now = Date.now()): ArchivedBalanceHistorySeed {
+  const todayKey = getDayKeyFromUnixSeconds(Math.floor(now / 1000))
   const yesterdayKey = subtractDaysFromDayKey(todayKey, 1)
   const twoDaysAgoKey = subtractDaysFromDayKey(todayKey, 2)
   const eightDaysAgoKey = subtractDaysFromDayKey(todayKey, 8)
@@ -70,21 +70,21 @@ function createBalanceSnapshots(): ArchivedBalanceHistorySeed {
         quota: 10_000_000,
         today_income: 1_500_000,
         today_quota_consumption: 500_000,
-        capturedAt: Date.now() - 2 * 86_400_000,
+        capturedAt: now - 2 * 86_400_000,
         source: "refresh",
       },
       [yesterdayKey]: {
         quota: 12_000_000,
         today_income: 2_000_000,
         today_quota_consumption: 700_000,
-        capturedAt: Date.now() - 86_400_000,
+        capturedAt: now - 86_400_000,
         source: "refresh",
       },
       [todayKey]: {
         quota: 13_000_000,
         today_income: 1_000_000,
         today_quota_consumption: 600_000,
-        capturedAt: Date.now(),
+        capturedAt: now,
         source: "refresh",
       },
     },
@@ -93,14 +93,14 @@ function createBalanceSnapshots(): ArchivedBalanceHistorySeed {
         quota: 8_000_000,
         today_income: 300_000,
         today_quota_consumption: 900_000,
-        capturedAt: Date.now() - 8 * 86_400_000,
+        capturedAt: now - 8 * 86_400_000,
         source: "refresh",
       },
       [todayKey]: {
         quota: 7_500_000,
         today_income: 200_000,
         today_quota_consumption: 400_000,
-        capturedAt: Date.now(),
+        capturedAt: now,
         source: "refresh",
       },
     },
@@ -275,29 +275,29 @@ test("selects recorded cashflow by native unit and keeps converted balance histo
     id: "history-mixed-archive-row",
     extensionDir,
   })
-  const canvas = trend.locator("canvas")
-  await expect(canvas).toBeVisible()
-  const bounds = (await canvas.boundingBox())!
-  await canvas.hover({
-    position: { x: bounds.width * 0.2, y: bounds.height * 0.5 },
-  })
-  await expect(
-    page.getByText("10 USD · Converted history", { exact: true }),
-  ).toBeVisible()
-  await captureVisualViews({
-    page,
-    ready: trend,
-    captureTarget: trend,
-    id: "history-native-usd-overlay",
-    extensionDir,
-  })
-  await page.mouse.move(0, 0)
   const select = async (region: typeof trend, label: string) => {
     await region
       .getByRole("button", { name: /^(Trend|Account breakdown):/ })
       .click()
     await page.getByRole("menuitemradio", { name: label, exact: true }).click()
   }
+  await expect(trend.locator("canvas")).toBeVisible()
+  await expect(
+    trend.getByText("Converted history", { exact: true }),
+  ).toHaveCount(0)
+  await select(trend, "Converted balance · Converted history")
+  await expect(
+    trend.getByRole("button", {
+      name: "Trend: Converted balance · Converted history",
+    }),
+  ).toBeVisible()
+  await captureVisualViews({
+    page,
+    ready: trend.locator("canvas"),
+    captureTarget: trend,
+    id: "history-converted-balance",
+    extensionDir,
+  })
   await trend.getByRole("button", { name: /^Trend:/ }).click()
   await expect(
     page.getByRole("menuitemradio", { name: "Income", exact: true }),
@@ -515,7 +515,7 @@ test("keeps native asset history independent from legacy reference currency", as
   const now = Date.now()
   const earlier = now - 2 * 86_400_000
   const today = getDayKeyFromUnixSeconds(Math.floor(now / 1000))
-  const referenceHistory = createBalanceSnapshots()["balance-account-a"]!
+  const referenceHistory = createBalanceSnapshots(now)["balance-account-a"]!
   const scope = {
     ...accountBalanceScope({
       baseUrl: "https://balance-a.example.com",
@@ -1180,7 +1180,13 @@ test("filters balance history by tag/account and persists the selected currency"
     THEME_PRESET.DEFAULT,
   )
   for (const dark of [false, true]) {
+    if (dark)
+      await chart.evaluate((canvas) => {
+        delete canvas.dataset.drawnFonts
+        delete canvas.dataset.drewGapBridge
+      })
     await setVisualDarkMode(page, dark)
+    if (dark) await expect(chart).toHaveAttribute("data-drawn-fonts", /px/)
     const bounds = await chart.boundingBox()
     expect(bounds).not.toBeNull()
     await chart.hover({
@@ -1256,7 +1262,8 @@ test("filters balance history by tag/account and persists the selected currency"
   const startDate = filterSheet.getByLabel("Start Date")
   const endDate = filterSheet.getByLabel("End Date")
   await filterSheet.getByRole("button", { name: "7 days", exact: true }).click()
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+  const referenceTime = Date.now()
+  const todayKey = getDayKeyFromUnixSeconds(Math.floor(referenceTime / 1000))
   const sevenDays = filterSheet.getByRole("button", {
     name: "7 days",
     exact: true,
@@ -1396,7 +1403,7 @@ test("filters balance history by tag/account and persists the selected currency"
   await page.keyboard.press("Escape")
   await expect(filterSheet).toBeHidden()
 
-  const snapshots = createBalanceSnapshots()
+  const snapshots = createBalanceSnapshots(referenceTime)
   const archive = snapshots["balance-account-b"]!
   archive[subtractDaysFromDayKey(todayKey, 2)] = archive[todayKey]!
   await setPlasmoStorageValue(

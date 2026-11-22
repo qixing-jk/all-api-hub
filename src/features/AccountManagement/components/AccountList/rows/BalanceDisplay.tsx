@@ -38,6 +38,7 @@ import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import { ACCOUNT_SUBSCRIPTION_STATUSES as subscriptionStatuses } from "~/types"
 import type { CurrencyType, DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
   getCurrencySymbol,
@@ -578,7 +579,11 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 <NetInflowEstimateDisplay
                   estimate={site.netInflowEstimate}
                   onRefresh={
-                    isAccountDisabled
+                    isAccountDisabled ||
+                    site.netInflowEstimate?.status ===
+                      TODAY_INCOME_ESTIMATE_STATUS.disabled ||
+                    site.netInflowEstimate?.status ===
+                      TODAY_INCOME_ESTIMATE_STATUS.manualBalance
                       ? undefined
                       : () => refreshMetric(BALANCE_REFRESH_TARGETS.NET_INFLOW)
                   }

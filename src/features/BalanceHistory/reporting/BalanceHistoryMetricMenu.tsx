@@ -78,7 +78,9 @@ export function BalanceHistoryMetricMenu({
   const commonOption = (key: BalanceHistoryVisibleMetric): MetricOption => ({
     key: `reference:${key}`,
     label:
-      nativeMetrics.length > 0
+      nativeMetrics.length > 0 ||
+      hasReferenceBalance ||
+      referenceMetrics?.length
         ? `${key === DAILY_BALANCE_HISTORY_METRICS.Balance ? t("metricMenu.convertedBalance") : getBalanceHistoryMetricLabel(t, key)} · ${t("legacy.title")}`
         : getBalanceHistoryMetricLabel(t, key),
     kind: metricIcons[key],

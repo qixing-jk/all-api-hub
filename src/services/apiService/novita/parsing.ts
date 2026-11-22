@@ -69,11 +69,16 @@ export function parseNovitaBalanceDetail(body: unknown): NovitaBalanceDetail {
   const endpoint = NOVITA_OPENAPI_ENDPOINTS.balanceDetail
   if (!isRecord(body)) throw invalidResponseError(endpoint)
   const exact = (value: unknown) => {
-    const parsed =
-      typeof value === "string" && /^-?\d+$/.test(value)
-        ? parseDecimal(value)
-        : undefined
-    return parsed === undefined ? undefined : scaleDecimal(parsed, -4)
+    if (typeof value !== "string") return undefined
+    const integer = value.trim()
+    if (!/^-?\d+$/.test(integer)) return undefined
+    const parsed = parseDecimal(integer)
+    if (parsed === undefined) return undefined
+    try {
+      return scaleDecimal(parsed, -4)
+    } catch {
+      return undefined
+    }
   }
   const amounts = {
     available: exact(body.availableBalance),

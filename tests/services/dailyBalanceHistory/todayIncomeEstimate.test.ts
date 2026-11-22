@@ -340,6 +340,58 @@ describe("today net inflow", () => {
     },
   )
 
+  it("tries an earlier baseline when the closest prior reading does not match the billing interval", () => {
+    const history = store()
+    const entries = history.financialSnapshotsByAccountId!.account!
+    const at = startAt + 9 * 60_000
+    const latest = entries[1]!
+    const end = startAt + 30 * 60_000
+    latest.balance!.capturedAt = end
+    latest.balance!.positions = [position("65", end)]
+    const original = latest.settledConsumption![0]!
+    original.window.end = end
+    original.amount = observeAmount("30", original.amount.source, end)
+    entries.splice(1, 0, {
+      ...entries[0]!,
+      balance: {
+        ...entries[0]!.balance!,
+        capturedAt: at,
+        positions: [position("99", at)],
+      },
+    })
+
+    expect(estimate(history).estimates).toMatchObject([
+      { status: "available", netInflow: { amount: { value: "-5" } } },
+    ])
+  })
+
+  it("ignores a baseline timestamp outside the calendar range", () => {
+    const history = store()
+    const entries = history.financialSnapshotsByAccountId!.account!
+    entries[0]!.balance!.positions = [position("99", -9_000_000_000_000_000)]
+
+    expect(estimate(history).status).toBe("missing_baseline")
+  })
+
+  it("does not estimate from a retained account balance after the ledger ends", () => {
+    const history = store()
+    const entries = history.financialSnapshotsByAccountId!.account!
+    const balance = entries[1]!.balance!
+    entries.push({
+      source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+      balance: { ...balance, capturedAt: endAt + 1, positions: [] },
+      endedPositionKeys: [getFinancialSeriesKey(balance.positions[0]!)],
+    })
+
+    expect(estimate(history, "UTC", balance).status).toBe(
+      "missing_current_snapshot",
+    )
+  })
+
+  it("accepts equivalent time-zone identifiers", () => {
+    expect(estimate(store(), "Etc/UTC").status).toBe("available")
+  })
+
   it("preserves signed original currency and never compensates confirmed income", () => {
     expect(estimate()).toMatchObject({
       status: "available",
@@ -395,6 +447,19 @@ describe("today net inflow", () => {
   it("requires consumption timezone to match the selected day timezone", () => {
     expect(estimate(store(), "Asia/Shanghai").status).not.toBe("available")
   })
+  it("keeps malformed report dates and time zones unavailable", () => {
+    expect(estimate(store(), "not-a-time-zone").status).toBe("invalid_estimate")
+    expect(
+      estimateTodayIncomeForAccount({
+        enabled: true,
+        store: store(),
+        account: { id: "account" },
+        currentDayKey: "2026-02-30",
+        timeZone: "UTC",
+      }).status,
+    ).toBe("invalid_estimate")
+  })
+
   it("rejects a console to inference source switch", () => {
     const history = structuredClone(store())
     history.financialSnapshotsByAccountId!.account![1]!.balance!.positions[0]!.amount.source.operation =

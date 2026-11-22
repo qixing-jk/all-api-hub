@@ -75,7 +75,7 @@ export async function fetchVercelCredits(
   const totalUsedUsd = isRecord(body)
     ? parseDecimal(body.total_used)
     : undefined
-  if (!isRecord(body) || !("balance" in body || "total_used" in body)) {
+  if (balanceUsd === undefined && totalUsedUsd === undefined) {
     throw new VercelCreditsError()
   }
   return { balanceUsd, totalUsedUsd }

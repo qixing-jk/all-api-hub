@@ -199,7 +199,12 @@ export async function fetchAccountData(
           {
             source,
             collectionKey: "active-plans",
-            enumeration: FINANCIAL_ENUMERATION.Complete,
+            enumeration: entries.every(
+              ({ identityKind }) =>
+                identityKind === ALLOWANCE_IDENTITY_KINDS.Upstream,
+            )
+              ? FINANCIAL_ENUMERATION.Complete
+              : FINANCIAL_ENUMERATION.Partial,
             entries,
           },
         ],

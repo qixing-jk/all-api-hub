@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { accountAllowanceEntryKey } from "~/services/accounts/allowances"
 import { acceptBalanceRefresh } from "~/services/accounts/refresh/balanceAcceptance"
 import {
   fetchAccountData,
@@ -152,7 +153,8 @@ it.each([0, 1e20, -1, null])(
   },
 )
 
-it("falls back to inference subscription after management scope refusal", async () => {
+it("uses the same allowance identity across management and inference reads", async () => {
+  let managementAvailable = true
   server.use(
     http.post(`${API_ORIGIN}/api/check-balance`, () =>
       HttpResponse.json(balanceBody),
@@ -163,7 +165,12 @@ it("falls back to inference subscription after management scope refusal", async 
       }),
     ),
     http.get(`${CONSOLE_ORIGIN}/api/management/v1/subscription/usage`, () =>
-      HttpResponse.json({ error: "denied" }, { status: 403 }),
+      managementAvailable
+        ? HttpResponse.json({
+            active: true,
+            dailyInputTokens: { remaining: 6, resetAt: 1700000000000 },
+          })
+        : HttpResponse.json({ error: "denied" }, { status: 403 }),
     ),
     http.get(`${API_ORIGIN}/api/subscription/v1/usage`, () =>
       HttpResponse.json({
@@ -173,7 +180,7 @@ it("falls back to inference subscription after management scope refusal", async 
       }),
     ),
   )
-  const data = await fetchAccountData({
+  const request = {
     ...tokenRequest,
     auth: {
       ...tokenRequest.auth,
@@ -181,7 +188,16 @@ it("falls back to inference subscription after management scope refusal", async 
         'nanogpt-credentials:{"apiKey":"sk-nano-fixture","managementToken":"sk-nano-mgmt-fixture"}',
     },
     checkIn: buildCheckInConfig(),
+  }
+  const initial = await fetchAccountData(request)
+  managementAvailable = false
+  const data = await fetchAccountData(request)
+  expect(initial.allowances?.entries[0]?.constraint.remaining).toMatchObject({
+    value: "6",
   })
+  expect(accountAllowanceEntryKey(data.allowances!.entries[0]!)).toBe(
+    accountAllowanceEntryKey(initial.allowances!.entries[0]!),
+  )
   expect(data.allowances?.entries[0]?.constraint).toMatchObject({
     remaining: { value: "4" },
     window: { period: "day", resetsAt: 1700000000000 },
@@ -425,7 +441,27 @@ describe("NanoGPT response parsing", () => {
         },
         "endpoint",
       ),
-    ).toEqual({ active: true, state: "active", dailyInputTokens: {} })
+    ).toEqual({ active: true, state: "active" })
+  })
+
+  it("drops negative allowance counters while keeping an independently reported zero", () => {
+    expect(
+      parseNanoGptSubscription(
+        {
+          active: true,
+          dailyInputTokens: { used: "-1", remaining: 0 },
+          weeklyInputTokens: {
+            used: "-3",
+            remaining: "-5",
+            resetAt: 1900000000000,
+          },
+        },
+        "/subscription",
+      ),
+    ).toEqual({
+      active: true,
+      dailyInputTokens: { remaining: "0" },
+    })
   })
 
   it("keeps the weekly quota even when the daily one is unconfigured", () => {

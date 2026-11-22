@@ -15,10 +15,7 @@ import {
   accountBalanceScope,
 } from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
-import {
-  NANOGPT_API_ORIGIN,
-  NANOGPT_WEB_ORIGIN,
-} from "~/services/accountSiteDefinitions/identifiers"
+import { NANOGPT_API_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import {
   balancePosition,
   observeAmount,
@@ -136,16 +133,16 @@ function subscriptionAllowances(
 ) {
   const source = {
     adapter: "nanogpt",
-    operation: management
-      ? "/api/management/v1/subscription/usage"
-      : NANOGPT_ENDPOINTS.subscriptionUsage,
+    operation: NANOGPT_ENDPOINTS.subscriptionUsage,
     contractVersion: "1",
     kind: EVIDENCE_KINDS.Reported,
+    inputs: [
+      management
+        ? "/api/management/v1/subscription/usage"
+        : NANOGPT_ENDPOINTS.subscriptionUsage,
+    ],
   }
-  const allowanceScope = {
-    ...scope,
-    authority: management ? NANOGPT_WEB_ORIGIN : NANOGPT_API_ORIGIN,
-  }
+  const allowanceScope = { ...scope, authority: NANOGPT_API_ORIGIN }
   const entries: AccountAllowanceRefreshPart["entries"] = []
   for (const [id, quota, period, label] of [
     ["dailyInputTokens", snapshot?.dailyInputTokens, "day", "Input Token"],

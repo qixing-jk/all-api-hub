@@ -316,7 +316,7 @@ describe("apiService VoAPI v2", () => {
       { status: "known", value: "2" },
       { status: "known", value: "0" },
     ])
-    expect(data.today_quota_consumption).toBe(0)
+    expect(data.today_quota_consumption).toBeUndefined()
     expect(statsCalled).toBe(false)
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: {
@@ -375,7 +375,7 @@ describe("apiService VoAPI v2", () => {
 
     const data = await fetchVoApiV2AccountData(createVoApiV2Request())
 
-    expect(data.today_quota_consumption).toBe(0)
+    expect(data.today_quota_consumption).toBeUndefined()
     expect(data.today_requests_count).toBe(9)
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: {

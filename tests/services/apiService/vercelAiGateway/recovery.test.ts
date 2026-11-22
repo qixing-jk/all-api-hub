@@ -252,16 +252,19 @@ it.each([null, {}, { user: { id: "u" } }])(
   },
 )
 
-it.each([null, {}])("rejects unrelated credit payloads %j", async (body) => {
-  server.use(
-    http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
-      HttpResponse.json(body),
-    ),
-  )
-  await expect(fetchVercelCredits(request, "team_test")).rejects.toThrow(
-    "vercel_credits_unreadable",
-  )
-})
+it.each([null, {}, { balance: null, total_used: "n/a" }])(
+  "rejects unrelated or entirely unreadable credit payloads %j",
+  async (body) => {
+    server.use(
+      http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
+        HttpResponse.json(body),
+      ),
+    )
+    await expect(fetchVercelCredits(request, "team_test")).rejects.toThrow(
+      "vercel_credits_unreadable",
+    )
+  },
+)
 it.each([" ", true, "Infinity", 1e308])(
   "retains available lifetime usage when balance cannot be read exactly: %j",
   async (balance) => {

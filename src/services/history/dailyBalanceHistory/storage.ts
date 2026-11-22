@@ -11,6 +11,7 @@ import {
   usageScopeSchema,
 } from "~/services/amounts/balance"
 import {
+  BALANCE_ROLES,
   FINANCIAL_SETTLEMENT_STATUSES,
   FINANCIAL_SUBJECT_KINDS,
   OBSERVATION_STATUSES,
@@ -256,6 +257,10 @@ function sanitizeStore(value: unknown): DailyBalanceHistoryStore {
 
 /** Find eligible recorded baselines per billing boundary and independent balance series. */
 function getBillingBaselines(entries: FinancialHistorySnapshot[]) {
+  // Keep a local day of candidate baselines even if the provider has a longer
+  // DST day or does not return a billing window until after midnight.
+  const recentSince = Date.now() - 26 * 60 * 60_000
+  const recentWindows: FinancialConsumptionFact[] = []
   const windows = new Map<number, Map<string, FinancialConsumptionFact>>()
   const bucketFor = (at: number) =>
     Math.floor(at / NET_INFLOW_MAX_CLOCK_SKEW_MS)
@@ -267,6 +272,7 @@ function getBillingBaselines(entries: FinancialHistorySnapshot[]) {
         fact.amount.status !== OBSERVATION_STATUSES.Known
       )
         continue
+      if (fact.window.end >= recentSince) recentWindows.push(fact)
       const bucket = bucketFor(fact.window.start)
       const facts = windows.get(bucket) ?? new Map()
       facts.set(
@@ -286,13 +292,24 @@ function getBillingBaselines(entries: FinancialHistorySnapshot[]) {
     string,
     { distance: number; entry: FinancialHistorySnapshot }
   >()
-  if (windows.size === 0) return new Set<FinancialHistorySnapshot>()
+  const unclassified = new Set<FinancialHistorySnapshot>()
   for (const entry of entries) {
     const positions = entry.balance?.positions ?? []
     const sole = getSoleAccountBalance(positions)
     for (const position of positions) {
       if (position.amount.status !== OBSERVATION_STATUSES.Known) continue
       const at = position.amount.observedAt
+      if (
+        at >= recentSince &&
+        (position.role === BALANCE_ROLES.Ledger || position === sole) &&
+        !recentWindows.some(
+          (fact) =>
+            at >= fact.window.start - NET_INFLOW_MAX_CLOCK_SKEW_MS &&
+            at <= fact.window.end &&
+            isConsumptionApplicableToBalance(position, fact, position === sole),
+        )
+      )
+        unclassified.add(entry)
       const bucket = bucketFor(at)
       for (const candidate of [bucket - 1, bucket, bucket + 1]) {
         for (const [id, fact] of windows.get(candidate) ?? []) {
@@ -310,7 +327,8 @@ function getBillingBaselines(entries: FinancialHistorySnapshot[]) {
       }
     }
   }
-  return new Set(Array.from(closest.values(), ({ entry }) => entry))
+  for (const { entry } of closest.values()) unclassified.add(entry)
+  return unclassified
 }
 
 /** Prunes expired observations and compacts equivalent intraday receipts. */

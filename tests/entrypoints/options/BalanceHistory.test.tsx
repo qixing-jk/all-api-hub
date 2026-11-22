@@ -1163,13 +1163,13 @@ describe("BalanceHistory options page", () => {
           screen.getByRole("button", {
             name: getMetricDropdownButtonName(
               "trend",
-              "balanceHistory:metrics.balance",
+              "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
             ),
           }),
         )
         await user.click(
           await screen.findByRole("menuitemradio", {
-            name: `balanceHistory:metrics.${metric}`,
+            name: `balanceHistory:metrics.${metric} · balanceHistory:legacy.title`,
           }),
         )
 
@@ -1777,20 +1777,20 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.balance",
+            "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.outcome",
+          name: "balanceHistory:metrics.outcome · balanceHistory:legacy.title",
         }),
       )
       expect(
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.outcome",
+            "balanceHistory:metrics.outcome · balanceHistory:legacy.title",
           ),
         }),
       ).toBeInTheDocument()
@@ -1799,13 +1799,13 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.outcome",
+            "balanceHistory:metrics.outcome · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.net",
+          name: "balanceHistory:metrics.net · balanceHistory:legacy.title",
         }),
       )
 
@@ -1814,7 +1814,7 @@ describe("BalanceHistory options page", () => {
           screen.getByRole("button", {
             name: getMetricDropdownButtonName(
               "breakdown",
-              "balanceHistory:metrics.net",
+              "balanceHistory:metrics.net · balanceHistory:legacy.title",
             ),
           }),
         ).toBeInTheDocument()
@@ -1988,26 +1988,26 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.balance",
+            "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.estimatedIncome",
+          name: "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
         }),
       )
       await user.click(
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "trend",
-            "balanceHistory:metrics.balance",
+            "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.estimatedIncome",
+          name: "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
         }),
       )
 
@@ -2015,7 +2015,7 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).toBeInTheDocument()
@@ -2023,7 +2023,7 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "trend",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).toBeInTheDocument()
@@ -2047,7 +2047,7 @@ describe("BalanceHistory options page", () => {
         screen.queryByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).not.toBeInTheDocument()
@@ -2055,7 +2055,7 @@ describe("BalanceHistory options page", () => {
         screen.queryByRole("button", {
           name: getMetricDropdownButtonName(
             "trend",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).not.toBeInTheDocument()
@@ -2086,7 +2086,7 @@ describe("BalanceHistory options page", () => {
       )
       expect(
         screen.queryByRole("menuitemradio", {
-          name: "balanceHistory:metrics.estimatedIncome",
+          name: "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
         }),
       ).not.toBeInTheDocument()
     } finally {

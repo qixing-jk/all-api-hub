@@ -33,6 +33,7 @@ import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHisto
 import { estimateTodayIncomeForAccount } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -124,12 +125,14 @@ async function expectEstimate(
       },
     ],
   })
+  const asOf = Date.now()
+  const viewerDay = getDayKeyFromUnixSeconds(asOf / 1000)
   const history = buildFinancialHistorySeries({
     store,
     accountIds: [account.id],
-    startDayKey: day,
-    endDayKey: day,
-    asOf: Date.now(),
+    startDayKey: viewerDay,
+    endDayKey: viewerDay,
+    asOf,
   })
   expect(
     history.series

@@ -678,9 +678,13 @@ describe("rightcode apiService index", () => {
                   expired_at: "2020-01-01T00:00:00",
                 },
                 {
-                  item_id: 2,
+                  item_id: " 2 ",
                   name: "Long Term Plan",
                   expired_at: null,
+                },
+                {
+                  item_id: 2,
+                  name: "Duplicate Plan",
                 },
                 {
                   item_id: 3,
@@ -701,6 +705,13 @@ describe("rightcode apiService index", () => {
       )
 
       const result = await fetchAccountData(accountRequest)
+      expect(result.allowanceRefreshParts?.[0]?.enumeration).toBe("partial")
+      expect(
+        result.allowances?.entries.filter(({ id }) => id === "2:total"),
+      ).toHaveLength(1)
+      expect(result.allowances?.entries).not.toContainEqual(
+        expect.objectContaining({ label: "Duplicate Plan" }),
+      )
       expect(result.allowances?.entries).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

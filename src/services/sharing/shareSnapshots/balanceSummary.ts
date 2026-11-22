@@ -1,5 +1,6 @@
 import { CURRENCIES } from "~/constants/money"
 import {
+  parseAllowanceInstant,
   projectAllowancePosition,
   type AccountAllowanceSnapshot,
 } from "~/services/accounts/allowances"
@@ -71,7 +72,9 @@ export function accountShareBalanceSummary(
 ): ShareBalanceSummary {
   const validAllowances =
     allowances?.entries.filter(
-      ({ constraint, validity }) =>
+      ({ constraint, validity, reportedTiming }) =>
+        (parseAllowanceInstant(reportedTiming?.startsAt) ??
+          Number.NEGATIVE_INFINITY) <= asOf &&
         constraint.asset.kind !== ASSET_KINDS.Unknown &&
         (isKnownOrStaleObservation(constraint.remaining) ||
           (constraint.limitState === BUDGET_LIMIT_STATES.Unlimited &&

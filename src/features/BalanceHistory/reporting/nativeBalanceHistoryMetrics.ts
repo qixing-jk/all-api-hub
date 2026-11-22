@@ -1,17 +1,12 @@
 import type { TFunction } from "i18next"
 
 import { FINANCIAL_METRIC_KINDS } from "~/components/financialMetricKinds"
-import { CURRENCIES } from "~/constants/money"
-import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/constants/siteType"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   ASSET_KINDS,
   BALANCE_FUNDING,
   BALANCE_ROLES,
 } from "~/services/amounts/financialConstants"
-import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
 import type { buildFinancialHistorySeries } from "~/services/history/dailyBalanceHistory/selectors"
-import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 
 import type { getFinancialHistoryPresentation } from "./financialHistoryPresentation"
 import {
@@ -20,20 +15,16 @@ import {
   groupFinancialHistoryMetrics,
 } from "./financialHistorySelection"
 
-/** Build native balance metrics and compatible archived USD bridges independently of React state. */
+/** Build metrics from balances with native wallet identity. */
 export function buildNativeBalanceHistoryMetrics({
   financialHistory,
   historyPresentation,
   accountDisplayLabelById,
-  manualBalanceAccountIds,
-  store,
   t,
 }: {
   financialHistory: ReturnType<typeof buildFinancialHistorySeries>
   historyPresentation: ReturnType<typeof getFinancialHistoryPresentation>
   accountDisplayLabelById: Map<string, string>
-  manualBalanceAccountIds: Set<string>
-  store: DailyBalanceHistoryStore | null
   t: TFunction<"balanceHistory">
 }) {
   const { metricLabel, optionLabel, displayValue, unitLabel, displayAmount } =
@@ -81,6 +72,7 @@ export function buildNativeBalanceHistoryMetrics({
       : undefined
     return {
       key,
+      sourceKeys: items.map((item) => `native:${item.key}`),
       kind:
         first.position.asset.kind === ASSET_KINDS.Quota
           ? FINANCIAL_METRIC_KINDS.Tokens
@@ -96,44 +88,6 @@ export function buildNativeBalanceHistoryMetrics({
       currencyCode:
         asset.kind === ASSET_KINDS.Currency ? asset.code : undefined,
       overviewEntries,
-      referenceTrendSeries: items.flatMap((item) => {
-        const { position, accountId } = item
-        const { adapter, contractVersion, operation } = position.amount.source
-        const family = getAccountSiteDefinition(adapter)?.adapterFamily
-        // These release balances used the same USD denomination as the native wallet.
-        const releaseUsdWallet =
-          (family === ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api &&
-            contractVersion === "usd/v1" &&
-            operation === "/api/v1/auth/me:balance") ||
-          (family === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily &&
-            contractVersion ===
-              NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd &&
-            operation === "/api/user/self:quota")
-        if (
-          !releaseUsdWallet ||
-          position.role !== BALANCE_ROLES.Available ||
-          asset.kind !== ASSET_KINDS.Currency ||
-          asset.code !== CURRENCIES.USD ||
-          manualBalanceAccountIds.has(accountId)
-        )
-          return []
-        const firstNative = item.values.findIndex((value) => value !== null)
-        const reference = store?.referenceSnapshotsByAccountId[accountId]
-        if (!reference || firstNative <= 0) return []
-        const values = financialHistory.dayKeys.map((day, index) =>
-          index < firstNative ? (reference[day]?.balanceUsd ?? null) : null,
-        )
-        return values.some((value) => value !== null)
-          ? [
-              {
-                name: `${accountName(accountId)} · ${t("balanceHistory:legacy.title")}`,
-                values,
-                valueFormatter: (value: number | string) =>
-                  `${displayAmount(asset, String(value))} · ${t("balanceHistory:legacy.title")}`,
-              },
-            ]
-          : []
-      }),
       totalSeries: totals
         ? {
             name: t("balanceHistory:trend.scopes.total"),

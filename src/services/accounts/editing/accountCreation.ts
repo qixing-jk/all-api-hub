@@ -316,7 +316,7 @@ export async function validateAndSaveAccount(
         reportedIncome: freshAccountData.reportedIncome,
         today_prompt_tokens: freshAccountData.today_prompt_tokens,
         today_completion_tokens: freshAccountData.today_completion_tokens,
-        today_quota_consumption: freshAccountData.today_quota_consumption,
+        today_quota_consumption: freshAccountData.today_quota_consumption ?? 0,
         today_requests_count: freshAccountData.today_requests_count,
         today_income: freshAccountData.today_income,
         todayStatsAvailability: freshAccountData.todayStatsAvailability,

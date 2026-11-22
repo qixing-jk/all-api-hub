@@ -8,6 +8,7 @@ import {
 } from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { balancePosition } from "~/services/amounts/balance"
+import { addDecimal, parseDecimal } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
   BALANCE_FUNDING,
@@ -71,13 +72,23 @@ export async function fetchAccountData(
       displayLabel: "credits",
       displayScale: 1,
     }
+    const permanent = parseDecimal(data.permanentQuota)
+    const daily = parseDecimal(data.dailyQuota)
+    let total = parseDecimal(data.quota)
+    if (total !== undefined && permanent !== undefined && daily !== undefined) {
+      try {
+        if (addDecimal(permanent, daily) !== total) total = undefined
+      } catch {
+        total = undefined
+      }
+    }
     const positions = [
       balancePosition({
         id: "available",
         collectionKey: "credits",
         scope,
         asset,
-        value: data.quota,
+        value: total,
         nature: BALANCE_NATURES.Mixed,
         source,
         observedAt,
@@ -88,7 +99,7 @@ export async function fetchAccountData(
         collectionKey: "credits",
         scope,
         asset,
-        value: data.permanentQuota,
+        value: permanent,
         nature: BALANCE_NATURES.Prepaid,
         validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
         parentId: "available",
@@ -102,7 +113,7 @@ export async function fetchAccountData(
         collectionKey: "credits",
         scope,
         asset,
-        value: data.dailyQuota,
+        value: daily,
         funding: BALANCE_FUNDING.Granted,
         parentId: "available",
         relation: BALANCE_RELATIONS.Component,

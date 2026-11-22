@@ -308,6 +308,19 @@ it("treats scope restrictions as sets and preserves decimal precision", () => {
   })
 })
 
+it("keeps a change beyond the representable decimal range unavailable", () => {
+  const large = "9".repeat(256)
+  const result = estimateNetInflow({
+    start: position("0", startAt),
+    end: position(large, endAt),
+    consumption: [consumption("1")],
+  })
+  expect(result).toEqual({
+    status: "unavailable",
+    reason: "amount-out-of-range",
+  })
+})
+
 it("selects consumption for the matching wallet and asset without rejecting independent wallets", () => {
   const unrelated = structuredClone(consumption("99"))
   unrelated.scope.walletId = "other"

@@ -48,7 +48,12 @@ export type TodayIncomeDataWithAvailability = TodayIncomeData & {
   todayStatsAvailability: Pick<AccountTodayStatsAvailability, "income">
 }
 
-export interface AccountData extends TodayStatsData {
+export interface AccountData extends Omit<
+  TodayStatsData,
+  "today_quota_consumption"
+> {
+  /** A precise native amount may have no equivalent legacy quota counter. */
+  today_quota_consumption?: number
   reportedIncome?: FinancialIncomeFact[]
   allowances?: AccountAllowanceSnapshot
   allowanceRefreshParts?: AccountAllowanceRefreshPart[]

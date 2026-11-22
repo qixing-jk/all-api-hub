@@ -142,6 +142,7 @@ export function useAccountSnapshot({
   accountsRef.current = accounts
   const targetedReloadGenerationRef = useRef(0)
   const appliedTargetedReloadRef = useRef(0)
+  const appliedFullLoadRef = useRef(0)
   const targetedReloadGenerationByAccountIdRef = useRef<Record<string, number>>(
     {},
   )
@@ -190,6 +191,8 @@ export function useAccountSnapshot({
           setPrevBalances(prevBalances)
         }
 
+        appliedFullLoadRef.current += 1
+        accountsRef.current = allAccounts
         setAccounts(allAccounts)
         setBookmarks(allBookmarks)
         setStats(accountStats)
@@ -329,6 +332,7 @@ export function useAccountSnapshot({
           }
         }
 
+        const appliedFullLoad = appliedFullLoadRef.current
         appliedTargetedReloadRef.current += 1
         accountsRef.current = mergedAccounts
         setAccounts(mergedAccounts)
@@ -341,21 +345,26 @@ export function useAccountSnapshot({
             targetedReloadGenerationByAccountIdRef.current[account.id] ===
             reloadGeneration,
         )
-        if (latestActiveReloadedAccounts.length === 0) {
-          return
-        }
-
-        const latestReloadedById = Object.fromEntries(
-          latestActiveReloadedAccounts.map((account) => [account.id, account]),
-        )
         const latestAccounts = accountsRef.current
         const latestKnownIds = new Set(
           latestAccounts.map((account) => account.id),
         )
+        const canApply =
+          appliedFullLoad === appliedFullLoadRef.current
+            ? latestActiveReloadedAccounts
+            : latestActiveReloadedAccounts.filter(
+                ({ id }) => !knownIds.has(id) && !latestKnownIds.has(id),
+              )
+        for (const { id } of latestActiveReloadedAccounts)
+          delete targetedReloadGenerationByAccountIdRef.current[id]
+        if (canApply.length === 0) return
+        const latestReloadedById = Object.fromEntries(
+          canApply.map((account) => [account.id, account]),
+        )
         const latestMergedAccounts = latestAccounts.map(
           (account) => latestReloadedById[account.id] ?? account,
         )
-        for (const account of latestActiveReloadedAccounts) {
+        for (const account of canApply) {
           if (!latestKnownIds.has(account.id)) {
             latestMergedAccounts.push(account)
           }
@@ -372,14 +381,6 @@ export function useAccountSnapshot({
             todayKey,
           }),
         )
-        for (const account of latestActiveReloadedAccounts) {
-          if (
-            targetedReloadGenerationByAccountIdRef.current[account.id] ===
-            reloadGeneration
-          ) {
-            delete targetedReloadGenerationByAccountIdRef.current[account.id]
-          }
-        }
       } catch (error) {
         logger.warn(
           "Account-scoped reload failed; falling back to full reload",

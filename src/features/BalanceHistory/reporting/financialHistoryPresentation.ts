@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 
-import type { Asset } from "~/services/amounts/assets"
+import type { Asset, QuotaAsset } from "~/services/amounts/assets"
 import { normalizeDecimalUnits } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
@@ -22,14 +22,41 @@ export function getFinancialHistoryPresentation(
   t: TFunction<"balanceHistory">,
   locale: string,
 ) {
+  const scaleKey = (asset: QuotaAsset) =>
+    JSON.stringify([asset.id, asset.displayScale, asset.displayLabel])
+  const rawUnits = new Set<string>()
+  for (const {
+    position: { asset },
+    values,
+    observations,
+  } of series) {
+    if (asset.kind !== ASSET_KINDS.Quota) continue
+    const key = scaleKey(asset)
+    if (rawUnits.has(key)) continue
+    const cannotScale = (value: string | null) =>
+      value !== null &&
+      normalizeDecimalUnits(value, asset.displayScale) === undefined
+    if (
+      cannotScale("1") ||
+      values.some(cannotScale) ||
+      observations.some(({ value }) => cannotScale(value))
+    )
+      rawUnits.add(key)
+  }
+
+  const usesRawUnit = (asset: QuotaAsset) =>
+    rawUnits.has(scaleKey(asset)) ||
+    normalizeDecimalUnits("1", asset.displayScale) === undefined
+
   const unitLabel = (asset: Asset) =>
     asset.kind === ASSET_KINDS.Quota
-      ? normalizeDecimalUnits("1", asset.displayScale) === undefined
+      ? usesRawUnit(asset)
         ? asset.label
         : asset.displayLabel
       : getAssetLabel(asset, t("native.unknownAsset"))
   const displayValue = (asset: Asset, value: string) =>
-    asset.kind === ASSET_KINDS.Unknown
+    asset.kind === ASSET_KINDS.Unknown ||
+    (asset.kind === ASSET_KINDS.Quota && usesRawUnit(asset))
       ? value
       : getAssetDisplayValue({ asset, value })
   const displayAmount = (asset: Asset, value: string) =>

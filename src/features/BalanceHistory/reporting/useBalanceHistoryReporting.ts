@@ -138,8 +138,6 @@ export function useBalanceHistoryReporting({
         },
         historyPresentation,
         accountDisplayLabelById,
-        manualBalanceAccountIds,
-        store,
         t,
       }),
     [
@@ -147,8 +145,6 @@ export function useBalanceHistoryReporting({
       financialHistory.dayKeys,
       financialHistory.series,
       historyPresentation,
-      manualBalanceAccountIds,
-      store,
       t,
     ],
   )
@@ -217,9 +213,16 @@ export function useBalanceHistoryReporting({
     metric: DailyBalanceHistoryMetric,
     options = nativeMetrics,
   ) => {
-    if (key?.startsWith("reference:")) return undefined
+    if (key?.startsWith("reference:"))
+      return referenceMetrics.includes(metric) ? undefined : options[0]
     const explicit = options.find((item) => item.key === key)
     if (explicit) return explicit
+    if (key) {
+      const sameSource = options.find(
+        (item) => "sourceKeys" in item && item.sourceKeys.includes(key),
+      )
+      if (sameSource) return sameSource
+    }
     if (metric === DAILY_BALANCE_HISTORY_METRICS.Balance) {
       return key !== null
         ? (options.find(
@@ -382,40 +385,11 @@ export function useBalanceHistoryReporting({
   const nativeTrendCanSum = nativeTotalSeries !== undefined
   const nativeTrendWindow = useMemo(() => {
     if (!nativeTrend) return
-    const references =
-      "referenceTrendSeries" in nativeTrend
-        ? nativeTrend.referenceTrendSeries
-        : []
-    const referenceTotal =
-      nativeTotalSeries && references.length
-        ? [
-            {
-              name: `${t("trend.scopes.total")} · ${t("legacy.title")}`,
-              values: financialHistory.dayKeys.map((_, day) => {
-                const known = references.flatMap(({ values }) =>
-                  Number.isFinite(values[day]) ? [values[day]!] : [],
-                )
-                const sum = known.reduce((total, value) => total + value, 0)
-                return known.length && Number.isFinite(sum) ? sum : null
-              }),
-              valueFormatter: (value: number | string, day: number) =>
-                `${references[0]!.valueFormatter(value)} · ${t(
-                  "native.coverage",
-                  {
-                    covered: references.filter(({ values }) =>
-                      Number.isFinite(values[day]),
-                    ).length,
-                    total: nativeTrend.series.length,
-                  },
-                )}`,
-            },
-          ]
-        : []
     const trendSeries =
       trendScope === BALANCE_HISTORY_TREND_SERIES_SCOPES.Total &&
       nativeTotalSeries
-        ? [nativeTotalSeries, ...referenceTotal]
-        : [...nativeTrend.series, ...references]
+        ? [nativeTotalSeries]
+        : nativeTrend.series
     const dates = financialHistory.dayKeys
     const hasValueAt = (index: number) =>
       trendSeries.some(({ values }) => Number.isFinite(values[index]))
@@ -449,7 +423,7 @@ export function useBalanceHistoryReporting({
             : undefined,
       },
     }
-  }, [financialHistory.dayKeys, nativeTotalSeries, nativeTrend, trendScope, t])
+  }, [financialHistory.dayKeys, nativeTotalSeries, nativeTrend, trendScope])
 
   const trendOption = useMemo(() => {
     if (nativeTrend && nativeTrendWindow) {

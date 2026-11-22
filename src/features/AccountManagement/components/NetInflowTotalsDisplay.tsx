@@ -8,6 +8,7 @@ import {
   buildNetInflowTotals,
   type NetInflowTotals,
 } from "~/services/accounts/metrics/netInflowTotals"
+import { assetIdentity } from "~/services/amounts/assets"
 import {
   FINANCIAL_COVERAGE,
   SCOPE_SELECTION_KINDS,
@@ -35,6 +36,11 @@ export function NetInflowTotalsDisplay({
   const { t, i18n } = useTranslation(["account", "shareSnapshots"])
   const summary = totals ?? buildNetInflowTotals(sites)
   const name = (id: string) => sites.find((site) => site.id === id)?.name ?? id
+  const countByAsset = new Map<string, number>()
+  for (const { amount } of summary.groups) {
+    const asset = assetIdentity(amount.asset)
+    countByAsset.set(asset, (countByAsset.get(asset) ?? 0) + 1)
+  }
   return (
     <section
       aria-label={t("account:stats.estimatedNetInflow")}
@@ -51,13 +57,17 @@ export function NetInflowTotalsDisplay({
       {summary.groups.length ? (
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5">
           {summary.groups.map((group) => (
-            <p
-              key={group.key}
-              className="min-w-0 text-base font-semibold break-words tabular-nums"
-              title={formatAssetAmount(group.amount, i18n.language)}
-            >
-              {formatCompactAssetAmount(group.amount, i18n.language)}
-            </p>
+            <div key={group.key} className="min-w-0">
+              <p
+                className="text-base font-semibold break-words tabular-nums"
+                title={formatAssetAmount(group.amount, i18n.language)}
+              >
+                {formatCompactAssetAmount(group.amount, i18n.language)}
+              </p>
+              {compact &&
+                (countByAsset.get(assetIdentity(group.amount.asset)) ?? 0) >
+                  1 && <ObservationWindow window={group.window} />}
+            </div>
           ))}
         </div>
       ) : (
@@ -93,28 +103,29 @@ export function NetInflowTotalsDisplay({
                   {formatAssetAmount(group.amount, i18n.language)}
                 </p>
                 <ObservationWindow window={group.window} />
+                {group.contributions.map(
+                  ({ accountId, seriesKey, estimate }) => (
+                    <p key={`${accountId}:${seriesKey}`} className="py-1">
+                      {name(accountId)} ·{" "}
+                      {formatAssetAmount(estimate.amount, i18n.language)} ·{" "}
+                      {formatBalanceSource(estimate.source, t)} ·{" "}
+                      {estimate.scope.authority}
+                      {[
+                        estimate.scope.projects,
+                        estimate.scope.keys,
+                        estimate.scope.models,
+                        estimate.scope.groups,
+                      ].some(
+                        (scope) =>
+                          scope.kind === SCOPE_SELECTION_KINDS.Restricted,
+                      )
+                        ? ` · ${t("account:financial.restricted")}`
+                        : ""}
+                    </p>
+                  ),
+                )}
               </div>
             ))}
-            {summary.groups
-              .flatMap((group) => group.contributions)
-              .map(({ accountId, seriesKey, estimate }) => (
-                <p key={`${accountId}:${seriesKey}`} className="py-1">
-                  {name(accountId)} ·{" "}
-                  {formatAssetAmount(estimate.amount, i18n.language)} ·{" "}
-                  {formatBalanceSource(estimate.source, t)} ·{" "}
-                  {estimate.scope.authority}
-                  {[
-                    estimate.scope.projects,
-                    estimate.scope.keys,
-                    estimate.scope.models,
-                    estimate.scope.groups,
-                  ].some(
-                    (scope) => scope.kind === SCOPE_SELECTION_KINDS.Restricted,
-                  )
-                    ? ` · ${t("account:financial.restricted")}`
-                    : ""}
-                </p>
-              ))}
             {summary.excluded.map((item) => (
               <p
                 key={`${item.accountId}:${item.seriesKey ?? "account"}`}

@@ -81,8 +81,7 @@ describe("relayfor api service", () => {
 
     const overview = await fetchRelayForOverview(request)
     expect(overview.user.username).toBe("relayuser")
-    expect(overview.today?.requests).toBe(10)
-    expect(overview.today?.quota).toBe(15000)
+    expect(overview.today).toMatchObject({ requests: 10, quota: 15000 })
     expect(transport.fetchRelayForData).toHaveBeenCalledWith(
       request,
       "/api/user/overview",

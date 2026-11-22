@@ -106,8 +106,13 @@ export type NanoGptSubscriptionSnapshot = {
 
 const readQuotaWindow = (value: unknown): NanoGptQuotaWindow | undefined => {
   if (!isRecord(value)) return undefined
-  const used = parseDecimal(value.used)
-  const remaining = parseDecimal(value.remaining)
+  const nonnegative = (raw: unknown) => {
+    const amount = parseDecimal(raw)
+    return amount?.startsWith("-") ? undefined : amount
+  }
+  const used = nonnegative(value.used)
+  const remaining = nonnegative(value.remaining)
+  if (used === undefined && remaining === undefined) return undefined
   const resetAtMs = readNanoGptAmount(value.resetAt)
   // Documented as UNIX epoch milliseconds; an unusable instant is dropped
   // rather than surfaced as an invalid date.

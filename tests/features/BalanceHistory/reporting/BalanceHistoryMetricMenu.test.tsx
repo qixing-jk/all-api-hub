@@ -39,6 +39,26 @@ describe("BalanceHistoryMetricMenu", () => {
     ).toBeVisible()
   })
 
+  it("shows the converted label when the archive is the only available source", async () => {
+    render(
+      <BalanceHistoryMetricMenu
+        title="Trend"
+        metric={DAILY_BALANCE_HISTORY_METRICS.Balance}
+        nativeMetrics={[]}
+        hasReferenceBalance
+        referenceMetrics={[DAILY_BALANCE_HISTORY_METRICS.Balance]}
+        currencyType="USD"
+        estimatedTodayIncomeEnabled={false}
+        onChange={vi.fn()}
+      />,
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "Trend: balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
+      }),
+    ).toBeVisible()
+  })
+
   it("labels the recorded archive separately and selects its explicit route", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

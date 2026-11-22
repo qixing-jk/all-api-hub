@@ -380,29 +380,15 @@ describe("useBalanceHistoryReporting", () => {
     },
   )
   it.each([
-    ["fixture", DAILY_BALANCE_HISTORY_METRICS.Balance, "1", false],
-    ["sub2api", "/api/v1/auth/me:balance", "usd/v1", true],
+    ["sub2api", "/api/v1/auth/me:balance", "usd/v1"],
     [
       "new-api",
       "/api/user/self:quota",
       NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd,
-      true,
-    ],
-    [
-      "new-api",
-      "/api/user/self:quota",
-      NEW_API_FINANCIAL_CONTRACT_VERSIONS.NativeQuota,
-      false,
-    ],
-    [
-      "fixture",
-      "/api/user/self:quota",
-      NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd,
-      false,
     ],
   ] as const)(
-    "shows native %s %s %s balance and includes only compatible release history",
-    async (adapter, operation, contractVersion, compatible) => {
+    "keeps the %s native wallet separate from anonymous release history",
+    async (adapter, operation, contractVersion) => {
       const at = new Date(2026, 9, 2, 10).getTime()
       const scope = accountBalanceScope({
         baseUrl: "https://alpha.invalid",
@@ -458,20 +444,12 @@ describe("useBalanceHistoryReporting", () => {
       expect(result.current.nativeBreakdown).toMatchObject({
         currencyCode: "USD",
       })
-      expect(result.current.trendOption.series).toEqual(
-        compatible
-          ? [
-              expect.objectContaining({ name: "Alpha", data: [null, 15] }),
-              expect.objectContaining({
-                name: expect.stringContaining("Alpha"),
-                data: [2, null],
-              }),
-            ]
-          : [expect.objectContaining({ name: "Alpha", data: [15] })],
-      )
+      expect(result.current.trendOption.series).toEqual([
+        expect.objectContaining({ name: "Alpha", data: [15] }),
+      ])
     },
   )
-  it("keeps a separately labeled compatible release subtotal in native total view", async () => {
+  it("keeps anonymous archived balances out of the native total view", async () => {
     const at = new Date(2026, 9, 2, 10).getTime()
     const options = buildOptions({ asOf: at })
     options.store!.financialSnapshotsByAccountId = Object.fromEntries(
@@ -516,11 +494,7 @@ describe("useBalanceHistoryReporting", () => {
     expect(result.current.trendOption.series).toEqual([
       expect.objectContaining({
         name: "balanceHistory:trend.scopes.total",
-        data: [null, 22],
-      }),
-      expect.objectContaining({
-        name: "balanceHistory:trend.scopes.total · balanceHistory:legacy.title",
-        data: [5, null],
+        data: [22],
       }),
     ])
   })
@@ -831,6 +805,234 @@ describe("useBalanceHistoryReporting", () => {
       )
     },
   )
+
+  it("keeps anonymous archived balances on the reference axis and falls back when the archive is filtered out", async () => {
+    const options = buildOptions()
+    const at = new Date(2026, 9, 2, 12).getTime()
+    const scope = accountBalanceScope(
+      {
+        baseUrl: "https://alpha.invalid",
+        accountId: "alpha",
+      },
+      { walletId: "replacement" },
+    )
+    const position = balancePosition({
+      id: "balance",
+      role: BALANCE_ROLES.Available,
+      scope,
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      value: "4",
+      observedAt: at,
+      source: {
+        adapter: "new-api",
+        operation: "/api/user/self:quota",
+        contractVersion: NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd,
+        kind: EVIDENCE_KINDS.Reported,
+      },
+    })
+    const { result, rerender } = renderHook(
+      ({ key, startDayKey }) =>
+        useBalanceHistoryReporting({
+          ...options,
+          store: {
+            ...options.store!,
+            financialSnapshotsByAccountId: {
+              alpha: [
+                {
+                  source: "refresh",
+                  balance: accountBalanceSnapshot(
+                    scope,
+                    [position],
+                    at,
+                    "complete",
+                  ),
+                },
+              ],
+            },
+          },
+          effectiveAccountIds: ["alpha"],
+          asOf: at,
+          effectiveRange: { startDayKey, endDayKey: "2026-10-02" },
+          trendBalanceKey: key,
+          breakdownBalanceKey: key,
+          breakdownBalanceDayKey: "2026-10-02",
+        }),
+      { initialProps: { key: "reference:balance", startDayKey: "2026-10-01" } },
+    )
+    await waitFor(() => expect(result.current).not.toBeNull())
+    expect(result.current.trendOption.series).toEqual([
+      expect.objectContaining({ data: [2, null] }),
+    ])
+    const nativeKey = result.current.nativeMetrics[0]!.key
+    rerender({ key: nativeKey, startDayKey: "2026-10-01" })
+    expect(result.current.trendOption.series).toEqual([
+      expect.objectContaining({ data: [4] }),
+    ])
+    rerender({ key: "reference:balance", startDayKey: "2026-10-02" })
+    expect(result.current.nativeTrend?.key).toBe(nativeKey)
+    expect(result.current.nativeBreakdown?.key).toBe(nativeKey)
+    expect(result.current.trendOption.series).toEqual([
+      expect.objectContaining({ data: [4] }),
+    ])
+  })
+
+  it("keeps the selected source after another wallet is filtered out", async () => {
+    const scope = accountBalanceScope({
+      baseUrl: "https://kimi.example",
+      accountId: "alpha",
+    })
+    const firstDay = new Date(2026, 9, 1, 12).getTime()
+    const lastDay = new Date(2026, 9, 2, 12).getTime()
+    const wallet = (
+      operation: string,
+      value: string,
+      observedAt: number,
+      code: "USD" | "CNY" = "USD",
+    ) =>
+      balancePosition({
+        id: operation,
+        scope,
+        asset: { kind: ASSET_KINDS.Currency, code },
+        value,
+        observedAt,
+        source: {
+          adapter: "kimi",
+          operation,
+          contractVersion: "2",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+      })
+    const options = buildOptions({
+      asOf: lastDay,
+      effectiveAccountIds: ["alpha"],
+      store: {
+        schemaVersion: 4,
+        referenceSnapshotsByAccountId: {},
+        financialSnapshotsByAccountId: {
+          alpha: [
+            {
+              source: "refresh",
+              balance: accountBalanceSnapshot(
+                scope,
+                [wallet("console", "4", firstDay)],
+                firstDay,
+                "complete",
+              ),
+            },
+            {
+              source: "refresh",
+              balance: accountBalanceSnapshot(
+                scope,
+                [
+                  wallet("extra", "13", lastDay, "CNY"),
+                  wallet("inference", "7", lastDay),
+                ],
+                lastDay,
+                "complete",
+              ),
+            },
+          ],
+        },
+      },
+    })
+    const { result, rerender } = renderHook(
+      ({ key, startDayKey }: { key?: string; startDayKey: string }) =>
+        useBalanceHistoryReporting({
+          ...options,
+          effectiveRange: { startDayKey, endDayKey: "2026-10-02" },
+          trendBalanceKey: key,
+        }),
+      {
+        initialProps: {
+          key: undefined as string | undefined,
+          startDayKey: "2026-10-01",
+        },
+      },
+    )
+
+    await waitFor(() => expect(result.current?.nativeMetrics).toHaveLength(3))
+    const sources = result.current.nativeMetrics.filter(
+      ({ currencyCode }) => currencyCode === "USD",
+    )
+    expect(sources.map(({ label }) => label)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("balanceHistory:native.sources.console"),
+        expect.stringContaining("balanceHistory:native.sources.inference"),
+      ]),
+    )
+    const selected = sources.find(({ label }) =>
+      label.includes("balanceHistory:native.sources.inference"),
+    )!
+    rerender({ key: selected.key, startDayKey: "2026-10-02" })
+    expect(result.current.nativeTrend?.currencyCode).toBe("USD")
+    expect(result.current.trendOption.series).toEqual([
+      expect.objectContaining({ data: [7] }),
+    ])
+  })
+
+  it("uses the raw quota unit for every observation when one scaled value exceeds precision", async () => {
+    const options = buildOptions({
+      trendScope: BALANCE_HISTORY_TREND_SERIES_SCOPES.Accounts,
+    })
+    const scope = accountBalanceScope({
+      baseUrl: "https://alpha.invalid",
+      accountId: "alpha",
+    })
+    const tiny = "0." + "0".repeat(253) + "1"
+    const snapshot = (value: string, at: number) => ({
+      source: "refresh" as const,
+      balance: accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "credits",
+            scope,
+            role: BALANCE_ROLES.Available,
+            asset: {
+              kind: "quota",
+              id: "raw-credits",
+              label: "credits",
+              displayLabel: "decacredits",
+              displayScale: 10,
+            },
+            value,
+            observedAt: at,
+            source: {
+              adapter: "fixture",
+              operation: "balance",
+              kind: EVIDENCE_KINDS.Reported,
+              contractVersion: "1",
+            },
+          }),
+        ],
+        at,
+        "complete",
+      ),
+    })
+    const { result } = renderHook(() =>
+      useBalanceHistoryReporting({
+        ...options,
+        store: {
+          schemaVersion: 4,
+          referenceSnapshotsByAccountId: {},
+          financialSnapshotsByAccountId: {
+            alpha: [
+              snapshot("20", new Date(2026, 9, 1, 12).getTime()),
+              snapshot(tiny, new Date(2026, 9, 2, 12).getTime()),
+            ],
+          },
+        },
+        effectiveAccountIds: ["alpha"],
+        asOf: new Date(2026, 9, 2, 14).getTime(),
+      }),
+    )
+    await waitFor(() =>
+      expect(result.current?.nativeTrend?.unit).toBe("credits"),
+    )
+    expect(result.current.trendOption.series).toMatchObject([
+      { data: [20, Number(tiny)] },
+    ])
+  })
 
   it("preserves reference dates and shows scaled native allowances on their own axis", async () => {
     const options = buildOptions()

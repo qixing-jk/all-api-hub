@@ -397,6 +397,31 @@ describe("FoxCode console account contract", () => {
     },
   )
 
+  it("keeps active plan enumeration partial when a plan has no verified identity", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { user, subscription: { active: [{ quotaRemaining: 7 }] } },
+        }),
+      ),
+    )
+    const data = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig("foxcode"),
+      includeTodayCashflow: false,
+    })
+    expect(data.allowanceRefreshParts).toMatchObject([
+      {
+        enumeration: "partial",
+        entries: [{ identityKind: "observation-only" }],
+      },
+    ])
+  })
+
   it("keeps a verified balance when optional usage is unavailable", async () => {
     server.use(
       http.get(`${origin}/api/auth/me`, () =>

@@ -2001,6 +2001,7 @@ describe("BalanceDisplay", () => {
       amount: { value: "2", asset: { kind: ASSET_KINDS.Crypto, id: "XNO" } },
     })
     missing.status = "missing_baseline"
+    missing.position.label = "Reserve wallet"
     delete missing.netInflow
     mockUseUserPreferencesContext.mockReturnValue({
       currencyType: CURRENCIES.USD,
@@ -2020,12 +2021,14 @@ describe("BalanceDisplay", () => {
       name: /account:stats.estimatedNetInflow/,
     })
     expect(button).toHaveTextContent(/CNY\s*-5|-[^0-9]*CNY\s*5/)
+    expect(button).toHaveTextContent("Reserve wallet")
+    expect(button).toHaveAccessibleName(/Reserve wallet.*XNO/)
     expect(button).toHaveTextContent("XNO")
     expect(button).toHaveTextContent("account:financial.unavailable")
     expect(button).toHaveAccessibleName(/account:netInflow.reasons.baseline/)
   })
 
-  it("hides account estimated income when the preference is disabled or unavailable", () => {
+  it("hides native net inflow with the preference off and shows unavailable readings with it on", () => {
     mockUseUserPreferencesContext.mockReturnValue({
       currencyType: CURRENCIES.USD,
       showTodayCashflow: true,
@@ -2039,13 +2042,16 @@ describe("BalanceDisplay", () => {
     const { rerender } = render(
       <BalanceDisplay
         site={buildDisplaySiteData({
-          estimatedTodayIncome: { USD: 5.5, CNY: 38.5 },
+          netInflowEstimate: {
+            status: "available",
+            estimates: [buildNetInflowItem()],
+          },
         })}
       />,
     )
 
     expect(
-      screen.queryByTitle("account:stats.estimatedTodayIncome"),
+      screen.queryByLabelText(/account:stats.estimatedNetInflow/),
     ).not.toBeInTheDocument()
 
     mockUseUserPreferencesContext.mockReturnValue({
@@ -2060,14 +2066,45 @@ describe("BalanceDisplay", () => {
 
     rerender(
       <BalanceDisplay
-        site={buildDisplaySiteData({ estimatedTodayIncome: null })}
+        site={buildDisplaySiteData({
+          netInflowEstimate: { status: "missing_baseline", estimates: [] },
+        })}
       />,
     )
 
     expect(
-      screen.queryByTitle("account:stats.estimatedTodayIncome"),
-    ).not.toBeInTheDocument()
+      screen.getByRole("button", { name: /account:stats.estimatedNetInflow/ }),
+    ).toHaveTextContent("account:financial.unavailable")
   })
+
+  it.each(["disabled", "manual_balance"] as const)(
+    "shows the %s estimate reason without offering a provider refresh",
+    (status) => {
+      mockUseUserPreferencesContext.mockReturnValue({
+        currencyType: CURRENCIES.USD,
+        showTodayCashflow: true,
+        preferences: {
+          balanceHistory: { estimatedTodayIncome: { enabled: true } },
+        },
+      })
+      render(
+        <BalanceDisplay
+          site={buildDisplaySiteData({
+            netInflowEstimate: { status, estimates: [] },
+          })}
+        />,
+      )
+
+      expect(
+        screen.getByLabelText(/account:stats.estimatedNetInflow/),
+      ).toHaveAccessibleName(/account:netInflow.reasons/)
+      expect(
+        screen.queryByRole("button", {
+          name: /account:stats.estimatedNetInflow/,
+        }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   it("renders neutral disabled net inflow without a refresh action", async () => {
     const user = userEvent.setup()

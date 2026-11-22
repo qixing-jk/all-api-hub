@@ -38,6 +38,7 @@ import {
   type AccountTodayMetricAvailability,
 } from "~/types"
 import { toOptionalFiniteNumber } from "~/utils/core/number"
+import { isPlainObject } from "~/utils/core/object"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -247,7 +248,9 @@ export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const codex = await getCodexQuota(request)
-  const subscription = codex.subscriptions
+  const subscription = isPlainObject(codex.subscriptions)
+    ? codex.subscriptions
+    : undefined
   const currentUsage = codex.currentUsage
   const parsedTotalRequests = toOptionalFiniteNumber(
     currentUsage?.totalRequests,

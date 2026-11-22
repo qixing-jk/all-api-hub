@@ -206,6 +206,8 @@ export async function fetchVoApiV2AccountData(
   const validConsumptionSourceCount =
     Number(usedBasicBalance !== undefined) +
     Number(usedBindBalance !== undefined)
+  const completeConsumption =
+    nativeConsumption !== undefined && validConsumptionSourceCount === 2
   const requestFailure = unavailableAvailability(
     ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
   )
@@ -227,10 +229,9 @@ export async function fetchVoApiV2AccountData(
             requests: requestFailure,
           }
         : {
-            consumption:
-              validConsumptionSourceCount === 2
-                ? completeAvailability()
-                : invalidPayload,
+            consumption: completeConsumption
+              ? completeAvailability()
+              : invalidPayload,
             requests:
               requests === undefined ? invalidPayload : completeAvailability(),
           }
@@ -245,10 +246,12 @@ export async function fetchVoApiV2AccountData(
               scope: accountReportingScope(request),
               window: statisticsQuery.window,
               settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
-              coverage:
-                validConsumptionSourceCount === 2
-                  ? FINANCIAL_COVERAGE.Complete
-                  : FINANCIAL_COVERAGE.Partial,
+              cumulative: true,
+              coverage: completeConsumption
+                ? FINANCIAL_COVERAGE.Complete
+                : nativeConsumption !== undefined
+                  ? FINANCIAL_COVERAGE.Partial
+                  : FINANCIAL_COVERAGE.Unknown,
               amount: observeAmount(
                 nativeConsumption,
                 {
@@ -272,12 +275,10 @@ export async function fetchVoApiV2AccountData(
           ],
         }
       : {}),
-    today_quota_consumption:
-      nativeConsumption !== undefined &&
-      validConsumptionSourceCount === 2 &&
-      parseDecimal(Number(nativeConsumption)) === nativeConsumption
-        ? amountToQuota(Number(nativeConsumption))
-        : 0,
+    ...(completeConsumption &&
+    parseDecimal(Number(nativeConsumption)) === nativeConsumption
+      ? { today_quota_consumption: amountToQuota(Number(nativeConsumption)) }
+      : {}),
     today_requests_count: Math.max(0, Math.trunc(requests ?? 0)),
     today_prompt_tokens: 0,
     today_completion_tokens: 0,

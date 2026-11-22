@@ -10,6 +10,7 @@ import type { DisplaySiteData } from "~/types"
 import {
   formatBalanceSource,
   formatBalanceWindow,
+  getBalanceRoleLabel,
 } from "~/utils/core/balancePresentation"
 import { formatAssetAmount } from "~/utils/core/money"
 import {
@@ -38,6 +39,7 @@ export function NetInflowEstimateDisplay({
     return {
       ...item,
       available,
+      walletLabel: item.position.label || getBalanceRoleLabel(item.position, t),
       value: available
         ? formatAssetAmount(available.amount, i18n.language)
         : [
@@ -63,7 +65,10 @@ export function NetInflowEstimateDisplay({
     : getNetInflowReasonLabel(estimate?.status, t)
   const description = items.length
     ? items
-        .map((item) => `${item.value}${item.reason ? `. ${item.reason}` : ""}`)
+        .map(
+          (item) =>
+            `${item.walletLabel} · ${item.value}${item.reason ? `. ${item.reason}` : ""}`,
+        )
         .join(". ")
     : `${t("financial.unavailable")}. ${fallbackReason}`
   const content = (
@@ -78,6 +83,7 @@ export function NetInflowEstimateDisplay({
       {items.length ? (
         items.map((item) => (
           <span className="block" key={item.seriesKey}>
+            <span>{item.walletLabel} · </span>
             {item.value}
           </span>
         ))
@@ -94,7 +100,9 @@ export function NetInflowEstimateDisplay({
           {fallbackReason && <p>{fallbackReason}</p>}
           {items.map((item) => (
             <div key={item.seriesKey} className="space-y-1">
-              <p>{item.value}</p>
+              <p>
+                {item.walletLabel} · {item.value}
+              </p>
               {item.reason && <p>{item.reason}</p>}
               {item.available &&
                 formatBalanceWindow(

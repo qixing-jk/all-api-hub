@@ -313,6 +313,38 @@ describe("BalanceHistoryAccountSummaryTable", () => {
     },
   )
 
+  it("keeps missing converted end balances below recorded balances in either mobile sort direction", async () => {
+    useIsMobile.mockReturnValue(true)
+    const user = userEvent.setup()
+    try {
+      render(
+        <BalanceHistoryAccountSummaryTable
+          rows={[
+            buildRow({ id: "missing", label: "Missing", endBalance: null }),
+            buildRow({ id: "low", label: "Low", endBalance: 1 }),
+            buildRow({ id: "high", label: "High", endBalance: 20 }),
+          ]}
+          isLoading={false}
+          currencySymbol="$"
+          showReferenceColumns
+        />,
+      )
+      await user.click(
+        screen.getByRole("button", { name: /account:list.sortMenu/ }),
+      )
+      await user.click(
+        screen.getByRole("menuitemradio", { name: /table.columns.endBalance/ }),
+      )
+      expect(getAccountOrder()).toEqual(["High", "Low", "Missing"])
+      await user.click(
+        screen.getByRole("button", { name: /account:list.toggleSortOrder/ }),
+      )
+      expect(getAccountOrder()).toEqual(["Low", "High", "Missing"])
+    } finally {
+      useIsMobile.mockReturnValue(false)
+    }
+  })
+
   it("shows the loading state when there are no rows yet", () => {
     render(
       <BalanceHistoryAccountSummaryTable

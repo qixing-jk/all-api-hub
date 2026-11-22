@@ -155,6 +155,20 @@ describe("useBalanceHistoryData", () => {
     expect(mocks.complete).toHaveBeenCalledTimes(2)
   })
 
+  it("keeps loaded history when a successful response omits capture results", async () => {
+    mocks.store.mockResolvedValue(beforePrune)
+    mocks.message.mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useBalanceHistoryData([]))
+    await act(async () => {})
+    await act(async () => result.current.handleRefreshNow())
+    expect(mocks.error).toHaveBeenCalledWith("messages.error.refreshFailed", {
+      id: "pending-toast",
+    })
+    expect(mocks.success).not.toHaveBeenCalled()
+    expect(mocks.store).toHaveBeenCalledOnce()
+    expect(result.current.store).toEqual(beforePrune)
+  })
+
   it("warns about uncaptured accounts without claiming full capture success", async () => {
     mocks.message.mockResolvedValue({
       success: true,
@@ -209,6 +223,15 @@ describe("useBalanceHistoryData", () => {
     expect(result.current.isLoading).toBe(false)
     expect(result.current.loadError).toBe("read failed")
     expect(result.current.hasLoadedData).toBe(true)
+  })
+
+  it("exposes an initial history read error without a message", async () => {
+    mocks.store.mockRejectedValueOnce(new Error(""))
+    const { result } = renderHook(() => useBalanceHistoryData([]))
+    await act(async () => {})
+
+    expect(result.current.loadError).toBeTruthy()
+    expect(result.current.hasLoadedData).toBe(false)
   })
 
   it("exposes an initial history read error and clears it only after a successful retry", async () => {

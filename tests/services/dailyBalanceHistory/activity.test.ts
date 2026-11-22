@@ -114,6 +114,7 @@ describe("recorded financial history activity", () => {
               settledConsumption: [
                 spend(day, day + 3_600_000, "7", "ledger"),
                 spend(day + 1_800_000, day + 7_200_000, "9", "dashboard"),
+                spend(day + 5_400_000, day + 9_000_000, "20", "late-detail"),
                 spend(dayAfter, dayAfter + 3_600_000, "0", "ledger"),
               ],
             },
@@ -284,8 +285,10 @@ describe("recorded financial history activity", () => {
       expect.objectContaining({
         siteDay: true,
         partial: true,
+        latestReading: true,
         total: "11",
-        values: [null, "11"],
+        values: [null, null],
+        recordedDays: [],
       }),
     ])
   })
