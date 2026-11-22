@@ -66,6 +66,17 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 describe("AccountBalanceSummary", () => {
+  it("keeps the released income estimate in the intermediate account summary", () => {
+    netEnabled.value = true
+    context.mockReturnValue({
+      displayData: [],
+      todayIncomeEstimateTotals: { estimated: { USD: 2, CNY: 14 } },
+    })
+    render(<AccountBalanceSummary />)
+    expect(screen.getByText("account:stats.estimatedTodayIncome")).toBeVisible()
+    expect(screen.getByText(/USD\s2(?:\.00)?$/)).toBeVisible()
+  })
+
   afterEach(() => {
     vi.useRealTimers()
     netEnabled.value = false

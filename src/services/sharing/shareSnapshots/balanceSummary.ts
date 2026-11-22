@@ -103,12 +103,12 @@ export function accountShareBalanceSummary(
   return {
     purpose: SHARE_BALANCE_PURPOSES.Account,
     coverage:
-      snapshot &&
-      validAllowances.length &&
-      allowances?.coverage !== FINANCIAL_COVERAGE.Complete
-        ? FINANCIAL_COVERAGE.Partial
+      snapshot && allowances
+        ? snapshot.coverage === allowances.coverage
+          ? snapshot.coverage
+          : FINANCIAL_COVERAGE.Partial
         : (snapshot?.coverage ??
-          (validAllowances.length ? allowances?.coverage : undefined) ??
+          allowances?.coverage ??
           FINANCIAL_COVERAGE.Unknown),
     entries: positions
       .filter(

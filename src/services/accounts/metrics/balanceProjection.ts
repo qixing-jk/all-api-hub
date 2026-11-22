@@ -235,6 +235,19 @@ function projectBalanceCandidates(
 ) {
   const excluded: BalanceExclusion[] = []
   const conflicts: BalanceConflict[] = []
+  /** Only currently eligible facts may suppress another position as an overlapping view. */
+  const hasValidTiming = (position: BalancePosition) =>
+    !(
+      (position.validity.kind === BALANCE_VALIDITY_KINDS.Expires &&
+        position.validity.at <= asOf) ||
+      (position.window &&
+        ((position.window.resetsAt !== undefined &&
+          position.window.resetsAt <= asOf) ||
+          (position.amount.status === OBSERVATION_STATUSES.Stale &&
+            position.window.end <= asOf))) ||
+      (purpose === BALANCE_PURPOSES.Prepaid &&
+        position.validity.kind !== BALANCE_VALIDITY_KINDS.NoExpiry)
+    )
   const candidates = snapshot.positions.filter((position) => {
     let reason: BalanceExclusion["reason"] | undefined
     const scopes = [
@@ -281,26 +294,7 @@ function projectBalanceCandidates(
       reason = BALANCE_EXCLUSION_REASONS.ScopeUnknown
     else if (scopes.some((s) => s.kind === SCOPE_SELECTION_KINDS.Restricted))
       reason = BALANCE_EXCLUSION_REASONS.Restricted
-    else if (
-      !deferValidity &&
-      position.validity.kind === BALANCE_VALIDITY_KINDS.Expires &&
-      position.validity.at <= asOf
-    )
-      reason = BALANCE_EXCLUSION_REASONS.Validity
-    else if (
-      !deferValidity &&
-      position.window &&
-      ((position.window.resetsAt !== undefined &&
-        position.window.resetsAt <= asOf) ||
-        (position.amount.status === OBSERVATION_STATUSES.Stale &&
-          position.window.end <= asOf))
-    )
-      reason = BALANCE_EXCLUSION_REASONS.Validity
-    else if (
-      !deferValidity &&
-      purpose === BALANCE_PURPOSES.Prepaid &&
-      position.validity.kind !== BALANCE_VALIDITY_KINDS.NoExpiry
-    )
+    else if (!deferValidity && !hasValidTiming(position))
       reason = BALANCE_EXCLUSION_REASONS.Validity
     if (reason) {
       excluded.push({ position, reason })
@@ -308,7 +302,9 @@ function projectBalanceCandidates(
     }
     return true
   })
-  const selected = new Set(candidates.map((p) => balancePositionKey(p)))
+  const selected = new Set(
+    candidates.filter(hasValidTiming).map((p) => balancePositionKey(p)),
+  )
   const nonOverlapping = candidates.filter((position) => {
     const hasParent =
       position.parentId &&
@@ -319,6 +315,7 @@ function projectBalanceCandidates(
       candidates.some(
         (other) =>
           other.role === BALANCE_ROLES.Ledger &&
+          hasValidTiming(other) &&
           !(
             other.parentId &&
             selected.has(balancePositionKey(other, other.parentId))

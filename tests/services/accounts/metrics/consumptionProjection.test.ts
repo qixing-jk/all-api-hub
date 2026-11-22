@@ -7,6 +7,7 @@ import {
   displayCashflowAmount,
   getDisplayConsumptionProjection,
   getDisplayIncomeProjection,
+  getProjectedConsumptionFacts,
   getReferenceCashflowTotal,
   selectDisplayCashflow,
 } from "~/services/accounts/metrics/consumptionProjection"
@@ -92,6 +93,40 @@ function fact(id: string, value: string, end = now): FinancialConsumptionFact {
 }
 
 afterEach(() => vi.useRealTimers())
+
+it.each([false, true])(
+  "retains qualified serialized cashflow totals without reconstructing private contributors (%s)",
+  (large) => {
+    const usd = fact("a", large ? "5".repeat(256) : "2")
+    const yuan = {
+      ...fact("a", "14"),
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+    }
+    const projection = structuredClone(
+      getDisplayConsumptionProjection(
+        [{ id: "a", exchangeRate: 7, settledConsumption: [usd, yuan] }],
+        now,
+      ),
+    )
+    expect(getProjectedConsumptionFacts(projection)).toEqual([])
+    const display = selectDisplayCashflow(projection, CURRENCIES.USD, 7)
+    expect(display.displayAmount).toEqual({
+      asset: { kind: "currency", code: "USD" },
+      value: large ? `${"5".repeat(255)}7` : "4",
+    })
+    expect(display.coverage).toMatchObject({
+      status: "complete",
+      completeCount: 1,
+      eligibleCount: 1,
+    })
+    if (large) expect(display.comparisonAmount).toBeUndefined()
+    else
+      expect(display.comparisonAmount).toEqual({
+        asset: { kind: "currency", code: "CNY" },
+        value: "28",
+      })
+  },
+)
 
 it("deduplicates a shared wallet when unrestricted routes are omitted or explicit", () => {
   const first = fact("a", "12")

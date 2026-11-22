@@ -7,7 +7,7 @@ import {
   usageScopeKey,
 } from "~/services/amounts/balance"
 import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
-import type { AccountUsageSummary } from "~/types"
+import type { AccountInfo, AccountUsageSummary } from "~/types"
 
 /** Failure changes freshness, never the original measurement or its clock. */
 export function staleUsageSummary(
@@ -52,6 +52,13 @@ const usageKey = (usage: AccountUsageSummary) => {
   ])
 }
 
+/** Undated daily counters do not establish that an older cost shares their provider day. */
+const hasUnqualifiedDailyPeriod = (usage: AccountUsageSummary) =>
+  (usage.scope === ACCOUNT_USAGE_SCOPES.Today ||
+    usage.scope === ACCOUNT_USAGE_SCOPES.SiteToday) &&
+  !usage.reportedDay &&
+  !usage.cost?.window
+
 /** The singleton retains its matching last-known cost even when list consumers need separate windows. */
 export function acceptUsageSummary(
   previous: AccountUsageSummary | undefined,
@@ -65,6 +72,7 @@ export function acceptUsageSummary(
   if (
     !primary ||
     !primary.cost ||
+    hasUnqualifiedDailyPeriod(primary) ||
     isKnownOrStaleObservation(primary.cost.amount)
   )
     return primary
@@ -112,6 +120,11 @@ export function acceptUsageObservations(
       isKnownOrStaleObservation(old.cost.amount)
     ) {
       if (
+        hasUnqualifiedDailyPeriod(usage) &&
+        !isKnownOrStaleObservation(usage.cost.amount)
+      )
+        return usage
+      if (
         old.cost.window &&
         usage.cost.window &&
         old.cost.window.end > usage.cost.window.end
@@ -139,4 +152,27 @@ export function acceptUsageObservations(
     return usage
   })
   return [...accepted, ...Array.from(pending.values(), staleUsageSummary)]
+}
+
+/** Keep displaced singleton costs in the observation list without joining different provider days. */
+export function acceptUsageState(
+  previous: Pick<AccountInfo, "usage" | "usageObservations">,
+  incoming: Pick<AccountInfo, "usage" | "usageObservations"> | undefined,
+): Pick<AccountInfo, "usage" | "usageObservations"> {
+  const singleton = acceptUsageObservations(
+    previous.usage ? [previous.usage] : undefined,
+    incoming?.usage ? [incoming.usage] : undefined,
+  )
+  const retained = singleton?.slice(1) ?? []
+  const observations =
+    incoming?.usageObservations === undefined && !retained.length
+      ? undefined
+      : [...(incoming?.usageObservations ?? []), ...retained]
+  return {
+    usage: acceptUsageSummary(previous.usage, incoming?.usage),
+    usageObservations: acceptUsageObservations(
+      previous.usageObservations,
+      observations,
+    ),
+  }
 }

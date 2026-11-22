@@ -1,4 +1,5 @@
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
+import { createDefaultAccountStorageConfig } from "~/services/accounts/editing/accountDefaults"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { mergeFeatureGuidanceStates } from "~/services/featureGuidance/featureGuidanceState"
 import type {
@@ -10,6 +11,7 @@ import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { buildWebdavSharedPreferences } from "~/services/preferences/webdavSharedPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
 import { readWebdavBackupFacts } from "~/services/webdav/backup/webdavBackupFacts"
 import {
   projectWebdavEntries,
@@ -38,6 +40,20 @@ function shouldIncludeWebdavTagStore(
   return (
     selection.accounts || selection.bookmarks || selection.apiCredentialProfiles
   )
+}
+
+/** Read only the selected local entries, keeping account and tag export consistent. */
+export async function readSelectedAccountBackupState(
+  selection: WebDAVSyncDataSelection,
+) {
+  if (selection.accounts || selection.bookmarks)
+    return accountDataTransfer.exportDataWithTags()
+  return {
+    accounts: createDefaultAccountStorageConfig(),
+    tagStore: shouldIncludeWebdavTagStore(selection)
+      ? await tagStorage.exportTagStore()
+      : createDefaultTagStore(),
+  }
 }
 
 /**
@@ -218,14 +234,12 @@ export async function buildWebdavImportPayloadBySelection(input: {
 }): Promise<RawBackupData> {
   await ensureLegacyChannelConfigMigrationReady({ bypassBackoff: true })
   const [
-    accountsConfig,
-    tagStore,
+    { accounts: accountsConfig, tagStore },
     preferences,
     channelConfigs,
     apiCredentialProfiles,
   ] = await Promise.all([
-    accountDataTransfer.exportData(),
-    tagStorage.exportTagStore(),
+    readSelectedAccountBackupState(input.selection),
     userPreferences.exportPreferences(),
     channelConfigStorage.exportConfigs(),
     apiCredentialProfilesStorage.exportConfig(),

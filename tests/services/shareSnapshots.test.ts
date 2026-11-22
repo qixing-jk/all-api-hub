@@ -13,7 +13,7 @@ import {
   getDisplayConsumptionProjection,
   getDisplayIncomeProjection,
 } from "~/services/accounts/metrics/consumptionProjection"
-import { balancePosition } from "~/services/amounts/balance"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
 import { budgetConstraint } from "~/services/amounts/budgets"
 import {
   ASSET_KINDS,
@@ -35,12 +35,21 @@ import {
 import {
   accountShareBalanceSummary,
   formatOverviewShareBalance,
+  getShareBalanceDisplayAmounts,
+  shareBalanceLines,
+  shareBalanceTitle,
 } from "~/services/sharing/shareSnapshots/balanceSummary"
 import {
   getShareNetAmount,
   publicConsumptionSummary,
+  publicSiteDayUsage,
   shareConsumptionLines,
+  shareSiteDayLines,
 } from "~/services/sharing/shareSnapshots/consumptionSummary"
+import {
+  SHARE_BALANCE_PURPOSES,
+  type ShareBalanceSummary,
+} from "~/services/sharing/shareSnapshots/types"
 import {
   createShareSnapshotSeed,
   formatAsOfTimestamp,
@@ -49,7 +58,448 @@ import {
   redactShareSecrets,
   relativeLuminanceFromRgb,
 } from "~/services/sharing/shareSnapshots/utils"
+import type { AccountUsageSummary } from "~/types"
 import { buildPeriodIncome } from "~~/tests/test-utils/financialPeriod"
+
+describe("public native financial sharing boundaries", () => {
+  const source = {
+    adapter: "private-provider",
+    operation: "private-operation",
+    contractVersion: "1",
+    kind: EVIDENCE_KINDS.Reported,
+  } as const
+
+  it("retains supplied partial allowance coverage even without displayable plans", () => {
+    const scope = accountBalanceScope({ baseUrl: "https://allowances.example" })
+    const snapshot = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          scope,
+          source,
+          asset: { kind: "currency", code: "USD" },
+          value: "20",
+          observedAt: 100,
+        }),
+      ],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    const allowances = {
+      schemaVersion: 1 as const,
+      subject: scope.subject,
+      capturedAt: 100,
+      entries: [],
+      coverage: FINANCIAL_COVERAGE.Partial,
+    }
+    const summary = accountShareBalanceSummary(snapshot, allowances, 100)
+    expect(summary.entries[0]?.amount?.value).toBe("20")
+    expect(summary.coverage).toBe(FINANCIAL_COVERAGE.Partial)
+    expect(shareBalanceLines(summary)).toContain(
+      "shareSnapshots:financial.partial",
+    )
+  })
+
+  it.each(["disabled", "expired", "reset", "unreadable"] as const)(
+    "keeps an ineligible %s allowance out of shared entries without hiding its coverage gap",
+    (state) => {
+      const scope = accountBalanceScope({
+        baseUrl: "https://allowances.example",
+      })
+      const constraint = budgetConstraint({
+        scope,
+        source,
+        observedAt: 100,
+        asset: { kind: "currency", code: "USD" },
+        remaining: 10,
+        limitState: BUDGET_LIMIT_STATES.Finite,
+      })
+      if (state === "disabled")
+        constraint.enabled = {
+          status: "known",
+          value: false,
+          source,
+          observedAt: 100,
+        }
+      if (state === "reset")
+        constraint.window = {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period: "day",
+          resetsAt: 100,
+        }
+      if (state === "unreadable")
+        constraint.remaining = observeAmount(undefined, source, 100)
+      const allowances = {
+        schemaVersion: 1 as const,
+        subject: scope.subject,
+        capturedAt: 100,
+        coverage: FINANCIAL_COVERAGE.Partial,
+        entries: [
+          {
+            id: "plan",
+            collectionKey: "plans",
+            identityKind: "upstream" as const,
+            constraint,
+            validity:
+              state === "expired"
+                ? { kind: BALANCE_VALIDITY_KINDS.Expires, at: 100 }
+                : { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+          },
+        ],
+      }
+      const snapshot = accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "wallet",
+            scope,
+            asset: { kind: "currency", code: "USD" },
+            value: "20",
+            source,
+            observedAt: 100,
+          }),
+        ],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      )
+      const summary = accountShareBalanceSummary(snapshot, allowances, 100)
+      expect(summary.entries).toHaveLength(1)
+      expect(summary.entries[0]?.amount?.value).toBe("20")
+      expect(summary.coverage).toBe(FINANCIAL_COVERAGE.Partial)
+    },
+  )
+
+  it("keeps provider billing dates and intervals in the public caption while omitting private scope", () => {
+    const usage = {
+      scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+      reportedDay: "2026-11-18",
+      totalTokens: 3,
+      cost: {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        amount: observeAmount("2", source, 100),
+        scope: accountBalanceScope({
+          baseUrl: "https://private.example",
+          accountId: "private-account",
+        }),
+        window: { start: 0, end: 100, timeZone: "UTC" },
+      },
+    }
+    const readings = publicSiteDayUsage([usage])
+    expect(readings[0]).toMatchObject({
+      reportedDay: "2026-11-18",
+      window: { start: 0, end: 100, timeZone: "UTC" },
+      tokens: 3,
+    })
+    const caption = shareSiteDayLines(readings, "en-US").join("\n")
+    expect(caption).toContain("2026-11-18")
+    expect(caption).toContain("UTC")
+    expect(caption).not.toContain("private-account")
+    expect(caption).not.toContain("private.example")
+  })
+
+  it.each([CURRENCIES.CNY, CURRENCY_DISPLAY_MODES.Original])(
+    "uses the account's retained-income conversion for %s captions",
+    (currencyDisplay) => {
+      const fact = buildPeriodIncome("retained", "2")
+      fact.amount = {
+        source: fact.amount.source,
+        value: "2",
+        observedAt: Date.now(),
+        status: OBSERVATION_STATUSES.Stale,
+        reason: "offline",
+      }
+      const income = getDisplayIncomeProjection([
+        { id: "retained", reportedIncome: [fact] },
+      ])
+      const payload = buildAccountShareSnapshotPayload({
+        siteName: "Retained income",
+        currencyType: CURRENCIES.CNY,
+        currencyDisplay,
+        exchangeRate: 14,
+        includeTodayCashflow: true,
+        income,
+      })
+      const caption = generateShareSnapshotCaption(payload)
+      expect(caption).toMatch(
+        currencyDisplay === CURRENCIES.CNY ? /CNY\s28\b/ : /USD\s2\b/,
+      )
+      expect(caption).toContain("account:financial.lastKnown")
+    },
+  )
+
+  it.each([-1, Infinity, NaN])(
+    "omits invalid provider counters (%s) while preserving a usable cost",
+    (invalidCount) => {
+      const usage: AccountUsageSummary = {
+        scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+        totalRequests: invalidCount,
+        totalTokens: invalidCount,
+        cost: {
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          amount: observeAmount("2", source, 100),
+        },
+      }
+      const readings = publicSiteDayUsage([usage])
+      expect(readings).toEqual([
+        {
+          cost: {
+            asset: { kind: ASSET_KINDS.Currency, code: "USD" },
+            value: "2",
+          },
+          observedAt: 100,
+          lastKnown: true,
+        },
+      ])
+      expect(JSON.stringify(readings)).not.toContain("private-provider")
+    },
+  )
+
+  it("omits empty and unrelated provider readings while keeping zero counters without inventing a cost", () => {
+    expect(
+      publicSiteDayUsage([
+        { scope: ACCOUNT_USAGE_SCOPES.CurrentPeriod },
+        { scope: ACCOUNT_USAGE_SCOPES.SiteToday },
+        {
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          totalRequests: 0,
+          totalTokens: 0,
+        },
+      ]),
+    ).toEqual([{ requests: 0, tokens: 0, lastKnown: true }])
+  })
+
+  it("shares counters for an unknown cost asset without exporting its amount", () => {
+    const readings = publicSiteDayUsage([
+      {
+        scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+        observedAt: 100,
+        totalRequests: 4,
+        cost: {
+          asset: { kind: ASSET_KINDS.Unknown },
+          amount: observeAmount("99", source, 100),
+        },
+      },
+    ])
+    expect(readings).toEqual([
+      { requests: 4, observedAt: 100, lastKnown: true },
+    ])
+    const caption = shareSiteDayLines(readings, "en-US").join("\n")
+    expect(caption).toContain("4 usageAnalytics:summary.requests")
+    expect(caption).not.toContain("99")
+    expect(caption).toContain("account:financial.lastKnown")
+    expect(shareSiteDayLines(undefined)).toEqual([])
+  })
+
+  it("uses the caller's rate for a plain provider reading and retains its original currency", () => {
+    const readings = publicSiteDayUsage(
+      [
+        {
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          cost: {
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+            amount: observeAmount("140", source, 100),
+          },
+        },
+      ],
+      CURRENCIES.USD,
+      14,
+    )
+    expect(readings[0]).toMatchObject({
+      cost: { value: "140", asset: { code: "CNY" } },
+      displayCost: { value: "10", asset: { code: "USD" } },
+    })
+    const caption = shareSiteDayLines(readings, "en-US").join("\n")
+    expect(caption).toMatch(/USD\s10\b/)
+    expect(caption).toMatch(/CNY\s140\b/)
+  })
+
+  it.each(["crypto", "quota"] as const)(
+    "keeps %s balances native when an overview supplies converted money",
+    (kind) => {
+      const native = {
+        asset:
+          kind === "crypto"
+            ? { kind: ASSET_KINDS.Crypto, id: "XNO" as const }
+            : {
+                kind: ASSET_KINDS.Quota,
+                id: "credits",
+                label: "Credits",
+                displayLabel: "Credits",
+                displayScale: 1,
+              },
+        value: "12",
+      } as const
+      const summary: ShareBalanceSummary = {
+        purpose: SHARE_BALANCE_PURPOSES.Available,
+        entries: [],
+        amounts: [native],
+        convertedCurrencyTotals: { USD: "7" },
+        coverage: FINANCIAL_COVERAGE.Complete,
+      }
+      expect(getShareBalanceDisplayAmounts(summary, CURRENCIES.USD)).toEqual([
+        native,
+      ])
+      expect(shareBalanceLines(summary, "en-US", CURRENCIES.USD)[0]).toContain(
+        kind === "crypto" ? "XNO" : "Credits",
+      )
+      expect(
+        shareBalanceLines(summary, "en-US", CURRENCIES.USD)[0],
+      ).not.toContain("$7")
+    },
+  )
+
+  it("keeps an original CNY subtotal beside its independently recorded USD conversion", () => {
+    const summary: ShareBalanceSummary = {
+      purpose: SHARE_BALANCE_PURPOSES.Prepaid,
+      entries: [],
+      amounts: [
+        { asset: { kind: ASSET_KINDS.Currency, code: "CNY" }, value: "140" },
+      ],
+      cnyInUsd: "10",
+      coverage: FINANCIAL_COVERAGE.Partial,
+      includedCount: 1,
+      eligibleCount: 2,
+      manualCount: 1,
+    }
+    const lines = shareBalanceLines(summary, "en-US", CURRENCIES.USD)
+    expect(lines[0]).toContain("$10.00")
+    expect(lines[0]).toContain("¥140.00")
+    expect(lines).toContain("shareSnapshots:financial.partial")
+    expect(lines).toContain("account:financial.manualContribution")
+    expect(shareBalanceTitle(summary)).toBe("account:financial.prepaidTotal")
+    expect(shareBalanceTitle()).toBe("shareSnapshots:labels.balance")
+  })
+
+  it("combines a verified USD/CNY overview subtotal once and retains both native amounts in the caption", () => {
+    const summary: ShareBalanceSummary = {
+      purpose: SHARE_BALANCE_PURPOSES.Available,
+      entries: [],
+      amounts: [
+        { asset: { kind: ASSET_KINDS.Currency, code: "USD" }, value: "2" },
+        { asset: { kind: ASSET_KINDS.Currency, code: "CNY" }, value: "14" },
+      ],
+      convertedCurrencyTotals: { USD: "4" },
+      coverage: FINANCIAL_COVERAGE.Complete,
+    }
+    expect(getShareBalanceDisplayAmounts(summary, CURRENCIES.USD)).toEqual([
+      { asset: { kind: ASSET_KINDS.Currency, code: "USD" }, value: "4" },
+    ])
+    const caption = shareBalanceLines(summary, "en-US", CURRENCIES.USD)[0]
+    expect(caption).toContain("$4.00")
+    expect(caption).toContain("$2.00")
+    expect(caption).toContain("¥14.00")
+  })
+
+  it.each([CURRENCIES.CNY, CURRENCY_DISPLAY_MODES.Original])(
+    "keeps a portfolio's saved reference separate from spendable money in %s mode",
+    (currencyDisplay) => {
+      const payload = buildOverviewShareSnapshotPayload({
+        currencyType: CURRENCIES.CNY,
+        currencyDisplay,
+        enabledAccountCount: 1,
+        includeTodayCashflow: false,
+        portfolio: {
+          amounts: [],
+          includedCount: 0,
+          eligibleCount: 1,
+          duplicateCount: 0,
+          potentialDuplicateCount: 0,
+          conflictCount: 0,
+          manualCount: 0,
+          coverage: FINANCIAL_COVERAGE.Partial,
+          referenceUsd: { USD: "2", CNY: "28" },
+          lastKnownCount: 1,
+        },
+      })
+      expect(payload.balanceSummary?.amounts).toEqual([])
+      expect(payload.balanceSummary?.referenceAmount).toEqual({
+        asset: {
+          kind: "currency",
+          code: currencyDisplay === CURRENCIES.CNY ? "CNY" : "USD",
+        },
+        value: currencyDisplay === CURRENCIES.CNY ? "28" : "2",
+      })
+      expect(generateShareSnapshotCaption(payload)).toContain(
+        "account:financial.lastKnown",
+      )
+    },
+  )
+
+  it.each([
+    { kind: ASSET_KINDS.Crypto, id: "XNO" },
+    {
+      kind: ASSET_KINDS.Quota,
+      id: "credits",
+      label: "Credits",
+      displayLabel: "Credits",
+      displayScale: 1,
+    },
+    { kind: ASSET_KINDS.Unknown },
+  ] as const)(
+    "labels an unavailable $kind balance without publishing a monetary value",
+    (asset) => {
+      const scope = accountBalanceScope({ baseUrl: "https://private.example" })
+      const summary = accountShareBalanceSummary(
+        accountBalanceSnapshot(
+          scope,
+          [
+            balancePosition({
+              id: "wallet",
+              scope,
+              asset,
+              source,
+              value: undefined,
+              observedAt: 100,
+            }),
+          ],
+          100,
+        ),
+      )
+      const caption = shareBalanceLines(summary, "en-US").join("\n")
+      expect(summary.entries[0]?.amount).toBeUndefined()
+      expect(caption).toContain("shareSnapshots:financial.unavailable")
+      if (asset.kind === ASSET_KINDS.Crypto) expect(caption).toContain("XNO")
+      if (asset.kind === ASSET_KINDS.Quota) expect(caption).toContain("Credits")
+      expect(caption).not.toContain("private.example")
+      expect(caption).not.toContain("USD")
+    },
+  )
+
+  it("keeps old reference income readable without inventing an observation timestamp", () => {
+    const coverage = {
+      status: "unavailable" as const,
+      completeCount: 0,
+      partialCount: 0,
+      eligibleCount: 1,
+      legacyUnclassifiedCount: 1,
+    }
+    const summary = publicConsumptionSummary({
+      groups: [],
+      nativeCoverage: coverage,
+      references: [
+        {
+          accountId: "private-reference",
+          amount: { USD: 2, CNY: 14 },
+          lastKnown: false,
+        },
+      ],
+    })
+    expect(summary.references).toEqual([
+      { amount: { USD: 2, CNY: 14 }, lastKnown: false },
+    ])
+    const lines = shareConsumptionLines(
+      summary,
+      "en-US",
+      ACCOUNT_CASHFLOW_METRICS.Income,
+      CURRENCIES.CNY,
+    )
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatch(
+      /^account:financial.reportedIncome: account:financial.legacy · CNY\s14$/,
+    )
+  })
+})
 
 describe("shareSnapshots", () => {
   it.each(["asset", "overflow"] as const)(

@@ -67,6 +67,57 @@ const dailyUsage = (): AccountUsageSummary => ({
   },
 })
 
+it("keeps provider-day counters separate from an old cost when neither report establishes a billing day", () => {
+  const firstAt = Date.UTC(2026, 10, 18, 12)
+  const source = {
+    adapter: "pmapi",
+    operation: "/api/user/info",
+    contractVersion: "1",
+    kind: EVIDENCE_KINDS.Reported,
+  } as const
+  const previous: AccountUsageSummary = {
+    scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+    observedAt: firstAt,
+    totalRequests: 10,
+    cost: {
+      asset: { kind: "currency", code: "USD" },
+      amount: observeAmount("5", source, firstAt),
+    },
+  }
+  const incoming: AccountUsageSummary = {
+    ...previous,
+    observedAt: firstAt + 86_400_000,
+    totalRequests: 2,
+    cost: {
+      ...previous.cost!,
+      amount: observeAmount(undefined, source, firstAt + 86_400_000),
+    },
+  }
+  const observations = acceptUsageObservations([previous], [incoming])!
+  expect(observations[0]).toMatchObject({
+    totalRequests: 2,
+    cost: { amount: { status: "unavailable" } },
+  })
+  expect(observations[1]).toMatchObject({
+    totalRequests: 10,
+    cost: { amount: { status: "stale", value: "5", observedAt: firstAt } },
+  })
+  expect(acceptUsageSummary(previous, incoming)?.cost?.amount.status).toBe(
+    "unavailable",
+  )
+  const fresh = {
+    ...incoming,
+    cost: {
+      ...incoming.cost!,
+      amount: observeAmount("7", source, firstAt + 86_400_000),
+    },
+  }
+  expect(acceptUsageSummary(previous, fresh)?.cost?.amount).toMatchObject({
+    status: "known",
+    value: "7",
+  })
+})
+
 it("keeps the last usable cost in singleton usage when the clock moves backward", () => {
   const old = dailyUsage()
   const incoming = {

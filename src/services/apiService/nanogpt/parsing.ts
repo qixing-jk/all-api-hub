@@ -51,6 +51,7 @@ export function parseNanoGptBalance(
   if (!depositAddress) throw invalid(endpoint)
   const nanoBalance = readNanoGptAmount(value.nano_balance)
   const exactAmount = (value: unknown) => {
+    if (readNanoGptAmount(value) === undefined) return undefined
     const original =
       typeof value === "string"
         ? value.trim().replace(/^\./, "0.").replace(/\.$/, "")

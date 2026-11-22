@@ -1,5 +1,5 @@
 import { History } from "lucide-react"
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -17,6 +17,7 @@ import { CURRENCIES } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useBalanceAsOf } from "~/features/AccountManagement/data/useBalanceAsOf"
 import CountUp from "~/lib/countup"
 import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
 import {
@@ -280,6 +281,8 @@ const AnimatedValue: React.FC<{
 
 const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const { t, i18n } = useTranslation("account")
+  const clockSites = useMemo(() => [site], [site])
+  const asOf = useBalanceAsOf(clockSites)
   const {
     currencyType,
     currencyDisplay = currencyType,
@@ -319,7 +322,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       (!subscriptionStatus && site.subscription?.isActive === true)) &&
     !(
       site.subscription?.expireTime &&
-      Date.parse(site.subscription.expireTime) <= Date.now()
+      Date.parse(site.subscription.expireTime) <= asOf
     )
       ? site.subscription
       : undefined
@@ -333,7 +336,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
     remainingCount !== undefined &&
     Number.isFinite(remainingCount) &&
     remainingCount >= 0
-  const siteDayReadings = getSiteDayReadings(site)
+  const siteDayReadings = getSiteDayReadings(site, asOf)
   const siteDayReading = siteDayReadings[0]
   const siteDay = siteDayReading?.usage
   const showGenericUsageCounters =
@@ -358,7 +361,6 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const estimate = preferences?.balanceHistory?.estimatedTodayIncome?.enabled
     ? site.estimatedTodayIncome?.[displayCurrency ?? CURRENCIES.USD]
     : undefined
-  const asOf = Date.now()
   const consumption = getDisplayConsumptionProjection(
     [{ ...site, disabled: false }],
     asOf,
@@ -393,8 +395,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       ? site.todayStatsAvailability.income
       : displayedIncome.coverage,
   )
-  const consumptionReference = site.referenceConsumption
-  const incomeReference = site.referenceIncome
+  const consumptionReference = consumption.references?.[0]
+  const incomeReference = income.references?.[0]
   const consumptionValue =
     consumptionReference?.amount[referenceCurrency] ??
     consumptionPresentation.value

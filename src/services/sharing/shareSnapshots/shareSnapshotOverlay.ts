@@ -802,6 +802,7 @@ export const drawShareSnapshotOverlay = (
     label:
       !payload.consumptionSummary?.groups.length &&
       !payload.consumptionSummary?.references?.length &&
+      !payload.consumptionSummary?.retained?.length &&
       payload.siteDayUsage?.length
         ? siteDayLabel
         : labels.outcome,

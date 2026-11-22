@@ -276,6 +276,7 @@ export function shareConsumptionLines(
   locale?: string,
   metric: AccountCashflowMetric = ACCOUNT_CASHFLOW_METRICS.Consumption,
   currencyType?: CurrencyType,
+  exchangeRate?: number,
 ): string[] {
   if (!summary) return []
   const label =
@@ -289,7 +290,7 @@ export function shareConsumptionLines(
   ).map((line) => `${label}: ${line}`)
   references.push(
     ...(summary.retained ?? []).flatMap((fact) => [
-      `${label}: ${formatAssetAmount(convertCurrencyAmount(fact.amount, currencyType), locale)} · ${t("account:financial.lastKnown")} · ${new Date(fact.observedAt).toLocaleString(locale)}`,
+      `${label}: ${formatAssetAmount(convertCurrencyAmount(fact.amount, currencyType, exchangeRate), locale)} · ${t("account:financial.lastKnown")} · ${new Date(fact.observedAt).toLocaleString(locale)}`,
       ...formatBalanceWindow(fact.window, t, locale),
     ]),
   )

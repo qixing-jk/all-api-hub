@@ -155,6 +155,32 @@ it("falls back to inference subscription after management scope refusal", async 
 })
 
 beforeEach(() => server.resetHandlers())
+it.each([".", " . "])(
+  "keeps a digit-free Nano amount unavailable (%j)",
+  (amount) => {
+    const parsed = parseNanoGptBalance(
+      { ...balanceBody, nano_balance: amount },
+      "/balance",
+    )
+    expect(parsed.nanoAmount).toBeUndefined()
+    expect(parsed.nanoBalance).toBeUndefined()
+    expect(parsed.nanoAmountUnavailable).toBe(true)
+  },
+)
+
+it.each([
+  [".5", "0.5"],
+  ["1.", "1"],
+] as const)(
+  "preserves valid abbreviated Nano decimal %s",
+  (amount, expected) => {
+    expect(
+      parseNanoGptBalance({ ...balanceBody, nano_balance: amount }, "/balance")
+        .nanoAmount,
+    ).toBe(expected)
+  },
+)
+
 it.each(["0x10", "0b10", "0o10"])(
   "rejects non-decimal balance %s",
   (amount) => {

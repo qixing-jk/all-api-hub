@@ -102,6 +102,75 @@ const capture = (
     timeZone: "UTC",
   })
 
+it.each([true, false])(
+  "captures a newer source only when both readings prove the same wallet (%s)",
+  async (identified) => {
+    upsertSnapshotMock.mockClear().mockResolvedValue(true)
+    const account = buildSiteAccount({ id: "same-wallet" })
+    const asOf = Date.now()
+    const scope = {
+      ...accountBalanceScope({
+        baseUrl: account.site_url,
+        accountId: account.id,
+      }),
+      ...(identified ? { walletId: "verified-wallet" } : {}),
+    }
+    const old = balancePosition({
+      id: "wallet",
+      scope,
+      asset: { kind: "currency", code: "USD" },
+      value: "20",
+      observedAt: asOf - 1000,
+      source: {
+        adapter: "fixture",
+        operation: "old-endpoint",
+        contractVersion: "1",
+        kind: "reported",
+      },
+    })
+    old.amount = {
+      ...old.amount,
+      status: "stale",
+      value: "20",
+      observedAt: asOf - 1000,
+      reason: "offline",
+    }
+    const current = balancePosition({
+      id: "wallet",
+      scope,
+      asset: { kind: "currency", code: "USD" },
+      value: "25",
+      observedAt: asOf,
+      source: {
+        adapter: "fixture",
+        operation: "new-endpoint",
+        contractVersion: "1",
+        kind: "reported",
+      },
+    })
+    account.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [old, current],
+      asOf,
+      "complete",
+    )
+    expect(
+      await maybeCaptureAccountReferenceBalance({
+        account,
+        source: "refresh",
+        asOf,
+      }),
+    ).toBe(identified)
+    if (identified)
+      expect(upsertSnapshotMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          snapshot: expect.objectContaining({ quota: 12_500_000 }),
+        }),
+      )
+    else expect(upsertSnapshotMock).not.toHaveBeenCalled()
+  },
+)
+
 describe("maybeCaptureDailyBalanceSnapshot", () => {
   it("does not record native token assets as zero-dollar snapshots", async () => {
     expect(

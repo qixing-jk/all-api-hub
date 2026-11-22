@@ -27,10 +27,7 @@ import {
   staleBalancePosition,
 } from "~/services/accounts/refresh/balanceAcceptance"
 import { acceptPeriodAmounts } from "~/services/accounts/refresh/periodAmountAcceptance"
-import {
-  acceptUsageObservations,
-  acceptUsageSummary,
-} from "~/services/accounts/refresh/usageAcceptance"
+import { acceptUsageState } from "~/services/accounts/refresh/usageAcceptance"
 import { assetIdentity } from "~/services/amounts/assets"
 import {
   balancePositionKey,
@@ -480,15 +477,10 @@ class AccountMutations {
                 prior.account_info.reportedIncome,
                 data?.reportedIncome,
               )
-              nextAccount.account_info.usage = acceptUsageSummary(
-                prior.account_info.usage,
-                data?.usage,
+              Object.assign(
+                nextAccount.account_info,
+                acceptUsageState(prior.account_info, data),
               )
-              nextAccount.account_info.usageObservations =
-                acceptUsageObservations(
-                  prior.account_info.usageObservations,
-                  data?.usageObservations,
-                )
             } else {
               // A stale network result does not replace the last accepted refresh metadata.
               nextAccount.health = account.health
@@ -597,13 +589,13 @@ class AccountMutations {
         effectiveUpdates.account_info.allowances = allowances
         if (balanceGeneration !== undefined) {
           const info = effectiveUpdates.account_info
-          info.usage = acceptUsageSummary(
-            account.account_info.usage,
-            info.usage as SiteAccount["account_info"]["usage"],
-          )
-          info.usageObservations = acceptUsageObservations(
-            account.account_info.usageObservations,
-            info.usageObservations as SiteAccount["account_info"]["usageObservations"],
+          Object.assign(
+            info,
+            acceptUsageState(account.account_info, {
+              usage: info.usage as SiteAccount["account_info"]["usage"],
+              usageObservations:
+                info.usageObservations as SiteAccount["account_info"]["usageObservations"],
+            }),
           )
           info.settledConsumption = acceptPeriodAmounts(
             account.account_info.settledConsumption,

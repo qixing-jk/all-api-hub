@@ -56,6 +56,7 @@ vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
   accountDataTransfer: {
     importData: vi.fn(),
     exportData: vi.fn(),
+    exportDataWithTags: vi.fn(),
   },
 }))
 
@@ -2067,6 +2068,12 @@ describe("export handlers", () => {
     vi.clearAllMocks()
 
     // Mock URL helpers
+    vi.mocked(accountDataTransfer.exportDataWithTags).mockImplementation(
+      async () => ({
+        accounts: await accountDataTransfer.exportData(),
+        tagStore: await tagStorage.exportTagStore(),
+      }),
+    )
     URL.createObjectURL = vi.fn(() => "blob:mock-url") as any
     URL.revokeObjectURL = vi.fn() as any
 

@@ -220,6 +220,70 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
+  it.each([CURRENCIES.CNY, CURRENCY_DISPLAY_MODES.Original])(
+    "keeps the released income estimate readable in %s mode",
+    (currencyDisplay) => {
+      const site = buildDisplaySiteData({
+        estimatedTodayIncome: { USD: 2, CNY: 14 },
+      })
+      mockUseUserPreferencesContext.mockReturnValue({
+        currencyType: CURRENCIES.CNY,
+        currencyDisplay,
+        showTodayCashflow: true,
+        preferences: {
+          balanceHistory: { estimatedTodayIncome: { enabled: true } },
+        },
+      })
+      render(<BalanceDisplay site={site} />)
+      expect(
+        screen.getByTitle("account:stats.estimatedTodayIncome"),
+      ).toHaveTextContent(
+        currencyDisplay === CURRENCIES.CNY ? "~¥14.00" : "~$2.00",
+      )
+    },
+  )
+
+  it.each(["native", "reference"] as const)(
+    "updates unchanged %s cashflow rows at local midnight",
+    async (kind) => {
+      vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] })
+      vi.setSystemTime(new Date(2026, 10, 22, 23, 59, 59))
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
+      const observedAt = Date.now()
+      const site = buildDisplaySiteData(
+        kind === "native"
+          ? { todayIncome: { USD: 2.5, CNY: 17.5 } }
+          : {
+              reportedIncome: [],
+              referenceIncome: {
+                amount: { USD: 2.5, CNY: 17.5 },
+                observedAt,
+                lastKnown: false,
+              },
+            },
+        [CURRENCIES.USD],
+      )
+      const mounted = await render(<BalanceDisplay site={site} />)
+      const income = screen.getByRole("button", { name: /refreshIncome/ })
+      expect(income).toHaveTextContent("+$2.50")
+      expect(income).not.toHaveTextContent("account:financial.lastKnown")
+      await act(async () => vi.advanceTimersByTime(1001))
+      const refreshedIncome = screen.getByRole("button", {
+        name: /refreshIncome/,
+      })
+      if (kind === "native")
+        expect(refreshedIncome).not.toHaveTextContent("$2.50")
+      else {
+        expect(refreshedIncome).toHaveTextContent("+$2.50")
+        expect(refreshedIncome).toHaveTextContent("account:financial.lastKnown")
+        expect(site.referenceIncome?.lastKnown).toBe(false)
+      }
+      mounted.unmount()
+    },
+  )
+
   it("converts native yuan consumption and income to the selected dollar display", () => {
     const site = buildDisplaySiteData({
       todayConsumption: { USD: 99, CNY: 7 },

@@ -110,6 +110,10 @@ const mockAccountStorageImportData = vi.fn()
 vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
   accountDataTransfer: {
     exportData: (...args: any[]) => mockAccountStorageExportData(...args),
+    exportDataWithTags: async () => ({
+      accounts: await mockAccountStorageExportData(),
+      tagStore: await mockTagStoreExport(),
+    }),
     importData: (...args: any[]) => mockAccountStorageImportData(...args),
   },
 }))

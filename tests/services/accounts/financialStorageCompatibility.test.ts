@@ -65,6 +65,7 @@ import { createDynamicSortComparator } from "~/services/preferences/utils/sortin
 import { publicConsumptionSummary } from "~/services/sharing/shareSnapshots/consumptionSummary"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { SiteHealthStatus, type AccountUsageSummary } from "~/types"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   buildDisplaySiteData,
   buildSiteAccount,
@@ -235,6 +236,86 @@ it("preserves both concurrent account and tag merges", async () => {
   expect(
     Object.keys((await tagStorage.exportTagStore()).tagsById).sort(),
   ).toEqual(["first", "second"])
+})
+
+it("exports accounts and tags from one completed account transaction", async () => {
+  const id = await accountMutations.addAccount(
+    buildSiteAccount({ tagIds: ["before"] }),
+  )
+  const before = await accountDataTransfer.exportData()
+  const entered = createDeferred<void>()
+  const release = createDeferred<void>()
+  const tagStore = {
+    version: 1,
+    tagsById: {
+      after: { id: "after", name: "After", createdAt: 10, updatedAt: 20 },
+    },
+  }
+  const writer = withExtensionStorageWriteLock(
+    STORAGE_LOCKS.ACCOUNT_STORAGE,
+    async () => {
+      await storage.set(TAG_STORAGE_KEYS.TAG_STORE, tagStore)
+      entered.resolve()
+      await release.promise
+      await storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        ...before,
+        accounts: before.accounts.map((account) => ({
+          ...account,
+          tagIds: ["after"],
+        })),
+      })
+    },
+  )
+  await entered.promise
+  const exporting = Promise.resolve().then(() =>
+    accountDataTransfer.exportDataWithTags(),
+  )
+  exporting.catch(() => {})
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  } finally {
+    release.resolve()
+    await writer
+  }
+  const exported = await exporting
+  expect(
+    exported.accounts.accounts.find((account) => account.id === id)?.tagIds,
+  ).toEqual(["after"])
+  expect(exported.tagStore).toEqual(tagStore)
+})
+
+it("rejects paired backup export when the tag store cannot be read", async () => {
+  await accountMutations.addAccount(buildSiteAccount())
+  await accountDataTransfer.exportDataWithTags()
+  const originalGet = browser.storage.local.get.bind(browser.storage.local)
+  const read = vi
+    .spyOn(browser.storage.local, "get")
+    .mockImplementation((keys) => {
+      if (
+        keys === TAG_STORAGE_KEYS.TAG_STORE ||
+        (Array.isArray(keys) && keys.includes(TAG_STORAGE_KEYS.TAG_STORE))
+      )
+        return Promise.reject(new Error("tag-read-failed"))
+      return originalGet(keys)
+    })
+  try {
+    await expect(accountDataTransfer.exportDataWithTags()).rejects.toThrow(
+      "tag-read-failed",
+    )
+  } finally {
+    read.mockRestore()
+  }
+})
+
+it("rejects an admitted refresh after its account was deleted without advancing the financial counter", async () => {
+  const id = await accountMutations.addAccount(buildSiteAccount())
+  const request = (await accountQueries.getAccountById(id))!
+  await accountMutations.deleteAccount(id)
+  const counter = await storage.get(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION)
+  expect(await accountMutations.beginBalanceRefresh(id, request)).toBeNull()
+  expect(await storage.get(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION)).toBe(
+    counter,
+  )
 })
 
 it.each(["site URL", "upstream user ID", "cashflow-only site URL"] as const)(
@@ -1034,6 +1115,141 @@ it("recovers a corrupt generation counter during clear-and-restore without accep
     (await accountQueries.getAccountById(id))?.balanceRefreshGeneration,
   ).toBeGreaterThan(generation)
 })
+
+it("preserves accounts and the exhausted generation counter when clearing cannot invalidate pending refreshes", async () => {
+  const id = await accountMutations.addAccount(buildSiteAccount())
+  const before = await accountDataTransfer.exportData()
+  await storage.set(
+    ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION,
+    Number.MAX_SAFE_INTEGER,
+  )
+  onTestFinished(() => storage.remove(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION))
+  expect(await accountDataTransfer.clearAllData()).toBe(false)
+  expect(await accountDataTransfer.exportData()).toEqual(before)
+  expect((await accountQueries.getAccountById(id))?.id).toBe(id)
+  expect(await storage.get(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION)).toBe(
+    Number.MAX_SAFE_INTEGER,
+  )
+})
+
+it("keeps a valid deletion marker when a newer malformed backup marker is rejected", async () => {
+  const valid = { kind: "account" as const, deletedAt: 100, entryUpdatedAt: 50 }
+  await accountDataTransfer.importData({
+    accounts: [],
+    deletedEntryRecords: { deleted: valid },
+  })
+  await accountDataTransfer.importData({
+    accounts: [],
+    deletedEntryRecords: {
+      deleted: { ...valid, kind: "invalid" as never, deletedAt: 200 },
+    },
+  })
+  expect(
+    (await accountDataTransfer.exportData()).deletedEntryRecords?.deleted,
+  ).toEqual(valid)
+  await accountDataTransfer.importData({
+    accounts: [],
+    deletedEntryRecords: { deleted: { ...valid, deletedAt: 300 } },
+  })
+  expect(
+    (await accountDataTransfer.exportData()).deletedEntryRecords?.deleted,
+  ).toEqual({ ...valid, deletedAt: 300 })
+})
+
+it.each(["ordinary", "editor"] as const)(
+  "%s refresh retains an unqualified old provider-day cost separately from fresh counters",
+  async (mode) => {
+    const firstAt = Date.UTC(2026, 10, 18, 12)
+    const source = {
+      adapter: "pmapi",
+      operation: "/api/user/info",
+      contractVersion: "1",
+      kind: EVIDENCE_KINDS.Reported,
+    } as const
+    const previous = {
+      scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+      observedAt: firstAt,
+      totalRequests: 10,
+      cost: {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        amount: {
+          status: OBSERVATION_STATUSES.Known,
+          value: "5",
+          observedAt: firstAt,
+          source,
+        },
+      },
+    } as const
+    const account = buildSiteAccount()
+    account.account_info.usage = previous
+    account.account_info.usageObservations = undefined
+    const id = await accountMutations.addAccount(account)
+    const request = (await accountQueries.getAccountById(id))!
+    const generation = (await accountMutations.beginBalanceRefresh(
+      id,
+      request,
+    ))!
+    const incoming = {
+      ...previous,
+      totalRequests: 2,
+      observedAt: firstAt + 86_400_000,
+      cost: {
+        ...previous.cost,
+        amount: {
+          status: OBSERVATION_STATUSES.Unavailable,
+          reason: "missing",
+          source,
+        },
+      },
+    } as const
+    if (mode === "ordinary")
+      await accountMutations.updateAccountFromRefresh(
+        id,
+        { account_info: { usage: incoming } },
+        undefined,
+        request,
+        undefined,
+        generation,
+      )
+    else
+      await accountMutations.updateAccountWithCheckInDraft(
+        id,
+        {},
+        request.checkIn,
+        {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+          balanceRefresh: {
+            generation,
+            requestSnapshot: request,
+            data: {
+              ...request.account_info,
+              usage: incoming,
+              checkIn: request.checkIn,
+            },
+          },
+        },
+      )
+    const info = (await accountQueries.getAccountById(id))!.account_info
+    expect(info.usage).toMatchObject({
+      totalRequests: 2,
+      cost: { amount: { status: "unavailable" } },
+    })
+    expect(info.usageObservations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          totalRequests: 10,
+          cost: expect.objectContaining({
+            amount: expect.objectContaining({
+              status: "stale",
+              value: "5",
+              observedAt: firstAt,
+            }),
+          }),
+        }),
+      ]),
+    )
+  },
+)
 
 it.each([
   [-1, "invalid_balance_refresh_generation"],

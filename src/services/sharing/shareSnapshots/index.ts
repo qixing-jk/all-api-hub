@@ -138,7 +138,10 @@ const applyCashflow = <TPayload extends ShareSnapshotCashflowPayload>(
 
 const appendCashflowAndAsOf = (
   lines: string[],
-  payload: ShareSnapshotCashflowPayload & { currencyType: CurrencyType },
+  payload: ShareSnapshotCashflowPayload & {
+    currencyType: CurrencyType
+    exchangeRate?: number
+  },
   labels: ShareSnapshotOverlayLabels,
   asOfText: string,
   currencyType?: CurrencyType,
@@ -150,12 +153,14 @@ const appendCashflowAndAsOf = (
       getLocale(),
       ACCOUNT_CASHFLOW_METRICS.Consumption,
       currencyType,
+      payload.exchangeRate,
     ),
     ...shareConsumptionLines(
       payload.incomeSummary,
       getLocale(),
       ACCOUNT_CASHFLOW_METRICS.Income,
       currencyType,
+      payload.exchangeRate,
     ),
   )
   if (payload.todayNetAmount)

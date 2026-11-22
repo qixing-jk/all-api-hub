@@ -10,6 +10,7 @@ import {
   aggregateBalances,
   BALANCE_PURPOSES,
   getDisplayBalancePortfolio,
+  getDisplayBalancePositions,
   projectBalance,
 } from "~/services/accounts/metrics/balanceProjection"
 import { balancePosition } from "~/services/amounts/balance"
@@ -60,6 +61,77 @@ const position = (id: string, value: string) =>
   })
 
 describe("purpose-specific balance projection", () => {
+  it("shows a ledger-only snapshot as detail while keeping it out of spendable totals", () => {
+    const ledger = { ...position("ledger", "20"), role: BALANCE_ROLES.Ledger }
+    const snapshot = accountBalanceSnapshot(
+      scope,
+      [ledger],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    expect(getDisplayBalancePositions(snapshot).map(({ id }) => id)).toEqual([
+      "ledger",
+    ])
+    expect(
+      projectBalance(snapshot, BALANCE_PURPOSES.Available, 200).amounts,
+    ).toEqual([])
+    expect(
+      projectBalance(snapshot, BALANCE_PURPOSES.Prepaid, 200).amounts,
+    ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "20" }])
+  })
+
+  it("retains unknown balance details without turning their value into currency", () => {
+    const root = {
+      ...position("unknown", "20"),
+      asset: { kind: ASSET_KINDS.Unknown },
+    }
+    const snapshot = accountBalanceSnapshot(
+      scope,
+      [root],
+      100,
+      FINANCIAL_COVERAGE.Partial,
+    )
+    expect(getDisplayBalancePositions(snapshot)[0]?.asset.kind).toBe(
+      ASSET_KINDS.Unknown,
+    )
+    expect(
+      projectBalance(snapshot, BALANCE_PURPOSES.Available, 200).amounts,
+    ).toEqual([])
+  })
+
+  it.each([
+    { kind: BALANCE_VALIDITY_KINDS.Expires, at: 250 },
+    { kind: BALANCE_VALIDITY_KINDS.Unknown },
+  ] as const)(
+    "retains a valid prepaid wallet beside an ineligible $kind ledger",
+    (validity) => {
+      const ledger = {
+        ...position("ledger", "30"),
+        role: BALANCE_ROLES.Ledger,
+        validity,
+      }
+      const available = position("available", "20")
+      const snapshot = accountBalanceSnapshot(
+        scope,
+        [ledger, available],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      )
+      const expected = [
+        {
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          value: "20",
+        },
+      ]
+      expect(
+        projectBalance(snapshot, BALANCE_PURPOSES.Prepaid, 300).amounts,
+      ).toEqual(expected)
+      expect(
+        aggregateBalances([snapshot], BALANCE_PURPOSES.Prepaid, 300).amounts,
+      ).toEqual(expected)
+    },
+  )
+
   it("keeps the native balance when the converted subtotal exceeds decimal bounds", () => {
     const value = "9".repeat(256)
     const display = buildDisplaySiteData({

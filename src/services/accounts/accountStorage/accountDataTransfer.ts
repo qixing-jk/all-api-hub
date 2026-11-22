@@ -56,6 +56,18 @@ class AccountDataTransfer {
     return accountConfigStore.read()
   }
 
+  /** Read the related account and tag keys under the same restore lock. */
+  async exportDataWithTags(): Promise<{
+    accounts: AccountStorageConfig
+    tagStore: TagStore
+  }> {
+    await accountConfigStore.ensureTagsMigrated()
+    return accountConfigStore.runExclusive(async (transaction) => ({
+      accounts: await transaction.read(),
+      tagStore: await transaction.readTags(),
+    }))
+  }
+
   async importData<T>(
     prepare: AccountImportPreparation<T>,
   ): Promise<{ migratedCount: number; result: T }>
@@ -121,7 +133,7 @@ class AccountDataTransfer {
             : fallbackOrderedIds
           const deletedEntryRecords = mergeDeletedEntryRecordMaps({
             existing: backupConfig.deletedEntryRecords,
-            incoming: data.deletedEntryRecords,
+            incoming: incoming.deletedEntryRecords,
           })
           for (const id of entryIds) delete deletedEntryRecords[id]
 

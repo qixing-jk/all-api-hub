@@ -1282,7 +1282,7 @@ describe("createWebdavImportPayloadBySelection", () => {
 
 describe("buildWebdavImportPayloadBySelection", () => {
   it("propagates migration deferral before reading local backup state", async () => {
-    const exportAccounts = vi.spyOn(accountDataTransfer, "exportData")
+    const exportAccounts = vi.spyOn(accountDataTransfer, "exportDataWithTags")
     ensureLegacyChannelConfigMigrationReadyMock.mockRejectedValueOnce(
       new Error("migration deferred"),
     )

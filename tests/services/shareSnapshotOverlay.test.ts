@@ -53,6 +53,49 @@ const LABELS: ShareSnapshotOverlayLabels = {
   net: "Net",
 }
 
+it("labels retained consumption as outcome when provider-day usage is also present", () => {
+  const { ctx, fillTextCalls } = createMockContext()
+  drawShareSnapshotOverlay(ctx, {
+    payload: {
+      kind: "account",
+      siteName: "Retained",
+      currencyType: "USD",
+      asOf: 100,
+      backgroundSeed: 1,
+      consumptionSummary: {
+        groups: [],
+        nativeCoverage: {
+          status: "partial",
+          completeCount: 0,
+          partialCount: 1,
+          eligibleCount: 1,
+          legacyUnclassifiedCount: 0,
+        },
+        retained: [
+          {
+            amount: { asset: { kind: "currency", code: "USD" }, value: "2" },
+            observedAt: 100,
+            window: { start: 0, end: 100, timeZone: "UTC" },
+          },
+        ],
+      },
+      siteDayUsage: [
+        {
+          cost: { asset: { kind: "currency", code: "USD" }, value: "1" },
+          lastKnown: false,
+        },
+      ],
+    },
+    width: 1200,
+    height: 1200,
+    locale: "en",
+    labels: LABELS,
+    watermarkText: "All API Hub",
+  })
+  expect(fillTextCalls.map(({ text }) => text)).toContain("Outcome")
+  expect(fillTextCalls.map(({ text }) => text).join("\n")).toMatch(/USD\s2\b/)
+})
+
 it("renders a saved account reference balance on the canvas", () => {
   const { ctx, fillTextCalls } = createMockContext()
   const payload = buildAccountShareSnapshotPayload({

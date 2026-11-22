@@ -10,6 +10,7 @@ import {
   getDisplayIncomeProjection,
 } from "~/services/accounts/metrics/consumptionProjection"
 import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
+import { balancePositionKey, usageScopeKey } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
   BALANCE_ROLES,
@@ -121,12 +122,21 @@ export async function maybeCaptureAccountReferenceBalance({
   const info = account.account_info
   if (!info.balance) return false
   // Unreadable independent wallets still identify separate balances.
-  if (
-    getDisplayBalancePositions(info.balance).filter(
-      (position) => position.role !== BALANCE_ROLES.Allowance,
-    ).length !== 1
+  const wallets = new Set(
+    getDisplayBalancePositions(info.balance)
+      .filter((position) => position.role !== BALANCE_ROLES.Allowance)
+      .map((position) =>
+        position.scope.walletId ||
+        position.scope.organizationId ||
+        position.scope.workspaceId
+          ? usageScopeKey({
+              ...position.scope,
+              routes: position.scope.routes ?? { kind: "all" },
+            })
+          : balancePositionKey(position),
+      ),
   )
-    return false
+  if (wallets.size !== 1) return false
   const { amounts, conflicts, positions } = projectBalance(
     info.balance,
     BALANCE_PURPOSES.Available,
