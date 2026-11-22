@@ -557,6 +557,10 @@ async function renderBatch(localeKey = "zh", requestedPages = null) {
             ),
           )
           await p
+            .getByRole("button", { name: copy.filters.title, exact: true })
+            .click()
+          const filters = p.getByRole("dialog", { name: copy.filters.title })
+          await filters
             .getByRole("button", {
               name: copy.filters.quickRanges["7d"],
               exact: true,
@@ -568,8 +572,10 @@ async function renderBatch(localeKey = "zh", requestedPages = null) {
             "AIHubMix",
             "New API",
           ]) {
-            await p.getByRole("button", { name, exact: true }).click()
+            await filters.getByRole("button", { name, exact: true }).click()
           }
+          await p.keyboard.press("Escape")
+          await filters.waitFor({ state: "hidden" })
           await p
             .getByRole("button", {
               name: `${copy.breakdown.title}: ${copy.metrics.balance}`,
@@ -585,12 +591,20 @@ async function renderBatch(localeKey = "zh", requestedPages = null) {
           await p
             .getByTestId("balance-history-overview")
             .waitFor({ state: "visible" })
-          await p.waitForFunction(
-            () =>
-              document.querySelectorAll(
-                "[_echarts_instance_] canvas, [_echarts_instance_] svg",
-              ).length >= 2,
-          )
+          const trend = p.getByRole("region", { name: copy.trend.title })
+          await trend
+            .locator("canvas, [_echarts_instance_] svg")
+            .first()
+            .waitFor({ state: "visible" })
+          const breakdown = p.getByRole("region", {
+            name: copy.breakdown.title,
+          })
+          await breakdown
+            .getByRole("button", {
+              name: `${copy.breakdown.title}: ${copy.metrics.outcome}`,
+              exact: true,
+            })
+            .waitFor({ state: "visible" })
         },
       },
     )

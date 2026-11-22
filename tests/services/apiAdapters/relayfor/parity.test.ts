@@ -216,40 +216,58 @@ describe("RelayFor native account workflows", () => {
       ],
     })
     const data = await relayForCapabilities.account!.data!.fetchData(request)
-    expect(data.quota).toBe(500000)
-    expect(data.nativeBalance).toMatchObject({
-      unit: "USD",
-      total: 6,
-      permanent: 1,
-      daily: 2,
-      components: expect.arrayContaining([
+    expect(data).not.toHaveProperty("quota")
+    expect(data).not.toHaveProperty("nativeBalance")
+    expect(data.balance?.positions).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          kind: "subscription",
-          name: "Monthly",
-          amount: 3,
-          scope: "premium-only",
-          unlockedModels: ["gpt-4o"],
-          resetAt: "2098-12-01",
+          id: "permanent",
+          amount: expect.objectContaining({ value: "1" }),
         }),
         expect.objectContaining({
-          kind: "subscription",
-          name: "Unlimited",
-          unlimited: true,
+          id: "timed",
+          amount: expect.objectContaining({ value: "2" }),
         }),
-        expect.objectContaining({ kind: "group", scope: "premium", amount: 4 }),
+        expect.objectContaining({
+          id: "group:premium",
+          amount: expect.objectContaining({ value: "4" }),
+          scope: expect.objectContaining({
+            groups: { kind: "restricted", ids: ["premium"] },
+          }),
+        }),
       ]),
-    })
-    expect(data.subscription).toMatchObject({
-      name: "Monthly · Unlimited",
-      isActive: true,
-    })
+    )
+    expect(data.allowances?.entries).toMatchObject([
+      {
+        label: "Monthly",
+        constraint: {
+          remaining: { value: "3" },
+          scope: {
+            groups: { kind: "restricted", ids: ["premium-only"] },
+            models: { kind: "restricted", ids: ["gpt-4o"] },
+          },
+        },
+        reportedTiming: { resetsAt: "2098-12-01" },
+      },
+      { label: "Unlimited", constraint: { limitState: "unlimited" } },
+      { label: "Expired", constraint: { enabled: { value: false } } },
+    ])
   })
 
-  it("rejects incomplete overview envelopes and never marks missing metrics complete", async () => {
+  it("retains verified overview values and never marks missing metrics complete", async () => {
     respond({ user: { id: 1, username: "fixture", quota: 500000 } })
     await expect(
       relayForCapabilities.account!.data!.fetchData(request),
-    ).rejects.toThrow()
+    ).resolves.toMatchObject({
+      balance: {
+        positions: expect.arrayContaining([
+          expect.objectContaining({
+            id: "permanent",
+            amount: expect.objectContaining({ value: "1" }),
+          }),
+        ]),
+      },
+    })
     respond({
       user: { id: 1, username: "fixture", quota: 500000 },
       today: { requests: 0 },
@@ -558,7 +576,10 @@ describe("RelayFor native account workflows", () => {
         request,
         code: "fixture",
       }),
-    ).toMatchObject({ message: expect.stringContaining("Monthly") })
+    ).toMatchObject({
+      message: expect.stringContaining("Monthly"),
+      awards: [{ amount: { source: { inputs: ["subscription"] } } }],
+    })
   })
 
   it("retains nested benefit allowances, scope and expiry in redemption feedback", async () => {
@@ -586,10 +607,63 @@ describe("RelayFor native account workflows", () => {
       code: "fixture",
     })
     expect(result).toMatchObject({ message: expect.stringContaining("Gift") })
+    expect(result.message).toContain("Total allowance: 2 USD")
     expect(JSON.stringify(result)).toContain("2 USD")
     expect(JSON.stringify(result)).toContain("premium")
     expect(JSON.stringify(result)).toContain("2099")
     expect(JSON.stringify(result)).toContain("100")
+  })
+
+  it("retains exact native string grants and distinguishes malformed amounts", async () => {
+    respond({
+      benefits: [
+        { type: "quota", quota: "1000000" },
+        { type: "burst_credits", burst_credits: "100" },
+        { type: "quota", quota: "invalid" },
+        { type: "burst_credits", burst_credits: "invalid" },
+        { type: "quota", quota: "-500000" },
+      ],
+    })
+    const result = await relayForCapabilities.account!.redemption!.redeem({
+      request,
+      code: "fixture",
+    })
+    expect(result.message).toContain("2 USD")
+    expect(result.message).toContain("100")
+    expect(result.awards.map((award) => award.amount.status)).toEqual([
+      "known",
+      "known",
+      "unavailable",
+      "unavailable",
+      "unavailable",
+    ])
+    expect(result.message).not.toContain("-1 USD")
+  })
+
+  it("keeps simultaneous native benefits and subscriptions as separate awards", async () => {
+    respond({
+      benefits: [{ type: "burst_credits", burst_credits: 100 }],
+      subscriptions: [{ plan_name: "Extra plan", quota_total: 1000000 }],
+      redeem_type: "subscription",
+    })
+    const result = await relayForCapabilities.account!.redemption!.redeem({
+      request,
+      code: "fixture",
+    })
+    expect(result.awards).toMatchObject([
+      {
+        asset: { kind: "quota" },
+        amount: { status: "known", value: "100" },
+        target: "wallet",
+      },
+      {
+        asset: { kind: "unknown" },
+        amount: { status: "unknown" },
+        target: "entitlement",
+      },
+    ])
+    expect(result.message).toContain("Extra plan")
+    expect(fetchPreparedJsonResponse).toHaveBeenCalledOnce()
   })
 
   it("preserves expiry of timed grants and reports partial detail failures", async () => {
@@ -608,25 +682,35 @@ describe("RelayFor native account workflows", () => {
       },
     ])
     const first = await relayForCapabilities.account!.data!.fetchData(request)
-    expect(
-      first.nativeBalance?.unit === "USD"
-        ? first.nativeBalance.timedDetails
-        : undefined,
-    ).toEqual([
-      expect.objectContaining({
-        name: "Prepaid",
-        amount: 2,
-        expiresAt: "2099-01-01",
-      }),
-    ])
+    expect(first.balance?.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          collectionKey: "timed-grants",
+          label: "Prepaid",
+          reportedTiming: { expiresAt: "2099-01-01" },
+          amount: expect.objectContaining({ value: "2" }),
+          validity: { kind: "unknown" },
+        }),
+      ]),
+    )
     respond(overview)
     vi.mocked(fetchPreparedJsonResponse).mockRejectedValueOnce(
       new Error("unavailable"),
     )
     const partial = await relayForCapabilities.account!.data!.fetchData(request)
-    expect(partial.nativeBalance).toMatchObject({
-      total: 3,
-      timedDetailsUnavailable: true,
-    })
+    expect(partial.balanceRefreshParts).toContainEqual(
+      expect.objectContaining({
+        collectionKey: "timed-grants",
+        enumeration: "unavailable",
+      }),
+    )
+    expect(partial.balance?.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "timed",
+          amount: expect.objectContaining({ value: "2" }),
+        }),
+      ]),
+    )
   })
 })

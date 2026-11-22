@@ -14,18 +14,32 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
-import { QUOTA_PER_USD } from "~/constants/money"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AccountDataProvider,
   useAccountDataContext,
 } from "~/features/AccountManagement/data/AccountDataContext"
 import type { AccountManagementSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
+import { accountBalanceSnapshot } from "~/services/accounts/balanceSnapshot"
 import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
 import {
   AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
   AUTO_REFRESH_UPDATE_TYPES,
 } from "~/services/accounts/refresh/constants"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_ROLES,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_OBSERVATION_REASONS,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
@@ -47,6 +61,10 @@ import {
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+import { buildNetInflowItem } from "~~/tests/test-utils/netInflow"
+
+// Hoisted fixtures load dependency-free runtime values before component imports.
+const { CURRENCIES } = await vi.hoisted(() => import("~/constants/money"))
 
 function buildCheckInStatus(isCheckedInToday: boolean): CheckInConfig {
   return mergeCompatibilityCheckInStatus({
@@ -192,7 +210,7 @@ const {
 
 const mockUserPreferencesContext = vi.hoisted(() => ({
   current: {
-    currencyType: "USD",
+    currencyType: CURRENCIES.USD,
     sortField: "name" as ActiveSortField,
     sortOrder: "asc",
     updateSortConfig: mockUpdateSortConfig,
@@ -371,7 +389,7 @@ beforeEach(() => {
   )
 
   mockUserPreferencesContext.current = {
-    currencyType: "USD",
+    currencyType: CURRENCIES.USD,
     sortField: "name",
     sortOrder: "asc",
     updateSortConfig: mockUpdateSortConfig,
@@ -395,7 +413,7 @@ beforeEach(() => {
   mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
   mockGetDailyBalanceHistoryStore.mockResolvedValue({
     schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-    snapshotsByAccountId: {},
+    referenceSnapshotsByAccountId: {},
   })
   mockGetAllAccounts.mockResolvedValue([])
   mockGetAllBookmarks.mockResolvedValue([])
@@ -549,6 +567,72 @@ describe("AccountDataContext initial statistics", () => {
     })
     expect(mockGetDailyBalanceHistoryStore).not.toHaveBeenCalled()
     expect(atIndex(getContext().displayData, 0).estimatedTodayIncome).toBeNull()
+  })
+  it("loads and refreshes saved accounts when optional future-version history cannot be read", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled = true
+    mockGetDailyBalanceHistoryStore.mockRejectedValue(
+      new Error("unsupported_balance_history_version"),
+    )
+    const position = buildNetInflowItem().position
+    position.scope.subject = {
+      kind: FINANCIAL_SUBJECT_KINDS.Account,
+      accountId: "history-failure",
+    }
+    const account = {
+      id: "history-failure",
+      name: "Current saved account",
+      tagIds: [],
+      last_sync_time: Date.now(),
+      account_info: {
+        balance: accountBalanceSnapshot(
+          position.scope,
+          [position],
+          Date.now(),
+          FINANCIAL_COVERAGE.Complete,
+        ),
+      },
+    }
+    mockGetAllAccounts.mockResolvedValue([account])
+    const getContext = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getContext().displayData).toMatchObject([
+        {
+          id: account.id,
+          name: account.name,
+          estimatedTodayIncome: null,
+          netInflowEstimate: {
+            status: "history_unavailable",
+            estimates: [{ status: "history_unavailable", position }],
+          },
+        },
+      ]),
+    )
+    expect(getContext().netInflowTotals).toMatchObject({
+      groups: [],
+      availableAccounts: 0,
+      totalAccounts: 1,
+      coverage: "partial",
+      excluded: [{ accountId: account.id, reason: "history_unavailable" }],
+    })
+
+    mockGetAccountById.mockResolvedValue({
+      ...account,
+      name: "Refreshed saved account",
+    })
+    await act(async () => getContext().reloadAccountsById([account.id]))
+    expect(getContext().displayData).toMatchObject([
+      {
+        id: account.id,
+        name: "Refreshed saved account",
+        estimatedTodayIncome: null,
+        netInflowEstimate: {
+          status: "history_unavailable",
+          estimates: [{ status: "history_unavailable", position }],
+        },
+      },
+    ])
+    expect(getContext().netInflowTotals.groups).toEqual([])
+    expect(mockGetAllAccounts).toHaveBeenCalledTimes(1)
   })
   it("starts with unavailable empty statistics coverage", async () => {
     mockGetAllAccounts.mockReturnValue(new Promise(() => undefined))
@@ -889,9 +973,7 @@ describe("AccountDataContext handleReorder", () => {
 })
 
 describe("AccountDataContext initial load orchestration", () => {
-  it("excludes today-income opt-outs from estimated income totals", async () => {
-    const factor = QUOTA_PER_USD
-
+  it("excludes opted-out accounts from net-inflow coverage without upgrading legacy history", async () => {
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
       preferences: {
@@ -920,35 +1002,35 @@ describe("AccountDataContext initial load orchestration", () => {
     ])
     mockGetDailyBalanceHistoryStore.mockResolvedValue({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {
+      referenceSnapshotsByAccountId: {
         included: {
           "2026-05-22": {
-            quota: 10 * factor,
-            today_income: 0,
-            today_quota_consumption: 0,
+            balanceUsd: 10,
+            incomeUsd: 0,
+            consumptionUsd: 0,
             capturedAt: 1,
             source: "alarm",
           },
           "2026-05-23": {
-            quota: 12 * factor,
-            today_income: 0.5 * factor,
-            today_quota_consumption: 1 * factor,
+            balanceUsd: 12,
+            incomeUsd: 0.5,
+            consumptionUsd: 1,
             capturedAt: 2,
             source: "refresh",
           },
         },
         excluded: {
           "2026-05-22": {
-            quota: 20 * factor,
-            today_income: 0,
-            today_quota_consumption: 0,
+            balanceUsd: 20,
+            incomeUsd: 0,
+            consumptionUsd: 0,
             capturedAt: 1,
             source: "alarm",
           },
           "2026-05-23": {
-            quota: 30 * factor,
-            today_income: 9 * factor,
-            today_quota_consumption: 1 * factor,
+            balanceUsd: 30,
+            incomeUsd: 9,
+            consumptionUsd: 1,
             capturedAt: 2,
             source: "refresh",
           },
@@ -960,18 +1042,187 @@ describe("AccountDataContext initial load orchestration", () => {
     const getLatestCtx = await renderAccountDataProvider()
 
     await waitFor(() => {
-      expect(getLatestCtx().todayIncomeEstimateTotals).toMatchObject({
-        trusted: { USD: 0.5, CNY: 3.5 },
-        estimated: { USD: 3, CNY: 21 },
-        availableAccounts: 1,
+      expect(getLatestCtx().netInflowTotals).toMatchObject({
+        groups: [],
+        availableAccounts: 0,
+        excluded: [{ accountId: "included", reason: "legacy" }],
         totalAccounts: 1,
       })
     })
   })
 
-  it("projects available estimated income onto display account rows", async () => {
-    const factor = QUOTA_PER_USD
+  it("projects native net inflow with its window and source without synthesizing a currency pair", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled = true
+    const startAt = new Date(2026, 4, 23).getTime(),
+      endAt = startAt + 3600000
+    vi.setSystemTime(endAt)
+    const scope = {
+      subject: {
+        kind: FINANCIAL_SUBJECT_KINDS.Account,
+        accountId: "included",
+      } as const,
+      authority: "https://example.com",
+      walletId: "wallet",
+      projects: { kind: SCOPE_SELECTION_KINDS.All } as const,
+      keys: { kind: SCOPE_SELECTION_KINDS.All } as const,
+      models: { kind: SCOPE_SELECTION_KINDS.All } as const,
+      groups: { kind: SCOPE_SELECTION_KINDS.All } as const,
+    }
+    const source = {
+      adapter: "fixture",
+      operation: "wallet",
+      contractVersion: "2",
+      kind: EVIDENCE_KINDS.Reported,
+    } as const
+    const position = (value: string, observedAt: number) =>
+      balancePosition({
+        id: "ledger",
+        role: BALANCE_ROLES.Ledger,
+        nature: BALANCE_NATURES.Prepaid,
+        scope,
+        source,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+        value,
+        observedAt,
+        validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+      })
+    const currentBalance = accountBalanceSnapshot(
+      scope,
+      [position("65", endAt)],
+      endAt,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "included",
+        disabled: false,
+        exchange_rate: 7,
+        account_info: { id: 1, balance: currentBalance },
+        last_sync_time: endAt,
+      },
+    ])
+    mockGetDailyBalanceHistoryStore.mockResolvedValue({
+      schemaVersion: 4,
+      referenceSnapshotsByAccountId: {},
+      financialSnapshotsByAccountId: {
+        included: [
+          {
+            balance: accountBalanceSnapshot(
+              scope,
+              [position("70", startAt)],
+              startAt,
+              FINANCIAL_COVERAGE.Complete,
+            ),
+            source: "refresh",
+          },
+          {
+            balance: accountBalanceSnapshot(
+              scope,
+              [position("65", endAt)],
+              endAt,
+              FINANCIAL_COVERAGE.Complete,
+            ),
+            source: "refresh",
+            settledConsumption: [
+              {
+                asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+                amount: observeAmount(
+                  "0",
+                  { ...source, operation: "settled-usage" },
+                  endAt,
+                ),
+                scope,
+                window: {
+                  start: startAt,
+                  end: endAt,
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                },
+                settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+                coverage: FINANCIAL_COVERAGE.Complete,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const getLatestCtx = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getLatestCtx().displayData).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "included",
+            estimatedTodayIncome: null,
+            netInflowEstimate: expect.objectContaining({
+              status: "available",
+              estimates: [
+                expect.objectContaining({
+                  netInflow: expect.objectContaining({
+                    amount: {
+                      value: "-5",
+                      asset: { kind: "currency", code: "CNY" },
+                    },
+                    scope,
+                    source: expect.objectContaining({
+                      kind: "derived",
+                      adapter: "fixture",
+                    }),
+                  }),
+                }),
+              ],
+            }),
+          }),
+        ]),
+      ),
+    )
+    expect(getLatestCtx().netInflowTotals).toMatchObject({
+      groups: [
+        { amount: { value: "-5", asset: { kind: "currency", code: "CNY" } } },
+      ],
+      availableAccounts: 1,
+      totalAccounts: 1,
+      coverage: "complete",
+    })
+    mockGetAccountById.mockResolvedValue({
+      id: "included",
+      disabled: false,
+      exchange_rate: 7,
+      account_info: { id: 1, balance: currentBalance },
+      last_sync_time: endAt,
+    })
+    await act(async () => getLatestCtx().reloadAccountsById(["included"]))
+    expect(
+      getLatestCtx().displayData[0]?.netInflowEstimate?.estimates[0]?.netInflow,
+    ).toMatchObject({
+      amount: { value: "-5", asset: { kind: "currency", code: "CNY" } },
+    })
+    const stale = structuredClone(currentBalance)
+    const amount = stale.positions[0]!.amount
+    if (amount.status !== OBSERVATION_STATUSES.Known) throw new Error("fixture")
+    stale.positions[0]!.amount = {
+      ...amount,
+      status: OBSERVATION_STATUSES.Stale,
+      reason: FINANCIAL_OBSERVATION_REASONS.IdentityChanged,
+    }
+    mockGetAccountById.mockResolvedValue({
+      id: "included",
+      disabled: false,
+      exchange_rate: 7,
+      account_info: { id: 1, balance: stale },
+      last_sync_time: endAt,
+    })
+    await act(async () => getLatestCtx().reloadAccountsById(["included"]))
+    expect(
+      getLatestCtx().displayData[0]?.netInflowEstimate?.estimates,
+    ).toMatchObject([
+      {
+        status: "missing_current_snapshot",
+        position: { amount: { status: "stale" } },
+      },
+    ])
+    expect(getLatestCtx().netInflowTotals.groups).toEqual([])
+  })
 
+  it("keeps legacy estimates and manual balance exclusions explicit on account rows", async () => {
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
       preferences: {
@@ -1001,35 +1252,35 @@ describe("AccountDataContext initial load orchestration", () => {
     ])
     mockGetDailyBalanceHistoryStore.mockResolvedValue({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {
+      referenceSnapshotsByAccountId: {
         included: {
           "2026-05-22": {
-            quota: 10 * factor,
-            today_income: 0,
-            today_quota_consumption: 0,
+            balanceUsd: 10,
+            incomeUsd: 0,
+            consumptionUsd: 0,
             capturedAt: 1,
             source: "alarm",
           },
           "2026-05-23": {
-            quota: 12 * factor,
-            today_income: 0.5 * factor,
-            today_quota_consumption: 1 * factor,
+            balanceUsd: 12,
+            incomeUsd: 0.5,
+            consumptionUsd: 1,
             capturedAt: 2,
             source: "refresh",
           },
         },
         manual: {
           "2026-05-22": {
-            quota: 10 * factor,
-            today_income: 0,
-            today_quota_consumption: 0,
+            balanceUsd: 10,
+            incomeUsd: 0,
+            consumptionUsd: 0,
             capturedAt: 1,
             source: "alarm",
           },
           "2026-05-23": {
-            quota: 12 * factor,
-            today_income: 0.5 * factor,
-            today_quota_consumption: 1 * factor,
+            balanceUsd: 12,
+            incomeUsd: 0.5,
+            consumptionUsd: 1,
             capturedAt: 2,
             source: "refresh",
           },
@@ -1045,7 +1296,8 @@ describe("AccountDataContext initial load orchestration", () => {
         expect.arrayContaining([
           expect.objectContaining({
             id: "included",
-            estimatedTodayIncome: { USD: 3, CNY: 21 },
+            estimatedTodayIncome: null,
+            netInflowEstimate: { status: "legacy", estimates: [] },
           }),
           expect.objectContaining({
             id: "manual",
@@ -1661,7 +1913,7 @@ describe("AccountDataContext actions", () => {
     const getLatestCtx = await renderAccountDataProvider()
 
     await waitFor(() => {
-      expect(getLatestCtx().pinnedAccountIds).toEqual([])
+      expect(getLatestCtx().orderedAccountIds).toEqual(["acc-1"])
     })
 
     await act(async () => {
@@ -2370,8 +2622,7 @@ describe("AccountDataContext refresh orchestration", () => {
 
     const initialLoadCalls = mockGetAllAccounts.mock.calls.length
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     await act(async () => {
@@ -2415,8 +2666,7 @@ describe("AccountDataContext refresh orchestration", () => {
     })
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     await act(async () => {
@@ -2438,18 +2688,17 @@ describe("AccountDataContext refresh orchestration", () => {
   })
 
   it("does not let an older targeted reload overwrite a newer reload after balance history loads", async () => {
-    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
-      true
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled = true
     mockGetAllAccounts.mockResolvedValue([
       { id: "saved-account-id", name: "before", last_sync_time: 0 },
     ])
     const olderBalanceHistoryLoad = createDeferred<{
       schemaVersion: number
-      snapshotsByAccountId: Record<string, never>
+      referenceSnapshotsByAccountId: Record<string, never>
     }>()
     const balanceHistoryStore = {
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {},
+      referenceSnapshotsByAccountId: {},
     }
     mockGetDailyBalanceHistoryStore.mockResolvedValue(balanceHistoryStore)
 
@@ -3164,8 +3413,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     await act(async () => {
@@ -3191,9 +3439,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     expect(mockGetAccountById).toHaveBeenCalledWith("a")
   })
 
-  it("preserves estimated today income on targeted reload display rows", async () => {
-    const factor = QUOTA_PER_USD
-
+  it("preserves legacy estimate rejection on targeted reload display rows", async () => {
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
       preferences: {
@@ -3239,35 +3485,35 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
     mockGetDailyBalanceHistoryStore.mockResolvedValue({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {
+      referenceSnapshotsByAccountId: {
         a: {
           "2026-05-22": {
-            quota: 10 * factor,
-            today_income: 0,
-            today_quota_consumption: 0,
+            balanceUsd: 10,
+            incomeUsd: 0,
+            consumptionUsd: 0,
             capturedAt: 1,
             source: "alarm",
           },
           "2026-05-23": {
-            quota: 12 * factor,
-            today_income: 0.5 * factor,
-            today_quota_consumption: 1 * factor,
+            balanceUsd: 12,
+            incomeUsd: 0.5,
+            consumptionUsd: 1,
             capturedAt: 2,
             source: "refresh",
           },
         },
         b: {
           "2026-05-22": {
-            quota: 20 * factor,
-            today_income: 0,
-            today_quota_consumption: 0,
+            balanceUsd: 20,
+            incomeUsd: 0,
+            consumptionUsd: 0,
             capturedAt: 1,
             source: "alarm",
           },
           "2026-05-23": {
-            quota: 21 * factor,
-            today_income: 0.5 * factor,
-            today_quota_consumption: 1 * factor,
+            balanceUsd: 21,
+            incomeUsd: 0.5,
+            consumptionUsd: 1,
             capturedAt: 2,
             source: "refresh",
           },
@@ -3286,15 +3532,15 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
         expect.arrayContaining([
           expect.objectContaining({
             id: "a",
-            estimatedTodayIncome: { USD: 3, CNY: 21 },
+            estimatedTodayIncome: null,
+            netInflowEstimate: { status: "legacy", estimates: [] },
           }),
         ]),
       )
     })
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     await act(async () => {
@@ -3311,12 +3557,13 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       expect(readCheckInToday(byId.a?.checkIn)).toBe(
         CHECK_IN_METHOD_TODAY_STATUSES.Checked,
       )
-      expect(byId.a?.estimatedTodayIncome).toEqual({ USD: 3, CNY: 21 })
-      expect(byId.b?.estimatedTodayIncome).toEqual({ USD: 2, CNY: 14 })
-      expect(getLatestCtx().todayIncomeEstimateTotals).toMatchObject({
-        trusted: { USD: 1, CNY: 7 },
-        estimated: { USD: 5, CNY: 35 },
-        availableAccounts: 2,
+      expect(byId.a?.estimatedTodayIncome).toBeNull()
+      expect(byId.a?.netInflowEstimate.status).toBe("legacy")
+      expect(byId.b?.estimatedTodayIncome).toBeNull()
+      expect(byId.b?.netInflowEstimate.status).toBe("legacy")
+      expect(getLatestCtx().netInflowTotals).toMatchObject({
+        groups: [],
+        availableAccounts: 0,
         totalAccounts: 2,
       })
     })
@@ -3332,8 +3579,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     mockGetAllAccounts.mockClear()
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     mockGetAllAccounts.mockClear()
@@ -3387,8 +3633,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     await act(async () => {
@@ -3428,7 +3673,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
     mockGetDailyBalanceHistoryStore.mockResolvedValue({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {},
+      referenceSnapshotsByAccountId: {},
     })
     mockGetAccountById.mockResolvedValue({ id: "b", disabled: false })
     const getContext = await renderAccountDataProvider()
@@ -3454,7 +3699,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     await act(async () => {
       balanceRead.resolve({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {},
+        referenceSnapshotsByAccountId: {},
       })
       await balanceRead.promise
     })
@@ -3473,6 +3718,172 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
     expect(mockGetAccountById).not.toHaveBeenCalled()
   })
+
+  it("retries a full snapshot that would overwrite a completed targeted reload", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      preferences: {
+        balanceHistory: { estimatedTodayIncome: { enabled: true } },
+      },
+    }
+    const initial = [{ id: "a", disabled: false }]
+    const latest = [...initial, { id: "b", disabled: false }]
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue(initial)
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["a", "b"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockConvertToDisplayData.mockImplementation((input: any) => {
+      const rows = (Array.isArray(input) ? input : [input]).map(
+        (account: any) => ({ id: account.id, name: account.id }),
+      )
+      return Array.isArray(input) ? rows : rows[0]
+    })
+    const store = {
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      referenceSnapshotsByAccountId: {},
+    }
+    mockGetDailyBalanceHistoryStore.mockResolvedValue(store)
+    mockGetAccountById.mockResolvedValue(latest[1])
+    const getContext = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getContext().displayData.map(({ id }) => id)).toEqual(["a"]),
+    )
+
+    const balanceRead = createDeferred<typeof store>()
+    mockGetDailyBalanceHistoryStore.mockReturnValueOnce(balanceRead.promise)
+    const fullReload = getContext().loadAccountData()
+    await waitFor(() =>
+      expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2),
+    )
+    mockGetAllAccounts.mockResolvedValue(latest)
+    const listener = (globalThis as any)
+      .__accountDataContextRuntimeListener as (message: any) => void
+    await act(async () =>
+      listener({
+        action: RuntimeActionIds.AccountRefreshCompleted,
+        updatedAccountIds: ["b"],
+      }),
+    )
+    await waitFor(() =>
+      expect(getContext().displayData.map(({ id }) => id)).toEqual(["a", "b"]),
+    )
+
+    await act(async () => {
+      balanceRead.resolve(store)
+      await fullReload
+    })
+    expect(getContext().displayData.map(({ id }) => id)).toEqual(["a", "b"])
+    expect(mockGetAllAccounts).toHaveBeenCalledTimes(3)
+  })
+
+  it.each([
+    ["account", "existing"],
+    ["history", "existing"],
+    ["account", "added-by-full-load"],
+    ["account", "removed-by-full-load"],
+    ["account", "new-target"],
+    ["account", "newer-target"],
+  ])(
+    "reconciles the %s read with the full load for %s",
+    async (pendingRead, scenario) => {
+      mockUserPreferencesContext.current = {
+        ...mockUserPreferencesContext.current,
+        preferences: {
+          balanceHistory: { estimatedTodayIncome: { enabled: true } },
+        },
+      }
+      const target = { id: "a", name: "targeted", disabled: false }
+      const knownInitially =
+        scenario === "existing" ||
+        scenario === "removed-by-full-load" ||
+        scenario === "newer-target"
+      const initial = {
+        ...target,
+        id: knownInitially ? "a" : "b",
+        name: "initial",
+      }
+      const latest = { ...target, name: "latest" }
+      const nextAccounts =
+        scenario === "removed-by-full-load"
+          ? []
+          : [scenario === "new-target" ? initial : latest]
+      const expected =
+        scenario === "new-target"
+          ? [...nextAccounts, target]
+          : scenario === "newer-target"
+            ? [target]
+            : nextAccounts
+      mockResetExpiredCheckIns.mockResolvedValue(undefined)
+      mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+      mockGetAllAccounts.mockResolvedValue([initial])
+      mockGetAllBookmarks.mockResolvedValue([])
+      mockGetOrderedList.mockResolvedValue(["a"])
+      mockGetPinnedList.mockResolvedValue([])
+      mockGetAccountStats.mockResolvedValue(createEmptyStats())
+      mockConvertToDisplayData.mockImplementation((accounts) => accounts)
+      const store = {
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        referenceSnapshotsByAccountId: {},
+      }
+      mockGetDailyBalanceHistoryStore.mockResolvedValue(store)
+      mockGetAccountById.mockResolvedValue(
+        scenario === "removed-by-full-load"
+          ? null
+          : scenario === "newer-target"
+            ? target
+            : latest,
+      )
+      const getContext = await renderAccountDataProvider()
+      await waitFor(() =>
+        expect(getContext().displayData[0]?.name).toBe("initial"),
+      )
+
+      const pendingAccount = createDeferred<typeof target>()
+      const pendingHistory = createDeferred<typeof store>()
+      if (pendingRead === "account") {
+        mockGetAccountById.mockReturnValueOnce(pendingAccount.promise)
+      } else {
+        mockGetDailyBalanceHistoryStore.mockReturnValueOnce(
+          pendingHistory.promise,
+        )
+      }
+      let pendingReload: Promise<void>
+      act(() => {
+        pendingReload = getContext().reloadAccountsById(["a"])
+      })
+      if (pendingRead === "account") {
+        await waitFor(() =>
+          expect(mockGetAccountById).toHaveBeenCalledWith("a"),
+        )
+      } else {
+        await waitFor(() =>
+          expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2),
+        )
+      }
+      mockGetAllAccounts.mockResolvedValue(nextAccounts)
+      await act(async () => getContext().loadAccountData())
+      expect(
+        getContext().displayData.map(({ id, name }) => ({ id, name })),
+      ).toEqual(nextAccounts.map(({ id, name }) => ({ id, name })))
+
+      await act(async () => {
+        pendingAccount.resolve(target)
+        pendingHistory.resolve(store)
+        await pendingReload
+      })
+      const displayIdentity = ({ id, name }: { id: string; name: string }) => ({
+        id,
+        name,
+      })
+      expect(getContext().displayData.map(displayIdentity)).toEqual(
+        expected.map(displayIdentity),
+      )
+      expect(getContext().accounts).toMatchObject(expected)
+    },
+  )
 
   it("falls back to loadAccountData() when a targeted reload fails", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
@@ -3507,8 +3918,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     mockGetAccountById.mockResolvedValue(null)
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     await act(async () => {
@@ -3524,13 +3934,12 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("merges concurrent targeted reloads against the latest account snapshot", async () => {
-    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
-      true
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled = true
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     const emptyStore = {
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {},
+      referenceSnapshotsByAccountId: {},
     }
 
     const accountA: any = {
@@ -3600,8 +4009,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     mockGetDailyBalanceHistoryStore.mockReset()
@@ -3682,13 +4090,12 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("ignores older targeted reloads for the same account after a newer reload completes", async () => {
-    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
-      true
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled = true
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     const emptyStore = {
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {},
+      referenceSnapshotsByAccountId: {},
     }
 
     mockGetAllAccounts.mockResolvedValue([
@@ -3730,8 +4137,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
 
     const listener = (globalThis as any).__accountDataContextRuntimeListener as
-      | ((message: any) => void)
-      | undefined
+      ((message: any) => void) | undefined
     expect(listener).toBeTypeOf("function")
 
     mockGetDailyBalanceHistoryStore.mockClear()

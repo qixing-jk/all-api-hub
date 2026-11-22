@@ -105,6 +105,7 @@ vi.mock("~/features/DevPanel/fixtureAccounts", () => ({
   countDevFixtureAccounts: vi.fn(async () => 0),
   addDevFixtureAccounts: vi.fn(async () => 0),
   addDevCheckInFixtureAccounts: vi.fn(async () => 5),
+  addDevFinancialFixtureAccounts: vi.fn(async () => 9),
   clearDevFixtureAccounts: vi.fn(async () => 0),
 }))
 

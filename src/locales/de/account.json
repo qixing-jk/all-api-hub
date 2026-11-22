@@ -370,9 +370,21 @@
     "toggleSortOrder": "Sortierreihenfolge wechseln"
   },
   "netInflow": {
+    "coverage": "Vergleichbare Schätzungen: {{included}}/{{eligible}} Konten",
+    "details": "Schätzungsgrundlage und Abdeckung",
+    "explanation": "Schlussbuchsaldo − Anfangsbuchsaldo + abgerechneter Verbrauch. Dies ist eine nicht klassifizierte Nettoänderung, keine bestätigte Einnahme.",
     "reasons": {
+      "balance": "Eine aktuelle vergleichbare Buchsaldo-Beobachtung fehlt",
+      "baseline": "Ein verlässlicher Tagesanfangswert fehlt",
       "conflict": "Widersprüchliche Wallet-Beobachtungen ausgeschlossen",
-      "duplicate": "Doppeltes Wallet ausgeschlossen"
+      "consumption": "Vollständiger abgerechneter Verbrauch fehlt",
+      "disabled": "Schätzung ist deaktiviert",
+      "duplicate": "Doppeltes Wallet ausgeschlossen",
+      "identity": "Vermögenswert, Wallet, Quelle oder Geltungsbereich hat sich geändert",
+      "interval": "Saldo- und Verbrauchszeiträume stimmen nicht überein",
+      "manual": "Manuelle Salden haben keinen passenden Abrechnungsnachweis",
+      "precision": "Betrag überschreitet die unterstützte Genauigkeit",
+      "unverified": "Vergleichbarkeit für die Schätzung nicht bestätigt"
     }
   },
   "popupOnboarding": {
@@ -427,7 +439,7 @@
   "stats": {
     "allowanceExpiry": "Läuft ab: {{time}}",
     "completion": "Ausgabe",
-    "estimatedTodayIncome": "Geschätztes Einkommen",
+    "estimatedNetInflow": "Geschätzter Nettozufluss",
     "prompt": "Eingabe",
     "subscriptionRemainingCount": "Verbleibende Abonnementanfragen",
     "subscriptionRemainingTokens": "Verbleibende Tokens",

@@ -172,11 +172,6 @@ export const RuntimeActionIds = {
     "contextMenuTrigger",
   ),
 
-  BalanceHistoryDebugSeedEstimateSnapshots: composeRuntimeAction(
-    RuntimeActionPrefixes.BalanceHistory,
-    "debugSeedEstimateSnapshots",
-  ),
-
   TempContextDebugCreateOrphan: composeRuntimeAction(
     RuntimeActionPrefixes.TempContextDebug,
     "createOrphan",

@@ -1,41 +1,43 @@
 import { describe, expect, it } from "vitest"
 
-import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import {
   buildAccountRangeSummaries,
   buildPerAccountDailyBalanceMoneySeries,
 } from "~/services/history/dailyBalanceHistory/selectors"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import {
+  DAILY_BALANCE_HISTORY_CAPTURE_SOURCES,
+  DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+} from "~/types/dailyBalanceHistory"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const createStore = (
-  snapshotsByAccountId: DailyBalanceHistoryStore["snapshotsByAccountId"],
+  referenceSnapshotsByAccountId: DailyBalanceHistoryStore["referenceSnapshotsByAccountId"],
 ): DailyBalanceHistoryStore => ({
   schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-  snapshotsByAccountId,
+  referenceSnapshotsByAccountId,
 })
 
 describe("dailyBalanceHistory selectors", () => {
   it("falls back to the default exchange rate when a CNY account rate is missing or invalid", () => {
-    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
-          quota: 2 * factor,
-          today_income: 1 * factor,
-          today_quota_consumption: 0.5 * factor,
+          balanceUsd: 2,
+          incomeUsd: 1,
+          consumptionUsd: 0.5,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
       a2: {
         "2026-02-07": {
-          quota: 3 * factor,
-          today_income: 2 * factor,
-          today_quota_consumption: 1 * factor,
+          balanceUsd: 3,
+          incomeUsd: 2,
+          consumptionUsd: 1,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -45,7 +47,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1", "a2"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "CNY",
+      currencyType: CURRENCIES.CNY,
       exchangeRateByAccountId: {
         a1: 0,
         a2: Number.NaN,
@@ -74,15 +76,14 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("builds per-account daily series with per-account gaps (does not blank other accounts)", () => {
-    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
-          quota: 10 * factor,
-          today_income: 1 * factor,
-          today_quota_consumption: 2 * factor,
+          balanceUsd: 10,
+          incomeUsd: 1,
+          consumptionUsd: 2,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
       a2: {},
@@ -93,7 +94,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1", "a2"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
     })
 
     expect(result.dayKeys).toEqual(["2026-02-07"])
@@ -143,27 +144,22 @@ describe("dailyBalanceHistory selectors", () => {
       expectedIncomeAccounts,
       expectedOutcomeAccounts,
     }) => {
-      const factor = QUOTA_PER_USD
       const result = buildPerAccountDailyBalanceMoneySeries({
         store: createStore({
           a1: {
             "2026-02-07": {
-              quota: 10 * factor,
-              today_income:
-                today_income === null ? null : today_income * factor,
-              today_quota_consumption:
-                today_quota_consumption === null
-                  ? null
-                  : today_quota_consumption * factor,
+              balanceUsd: 10,
+              incomeUsd: today_income,
+              consumptionUsd: today_quota_consumption,
               capturedAt: 0,
-              source: "refresh",
+              source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
             },
           },
         }),
         accountIds: ["a1"],
         startDayKey: "2026-02-07",
         endDayKey: "2026-02-07",
-        currencyType: "USD",
+        currencyType: CURRENCIES.USD,
       })
 
       expect(atIndex(result.seriesByAccountId, "a1").income).toEqual([
@@ -181,23 +177,22 @@ describe("dailyBalanceHistory selectors", () => {
     },
   )
 
-  it("builds estimated income per-account series without changing trusted income", () => {
-    const factor = QUOTA_PER_USD
+  it("keeps the archived estimate after an afternoon refresh while retaining reported income separately", () => {
     const store = createStore({
       a1: {
         "2026-02-06": {
-          quota: 10 * factor,
-          today_income: 0,
-          today_quota_consumption: 0,
-          capturedAt: 0,
-          source: "alarm",
+          balanceUsd: 10,
+          incomeUsd: 0,
+          consumptionUsd: 0,
+          capturedAt: new Date(2026, 1, 6, 15).getTime(),
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
         "2026-02-07": {
-          quota: 12 * factor,
-          today_income: 0.5 * factor,
-          today_quota_consumption: 1 * factor,
-          capturedAt: 1,
-          source: "refresh",
+          balanceUsd: 12,
+          incomeUsd: 0.5,
+          consumptionUsd: 1,
+          capturedAt: new Date(2026, 1, 7, 15).getTime(),
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -207,7 +202,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       estimatedTodayIncomeEnabled: true,
     })
 
@@ -222,22 +217,21 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("returns null estimated income per-account series when estimates are disabled", () => {
-    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {
-          quota: 10 * factor,
-          today_income: 0,
-          today_quota_consumption: 0,
+          balanceUsd: 10,
+          incomeUsd: 0,
+          consumptionUsd: 0,
           capturedAt: 0,
-          source: "alarm",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Alarm,
         },
         "2026-02-07": {
-          quota: 12 * factor,
-          today_income: 0.5 * factor,
-          today_quota_consumption: 1 * factor,
+          balanceUsd: 12,
+          incomeUsd: 0.5,
+          consumptionUsd: 1,
           capturedAt: 1,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -247,7 +241,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       estimatedTodayIncomeEnabled: false,
     })
 
@@ -262,22 +256,21 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("returns null estimated income for manual balance accounts", () => {
-    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {
-          quota: 10 * factor,
-          today_income: 0,
-          today_quota_consumption: 0,
+          balanceUsd: 10,
+          incomeUsd: 0,
+          consumptionUsd: 0,
           capturedAt: 0,
-          source: "alarm",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Alarm,
         },
         "2026-02-07": {
-          quota: 12 * factor,
-          today_income: 0.5 * factor,
-          today_quota_consumption: 1 * factor,
+          balanceUsd: 12,
+          incomeUsd: 0.5,
+          consumptionUsd: 1,
           capturedAt: 1,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -287,7 +280,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       estimatedTodayIncomeEnabled: true,
       manualBalanceAccountIds: new Set(["a1"]),
     })
@@ -303,24 +296,23 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("converts per-account daily series into CNY using per-account exchange rates", () => {
-    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
-          quota: 1 * factor,
-          today_income: 1 * factor,
-          today_quota_consumption: 2 * factor,
+          balanceUsd: 1,
+          incomeUsd: 1,
+          consumptionUsd: 2,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
       a2: {
         "2026-02-07": {
-          quota: 2 * factor,
-          today_income: 3 * factor,
-          today_quota_consumption: 4 * factor,
+          balanceUsd: 2,
+          incomeUsd: 3,
+          consumptionUsd: 4,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -330,7 +322,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1", "a2"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "CNY",
+      currencyType: CURRENCIES.CNY,
       exchangeRateByAccountId: { a1: 7, a2: 8 },
     })
 
@@ -346,7 +338,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: [],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-08",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
     })
 
     expect(result.dayKeys).toEqual(["2026-02-07", "2026-02-08"])
@@ -372,31 +364,30 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("summarizes per-account range totals and coverage", () => {
-    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
-          quota: 10 * factor,
-          today_income: 1 * factor,
-          today_quota_consumption: 0.5 * factor,
+          balanceUsd: 10,
+          incomeUsd: 1,
+          consumptionUsd: 0.5,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
         "2026-02-08": {
-          quota: 15 * factor,
-          today_income: null,
-          today_quota_consumption: null,
+          balanceUsd: 15,
+          incomeUsd: null,
+          consumptionUsd: null,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
       a2: {
         "2026-02-08": {
-          quota: 20 * factor,
-          today_income: 2 * factor,
-          today_quota_consumption: 1 * factor,
+          balanceUsd: 20,
+          incomeUsd: 2,
+          consumptionUsd: 1,
           capturedAt: 0,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -406,7 +397,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1", "a2"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-08",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
     })
 
     expect(result.dayKeys).toEqual(["2026-02-07", "2026-02-08"])
@@ -473,27 +464,22 @@ describe("dailyBalanceHistory selectors", () => {
       expectedIncomeDays,
       expectedOutcomeDays,
     }) => {
-      const factor = QUOTA_PER_USD
       const result = buildAccountRangeSummaries({
         store: createStore({
           a1: {
             "2026-02-07": {
-              quota: 10 * factor,
-              today_income:
-                today_income === null ? null : today_income * factor,
-              today_quota_consumption:
-                today_quota_consumption === null
-                  ? null
-                  : today_quota_consumption * factor,
+              balanceUsd: 10,
+              incomeUsd: today_income,
+              consumptionUsd: today_quota_consumption,
               capturedAt: 0,
-              source: "refresh",
+              source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
             },
           },
         }),
         accountIds: ["a1"],
         startDayKey: "2026-02-07",
         endDayKey: "2026-02-07",
-        currencyType: "USD",
+        currencyType: CURRENCIES.USD,
       })
 
       expect(result.summaries[0]).toMatchObject({
@@ -508,37 +494,36 @@ describe("dailyBalanceHistory selectors", () => {
   )
 
   it("sums range net only from days with paired income and outcome", () => {
-    const factor = QUOTA_PER_USD
     const result = buildAccountRangeSummaries({
       store: createStore({
         a1: {
           "2026-02-07": {
-            quota: 10 * factor,
-            today_income: 1 * factor,
-            today_quota_consumption: 2 * factor,
+            balanceUsd: 10,
+            incomeUsd: 1,
+            consumptionUsd: 2,
             capturedAt: 0,
-            source: "refresh",
+            source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
           },
           "2026-02-08": {
-            quota: 11 * factor,
-            today_income: 3 * factor,
-            today_quota_consumption: null,
+            balanceUsd: 11,
+            incomeUsd: 3,
+            consumptionUsd: null,
             capturedAt: 0,
-            source: "refresh",
+            source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
           },
           "2026-02-09": {
-            quota: 12 * factor,
-            today_income: null,
-            today_quota_consumption: 4 * factor,
+            balanceUsd: 12,
+            incomeUsd: null,
+            consumptionUsd: 4,
             capturedAt: 0,
-            source: "refresh",
+            source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
           },
         },
       }),
       accountIds: ["a1"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-09",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
     })
 
     expect(result.summaries[0]).toMatchObject({
@@ -551,23 +536,22 @@ describe("dailyBalanceHistory selectors", () => {
     })
   })
 
-  it("summarizes estimated income separately from trusted income", () => {
-    const factor = QUOTA_PER_USD
+  it("includes archived estimates under their own range summary", () => {
     const store = createStore({
       a1: {
         "2026-02-06": {
-          quota: 10 * factor,
-          today_income: 0,
-          today_quota_consumption: 0,
+          balanceUsd: 10,
+          incomeUsd: 0,
+          consumptionUsd: 0,
           capturedAt: 0,
-          source: "alarm",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Alarm,
         },
         "2026-02-07": {
-          quota: 12 * factor,
-          today_income: 0.5 * factor,
-          today_quota_consumption: 1 * factor,
+          balanceUsd: 12,
+          incomeUsd: 0.5,
+          consumptionUsd: 1,
           capturedAt: 1,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -577,7 +561,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       estimatedTodayIncomeEnabled: true,
     })
 
@@ -589,22 +573,21 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("excludes disabled estimated income from range summaries", () => {
-    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {
-          quota: 10 * factor,
-          today_income: 0,
-          today_quota_consumption: 0,
+          balanceUsd: 10,
+          incomeUsd: 0,
+          consumptionUsd: 0,
           capturedAt: 0,
-          source: "alarm",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Alarm,
         },
         "2026-02-07": {
-          quota: 12 * factor,
-          today_income: 0.5 * factor,
-          today_quota_consumption: 1 * factor,
+          balanceUsd: 12,
+          incomeUsd: 0.5,
+          consumptionUsd: 1,
           capturedAt: 1,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     })
@@ -614,7 +597,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-07",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       estimatedTodayIncomeEnabled: false,
     })
 
@@ -629,7 +612,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: ["a1"],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-08",
-      currencyType: "CNY",
+      currencyType: CURRENCIES.CNY,
       exchangeRateByAccountId: new Map([["a1", 8]]),
     })
 
@@ -659,7 +642,7 @@ describe("dailyBalanceHistory selectors", () => {
       accountIds: [],
       startDayKey: "2026-02-07",
       endDayKey: "2026-02-08",
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
     })
 
     expect(result).toEqual({

@@ -1,9 +1,5 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
-import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
-import { resolveAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStatsResolver"
-import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -19,6 +15,7 @@ import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageT
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import {
+  DAILY_BALANCE_HISTORY_CAPTURE_SOURCES,
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
   type DailyBalanceHistoryCaptureSource,
@@ -36,11 +33,6 @@ import {
   hasAlarmsAPI,
   onAlarm,
 } from "~/utils/browser/alarms"
-import {
-  getDayKeyFromUnixSeconds,
-  subtractDaysFromDayKey,
-} from "~/utils/core/dayKey"
-import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -56,7 +48,8 @@ import { dailyBalanceHistoryStorage } from "./storage"
 import { clampBalanceHistoryRetentionDays } from "./utils"
 
 const logger = createLogger("DailyBalanceHistoryScheduler")
-const BALANCE_HISTORY_ALARM_TRIGGER: DailyBalanceHistoryCaptureSource = "alarm"
+const BALANCE_HISTORY_ALARM_TRIGGER: DailyBalanceHistoryCaptureSource =
+  DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Alarm
 
 const END_OF_DAY_CAPTURE_TIME = {
   hour: 23,
@@ -234,9 +227,10 @@ class DailyBalanceHistoryScheduler {
         protectionBypassExecution,
         ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
       })
+      const captured = result.balanceHistoryCapturedCount ?? 0
       return {
-        success: result.success,
-        failed: result.failed,
+        success: captured,
+        failed: result.success + result.failed - captured,
         refreshedCount: result.refreshedCount,
       }
     }
@@ -260,7 +254,8 @@ class DailyBalanceHistoryScheduler {
 
     for (const result of results) {
       if (result.status === "fulfilled" && result.value) {
-        success += 1
+        if (result.value.balanceHistoryCaptured === true) success += 1
+        else failed += 1
         if (result.value.refreshed) {
           refreshedCount += 1
         }
@@ -270,103 +265,6 @@ class DailyBalanceHistoryScheduler {
     }
 
     return { success, failed, refreshedCount }
-  }
-
-  async debugSeedEstimateSnapshots(): Promise<{
-    seeded: number
-    skipped: number
-    todayKey: string
-    yesterdayKey: string
-  }> {
-    const prefs = await userPreferences.getPreferences()
-    const config = prefs.balanceHistory ?? DEFAULT_BALANCE_HISTORY_PREFERENCES
-    const retentionDays = Math.max(
-      2,
-      clampBalanceHistoryRetentionDays(config.retentionDays),
-    )
-    const nowMs = Date.now()
-    const todayKey = getDayKeyFromUnixSeconds(Math.floor(nowMs / 1000))
-    const yesterdayKey = subtractDaysFromDayKey(todayKey, 1)
-    const accounts = await accountQueries.getEnabledAccounts()
-    let seeded = 0
-    let skipped = 0
-
-    for (const account of accounts) {
-      if (
-        !supportsMonetaryBalance(
-          account.account_info.nativeBalance,
-          account.account_info.balanceUnavailable,
-        ) ||
-        account.excludeFromTodayIncome === true ||
-        (typeof account.manualBalanceUsd === "string" &&
-          account.manualBalanceUsd.trim() !== "")
-      ) {
-        skipped += 1
-        continue
-      }
-
-      const info = account.account_info
-      const todayStatsAvailability =
-        resolveAccountTodayStatsAvailability(account)
-      const quota = Number(info?.quota)
-      if (!Number.isFinite(quota) || quota <= 0) {
-        skipped += 1
-        continue
-      }
-
-      const todayConsumption =
-        isAccountTodayMetricComplete(todayStatsAvailability.consumption) &&
-        Number.isFinite(info?.today_quota_consumption)
-          ? Math.max(0, Number(info.today_quota_consumption))
-          : null
-      const trustedIncome =
-        isAccountTodayMetricComplete(todayStatsAvailability.income) &&
-        Number.isFinite(info?.today_income)
-          ? Math.max(0, Number(info.today_income))
-          : null
-      const estimatedIncome = Math.max(
-        (trustedIncome ?? 0) + 1_000_000,
-        1_000_000,
-      )
-      const baselineQuota = Math.max(
-        0,
-        quota + (todayConsumption ?? 1_000_000) - estimatedIncome,
-      )
-      const yesterdayCapturedAt = nowMs - 24 * 60 * 60 * 1000
-
-      const yesterdayOk = await dailyBalanceHistoryStorage.upsertSnapshot({
-        accountId: account.id,
-        dayKey: yesterdayKey,
-        retentionDays,
-        snapshot: {
-          quota: baselineQuota,
-          today_income: 0,
-          today_quota_consumption: 0,
-          capturedAt: yesterdayCapturedAt,
-          source: "refresh",
-        },
-      })
-      const todayOk = await dailyBalanceHistoryStorage.upsertSnapshot({
-        accountId: account.id,
-        dayKey: todayKey,
-        retentionDays,
-        snapshot: {
-          quota,
-          today_income: trustedIncome,
-          today_quota_consumption: todayConsumption,
-          capturedAt: nowMs,
-          source: "refresh",
-        },
-      })
-
-      if (yesterdayOk && todayOk) {
-        seeded += 1
-      } else {
-        skipped += 1
-      }
-    }
-
-    return { seeded, skipped, todayKey, yesterdayKey }
   }
 
   async runEndOfDayCapture(params: {
@@ -406,7 +304,8 @@ class DailyBalanceHistoryScheduler {
       const totals = results.reduce(
         (acc, item) => {
           if (item.status === "fulfilled" && item.value) {
-            acc.success += 1
+            if (item.value.balanceHistoryCaptured === true) acc.success += 1
+            else acc.failed += 1
             if (item.value.refreshed) acc.refreshed += 1
           } else {
             acc.failed += 1
@@ -557,32 +456,5 @@ export async function resolveBalanceHistoryPruneMessage(): Promise<
   } catch (error) {
     logger.error("Message handling failed", error)
     return createRuntimeMessageFailure(getErrorMessage(error))
-  }
-}
-
-export const handleDailyBalanceHistoryMessage = async (
-  request: any,
-  sendResponse: (response: any) => void,
-) => {
-  try {
-    if (
-      request.action !==
-      RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots
-    ) {
-      sendResponse({ success: false, error: "Unknown action" })
-      return
-    }
-
-    if (!isDevelopmentMode()) {
-      sendResponse({ success: false, error: "Debug action unavailable" })
-      return
-    }
-
-    const result =
-      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
-    sendResponse({ success: true, data: result })
-  } catch (error) {
-    logger.error("Message handling failed", error)
-    sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }

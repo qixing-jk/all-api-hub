@@ -1,14 +1,27 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import { REQUESTY_MANAGE_API_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
+import { balancePosition } from "~/services/amounts/balance"
+import { parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import {
   REQUESTY_ENDPOINTS,
   REQUESTY_RESPONSE_ERRORS,
 } from "~/services/apiService/requesty/constants"
-import { readDecimal, readString } from "~/services/apiService/requesty/parsing"
+import { readString } from "~/services/apiService/requesty/parsing"
 import {
   fetchRequestyManageData,
   readRequestyRecord,
@@ -31,7 +44,7 @@ export type RequestyManageRequest = Pick<
 export interface RequestyOrg {
   name: string
   /** Prepaid USD credit balance (string-decimal on the live deployment). */
-  balance: number
+  balance: string | undefined
 }
 
 /** Reads the verified organization identity and prepaid USD balance. */
@@ -44,8 +57,8 @@ export async function fetchRequestyOrg(
     endpoint,
   )
   const name = readString(body.name)
-  const balance = readDecimal(body.balance)
-  if (name === undefined || balance === undefined || balance < 0) {
+  const balance = parseDecimal(body.balance)
+  if (name === undefined) {
     throw new Error(REQUESTY_RESPONSE_ERRORS.Organization)
   }
   return { name, balance }
@@ -112,11 +125,41 @@ export async function fetchAccountData(
   request: RequestyManageRequest,
 ): Promise<AccountData> {
   const org = await fetchRequestyOrg(request)
-
+  const userId =
+    typeof request.auth.userId === "string"
+      ? request.auth.userId.trim()
+      : undefined
+  const scope = accountBalanceScope(request, {
+    authority: REQUESTY_MANAGE_API_ORIGIN,
+    ...(userId && !userId.startsWith("requesty:")
+      ? { organizationId: userId }
+      : {}),
+  })
+  const now = Date.now()
   return {
-    quota: Math.round(org.balance * QUOTA_PER_USD),
-    // One fungible prepaid USD balance, not a scoped or expiring allowance.
-    // Native balances are excluded from monetary totals and balance history.
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "balance",
+          collectionKey: "organization-wallet",
+          scope,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          nature: BALANCE_NATURES.Prepaid,
+          value: org.balance,
+          observedAt: now,
+          source: {
+            adapter: "requesty",
+            operation: REQUESTY_ENDPOINTS.org,
+            contractVersion: "org-usd/v1",
+            kind: EVIDENCE_KINDS.Reported,
+            inputs: ["balance"],
+          },
+        }),
+      ],
+      now,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
     today_quota_consumption: 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,

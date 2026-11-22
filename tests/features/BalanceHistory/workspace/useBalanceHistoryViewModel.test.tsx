@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
+import { CURRENCIES } from "~/constants/money"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useBalanceHistoryData } from "~/features/BalanceHistory/data/useBalanceHistoryData"
 import { useBalanceHistoryReporting } from "~/features/BalanceHistory/reporting/useBalanceHistoryReporting"
 import { useBalanceHistoryViewModel } from "~/features/BalanceHistory/workspace/useBalanceHistoryViewModel"
+import { DAILY_BALANCE_HISTORY_METRICS } from "~/services/history/dailyBalanceHistory/constants"
 import type { SiteAccount, TagStore } from "~/types"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
+import { DAILY_BALANCE_HISTORY_CAPTURE_SOURCES } from "~/types/dailyBalanceHistory"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { act, renderHook } from "~~/tests/test-utils/render"
 
@@ -81,21 +84,22 @@ describe("useBalanceHistoryViewModel", () => {
   }
 
   const sampleStore: DailyBalanceHistoryStore = {
-    schemaVersion: 1,
-    snapshotsByAccountId: {
+    schemaVersion: 4,
+    referenceSnapshotsByAccountId: {
       "acc-1": {
         "2026-10-01": {
-          quota: 10,
-          today_income: 1,
-          today_quota_consumption: 0,
+          balanceUsd: 0.00002,
+          incomeUsd: 0.000002,
+          consumptionUsd: 0,
           capturedAt: 12345678,
-          source: "refresh",
+          source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
         },
       },
     },
   }
 
   const defaultReportingResult = {
+    financialHistory: { dayKeys: [], series: [] },
     perAccountSeries: {
       coverageByDay: [
         {
@@ -115,7 +119,11 @@ describe("useBalanceHistoryViewModel", () => {
       totalAccounts: 2,
     },
     trendOption: {},
-    breakdownData: { hasNegativeValues: false },
+    breakdownData: {
+      hasNegativeValues: false,
+      canUsePie: true,
+      entries: [{ value: 10 }, { value: 20 }],
+    },
     breakdownOption: {},
     overviewTotals: {},
     tableRows: [],
@@ -126,11 +134,14 @@ describe("useBalanceHistoryViewModel", () => {
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: defaultPreferences,
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       updateCurrencyType: updateCurrencyTypeMock,
     } as unknown as ReturnType<typeof useUserPreferencesContext>)
 
     vi.mocked(useBalanceHistoryData).mockReturnValue({
+      loadError: null,
+      retryLoad: vi.fn(async () => {}),
+      hasLoadedData: true,
       accounts: sampleAccounts,
       tagStore: sampleTagStore,
       store: sampleStore,
@@ -153,7 +164,7 @@ describe("useBalanceHistoryViewModel", () => {
     expect(result.current.effectiveBreakdownMetric).toBe("balance")
     expect(result.current.trendScope).toBe("accounts")
     expect(result.current.trendChartType).toBe("line")
-    expect(result.current.breakdownChartType).toBe("pie")
+    expect(result.current.breakdownChartType).toBe("bar")
     expect(result.current.currencySymbol).toBe("$")
     expect(result.current.isInitialLoading).toBe(false)
     expect(result.current.isStoreEmpty).toBe(false)
@@ -211,7 +222,7 @@ describe("useBalanceHistoryViewModel", () => {
     const { result } = renderHook(() => useBalanceHistoryViewModel())
 
     act(() => {
-      result.current.handleCurrencyChange("CNY")
+      result.current.handleCurrencyChange(CURRENCIES.CNY)
     })
 
     expect(updateCurrencyTypeMock).toHaveBeenCalledWith("CNY")
@@ -219,7 +230,7 @@ describe("useBalanceHistoryViewModel", () => {
     // Calling with same currency does nothing
     updateCurrencyTypeMock.mockClear()
     act(() => {
-      result.current.handleCurrencyChange("USD")
+      result.current.handleCurrencyChange(CURRENCIES.USD)
     })
     expect(updateCurrencyTypeMock).not.toHaveBeenCalled()
   })
@@ -228,8 +239,12 @@ describe("useBalanceHistoryViewModel", () => {
     const { result } = renderHook(() => useBalanceHistoryViewModel())
 
     act(() => {
-      result.current.setTrendMetric("estimatedIncome")
-      result.current.setBreakdownMetric("estimatedIncome")
+      result.current.setTrendMetric(
+        DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome,
+      )
+      result.current.setBreakdownMetric(
+        DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome,
+      )
     })
 
     expect(result.current.effectiveTrendMetric).toBe("income")
@@ -245,15 +260,19 @@ describe("useBalanceHistoryViewModel", () => {
           estimatedTodayIncome: { enabled: true },
         },
       },
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       updateCurrencyType: updateCurrencyTypeMock,
     } as unknown as ReturnType<typeof useUserPreferencesContext>)
 
     const { result } = renderHook(() => useBalanceHistoryViewModel())
 
     act(() => {
-      result.current.setTrendMetric("estimatedIncome")
-      result.current.setBreakdownMetric("estimatedIncome")
+      result.current.setTrendMetric(
+        DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome,
+      )
+      result.current.setBreakdownMetric(
+        DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome,
+      )
     })
 
     expect(result.current.effectiveTrendMetric).toBe("estimatedIncome")
@@ -261,13 +280,20 @@ describe("useBalanceHistoryViewModel", () => {
   })
 
   it("switches pie chart to bar chart when breakdown data contains negative values", () => {
+    const { result, rerender } = renderHook(() => useBalanceHistoryViewModel())
+    act(() => result.current.setBreakdownChartType("pie"))
+    expect(result.current.breakdownChartType).toBe("pie")
+
     vi.mocked(useBalanceHistoryReporting).mockReturnValue({
       ...defaultReportingResult,
-      breakdownData: { hasNegativeValues: true },
+      breakdownData: {
+        hasNegativeValues: true,
+        canUsePie: false,
+        entries: [{ value: -10 }, { value: 20 }],
+      },
     } as unknown as ReturnType<typeof useBalanceHistoryReporting>)
 
-    const { result } = renderHook(() => useBalanceHistoryViewModel())
-
+    rerender()
     expect(result.current.breakdownChartType).toBe("bar")
   })
 
@@ -307,7 +333,7 @@ describe("useBalanceHistoryViewModel", () => {
           endOfDayCapture: { enabled: false },
         },
       },
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       updateCurrencyType: updateCurrencyTypeMock,
     } as unknown as ReturnType<typeof useUserPreferencesContext>)
 
@@ -323,7 +349,7 @@ describe("useBalanceHistoryViewModel", () => {
           enabled: false,
         },
       },
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       updateCurrencyType: updateCurrencyTypeMock,
     } as unknown as ReturnType<typeof useUserPreferencesContext>)
 

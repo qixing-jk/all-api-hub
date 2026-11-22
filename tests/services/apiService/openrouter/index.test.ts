@@ -10,8 +10,12 @@ import {
   vi,
 } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
+import {
+  BALANCE_PURPOSES,
+  projectBalance,
+} from "~/services/accounts/metrics/balanceProjection"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import {
   createOpenRouterManagementRequest,
   fetchAccountData,
@@ -21,6 +25,7 @@ import {
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { accountShareBalanceSummary } from "~/services/sharing/shareSnapshots/balanceSummary"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   AuthTypeEnum,
@@ -43,6 +48,61 @@ const baseRequest = {
 }
 
 describe("apiService OpenRouter", () => {
+  it("includes official remaining credits in the available balance total", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+        HttpResponse.json({
+          data: { total_credits: 100.5, total_usage: 25.75 },
+        }),
+      ),
+    )
+    const result = await fetchAccountData(baseRequest)
+    expect(accountShareBalanceSummary(result.balance).entries).toHaveLength(1)
+    expect(
+      projectBalance(result.balance!, BALANCE_PURPOSES.Available),
+    ).toMatchObject({
+      amounts: [{ asset: { kind: "currency", code: "USD" }, value: "74.75" }],
+    })
+  })
+  it("preserves both reported operands when their derived ledger exceeds decimal bounds", async () => {
+    const credits = "9".repeat(256)
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+        HttpResponse.json({
+          data: { total_credits: credits, total_usage: "-1" },
+        }),
+      ),
+    )
+    const result = await fetchAccountData(baseRequest)
+    expect(result.balance?.positions[0]?.amount).toMatchObject({
+      status: "unavailable",
+      source: { amountInputs: { total_credits: credits, total_usage: "-1" } },
+    })
+  })
+  it("preserves exact credits strings and an unavailable ledger when one operand is absent", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+        HttpResponse.json({
+          data: { total_credits: "100.000000000000000017", total_usage: "30" },
+        }),
+      ),
+    )
+    const exact = await fetchAccountData(baseRequest)
+    expect(exact.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "70.000000000000000017",
+    })
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+        HttpResponse.json({ data: { total_credits: "100" } }),
+      ),
+    )
+    const partial = await fetchAccountData(baseRequest)
+    expect(partial.balance?.positions[0]?.amount).toMatchObject({
+      status: "unavailable",
+      source: { amountInputs: { total_credits: "100" } },
+    })
+  })
   beforeAll(() => {
     i18n.addResourceBundle(
       "en",
@@ -258,15 +318,36 @@ describe("apiService OpenRouter", () => {
     },
   )
 
-  it("normalizes cumulative credits into remaining quota and unsupported today stats", async () => {
+  it("retains signed native ledger balance and its cumulative source operands", async () => {
     server.use(
       http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
-        HttpResponse.json({ data: { total_credits: 10, total_usage: 12.5 } }),
+        HttpResponse.json({ data: { total_credits: 0.1, total_usage: 0.3 } }),
       ),
     )
 
-    await expect(fetchAccountData(baseRequest)).resolves.toEqual({
-      quota: Math.round(-2.5 * QUOTA_PER_USD),
+    const data = await fetchAccountData(baseRequest)
+    expect(data).not.toHaveProperty("quota")
+    expect(data).not.toHaveProperty("nativeBalance")
+    expect(data.balance?.positions.slice(0, 1)).toEqual([
+      expect.objectContaining({
+        role: "ledger",
+        asset: { kind: "currency", code: "USD" },
+        nature: "prepaid",
+        cashClassification: "unknown",
+        scope: expect.objectContaining({ authority: "https://openrouter.ai" }),
+        amount: expect.objectContaining({
+          status: "known",
+          value: "-0.2",
+          source: expect.objectContaining({
+            operation: "/credits",
+            kind: "derived",
+            inputs: ["total_credits", "total_usage"],
+            amountInputs: { total_credits: "0.1", total_usage: "0.3" },
+          }),
+        }),
+      }),
+    ])
+    expect(data).toMatchObject({
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -295,48 +376,43 @@ describe("apiService OpenRouter", () => {
   })
 
   it.each([
-    { data: { total_credits: "10", total_usage: 1 } },
-    { data: { total_credits: 10, total_usage: Number.NaN } },
-    { data: { total_credits: 10 } },
-  ])("rejects malformed credits payloads: %j", async (body) => {
-    server.use(
-      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
-        HttpResponse.json(body),
-      ),
-    )
-
-    await expect(fetchAccountData(baseRequest)).rejects.toBeInstanceOf(ApiError)
-  })
-
-  it("rejects finite credits whose converted quota overflows", async () => {
-    server.use(
-      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
-        HttpResponse.json({
-          data: {
-            total_credits: Number.MAX_VALUE,
-            total_usage: 0,
-          },
-        }),
-      ),
-    )
-
-    await expect(fetchAccountData(baseRequest)).rejects.toBeInstanceOf(ApiError)
-  })
-
-  it("rejects finite credits whose remaining balance calculation overflows", async () => {
-    server.use(
-      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
-        HttpResponse.json({
-          data: {
-            total_credits: Number.MAX_VALUE,
-            total_usage: -Number.MAX_VALUE,
-          },
-        }),
-      ),
-    )
-
-    await expect(fetchAccountData(baseRequest)).rejects.toBeInstanceOf(ApiError)
-  })
+    {
+      body: { data: { total_credits: "10", total_usage: 1 } },
+      amount: { status: OBSERVATION_STATUSES.Known, value: "9" },
+    },
+    {
+      body: { data: { total_credits: 10, total_usage: Number.NaN } },
+      amount: { status: "unavailable" },
+    },
+    {
+      body: { data: { total_credits: 10 } },
+      amount: { status: "unavailable" },
+    },
+    {
+      body: { data: { total_credits: Number.MAX_VALUE, total_usage: 0 } },
+      amount: { status: "unavailable" },
+    },
+    {
+      body: {
+        data: {
+          total_credits: Number.MAX_VALUE,
+          total_usage: -Number.MAX_VALUE,
+        },
+      },
+      amount: { status: "unavailable" },
+    },
+  ])(
+    "preserves exact strings and refuses unsafe or absent ledger operands: $body",
+    async ({ body, amount }) => {
+      server.use(
+        http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+          HttpResponse.json(body),
+        ),
+      )
+      const data = await fetchAccountData(baseRequest)
+      expect(data.balance?.positions[0]?.amount).toMatchObject(amount)
+    },
+  )
 
   it.each([401, 403, 429])("preserves HTTP %i errors", async (status) => {
     server.use(

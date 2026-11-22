@@ -1,5 +1,17 @@
+import { CURRENCIES } from "~/constants/money"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import { normalizeDecimalUnits } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+} from "~/services/amounts/financialConstants"
+import { recordedLogCharge } from "~/services/amounts/usage"
 import type { UsageHistoryCapability } from "~/services/apiAdapters/contracts/usageHistory"
 import { fetchRelayForUsagePage } from "~/services/apiService/relayfor"
+import {
+  RELAYFOR_ENDPOINTS,
+  RELAYFOR_QUOTA_PER_USD,
+} from "~/services/apiService/relayfor/constants"
 import { isRecord } from "~/services/apiService/relayfor/parsing"
 import {
   LogType,
@@ -17,6 +29,7 @@ export const relayForUsageHistory: UsageHistoryCapability = {
       Number(data.total_pages) < 0
     )
       throw new Error("Invalid RelayFor usage page")
+    const scope = accountBalanceScope(request)
     const items = data.items.map((item): LogItem => {
       if (
         !isRecord(item) ||
@@ -33,6 +46,7 @@ export const relayForUsageHistory: UsageHistoryCapability = {
       const number = (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? value : 0
       const detail = isRecord(item.billing_detail) ? item.billing_detail : {}
+      const quota = Math.max(0, item.quota - number(detail.refund_quota))
       return {
         id: item.id,
         user_id: Number(request.auth?.userId) || 0,
@@ -42,7 +56,19 @@ export const relayForUsageHistory: UsageHistoryCapability = {
         username: "",
         token_name: typeof item.token_name === "string" ? item.token_name : "",
         model_name: item.model,
-        quota: Math.max(0, item.quota - number(detail.refund_quota)),
+        quota,
+        consumption: recordedLogCharge(
+          { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          normalizeDecimalUnits(quota, RELAYFOR_QUOTA_PER_USD),
+          scope,
+          {
+            adapter: "relayfor",
+            operation: `${RELAYFOR_ENDPOINTS.logs}:quota`,
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          timestamp,
+        ),
         prompt_tokens: number(item.prompt_tokens),
         completion_tokens: number(item.completion_tokens),
         use_time:

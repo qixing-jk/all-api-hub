@@ -8,20 +8,18 @@ import {
   invalidKrillResponse,
   readKrill,
   readKrillEnvelope,
-  usdAmount,
   withKrillSession,
 } from "./transport"
 
 export type KrillIdentity = {
   id: number
   email: string
-  creditBalanceUsd: number
   enterpriseMemberships: readonly unknown[]
 }
 
 /**
  * The console identifies an account by its numeric user id plus email.
- * `credit_balance_usd` is USD cash, not plan allowance or welfare credit.
+ * The authoritative wallet is collected separately from `/api/subscription`.
  * Accepts either the full envelope or its unwrapped `data` object.
  */
 export function parseKrillIdentity(
@@ -42,7 +40,6 @@ export function parseKrillIdentity(
   return {
     id: user.id,
     email: user.email.trim(),
-    creditBalanceUsd: usdAmount(user.credit_balance_usd, endpoint),
     enterpriseMemberships: user.enterprise_memberships,
   }
 }

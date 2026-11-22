@@ -1,54 +1,112 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  balancePosition,
+  type BalancePosition,
+} from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_CASH_CLASSIFICATIONS,
+  BALANCE_NATURES,
+  BALANCE_ROLES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import { fetchNovitaBalanceDetail } from "~/services/apiService/novita"
-import type { NovitaBalanceDetail } from "~/services/apiService/novita/parsing"
 import { SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("ApiService.Novita")
 
-/**
- * Preserve the upstream `availableBalance` (console "Credits Remaining")
- * rather than deriving it from the components. Cash is remaining top-up funds;
- * the credit limit is the maximum debt allowed, not purchased balance.
- */
-function toNativeBalance(balance: NovitaBalanceDetail) {
-  return {
-    unit: "USD" as const,
-    total: balance.availableUsd,
-    permanent: balance.cashUsd,
-    daily: 0,
-    components: [
-      { kind: "permanent" as const, amount: balance.cashUsd },
-      ...(balance.creditLimitUsd > 0
-        ? [
-            {
-              kind: "permanent" as const,
-              name: "Credit limit",
-              amount: balance.creditLimitUsd,
-            },
-          ]
-        : []),
-    ],
-  }
-}
-
 /** Fetches and normalizes the Novita account balance. */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const balance = await fetchNovitaBalanceDetail(request)
+  const scope = accountBalanceScope(request)
+  const capturedAt = Date.now()
+  const position = (
+    id: string,
+    role: BalancePosition["role"],
+    value: unknown,
+    field: string,
+  ) =>
+    balancePosition({
+      id,
+      role,
+      scope,
+      value,
+      observedAt: capturedAt,
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      source: {
+        adapter: "novita",
+        operation: "/v1/billing/balance/detail",
+        contractVersion: "2",
+        kind: EVIDENCE_KINDS.Reported,
+        inputs: [field],
+      },
+    })
 
   return {
-    quota: balance.availableUsd * QUOTA_PER_USD,
-    nativeBalance: toNativeBalance(balance),
+    ...accountBalanceObservation(
+      scope,
+      [
+        {
+          ...position(
+            "available",
+            BALANCE_ROLES.Available,
+            balance.amounts.available,
+            "availableBalance",
+          ),
+          nature: BALANCE_NATURES.Mixed,
+        },
+        {
+          ...position(
+            "cash",
+            BALANCE_ROLES.Ledger,
+            balance.amounts.cash,
+            "cashBalance",
+          ),
+          nature: BALANCE_NATURES.Prepaid,
+          cashClassification: BALANCE_CASH_CLASSIFICATIONS.ReportedCash,
+        },
+        {
+          ...position(
+            "credit-limit",
+            BALANCE_ROLES.CreditLimit,
+            balance.amounts.creditLimit,
+            "creditLimit",
+          ),
+          nature: BALANCE_NATURES.Credit,
+          cashClassification: BALANCE_CASH_CLASSIFICATIONS.NotCash,
+        },
+        position(
+          "pending",
+          BALANCE_ROLES.PendingCharge,
+          balance.amounts.pending,
+          "pendingCharges",
+        ),
+        position(
+          "debt",
+          BALANCE_ROLES.Debt,
+          balance.amounts.debt,
+          "outstandingInvoices",
+        ),
+      ],
+      capturedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
     // The day-cycle billing route's non-empty shape is unverified, and the
     // monthly-consume route needs the console session; no "today" window is
     // advertised for the extension's own day.

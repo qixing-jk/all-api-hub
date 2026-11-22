@@ -141,6 +141,46 @@ describe("account persistence and form validation", () => {
       expect(mockUpdateAccountWithCheckInDraft).not.toHaveBeenCalled()
     })
 
+    it("uses the resolved Requesty organization when fetching balances after a credential edit", async () => {
+      mockgetSiteTypeCapabilities.mockReturnValue({
+        account: {
+          persistence: {
+            usePreparedIdentityForRequests: true,
+            prepareIdentity: async () => "new-organization",
+            getOperationLogDetails: (details: unknown) => details,
+            getCredentialKey: (value: string) => value,
+          },
+          data: { fetchData: mockFetchAccountData },
+        },
+      })
+      mockFetchAccountData.mockResolvedValueOnce({
+        quota: 1,
+        checkIn: checkInDisabled,
+      })
+      const result = await validateAndUpdateAccount({
+        accountId: "account-1",
+        url: "https://app.requesty.ai",
+        siteName: "Requesty",
+        username: "user",
+        accessToken: "new-key",
+        userId: "old-organization",
+        exchangeRate: "7.0",
+        notes: "",
+        tagIds: [],
+        checkInConfig: checkInDisabled,
+        siteType: SITE_TYPES.REQUESTY,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
+
+      expect(result.success).toBe(true)
+      expect(mockFetchAccountData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          auth: expect.objectContaining({ userId: "new-organization" }),
+        }),
+      )
+    })
+
     it("persists empty tagIds to clear account tags", async () => {
       mockFetchAccountData.mockResolvedValueOnce({
         quota: 1,

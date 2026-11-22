@@ -2,7 +2,23 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import { balancePosition } from "~/services/amounts/balance"
+import { addDecimal, parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_FUNDING,
+  BALANCE_LABEL_KEYS,
+  BALANCE_NATURES,
+  BALANCE_RELATIONS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
@@ -35,29 +51,83 @@ export async function fetchIdentity(
 export async function fetchUserInfo(request: ApiServiceRequest) {
   return (await fetchIdentity(request)).user
 }
-/** Reject missing or invalid native credit values instead of replacing them with zero. */
-function credits(value: unknown) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
-    throw invalidXiaoenResponse(XIAOEN_ENDPOINTS.Identity)
-  return value
-}
 /** Credits have no verified cash exchange rate. Daily credit expires independently of fixed credit. */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   return withXiaoenSession(request, async (request) => {
     const { data } = await fetchIdentity(request)
-    const total = credits(data.quota),
-      permanent = credits(data.permanentQuota),
-      daily = credits(data.dailyQuota)
-    if (
-      total !== permanent + daily ||
-      typeof data.hasSignedInToday !== "boolean"
-    )
-      throw invalidXiaoenResponse(XIAOEN_ENDPOINTS.Identity)
+    const observedAt = Date.now()
+    const scope = accountBalanceScope(request)
+    const source = {
+      adapter: "xiaoen",
+      operation: XIAOEN_ENDPOINTS.Identity,
+      contractVersion: "credits/v1",
+      kind: EVIDENCE_KINDS.Reported,
+    }
+    const asset = {
+      kind: ASSET_KINDS.Quota,
+      id: "xiaoen:credits",
+      label: "credits",
+      displayLabel: "credits",
+      displayScale: 1,
+    }
+    const permanent = parseDecimal(data.permanentQuota)
+    const daily = parseDecimal(data.dailyQuota)
+    let total = parseDecimal(data.quota)
+    if (total !== undefined && permanent !== undefined && daily !== undefined) {
+      try {
+        if (addDecimal(permanent, daily) !== total) total = undefined
+      } catch {
+        total = undefined
+      }
+    }
+    const positions = [
+      balancePosition({
+        id: "available",
+        collectionKey: "credits",
+        scope,
+        asset,
+        value: total,
+        nature: BALANCE_NATURES.Mixed,
+        source,
+        observedAt,
+      }),
+      balancePosition({
+        id: "permanent",
+        labelKey: BALANCE_LABEL_KEYS.Permanent,
+        collectionKey: "credits",
+        scope,
+        asset,
+        value: permanent,
+        nature: BALANCE_NATURES.Prepaid,
+        validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+        parentId: "available",
+        relation: BALANCE_RELATIONS.Component,
+        source,
+        observedAt,
+      }),
+      balancePosition({
+        id: "daily",
+        labelKey: BALANCE_LABEL_KEYS.Daily,
+        collectionKey: "credits",
+        scope,
+        asset,
+        value: daily,
+        funding: BALANCE_FUNDING.Granted,
+        parentId: "available",
+        relation: BALANCE_RELATIONS.Component,
+        source,
+        observedAt,
+      }),
+    ]
     return {
-      quota: 0,
-      nativeBalance: { unit: "credits", total, permanent, daily },
+      ...accountBalanceObservation(
+        scope,
+        positions,
+        observedAt,
+        FINANCIAL_ENUMERATION.Complete,
+      ),
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,

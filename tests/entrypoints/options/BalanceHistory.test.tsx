@@ -1,15 +1,32 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { echarts } from "~/components/charts/echarts"
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
+import { BALANCE_HISTORY_TREND_CHART_TYPES } from "~/features/BalanceHistory/contracts"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
+import {
+  DevPanelProvider,
+  useDevPanelSections,
+} from "~/features/DevPanel/DevPanelSectionsContext"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+} from "~/services/amounts/financialConstants"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
@@ -26,14 +43,20 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
-import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import { AuthTypeEnum } from "~/types"
+import {
+  DAILY_BALANCE_HISTORY_CAPTURE_SOURCES,
+  DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+} from "~/types/dailyBalanceHistory"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
 } from "~/utils/core/dayKey"
+import { isDevUnlocked, toggleDevUnlocked } from "~/utils/core/devMode"
 import { openSettingsTab } from "~/utils/navigation"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -49,6 +72,31 @@ const getMetricDropdownButtonName = (
     `balanceHistory:${section}\\.title:\\s*${metric.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
   )
 
+function PreviewActions() {
+  const section = useDevPanelSections().find(
+    ({ id }) => id === `${MENU_ITEM_IDS.BALANCE_HISTORY}-preview`,
+  )
+  return section?.actions?.map(({ id, label, run, disabled }) => (
+    <button key={id} disabled={disabled} onClick={() => void run()}>
+      {label}
+    </button>
+  ))
+}
+
+function renderDesktopHistory() {
+  const matchMedia = window.matchMedia
+  window.matchMedia = (media) => {
+    const result = matchMedia.call(window, media)
+    return media === "(min-width: 1200px)"
+      ? { ...result, matches: true }
+      : result
+  }
+  onTestFinished(() => {
+    window.matchMedia = matchMedia
+  })
+  return render(<BalanceHistory />)
+}
+
 const {
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
@@ -63,6 +111,7 @@ vi.mock("~/lib/notify", () => ({
   default: {
     loading: vi.fn(() => "toast-id"),
     success: vi.fn(),
+    warning: vi.fn(),
     error: vi.fn(),
   },
 }))
@@ -83,7 +132,7 @@ vi.mock("~/components/charts/echarts", async () => {
 })
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
-  accountQueries: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
+  accountQueries: { getAllAccounts: vi.fn(), getAllAccountsOrThrow: vi.fn() },
 }))
 
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
@@ -162,7 +211,7 @@ describe("BalanceHistory options page", () => {
     endOfDayCaptureEnabled = false,
     estimatedTodayIncomeEnabled = false,
     retentionDays = DEFAULT_RETENTION_DAYS,
-    currencyType = "USD",
+    currencyType = CURRENCIES.USD,
   }: {
     showTodayCashflow?: boolean
     enabled?: boolean
@@ -204,14 +253,14 @@ describe("BalanceHistory options page", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
-    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([] as any)
     vi.mocked(tagStorage.getTagStore).mockResolvedValue({
       version: 1,
       tagsById: {},
     } as any)
     vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {},
+      referenceSnapshotsByAccountId: {},
     } as any)
 
     vi.mocked(useUserPreferencesContext).mockReturnValue(
@@ -229,6 +278,492 @@ describe("BalanceHistory options page", () => {
     expect(await screen.findByText(DISABLED_HINT_TITLE)).toBeInTheDocument()
     expect(screen.queryByText(TAG_FILTER_LABEL)).toBeNull()
     expect(screen.queryByText(EMPTY_TITLE)).toBeNull()
+  })
+
+  it("shows a retryable read error instead of an empty history state", async () => {
+    vi.mocked(dailyBalanceHistoryStorage.getStore).mockRejectedValueOnce(
+      new Error("unsupported_balance_history_version"),
+    )
+    render(<BalanceHistory />)
+    expect(
+      await screen.findByText("balanceHistory:messages.error.loadTitle"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(EMPTY_TITLE)).not.toBeInTheDocument()
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "common:actions.retry" }))
+    expect(await screen.findByText(EMPTY_TITLE)).toBeInTheDocument()
+    expect(
+      screen.queryByText("balanceHistory:messages.error.loadTitle"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows native Token history with source and gaps without a synthetic USD overview", async () => {
+    if (!isDevUnlocked()) {
+      toggleDevUnlocked()
+      onTestFinished(() => {
+        toggleDevUnlocked()
+      })
+    }
+    const now = Date.now()
+    const scope = accountBalanceScope({
+      baseUrl: "https://fixture.invalid",
+      accountId: "tokens",
+      auth: { authType: AuthTypeEnum.AccessToken },
+    })
+    const balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "tokens",
+          scope,
+          asset: {
+            kind: ASSET_KINDS.Quota,
+            id: "fixture:token",
+            label: "Token",
+            displayLabel: "Token",
+            displayScale: 1,
+          },
+          value: "4500",
+          observedAt: now,
+          source: {
+            adapter: "fixture",
+            operation: "console",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      now,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
+      {
+        id: "tokens",
+        site_name: "Token Wallet",
+        site_url: "https://fixture.invalid",
+        site_type: SITE_TYPES.DAHL,
+        account_info: {
+          username: "user",
+          nativeBalance: { amount: 4500, unit: "token" },
+        },
+      },
+    ] as any)
+    vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 4,
+      referenceSnapshotsByAccountId: {},
+      financialSnapshotsByAccountId: {
+        tokens: [
+          { balance, source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh },
+        ],
+      },
+    })
+    const user = userEvent.setup()
+    render(<BalanceHistory />)
+    const amounts = await screen.findByRole("region", {
+      name: "balanceHistory:native.amountsTitle",
+    })
+    await user.click(
+      within(amounts).getByRole("button", {
+        name: /balanceHistory:overview.viewTrend/,
+      }),
+    )
+    expect(
+      within(
+        screen.getByRole("region", {
+          name: "balanceHistory:trend.title",
+        }),
+      ).getByText(/^4,?500 Token$/),
+    ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: /balanceHistory:trend.title:.*Token/,
+        }),
+      ).toHaveFocus(),
+    )
+    await user.click(
+      within(screen.getByRole("table")).getByRole("button", {
+        name: /4,?500 Token/,
+      }),
+    )
+    const records = within(screen.getByRole("dialog"))
+    const sourceDetails = screen.getByText(/fixture\/console@1/)
+    const scopeDetails = screen.getByText(/balanceHistory:native.scope:/)
+    expect(sourceDetails).not.toBeVisible()
+    expect(scopeDetails).not.toBeVisible()
+    await user.click(records.getByText("account:financial.technicalDetails"))
+    expect(sourceDetails).toBeVisible()
+    expect(scopeDetails).toBeVisible()
+    expect(
+      screen.getAllByText("balanceHistory:native.restrictions"),
+    ).toHaveLength(4)
+    for (const restriction of screen.getAllByText(
+      "balanceHistory:native.restrictions",
+    ))
+      expect(restriction).toBeVisible()
+    await user.click(records.getByText("account:financial.technicalDetails"))
+    expect(sourceDetails).not.toBeVisible()
+    expect(records.getByRole("cell", { name: /4,?500 Token/ })).toBeVisible()
+    expect(screen.queryByText(EMPTY_TITLE)).not.toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    await user.click(screen.getByRole("button", { name: FILTERS_BUTTON_LABEL }))
+    expect(
+      await screen.findByRole("button", { name: "Token Wallet" }),
+    ).toBeEnabled()
+  })
+
+  it.each([
+    ["Dev: Preview USD balances", "balanceHistory:native.amountsTitle"],
+    ["Dev: Preview mixed balances", "balanceHistory:native.amountsTitle"],
+    ["Dev: Preview empty history", EMPTY_TITLE],
+  ])(
+    "shows isolated data for %s and restores storage after exit",
+    async (action, expected) => {
+      if (!isDevUnlocked()) {
+        toggleDevUnlocked()
+        onTestFinished(() => {
+          toggleDevUnlocked()
+        })
+      }
+      const user = userEvent.setup()
+      render(
+        <DevPanelProvider
+          surface="options"
+          page={MENU_ITEM_IDS.BALANCE_HISTORY}
+        >
+          <BalanceHistory />
+          <PreviewActions />
+        </DevPanelProvider>,
+      )
+      expect(await screen.findByText(EMPTY_TITLE)).toBeVisible()
+      const reads = vi.mocked(dailyBalanceHistoryStorage.getStore).mock.calls
+        .length
+
+      await user.click(await screen.findByRole("button", { name: action }))
+      expect(await screen.findByText(/Dev preview/)).toBeVisible()
+      if (expected === EMPTY_TITLE) {
+        expect(screen.getByText(expected)).toBeVisible()
+      } else {
+        expect(screen.getByRole("region", { name: expected })).toBeVisible()
+        expect(
+          screen.getByRole("img", { name: /balanceHistory:trend.scopes/ }),
+        ).toBeVisible()
+      }
+      expect(dailyBalanceHistoryStorage.getStore).toHaveBeenCalledTimes(reads)
+
+      await user.click(screen.getByRole("button", { name: "Exit preview" }))
+      expect(await screen.findByText(EMPTY_TITLE)).toBeVisible()
+      expect(screen.queryByText(/Dev preview/)).not.toBeInTheDocument()
+    },
+  )
+
+  it("shows the configured exchange rate next to the converted reference history", async () => {
+    const now = Date.now()
+    const today = getDayKeyFromUnixSeconds(now / 1000)
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createMockUserPreferencesContext({
+        enabled: true,
+        currencyType: CURRENCIES.CNY,
+      }),
+    )
+    vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
+      {
+        id: "archived",
+        site_name: "Archived Wallet",
+        site_url: "https://archive.invalid",
+        site_type: SITE_TYPES.ONE_API,
+        account_info: { username: "archive" },
+        exchange_rate: 7,
+      },
+    ] as any)
+    vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 4,
+      referenceSnapshotsByAccountId: {
+        archived: {
+          [today]: {
+            balanceUsd: 2,
+            incomeUsd: 0,
+            consumptionUsd: 0,
+            capturedAt: now,
+            source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+          },
+        },
+      },
+    })
+    const user = userEvent.setup()
+    render(<BalanceHistory />)
+    const details = await screen.findByRole("button", {
+      name: "balanceHistory:legacy.referenceRates",
+    })
+    await user.click(details)
+    const rates = await screen.findByLabelText(
+      "balanceHistory:legacy.referenceRates",
+    )
+    expect(within(rates).getByRole("listitem")).toHaveTextContent(
+      "balanceHistory:legacy.referenceRate",
+    )
+  })
+
+  it.each(["account", "date"])(
+    "restores the legacy overview when the %s filter excludes native history",
+    async (filter) => {
+      const now = Date.now()
+      const earlier = now - 10 * 86_400_000
+      const today = getDayKeyFromUnixSeconds(now / 1000)
+      const scope = accountBalanceScope({
+        baseUrl: "https://native.invalid",
+        accountId: "native",
+        auth: { authType: AuthTypeEnum.AccessToken },
+      })
+      const balance = accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "wallet",
+            scope,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+            value: "8",
+            observedAt: earlier,
+            source: {
+              adapter: "fixture",
+              operation: "account",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        earlier,
+        FINANCIAL_COVERAGE.Complete,
+      )
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
+        {
+          id: "native",
+          site_name: "Native Only",
+          site_url: "https://native.invalid",
+          site_type: SITE_TYPES.ONE_API,
+          account_info: { username: "native" },
+        },
+        {
+          id: "legacy",
+          site_name: "Legacy Only",
+          site_url: "https://legacy.invalid",
+          site_type: SITE_TYPES.ONE_API,
+          account_info: { username: "legacy" },
+        },
+      ] as any)
+      vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+        schemaVersion: 4,
+        referenceSnapshotsByAccountId: {
+          legacy: {
+            [today]: {
+              balanceUsd: 1,
+              incomeUsd: 0,
+              consumptionUsd: 0,
+              capturedAt: now,
+              source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+            },
+          },
+        },
+        financialSnapshotsByAccountId: {
+          native: [
+            { balance, source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh },
+          ],
+        },
+      })
+      render(<BalanceHistory />)
+      expect(await screen.findByText("8 CNY")).toBeInTheDocument()
+      const user = userEvent.setup()
+      await user.click(
+        screen.getByRole("button", { name: FILTERS_BUTTON_LABEL }),
+      )
+      if (filter === "account")
+        await user.click(screen.getByRole("button", { name: "Legacy Only" }))
+      else {
+        fireEvent.change(screen.getByLabelText(START_DAY_LABEL), {
+          target: { value: today },
+        })
+        fireEvent.blur(screen.getByLabelText(START_DAY_LABEL))
+      }
+      await user.keyboard("{Escape}")
+      expect(
+        await screen.findByText(
+          "balanceHistory:overview.kpis.endBalance.label",
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByTestId(BALANCE_HISTORY_TEST_IDS.accountSummary),
+      ).toBeVisible()
+      expect(
+        screen.queryByRole("columnheader", {
+          name: "balanceHistory:native.amountsTitle",
+        }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it.each(["deadline", "focus", "visibility"])(
+    "updates expiry and reset on %s without moving the amount observation time",
+    async (trigger) => {
+      const now = new Date(2026, 10, 11, 12).getTime()
+      vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] })
+      vi.setSystemTime(now)
+      try {
+        const scope = accountBalanceScope({
+          baseUrl: "https://timed.invalid",
+          accountId: "timed",
+          auth: { authType: AuthTypeEnum.AccessToken },
+        })
+        const balance = accountBalanceSnapshot(
+          scope,
+          [
+            balancePosition({
+              id: "plan",
+              scope,
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+              value: "9",
+              observedAt: now,
+              validity: {
+                kind: BALANCE_VALIDITY_KINDS.Expires,
+                at: now + 1000,
+              },
+              window: {
+                start: now - 1000,
+                end: now + 2000,
+                resetsAt: now + 2000,
+                timeZone: "UTC",
+              },
+              source: {
+                adapter: "fixture",
+                operation: "account",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+              },
+            }),
+          ],
+          now,
+          FINANCIAL_COVERAGE.Complete,
+        )
+        vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
+          {
+            id: "timed",
+            site_name: "Timed Plan",
+            site_url: "https://timed.invalid",
+            site_type: SITE_TYPES.ONE_API,
+            account_info: { username: "timed" },
+          },
+        ] as any)
+        vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+          schemaVersion: 4,
+          referenceSnapshotsByAccountId: {},
+          financialSnapshotsByAccountId: {
+            timed: [
+              {
+                balance,
+                source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+              },
+            ],
+          },
+        })
+        await act(async () => {
+          render(<BalanceHistory />)
+        })
+        fireEvent.click(screen.getByRole("button", { name: /9 CNY/ }))
+        const records = within(screen.getByRole("dialog"))
+        const originalRow = records
+          .getByRole("cell", { name: "9 CNY" })
+          .closest("tr")?.textContent
+        expect(
+          records.queryByRole("cell", {
+            name: "balanceHistory:native.expired",
+          }),
+        ).not.toBeInTheDocument()
+        expect(
+          records.queryByRole("cell", { name: "balanceHistory:native.reset" }),
+        ).not.toBeInTheDocument()
+        await act(async () => {
+          if (trigger === "deadline") await vi.advanceTimersByTimeAsync(2500)
+          else {
+            vi.setSystemTime(now + 2500)
+            if (trigger === "focus") fireEvent.focus(window)
+            else fireEvent(document, new Event("visibilitychange"))
+          }
+        })
+        expect(
+          records.getByRole("cell", { name: "balanceHistory:native.expired" }),
+        ).toBeInTheDocument()
+        expect(
+          records.getByRole("cell", { name: "balanceHistory:native.reset" }),
+        ).toBeInTheDocument()
+        expect(
+          records.getByRole("cell", { name: "9 CNY" }).closest("tr")
+            ?.textContent,
+        ).toBe(originalRow)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("keeps an account selectable when only an expiry event falls within the date filter", async () => {
+    const now = Date.now()
+    const scope = accountBalanceScope({
+      baseUrl: "https://fixture.invalid",
+      accountId: "expired",
+      auth: { authType: AuthTypeEnum.AccessToken },
+    })
+    const balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "plan",
+          scope,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+          value: "10",
+          observedAt: now - 35 * 86_400_000,
+          validity: {
+            kind: BALANCE_VALIDITY_KINDS.Expires,
+            at: now - 86_400_000,
+          },
+          source: {
+            adapter: "fixture",
+            operation: "account",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      now - 35 * 86_400_000,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
+      {
+        id: "expired",
+        site_name: "Expired Plan",
+        site_url: "https://fixture.invalid",
+        site_type: SITE_TYPES.DAHL,
+        account_info: { username: "user" },
+      },
+    ] as any)
+    vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 4,
+      referenceSnapshotsByAccountId: {},
+      financialSnapshotsByAccountId: {
+        expired: [
+          { balance, source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh },
+        ],
+      },
+    })
+    render(<BalanceHistory />)
+    expect(
+      await screen.findByText("balanceHistory:native.expired"),
+    ).toBeInTheDocument()
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: FILTERS_BUTTON_LABEL }))
+    expect(
+      await screen.findByRole("button", { name: "Expired Plan" }),
+    ).toBeEnabled()
   })
 
   it.each(["stored", "missing"])(
@@ -365,7 +900,7 @@ describe("BalanceHistory options page", () => {
       `^${escapeRegExp(TAG_NAME_WORK)}\\D*${TAG_WORK_ACCOUNT_COUNT}$`,
     )
 
-    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
       {
         id: ACCOUNT_ID_A,
         site_name: SITE_A_NAME,
@@ -430,7 +965,7 @@ describe("BalanceHistory options page", () => {
     ).not.toBeInTheDocument()
     store.resolve({
       schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      snapshotsByAccountId: {},
+      referenceSnapshotsByAccountId: {},
     })
     await waitFor(() =>
       expect(
@@ -514,14 +1049,13 @@ describe("BalanceHistory options page", () => {
   })
 
   it("keeps filters available from an empty range so the user can restore data", async () => {
-    const factor = QUOTA_PER_USD
     const fixedNowMs = new Date(2026, 1, 7, 12, 0, 0).getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
 
     try {
       const firstDayKey = "2026-02-01"
       const lastDayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -532,19 +1066,19 @@ describe("BalanceHistory options page", () => {
       ] as any)
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [firstDayKey]: {
-              quota: 8 * factor,
-              today_income: 1 * factor,
-              today_quota_consumption: 1 * factor,
+              balanceUsd: 8,
+              incomeUsd: 1,
+              consumptionUsd: 1,
               capturedAt: 0,
               source: "refresh",
             },
             [lastDayKey]: {
-              quota: 10 * factor,
-              today_income: 1 * factor,
-              today_quota_consumption: 1 * factor,
+              balanceUsd: 10,
+              incomeUsd: 1,
+              consumptionUsd: 1,
               capturedAt: 0,
               source: "refresh",
             },
@@ -593,7 +1127,6 @@ describe("BalanceHistory options page", () => {
   })
 
   it("renders non-empty per-account trend series for multi-account partial coverage", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -602,7 +1135,7 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -621,12 +1154,12 @@ describe("BalanceHistory options page", () => {
 
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [todayKey]: {
-              quota: 10 * factor,
-              today_income: 1 * factor,
-              today_quota_consumption: 2 * factor,
+              balanceUsd: 10,
+              incomeUsd: 1,
+              consumptionUsd: 2,
               capturedAt: 0,
               source: "refresh",
             },
@@ -651,7 +1184,10 @@ describe("BalanceHistory options page", () => {
         )
 
       const trendOption = options.find((option: any) =>
-        option?.series?.some?.((series: any) => series?.type === "line"),
+        option?.series?.some?.(
+          (series: any) =>
+            series?.type === BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+        ),
       )
 
       expect(trendOption).toBeTruthy()
@@ -720,7 +1256,6 @@ describe("BalanceHistory options page", () => {
       today_quota_consumption,
       expectedValue,
     }) => {
-      const factor = QUOTA_PER_USD
       const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
       const fixedNowMs = FIXED_NOW.getTime()
       const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -728,7 +1263,7 @@ describe("BalanceHistory options page", () => {
       try {
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-        vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+        vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
           {
             id: "a1",
             site_name: "Site A",
@@ -739,16 +1274,12 @@ describe("BalanceHistory options page", () => {
         ] as any)
         vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
           schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-          snapshotsByAccountId: {
+          referenceSnapshotsByAccountId: {
             a1: {
               [todayKey]: {
-                quota: 10 * factor,
-                today_income:
-                  today_income === null ? null : today_income * factor,
-                today_quota_consumption:
-                  today_quota_consumption === null
-                    ? null
-                    : today_quota_consumption * factor,
+                balanceUsd: 10,
+                incomeUsd: today_income,
+                consumptionUsd: today_quota_consumption,
                 capturedAt: 0,
                 source: "refresh",
               },
@@ -764,13 +1295,13 @@ describe("BalanceHistory options page", () => {
           screen.getByRole("button", {
             name: getMetricDropdownButtonName(
               "trend",
-              "balanceHistory:metrics.balance",
+              "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
             ),
           }),
         )
         await user.click(
           await screen.findByRole("menuitemradio", {
-            name: `balanceHistory:metrics.${metric}`,
+            name: `balanceHistory:metrics.${metric} · balanceHistory:legacy.title`,
           }),
         )
 
@@ -789,7 +1320,8 @@ describe("BalanceHistory options page", () => {
           )
           const accountMetricSeries = metricOption?.series?.find?.(
             (series: any) =>
-              series?.type === "line" && series?.name === "Site A",
+              series?.type === BALANCE_HISTORY_TREND_CHART_TYPES.Line &&
+              series?.name === "Site A",
           )
 
           expect(accountMetricSeries?.data).toContain(expectedValue)
@@ -801,7 +1333,6 @@ describe("BalanceHistory options page", () => {
   )
 
   it("uses shared duplicate-name labels in account selectors and trend series", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -810,7 +1341,7 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Shared Site",
@@ -829,21 +1360,21 @@ describe("BalanceHistory options page", () => {
 
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [todayKey]: {
-              quota: 10 * factor,
-              today_income: 1 * factor,
-              today_quota_consumption: 2 * factor,
+              balanceUsd: 10,
+              incomeUsd: 1,
+              consumptionUsd: 2,
               capturedAt: 0,
               source: "refresh",
             },
           },
           a2: {
             [todayKey]: {
-              quota: 20 * factor,
-              today_income: 3 * factor,
-              today_quota_consumption: 4 * factor,
+              balanceUsd: 20,
+              incomeUsd: 3,
+              consumptionUsd: 4,
               capturedAt: 0,
               source: "refresh",
             },
@@ -887,7 +1418,6 @@ describe("BalanceHistory options page", () => {
   })
 
   it("refreshes the selected accounts and reloads history after a successful runtime refresh", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -895,7 +1425,7 @@ describe("BalanceHistory options page", () => {
     try {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -914,21 +1444,21 @@ describe("BalanceHistory options page", () => {
 
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [todayKey]: {
-              quota: 10 * factor,
-              today_income: 2 * factor,
-              today_quota_consumption: 1 * factor,
+              balanceUsd: 10,
+              incomeUsd: 2,
+              consumptionUsd: 1,
               capturedAt: 0,
               source: "refresh",
             },
           },
           a2: {
             [todayKey]: {
-              quota: 20 * factor,
-              today_income: 4 * factor,
-              today_quota_consumption: 3 * factor,
+              balanceUsd: 20,
+              incomeUsd: 4,
+              consumptionUsd: 3,
               capturedAt: 0,
               source: "refresh",
             },
@@ -937,6 +1467,7 @@ describe("BalanceHistory options page", () => {
       } as any)
       vi.mocked(sendBalanceHistoryMessage).mockResolvedValue({
         success: true,
+        data: { success: 1, failed: 0, refreshedCount: 1 },
       } as any)
 
       render(<BalanceHistory />)
@@ -1000,7 +1531,6 @@ describe("BalanceHistory options page", () => {
   })
 
   it("keeps the current balance history content visible while a refresh reload is pending", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1009,7 +1539,7 @@ describe("BalanceHistory options page", () => {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
       const deferredStore = createDeferred<any>()
 
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1022,12 +1552,12 @@ describe("BalanceHistory options page", () => {
       vi.mocked(dailyBalanceHistoryStorage.getStore)
         .mockResolvedValueOnce({
           schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-          snapshotsByAccountId: {
+          referenceSnapshotsByAccountId: {
             a1: {
               [todayKey]: {
-                quota: 10 * factor,
-                today_income: 2 * factor,
-                today_quota_consumption: 1 * factor,
+                balanceUsd: 10,
+                incomeUsd: 2,
+                consumptionUsd: 1,
                 capturedAt: 0,
                 source: "refresh",
               },
@@ -1038,6 +1568,7 @@ describe("BalanceHistory options page", () => {
 
       vi.mocked(sendBalanceHistoryMessage).mockResolvedValue({
         success: true,
+        data: { success: 1, failed: 0, refreshedCount: 1 },
       } as any)
 
       render(<BalanceHistory />)
@@ -1052,7 +1583,10 @@ describe("BalanceHistory options page", () => {
           )
         const trendOption = options
           .filter((option: any) =>
-            option?.series?.some?.((series: any) => series?.type === "line"),
+            option?.series?.some?.(
+              (series: any) =>
+                series?.type === BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+            ),
           )
           .at(-1)
         return trendOption?.series?.[0]?.data?.filter(
@@ -1084,12 +1618,12 @@ describe("BalanceHistory options page", () => {
 
       deferredStore.resolve({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [todayKey]: {
-              quota: 12 * factor,
-              today_income: 3 * factor,
-              today_quota_consumption: 1 * factor,
+              balanceUsd: 12,
+              incomeUsd: 3,
+              consumptionUsd: 1,
               capturedAt: 0,
               source: "refresh",
             },
@@ -1106,7 +1640,6 @@ describe("BalanceHistory options page", () => {
   })
 
   it("shows a fallback runtime error when refresh fails without a server message", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1114,7 +1647,7 @@ describe("BalanceHistory options page", () => {
     try {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1126,10 +1659,12 @@ describe("BalanceHistory options page", () => {
 
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [todayKey]: {
-              quota: 10 * factor,
+              balanceUsd: 10,
+              incomeUsd: null,
+              consumptionUsd: null,
               capturedAt: 0,
               source: "refresh",
             },
@@ -1316,7 +1851,6 @@ describe("BalanceHistory options page", () => {
   })
 
   it("forces histogram mode for negative net breakdown values", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1324,7 +1858,7 @@ describe("BalanceHistory options page", () => {
     try {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1332,16 +1866,32 @@ describe("BalanceHistory options page", () => {
           site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
+        {
+          id: "a2",
+          site_name: "Site B",
+          site_url: "https://b.example.com",
+          site_type: SITE_TYPES.ONE_API,
+          account_info: { username: "User B" },
+        },
       ] as any)
 
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [todayKey]: {
-              quota: 10 * factor,
-              today_income: 1 * factor,
-              today_quota_consumption: 4 * factor,
+              balanceUsd: 10,
+              incomeUsd: 1,
+              consumptionUsd: 4,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+          a2: {
+            [todayKey]: {
+              balanceUsd: 10,
+              incomeUsd: 3,
+              consumptionUsd: 1,
               capturedAt: 0,
               source: "refresh",
             },
@@ -1349,7 +1899,7 @@ describe("BalanceHistory options page", () => {
         },
       } as any)
 
-      render(<BalanceHistory />)
+      renderDesktopHistory()
 
       expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
 
@@ -1359,20 +1909,20 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.balance",
+            "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.outcome",
+          name: "balanceHistory:metrics.outcome · balanceHistory:legacy.title",
         }),
       )
       expect(
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.outcome",
+            "balanceHistory:metrics.outcome · balanceHistory:legacy.title",
           ),
         }),
       ).toBeInTheDocument()
@@ -1381,13 +1931,13 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.outcome",
+            "balanceHistory:metrics.outcome · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.net",
+          name: "balanceHistory:metrics.net · balanceHistory:legacy.title",
         }),
       )
 
@@ -1396,7 +1946,7 @@ describe("BalanceHistory options page", () => {
           screen.getByRole("button", {
             name: getMetricDropdownButtonName(
               "breakdown",
-              "balanceHistory:metrics.net",
+              "balanceHistory:metrics.net · balanceHistory:legacy.title",
             ),
           }),
         ).toBeInTheDocument()
@@ -1414,7 +1964,7 @@ describe("BalanceHistory options page", () => {
       ).toBeDisabled()
       await user.click(
         screen.getByRole("button", {
-          name: "balanceHistory:breakdown.chartTypes.histogram",
+          name: "balanceHistory:breakdown.chartTypes.bars",
         }),
       )
     } finally {
@@ -1423,7 +1973,6 @@ describe("BalanceHistory options page", () => {
   })
 
   it("updates currency and manual date controls", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1434,11 +1983,11 @@ describe("BalanceHistory options page", () => {
       vi.mocked(useUserPreferencesContext).mockReturnValue({
         ...createMockUserPreferencesContext({
           enabled: true,
-          currencyType: "USD",
+          currencyType: CURRENCIES.USD,
         }),
         updateCurrencyType,
       } as any)
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1449,12 +1998,12 @@ describe("BalanceHistory options page", () => {
       ] as any)
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
             [todayKey]: {
-              quota: 10 * factor,
-              today_income: 1 * factor,
-              today_quota_consumption: 2 * factor,
+              balanceUsd: 10,
+              incomeUsd: 1,
+              consumptionUsd: 2,
               capturedAt: 0,
               source: "refresh",
             },
@@ -1462,7 +2011,7 @@ describe("BalanceHistory options page", () => {
         },
       } as any)
 
-      render(<BalanceHistory />)
+      renderDesktopHistory()
 
       expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
       const accountSummary = await screen.findByTestId(
@@ -1512,7 +2061,6 @@ describe("BalanceHistory options page", () => {
   })
 
   it("does not expose selected estimated income metrics after the preference is disabled", async () => {
-    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1526,7 +2074,7 @@ describe("BalanceHistory options page", () => {
           estimatedTodayIncomeEnabled: true,
         }),
       )
-      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1537,48 +2085,61 @@ describe("BalanceHistory options page", () => {
       ] as any)
       vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
+        referenceSnapshotsByAccountId: {
           a1: {
+            [subtractDaysFromDayKey(todayKey, 1)]: {
+              balanceUsd: 12,
+              incomeUsd: null,
+              consumptionUsd: null,
+              capturedAt: fixedNowMs - 86_400_000,
+              source: "refresh",
+            },
             [todayKey]: {
-              quota: 10 * factor,
-              today_income: 1 * factor,
-              today_quota_consumption: 4 * factor,
-              capturedAt: 0,
+              balanceUsd: 10,
+              incomeUsd: 1,
+              consumptionUsd: 4,
+              capturedAt: fixedNowMs,
               source: "refresh",
             },
           },
         },
       } as any)
 
-      const { rerender } = render(<BalanceHistory />)
+      const { rerender } = renderDesktopHistory()
 
       expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
+      const accountSummary = await screen.findByTestId(
+        BALANCE_HISTORY_TEST_IDS.accountSummary,
+      )
+      expect(
+        await within(accountSummary).findByText("$2.00"),
+      ).toBeInTheDocument()
 
       const user = userEvent.setup()
       await user.click(
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.balance",
+            "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.estimatedIncome",
+          name: "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
         }),
       )
       await user.click(
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "trend",
-            "balanceHistory:metrics.balance",
+            "balanceHistory:metricMenu.convertedBalance · balanceHistory:legacy.title",
           ),
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: "balanceHistory:metrics.estimatedIncome",
+          name: "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
         }),
       )
 
@@ -1586,7 +2147,7 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).toBeInTheDocument()
@@ -1594,7 +2155,7 @@ describe("BalanceHistory options page", () => {
         screen.getByRole("button", {
           name: getMetricDropdownButtonName(
             "trend",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).toBeInTheDocument()
@@ -1612,10 +2173,13 @@ describe("BalanceHistory options page", () => {
       rerender(<BalanceHistory />)
 
       expect(
+        within(accountSummary).queryByText("$2.00"),
+      ).not.toBeInTheDocument()
+      expect(
         screen.queryByRole("button", {
           name: getMetricDropdownButtonName(
             "breakdown",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).not.toBeInTheDocument()
@@ -1623,7 +2187,7 @@ describe("BalanceHistory options page", () => {
         screen.queryByRole("button", {
           name: getMetricDropdownButtonName(
             "trend",
-            "balanceHistory:metrics.estimatedIncome",
+            "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
           ),
         }),
       ).not.toBeInTheDocument()
@@ -1654,7 +2218,7 @@ describe("BalanceHistory options page", () => {
       )
       expect(
         screen.queryByRole("menuitemradio", {
-          name: "balanceHistory:metrics.estimatedIncome",
+          name: "balanceHistory:metrics.estimatedIncome · balanceHistory:legacy.title",
         }),
       ).not.toBeInTheDocument()
     } finally {

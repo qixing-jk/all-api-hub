@@ -1,9 +1,10 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import { parseAllowanceInstant } from "~/services/accounts/allowances"
 import {
   accountBalanceObservation,
   accountBalanceScope,
@@ -15,11 +16,13 @@ import { balancePosition, observeAmount } from "~/services/amounts/balance"
 import { normalizeDecimalUnits } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
+  BALANCE_FUNDING,
+  BALANCE_LABEL_KEYS,
+  BALANCE_NATURES,
   EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
   FINANCIAL_ENUMERATION,
   FINANCIAL_SETTLEMENT_STATUSES,
-  WALLET_BALANCE_COLLECTION_KEY,
 } from "~/services/amounts/financialConstants"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -35,11 +38,7 @@ import { isRecord } from "~/utils/core/object"
 
 import { CUBENCE_ME_ENDPOINT, readCubenceUser } from "./identity"
 import { withCubenceSession } from "./session"
-import {
-  cubenceNumber,
-  invalidCubenceResponse,
-  readCubenceResponse,
-} from "./transport"
+import { invalidCubenceResponse, readCubenceResponse } from "./transport"
 
 export const CUBENCE_UNITS_PER_USD = 1_000_000
 const TODAY_ENDPOINT = "/api/v1/analytics/apikeys/hourly-usage?range=today"
@@ -53,34 +52,48 @@ export async function fetchAccountData(
 ): Promise<AccountData> {
   return withCubenceSession(request, async (scoped) => {
     const user = await readCubenceUser(scoped)
-    const balance = cubenceNumber(user.normal_balance, CUBENCE_ME_ENDPOINT)
-    const scope = accountBalanceScope(request, { walletId: String(user.id) })
     const observedAt = Date.now()
-    const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
+    const scope = accountBalanceScope(scoped, { walletId: String(user.id) })
     const source = {
-      adapter: SITE_TYPES.CUBENCE,
-      operation: `${CUBENCE_ME_ENDPOINT}:normal_balance`,
-      contractVersion: "usd-per-million/v1",
+      adapter: "cubence",
+      operation: CUBENCE_ME_ENDPOINT,
+      contractVersion: "micro-usd/v1",
       kind: EVIDENCE_KINDS.Reported,
-    } as const
+    }
+    const usd = (value: unknown) =>
+      normalizeDecimalUnits(value, CUBENCE_UNITS_PER_USD)
+    const positions = [
+      balancePosition({
+        id: "normal",
+        labelKey: BALANCE_LABEL_KEYS.Normal,
+        collectionKey: "wallets",
+        scope,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        value: usd(user.normal_balance),
+        nature: BALANCE_NATURES.Prepaid,
+        funding: BALANCE_FUNDING.Purchased,
+        source,
+        observedAt,
+      }),
+      balancePosition({
+        id: "charity",
+        labelKey: BALANCE_LABEL_KEYS.Charity,
+        collectionKey: "wallets",
+        scope,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        value: usd(user.charity_balance),
+        funding: BALANCE_FUNDING.Granted,
+        source,
+        observedAt,
+      }),
+    ]
     const data: AccountData = {
       ...accountBalanceObservation(
         scope,
-        [
-          balancePosition({
-            id: "normal_balance",
-            collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-            scope,
-            observedAt,
-            asset,
-            value: normalizeDecimalUnits(balance, CUBENCE_UNITS_PER_USD),
-            source,
-          }),
-        ],
+        positions,
         observedAt,
         FINANCIAL_ENUMERATION.Complete,
       ),
-      quota: (balance / CUBENCE_UNITS_PER_USD) * QUOTA_PER_USD,
       today_quota_consumption: 0,
       today_requests_count: 0,
       today_prompt_tokens: 0,
@@ -100,8 +113,7 @@ export async function fetchAccountData(
       const body = await readCubenceResponse(scoped, TODAY_ENDPOINT)
       const summary = body.summary
       // The native today window is Asia/Shanghai, not the rolling 24-hour range.
-      const costObservedAt = Date.now()
-      const today = new Date(costObservedAt + 8 * 60 * 60 * 1000)
+      const today = new Date(Date.now() + 8 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10)
       if (
@@ -110,50 +122,92 @@ export async function fetchAccountData(
         !isRecord(summary)
       )
         invalidCubenceResponse(TODAY_ENDPOINT)
-      const number = (key: string) => {
-        const value = cubenceNumber(summary[key], TODAY_ENDPOINT)
-        if (value < 0) invalidCubenceResponse(TODAY_ENDPOINT)
-        return value
-      }
-      const cost = number("cost"),
-        calls = number("calls"),
-        total = number("tokens"),
-        output = number("output_tokens")
-      if (output > total) invalidCubenceResponse(TODAY_ENDPOINT)
-      const start = Date.parse(body.window_start)
-      if (costObservedAt > start)
+      const nativeCost = usd(summary.cost)
+      const usageObservedAt = Date.now()
+      const costObservation = observeAmount(
+        nativeCost,
+        { ...source, operation: TODAY_ENDPOINT },
+        usageObservedAt,
+      )
+      const windowStart = parseAllowanceInstant(body.window_start)
+      const windowEnd = parseAllowanceInstant(body.as_of)
+      if (
+        windowStart !== undefined &&
+        windowEnd !== undefined &&
+        windowStart < windowEnd &&
+        windowEnd <= windowStart + 24 * 60 * 60 * 1000 &&
+        windowEnd <= Date.now()
+      )
         data.settledConsumption = [
           {
-            asset,
-            amount: observeAmount(
-              normalizeDecimalUnits(cost, CUBENCE_UNITS_PER_USD),
-              { ...source, operation: `${TODAY_ENDPOINT}:summary.cost` },
-              costObservedAt,
-            ),
-            scope: accountReportingScope(request, {
-              walletId: String(user.id),
-            }),
-            window: { start, end: costObservedAt, timeZone: "Asia/Shanghai" },
+            scope: accountReportingScope(scoped, { walletId: String(user.id) }),
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            amount: costObservation,
+            window: {
+              start: windowStart,
+              end: windowEnd,
+              timeZone: "Asia/Shanghai",
+            },
             settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
             coverage: FINANCIAL_COVERAGE.Complete,
             cumulative: true,
           },
         ]
-      data.today_quota_consumption =
-        (cost / CUBENCE_UNITS_PER_USD) * QUOTA_PER_USD
-      data.today_requests_count = calls
-      data.today_prompt_tokens = total - output
-      data.today_completion_tokens = output
-      for (const key of ["requests", "tokens"] as const)
-        data.todayStatsAvailability![key] = {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+      else
+        data.usage = {
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          observedAt: usageObservedAt,
+          cost: {
+            scope: accountReportingScope(scoped, { walletId: String(user.id) }),
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            amount: costObservation,
+          },
         }
-      data.todayStatsAvailability!.consumption =
-        costObservedAt > start
+      const counter = (key: string) => {
+        const value = summary[key]
+        return typeof value === "number" && Number.isFinite(value) && value >= 0
+          ? value
+          : undefined
+      }
+      const calls = counter("calls"),
+        total = counter("tokens"),
+        output = counter("output_tokens")
+      const completeTokens =
+        total !== undefined && output !== undefined && output <= total
+      if (!data.settledConsumption) {
+        for (const [key, known] of [
+          ["requests", calls !== undefined],
+          ["tokens", completeTokens],
+        ] as const) {
+          data.todayStatsAvailability![key] =
+            known && windowStart === usageObservedAt
+              ? { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete }
+              : {
+                  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+                  reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+                }
+        }
+        data.usage = {
+          ...data.usage!,
+          totalRequests: calls,
+          totalTokens: total,
+        }
+        return data
+      }
+      data.today_quota_consumption = Number(nativeCost ?? 0) * QUOTA_PER_USD
+      data.today_requests_count = calls ?? 0
+      data.today_prompt_tokens = completeTokens ? total - output : 0
+      data.today_completion_tokens = output ?? 0
+      for (const [key, known] of [
+        ["consumption", nativeCost !== undefined],
+        ["requests", calls !== undefined],
+        ["tokens", completeTokens],
+      ] as const)
+        data.todayStatsAvailability![key] = known
           ? { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete }
           : {
               status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
             }
     } catch (error) {
       if (

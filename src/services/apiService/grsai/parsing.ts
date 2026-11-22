@@ -1,4 +1,3 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import type {
   GrsaiApiKey,
   GrsaiApiKeyList,
@@ -9,17 +8,10 @@ import type {
   GrsaiUserInfo,
 } from "~/services/apiService/grsai/type"
 
+export { toOptionalFiniteNumber } from "~/utils/core/number"
+
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
-
-export const toOptionalFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : undefined
-  }
-  return undefined
-}
 
 export const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() ? value.trim() : undefined
@@ -27,8 +19,8 @@ export const toOptionalString = (value: unknown): string | undefined =>
 /**
  * Credits the deployment sells for one US dollar at its own base (no-bonus)
  * rate, from the console's goods list: `$5 -> 333,000` and `¥10 -> 100,000`.
- * The account balance, today's consumption and model prices are all in credits,
- * so this is the site's own USD rate rather than an inferred one.
+ * This is a historical purchase quote, not an exchange contract for existing
+ * credit balances, usage, budgets, or model billing.
  */
 export const GRSAI_CREDITS_PER_USD = 66_600
 
@@ -37,10 +29,6 @@ export const GRSAI_CREDITS_PER_USD = 66_600
  * 66,600 credits per dollar against 10,000 credits per yuan.
  */
 export const GRSAI_CNY_PER_USD = GRSAI_CREDITS_PER_USD / 10_000
-
-/** Normalizes a credit amount to the product's USD-scaled quota units. */
-export const creditsToQuota = (credits: number): number =>
-  Math.round((credits / GRSAI_CREDITS_PER_USD) * QUOTA_PER_USD)
 
 export const isGrsaiConfig = (value: unknown): value is GrsaiConfig =>
   isRecord(value) &&
@@ -56,7 +44,8 @@ export const isGrsaiUserInfo = (value: unknown): value is GrsaiUserInfo =>
 export const isGrsaiDashboardData = (
   value: unknown,
 ): value is GrsaiDashboardData =>
-  isRecord(value) && toOptionalFiniteNumber(value.credits) !== undefined
+  isRecord(value) &&
+  ("credits" in value || "todayConsumed" in value || "totalConsumed" in value)
 
 export const isGrsaiApiKey = (value: unknown): value is GrsaiApiKey =>
   isRecord(value) &&

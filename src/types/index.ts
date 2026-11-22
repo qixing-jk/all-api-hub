@@ -552,6 +552,10 @@ export interface DisplaySiteData {
   todayIncome: CurrencyAmount
   /** @deprecated Unverified legacy display input; new projections always emit null. */
   estimatedTodayIncome?: CurrencyAmount | null
+  netInflowEstimate?: Pick<
+    import("~/types/dailyBalanceHistory").TodayIncomeEstimateResult,
+    "status" | "estimates"
+  >
   todayTokens: TokenUsage
   todayStatsAvailability: AccountTodayStatsAvailability
   usage?: AccountUsageSummary

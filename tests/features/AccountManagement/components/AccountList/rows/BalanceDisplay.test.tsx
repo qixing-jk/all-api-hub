@@ -49,6 +49,10 @@ import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/account
 import { buildDisplaySiteData as buildBaseDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+import {
+  buildNetInflow,
+  buildNetInflowItem,
+} from "~~/tests/test-utils/netInflow"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const createDeferred = <T,>() => {
@@ -220,29 +224,6 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
-  it.each([CURRENCIES.CNY, CURRENCY_DISPLAY_MODES.Original])(
-    "keeps the released income estimate readable in %s mode",
-    (currencyDisplay) => {
-      const site = buildDisplaySiteData({
-        estimatedTodayIncome: { USD: 2, CNY: 14 },
-      })
-      mockUseUserPreferencesContext.mockReturnValue({
-        currencyType: CURRENCIES.CNY,
-        currencyDisplay,
-        showTodayCashflow: true,
-        preferences: {
-          balanceHistory: { estimatedTodayIncome: { enabled: true } },
-        },
-      })
-      render(<BalanceDisplay site={site} />)
-      expect(
-        screen.getByTitle("account:stats.estimatedTodayIncome"),
-      ).toHaveTextContent(
-        currencyDisplay === CURRENCIES.CNY ? "~¥14.00" : "~$2.00",
-      )
-    },
-  )
-
   it.each(["native", "reference"] as const)(
     "updates unchanged %s cashflow rows at local midnight",
     async (kind) => {
@@ -1957,6 +1938,257 @@ describe("BalanceDisplay", () => {
     )
 
     await user.click(legacyValue)
+    expect(handleRefreshAccount).toHaveBeenCalledWith(site, true)
+  })
+
+  it("renders native negative net inflow separately from confirmed income", async () => {
+    const user = userEvent.setup()
+    const site = buildDisplaySiteData({
+      balance: { USD: 25.25, CNY: 176.75 },
+      todayConsumption: { USD: 3, CNY: 21 },
+      todayIncome: { USD: 2, CNY: 14 },
+      estimatedTodayIncome: { USD: 5.5, CNY: 38.5 },
+      netInflowEstimate: {
+        status: "available",
+        estimates: [buildNetInflowItem(buildNetInflow("-5"))],
+      },
+    })
+    const updatedSite = buildDisplaySiteData({
+      ...site,
+      estimatedTodayIncome: { USD: 6.5, CNY: 45.5 },
+      netInflowEstimate: {
+        status: "available",
+        estimates: [buildNetInflowItem(buildNetInflow("-6"))],
+      },
+    })
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    const { rerender } = render(<BalanceDisplay site={site} />)
+
+    expect(screen.queryByTestId("countup")).toBeNull()
+
+    rerender(<BalanceDisplay site={updatedSite} />)
+
+    const estimatedNode = screen.getByRole("button", {
+      name: /account:stats.estimatedNetInflow/,
+    })
+    expect(estimatedNode).toHaveTextContent(/CNY\s*-6|-[^0-9]*CNY\s*6/)
+    expect(estimatedNode).not.toHaveTextContent("$6.50")
+    expect(estimatedNode).toHaveTextContent("account:stats.estimatedNetInflow")
+
+    await user.click(estimatedNode)
+
+    expect(handleRefreshAccount).toHaveBeenCalledWith(updatedSite, true)
+  })
+
+  it("preserves available and unavailable native ledgers in the same row", () => {
+    const missing = buildNetInflowItem({
+      ...buildNetInflow(),
+      amount: { value: "2", asset: { kind: ASSET_KINDS.Crypto, id: "XNO" } },
+    })
+    missing.status = "missing_baseline"
+    missing.position.label = "Reserve wallet"
+    delete missing.netInflow
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: { estimatedTodayIncome: { enabled: true } },
+      },
+    })
+    const site = buildDisplaySiteData({
+      netInflowEstimate: {
+        status: "available",
+        estimates: [buildNetInflowItem(), missing],
+      },
+    })
+    render(<BalanceDisplay site={site} />)
+    const button = screen.getByRole("button", {
+      name: /account:stats.estimatedNetInflow/,
+    })
+    expect(button).toHaveTextContent(/CNY\s*-5|-[^0-9]*CNY\s*5/)
+    expect(button).toHaveTextContent("Reserve wallet")
+    expect(button).toHaveAccessibleName(/Reserve wallet.*XNO/)
+    expect(button).toHaveTextContent("XNO")
+    expect(button).toHaveTextContent("account:financial.unavailable")
+    expect(button).toHaveAccessibleName(/account:netInflow.reasons.baseline/)
+  })
+
+  it("hides native net inflow with the preference off and shows unavailable readings with it on", () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: false },
+        },
+      },
+    })
+
+    const { rerender } = render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          netInflowEstimate: {
+            status: "available",
+            estimates: [buildNetInflowItem()],
+          },
+        })}
+      />,
+    )
+
+    expect(
+      screen.queryByLabelText(/account:stats.estimatedNetInflow/),
+    ).not.toBeInTheDocument()
+
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    })
+
+    rerender(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          netInflowEstimate: { status: "missing_baseline", estimates: [] },
+        })}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: /account:stats.estimatedNetInflow/ }),
+    ).toHaveTextContent("account:financial.unavailable")
+  })
+
+  it.each(["disabled", "manual_balance"] as const)(
+    "shows the %s estimate reason without offering a provider refresh",
+    (status) => {
+      mockUseUserPreferencesContext.mockReturnValue({
+        currencyType: CURRENCIES.USD,
+        showTodayCashflow: true,
+        preferences: {
+          balanceHistory: { estimatedTodayIncome: { enabled: true } },
+        },
+      })
+      render(
+        <BalanceDisplay
+          site={buildDisplaySiteData({
+            netInflowEstimate: { status, estimates: [] },
+          })}
+        />,
+      )
+
+      expect(
+        screen.getByLabelText(/account:stats.estimatedNetInflow/),
+      ).toHaveAccessibleName(/account:netInflow.reasons/)
+      expect(
+        screen.queryByRole("button", {
+          name: /account:stats.estimatedNetInflow/,
+        }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it("renders neutral disabled net inflow without a refresh action", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          disabled: true,
+          estimatedTodayIncome: { USD: 0, CNY: 0 },
+          netInflowEstimate: {
+            status: "available",
+            estimates: [buildNetInflowItem(buildNetInflow("0"))],
+          },
+        })}
+      />,
+    )
+
+    const estimatedNode = screen.getByLabelText(
+      /account:stats.estimatedNetInflow/,
+    )
+    expect(estimatedNode).toHaveTextContent(/CNY\s*0/)
+    expect(estimatedNode).toHaveClass("text-muted-foreground")
+    expect(
+      screen.queryByRole("button", {
+        name: /account:stats.estimatedNetInflow/,
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(estimatedNode)
+
+    expect(handleRefreshAccount).not.toHaveBeenCalled()
+  })
+
+  it("renders a neutral enabled net inflow as a refresh action", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    const site = buildDisplaySiteData({
+      disabled: false,
+      estimatedTodayIncome: { USD: 0, CNY: 0 },
+      netInflowEstimate: {
+        status: "available",
+        estimates: [buildNetInflowItem(buildNetInflow("0"))],
+      },
+    })
+    render(<BalanceDisplay site={site} />)
+
+    const estimatedButton = screen.getByRole("button", {
+      name: /account:stats.estimatedNetInflow/,
+    })
+    expect(estimatedButton).toHaveTextContent(/CNY\s*0/)
+    expect(estimatedButton).toHaveClass("text-muted-foreground")
+
+    await user.click(estimatedButton)
+
     expect(handleRefreshAccount).toHaveBeenCalledWith(site, true)
   })
 

@@ -16,6 +16,7 @@ import {
 import { CURRENCIES } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
+import { NetInflowEstimateDisplay } from "~/features/AccountManagement/components/NetInflowEstimateDisplay"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useBalanceAsOf } from "~/features/AccountManagement/data/useBalanceAsOf"
 import CountUp from "~/lib/countup"
@@ -37,6 +38,7 @@ import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import { ACCOUNT_SUBSCRIPTION_STATUSES as subscriptionStatuses } from "~/types"
 import type { CurrencyType, DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
   getCurrencySymbol,
@@ -280,7 +282,7 @@ const AnimatedValue: React.FC<{
 )
 
 const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
-  const { t, i18n } = useTranslation("account")
+  const { t } = useTranslation("account")
   const clockSites = useMemo(() => [site], [site])
   const asOf = useBalanceAsOf(clockSites)
   const {
@@ -358,9 +360,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
           ),
         )
       : undefined
-  const estimate = preferences?.balanceHistory?.estimatedTodayIncome?.enabled
-    ? site.estimatedTodayIncome?.[displayCurrency ?? CURRENCIES.USD]
-    : undefined
+  const netInflowEnabled =
+    preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
   const consumption = getDisplayConsumptionProjection(
     [{ ...site, disabled: false }],
     asOf,
@@ -574,23 +575,23 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 emptyContent={recoveryContent(incomePresentation)}
               />
 
-              {typeof estimate === "number" && (
-                <span
-                  className="text-xs text-muted-foreground"
-                  title={t("stats.estimatedTodayIncome")}
-                >
-                  ~
-                  {formatBalanceAmount(
-                    {
-                      asset: {
-                        kind: "currency",
-                        code: displayCurrency ?? CURRENCIES.USD,
-                      },
-                      value: String(estimate),
-                    },
-                    i18n.language,
-                  )}
-                </span>
+              {netInflowEnabled && (
+                <NetInflowEstimateDisplay
+                  estimate={site.netInflowEstimate}
+                  onRefresh={
+                    isAccountDisabled ||
+                    site.netInflowEstimate?.status ===
+                      TODAY_INCOME_ESTIMATE_STATUS.disabled ||
+                    site.netInflowEstimate?.status ===
+                      TODAY_INCOME_ESTIMATE_STATUS.manualBalance
+                      ? undefined
+                      : () => refreshMetric(BALANCE_REFRESH_TARGETS.NET_INFLOW)
+                  }
+                  disabled={isRefreshLocked}
+                  loading={
+                    activeRefreshTarget === BALANCE_REFRESH_TARGETS.NET_INFLOW
+                  }
+                />
               )}
             </div>
           )}

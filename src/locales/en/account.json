@@ -370,9 +370,21 @@
     "toggleSortOrder": "Toggle sort order"
   },
   "netInflow": {
+    "coverage": "Comparable estimates: {{included}}/{{eligible}} accounts",
+    "details": "Estimate details and coverage",
+    "explanation": "Closing ledger balance − opening ledger balance + settled consumption. This is unclassified net change, not confirmed income.",
     "reasons": {
+      "balance": "A current comparable ledger observation is missing",
+      "baseline": "A reliable start-of-day baseline is missing",
       "conflict": "Conflicting wallet observations excluded",
-      "duplicate": "Duplicate wallet excluded"
+      "consumption": "Complete settled consumption is missing",
+      "disabled": "Estimation is disabled",
+      "duplicate": "Duplicate wallet excluded",
+      "identity": "Asset, wallet, source or scope changed",
+      "interval": "Balance and consumption intervals do not match",
+      "manual": "Manual balances have no matching billing evidence",
+      "precision": "Amount exceeds supported precision",
+      "unverified": "Estimate comparability is unverified"
     }
   },
   "popupOnboarding": {
@@ -427,7 +439,7 @@
   "stats": {
     "allowanceExpiry": "Expires: {{time}}",
     "completion": "Completion",
-    "estimatedTodayIncome": "Estimated income",
+    "estimatedNetInflow": "Estimated net inflow",
     "prompt": "Prompt",
     "subscriptionRemainingCount": "Remaining subscription requests",
     "subscriptionRemainingTokens": "Remaining tokens",

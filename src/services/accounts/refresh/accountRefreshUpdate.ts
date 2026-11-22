@@ -3,14 +3,18 @@ import type {
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
-import { migrateAccountFinancialInfo } from "~/services/accounts/migrations/accountFinancialMigration"
-import type { SiteAccount } from "~/types"
+import {
+  migrateAccountFinancialInfo,
+  type LegacyAccountFinancialEvidence,
+} from "~/services/accounts/migrations/accountFinancialMigration"
+import { ACCOUNT_TODAY_METRIC_STATUSES, type SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 
 /** Preserve data from adapters still returning the release wire format. */
 export function readLegacyAdapterFinancialPatch(
   data: AccountData,
   context: Parameters<typeof migrateAccountFinancialInfo>[1],
+  previous: LegacyAccountFinancialEvidence | undefined,
 ) {
   if (
     data.balance !== undefined ||
@@ -20,11 +24,55 @@ export function readLegacyAdapterFinancialPatch(
       data.balanceUnavailable === undefined)
   )
     return {}
-  const { balance, legacyFinancial } = migrateAccountFinancialInfo(
-    { ...data, id: "", username: "", access_token: "" },
+  const { balance } = migrateAccountFinancialInfo(
+    {
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      id: "",
+      username: "",
+      access_token: "",
+      ...(data.quota === undefined ? {} : { quota: data.quota }),
+      ...(data.nativeBalance === undefined
+        ? {}
+        : { nativeBalance: data.nativeBalance }),
+      ...(data.balanceUnavailable === undefined
+        ? {}
+        : { balanceUnavailable: data.balanceUnavailable }),
+    },
     context,
   )
-  return { balance, legacyFinancial }
+  const fields = [
+    ["consumption", data.today_quota_consumption],
+    ["income", data.today_income],
+  ] as const
+  const fresh = fields.filter(
+    ([metric, value]) =>
+      data.todayStatsAvailability?.[metric]?.status ===
+        ACCOUNT_TODAY_METRIC_STATUSES.Complete &&
+      typeof value === "number" &&
+      Number.isFinite(value),
+  )
+  if (!fresh.length) return { balance }
+  const accepted = previous?.identityInvalidated ? undefined : previous
+  return {
+    balance,
+    legacyFinancial: {
+      schemaVersion: 1 as const,
+      capturedAt: context.capturedAt,
+      ...previous,
+      identityInvalidated: previous?.identityInvalidated ? false : undefined,
+      cashflow: { ...accepted?.cashflow, ...Object.fromEntries(fresh) },
+      cashflowCapturedAt: {
+        ...accepted?.cashflowCapturedAt,
+        ...Object.fromEntries(
+          fresh.map(([metric]) => [metric, context.capturedAt]),
+        ),
+      },
+    },
+  }
 }
 
 /** Projects adapter data into a refresh patch without writing stored account state. */
@@ -59,12 +107,16 @@ export function buildAccountRefreshUpdate(
     usageObservations: result.data.usageObservations,
     subscription: result.data.subscription,
     recentUsageRecords: result.data.recentUsageRecords,
-    ...readLegacyAdapterFinancialPatch(result.data, {
-      accountId: account.id,
-      siteUrl: account.site_url,
-      siteType: account.site_type,
-      capturedAt,
-    }),
+    ...readLegacyAdapterFinancialPatch(
+      result.data,
+      {
+        accountId: account.id,
+        siteUrl: account.site_url,
+        siteType: account.site_type,
+        capturedAt,
+      },
+      account.account_info.legacyFinancial,
+    ),
   }
   if (reEnableOnSuccess) updateData.disabled = false
 

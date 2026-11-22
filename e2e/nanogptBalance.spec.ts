@@ -62,6 +62,18 @@ test("NanoGPT preserves independent XNO with zero USD after reload", async ({
   )
   await page.reload()
   await expect(row).toContainText("26.72 XNO")
+  await expect(row).toContainText("Last known")
+  await row
+    .getByRole("button", { name: "Balance details", exact: true })
+    .click()
+  const details = page.getByRole("dialog", {
+    name: "Balance details",
+    exact: true,
+  })
+  const xnoAmount = details.locator("dd").getByText(/^26\.71801147\s+XNO$/)
+  await expect(xnoAmount).toHaveCount(1)
+  await expect(xnoAmount).toBeVisible()
+  await page.keyboard.press("Escape")
   for (const [status, label] of Object.entries({
     active: "Subscription active",
     grace: "Subscription grace period",

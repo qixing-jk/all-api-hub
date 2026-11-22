@@ -1,6 +1,5 @@
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES } from "~/constants/money"
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -8,15 +7,27 @@ import type {
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import {
+  accountAllowanceObservation,
+  ALLOWANCE_IDENTITY_KINDS,
+  parseAllowanceInstant,
+  type AccountAllowanceEntry,
+} from "~/services/accounts/allowances"
+import {
   accountBalanceObservation,
   accountBalanceScope,
-  accountReportingScope,
 } from "~/services/accounts/balanceSnapshot"
 import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { budgetConstraint } from "~/services/amounts/budgets"
 import {
   ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_VALIDITY_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
   EVIDENCE_KINDS,
   FINANCIAL_ENUMERATION,
+  SCOPE_SELECTION_KINDS,
   WALLET_BALANCE_COLLECTION_KEY,
 } from "~/services/amounts/financialConstants"
 import type {
@@ -37,7 +48,6 @@ import {
   isRightCodeSubscriptionSummary,
   isRightCodeUsageStats,
   isRightCodeUserInfo,
-  toFiniteNumber,
   toOptionalFiniteNumber,
   toOptionalString,
 } from "~/services/apiService/rightcode/parsing"
@@ -68,6 +78,7 @@ import {
   SiteHealthStatus,
   type AccountTodayMetricAvailability,
   type AccountTodayStatsAvailability,
+  type AccountUsageSummary,
 } from "~/types"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
@@ -75,10 +86,6 @@ import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("ApiService.RightCode")
-
-const COMPLETE_METRIC: AccountTodayMetricAvailability = {
-  status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
-}
 
 const unavailableMetric = (
   reason:
@@ -312,33 +319,6 @@ export async function deleteRightCodeKey(
   )
 }
 
-const readSubscriptionAmounts = (
-  subscriptions: readonly RightCodeSubscription[],
-) => {
-  const now = Date.now()
-  const active = subscriptions.filter((subscription) => {
-    const expiry = toOptionalString(subscription.expired_at)
-    if (!expiry) return true
-    const parsed = Date.parse(expiry)
-    return Number.isNaN(parsed) ? true : parsed > now
-  })
-
-  const expiries = active
-    .map((subscription) => toOptionalString(subscription.expired_at))
-    .filter((value): value is string => Boolean(value))
-    .sort()
-
-  const names = active
-    .map((subscription) => toOptionalString(subscription.name))
-    .filter((value): value is string => Boolean(value))
-
-  return {
-    activeCount: active.length,
-    names: Array.from(new Set(names)),
-    latestExpiry: expiries.length ? expiries[expiries.length - 1] : undefined,
-  }
-}
-
 /**
  * Account snapshot used by the refresh flow: wallet balance, lifetime usage and
  * the subscribed quota pool.
@@ -349,12 +329,45 @@ export async function fetchAccountData(
   const shouldCollectToday = request.includeTodayCashflow !== false
   const today = formatLocalDayKey()
 
-  const [userInfo, overall] = await Promise.all([
-    fetchRightCodeUserInfo(request),
-    fetchRightCodeOverallUsageStats(request),
-  ])
+  const [{ value: userInfo, observedAt: walletObservedAt }, overallResult] =
+    await Promise.all([
+      fetchRightCodeUserInfo(request).then((value) => ({
+        value,
+        observedAt: Date.now(),
+      })),
+      fetchRightCodeOverallUsageStats(request)
+        .then((value) => ({ value, observedAt: Date.now() }))
+        .catch(() => ({ value: undefined, observedAt: Date.now() })),
+    ])
+  const overall = overallResult.value
+  const scope = accountBalanceScope(request)
+  const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
+  const wallet = accountBalanceObservation(
+    scope,
+    [
+      balancePosition({
+        id: "balance",
+        collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+        scope,
+        asset,
+        value: userInfo.balance,
+        nature: BALANCE_NATURES.Prepaid,
+        observedAt: walletObservedAt,
+        source: {
+          adapter: "rightcode",
+          operation: RIGHTCODE_ENDPOINTS.me,
+          contractVersion: "wallet-usd/v1",
+          kind: EVIDENCE_KINDS.Reported,
+          inputs: ["balance"],
+        },
+      }),
+    ],
+    walletObservedAt,
+    FINANCIAL_ENUMERATION.Complete,
+  )
 
   let todayStats: RightCodeUsageStats | null = null
+  let todayObservedAt = walletObservedAt
   let todayFailed = false
   if (shouldCollectToday) {
     try {
@@ -362,6 +375,7 @@ export async function fetchAccountData(
         startDate: today,
         endDate: today,
       })
+      todayObservedAt = Date.now()
     } catch (error) {
       todayFailed = true
       logger.warn("Failed to fetch Right Code today usage", error)
@@ -388,7 +402,10 @@ export async function fetchAccountData(
       ? unavailableMetric(ACCOUNT_TODAY_METRIC_REASONS.NotCollected)
       : value === undefined
         ? todayAvailability
-        : COMPLETE_METRIC
+        : {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+          }
 
   const todayStatsAvailability = {
     consumption: collect(todayCost),
@@ -397,54 +414,169 @@ export async function fetchAccountData(
     income: UNSUPPORTED_INCOME,
   } satisfies AccountTodayStatsAvailability
 
-  const amounts = readSubscriptionAmounts(subscriptions ?? [])
-  const summary = subscriptionSummary
-  const subscription = summary
-    ? ({
-        ...(amounts.names.length ? { name: amounts.names.join(" / ") } : {}),
-        ...(toOptionalFiniteNumber(summary.total_quota) === undefined
-          ? {}
-          : { amountLimit: toOptionalFiniteNumber(summary.total_quota) }),
-        ...(toOptionalFiniteNumber(summary.used_quota) === undefined
-          ? {}
-          : { usedAmount: toOptionalFiniteNumber(summary.used_quota) }),
-        ...(toOptionalFiniteNumber(summary.remaining_quota) === undefined
-          ? {}
-          : {
-              remainingAmount: toOptionalFiniteNumber(summary.remaining_quota),
-            }),
-        ...(amounts.latestExpiry ? { expireTime: amounts.latestExpiry } : {}),
-        isLongTerm: amounts.latestExpiry === undefined,
-        isActive: (summary.active_subscription_count ?? 0) > 0,
-      } satisfies NonNullable<AccountData["subscription"]>)
-    : undefined
-
-  const scope = accountBalanceScope(request)
-  const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
-  const observedAt = Date.now()
-  const source = {
-    adapter: SITE_TYPES.RIGHT_CODE,
-    contractVersion: "usd/v1",
+  const allowanceObservedAt = Date.now()
+  // The official HomeUser subscription card prefixes total_quota and
+  // remaining_quota directly with '$'. These are USD plan limits, separate
+  // from the wallet; the New API atomic-quota ratio does not apply.
+  const allowanceAsset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
+  const planSource = {
+    adapter: "rightcode",
+    operation: RIGHTCODE_ENDPOINTS.subscriptions,
+    contractVersion: "subscription-quota/v1",
     kind: EVIDENCE_KINDS.Reported,
-  } as const
-  return {
-    ...accountBalanceObservation(
+  }
+  const summarySource = {
+    ...planSource,
+    operation: RIGHTCODE_ENDPOINTS.subscriptionSummary,
+  }
+  let partialSubscriptions = false
+  const seenPlans = new Set<string>()
+  const entries: AccountAllowanceEntry[] = (subscriptions ?? []).flatMap(
+    (plan) => {
+      if (
+        !isRecord(plan) ||
+        !(
+          (typeof plan.item_id === "number" &&
+            Number.isSafeInteger(plan.item_id)) ||
+          (typeof plan.item_id === "string" && plan.item_id.trim())
+        )
+      ) {
+        partialSubscriptions = true
+        return []
+      }
+      const planId = String(plan.item_id).trim()
+      if (seenPlans.has(planId)) {
+        partialSubscriptions = true
+        return []
+      }
+      seenPlans.add(planId)
+      const at = parseAllowanceInstant(plan.expired_at)
+      const base = {
+        identityKind: "upstream" as const,
+        collectionKey: "subscriptions",
+        ...(typeof plan.name === "string" ? { label: plan.name } : {}),
+        validity:
+          at === undefined
+            ? { kind: BALANCE_VALIDITY_KINDS.Unknown }
+            : { kind: BALANCE_VALIDITY_KINDS.Expires, at },
+        ...(typeof plan.expired_at === "string"
+          ? { reportedTiming: { expiresAt: plan.expired_at } }
+          : {}),
+      }
+      const constraint = (remaining: unknown, daily: boolean) =>
+        budgetConstraint({
+          asset: allowanceAsset,
+          scope: {
+            ...scope,
+            ...(Array.isArray(plan.available_prefixes)
+              ? {
+                  routes: {
+                    kind: SCOPE_SELECTION_KINDS.Restricted,
+                    ids: plan.available_prefixes.filter(
+                      (prefix) => typeof prefix === "string" && prefix.trim(),
+                    ),
+                  },
+                }
+              : {}),
+          },
+          source: planSource,
+          observedAt: allowanceObservedAt,
+          limitState: BUDGET_LIMIT_STATES.Finite,
+          remaining,
+          ...(daily ? {} : { limit: plan.total_quota }),
+          window: daily
+            ? { kind: BUDGET_WINDOW_KINDS.Unknown, period: BUDGET_PERIODS.Day }
+            : { kind: BUDGET_WINDOW_KINDS.Unknown },
+        })
+      return [
+        {
+          ...base,
+          id: `${planId}:total`,
+          constraint: constraint(plan.remaining_quota, false),
+        },
+        ...(plan.available_today_quota === undefined ||
+        plan.available_today_quota === null
+          ? []
+          : [
+              {
+                ...base,
+                id: `${planId}:day`,
+                constraint: constraint(plan.available_today_quota, true),
+              },
+            ]),
+      ]
+    },
+  )
+  const allowances = accountAllowanceObservation(
+    scope,
+    [
+      {
+        source: planSource,
+        collectionKey: "subscriptions",
+        enumeration:
+          subscriptions === null
+            ? FINANCIAL_ENUMERATION.Unavailable
+            : partialSubscriptions
+              ? FINANCIAL_ENUMERATION.Partial
+              : FINANCIAL_ENUMERATION.Complete,
+        entries,
+      },
+      {
+        source: summarySource,
+        collectionKey: "subscription-summary",
+        enumeration:
+          subscriptionSummary === null
+            ? FINANCIAL_ENUMERATION.Unavailable
+            : FINANCIAL_ENUMERATION.Complete,
+        entries:
+          subscriptionSummary === null
+            ? []
+            : [
+                {
+                  id: "summary",
+                  identityKind: ALLOWANCE_IDENTITY_KINDS.SourceSlot,
+                  collectionKey: "subscription-summary",
+                  validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+                  constraint: budgetConstraint({
+                    asset: allowanceAsset,
+                    scope,
+                    source: summarySource,
+                    observedAt: allowanceObservedAt,
+                    limitState: BUDGET_LIMIT_STATES.Finite,
+                    limit: subscriptionSummary.total_quota,
+                    used: subscriptionSummary.used_quota,
+                    remaining: subscriptionSummary.remaining_quota,
+                  }),
+                },
+              ],
+      },
+    ],
+    allowanceObservedAt,
+  )
+  const usage: AccountUsageSummary = {
+    scope: ACCOUNT_USAGE_SCOPES.Lifetime,
+    totalRequests: toOptionalFiniteNumber(overall?.total_requests),
+    totalTokens: toOptionalFiniteNumber(overall?.total_tokens),
+    cost: {
+      asset,
       scope,
-      [
-        balancePosition({
-          id: "balance",
-          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-          scope,
-          observedAt,
-          asset,
-          value: userInfo.balance,
-          source: { ...source, operation: `${RIGHTCODE_ENDPOINTS.me}:balance` },
-        }),
-      ],
-      observedAt,
-      FINANCIAL_ENUMERATION.Complete,
-    ),
-    quota: amountToQuota(toFiniteNumber(userInfo.balance)),
+      amount: observeAmount(
+        overall?.total_cost,
+        {
+          adapter: "rightcode",
+          operation: RIGHTCODE_ENDPOINTS.usageStatsOverall,
+          contractVersion: "lifetime-usd/v1",
+          kind: EVIDENCE_KINDS.Reported,
+          inputs: ["total_cost"],
+        },
+        overallResult.observedAt,
+      ),
+    },
+  }
+
+  return {
+    ...wallet,
+    ...allowances,
     today_quota_consumption:
       shouldCollectToday && todayCost !== undefined
         ? amountToQuota(todayCost)
@@ -458,37 +590,39 @@ export async function fetchAccountData(
       shouldCollectToday && todayRequests !== undefined ? todayRequests : 0,
     today_income: 0,
     todayStatsAvailability,
-    usage: {
-      scope: "lifetime",
-      totalRequests: toFiniteNumber(overall.total_requests),
-      totalTokens: toFiniteNumber(overall.total_tokens),
-      totalCost: toFiniteNumber(overall.total_cost),
-    },
-    ...(todayStats
-      ? {
-          usageObservations: [
+    usage,
+    usageObservations: [
+      usage,
+      ...(todayStats
+        ? [
             {
-              scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+              scope: "site_today" as const,
               reportedDay: today,
               totalRequests: todayRequests,
               totalTokens: todayTokens,
               cost: {
                 asset,
+                scope,
                 amount: observeAmount(
                   todayStats.total_cost,
                   {
-                    ...source,
-                    operation: `${RIGHTCODE_ENDPOINTS.usageStats}:total_cost`,
+                    adapter: "rightcode",
+                    operation: RIGHTCODE_ENDPOINTS.usageStats,
+                    contractVersion: "queried-period-usd/v1",
+                    kind: EVIDENCE_KINDS.Reported,
+                    inputs: [
+                      "total_cost",
+                      `start_date=${today}`,
+                      `end_date=${today}`,
+                    ],
                   },
-                  observedAt,
+                  todayObservedAt,
                 ),
-                scope: accountReportingScope(request),
               },
             },
-          ],
-        }
-      : {}),
-    subscription,
+          ]
+        : []),
+    ],
     checkIn: request.checkIn,
   }
 }

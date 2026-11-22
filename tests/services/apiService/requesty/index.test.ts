@@ -1,10 +1,8 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
-import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import {
   createRequestyApiKey,
   deleteRequestyApiKey,
@@ -33,6 +31,15 @@ const request: ApiServiceAccountRequest = {
 
 const ORG_URL = "https://api-v2.requesty.ai/v1/manage/org"
 const KEYS_URL = "https://api-v2.requesty.ai/v1/manage/apikey"
+
+it("preserves an authenticated organization with an unavailable wallet amount", async () => {
+  server.use(
+    http.get(ORG_URL, () => HttpResponse.json({ name: "Engineering" })),
+  )
+  const data = await fetchAccountData(request)
+  expect(data.balance?.positions[0]?.amount.status).toBe("unavailable")
+  expect(data).not.toHaveProperty("quota")
+})
 
 describe("fetchRequestyAccountIdentity", () => {
   it.each([
@@ -123,7 +130,7 @@ describe("fetchRequestyOrg", () => {
     )
     await expect(fetchRequestyOrg(request)).resolves.toEqual({
       name: "hang's Workspace",
-      balance: 12.5,
+      balance: "12.5",
     })
   })
 
@@ -178,16 +185,28 @@ describe("fetchRequestySelfKeyInfo", () => {
 })
 
 describe("fetchAccountData", () => {
-  it("keeps the organization's prepaid USD balance eligible for monetary totals and history", async () => {
+  it("retains the organization's exact signed USD wallet without turning it into a key budget", async () => {
     server.use(
       http.get(ORG_URL, () =>
-        HttpResponse.json({ name: "example-org", balance: "12.5" }),
+        HttpResponse.json({ name: "example-org", balance: "-0.0000000003" }),
       ),
     )
-    const data = await fetchAccountData(request)
-    expect(data.quota).toBe(Math.round(12.5 * QUOTA_PER_USD))
-    expect(data.nativeBalance).toBeUndefined()
-    expect(supportsMonetaryBalance(data.nativeBalance)).toBe(true)
+    const data = await fetchAccountData({
+      ...request,
+      auth: { ...request.auth, userId: "org-123" },
+    })
+    expect(data).not.toHaveProperty("quota")
+    expect(data).not.toHaveProperty("nativeBalance")
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      nature: "prepaid",
+      funding: "unknown",
+      scope: {
+        authority: "https://api-v2.requesty.ai",
+        organizationId: "org-123",
+      },
+      amount: { status: "known", value: "-0.0000000003" },
+    })
     // Day-boundary timezone semantics are unverified, so today stays unsupported.
     expect(data.todayStatsAvailability).toEqual(
       createUnsupportedTodayStatsAvailability(),

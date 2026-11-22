@@ -1074,7 +1074,6 @@ test("captures daily balance snapshots when its MV3 alarm fires", async ({
   const serviceWorker = await getServiceWorker(context)
   const accountId = "balance-alarm-account"
   const baseUrl = "https://balance-alarm.example.com"
-  const balanceDayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
 
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({
@@ -1118,7 +1117,9 @@ test("captures daily balance snapshots when its MV3 alarm fires", async ({
           serviceWorker,
           STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
         )
-        return store?.snapshotsByAccountId[accountId]?.[balanceDayKey]
+        return store?.financialSnapshotsByAccountId?.[accountId]?.find(
+          (entry) => entry.source === "alarm",
+        )
       },
       {
         message:
@@ -1128,10 +1129,16 @@ test("captures daily balance snapshots when its MV3 alarm fires", async ({
     )
     .toEqual(
       expect.objectContaining({
-        quota: 9_876_543,
-        today_quota_consumption: 123_456,
         source: "alarm",
-        capturedAt: expect.any(Number),
+        balance: expect.objectContaining({
+          capturedAt: expect.any(Number),
+          positions: expect.arrayContaining([
+            expect.objectContaining({
+              asset: { kind: "currency", code: "USD" },
+              amount: expect.objectContaining({ value: "19.753086" }),
+            }),
+          ]),
+        }),
       }),
     )
 })

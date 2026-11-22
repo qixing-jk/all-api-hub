@@ -6,7 +6,7 @@
   },
   "breakdown": {
     "chartTypes": {
-      "histogram": "ヒストグラム",
+      "bars": "横棒グラフ",
       "pie": "円グラフ"
     },
     "controls": {
@@ -19,6 +19,9 @@
       "pieDisabledForNegative": "負の値では円グラフを利用できません。"
     },
     "title": "アカウント内訳"
+  },
+  "charts": {
+    "view": "グラフ表示"
   },
   "description": "アカウントごとの残高や利用枠の推移を確認できます。",
   "empty": {
@@ -68,8 +71,24 @@
       "title": "合計値が不完全な可能性があります"
     }
   },
+  "legacy": {
+    "accountDetails": "アカウント別の換算明細",
+    "columnsHint": "金額はフィルターで選択した参考通貨で表示します。列の見出しを選択するとアカウントを並べ替えられます。",
+    "coverage": "参考額の記録日数",
+    "currency": "参考通貨",
+    "currencyHint": "中国元の金額は、アカウントの現在の為替レートで換算されます。",
+    "referenceRate": "{{account}} · {{date}} の参考値: 1 USD = {{rate}} CNY",
+    "referenceRates": "参考為替レート",
+    "showColumns": "換算額の列を表示",
+    "title": "旧スナップショットの換算額",
+    "totalsHint": "過去のスナップショットは選択した参考通貨で換算します。"
+  },
   "messages": {
     "error": {
+      "captureResultUnavailable": "取得結果を利用できません。",
+      "lastLoadedDescription": "前回読み込んだ履歴を表示しています。再読み込みに失敗しました。更新するには再試行してください。",
+      "loadDescription": "保存済みの履歴は置き換えていません。再試行するか、このデータに対応するアプリを使用してください。",
+      "loadTitle": "履歴を読み込めませんでした",
       "pruneFailed": "整理に失敗しました: {{error}}",
       "refreshFailed": "更新に失敗しました: {{error}}",
       "settingsSaveFailed": "設定の保存に失敗しました: {{error}}"
@@ -84,7 +103,30 @@
       "pruneCompleted": "整理が完了しました",
       "refreshCompleted": "更新が完了しました",
       "settingsSaved": "設定を保存しました"
+    },
+    "warning": {
+      "refreshIncomplete": "履歴の取得は不完全です。記録済み：{{captured}}、未記録：{{uncaptured}}。"
     }
+  },
+  "metricHelp": {
+    "allowanceHint": "サービスが報告した残り利用枠です。対象となる利用と有効期限はサービスが定めます。",
+    "bonusHint": "サービスから付与されるクレジットで、Bonus credits と表示されることもあります。対象の支払いと有効期限はサービスが定めます。",
+    "convertedHint": "過去の残高を、フィルターで選んだ基準通貨にアカウントの現在の為替レートで換算して表示します。",
+    "estimatedHint": "2 回の過去の残高と当日の記録済み消費額による参考推定です。残高の観測期間と消費期間は異なる場合があります。",
+    "incomeHint": "サービスが記録したアカウントへの入金額です。",
+    "ledgerHint": "サービスが報告したアカウント残高を元の単位で表示します。",
+    "nativeHint": "サービスが報告したこの項目の金額を元の単位で表示します。",
+    "netHint": "記録された収入から支出を引いた値です。",
+    "outcomeHint": "サービスが記録した支出額です。",
+    "quotaHint": "{{unit}} で計測された残高または残り利用枠です。差し引きのルールはサービスが定めます。",
+    "title": "指標の説明",
+    "trigger": "{{chart}}の指標の説明"
+  },
+  "metricMenu": {
+    "allowances": "利用枠",
+    "balances": "残高",
+    "cashflow": "収入・支出と増減",
+    "convertedBalance": "換算残高"
   },
   "metrics": {
     "balance": "残高",
@@ -94,6 +136,11 @@
     "outcome": "支出"
   },
   "native": {
+    "activityCoverage": "{{covered}}/{{total}} 日に記録あり",
+    "activityHint": "元の通貨や単位で、サイトの記録日を基準に収支を集計します。",
+    "activityTitle": "期間集計",
+    "amountsTitle": "残高と利用枠",
+    "coverage": "{{total}} 件中 {{covered}} 件のアカウントに記録あり",
     "dimensions": {
       "groups": "グループ",
       "keys": "キー",
@@ -101,9 +148,30 @@
       "projects": "プロジェクト",
       "routes": "ルート"
     },
+    "ended": "終了",
     "expired": "期限切れ",
+    "firstRecord": "最初の記録",
+    "gaps": "グラフの途切れは、その日に値がないことを示します。",
+    "latest": "最新の記録",
+    "netInflow": "推定純流入",
+    "netInflowHint": "— は、データ不足で純流入額を推定できないことを示します。",
+    "originalObservation": "{{date}} 時点の値",
+    "recordedIncome": "記録済み収入",
+    "recordedRange": "記録のある日付：{{range}}",
+    "recordedSpending": "記録済み支出",
     "reset": "リセット",
-    "restrictions": "{{dimension}}: {{value}}"
+    "restrictions": "{{dimension}}: {{value}}",
+    "scope": "サイト · 組織 · ウォレット",
+    "sources": {
+      "console": "コンソール",
+      "inference": "推論 API",
+      "numbered": "ソース {{number}}"
+    },
+    "status": "状態",
+    "time": "時刻",
+    "unknown": "不明",
+    "unknownAsset": "不明な資産",
+    "unsupported": "非対応"
   },
   "overview": {
     "kpis": {
@@ -121,7 +189,7 @@
         "label": "期間純増減"
       }
     },
-    "title": "概要"
+    "viewTrend": "推移を表示：{{metric}}、{{amount}}"
   },
   "settings": {
     "alarmUnsupported": "このブラウザでは Alarms API を利用できないため、日次終了時の自動記録は有効にできません。",
@@ -165,6 +233,7 @@
     },
     "emptyMetric": "この期間には {{metric}} データがありません。",
     "gapBridge": "記録なし",
+    "noRecordForDay": "この日の記録はありません",
     "scopes": {
       "accounts": "アカウント別",
       "total": "合計"

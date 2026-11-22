@@ -35,6 +35,7 @@ for (const mismatchedRefresh of [false, true]) {
     await page.setViewportSize({ width: 1280, height: 960 })
     await page.emulateMedia({ reducedMotion: "reduce" })
     await stubLlmMetadataIndex(context)
+    const allowanceResetAt = Date.now() + 24 * 60 * 60 * 1000
     let refreshing = false
     const calls: string[] = []
     const logs: string[] = []
@@ -113,7 +114,7 @@ for (const mismatchedRefresh of [false, true]) {
             weeklyInputTokens: {
               used: 930,
               remaining: 70,
-              resetAt: 1_793_707_200_000,
+              resetAt: allowanceResetAt,
             },
           },
         })
@@ -211,10 +212,27 @@ for (const mismatchedRefresh of [false, true]) {
     expect(verified).toMatchObject({
       health: { status: "healthy" },
       account_info: {
-        subscription: { isActive: true, remainingTokens: 70, period: "week" },
+        subscription: { isActive: true },
+        allowances: {
+          entries: [
+            {
+              id: "weeklyInputTokens",
+              constraint: {
+                remaining: { status: "known", value: "70" },
+                window: {
+                  kind: "periodic",
+                  period: "week",
+                  resetsAt: allowanceResetAt,
+                },
+              },
+            },
+          ],
+        },
       },
     })
-    await expect(row).toContainText("70")
+    await expect(
+      row.getByText("Subscription active", { exact: true }),
+    ).toBeVisible()
     await row.hover()
     await row.getByTestId(accounts.rowEditButton).click()
     await expect(dialog.getByTestId(accounts.accessTokenInput)).toHaveValue(KEY)

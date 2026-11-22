@@ -145,6 +145,59 @@ const handlers = (
 }
 
 describe("EMRank response and capability boundaries", () => {
+  it("preserves an exact large Token integer and keeps missing quota unavailable", async () => {
+    for (const quota of ["9007199254740993000", undefined]) {
+      handlers({ quota })
+      const result = await fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
+      })
+      expect(result.balance?.positions[0]?.amount).toMatchObject(
+        quota === undefined
+          ? { status: "unavailable" }
+          : { status: "known", value: quota },
+      )
+    }
+  })
+  it("preserves a signed native balance with source and unknown restrictions", async () => {
+    handlers({ quota: "-4500" })
+    const result = await fetchAccountData({
+      ...request,
+      accountId: "emrank-test",
+      checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
+    })
+    expect(result).not.toHaveProperty("quota")
+    expect(result).not.toHaveProperty("nativeBalance")
+    expect(result.balanceRefreshParts).toEqual([
+      expect.objectContaining({
+        enumeration: "complete",
+        positions: result.balance?.positions,
+      }),
+    ])
+    expect(result.balance).toMatchObject({
+      schemaVersion: 2,
+      subject: { kind: "account", accountId: "emrank-test" },
+      positions: [
+        {
+          role: "available",
+          nature: "prepaid",
+          cashClassification: "not-cash",
+          asset: { kind: "quota", ...EMRANK_TOKEN_ASSET },
+          amount: {
+            status: "known",
+            value: "-4500",
+            source: {
+              adapter: "emrank",
+              operation: "/api/account",
+              kind: "reported",
+            },
+          },
+          scope: { authority: origin, models: { kind: "unknown" } },
+          validity: { kind: "unknown" },
+        },
+      ],
+    })
+  })
   const storedAccount = () =>
     buildSiteAccount({
       site_url: origin,
@@ -386,7 +439,7 @@ describe("EMRank response and capability boundaries", () => {
   })
 
   it.each([undefined, null, "bad", 1.5])(
-    "rejects an invalid account balance %j",
+    "retains unknown amount for an invalid account balance %j",
     async (quota) => {
       handlers({ quota })
       await expect(
@@ -394,7 +447,9 @@ describe("EMRank response and capability boundaries", () => {
           ...request,
           checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
         }),
-      ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+      ).resolves.toMatchObject({
+        balance: { positions: [{ amount: { status: "unavailable" } }] },
+      })
     },
   )
   it("accepts a numeric signed balance and falls back to the login name", async () => {
@@ -415,7 +470,9 @@ describe("EMRank response and capability boundaries", () => {
         ...request,
         checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
       }),
-    ).resolves.toMatchObject({ nativeBalance: { total: -12 } })
+    ).resolves.toMatchObject({
+      balance: { positions: [{ amount: { value: "-12" } }] },
+    })
   })
   it.each([null, {}, { check_in_available: "yes" }])(
     "rejects malformed support capabilities %j",
@@ -880,16 +937,9 @@ describe("EMRank console contract", () => {
       ...request,
       checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
     })
-    expect(data.quota).toBe(0)
-    expect(data.nativeBalance).toEqual({
-      unit: "quota",
-      total: 22000000,
-      asset: {
-        id: `${origin}/token`,
-        label: "Token",
-        displayScale: 1000000,
-        displayLabel: "M Token",
-      },
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "quota", id: `${origin}/token`, displayScale: 1000000 },
+      amount: { value: "22000000" },
     })
     expect(data.todayStatsAvailability!.consumption).toMatchObject({
       status: "unavailable",
@@ -907,7 +957,9 @@ describe("EMRank console contract", () => {
       ...request,
       checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
     })
-    expect(data.nativeBalance?.total).toBe(-1234567)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      value: "-1234567",
+    })
   })
 
   it("reads the authoritative check-in state without performing a claim", async () => {

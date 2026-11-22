@@ -29,7 +29,7 @@ import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newAp
 import type { AccountInfo, AccountUsageSummary, SiteAccount } from "~/types"
 import { isPlainObject } from "~/utils/core/object"
 
-/** Original pre-migration facts are evidence for backups, never a second writable balance. */
+/** Quota-based compatibility evidence, with independent timestamps for refreshed counters. */
 export type LegacyAccountFinancialEvidence = {
   schemaVersion: 1
   capturedAt: number
@@ -40,6 +40,7 @@ export type LegacyAccountFinancialEvidence = {
   identityInvalidated?: boolean
   /** An empty object records that the release did not save either value. */
   cashflow?: { consumption?: unknown; income?: unknown }
+  cashflowCapturedAt?: { consumption?: number; income?: number }
 }
 
 /** Daya's earlier daily amount lived in usage, not in a settled-charge fact. */

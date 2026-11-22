@@ -1,3 +1,5 @@
+import { type BUDGET_PERIODS } from "~/services/amounts/financialConstants"
+
 /**
  * RelayFor wire types.
  *
@@ -14,40 +16,9 @@ export type RelayForUser = {
   [key: string]: unknown
 }
 
-export type RelayForTodayStats = {
-  requests?: number
-  tokens?: number
-  input_tokens?: number
-  output_tokens?: number
-  quota?: number
-}
-
-export type RelayForOverview = {
-  user: RelayForUser
-  identity?: Record<string, unknown>
-  timed_quota?: number
-  group_quotas?: unknown[]
-  total_quota?: number
-  requests?: number
-  token_count?: number
-  input_tokens?: number
-  output_tokens?: number
-  today?: RelayForTodayStats
-  active_subscriptions?: RelayForSubscription[]
-}
-
-export type RelayForSubscription = {
-  plan_name?: string
-  plan_code?: string
-  status: number
-  starts_at: string
-  expires_at: string
-  quota_remaining?: number
-  quota_total?: number
-  unlimited_quota?: boolean
-  next_reset_at?: string
-  quota_group?: string
-  model_rules?: Record<string, unknown>
+/** The overview only guarantees identity. Financial and count fields are raw. */
+export type RelayForOverview = Record<string, unknown> & {
+  user: Pick<RelayForUser, "id" | "username"> & Record<string, unknown>
 }
 
 export type RelayForTokenLimits = {
@@ -62,7 +33,7 @@ export type RelayForTokenLimits = {
 
 export type RelayForToken = {
   budget_usage?: {
-    window: "5h" | "day" | "week" | "month"
+    window: (typeof BUDGET_PERIODS)[keyof typeof BUDGET_PERIODS]
     limit: number
     used: number
     remaining: number

@@ -8,15 +8,9 @@ import type {
   RightCodeUsageStats,
   RightCodeUserInfo,
 } from "~/services/apiService/rightcode/type"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
 
-export const toOptionalFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : undefined
-  }
-  return undefined
-}
+export { toOptionalFiniteNumber } from "~/utils/core/number"
 
 export const toFiniteNumber = (value: unknown, fallback = 0): number =>
   toOptionalFiniteNumber(value) ?? fallback

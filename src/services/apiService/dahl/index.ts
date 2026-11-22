@@ -1,10 +1,25 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { DAHL_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
+import { balancePosition } from "~/services/amounts/balance"
+import { addDecimal, parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_CASH_CLASSIFICATIONS,
+  BALANCE_LABEL_KEYS,
+  BALANCE_NATURES,
+  BALANCE_RELATIONS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
   AccountKeyResourceError,
@@ -25,9 +40,9 @@ import {
   DAHL_KEY_STATUSES,
   DAHL_KEYS_ENDPOINT,
   DAHL_MODELS_ENDPOINT,
+  DAHL_TOKEN_ASSET,
   DAHL_TRANSFER_DIRECTIONS,
   DAHL_USAGE_ENDPOINT,
-  DAHL_USD_PER_TOKEN,
   type DahlTransferDirection,
 } from "./constants"
 import { parseDahlIdentity } from "./identity"
@@ -154,16 +169,81 @@ export async function fetchAccountData(
 ): Promise<AccountData> {
   return withDahlSession(request, async (request) => {
     const { body } = await account(request)
-    const tokens =
-      count(body.token_balance, DAHL_ACCOUNT_ENDPOINT) +
-      count(body.tokens_on_keys, DAHL_ACCOUNT_ENDPOINT)
+    const capturedAt = Date.now()
     const usageEndpoint = DAHL_USAGE_ENDPOINT
-    const usage = await read(request, usageEndpoint)
+    const usage = await read(request, usageEndpoint).catch(() => undefined)
+    const usageCount = (value: unknown) =>
+      typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+        ? value
+        : undefined
+    const input = usageCount(usage?.total_input_tokens),
+      output = usageCount(usage?.total_output_tokens)
     const totalTokens =
-      count(usage.total_input_tokens, usageEndpoint) +
-      count(usage.total_output_tokens, usageEndpoint)
+      input !== undefined && output !== undefined ? input + output : undefined
+    const tokenAmount = (value: unknown) => {
+      const parsed = parseDecimal(value)
+      return parsed !== undefined && /^\d+$/.test(parsed) ? parsed : undefined
+    }
+    const pool = tokenAmount(body.token_balance),
+      keys = tokenAmount(body.tokens_on_keys)
+    let total: string | undefined
+    if (pool !== undefined && keys !== undefined) {
+      try {
+        total = addDecimal(pool, keys)
+      } catch {
+        // A bounded derived total must not discard independently valid balances.
+      }
+    }
+    const scope = accountBalanceScope(request)
+    const source = {
+      adapter: "dahl",
+      contractVersion: "2",
+      operation: DAHL_ACCOUNT_ENDPOINT,
+      kind: EVIDENCE_KINDS.Reported,
+    }
+    const position = (id: string, value: unknown) =>
+      balancePosition({
+        id,
+        scope,
+        value,
+        source,
+        observedAt: capturedAt,
+        asset: { kind: ASSET_KINDS.Quota, ...DAHL_TOKEN_ASSET },
+        nature: BALANCE_NATURES.Prepaid,
+        cashClassification: BALANCE_CASH_CLASSIFICATIONS.NotCash,
+      })
     return {
-      quota: Math.round(tokens * DAHL_USD_PER_TOKEN * QUOTA_PER_USD),
+      ...accountBalanceObservation(
+        scope,
+        [
+          {
+            ...position("total", total),
+            labelKey: BALANCE_LABEL_KEYS.TotalTokens,
+            amount: {
+              ...position("total", total).amount,
+              source: {
+                ...source,
+                kind: EVIDENCE_KINDS.Derived,
+                inputs: ["token_balance", "tokens_on_keys"],
+              },
+            },
+          },
+          {
+            ...position("pool", pool),
+            labelKey: BALANCE_LABEL_KEYS.PoolTokens,
+            parentId: "total",
+            relation: BALANCE_RELATIONS.Component,
+          },
+          {
+            ...position("keys", keys),
+            labelKey: BALANCE_LABEL_KEYS.AllocatedTokens,
+            parentId: "total",
+            relation: BALANCE_RELATIONS.Allocation,
+          },
+        ],
+        capturedAt,
+        FINANCIAL_ENUMERATION.Complete,
+      ),
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -172,16 +252,9 @@ export async function fetchAccountData(
       // days=1 has no verified day-boundary contract. Do not label it "today".
       todayStatsAvailability: createUnsupportedTodayStatsAvailability(),
       usage: {
-        scope: "rolling_window",
+        scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
         totalTokens,
-        totalRequests: count(usage.total_requests, usageEndpoint),
-        totalCost: totalTokens * DAHL_USD_PER_TOKEN,
-      },
-      subscription: {
-        name: "Dahl",
-        billingType: "tokens",
-        remainingTokens: tokens,
-        isActive: true,
+        totalRequests: usageCount(usage?.total_requests),
       },
       checkIn: request.checkIn,
     }

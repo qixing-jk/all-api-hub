@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 
 // Initialize provider registrations before measuring the shared snapshot queries.
@@ -217,7 +218,7 @@ describe("apiService VoAPI v2", () => {
             bindBalance: "3",
             totalRequest: 123,
             totalToken: 456,
-            currency: "USD",
+            currency: CURRENCIES.USD,
           },
         })
       }),
@@ -248,7 +249,12 @@ describe("apiService VoAPI v2", () => {
       { ...createVoApiV2Request(), siteType: SITE_TYPES.VO_API_V2 },
     )
 
-    expect(data.quota).toBe(2500000)
+    expect(
+      data.balance?.positions.map((position) => position.amount),
+    ).toMatchObject([
+      { status: "known", value: "2" },
+      { status: "known", value: "3" },
+    ])
     expect(data.today_quota_consumption).toBe(375000)
     expect(data.today_requests_count).toBe(9)
     expect(data.todayStatsAvailability).toEqual({
@@ -304,8 +310,13 @@ describe("apiService VoAPI v2", () => {
       },
     )
 
-    expect(data.quota).toBe(1000000)
-    expect(data.today_quota_consumption).toBe(0)
+    expect(
+      data.balance?.positions.map((position) => position.amount),
+    ).toMatchObject([
+      { status: "known", value: "2" },
+      { status: "known", value: "0" },
+    ])
+    expect(data.today_quota_consumption).toBeUndefined()
     expect(statsCalled).toBe(false)
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: {
@@ -364,12 +375,12 @@ describe("apiService VoAPI v2", () => {
 
     const data = await fetchVoApiV2AccountData(createVoApiV2Request())
 
-    expect(data.today_quota_consumption).toBe(250000)
+    expect(data.today_quota_consumption).toBeUndefined()
     expect(data.today_requests_count).toBe(9)
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: {
-        status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-        reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
       },
       requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
     })
@@ -432,7 +443,12 @@ describe("apiService VoAPI v2", () => {
 
     const data = await fetchVoApiV2AccountData(createVoApiV2Request())
 
-    expect(data.quota).toBe(1000000)
+    expect(
+      data.balance?.positions.map((position) => position.amount),
+    ).toMatchObject([
+      { status: "known", value: "2" },
+      { status: "known", value: "0" },
+    ])
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,

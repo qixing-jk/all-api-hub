@@ -25,8 +25,3 @@ export const DAHL_TRANSFER_DIRECTIONS = {
 } as const
 export type DahlTransferDirection =
   (typeof DAHL_TRANSFER_DIRECTIONS)[keyof typeof DAHL_TRANSFER_DIRECTIONS]
-
-// inference.dahl.global/docs and /pricing (2026-10-11): all input, output and
-// cached tokens cost $0.03/M, including promotional tokens. This is a credit
-// valuation, not a cash balance or a refundable dollar deposit.
-export const DAHL_USD_PER_TOKEN = 0.03 / 1000000

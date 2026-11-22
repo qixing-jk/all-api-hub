@@ -28,6 +28,7 @@ class AccountRefresh {
     let successCount = 0
     let failedCount = 0
     let refreshedCount = 0
+    let balanceHistoryCapturedCount = 0
     let checkInStatusFailedCount = 0
     let latestSyncTime = 0
     results.forEach((result, index) => {
@@ -38,6 +39,8 @@ class AccountRefresh {
           latestSyncTime,
         )
         if (result.value.refreshed) refreshedCount += 1
+        if (result.value.balanceHistoryCaptured)
+          balanceHistoryCapturedCount += 1
         if (
           result.value.checkInStatusRefreshOutcome ===
           CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable
@@ -58,6 +61,9 @@ class AccountRefresh {
       failed: failedCount,
       latestSyncTime,
       refreshedCount,
+      ...(balanceHistoryCapturedCount > 0
+        ? { balanceHistoryCapturedCount }
+        : {}),
       ...(checkInStatusFailedCount > 0 ? { checkInStatusFailedCount } : {}),
     }
   }

@@ -1,20 +1,36 @@
-import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
-import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
 import {
+  accountAllowanceObservation,
+  ALLOWANCE_IDENTITY_KINDS,
+  parseAllowanceInstant,
+  type AccountAllowanceRefreshPart,
+} from "~/services/accounts/allowances"
+import {
   accountBalanceObservation,
   accountBalanceScope,
 } from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
-import { balancePosition } from "~/services/amounts/balance"
+import { NANOGPT_API_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
+import {
+  balancePosition,
+  observeAmount,
+  type UsageScope,
+} from "~/services/amounts/balance"
+import { budgetConstraint } from "~/services/amounts/budgets"
 import {
   ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_ROLES,
+  BALANCE_VALIDITY_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
   EVIDENCE_KINDS,
   FINANCIAL_ENUMERATION,
-  WALLET_BALANCE_COLLECTION_KEY,
 } from "~/services/amounts/financialConstants"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { NANOGPT_ENDPOINTS } from "~/services/apiService/nanogpt/constants"
@@ -38,7 +54,6 @@ import {
   AuthTypeEnum,
   ACCOUNT_SUBSCRIPTION_STATUSES as subscriptionStatuses,
 } from "~/types"
-import type { AccountSubscriptionSummary } from "~/types"
 
 /**
  * Reads the balances and the account identity that the saved API key proves.
@@ -109,56 +124,78 @@ export async function fetchNanoGptSubscription(
   return parseNanoGptSubscription(body, NANOGPT_ENDPOINTS.subscriptionUsage)
 }
 
-/**
- * Maps documented token quotas into the shared subscription summary.
- * Input-token quotas count tokens, so only the token allowance is projected;
- * image quotas and the unverified plan metadata are intentionally left out.
- *
- * The daily and weekly quotas are independent and either may be unconfigured
- * (probe-20), so the daily window is preferred and the weekly one is the
- * fallback rather than being dropped.
- */
-function toSubscriptionSummary(
-  subscription: NanoGptSubscriptionSnapshot,
-): AccountSubscriptionSummary | undefined {
-  if (!subscription.active) {
-    return {
-      isActive: false,
-      status:
-        subscription.state === subscriptionStatuses.Grace
-          ? subscriptionStatuses.Grace
-          : subscriptionStatuses.Inactive,
-    }
+/** Each upstream quota window is a constraint, never an additional wallet balance. */
+function subscriptionAllowances(
+  scope: UsageScope,
+  snapshot: NanoGptSubscriptionSnapshot | undefined,
+  management: boolean,
+  capturedAt: number,
+) {
+  const source = {
+    adapter: "nanogpt",
+    operation: NANOGPT_ENDPOINTS.subscriptionUsage,
+    contractVersion: "1",
+    kind: EVIDENCE_KINDS.Reported,
+    inputs: [
+      management
+        ? "/api/management/v1/subscription/usage"
+        : NANOGPT_ENDPOINTS.subscriptionUsage,
+    ],
   }
-  const daily = subscription.dailyInputTokens
-  const window =
-    daily?.remaining !== undefined
-      ? { quota: daily, period: "day" }
-      : subscription.weeklyInputTokens?.remaining !== undefined
-        ? { quota: subscription.weeklyInputTokens, period: "week" }
-        : undefined
-  // `degraded` responses carry null counters: unknown is not a full allowance.
-  if (!window) {
-    return {
-      isActive: true,
-      status:
-        subscription.state === subscriptionStatuses.Grace
-          ? subscriptionStatuses.Grace
-          : subscriptionStatuses.Active,
-      billingType: "tokens",
-    }
+  const allowanceScope = { ...scope, authority: NANOGPT_API_ORIGIN }
+  const entries: AccountAllowanceRefreshPart["entries"] = []
+  for (const [id, quota, period, label] of [
+    ["dailyInputTokens", snapshot?.dailyInputTokens, "day", "Input Token"],
+    ["weeklyInputTokens", snapshot?.weeklyInputTokens, "week", "Input Token"],
+    ["dailyImages", snapshot?.dailyImages, "day", "Image"],
+  ] as const) {
+    if (!quota) continue
+    const resetsAt = parseAllowanceInstant(quota.resetAt)
+    entries.push({
+      id,
+      identityKind: ALLOWANCE_IDENTITY_KINDS.SourceSlot,
+      collectionKey: "subscription",
+      validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+      constraint: budgetConstraint({
+        source,
+        scope: allowanceScope,
+        observedAt: capturedAt,
+        asset: {
+          kind: ASSET_KINDS.Quota,
+          id: `nanogpt:${label === "Image" ? "image" : "input-token"}`,
+          label,
+          displayScale: 1,
+          displayLabel: label,
+        },
+        limitState:
+          quota.remaining === undefined
+            ? BUDGET_LIMIT_STATES.Unknown
+            : BUDGET_LIMIT_STATES.Finite,
+        used: quota.used,
+        remaining: quota.remaining,
+        enabled: snapshot?.active,
+        window: {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period,
+          ...(resetsAt === undefined ? {} : { resetsAt }),
+        },
+      }),
+    })
   }
-  return {
-    isActive: true,
-    status:
-      subscription.state === subscriptionStatuses.Grace
-        ? subscriptionStatuses.Grace
-        : subscriptionStatuses.Active,
-    billingType: "tokens",
-    remainingTokens: window.quota.remaining,
-    period: window.period,
-    ...(window.quota.resetAt ? { periodResetTime: window.quota.resetAt } : {}),
-  }
+  return accountAllowanceObservation(
+    allowanceScope,
+    [
+      {
+        source,
+        collectionKey: "subscription",
+        enumeration: snapshot
+          ? FINANCIAL_ENUMERATION.Complete
+          : FINANCIAL_ENUMERATION.Unavailable,
+        entries,
+      },
+    ],
+    capturedAt,
+  )
 }
 
 /**
@@ -166,60 +203,117 @@ function toSubscriptionSummary(
  *
  * Subscription quotas are read through the same credential but treated as
  * optional: the endpoint can answer `active: false`, and its failure must not
- * hide a valid balance. Only the balance (identity) and usage reads are
- * required.
+ * hide a valid balance. The usage aggregate is independent and optional too.
  */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const pair = parseNanoGptCredentials(request.auth.accessToken)
+  const baseScope = accountBalanceScope(request)
   if (!pair.apiKey && pair.managementToken) {
     const snapshot = await verifyNanoGptManagementCredential(request)
-    const subscription = snapshot
-      ? toSubscriptionSummary(snapshot)
-      : { status: subscriptionStatuses.Unavailable }
+    const capturedAt = Date.now()
     return {
-      ...nanoGptWallet(request),
-      quota: 0,
-      balanceUnavailable: true,
+      ...accountBalanceObservation(
+        baseScope,
+        [
+          balancePosition({
+            id: "usd_balance",
+            collectionKey: "balance",
+            scope: baseScope,
+            source: {
+              adapter: "nanogpt",
+              operation: NANOGPT_ENDPOINTS.checkBalance,
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            value: undefined,
+            observedAt: capturedAt,
+          }),
+        ],
+        capturedAt,
+        FINANCIAL_ENUMERATION.Partial,
+      ),
+      ...subscriptionAllowances(baseScope, snapshot, true, capturedAt),
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
       today_income: 0,
       todayStatsAvailability: createUnsupportedTodayStatsAvailability(),
-      ...(subscription ? { subscription } : {}),
+      subscription: {
+        status: snapshot
+          ? snapshot.state === "grace"
+            ? subscriptionStatuses.Grace
+            : snapshot.active
+              ? subscriptionStatuses.Active
+              : subscriptionStatuses.Inactive
+          : subscriptionStatuses.Unavailable,
+        ...(snapshot ? { isActive: snapshot.active } : {}),
+      },
       checkIn: request.checkIn,
     }
   }
-  const [balance, usage] = await Promise.all([
-    fetchNanoGptBalance(request),
-    fetchNanoGptUsage(request),
+  const [balanceResult, usageResult] = await Promise.all([
+    fetchNanoGptBalance(request).then((value) => ({
+      value,
+      observedAt: Date.now(),
+    })),
+    fetchNanoGptUsage(request)
+      .then((value) => ({ value, observedAt: Date.now() }))
+      .catch(() => ({ value: undefined, observedAt: Date.now() })),
   ])
-
+  let management = Boolean(pair.managementToken)
   const subscription = await (
     pair.managementToken
-      ? fetchNanoGptManagementSubscription(request).catch(() =>
-          fetchNanoGptSubscription(request),
-        )
+      ? fetchNanoGptManagementSubscription(request).catch(() => {
+          management = false
+          return fetchNanoGptSubscription(request)
+        })
       : fetchNanoGptSubscription(request)
-  )
-    .then(toSubscriptionSummary)
-    .catch(() => ({ status: subscriptionStatuses.Unavailable }))
+  ).catch(() => undefined)
+  const { value: balance, observedAt } = balanceResult
+  const usage = usageResult.value
+  const scope = { ...baseScope, walletId: balance.depositAddress }
+  const source = {
+    adapter: "nanogpt",
+    operation: NANOGPT_ENDPOINTS.checkBalance,
+    contractVersion: "1",
+    kind: EVIDENCE_KINDS.Reported,
+  }
 
   return {
-    ...nanoGptWallet(request, balance),
-    quota: Math.round(balance.usdBalance * QUOTA_PER_USD),
-    balanceUnavailable: false,
-    ...(balance.nanoBalance !== undefined
-      ? {
-          nativeBalance: {
-            unit: "USD_XNO" as const,
-            total: balance.usdBalance,
-            nanoBalance: balance.nanoBalance,
-          },
-        }
-      : {}),
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "usd_balance",
+          collectionKey: "balance",
+          scope,
+          source,
+          observedAt,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          value: balance.usdBalance,
+          role: BALANCE_ROLES.Available,
+          nature: BALANCE_NATURES.Prepaid,
+        }),
+        balancePosition({
+          id: "nano_balance",
+          collectionKey: "balance",
+          scope,
+          source,
+          observedAt,
+          asset: { kind: ASSET_KINDS.Crypto, id: "XNO" },
+          value: balance.nanoBalance,
+          role: BALANCE_ROLES.Available,
+          nature: BALANCE_NATURES.Prepaid,
+        }),
+      ],
+      observedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
+    ...subscriptionAllowances(scope, subscription, management, Date.now()),
     today_quota_consumption: 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
@@ -229,59 +323,29 @@ export async function fetchAccountData(
     // per-day statistics stay explicitly unsupported.
     todayStatsAvailability: createUnsupportedTodayStatsAvailability(),
     usage: {
-      scope: "rolling_window",
-      totalRequests: usage.requests,
-      totalTokens: usage.totalTokens,
-      totalCost: usage.costUsd,
+      scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
+      totalRequests: usage?.requests,
+      totalTokens: usage?.totalTokens,
+      cost: {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        amount: observeAmount(
+          usage?.costUsd,
+          { ...source, operation: NANOGPT_ENDPOINTS.usage },
+          usageResult.observedAt,
+        ),
+        scope,
+      },
     },
-    ...(subscription ? { subscription } : {}),
+    subscription: {
+      status: subscription
+        ? subscription.state === "grace"
+          ? subscriptionStatuses.Grace
+          : subscription.active
+            ? subscriptionStatuses.Active
+            : subscriptionStatuses.Inactive
+        : subscriptionStatuses.Unavailable,
+      ...(subscription ? { isActive: subscription.active } : {}),
+    },
     checkIn: request.checkIn,
   }
-}
-
-/** USD and XNO are independent balances reported by the same wallet endpoint. */
-function nanoGptWallet(
-  request: ApiServiceAccountRequest,
-  balance?: NanoGptBalance,
-) {
-  const scope = accountBalanceScope(
-    request,
-    balance ? { walletId: balance.depositAddress } : {},
-  )
-  const observedAt = Date.now()
-  const source = {
-    adapter: SITE_TYPES.NANOGPT,
-    operation: NANOGPT_ENDPOINTS.checkBalance,
-    contractVersion: "wallet-usd-xno/v1",
-    kind: EVIDENCE_KINDS.Reported,
-  } as const
-  const common = {
-    collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-    scope,
-    observedAt,
-    source,
-  }
-  return accountBalanceObservation(
-    scope,
-    [
-      balancePosition({
-        ...common,
-        id: "usd_balance",
-        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
-        value: balance?.usdAmount,
-      }),
-      ...(balance?.nanoAmount === undefined && !balance?.nanoAmountUnavailable
-        ? []
-        : [
-            balancePosition({
-              ...common,
-              id: "nano_balance",
-              asset: { kind: ASSET_KINDS.Crypto, id: "XNO" },
-              value: balance?.nanoAmount,
-            }),
-          ]),
-    ],
-    observedAt,
-    balance ? FINANCIAL_ENUMERATION.Complete : FINANCIAL_ENUMERATION.Partial,
-  )
 }

@@ -396,9 +396,21 @@
     "toggleSortOrder": "Cambiar orden"
   },
   "netInflow": {
+    "coverage": "Estimaciones comparables: {{included}}/{{eligible}} cuentas",
+    "details": "Base y cobertura de la estimación",
+    "explanation": "Saldo contable final − saldo contable inicial + consumo liquidado. Es un cambio neto sin clasificar, no un ingreso confirmado.",
     "reasons": {
+      "balance": "Falta una observación contable actual y comparable",
+      "baseline": "Falta una base confiable al inicio del día",
       "conflict": "Observaciones de billetera contradictorias excluidas",
-      "duplicate": "Billetera duplicada excluida"
+      "consumption": "Falta el consumo liquidado completo",
+      "disabled": "La estimación está desactivada",
+      "duplicate": "Billetera duplicada excluida",
+      "identity": "Cambió el activo, la billetera, la fuente o el alcance",
+      "interval": "Los intervalos de saldo y consumo no coinciden",
+      "manual": "Los saldos manuales no tienen evidencia de facturación coincidente",
+      "precision": "El importe supera la precisión admitida",
+      "unverified": "No se verificó la comparabilidad necesaria"
     }
   },
   "popupOnboarding": {
@@ -454,7 +466,7 @@
   "stats": {
     "allowanceExpiry": "Vence: {{time}}",
     "completion": "Salida",
-    "estimatedTodayIncome": "Ingresos estimados",
+    "estimatedNetInflow": "Flujo neto estimado",
     "prompt": "Entrada",
     "subscriptionRemainingCount": "Solicitudes de suscripción restantes",
     "subscriptionRemainingTokens": "Tokens restantes",

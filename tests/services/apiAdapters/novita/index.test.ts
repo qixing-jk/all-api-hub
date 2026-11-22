@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { novitaAccountCompletion } from "~/services/apiAdapters/novita/accountCompletion"
 import { novitaAccountDetectionPrivacy } from "~/services/apiAdapters/novita/accountDetection"
@@ -42,6 +41,69 @@ describe("novita capabilities wiring", () => {
 })
 
 describe("novita account data", () => {
+  it("retains valid Novita fields when another amount is missing or larger than a safe integer", async () => {
+    server.use(
+      http.get("https://api.novita.ai/openapi/v1/billing/balance/detail", () =>
+        HttpResponse.json({
+          availableBalance: "930000",
+          creditLimit: "9007199254740993",
+        }),
+      ),
+    )
+    const data = await getSiteTypeCapabilities(
+      SITE_TYPES.NOVITA,
+    ).account!.data!.fetchData(request as never)
+    expect(
+      data.balance?.positions
+        .slice(0, 3)
+        .map((p) => [
+          p.amount.status,
+          "value" in p.amount ? p.amount.value : undefined,
+        ]),
+    ).toEqual([
+      ["known", "93"],
+      ["unavailable", undefined],
+      ["known", "900719925474.0993"],
+    ])
+  })
+  it("preserves independent available cash credit debt and missing pending observations", async () => {
+    server.use(
+      http.get("https://api.novita.ai/openapi/v1/billing/balance/detail", () =>
+        HttpResponse.json({
+          availableBalance: "930000",
+          cashBalance: "-20000",
+          creditLimit: "200000",
+          outstandingInvoices: "9007199254740993",
+        }),
+      ),
+    )
+    const data = await getSiteTypeCapabilities(
+      SITE_TYPES.NOVITA,
+    ).account!.data!.fetchData(request as never)
+    expect(
+      data.balance?.positions.map((p) => [
+        p.role,
+        p.amount.status,
+        "value" in p.amount ? p.amount.value : undefined,
+      ]),
+    ).toEqual([
+      ["available", "known", "93"],
+      ["ledger", "known", "-2"],
+      ["credit-limit", "known", "20"],
+      ["pending-charge", "unavailable", undefined],
+      ["debt", "known", "900719925474.0993"],
+    ])
+    expect(data).not.toHaveProperty("quota")
+    expect(data).not.toHaveProperty("nativeBalance")
+    expect(data.balance?.positions[1]?.cashClassification).toBe("reported-cash")
+    expect(data.balance?.positions[2]?.nature).toBe("credit")
+    expect(data.balanceRefreshParts).toEqual([
+      expect.objectContaining({
+        enumeration: "complete",
+        positions: data.balance?.positions,
+      }),
+    ])
+  })
   beforeEach(() => {
     server.resetHandlers()
     server.use(
@@ -57,23 +119,16 @@ describe("novita account data", () => {
     )
   })
 
-  it("normalizes the 1/10000 USD balance into quota and native balance", async () => {
+  it("normalizes the 1/10000 USD balance into separate available, cash and credit facts", async () => {
     const { fetchData } = getSiteTypeCapabilities(SITE_TYPES.NOVITA).account!
       .data!
     const data = await fetchData(request as never)
 
-    expect(data.quota).toBe(100 * QUOTA_PER_USD)
-    expect(data.nativeBalance).toMatchObject({
-      unit: "USD",
-      total: 100,
-      permanent: 80,
-      daily: 0,
-      // The credit allowance stays a separate component, not purchased balance.
-      components: [
-        { kind: "permanent", amount: 80 },
-        { kind: "permanent", name: "Credit limit", amount: 20 },
-      ],
-    })
+    expect(data.balance?.positions.slice(0, 3)).toMatchObject([
+      { id: "available", amount: { value: "100" } },
+      { id: "cash", amount: { value: "80" } },
+      { id: "credit-limit", role: "credit-limit", amount: { value: "20" } },
+    ])
     expect(data.todayStatsAvailability).toBeDefined()
     const availability = Object.values(
       data.todayStatsAvailability as unknown as Record<
@@ -108,15 +163,11 @@ describe("novita account data", () => {
     const { fetchData } = getSiteTypeCapabilities(SITE_TYPES.NOVITA).account!
       .data!
     const data = await fetchData(request as never)
-    expect(data.quota).toBe(93 * QUOTA_PER_USD)
-    expect(data.nativeBalance).toMatchObject({
-      total: 93,
-      permanent: 0,
-      components: [
-        { kind: "permanent", amount: 0 },
-        { kind: "permanent", name: "Credit limit", amount: 20 },
-      ],
-    })
+    expect(data.balance?.positions.slice(0, 3)).toMatchObject([
+      { id: "available", amount: { value: "93" } },
+      { id: "cash", amount: { value: "0" } },
+      { id: "credit-limit", role: "credit-limit", amount: { value: "20" } },
+    ])
   })
 })
 

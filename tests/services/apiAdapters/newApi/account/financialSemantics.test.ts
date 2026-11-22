@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -9,9 +9,16 @@ import {
   getDisplayBalancePortfolio,
   projectBalance,
 } from "~/services/accounts/metrics/balanceProjection"
+import { getDisplayIncomeProjection } from "~/services/accounts/metrics/consumptionProjection"
+import {
+  ASSET_KINDS,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/account/accountData"
 import { newApiVariantRegistrations } from "~/services/apiAdapters/newApi/variantRegistration"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { estimateNetInflow } from "~/services/history/dailyBalanceHistory/netInflow"
+import { buildFinancialHistorySeries } from "~/services/history/dailyBalanceHistory/selectors"
 import { AuthTypeEnum } from "~/types"
 import { formatAssetAmount } from "~/utils/core/money"
 import { server } from "~~/tests/msw/server"
@@ -147,6 +154,170 @@ describe("New API family financial contract", () => {
     })
   })
 
+  it("estimates net inflow before the current billing day ends", async () => {
+    server.use(
+      http.get(`${origin}/api/user/self`, () =>
+        HttpResponse.json({ success: true, data: { quota: 6000000 } }),
+      ),
+      http.get(`${origin}/api/log/self/stat`, () =>
+        HttpResponse.json({ success: true, data: { quota: 500000 } }),
+      ),
+      http.get(`${origin}/api/log/self`, () =>
+        HttpResponse.json({ success: true, data: { items: [], total: 0 } }),
+      ),
+    )
+    const adapter = createNewApiAccountData(SITE_TYPES.NEW_API)
+    try {
+      vi.setSystemTime(new Date(2026, 10, 19, 12))
+      const result = await adapter.fetchData({
+        ...request,
+        includeTodayCashflow: true,
+      })
+      const end = result.balance!.positions[0]!
+      const start = structuredClone(end)
+      if (start.amount.status !== OBSERVATION_STATUSES.Known)
+        throw new Error("Expected a balance")
+      start.amount.value = "10"
+      start.amount.observedAt = new Date(2026, 10, 18, 23, 55).getTime()
+      expect(
+        estimateNetInflow({
+          start,
+          end,
+          consumption: result.settledConsumption!,
+          allowAccountBalance: true,
+        }),
+      ).toMatchObject({
+        status: "available",
+        amount: { value: "3" },
+        partial: true,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("uses the midnight baseline after multiple daytime refreshes", async () => {
+    let quota = 5_000_000
+    let spend = 0
+    server.use(
+      http.get(`${origin}/api/user/self`, () =>
+        HttpResponse.json({ success: true, data: { quota } }),
+      ),
+      http.get(`${origin}/api/log/self/stat`, () =>
+        HttpResponse.json({ success: true, data: { quota: spend } }),
+      ),
+      http.get(`${origin}/api/log/self`, () =>
+        HttpResponse.json({ success: true, data: { items: [], total: 0 } }),
+      ),
+    )
+    const adapter = createNewApiAccountData(SITE_TYPES.NEW_API)
+    const capture = async (date: Date) => {
+      vi.setSystemTime(date)
+      const data = await adapter.fetchData({
+        ...request,
+        includeTodayCashflow: true,
+      })
+      return {
+        source: "refresh" as const,
+        balance: data.balance,
+        settledConsumption: data.settledConsumption,
+      }
+    }
+    try {
+      const night = await capture(new Date(2026, 10, 18, 23, 55))
+      quota = 6_000_000
+      spend = 500_000
+      const noon = await capture(new Date(2026, 10, 19, 12))
+      quota = 6_500_000
+      spend = 1_000_000
+      const afternoon = await capture(new Date(2026, 10, 19, 14))
+      const { series } = buildFinancialHistorySeries({
+        store: {
+          schemaVersion: 4,
+          referenceSnapshotsByAccountId: {},
+          financialSnapshotsByAccountId: {
+            "account-1": [night, noon, afternoon],
+          },
+        },
+        accountIds: ["account-1"],
+        startDayKey: "2026-11-19",
+        endDayKey: "2026-11-19",
+        asOf: Date.now(),
+      })
+      expect(series[0]?.observations.at(-1)?.netInflow).toMatchObject({
+        status: "available",
+        amount: { value: "5" },
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+  it.each([true, false])(
+    "keeps native credited quota separate from explicit currency text (%s)",
+    async (ambiguous) => {
+      server.use(
+        http.get(`${origin}/api/user/self`, () =>
+          HttpResponse.json({ success: true, data: { id: 1, quota: 50 } }),
+        ),
+        http.get(`${origin}/api/log/self/stat`, () =>
+          HttpResponse.json({ success: true, data: { quota: 0 } }),
+        ),
+        http.get(`${origin}/api/log/self`, ({ request }) => {
+          const type = new URL(request.url).searchParams.get("type")
+          const items =
+            type === "1"
+              ? [{ quota: "17.000000000000017" }]
+              : type === "4" && ambiguous
+                ? [{ quota: 0, content: "$5 gift" }]
+                : []
+          return HttpResponse.json({
+            success: true,
+            data: { items, total: items.length },
+          })
+        }),
+      )
+      const result = await createNewApiAccountData(
+        SITE_TYPES.UNKNOWN,
+      ).fetchData({ ...request, includeTodayCashflow: true })
+      const quotaIncome = result.reportedIncome?.filter(
+        ({ asset }) => asset.kind === ASSET_KINDS.Quota,
+      )
+      expect(quotaIncome).toEqual([
+        expect.objectContaining({
+          asset: expect.objectContaining({ kind: "quota", label: "quota" }),
+          amount: expect.objectContaining({
+            status: "known",
+            value: "17.000000000000017",
+          }),
+          classification: "unclassified",
+          coverage: "complete",
+          scope: expect.objectContaining({
+            walletId: "user:1",
+            projects: { kind: "all" },
+          }),
+        }),
+      ])
+      expect(
+        result.reportedIncome?.filter(({ asset }) => asset.kind === "currency"),
+      ).toEqual(
+        ambiguous
+          ? [
+              expect.objectContaining({
+                asset: { kind: "currency", code: "USD" },
+                amount: expect.objectContaining({ value: "5" }),
+              }),
+            ]
+          : [],
+      )
+      expect(result.todayStatsAvailability?.income.status).toBe("unavailable")
+      expect(
+        getDisplayIncomeProjection([
+          { id: request.accountId, reportedIncome: result.reportedIncome },
+        ]).groups.find(({ amount }) => amount.asset.kind === "quota")?.amount
+          .value,
+      ).toBe("17.000000000000017")
+    },
+  )
   it("preserves the deployment's exact native quota without assuming USD", async () => {
     server.use(
       http.get(`${origin}/api/user/self`, () =>

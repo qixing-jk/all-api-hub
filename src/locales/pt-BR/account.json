@@ -396,9 +396,21 @@
     "toggleSortOrder": "Alternar ordem"
   },
   "netInflow": {
+    "coverage": "Estimativas comparáveis: {{included}}/{{eligible}} contas",
+    "details": "Base e cobertura da estimativa",
+    "explanation": "Saldo contábil final − saldo contábil inicial + consumo liquidado. É uma variação líquida não classificada, não receita confirmada.",
     "reasons": {
+      "balance": "Falta uma observação contábil atual e comparável",
+      "baseline": "Falta uma base confiável no início do dia",
       "conflict": "Observações conflitantes de carteira excluídas",
-      "duplicate": "Carteira duplicada excluída"
+      "consumption": "Falta o consumo liquidado completo",
+      "disabled": "A estimativa está desativada",
+      "duplicate": "Carteira duplicada excluída",
+      "identity": "O ativo, a carteira, a fonte ou o escopo mudou",
+      "interval": "Os períodos de saldo e consumo não coincidem",
+      "manual": "Saldos manuais não têm evidência de cobrança correspondente",
+      "precision": "O valor excede a precisão suportada",
+      "unverified": "A comparabilidade necessária não foi verificada"
     }
   },
   "popupOnboarding": {
@@ -454,7 +466,7 @@
   "stats": {
     "allowanceExpiry": "Expira: {{time}}",
     "completion": "Conclusão",
-    "estimatedTodayIncome": "Renda estimada",
+    "estimatedNetInflow": "Entrada líquida estimada",
     "prompt": "Prompt",
     "subscriptionRemainingCount": "Solicitações de assinatura restantes",
     "subscriptionRemainingTokens": "Tokens restantes",

@@ -423,6 +423,7 @@ const producerFixturesByFamily = {
           HttpResponse.json({
             code: 200,
             range: "today",
+            as_of: new Date(Date.now()).toISOString(),
             window_start: `${new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)}T00:00:00+08:00`,
             summary: {
               cost: 10,
@@ -616,9 +617,9 @@ const producerFixturesByFamily = {
     baseUrl: "https://sharedchat.example.invalid",
     authType: AuthTypeEnum.Cookie,
     expectedAvailability: {
-      consumption: complete,
-      requests: complete,
-      tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
       income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
     },
     handlers: [
@@ -715,9 +716,9 @@ const producerFixturesByFamily = {
     baseUrl: "https://right-code.example.invalid",
     authType: AuthTypeEnum.AccessToken,
     expectedAvailability: {
-      consumption: complete,
-      requests: complete,
-      tokens: complete,
+      consumption: providerDay,
+      requests: providerDay,
+      tokens: providerDay,
       income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
     },
     handlers: [
@@ -730,16 +731,20 @@ const producerFixturesByFamily = {
           balance: 1,
         })
       }),
-      http.get("https://right-code.example.invalid/use-log/stats", () => {
-        collectedRequests.rightCodeTodayStats += 1
-        return HttpResponse.json({
-          total_requests: 2,
-          total_tokens: 3,
-          total_cost: 0.5,
-          start_date: "2026-09-24T00:00",
-          end_date: "2026-09-24T00:00",
-        })
-      }),
+      http.get(
+        "https://right-code.example.invalid/use-log/stats",
+        ({ request }) => {
+          const query = new URL(request.url).searchParams
+          collectedRequests.rightCodeTodayStats += 1
+          return HttpResponse.json({
+            total_requests: 2,
+            total_tokens: 3,
+            total_cost: 0.5,
+            start_date: `${query.get("start_date")}T00:00`,
+            end_date: `${query.get("end_date")}T00:00`,
+          })
+        },
+      ),
       http.get(
         "https://right-code.example.invalid/use-log/stats/overall",
         () => {
@@ -777,7 +782,7 @@ const producerFixturesByFamily = {
     baseUrl: "https://platform.kimi.ai",
     authType: AuthTypeEnum.AccessToken,
     expectedAvailability: {
-      consumption: complete,
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
@@ -817,7 +822,7 @@ const producerFixturesByFamily = {
     baseUrl: "https://grsai.com",
     authType: AuthTypeEnum.AccessToken,
     expectedAvailability: {
-      consumption: complete,
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       // The deployment reports no request, token or income series at all.
       requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
@@ -866,7 +871,7 @@ const producerFixturesByFamily = {
     baseUrl: "https://relayfor.example.invalid",
     authType: AuthTypeEnum.AccessToken,
     expectedAvailability: {
-      consumption: complete,
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       requests: complete,
       tokens: complete,
       income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
@@ -1129,9 +1134,14 @@ const createAccountScopedRequest = async (siteType: AccountSiteType) => {
 }
 
 describe("AccountData availability producer conformance", () => {
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
     vi.spyOn(browser.permissions, "contains").mockResolvedValue(false)
     server.resetHandlers()
     Object.assign(collectedRequests, {

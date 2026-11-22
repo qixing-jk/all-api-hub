@@ -301,6 +301,7 @@ export async function validateAndSaveAccount(
         },
       },
     )
+    const capturedAt = Date.now()
     const accountData: Omit<
       SiteAccount,
       "id" | "created_at" | "updated_at" | "user_updated_at"
@@ -317,7 +318,7 @@ export async function validateAndSaveAccount(
         reportedIncome: freshAccountData.reportedIncome,
         today_prompt_tokens: freshAccountData.today_prompt_tokens,
         today_completion_tokens: freshAccountData.today_completion_tokens,
-        today_quota_consumption: freshAccountData.today_quota_consumption,
+        today_quota_consumption: freshAccountData.today_quota_consumption ?? 0,
         today_requests_count: freshAccountData.today_requests_count,
         today_income: freshAccountData.today_income,
         todayStatsAvailability: freshAccountData.todayStatsAvailability,
@@ -325,14 +326,18 @@ export async function validateAndSaveAccount(
         usageObservations: freshAccountData.usageObservations,
         subscription: freshAccountData.subscription,
         recentUsageRecords: freshAccountData.recentUsageRecords,
-        ...readLegacyAdapterFinancialPatch(freshAccountData, {
-          accountId: "",
-          siteUrl: requestBaseUrl,
-          siteType: normalizedSiteType,
-          capturedAt: Date.now(),
-        }),
+        ...readLegacyAdapterFinancialPatch(
+          freshAccountData,
+          {
+            accountId: "",
+            siteUrl: requestBaseUrl,
+            siteType: normalizedSiteType,
+            capturedAt,
+          },
+          undefined,
+        ),
       },
-      last_sync_time: Date.now(),
+      last_sync_time: capturedAt,
     }
 
     const accountId = await accountMutations.addAccount(accountData, {

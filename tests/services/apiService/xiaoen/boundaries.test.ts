@@ -91,20 +91,21 @@ describe("Xiaoen protocol boundaries", () => {
     vi.unstubAllEnvs()
   })
 
-  it.each([
-    { quota: 31 },
-    { hasSignedInToday: null },
-    { id: "another-user" },
-    { id: "" },
-  ])("rejects invalid or foreign account facts %j", async (change) => {
-    fetchApi.mockResolvedValue({ success: true, data: { ...user, ...change } })
-    await expect(
-      capabilities.account!.data!.fetchData({
-        ...request,
-        checkIn: account.checkIn,
-      }),
-    ).rejects.toThrow()
-  })
+  it.each([{ id: "another-user" }, { id: "" }])(
+    "rejects invalid or foreign account facts %j",
+    async (change) => {
+      fetchApi.mockResolvedValue({
+        success: true,
+        data: { ...user, ...change },
+      })
+      await expect(
+        capabilities.account!.data!.fetchData({
+          ...request,
+          checkIn: account.checkIn,
+        }),
+      ).rejects.toThrow()
+    },
+  )
   it.each([
     {},
     { inviteCode: "" },

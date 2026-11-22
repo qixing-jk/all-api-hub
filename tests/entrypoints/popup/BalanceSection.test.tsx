@@ -9,17 +9,15 @@ import { UpdateTimeAndWarning } from "~/entrypoints/popup/components/BalanceSect
 import { RELATIVE_TIME_REFRESH_INTERVAL_MS } from "~/entrypoints/popup/summaryConfig"
 import AccountBalanceSummary from "~/features/AccountManagement/components/AccountBalanceSummary"
 import { TokenStats } from "~/features/AccountManagement/components/TokenStats"
-import {
-  accountBalanceScope,
-  accountBalanceSnapshot,
-} from "~/services/accounts/balanceSnapshot"
-import { balancePosition } from "~/services/amounts/balance"
+import { accountBalanceSnapshot } from "~/services/accounts/balanceSnapshot"
 import {
   ASSET_KINDS,
   BALANCE_NATURES,
   BALANCE_ROLES,
   BALANCE_VALIDITY_KINDS,
   FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -40,6 +38,10 @@ import {
   buildPeriodConsumption,
   buildPeriodIncome,
 } from "~~/tests/test-utils/financialPeriod"
+import {
+  buildNetInflow,
+  buildNetInflowItem,
+} from "~~/tests/test-utils/netInflow"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const {
@@ -126,31 +128,20 @@ vi.mock("~/utils/core/formatters", async (importOriginal) => {
 })
 
 function nativeBalance(accountId: string, value: string) {
-  const scope = accountBalanceScope({
-    baseUrl: "https://example.com",
-    accountId,
-  })
+  const position = buildNetInflowItem().position
+  position.scope.subject = { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId }
+  position.scope.walletId = accountId
+  position.asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
+  position.nature = BALANCE_NATURES.Prepaid
+  position.role = BALANCE_ROLES.Available
+  position.validity = { kind: BALANCE_VALIDITY_KINDS.NoExpiry }
+  if (position.amount.status !== OBSERVATION_STATUSES.Known)
+    throw new Error("fixture")
+  position.amount.value = value
   return accountBalanceSnapshot(
-    scope,
-    [
-      balancePosition({
-        id: "wallet",
-        scope,
-        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
-        value,
-        observedAt: 100,
-        nature: BALANCE_NATURES.Prepaid,
-        role: BALANCE_ROLES.Available,
-        validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
-        source: {
-          adapter: "fixture",
-          operation: "balance",
-          contractVersion: "1",
-          kind: "reported",
-        },
-      }),
-    ],
-    100,
+    position.scope,
+    [position],
+    Date.now(),
     FINANCIAL_COVERAGE.Complete,
   )
 }
@@ -504,6 +495,111 @@ describe("popup BalanceSection components", () => {
       ).getByText("0", { exact: true }),
     ).toBeVisible()
   })
+
+  it("keeps reported income visible when net-inflow display is disabled", () => {
+    render(<AccountBalanceSummary />)
+    expect(
+      screen.getByRole("region", { name: "account:filteredTotals.income" }),
+    ).toHaveTextContent(/USD\s*1\.25/)
+    expect(
+      screen.queryByRole("region", {
+        name: "account:stats.estimatedNetInflow",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows confirmed income independently from native net inflow", () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      updateCurrencyType: vi.fn(),
+      preferences: {
+        balanceHistory: { estimatedTodayIncome: { enabled: true } },
+      },
+    })
+    const value = createAccountDataContextValue()
+    value.displayData[0]!.netInflowEstimate = {
+      status: "available",
+      estimates: [buildNetInflowItem(buildNetInflow("-5"))],
+    }
+    mockUseAccountDataContext.mockReturnValue(value)
+    render(<AccountBalanceSummary />)
+    const income = screen.getByRole("region", {
+      name: "account:filteredTotals.income",
+    })
+    const net = screen.getByRole("region", {
+      name: "account:stats.estimatedNetInflow",
+    })
+    expect(income).toHaveTextContent(/USD\s*1\.25/)
+    expect(net).toHaveTextContent(/CNY\s*-5|-[^0-9]*CNY\s*5/)
+    expect(net).not.toHaveTextContent(/USD\s*1\.25/)
+  })
+
+  it("shows unavailable net inflow with its history-read reason and no synthetic zero", () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      showTodayCashflow: true,
+      updateCurrencyType: vi.fn(),
+      preferences: {
+        balanceHistory: { estimatedTodayIncome: { enabled: true } },
+      },
+    })
+    const value = createAccountDataContextValue()
+    value.displayData[0]!.netInflowEstimate = {
+      status: "history_unavailable",
+      estimates: [],
+    }
+    mockUseAccountDataContext.mockReturnValue(value)
+    render(<AccountBalanceSummary />)
+    expect(
+      screen.queryByRole("region", {
+        name: "account:stats.estimatedNetInflow",
+      }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", { name: "account:financial.summary" }),
+    )
+    const net = screen.getByRole("region", {
+      name: "account:stats.estimatedNetInflow",
+    })
+    expect(net).toHaveTextContent("account:financial.unavailable")
+    expect(net).toHaveTextContent("balanceHistory:messages.error.loadTitle")
+    expect(within(net).queryByTestId("countup")).not.toBeInTheDocument()
+    expect(net).not.toHaveTextContent("$0.00")
+  })
+
+  it.each(["0", "-1"])(
+    "preserves native net inflow %s without a confirmed-income plus prefix",
+    (amount) => {
+      mockUseUserPreferencesContext.mockReturnValue({
+        currencyType: CURRENCIES.USD,
+        showTodayCashflow: true,
+        updateCurrencyType: vi.fn(),
+        preferences: {
+          balanceHistory: { estimatedTodayIncome: { enabled: true } },
+        },
+      })
+      const value = createAccountDataContextValue()
+      value.displayData[0]!.netInflowEstimate = {
+        status: "available",
+        estimates: [buildNetInflowItem(buildNetInflow(amount))],
+      }
+      mockUseAccountDataContext.mockReturnValue(value)
+      render(<AccountBalanceSummary />)
+      const net = screen.getByRole("region", {
+        name: "account:stats.estimatedNetInflow",
+      })
+      expect(net).toHaveTextContent(
+        amount === "0" ? /CNY\s*0/ : /CNY\s*-1|-[^0-9]*CNY\s*1/,
+      )
+      expect(net).not.toHaveTextContent("+")
+      expect(
+        within(net).queryByRole("button", {
+          name: /common:currency\.clickToSwitch/,
+        }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   it("hides cashflow when disabled and keeps original USD balance in details under the CNY preference", () => {
     mockUseUserPreferencesContext.mockReturnValue({

@@ -16,7 +16,7 @@ import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import { maybeCaptureAccountReferenceBalance } from "~/services/history/dailyBalanceHistory/capture"
+import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -60,6 +60,7 @@ export type RefreshAccountOptions = {
 
 interface StoredAccountRefreshResult {
   /** Receipt for history persistence; account refresh success is independent. */
+  balanceHistoryCaptured?: boolean
   account: SiteAccount | null
   refreshed: boolean
   checkInStatusRefreshOutcome?: CheckInStatusRefreshOutcome
@@ -216,13 +217,26 @@ async function runRefreshAttempt(
   )
   const didPersist = persistedAccount !== null
   const updatedAccount = persistedAccount ?? account
-  if (result.success && persistedAccount) {
+  let balanceHistoryCaptured = false
+  if (persistedAccount) {
     try {
-      await maybeCaptureAccountReferenceBalance({
+      const historyWritten = await maybeCaptureDailyBalanceSnapshot({
         config: prefs.balanceHistory,
-        account: persistedAccount,
+        accountId: account.id,
+        generation: persistedAccount.balanceRefreshGeneration,
+        balance: persistedAccount.account_info.balance,
+        allowances: persistedAccount.account_info.allowances,
+        settledConsumption: persistedAccount.account_info.settledConsumption,
+        usage: [
+          ...(persistedAccount.account_info.usage
+            ? [persistedAccount.account_info.usage]
+            : []),
+          ...(persistedAccount.account_info.usageObservations ?? []),
+        ],
+        reportedIncome: persistedAccount.account_info.reportedIncome,
         source: options?.balanceHistoryCaptureSource ?? "refresh",
       })
+      balanceHistoryCaptured = result.success && historyWritten
     } catch (error) {
       logger.debug("Failed to capture daily balance snapshot", {
         accountId: account.id,
@@ -248,6 +262,7 @@ async function runRefreshAttempt(
     requestFailed,
     result: {
       account: updatedAccount,
+      balanceHistoryCaptured,
       refreshed: didPersist,
       reEnabled,
       ...(didPersist && checkInStatusRefreshOutcome

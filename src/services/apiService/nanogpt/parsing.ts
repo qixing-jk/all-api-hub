@@ -23,11 +23,8 @@ const invalid = (endpoint: string) =>
   )
 
 export type NanoGptBalance = {
-  usdBalance: number
-  nanoBalance?: number
-  usdAmount: string
-  nanoAmount?: string
-  nanoAmountUnavailable?: true
+  usdBalance?: string
+  nanoBalance?: string
   /** Per-account Nano deposit address; the stable identity a key can prove. */
   depositAddress: string
 }
@@ -42,43 +39,33 @@ export function parseNanoGptBalance(
   endpoint: string,
 ): NanoGptBalance {
   if (!isRecord(value)) throw invalid(endpoint)
-  const usdBalance = readNanoGptAmount(value.usd_balance)
-  if (usdBalance === undefined) throw invalid(endpoint)
+  const decimal = (raw: unknown) => {
+    if (readNanoGptAmount(raw) === undefined) return undefined
+    return parseDecimal(
+      typeof raw === "string"
+        ? raw.trim().replace(/^\./, "0.").replace(/\.$/, "")
+        : raw,
+    )
+  }
+  const usdBalance = decimal(value.usd_balance)
   const depositAddress =
     typeof value.nanoDepositAddress === "string"
       ? value.nanoDepositAddress.trim()
       : ""
   if (!depositAddress) throw invalid(endpoint)
-  const nanoBalance = readNanoGptAmount(value.nano_balance)
-  const exactAmount = (value: unknown) => {
-    if (readNanoGptAmount(value) === undefined) return undefined
-    const original =
-      typeof value === "string"
-        ? value.trim().replace(/^\./, "0.").replace(/\.$/, "")
-        : value
-    const parsed = parseDecimal(original)
-    return parsed?.startsWith("-") ? undefined : parsed
-  }
-  const usdAmount = exactAmount(value.usd_balance)
-  if (usdAmount === undefined) throw invalid(endpoint)
-  const nanoAmount = exactAmount(value.nano_balance)
+  const nanoBalance = decimal(value.nano_balance)
   return {
     usdBalance,
-    usdAmount,
-    ...(nanoAmount === undefined ? {} : { nanoAmount }),
-    ...(value.nano_balance !== undefined && nanoAmount === undefined
-      ? { nanoAmountUnavailable: true as const }
-      : {}),
     ...(nanoBalance === undefined ? {} : { nanoBalance }),
     depositAddress,
   }
 }
 
 export type NanoGptUsageAggregate = {
-  requests: number
-  totalTokens: number
+  requests?: number
+  totalTokens?: number
   /** Net of refunds when the provider reports it; otherwise the gross charge. */
-  costUsd: number
+  costUsd?: string
 }
 
 /**
@@ -94,19 +81,18 @@ export function parseNanoGptUsageAggregate(
   const requests = readNanoGptAmount(totals.requests)
   const totalTokens = readNanoGptAmount(totals.totalTokens)
   const costUsd =
-    readNanoGptAmount(totals.netCostUsd) ?? readNanoGptAmount(totals.costUsd)
-  if (
-    requests === undefined ||
-    totalTokens === undefined ||
-    costUsd === undefined
-  )
-    throw invalid(endpoint)
-  return { requests, totalTokens, costUsd }
+    parseDecimal(totals.netCostUsd) ?? parseDecimal(totals.costUsd)
+  // Independent observations remain useful when another field is unreported.
+  return {
+    ...(requests === undefined ? {} : { requests }),
+    ...(totalTokens === undefined ? {} : { totalTokens }),
+    ...(costUsd === undefined ? {} : { costUsd }),
+  }
 }
 
 export type NanoGptQuotaWindow = {
-  used?: number
-  remaining?: number
+  used?: string
+  remaining?: string
   resetAt?: string
 }
 
@@ -120,8 +106,12 @@ export type NanoGptSubscriptionSnapshot = {
 
 const readQuotaWindow = (value: unknown): NanoGptQuotaWindow | undefined => {
   if (!isRecord(value)) return undefined
-  const used = readNanoGptAmount(value.used)
-  const remaining = readNanoGptAmount(value.remaining)
+  const nonnegative = (raw: unknown) => {
+    const amount = parseDecimal(raw)
+    return amount?.startsWith("-") ? undefined : amount
+  }
+  const used = nonnegative(value.used)
+  const remaining = nonnegative(value.remaining)
   const resetAtMs = readNanoGptAmount(value.resetAt)
   // Documented as UNIX epoch milliseconds; an unusable instant is dropped
   // rather than surfaced as an invalid date.
@@ -130,12 +120,13 @@ const readQuotaWindow = (value: unknown): NanoGptQuotaWindow | undefined => {
     const instant = new Date(resetAtMs)
     if (Number.isFinite(instant.getTime())) resetAt = instant.toISOString()
   }
-  const window: NanoGptQuotaWindow = {
+  if (used === undefined && remaining === undefined && resetAt === undefined)
+    return undefined
+  return {
     ...(used === undefined ? {} : { used }),
     ...(remaining === undefined ? {} : { remaining }),
     ...(resetAt === undefined ? {} : { resetAt }),
   }
-  return Object.keys(window).length ? window : undefined
 }
 
 /**

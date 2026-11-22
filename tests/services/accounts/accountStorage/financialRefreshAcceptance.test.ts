@@ -30,19 +30,26 @@ import {
   BALANCE_FUNDING,
   BALANCE_NATURES,
   BALANCE_VALIDITY_KINDS,
+  OBSERVATION_STATUSES,
   WALLET_BALANCE_COLLECTION_KEY,
 } from "~/services/amounts/financialConstants"
+import { fetchAccountData } from "~/services/apiService/daya"
+import { fetchAccountData as fetchGrsaiAccountData } from "~/services/apiService/grsai"
+import { GRSAI_ENDPOINTS } from "~/services/apiService/grsai/constants"
 import { fetchAccountData as fetchNewApiAccountData } from "~/services/apiService/newApiFamily/default/accountData"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { SiteAccount } from "~/types"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
+import { GRSAI_SIGNATURE_MATERIAL } from "~~/tests/services/apiService/grsai/signatureFixture"
 import {
   buildFinancialIncomeFact,
   buildFinancialPeriodFact,
 } from "~~/tests/test-utils/accountTodayStats"
+import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 type RefreshMode = "ordinary" | "editor"
@@ -136,6 +143,106 @@ async function refreshPeriod(
   return (await accountQueries.getAccountById(account.id))!
 }
 
+it("Daya valid wallet plus missing cost must retain the last observed cost through acceptance and row projection", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+  onTestFinished(() => {
+    vi.useRealTimers()
+  })
+  installCookieTransport("daya_sid", "api.dayaai.com")
+  onTestFinished(() => {
+    vi.restoreAllMocks()
+  })
+  const origin = "https://api.dayaai.com"
+  let cost: string | undefined = "3.5"
+  server.use(
+    http.get(origin + "/api/v1/auth/me", () =>
+      HttpResponse.json({
+        code: 0,
+        message: "success",
+        data: { id: 615, username: "test", balance: "20", status: "active" },
+      }),
+    ),
+    http.get(origin + "/api/v1/usage/dashboard/stats", () =>
+      HttpResponse.json({
+        code: 0,
+        message: "success",
+        data: {
+          ...(cost === undefined ? {} : { today_cost: cost }),
+          today_requests: 8,
+        },
+      }),
+    ),
+  )
+  let account = buildSiteAccount({
+    id: "daya",
+    site_type: SITE_TYPES.DAYA,
+    site_url: origin,
+    authType: AuthTypeEnum.Cookie,
+  })
+  account.account_info.id = "615"
+  const storage = new Storage({ area: "local" })
+  const config = createDefaultAccountStorageConfig()
+  config.accounts = [account]
+  await storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
+  const accept = async () => {
+    const generation = (await accountMutations.beginBalanceRefresh(
+      "daya",
+      account,
+    ))!
+    const data = await fetchAccountData({
+      directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+      baseUrl: origin,
+      accountId: "daya",
+      auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
+      includeTodayCashflow: true,
+      checkIn: account.checkIn,
+    })
+    const updates = buildAccountRefreshUpdate(
+      account,
+      {
+        success: true,
+        data,
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
+      },
+      false,
+    )
+    account = (await accountMutations.updateAccountFromRefresh(
+      "daya",
+      updates,
+      undefined,
+      account,
+      data,
+      generation,
+    ))!
+    return accountPresentation.convertToDisplayData(account)
+  }
+  const first = await accept()
+  expect(first.settledConsumption?.[0]?.amount).toMatchObject({
+    status: "known",
+    value: "3.5",
+  })
+  const oldFact = account.account_info.settledConsumption![0]!
+  const oldAmount = oldFact.amount
+  if (oldAmount.status !== OBSERVATION_STATUSES.Known)
+    throw new Error("Expected collected amount")
+  const oldTime = oldAmount.observedAt
+  cost = undefined
+  vi.setSystemTime(new Date("2026-11-19T06:01:00Z"))
+  const second = await accept()
+  expect(account.account_info.balance?.positions[0]?.amount).toMatchObject({
+    status: "known",
+    value: "20",
+  })
+  expect(account.account_info.today_requests_count).toBe(8)
+  expect(second.settledConsumption?.[0]?.amount).toMatchObject({
+    status: "stale",
+    value: "3.5",
+    observedAt: oldTime,
+  })
+  expect(second.settledConsumption?.[0]?.window).toEqual(oldFact.window)
+})
+
 it.each(["usage", "usageObservations"] as const)(
   "accepted editor refresh captures %s costs with the same accepted balance",
   async (field) => {
@@ -225,6 +332,19 @@ it.each(["usage", "usageObservations"] as const)(
         : stored.account_info.usageObservations?.[0]
       )?.cost?.amount,
     ).toMatchObject({ status: "known", value: "3.5" })
+    const record = (await dailyBalanceHistoryStorage.getStore())
+      .financialSnapshotsByAccountId?.editor?.[0]
+    expect(record?.balance).toEqual(stored.account_info.balance)
+    expect(
+      record?.balance?.positions.find(({ id }) => id === "balance")?.amount,
+    ).toMatchObject({
+      status: "known",
+      value: "20",
+    })
+    expect(record?.reportedDayCosts?.[0]?.amount).toMatchObject({
+      status: "known",
+      value: "3.5",
+    })
   },
 )
 
@@ -326,6 +446,96 @@ it.each(["ordinary", "editor"] as const)(
           amount: { asset: { kind: "currency", code: "USD" }, value: "3" },
         }),
       ]),
+    )
+  },
+)
+
+it.each([
+  ["ordinary", "user-to-dashboard"],
+  ["ordinary", "dashboard-to-user"],
+  ["editor", "user-to-dashboard"],
+  ["editor", "dashboard-to-user"],
+] as const)(
+  "%s refresh keeps one usable Grsai wallet when its balance source switches %s",
+  async (mode, direction) => {
+    const origin = "https://eb.grsaiapi.com"
+    let fallback = direction === "dashboard-to-user"
+    let unavailable = false
+    server.use(
+      http.post(origin + GRSAI_ENDPOINTS.userInfo, () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            id: "user-1",
+            ...(fallback || unavailable ? {} : { credits: "100" }),
+          },
+          msg: "",
+        }),
+      ),
+      http.post(origin + GRSAI_ENDPOINTS.dashboard, () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            ...(unavailable ? {} : { credits: "80" }),
+            totalConsumed: "20",
+          },
+          msg: "",
+        }),
+      ),
+    )
+    let account = buildSiteAccount({
+      id: "grsai",
+      site_type: SITE_TYPES.GRSAI,
+      site_url: "https://grsai.com",
+    })
+    account.account_info.id = "user-1"
+    const config = createDefaultAccountStorageConfig()
+    config.accounts = [account]
+    await new Storage({ area: "local" }).set(
+      ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      config,
+    )
+    const refresh = async () => {
+      const data = await fetchGrsaiAccountData(
+        {
+          baseUrl: account.site_url,
+          accountId: account.id,
+          siteType: SITE_TYPES.GRSAI,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            userId: "user-1",
+            accessToken: "test",
+          },
+          directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+          includeTodayCashflow: true,
+          checkIn: account.checkIn,
+        },
+        { token: "test", isAuth: true, material: GRSAI_SIGNATURE_MATERIAL },
+      )
+      account = await refreshPeriod(mode, account, data)
+      return getDisplayBalancePortfolio([
+        accountPresentation.convertToDisplayData(account),
+      ])
+    }
+    expect((await refresh()).amounts[0]?.value).toBe(fallback ? "80" : "100")
+    fallback = !fallback
+    const second = await refresh()
+    const value = fallback ? "80" : "100"
+    expect(second.amounts[0]?.value).toBe(value)
+    expect(second.includedCount).toBe(1)
+    expect(second.conflicts).toEqual([])
+    const nativePositions = account.account_info.balance?.positions.filter(
+      (position) => position.asset.kind === ASSET_KINDS.Quota,
+    )
+    expect(nativePositions).toHaveLength(1)
+    const lastAmount = nativePositions![0]!.amount
+    unavailable = true
+    const missing = await refresh()
+    expect(missing.amounts[0]?.value).toBe(value)
+    expect(account.account_info.balance?.positions).toContainEqual(
+      expect.objectContaining({
+        amount: { ...lastAmount, status: "stale", reason: expect.any(String) },
+      }),
     )
   },
 )

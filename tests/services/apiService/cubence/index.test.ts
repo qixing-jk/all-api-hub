@@ -1,7 +1,10 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { QUOTA_PER_USD } from "~/constants/money"
+import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import {
   fetchAccountData,
   fetchInviteLink,
@@ -54,6 +57,168 @@ describe("Cubence account protocol", () => {
     expect(data.todayStatsAvailability?.requests.status).toBe("complete")
     expect(data.balance?.positions[0]?.scope.walletId).toBe("7")
   })
+  it("keeps provider-labelled daily amounts and counters visible when an exact observation boundary is omitted", async () => {
+    server.use(
+      http.get(`${origin}/api/v1/analytics/apikeys/hourly-usage`, () =>
+        HttpResponse.json({ ...today, as_of: undefined }),
+      ),
+    )
+    const data = await fetchAccountData(accountRequest)
+    expect(getSiteDayReadings(data)).toMatchObject([
+      {
+        lastKnown: false,
+        observedAt: Date.now(),
+        usage: {
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          totalRequests: 4,
+          totalTokens: 400,
+          cost: {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "1.5" },
+          },
+        },
+      },
+    ])
+    expect(
+      getDisplayConsumptionProjection([
+        { id: "cubence", settledConsumption: data.settledConsumption },
+      ]).groups,
+    ).toEqual([])
+  })
+  it.each([undefined, null, -1, "4"])(
+    "retains known cost and token counts independently of unavailable requests: %s",
+    async (calls) => {
+      server.use(
+        http.get(`${origin}/api/v1/analytics/apikeys/hourly-usage`, () =>
+          HttpResponse.json({ ...today, summary: { ...today.summary, calls } }),
+        ),
+      )
+      const data = await fetchAccountData(accountRequest)
+      expect(data.settledConsumption?.[0]?.amount).toMatchObject({
+        status: "known",
+        value: "1.5",
+      })
+      expect(data.todayStatsAvailability).toMatchObject({
+        consumption: { status: "complete" },
+        requests: { status: "unavailable", reason: "invalid_payload" },
+        tokens: { status: "complete" },
+      })
+      expect(data.today_prompt_tokens).toBe(350)
+      expect(data.today_completion_tokens).toBe(50)
+    },
+  )
+  it.each([undefined, null, "invalid"])(
+    "retains known requests and token counts independently of unavailable cost: %s",
+    async (cost) => {
+      server.use(
+        http.get(`${origin}/api/v1/analytics/apikeys/hourly-usage`, () =>
+          HttpResponse.json({ ...today, summary: { ...today.summary, cost } }),
+        ),
+      )
+      const data = await fetchAccountData(accountRequest)
+      expect(data.settledConsumption?.[0]?.amount.status).toBe("unavailable")
+      expect(data.today_requests_count).toBe(4)
+      expect(data.todayStatsAvailability).toMatchObject({
+        consumption: { status: "unavailable", reason: "invalid_payload" },
+        requests: { status: "complete" },
+        tokens: { status: "complete" },
+      })
+    },
+  )
+  it.each([undefined, -1, "400"])(
+    "retains billed cost and request counts independently of unavailable token fields: %s",
+    async (tokens) => {
+      server.use(
+        http.get(`${origin}/api/v1/analytics/apikeys/hourly-usage`, () =>
+          HttpResponse.json({
+            ...today,
+            summary: { cost: 1500000, calls: 4, tokens },
+          }),
+        ),
+      )
+      const data = await fetchAccountData(accountRequest)
+      expect(data.settledConsumption?.[0]?.amount).toMatchObject({
+        status: "known",
+        value: "1.5",
+      })
+      expect(data.today_requests_count).toBe(4)
+      expect(data.todayStatsAvailability).toMatchObject({
+        consumption: { status: "complete" },
+        requests: { status: "complete" },
+        tokens: { status: "unavailable", reason: "invalid_payload" },
+      })
+    },
+  )
+  it("includes unfiltered billed costs in financial reporting while wallet restrictions remain unknown", async () => {
+    const data = await fetchAccountData({
+      ...accountRequest,
+      accountId: "cubence-account",
+    })
+    expect(data.settledConsumption).toHaveLength(1)
+    expect(data.settledConsumption?.[0]).toMatchObject({
+      cumulative: true,
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "1.5" },
+      scope: {
+        subject: { kind: "account", accountId: "cubence-account" },
+        projects: { kind: "all" },
+        keys: { kind: "all" },
+        models: { kind: "all" },
+        groups: { kind: "all" },
+      },
+    })
+    expect(data.balance?.positions[0]?.scope.keys).toEqual({ kind: "unknown" })
+  })
+  it.each(["balance", "usage"])(
+    "keeps independent facts when %s normalization exceeds decimal precision",
+    async (field) => {
+      const tiny = `0.${"0".repeat(252)}1`
+      server.use(
+        http.get(`${origin}/api/v1/auth/me`, () =>
+          HttpResponse.json({
+            user: {
+              ...user,
+              ...(field === "balance" ? { normal_balance: tiny } : {}),
+            },
+          }),
+        ),
+        http.get(`${origin}/api/v1/analytics/apikeys/hourly-usage`, () =>
+          HttpResponse.json({
+            ...today,
+            summary: {
+              ...today.summary,
+              ...(field === "usage" ? { cost: tiny } : {}),
+            },
+          }),
+        ),
+      )
+      const result = await fetchAccountData(accountRequest)
+      expect(result.balance?.positions).toMatchObject([
+        {
+          id: "normal",
+          labelKey: "normalBalance",
+          amount:
+            field === "balance"
+              ? { status: "unavailable" }
+              : { status: "known", value: "12.5" },
+        },
+        {
+          id: "charity",
+          labelKey: "charityBalance",
+          amount: { status: "known", value: "9" },
+        },
+      ])
+      expect(result.settledConsumption?.[0]?.amount).toMatchObject(
+        field === "usage"
+          ? { status: "unavailable" }
+          : { status: "known", value: "1.5" },
+      )
+      expect(result.todayStatsAvailability?.requests).toMatchObject({
+        status: "complete",
+      })
+      expect(result.today_requests_count).toBe(4)
+    },
+  )
   beforeEach(() => {
     installCookieTransport()
   })
@@ -76,13 +241,39 @@ describe("Cubence account protocol", () => {
   })
 
   it("verifies live identity and maps purchased USD microcredits without merging charity balance", async () => {
+    const native = await fetchAccountData(accountRequest)
+    expect(native.settledConsumption?.[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "1.5" },
+      window: {
+        start: Date.parse(today.window_start),
+        end: Date.parse(today.as_of),
+        timeZone: "Asia/Shanghai",
+      },
+    })
     await expect(fetchUserInfo(request)).resolves.toMatchObject({
       id: "7",
       username: "example",
       access_token: null,
     })
     await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
-      quota: 12.5 * QUOTA_PER_USD,
+      balance: {
+        positions: [
+          {
+            id: "normal",
+            asset: { kind: "currency", code: "USD" },
+            amount: { value: "12.5" },
+            funding: "purchased",
+          },
+          {
+            id: "charity",
+            asset: { kind: "currency", code: "USD" },
+            amount: { value: "9" },
+            funding: "granted",
+            nature: "unknown",
+          },
+        ],
+      },
       today_quota_consumption: 1.5 * QUOTA_PER_USD,
       today_requests_count: 4,
       today_prompt_tokens: 350,
@@ -96,6 +287,39 @@ describe("Cubence account protocol", () => {
     })
   })
 
+  it.each([undefined, "2026-10-09T14:00:00", "2026-10-10T14:00:00+08:00"])(
+    "keeps usage outside today's complete interval separate: %s",
+    async (as_of) => {
+      server.use(
+        http.get(`${origin}/api/v1/analytics/apikeys/hourly-usage`, () =>
+          HttpResponse.json({ ...today, as_of }),
+        ),
+      )
+      const data = await fetchAccountData(accountRequest)
+      expect(data.settledConsumption).toBeUndefined()
+      expect(data.usage).toMatchObject({
+        scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+        totalRequests: 4,
+        totalTokens: 400,
+        cost: {
+          amount: { value: "1.5" },
+          scope: {
+            projects: { kind: "all" },
+            keys: { kind: "all" },
+            models: { kind: "all" },
+            groups: { kind: "all" },
+          },
+        },
+      })
+      expect(data.today_quota_consumption).toBe(0)
+      expect(data.todayStatsAvailability).toMatchObject({
+        consumption: { status: "unavailable" },
+        requests: { status: "unavailable" },
+        tokens: { status: "unavailable" },
+      })
+    },
+  )
+
   it("rejects another logged-in identity before fetching account data", async () => {
     server.use(
       http.get(`${origin}/api/v1/auth/me`, () =>
@@ -107,17 +331,25 @@ describe("Cubence account protocol", () => {
     })
   })
 
-  it.each([null, "12", NaN])(
-    "rejects malformed balance %s instead of inventing zero",
-    async (normal_balance) => {
+  it.each([
+    [null, undefined],
+    ["12", "0.000012"],
+    [NaN, undefined],
+  ])(
+    "retains exact or unavailable balance %s without inventing zero",
+    async (normal_balance, expected) => {
       server.use(
         http.get(`${origin}/api/v1/auth/me`, () =>
           HttpResponse.json({ user: { ...user, normal_balance } }),
         ),
       )
-      await expect(fetchAccountData(accountRequest)).rejects.toMatchObject({
-        code: "JSON_PARSE_ERROR",
-      })
+      const amount = (await fetchAccountData(accountRequest)).balance
+        ?.positions[0]?.amount
+      expect(amount).toMatchObject(
+        expected === undefined
+          ? { status: "unavailable" }
+          : { status: "known", value: expected },
+      )
     },
   )
 
@@ -127,7 +359,9 @@ describe("Cubence account protocol", () => {
         HttpResponse.json({ user: { ...user, normal_balance: -1000000 } }),
       ),
     )
-    expect((await fetchAccountData(accountRequest)).quota).toBe(-QUOTA_PER_USD)
+    expect(
+      (await fetchAccountData(accountRequest)).balance?.positions[0]?.amount,
+    ).toMatchObject({ value: "-1" })
   })
 
   it("keeps balance when today usage fails and does not report a complete zero", async () => {
@@ -137,7 +371,14 @@ describe("Cubence account protocol", () => {
       ),
     )
     await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
-      quota: 12.5 * QUOTA_PER_USD,
+      balance: {
+        positions: expect.arrayContaining([
+          expect.objectContaining({
+            id: "normal",
+            amount: expect.objectContaining({ value: "12.5" }),
+          }),
+        ]),
+      },
       todayStatsAvailability: {
         consumption: { status: "unavailable", reason: "request_failed" },
       },

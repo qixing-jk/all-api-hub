@@ -7,16 +7,13 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
+import { buildNetInflowTotals } from "~/services/accounts/metrics/netInflowTotals"
 import {
   AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
   AUTO_REFRESH_UPDATE_TYPES,
 } from "~/services/accounts/refresh/constants"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
-import {
-  buildEstimatedTodayIncomeMoneyTotals,
-  convertQuotaToMoney,
-  estimateTodayIncomeForAccount,
-} from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
+import { estimateTodayIncomeForAccount } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type {
   AccountStats,
@@ -28,13 +25,26 @@ import type {
   Tag,
   TagStore,
 } from "~/types"
-import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
+import type { TodayIncomeEstimateResult } from "~/types/dailyBalanceHistory"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
 /** Account reads, visible projections and per-account reload ordering share one owner. */
 const logger = createLogger("AccountDataContext")
+
+/** Optional history failure must not prevent current saved-account data from loading. */
+async function readBalanceHistoryForEstimates(enabled: boolean) {
+  try {
+    return {
+      store: enabled ? await dailyBalanceHistoryStorage.getStore() : null,
+      unavailable: false,
+    }
+  } catch (error) {
+    logger.warn("Balance history unavailable for net inflow estimates", error)
+    return { store: null, unavailable: true }
+  }
+}
 
 /** Load and project saved-account facts while preserving reload ordering. */
 export function useAccountSnapshot({
@@ -52,14 +62,10 @@ export function useAccountSnapshot({
   const [hasLoadedAccountData, setHasLoadedAccountData] = useState(false)
   const [prevTotalConsumption, setPrevTotalConsumption] =
     useState<CurrencyAmount>({ USD: 0, CNY: 0 })
-  const [todayIncomeEstimateTotals, setTodayIncomeEstimateTotals] = useState<
-    ReturnType<typeof buildEstimatedTodayIncomeMoneyTotals>
-  >({
-    trusted: { USD: 0, CNY: 0 },
-    estimated: null,
-    availableAccounts: 0,
-    totalAccounts: 0,
-  })
+  const netInflowTotals = useMemo(
+    () => buildNetInflowTotals(displayData),
+    [displayData],
+  )
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
   const [tagStore, setTagStore] = useState<TagStore>({
     version: 1,
@@ -94,9 +100,13 @@ export function useAccountSnapshot({
       balanceHistoryStore: Awaited<
         ReturnType<typeof dailyBalanceHistoryStorage.getStore>
       > | null
+      balanceHistoryUnavailable: boolean
       todayKey: string
     }) => {
-      const estimatedByAccountId = new Map<string, CurrencyAmount | null>()
+      const estimatesByAccountId = new Map<
+        string,
+        Pick<TodayIncomeEstimateResult, "status" | "estimates">
+      >()
 
       for (const account of params.nextAccounts) {
         const estimate = estimateTodayIncomeForAccount({
@@ -105,20 +115,15 @@ export function useAccountSnapshot({
             account.disabled !== true &&
             account.excludeFromTodayIncome !== true,
           store: params.balanceHistoryStore,
+          historyUnavailable: params.balanceHistoryUnavailable,
           account,
           currentDayKey: params.todayKey,
         })
 
-        estimatedByAccountId.set(
-          account.id,
-          estimate.status === TODAY_INCOME_ESTIMATE_STATUS.available &&
-            estimate.estimatedTodayIncome !== null
-            ? convertQuotaToMoney({
-                quota: estimate.estimatedTodayIncome,
-                exchangeRate: account.exchange_rate,
-              })
-            : null,
-        )
+        estimatesByAccountId.set(account.id, {
+          status: estimate.status,
+          estimates: estimate.estimates,
+        })
       }
 
       return buildDisplayDataWithResolvedTags(
@@ -126,7 +131,8 @@ export function useAccountSnapshot({
         params.currentTagStore,
       ).map((site) => ({
         ...site,
-        estimatedTodayIncome: estimatedByAccountId.get(site.id) ?? null,
+        estimatedTodayIncome: null,
+        netInflowEstimate: estimatesByAccountId.get(site.id),
       }))
     },
     [buildDisplayDataWithResolvedTags, estimatedTodayIncomeEnabled],
@@ -135,99 +141,95 @@ export function useAccountSnapshot({
   const accountsRef = useRef<SiteAccount[]>([])
   accountsRef.current = accounts
   const targetedReloadGenerationRef = useRef(0)
+  const appliedTargetedReloadRef = useRef(0)
+  const appliedFullLoadRef = useRef(0)
   const targetedReloadGenerationByAccountIdRef = useRef<Record<string, number>>(
     {},
   )
   const hasLoadedAccountDataRef = useRef(false)
   hasLoadedAccountDataRef.current = hasLoadedAccountData
 
-  const loadAccountData = useCallback(async () => {
-    try {
-      logger.debug("Loading account data")
-      await accountCheckInState.resetExpiredCheckIns()
-      const [accountSnapshot, currentTagStore, balanceHistoryStore] =
-        await Promise.all([
-          accountReadModels.getAccountManagementSnapshot(),
-          tagStorage.getTagStore(),
-          estimatedTodayIncomeEnabled
-            ? dailyBalanceHistoryStorage.getStore()
-            : null,
-        ])
-      const {
-        accounts: allAccounts,
-        bookmarks: allBookmarks,
-        orderedIds: storedOrderedIds,
-        stats: accountStats,
-        pinnedIds,
-      } = accountSnapshot
-      const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-      const displaySiteData = buildDisplayDataWithBalanceHistory({
-        nextAccounts: allAccounts,
-        currentTagStore,
-        balanceHistoryStore,
-        todayKey,
-      })
+  const loadAccountData = useCallback(
+    async function load() {
+      try {
+        logger.debug("Loading account data")
+        await accountCheckInState.resetExpiredCheckIns()
+        const appliedTargetedReload = appliedTargetedReloadRef.current
+        const [accountSnapshot, currentTagStore, balanceHistory] =
+          await Promise.all([
+            accountReadModels.getAccountManagementSnapshot(),
+            tagStorage.getTagStore(),
+            readBalanceHistoryForEstimates(estimatedTodayIncomeEnabled),
+          ])
+        if (appliedTargetedReload !== appliedTargetedReloadRef.current)
+          return load()
+        const {
+          accounts: allAccounts,
+          bookmarks: allBookmarks,
+          orderedIds: storedOrderedIds,
+          stats: accountStats,
+          pinnedIds,
+        } = accountSnapshot
+        const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+        const displaySiteData = buildDisplayDataWithBalanceHistory({
+          nextAccounts: allAccounts,
+          currentTagStore,
+          balanceHistoryStore: balanceHistory.store,
+          balanceHistoryUnavailable: balanceHistory.unavailable,
+          todayKey,
+        })
 
-      setTagStore(currentTagStore)
-      setTags(
-        Object.values(currentTagStore.tagsById).sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-        ),
-      )
-
-      if (hasLoadedAccountDataRef.current) {
-        setPrevTotalConsumption(prevTotalConsumption)
-        setPrevBalances(prevBalances)
-      }
-
-      setAccounts(allAccounts)
-      setBookmarks(allBookmarks)
-      setStats(accountStats)
-      setDisplayData(displaySiteData)
-      const enabledAccounts = allAccounts.filter(
-        (account) =>
-          account.disabled !== true && account.excludeFromTodayIncome !== true,
-      )
-      setTodayIncomeEstimateTotals(
-        buildEstimatedTodayIncomeMoneyTotals({
-          enabled: estimatedTodayIncomeEnabled,
-          store: balanceHistoryStore,
-          accounts: enabledAccounts,
-          currentDayKey: todayKey,
-        }),
-      )
-
-      const entryIdSet = new Set<string>([
-        ...displaySiteData.map((site) => site.id),
-        ...allBookmarks.map((bookmark) => bookmark.id),
-      ])
-
-      setEntryLayoutSnapshot({
-        orderedIds: storedOrderedIds.filter((id) => entryIdSet.has(id)),
-        pinnedIds: pinnedIds.filter((id) => entryIdSet.has(id)),
-      })
-
-      if (allAccounts.length > 0) {
-        const latestSyncTime = Math.max(
-          ...allAccounts.map((acc) => acc.last_sync_time),
+        setTagStore(currentTagStore)
+        setTags(
+          Object.values(currentTagStore.tagsById).sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          ),
         )
-        if (latestSyncTime > 0) {
-          setLastUpdateTime(new Date(latestSyncTime))
+
+        if (hasLoadedAccountDataRef.current) {
+          setPrevTotalConsumption(prevTotalConsumption)
+          setPrevBalances(prevBalances)
+        }
+
+        appliedFullLoadRef.current += 1
+        accountsRef.current = allAccounts
+        setAccounts(allAccounts)
+        setBookmarks(allBookmarks)
+        setStats(accountStats)
+        setDisplayData(displaySiteData)
+        const entryIdSet = new Set<string>([
+          ...displaySiteData.map((site) => site.id),
+          ...allBookmarks.map((bookmark) => bookmark.id),
+        ])
+
+        setEntryLayoutSnapshot({
+          orderedIds: storedOrderedIds.filter((id) => entryIdSet.has(id)),
+          pinnedIds: pinnedIds.filter((id) => entryIdSet.has(id)),
+        })
+
+        if (allAccounts.length > 0) {
+          const latestSyncTime = Math.max(
+            ...allAccounts.map((acc) => acc.last_sync_time),
+          )
+          if (latestSyncTime > 0) {
+            setLastUpdateTime(new Date(latestSyncTime))
+          }
+        }
+      } catch (error) {
+        logger.error("Failed to load account data", error)
+      } finally {
+        if (!hasLoadedAccountDataRef.current) {
+          setHasLoadedAccountData(true)
         }
       }
-    } catch (error) {
-      logger.error("Failed to load account data", error)
-    } finally {
-      if (!hasLoadedAccountDataRef.current) {
-        setHasLoadedAccountData(true)
-      }
-    }
-  }, [
-    buildDisplayDataWithBalanceHistory,
-    estimatedTodayIncomeEnabled,
-    prevTotalConsumption,
-    prevBalances,
-  ])
+    },
+    [
+      buildDisplayDataWithBalanceHistory,
+      estimatedTodayIncomeEnabled,
+      prevTotalConsumption,
+      prevBalances,
+    ],
+  )
 
   /**
    * Tag CRUD actions exposed to UIs (AccountDialog, filters).
@@ -288,32 +290,43 @@ export function useAccountSnapshot({
             reloadGeneration
         }
 
-        // Each single-account query reads the complete storage envelope. Read
-        // batches once to avoid repeating that work for every updated account.
-        const [singleId] = uniqueIds
-        const storedAccounts =
-          uniqueIds.length === 1 && singleId !== undefined
-            ? [await accountQueries.getAccountById(singleId)]
-            : await accountQueries.getAllAccounts()
-        const storedById = new Map(
-          storedAccounts
-            .filter((account): account is SiteAccount => account !== null)
-            .map((account) => [account.id, account]),
-        )
-        const reloadedAccounts = uniqueIds.map((accountId) => {
-          const account = storedById.get(accountId)
-          if (!account) {
-            throw new Error(`Account not found: ${accountId}`)
+        const isCurrentReload = (id: string) =>
+          targetedReloadGenerationByAccountIdRef.current[id] ===
+          reloadGeneration
+        let activeReloadedAccounts: SiteAccount[]
+        while (true) {
+          const fullLoadBeforeQuery = appliedFullLoadRef.current
+          const accountsBeforeQuery = accountsRef.current
+          const [singleId] = uniqueIds
+          // Each single-account query reads the complete envelope. Read a batch once.
+          const storedAccounts =
+            uniqueIds.length === 1 && singleId !== undefined
+              ? [await accountQueries.getAccountById(singleId)]
+              : await accountQueries.getAllAccounts()
+          const activeIds = uniqueIds.filter(isCurrentReload)
+          if (activeIds.length === 0) return
+          if (
+            appliedFullLoadRef.current !== fullLoadBeforeQuery &&
+            activeIds.some(
+              (id) =>
+                accountsBeforeQuery.some((account) => account.id === id) ||
+                accountsRef.current.some((account) => account.id === id),
+            )
+          ) {
+            // A full load can finish later with data read earlier. Re-read before applying either result.
+            continue
           }
-          return account
-        })
-        const activeReloadedAccounts = reloadedAccounts.filter(
-          (account) =>
-            targetedReloadGenerationByAccountIdRef.current[account.id] ===
-            reloadGeneration,
-        )
-        if (activeReloadedAccounts.length === 0) {
-          return
+          const storedById = new Map(
+            storedAccounts
+              .filter((account): account is SiteAccount => account !== null)
+              .map((account) => [account.id, account]),
+          )
+          activeReloadedAccounts = activeIds.map((id) => {
+            const account = storedById.get(id)
+            if (!account) throw new Error(`Account not found: ${id}`)
+            return account
+          })
+          break
         }
 
         const reloadedById = Object.fromEntries(
@@ -330,32 +343,37 @@ export function useAccountSnapshot({
           }
         }
 
+        const appliedFullLoad = appliedFullLoadRef.current
+        appliedTargetedReloadRef.current += 1
         accountsRef.current = mergedAccounts
         setAccounts(mergedAccounts)
-        const balanceHistoryStore = estimatedTodayIncomeEnabled
-          ? await dailyBalanceHistoryStorage.getStore()
-          : null
+        const balanceHistory = await readBalanceHistoryForEstimates(
+          estimatedTodayIncomeEnabled,
+        )
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
         const latestActiveReloadedAccounts = activeReloadedAccounts.filter(
-          (account) =>
-            targetedReloadGenerationByAccountIdRef.current[account.id] ===
-            reloadGeneration,
-        )
-        if (latestActiveReloadedAccounts.length === 0) {
-          return
-        }
-
-        const latestReloadedById = Object.fromEntries(
-          latestActiveReloadedAccounts.map((account) => [account.id, account]),
+          ({ id }) => isCurrentReload(id),
         )
         const latestAccounts = accountsRef.current
         const latestKnownIds = new Set(
           latestAccounts.map((account) => account.id),
         )
+        const canApply =
+          appliedFullLoad === appliedFullLoadRef.current
+            ? latestActiveReloadedAccounts
+            : latestActiveReloadedAccounts.filter(
+                ({ id }) => !knownIds.has(id) && !latestKnownIds.has(id),
+              )
+        for (const { id } of latestActiveReloadedAccounts)
+          delete targetedReloadGenerationByAccountIdRef.current[id]
+        if (canApply.length === 0) return
+        const latestReloadedById = Object.fromEntries(
+          canApply.map((account) => [account.id, account]),
+        )
         const latestMergedAccounts = latestAccounts.map(
           (account) => latestReloadedById[account.id] ?? account,
         )
-        for (const account of latestActiveReloadedAccounts) {
+        for (const account of canApply) {
           if (!latestKnownIds.has(account.id)) {
             latestMergedAccounts.push(account)
           }
@@ -367,31 +385,11 @@ export function useAccountSnapshot({
           buildDisplayDataWithBalanceHistory({
             nextAccounts: latestMergedAccounts,
             currentTagStore: tagStore,
-            balanceHistoryStore,
+            balanceHistoryStore: balanceHistory.store,
+            balanceHistoryUnavailable: balanceHistory.unavailable,
             todayKey,
           }),
         )
-        const enabledAccounts = latestMergedAccounts.filter(
-          (account) =>
-            account.disabled !== true &&
-            account.excludeFromTodayIncome !== true,
-        )
-        setTodayIncomeEstimateTotals(
-          buildEstimatedTodayIncomeMoneyTotals({
-            enabled: estimatedTodayIncomeEnabled,
-            store: balanceHistoryStore,
-            accounts: enabledAccounts,
-            currentDayKey: todayKey,
-          }),
-        )
-        for (const account of latestActiveReloadedAccounts) {
-          if (
-            targetedReloadGenerationByAccountIdRef.current[account.id] ===
-            reloadGeneration
-          ) {
-            delete targetedReloadGenerationByAccountIdRef.current[account.id]
-          }
-        }
       } catch (error) {
         logger.warn(
           "Account-scoped reload failed; falling back to full reload",
@@ -471,7 +469,7 @@ export function useAccountSnapshot({
     lastUpdateTime,
     hasLoadedAccountData,
     prevTotalConsumption,
-    todayIncomeEstimateTotals,
+    netInflowTotals,
     prevBalances,
     tagStore,
     tags,

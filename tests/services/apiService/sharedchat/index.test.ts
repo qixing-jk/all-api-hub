@@ -1,8 +1,13 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  accountBalanceScope,
+  readAccountBalance,
+} from "~/services/accounts/balanceSnapshot"
+import { acceptBalanceRefresh } from "~/services/accounts/refresh/balanceAcceptance"
 import {
   fetchAccountData,
   fetchCodexServiceCredential,
@@ -40,6 +45,95 @@ const accountRequest = {
 }
 
 describe("apiService SharedChat", () => {
+  it("retains raw timezone-free timing and the usage account scope", async () => {
+    const sample = {
+      ...sharedChatCodexQuotaSample,
+      data: {
+        ...sharedChatCodexQuotaSample.data,
+        codex: {
+          ...sharedChatCodexQuotaSample.data.codex,
+          subscriptions: {
+            ...sharedChatCodexQuotaSample.data.codex.subscriptions,
+            expireTime: "2026-09-01T00:00:00",
+            periodResetTime: "2026-08-01",
+          },
+        },
+      },
+    }
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json(sample),
+      ),
+    )
+    const data = await fetchAccountData(accountRequest)
+    expect(data.allowances?.entries[0]).toMatchObject({
+      validity: { kind: "unknown" },
+      reportedTiming: {
+        expiresAt: "2026-09-01T00:00:00",
+        resetsAt: "2026-08-01",
+      },
+    })
+    expect(data.usage?.cost?.scope).toMatchObject({
+      authority: "https://new.sharedchat.cc",
+      subject: { kind: "account" },
+    })
+  })
+  it("preserves a subscription allowance without calling rolling 24-hour usage today", async () => {
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json(sharedChatCodexQuotaSample),
+      ),
+    )
+    const result = await fetchAccountData(accountRequest)
+    expect(result).not.toHaveProperty("quota")
+    const prior = readAccountBalance(
+      { quota: 44_000_000 },
+      accountBalanceScope({ ...accountRequest, accountId: "fixture" }),
+      100,
+    )
+    expect(prior.positions).toHaveLength(1)
+    expect(
+      acceptBalanceRefresh(
+        prior,
+        result.balanceRefreshParts ?? [],
+        prior.subject,
+        200,
+      ).positions,
+    ).toEqual([])
+    expect(result).toMatchObject({
+      allowances: {
+        entries: [
+          {
+            id: "subscription-redacted:amount",
+            validity: {
+              kind: "expires",
+              at: Date.parse("2026-09-01T00:00:00+08:00"),
+            },
+            constraint: {
+              asset: { kind: "currency", code: "USD" },
+              limit: { status: "known", value: "100" },
+              used: { status: "known", value: "12" },
+              remaining: { status: "known", value: "88" },
+              window: { kind: "periodic", period: "month" },
+            },
+          },
+        ],
+      },
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_completion_tokens: 0,
+      todayStatsAvailability: {
+        consumption: { status: "unavailable" },
+        requests: { status: "unavailable" },
+        tokens: { status: "unavailable" },
+      },
+      usage: {
+        scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
+        cost: { asset: { code: "USD" }, amount: { value: "1.23" } },
+        totalRequests: 10,
+      },
+    })
+  })
   beforeEach(() => {
     server.resetHandlers()
   })
@@ -273,18 +367,23 @@ describe("apiService SharedChat", () => {
     )
 
     await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
-      quota: 88 * QUOTA_PER_USD,
-      today_requests_count: 10,
+      today_requests_count: 0,
       today_prompt_tokens: 0,
-      today_completion_tokens: 12345,
-      today_quota_consumption: 1.23 * QUOTA_PER_USD,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
       today_income: 0,
       todayStatsAvailability: {
-        consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-        requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
         tokens: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
         },
         income: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
@@ -292,20 +391,25 @@ describe("apiService SharedChat", () => {
         },
       },
       usage: {
-        scope: "rolling_window",
+        scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
         totalRequests: 10,
         totalTokens: 12345,
-        totalCost: 1.23,
+        cost: { amount: { value: "1.23" } },
         lastRequestTime: "2026-07-01T12:34:56+08:00",
+      },
+      allowances: {
+        entries: [
+          {
+            constraint: {
+              asset: { kind: "currency", code: "USD" },
+              limit: { value: "100" },
+              remaining: { value: "88" },
+            },
+          },
+        ],
       },
       subscription: {
         billingType: "amount",
-        limit: 100,
-        amountLimit: 100,
-        usedAmount: 12,
-        remainingAmount: 88,
-        usedCount: 3,
-        remainingCount: 97,
         period: "month",
         periodResetTime: "2026-08-01T00:00:00+08:00",
         expireTime: "2026-09-01T00:00:00+08:00",
@@ -360,23 +464,23 @@ describe("apiService SharedChat", () => {
       today_completion_tokens: 0,
       today_quota_consumption: 0,
       usage: {
-        scope: "rolling_window",
-        totalRequests: 0,
-        totalTokens: 0,
-        totalCost: 0,
+        scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
+        totalRequests: undefined,
+        totalTokens: undefined,
+        cost: { amount: { status: "unavailable" } },
       },
       todayStatsAvailability: {
         consumption: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
         },
         requests: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
         },
         tokens: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
         },
       },
     })
@@ -396,10 +500,10 @@ describe("apiService SharedChat", () => {
       today_completion_tokens: 0,
       today_quota_consumption: 0,
       usage: {
-        scope: "rolling_window",
+        scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
         totalRequests: 10,
         totalTokens: 12345,
-        totalCost: 1.23,
+        cost: { amount: { value: "1.23" } },
       },
       todayStatsAvailability: {
         consumption: {
@@ -455,25 +559,28 @@ describe("apiService SharedChat", () => {
     )
 
     await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
-      quota: 88 * QUOTA_PER_USD,
-      today_requests_count: 10,
-      today_completion_tokens: 12345,
-      today_quota_consumption: 1.23 * QUOTA_PER_USD,
+      today_requests_count: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
       usage: {
         totalRequests: 10,
         totalTokens: 12345,
-        totalCost: 1.23,
+        cost: { amount: { value: "1.23" } },
         lastRequestTime: undefined,
+      },
+      allowances: {
+        entries: [
+          {
+            constraint: {
+              asset: { kind: "unknown" },
+              remaining: { value: "88" },
+            },
+          },
+        ],
       },
       subscription: {
         name: "Team Plan",
         billingType: undefined,
-        limit: 100,
-        amountLimit: undefined,
-        usedAmount: undefined,
-        remainingAmount: 88,
-        usedCount: 3,
-        remainingCount: undefined,
         period: "month",
         periodResetTime: undefined,
         expireTime: "2026-09-01T00:00:00+08:00",
@@ -482,6 +589,61 @@ describe("apiService SharedChat", () => {
       },
     })
   })
+
+  it("keeps a subscription count separate from its monetary fields", async () => {
+    const sample = sharedChatCodexQuotaSample
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({
+          ...sample,
+          data: {
+            codex: {
+              ...sample.data.codex,
+              subscriptions: {
+                ...sample.data.codex.subscriptions,
+                billingType: "count",
+                limit: 120,
+                usedCount: 25,
+                remainingCount: 95,
+              },
+            },
+          },
+        }),
+      ),
+    )
+    const data = await fetchAccountData(accountRequest)
+    expect(data.allowances?.entries).toMatchObject([
+      {
+        id: "subscription-redacted:count",
+        constraint: {
+          asset: { kind: "quota" },
+          limit: { status: "known", value: "120" },
+          used: { status: "known", value: "25" },
+          remaining: { status: "known", value: "95" },
+        },
+      },
+    ])
+  })
+
+  it.each([true, "active", []])(
+    "keeps subscription coverage unavailable for %j",
+    async (subscriptions) => {
+      server.use(
+        http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+          HttpResponse.json({
+            code: 1,
+            msg: "success",
+            data: { codex: { subscriptions } },
+          }),
+        ),
+      )
+
+      const data = await fetchAccountData(accountRequest)
+      expect(data.allowanceRefreshParts).toMatchObject([
+        { enumeration: "unavailable", entries: [] },
+      ])
+    },
+  )
 
   it("rejects malformed SharedChat quota envelopes", async () => {
     server.use(

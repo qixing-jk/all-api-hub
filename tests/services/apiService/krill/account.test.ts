@@ -1,7 +1,24 @@
 import { http, HttpResponse } from "msw"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRefreshUpdate"
+import {
+  FINANCIAL_ENUMERATION,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { fetchAccountData } from "~/services/apiService/krill"
 import {
@@ -12,6 +29,10 @@ import * as permissions from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
+import {
+  buildCheckInConfig,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 
 const origin = "https://www.krill-code.com"
 const user = {
@@ -98,6 +119,432 @@ function useHappyPath(
 }
 
 describe("Krill AI account console", () => {
+  it.each([
+    {
+      subscriptions: undefined,
+      summary: undefined,
+      enumeration: FINANCIAL_ENUMERATION.Unavailable,
+      retainPlans: true,
+    },
+    {
+      subscriptions: null,
+      summary: undefined,
+      enumeration: FINANCIAL_ENUMERATION.Unavailable,
+      retainPlans: true,
+    },
+    {
+      subscriptions: undefined,
+      summary: { ...subscription.summary, total_remaining_usd: "333.25" },
+      enumeration: FINANCIAL_ENUMERATION.Partial,
+      retainPlans: true,
+    },
+    {
+      subscriptions: null,
+      summary: { ...subscription.summary, total_remaining_usd: "333.25" },
+      enumeration: FINANCIAL_ENUMERATION.Partial,
+      retainPlans: true,
+    },
+    {
+      subscriptions: [],
+      summary: undefined,
+      enumeration: FINANCIAL_ENUMERATION.Complete,
+      retainPlans: false,
+    },
+  ])(
+    "persists independent wallet and daily cost while respecting subscription-list coverage: %j",
+    async ({ subscriptions, summary, enumeration, retainPlans }) => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date("2026-10-15T06:00:00Z"))
+      useHappyPath()
+      const previous = await fetchAccountData({
+        ...request,
+        includeTodayCashflow: false,
+      } as never)
+      const id = await accountMutations.addAccount(
+        buildSiteAccount({
+          site_type: SITE_TYPES.KRILL,
+          site_url: origin,
+          authType: AuthTypeEnum.Cookie,
+          checkIn: buildCheckInConfig({ automaticExecutionEnabled: false }),
+          account_info: {
+            ...buildSiteAccount().account_info,
+            id: String(user.id),
+            username: user.email,
+            access_token: "",
+            balance: previous.balance,
+            allowances: previous.allowances,
+          },
+        }),
+      )
+      onTestFinished(async () => {
+        await accountMutations.deleteAccount(id)
+      })
+      const stored = (await accountQueries.getAccountById(id))!
+      const generation = (await accountMutations.beginBalanceRefresh(
+        id,
+        stored,
+      ))!
+      useHappyPath({ subscription: { subscriptions, summary } })
+      server.use(
+        http.post(`${origin}/api/request-logs/stats`, () =>
+          HttpResponse.json({
+            success: true,
+            data: { ...stats, total_cost_usd: "1.5" },
+          }),
+        ),
+      )
+      const refresh = await getSiteTypeCapabilities(
+        "krill",
+      ).account!.refresh!.refreshAccount({
+        ...request,
+        accountId: id,
+        checkIn: stored.checkIn,
+      } as never)
+      expect(refresh.success).toBe(true)
+      if (!refresh.success) throw new Error("Krill partial refresh failed")
+      const data = refresh.data
+      expect(data.allowanceRefreshParts?.[0]?.enumeration).toBe(enumeration)
+      expect(
+        await accountMutations.updateAccountFromRefresh(
+          id,
+          buildAccountRefreshUpdate(stored, refresh, false),
+          undefined,
+          stored,
+          data,
+          generation,
+        ),
+      ).not.toBeNull()
+      const saved = (await accountQueries.getAccountById(id))!
+      const display = accountPresentation.convertToDisplayData(saved)
+      expect(display.balanceSnapshot?.positions[0]?.amount).toMatchObject({
+        status: "known",
+        value: "12.5",
+      })
+      expect(display.settledConsumption).toMatchObject([
+        {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "1.5" },
+          window: { timeZone: "Asia/Shanghai" },
+        },
+      ])
+      if (!retainPlans) {
+        expect(saved.account_info.allowances?.entries).toEqual([])
+        return
+      }
+      expect(
+        saved.account_info.allowances?.entries.find(
+          (entry) => entry.id === "22",
+        )?.constraint.enabled,
+      ).toMatchObject({ status: "stale", value: true })
+      expect(
+        saved.account_info.allowances?.entries.find(
+          (entry) => entry.id === "summary",
+        )?.constraint.remaining,
+      ).toMatchObject({
+        status: summary ? "known" : "stale",
+        value: summary ? "333.25" : "404.75",
+      })
+    },
+  )
+  it.each([undefined, null, -1, "4"])(
+    "retains known cost and token counts independently of unavailable requests: %s",
+    async (total_requests) => {
+      useHappyPath()
+      server.use(
+        http.post(`${origin}/api/request-logs/stats`, () =>
+          HttpResponse.json({
+            success: true,
+            data: { ...stats, total_requests },
+          }),
+        ),
+      )
+      const data = await fetchAccountData(request as never)
+      expect(data.settledConsumption?.[0]?.amount).toMatchObject({
+        status: "known",
+        value: "1.75",
+      })
+      expect(data.todayStatsAvailability).toMatchObject({
+        consumption: { status: "complete" },
+        requests: { status: "unavailable", reason: "invalid_payload" },
+        tokens: { status: "complete" },
+      })
+      expect(data.today_prompt_tokens).toBe(1000)
+      expect(data.today_completion_tokens).toBe(200)
+    },
+  )
+  it.each([undefined, null, "invalid"])(
+    "retains known requests and token counts independently of unavailable cost: %s",
+    async (total_cost_usd) => {
+      useHappyPath()
+      server.use(
+        http.post(`${origin}/api/request-logs/stats`, () =>
+          HttpResponse.json({
+            success: true,
+            data: { ...stats, total_cost_usd },
+          }),
+        ),
+      )
+      const data = await fetchAccountData(request as never)
+      expect(data.settledConsumption?.[0]?.amount.status).toBe("unavailable")
+      expect(data.today_requests_count).toBe(7)
+      expect(data.todayStatsAvailability).toMatchObject({
+        consumption: { status: "unavailable", reason: "invalid_payload" },
+        requests: { status: "complete" },
+        tokens: { status: "complete" },
+      })
+    },
+  )
+  it.each([undefined, null, "-1"])(
+    "refreshes the authoritative wallet without requiring unused identity money: %s",
+    async (credit_balance_usd) => {
+      useHappyPath()
+      server.use(
+        http.get(`${origin}/api/auth/me`, () =>
+          HttpResponse.json({
+            success: true,
+            data: { ...user, credit_balance_usd },
+          }),
+        ),
+      )
+      const refresh = getSiteTypeCapabilities("krill").account!.refresh!
+      expect(
+        await refresh.refreshAccount({
+          ...request,
+          includeTodayCashflow: false,
+        } as never),
+      ).toMatchObject({
+        success: true,
+        data: {
+          balance: {
+            positions: [{ amount: { status: "known", value: "12.5" } }],
+          },
+        },
+      })
+    },
+  )
+  it.each([undefined, -1, "100"])(
+    "retains billed costs and request counts independently of unavailable token fields: %s",
+    async (input_tokens) => {
+      useHappyPath()
+      server.use(
+        http.post(`${origin}/api/request-logs/stats`, () =>
+          HttpResponse.json({
+            success: true,
+            data: { ...stats, input_tokens, total_requests: 4 },
+          }),
+        ),
+      )
+      const data = await fetchAccountData(request as never)
+      expect(data.settledConsumption?.[0]?.amount).toMatchObject({
+        status: "known",
+        value: "1.75",
+      })
+      expect(data.today_requests_count).toBe(4)
+      expect(data.todayStatsAvailability).toMatchObject({
+        consumption: { status: "complete" },
+        requests: { status: "complete" },
+        tokens: { status: "unavailable", reason: "invalid_payload" },
+      })
+    },
+  )
+  it("preserves unfiltered billed cost coverage when the report omits its time window", async () => {
+    useHappyPath()
+    server.use(
+      http.post(`${origin}/api/request-logs/stats`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { ...stats, range_start: null, range_end: null },
+        }),
+      ),
+    )
+    const data = await fetchAccountData(request as never)
+    expect(data.settledConsumption).toBeUndefined()
+    expect(data.usage?.cost).toMatchObject({
+      amount: { status: "known", value: "1.75" },
+      scope: {
+        projects: { kind: "all" },
+        keys: { kind: "all" },
+        models: { kind: "all" },
+        groups: { kind: "all" },
+      },
+    })
+    expect(data.usage?.cost?.window).toBeUndefined()
+  })
+  it.each([
+    {
+      statuses: ["active"],
+      expected: { status: OBSERVATION_STATUSES.Known, value: true },
+    },
+    {
+      statuses: ["expired", "active"],
+      expected: { status: OBSERVATION_STATUSES.Known, value: true },
+    },
+    {
+      statuses: ["expired", "frozen"],
+      expected: { status: OBSERVATION_STATUSES.Known, value: false },
+    },
+    { statuses: [undefined], expected: { status: "unknown" } },
+    { statuses: ["expired", undefined], expected: { status: "unknown" } },
+  ])(
+    "reports aggregate activity from known plan rows without inventing an omitted summary expiry: $statuses",
+    async ({ statuses, expected }) => {
+      useHappyPath({
+        subscription: {
+          summary: { ...subscription.summary, subscription_end_at: null },
+          subscriptions: statuses.map((status, id) => ({
+            id,
+            status,
+            subscription_end_at: "2099-10-21T00:00:00Z",
+          })),
+        },
+      })
+      const data = await fetchAccountData({
+        ...request,
+        includeTodayCashflow: false,
+      } as never)
+      expect(data.allowances?.entries[0]).toMatchObject({
+        validity: { kind: "unknown" },
+        constraint: { enabled: expected },
+      })
+      expect(data.allowances?.entries[0]?.reportedTiming).toBeUndefined()
+      expect(data.allowances?.entries[1]?.validity).toEqual({
+        kind: "expires",
+        at: Date.parse("2099-10-21T00:00:00Z"),
+      })
+    },
+  )
+  it.each([
+    { status: "expired", expected: { status: "unknown" } },
+    {
+      status: "active",
+      expected: { status: OBSERVATION_STATUSES.Known, value: true },
+    },
+  ])(
+    "preserves incomplete plan enumeration when determining aggregate activity: $status",
+    async ({ status, expected }) => {
+      useHappyPath({
+        subscription: { subscriptions: [{ id: 22, status }, null] },
+      })
+      const data = await fetchAccountData({
+        ...request,
+        includeTodayCashflow: false,
+      } as never)
+      expect(data.allowanceRefreshParts?.[0]?.enumeration).toBe("partial")
+      expect(data.allowances?.entries[0]?.constraint.enabled).toMatchObject(
+        expected,
+      )
+    },
+  )
+  it("preserves reported expiry and inactivity on the aggregate remaining allowance", async () => {
+    useHappyPath({
+      subscription: {
+        subscriptions: [
+          {
+            id: 22,
+            status: "expired",
+            subscription_end_at: "2026-11-18T00:00:00Z",
+          },
+        ],
+        summary: {
+          ...subscription.summary,
+          subscription_end_at: "2026-11-18T00:00:00Z",
+        },
+      },
+    })
+    const data = await fetchAccountData({
+      ...request,
+      includeTodayCashflow: false,
+    } as never)
+    expect(data.allowances?.entries[0]).toMatchObject({
+      id: "summary",
+      validity: { kind: "expires", at: Date.parse("2026-11-18T00:00:00Z") },
+      reportedTiming: { expiresAt: "2026-11-18T00:00:00Z" },
+      constraint: {
+        remaining: { status: "known", value: "404.75" },
+        enabled: { status: "known", value: false },
+      },
+    })
+  })
+  it("includes unfiltered billed costs in financial reporting while wallet restrictions remain unknown", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-10-15T06:00:00Z"))
+    useHappyPath()
+    const data = await fetchAccountData({
+      ...request,
+      accountId: "krill-account",
+    } as never)
+    expect(data.settledConsumption).toHaveLength(1)
+    expect(data.settledConsumption?.[0]).toMatchObject({
+      cumulative: true,
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "1.75" },
+      scope: {
+        projects: { kind: "all" },
+        keys: { kind: "all" },
+        models: { kind: "all" },
+        groups: { kind: "all" },
+      },
+      window: {
+        start: Date.parse("2026-10-14T16:00:00Z"),
+        end: Date.parse("2026-10-15T00:00:00Z"),
+        timeZone: "Asia/Shanghai",
+      },
+    })
+    expect(data.balance?.positions[0]?.scope.keys).toEqual({ kind: "unknown" })
+  })
+  it("keeps the exact wallet and daily plan summary apart, preserving each plan expiry", async () => {
+    useHappyPath({
+      subscription: {
+        credit_balance_usd: "12.000000000000000017",
+        subscriptions: [
+          {
+            id: 22,
+            plan: { name: "Plan A" },
+            status: "active",
+            subscription_end_at: "2099-10-21T00:00:00Z",
+          },
+          {
+            id: 23,
+            plan: { name: "Plan B" },
+            status: "frozen",
+            subscription_end_at: "2099-11-21T00:00:00Z",
+          },
+        ],
+      },
+    })
+    const result = await fetchAccountData({
+      ...request,
+      includeTodayCashflow: false,
+    } as never)
+    expect(result).not.toHaveProperty("quota")
+    expect(result.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "12.000000000000000017" },
+    })
+    expect(result.allowances?.entries).toEqual([
+      expect.objectContaining({
+        id: "summary",
+        constraint: expect.objectContaining({
+          remaining: expect.objectContaining({ value: "404.75" }),
+          window: expect.objectContaining({ period: "day" }),
+        }),
+      }),
+      expect.objectContaining({
+        id: "22",
+        validity: { kind: "expires", at: Date.parse("2099-10-21T00:00:00Z") },
+        constraint: expect.objectContaining({
+          remaining: expect.objectContaining({ status: "unknown" }),
+          enabled: expect.objectContaining({ value: true }),
+        }),
+      }),
+      expect.objectContaining({
+        id: "23",
+        constraint: expect.objectContaining({
+          enabled: expect.objectContaining({ value: false }),
+        }),
+      }),
+    ])
+  })
   it("retries a failed reusable read within the operation and retains its successful result", async () => {
     let reads = 0
     server.use(
@@ -143,6 +590,7 @@ describe("Krill AI account console", () => {
     ])
   })
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
     vi.unstubAllEnvs()
   })
@@ -150,8 +598,8 @@ describe("Krill AI account console", () => {
   it("uses the newer subscription balance when usage changes it after the identity read", async () => {
     useHappyPath({ subscription: { credit_balance_usd: "12.400000" } })
     await expect(fetchAccountData(request as never)).resolves.toHaveProperty(
-      "quota",
-      12.4 * QUOTA_PER_USD,
+      "balance.positions.0.amount.value",
+      "12.4",
     )
   })
 
@@ -170,11 +618,13 @@ describe("Krill AI account console", () => {
       },
     })
     await expect(fetchAccountData(request as never)).resolves.toHaveProperty(
-      "subscription",
+      "allowances.entries.1",
       expect.objectContaining({
-        name: "Frozen plan",
-        isActive: false,
-        expireTime: "2026-10-21T00:00:00Z",
+        label: "Frozen plan",
+        constraint: expect.objectContaining({
+          enabled: expect.objectContaining({ status: "known", value: false }),
+        }),
+        validity: { kind: "expires", at: Date.parse("2026-10-21T00:00:00Z") },
       }),
     )
   })
@@ -183,14 +633,19 @@ describe("Krill AI account console", () => {
     useHappyPath()
     const data = await fetchAccountData(request as never)
 
-    expect(data.quota).toBe(12.5 * QUOTA_PER_USD)
-    expect(data.subscription).toMatchObject({
-      name: "轻享周卡",
-      amountLimit: 420 * QUOTA_PER_USD,
-      usedAmount: 15.25 * QUOTA_PER_USD,
-      remainingAmount: 404.75 * QUOTA_PER_USD,
-      expireTime: "2026-10-21T00:00:00Z",
-      isActive: true,
+    expect(data.balance?.positions[0]?.amount).toMatchObject({ value: "12.5" })
+    expect(data.allowances?.entries[0]).toMatchObject({
+      id: "summary",
+      constraint: {
+        limit: { value: "420" },
+        used: { value: "15.25" },
+        remaining: { value: "404.75" },
+      },
+    })
+    expect(data.allowances?.entries[1]).toMatchObject({
+      label: "轻享周卡",
+      validity: { kind: "expires", at: Date.parse("2026-10-21T00:00:00Z") },
+      constraint: { enabled: { status: "known", value: true } },
     })
   })
 
@@ -209,6 +664,15 @@ describe("Krill AI account console", () => {
     expect(body.today_prompt_tokens).toBe(1_000)
     expect(body.today_completion_tokens).toBe(200)
     expect(body.todayStatsAvailability?.consumption.status).toBe("complete")
+    expect(body.settledConsumption?.[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "1.75" },
+      window: {
+        start: Date.parse(stats.range_start),
+        end: Date.parse(stats.range_end) + 1000,
+        timeZone: "Asia/Shanghai",
+      },
+    })
   })
 
   it("includes native cache creation and reads in today's input token total", async () => {
@@ -253,8 +717,8 @@ describe("Krill AI account console", () => {
 
   it("does not turn an unreadable balance into zero", async () => {
     useHappyPath({ subscription: { credit_balance_usd: "not-a-number" } })
-    await expect(fetchAccountData(request as never)).rejects.toMatchObject({
-      code: "JSON_PARSE_ERROR",
+    await expect(fetchAccountData(request as never)).resolves.toMatchObject({
+      balance: { positions: [{ amount: { status: "unavailable" } }] },
     })
   })
   it.each([
@@ -271,7 +735,9 @@ describe("Krill AI account console", () => {
         ),
       )
       const result = await fetchAccountData(request as never)
-      expect(result.quota).toBe(12.5 * QUOTA_PER_USD)
+      expect(result.balance?.positions[0]?.amount).toMatchObject({
+        value: "12.5",
+      })
       expect(result.todayStatsAvailability?.tokens).toMatchObject({
         status: "unavailable",
         reason: "invalid_payload",
@@ -305,28 +771,23 @@ describe("Krill AI account console", () => {
       })
     },
   )
-  it.each([
-    null,
-    { subscriptions: null },
-    { subscriptions: [{}], summary: null },
-    {
-      subscriptions: [{}],
-      summary: { ...subscription.summary, subscription_end_at: 123 },
+  it.each([null, []])(
+    "rejects malformed subscription response envelopes: %j",
+    async (data) => {
+      useHappyPath()
+      server.use(
+        http.get(`${origin}/api/subscription`, () =>
+          HttpResponse.json({
+            success: true,
+            data,
+          }),
+        ),
+      )
+      await expect(fetchAccountData(request as never)).rejects.toMatchObject({
+        code: "JSON_PARSE_ERROR",
+      })
     },
-  ])("rejects malformed subscription data: %j", async (data) => {
-    useHappyPath()
-    server.use(
-      http.get(`${origin}/api/subscription`, () =>
-        HttpResponse.json({
-          success: true,
-          data: data === null ? null : { ...subscription, ...data },
-        }),
-      ),
-    )
-    await expect(fetchAccountData(request as never)).rejects.toMatchObject({
-      code: "JSON_PARSE_ERROR",
-    })
-  })
+  )
   it("does not invent a subscription when there are no plans", async () => {
     useHappyPath({ subscription: { subscriptions: [] } })
     expect(
@@ -345,7 +806,7 @@ describe("Krill AI account console", () => {
     { data: {} },
     { success: true, data: null },
     { success: true, data: { ...user, email: "" } },
-    { success: true, data: { ...user, credit_balance_usd: "-1" } },
+    { success: true, data: { ...user, id: 0 } },
   ])(
     "rejects invalid or unauthenticated identity envelopes: %j",
     async (body) => {
@@ -423,7 +884,7 @@ describe("Krill AI account console", () => {
     const refresh = getSiteTypeCapabilities("krill").account!.refresh!
     expect(await refresh.refreshAccount(request as never)).toMatchObject({
       success: true,
-      data: { quota: 12.5 * QUOTA_PER_USD },
+      data: { balance: { positions: [{ amount: { value: "12.5" } }] } },
     })
     server.use(
       http.get(`${origin}/api/auth/me`, () =>
@@ -450,7 +911,9 @@ describe("Krill AI account console", () => {
     )
     useHappyPath()
     const result = await fetchAccountData(request as never)
-    expect(result.quota).toBe(12.5 * QUOTA_PER_USD)
+    expect(result.balance?.positions[0]?.amount).toMatchObject({
+      value: "12.5",
+    })
   })
   it("rejects a non-API endpoint before transport dispatch", async () => {
     await expect(readKrill(request as never, "/unsafe")).rejects.toMatchObject({
@@ -465,7 +928,7 @@ describe("Krill AI account console", () => {
       } as never),
     ).rejects.toMatchObject({ statusCode: 401 })
   })
-  it("uses the latest native plan expiry when multiple plans omit the summary expiry", async () => {
+  it("keeps each native plan expiry when multiple plans omit the summary expiry", async () => {
     useHappyPath({
       subscription: {
         summary: { ...subscription.summary, subscription_end_at: null },
@@ -484,7 +947,12 @@ describe("Krill AI account console", () => {
       },
     })
     expect(
-      (await fetchAccountData(request as never)).subscription?.expireTime,
-    ).toBe("2026-10-21T00:00:00Z")
+      (await fetchAccountData(request as never)).allowances?.entries
+        .slice(1)
+        .map((entry) => entry.validity),
+    ).toEqual([
+      { kind: "expires", at: Date.parse("2026-10-20T00:00:00Z") },
+      { kind: "expires", at: Date.parse("2026-10-21T00:00:00Z") },
+    ])
   })
 })

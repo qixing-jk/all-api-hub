@@ -60,6 +60,10 @@ import {
   type HealthStatus,
   type SiteAccount,
 } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import type { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 import { parseDayKey } from "~/utils/core/dayKey"
@@ -370,6 +374,23 @@ export function normalizeAccountStorageConfigForWrite(
  */
 function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
   const merged = deepOverride(DEFAULT_ACCOUNT_INFO, raw ?? undefined)
+  const consumption = coerceOptionalNumber(raw?.today_quota_consumption)
+  const availability =
+    raw?.todayStatsAvailability === undefined
+      ? undefined
+      : normalizeAccountTodayStatsAvailability(raw.todayStatsAvailability)
+  // Keep the required numeric placeholder without promoting missing evidence to a known zero.
+  if (
+    consumption === undefined &&
+    availability &&
+    availability.consumption.status !==
+      ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+  ) {
+    availability.consumption = {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+    }
+  }
   return {
     id: coerceAccountIdentity(merged.id, ""),
     access_token: coerceString(merged.access_token, ""),
@@ -397,13 +418,10 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
       : { balance: balanceSnapshotSchema.parse(raw.balance) }),
     today_prompt_tokens: coerceNumber(merged.today_prompt_tokens, 0),
     today_completion_tokens: coerceNumber(merged.today_completion_tokens, 0),
-    today_quota_consumption: coerceNumber(merged.today_quota_consumption, 0),
+    today_quota_consumption: consumption ?? 0,
     today_requests_count: coerceNumber(merged.today_requests_count, 0),
     today_income: coerceNumber(merged.today_income, 0),
-    todayStatsAvailability:
-      raw?.todayStatsAvailability === undefined
-        ? undefined
-        : normalizeAccountTodayStatsAvailability(raw.todayStatsAvailability),
+    todayStatsAvailability: availability,
     usage: normalizeAccountUsageSummary(merged.usage),
     ...(raw?.usageObservations === undefined
       ? {}
@@ -691,7 +709,12 @@ export function applySiteAccountUpdates(params: {
   )
     merged.account_info.allowances = params.updates.account_info
       .allowances as AccountInfo["allowances"]
-  for (const field of ["usage", "usageObservations", "reportedIncome"] as const)
+  for (const field of [
+    "usage",
+    "usageObservations",
+    "reportedIncome",
+    "legacyFinancial",
+  ] as const)
     if (
       params.updates.account_info &&
       Object.hasOwn(params.updates.account_info, field)

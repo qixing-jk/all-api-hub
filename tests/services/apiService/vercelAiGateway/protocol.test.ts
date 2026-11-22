@@ -283,18 +283,19 @@ describe("Vercel AI Gateway protocol", () => {
     const credits = await fetchVercelCredits(request, TEAM_ID)
 
     expect(seenUrl).toContain(`teamId=${TEAM_ID}`)
-    expect(credits).toEqual({ balanceUsd: 95.5, totalUsedUsd: 4.5 })
+    expect(credits).toEqual({ balanceUsd: "95.5", totalUsedUsd: "4.5" })
   })
 
-  it("rejects a credits payload that is not the documented shape", async () => {
+  it("retains the balance independently when lifetime usage is missing", async () => {
     server.use(
       http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
         HttpResponse.json({ balance: 95.5 }),
       ),
     )
-    await expect(fetchVercelCredits(request, TEAM_ID)).rejects.toThrow(
-      "vercel_credits_unreadable",
-    )
+    await expect(fetchVercelCredits(request, TEAM_ID)).resolves.toEqual({
+      balanceUsd: "95.5",
+      totalUsedUsd: undefined,
+    })
   })
 
   it("reads the model catalog with availability annotations", async () => {

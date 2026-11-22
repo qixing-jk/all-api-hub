@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  BALANCE_PURPOSES,
+  projectBalance,
+} from "~/services/accounts/metrics/balanceProjection"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import {
   createKimiKey,
   deleteKimiKey,
@@ -39,6 +46,189 @@ const accountRequest = () => ({
 })
 
 describe("kimiOpenPlatform service index", () => {
+  it("keeps console provider-day spending in its native currency and organization for daily presentation", async () => {
+    vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)
+    vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
+      code: 0,
+      data: { cur: 200000, voucher_cur: 100000, today_consume: 400000 },
+    })
+    const data = await fetchKimiAccountData({
+      ...accountRequest(),
+      checkIn: buildCheckInConfig(),
+    })
+    expect(getSiteDayReadings(data)).toMatchObject([
+      {
+        lastKnown: false,
+        observedAt: expect.any(Number),
+        usage: {
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          cost: {
+            asset: { kind: "currency", code: "CNY" },
+            amount: { status: "known", value: "4" },
+            scope: { organizationId: "org-xyz" },
+          },
+        },
+      },
+    ])
+    expect(
+      getDisplayConsumptionProjection([
+        { id: "acc-1", settledConsumption: data.settledConsumption },
+      ]).groups,
+    ).toEqual([])
+  })
+  it("keeps inference cash and vouchers readable without inventing an absent available balance", async () => {
+    vi.mocked(transport.fetchKimiInference).mockResolvedValue({
+      status: true,
+      code: 0,
+      data: { cash_balance: -2, voucher_balance: 10 },
+    })
+    const data = await fetchKimiAccountData({
+      ...accountRequest(),
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "sk-test" },
+      checkIn: buildCheckInConfig(),
+    })
+    expect(data.balance?.positions[0]?.amount.status).toBe("unavailable")
+    expect(
+      data.balance?.positions
+        .slice(1)
+        .map(({ amount }) => ("value" in amount ? amount.value : undefined)),
+    ).toEqual(["-2", "10"])
+    expect(
+      projectBalance(data.balance!, BALANCE_PURPOSES.Available).amounts,
+    ).toEqual([])
+  })
+  it.each([`0.${"0".repeat(253)}1`, "9".repeat(256), "invalid", true])(
+    "retains independent voucher and zero consumption when a synthetic console amount is invalid or exceeds normalization bounds: %s",
+    async (cur) => {
+      vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)
+      vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
+        code: 0,
+        data: {
+          cur,
+          voucher_cur: 100000,
+          today_consume: 0,
+        },
+      })
+      const data = await fetchKimiAccountData({
+        ...accountRequest(),
+        checkIn: buildCheckInConfig(),
+      })
+      expect(
+        data.balance?.positions.map((position) => position.amount),
+      ).toEqual([
+        expect.objectContaining({ status: "unavailable" }),
+        expect.objectContaining({ status: "unavailable" }),
+        expect.objectContaining({ status: "known", value: "1" }),
+      ])
+      expect(data.balance?.coverage).toBe("partial")
+      expect(data.usageObservations?.[0]?.cost?.amount).toMatchObject({
+        status: "known",
+        value: "0",
+      })
+    },
+  )
+
+  it.each([
+    [200000, 0, "2"],
+    [0, 1000000, "10"],
+    [200000, 1000000, "12"],
+    [0, 0, "0"],
+    [-200000, 1000000, "8"],
+    [undefined, 1000000, undefined],
+    [200000, undefined, undefined],
+  ])(
+    "retains console components without inventing missing money: %s/%s",
+    async (cur, voucher, available) => {
+      vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)
+      vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
+        code: 0,
+        data: { cur, voucher_cur: voucher, today_consume: 2298 },
+      })
+      const data = await fetchKimiAccountData({
+        ...accountRequest(),
+        checkIn: buildCheckInConfig(),
+      })
+      expect(data).not.toHaveProperty("quota")
+      expect(data).not.toHaveProperty("nativeBalance")
+      expect(
+        data.balance?.positions.map((p) => [
+          p.id,
+          p.amount.status,
+          "value" in p.amount ? p.amount.value : undefined,
+        ]),
+      ).toEqual([
+        [
+          "available",
+          available === undefined ? "unavailable" : "known",
+          available,
+        ],
+        [
+          "cur",
+          cur === undefined ? "unavailable" : "known",
+          cur === undefined ? undefined : String(cur / 100000),
+        ],
+        [
+          "voucher",
+          voucher === undefined ? "unavailable" : "known",
+          voucher === undefined ? undefined : String(voucher / 100000),
+        ],
+      ])
+      expect(data.balance?.positions[0]).toMatchObject({
+        asset: { kind: "currency", code: "CNY" },
+        nature: "mixed",
+        amount: {
+          source: {
+            adapter: "kimi",
+            operation: "console/account",
+            contractVersion: "2",
+            kind: "derived",
+          },
+        },
+        scope: { organizationId: "org-xyz" },
+      })
+      expect(data.today_quota_consumption).toBe(0)
+      expect(data.usageObservations?.[0]?.cost?.amount).toMatchObject({
+        value: "0.02298",
+      })
+      expect(data.balanceRefreshParts).toEqual([
+        expect.objectContaining({
+          enumeration: "complete",
+          collectionKey: "console/account",
+          positions: data.balance?.positions,
+        }),
+      ])
+      expect(data.balance?.positions[2]).toMatchObject({
+        instrument: "voucher",
+        funding: "unknown",
+      })
+    },
+  )
+
+  it("keeps inference available authoritative despite negative cash and never applies console scaling", async () => {
+    vi.mocked(transport.fetchKimiInference).mockResolvedValue({
+      status: true,
+      code: 0,
+      data: { available_balance: 10, cash_balance: -2, voucher_balance: 10 },
+    })
+    const data = await fetchKimiAccountData({
+      ...accountRequest(),
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "sk-test" },
+      checkIn: buildCheckInConfig(),
+    })
+    expect(
+      data.balance?.positions.map((p) => [
+        p.id,
+        "value" in p.amount ? p.amount.value : undefined,
+      ]),
+    ).toEqual([
+      ["available", "10"],
+      ["cash", "-2"],
+      ["voucher", "10"],
+    ])
+    expect(data.balance?.positions[0]?.amount.source.operation).toBe(
+      "inference/balance",
+    )
+  })
   beforeEach(() => {
     vi.resetAllMocks()
   })
@@ -128,11 +318,11 @@ describe("kimiOpenPlatform service index", () => {
   })
 
   it.each([
-    ["https://platform.kimi.com", 72, 7.2, 5_000_000],
-    ["https://platform.kimi.ai", 10, 7.2, 5_000_000],
+    ["https://platform.kimi.com", 72, 7.2],
+    ["https://platform.kimi.ai", 10, 7.2],
   ])(
     "uses API-key-only balance on the correct deployment %s",
-    async (baseUrl, available, exchangeRate, quota) => {
+    async (baseUrl, available, exchangeRate) => {
       vi.mocked(transport.readKimiAuthState).mockReturnValue(undefined)
       vi.mocked(transport.fetchKimiInference).mockResolvedValue({
         code: 0,
@@ -151,7 +341,14 @@ describe("kimiOpenPlatform service index", () => {
         },
       }
       await expect(fetchKimiAccountData(request)).resolves.toMatchObject({
-        quota,
+        balance: {
+          positions: expect.arrayContaining([
+            expect.objectContaining({
+              id: "available",
+              amount: expect.objectContaining({ value: String(available) }),
+            }),
+          ]),
+        },
         today_quota_consumption: 0,
       })
       expect(transport.fetchKimiInference).toHaveBeenCalledWith(
@@ -234,37 +431,29 @@ describe("kimiOpenPlatform service index", () => {
     {
       baseUrl: "https://platform.kimi.com",
       exchangeRate: 7.2,
-      quota: 5_318_264,
-      todayQuota: 1_596,
     },
     {
       baseUrl: "https://platform.kimi.com",
       exchangeRate: undefined,
-      quota: 5_318_264,
-      todayQuota: 1_596,
     },
     {
       baseUrl: "https://platform.kimi.com",
       exchangeRate: 8,
-      quota: 4_786_438,
-      todayQuota: 1_436,
     },
     {
       baseUrl: "https://platform.kimi.ai",
       exchangeRate: 8,
-      quota: 38_291_500,
-      todayQuota: 11_490,
     },
   ])(
     "normalizes console balance and today's consumption for $baseUrl with exchange rate $exchangeRate",
-    async ({ baseUrl, exchangeRate, quota, todayQuota }) => {
+    async ({ baseUrl, exchangeRate }) => {
       vi.mocked(transport.ensureKimiAuthState).mockResolvedValueOnce(
         consoleSession,
       )
       vi.mocked(transport.fetchKimiConsole).mockResolvedValueOnce({
         code: 0,
         // The console shows 76.58300 and 0.02298 in its deployment currency.
-        data: { cur: 7_658_300, today_consume: 2_298 },
+        data: { cur: 7_658_300, voucher_cur: 0, today_consume: 2_298 },
       })
 
       const request = {
@@ -281,22 +470,29 @@ describe("kimiOpenPlatform service index", () => {
         { query: { oid: "org-xyz" } },
       )
       expect(data).toMatchObject({
-        quota,
-        today_quota_consumption: todayQuota,
+        balance: {
+          positions: expect.arrayContaining([
+            expect.objectContaining({
+              id: "available",
+              amount: expect.objectContaining({ value: "76.583" }),
+            }),
+          ]),
+        },
+        today_quota_consumption: 0,
       })
     },
   )
 
   it.each([
-    { cur: 0, todayConsume: 0, quota: 0, todayQuota: 0 },
-    { cur: -150_000, todayConsume: 1, quota: -750_000, todayQuota: 5 },
+    { cur: 0, todayConsume: 0, expected: "0" },
+    { cur: -150_000, todayConsume: 1, expected: "-1.5" },
   ])(
     "preserves zero, debt and fractional console amounts: $cur / $todayConsume",
-    async ({ cur, todayConsume, quota, todayQuota }) => {
+    async ({ cur, todayConsume, expected }) => {
       vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)
       vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
         code: 0,
-        data: { cur, today_consume: todayConsume },
+        data: { cur, voucher_cur: 0, today_consume: todayConsume },
       })
 
       await expect(
@@ -306,8 +502,15 @@ describe("kimiOpenPlatform service index", () => {
           checkIn: buildCheckInConfig(),
         }),
       ).resolves.toMatchObject({
-        quota,
-        today_quota_consumption: todayQuota,
+        balance: {
+          positions: expect.arrayContaining([
+            expect.objectContaining({
+              id: "available",
+              amount: expect.objectContaining({ value: expected }),
+            }),
+          ]),
+        },
+        today_quota_consumption: 0,
       })
     },
   )
@@ -359,4 +562,22 @@ describe("kimiOpenPlatform service index", () => {
     ).rejects.toThrow("missing_kimi_project")
     expect(transport.fetchKimiConsolePath).not.toHaveBeenCalled()
   })
+})
+
+it("keeps native console spend without inventing a daily interval", async () => {
+  vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)
+  vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
+    code: 0,
+    data: { cur: 100000, voucher_cur: 0, today_consume: "2.0000000000001" },
+  })
+  const data = await fetchKimiAccountData({
+    ...accountRequest(),
+    checkIn: buildCheckInConfig(),
+  })
+  expect(data.usageObservations?.[0]).toMatchObject({
+    scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+    cost: { amount: { value: "0.000020000000000001" } },
+  })
+  expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
+  expect(data.today_quota_consumption).toBe(0)
 })

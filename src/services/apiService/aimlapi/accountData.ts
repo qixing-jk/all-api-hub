@@ -1,8 +1,24 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+  accountReportingScope,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+  FINANCIAL_SETTLEMENT_STATUSES,
+} from "~/services/amounts/financialConstants"
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import { AIMLAPI_ENDPOINTS } from "~/services/apiService/aimlapi/constants"
 import {
@@ -28,7 +44,7 @@ function finiteNumber(value: unknown, endpoint: string): number {
 }
 
 export type AimlApiBilling = {
-  currentBalance: number
+  currentBalance?: string
   currency: string
 }
 
@@ -43,12 +59,10 @@ async function fetchAimlApiBilling(
   )
   if (!isRecord(body)) invalidAimlApiResponse(AIMLAPI_ENDPOINTS.Billing)
   const currency = body.currency
-  if (currency !== "USD") invalidAimlApiResponse(AIMLAPI_ENDPOINTS.Billing)
+  if (currency !== CURRENCIES.USD)
+    invalidAimlApiResponse(AIMLAPI_ENDPOINTS.Billing)
   return {
-    currentBalance: finiteNumber(
-      body.current_balance,
-      AIMLAPI_ENDPOINTS.Billing,
-    ),
+    currentBalance: parseDecimal(body.current_balance),
     currency,
   }
 }
@@ -67,24 +81,27 @@ export async function fetchAimlApiBillingDetail(
     credential: "regular-api-key",
   })
   if (!isRecord(body)) invalidAimlApiResponse(endpoint)
-  if (body.currency !== "USD") invalidAimlApiResponse(endpoint)
+  if (body.currency !== CURRENCIES.USD) invalidAimlApiResponse(endpoint)
   const userId = finiteNumber(body.user_id, endpoint)
   if (!Number.isSafeInteger(userId)) invalidAimlApiResponse(endpoint)
   if (body.email !== null && typeof body.email !== "string")
     invalidAimlApiResponse(endpoint)
   return {
-    currentBalance: finiteNumber(body.current_balance, endpoint),
-    currency: "USD",
+    currentBalance: parseDecimal(body.current_balance),
+    currency: CURRENCIES.USD,
     userId,
     email: body.email,
   }
 }
 
 export type AimlApiTodayUsage = {
-  spendUsd: number
+  spendUsd?: string
+  observedAt: number
+  window: FinancialConsumptionFact["window"]
   inputTokens: number
   outputTokens: number
-  requests: number
+  requests?: number
+  tokensComplete: boolean
 }
 
 const COMPLETE: AccountTodayMetricAvailability = {
@@ -122,32 +139,42 @@ export async function fetchAimlApiTodayUsage(
     },
   })
   if (!isRecord(body)) invalidAimlApiResponse(endpoint)
-  const spend = finiteNumber(body.spend, endpoint)
-  const requests = finiteNumber(body.requests, endpoint)
+  const observedAt = Date.now()
+  const parsedSpend = parseDecimal(body.spend)
+  const spend =
+    parsedSpend !== undefined && compareDecimal(parsedSpend, "0") >= 0
+      ? parsedSpend
+      : undefined
+  const counter = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0
+      ? value
+      : undefined
+  const requests = counter(body.requests)
   const groups = body.groups
-  if (!Array.isArray(groups)) invalidAimlApiResponse(endpoint)
 
   let inputTokens = 0
   let outputTokens = 0
-  for (const group of groups) {
-    if (!isRecord(group) || !isRecord(group.tokens)) continue
-    inputTokens += finiteNumber(group.tokens.input, endpoint)
-    outputTokens += finiteNumber(group.tokens.output, endpoint)
+  let tokensComplete = Array.isArray(groups)
+  for (const group of Array.isArray(groups) ? groups : []) {
+    if (!isRecord(group) || !isRecord(group.tokens)) {
+      tokensComplete = false
+      continue
+    }
+    const input = counter(group.tokens.input)
+    const output = counter(group.tokens.output)
+    inputTokens += input ?? 0
+    outputTokens += output ?? 0
+    if (input === undefined || output === undefined) tokensComplete = false
   }
 
-  return { spendUsd: spend, inputTokens, outputTokens, requests }
-}
-
-/** Projects one provider balance into the shared account model. */
-function toAccountBalance(
-  billing: AimlApiBilling,
-): AccountData["nativeBalance"] {
   return {
-    unit: "USD",
-    permanent: billing.currentBalance,
-    daily: 0,
-    total: billing.currentBalance,
-    components: [{ kind: "permanent", amount: billing.currentBalance }],
+    spendUsd: spend,
+    inputTokens,
+    outputTokens,
+    requests,
+    tokensComplete,
+    observedAt,
+    window: { start: start.getTime(), end: end.getTime(), timeZone: "UTC" },
   }
 }
 
@@ -171,11 +198,36 @@ const createUnavailableTodayStats = (
 export async function fetchAimlApiAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
+  const scope = accountBalanceScope(request)
+  const snapshot = (value: unknown) => {
+    const capturedAt = Date.now()
+    return accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "balance",
+          scope,
+          value,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          nature: BALANCE_NATURES.Prepaid,
+          observedAt: capturedAt,
+          source: {
+            adapter: "aimlapi",
+            operation: AIMLAPI_ENDPOINTS.Billing,
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+            inputs: ["current_balance"],
+          },
+        }),
+      ],
+      capturedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    )
+  }
   const apiKey = await ensureAimlApiKey(request)
   if (!apiKey) {
     return {
-      quota: 0,
-      balanceUnavailable: true,
+      ...snapshot(undefined),
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -190,13 +242,15 @@ export async function fetchAimlApiAccountData(
 
   const scoped: ApiServiceAccountRequest = { ...request, aimlApiKey: apiKey }
   const billing = await fetchAimlApiBilling(scoped)
+  const balance = snapshot(billing.currentBalance)
 
   let today: AimlApiTodayUsage | undefined
   let todayFailureReason:
     | (typeof ACCOUNT_TODAY_METRIC_REASONS)[keyof typeof ACCOUNT_TODAY_METRIC_REASONS]
     | undefined
   try {
-    today = await fetchAimlApiTodayUsage(scoped)
+    if (request.includeTodayCashflow !== false)
+      today = await fetchAimlApiTodayUsage(scoped)
   } catch (error) {
     if (error instanceof AimlApiCredentialScopeError) throw error
     todayFailureReason = ACCOUNT_TODAY_METRIC_REASONS.RequestFailed
@@ -204,9 +258,17 @@ export async function fetchAimlApiAccountData(
 
   const todayStatsAvailability: AccountTodayStatsAvailability = today
     ? {
-        consumption: COMPLETE,
-        requests: COMPLETE,
-        tokens: COMPLETE,
+        consumption:
+          today.spendUsd === undefined
+            ? UNAVAILABLE(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload)
+            : COMPLETE,
+        requests:
+          today.requests === undefined
+            ? UNAVAILABLE(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload)
+            : COMPLETE,
+        tokens: today.tokensComplete
+          ? COMPLETE
+          : UNAVAILABLE(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
         income: UNAVAILABLE(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       }
     : createUnavailableTodayStats(
@@ -214,9 +276,34 @@ export async function fetchAimlApiAccountData(
       )
 
   return {
-    quota: billing.currentBalance * QUOTA_PER_USD,
-    nativeBalance: toAccountBalance(billing),
-    today_quota_consumption: (today?.spendUsd ?? 0) * QUOTA_PER_USD,
+    ...balance,
+    ...(today
+      ? {
+          settledConsumption: [
+            {
+              scope: accountReportingScope(request),
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              amount: observeAmount(
+                today.spendUsd,
+                {
+                  adapter: "aimlapi",
+                  operation: AIMLAPI_ENDPOINTS.UsageDetail,
+                  // Billing and charged usage share the reported USD contract;
+                  // the UTC billing period remains explicit in the window.
+                  contractVersion: "1",
+                  kind: EVIDENCE_KINDS.Reported,
+                },
+                today.observedAt,
+              ),
+              window: today.window,
+              settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+              coverage: FINANCIAL_COVERAGE.Complete,
+              cumulative: true,
+            },
+          ],
+        }
+      : {}),
+    today_quota_consumption: Number(today?.spendUsd ?? 0) * QUOTA_PER_USD,
     today_prompt_tokens: today?.inputTokens ?? 0,
     today_completion_tokens: today?.outputTokens ?? 0,
     today_requests_count: today?.requests ?? 0,

@@ -1,10 +1,13 @@
 import { z } from "zod"
 
-import { assetSchema } from "~/services/amounts/assets"
+import { assetSchema, type Asset } from "~/services/amounts/assets"
 import {
   observationWindowSchema,
+  observeAmount,
   observedAmountSchema,
   usageScopeSchema,
+  type EvidenceRef,
+  type UsageScope,
 } from "~/services/amounts/balance"
 import {
   FINANCIAL_COVERAGE,
@@ -55,6 +58,24 @@ export const financialConsumptionFactSchema = z.strictObject({
 export type FinancialConsumptionFact = z.infer<
   typeof financialConsumptionFactSchema
 >
+
+/** A log charge describes one request rather than complete window coverage. */
+export function recordedLogCharge(
+  asset: Asset,
+  value: unknown,
+  scope: UsageScope,
+  source: EvidenceRef,
+  at: number,
+): FinancialConsumptionFact {
+  return {
+    asset,
+    amount: observeAmount(value, source, at),
+    scope,
+    window: { start: at, end: at + 1, timeZone: "UTC" },
+    settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+    coverage: FINANCIAL_COVERAGE.Partial,
+  }
+}
 
 /** Earlier New API observations used the requested day without a cumulative marker. */
 export function isCumulativeConsumption(

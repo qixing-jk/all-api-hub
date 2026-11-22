@@ -96,6 +96,7 @@ class AccountPresentation {
         )
           return undefined
         const at =
+          account.account_info.legacyFinancial?.cashflowCapturedAt?.[metric] ??
           account.account_info.legacyFinancial?.capturedAt ??
           account.last_sync_time
         const observedAt =

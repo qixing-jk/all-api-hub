@@ -25,7 +25,7 @@ export const KIMI_FINANCIAL_SOURCES = {
 } as const
 
 /** Console integers are 1e-5 currency units. Inference is already currency. */
-function kimiConsoleAmount(value: unknown): string | undefined {
+export function kimiConsoleAmount(value: unknown): string | undefined {
   return normalizeDecimalUnits(value, 100_000)
 }
 

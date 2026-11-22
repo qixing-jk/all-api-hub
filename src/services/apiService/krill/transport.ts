@@ -41,23 +41,6 @@ export function invalidKrillResponse(endpoint: string): never {
   )
 }
 
-/** Console amounts arrive as fixed-precision USD strings; coercion hides bad data. */
-export function krillNumber(value: unknown, endpoint: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value))
-    return invalidKrillResponse(endpoint)
-  return value
-}
-
-/** Parse a fixed-precision USD string without silently reading missing values as zero. */
-export function usdAmount(value: unknown, endpoint: string): number {
-  if (typeof value !== "string" || !/^-?\d+(\.\d+)?$/.test(value.trim()))
-    return invalidKrillResponse(endpoint)
-  const amount = Number(value)
-  if (!Number.isFinite(amount) || amount < 0)
-    return invalidKrillResponse(endpoint)
-  return amount
-}
-
 /** Nested reads share facts only while the same captured Cookie operation is active. */
 export async function withKrillSession<TRequest extends ApiServiceRequest, T>(
   request: TRequest,
