@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CURRENCIES } from "~/constants/money"
 import { accountBalanceSnapshot } from "~/services/accounts/balanceSnapshot"
@@ -42,6 +42,12 @@ import {
   buildPeriodConsumption,
   buildPeriodIncome,
 } from "~~/tests/test-utils/financialPeriod"
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  vi.setSystemTime(new Date(2026, 10, 19, 12))
+})
+afterEach(() => vi.useRealTimers())
 
 /** Existing explicit currency examples represent independently reported facts. */
 function buildDisplaySiteData(overrides: Partial<DisplaySiteData> = {}) {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
 import {
   getOrCreateAccessToken as fetchRixApiAccessToken,
   fetchAccountBalance as fetchRixApiAccountBalance,
@@ -12,6 +13,7 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildPeriodConsumption } from "~~/tests/test-utils/financialPeriod"
 
 const {
   mockData,
@@ -91,6 +93,30 @@ describe("Rix API account data variant", () => {
       expect.objectContaining({ baseUrl: request.baseUrl }),
       { endpoint: "/api/user/self" },
     )
+  })
+
+  it("keeps normalized daily charges comparable with the direct USD wallet dialect", async () => {
+    mockData.mockResolvedValue({ balance: "2.5" })
+    const cost = buildPeriodConsumption("account-1", "2")
+    cost.amount.source = {
+      ...cost.amount.source,
+      adapter: SITE_TYPES.RIX_API,
+      operation: "/api/log/self/stat:quota",
+      contractVersion: NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd,
+    }
+    mockFetchTodayUsage.mockResolvedValueOnce({
+      settledConsumption: [cost],
+      todayStatsAvailability: { consumption: { status: "complete" } },
+    })
+    const result = await fetchRixApiAccountData({
+      ...request,
+      checkIn: buildCheckInConfig(),
+    })
+    expect(result.settledConsumption?.[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "2", source: { contractVersion: "usd-balance/v1" } },
+    })
+    expect(result.settledConsumption?.[0]?.scope).toEqual(cost.scope)
   })
 
   it("accepts a numeric balance as well as the string form", async () => {

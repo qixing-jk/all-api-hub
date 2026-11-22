@@ -4,7 +4,7 @@ import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES } from "~/constants/money"
 import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
 import { accountBalanceSnapshot } from "~/services/accounts/balanceSnapshot"
-import { balancePosition } from "~/services/amounts/balance"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
   BALANCE_NATURES,
@@ -18,6 +18,27 @@ import {
 import { SiteHealthStatus } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+
+it("keeps unavailable provider cost without counters out of statistic readings", () => {
+  const site = buildSiteAccount()
+  site.account_info.usage = {
+    scope: "site_today",
+    cost: {
+      asset: { kind: "currency", code: "USD" },
+      amount: observeAmount(
+        undefined,
+        {
+          adapter: "fixture",
+          operation: "cost",
+          contractVersion: "1",
+          kind: "reported",
+        },
+        Date.now(),
+      ),
+    },
+  }
+  expect(calculateAccountStats([site]).siteDayUsage).toBeUndefined()
+})
 
 /** Provider facts remain independent of the deliberately misleading quota DTO. */
 function account(

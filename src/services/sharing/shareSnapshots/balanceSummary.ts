@@ -17,6 +17,7 @@ import {
   BALANCE_RELATIONS,
   BALANCE_ROLES,
   BALANCE_VALIDITY_KINDS,
+  BUDGET_LIMIT_STATES,
   EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
   OBSERVATION_STATUSES,
@@ -72,7 +73,12 @@ export function accountShareBalanceSummary(
     allowances?.entries.filter(
       ({ constraint, validity }) =>
         constraint.asset.kind !== ASSET_KINDS.Unknown &&
-        isKnownOrStaleObservation(constraint.remaining) &&
+        (isKnownOrStaleObservation(constraint.remaining) ||
+          (constraint.limitState === BUDGET_LIMIT_STATES.Unlimited &&
+            (constraint.stateObservation.status ===
+              OBSERVATION_STATUSES.Known ||
+              constraint.stateObservation.status ===
+                OBSERVATION_STATUSES.Stale))) &&
         !(
           constraint.enabled.status === OBSERVATION_STATUSES.Known &&
           !constraint.enabled.value
@@ -90,16 +96,20 @@ export function accountShareBalanceSummary(
   const allowanceDisplay = new Map(
     validAllowances.map((entry) => [
       projectAllowancePosition(entry),
-      formatBudgetRules(entry.constraint, t, false),
+      { rules: formatBudgetRules(entry.constraint, t, false), entry },
     ]),
   )
   const positions = [...(snapshot?.positions ?? []), ...allowanceDisplay.keys()]
   return {
     purpose: SHARE_BALANCE_PURPOSES.Account,
     coverage:
-      snapshot?.coverage ??
-      (validAllowances.length ? allowances?.coverage : undefined) ??
-      FINANCIAL_COVERAGE.Unknown,
+      snapshot &&
+      validAllowances.length &&
+      allowances?.coverage !== FINANCIAL_COVERAGE.Complete
+        ? FINANCIAL_COVERAGE.Partial
+        : (snapshot?.coverage ??
+          (validAllowances.length ? allowances?.coverage : undefined) ??
+          FINANCIAL_COVERAGE.Unknown),
     entries: positions
       .filter(
         (p) =>
@@ -116,6 +126,10 @@ export function accountShareBalanceSummary(
               isKnownOrStaleObservation(p.amount) &&
               mirror.amount.status === p.amount.status &&
               mirror.amount.value === p.amount.value &&
+              mirror.validity.kind === p.validity.kind &&
+              (mirror.validity.kind !== BALANCE_VALIDITY_KINDS.Expires ||
+                (p.validity.kind === BALANCE_VALIDITY_KINDS.Expires &&
+                  mirror.validity.at === p.validity.at)) &&
               mirror.amount.observedAt === p.amount.observedAt,
           ),
       )
@@ -125,13 +139,20 @@ export function accountShareBalanceSummary(
         const { adapter, operation, contractVersion, kind, inputs } =
           p.amount.source
         const asset = publicShareAsset(p.asset)
+        const allowance = allowanceDisplay.get(p)
+        const unlimited =
+          allowance?.entry.constraint.limitState ===
+          BUDGET_LIMIT_STATES.Unlimited
         return {
           asset,
           amount:
             observed && asset.kind !== ASSET_KINDS.Unknown
               ? { asset, value: observation.value }
               : undefined,
-          status: p.amount.status,
+          status: unlimited
+            ? allowance.entry.constraint.stateObservation.status
+            : p.amount.status,
+          ...(unlimited ? { unlimited: true as const } : {}),
           role: p.role,
           nature: p.nature,
           funding: p.funding,
@@ -158,9 +179,14 @@ export function accountShareBalanceSummary(
                 ? [...inputs]
                 : undefined,
           },
-          observedAt: observed ? observation.observedAt : undefined,
+          observedAt: observed
+            ? observation.observedAt
+            : unlimited &&
+                "observedAt" in allowance.entry.constraint.stateObservation
+              ? allowance.entry.constraint.stateObservation.observedAt
+              : undefined,
           ...(allowanceDisplay.has(p)
-            ? { allowanceRules: allowanceDisplay.get(p) }
+            ? { allowanceRules: allowance?.rules }
             : {}),
           scope: {
             projects: p.scope.projects.kind,
@@ -238,7 +264,7 @@ export function formatOverviewShareBalance(
       locale,
     )
   }
-  return formatBalanceAmount(amount, locale, currencyType)
+  return formatBalanceAmount(amount, locale)
 }
 
 /** Include full balance details in the share caption. */
@@ -260,14 +286,16 @@ export function shareBalanceLines(
                 : entry.asset.kind === ASSET_KINDS.Quota
                   ? entry.asset.displayLabel
                   : ""
-          const value = entry.amount
-            ? formatBalanceAmount(
-                entry.amount,
-                locale,
-                currencyType,
-                exchangeRate,
-              )
-            : `${assetLabel} ${t("shareSnapshots:financial.unavailable")}`.trim()
+          const value = entry.unlimited
+            ? t("keyManagement:dialog.unlimitedQuota")
+            : entry.amount
+              ? formatBalanceAmount(
+                  entry.amount,
+                  locale,
+                  currencyType,
+                  exchangeRate,
+                )
+              : `${assetLabel} ${t("shareSnapshots:financial.unavailable")}`.trim()
           const qualifiers = [
             ...getBalanceQualifiers(entry, t),
             entry.source.kind === EVIDENCE_KINDS.Manual

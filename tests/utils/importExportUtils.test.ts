@@ -134,6 +134,7 @@ vi.mock("~/lib/notify", () => ({
 
 const mockAccountStorageImportData =
   accountDataTransfer.importData as unknown as ReturnType<typeof vi.fn>
+const mockPreparedAccountImport = vi.fn()
 const mockAccountStorageExportData =
   accountDataTransfer.exportData as unknown as ReturnType<typeof vi.fn>
 
@@ -292,6 +293,17 @@ describe("parseBackupSummary", () => {
 describe("importFromBackupObject", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAccountStorageImportData.mockImplementation(async (input) => {
+      const prepared =
+        typeof input === "function"
+          ? input(
+              await accountDataTransfer.exportData(),
+              await tagStorage.exportTagStore(),
+            )
+          : { data: input, result: undefined }
+      mockPreparedAccountImport(prepared.data)
+      return { migratedCount: 0, result: prepared.result }
+    })
     mockUserPreferencesImport.mockResolvedValue(preferenceWriteSuccess())
     mockEnsureLegacyMigration.mockResolvedValue({
       migratedAccountCount: 0,
@@ -386,13 +398,15 @@ describe("importFromBackupObject", () => {
 
     const result = await importFromBackupObject(backup as BackupV2)
 
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith({
       accounts: [{ id: "a1" }, { id: "a2" }],
       bookmarks: [{ id: "b1" }],
       pinnedAccountIds: ["a2", "b1"],
       orderedAccountIds: ["b1", "a1", "a2"],
+      deletedEntryRecords: undefined,
+      tagStore: backup.tagStore,
     })
-    expect(mockTagStoreImport).toHaveBeenCalled()
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockEnsureLegacyMigration).toHaveBeenCalled()
     expect(mockUserPreferencesImport).toHaveBeenCalledWith({
       themeMode: "dark",
@@ -616,7 +630,7 @@ describe("importFromBackupObject", () => {
       mode: "merge",
     })
 
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith({
       accounts: [
         expect.objectContaining({ id: "local-account" }),
         expect.objectContaining({ id: "remote-account" }),
@@ -633,11 +647,9 @@ describe("importFromBackupObject", () => {
         "remote-bookmark",
       ],
       deletedEntryRecords: {},
+      tagStore: { version: 1, tagsById: {} },
     })
-    expect(mockTagStoreImport).toHaveBeenCalledWith({
-      version: 1,
-      tagsById: {},
-    })
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockUserPreferencesImport).not.toHaveBeenCalled()
     expect(mockChannelConfigMerge).toHaveBeenCalledWith(remoteChannelConfigs)
     expect(mockApiCredentialProfilesMergeConfig).toHaveBeenCalledWith(
@@ -759,7 +771,7 @@ describe("importFromBackupObject", () => {
       },
     })
 
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith(
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith(
       expect.objectContaining({
         accounts: [
           expect.objectContaining({ id: "local-account" }),
@@ -860,12 +872,17 @@ describe("importFromBackupObject", () => {
         remoteTaggables: backup.apiCredentialProfiles?.profiles,
       }),
     )
-    expect(mockTagStoreImport).toHaveBeenCalledWith({
-      version: 2,
-      tagsById: {
-        local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
-      },
-    })
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tagStore: {
+          version: 2,
+          tagsById: {
+            local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
+          },
+        },
+      }),
+    )
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockApiCredentialProfilesMergeConfig).toHaveBeenCalledWith({
       ...backup.apiCredentialProfiles,
       profiles: [
@@ -1545,12 +1562,12 @@ describe("importFromBackupObject", () => {
         },
       },
     )
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith(
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith(
       expect.objectContaining({ accounts: [local, newerMatching, incoming] }),
     )
   })
 
-  it("imports the legacy tag store before accounts", async () => {
+  it("imports legacy tags together with accounts", async () => {
     const tagStore = { version: 1, tagsById: {} }
     await importFromBackupObject({
       version: "1.0",
@@ -1558,13 +1575,11 @@ describe("importFromBackupObject", () => {
       accounts: [{ id: "legacy-tagged" }],
       tagStore,
     })
-    expect(mockTagStoreImport).toHaveBeenCalledWith(tagStore)
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockAccountStorageImportData).toHaveBeenCalledWith({
       accounts: [{ id: "legacy-tagged" }],
+      tagStore,
     })
-    expect(mockTagStoreImport.mock.invocationCallOrder[0]).toBeLessThan(
-      mockAccountStorageImportData.mock.invocationCallOrder[0]!,
-    )
   })
 
   it("preserves WebDAV configuration when importing legacy preferences", async () => {

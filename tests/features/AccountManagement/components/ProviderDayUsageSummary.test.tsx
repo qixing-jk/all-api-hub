@@ -104,13 +104,13 @@ it("preserves exact original currency cost precision in the provider-day summary
 })
 
 it.each([
-  [CURRENCIES.USD, CURRENCIES.CNY, "140", /USD\s*10(?:\.00)?/],
-  [CURRENCIES.CNY, CURRENCIES.USD, "10", /CNY\s*140(?:\.00)?/],
+  [CURRENCIES.USD, CURRENCIES.CNY, "140", /^USD\s*10(?:\.00)?$/],
+  [CURRENCIES.CNY, CURRENCIES.USD, "10", /^CNY\s*140(?:\.00)?$/],
   [
     CURRENCY_DISPLAY_MODES.Original,
     CURRENCIES.CNY,
     "140",
-    /CNY\s*140(?:\.00)?/,
+    /^CNY\s*140(?:\.00)?$/,
   ],
 ] as const)(
   "shows provider-day %s amounts with the account's nondefault rate and preserves Original",
@@ -147,7 +147,7 @@ it.each([
     displayPreference.mode = CURRENCY_DISPLAY_MODES.Original
     rerender(<ProviderDayUsageSummary sites={[site]} />)
     expect(
-      screen.getByText(new RegExp(`${code}\\s*${value}(?:\\.00)?`)),
+      screen.getByText(new RegExp(`^${code}\\s*${value}(?:\\.00)?$`)),
     ).toBeVisible()
   },
 )

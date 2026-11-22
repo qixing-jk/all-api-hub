@@ -155,6 +155,28 @@ describe("PM-API account data", () => {
     })
   })
 
+  it("keeps valid daily cost independent of malformed request and token counters", async () => {
+    mockIdentity([
+      http.get(`${origin}/api/me/stats`, () =>
+        HttpResponse.json(
+          envelope({
+            today: { quota: 125000, requests: -1, tokens: "pending" },
+            user: identity,
+          }),
+        ),
+      ),
+    ])
+    const data = await fetchAccountData(accountRequest())
+    expect(data.today_requests_count).toBe(0)
+    expect(data.today_prompt_tokens).toBe(0)
+    expect(data.todayStatsAvailability?.requests.status).toBe("unavailable")
+    expect(data.todayStatsAvailability?.tokens.status).toBe("unavailable")
+    expect(data.usage?.cost?.amount).toMatchObject({
+      value: "0.25",
+      status: "known",
+    })
+  })
+
   it("keeps account data usable when the stats route fails", async () => {
     mockIdentity([
       http.get(`${origin}/api/me/stats`, () =>

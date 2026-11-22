@@ -52,7 +52,10 @@ export function accountBalanceScope<
       ...(request.accountId ? { accountId: request.accountId } : {}),
     },
     ...identity,
-    authority: identity.authority ?? new URL(request.baseUrl).origin,
+    authority:
+      identity.authority ??
+      sanitizeOriginUrl(request.baseUrl) ??
+      "legacy:unknown-authority",
     projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
     keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
     models: { kind: SCOPE_SELECTION_KINDS.Unknown },

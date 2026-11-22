@@ -106,7 +106,9 @@ test("guides the first account without empty statistics or account shortcuts", a
   await expect(
     page.getByRole("button", { name: "Quick check-in" }),
   ).toHaveCount(0)
-  await expect(page.getByText("Total Balance", { exact: true })).toHaveCount(0)
+  await expect(
+    page.getByRole("region", { name: "Financial totals", exact: true }),
+  ).toHaveCount(0)
   await expect(
     page.getByRole("button", { name: "Share overview snapshot", exact: true }),
   ).toHaveCount(0)

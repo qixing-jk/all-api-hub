@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import type { BalancePosition } from "~/services/amounts/balance"
+import { createUnixDayKeyFormatter } from "~/utils/core/dayKey"
 
 type Window = NonNullable<BalancePosition["window"]>
 
@@ -62,16 +63,22 @@ export function ObservationWindow({
 }) {
   const { t, i18n } = useTranslation("account")
   let presentation
+  let displayTimeZone = window.timeZone
   try {
     presentation = describeWindow(window, i18n.language)
   } catch {
+    displayTimeZone = "UTC"
     presentation = describeWindow({ ...window, timeZone: "UTC" }, "en")
   }
-  const summary = today
-    ? presentation.sameDay
-      ? t("financial.observedThrough", { time: presentation.cutoff })
-      : t("financial.fullDay")
-    : presentation.summary
+  const dayKey = createUnixDayKeyFormatter(displayTimeZone)
+  const startsAtDayBoundary =
+    dayKey(window.start / 1000) !== dayKey((window.start - 1) / 1000)
+  const summary =
+    today && startsAtDayBoundary
+      ? presentation.sameDay
+        ? t("financial.observedThrough", { time: presentation.cutoff })
+        : t("financial.fullDay")
+      : presentation.summary
   return (
     <Tooltip
       anchorAsChild

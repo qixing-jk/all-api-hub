@@ -6,7 +6,9 @@ import { expect, it, onTestFinished, vi } from "vitest"
 import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { FinancialBalanceDisplay } from "~/features/AccountManagement/components/AccountList/rows/FinancialBalanceDisplay"
+import { ObservationWindow } from "~/features/AccountManagement/components/ObservationWindow"
 import { buildDevFinancialScenarios } from "~/features/DevPanel/fixtureFinancialScenarios"
+import { DEV_SITE_FINANCIAL_STATES } from "~/features/DevPanel/fixtureScenarioKinds"
 import { buildDevSiteFinancialScenarios } from "~/features/DevPanel/fixtureSiteBalances"
 import enAccount from "~/locales/en/account.json"
 import enBalanceHistory from "~/locales/en/balanceHistory.json"
@@ -48,6 +50,53 @@ import {
 import { toggleDevUnlocked } from "~/utils/core/devMode"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, within } from "~~/tests/test-utils/render"
+
+it("labels partial cross-date daily windows by their actual range", () => {
+  render(
+    <ObservationWindow
+      today
+      window={{
+        start: Date.parse("2026-11-18T12:00:00Z"),
+        end: Date.parse("2026-11-19T00:00:00Z"),
+        timeZone: "UTC",
+      }}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(
+    screen.queryByText("account:financial.fullDay"),
+  ).not.toBeInTheDocument()
+  expect(screen.getByRole("button")).toHaveTextContent("12:00")
+})
+
+it("shows the developer request allowance with its native unit", () => {
+  const scenario = buildDevSiteFinancialScenarios(
+    Date.now(),
+    DEV_SITE_FINANCIAL_STATES.Requests,
+  )[0]!
+  render(
+    <FinancialBalanceDisplay
+      allowances={scenario.allowances}
+      disabled={false}
+      refreshing={false}
+      onRefresh={() => {}}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(
+    screen
+      .getAllByRole("button")
+      .some((button) => button.textContent?.includes("requests")),
+  ).toBe(true)
+})
+
+function independentPlans(now: number) {
+  const scenario = buildDevFinancialScenarios(now).find(
+    (entry) => entry.label === "Independent plans",
+  )
+  if (!scenario) throw new Error("Independent plans fixture missing")
+  return scenario
+}
 
 it.each([
   [
@@ -220,9 +269,15 @@ it("shows the complete known zero balance in its hover and keyboard hint", async
 it.each([
   { value: "0", summary: "$0.00", inactive: false },
   { value: "0.000001", summary: "<$0.01", inactive: true },
+  {
+    value: "0.000001",
+    summary: "<$0.01",
+    inactive: true,
+    cachedInactive: true,
+  },
 ])(
   "names the $summary allowance amount and preserves its inactive status",
-  async ({ value, summary, inactive }) => {
+  async ({ value, summary, inactive, cachedInactive }) => {
     const now = Date.now()
     const scenario = buildDevSiteFinancialScenarios(now).find(
       (entry) => entry.siteType === SITE_TYPES.SHAREDCHAT,
@@ -241,6 +296,12 @@ it.each([
       observedAt: now,
       value: !inactive,
     }
+    if (cachedInactive)
+      entry.constraint.enabled = {
+        ...entry.constraint.enabled,
+        status: OBSERVATION_STATUSES.Stale,
+        reason: "not-reported",
+      }
     const i18n = await createResourceTestI18n({
       en: { account: enAccount, balanceHistory: enBalanceHistory, common },
     })
@@ -344,7 +405,7 @@ it.each(["expired", "reset"] as const)(
   "retains %s allowance warnings in the full-amount hint",
   async (state) => {
     const now = Date.now()
-    const scenario = buildDevFinancialScenarios(now)[6]!
+    const scenario = independentPlans(now)
     const allowances = structuredClone(scenario.allowances!)
     const entry = allowances.entries[0]!
     entry.constraint.remaining = {
@@ -656,7 +717,7 @@ it.each(["expired", "reset"] as const)(
   "marks an %s allowance independently of its last reported amount",
   async (state) => {
     const now = Date.now()
-    const scenario = buildDevFinancialScenarios(now)[6]!
+    const scenario = independentPlans(now)
     const entry = scenario.allowances!.entries[0]!
     const onRefresh = vi.fn()
     const i18n = await createResourceTestI18n({
@@ -742,7 +803,7 @@ it.each([
     const i18n = await createResourceTestI18n({
       en: { account: enAccount, common },
     })
-    const scenario = buildDevFinancialScenarios(Date.now())[6]!
+    const scenario = independentPlans(Date.now())
     const entry = scenario.allowances!.entries[0]!
     render(
       <I18nextProvider i18n={i18n}>
@@ -828,7 +889,7 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.NANOGPT, SITE_TYPES.FREEMODEL])(
 it.each([BUDGET_LIMIT_STATES.Finite, BUDGET_LIMIT_STATES.Unlimited])(
   "separates a stale %s allowance's value from its accessible status indicator",
   async (limitState) => {
-    const scenario = buildDevFinancialScenarios(Date.now())[6]!
+    const scenario = independentPlans(Date.now())
     const entry = scenario.allowances!.entries[0]!
     const constraint = staleBudgetConstraint(
       { ...entry.constraint, limitState },
@@ -1121,7 +1182,7 @@ it.each([
 
 it("bounds an inline Token allowance and preserves its precision in details", async () => {
   const user = userEvent.setup()
-  const scenario = buildDevFinancialScenarios(Date.now())[6]!
+  const scenario = independentPlans(Date.now())
   const entry = scenario.allowances!.entries[0]!
   const allowances = {
     ...scenario.allowances!,
@@ -1299,7 +1360,7 @@ it.each([true, false])(
 )
 
 it("identifies each plan's period in its accessible name without repeating it beside the plan name", async () => {
-  const scenario = buildDevFinancialScenarios(Date.now())[6]!
+  const scenario = independentPlans(Date.now())
   render(
     <FinancialBalanceDisplay
       snapshot={scenario.balance}
@@ -1324,7 +1385,7 @@ it("identifies each plan's period in its accessible name without repeating it be
 
 it("keeps a readable plan inline when the balance has no readable amount", async () => {
   const now = Date.now()
-  const scenario = buildDevFinancialScenarios(now)[6]!
+  const scenario = independentPlans(now)
   const missing = balancePosition({
     id: "missing",
     scope: scenario.allowances!.entries[0]!.constraint.scope,
@@ -1437,9 +1498,10 @@ it("shows named timed funds and the original zone-less expiry without inventing 
     )
   const dialog = within(screen.getByRole("dialog"))
   expect(dialog.getByText("Weekly gift")).toBeVisible()
-  expect(dialog.getByText(/2027-01-04/)).toHaveTextContent(
-    i18n.t("account:financial.timingUnknown"),
-  )
+  const expiry = dialog.getByText(/2027-01-04/)
+  expect(expiry.querySelector("time[datetime]")).toBeNull()
+  expect(expiry).not.toHaveAttribute("datetime")
+  expect(expiry).toHaveTextContent(i18n.t("account:financial.timingUnknown"))
 })
 
 it("identifies Kimi vouchers consistently in account details and sharing without calling console cur cash", async () => {

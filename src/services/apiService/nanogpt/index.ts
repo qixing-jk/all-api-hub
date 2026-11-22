@@ -268,16 +268,16 @@ function nanoGptWallet(
         ...common,
         id: "usd_balance",
         asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
-        value: balance?.usdBalance,
+        value: balance?.usdAmount,
       }),
-      ...(balance?.nanoBalance === undefined
+      ...(balance?.nanoAmount === undefined && !balance?.nanoAmountUnavailable
         ? []
         : [
             balancePosition({
               ...common,
               id: "nano_balance",
               asset: { kind: ASSET_KINDS.Crypto, id: "XNO" },
-              value: balance.nanoBalance,
+              value: balance?.nanoAmount,
             }),
           ]),
     ],

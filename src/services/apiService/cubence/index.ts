@@ -54,7 +54,7 @@ export async function fetchAccountData(
   return withCubenceSession(request, async (scoped) => {
     const user = await readCubenceUser(scoped)
     const balance = cubenceNumber(user.normal_balance, CUBENCE_ME_ENDPOINT)
-    const scope = accountBalanceScope(request)
+    const scope = accountBalanceScope(request, { walletId: String(user.id) })
     const observedAt = Date.now()
     const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
     const source = {
@@ -100,7 +100,8 @@ export async function fetchAccountData(
       const body = await readCubenceResponse(scoped, TODAY_ENDPOINT)
       const summary = body.summary
       // The native today window is Asia/Shanghai, not the rolling 24-hour range.
-      const today = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      const costObservedAt = Date.now()
+      const today = new Date(costObservedAt + 8 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10)
       if (
@@ -119,7 +120,6 @@ export async function fetchAccountData(
         total = number("tokens"),
         output = number("output_tokens")
       if (output > total) invalidCubenceResponse(TODAY_ENDPOINT)
-      const costObservedAt = Date.now()
       const start = Date.parse(body.window_start)
       if (costObservedAt > start)
         data.settledConsumption = [
@@ -130,7 +130,9 @@ export async function fetchAccountData(
               { ...source, operation: `${TODAY_ENDPOINT}:summary.cost` },
               costObservedAt,
             ),
-            scope: accountReportingScope(request),
+            scope: accountReportingScope(request, {
+              walletId: String(user.id),
+            }),
             window: { start, end: costObservedAt, timeZone: "Asia/Shanghai" },
             settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
             coverage: FINANCIAL_COVERAGE.Complete,
@@ -142,10 +144,17 @@ export async function fetchAccountData(
       data.today_requests_count = calls
       data.today_prompt_tokens = total - output
       data.today_completion_tokens = output
-      for (const key of ["consumption", "requests", "tokens"] as const)
+      for (const key of ["requests", "tokens"] as const)
         data.todayStatsAvailability![key] = {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
         }
+      data.todayStatsAvailability!.consumption =
+        costObservedAt > start
+          ? { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete }
+          : {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+            }
     } catch (error) {
       if (
         request.abortSignal?.aborted ||

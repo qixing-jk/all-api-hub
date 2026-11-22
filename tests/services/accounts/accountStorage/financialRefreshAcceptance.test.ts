@@ -212,6 +212,13 @@ it.each(["usage", "usageObservations"] as const)(
       ),
     ).toBe(true)
     const stored = (await accountQueries.getAccountById("editor"))!
+    expect(stored.account_info.balance?.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          amount: expect.objectContaining({ status: "known", value: "20" }),
+        }),
+      ]),
+    )
     expect(
       (field === "usage"
         ? stored.account_info.usage
@@ -233,7 +240,10 @@ it.each(["ordinary", "editor"] as const)(
     let partial = false
     server.use(
       http.get(origin + "/api/user/self", () =>
-        HttpResponse.json({ success: true, data: { quota: 10_000_000 } }),
+        HttpResponse.json({
+          success: true,
+          data: { quota: partial ? 10_500_000 : 10_000_000 },
+        }),
       ),
       http.get(origin + "/api/log/self/stat", () =>
         HttpResponse.json({ success: true, data: { quota: 500_000 } }),
@@ -288,7 +298,7 @@ it.each(["ordinary", "editor"] as const)(
     await refresh()
     expect(account.account_info.balance?.positions[0]?.amount).toMatchObject({
       status: "known",
-      value: "20",
+      value: "21",
     })
     expect(account.account_info.reportedIncome).toEqual(
       expect.arrayContaining([
@@ -563,8 +573,14 @@ it.each([
           ? ("complete" as const)
           : ("partial" as const),
     }
-    if (difference === "day")
-      incoming.window = { ...incoming.window, start: 400, end: 500 }
+    if (difference === "day") {
+      incoming.window = {
+        ...incoming.window,
+        start: 86_400_000,
+        end: 86_400_500,
+      }
+      incoming.amount = observeAmount("7", cost.amount.source, 86_400_300)
+    }
     if (difference === "source")
       incoming.amount.source = {
         ...cost.amount.source,
@@ -678,7 +694,7 @@ it.each(["day", "source", "asset", "scope", "noncumulative"] as const)(
       },
     }
     if (difference === "day")
-      failed.window = { ...cost.window, start: 400, end: 500 }
+      failed.window = { ...cost.window, start: 86_400_000, end: 86_400_500 }
     if (difference === "source")
       failed.amount.source = {
         ...cost.amount.source,

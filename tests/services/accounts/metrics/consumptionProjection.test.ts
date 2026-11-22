@@ -6,6 +6,8 @@ import { calculateAccountStats } from "~/services/accounts/accountStorage/accoun
 import {
   displayCashflowAmount,
   getDisplayConsumptionProjection,
+  getDisplayIncomeProjection,
+  getReferenceCashflowTotal,
   selectDisplayCashflow,
 } from "~/services/accounts/metrics/consumptionProjection"
 import {
@@ -31,6 +33,34 @@ import {
 const now = new Date(2026, 10, 11, 12).getTime()
 const start = new Date(2026, 10, 11).getTime()
 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+it("reclassifies cached legacy reference amounts after the local day changes", () => {
+  const reference = {
+    amount: { USD: 5, CNY: 35 },
+    observedAt: now,
+    lastKnown: false,
+  }
+  const account = buildDisplaySiteData({
+    id: "reference",
+    referenceConsumption: reference,
+    referenceIncome: reference,
+  })
+  const tomorrow = new Date(2026, 10, 12, 12).getTime()
+  for (const project of [
+    getDisplayConsumptionProjection,
+    getDisplayIncomeProjection,
+  ]) {
+    expect(
+      getReferenceCashflowTotal(project([account], now), "USD"),
+    ).toMatchObject({ value: "5" })
+    const next = project([account], tomorrow)
+    expect(getReferenceCashflowTotal(next, "USD")).toBeUndefined()
+    expect(next.references?.[0]).toMatchObject({
+      observedAt: now,
+      lastKnown: true,
+    })
+  }
+})
 
 function fact(id: string, value: string, end = now): FinancialConsumptionFact {
   return {
@@ -62,6 +92,29 @@ function fact(id: string, value: string, end = now): FinancialConsumptionFact {
 }
 
 afterEach(() => vi.useRealTimers())
+
+it("deduplicates a shared wallet when unrestricted routes are omitted or explicit", () => {
+  const first = fact("a", "12")
+  const second = {
+    ...first,
+    scope: {
+      ...first.scope,
+      subject: { kind: "account", accountId: "b" } as const,
+      routes: { kind: "all" } as const,
+    },
+  }
+  const accounts = [
+    { id: "a", settledConsumption: [first] },
+    { id: "b", settledConsumption: [second] },
+  ]
+  expect(getDisplayConsumptionProjection(accounts, now).groups).toMatchObject([
+    { amount: { value: "12" } },
+  ])
+  second.scope.walletId = "independent-wallet"
+  expect(getDisplayConsumptionProjection(accounts, now).groups).toMatchObject([
+    { amount: { value: "24" } },
+  ])
+})
 
 it("keeps native coverage partial across assets and monetary coverage limited to its contributors", () => {
   const usd = fact("a", "10")
@@ -407,8 +460,14 @@ it.each([
     const third = fact("c", "2")
     third.scope.walletId = "shared"
     const accounts = [
-      buildDisplaySiteData({ id: "a", settledConsumption: [first] }),
-      buildDisplaySiteData({ id: "b", settledConsumption: [second] }),
+      buildDisplaySiteData({
+        id: "a",
+        settledConsumption: [first, fact("a", "1")],
+      }),
+      buildDisplaySiteData({
+        id: "b",
+        settledConsumption: [second, fact("b", "1")],
+      }),
       buildDisplaySiteData({
         id: "c",
         settledConsumption: [third, fact("c", "1")],
@@ -417,7 +476,8 @@ it.each([
     const result = calculateTotalConsumption(
       order.map((id) => accounts.find((account) => account.id === id)!),
     )
-    expect(result.coverage).toMatchObject({ completeCount: 0, partialCount: 1 })
+    expect(result.amount.USD).toBe(3)
+    expect(result.coverage).toMatchObject({ completeCount: 0, partialCount: 3 })
   },
 )
 

@@ -33,6 +33,10 @@ import {
   generateShareSnapshotCaption,
 } from "~/services/sharing/shareSnapshots"
 import {
+  accountShareBalanceSummary,
+  formatOverviewShareBalance,
+} from "~/services/sharing/shareSnapshots/balanceSummary"
+import {
   getShareNetAmount,
   publicConsumptionSummary,
   shareConsumptionLines,
@@ -45,8 +49,223 @@ import {
   redactShareSecrets,
   relativeLuminanceFromRgb,
 } from "~/services/sharing/shareSnapshots/utils"
+import { buildPeriodIncome } from "~~/tests/test-utils/financialPeriod"
 
 describe("shareSnapshots", () => {
+  it.each(["asset", "overflow"] as const)(
+    "omits net cashflow for %s while preserving independent groups",
+    (scenario) => {
+      const coverage = {
+        status: "complete" as const,
+        completeCount: 1,
+        partialCount: 0,
+        eligibleCount: 1,
+        legacyUnclassifiedCount: 0,
+      }
+      const summary = (code: string, value: string) =>
+        publicConsumptionSummary({
+          nativeCoverage: coverage,
+          groups: [
+            {
+              amount: { asset: { kind: "currency", code }, value },
+              coverage,
+              window: { start: 100, end: 200, timeZone: "UTC" },
+            },
+          ],
+        })
+      const income = summary(
+        "USD",
+        scenario === "asset" ? "10" : "9".repeat(256),
+      )
+      const spending = summary(
+        scenario === "asset" ? "CNY" : "USD",
+        scenario === "asset" ? "3" : `-${"9".repeat(256)}`,
+      )
+      expect(getShareNetAmount(income, spending)).toBeUndefined()
+      expect(income.groups).toHaveLength(1)
+      expect(spending.groups).toHaveLength(1)
+    },
+  )
+  it("preserves unknown asset classification without exporting a usable monetary amount", () => {
+    const scope = accountBalanceScope({ baseUrl: "https://unknown.invalid" })
+    const payload = buildAccountShareSnapshotPayload({
+      siteName: "Unknown",
+      currencyType: "USD",
+      includeTodayCashflow: false,
+      balanceSnapshot: accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "unknown",
+            scope,
+            asset: { kind: "unknown" },
+            value: "7",
+            observedAt: 100,
+            source: {
+              adapter: "fixture",
+              operation: "wallet",
+              contractVersion: "1",
+              kind: "reported",
+            },
+          }),
+        ],
+        100,
+        "unknown",
+      ),
+    })
+    expect(payload.balanceSummary?.entries).toMatchObject([
+      { asset: { kind: "unknown" }, amount: undefined },
+    ])
+    expect(generateShareSnapshotCaption(payload)).toContain(
+      "shareSnapshots:financial.unavailable",
+    )
+  })
+  it("keeps a ledger whose validity differs from its summary mirror", () => {
+    const scope = accountBalanceScope({ baseUrl: "https://mirror.invalid" })
+    const source = {
+      adapter: "fixture",
+      operation: "balance",
+      contractVersion: "1",
+      kind: "reported",
+    } as const
+    const ledger = balancePosition({
+      id: "ledger",
+      role: "ledger",
+      scope,
+      source,
+      observedAt: 100,
+      asset: { kind: "currency", code: "USD" },
+      value: "20",
+      validity: { kind: "no-expiry" },
+    })
+    const mirror = {
+      ...ledger,
+      id: "summary",
+      role: "available" as const,
+      parentId: "ledger",
+      relation: "summary" as const,
+      validity: { kind: "expires" as const, at: 1000 },
+    }
+    expect(
+      accountShareBalanceSummary(
+        accountBalanceSnapshot(scope, [ledger, mirror], 100, "complete"),
+      ).entries,
+    ).toHaveLength(2)
+  })
+
+  it("keeps the native unit when the portfolio has no usable display conversion", () => {
+    expect(
+      formatOverviewShareBalance(
+        { asset: { kind: "currency", code: "USD" }, value: "1" },
+        { purpose: "available", entries: [], coverage: "complete" },
+        "en",
+        "CNY",
+      ),
+    ).toBe("$1.00")
+  })
+  it("shares unlimited plans and their reported timing without inventing a numeric amount", () => {
+    const scope = accountBalanceScope({ baseUrl: "https://share.invalid" })
+    const at = Date.now()
+    const payload = buildAccountShareSnapshotPayload({
+      siteName: "Plans",
+      currencyType: "USD",
+      includeTodayCashflow: false,
+      balanceSnapshot: accountBalanceSnapshot(scope, [], at, "complete"),
+      allowances: {
+        schemaVersion: 1,
+        subject: scope.subject,
+        capturedAt: at,
+        coverage: "partial",
+        entries: [
+          {
+            id: "unlimited",
+            collectionKey: "plans",
+            identityKind: "upstream",
+            validity: { kind: "unknown" },
+            reportedTiming: { expiresAt: "2027-01-04" },
+            constraint: budgetConstraint({
+              scope,
+              asset: { kind: "currency", code: "USD" },
+              source: {
+                adapter: "fixture",
+                operation: "plans",
+                contractVersion: "1",
+                kind: "reported",
+              },
+              observedAt: at,
+              limitState: "unlimited",
+              enabled: true,
+            }),
+          },
+        ],
+      },
+    })
+    expect(payload.balanceSummary?.entries).toMatchObject([
+      {
+        amount: undefined,
+        unlimited: true,
+        reportedTiming: { expiresAt: "2027-01-04" },
+      },
+    ])
+    expect(payload.balanceSummary?.coverage).toBe("partial")
+    expect(generateShareSnapshotCaption(payload)).toContain(
+      "keyManagement:dialog.unlimitedQuota",
+    )
+  })
+  it("shares retained native income separately from current totals", () => {
+    const fact = buildPeriodIncome("private-id", "5")
+    fact.amount = {
+      ...fact.amount,
+      status: "stale",
+      reason: "refresh-failed",
+    } as typeof fact.amount
+    const projection = getDisplayIncomeProjection([
+      { id: "private-id", reportedIncome: [fact] },
+    ])
+    expect(projection.groups).toEqual([])
+    const publicSummary = publicConsumptionSummary(projection)
+    expect(
+      shareConsumptionLines(
+        publicSummary,
+        "en",
+        ACCOUNT_CASHFLOW_METRICS.Income,
+      ).join(" "),
+    ).toMatch(/USD\s5/)
+    expect(JSON.stringify(publicSummary)).not.toContain("private-id")
+  })
+  it("omits net cashflow when a native projection is partial despite a complete USD group", () => {
+    const coverage = {
+      status: "complete" as const,
+      completeCount: 1,
+      partialCount: 0,
+      eligibleCount: 1,
+      legacyUnclassifiedCount: 0,
+    }
+    const summary = (value: string) =>
+      publicConsumptionSummary({
+        nativeCoverage: coverage,
+        groups: [
+          {
+            amount: {
+              asset: { kind: "currency", code: CURRENCIES.USD },
+              value,
+            },
+            coverage,
+            window: { start: 1000, end: 2000, timeZone: "UTC" },
+          },
+        ],
+      })
+    const income = summary("10")
+    const spending = summary("3")
+    spending.nativeCoverage.status = "partial"
+    expect(getShareNetAmount(income, spending)).toBeUndefined()
+    expect(shareConsumptionLines(spending, "en").join(" ")).toMatch(
+      /USD\s3(?:\s|$)/,
+    )
+    spending.nativeCoverage.status = "complete"
+    expect(getShareNetAmount(income, spending)).toMatchObject({ value: "7" })
+  })
+
   it.each([
     "partial",
     "pending",

@@ -315,6 +315,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const savedAllowance =
     !site.allowances?.entries.length &&
     (subscriptionStatus === subscriptionStatuses.Active ||
+      subscriptionStatus === subscriptionStatuses.Grace ||
       (!subscriptionStatus && site.subscription?.isActive === true)) &&
     !(
       site.subscription?.expireTime &&
@@ -332,14 +333,14 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
     remainingCount !== undefined &&
     Number.isFinite(remainingCount) &&
     remainingCount >= 0
-  const siteDayReading = getSiteDayReadings(site)[0]
+  const siteDayReadings = getSiteDayReadings(site)
+  const siteDayReading = siteDayReadings[0]
   const siteDay = siteDayReading?.usage
   const showGenericUsageCounters =
     !siteDay ||
     (site.usage?.scope !== ACCOUNT_USAGE_SCOPES.SiteToday &&
       site.usage?.scope !== ACCOUNT_USAGE_SCOPES.Today)
-  const dayCost = siteDay?.cost
-  const displayDayCost =
+  const formatDayCost = (dayCost: NonNullable<typeof siteDay>["cost"]) =>
     dayCost &&
     dayCost.asset.kind !== ASSET_KINDS.Unknown &&
     isKnownOrStaleObservation(dayCost.amount)
@@ -357,9 +358,11 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const estimate = preferences?.balanceHistory?.estimatedTodayIncome?.enabled
     ? site.estimatedTodayIncome?.[displayCurrency ?? CURRENCIES.USD]
     : undefined
-  const consumption = getDisplayConsumptionProjection([
-    { ...site, disabled: false },
-  ])
+  const asOf = Date.now()
+  const consumption = getDisplayConsumptionProjection(
+    [{ ...site, disabled: false }],
+    asOf,
+  )
   const displayedConsumption = selectDisplayCashflow(
     consumption,
     displayCurrency,
@@ -373,9 +376,10 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       ? site.todayStatsAvailability.consumption
       : displayedConsumption.coverage,
   )
-  const income = getDisplayIncomeProjection([
-    { ...site, disabled: false, excludeFromTodayIncome: false },
-  ])
+  const income = getDisplayIncomeProjection(
+    [{ ...site, disabled: false, excludeFromTodayIncome: false }],
+    asOf,
+  )
   const displayedIncome = selectDisplayCashflow(
     income,
     displayCurrency,
@@ -449,11 +453,11 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
     void handleRefreshClick(target).catch(() => undefined)
   }
 
-  const showSiteDayStats = Boolean(
-    siteDay &&
-    ((showTodayCashflow && displayDayCost) ||
-      siteDay.totalRequests !== undefined ||
-      siteDay.totalTokens !== undefined),
+  const showSiteDayStats = siteDayReadings.some(
+    ({ usage }) =>
+      (showTodayCashflow && formatDayCost(usage.cost)) ||
+      usage.totalRequests !== undefined ||
+      usage.totalTokens !== undefined,
   )
   const showAccountUsageSummary = Boolean(
     site.subscription?.name ||
@@ -637,49 +641,61 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
               )}
             </div>
           )}
-          {siteDay && showSiteDayStats && (
-            <div
-              role="group"
-              aria-label={t("account:financial.siteDay")}
-              className="col-start-1 flex flex-wrap justify-end gap-x-1.5 text-3xs text-muted-foreground sm:text-xs"
-            >
-              <span>
-                {siteDay.reportedDay ?? t("account:financial.siteDay")}
-              </span>
-              {siteDayReading?.lastKnown && (
-                <span>{t("financial.lastKnown")}</span>
-              )}
-              {siteDayReading?.lastKnown &&
-                siteDayReading.observedAt !== undefined && (
-                  <time
-                    dateTime={new Date(siteDayReading.observedAt).toISOString()}
-                    title={new Date(siteDayReading.observedAt).toLocaleString()}
-                  >
-                    {formatLocalDayKey(new Date(siteDayReading.observedAt))}
-                  </time>
-                )}
-              {showTodayCashflow && displayDayCost && (
-                <span className="text-cashflow-expense">{displayDayCost}</span>
-              )}
-              {showTodayCashflow &&
-                displayDayCost &&
-                siteDay.cost?.coverage === FINANCIAL_COVERAGE.Partial && (
-                  <span title={t("todayMetricAvailability.partial")}>
-                    {t("keyManagement:financial.partial")}
+          {showSiteDayStats &&
+            siteDayReadings.map((siteDayReading, index) => {
+              const siteDay = siteDayReading.usage
+              const displayDayCost = formatDayCost(siteDay.cost)
+              return (
+                <div
+                  key={index}
+                  role="group"
+                  aria-label={t("account:financial.siteDay")}
+                  className="col-start-1 flex flex-wrap justify-end gap-x-1.5 text-3xs text-muted-foreground sm:text-xs"
+                >
+                  <span>
+                    {siteDay.reportedDay ?? t("account:financial.siteDay")}
                   </span>
-                )}
-              {siteDay.totalRequests !== undefined && (
-                <span title={t("stats.usageRequests")}>
-                  {formatCompactNumber(siteDay.totalRequests)}
-                </span>
-              )}
-              {siteDay.totalTokens !== undefined && (
-                <span title={t("stats.usageTokens")}>
-                  {formatCompactNumber(siteDay.totalTokens)}
-                </span>
-              )}
-            </div>
-          )}
+                  {siteDayReading?.lastKnown && (
+                    <span>{t("financial.lastKnown")}</span>
+                  )}
+                  {siteDayReading?.lastKnown &&
+                    siteDayReading.observedAt !== undefined && (
+                      <time
+                        dateTime={new Date(
+                          siteDayReading.observedAt,
+                        ).toISOString()}
+                        title={new Date(
+                          siteDayReading.observedAt,
+                        ).toLocaleString()}
+                      >
+                        {formatLocalDayKey(new Date(siteDayReading.observedAt))}
+                      </time>
+                    )}
+                  {showTodayCashflow && displayDayCost && (
+                    <span className="text-cashflow-expense">
+                      {displayDayCost}
+                    </span>
+                  )}
+                  {showTodayCashflow &&
+                    displayDayCost &&
+                    siteDay.cost?.coverage === FINANCIAL_COVERAGE.Partial && (
+                      <span title={t("todayMetricAvailability.partial")}>
+                        {t("keyManagement:financial.partial")}
+                      </span>
+                    )}
+                  {siteDay.totalRequests !== undefined && (
+                    <span title={t("stats.usageRequests")}>
+                      {formatCompactNumber(siteDay.totalRequests)}
+                    </span>
+                  )}
+                  {siteDay.totalTokens !== undefined && (
+                    <span title={t("stats.usageTokens")}>
+                      {formatCompactNumber(siteDay.totalTokens)}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
         </div>
       )}
     </div>

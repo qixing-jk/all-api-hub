@@ -76,7 +76,10 @@ export function ProviderDayUsageSummary({
             <span>{t("todayMetricAvailability.partial")}</span>
           )}
           {usage.totalTokens !== undefined && (
-            <span>Token: {formatCount(usage.totalTokens)}</span>
+            <span>
+              {t("usageAnalytics:summary.totalTokens")}:{" "}
+              {formatCount(usage.totalTokens)}
+            </span>
           )}
           {lastKnown && <span>{t("financial.lastKnown")}</span>}
           {usage.reportedDay ? (

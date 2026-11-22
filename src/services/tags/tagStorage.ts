@@ -48,7 +48,7 @@ class TagStorageService {
    * Best-effort broadcast to other extension contexts so they can refresh
    * in-memory state (e.g. options page vs popup).
    */
-  private notifyTagStoreUpdated() {
+  notifyTagStoreUpdated() {
     try {
       const maybePromise = sendRuntimeMessage({
         type: "TAG_STORE_UPDATE",
@@ -70,8 +70,7 @@ class TagStorageService {
 
   private async getAccountStorageConfig(): Promise<AccountStorageConfig> {
     const raw = (await this.storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)) as
-      | AccountStorageConfig
-      | undefined
+      AccountStorageConfig | undefined
 
     return canonicalizeAccountStorageConfig(raw).config
   }

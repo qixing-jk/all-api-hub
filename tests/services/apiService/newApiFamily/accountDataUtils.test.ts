@@ -9,6 +9,19 @@ import {
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
 
 describe("New API family account data utilities", () => {
+  it("marks overflowing native usage partial while retaining its prior subtotal and fresh counters", () => {
+    const first = aggregateUsageData([
+      { quota: "9".repeat(256), prompt_tokens: 1, completion_tokens: 2 },
+    ])
+    const next = aggregateUsageData(
+      [{ quota: "9".repeat(256), prompt_tokens: 3, completion_tokens: 4 }],
+      first,
+    )
+    expect(next.coverage.consumption.invalidCount).toBe(1)
+    expect(next.nativeQuotaConsumption).toBe(first.nativeQuotaConsumption)
+    expect(next.today_prompt_tokens).toBe(4)
+    expect(next.today_completion_tokens).toBe(6)
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })

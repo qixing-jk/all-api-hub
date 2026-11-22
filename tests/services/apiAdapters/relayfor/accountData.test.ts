@@ -33,6 +33,60 @@ const createRequest = (overrides = {}) => ({
 })
 
 describe("relayForAccountData", () => {
+  it("retains timed grant scope and receipt time with one parent wallet collection", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+    try {
+      vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+        user: { id: 1, username: "alice", quota: 0 },
+        timed_quota: 1000000,
+      } as never)
+      vi.mocked(fetchRelayForTimedQuotas).mockImplementationOnce(async () => {
+        vi.setSystemTime(new Date("2026-11-19T06:01:00Z"))
+        return [
+          {
+            status: 1,
+            quota_remaining: 500000,
+            quota_group: "premium",
+            expires_at: "2099-02-01",
+          },
+        ]
+      })
+      const data = await relayForAccountData.fetchData(createRequest())
+      const grant = data.balance?.positions.find((p) =>
+        p.id.startsWith("timed-grant:"),
+      )
+      expect(grant?.amount).toMatchObject({
+        observedAt: Date.parse("2026-11-19T06:01:00Z"),
+        source: { inputs: ["/api/user/timed-quotas"] },
+      })
+      expect(grant?.scope.groups).toEqual({
+        kind: "restricted",
+        ids: ["premium"],
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("retains active plans with indeterminate provider timing as a partial collection", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, username: "alice", quota: 0 },
+      active_subscriptions: [
+        {
+          status: 1,
+          plan_name: "Zone-less",
+          starts_at: "2026-11-19",
+          expires_at: "2099-02-01",
+          quota_remaining: 500000,
+          quota_total: 1000000,
+        },
+      ],
+    } as never)
+    const data = await relayForAccountData.fetchData(createRequest())
+    expect(data.allowances?.entries).toHaveLength(1)
+    expect(data.allowances?.coverage).toBe("partial")
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })

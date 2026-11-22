@@ -908,11 +908,13 @@ describe("BalanceDisplay", () => {
       ),
     ).toBeVisible()
     expect(screen.getByText(/CNY\s*7/)).toBeVisible()
+    const spending = within(screen.getByRole("dialog")).getByRole("group", {
+      name: /account:financial.usagePeriod/,
+    })
     expect(
-      screen
-        .getAllByTitle(new Date(1700000001000).toLocaleString("en"))
-        .find((time) => time.closest('[role="group"]')),
+      within(spending).getByTitle(new Date(1700000001000).toLocaleString("en")),
     ).toBeVisible()
+    expect(spending).toHaveTextContent("account:financial.lastKnown")
   })
   it("shows readable consumption rows and reveals exact observations with a details button", async () => {
     const user = userEvent.setup()
@@ -1449,7 +1451,10 @@ describe("BalanceDisplay", () => {
       const remaining = screen.queryByTitle(
         /account:stats.subscriptionRemainingTokens/,
       )
-      if (status === subscriptionStatuses.Active) {
+      if (
+        status === subscriptionStatuses.Active ||
+        status === subscriptionStatuses.Grace
+      ) {
         expect(remaining).toHaveTextContent("123")
         expect(
           screen.getAllByText("account:financial.lastKnown").length,
@@ -1457,6 +1462,39 @@ describe("BalanceDisplay", () => {
       } else expect(remaining).not.toBeInTheDocument()
     },
   )
+
+  it("keeps a separate provider-day counter reading beside the cost reading", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          usage: {
+            scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+            cost: {
+              asset: { kind: "currency", code: "USD" },
+              amount: observeAmount(
+                "2",
+                {
+                  adapter: "fixture",
+                  operation: "usage",
+                  contractVersion: "1",
+                  kind: "reported",
+                },
+                Date.now(),
+              ),
+            },
+          },
+          usageObservations: [
+            { scope: ACCOUNT_USAGE_SCOPES.SiteToday, totalRequests: 12 },
+          ],
+        })}
+      />,
+    )
+    const readings = screen.getAllByRole("group", {
+      name: "account:financial.siteDay",
+    })
+    expect(readings).toHaveLength(2)
+    expect(within(readings[1]!).getByText("12", { exact: true })).toBeVisible()
+  })
 
   it("shows a saved active subscription's last-known remaining units", () => {
     render(
@@ -1512,6 +1550,7 @@ describe("BalanceDisplay", () => {
     )
     const usage = screen.getByLabelText("account:financial.siteDay")
     expect(usage).toHaveTextContent("USD 3")
+    expect(screen.getByText("123", { exact: true })).toBeVisible()
     expect(usage).toHaveTextContent("4")
     expect(usage).toHaveTextContent("10")
   })
@@ -1560,6 +1599,8 @@ describe("BalanceDisplay", () => {
         within(row).getByTitle(new Date(observedAt).toLocaleString()),
       ).toBeVisible()
       expect(row).toHaveTextContent("7")
+      if (showTodayCashflow) expect(row).toHaveTextContent("2.5")
+      else expect(row).not.toHaveTextContent("2.5")
     },
   )
 

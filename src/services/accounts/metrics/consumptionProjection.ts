@@ -32,6 +32,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
   type AccountTodayMetricReason,
 } from "~/types/accountTodayStats"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
   convertCnyToUsd,
   convertCurrencyAmount,
@@ -65,8 +66,18 @@ const groupContributors = new WeakMap<
   {
     complete: Set<string>
     partial: Set<string>
+    facts: Omit<FinancialConsumptionFact, "settlement">[]
   }
 >()
+
+/** The accepted facts retain the identity behind an aggregate amount. */
+export function getProjectedConsumptionFacts(projection: {
+  groups: ConsumptionGroup[]
+}): Omit<FinancialConsumptionFact, "settlement">[] {
+  return projection.groups.flatMap(
+    (group) => groupContributors.get(group)?.facts ?? [],
+  )
+}
 
 /** Prefer the configured conversion for display while retaining the original amount. */
 export function displayCashflowAmount(
@@ -88,6 +99,11 @@ export function displayCashflowAmount(
 
 /** Each currency has independent coverage; native intervals never become an exchange rate. */
 export interface ConsumptionProjection {
+  retained?: {
+    amount: Amount
+    observedAt: number
+    window: FinancialConsumptionFact["window"]
+  }[]
   /** Release values remain readable without becoming native period facts. */
   references?: (ReferenceCashflow & { accountId: string })[]
   amount: CurrencyAmount
@@ -336,6 +352,23 @@ export interface ReferenceCashflow {
   lastKnown: boolean
 }
 
+/** Requalify saved reference amounts against the requested local day. */
+function currentReference(
+  reference: ReferenceCashflow,
+  accountId: string,
+  asOf: number,
+) {
+  return {
+    ...reference,
+    accountId,
+    lastKnown:
+      reference.lastKnown ||
+      reference.observedAt === undefined ||
+      formatLocalDayKey(new Date(reference.observedAt)) !==
+        formatLocalDayKey(new Date(asOf)),
+  }
+}
+
 /** An unavailable native reading cannot replace a saved release amount. */
 export function hasRecordedCashflowAmount(
   observations: readonly Pick<FinancialConsumptionFact, "amount">[] | undefined,
@@ -392,7 +425,7 @@ export function getDisplayConsumptionProjection(
     !account.disabled &&
     !hasRecordedCashflowAmount(account.settledConsumption) &&
     account.referenceConsumption
-      ? [{ ...account.referenceConsumption, accountId: account.id }]
+      ? [currentReference(account.referenceConsumption, account.id, asOf)]
       : [],
   )
   return { ...projection, ...(references.length ? { references } : {}) }
@@ -436,10 +469,33 @@ export function getDisplayIncomeProjection(
     !account.excludeFromTodayIncome &&
     !hasRecordedCashflowAmount(account.reportedIncome) &&
     account.referenceIncome
-      ? [{ ...account.referenceIncome, accountId: account.id }]
+      ? [currentReference(account.referenceIncome, account.id, asOf)]
       : [],
   )
-  return { ...projection, ...(references.length ? { references } : {}) }
+  const retained = accounts.flatMap((account) =>
+    account.disabled || account.excludeFromTodayIncome
+      ? []
+      : (account.reportedIncome ?? []).flatMap((value) => {
+          const parsed = financialIncomeFactSchema.safeParse(value)
+          const fact = parsed.success ? parsed.data : undefined
+          return fact &&
+            fact.asset.kind !== ASSET_KINDS.Unknown &&
+            fact.amount.status === OBSERVATION_STATUSES.Stale
+            ? [
+                {
+                  amount: { asset: fact.asset, value: fact.amount.value },
+                  observedAt: fact.amount.observedAt,
+                  window: fact.window,
+                },
+              ]
+            : []
+        }),
+  )
+  return {
+    ...projection,
+    ...(references.length ? { references } : {}),
+    ...(retained.length ? { retained } : {}),
+  }
 }
 
 /** Native period arithmetic is shared, while each caller validates its own domain facts. */
@@ -562,7 +618,10 @@ function projectPeriodAmounts(
       const { fact } = candidate
       const key = JSON.stringify([
         usageScopeKey(
-          fact.scope,
+          {
+            ...fact.scope,
+            routes: fact.scope.routes ?? { kind: SCOPE_SELECTION_KINDS.All },
+          },
           !(
             fact.scope.walletId ||
             fact.scope.organizationId ||
@@ -689,6 +748,7 @@ function projectPeriodAmounts(
         groupContributors.set(group, {
           complete: completeIds,
           partial: partialIds,
+          facts: compatible.map(({ fact }) => fact),
         })
         groups.push(group)
         for (const candidate of compatible) nativeIncluded.add(candidate.id)

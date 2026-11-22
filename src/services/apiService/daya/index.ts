@@ -47,7 +47,9 @@ export async function fetchAccountData(
   return withDayaSession(request, async (request) => {
     const identity = await fetchDayaIdentity(request)
     const endpoint = DAYA_ENDPOINTS.Identity
-    const scope = accountBalanceScope(request)
+    const scope = accountBalanceScope(request, {
+      walletId: String(identity.id),
+    })
     const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
     const observedAt = Date.now()
     const result: AccountData = {
@@ -109,7 +111,8 @@ export async function fetchAccountData(
         cacheRead = counter("today_cache_read_tokens"),
         output = counter("today_output_tokens"),
         requests = counter("today_requests")
-      const cost = parseDecimal(stats.today_cost)
+      const parsedCost = parseDecimal(stats.today_cost)
+      const cost = parsedCost?.startsWith("-") ? undefined : parsedCost
       result.today_quota_consumption =
         cost === undefined ? 0 : Number(cost) * QUOTA_PER_USD
       result.today_requests_count = requests ?? 0
@@ -138,7 +141,9 @@ export async function fetchAccountData(
         },
         costObservedAt,
       )
-      const reportingScope = accountReportingScope(request)
+      const reportingScope = accountReportingScope(request, {
+        walletId: String(identity.id),
+      })
       if (sameDay && costObservedAt > start)
         result.settledConsumption = [
           {

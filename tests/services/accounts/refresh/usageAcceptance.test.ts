@@ -4,7 +4,10 @@ import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES } from "~/constants/money"
 import { accountReportingScope } from "~/services/accounts/balanceSnapshot"
 import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
-import { acceptUsageObservations } from "~/services/accounts/refresh/usageAcceptance"
+import {
+  acceptUsageObservations,
+  acceptUsageSummary,
+} from "~/services/accounts/refresh/usageAcceptance"
 import { observeAmount } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
@@ -62,6 +65,28 @@ const dailyUsage = (): AccountUsageSummary => ({
       200,
     ),
   },
+})
+
+it("keeps the last usable cost in singleton usage when the clock moves backward", () => {
+  const old = dailyUsage()
+  const incoming = {
+    ...old,
+    observedAt: 150,
+    totalRequests: 8,
+    cost: {
+      ...old.cost!,
+      window: { ...old.cost!.window!, end: 150 },
+      amount: observeAmount(undefined, old.cost!.amount.source, 150),
+    },
+  }
+  expect(acceptUsageSummary(old, incoming)).toMatchObject({
+    totalRequests: 8,
+    observedAt: 150,
+    cost: {
+      window: old.cost!.window,
+      amount: { value: "1.5", status: "stale", observedAt: 200 },
+    },
+  })
 })
 
 it("retains a failed growing-day cost in the primary observation with its original window and fresh counters", () => {

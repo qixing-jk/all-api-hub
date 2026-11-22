@@ -49,9 +49,13 @@ import {
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
+  TAG_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import { importV2AccountsWithReplace } from "~/services/importExport/accountImport"
+import {
+  importV2AccountsWithMerge,
+  importV2AccountsWithReplace,
+} from "~/services/importExport/accountImport"
 import {
   normalizeBackupForMerge,
   parseBackupSummary,
@@ -73,6 +77,164 @@ import {
 const storage = new Storage({ area: "local" })
 beforeEach(async () => {
   await accountDataTransfer.clearAllData()
+})
+
+it("does not overwrite an unknown tag base after a failed merge read", async () => {
+  const id = await accountMutations.addAccount(buildSiteAccount())
+  const before = await accountDataTransfer.exportData()
+  const originalGet = browser.storage.local.get.bind(browser.storage.local)
+  const read = vi
+    .spyOn(browser.storage.local, "get")
+    .mockImplementation((keys) => {
+      if (
+        keys === TAG_STORAGE_KEYS.TAG_STORE ||
+        (Array.isArray(keys) && keys.includes(TAG_STORAGE_KEYS.TAG_STORE))
+      )
+        return Promise.reject(new Error("tag-read-failed"))
+      return originalGet(keys)
+    })
+  try {
+    await expect(
+      importV2AccountsWithMerge({
+        version: BACKUP_VERSION,
+        timestamp: 100,
+        type: "accounts",
+        accounts: before,
+      }),
+    ).rejects.toThrow("tag-read-failed")
+  } finally {
+    read.mockRestore()
+  }
+  expect(await accountDataTransfer.exportData()).toEqual(before)
+  expect((await accountQueries.getAccountById(id))?.id).toBe(id)
+})
+
+it.each([null, [], "accounts"])(
+  "rejects malformed imports before changing storage (%j)",
+  async (incoming) => {
+    await expect(
+      accountDataTransfer.importData(incoming as never),
+    ).rejects.toThrow("unsupported_or_invalid_account_storage")
+  },
+)
+
+it.each(["replace", "merge"] as const)(
+  "keeps existing tags and accounts when a %s restore fails",
+  async (mode) => {
+    const tag = {
+      id: "old-tag",
+      name: "Original",
+      createdAt: 10,
+      updatedAt: 20,
+    }
+    await tagStorage.importTagStore({ version: 1, tagsById: { [tag.id]: tag } })
+    await accountMutations.addAccount(buildSiteAccount({ tagIds: [tag.id] }))
+    const beforeAccounts = await accountDataTransfer.exportData()
+    const beforeTags = await tagStorage.exportTagStore()
+    const imported = vi
+      .spyOn(accountDataTransfer, "importData")
+      .mockRejectedValueOnce(new Error("restore-failed"))
+    onTestFinished(() => imported.mockRestore())
+    const nextTag = {
+      id: "next-tag",
+      name: "Backup",
+      createdAt: 30,
+      updatedAt: 40,
+    }
+    const backup = {
+      version: BACKUP_VERSION,
+      timestamp: 100,
+      type: "accounts" as const,
+      accounts: {
+        ...beforeAccounts,
+        accounts: [buildSiteAccount({ id: "incoming", tagIds: [nextTag.id] })],
+      },
+      tagStore: { version: 1, tagsById: { [nextTag.id]: nextTag } },
+    }
+    await expect(
+      mode === "replace"
+        ? importV2AccountsWithReplace(backup)
+        : importV2AccountsWithMerge(backup),
+    ).rejects.toThrow("restore-failed")
+    expect(await tagStorage.exportTagStore()).toEqual(beforeTags)
+    expect(await accountDataTransfer.exportData()).toEqual(beforeAccounts)
+  },
+)
+
+it.each(["replace", "merge", "legacy"] as const)(
+  "does not publish new tags when the %s account storage write fails",
+  async (mode) => {
+    const tag = {
+      id: "old-tag",
+      name: "Original",
+      createdAt: 10,
+      updatedAt: 20,
+    }
+    await tagStorage.importTagStore({ version: 1, tagsById: { [tag.id]: tag } })
+    await accountMutations.addAccount(buildSiteAccount({ tagIds: [tag.id] }))
+    const beforeAccounts = await accountDataTransfer.exportData()
+    const beforeTags = await tagStorage.exportTagStore()
+    const nextTag = {
+      id: "next-tag",
+      name: "Backup",
+      createdAt: 30,
+      updatedAt: 40,
+    }
+    const incoming = buildSiteAccount({ id: "incoming", tagIds: [nextTag.id] })
+    const originalWrite = browser.storage.local.set.bind(browser.storage.local)
+    const write = vi.spyOn(browser.storage.local, "set")
+    write.mockImplementation((items, ...rest) => {
+      if (ACCOUNT_STORAGE_KEYS.ACCOUNTS in items)
+        return Promise.reject(new Error("write-failed"))
+      return originalWrite(items, ...rest)
+    })
+    onTestFinished(() => write.mockRestore())
+    const backup = {
+      version: BACKUP_VERSION,
+      timestamp: 100,
+      type: "accounts" as const,
+      accounts: { ...beforeAccounts, accounts: [incoming] },
+      tagStore: { version: 1, tagsById: { [nextTag.id]: nextTag } },
+    }
+    await expect(
+      mode === "legacy"
+        ? importV1Backup({ ...backup, version: "1.0", accounts: [incoming] })
+        : mode === "replace"
+          ? importV2AccountsWithReplace(backup)
+          : importV2AccountsWithMerge(backup),
+    ).rejects.toThrow("write-failed")
+    expect(await tagStorage.exportTagStore()).toEqual(beforeTags)
+    expect(await accountDataTransfer.exportData()).toEqual(beforeAccounts)
+  },
+)
+
+it("preserves both concurrent account and tag merges", async () => {
+  await tagStorage.importTagStore({ version: 1, tagsById: {} })
+  const backups = ["first", "second"].map((id) => ({
+    version: BACKUP_VERSION,
+    timestamp: 100,
+    type: "accounts" as const,
+    accounts: {
+      accounts: [buildSiteAccount({ id, tagIds: [id] })],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 100,
+    },
+    tagStore: {
+      version: 1,
+      tagsById: { [id]: { id, name: id, createdAt: 10, updatedAt: 20 } },
+    },
+  }))
+  await Promise.all(backups.map((backup) => importV2AccountsWithMerge(backup)))
+  expect(
+    (await accountDataTransfer.exportData()).accounts
+      .map((account) => account.id)
+      .sort(),
+  ).toEqual(["first", "second"])
+  expect(
+    Object.keys((await tagStorage.exportTagStore()).tagsById).sort(),
+  ).toEqual(["first", "second"])
 })
 
 it.each(["site URL", "upstream user ID", "cashflow-only site URL"] as const)(
@@ -315,13 +477,14 @@ it("writes the native snapshot without legacy amount fields and preserves their 
   expect(stored).toMatchObject({
     legacyFinancial: { quota: 123456, capturedAt: 100 },
   })
-  expect(await storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toMatchObject({
-    accounts: [
-      expect.objectContaining({
-        account_info: expect.not.objectContaining({ quota: 123456 }),
-      }),
-    ],
-  })
+  const raw = await storage.get<{
+    accounts: { id: string; account_info: unknown }[]
+  }>(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+  const rawInfo = raw?.accounts.find(
+    (account) => account.id === id,
+  )?.account_info
+  expect(rawInfo).not.toHaveProperty("quota")
+  expect(rawInfo).not.toHaveProperty("nativeBalance")
 })
 
 it.each([
@@ -416,9 +579,21 @@ it("persists both native allowance windows and binds them to the saved account",
   const id = await accountMutations.addAccount(account)
   const stored = (await accountQueries.getAccountById(id))!.account_info
     .allowances
-  expect(stored?.entries.map((entry) => entry.constraint.remaining)).toEqual([
-    expect.objectContaining({ value: "20", observedAt: 100 }),
-    expect.objectContaining({ value: "90", observedAt: 100 }),
+  expect(stored?.entries).toMatchObject([
+    {
+      id: "plan:day",
+      constraint: {
+        remaining: { value: "20", observedAt: 100 },
+        window: { period: "day" },
+      },
+    },
+    {
+      id: "plan:week",
+      constraint: {
+        remaining: { value: "90", observedAt: 100 },
+        window: { period: "week" },
+      },
+    },
   ])
   expect(
     stored?.entries.every(
@@ -798,6 +973,17 @@ it.each(["identity", "failure"])(
       )
     }
     const stored = (await accountQueries.getAccountById(id))!.account_info
+    expect(stored.usageObservations).toMatchObject([
+      {
+        cost: {
+          amount: {
+            status: "stale",
+            value: "1.00000000000001",
+            observedAt: 100,
+          },
+        },
+      },
+    ])
     expect(stored.allowances?.entries[0]?.constraint.remaining).toMatchObject({
       status: "stale",
       value: "20",
@@ -823,6 +1009,30 @@ it("reserves generations above existing accounts when migrating the local counte
   expect(
     await accountMutations.beginBalanceRefresh(id, request),
   ).toBeGreaterThan(9000)
+})
+
+it("recovers a corrupt generation counter during clear-and-restore without accepting pre-clear refreshes", async () => {
+  const id = await accountMutations.addAccount(buildSiteAccount())
+  const backup = await accountDataTransfer.exportData()
+  const request = (await accountQueries.getAccountById(id))!
+  const generation = (await accountMutations.beginBalanceRefresh(id, request))!
+  await storage.set(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION, "8")
+  onTestFinished(() => storage.remove(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION))
+  expect(await accountDataTransfer.clearAllData()).toBe(true)
+  await accountDataTransfer.importData(backup)
+  expect(
+    await accountMutations.updateAccountFromRefresh(
+      id,
+      { notes: "pre-clear" },
+      undefined,
+      request,
+      undefined,
+      generation,
+    ),
+  ).toBeNull()
+  expect(
+    (await accountQueries.getAccountById(id))?.balanceRefreshGeneration,
+  ).toBeGreaterThan(generation)
 })
 
 it.each([
@@ -935,6 +1145,107 @@ it("migrates v4.10.1 Novita cash and credit limit as last-known details", async 
       amount: expect.objectContaining({ status: "stale", value: "20" }),
     }),
   ])
+})
+
+it("updates a legacy adapter wallet on successful refresh and retains the latest value on failure", async () => {
+  const id = await accountMutations.addAccount(
+    buildSiteAccount({ site_type: SITE_TYPES.NOVITA }),
+  )
+  for (const value of [5, 8, undefined]) {
+    const request = (await accountQueries.getAccountById(id))!
+    const generation = (await accountMutations.beginBalanceRefresh(
+      id,
+      request,
+    ))!
+    const update = buildAccountRefreshUpdate(
+      request,
+      {
+        success: value !== undefined,
+        healthStatus: {
+          status:
+            value === undefined
+              ? SiteHealthStatus.Error
+              : SiteHealthStatus.Healthy,
+          message: "fixture",
+        },
+        data: {
+          nativeBalance: {
+            unit: "USD",
+            total: value ?? 0,
+            permanent: value ?? 0,
+            daily: 0,
+          },
+        },
+      } as never,
+      false,
+    )
+    const saved = await accountMutations.updateAccountFromRefresh(
+      id,
+      update,
+      undefined,
+      request,
+      undefined,
+      generation,
+    )
+    expect(saved?.account_info.balance?.positions[0]?.amount).toMatchObject({
+      value: String(value ?? 8),
+      status: "stale",
+      source: { kind: "legacy" },
+    })
+  }
+})
+
+it("keeps legacy balances when an incoming wallet belongs to another authority", async () => {
+  const legacy = buildSiteAccount({
+    site_type: "new-api",
+    configVersion: 8,
+    site_url: "https://original.example",
+  })
+  delete legacy.account_info.balance
+  legacy.account_info.quota = 10_000_000
+  await accountDataTransfer.importData({ accounts: [legacy] })
+  const request = (await accountQueries.getAccountById(legacy.id))!
+  const generation = (await accountMutations.beginBalanceRefresh(
+    legacy.id,
+    request,
+  ))!
+  const scope = accountBalanceScope({
+    baseUrl: "https://different.example",
+    accountId: legacy.id,
+  })
+  const fresh = accountBalanceObservation(
+    scope,
+    [
+      balancePosition({
+        id: "balance",
+        scope,
+        asset: { kind: "currency", code: "USD" },
+        value: "5",
+        observedAt: Date.now(),
+        source: {
+          adapter: "new-api",
+          operation: "wallet",
+          contractVersion: "1",
+          kind: "reported",
+        },
+      }),
+    ],
+    Date.now(),
+    FINANCIAL_ENUMERATION.Complete,
+  )
+  const saved = await accountMutations.updateAccountFromRefresh(
+    legacy.id,
+    { account_info: { balance: fresh.balance } },
+    undefined,
+    request,
+    fresh,
+    generation,
+  )
+  expect(
+    saved?.account_info.balance?.positions.find(
+      (p) => p.amount.source.kind === "legacy",
+    )?.amount,
+  ).toMatchObject({ value: "20" })
 })
 
 it.each([false, true])(

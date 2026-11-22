@@ -11,6 +11,7 @@ import {
 import { FinancialTotalsPopover } from "~/features/AccountManagement/components/FinancialTotalsPopover"
 import { ProviderDayUsageSummary } from "~/features/AccountManagement/components/ProviderDayUsageSummary"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useBalanceAsOf } from "~/features/AccountManagement/data/useBalanceAsOf"
 import {
   displayCashflowAmount,
   getReferenceCashflowTotal,
@@ -35,6 +36,7 @@ export default function AccountBalanceSummary({
 } = {}) {
   const { t, i18n } = useTranslation("account")
   const { displayData, todayIncomeEstimateTotals } = useAccountDataContext()
+  const asOf = useBalanceAsOf(displayData)
   const {
     showTodayCashflow,
     preferences,
@@ -47,12 +49,12 @@ export default function AccountBalanceSummary({
     ? todayIncomeEstimateTotals?.estimated?.[referenceCurrency]
     : undefined
   const consumption = useMemo(
-    () => calculateTotalConsumption(displayData),
-    [displayData],
+    () => calculateTotalConsumption(displayData, asOf),
+    [displayData, asOf],
   )
   const income = useMemo(
-    () => calculateTotalIncomeForSites(displayData),
-    [displayData],
+    () => calculateTotalIncomeForSites(displayData, asOf),
+    [displayData, asOf],
   )
   const summaries = [
     {

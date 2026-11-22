@@ -114,6 +114,17 @@ export async function refreshAccountRowsAndReadStorage(params: {
   expect(params.accountIds.length).toBe(params.expectedBalances.length)
 
   for (const [index, accountId] of params.accountIds.entries()) {
+    const before = (await readStoredAccounts(params.serviceWorker)).find(
+      (account) => account.id === accountId,
+    )
+    const afterObservedAt = before?.account_info.balance?.positions.reduce(
+      (latest, position) =>
+        Math.max(
+          latest,
+          "observedAt" in position.amount ? position.amount.observedAt : 0,
+        ),
+      0,
+    )
     const row = params.page.getByTestId(
       getAccountManagementListItemTestId(accountId),
     )
@@ -128,6 +139,7 @@ export async function refreshAccountRowsAndReadStorage(params: {
       serviceWorker: params.serviceWorker,
       accountId,
       expectedBalance: atIndex(params.expectedBalances, index),
+      afterObservedAt,
     })
   }
 
@@ -145,6 +157,7 @@ async function waitForStoredAccountBalance(params: {
   serviceWorker: Worker
   accountId: string
   expectedBalance: { value: string; asset: Partial<Asset> }
+  afterObservedAt?: number
 }) {
   await expect
     .poll(async () => {
@@ -152,7 +165,14 @@ async function waitForStoredAccountBalance(params: {
       const account = accounts.find(
         (candidate) => candidate.id === params.accountId,
       )
-      return account?.account_info.balance?.positions ?? []
+      return (
+        account?.account_info.balance?.positions.filter(
+          (position) =>
+            params.afterObservedAt === undefined ||
+            ("observedAt" in position.amount &&
+              position.amount.observedAt > params.afterObservedAt),
+        ) ?? []
+      )
     })
     .toEqual(
       expect.arrayContaining([

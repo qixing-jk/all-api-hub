@@ -52,6 +52,30 @@ const usageKey = (usage: AccountUsageSummary) => {
   ])
 }
 
+/** The singleton retains its matching last-known cost even when list consumers need separate windows. */
+export function acceptUsageSummary(
+  previous: AccountUsageSummary | undefined,
+  incoming: AccountUsageSummary | undefined,
+): AccountUsageSummary | undefined {
+  const accepted = acceptUsageObservations(
+    previous ? [previous] : undefined,
+    incoming ? [incoming] : undefined,
+  )
+  const primary = accepted?.[0]
+  if (
+    !primary ||
+    !primary.cost ||
+    isKnownOrStaleObservation(primary.cost.amount)
+  )
+    return primary
+  const retained = accepted?.find(
+    (usage) =>
+      usageKey(usage) === usageKey(primary) &&
+      isKnownOrStaleObservation(usage.cost?.amount),
+  )
+  return retained ? { ...primary, cost: retained.cost } : primary
+}
+
 /** Snapshot-only usage endpoints do not prove that omitted sources disappeared. */
 export function acceptUsageObservations(
   previous: AccountUsageSummary[] | undefined,

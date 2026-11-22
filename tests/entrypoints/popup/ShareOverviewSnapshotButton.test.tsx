@@ -446,8 +446,27 @@ describe("ShareOverviewSnapshotButton", () => {
       expect(buildOverviewShareSnapshotPayloadMock).toHaveBeenCalledWith(
         expect.objectContaining({
           includeTodayCashflow: true,
-          consumption: expect.objectContaining({ groups: expect.any(Array) }),
-          income: expect.objectContaining({ groups: expect.any(Array) }),
+          consumption: expect.objectContaining({
+            groups: expect.arrayContaining([
+              expect.objectContaining({
+                amount: {
+                  asset: { kind: "currency", code: "USD" },
+                  value: "4",
+                },
+              }),
+            ]),
+          }),
+          income: expect.objectContaining({
+            groups: expect.arrayContaining([
+              expect.objectContaining({
+                amount: {
+                  asset: { kind: "currency", code: "USD" },
+                  value:
+                    availability.income.status === "unavailable" ? "2" : "6",
+                },
+              }),
+            ]),
+          }),
         }),
       )
       expect(trackerCompleteMock).toHaveBeenCalledWith(

@@ -99,6 +99,24 @@ describe("accountDataMigration", () => {
   })
 
   describe("migrateAccountConfig", () => {
+    it.each([
+      { value: "1700000000000", expected: 1700000000000 },
+      { value: " 123 ", expected: 123 },
+      { value: undefined, expected: 0 },
+      { value: "not-a-number", expected: 0 },
+    ])(
+      "normalizes the legacy financial observation clock before V9 migration ($value)",
+      ({ value, expected }) => {
+        const account = createSiteAccount({
+          configVersion: 8,
+          last_sync_time: value as any,
+        })
+        const migrated = migrateAccountConfig(account)
+        expect(migrated.account_info.balance?.capturedAt).toBe(expected)
+        expect(migrated.account_info.legacyFinancial?.capturedAt).toBe(expected)
+      },
+    )
+
     it("migrates account from version 0 to current version", () => {
       const oldAccount = createSiteAccount({
         configVersion: 0,

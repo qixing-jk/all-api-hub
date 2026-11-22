@@ -14,6 +14,7 @@ import {
   getAccountBalanceSnapshots,
 } from "~/services/accounts/balanceSnapshot"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
+import { getDisplayBalancePortfolio } from "~/services/accounts/metrics/balanceProjection"
 import { migrateAccountFinancialInfo } from "~/services/accounts/migrations/accountFinancialMigration"
 import { balancePosition } from "~/services/amounts/balance"
 import {
@@ -1684,6 +1685,37 @@ describe("accountStorage core behaviors", () => {
       "legacy",
     )
     expect(account.excludeFromTotalBalance).toBe(false)
+    const cash = createAccount({ id: "cash", site_type: SITE_TYPES.NEW_API })
+    const scope = accountBalanceScope({
+      baseUrl: cash.site_url,
+      accountId: cash.id,
+    })
+    cash.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          scope,
+          asset: { kind: "currency", code: "USD" },
+          value: "5",
+          observedAt: Date.now(),
+          source: {
+            adapter: "new-api",
+            operation: "wallet",
+            contractVersion: "1",
+            kind: "reported",
+          },
+        }),
+      ],
+      Date.now(),
+      "complete",
+    )
+    expect(
+      getDisplayBalancePortfolio([
+        display,
+        accountStorage.convertToDisplayData(cash),
+      ]).amounts,
+    ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "5" }])
   })
 
   it("projects missing availability through generic and AIHubMix legacy policies", () => {
@@ -4988,6 +5020,7 @@ describe("accountStorage core behaviors", () => {
       expect(result).toEqual(
         expect.objectContaining({
           refreshed: false,
+          skippedReason: "interval_not_elapsed",
           account: expect.objectContaining({ id: "too-soon" }),
         }),
       )
@@ -5791,7 +5824,11 @@ describe("accountStorage core behaviors", () => {
           site_type: SITE_TYPES.PMAPI,
           authType: AuthTypeEnum.AccessToken,
           account_info: {
-            ...createAccount().account_info,
+            ...createAccount({
+              id: "pmapi-common-refresh",
+              site_url: "https://pmcat.top",
+              site_type: SITE_TYPES.PMAPI,
+            }).account_info,
             id: "10171",
             access_token: "pm-console-token",
           },

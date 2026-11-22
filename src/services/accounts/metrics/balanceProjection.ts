@@ -222,6 +222,17 @@ export function projectBalance(
   asOf = Date.now(),
   includeLastKnown = false,
 ) {
+  return projectBalanceCandidates(snapshot, purpose, asOf, includeLastKnown)
+}
+
+/** Shared-wallet selection must see expired observations before qualifying the winner. */
+function projectBalanceCandidates(
+  snapshot: BalanceSnapshot,
+  purpose: (typeof BALANCE_PURPOSES)["Prepaid" | "Available"],
+  asOf: number,
+  includeLastKnown: boolean,
+  deferValidity = false,
+) {
   const excluded: BalanceExclusion[] = []
   const conflicts: BalanceConflict[] = []
   const candidates = snapshot.positions.filter((position) => {
@@ -271,11 +282,13 @@ export function projectBalance(
     else if (scopes.some((s) => s.kind === SCOPE_SELECTION_KINDS.Restricted))
       reason = BALANCE_EXCLUSION_REASONS.Restricted
     else if (
+      !deferValidity &&
       position.validity.kind === BALANCE_VALIDITY_KINDS.Expires &&
       position.validity.at <= asOf
     )
       reason = BALANCE_EXCLUSION_REASONS.Validity
     else if (
+      !deferValidity &&
       position.window &&
       ((position.window.resetsAt !== undefined &&
         position.window.resetsAt <= asOf) ||
@@ -284,6 +297,7 @@ export function projectBalance(
     )
       reason = BALANCE_EXCLUSION_REASONS.Validity
     else if (
+      !deferValidity &&
       purpose === BALANCE_PURPOSES.Prepaid &&
       position.validity.kind !== BALANCE_VALIDITY_KINDS.NoExpiry
     )
@@ -409,7 +423,13 @@ export function aggregateBalances(
     { accounts: Set<number>; unidentified: Set<number> }
   >()
   snapshots.forEach((snapshot, index) => {
-    const projection = projectBalance(snapshot, purpose, asOf, includeLastKnown)
+    const projection = projectBalanceCandidates(
+      snapshot,
+      purpose,
+      asOf,
+      includeLastKnown,
+      true,
+    )
     conflicts.push(...projection.conflicts)
     partial ||= projection.coverage !== FINANCIAL_COVERAGE.Complete
     for (const p of projection.positions) {
@@ -520,12 +540,22 @@ export function aggregateBalances(
         JSON.stringify(snapshots[b.index]!.subject),
       ),
     )[0]!
-    positions.push(...selected.positions)
-    included.add(selected.index)
-    includedPositions.set(selected.index, [
-      ...(includedPositions.get(selected.index) ?? []),
-      ...selected.positions,
-    ])
+    const qualified = projectBalance(
+      { ...snapshots[selected.index]!, positions: selected.positions },
+      purpose,
+      asOf,
+      includeLastKnown,
+    )
+    partial ||= qualified.coverage !== FINANCIAL_COVERAGE.Complete
+    conflicts.push(...qualified.conflicts)
+    positions.push(...qualified.positions)
+    if (qualified.positions.length) {
+      included.add(selected.index)
+      includedPositions.set(selected.index, [
+        ...(includedPositions.get(selected.index) ?? []),
+        ...qualified.positions,
+      ])
+    }
     observations.forEach((o) => {
       if (o.index !== selected.index) duplicates.add(o.index)
     })

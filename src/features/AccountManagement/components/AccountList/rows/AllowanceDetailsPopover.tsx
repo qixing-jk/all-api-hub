@@ -28,6 +28,8 @@ export function AllowanceDetailsPopover({
   const contentRef = useRef<HTMLDivElement>(null)
   const pinnedRef = useRef(false)
   const pointerInsideRef = useRef(false)
+  const restoreFocusRef = useRef(false)
+  const restoringFocusRef = useRef(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const clearCloseTimer = () => {
     if (closeTimerRef.current !== null) {
@@ -68,6 +70,9 @@ export function AllowanceDetailsPopover({
     <Popover
       open={open}
       onOpenChange={(next) => {
+        if (!next)
+          restoreFocusRef.current =
+            contentRef.current?.contains(document.activeElement) ?? false
         setOpen(next)
         if (!next) {
           clearCloseTimer()
@@ -98,6 +103,7 @@ export function AllowanceDetailsPopover({
             if (event.pointerType !== "touch") releasePointer()
           }}
           onFocus={() => {
+            if (restoringFocusRef.current) return
             clearCloseTimer()
             setOpen(true)
           }}
@@ -134,7 +140,15 @@ export function AllowanceDetailsPopover({
             event.preventDefault()
         }}
         onOpenAutoFocus={(event) => event.preventDefault()}
-        onCloseAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault()
+          if (restoreFocusRef.current) {
+            restoreFocusRef.current = false
+            restoringFocusRef.current = true
+            triggerRef.current?.focus()
+            restoringFocusRef.current = false
+          }
+        }}
         onEscapeKeyDown={(event) => {
           // A focused observation hint handles Escape before its enclosing details.
           if (hasOpenFloatingLayer(contentRef.current)) {
@@ -151,7 +165,7 @@ export function AllowanceDetailsPopover({
             clearCloseTimer()
             pinnedRef.current = false
             pointerInsideRef.current = false
-            triggerRef.current?.focus()
+            restoreFocusRef.current = true
             setOpen(false)
           }}
         >

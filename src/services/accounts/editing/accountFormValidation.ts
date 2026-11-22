@@ -27,7 +27,12 @@ export function normalizeManualBalanceUsd(value: unknown): string | undefined {
     .replace(/^\+/, "")
     .replace(/^(-?)\./, (_match, sign: string) => `${sign}0.`)
     .replace(/\.(?=[eE]|$)/, "")
-  return parseDecimal(decimal) ?? parseDecimal(String(amount))
+    .replace(
+      /[eE]([+-]?)(\d+)$/,
+      (_match, sign: string, exponent: string) =>
+        `e${sign}${exponent.replace(/^0+(?=\d)/, "")}`,
+    )
+  return parseDecimal(decimal)
 }
 
 /** Converts a valid manual USD balance to the legacy quota projection. */

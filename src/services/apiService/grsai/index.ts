@@ -12,6 +12,7 @@ import {
   accountReportingScope,
 } from "~/services/accounts/balanceSnapshot"
 import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { parseDecimal } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
   EVIDENCE_KINDS,
@@ -300,9 +301,13 @@ export async function fetchAccountData(
     )
   }
 
-  const userCredits = toOptionalFiniteNumber(userInfo.credits)
-  const credits = userCredits ?? toOptionalFiniteNumber(dashboard.credits)
-  const todayCredits = toOptionalFiniteNumber(dashboard.todayConsumed)
+  const nativeCredits = (value: unknown) => {
+    const parsed = parseDecimal(value)
+    return parsed?.startsWith("-") ? undefined : parsed
+  }
+  const userCredits = nativeCredits(userInfo.credits)
+  const credits = userCredits ?? nativeCredits(dashboard.credits)
+  const todayCredits = nativeCredits(dashboard.todayConsumed)
 
   const todayStatsAvailability: AccountTodayStatsAvailability = {
     consumption: shouldCollectToday
@@ -338,16 +343,20 @@ export async function fetchAccountData(
           observedAt,
           asset,
           value: credits,
-          source: { ...source, operation: `${balanceEndpoint}:credits` },
+          source: {
+            ...source,
+            operation: "wallet:credits",
+            inputs: [`${balanceEndpoint}:credits`],
+          },
         }),
       ],
       observedAt,
       FINANCIAL_ENUMERATION.Complete,
     ),
-    quota: creditsToQuota(credits ?? 0),
+    quota: creditsToQuota(Number(credits ?? 0)),
     today_quota_consumption:
       shouldCollectToday && todayCredits !== undefined
-        ? creditsToQuota(todayCredits)
+        ? creditsToQuota(Number(todayCredits))
         : 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,

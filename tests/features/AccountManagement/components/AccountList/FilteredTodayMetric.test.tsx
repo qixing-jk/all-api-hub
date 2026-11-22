@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
-import { afterEach, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { FilteredTodayMetric } from "~/features/AccountManagement/components/AccountList/FilteredTodayMetric"
 import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
@@ -131,12 +131,17 @@ it("keeps same-day release references visible in filtered totals without adding 
       id: "one",
       referenceConsumption: {
         amount: { USD: 1.25, CNY: 8.75 },
+        observedAt: Date.now(),
         lastKnown: false,
       },
     }),
     buildDisplaySiteData({
       id: "two",
-      referenceConsumption: { amount: { USD: 2, CNY: 14 }, lastKnown: false },
+      referenceConsumption: {
+        amount: { USD: 2, CNY: 14 },
+        lastKnown: false,
+        observedAt: Date.now(),
+      },
     }),
     buildDisplaySiteData({
       id: "old",
@@ -189,3 +194,8 @@ it("bounds native filtered totals and reveals exact amounts without an invented 
   )
   expect(screen.queryByText(/USD|CNY/)).not.toBeInTheDocument()
 })
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  vi.setSystemTime(new Date(2026, 10, 19, 12))
+})
+afterEach(() => vi.useRealTimers())

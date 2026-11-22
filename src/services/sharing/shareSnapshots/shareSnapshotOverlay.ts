@@ -34,6 +34,7 @@ import {
   getBalanceRoleLabel,
 } from "~/utils/core/balancePresentation"
 import {
+  convertCurrencyAmount,
   formatAssetAmount,
   formatBalanceAmount,
   getAssetLabel,
@@ -344,28 +345,41 @@ export const drawShareSnapshotOverlay = (
     )
   const entries =
     summary?.purpose === SHARE_BALANCE_PURPOSES.Account
-      ? summary.entries.map((entry) => ({
-          value: entry.amount
-            ? formatBalance(entry.amount)
-            : [
-                getAssetLabel(entry.asset),
-                t("shareSnapshots:financial.unavailable"),
-              ]
-                .filter(Boolean)
-                .join(" · "),
-          label: [
-            entry.relation === BALANCE_RELATIONS.Component
-              ? getBalanceFundingLabel(entry.funding, t)
-              : undefined,
-            entry.status === OBSERVATION_STATUSES.Stale
-              ? t("account:financial.lastKnown")
-              : "",
-            getBalanceRoleLabel(entry, t),
-            entry.allowanceRules?.[0],
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        }))
+      ? summary.entries
+          .map((entry) => ({
+            value: entry.unlimited
+              ? t("keyManagement:dialog.unlimitedQuota")
+              : entry.amount
+                ? formatBalance(entry.amount)
+                : [
+                    getAssetLabel(entry.asset),
+                    t("shareSnapshots:financial.unavailable"),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+            label: [
+              entry.relation === BALANCE_RELATIONS.Component
+                ? getBalanceFundingLabel(entry.funding, t)
+                : undefined,
+              entry.status === OBSERVATION_STATUSES.Stale
+                ? t("account:financial.lastKnown")
+                : "",
+              getBalanceRoleLabel(entry, t),
+              entry.allowanceRules?.[0],
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          }))
+          .concat(
+            summary.referenceAmount
+              ? [
+                  {
+                    value: formatBalance(summary.referenceAmount),
+                    label: t("account:financial.lastKnown"),
+                  },
+                ]
+              : [],
+          )
       : [
           ...getShareBalanceDisplayAmounts(
             summary,
@@ -377,9 +391,7 @@ export const drawShareSnapshotOverlay = (
               locale,
               getShareDisplayCurrency(payload),
             ),
-            label: summary?.lastKnownCount
-              ? t("account:financial.lastKnown")
-              : "",
+            label: "",
           })),
           ...(summary?.referenceAmount
             ? [
@@ -509,6 +521,11 @@ export const drawShareSnapshotOverlay = (
           })
     drawBalanceNote([coverage, included].filter(Boolean).join(" · "))
   }
+  if (
+    summary?.purpose !== SHARE_BALANCE_PURPOSES.Account &&
+    summary?.lastKnownCount
+  )
+    drawBalanceNote(t("account:financial.lastKnown"))
 
   const todayIncome =
     typeof payload.todayIncome === "number" ? payload.todayIncome : undefined
@@ -526,7 +543,7 @@ export const drawShareSnapshotOverlay = (
         typeof todayNet === "number"
       ? formatSignedCurrencyAmount(
           todayNet,
-          getShareDisplayCurrency(payload) ?? CURRENCIES.USD,
+          getShareDisplayCurrency(payload) ?? payload.currencyType,
         )
       : undefined
   if (netValue !== undefined) {
@@ -609,6 +626,7 @@ export const drawShareSnapshotOverlay = (
     if (
       readings?.length &&
       !summary?.groups.length &&
+      !summary?.retained?.length &&
       !summary?.references?.length
     ) {
       ctx.font = `600 ${Math.round(width * 0.029)}px ${fontStack}`
@@ -625,7 +643,12 @@ export const drawShareSnapshotOverlay = (
       return
     }
 
-    if (summary && (summary.groups.length || summary.references?.length)) {
+    if (
+      summary &&
+      (summary.groups.length ||
+        summary.references?.length ||
+        summary.retained?.length)
+    ) {
       // Each tile owns its native observations, independently of the balance hero cap.
       // Keep the asset and uncertainty above the value so truncating digits cannot erase them.
       const observations = [
@@ -646,6 +669,14 @@ export const drawShareSnapshotOverlay = (
                     ? "account:todayMetricAvailability.partial"
                     : "account:financial.coverageUnknown",
                 ),
+        })),
+        ...(summary.retained ?? []).map((fact) => ({
+          displayed: convertCurrencyAmount(
+            fact.amount,
+            getShareDisplayCurrency(payload),
+            payload.exchangeRate,
+          ),
+          qualifier: t("account:financial.lastKnown"),
         })),
         ...(summary.references ?? []).map((reference) => ({
           displayed: {
@@ -786,6 +817,7 @@ export const drawShareSnapshotOverlay = (
 
   if (
     showCaptionHint ||
+    payload.incomeSummary?.retained?.length ||
     payload.incomeSummary?.groups.length ||
     payload.consumptionSummary?.groups.length ||
     payload.incomeSummary?.references?.length ||

@@ -1,7 +1,11 @@
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
-import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
+import {
+  getDisplayConsumptionProjection,
+  getProjectedConsumptionFacts,
+} from "~/services/accounts/metrics/consumptionProjection"
 import { assetIdentity } from "~/services/amounts/assets"
 import {
+  financialCollectionKey,
   isKnownOrStaleObservation,
   usageScopeKey,
 } from "~/services/amounts/balance"
@@ -68,6 +72,7 @@ export function getSiteDayUsages(
     asOf,
   )
   const seen = new Set<string>()
+  const projectedFacts = getProjectedConsumptionFacts(projected)
   return [
     ...observations,
     ...facts
@@ -94,13 +99,34 @@ export function getSiteDayUsages(
     )
       return []
     const originalCost = usage.cost
+    const originalAmount = originalCost?.amount
+    const originalScope = originalCost?.scope
     const duplicateCost =
       usage.scope === ACCOUNT_USAGE_SCOPES.Today &&
       originalCost &&
-      projected.groups.some(
-        ({ amount, window }) =>
-          assetIdentity(amount.asset) === assetIdentity(originalCost.asset) &&
-          JSON.stringify(window) === JSON.stringify(originalCost.window),
+      originalScope &&
+      isKnownOrStaleObservation(originalAmount) &&
+      projectedFacts.some(
+        (fact) =>
+          isKnownOrStaleObservation(fact.amount) &&
+          assetIdentity(fact.asset) === assetIdentity(originalCost.asset) &&
+          fact.amount.value === originalAmount.value &&
+          financialCollectionKey("", fact.amount.source) ===
+            financialCollectionKey("", originalAmount.source) &&
+          fact.amount.source.kind === originalAmount.source.kind &&
+          JSON.stringify(fact.amount.source.inputs) ===
+            JSON.stringify(originalAmount.source.inputs) &&
+          usageScopeKey({
+            ...fact.scope,
+            routes: fact.scope.routes ?? { kind: "all" },
+          }) ===
+            usageScopeKey({
+              ...originalScope,
+              routes: originalScope.routes ?? { kind: "all" },
+            }) &&
+          fact.window.start === originalCost.window?.start &&
+          fact.window.end === originalCost.window.end &&
+          fact.window.timeZone === originalCost.window.timeZone,
       )
     const cost = duplicateCost ? undefined : originalCost
     const hasCounters =
@@ -123,6 +149,8 @@ export function getSiteDayUsages(
             cost.amount.source,
             cost.window,
             usage.reportedDay,
+            usage.totalRequests,
+            usage.totalTokens,
           ])
         : JSON.stringify([
             usage.totalRequests,
@@ -154,6 +182,8 @@ export function getSiteDayUsages(
 export interface SiteDayReading {
   usage: AccountUsageSummary
   observedAt?: number
+  costObservedAt?: number
+  countersObservedAt?: number
   lastKnown: boolean
 }
 
@@ -164,13 +194,10 @@ export function getSiteDayReadings(
 ): SiteDayReading[] {
   return getSiteDayUsages(account, asOf).map((usage) => {
     const amount = usage.cost?.amount
-    const at =
-      usage.observedAt ??
-      (isKnownOrStaleObservation(amount)
-        ? amount.observedAt
-        : usage.lastKnown
-          ? undefined
-          : account.last_sync_time)
+    const at = isKnownOrStaleObservation(amount)
+      ? amount.observedAt
+      : (usage.observedAt ??
+        (usage.lastKnown ? undefined : account.last_sync_time))
     const observedAt =
       typeof at === "number" &&
       at > 0 &&
@@ -180,6 +207,12 @@ export function getSiteDayReadings(
     return {
       usage,
       ...(observedAt === undefined ? {} : { observedAt }),
+      ...(isKnownOrStaleObservation(amount)
+        ? { costObservedAt: amount.observedAt }
+        : {}),
+      ...(usage.totalRequests !== undefined || usage.totalTokens !== undefined
+        ? { countersObservedAt: usage.observedAt ?? account.last_sync_time }
+        : {}),
       lastKnown:
         usage.lastKnown === true ||
         amount?.status === OBSERVATION_STATUSES.Stale ||

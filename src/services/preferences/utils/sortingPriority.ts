@@ -261,7 +261,6 @@ function getBalanceSortValue(account: DisplaySiteData) {
     (!primary ||
       primary.asset.kind === ASSET_KINDS.Unknown ||
       !isKnownOrStaleObservation(primary.amount)) &&
-    displayed.length < 2 &&
     account.allowances?.entries[0]
   )
     primary = projectAllowancePosition(account.allowances.entries[0])

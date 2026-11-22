@@ -8,6 +8,7 @@
 
 import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
 
 import { getLegacyAutoCheckinMethodIds } from "../../checkin/autoCheckin/providers/registry"
 import { migrateAccountFinancialInfo } from "./accountFinancialMigration"
@@ -91,7 +92,7 @@ const migrations: Record<number, MigrationFunction> = {
       accountId: account.id,
       siteUrl: account.site_url,
       siteType: account.site_type,
-      capturedAt: account.last_sync_time ?? 0,
+      capturedAt: toOptionalFiniteNumber(account.last_sync_time) ?? 0,
     }),
     configVersion: 9,
   }),

@@ -64,6 +64,7 @@ export function projectAllowancePosition(
     asset: budget.asset,
     amount: budget.remaining,
     validity: entry.validity,
+    ...(entry.reportedTiming ? { reportedTiming: entry.reportedTiming } : {}),
     ...((window.kind === BUDGET_WINDOW_KINDS.Rolling ||
       window.kind === BUDGET_WINDOW_KINDS.Periodic) &&
     window.observation

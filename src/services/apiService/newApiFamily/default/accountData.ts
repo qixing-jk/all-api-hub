@@ -827,6 +827,8 @@ export async function fetchTodayIncome(
     request.siteType,
   )
   const quotaInUsd = creditedAmount.asset.kind === ASSET_KINDS.Currency
+  if (nativeIncome !== undefined && creditedAmount.value === undefined)
+    nativeIncomeInvalidCount += 1
   const totals = ([CURRENCIES.USD, CURRENCIES.CNY] as const).map((code) => {
     const values = textIncomeValues[code]
     const quota =

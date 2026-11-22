@@ -27,7 +27,10 @@ import {
   staleBalancePosition,
 } from "~/services/accounts/refresh/balanceAcceptance"
 import { acceptPeriodAmounts } from "~/services/accounts/refresh/periodAmountAcceptance"
-import { acceptUsageObservations } from "~/services/accounts/refresh/usageAcceptance"
+import {
+  acceptUsageObservations,
+  acceptUsageSummary,
+} from "~/services/accounts/refresh/usageAcceptance"
 import { assetIdentity } from "~/services/amounts/assets"
 import {
   balancePositionKey,
@@ -167,6 +170,7 @@ function acceptedFinancialSnapshot(
       const corresponding = completePositions.filter(
         (position) =>
           position.amount.source.kind !== EVIDENCE_KINDS.Legacy &&
+          position.scope.authority === old.scope.authority &&
           position.asset.kind !== ASSET_KINDS.Unknown &&
           assetIdentity(position.asset) === assetIdentity(old.asset) &&
           position.scope.subject.kind === FINANCIAL_SUBJECT_KINDS.Account &&
@@ -288,7 +292,7 @@ class AccountMutations {
       const account = config.accounts.find((item) => item.id === id)
       if (!account) return null
       if (!hasSameAccountRequestIdentity(account, requestSnapshot)) return null
-      const generation = await transaction.reserveFinancialGeneration()
+      const generation = await transaction.reserveFinancialGeneration(config)
       account.balanceRefreshGeneration = generation
       await transaction.write(config)
       return generation
@@ -476,12 +480,10 @@ class AccountMutations {
                 prior.account_info.reportedIncome,
                 data?.reportedIncome,
               )
-              nextAccount.account_info.usage = acceptUsageObservations(
-                prior.account_info.usage
-                  ? [prior.account_info.usage]
-                  : undefined,
-                data?.usage ? [data.usage] : undefined,
-              )?.[0]
+              nextAccount.account_info.usage = acceptUsageSummary(
+                prior.account_info.usage,
+                data?.usage,
+              )
               nextAccount.account_info.usageObservations =
                 acceptUsageObservations(
                   prior.account_info.usageObservations,
@@ -595,14 +597,10 @@ class AccountMutations {
         effectiveUpdates.account_info.allowances = allowances
         if (balanceGeneration !== undefined) {
           const info = effectiveUpdates.account_info
-          info.usage = acceptUsageObservations(
-            account.account_info.usage
-              ? [account.account_info.usage]
-              : undefined,
-            info.usage
-              ? [info.usage as SiteAccount["account_info"]["usage"] & {}]
-              : undefined,
-          )?.[0]
+          info.usage = acceptUsageSummary(
+            account.account_info.usage,
+            info.usage as SiteAccount["account_info"]["usage"],
+          )
           info.usageObservations = acceptUsageObservations(
             account.account_info.usageObservations,
             info.usageObservations as SiteAccount["account_info"]["usageObservations"],

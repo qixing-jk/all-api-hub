@@ -141,7 +141,14 @@ async function runRefreshAttempt(
       accountId: account.id,
       siteName: account.site_name,
     })
-    return { result: { account, refreshed: false }, followUpAccount: null }
+    return {
+      result: {
+        account,
+        refreshed: false,
+        skippedReason: ACCOUNT_REFRESH_SKIP_REASONS.IntervalNotElapsed,
+      },
+      followUpAccount: null,
+    }
   }
 
   const prefs = await userPreferences.getPreferences()
@@ -152,7 +159,14 @@ async function runRefreshAttempt(
     account,
   )
   if (balanceGeneration === null)
-    return { result: { account, refreshed: false }, followUpAccount: null }
+    return {
+      result: {
+        account,
+        refreshed: false,
+        skippedReason: ACCOUNT_REFRESH_SKIP_REASONS.AccountIdentityChanged,
+      },
+      followUpAccount: null,
+    }
   let result: RefreshAccountResult
   let requestFailed = false
   try {

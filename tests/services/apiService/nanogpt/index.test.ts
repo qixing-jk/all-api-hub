@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
+import { acceptBalanceRefresh } from "~/services/accounts/refresh/balanceAcceptance"
 import {
   fetchAccountData,
   fetchNanoGptBalance,
@@ -37,6 +38,63 @@ const balanceBody = {
   nano_balance: "26.71801147",
   nanoDepositAddress: DEPOSIT_ADDRESS,
 }
+
+it("retains exact wallet amounts and preserves malformed XNO as last known", async () => {
+  server.use(
+    http.get(`${API_ORIGIN}/api/v1/usage`, () =>
+      HttpResponse.json({
+        totals: { requests: 0, totalTokens: 0, costUsd: 0 },
+      }),
+    ),
+    http.get(`${API_ORIGIN}/api/subscription/v1/usage`, () =>
+      HttpResponse.json({ active: false }),
+    ),
+  )
+  server.use(
+    http.post(`${API_ORIGIN}/api/check-balance`, () =>
+      HttpResponse.json({
+        ...balanceBody,
+        usd_balance: "2.000000000000000001",
+        nano_balance: "1.000000000000000001",
+      }),
+    ),
+  )
+  const first = await fetchAccountData({
+    ...tokenRequest,
+    checkIn: buildCheckInConfig(),
+  })
+  expect(
+    first.balance?.positions.find((p) => p.id === "nano_balance")?.amount,
+  ).toMatchObject({ status: "known", value: "1.000000000000000001" })
+  expect(
+    first.balance?.positions.find((p) => p.id === "usd_balance")?.amount,
+  ).toMatchObject({ status: "known", value: "2.000000000000000001" })
+  server.use(
+    http.post(`${API_ORIGIN}/api/check-balance`, () =>
+      HttpResponse.json({
+        ...balanceBody,
+        usd_balance: "3",
+        nano_balance: "pending",
+      }),
+    ),
+  )
+  const next = await fetchAccountData({
+    ...tokenRequest,
+    checkIn: buildCheckInConfig(),
+  })
+  const merged = acceptBalanceRefresh(
+    first.balance,
+    next.balanceRefreshParts!,
+    next.balance!.subject,
+    Date.now(),
+  )
+  expect(
+    merged.positions.find((p) => p.id === "nano_balance")?.amount,
+  ).toMatchObject({ status: "stale", value: "1.000000000000000001" })
+  expect(
+    merged.positions.find((p) => p.id === "usd_balance")?.amount,
+  ).toMatchObject({ status: "known", value: "3" })
+})
 
 it.each([
   { totals: { totalTokens: 1, costUsd: 1 } },
@@ -125,7 +183,7 @@ it("omits unreported optional Nano amounts", () => {
       { usd_balance: 2, nanoDepositAddress: DEPOSIT_ADDRESS },
       "/balance",
     ),
-  ).toEqual({ usdBalance: 2, depositAddress: DEPOSIT_ADDRESS })
+  ).toEqual({ usdBalance: 2, usdAmount: "2", depositAddress: DEPOSIT_ADDRESS })
 })
 
 it("preserves management-only accounts without inventing a cash balance when only key-read is permitted", async () => {
@@ -252,6 +310,8 @@ describe("NanoGPT response parsing", () => {
     expect(parseNanoGptBalance(balanceBody, "endpoint")).toEqual({
       usdBalance: 129.46956147,
       nanoBalance: 26.71801147,
+      usdAmount: "129.46956147",
+      nanoAmount: "26.71801147",
       depositAddress: DEPOSIT_ADDRESS,
     })
   })

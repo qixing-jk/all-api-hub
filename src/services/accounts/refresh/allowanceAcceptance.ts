@@ -50,7 +50,14 @@ export const retainUnknownBudgetFields = (
       Object.assign(result, { [field]: stale[field] })
     }
   }
-  if (!isKnownOrStaleObservation(next.stateObservation)) {
+  const incompatibleUnboundedState =
+    (stale.limitState === BUDGET_LIMIT_STATES.Unlimited ||
+      stale.limitState === BUDGET_LIMIT_STATES.Unconfigured) &&
+    [result.limit, result.remaining].some(isKnownOrStaleObservation)
+  if (
+    !isKnownOrStaleObservation(next.stateObservation) &&
+    !incompatibleUnboundedState
+  ) {
     result.limitState = stale.limitState
     result.stateObservation = stale.stateObservation
   }

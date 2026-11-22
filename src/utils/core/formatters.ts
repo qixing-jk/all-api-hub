@@ -200,8 +200,10 @@ export const formatFullTime = (date: Date | undefined): string => {
 /**
  * 计算总消耗
  */
-export const calculateTotalConsumption = (sites: DisplaySiteData[]) =>
-  getDisplayConsumptionProjection(sites)
+export const calculateTotalConsumption = (
+  sites: DisplaySiteData[],
+  asOf = Date.now(),
+) => getDisplayConsumptionProjection(sites, asOf)
 
 /**
  * 计算总余额
@@ -234,8 +236,10 @@ export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
  * - disabled accounts ({@link DisplaySiteData.disabled})
  * - enabled but explicitly excluded accounts ({@link DisplaySiteData.excludeFromTodayIncome})
  */
-export const calculateTotalIncomeForSites = (sites: DisplaySiteData[]) =>
-  getDisplayIncomeProjection(sites)
+export const calculateTotalIncomeForSites = (
+  sites: DisplaySiteData[],
+  asOf = Date.now(),
+) => getDisplayIncomeProjection(sites, asOf)
 
 /**
  * 获取货币符号

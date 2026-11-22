@@ -314,7 +314,7 @@ export function FinancialBalanceDisplay({
   const allowanceInactive = (
     entry: AccountAllowanceSnapshot["entries"][number],
   ) =>
-    entry.constraint.enabled.status === OBSERVATION_STATUSES.Known &&
+    isKnownOrStaleObservation(entry.constraint.enabled) &&
     !entry.constraint.enabled.value
   const allowanceStatus = (
     entry: AccountAllowanceSnapshot["entries"][number],
@@ -322,7 +322,14 @@ export function FinancialBalanceDisplay({
     [
       allowanceObservation(entry)?.label,
       allowanceInactive(entry)
-        ? t("stats.subscriptionState.inactive")
+        ? [
+            entry.constraint.enabled.status === OBSERVATION_STATUSES.Stale
+              ? t("financial.lastKnown")
+              : undefined,
+            t("stats.subscriptionState.inactive"),
+          ]
+            .filter(Boolean)
+            .join(" · ")
         : undefined,
     ]
       .filter(Boolean)

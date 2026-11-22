@@ -55,10 +55,12 @@ export function useBalanceAsOf(
       clearTimeout(timer)
       const now = Date.now()
       setAsOf(now)
+      const nextMidnight = new Date(now)
+      nextMidnight.setHours(24, 0, 0, 0)
       const next = deadlines.reduce(
         (nearest, deadline) =>
           deadline > now ? Math.min(nearest, deadline) : nearest,
-        Infinity,
+        nextMidnight.getTime(),
       )
       if (Number.isFinite(next)) {
         timer = setTimeout(

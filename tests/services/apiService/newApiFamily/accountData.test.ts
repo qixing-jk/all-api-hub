@@ -659,6 +659,37 @@ describe("newApiFamily accountData", () => {
     )
   })
 
+  it.each(["conversion", "native subtotal", "text subtotal"])(
+    "keeps valid CNY income partial when the %s exceeds decimal bounds",
+    async (failure) => {
+      mockExtractAmount.mockReturnValue({ amount: 7, currency: "CNY" })
+      const operands =
+        failure === "conversion"
+          ? [{ quota: `0.${"0".repeat(253)}1` }]
+          : failure === "native subtotal"
+            ? [{ quota: "9".repeat(256) }, { quota: "9".repeat(256) }]
+            : [
+                { quota: 0, content: `充值 ＄${"9".repeat(256)} 额度` },
+                { quota: 0, content: `充值 ＄${"9".repeat(256)} 额度` },
+              ]
+      mockFetchApiData
+        .mockResolvedValueOnce({
+          items: [...operands, { quota: 0, content: "充值 ¥7.00 额度" }],
+          total: operands.length + 1,
+        })
+        .mockResolvedValueOnce({ items: [], total: 0 })
+      const result = await fetchTodayIncome({ ...baseRequest, exchangeRate: 7 })
+      expect(
+        result.reportedIncome?.find(
+          (fact) => fact.asset.kind === "currency" && fact.asset.code === "CNY",
+        ),
+      ).toMatchObject({
+        amount: { status: "known", value: "7" },
+        coverage: "partial",
+      })
+    },
+  )
+
   it("fetchTodayIncome uses the request exchange rate and parses quota fallbacks", async () => {
     mockExtractAmount.mockReturnValueOnce({ amount: 3 })
     mockFetchApiData

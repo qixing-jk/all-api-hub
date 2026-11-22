@@ -60,6 +60,112 @@ const position = (id: string, value: string) =>
   })
 
 describe("purpose-specific balance projection", () => {
+  it("keeps the native balance when the converted subtotal exceeds decimal bounds", () => {
+    const value = "9".repeat(256)
+    const display = buildDisplaySiteData({
+      id: "one",
+      exchangeRate: 7,
+      balanceSnapshot: accountBalanceSnapshot(
+        scope,
+        [position("available", value)],
+        100,
+        "complete",
+      ),
+    })
+    const portfolio = getDisplayBalancePortfolio([display])
+    expect(portfolio.amounts).toEqual([
+      { asset: { kind: "currency", code: "USD" }, value },
+    ])
+    expect(portfolio.convertedCurrencyTotals.CNY).toBeUndefined()
+  })
+
+  it("reports every excluded account behind a conflicting shared-wallet subtotal", () => {
+    const first = buildDisplaySiteData({
+      id: "one",
+      balanceSnapshot: accountBalanceSnapshot(
+        scope,
+        [position("available", "20")],
+        100,
+        "complete",
+      ),
+    })
+    const secondScope = {
+      ...scope,
+      subject: { kind: "account" as const, accountId: "two" },
+    }
+    const second = buildDisplaySiteData({
+      id: "two",
+      balanceSnapshot: accountBalanceSnapshot(
+        secondScope,
+        [{ ...position("available", "30"), scope: secondScope }],
+        100,
+        "complete",
+      ),
+    })
+    const portfolio = getDisplayBalancePortfolio([first, second])
+    expect(portfolio.amounts).toEqual([])
+    expect(portfolio.excludedAccounts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountId: "one",
+          reasons: expect.arrayContaining(["conflict"]),
+        }),
+        expect.objectContaining({
+          accountId: "two",
+          reasons: expect.arrayContaining(["conflict"]),
+        }),
+      ]),
+    )
+  })
+  it.each([BALANCE_PURPOSES.Available, BALANCE_PURPOSES.Prepaid])(
+    "does not revive an older wallet amount after the newest observation expires (%s)",
+    (purpose) => {
+      const newerScope = {
+        ...scope,
+        subject: {
+          kind: FINANCIAL_SUBJECT_KINDS.Account,
+          accountId: "two",
+        } as const,
+      }
+      const older = accountBalanceSnapshot(
+        scope,
+        [position("available", "20")],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      )
+      const newer = accountBalanceSnapshot(
+        newerScope,
+        [
+          {
+            ...balancePosition({
+              ...position("available", "30"),
+              value: "30",
+              scope: newerScope,
+              source,
+              observedAt: 200,
+            }),
+            validity: { kind: BALANCE_VALIDITY_KINDS.Expires, at: 250 },
+          },
+        ],
+        200,
+        FINANCIAL_COVERAGE.Complete,
+      )
+      for (const snapshots of [
+        [older, newer],
+        [newer, older],
+      ]) {
+        expect(aggregateBalances(snapshots, purpose, 300)).toMatchObject({
+          amounts: [],
+          includedCount: 0,
+          coverage: "partial",
+        })
+      }
+      expect(newer.positions[0]?.amount).toMatchObject({
+        value: "30",
+        observedAt: 200,
+      })
+    },
+  )
   it("offers combined display totals for convertible currencies without altering native asset totals", () => {
     const sites = [
       { id: "usd", code: CURRENCIES.USD, value: "2", rate: 8 },

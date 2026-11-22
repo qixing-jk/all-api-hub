@@ -62,14 +62,12 @@ export async function importV1Backup(
   ) {
     const accountConfig = readBackupAccountConfig(data)
     const rawTagStore = (data as any).tagStore ?? (data.data as any)?.tagStore
-    if (rawTagStore) {
-      await tagStorage.importTagStore(rawTagStore)
-    }
 
     const accountsData = accountConfig?.accounts
 
     if (accountsData) {
       await accountDataTransfer.importData({
+        tagStore: rawTagStore,
         accounts: canonicalizeLegacyAccountConfigs(
           accountsData,
         ) as SiteAccount[],

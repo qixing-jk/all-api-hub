@@ -108,6 +108,21 @@ async function mockIdentity(extra: HttpHandler[] = []) {
 
 describe("Daya API account data", () => {
   let transport: ReturnType<typeof session>
+  it("rejects negative charges while keeping independent counters and the verified wallet identity", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+    await mockIdentity([
+      http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
+        HttpResponse.json(envelope({ today_cost: "-3", today_requests: 4 })),
+      ),
+    ])
+    const data = await fetchAccountData(accountRequest())
+    expect(data.settledConsumption?.[0]?.amount.status).toBe("unavailable")
+    expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
+    expect(data.today_requests_count).toBe(4)
+    expect(data.balance?.positions[0]?.scope.walletId).toBe("615")
+    expect(data.settledConsumption?.[0]?.scope.walletId).toBe("615")
+  })
   it("keeps refreshed daily costs available after storage readback and display conversion", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date("2026-11-18T16:01:00Z"))

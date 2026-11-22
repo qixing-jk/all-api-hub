@@ -77,8 +77,10 @@ export async function fetchRelayForAccountData(
   const subscriptions = (overview.active_subscriptions ?? []).filter(
     (item) =>
       item.status === 1 &&
-      Date.parse(item.starts_at) <= now &&
-      Date.parse(item.expires_at) > now,
+      (parseAllowanceInstant(item.starts_at) === undefined ||
+        parseAllowanceInstant(item.starts_at)! <= now) &&
+      (parseAllowanceInstant(item.expires_at) === undefined ||
+        parseAllowanceInstant(item.expires_at)! > now),
   )
   const components: AccountBalanceComponent[] = [
     { kind: "permanent", amount: quotaToUsd(overview.user.quota) },
@@ -117,9 +119,11 @@ export async function fetchRelayForAccountData(
 
   let timedDetails: AccountBalanceComponent[] | undefined
   let timedDetailsUnavailable = false
+  let timedObservedAt = now
   if ((overview.timed_quota ?? 0) > 0) {
     try {
       const grants = await fetchRelayForTimedQuotas(request)
+      timedObservedAt = Date.now()
       timedDetails = grants
         .flatMap((item): AccountBalanceComponent[] => {
           if (
@@ -129,7 +133,8 @@ export async function fetchRelayForAccountData(
             !Number.isFinite(item.quota_remaining) ||
             item.quota_remaining <= 0 ||
             typeof item.expires_at !== "string" ||
-            Date.parse(item.expires_at) <= now ||
+            (parseAllowanceInstant(item.expires_at) !== undefined &&
+              parseAllowanceInstant(item.expires_at)! <= timedObservedAt) ||
             !Number.isFinite(Date.parse(item.expires_at))
           )
             return []
@@ -269,10 +274,18 @@ export async function fetchRelayForAccountData(
             parentId: "timed-quota",
             relation: BALANCE_RELATIONS.Component,
             collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-            scope,
+            scope: {
+              ...scope,
+              groups: detail.scope
+                ? {
+                    kind: SCOPE_SELECTION_KINDS.Restricted,
+                    ids: [detail.scope],
+                  }
+                : scope.groups,
+            },
             asset,
-            source,
-            observedAt: now,
+            source: { ...source, inputs: [RELAYFOR_ENDPOINTS.timedQuotas] },
+            observedAt: timedObservedAt,
             value: detail.amount,
             label: detail.name,
             reportedTiming: { expiresAt: detail.expiresAt },
@@ -322,7 +335,12 @@ export async function fetchRelayForAccountData(
           source: plansSource,
           collectionKey,
           enumeration:
-            overview.active_subscriptions === undefined
+            overview.active_subscriptions === undefined ||
+            subscriptions.some(
+              (item) =>
+                parseAllowanceInstant(item.starts_at) === undefined ||
+                parseAllowanceInstant(item.expires_at) === undefined,
+            )
               ? FINANCIAL_ENUMERATION.Partial
               : FINANCIAL_ENUMERATION.Complete,
           entries: plans,

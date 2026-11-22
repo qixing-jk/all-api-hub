@@ -78,6 +78,15 @@ test("NanoGPT preserves independent XNO with zero USD after reload", async ({
   }
   for (const width of [1280, 380]) {
     await page.setViewportSize({ width, height: 900 })
+    // Narrow rows can put the final account outside Virtuoso's mounted range.
+    await expect
+      .poll(async () => {
+        await page.evaluate(() =>
+          window.scrollTo({ top: document.documentElement.scrollHeight }),
+        )
+        return row.getByText("26.72 XNO").isVisible()
+      })
+      .toBe(true)
     await expect(row.getByText("26.72 XNO")).toBeVisible()
     await page.screenshot({
       path: testInfo.outputPath(`balance-${width}.png`),

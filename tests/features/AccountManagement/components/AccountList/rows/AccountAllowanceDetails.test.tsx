@@ -593,14 +593,49 @@ describe("AccountAllowanceDetails", () => {
   })
 })
 
+it("keeps an allowance's provider window and reported timing visible", async () => {
+  const i18n = await englishI18n()
+  render(
+    <I18nextProvider i18n={i18n}>
+      <AccountAllowanceDetails
+        snapshot={snapshot([
+          entry(
+            "window",
+            "Daily plan",
+            {
+              limitState: BUDGET_LIMIT_STATES.Inherited,
+              remaining: "8",
+              window: {
+                kind: BUDGET_WINDOW_KINDS.Periodic,
+                period: BUDGET_PERIODS.Day,
+                observation: {
+                  start: Date.parse("2026-11-18T00:00:00Z"),
+                  end: Date.parse("2026-11-18T12:00:00Z"),
+                  timeZone: "UTC",
+                },
+              },
+            },
+            {
+              reportedTiming: {
+                startsAt: "2026-11-18",
+                resetsAt: "2026-11-19",
+              },
+            },
+          ),
+        ])}
+      />
+    </I18nextProvider>,
+  )
+  expect(screen.getByText(/UTC/)).toBeVisible()
+  expect(screen.getByText(/2026-11-18/)).toBeVisible()
+  expect(screen.getByText(/2026-11-19/)).toBeVisible()
+  expect(screen.getByText(/USD\s8/)).toBeVisible()
+})
+
 it("keeps plan amounts visible while revealing technical observations only after developer unlock", async () => {
-  toggleDevUnlocked()
-  onTestFinished(() => {
-    toggleDevUnlocked()
-  })
   const i18n = await englishI18n()
   const user = userEvent.setup()
-  render(
+  const content = (
     <I18nextProvider i18n={i18n}>
       <AccountAllowanceDetails
         snapshot={snapshot([
@@ -611,8 +646,18 @@ it("keeps plan amounts visible while revealing technical observations only after
           }),
         ])}
       />
-    </I18nextProvider>,
+    </I18nextProvider>
   )
+  const { rerender } = render(content)
+  expect(
+    screen.queryByText("Technical details (debug)"),
+  ).not.toBeInTheDocument()
+  expect(screen.queryByText(/fixture\/plans@1/)).not.toBeInTheDocument()
+  toggleDevUnlocked()
+  onTestFinished(() => {
+    toggleDevUnlocked()
+  })
+  rerender(content)
   expect(screen.getByText(/fixture\/plans@1/)).not.toBeVisible()
   await user.click(screen.getByText("Technical details (debug)"))
   expect(screen.getByText(/fixture\/plans@1/)).toBeVisible()

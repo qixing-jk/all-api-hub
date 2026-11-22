@@ -694,6 +694,32 @@ describe("createDynamicSortComparator", () => {
         balanceSite("cash", "5"),
         buildDisplaySiteData({ id: "missing", name: "0" }),
       ]
+      for (const account of accounts.slice(0, 2)) {
+        const scope = accountBalanceScope({
+          baseUrl: account.baseUrl,
+          accountId: account.id,
+        })
+        account.balanceSnapshot = accountBalanceSnapshot(
+          scope,
+          ["one", "two"].map((id) =>
+            balancePosition({
+              id,
+              value: undefined,
+              scope,
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              source: {
+                adapter: "fixture",
+                operation: "wallet",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+              },
+              observedAt: Date.now(),
+            }),
+          ),
+          Date.now(),
+          "partial",
+        )
+      }
       expect(
         accounts
           .sort(

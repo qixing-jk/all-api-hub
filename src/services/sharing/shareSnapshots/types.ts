@@ -36,6 +36,7 @@ export interface ShareBalanceEntry {
   reportedTiming?: BalancePosition["reportedTiming"]
   window?: BalancePosition["window"]
   allowanceRules?: string[]
+  unlimited?: true
 }
 
 export const SHARE_BALANCE_PURPOSES = {

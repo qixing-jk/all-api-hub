@@ -2,6 +2,7 @@ import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
 import {
   BALANCE_PURPOSES,
+  getDisplayBalancePositions,
   projectBalance,
 } from "~/services/accounts/metrics/balanceProjection"
 import {
@@ -9,7 +10,10 @@ import {
   getDisplayIncomeProjection,
 } from "~/services/accounts/metrics/consumptionProjection"
 import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
-import { ASSET_KINDS } from "~/services/amounts/financialConstants"
+import {
+  ASSET_KINDS,
+  BALANCE_ROLES,
+} from "~/services/amounts/financialConstants"
 import type {
   AccountNativeBalance,
   AccountTodayStatsAvailability,
@@ -116,6 +120,13 @@ export async function maybeCaptureAccountReferenceBalance({
   if (!(config ?? DEFAULT_BALANCE_HISTORY_PREFERENCES).enabled) return false
   const info = account.account_info
   if (!info.balance) return false
+  // Unreadable independent wallets still identify separate balances.
+  if (
+    getDisplayBalancePositions(info.balance).filter(
+      (position) => position.role !== BALANCE_ROLES.Allowance,
+    ).length !== 1
+  )
+    return false
   const { amounts, conflicts, positions } = projectBalance(
     info.balance,
     BALANCE_PURPOSES.Available,
@@ -136,7 +147,7 @@ export async function maybeCaptureAccountReferenceBalance({
     id: account.id,
     exchangeRate: account.exchange_rate,
     disabled: account.disabled,
-    excludeFromTodayIncome: account.excludeFromTodayIncome,
+    excludeFromTodayIncome: false,
     settledConsumption: info.settledConsumption,
     reportedIncome: info.reportedIncome,
     todayStatsAvailability: info.todayStatsAvailability,

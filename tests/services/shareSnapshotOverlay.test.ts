@@ -53,6 +53,86 @@ const LABELS: ShareSnapshotOverlayLabels = {
   net: "Net",
 }
 
+it("renders a saved account reference balance on the canvas", () => {
+  const { ctx, fillTextCalls } = createMockContext()
+  const payload = buildAccountShareSnapshotPayload({
+    siteName: "Reference",
+    currencyType: "USD",
+    balance: 12.34,
+    includeTodayCashflow: false,
+  })
+  drawShareSnapshotOverlay(ctx, {
+    payload,
+    width: 1200,
+    height: 1200,
+    locale: "en",
+    labels: LABELS,
+    watermarkText: "All API Hub",
+  })
+  expect(fillTextCalls.map((call) => call.text)).toContain("$12.34")
+})
+
+it("places mixed-freshness portfolio status below the native subtotals", () => {
+  const { ctx, fillTextCalls } = createMockContext()
+  drawShareSnapshotOverlay(ctx, {
+    payload: {
+      kind: "overview",
+      enabledAccountCount: 2,
+      currencyType: "USD",
+      currencyDisplay: "original",
+      asOf: 100,
+      backgroundSeed: 1,
+      balanceSummary: {
+        purpose: "available",
+        entries: [],
+        coverage: "partial",
+        lastKnownCount: 1,
+        amounts: [
+          { asset: { kind: "currency", code: "USD" }, value: "10" },
+          { asset: { kind: "currency", code: "EUR" }, value: "2" },
+        ],
+      },
+    },
+    width: 1200,
+    height: 1200,
+    locale: "en",
+    labels: LABELS,
+    watermarkText: "All API Hub",
+  })
+  const usd = fillTextCalls.find((call) => call.text === "$10.00")!
+  const note = fillTextCalls.find(
+    (call) => call.text === "account:financial.lastKnown",
+  )!
+  expect(note.y).toBeGreaterThan(usd.y)
+})
+
+it("keeps the recorded CNY denomination on a legacy original-mode net", () => {
+  const { ctx, fillTextCalls } = createMockContext()
+  drawShareSnapshotOverlay(ctx, {
+    payload: {
+      kind: "account",
+      siteName: "Legacy",
+      currencyType: "CNY",
+      currencyDisplay: "original",
+      asOf: 100,
+      backgroundSeed: 1,
+      todayIncome: 20,
+      todayOutcome: 5,
+      todayNet: 15,
+    },
+    width: 1200,
+    height: 1200,
+    locale: "en",
+    labels: LABELS,
+    watermarkText: "All API Hub",
+  })
+  expect(
+    fillTextCalls.some(
+      (call) => call.text.includes("15.00") && call.text.includes("¥"),
+    ),
+  ).toBe(true)
+})
+
 it.each([
   [CURRENCIES.USD, /^USD\s2$/, /^USD\s4$/],
   [CURRENCIES.CNY, /^CNY\s21$/, /^CNY\s42$/],

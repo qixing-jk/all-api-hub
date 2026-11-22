@@ -12,4 +12,6 @@ export const AUTO_REFRESH_UPDATE_TYPES = {
 
 export const ACCOUNT_REFRESH_SKIP_REASONS = {
   AccountDisabled: "account_disabled",
+  IntervalNotElapsed: "interval_not_elapsed",
+  AccountIdentityChanged: "account_identity_changed",
 } as const

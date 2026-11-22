@@ -108,7 +108,9 @@ export function siteDayUsageValues(
     usage.requests === undefined
       ? undefined
       : `${usage.requests} ${t("usageAnalytics:summary.requests")}`,
-    usage.tokens === undefined ? undefined : `${usage.tokens} Token`,
+    usage.tokens === undefined
+      ? undefined
+      : `${usage.tokens} ${t("usageAnalytics:summary.totalTokens")}`,
   ].filter((value): value is string => value !== undefined)
 }
 
@@ -134,7 +136,7 @@ export function shareSiteDayLines(
 export function publicConsumptionSummary(
   consumption: Pick<
     ConsumptionProjection,
-    "groups" | "nativeCoverage" | "references"
+    "groups" | "nativeCoverage" | "references" | "retained"
   >,
 ) {
   const coverage = ({
@@ -177,6 +179,22 @@ export function publicConsumptionSummary(
       coverage: coverage(group.coverage),
     })),
     nativeCoverage: coverage(consumption.nativeCoverage),
+    ...(consumption.retained?.length
+      ? {
+          retained: consumption.retained.map((fact) => ({
+            amount: {
+              asset: publicShareAsset(fact.amount.asset),
+              value: fact.amount.value,
+            },
+            observedAt: fact.observedAt,
+            window: {
+              start: fact.window.start,
+              end: fact.window.end,
+              timeZone: fact.window.timeZone,
+            },
+          })),
+        }
+      : {}),
   }
 }
 
@@ -212,6 +230,12 @@ export function getShareNetAmount(
   consumption: ReturnType<typeof publicConsumptionSummary> | undefined,
   currencyType?: CurrencyType,
 ) {
+  if (
+    income?.nativeCoverage.status !== ACCOUNT_TODAY_METRIC_STATUSES.Complete ||
+    consumption?.nativeCoverage.status !==
+      ACCOUNT_TODAY_METRIC_STATUSES.Complete
+  )
+    return undefined
   const combineMoney = (summary: typeof income) => {
     if (!summary) return undefined
     const groups = selectDisplayCashflowGroups(summary, currencyType)
@@ -263,6 +287,12 @@ export function shareConsumptionLines(
     locale,
     currencyType,
   ).map((line) => `${label}: ${line}`)
+  references.push(
+    ...(summary.retained ?? []).flatMap((fact) => [
+      `${label}: ${formatAssetAmount(convertCurrencyAmount(fact.amount, currencyType), locale)} · ${t("account:financial.lastKnown")} · ${new Date(fact.observedAt).toLocaleString(locale)}`,
+      ...formatBalanceWindow(fact.window, t, locale),
+    ]),
+  )
   if (!summary.groups.length)
     return references.length
       ? references

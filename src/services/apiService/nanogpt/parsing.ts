@@ -1,3 +1,4 @@
+import { parseDecimal } from "~/services/amounts/decimal"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { isRecord } from "~/utils/core/object"
 
@@ -24,6 +25,9 @@ const invalid = (endpoint: string) =>
 export type NanoGptBalance = {
   usdBalance: number
   nanoBalance?: number
+  usdAmount: string
+  nanoAmount?: string
+  nanoAmountUnavailable?: true
   /** Per-account Nano deposit address; the stable identity a key can prove. */
   depositAddress: string
 }
@@ -46,8 +50,24 @@ export function parseNanoGptBalance(
       : ""
   if (!depositAddress) throw invalid(endpoint)
   const nanoBalance = readNanoGptAmount(value.nano_balance)
+  const exactAmount = (value: unknown) => {
+    const original =
+      typeof value === "string"
+        ? value.trim().replace(/^\./, "0.").replace(/\.$/, "")
+        : value
+    const parsed = parseDecimal(original)
+    return parsed?.startsWith("-") ? undefined : parsed
+  }
+  const usdAmount = exactAmount(value.usd_balance)
+  if (usdAmount === undefined) throw invalid(endpoint)
+  const nanoAmount = exactAmount(value.nano_balance)
   return {
     usdBalance,
+    usdAmount,
+    ...(nanoAmount === undefined ? {} : { nanoAmount }),
+    ...(value.nano_balance !== undefined && nanoAmount === undefined
+      ? { nanoAmountUnavailable: true as const }
+      : {}),
     ...(nanoBalance === undefined ? {} : { nanoBalance }),
     depositAddress,
   }

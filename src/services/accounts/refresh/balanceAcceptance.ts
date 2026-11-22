@@ -11,6 +11,7 @@ import {
   type BalanceSnapshot,
 } from "~/services/amounts/balance"
 import {
+  EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
   FINANCIAL_ENUMERATION,
   FINANCIAL_OBSERVATION_REASONS,
@@ -85,7 +86,16 @@ export function acceptBalanceRefresh(
                 usageScopeKey(p.scope) === usageScopeKey(position.scope),
             )
             // A failed reading cannot reassign the last amount's timing or financial meaning.
+            const refreshedLegacyReading =
+              position.amount.status === OBSERVATION_STATUSES.Stale &&
+              position.amount.source.kind === EVIDENCE_KINDS.Legacy &&
+              position.amount.reason ===
+                FINANCIAL_OBSERVATION_REASONS.LegacySemantics &&
+              (!prior ||
+                !("observedAt" in prior.amount) ||
+                position.amount.observedAt >= prior.amount.observedAt)
             return position.amount.status !== OBSERVATION_STATUSES.Known &&
+              !refreshedLegacyReading &&
               prior &&
               (prior.amount.status === OBSERVATION_STATUSES.Known ||
                 (prior.amount.status === OBSERVATION_STATUSES.Stale &&

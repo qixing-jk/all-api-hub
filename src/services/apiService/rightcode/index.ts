@@ -469,6 +469,7 @@ export async function fetchAccountData(
           usageObservations: [
             {
               scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+              reportedDay: today,
               totalRequests: todayRequests,
               totalTokens: todayTokens,
               cost: {

@@ -366,6 +366,8 @@ describe("popup BalanceSection components", () => {
       "account:todayMetricAvailability.unavailable",
     )
     expect(unavailableSummary).not.toHaveTextContent(/USD\s*0/)
+    expect(unavailableSummary).not.toHaveTextContent("999")
+    expect(screen.queryByText(/999/)).not.toBeInTheDocument()
   })
 
   it("shows pending-refresh guidance for unclassified legacy popup amounts", () => {
@@ -497,8 +499,10 @@ describe("popup BalanceSection components", () => {
     )
     render(<TokenStats />)
     expect(
-      screen.getByRole("region", { name: "account:stats.todayTokens" }),
-    ).toHaveTextContent("0")
+      within(
+        screen.getByRole("region", { name: "account:stats.todayTokens" }),
+      ).getByText("0", { exact: true }),
+    ).toBeVisible()
   })
 
   it("hides cashflow when disabled and keeps original USD balance in details under the CNY preference", () => {

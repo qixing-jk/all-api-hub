@@ -149,6 +149,7 @@ class AccountPresentation {
           referenceConsumption,
         },
       ])
+      const { reported, manual } = getAccountBalanceSnapshots(account)
       return {
         ...(referenceConsumption ? { referenceConsumption } : {}),
         ...(referenceIncome ? { referenceIncome } : {}),
@@ -156,9 +157,9 @@ class AccountPresentation {
         incomeProjection,
         settledConsumption: account.account_info.settledConsumption,
         consumptionProjection,
-        balanceSnapshot: getAccountBalanceSnapshots(account).reported,
+        balanceSnapshot: reported,
         allowances: account.account_info.allowances,
-        manualBalanceSnapshot: getAccountBalanceSnapshots(account).manual,
+        manualBalanceSnapshot: manual,
         id: account.id,
         exchangeRate: account.exchange_rate,
         name: resolveAccountDisplayName({

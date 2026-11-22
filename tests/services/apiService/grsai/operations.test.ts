@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { acceptBalanceRefresh } from "~/services/accounts/refresh/balanceAcceptance"
 import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { grsaiAccountBootstrap } from "~/services/apiAdapters/grsai/accountBootstrap"
 import { grsaiAccountRefresh } from "~/services/apiAdapters/grsai/accountRefresh"
@@ -41,6 +42,53 @@ const handle = (endpoint: string, data: unknown) =>
   http.post(`${origin}${endpoint}`, () => HttpResponse.json({ code: 0, data }))
 
 describe("Grsai protocol operations", () => {
+  it("retains exact native credit strings beyond numeric integer precision", async () => {
+    server.use(
+      handle(GRSAI_ENDPOINTS.userInfo, {
+        id: "user",
+        credits: "9007199254740993",
+      }),
+      handle(GRSAI_ENDPOINTS.dashboard, {
+        credits: "20",
+        todayConsumed: "9007199254740993",
+      }),
+    )
+    const data = await fetchAccountData(request)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "9007199254740993",
+    })
+    expect(data.usageObservations?.[0]?.cost?.amount).toMatchObject({
+      status: "known",
+      value: "9007199254740993",
+    })
+    expect(data.todayStatsAvailability?.consumption.status).toBe("complete")
+  })
+  it("replaces one wallet when its balance moves between user-info and dashboard endpoints", async () => {
+    const primary = await fetchAccountData(request)
+    server.use(
+      handle(GRSAI_ENDPOINTS.userInfo, { id: "user" }),
+      handle(GRSAI_ENDPOINTS.dashboard, { credits: "800" }),
+    )
+    const fallback = await fetchAccountData(request)
+    const merged = acceptBalanceRefresh(
+      primary.balance,
+      fallback.balanceRefreshParts!,
+      fallback.balance!.subject,
+      Date.now(),
+    )
+    expect(merged.positions).toHaveLength(1)
+    expect(merged.positions[0]?.amount).toMatchObject({
+      value: "800",
+      status: "known",
+    })
+    expect(primary.balance?.positions[0]?.amount.source.inputs).toContain(
+      `${GRSAI_ENDPOINTS.userInfo}:credits`,
+    )
+    expect(merged.positions[0]?.amount.source.inputs).toContain(
+      `${GRSAI_ENDPOINTS.dashboard}:credits`,
+    )
+  })
   it("reads all 101 keys across successive inventory pages", async () => {
     const inventory = Array.from({ length: 101 }, (_, index) => ({
       ...key,

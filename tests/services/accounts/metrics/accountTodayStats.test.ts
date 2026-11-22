@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES } from "~/constants/money"
@@ -21,6 +21,15 @@ import {
   type AccountTodayMetricReason,
 } from "~/types/accountTodayStats"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
+
+const previousTimeZone = process.env.TZ
+beforeAll(() => {
+  process.env.TZ = "UTC"
+})
+afterAll(() => {
+  if (previousTimeZone === undefined) delete process.env.TZ
+  else process.env.TZ = previousTimeZone
+})
 
 const PARTIAL_REASONS = new Set<AccountTodayMetricReason>([
   ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
@@ -62,6 +71,61 @@ const PROFILE_FALLBACK = {
 } as const
 
 describe("accountTodayStats", () => {
+  it.each(["scope", "source", "amount"] as const)(
+    "retains a distinct provider-day cost with the same window (%s)",
+    (difference) => {
+      const start = new Date(2026, 10, 19).getTime()
+      const now = new Date(2026, 10, 19, 12).getTime()
+      const source = {
+        adapter: "fixture",
+        operation: "cost",
+        contractVersion: "1",
+        kind: EVIDENCE_KINDS.Reported,
+      }
+      const fact = {
+        asset: { kind: "currency", code: CURRENCIES.USD } as const,
+        amount: observeAmount("12", source, now),
+        scope: accountReportingScope({
+          baseUrl: "https://cost.example",
+          accountId: "account",
+        }),
+        window: {
+          start,
+          end: now + 1,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        settlement: "settled" as const,
+        coverage: "complete" as const,
+      }
+      const cost = {
+        asset: fact.asset,
+        amount: fact.amount,
+        scope: structuredClone(fact.scope),
+        window: fact.window,
+      }
+      if (difference === "scope")
+        cost.scope.keys = { kind: "restricted", ids: ["key-1"] }
+      if (difference === "source")
+        cost.amount = observeAmount(
+          "12",
+          { ...source, operation: "other-cost" },
+          now,
+        )
+      if (difference === "amount") cost.amount = observeAmount("3", source, now)
+      const reading = getSiteDayUsages(
+        {
+          usage: { scope: "today", totalRequests: 4, cost },
+          settledConsumption: [fact],
+        },
+        now,
+      )[0]
+      expect(reading?.cost?.amount).toMatchObject({
+        status: "known",
+        value: difference === "amount" ? "3" : "12",
+      })
+    },
+  )
+
   it.each([
     { label: "weekly", start: Date.UTC(2026, 10, 13) },
     { label: "intraday", start: Date.UTC(2026, 10, 19, 23) },
@@ -218,7 +282,13 @@ describe("accountTodayStats", () => {
       },
     }
     expect(getSiteDayReadings({ usage }, now)).toEqual([
-      { usage, observedAt: yesterday, lastKnown: true },
+      {
+        usage,
+        observedAt: yesterday,
+        costObservedAt: yesterday,
+        countersObservedAt: undefined,
+        lastKnown: true,
+      },
     ])
   })
   it("retains every provider-day asset alongside an already displayed local-day cost", () => {
@@ -677,5 +747,69 @@ describe("accountTodayStats", () => {
         }),
       ).toBe(false)
     })
+  })
+})
+it("preserves distinct counter readings that share the same provider cost", () => {
+  const at = new Date(2026, 10, 19, 12).getTime()
+  const cost = {
+    asset: { kind: "currency" as const, code: "USD" },
+    amount: observeAmount(
+      "2",
+      {
+        adapter: "fixture",
+        operation: "usage",
+        contractVersion: "1",
+        kind: "reported",
+      },
+      at,
+    ),
+  }
+  const first = {
+    scope: "site_today" as const,
+    cost,
+    totalRequests: 4,
+    totalTokens: 20,
+  }
+  expect(
+    getSiteDayUsages(
+      { usage: first, usageObservations: [{ ...first, totalRequests: 9 }] },
+      at,
+    ).map((usage) => usage.totalRequests),
+  ).toEqual([4, 9])
+})
+
+it("keeps the cost clock separate from newly refreshed counter timing", () => {
+  const costAt = Date.parse("2026-11-18T23:50:00Z")
+  const countersAt = Date.parse("2026-11-19T00:10:00Z")
+  const reading = getSiteDayReadings(
+    {
+      usage: {
+        scope: "site_today",
+        observedAt: countersAt,
+        totalRequests: 9,
+        cost: {
+          asset: { kind: "currency", code: "USD" },
+          amount: {
+            status: "stale",
+            value: "2",
+            reason: "refresh-failed",
+            source: {
+              adapter: "fixture",
+              operation: "usage",
+              contractVersion: "1",
+              kind: "reported",
+            },
+            observedAt: costAt,
+          },
+        },
+      },
+    },
+    countersAt,
+  )[0]
+  expect(reading).toMatchObject({
+    observedAt: costAt,
+    costObservedAt: costAt,
+    countersObservedAt: countersAt,
+    lastKnown: true,
   })
 })

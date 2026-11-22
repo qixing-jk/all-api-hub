@@ -17,9 +17,6 @@ import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 /** Imports V2 accounts by replacing the current account/bookmark collection. */
 export async function importV2AccountsWithReplace(data: BackupV2) {
   readBackupAccountConfig(data)
-  if ("tagStore" in (data as any) && (data as any).tagStore) {
-    await tagStorage.importTagStore((data as any).tagStore)
-  }
 
   const accountsConfig = (data as BackupFullV2 | BackupAccountsPartialV2)
     .accounts
@@ -47,6 +44,7 @@ export async function importV2AccountsWithReplace(data: BackupV2) {
       : []
 
   await accountDataTransfer.importData({
+    tagStore: "tagStore" in data && data.tagStore ? data.tagStore : undefined,
     accounts: canonicalizeLegacyAccountConfigs(accounts) as SiteAccount[],
     bookmarks,
     pinnedAccountIds,
@@ -107,57 +105,57 @@ export async function importV2AccountsWithMerge(
   data: BackupV2,
   remoteApiCredentialProfiles: ApiCredentialProfilesConfig["profiles"] = [],
 ) {
-  const [localAccountsConfig, localTagStore] = await Promise.all([
-    accountDataTransfer.exportData(),
-    tagStorage.exportTagStore(),
-  ])
   const normalizedRemote = normalizeV2BackupForMerge(data as BackupFullV2, null)
+  const { result } = await accountDataTransfer.importData(
+    (localAccountsConfig, localTagStore) => {
+      const tagMerge = tagStorage.mergeTagStoresForSync({
+        localTagStore,
+        remoteTagStore: normalizedRemote.tagStore ?? createDefaultTagStore(),
+        localAccounts: localAccountsConfig.accounts,
+        remoteAccounts: normalizedRemote.accounts,
+        localBookmarks: localAccountsConfig.bookmarks,
+        remoteBookmarks: normalizedRemote.bookmarks,
+        localTaggables: [],
+        remoteTaggables: remoteApiCredentialProfiles,
+      })
 
-  const tagMerge = tagStorage.mergeTagStoresForSync({
-    localTagStore,
-    remoteTagStore: normalizedRemote.tagStore ?? createDefaultTagStore(),
-    localAccounts: localAccountsConfig.accounts,
-    remoteAccounts: normalizedRemote.accounts,
-    localBookmarks: localAccountsConfig.bookmarks,
-    remoteBookmarks: normalizedRemote.bookmarks,
-    localTaggables: [],
-    remoteTaggables: remoteApiCredentialProfiles,
-  })
+      const accounts = mergeByLatestUpdatedAt(
+        tagMerge.localAccounts,
+        tagMerge.remoteAccounts,
+      )
+      const bookmarks = mergeByLatestUpdatedAt(
+        tagMerge.localBookmarks,
+        tagMerge.remoteBookmarks,
+      )
+      const entryIdSet = new Set([
+        ...accounts.map((account) => account.id),
+        ...bookmarks.map((bookmark) => bookmark.id),
+      ])
 
-  const accounts = mergeByLatestUpdatedAt(
-    tagMerge.localAccounts,
-    tagMerge.remoteAccounts,
-  )
-  const bookmarks = mergeByLatestUpdatedAt(
-    tagMerge.localBookmarks,
-    tagMerge.remoteBookmarks,
-  )
-  const entryIdSet = new Set([
-    ...accounts.map((account) => account.id),
-    ...bookmarks.map((bookmark) => bookmark.id),
-  ])
-
-  await tagStorage.importTagStore(tagMerge.tagStore)
-  await accountDataTransfer.importData({
-    accounts,
-    bookmarks,
-    pinnedAccountIds: mergeEntryIdList({
-      localIds: localAccountsConfig.pinnedAccountIds || [],
-      remoteIds: normalizedRemote.pinnedAccountIds,
-      validIds: entryIdSet,
-    }),
-    orderedAccountIds: mergeEntryIdList({
-      localIds: localAccountsConfig.orderedAccountIds || [],
-      remoteIds: normalizedRemote.orderedAccountIds,
-      validIds: entryIdSet,
-    }),
-    deletedEntryRecords: {
-      ...(localAccountsConfig.deletedEntryRecords || {}),
-      ...(normalizedRemote.deletedEntryRecords || {}),
+      return {
+        data: {
+          tagStore: tagMerge.tagStore,
+          accounts,
+          bookmarks,
+          pinnedAccountIds: mergeEntryIdList({
+            localIds: localAccountsConfig.pinnedAccountIds || [],
+            remoteIds: normalizedRemote.pinnedAccountIds,
+            validIds: entryIdSet,
+          }),
+          orderedAccountIds: mergeEntryIdList({
+            localIds: localAccountsConfig.orderedAccountIds || [],
+            remoteIds: normalizedRemote.orderedAccountIds,
+            validIds: entryIdSet,
+          }),
+          deletedEntryRecords: {
+            ...(localAccountsConfig.deletedEntryRecords || {}),
+            ...(normalizedRemote.deletedEntryRecords || {}),
+          },
+        },
+        result: { remoteApiCredentialProfiles: tagMerge.remoteTaggables },
+      }
     },
-  })
+  )
   await tagStorage.ensureLegacyMigration()
-  return {
-    remoteApiCredentialProfiles: tagMerge.remoteTaggables,
-  }
+  return result
 }
