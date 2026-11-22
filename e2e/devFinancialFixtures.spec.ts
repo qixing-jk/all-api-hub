@@ -2153,380 +2153,398 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
   ).toHaveCount(0)
 })
 
-test("dev site balance scenarios cover every account type with native units, periods and currency switching", async ({
-  page,
-  context,
-  extensionId,
-  extensionDir,
-}) => {
-  await forceExtensionLanguage(page, "en")
-  await stubLlmMetadataIndex(context)
-  await page.addInitScript(() =>
-    localStorage.setItem("aah_dev_features_unlocked", "true"),
-  )
-  await page.emulateMedia({ reducedMotion: "reduce" })
-  await page.addLocatorHandler(
-    page.getByRole("button", { name: "Later", exact: true }),
-    async (later) => {
-      await later.click()
-    },
-  )
-  const worker = await getServiceWorker(context)
-  await seedStoredAccounts(worker, [])
-  await seedUserPreferences(worker, {
-    themeMode: "light",
-    currencyType: "USD",
-    showTodayCashflow: false,
-    autoRefresh: false,
-    currencyDisplay: "original",
-  })
-  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
-  await waitForExtensionRoot(page)
-  await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
-  const panel = page.getByRole("dialog", { name: "Dev panel", exact: true })
-  await panel
-    .getByRole("button", {
-      name: "Dev: Add native site balance scenarios",
-      exact: true,
-    })
-    .click()
-  await expect(
-    panel.getByRole("button", { name: "Dev: Clear fixture accounts (40)" }),
-  ).toBeEnabled()
-  const config = await getPlasmoStorageJsonValue<AccountStorageConfig>(
-    worker,
-    STORAGE_KEYS.ACCOUNTS,
-  )
-  if (!config) throw new Error("Missing native scenarios")
-  if (process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR) {
-    const directory = process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR
-    await mkdir(directory, { recursive: true })
-    await writeFile(
-      path.join(directory, "native-scenarios.json"),
-      JSON.stringify(
-        config.accounts.map((account) => ({
-          siteType: account.site_type,
-          balance: account.account_info.balance,
-          allowances: account.account_info.allowances,
-        })),
-        null,
-        2,
-      ),
+for (const phase of [
+  "native units and periods",
+  "currency switching",
+] as const) {
+  test(`dev site balance scenarios cover every account type with ${phase}`, async ({
+    page,
+    context,
+    extensionId,
+    extensionDir,
+  }) => {
+    await forceExtensionLanguage(page, "en")
+    await stubLlmMetadataIndex(context)
+    await page.addInitScript(() =>
+      localStorage.setItem("aah_dev_features_unlocked", "true"),
     )
-  }
-  expect(config.accounts.map((a) => a.site_type).sort()).toEqual(
-    [...ACCOUNT_SITE_TYPE_VALUES].sort(),
-  )
-  for (const account of config.accounts) {
-    expect(account.checkIn.automaticExecutionEnabled).toBe(false)
-    expect(account.account_info.balance?.subject).toEqual({
-      kind: "account",
-      accountId: account.id,
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.addLocatorHandler(
+      page.getByRole("button", { name: "Later", exact: true }),
+      async (later) => {
+        await later.click()
+      },
+    )
+    const worker = await getServiceWorker(context)
+    await seedStoredAccounts(worker, [])
+    await seedUserPreferences(worker, {
+      themeMode: "light",
+      currencyType: "USD",
+      showTodayCashflow: false,
+      autoRefresh: false,
+      currencyDisplay: "original",
     })
-  }
-  const row = (type: string) => {
-    const account = config.accounts.find((a) => a.site_type === type)
-    if (!account) throw new Error(`Missing type ${type}`)
-    return page.getByTestId(getAccountManagementListItemTestId(account.id))
-  }
-  await panel
-    .getByRole("button", { name: "Dev: View account list", exact: true })
-    .click()
-  await waitForExtensionRoot(page)
-  // The normal list virtualizes large collections; use its search control to inspect each row.
-  const show = async (type: string) => {
-    await page
-      .getByRole("textbox", {
-        name: "Enter site information or account information to search",
+    await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+    await waitForExtensionRoot(page)
+    await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
+    const panel = page.getByRole("dialog", { name: "Dev panel", exact: true })
+    await panel
+      .getByRole("button", {
+        name: "Dev: Add native site balance scenarios",
+        exact: true,
       })
-      .fill(`Dev Balance: ${type}`)
-    await expect(row(type)).toBeVisible()
-    return row(type)
-  }
-  for (const account of config.accounts) {
-    const visibleRow = await show(account.site_type)
-    const expected =
-      nativeBalanceExpectations[
-        account.site_type as keyof typeof nativeBalanceExpectations
-      ]
-    expect(expected, account.site_type).toBeDefined()
-    for (const text of expected) await expect(visibleRow).toContainText(text)
-    for (const [category, amount] of categorizedNativeBalances[
-      account.site_type as keyof typeof categorizedNativeBalances
-    ] ?? []) {
+      .click()
+    await expect(
+      panel.getByRole("button", { name: "Dev: Clear fixture accounts (40)" }),
+    ).toBeEnabled()
+    const config = await getPlasmoStorageJsonValue<AccountStorageConfig>(
+      worker,
+      STORAGE_KEYS.ACCOUNTS,
+    )
+    if (!config) throw new Error("Missing native scenarios")
+    if (process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR) {
+      const directory = process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR
+      await mkdir(directory, { recursive: true })
+      await writeFile(
+        path.join(directory, "native-scenarios.json"),
+        JSON.stringify(
+          config.accounts.map((account) => ({
+            siteType: account.site_type,
+            balance: account.account_info.balance,
+            allowances: account.account_info.allowances,
+          })),
+          null,
+          2,
+        ),
+      )
+    }
+    expect(config.accounts.map((a) => a.site_type).sort()).toEqual(
+      [...ACCOUNT_SITE_TYPE_VALUES].sort(),
+    )
+    for (const account of config.accounts) {
+      expect(account.checkIn.automaticExecutionEnabled).toBe(false)
+      expect(account.account_info.balance?.subject).toEqual({
+        kind: "account",
+        accountId: account.id,
+      })
+    }
+    const row = (type: string) => {
+      const account = config.accounts.find((a) => a.site_type === type)
+      if (!account) throw new Error(`Missing type ${type}`)
+      return page.getByTestId(getAccountManagementListItemTestId(account.id))
+    }
+    await panel
+      .getByRole("button", { name: "Dev: View account list", exact: true })
+      .click()
+    await waitForExtensionRoot(page)
+    // The normal list virtualizes large collections; use its search control to inspect each row.
+    const show = async (type: string) => {
+      await page
+        .getByRole("textbox", {
+          name: "Enter site information or account information to search",
+        })
+        .fill(`Dev Balance: ${type}`)
+      await expect(row(type)).toBeVisible()
+      return row(type)
+    }
+    if (phase === "native units and periods") {
+      for (const account of config.accounts) {
+        const visibleRow = await show(account.site_type)
+        const expected =
+          nativeBalanceExpectations[
+            account.site_type as keyof typeof nativeBalanceExpectations
+          ]
+        expect(expected, account.site_type).toBeDefined()
+        for (const text of expected)
+          await expect(visibleRow).toContainText(text)
+        for (const [category, amount] of categorizedNativeBalances[
+          account.site_type as keyof typeof categorizedNativeBalances
+        ] ?? []) {
+          await expect(
+            visibleRow
+              .getByRole("group", { name: new RegExp(category, "u") })
+              .getByText(amount, { exact: true }),
+          ).toBeVisible()
+        }
+        await captureVisualViews({
+          page,
+          ready: visibleRow,
+          captureTarget: visibleRow,
+          id: `all-native-${account.site_type.toLowerCase()}`,
+          extensionDir,
+          views: [{ id: "light", width: 1440, height: 1000, theme: "light" }],
+        })
+        const detailTexts: Record<string, readonly string[]> = {
+          [SITE_TYPES.FREEMODEL]: ["5 hours", "Weekly"],
+          [SITE_TYPES.KRILL]: ["Daily"],
+          [SITE_TYPES.NANOGPT]: ["Daily", "Weekly", "XNO", "Image"],
+          [SITE_TYPES.FOXCODE]: [
+            "Daily",
+            "Weekly",
+            "Monthly",
+            "Yearly",
+            "All time",
+          ],
+          [SITE_TYPES.SHAREDCHAT]: ["USD", "Daily"],
+          [SITE_TYPES.RIGHT_CODE]: ["USD", "Daily"],
+          [SITE_TYPES.XIAOEN]: ["Permanent credit", "Daily credit"],
+        }
+        {
+          await visibleRow
+            .getByRole("button", { name: "Balance details", exact: true })
+            .click()
+          const details = page.getByRole("dialog", {
+            name: "Balance details",
+            exact: true,
+          })
+          await expect(details).toBeVisible()
+          expect(await details.innerText()).not.toMatch(
+            /Credit type unverified|Funding source unverified|Usage scope unverified|Validity unverified|@standard-usd/,
+          )
+          for (const text of detailTexts[account.site_type] ?? [])
+            await expect(details).toContainText(text)
+          if (detailTexts[account.site_type])
+            await captureVisualViews({
+              page,
+              ready: details,
+              captureTarget: details,
+              id: `all-native-${account.site_type.toLowerCase()}-details`,
+              extensionDir,
+              views: [
+                { id: "light", width: 1440, height: 1000, theme: "light" },
+              ],
+            })
+          if (account.site_type === SITE_TYPES.NEW_API) {
+            const technical = details.getByText("Technical details (debug)", {
+              exact: true,
+            })
+            await technical.click()
+            await expect(
+              details.getByText(
+                /new-api\/dev-fixture\/balance@standard-usd\/v1/,
+              ),
+            ).toBeVisible()
+            await captureVisualViews({
+              page,
+              ready: details.getByText(
+                /new-api\/dev-fixture\/balance@standard-usd\/v1/,
+              ),
+              captureTarget: details,
+              id: "new-api-debug-details",
+              extensionDir,
+            })
+            await technical.click()
+          }
+          if (account.site_type === SITE_TYPES.FOXCODE) {
+            await details
+              .getByText("All time", { exact: true })
+              .scrollIntoViewIfNeeded()
+            await captureVisualViews({
+              page,
+              ready: details,
+              captureTarget: details,
+              id: "native-foxcode-yearly-lifetime",
+              extensionDir,
+            })
+          }
+          await details
+            .getByRole("button", { name: "Close", exact: true })
+            .click()
+          // A newly filtered row can appear beneath the old cursor and open its hover preview.
+          await page.mouse.move(0, 0)
+          await page
+            .getByRole("textbox", {
+              name: "Enter site information or account information to search",
+            })
+            .focus()
+          await expect(details).not.toBeVisible()
+        }
+      }
+      for (const [type, texts] of [
+        [SITE_TYPES.NEW_API, ["$10.00"]],
+        [SITE_TYPES.SUB2API, ["$12.34"]],
+        [
+          SITE_TYPES.RELAYFOR,
+          ["$1.88", "$3.76", "Permanent credit", "Timed credit"],
+        ],
+        [SITE_TYPES.CUBENCE, ["Normal balance", "Charity balance"]],
+        [SITE_TYPES.VO_API_V2, ["Bound balance"]],
+        [SITE_TYPES.KIMI, ["¥8.00"]],
+        [SITE_TYPES.DAHL, ["2.5 M Token"]],
+        [SITE_TYPES.EMRANK, ["2.5 M Token"]],
+        [SITE_TYPES.FREEMODEL, ["$17.34"]],
+        [SITE_TYPES.NANOGPT, ["1.25 XNO"]],
+      ] as const) {
+        const visibleRow = await show(type)
+        for (const text of texts) await expect(visibleRow).toContainText(text)
+      }
+      await show(SITE_TYPES.FREEMODEL)
+      await row(SITE_TYPES.FREEMODEL)
+        .getByRole("button", { name: "Balance details", exact: true })
+        .click()
       await expect(
-        visibleRow
-          .getByRole("group", { name: new RegExp(category, "u") })
-          .getByText(amount, { exact: true }),
-      ).toBeVisible()
-    }
-    await captureVisualViews({
-      page,
-      ready: visibleRow,
-      captureTarget: visibleRow,
-      id: `all-native-${account.site_type.toLowerCase()}`,
-      extensionDir,
-      views: [{ id: "light", width: 1440, height: 1000, theme: "light" }],
-    })
-    const detailTexts: Record<string, readonly string[]> = {
-      [SITE_TYPES.FREEMODEL]: ["5 hours", "Weekly"],
-      [SITE_TYPES.KRILL]: ["Daily"],
-      [SITE_TYPES.NANOGPT]: ["Daily", "Weekly", "XNO", "Image"],
-      [SITE_TYPES.FOXCODE]: [
-        "Daily",
-        "Weekly",
-        "Monthly",
-        "Yearly",
-        "All time",
-      ],
-      [SITE_TYPES.SHAREDCHAT]: ["USD", "Daily"],
-      [SITE_TYPES.RIGHT_CODE]: ["USD", "Daily"],
-      [SITE_TYPES.XIAOEN]: ["Permanent credit", "Daily credit"],
-    }
-    {
-      await visibleRow
+        page.getByRole("dialog", { name: "Balance details", exact: true }),
+      ).toContainText("Weekly")
+      await page.keyboard.press("Escape")
+      await show(SITE_TYPES.NANOGPT)
+      await row(SITE_TYPES.NANOGPT)
         .getByRole("button", { name: "Balance details", exact: true })
         .click()
       const details = page.getByRole("dialog", {
         name: "Balance details",
         exact: true,
       })
-      await expect(details).toBeVisible()
-      expect(await details.innerText()).not.toMatch(
-        /Credit type unverified|Funding source unverified|Usage scope unverified|Validity unverified|@standard-usd/,
-      )
-      for (const text of detailTexts[account.site_type] ?? [])
-        await expect(details).toContainText(text)
-      if (detailTexts[account.site_type])
-        await captureVisualViews({
-          page,
-          ready: details,
-          captureTarget: details,
-          id: `all-native-${account.site_type.toLowerCase()}-details`,
-          extensionDir,
-          views: [{ id: "light", width: 1440, height: 1000, theme: "light" }],
-        })
-      if (account.site_type === SITE_TYPES.NEW_API) {
-        const technical = details.getByText("Technical details (debug)", {
-          exact: true,
-        })
-        await technical.click()
-        await expect(
-          details.getByText(/new-api\/dev-fixture\/balance@standard-usd\/v1/),
-        ).toBeVisible()
-        await captureVisualViews({
-          page,
-          ready: details.getByText(
-            /new-api\/dev-fixture\/balance@standard-usd\/v1/,
-          ),
-          captureTarget: details,
-          id: "new-api-debug-details",
-          extensionDir,
-        })
-        await technical.click()
-      }
-      if (account.site_type === SITE_TYPES.FOXCODE) {
-        await details
-          .getByText("All time", { exact: true })
-          .scrollIntoViewIfNeeded()
-        await captureVisualViews({
-          page,
-          ready: details,
-          captureTarget: details,
-          id: "native-foxcode-yearly-lifetime",
-          extensionDir,
-        })
-      }
-      await details.getByRole("button", { name: "Close", exact: true }).click()
-      // A newly filtered row can appear beneath the old cursor and open its hover preview.
-      await page.mouse.move(0, 0)
-      await page
-        .getByRole("textbox", {
-          name: "Enter site information or account information to search",
-        })
-        .focus()
-      await expect(details).not.toBeVisible()
-    }
-  }
-  for (const [type, texts] of [
-    [SITE_TYPES.NEW_API, ["$10.00"]],
-    [SITE_TYPES.SUB2API, ["$12.34"]],
-    [
-      SITE_TYPES.RELAYFOR,
-      ["$1.88", "$3.76", "Permanent credit", "Timed credit"],
-    ],
-    [SITE_TYPES.CUBENCE, ["Normal balance", "Charity balance"]],
-    [SITE_TYPES.VO_API_V2, ["Bound balance"]],
-    [SITE_TYPES.KIMI, ["¥8.00"]],
-    [SITE_TYPES.DAHL, ["2.5 M Token"]],
-    [SITE_TYPES.EMRANK, ["2.5 M Token"]],
-    [SITE_TYPES.FREEMODEL, ["$17.34"]],
-    [SITE_TYPES.NANOGPT, ["1.25 XNO"]],
-  ] as const) {
-    const visibleRow = await show(type)
-    for (const text of texts) await expect(visibleRow).toContainText(text)
-  }
-  await show(SITE_TYPES.FREEMODEL)
-  await row(SITE_TYPES.FREEMODEL)
-    .getByRole("button", { name: "Balance details", exact: true })
-    .click()
-  await expect(
-    page.getByRole("dialog", { name: "Balance details", exact: true }),
-  ).toContainText("Weekly")
-  await page.keyboard.press("Escape")
-  await show(SITE_TYPES.NANOGPT)
-  await row(SITE_TYPES.NANOGPT)
-    .getByRole("button", { name: "Balance details", exact: true })
-    .click()
-  const details = page.getByRole("dialog", {
-    name: "Balance details",
-    exact: true,
-  })
-  await expect(details).toContainText("Daily")
-  await expect(details).toContainText("Weekly")
-  await expect(details).toContainText("Image")
-  await captureVisualViews({
-    page,
-    ready: details,
-    captureTarget: details,
-    id: "native-nanogpt-details",
-    extensionDir,
-  })
-  await details.getByText("8 Image", { exact: true }).scrollIntoViewIfNeeded()
-  await expect(details.getByText("8 Image", { exact: true })).toBeVisible()
-  await captureVisualViews({
-    page,
-    ready: details,
-    captureTarget: details,
-    id: "native-nanogpt-images",
-    extensionDir,
-  })
-  await page.keyboard.press("Escape")
-  for (const [type, texts] of [
-    [
-      SITE_TYPES.DAHL,
-      ["Token pool", "Tokens on keys", "1.5 M Token", "1 M Token"],
-    ],
-    [SITE_TYPES.NOVITA, ["Pending charges", "Debt", "3.7"]],
-  ] as const) {
-    await show(type)
-    await row(type)
-      .getByRole("button", { name: "Balance details", exact: true })
-      .click()
-    const nativeDetails = page.getByRole("dialog", {
-      name: "Balance details",
-      exact: true,
-    })
-    for (const text of texts) await expect(nativeDetails).toContainText(text)
-    await captureVisualViews({
-      page,
-      ready: nativeDetails,
-      captureTarget: nativeDetails,
-      id: `native-${type.toLowerCase()}-details`,
-      extensionDir,
-    })
-    if (type === SITE_TYPES.NOVITA) {
-      await nativeDetails
-        .getByText("Debt", { exact: true })
-        .scrollIntoViewIfNeeded()
-      await expect(
-        nativeDetails.getByText("Debt", { exact: true }),
-      ).toBeVisible()
+      await expect(details).toContainText("Daily")
+      await expect(details).toContainText("Weekly")
+      await expect(details).toContainText("Image")
       await captureVisualViews({
         page,
-        ready: nativeDetails,
-        captureTarget: nativeDetails,
-        id: "native-novita-charges-debt",
+        ready: details,
+        captureTarget: details,
+        id: "native-nanogpt-details",
         extensionDir,
       })
+      await details
+        .getByText("8 Image", { exact: true })
+        .scrollIntoViewIfNeeded()
+      await expect(details.getByText("8 Image", { exact: true })).toBeVisible()
+      await captureVisualViews({
+        page,
+        ready: details,
+        captureTarget: details,
+        id: "native-nanogpt-images",
+        extensionDir,
+      })
+      await page.keyboard.press("Escape")
+      for (const [type, texts] of [
+        [
+          SITE_TYPES.DAHL,
+          ["Token pool", "Tokens on keys", "1.5 M Token", "1 M Token"],
+        ],
+        [SITE_TYPES.NOVITA, ["Pending charges", "Debt", "3.7"]],
+      ] as const) {
+        await show(type)
+        await row(type)
+          .getByRole("button", { name: "Balance details", exact: true })
+          .click()
+        const nativeDetails = page.getByRole("dialog", {
+          name: "Balance details",
+          exact: true,
+        })
+        for (const text of texts)
+          await expect(nativeDetails).toContainText(text)
+        await captureVisualViews({
+          page,
+          ready: nativeDetails,
+          captureTarget: nativeDetails,
+          id: `native-${type.toLowerCase()}-details`,
+          extensionDir,
+        })
+        if (type === SITE_TYPES.NOVITA) {
+          await nativeDetails
+            .getByText("Debt", { exact: true })
+            .scrollIntoViewIfNeeded()
+          await expect(
+            nativeDetails.getByText("Debt", { exact: true }),
+          ).toBeVisible()
+          await captureVisualViews({
+            page,
+            ready: nativeDetails,
+            captureTarget: nativeDetails,
+            id: "native-novita-charges-debt",
+            extensionDir,
+          })
+        }
+        await page.keyboard.press("Escape")
+      }
+      for (const type of [
+        SITE_TYPES.NEW_API,
+        SITE_TYPES.SUB2API,
+        SITE_TYPES.RELAYFOR,
+        SITE_TYPES.KIMI,
+        SITE_TYPES.DAHL,
+        SITE_TYPES.CUBENCE,
+        SITE_TYPES.FREEMODEL,
+      ]) {
+        await show(type)
+        await captureVisualViews({
+          page,
+          ready: row(type),
+          captureTarget: row(type),
+          id: `native-${type.toLowerCase()}`,
+          extensionDir,
+          views: [
+            { id: "light", width: 1440, height: 1000, theme: "light" },
+            { id: "dark", width: 390, height: 1000, theme: "dark" },
+          ],
+        })
+      }
+    } else {
+      await page.goto(
+        `chrome-extension://${extensionId}/options.html#${MENU_ITEM_IDS.BASIC}`,
+      )
+      await waitForExtensionRoot(page)
+      await page.getByRole("button", { name: "CNY (¥)" }).click()
+      await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+      await waitForExtensionRoot(page)
+      await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
+      await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
+      await expect(await show(SITE_TYPES.KIMI)).toContainText("¥8.00")
+      await expect(await show(SITE_TYPES.DAHL)).toContainText("2.5 M Token")
+      for (const account of config.accounts) {
+        const visibleRow = await show(account.site_type)
+        const expected =
+          nativeBalanceExpectations[
+            account.site_type as keyof typeof nativeBalanceExpectations
+          ]
+        for (const text of expected) {
+          const match = /^\$([\d,.]+)$/.exec(text)
+          const converted = match
+            ? `¥${(Number(match[1]!.replaceAll(",", "")) * 7.2).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : text
+          await expect(visibleRow).toContainText(converted)
+        }
+      }
+      await page.reload()
+      await waitForExtensionRoot(page)
+      await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
+      await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
+      for (const [entry, width] of [
+        [POPUP_PAGE_PATH, 390],
+        [SIDEPANEL_PAGE_PATH, 320],
+      ] as const) {
+        await page.setViewportSize({ width, height: 1000 })
+        await page.goto(`chrome-extension://${extensionId}/${entry}`)
+        await waitForExtensionRoot(page)
+        await expect(await show(SITE_TYPES.RELAYFOR)).toContainText(
+          "Permanent credit",
+        )
+        await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
+        await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > innerWidth,
+          ),
+        ).toBe(false)
+        await captureVisualViews({
+          page,
+          ready: row(SITE_TYPES.SUB2API),
+          id: `native-${entry.replace(".html", "")}`,
+          extensionDir,
+        })
+      }
     }
-    await page.keyboard.press("Escape")
-  }
-  for (const type of [
-    SITE_TYPES.NEW_API,
-    SITE_TYPES.SUB2API,
-    SITE_TYPES.RELAYFOR,
-    SITE_TYPES.KIMI,
-    SITE_TYPES.DAHL,
-    SITE_TYPES.CUBENCE,
-    SITE_TYPES.FREEMODEL,
-  ]) {
-    await show(type)
-    await captureVisualViews({
-      page,
-      ready: row(type),
-      captureTarget: row(type),
-      id: `native-${type.toLowerCase()}`,
-      extensionDir,
-      views: [
-        { id: "light", width: 1440, height: 1000, theme: "light" },
-        { id: "dark", width: 390, height: 1000, theme: "dark" },
-      ],
-    })
-  }
-  await page.goto(
-    `chrome-extension://${extensionId}/options.html#${MENU_ITEM_IDS.BASIC}`,
-  )
-  await waitForExtensionRoot(page)
-  await page.getByRole("button", { name: "CNY (¥)" }).click()
-  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
-  await waitForExtensionRoot(page)
-  await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
-  await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
-  await expect(await show(SITE_TYPES.KIMI)).toContainText("¥8.00")
-  await expect(await show(SITE_TYPES.DAHL)).toContainText("2.5 M Token")
-  for (const account of config.accounts) {
-    const visibleRow = await show(account.site_type)
-    const expected =
-      nativeBalanceExpectations[
-        account.site_type as keyof typeof nativeBalanceExpectations
-      ]
-    for (const text of expected) {
-      const match = /^\$([\d,.]+)$/.exec(text)
-      const converted = match
-        ? `¥${(Number(match[1]!.replaceAll(",", "")) * 7.2).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : text
-      await expect(visibleRow).toContainText(converted)
-    }
-  }
-  await page.reload()
-  await waitForExtensionRoot(page)
-  await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
-  await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
-  for (const [entry, width] of [
-    [POPUP_PAGE_PATH, 390],
-    [SIDEPANEL_PAGE_PATH, 320],
-  ] as const) {
-    await page.setViewportSize({ width, height: 1000 })
-    await page.goto(`chrome-extension://${extensionId}/${entry}`)
+    await page.goto(`chrome-extension://${extensionId}/options.html#account`)
     await waitForExtensionRoot(page)
-    await expect(await show(SITE_TYPES.RELAYFOR)).toContainText(
-      "Permanent credit",
-    )
-    await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
-    await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > innerWidth,
-      ),
-    ).toBe(false)
-    await captureVisualViews({
-      page,
-      ready: row(SITE_TYPES.SUB2API),
-      id: `native-${entry.replace(".html", "")}`,
-      extensionDir,
-    })
-  }
-  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
-  await waitForExtensionRoot(page)
-  await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
-  await panel
-    .getByRole("button", { name: "Dev: Clear fixture accounts (40)" })
-    .click()
-  await expect(
-    panel.getByRole("button", { name: "Dev: Clear fixture accounts (0)" }),
-  ).toBeDisabled()
-})
+    await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
+    await panel
+      .getByRole("button", { name: "Dev: Clear fixture accounts (40)" })
+      .click()
+    await expect(
+      panel.getByRole("button", { name: "Dev: Clear fixture accounts (0)" }),
+    ).toBeDisabled()
+  })
+}
 
 test("dev native observation states persist for every type and distinguish missing from zero", async ({
   page,
