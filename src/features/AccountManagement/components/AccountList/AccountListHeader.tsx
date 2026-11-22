@@ -12,8 +12,6 @@ import {
   ListChecks,
   ListOrdered,
   Settings2,
-  TrendingDown,
-  TrendingUp,
   X,
   type LucideIcon,
 } from "lucide-react"
@@ -22,6 +20,8 @@ import { useTranslation } from "react-i18next"
 
 import {
   AccountBalanceIcon,
+  AccountConsumptionIcon,
+  AccountIncomeIcon,
   AutoCheckinIcon,
 } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
@@ -67,6 +67,7 @@ interface AccountListHeaderProps {
   onReorderModeExit: () => void
   onSort: (field: SortField) => void
   reorderDisabledReason: string | null
+  showResultCount?: boolean
   showTodayCashflow: boolean
   sortField: ActiveSortField
   sortOrder: SortOrder
@@ -86,6 +87,7 @@ export function AccountListHeader({
   onReorderModeExit,
   onSort,
   reorderDisabledReason,
+  showResultCount = true,
   showTodayCashflow,
   sortField,
   sortOrder,
@@ -111,12 +113,12 @@ export function AccountListHeader({
     sortOptions.push(
       {
         field: DATA_TYPE_CONSUMPTION,
-        icon: TrendingDown,
+        icon: AccountConsumptionIcon,
         label: t("account:list.header.todayConsumption"),
       },
       {
         field: DATA_TYPE_INCOME,
-        icon: TrendingUp,
+        icon: AccountIncomeIcon,
         label: t("account:list.header.todayIncome"),
       },
     )
@@ -198,24 +200,26 @@ export function AccountListHeader({
 
   return (
     <div
-      className="border-border/80 bg-surface-subtle/40 dark:border-foreground/10 dark:bg-foreground/[0.015] gap-y-density-1 py-density-1-5 flex min-w-0 flex-wrap items-center justify-between gap-x-3 border-y px-3 sm:px-4"
+      className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-density-1 border-y border-border/80 bg-surface-subtle/40 px-3 py-density-1-5 sm:px-4 dark:border-foreground/10 dark:bg-foreground/[0.015]"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader}
     >
-      <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
-        <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
-          <span className="sr-only [@container(min-width:24rem)]:not-sr-only">
-            {t("common:total") + ": "}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-density-1">
+        {showResultCount && (
+          <span className="text-xs font-medium whitespace-nowrap text-muted-foreground">
+            <span className="sr-only [@container(min-width:24rem)]:not-sr-only">
+              {t("common:total") + ": "}
+            </span>
+            {displayedResultCount}
           </span>
-          {displayedResultCount}
-        </span>
+        )}
 
         <div
-          className="gap-y-density-1 flex shrink-0 items-center gap-x-1"
+          className="flex shrink-0 items-center gap-x-1 gap-y-density-1"
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortControls}
         >
           <div
             className={cn(
-              "bg-muted/70 dark:bg-foreground/5 flex min-h-(--density-control-tight) shrink-0 items-center rounded-md transition-colors",
+              "flex min-h-(--density-control-tight) shrink-0 items-center rounded-md bg-muted/70 transition-colors dark:bg-foreground/5",
               hasActiveSort && "bg-primary-soft text-primary-soft-foreground",
             )}
           >
@@ -225,7 +229,7 @@ export function AccountListHeader({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="gap-y-density-1 min-h-(--density-control-tight) max-w-none gap-x-1 rounded-sm px-2 py-0 text-xs whitespace-nowrap has-[>svg]:px-2"
+                  className="min-h-(--density-control-tight) max-w-none gap-x-1 gap-y-density-1 rounded-sm px-2 py-0 text-xs whitespace-nowrap has-[>svg]:px-2"
                   disabled={inSearchMode}
                   aria-label={t("account:list.sortMenu")}
                   data-testid={
@@ -235,7 +239,7 @@ export function AccountListHeader({
                   {activeSortOption?.label ?? t("account:list.sortMenu")}
                   <ChevronDown
                     aria-hidden="true"
-                    className="text-faint-foreground size-3"
+                    className="size-3 text-faint-foreground"
                   />
                 </Button>
               </DropdownMenuTrigger>
@@ -256,7 +260,7 @@ export function AccountListHeader({
                         <DropdownMenuSeparator className="mx-1" />
                       )}
                       <DropdownMenuRadioItem
-                        className="data-[state=checked]:bg-accent gap-y-density-2 py-density-1-5 gap-x-2 pr-7 pl-2 text-xs data-[state=checked]:font-medium [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
+                        className="gap-x-2 gap-y-density-2 py-density-1-5 pr-7 pl-2 text-xs data-[state=checked]:bg-accent data-[state=checked]:font-medium [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
                         value={option.field}
                         data-testid={getAccountManagementSortButtonTestId(
                           option.field,
@@ -264,7 +268,7 @@ export function AccountListHeader({
                       >
                         <option.icon
                           aria-hidden="true"
-                          className="text-muted-foreground size-3.5"
+                          className="size-3.5 text-muted-foreground"
                         />
                         <span>{option.label}</span>
                       </DropdownMenuRadioItem>
@@ -329,7 +333,7 @@ export function AccountListHeader({
               <IconButton
                 variant="ghost"
                 size="none"
-                className="text-muted-foreground size-(--density-control-tight) shrink-0 rounded-md"
+                className="size-(--density-control-tight) shrink-0 rounded-md text-muted-foreground"
                 aria-label={t("settings:sorting.title")}
                 onClick={openSortingSettings}
               >
@@ -340,7 +344,7 @@ export function AccountListHeader({
         </div>
       </div>
       <div
-        className="gap-y-density-1 ml-auto flex shrink-0 items-center gap-x-1"
+        className="ml-auto flex shrink-0 items-center gap-x-1 gap-y-density-1"
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListUtilities}
       >
         <div
@@ -406,7 +410,7 @@ export function AccountListHeader({
                 {reorderLabel}
               </DropdownMenuItem>
               {reorderDisabledReason && (
-                <p className="text-muted-foreground py-density-1 max-w-64 px-2 text-xs">
+                <p className="max-w-64 px-2 py-density-1 text-xs text-muted-foreground">
                   {reorderDisabledReason}
                 </p>
               )}

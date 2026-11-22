@@ -3,7 +3,6 @@ import {
   CURRENCY_SYMBOLS,
   DEFAULT_USD_TO_CNY_RATE,
   isSupportedCurrency,
-  QUOTA_PER_USD,
 } from "~/constants/money"
 import type { Asset } from "~/services/amounts/assets"
 import type { Amount } from "~/services/amounts/balance"
@@ -12,6 +11,7 @@ import {
   DECIMAL_ERRORS,
   divideDecimal,
   multiplyDecimal,
+  normalizeDecimalUnits,
   parseDecimal,
 } from "~/services/amounts/decimal"
 import { ASSET_KINDS } from "~/services/amounts/financialConstants"
@@ -35,6 +35,14 @@ export function getAssetLabel(asset: Asset, unknownLabel = ""): string {
     case ASSET_KINDS.Unknown:
       return unknownLabel
   }
+}
+
+/** Charts use the same native scale as account amounts, while storage remains atomic. */
+export function getAssetDisplayValue(amount: Amount): string {
+  return amount.asset.kind === ASSET_KINDS.Quota
+    ? (normalizeDecimalUnits(amount.value, amount.asset.displayScale) ??
+        amount.value)
+    : amount.value
 }
 
 /** Formats the native asset at the display boundary without changing its value. */
@@ -69,7 +77,7 @@ export function formatCompactAssetAmount(
 }
 
 /** Convert using the configured approximate rate, without treating it as an upstream integer observation. */
-function convertUsdToCny(
+export function convertUsdToCny(
   value: string,
   exchangeRate = DEFAULT_USD_TO_CNY_RATE,
 ) {
@@ -84,7 +92,7 @@ function convertUsdToCny(
 }
 
 /** Display-only conversion keeps enough fractional places for small native amounts. */
-function convertCnyToUsd(
+export function convertCnyToUsd(
   value: string,
   exchangeRate = DEFAULT_USD_TO_CNY_RATE,
 ): string {
@@ -107,7 +115,7 @@ function convertCnyToUsd(
 }
 
 /** Only the supported monetary pair is converted; original and noncurrency units stay intact. */
-function convertCurrencyAmount(
+export function convertCurrencyAmount(
   amount: Amount,
   currencyType?: CurrencyType,
   exchangeRate = DEFAULT_USD_TO_CNY_RATE,
@@ -130,6 +138,24 @@ function convertCurrencyAmount(
   } catch {
     return amount
   }
+}
+
+/** Preserve native display precision; round only new estimates from a monetary conversion. */
+export function formatCurrencyDisplayAmount(
+  amount: Amount,
+  locale?: string,
+  currencyType?: CurrencyType,
+  exchangeRate?: number,
+): string {
+  const converted = convertCurrencyAmount(amount, currencyType, exchangeRate)
+  const changedCurrency =
+    amount.asset.kind === ASSET_KINDS.Currency &&
+    converted.asset.kind === ASSET_KINDS.Currency &&
+    amount.asset.code !== converted.asset.code
+  return (changedCurrency ? formatCompactAssetAmount : formatAssetAmount)(
+    converted,
+    locale,
+  )
 }
 
 /** A selected currency converts monetary amounts; omission preserves the original currency. */
@@ -244,18 +270,4 @@ export const formatTelemetryMoney = (
   return `${CURRENCY_SYMBOLS[currencyType]}${getDisplayMoneyValue(
     value,
   ).toFixed(MONEY_DECIMAL_PLACES)}`
-}
-
-/**
- * Converts an internal quota amount into both display currencies.
- *
- * The account owns the USD-to-CNY rate used elsewhere in the UI, so callers
- * pass their own account's `exchange_rate`.
- */
-export const convertQuotaToCurrencyAmounts = (
-  quota: number,
-  exchangeRate: number,
-): import("~/types").CurrencyAmount => {
-  const USD = quota / QUOTA_PER_USD
-  return { USD, CNY: USD * exchangeRate }
 }

@@ -47,8 +47,7 @@ const toObjectRecord = <T extends object>(
 type Sub2ApiUserIdentity = {
   userId: number
   username: string
-  balanceUsd: number
-  quota: number
+  balanceUsd: unknown
 }
 
 type Sub2ApiTodayUsage = {
@@ -150,13 +149,10 @@ export const parseSub2ApiUserIdentity = (
     throw createInvalidResponseError(endpoint)
   }
 
-  const balanceUsd = toFiniteNumberOrZero(data.balance)
-
   return {
     userId,
     username,
-    balanceUsd,
-    quota: convertUsdBalanceToQuota(balanceUsd),
+    balanceUsd: data.balance,
   }
 }
 

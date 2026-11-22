@@ -8,7 +8,6 @@ import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accoun
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
-import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRefreshUpdate"
 import { ACCOUNT_REFRESH_SKIP_REASONS } from "~/services/accounts/refresh/constants"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -17,7 +16,7 @@ import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
+import { maybeCaptureAccountReferenceBalance } from "~/services/history/dailyBalanceHistory/capture"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -60,6 +59,7 @@ export type RefreshAccountOptions = {
 }
 
 interface StoredAccountRefreshResult {
+  /** Receipt for history persistence; account refresh success is independent. */
   account: SiteAccount | null
   refreshed: boolean
   checkInStatusRefreshOutcome?: CheckInStatusRefreshOutcome
@@ -68,6 +68,7 @@ interface StoredAccountRefreshResult {
 }
 
 interface RefreshAttempt {
+  requestFailed?: boolean
   result: StoredAccountRefreshResult
   /** A successful adapter result accepted by storage, before optional follow-ups. */
   followUpAccount: SiteAccount | null
@@ -96,25 +97,12 @@ export async function refreshStoredAccount(
           runRefresh,
         )
       : await runRefresh()
-    return await runRefreshFollowUps(id, attempt, options)
+    return attempt.requestFailed
+      ? null
+      : await runRefreshFollowUps(id, attempt, options)
   } catch (error) {
     logger.error("刷新账号数据失败", { accountId: id, error })
-    try {
-      await accountMutations.updateAccount(
-        id,
-        {
-          health: {
-            status: SiteHealthStatus.Unknown,
-            reason: getErrorMessage(error),
-            code: undefined,
-          },
-          last_sync_time: Date.now(),
-        },
-        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
-      )
-    } catch (updateError) {
-      logger.error("更新健康状态失败", { accountId: id, error: updateError })
-    }
+    // Only the generation-guarded acceptance path may publish request failures.
     return null
   }
 }
@@ -159,11 +147,26 @@ async function runRefreshAttempt(
   const prefs = await userPreferences.getPreferences()
   const includeTodayCashflow =
     options?.includeTodayCashflow ?? prefs.showTodayCashflow ?? true
-  const result = await fetchAccountRefresh(
+  const balanceGeneration = await accountMutations.beginBalanceRefresh(
+    id,
     account,
-    includeTodayCashflow,
-    options,
   )
+  if (balanceGeneration === null)
+    return { result: { account, refreshed: false }, followUpAccount: null }
+  let result: RefreshAccountResult
+  let requestFailed = false
+  try {
+    result = await fetchAccountRefresh(account, includeTodayCashflow, options)
+  } catch (error) {
+    requestFailed = true
+    result = {
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Unknown,
+        message: getErrorMessage(error),
+      },
+    }
+  }
 
   const updateData = buildAccountRefreshUpdate(
     account,
@@ -195,22 +198,15 @@ async function runRefreshAttempt(
     refreshedCheckIn,
     account,
     result.success ? result.data : undefined,
+    balanceGeneration,
   )
   const didPersist = persistedAccount !== null
   const updatedAccount = persistedAccount ?? account
   if (result.success && persistedAccount) {
     try {
-      await maybeCaptureDailyBalanceSnapshot({
+      await maybeCaptureAccountReferenceBalance({
         config: prefs.balanceHistory,
-        accountId: account.id,
-        quota: persistedAccount.account_info.quota,
-        nativeBalance: persistedAccount.account_info.nativeBalance,
-        balanceUnavailable: persistedAccount.account_info.balanceUnavailable,
-        today_income: result.data.today_income,
-        today_quota_consumption: result.data.today_quota_consumption,
-        todayStatsAvailability: normalizeAccountTodayStatsAvailability(
-          result.data.todayStatsAvailability,
-        ),
+        account: persistedAccount,
         source: options?.balanceHistoryCaptureSource ?? "refresh",
       })
     } catch (error) {
@@ -235,9 +231,10 @@ async function runRefreshAttempt(
     })
   }
   return {
+    requestFailed,
     result: {
       account: updatedAccount,
-      refreshed: true,
+      refreshed: didPersist,
       reEnabled,
       ...(didPersist && checkInStatusRefreshOutcome
         ? { checkInStatusRefreshOutcome }

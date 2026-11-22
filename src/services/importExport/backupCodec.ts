@@ -1,5 +1,12 @@
 import { BACKUP_VERSION } from "~/constants/importExport"
-import { migrateAccountConfig } from "~/services/accounts/migrations/accountDataMigration"
+import {
+  normalizeAccountStorageConfigForRead,
+  normalizeSiteAccount,
+} from "~/services/accounts/editing/accountDefaults"
+import {
+  getConfigVersion,
+  migrateAccountConfig,
+} from "~/services/accounts/migrations/accountDataMigration"
 import {
   assertSupportedApiCredentialProfilesConfigVersion,
   coerceApiCredentialProfilesConfig,
@@ -59,10 +66,12 @@ export function canonicalizeLegacyAccountConfigs(
   accounts: unknown[],
 ): unknown[] {
   return accounts.map((account) => {
+    if (account && typeof account === "object")
+      getConfigVersion(account as SiteAccount)
     if (
       !account ||
       typeof account !== "object" ||
-      ![6, 7].includes(
+      ![6, 7, 8].includes(
         (account as { configVersion?: number }).configVersion ?? -1,
       )
     ) {
@@ -71,6 +80,42 @@ export function canonicalizeLegacyAccountConfigs(
 
     return migrateAccountConfig(account as SiteAccount)
   })
+}
+
+/** Preserve nested account schema validation before any backup section writes. */
+export function readBackupAccountConfig(
+  data: RawBackupData,
+): AccountStorageConfig | undefined {
+  let raw = data.accounts !== undefined ? data.accounts : data.data?.accounts
+  if (raw === undefined) return undefined
+  // Released V1 exports can store layout metadata at the root and accounts in
+  // data.accounts. Only that unversioned legacy shape has this fallback.
+  if (
+    (data.version === undefined || data.version === LEGACY_BACKUP_V1_VERSION) &&
+    raw &&
+    typeof raw === "object" &&
+    !Array.isArray(raw) &&
+    !("schemaVersion" in raw) &&
+    !("accounts" in raw) &&
+    Array.isArray(data.data?.accounts)
+  )
+    raw = { ...raw, accounts: data.data.accounts }
+  // Selective WebDAV uploads can contain bookmarks without the accounts list.
+  if (
+    raw &&
+    typeof raw === "object" &&
+    !Array.isArray(raw) &&
+    !("accounts" in raw) &&
+    "bookmarks" in raw &&
+    Array.isArray(raw.bookmarks)
+  )
+    raw = { ...raw, accounts: [] }
+  const config = normalizeAccountStorageConfigForRead(
+    (Array.isArray(raw) ? { accounts: raw } : raw) as AccountStorageConfig,
+  )
+  for (const account of canonicalizeLegacyAccountConfigs(config.accounts))
+    normalizeSiteAccount(account as SiteAccount)
+  return config
 }
 
 /** Reads current guidance state plus released legacy gateway progress. */
@@ -153,6 +198,7 @@ export function parseBackupSummary(
   try {
     const data = JSON.parse(importData) as RawBackupData
     getSupportedBackupVersion(data)
+    readBackupAccountConfig(data)
 
     const hasAccounts = Boolean(data.accounts || data.type === "accounts")
     const hasPreferences = Boolean(
@@ -256,6 +302,7 @@ export function normalizeV2BackupForMerge(
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
   const accountsField: any = data.accounts
+  readBackupAccountConfig(data)
   const accountsConfig = Array.isArray(accountsField)
     ? { accounts: accountsField }
     : accountsField || {}
@@ -319,18 +366,14 @@ function normalizeV1BackupForMerge(
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
+  const validated = readBackupAccountConfig(data)
   const accountsField: any = data.accounts
   const accountsConfig = Array.isArray(accountsField)
     ? { accounts: accountsField }
-    : accountsField || {}
-  const legacyAccounts = (data.data as any)?.accounts
+    : accountsField || data.data?.accounts || {}
   const legacyBookmarks = (data.data as any)?.bookmarks
 
-  const accounts = Array.isArray(accountsConfig.accounts)
-    ? canonicalizeLegacyAccountConfigs(accountsConfig.accounts)
-    : Array.isArray(legacyAccounts)
-      ? canonicalizeLegacyAccountConfigs(legacyAccounts)
-      : []
+  const accounts = canonicalizeLegacyAccountConfigs(validated?.accounts ?? [])
 
   const bookmarks = Array.isArray(accountsConfig.bookmarks)
     ? accountsConfig.bookmarks

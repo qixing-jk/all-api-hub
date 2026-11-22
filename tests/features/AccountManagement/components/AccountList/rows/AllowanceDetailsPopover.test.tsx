@@ -5,6 +5,23 @@ import { describe, expect, it } from "vitest"
 import { AllowanceDetailsPopover } from "~/features/AccountManagement/components/AccountList/rows/AllowanceDetailsPopover"
 
 describe("AllowanceDetailsPopover", () => {
+  it("closes a pinned detail panel with its close button and returns focus to the amount details trigger", async () => {
+    const user = userEvent.setup()
+    render(
+      <AllowanceDetailsPopover label="Allowance details">
+        <p>Daily plan: $8 remaining</p>
+      </AllowanceDetailsPopover>,
+    )
+    const trigger = screen.getByRole("button", { name: "Allowance details" })
+    await user.click(trigger)
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+  })
+
   it("ignores touch previews and dismisses a pinned panel on outside interaction", async () => {
     const user = userEvent.setup()
     render(

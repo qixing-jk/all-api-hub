@@ -551,9 +551,8 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const repair = await import(
-      "~/services/accounts/accountKeyAutoProvisioning/repair"
-    )
+    const repair =
+      await import("~/services/accounts/accountKeyAutoProvisioning/repair")
 
     repair.setupAccountKeyRepairMessagingListeners()
     repair.setupAccountKeyRepairMessagingListeners()
@@ -713,9 +712,8 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const repair = await import(
-      "~/services/accounts/accountKeyAutoProvisioning/repair"
-    )
+    const repair =
+      await import("~/services/accounts/accountKeyAutoProvisioning/repair")
     repair.setupAccountKeyRepairMessagingListeners()
     const recordImportResultsHandler = getRegisteredHandler(
       onAccountKeyRepairMessage,
@@ -754,12 +752,10 @@ describe("typed runtime messaging setup", () => {
       onWebdavAutoSyncMessage,
     }))
 
-    const service_webdavAutoSyncService = await import(
-      "~/services/webdav/autoSync/webdavAutoSyncService"
-    )
-    const service_webdavAutoSyncMessageHandlers = await import(
-      "~/services/webdav/autoSync/webdavAutoSyncMessageHandlers"
-    )
+    const service_webdavAutoSyncService =
+      await import("~/services/webdav/autoSync/webdavAutoSyncService")
+    const service_webdavAutoSyncMessageHandlers =
+      await import("~/services/webdav/autoSync/webdavAutoSyncMessageHandlers")
     vi.spyOn(
       service_webdavAutoSyncService.webdavAutoSyncService,
       "setupAutoSync",
@@ -870,9 +866,8 @@ describe("typed runtime messaging setup", () => {
       onBalanceHistoryMessage,
     }))
 
-    const scheduler = await import(
-      "~/services/history/dailyBalanceHistory/scheduler"
-    )
+    const scheduler =
+      await import("~/services/history/dailyBalanceHistory/scheduler")
     vi.spyOn(
       scheduler.dailyBalanceHistoryScheduler,
       "updateSettings",
@@ -989,9 +984,8 @@ describe("typed runtime messaging setup", () => {
       },
     )
     const refreshAllAccounts = vi.fn(async (_force, options) => {
-      const { protectionBypassCoordinator } = await import(
-        "~/entrypoints/background/protectionBypassCoordinator"
-      )
+      const { protectionBypassCoordinator } =
+        await import("~/entrypoints/background/protectionBypassCoordinator")
       const response = await protectionBypassCoordinator.execute({
         task: {
           kind: "api_fallback_fetch",
@@ -1010,6 +1004,7 @@ describe("typed runtime messaging setup", () => {
         failed: 0,
         refreshedCount: 1,
         latestSyncTime: Date.now(),
+        balanceHistoryCapturedCount: 1,
       }
     })
 
@@ -1042,9 +1037,8 @@ describe("typed runtime messaging setup", () => {
     const execution = userCommandExecution(
       PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
     )
-    const scheduler = await import(
-      "~/services/history/dailyBalanceHistory/scheduler"
-    )
+    const scheduler =
+      await import("~/services/history/dailyBalanceHistory/scheduler")
     scheduler.setupDailyBalanceHistoryMessagingListeners()
 
     await expect(
@@ -1246,9 +1240,8 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const background = await import(
-      "~/services/integrations/ldohSiteLookup/background"
-    )
+    const background =
+      await import("~/services/integrations/ldohSiteLookup/background")
 
     background.setupLdohSiteLookupMessagingListeners()
     background.setupLdohSiteLookupMessagingListeners()
@@ -1420,9 +1413,8 @@ describe("typed runtime messaging setup", () => {
     }))
     vi.doMock("~/services/apiTransport/request", () => ({
       fetchApi: vi.fn(async (request) => {
-        const { protectionBypassCoordinator } = await import(
-          "~/entrypoints/background/protectionBypassCoordinator"
-        )
+        const { protectionBypassCoordinator } =
+          await import("~/entrypoints/background/protectionBypassCoordinator")
         const response = await protectionBypassCoordinator.execute({
           task: {
             kind: "api_fallback_fetch",
@@ -1440,9 +1432,8 @@ describe("typed runtime messaging setup", () => {
       }),
     }))
 
-    const background = await import(
-      "~/services/integrations/ldohSiteLookup/background"
-    )
+    const background =
+      await import("~/services/integrations/ldohSiteLookup/background")
     background.setupLdohSiteLookupMessagingListeners()
 
     await expect(
@@ -1492,9 +1483,8 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const scheduler = await import(
-      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
-    )
+    const scheduler =
+      await import("~/services/checkin/autoCheckin/scheduling/schedulerMessaging")
 
     scheduler.setupAutoCheckinMessagingListeners()
     scheduler.setupAutoCheckinMessagingListeners()
@@ -1550,12 +1540,10 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const scheduler = await import(
-      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
-    )
-    const { autoCheckinScheduler } = await import(
-      "~/services/checkin/autoCheckin/scheduling/schedulerCore"
-    )
+    const scheduler =
+      await import("~/services/checkin/autoCheckin/scheduling/schedulerMessaging")
+    const { autoCheckinScheduler } =
+      await import("~/services/checkin/autoCheckin/scheduling/schedulerCore")
     vi.spyOn(autoCheckinScheduler, "runCheckins").mockImplementation(
       runCheckins,
     )
@@ -2047,9 +2035,8 @@ describe("typed runtime messaging setup", () => {
       })),
       getSelectedCheckInStatus: vi.fn(() => null),
       executeSelectedCheckIn: vi.fn(async ({ context }) => {
-        const { protectionBypassCoordinator } = await import(
-          "~/entrypoints/background/protectionBypassCoordinator"
-        )
+        const { protectionBypassCoordinator } =
+          await import("~/entrypoints/background/protectionBypassCoordinator")
         const response = await protectionBypassCoordinator.execute({
           task: {
             kind: "turnstile_fetch",
@@ -2075,9 +2062,8 @@ describe("typed runtime messaging setup", () => {
     const execution = userCommandExecution(
       PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
     )
-    const scheduler = await import(
-      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
-    )
+    const scheduler =
+      await import("~/services/checkin/autoCheckin/scheduling/schedulerMessaging")
     scheduler.setupAutoCheckinMessagingListeners()
 
     await expect(
@@ -2135,12 +2121,10 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const scheduler = await import(
-      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
-    )
-    const { autoCheckinScheduler } = await import(
-      "~/services/checkin/autoCheckin/scheduling/schedulerCore"
-    )
+    const scheduler =
+      await import("~/services/checkin/autoCheckin/scheduling/schedulerMessaging")
+    const { autoCheckinScheduler } =
+      await import("~/services/checkin/autoCheckin/scheduling/schedulerCore")
     vi.spyOn(autoCheckinScheduler, "runCheckins").mockRejectedValue(
       new Error("run failed"),
     )

@@ -101,6 +101,8 @@
       "projects": "專案",
       "routes": "路由"
     },
+    "expired": "已到期",
+    "reset": "已重設",
     "restrictions": "{{dimension}}：{{value}}"
   },
   "overview": {

@@ -911,14 +911,18 @@ test("wakes a stopped MV3 worker to refresh saved accounts", async ({
               storageKey,
             )
             const config = JSON.parse(stored[storageKey] ?? "{}")
-            return config.accounts?.find(
-              (account: { id: string }) => account.id === accountId,
-            )?.account_info?.quota
+            return config.accounts
+              ?.find((account: { id: string }) => account.id === accountId)
+              ?.account_info?.balance?.positions.find(
+                (position: { asset: { kind: string; code?: string } }) =>
+                  position.asset.kind === "currency" &&
+                  position.asset.code === "USD",
+              )?.amount
           },
           { storageKey: STORAGE_KEYS.ACCOUNTS, accountId },
         ),
       )
-      .toBe(9_876_543)
+      .toMatchObject({ status: "known", value: "19.753086" })
   } finally {
     await cdp.detach()
   }

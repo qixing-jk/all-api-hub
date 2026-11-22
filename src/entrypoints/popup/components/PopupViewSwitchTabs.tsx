@@ -27,7 +27,6 @@ interface PopupViewSwitchTabsProps {
   accountsLabel: string
   bookmarksLabel: string
   apiCredentialProfilesLabel: string
-  fullWidth?: boolean
   getAnalyticsAction?: (value: PopupViewType) => {
     featureId: ProductAnalyticsFeatureId
     actionId: ProductAnalyticsActionId
@@ -71,7 +70,7 @@ function PopupViewSwitchTab({
       onClick={trackingProps.onClick}
       className={cn(
         baseClassName,
-        "min-h-0 gap-x-1.5 gap-y-density-1 truncate",
+        "min-h-0 gap-x-1 gap-y-density-1 truncate",
         "text-muted-foreground hover:text-secondary-foreground dark:text-secondary-foreground dark:hover:text-foreground",
       )}
     >
@@ -82,8 +81,7 @@ function PopupViewSwitchTab({
 }
 
 /**
- * Popup view switch styled like the historical "StyledTab" control.
- * Renders a compact inline block instead of a full-width header row.
+ * Uses the same full-width tab strip for every popup view.
  */
 export default function PopupViewSwitchTabs({
   value,
@@ -91,11 +89,10 @@ export default function PopupViewSwitchTabs({
   accountsLabel,
   bookmarksLabel,
   apiCredentialProfilesLabel,
-  fullWidth = false,
   getAnalyticsAction,
 }: PopupViewSwitchTabsProps) {
   const baseClassName = cn(
-    `${CORNERS.item} px-2 py-density-1 text-xs font-medium transition-colors`,
+    `${CORNERS.item} w-full px-1 py-density-1 text-xs font-medium transition-colors`,
     ANIMATIONS.transition.base,
   )
   const tabs = [
@@ -125,15 +122,14 @@ export default function PopupViewSwitchTabs({
 
   return (
     <Tabs
-      className={cn("min-w-0", fullWidth && "w-full")}
+      className="w-full min-w-0"
       value={value}
       onValueChange={(nextValue) => onChange(nextValue as PopupViewType)}
     >
       <TabsList
         variant="default"
         className={cn(
-          "rounded-md",
-          fullWidth ? "grid w-full grid-cols-3" : "inline-flex max-w-full",
+          "grid w-full grid-cols-3 rounded-md",
           COLORS.background.tertiary,
         )}
       >
@@ -145,7 +141,7 @@ export default function PopupViewSwitchTabs({
             <PopupViewSwitchTab
               key={tab.value}
               analyticsAction={analyticsAction}
-              baseClassName={cn(baseClassName, fullWidth && "w-full")}
+              baseClassName={baseClassName}
               icon={tab.icon}
               label={tab.label}
               testId={tab.testId}

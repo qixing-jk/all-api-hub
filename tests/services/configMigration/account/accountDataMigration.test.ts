@@ -83,11 +83,13 @@ describe("accountDataMigration", () => {
       expect(needsConfigMigration(account)).toBe(false)
     })
 
-    it("returns false when account version is greater than current version", () => {
+    it("rejects account versions greater than the current version", () => {
       const account = createSiteAccount({
         configVersion: CURRENT_CONFIG_VERSION + 1,
       })
-      expect(needsConfigMigration(account)).toBe(false)
+      expect(() => needsConfigMigration(account)).toThrow(
+        "unsupported_account_config_version",
+      )
     })
 
     it("returns true when configVersion is undefined (version 0)", () => {
@@ -320,7 +322,7 @@ describe("accountDataMigration", () => {
       expect(migrated.checkIn).toEqual(currentAccount.checkIn)
     })
 
-    it("handles account with version higher than current version", () => {
+    it("rejects migration from a future account version", () => {
       const futureAccount = createSiteAccount({
         configVersion: CURRENT_CONFIG_VERSION + 1,
         checkIn: buildCheckInConfig({
@@ -329,10 +331,9 @@ describe("accountDataMigration", () => {
         }),
       })
 
-      const migrated = migrateAccountConfig(futureAccount)
-
-      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION + 1)
-      expect(migrated.checkIn).toEqual(futureAccount.checkIn)
+      expect(() => migrateAccountConfig(futureAccount)).toThrow(
+        "unsupported_account_config_version",
+      )
     })
 
     it("preserves all other account properties during migration", () => {
@@ -350,7 +351,16 @@ describe("accountDataMigration", () => {
       expect(migrated.id).toBe(oldAccount.id)
       expect(migrated.site_name).toBe(oldAccount.site_name)
       expect(migrated.notes).toBe(oldAccount.notes)
-      expect(migrated.account_info).toEqual(oldAccount.account_info)
+      const { quota, ...otherInfo } = oldAccount.account_info
+      expect(migrated.account_info).toMatchObject(otherInfo)
+      expect(migrated.account_info).not.toHaveProperty("quota")
+      expect(migrated.account_info.balance?.positions[0]?.amount).toMatchObject(
+        {
+          status: "stale",
+          value: "0.002",
+          source: { amountInputs: { quota: String(quota) } },
+        },
+      )
     })
 
     it("creates a copy and does not mutate the original account", () => {
@@ -425,7 +435,7 @@ describe("accountDataMigration", () => {
         }),
         createSiteAccount({
           id: "account-2",
-          configVersion: CURRENT_CONFIG_VERSION + 1,
+          configVersion: CURRENT_CONFIG_VERSION,
           disabled: false,
         }),
       ]

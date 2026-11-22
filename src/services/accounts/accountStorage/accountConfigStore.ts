@@ -33,6 +33,7 @@ interface LockedAccountConfigTransaction {
   read(): Promise<AccountStorageConfig>
   write(config: AccountStorageConfig): Promise<void>
   remove(): Promise<void>
+  reserveFinancialGeneration(): Promise<number>
 }
 
 const cloneConfig = (config: AccountStorageConfig): AccountStorageConfig => {
@@ -131,6 +132,32 @@ class AccountConfigStore {
         work({
           read: () => this.read(),
           write: (config) => this.writeSnapshot(config),
+          reserveFinancialGeneration: async () => {
+            const current = await this.storage.get<number>(
+              ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION,
+            )
+            if (
+              current !== undefined &&
+              (!Number.isSafeInteger(current) || current < 0)
+            )
+              throw new Error("invalid_balance_refresh_generation")
+            // Upgrades may already have account-local generations but no shared
+            // counter. Imports never restore the counter or move it backwards.
+            const config = await this.read()
+            const highest = config.accounts.reduce(
+              (value, account) =>
+                Math.max(value, account.balanceRefreshGeneration ?? 0),
+              current ?? 0,
+            )
+            const next = highest + 1
+            if (!Number.isSafeInteger(next))
+              throw new Error("balance_refresh_generation_overflow")
+            await this.storage.set(
+              ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION,
+              next,
+            )
+            return next
+          },
           remove: async () => {
             await this.storage.remove(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
           },
@@ -147,8 +174,7 @@ class AccountConfigStore {
     migratedCount: number
   }> {
     const config = (await this.storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)) as
-      | AccountStorageConfig
-      | undefined
+      AccountStorageConfig | undefined
     return canonicalizeAccountStorageConfig(config)
   }
 

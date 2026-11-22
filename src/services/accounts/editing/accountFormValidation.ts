@@ -9,20 +9,33 @@ import {
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
 } from "~/services/accounts/accountSiteProfile"
+import { parseDecimal } from "~/services/amounts/decimal"
 import type { AccountLoginMethodDefinition } from "~/services/apiAdapters/contracts/accountLogin"
 import { AuthTypeEnum } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 
-/** Converts a non-negative manual USD balance to quota units. */
-export function parseManualQuotaFromUsd(value: unknown): number | undefined {
+/** Normalize the editor's existing non-negative number syntax before projection. */
+export function normalizeManualBalanceUsd(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined
   const trimmed = value.trim()
   if (!trimmed) return undefined
-
   const amount = Number(trimmed)
   if (!Number.isFinite(amount) || amount < 0) return undefined
+  if (/^0(?:x[0-9a-f]+|o[0-7]+|b[01]+)$/i.test(trimmed))
+    return parseDecimal(String(BigInt(trimmed)))
+  const decimal = trimmed
+    .replace(/^\+/, "")
+    .replace(/^(-?)\./, (_match, sign: string) => `${sign}0.`)
+    .replace(/\.(?=[eE]|$)/, "")
+  return parseDecimal(decimal) ?? parseDecimal(String(amount))
+}
 
-  return Math.round(amount * QUOTA_PER_USD)
+/** Converts a valid manual USD balance to the legacy quota projection. */
+export function parseManualQuotaFromUsd(value: unknown): number | undefined {
+  const amount = normalizeManualBalanceUsd(value)
+  return amount === undefined
+    ? undefined
+    : Math.round(Number(amount) * QUOTA_PER_USD)
 }
 
 /** Checks the account form's required fields against the selected site profile. */

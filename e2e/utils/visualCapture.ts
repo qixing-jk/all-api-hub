@@ -104,6 +104,7 @@ export async function captureVisualViews({
   extensionDir,
   directory = process.env.AAH_VISUAL_CAPTURE_DIR,
   views,
+  beforeCapture,
   animations = "disabled",
 }: {
   page: Page
@@ -114,6 +115,7 @@ export async function captureVisualViews({
   extensionDir: string
   directory?: string
   views?: VisualView[]
+  beforeCapture?: () => Promise<void>
   animations?: "disabled" | "allow"
 }) {
   if (!directory) return
@@ -126,6 +128,7 @@ export async function captureVisualViews({
   )
   const selected = configured ?? views
   if (!selected) {
+    await beforeCapture?.()
     await captureVisualCheckpoint({
       page,
       ready,
@@ -160,6 +163,7 @@ export async function captureVisualViews({
         (dark) => document.documentElement.classList.toggle("dark", dark),
         view.theme === "dark",
       )
+      await beforeCapture?.()
       await captureVisualCheckpoint({
         page,
         ready,

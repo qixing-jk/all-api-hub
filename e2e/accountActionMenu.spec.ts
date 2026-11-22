@@ -24,177 +24,196 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
-for (const width of [320, 390, 1100]) {
-  for (const language of ["en", "zh-CN"]) {
-    test(`account menu groups remain reachable at ${width}px (${language})`, async ({
-      context,
-      page,
-      extensionId,
-    }, testInfo) => {
-      const copy = (language === "en" ? en : zh).actions
-      const completionCopy = (language === "en" ? enKeys : zhKeys).provisioning
-        .actions
-      await page.setViewportSize({ width, height: 850 })
-      installExtensionPageGuards(page)
-      await forceExtensionLanguage(page, language)
-      await stubLlmMetadataIndex(context)
-      await stubNewApiSiteRoutes(context, {
-        baseUrl: "https://menu.example.invalid",
-      })
-      await seedStoredAccounts(await getServiceWorker(context), [
-        createStoredAccount({
-          id: "menu-account",
-          site_name: "Menu Account",
-          site_url: "https://menu.example.invalid",
-        }),
-      ])
-      await seedUserPreferences(await getServiceWorker(context), {
-        managedSiteType: "new-api",
-        newApi: {
-          baseUrl: "https://admin.example.invalid",
-          adminToken: "test-only-token",
-          userId: "1",
-        },
-      })
-      await page.goto(
-        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
-      )
-      await waitForExtensionRoot(page)
-      await expectPermissionOnboardingHidden(page)
-      const row = page.getByTestId(
-        getAccountManagementListItemTestId("menu-account"),
-      )
-      await row.hover()
-      const more = page.getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton,
-      )
-      await more.click()
-      const root = page.getByRole("menu")
-      // Completion adds one grouped entry, rather than two top-level scope actions.
-      expect(await root.getByRole("menuitem").count()).toBe(13)
-      await expect(
-        page.getByRole("menuitem", { name: copy.keyManagement, exact: true }),
-      ).toBeVisible()
-      await expect(root.getByRole("menuitem").nth(0)).toHaveAccessibleName(
-        copy.keyList,
-      )
-      await expect(root.getByRole("menuitem").nth(1)).toHaveAccessibleName(
-        copy.keyManagement,
-      )
-      await expect(root.getByRole("menuitem").nth(2)).toHaveAccessibleName(
-        completionCopy.title,
-      )
-      await expect(root.getByRole("menuitem").nth(3)).toHaveAccessibleName(
-        copy.modelManagement,
-      )
-      await expect(root.getByRole("menuitem").nth(4)).toHaveAccessibleName(
-        copy.locateManagedSiteChannel,
-      )
-      await expect(
-        root.getByRole("menuitem", { name: copy.usageLog, exact: true }),
-      ).toHaveCount(0)
-      await expect(
-        root.getByRole("menuitem", { name: copy.redeemPage, exact: true }),
-      ).toHaveCount(0)
-      await page.screenshot({
-        path: testInfo.outputPath("menu.png"),
-        animations: "disabled",
-      })
-      const completion = root.getByRole("menuitem", {
-        name: completionCopy.title,
-        exact: true,
-      })
-      await completion.focus()
-      await page.keyboard.press("ArrowRight")
-      const completionMenu = page.getByRole("menu", {
-        name: completionCopy.title,
-        exact: true,
-      })
-      for (const name of [completionCopy.default, completionCopy.allGroups]) {
-        await expect(
-          completionMenu.getByRole("menuitem", { name, exact: true }),
-        ).toBeVisible()
-      }
-      await expect(async () => {
-        const box = await completionMenu.boundingBox()
-        expect(box).not.toBeNull()
-        expect(box!.x).toBeGreaterThanOrEqual(0)
-        expect(box!.x + box!.width).toBeLessThanOrEqual(width)
-      }).toPass()
-      await page.keyboard.press("ArrowLeft")
-      await expect(completion).toBeFocused()
-      const relatedPages = page.getByRole("menuitem", {
-        name: copy.relatedPages,
-        exact: true,
-      })
-      await relatedPages.focus()
-      await page.keyboard.press("ArrowRight")
-      const submenu = page.getByRole("menu", {
-        name: copy.relatedPages,
-        exact: true,
-      })
-      await expect(
-        submenu.getByRole("menuitem", {
-          name: copy.usageLog,
-          exact: true,
-        }),
-      ).toBeVisible()
-      await expect(async () => {
-        const box = await submenu.boundingBox()
-        expect(box).not.toBeNull()
-        expect(box!.width).toBeGreaterThanOrEqual(192)
-        expect(box!.x).toBeGreaterThanOrEqual(0)
-        expect(box!.x + box!.width).toBeLessThanOrEqual(width)
-      }).toPass()
-      await page.screenshot({
-        path: testInfo.outputPath("related-pages.png"),
-        animations: "disabled",
-      })
-      await page.keyboard.press("ArrowLeft")
-      await expect(relatedPages).toBeFocused()
-      await page
-        .getByRole("menuitem", { name: copy.share, exact: true })
-        .click()
-      const shareMenu = page.getByRole("menu", {
-        name: copy.share,
-        exact: true,
-      })
-      await expect(
-        shareMenu.getByRole("menuitem", {
-          name: copy.copyInviteLink,
-          exact: true,
-        }),
-      ).toBeVisible()
-      await expect(async () => {
-        const box = await shareMenu.boundingBox()
-        expect(box).not.toBeNull()
-        expect(box!.width).toBeGreaterThanOrEqual(192)
-        expect(box!.x).toBeGreaterThanOrEqual(0)
-        expect(box!.x + box!.width).toBeLessThanOrEqual(width)
-      }).toPass()
-      await page.screenshot({
-        path: testInfo.outputPath("share.png"),
-        animations: "disabled",
-      })
-      await page.keyboard.press("ArrowLeft")
-      await page.keyboard.press("Escape")
-      await expect(page.getByRole("menu")).toHaveCount(0)
-      await expect(more).toHaveAttribute("aria-expanded", "false")
-      await row.hover()
-      await more.click()
-      const tokenResponse = page.waitForResponse(
-        (response) =>
-          new URL(response.url()).origin === "https://menu.example.invalid" &&
-          new URL(response.url()).pathname === "/api/token/",
-      )
-      await page
-        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
-        .click()
-      expect((await tokenResponse).ok()).toBe(true)
-      await expect(page).toHaveURL(
-        /options\.html\?accountId=menu-account&workspace=account#keys$/,
-      )
-      await expect(page.getByRole("menu")).toHaveCount(0)
+const menuCases = [
+  ...[320, 390, 1100].flatMap((width) =>
+    ["en", "zh-CN"].map((language) => ({ width, language, fontFamily: "" })),
+  ),
+  { width: 320, language: "en", fontFamily: "monospace" },
+]
+
+for (const { width, language, fontFamily } of menuCases) {
+  test(`account menu groups remain reachable at ${width}px (${language}${fontFamily ? `, ${fontFamily}` : ""})`, async ({
+    context,
+    page,
+    extensionId,
+  }, testInfo) => {
+    const copy = (language === "en" ? en : zh).actions
+    const completionCopy = (language === "en" ? enKeys : zhKeys).provisioning
+      .actions
+    await page.setViewportSize({ width, height: 850 })
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    installExtensionPageGuards(page)
+    await forceExtensionLanguage(page, language)
+    await stubLlmMetadataIndex(context)
+    await stubNewApiSiteRoutes(context, {
+      baseUrl: "https://menu.example.invalid",
     })
-  }
+    await seedStoredAccounts(await getServiceWorker(context), [
+      createStoredAccount({
+        id: "menu-account",
+        site_name: "Menu Account",
+        site_url: "https://menu.example.invalid",
+      }),
+    ])
+    await seedUserPreferences(await getServiceWorker(context), {
+      managedSiteType: "new-api",
+      newApi: {
+        baseUrl: "https://admin.example.invalid",
+        adminToken: "test-only-token",
+        userId: "1",
+      },
+    })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    // Font metrics vary across supported desktops; labels must remain reachable.
+    if (fontFamily) {
+      await page.addStyleTag({
+        content: `[role="menu"] { font-family: ${fontFamily} !important; }`,
+      })
+    }
+    const row = page.getByTestId(
+      getAccountManagementListItemTestId("menu-account"),
+    )
+    await row.hover()
+    const more = page.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton,
+    )
+    await more.click()
+    const root = page.getByRole("menu")
+    const minimumSubmenuWidth = await page.evaluate(
+      () =>
+        12 * parseFloat(getComputedStyle(document.documentElement).fontSize),
+    )
+    // Completion adds one grouped entry, rather than two top-level scope actions.
+    expect(await root.getByRole("menuitem").count()).toBe(13)
+    await expect(
+      page.getByRole("menuitem", { name: copy.keyManagement, exact: true }),
+    ).toBeVisible()
+    await expect(root.getByRole("menuitem").nth(0)).toHaveAccessibleName(
+      copy.keyList,
+    )
+    await expect(root.getByRole("menuitem").nth(1)).toHaveAccessibleName(
+      copy.keyManagement,
+    )
+    await expect(root.getByRole("menuitem").nth(2)).toHaveAccessibleName(
+      completionCopy.title,
+    )
+    await expect(root.getByRole("menuitem").nth(3)).toHaveAccessibleName(
+      copy.modelManagement,
+    )
+    await expect(root.getByRole("menuitem").nth(4)).toHaveAccessibleName(
+      copy.locateManagedSiteChannel,
+    )
+    await expect(
+      root.getByRole("menuitem", { name: copy.usageLog, exact: true }),
+    ).toHaveCount(0)
+    await expect(
+      root.getByRole("menuitem", { name: copy.redeemPage, exact: true }),
+    ).toHaveCount(0)
+    await page.screenshot({
+      path: testInfo.outputPath("menu.png"),
+      animations: "disabled",
+    })
+    const completion = root.getByRole("menuitem", {
+      name: completionCopy.title,
+      exact: true,
+    })
+    await completion.focus()
+    await page.keyboard.press("ArrowRight")
+    const completionMenu = page.getByRole("menu", {
+      name: completionCopy.title,
+      exact: true,
+    })
+    for (const name of [completionCopy.default, completionCopy.allGroups]) {
+      await expect(
+        completionMenu.getByRole("menuitem", { name, exact: true }),
+      ).toBeVisible()
+    }
+    await expect(async () => {
+      const box = await completionMenu.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.x).toBeGreaterThanOrEqual(8)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width - 8)
+    }).toPass()
+    await page.keyboard.press("ArrowLeft")
+    await expect(completion).toBeFocused()
+    const relatedPages = page.getByRole("menuitem", {
+      name: copy.relatedPages,
+      exact: true,
+    })
+    await relatedPages.focus()
+    await page.keyboard.press("ArrowRight")
+    const submenu = page.getByRole("menu", {
+      name: copy.relatedPages,
+      exact: true,
+    })
+    await expect(
+      submenu.getByRole("menuitem", {
+        name: copy.usageLog,
+        exact: true,
+      }),
+    ).toBeVisible()
+    await expect(async () => {
+      const box = await submenu.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.width).toBeGreaterThanOrEqual(minimumSubmenuWidth - 1)
+      expect(box!.x).toBeGreaterThanOrEqual(8)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width - 8)
+    }).toPass()
+    await page.screenshot({
+      path: testInfo.outputPath("related-pages.png"),
+      animations: "disabled",
+    })
+    await page.keyboard.press("ArrowLeft")
+    await expect(relatedPages).toBeFocused()
+    const share = root.getByRole("menuitem", {
+      name: copy.share,
+      exact: true,
+    })
+    await share.focus()
+    await share.press("ArrowRight")
+    const shareMenu = page.getByRole("menu", {
+      name: copy.share,
+      exact: true,
+    })
+    await expect(
+      shareMenu.getByRole("menuitem", {
+        name: copy.copyInviteLink,
+        exact: true,
+      }),
+    ).toBeVisible()
+    await expect(async () => {
+      const box = await shareMenu.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.width).toBeGreaterThanOrEqual(minimumSubmenuWidth - 1)
+      expect(box!.x).toBeGreaterThanOrEqual(8)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width - 8)
+    }).toPass()
+    await page.screenshot({
+      path: testInfo.outputPath("share.png"),
+      animations: "disabled",
+    })
+    await page.keyboard.press("ArrowLeft")
+    await page.keyboard.press("Escape")
+    await expect(page.getByRole("menu")).toHaveCount(0)
+    await expect(more).toHaveAttribute("aria-expanded", "false")
+    await row.hover()
+    await more.click()
+    const tokenResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).origin === "https://menu.example.invalid" &&
+        new URL(response.url()).pathname === "/api/token/",
+    )
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
+      .click()
+    expect((await tokenResponse).ok()).toBe(true)
+    await expect(page).toHaveURL(
+      /options\.html\?accountId=menu-account&workspace=account#keys$/,
+    )
+    await expect(page.getByRole("menu")).toHaveCount(0)
+  })
 }

@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
 import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
+import { getAccountBalanceSnapshots } from "~/services/accounts/balanceSnapshot"
 import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreation"
 import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
-import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
@@ -27,7 +27,7 @@ describe("accountPersistence manual quota", () => {
   })
 
   it.each([true, false])(
-    "marks placeholder balances unavailable and clears the flag on manual edit; deferred=%s",
+    "keeps unavailable reported observations independent when adding and removing a manual balance; deferred=%s",
     async (deferDataRefresh) => {
       server.use(
         http.get("https://api.example.com/**", () =>
@@ -54,7 +54,11 @@ describe("accountPersistence manual quota", () => {
       })
       expect(created.success).toBe(true)
       const saved = await accountStorage.getAccountById(created.accountId!)
-      expect(saved?.account_info.balanceUnavailable).toBe(true)
+      expect(saved?.account_info.balance).toMatchObject({
+        positions: [],
+        coverage: "unknown",
+      })
+      expect(saved?.account_info).not.toHaveProperty("quota")
       const updated = await validateAndUpdateAccount({
         ...input,
         accountId: created.accountId!,
@@ -63,13 +67,20 @@ describe("accountPersistence manual quota", () => {
       })
       expect(updated.success).toBe(true)
       const current = await accountStorage.getAccountById(created.accountId!)
-      expect(current?.account_info.quota).toBe(2 * QUOTA_PER_USD)
       expect(
-        supportsMonetaryBalance(
-          current?.account_info.nativeBalance,
-          current?.account_info.balanceUnavailable,
-        ),
-      ).toBe(true)
+        getAccountBalanceSnapshots(current!).manual?.positions[0]?.amount,
+      ).toMatchObject({
+        status: "known",
+        value: "2",
+        source: { kind: "manual" },
+      })
+      expect(current?.account_info.balance).toMatchObject({
+        positions: [],
+        coverage: deferDataRefresh ? "unknown" : "partial",
+      })
+      expect(calculateAccountStats([current!]).total_quota).toBe(
+        2 * QUOTA_PER_USD,
+      )
       const removed = await validateAndUpdateAccount({
         ...input,
         accountId: created.accountId!,
@@ -81,8 +92,14 @@ describe("accountPersistence manual quota", () => {
         created.accountId!,
       ))!
       expect(withoutManualBalance.manualBalanceUsd).toBe("")
-      expect(withoutManualBalance.account_info.quota).toBe(0)
-      expect(withoutManualBalance.account_info.balanceUnavailable).toBe(true)
+      expect(
+        getAccountBalanceSnapshots(withoutManualBalance).manual,
+      ).toBeUndefined()
+      expect(withoutManualBalance.account_info.balance).toMatchObject({
+        positions: [],
+        coverage: deferDataRefresh ? "unknown" : "partial",
+      })
+      expect(withoutManualBalance.account_info).not.toHaveProperty("quota")
       expect(calculateAccountStats([withoutManualBalance]).total_quota).toBe(0)
     },
   )
@@ -108,9 +125,6 @@ describe("accountPersistence manual quota", () => {
     )
 
     const manualBalanceUsd = "1.23"
-    const expectedQuota = Math.round(
-      Number.parseFloat(manualBalanceUsd) * QUOTA_PER_USD,
-    )
 
     const createResult = await validateAndSaveAccount({
       url: "https://api.example.com",
@@ -138,12 +152,21 @@ describe("accountPersistence manual quota", () => {
     const saved = await accountStorage.getAccountById(accountId)
     expect(saved).not.toBeNull()
     expect(saved?.health.status).toBe(SiteHealthStatus.Warning)
-    expect((saved as any)?.manualBalanceUsd).toBe(manualBalanceUsd)
-    expect(saved?.account_info.quota).toBe(expectedQuota)
+    expect(saved?.manualBalanceUsd).toBe(manualBalanceUsd)
+    expect(
+      getAccountBalanceSnapshots(saved!).manual?.positions[0]?.amount,
+    ).toMatchObject({
+      status: "known",
+      value: "1.23",
+      source: { kind: "manual" },
+    })
+    expect(saved?.account_info).not.toHaveProperty("quota")
 
     const display = accountStorage.convertToDisplayData(saved!)
-    expect(display.balance.USD).toBeCloseTo(1.23, 6)
-    expect(display.balance.CNY).toBeCloseTo(1.23 * 7.0, 6)
+    expect(display.manualBalanceSnapshot).toEqual(
+      getAccountBalanceSnapshots(saved!).manual,
+    )
+    expect(display.exchangeRate).toBe(7)
 
     const updatedResult = await validateAndUpdateAccount({
       accountId: accountId,
@@ -164,7 +187,9 @@ describe("accountPersistence manual quota", () => {
 
     expect(updatedResult.success).toBe(true)
     const updated = await accountStorage.getAccountById(accountId)
-    expect((updated as any)?.manualBalanceUsd).toBe("2")
-    expect(updated?.account_info.quota).toBe(2 * QUOTA_PER_USD)
+    expect(updated?.manualBalanceUsd).toBe("2")
+    expect(
+      getAccountBalanceSnapshots(updated!).manual?.positions[0]?.amount,
+    ).toMatchObject({ status: "known", value: "2", source: { kind: "manual" } })
   })
 })

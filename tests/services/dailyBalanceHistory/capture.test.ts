@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
+import { CURRENCIES } from "~/constants/money"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  maybeCaptureAccountReferenceBalance,
+  maybeCaptureDailyBalanceSnapshot,
+} from "~/services/history/dailyBalanceHistory/capture"
 import type {
   AccountNativeBalance,
   AccountTodayStatsAvailability,
@@ -11,6 +20,7 @@ import {
 } from "~/types/accountTodayStats"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const { upsertSnapshotMock } = vi.hoisted(() => ({
   upsertSnapshotMock: vi.fn(),
@@ -187,4 +197,74 @@ it("does not record an unavailable cash balance as a real zero", async () => {
     }),
   ).toBe(false)
   expect(upsertSnapshotMock).not.toHaveBeenCalled()
+})
+
+describe("history compatibility with native accounts", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    upsertSnapshotMock.mockResolvedValue(true)
+  })
+
+  it.each([
+    { currency: CURRENCIES.USD, count: 1, expected: true },
+    { currency: CURRENCIES.CNY, count: 1, expected: false },
+    { currency: CURRENCIES.USD, count: 2, expected: false },
+  ])(
+    "writes a reference only for one USD wallet ($currency, $count)",
+    async ({ currency, count, expected }) => {
+      const asOf = new Date(2026, 10, 22, 12).getTime()
+      const account = buildSiteAccount({ id: "account-1" })
+      const scope = accountBalanceScope({
+        baseUrl: account.site_url,
+        accountId: account.id,
+      })
+      const wallets = Array.from({ length: count }, (_, index) =>
+        balancePosition({
+          id: "wallet",
+          scope: { ...scope, walletId: String(index) },
+          source: {
+            adapter: "fixture",
+            operation: "wallet",
+            contractVersion: "1",
+            kind: "reported",
+          },
+          asset: { kind: "currency", code: currency },
+          value: "15",
+          observedAt: asOf,
+        }),
+      )
+      account.account_info.balance = accountBalanceSnapshot(
+        scope,
+        wallets,
+        asOf,
+        "complete",
+      )
+      account.account_info.today_income = 100_000
+      account.account_info.today_quota_consumption = 200_000
+      expect(
+        await maybeCaptureAccountReferenceBalance({
+          account,
+          source: "refresh",
+          asOf,
+        }),
+      ).toBe(expected)
+      if (!expected) {
+        expect(upsertSnapshotMock).not.toHaveBeenCalled()
+        return
+      }
+      expect(upsertSnapshotMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: account.id,
+          dayKey: "2026-11-22",
+          snapshot: {
+            quota: 7_500_000,
+            today_income: null,
+            today_quota_consumption: null,
+            capturedAt: asOf,
+            source: "refresh",
+          },
+        }),
+      )
+    },
+  )
 })

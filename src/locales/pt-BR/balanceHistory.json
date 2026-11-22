@@ -103,6 +103,8 @@
       "projects": "Projetos",
       "routes": "Rotas"
     },
+    "expired": "Expirado",
+    "reset": "Redefinido",
     "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {

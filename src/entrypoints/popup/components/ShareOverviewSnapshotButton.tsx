@@ -9,7 +9,11 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import toast from "~/lib/notify"
-import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
+import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  BALANCE_PURPOSES,
+  getDisplayBalancePortfolio,
+} from "~/services/accounts/metrics/balanceProjection"
 import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -21,7 +25,6 @@ import {
 import { buildOverviewShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { getErrorMessage } from "~/utils/core/error"
 import {
-  calculateTotalBalanceForSites,
   calculateTotalConsumption,
   calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
@@ -30,12 +33,18 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("ShareOverviewSnapshotButton")
 
 /**
- * Popup header action to export an aggregate (enabled-only) overview snapshot.
+ * Exports the account overview as an aggregate snapshot.
  */
-export default function ShareOverviewSnapshotButton() {
+export default function ShareOverviewSnapshotButton({
+  purpose = BALANCE_PURPOSES.Available,
+}: { purpose?: (typeof BALANCE_PURPOSES)["Prepaid" | "Available"] } = {}) {
   const { t } = useTranslation(["shareSnapshots", "messages", "common"])
   const { accounts, displayData } = useAccountDataContext()
-  const { currencyType, showTodayCashflow } = useUserPreferencesContext()
+  const {
+    currencyType,
+    currencyDisplay = currencyType,
+    showTodayCashflow,
+  } = useUserPreferencesContext()
   const analyticsScope = useProductAnalyticsScope()
 
   const enabledAccounts = useMemo(
@@ -68,33 +77,41 @@ export default function ShareOverviewSnapshotButton() {
       0,
     )
 
-    const totalBalance =
-      calculateTotalBalanceForSites(displayData)[currencyType]
+    const portfolio = getDisplayBalancePortfolio(displayData, purpose)
     const todayIncomeTotal = calculateTotalIncomeForSites(displayData)
     const todayConsumptionTotal = calculateTotalConsumption(displayData)
-    const includeToday =
-      showTodayCashflow !== false &&
-      isAccountTodayMetricComplete(todayIncomeTotal.coverage) &&
-      isAccountTodayMetricComplete(todayConsumptionTotal.coverage)
-    const todayIncome = todayIncomeTotal.amount[currencyType]
-    const todayOutcome = todayConsumptionTotal.amount[currencyType]
-
+    const siteDayUsage = displayData
+      .filter((site) => !site.disabled)
+      .flatMap((site) =>
+        getSiteDayReadings(site).map((reading) => ({
+          ...reading,
+          exchangeRate: site.exchangeRate,
+        })),
+      )
     // Overview snapshots are aggregate-only and must not include per-account identifiers.
     const payload = buildOverviewShareSnapshotPayload({
+      ...(siteDayUsage.length ? { siteDayUsage } : {}),
       currencyType,
+      currencyDisplay,
       enabledAccountCount,
-      totalBalance,
-      includeTodayCashflow: includeToday,
-      todayIncome: includeToday ? todayIncome : undefined,
-      todayOutcome: includeToday ? todayOutcome : undefined,
+      portfolio,
+      income: showTodayCashflow !== false ? todayIncomeTotal : undefined,
+      consumption:
+        showTodayCashflow !== false ? todayConsumptionTotal : undefined,
+      purpose,
+      includeTodayCashflow: showTodayCashflow !== false,
       asOf: latestSyncTime > 0 ? latestSyncTime : undefined,
     })
     const analyticsInsights = {
       itemCount: enabledAccountCount,
       usageDataPresent:
-        Number.isFinite(payload.todayIncome) &&
-        Number.isFinite(payload.todayOutcome) &&
-        Number.isFinite(payload.todayNet),
+        Boolean(
+          payload.consumptionSummary?.groups.length ||
+          payload.incomeSummary?.groups.length,
+        ) ||
+        (Number.isFinite(payload.todayIncome) &&
+          Number.isFinite(payload.todayOutcome) &&
+          Number.isFinite(payload.todayNet)),
     }
 
     try {
@@ -127,11 +144,11 @@ export default function ShareOverviewSnapshotButton() {
     >
       <IconButton
         onClick={handleShare}
-        variant="outline"
+        variant="ghost"
         size="sm"
         aria-label={label}
         disabled={enabledAccountCount <= 0}
-        className="touch-manipulation"
+        className="touch-manipulation text-muted-foreground hover:text-foreground"
       >
         <Share2 className="h-4 w-4" />
       </IconButton>

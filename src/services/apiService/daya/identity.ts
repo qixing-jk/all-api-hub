@@ -10,7 +10,7 @@ export type DayaIdentity = {
   id: number
   username: string
   /** Stored USD credit; `null` when the read did not include it. */
-  balanceUsd: number | null
+  balanceUsd: unknown
   status: string
 }
 
@@ -30,14 +30,13 @@ export function parseDayaIdentity(body: unknown): DayaIdentity {
     user.id <= 0 ||
     typeof user.username !== "string" ||
     !user.username.trim() ||
-    (user.status !== undefined && typeof user.status !== "string") ||
-    (user.balance !== undefined && typeof user.balance !== "number")
+    (user.status !== undefined && typeof user.status !== "string")
   )
     return invalidDayaResponse(endpoint)
   return {
     id: user.id,
     username: user.username.trim(),
-    balanceUsd: typeof user.balance === "number" ? user.balance : null,
+    balanceUsd: user.balance,
     status: typeof user.status === "string" ? user.status : "active",
   }
 }

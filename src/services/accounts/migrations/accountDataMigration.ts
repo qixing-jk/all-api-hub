@@ -10,6 +10,7 @@ import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 import { getLegacyAutoCheckinMethodIds } from "../../checkin/autoCheckin/providers/registry"
+import { migrateAccountFinancialInfo } from "./accountFinancialMigration"
 import { migrateAccountLogin } from "./accountLoginMigration"
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
@@ -22,7 +23,7 @@ import { migrateSub2ApiAuthConfig } from "./sub2apiAuthMigration"
 const logger = createLogger("AccountDataMigration")
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = 8
+export const CURRENT_CONFIG_VERSION = 9
 
 /**
  * Migration function type
@@ -84,13 +85,23 @@ const migrations: Record<number, MigrationFunction> = {
       getLegacyMethodIds: getLegacyAutoCheckinMethodIds,
     }),
   8: (account) => ({ ...migrateAccountLogin(account), configVersion: 8 }),
+  9: (account) => ({
+    ...account,
+    account_info: migrateAccountFinancialInfo(account.account_info, {
+      accountId: account.id,
+      siteUrl: account.site_url,
+      siteType: account.site_type,
+      capturedAt: account.last_sync_time ?? 0,
+    }),
+    configVersion: 9,
+  }),
 }
 
 /**
  * Check if an account needs migration
  */
 export function needsConfigMigration(account: SiteAccount): boolean {
-  const currentVersion = account.configVersion ?? 0
+  const currentVersion = getConfigVersion(account)
   return currentVersion < CURRENT_CONFIG_VERSION
 }
 
@@ -98,7 +109,14 @@ export function needsConfigMigration(account: SiteAccount): boolean {
  * Get the version of an account's configuration
  */
 export function getConfigVersion(account: SiteAccount): number {
-  return account.configVersion ?? 0
+  const version = account.configVersion ?? 0
+  if (
+    !Number.isSafeInteger(version) ||
+    version < 0 ||
+    version > CURRENT_CONFIG_VERSION
+  )
+    throw new Error("unsupported_account_config_version")
+  return version
 }
 
 /**

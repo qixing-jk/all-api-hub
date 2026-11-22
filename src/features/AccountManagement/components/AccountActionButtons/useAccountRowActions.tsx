@@ -17,7 +17,11 @@ import {
   canResolveAccountRuntimeKeySecret,
   supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keys/keyProductCapabilities"
-import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
+import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  getDisplayConsumptionProjection,
+  getDisplayIncomeProjection,
+} from "~/services/accounts/metrics/consumptionProjection"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
@@ -90,8 +94,12 @@ export function useAccountRowActions({
     "messages",
     "common",
   ])
-  const { currencyType, showTodayCashflow, preferences } =
-    useUserPreferencesContext()
+  const {
+    currencyType,
+    currencyDisplay = currencyType,
+    showTodayCashflow,
+    preferences,
+  } = useUserPreferencesContext()
   const {
     refreshingAccountId,
     handleRefreshAccount,
@@ -280,9 +288,9 @@ export function useAccountRowActions({
 
   const canOpenUsagePage = Boolean(
     getStaticAccountSiteRouteUrl(site, SITE_ROUTE_KINDS.Usage) ||
-      getSiteTypeCapabilities(
-        site.siteType,
-      ).account?.bootstrap?.dynamicRoutes?.includes(SITE_ROUTE_KINDS.Usage),
+    getSiteTypeCapabilities(
+      site.siteType,
+    ).account?.bootstrap?.dynamicRoutes?.includes(SITE_ROUTE_KINDS.Usage),
   )
   const canOpenRedeemPage = Boolean(
     getStaticAccountSiteRouteUrl(
@@ -389,24 +397,28 @@ export function useAccountRowActions({
       return
     }
 
-    const includeToday =
-      showTodayCashflow !== false &&
-      isAccountTodayMetricComplete(site.todayStatsAvailability.consumption) &&
-      isAccountTodayMetricComplete(site.todayStatsAvailability.income)
-
+    const siteDayUsage = getSiteDayReadings(site)
     // Build an allowlisted, share-safe payload (origin-only URL; no secret-bearing fields).
     const payload = buildAccountShareSnapshotPayload({
+      ...(siteDayUsage.length ? { siteDayUsage } : {}),
       currencyType,
+      currencyDisplay,
+      exchangeRate: site.exchangeRate,
       siteName: site.name,
       originUrl: sanitizeOriginUrl(site.baseUrl),
-      balance: site.balance?.[currencyType] ?? 0,
-      includeTodayCashflow: includeToday,
-      todayIncome: includeToday
-        ? site.todayIncome?.[currencyType] ?? 0
-        : undefined,
-      todayOutcome: includeToday
-        ? site.todayConsumption?.[currencyType] ?? 0
-        : undefined,
+      balanceSnapshot: site.manualBalanceSnapshot ?? site.balanceSnapshot,
+      allowances: site.allowances,
+      income:
+        showTodayCashflow !== false
+          ? getDisplayIncomeProjection([
+              { ...site, excludeFromTodayIncome: false },
+            ])
+          : undefined,
+      consumption:
+        showTodayCashflow !== false
+          ? getDisplayConsumptionProjection([site])
+          : undefined,
+      includeTodayCashflow: showTodayCashflow !== false,
       asOf:
         site.last_sync_time && site.last_sync_time > 0
           ? site.last_sync_time

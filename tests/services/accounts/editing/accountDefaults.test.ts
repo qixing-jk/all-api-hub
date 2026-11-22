@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
-import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
+import {
+  CURRENCIES,
+  DEFAULT_USD_TO_CNY_RATE,
+  QUOTA_PER_USD,
+} from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+  getAccountBalanceSnapshots,
+} from "~/services/accounts/balanceSnapshot"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
@@ -14,6 +23,17 @@ import {
   normalizeSiteAccount,
 } from "~/services/accounts/editing/accountDefaults"
 import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { publicSiteDayUsage } from "~/services/sharing/shareSnapshots/consumptionSummary"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
@@ -22,11 +42,163 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountDefaults", () => {
-  it("drops Requesty's legacy allowance projection while preserving its monetary balance", () => {
+  it.each(["usage", "usageObservations"] as const)(
+    "preserves partial native cost through saving and sharing %s",
+    (field) => {
+      const account = createSiteAccount({ last_sync_time: Date.now() })
+      const cost = {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        scope: accountBalanceScope({
+          baseUrl: account.site_url,
+          accountId: account.id,
+        }),
+        amount: observeAmount(
+          "3",
+          {
+            adapter: "fixture",
+            operation: "stats",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          Date.now(),
+        ),
+        coverage: FINANCIAL_COVERAGE.Partial,
+      }
+      const usage = { scope: "site_today" as const, cost }
+      if (field === "usage") account.account_info.usage = usage
+      else account.account_info.usageObservations = [usage]
+      const saved = normalizeSiteAccount(account)
+      const readings =
+        field === "usage"
+          ? [saved.account_info.usage!]
+          : saved.account_info.usageObservations!
+      expect(publicSiteDayUsage(readings)[0]).toMatchObject({
+        cost: { value: "3" },
+        costCoverage: "partial",
+      })
+    },
+  )
+  it("freezes the legacy manual reference clock without upgrading it to an exact edit time", () => {
+    const original = createSiteAccount({
+      manualBalanceUsd: "2",
+      user_updated_at: 100,
+    })
+    const saved = applySiteAccountUpdates({
+      account: original,
+      updates: { notes: "changed" },
+      now: 200,
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+    expect(
+      getAccountBalanceSnapshots(saved).manual?.positions[0]?.amount,
+    ).toMatchObject({
+      observedAt: 100,
+      source: { contractVersion: "legacy-clock" },
+    })
+  })
+  it("keeps the manual amount observation clock independent of unrelated edits", () => {
+    const original = createSiteAccount()
+    const withAmount = applySiteAccountUpdates({
+      account: original,
+      updates: { manualBalanceUsd: "2.50" },
+      now: 100,
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+    const renamed = applySiteAccountUpdates({
+      account: withAmount,
+      updates: { notes: "new note", manualBalanceUsd: "2.5" },
+      now: 200,
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+    expect(
+      getAccountBalanceSnapshots(renamed).manual?.positions[0]?.amount,
+    ).toMatchObject({ value: "2.5", observedAt: 100 })
+    const changed = applySiteAccountUpdates({
+      account: renamed,
+      updates: { manualBalanceUsd: "3" },
+      now: 300,
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+    expect(
+      getAccountBalanceSnapshots(changed).manual?.positions[0]?.amount,
+    ).toMatchObject({ value: "3", observedAt: 300 })
+    const cleared = applySiteAccountUpdates({
+      account: changed,
+      updates: { manualBalanceUsd: "" },
+      now: 400,
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+    expect(getAccountBalanceSnapshots(cleared).manual).toBeUndefined()
+    expect(cleared.manualBalanceObservation).toBeUndefined()
+  })
+  it.each([
+    { site_url: "https://other.example" },
+    { account_info: { id: "2" } },
+    { site_type: SITE_TYPES.SUB2API },
+  ])(
+    "retains balances only as last known after saving a changed identity: %j",
+    (updates) => {
+      const account = createSiteAccount({ notes: "keep note" })
+      const scope = {
+        subject: {
+          kind: FINANCIAL_SUBJECT_KINDS.Account,
+          accountId: account.id,
+        } as const,
+        authority: account.site_url,
+        models: { kind: SCOPE_SELECTION_KINDS.All } as const,
+        groups: { kind: SCOPE_SELECTION_KINDS.All } as const,
+        projects: { kind: SCOPE_SELECTION_KINDS.All } as const,
+        keys: { kind: SCOPE_SELECTION_KINDS.All } as const,
+      }
+      account.account_info.balance = accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "wallet",
+            scope,
+            value: "20",
+            observedAt: 100,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            nature: BALANCE_NATURES.Prepaid,
+            validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+            source: {
+              adapter: "fixture",
+              operation: "wallet",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      )
+      expect(calculateAccountStats([account]).total_quota).toBe(10_000_000)
+      const saved = applySiteAccountUpdates({
+        account,
+        updates,
+        now: 200,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+      expect(saved.account_info.balance?.positions[0]?.amount).toMatchObject({
+        status: "stale",
+        value: "20",
+        observedAt: 100,
+      })
+      expect(saved.account_info.balance?.positions[0]?.scope.authority).toBe(
+        account.site_url,
+      )
+      expect(saved.notes).toBe("keep note")
+      expect(calculateAccountStats([saved]).total_quota).toBe(0)
+      expect(account.account_info.balance.positions[0]?.amount.status).toBe(
+        "known",
+      )
+    },
+  )
+  it("archives Requesty's legacy allowance projection without inferring a current monetary balance", () => {
     const saved = createSiteAccount({ site_type: SITE_TYPES.REQUESTY })
     saved.account_info.quota = 6_250_000
     saved.account_info.nativeBalance = {
-      unit: "USD",
+      unit: CURRENCIES.USD,
       total: 12.5,
       permanent: 12.5,
       daily: 0,
@@ -34,8 +206,21 @@ describe("accountDefaults", () => {
     }
     const normalized = normalizeSiteAccount(saved)
     expect(normalized.account_info.nativeBalance).toBeUndefined()
-    expect(normalized.account_info.quota).toBe(6_250_000)
-    expect(calculateAccountStats([normalized]).total_quota).toBe(6_250_000)
+    expect(normalized.account_info.legacyFinancial).toMatchObject({
+      quota: 6_250_000,
+      nativeBalance: saved.account_info.nativeBalance,
+    })
+    expect(normalized.account_info.balance?.positions[0]?.amount).toMatchObject(
+      { status: "stale", value: "12.5", source: { kind: "legacy" } },
+    )
+    const stats = calculateAccountStats([normalized])
+    expect(stats.total_quota).toBe(0)
+    expect(stats.balancePortfolio).toMatchObject({
+      amounts: [],
+      eligibleCount: 1,
+      includedCount: 0,
+      coverage: "partial",
+    })
     expect(saved.account_info.nativeBalance?.total).toBe(12.5)
   })
   it.each([
@@ -130,6 +315,7 @@ describe("accountDefaults", () => {
     it("defaults missing top-level collections and last_updated", () => {
       const normalized = normalizeAccountStorageConfigForRead(undefined, 123)
       expect(normalized).toEqual({
+        schemaVersion: 1,
         accounts: [],
         bookmarks: [],
         pinnedAccountIds: [],
@@ -141,6 +327,7 @@ describe("accountDefaults", () => {
 
     it("preserves provided top-level collections", () => {
       const raw: AccountStorageConfig = {
+        schemaVersion: 1,
         accounts: [createSiteAccount()],
         bookmarks: [] as any,
         pinnedAccountIds: ["a"],
@@ -178,6 +365,7 @@ describe("accountDefaults", () => {
 
       const normalized = normalizeAccountStorageConfigForRead(
         {
+          accounts: [],
           deletedEntryRecords: persistedDeletedEntryRecords,
         } as any,
         999,
@@ -198,6 +386,7 @@ describe("accountDefaults", () => {
   describe("storage helpers", () => {
     it("creates the canonical default storage shape", () => {
       expect(createDefaultAccountStorageConfig(321)).toEqual({
+        schemaVersion: 1,
         accounts: [],
         bookmarks: [],
         pinnedAccountIds: [],
@@ -207,21 +396,30 @@ describe("accountDefaults", () => {
       })
     })
 
-    it("normalizes write payloads before persistence", () => {
-      const normalized = normalizeAccountStorageConfigForWrite(
-        {
-          accounts: "bad" as any,
-          bookmarks: [{ id: "bookmark-1" }] as any,
-          pinnedAccountIds: "bad" as any,
-          orderedAccountIds: ["ordered-1"],
-          last_updated: 1,
-        } as any,
-        456,
-      )
-
-      expect(normalized).toEqual({
+    it("rejects malformed account collections before persistence", () => {
+      expect(() =>
+        normalizeAccountStorageConfigForWrite(
+          { accounts: "bad", bookmarks: [], last_updated: 1 } as any,
+          456,
+        ),
+      ).toThrow("unsupported_or_invalid_account_storage")
+    })
+    it("normalizes valid write envelopes before persistence", () => {
+      expect(
+        normalizeAccountStorageConfigForWrite(
+          {
+            accounts: [],
+            bookmarks: [],
+            pinnedAccountIds: "bad",
+            orderedAccountIds: ["ordered-1"],
+            last_updated: 1,
+          } as any,
+          456,
+        ),
+      ).toEqual({
+        schemaVersion: 1,
         accounts: [],
-        bookmarks: [{ id: "bookmark-1" }],
+        bookmarks: [],
         pinnedAccountIds: [],
         orderedAccountIds: ["ordered-1"],
         deletedEntryRecords: {},
@@ -246,19 +444,27 @@ describe("accountDefaults", () => {
           displayLabel: "M Token",
         },
       },
-    ])("drops malformed native balances %j", (nativeBalance) => {
-      const source = createSiteAccount()
-      expect(
-        normalizeSiteAccount({
+    ])(
+      "archives malformed legacy balances without exposing a current native projection %j",
+      (nativeBalance) => {
+        const source = createSiteAccount()
+        const normalized = normalizeSiteAccount({
           ...source,
           account_info: {
             ...source.account_info,
             nativeBalance:
               nativeBalance as typeof source.account_info.nativeBalance,
           },
-        }).account_info.nativeBalance,
-      ).toBeUndefined()
-    })
+        })
+        expect(normalized.account_info.nativeBalance).toBeUndefined()
+        expect(normalized.account_info.legacyFinancial?.nativeBalance).toEqual(
+          nativeBalance,
+        )
+        expect(
+          calculateAccountStats([normalized]).balancePortfolio?.amounts,
+        ).toEqual([])
+      },
+    )
     it("preserves signed atomic token balances", () => {
       const asset = {
         id: "https://emrank.tech/token",
@@ -272,12 +478,21 @@ describe("accountDefaults", () => {
         asset,
         total: -1234567,
       }
-      expect(normalizeSiteAccount(source).account_info.nativeBalance).toEqual(
+      const normalized = normalizeSiteAccount(source)
+      expect(normalized.account_info.legacyFinancial?.nativeBalance).toEqual(
         source.account_info.nativeBalance,
       )
+      expect(normalized.account_info.balance?.positions[0]).toMatchObject({
+        asset: { kind: "quota", ...asset },
+        amount: {
+          status: "stale",
+          value: "-1234567",
+          source: { kind: "legacy" },
+        },
+      })
     })
 
-    it("normalizes timed allowance details with the same validation as components", () => {
+    it("archives original timed allowance details without reinterpreting them", () => {
       const source = createSiteAccount()
       const details = [
         { amount: 2 },
@@ -296,38 +511,31 @@ describe("accountDefaults", () => {
         },
       ]
       source.account_info.nativeBalance = {
-        unit: "USD",
+        unit: CURRENCIES.USD,
         total: 2,
         permanent: 0,
         daily: 2,
         timedDetails: details,
         components: details,
       } as unknown as NonNullable<SiteAccount["account_info"]["nativeBalance"]>
-      const normalized = normalizeSiteAccount(source).account_info.nativeBalance
-      expect(normalized).toMatchObject({
-        timedDetails: [
-          {
-            kind: "timed",
-            amount: 2,
-            unlockedModels: ["gpt-4o"],
-            expiresAt: "2099-01-01",
-          },
-        ],
-      })
-      if (normalized?.unit !== "USD") throw new Error("Expected USD allowances")
-      expect(normalized.timedDetails).toEqual(normalized.components)
-      expect(normalized.timedDetails?.[0]).toMatchObject({
-        name: undefined,
-        scope: undefined,
-        unlimited: undefined,
-        resetAt: undefined,
+      const normalized = normalizeSiteAccount(source)
+      expect(normalized.account_info.nativeBalance).toBeUndefined()
+      expect(normalized.account_info.legacyFinancial?.nativeBalance).toEqual(
+        source.account_info.nativeBalance,
+      )
+      expect(
+        normalized.account_info.balance?.positions[0]?.amount,
+      ).toMatchObject({
+        status: "stale",
+        value: "2",
+        source: { kind: "legacy" },
       })
     })
 
     it("retains scoped USD allowances through storage normalization", () => {
       const source = createSiteAccount()
       source.account_info.nativeBalance = {
-        unit: "USD",
+        unit: CURRENCIES.USD,
         total: 6,
         permanent: 1,
         daily: 2,
@@ -346,11 +554,12 @@ describe("accountDefaults", () => {
         ],
       }
       expect(
-        normalizeSiteAccount(source).account_info.nativeBalance,
+        normalizeSiteAccount(source).account_info.legacyFinancial
+          ?.nativeBalance,
       ).toMatchObject(source.account_info.nativeBalance)
     })
 
-    it("retains native credits across storage normalization and refresh updates", () => {
+    it("archives native credits and preserves that reference through unrelated updates", () => {
       const source = createSiteAccount()
       source.account_info.nativeBalance = {
         unit: "credits",
@@ -359,30 +568,22 @@ describe("accountDefaults", () => {
         daily: 2000,
       }
       const normalized = normalizeSiteAccount(source)
-      expect(normalized.account_info.nativeBalance).toEqual(
+      expect(normalized.account_info.legacyFinancial?.nativeBalance).toEqual(
         source.account_info.nativeBalance,
       )
       const refreshed = applySiteAccountUpdates({
         account: normalized,
-        updates: {
-          account_info: {
-            nativeBalance: {
-              unit: "credits",
-              total: 34000,
-              permanent: 34000,
-              daily: 0,
-            },
-          },
-        },
+        updates: { notes: "changed" },
         now: 12345,
         userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
       })
-      expect(refreshed.account_info.nativeBalance).toEqual({
-        unit: "credits",
-        total: 34000,
-        permanent: 34000,
-        daily: 0,
-      })
+      expect(refreshed.account_info.legacyFinancial).toEqual(
+        normalized.account_info.legacyFinancial,
+      )
+      expect(refreshed.account_info.balance).toEqual(
+        normalized.account_info.balance,
+      )
+      expect(refreshed.account_info).not.toHaveProperty("nativeBalance")
     })
     it("retains token allowances through account normalization without treating them as request counts", () => {
       const normalized = normalizeSiteAccount(
@@ -618,7 +819,8 @@ describe("accountDefaults", () => {
       expect(normalized.exchange_rate).toBe(DEFAULT_USD_TO_CNY_RATE)
       expect(normalized.authType).toBe(AuthTypeEnum.AccessToken)
       expect(normalized.account_info.id).toBe("12")
-      expect(normalized.account_info.quota).toBe(15)
+      expect(normalized.account_info.legacyFinancial?.quota).toBe("15")
+      expect(normalized.account_info).not.toHaveProperty("quota")
       expect(normalized.account_info.today_income).toBe(0)
       expect(normalized.health.status).toBe(SiteHealthStatus.Unknown)
       expect(normalized.health.reason).toBeUndefined()
@@ -710,11 +912,11 @@ describe("accountDefaults", () => {
           userTimestampMode: AccountUpdateUserTimestampMode.Touch,
         })
         expect(updated.manualBalanceUsd).toBe("")
-        expect(updated.account_info.quota).toBe(1500000)
+        expect(updated.account_info.legacyFinancial?.quota).toBe(1500000)
       },
     )
     it.each(["0", "2"])(
-      "invalidates a removed manual balance %s when no refreshed quota is supplied",
+      "removes only the independent manual balance %s while retaining legacy reference evidence",
       (manualBalanceUsd) => {
         const account = createSiteAccount()
         account.manualBalanceUsd = manualBalanceUsd
@@ -725,33 +927,65 @@ describe("accountDefaults", () => {
           now: 1000,
           userTimestampMode: AccountUpdateUserTimestampMode.Touch,
         })
-        expect(updated.account_info.quota).toBe(0)
-        expect(updated.account_info.balanceUnavailable).toBe(true)
+        expect(getAccountBalanceSnapshots(updated).manual).toBeUndefined()
+        expect(updated.account_info.legacyFinancial?.quota).toBe(
+          Number(manualBalanceUsd) * QUOTA_PER_USD,
+        )
+        expect(updated.account_info.balance?.positions[0]?.amount.status).toBe(
+          "stale",
+        )
       },
     )
     it.each([false, true])(
-      "preserves authoritative quota when no manual balance is removed or refreshed quota is provided (%s)",
-      (hasRefreshedQuota) => {
-        const account = createSiteAccount()
-        if (hasRefreshedQuota) account.manualBalanceUsd = "2"
-        account.account_info.quota = 1500000
+      "preserves the reported snapshot when manual balance is cleared (replacement=%s)",
+      (replacement) => {
+        const account = createSiteAccount({ manualBalanceUsd: "2" })
+        const scope = accountBalanceScope({
+          baseUrl: account.site_url,
+          accountId: account.id,
+        })
+        const wallet = (value: string, observedAt: number) =>
+          accountBalanceSnapshot(
+            scope,
+            [
+              balancePosition({
+                id: "wallet",
+                scope,
+                value,
+                observedAt,
+                asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+                source: {
+                  adapter: "fixture",
+                  operation: "balance",
+                  contractVersion: "1",
+                  kind: EVIDENCE_KINDS.Reported,
+                },
+              }),
+            ],
+            observedAt,
+            FINANCIAL_COVERAGE.Complete,
+          )
+        const reported = wallet("10", 100)
+        const next = wallet("20", 200)
+        account.account_info.balance = reported
         const updated = applySiteAccountUpdates({
           account,
           updates: {
             manualBalanceUsd: "",
-            ...(hasRefreshedQuota
-              ? { account_info: { quota: 1500000, balanceUnavailable: false } }
-              : {}),
+            ...(replacement ? { account_info: { balance: next } } : {}),
           },
           now: 1000,
           userTimestampMode: AccountUpdateUserTimestampMode.Touch,
         })
-        expect(updated.account_info.quota).toBe(1500000)
-        expect(updated.account_info.balanceUnavailable).not.toBe(true)
+        expect(updated.account_info.balance).toEqual(
+          replacement ? next : reported,
+        )
+        expect(getAccountBalanceSnapshots(updated).manual).toBeUndefined()
+        expect(updated.account_info).not.toHaveProperty("quota")
       },
     )
     it.each([true, false])(
-      "clears native credits only when an update explicitly removes them (%s)",
+      "retains archived native credits when an obsolete projection is removed (%s)",
       (explicitRemoval) => {
         const account = createSiteAccount()
         account.account_info.nativeBalance = {
@@ -760,26 +994,23 @@ describe("accountDefaults", () => {
           permanent: 20,
           daily: 10,
         }
+        const normalized = normalizeSiteAccount(account)
         const updated = applySiteAccountUpdates({
-          account,
+          account: normalized,
           updates: {
-            account_info: {
-              quota: 5000,
-              ...(explicitRemoval ? { nativeBalance: undefined } : {}),
-            },
+            account_info: explicitRemoval ? { nativeBalance: undefined } : {},
           },
           now: 100,
           userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
         })
-        if (explicitRemoval) {
-          expect(updated.account_info).not.toHaveProperty("nativeBalance")
-        } else {
-          expect(updated.account_info.nativeBalance).toEqual(
-            account.account_info.nativeBalance,
-          )
-        }
-        expect(updated.account_info.quota).toBe(5000)
-        expect(account.account_info.nativeBalance?.total).toBe(30)
+        expect(updated.account_info).not.toHaveProperty("nativeBalance")
+        expect(updated.account_info.legacyFinancial).toEqual(
+          normalized.account_info.legacyFinancial,
+        )
+        expect(updated.account_info.balance).toEqual(
+          normalized.account_info.balance,
+        )
+        expect(account.account_info.nativeBalance.total).toBe(30)
       },
     )
     it("deep merges nested updates and preserves sibling fields", () => {

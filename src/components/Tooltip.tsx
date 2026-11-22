@@ -8,6 +8,7 @@ import {
   useId,
   useRef,
   useState,
+  type ComponentProps,
   type FocusEventHandler,
   type MouseEventHandler,
   type ReactElement,
@@ -35,6 +36,8 @@ interface TooltipProps {
     | "left-end"
   delay?: number
   positionStrategy?: "absolute" | "fixed"
+  /** Position against a specific element while keeping the original interaction trigger. */
+  positionAnchor?: ComponentProps<typeof TooltipPrimitive.Positioner>["anchor"]
   /** Mounts the popup outside a clipping or transformed anchor container when provided. */
   portalContainer?: HTMLElement
   className?: string
@@ -69,6 +72,7 @@ export default function Tooltip({
   position = "top",
   delay = 0,
   positionStrategy = "absolute",
+  positionAnchor,
   portalContainer,
   className = "",
   wrapperClassName = "",
@@ -269,6 +273,7 @@ export default function Tooltip({
   ]
   const popup = (
     <TooltipPrimitive.Positioner
+      anchor={positionAnchor}
       positionMethod={positionStrategy}
       side={side}
       align={align}

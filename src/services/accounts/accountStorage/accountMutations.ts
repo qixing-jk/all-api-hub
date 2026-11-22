@@ -7,17 +7,45 @@ import {
   getAccountSiteProductProfile,
 } from "~/services/accounts/accountSiteProfile"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
+import { getAccountBalanceSnapshots } from "~/services/accounts/balanceSnapshot"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
   createPersistedSiteAccount,
   type AccountUpdateOptions,
 } from "~/services/accounts/editing/accountDefaults"
-import { parseManualQuotaFromUsd } from "~/services/accounts/editing/accountFormValidation"
 import {
   hasSameAccountRequestIdentity,
   hasSameCheckInRequestCredentials,
 } from "~/services/accounts/identity/accountIdentity"
+import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRefreshUpdate"
+import { acceptAccountAllowances } from "~/services/accounts/refresh/allowanceAcceptance"
+import {
+  acceptBalanceRefresh,
+  LEGACY_BALANCE_SUPERSEDED_REASON,
+  snapshotRefreshParts,
+  staleBalancePosition,
+} from "~/services/accounts/refresh/balanceAcceptance"
+import { acceptPeriodAmounts } from "~/services/accounts/refresh/periodAmountAcceptance"
+import { acceptUsageObservations } from "~/services/accounts/refresh/usageAcceptance"
+import { assetIdentity } from "~/services/amounts/assets"
+import {
+  balancePositionKey,
+  balanceSnapshotSchema,
+  financialCollectionKey,
+  isKnownOrStaleObservation,
+} from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+  FINANCIAL_OBSERVATION_REASONS,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
@@ -110,7 +138,162 @@ const removeAccountsFromConfig = (
   }
 }
 
+/** The editor and background refresh share collection acceptance and failure semantics. */
+function acceptedFinancialSnapshot(
+  account: SiteAccount,
+  incoming: unknown,
+  parts: AccountData["balanceRefreshParts"],
+  attempted: boolean,
+) {
+  const snapshot =
+    incoming === undefined ? undefined : balanceSnapshotSchema.parse(incoming)
+  const observedParts =
+    parts ?? (snapshot ? snapshotRefreshParts(snapshot) : undefined)
+  const asOf = Date.now()
+  let previous = account.account_info.balance
+  if (
+    previous?.positions.some(
+      (position) => position.amount.source.kind === EVIDENCE_KINDS.Legacy,
+    )
+  ) {
+    // Materialize saved details before retiring an aggregate that owns their tree.
+    previous = getAccountBalanceSnapshots(account).reported
+    const completePositions = (observedParts ?? [])
+      .filter((part) => part.enumeration === FINANCIAL_ENUMERATION.Complete)
+      .flatMap((part) => part.positions)
+    const retired = new Set<string>()
+    for (const old of previous.positions) {
+      if (old.amount.source.kind !== EVIDENCE_KINDS.Legacy) continue
+      const corresponding = completePositions.filter(
+        (position) =>
+          position.amount.source.kind !== EVIDENCE_KINDS.Legacy &&
+          position.asset.kind !== ASSET_KINDS.Unknown &&
+          assetIdentity(position.asset) === assetIdentity(old.asset) &&
+          position.scope.subject.kind === FINANCIAL_SUBJECT_KINDS.Account &&
+          (!position.scope.subject.accountId ||
+            position.scope.subject.accountId === account.id) &&
+          (!old.scope.walletId ||
+            old.scope.walletId === position.scope.walletId) &&
+          (!old.scope.organizationId ||
+            old.scope.organizationId === position.scope.organizationId) &&
+          (!old.scope.workspaceId ||
+            old.scope.workspaceId === position.scope.workspaceId) &&
+          [
+            position.scope.projects,
+            position.scope.keys,
+            position.scope.models,
+            position.scope.groups,
+            ...(position.scope.routes ? [position.scope.routes] : []),
+          ].every(
+            (selection) => selection.kind !== SCOPE_SELECTION_KINDS.Restricted,
+          ) &&
+          old.role === position.role &&
+          (old.parentId
+            ? (old.labelKey !== undefined &&
+                old.labelKey === position.labelKey) ||
+              (old.label !== undefined && old.label === position.label)
+            : !position.parentId),
+      )
+      // One component or credit limit cannot establish the old available total.
+      if (
+        corresponding.length &&
+        new Set(
+          corresponding.map((position) =>
+            financialCollectionKey(
+              position.collectionKey,
+              position.amount.source,
+            ),
+          ),
+        ).size === 1 &&
+        corresponding.every(
+          (position) =>
+            position.amount.status === OBSERVATION_STATUSES.Known &&
+            (position.validity.kind !== BALANCE_VALIDITY_KINDS.Expires ||
+              position.validity.at > asOf),
+        )
+      )
+        retired.add(balancePositionKey(old))
+    }
+    const superseded = new Set(retired)
+    for (const position of previous.positions) {
+      if (retired.has(balancePositionKey(position))) continue
+      let parent = position.parentId
+      while (parent) {
+        const key = balancePositionKey(position, parent)
+        retired.delete(key)
+        parent = previous.positions.find(
+          (candidate) => balancePositionKey(candidate) === key,
+        )?.parentId
+      }
+    }
+    previous = {
+      ...previous,
+      positions: previous.positions
+        .filter((position) => !retired.has(balancePositionKey(position)))
+        .map((position) =>
+          superseded.has(balancePositionKey(position)) &&
+          isKnownOrStaleObservation(position.amount)
+            ? {
+                ...position,
+                amount: {
+                  ...position.amount,
+                  status: OBSERVATION_STATUSES.Stale,
+                  reason: LEGACY_BALANCE_SUPERSEDED_REASON,
+                },
+              }
+            : position,
+        ),
+    }
+  }
+  if (parts)
+    return acceptBalanceRefresh(
+      previous,
+      parts,
+      { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: account.id },
+      Date.now(),
+    )
+  if (snapshot) {
+    return previous?.positions.length
+      ? acceptBalanceRefresh(
+          previous,
+          snapshotRefreshParts(snapshot),
+          snapshot.subject,
+          snapshot.capturedAt,
+        )
+      : snapshot
+  }
+  if (attempted && previous)
+    return {
+      ...previous,
+      capturedAt: Date.now(),
+      coverage: FINANCIAL_COVERAGE.Partial,
+      positions: previous.positions.map((position) =>
+        staleBalancePosition(
+          position,
+          FINANCIAL_OBSERVATION_REASONS.RefreshFailed,
+        ),
+      ),
+    }
+  return undefined
+}
+
 class AccountMutations {
+  /** Reserves a monotonic generation under the same cross-context account lock. */
+  async beginBalanceRefresh(
+    id: string,
+    requestSnapshot: SiteAccount,
+  ): Promise<number | null> {
+    return accountConfigStore.runExclusive(async (transaction) => {
+      const config = await transaction.read()
+      const account = config.accounts.find((item) => item.id === id)
+      if (!account) return null
+      if (!hasSameAccountRequestIdentity(account, requestSnapshot)) return null
+      const generation = await transaction.reserveFinancialGeneration()
+      account.balanceRefreshGeneration = generation
+      await transaction.write(config)
+      return generation
+    })
+  }
   async updateAccountWithCheckInDraft(
     id: string,
     updates: Omit<DeepPartial<SiteAccount>, "checkIn">,
@@ -119,6 +302,12 @@ class AccountMutations {
       selectionChanged?: boolean
       discoveryBaseSelection?: CheckInMethodSelection
       refreshed?: SiteAccount["checkIn"]
+      /** Financial request reserved before editor network work; user fields still save if stale. */
+      balanceRefresh?: {
+        generation: number
+        requestSnapshot: SiteAccount
+        data?: AccountData
+      }
       /** Runs inside the account storage lock; throwing aborts the update. */
       guard?: AccountWriteGuard
       loadedSub2ApiAuth?: LoadedSub2ApiAuth
@@ -132,11 +321,17 @@ class AccountMutations {
   ): Promise<boolean> {
     const { guard, ...mutationOptions } = options
     try {
-      return await accountConfigStore.mutateAccount(
+      await accountConfigStore.mutateAccount(
         id,
         (account) => {
           const loaded = mutationOptions.loadedKimiAuth
           const effectiveUpdates = { ...updates }
+          if (mutationOptions.balanceRefresh && effectiveUpdates.account_info) {
+            // The editor owns identity fields. Provider observations enter only
+            // after generation admission below, including counters and usage.
+            const { id, username, access_token } = effectiveUpdates.account_info
+            effectiveUpdates.account_info = { id, username, access_token }
+          }
           const loadedSub2ApiAuth = mutationOptions.loadedSub2ApiAuth
           // Compare the same canonical auth shape produced by form persistence.
           const loadedSession = loadedSub2ApiAuth
@@ -229,6 +424,75 @@ class AccountMutations {
             now: Date.now(),
             userTimestampMode: mutationOptions.userTimestampMode,
           })
+          const financial = mutationOptions.balanceRefresh
+          if (financial) {
+            if (
+              account.balanceRefreshGeneration === financial.generation &&
+              hasSameAccountRequestIdentity(
+                nextAccount,
+                financial.requestSnapshot,
+              )
+            ) {
+              const data = financial.data
+              const prior = {
+                ...nextAccount,
+                account_info: { ...nextAccount.account_info },
+              }
+              if (data)
+                Object.assign(
+                  nextAccount.account_info,
+                  buildAccountRefreshUpdate(
+                    nextAccount,
+                    {
+                      success: true,
+                      data,
+                      healthStatus: {
+                        status: nextAccount.health.status,
+                        message: nextAccount.health.reason ?? "",
+                      },
+                    },
+                    false,
+                  ).account_info,
+                )
+              nextAccount.account_info.allowances = acceptAccountAllowances(
+                prior.account_info.allowances,
+                data?.allowances,
+                data?.allowanceRefreshParts,
+                id,
+                true,
+                Date.now(),
+              )
+              nextAccount.account_info.balance = acceptedFinancialSnapshot(
+                prior,
+                data ? nextAccount.account_info.balance : undefined,
+                data?.balanceRefreshParts,
+                true,
+              )
+              nextAccount.account_info.settledConsumption = acceptPeriodAmounts(
+                prior.account_info.settledConsumption,
+                data?.settledConsumption,
+              )
+              nextAccount.account_info.reportedIncome = acceptPeriodAmounts(
+                prior.account_info.reportedIncome,
+                data?.reportedIncome,
+              )
+              nextAccount.account_info.usage = acceptUsageObservations(
+                prior.account_info.usage
+                  ? [prior.account_info.usage]
+                  : undefined,
+                data?.usage ? [data.usage] : undefined,
+              )?.[0]
+              nextAccount.account_info.usageObservations =
+                acceptUsageObservations(
+                  prior.account_info.usageObservations,
+                  data?.usageObservations,
+                )
+            } else {
+              // A stale network result does not replace the last accepted refresh metadata.
+              nextAccount.health = account.health
+              nextAccount.last_sync_time = account.last_sync_time
+            }
+          }
           const hasFreshDraftDiscovery =
             mutationOptions.discoveryBaseSelection &&
             (checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0) >
@@ -252,6 +516,7 @@ class AccountMutations {
         },
         { guard },
       )
+      return true
     } catch (error) {
       // A rejected guard is a decided outcome, not a storage failure: the caller
       // reports why the update was refused instead of a generic save error.
@@ -285,10 +550,22 @@ class AccountMutations {
     updates: DeepPartial<SiteAccount>,
     refreshedCheckIn?: SiteAccount["checkIn"],
     requestSnapshot?: SiteAccount,
-    providerBalance?: Pick<AccountData, "quota" | "balanceUnavailable">,
+    providerBalance?: Pick<
+      AccountData,
+      | "quota"
+      | "balanceUnavailable"
+      | "balanceRefreshParts"
+      | "allowanceRefreshParts"
+    >,
+    balanceGeneration?: number,
   ): Promise<SiteAccount | null> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
+        if (
+          balanceGeneration !== undefined &&
+          account.balanceRefreshGeneration !== balanceGeneration
+        )
+          return { nextAccount: account, result: null, changed: false }
         if (
           requestSnapshot &&
           !hasSameAccountRequestIdentity(account, requestSnapshot)
@@ -299,18 +576,45 @@ class AccountMutations {
           ...updates,
           account_info: { ...updates.account_info },
         }
-        if (providerBalance) {
-          // The fetch snapshot may predate a manual balance edit. Resolve this
-          // under the storage lock, retaining the latest saved override or
-          // restoring the provider result when the override has been removed.
-          if (parseManualQuotaFromUsd(account.manualBalanceUsd) !== undefined) {
-            delete effectiveUpdates.account_info.quota
-            delete effectiveUpdates.account_info.balanceUnavailable
-          } else {
-            effectiveUpdates.account_info.quota = providerBalance.quota
-            effectiveUpdates.account_info.balanceUnavailable =
-              providerBalance.balanceUnavailable === true
-          }
+        const allowances = acceptAccountAllowances(
+          account.account_info.allowances,
+          effectiveUpdates.account_info.allowances,
+          providerBalance?.allowanceRefreshParts,
+          id,
+          balanceGeneration !== undefined,
+          Date.now(),
+        )
+        const balance = acceptedFinancialSnapshot(
+          account,
+          effectiveUpdates.account_info.balance,
+          providerBalance?.balanceRefreshParts,
+          balanceGeneration !== undefined,
+        )
+        if (balance !== undefined)
+          effectiveUpdates.account_info.balance = balance
+        effectiveUpdates.account_info.allowances = allowances
+        if (balanceGeneration !== undefined) {
+          const info = effectiveUpdates.account_info
+          info.usage = acceptUsageObservations(
+            account.account_info.usage
+              ? [account.account_info.usage]
+              : undefined,
+            info.usage
+              ? [info.usage as SiteAccount["account_info"]["usage"] & {}]
+              : undefined,
+          )?.[0]
+          info.usageObservations = acceptUsageObservations(
+            account.account_info.usageObservations,
+            info.usageObservations as SiteAccount["account_info"]["usageObservations"],
+          )
+          info.settledConsumption = acceptPeriodAmounts(
+            account.account_info.settledConsumption,
+            info.settledConsumption as SiteAccount["account_info"]["settledConsumption"],
+          )
+          info.reportedIncome = acceptPeriodAmounts(
+            account.account_info.reportedIncome,
+            info.reportedIncome as SiteAccount["account_info"]["reportedIncome"],
+          )
         }
         if (
           requestSnapshot &&

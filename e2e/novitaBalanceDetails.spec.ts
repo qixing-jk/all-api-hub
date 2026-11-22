@@ -53,9 +53,9 @@ test("Novita balance details distinguish zero top-up funds from available balanc
     animations: "disabled",
   })
   await expect(details).toHaveAccessibleName("余额明细")
-  await expect(details).toContainText("可用余额$93")
-  await expect(details).toContainText("充值余额$0")
-  await expect(details).toContainText("信用额度（可欠款上限）$20")
+  await expect(details).toContainText(/可用额度USD\s+93/)
+  await expect(details).toContainText(/现金余额USD\s+0/)
+  await expect(details).toContainText(/授信上限USD\s+20/)
   await expect(details).not.toContainText("永久额度")
   await expect(details).not.toContainText("分组和套餐")
   await page.setViewportSize({ width: 380, height: 800 })

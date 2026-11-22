@@ -1,9 +1,21 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { NANOGPT_ENDPOINTS } from "~/services/apiService/nanogpt/constants"
 import { parseNanoGptCredentials } from "~/services/apiService/nanogpt/credentials"
@@ -167,6 +179,7 @@ export async function fetchAccountData(
       ? toSubscriptionSummary(snapshot)
       : { status: subscriptionStatuses.Unavailable }
     return {
+      ...nanoGptWallet(request),
       quota: 0,
       balanceUnavailable: true,
       today_quota_consumption: 0,
@@ -195,6 +208,7 @@ export async function fetchAccountData(
     .catch(() => ({ status: subscriptionStatuses.Unavailable }))
 
   return {
+    ...nanoGptWallet(request, balance),
     quota: Math.round(balance.usdBalance * QUOTA_PER_USD),
     balanceUnavailable: false,
     ...(balance.nanoBalance !== undefined
@@ -223,4 +237,51 @@ export async function fetchAccountData(
     ...(subscription ? { subscription } : {}),
     checkIn: request.checkIn,
   }
+}
+
+/** USD and XNO are independent balances reported by the same wallet endpoint. */
+function nanoGptWallet(
+  request: ApiServiceAccountRequest,
+  balance?: NanoGptBalance,
+) {
+  const scope = accountBalanceScope(
+    request,
+    balance ? { walletId: balance.depositAddress } : {},
+  )
+  const observedAt = Date.now()
+  const source = {
+    adapter: SITE_TYPES.NANOGPT,
+    operation: NANOGPT_ENDPOINTS.checkBalance,
+    contractVersion: "wallet-usd-xno/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  } as const
+  const common = {
+    collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+    scope,
+    observedAt,
+    source,
+  }
+  return accountBalanceObservation(
+    scope,
+    [
+      balancePosition({
+        ...common,
+        id: "usd_balance",
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        value: balance?.usdBalance,
+      }),
+      ...(balance?.nanoBalance === undefined
+        ? []
+        : [
+            balancePosition({
+              ...common,
+              id: "nano_balance",
+              asset: { kind: ASSET_KINDS.Crypto, id: "XNO" },
+              value: balance.nanoBalance,
+            }),
+          ]),
+    ],
+    observedAt,
+    balance ? FINANCIAL_ENUMERATION.Complete : FINANCIAL_ENUMERATION.Partial,
+  )
 }

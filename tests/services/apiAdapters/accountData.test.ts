@@ -115,7 +115,10 @@ describe("apiAdapter accountData", () => {
       accountData,
     )
 
-    expect(mockDoneHubFetchAccountData).toHaveBeenCalledWith(request)
+    expect(mockDoneHubFetchAccountData).toHaveBeenCalledWith({
+      ...request,
+      siteType: SITE_TYPES.DONE_HUB,
+    })
     expect(mockFetchAccountData).not.toHaveBeenCalled()
   })
 

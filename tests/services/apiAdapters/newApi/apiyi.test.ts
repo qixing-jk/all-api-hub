@@ -234,7 +234,21 @@ describe("APIyi account capabilities", () => {
         includeTodayCashflow: false,
       })
 
-      expect(result).toMatchObject({ success: true, data: { quota: 1500000 } })
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          balance: {
+            positions: [
+              expect.objectContaining({
+                amount: expect.objectContaining({
+                  status: "known",
+                  value: "3",
+                }),
+              }),
+            ],
+          },
+        },
+      })
       expect(authorization).toBe(
         authType === AuthTypeEnum.AccessToken ? "Bearer saved-token" : null,
       )

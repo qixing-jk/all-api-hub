@@ -34,6 +34,7 @@ import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AccountKeyProvisioningScopeItems } from "~/features/TokenProvisioning/creation/AccountKeyProvisioningScopeItems"
+import { cn } from "~/lib/utils"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
@@ -51,10 +52,11 @@ import {
 
 /** Render the feature through its state and command owner. */
 export default function AccountActionButtons({
+  className,
   site,
   onCopyKey,
   onDeleteAccount,
-}: ActionButtonsProps) {
+}: ActionButtonsProps & { className?: string }) {
   const { t } = useTranslation([
     "account",
     "shareSnapshots",
@@ -118,7 +120,12 @@ export default function AccountActionButtons({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
       surfaceId={rowActionsSurface}
     >
-      <div className="grid grid-cols-2 justify-end gap-x-2 gap-y-density-2 sm:grid-cols-4">
+      <div
+        className={cn(
+          "grid grid-cols-2 justify-end gap-x-2 gap-y-density-2 sm:grid-cols-4",
+          className,
+        )}
+      >
         {/* Primary Level - Standalone buttons */}
         <IconButton
           onClick={handleCopyUrlLocal}

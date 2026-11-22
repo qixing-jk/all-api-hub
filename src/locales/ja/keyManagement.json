@@ -247,6 +247,7 @@
     "lifetime": "全期間",
     "limit": "上限",
     "nativeQuota": "ネイティブクォータ",
+    "partial": "一部の結果",
     "period": {
       "5h": "5 時間",
       "day": "日次",

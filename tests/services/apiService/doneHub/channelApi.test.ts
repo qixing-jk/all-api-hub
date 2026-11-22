@@ -22,6 +22,14 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
+const accountBalance = {
+  schemaVersion: 2,
+  subject: { kind: "account" },
+  capturedAt: 1000,
+  positions: [],
+  coverage: "unknown",
+}
+
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
 }))
@@ -42,7 +50,7 @@ vi.mock("~/utils/core/logger", () => ({
 
 const {
   mockDetermineHealthStatus,
-  mockFetchAccountQuota,
+  mockFetchAccountBalance,
   mockFetchCheckInStatus,
   mockFetchTodayIncome,
   mockFetchTodayUsage,
@@ -51,7 +59,7 @@ const {
     status: "unknown",
     message: "unknown",
   })),
-  mockFetchAccountQuota: vi.fn(),
+  mockFetchAccountBalance: vi.fn(),
   mockFetchCheckInStatus: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
   mockFetchTodayUsage: vi.fn(),
@@ -69,7 +77,7 @@ vi.mock("~/services/accounts/accountHealth", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
-  fetchAccountQuota: mockFetchAccountQuota,
+  fetchAccountBalance: mockFetchAccountBalance,
   fetchCheckInStatus: mockFetchCheckInStatus,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
@@ -114,7 +122,7 @@ describe("apiService doneHub channel APIs", () => {
     mockFetchApiData.mockReset()
     mockFetchApi.mockReset()
     mockDetermineHealthStatus.mockReset()
-    mockFetchAccountQuota.mockReset()
+    mockFetchAccountBalance.mockReset()
     mockFetchCheckInStatus.mockReset()
     mockFetchTodayIncome.mockReset()
     mockFetchTodayUsage.mockReset()
@@ -123,7 +131,7 @@ describe("apiService doneHub channel APIs", () => {
       status: "unknown",
       message: "unknown",
     })
-    mockFetchAccountQuota.mockResolvedValue(500)
+    mockFetchAccountBalance.mockResolvedValue({ balance: accountBalance })
     mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
     mockFetchTodayUsage.mockResolvedValue({
       today_quota_consumption: 0,
@@ -1115,7 +1123,7 @@ describe("apiService doneHub channel APIs", () => {
     await expect(refreshAccountData(request as any)).resolves.toMatchObject({
       success: true,
       data: {
-        quota: 500,
+        balance: accountBalance,
         today_quota_consumption: 88,
         today_requests_count: 7,
         today_prompt_tokens: 0,
@@ -1139,7 +1147,7 @@ describe("apiService doneHub channel APIs", () => {
     }
 
     const error = new Error("quota unavailable")
-    mockFetchAccountQuota.mockRejectedValueOnce(error)
+    mockFetchAccountBalance.mockRejectedValueOnce(error)
     mockDetermineHealthStatus.mockReturnValueOnce({
       status: SiteHealthStatus.Error,
       message: "quota unavailable",

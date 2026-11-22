@@ -121,7 +121,7 @@ export function getDayKeyFromUnixSeconds(
 }
 
 /** Reuse a zone formatter when reading many timestamps in one operation. */
-function createUnixDayKeyFormatter(timeZone?: string) {
+export function createUnixDayKeyFormatter(timeZone?: string) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",

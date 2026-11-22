@@ -1,9 +1,17 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountData } from "~/features/AccountManagement/data/useAccountData"
 import type { AccountOverviewSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import type {
   ProtectionBypassSurface,
   ProtectionBypassUserCommand,
@@ -85,12 +93,48 @@ describe("useAccountData enabled slices", () => {
   })
 
   it("retains the previous successful snapshot for animation across reload and refresh", async () => {
+    const observedAt = Date.now()
+    const start = new Date(observedAt).setHours(0, 0, 0, 0)
+    const consumption = (id: string, usd: string, cny: string) =>
+      [
+        { code: CURRENCIES.USD, value: usd },
+        { code: CURRENCIES.CNY, value: cny },
+      ].map(({ code, value }) => ({
+        asset: { kind: ASSET_KINDS.Currency, code },
+        amount: {
+          status: OBSERVATION_STATUSES.Known,
+          value,
+          observedAt,
+          source: {
+            adapter: "fixture",
+            operation: "usage",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        },
+        scope: {
+          ...accountBalanceScope({
+            baseUrl: "https://fixture.example",
+            accountId: id,
+          }),
+          projects: { kind: SCOPE_SELECTION_KINDS.All },
+          keys: { kind: SCOPE_SELECTION_KINDS.All },
+          models: { kind: SCOPE_SELECTION_KINDS.All },
+          groups: { kind: SCOPE_SELECTION_KINDS.All },
+        },
+        window: {
+          start,
+          end: observedAt,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        settlement: "settled" as const,
+        coverage: "complete" as const,
+      }))
     const first = createOverviewSnapshot({
       displayAccounts: [
         createDisplayAccount({
           id: "first",
-          balance: { USD: 12, CNY: 84 },
-          todayConsumption: { USD: 2, CNY: 14 },
+          settledConsumption: consumption("first", "2", "14"),
         }),
       ],
     })
@@ -98,8 +142,7 @@ describe("useAccountData enabled slices", () => {
       displayAccounts: [
         createDisplayAccount({
           id: "second",
-          balance: { USD: 9, CNY: 63 },
-          todayConsumption: { USD: 3, CNY: 21 },
+          settledConsumption: consumption("second", "3", "21"),
         }),
       ],
     })
@@ -107,14 +150,12 @@ describe("useAccountData enabled slices", () => {
     const { result } = renderHook(() => useAccountData())
     await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
     const load = result.current.loadAccountData
-    expect(result.current.prevBalances).toEqual({})
     expect(result.current.prevTotalConsumption).toEqual({ USD: 0, CNY: 0 })
 
     mockGetAccountOverviewSnapshot.mockResolvedValueOnce(second)
     await act(async () => {
       await load()
     })
-    expect(result.current.prevBalances).toEqual({ first: { USD: 12, CNY: 84 } })
     expect(result.current.prevTotalConsumption).toEqual({ USD: 2, CNY: 14 })
 
     mockGetAccountOverviewSnapshot.mockRejectedValueOnce(
@@ -124,7 +165,6 @@ describe("useAccountData enabled slices", () => {
       await load()
     })
     expect(result.current.displayData).toEqual(second.displayAccounts)
-    expect(result.current.prevBalances).toEqual({ first: { USD: 12, CNY: 84 } })
 
     mockGetAccountOverviewSnapshot.mockResolvedValueOnce(
       createOverviewSnapshot(),
@@ -133,7 +173,6 @@ describe("useAccountData enabled slices", () => {
     await act(async () => {
       await result.current.handleRefresh()
     })
-    expect(result.current.prevBalances).toEqual({ second: { USD: 9, CNY: 63 } })
     expect(result.current.prevTotalConsumption).toEqual({ USD: 3, CNY: 21 })
     expect(result.current.loadAccountData).toBe(load)
     expect(mockGetAccountOverviewSnapshot).toHaveBeenCalledTimes(4)

@@ -434,17 +434,14 @@ for (const width of [1280, 390, 320]) {
           getAccountManagementListItemTestId("text-size-account"),
         ),
       ).toBeVisible()
-      // Account metric captions use a nonstandard 10px baseline below sm.
-      // They must follow text size too, including their responsive override.
+      // The compact financial metric must follow the shared text size preference.
       await expect(
         view
           .getByTestId(getAccountManagementListItemTestId("text-size-account"))
-          .locator(".text-3xs")
-          .first(),
-      ).toHaveCSS(
-        "font-size",
-        view.viewportSize()!.width < 640 ? "14px" : "16px",
-      )
+          .getByRole("button", {
+            name: /^Click to refresh today's consumption/,
+          }),
+      ).toHaveCSS("font-size", "16px")
       await expectPageToFit(view)
       await view.screenshot({
         path: testInfo.outputPath(

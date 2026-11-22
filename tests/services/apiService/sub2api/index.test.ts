@@ -217,8 +217,8 @@ describe("apiService sub2api parsing", () => {
 
     expect(identity.userId).toBe(12)
     expect(identity.username).toBe("alice")
-    expect(identity.balanceUsd).toBe(1.5)
-    expect(identity.quota).toBe(Math.round(1.5 * 500000))
+    expect(identity.balanceUsd).toBe("1.5")
+    expect(identity).not.toHaveProperty("quota")
   })
 
   it("parseSub2ApiUserIdentity falls back to email local-part when username is empty", () => {
@@ -403,15 +403,24 @@ describe("apiService sub2api parsing", () => {
     } as any)
 
     await expect(fetchSupportCheckIn(request as any)).resolves.toBe(false)
-    await expect(fetchTodayUsage(request as any)).resolves.toEqual({
+    await expect(fetchTodayUsage(request as any)).resolves.toMatchObject({
       today_quota_consumption: 125000,
       today_prompt_tokens: 12,
       today_completion_tokens: 8,
       today_requests_count: 2,
       todayStatsAvailability: {
-        consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-        requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-        tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
       },
     })
   })
@@ -475,14 +484,17 @@ describe("apiService sub2api parsing", () => {
       today_completion_tokens: 0,
       today_requests_count: 0,
       todayStatsAvailability: {
-        consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
         requests: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
           reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
         },
         tokens: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
         },
       },
     })
@@ -598,7 +610,10 @@ describe("apiService sub2api refreshAccountData", () => {
     const result = await refreshAccountData(createRequest())
 
     expect(result.success).toBe(true)
-    expect(result.data?.quota).toBe(1_000_000)
+    expect(result.data?.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "2",
+    })
     expect(result.data?.today_quota_consumption).toBe(625_000)
     expect(result.data?.today_prompt_tokens).toBe(120)
     expect(result.data?.today_completion_tokens).toBe(45)
@@ -910,7 +925,13 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result).toMatchObject({
       success: true,
       data: {
-        quota: 1_000_000,
+        balance: {
+          positions: [
+            expect.objectContaining({
+              amount: expect.objectContaining({ status: "known", value: "2" }),
+            }),
+          ],
+        },
         today_quota_consumption: 0,
         todayStatsAvailability: {
           consumption: {
@@ -977,7 +998,10 @@ describe("apiService sub2api refreshAccountData", () => {
     )
 
     expect(result.success).toBe(true)
-    expect(result.data?.quota).toBe(500_000)
+    expect(result.data?.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "1",
+    })
     expect(result.authUpdate?.accessToken).toBe("new-jwt")
     expect(result.authUpdate?.userId).toBe("2")
     expect(result.authUpdate?.username).toBe("bob")
@@ -1631,7 +1655,10 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
 
     expect(result.success).toBe(true)
-    expect(result.data?.quota).toBe(500_000)
+    expect(result.data?.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "1",
+    })
     expect(result.authUpdate?.accessToken).toBe("new-jwt")
     expect(result.authUpdate?.sub2apiAuth).toEqual({
       refreshToken: "new-refresh",
@@ -2651,7 +2678,13 @@ describe("apiService sub2api exported operations", () => {
     } as any)
 
     expect(result).toMatchObject({
-      quota: 750000,
+      balance: {
+        positions: [
+          expect.objectContaining({
+            amount: expect.objectContaining({ status: "known", value: "1.5" }),
+          }),
+        ],
+      },
       today_quota_consumption: 0,
       today_income: 0,
       checkIn,

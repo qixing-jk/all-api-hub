@@ -254,6 +254,7 @@
     "lifetime": "Gesamtzeit",
     "limit": "Limit",
     "nativeQuota": "Native Quote",
+    "partial": "Teilweise",
     "period": {
       "5h": "5 Stunden",
       "day": "Täglich",

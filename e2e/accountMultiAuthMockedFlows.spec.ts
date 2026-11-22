@@ -146,7 +146,10 @@ test("saves two access-token accounts on the same mocked site", async ({
     page,
     serviceWorker,
     accountIds: accounts.map((account) => account.id),
-    expectedQuotas: [11_000, 22_000],
+    expectedBalances: ["0.022", "0.044"].map((value) => ({
+      asset: { kind: "currency", code: "USD" },
+      value,
+    })),
   })
   expect(refreshedAccounts).toEqual(
     expect.arrayContaining([
@@ -154,14 +157,12 @@ test("saves two access-token accounts on the same mocked site", async ({
         account_info: expect.objectContaining({
           id: "101",
           username: "token-user-a",
-          quota: 11_000,
         }),
       }),
       expect.objectContaining({
         account_info: expect.objectContaining({
           id: "102",
           username: "token-user-b",
-          quota: 22_000,
         }),
       }),
     ]),
@@ -258,7 +259,10 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
     page,
     serviceWorker,
     accountIds: accounts.map((account) => account.id),
-    expectedQuotas: [33_000, 44_000],
+    expectedBalances: ["0.066", "0.088"].map((value) => ({
+      asset: { kind: "currency", code: "USD" },
+      value,
+    })),
   })
   expect(refreshedAccounts).toEqual(
     expect.arrayContaining([
@@ -268,7 +272,6 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
         account_info: expect.objectContaining({
           id: "201",
           username: "cookie-user-a",
-          quota: 33_000,
         }),
       }),
       expect.objectContaining({
@@ -277,7 +280,6 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
         account_info: expect.objectContaining({
           id: "202",
           username: "cookie-user-b",
-          quota: 44_000,
         }),
       }),
     ]),

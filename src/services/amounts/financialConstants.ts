@@ -1,3 +1,13 @@
+/** Stable runtime values for the shared financial contracts. */
+export const FINANCIAL_ACCOUNT_EXCLUSION_REASONS = {
+  Disabled: "disabled",
+  Settings: "settings",
+  NoBalance: "no-balance",
+  NoUsableData: "no-usable-data",
+  Duplicate: "duplicate",
+  Conflict: "conflict",
+} as const
+
 export const ASSET_KINDS = {
   Currency: "currency",
   Quota: "quota",
@@ -79,6 +89,9 @@ export const BALANCE_ROLES = {
   PendingCharge: "pending-charge",
   Allowance: "allowance",
 } as const
+
+/** Fixed wallet collection identity used when accepting balance refresh parts. */
+export const WALLET_BALANCE_COLLECTION_KEY = "wallet"
 
 export const BALANCE_NATURES = {
   Prepaid: "prepaid",
@@ -184,3 +197,15 @@ export const BUDGET_OBSERVATION_FIELDS = [
   "includesByok",
   "usedIncludesByok",
 ] as const
+
+export const INCOME_CLASSIFICATIONS = {
+  Topup: "topup",
+  Grant: "grant",
+  Unclassified: "unclassified",
+} as const
+
+export const FINANCIAL_SETTLEMENT_STATUSES = {
+  Settled: "settled",
+  Pending: "pending",
+  Unknown: "unknown",
+} as const

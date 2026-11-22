@@ -101,6 +101,8 @@
       "projects": "プロジェクト",
       "routes": "ルート"
     },
+    "expired": "期限切れ",
+    "reset": "リセット",
     "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {

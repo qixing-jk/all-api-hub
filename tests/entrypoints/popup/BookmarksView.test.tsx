@@ -101,7 +101,6 @@ vi.mock("~/entrypoints/popup/viewRegistry", () => ({
     return {
       accounts: {
         showRefresh: true,
-        headerAction: <div>ShareOverviewSnapshotButton</div>,
         statsSection: <div>BalanceSection</div>,
         primaryActionLabel: "account:addAccount",
         onPrimaryAction: vi.fn(),

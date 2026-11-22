@@ -10,11 +10,14 @@ import {
   DATA_TYPE_INCOME,
   DATA_TYPE_NAME,
 } from "~/constants"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import {
   type CURRENCY_DISPLAY_TYPES,
   type CURRENCY_TYPES,
 } from "~/constants/money"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { LegacyAccountFinancialEvidence } from "~/services/accounts/migrations/accountFinancialMigration"
+import type { ReportedUsageCost } from "~/services/amounts/usage"
 import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 import type {
   AccountMetricCoverage,
@@ -52,10 +55,16 @@ export type AccountIdentity = string
 
 // 账号基础信息
 export interface AccountInfo {
+  reportedIncome?: import("~/services/amounts/income").FinancialIncomeFact[]
+  allowances?: import("~/services/accounts/allowances").AccountAllowanceSnapshot
+  settledConsumption?: import("~/services/amounts/usage").FinancialConsumptionFact[]
+  balance?: import("~/services/amounts/balance").BalanceSnapshot
   id: AccountIdentity // 账号身份标识（站点内稳定字符串）
   access_token: string
   username: string
-  quota: number // 总余额点数
+  /** Legacy input only; canonical writes archive this without reinterpreting it. */
+  quota?: number
+  legacyFinancial?: LegacyAccountFinancialEvidence
   /** Zero quota is a placeholder when no authoritative monetary balance was obtainable. */
   balanceUnavailable?: boolean
   today_prompt_tokens: number // 今日 prompt_tokens
@@ -65,26 +74,36 @@ export interface AccountInfo {
   today_income: number // 今日收入 (recharge + check-in)
   todayStatsAvailability?: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
+  usageObservations?: AccountUsageSummary[]
   subscription?: AccountSubscriptionSummary
   nativeBalance?: AccountNativeBalance
   recentUsageRecords?: AccountUsageRecord[]
 }
 
 export const ACCOUNT_USAGE_SUMMARY_SCOPES = [
-  "today",
-  "current_period",
-  "rolling_window",
-  "lifetime",
-  "unknown",
+  ACCOUNT_USAGE_SCOPES.Today,
+  ACCOUNT_USAGE_SCOPES.CurrentPeriod,
+  ACCOUNT_USAGE_SCOPES.SiteToday,
+  ACCOUNT_USAGE_SCOPES.RollingWindow,
+  ACCOUNT_USAGE_SCOPES.Lifetime,
+  ACCOUNT_USAGE_SCOPES.Unknown,
 ] as const
 export type AccountUsageSummaryScope =
   (typeof ACCOUNT_USAGE_SUMMARY_SCOPES)[number]
 
 export interface AccountUsageSummary {
   scope: AccountUsageSummaryScope
-  totalRequests: number
-  totalTokens: number
-  totalCost: number
+  /** Clock of an accepted usage collection, independent of whether cost was available. */
+  observedAt?: number
+  /** A failed or omitted usage collection retained this reading. Absent in old records. */
+  lastKnown?: boolean
+  /** Calendar date sent to a provider day query, when it is known. */
+  reportedDay?: string
+  totalRequests?: number
+  totalTokens?: number
+  /** Legacy unqualified numeric cost, accepted only by the compatibility codec. */
+  totalCost?: number
+  cost?: ReportedUsageCost
   lastRequestTime?: string
 }
 
@@ -215,6 +234,11 @@ export interface AimlApiAuthConfig {
 }
 
 // 站点账号完整信息
+export const MANUAL_BALANCE_OBSERVATION_KINDS = {
+  Edit: "edit",
+  LegacyReference: "legacy-reference",
+} as const
+
 export interface SiteAccount {
   login?: import("~/types/accountLogin").AccountLoginConfiguration
   /** @deprecated Read-only migration compatibility; canonical writes use login.credentials. */
@@ -231,6 +255,8 @@ export interface SiteAccount {
   site_type: AccountSiteType // 账号站点类型
   exchange_rate: number // 人民币与美元充值比例 (CNY per USD)
   account_info: AccountInfo // 账号信息
+  /** Cross-context request order for account financial observations. */
+  balanceRefreshGeneration?: number
   last_sync_time: number // 最后同步时间 (timestamp)
   updated_at: number // 更改时间 (timestamp)
   user_updated_at: number // 用户意图更改时间 (timestamp)
@@ -321,6 +347,11 @@ export interface SiteAccount {
    * Empty/undefined means the account should rely on auto-fetched quota/balance.
    */
   manualBalanceUsd?: string
+  /** Timestamp of an actual manual amount edit, independent of other user changes. */
+  manualBalanceObservation?: {
+    at: number
+    kind: (typeof MANUAL_BALANCE_OBSERVATION_KINDS)[keyof typeof MANUAL_BALANCE_OBSERVATION_KINDS]
+  }
   /**
    * Configuration version for migration tracking
    * 1.0.0: Initial version (no version field = version 0)
@@ -383,6 +414,8 @@ export interface DeletedEntryRecord {
  * Account and bookmark storage schema persisted in the extension's storage.
  */
 export interface AccountStorageConfig {
+  /** Missing only in the original unversioned envelope. Unknown versions reject writes. */
+  schemaVersion?: 1
   accounts: SiteAccount[]
   /**
    * Persisted bookmarks stored alongside accounts.
@@ -429,6 +462,25 @@ export interface TagStore {
 
 // 账号统计信息 (用于展示)
 export interface AccountStats {
+  siteDayUsage?: {
+    id: string
+    label: string
+    exchangeRate?: number
+    lastKnown: boolean
+    reportedDay?: string
+    observedAt?: number
+    window?: import("~/services/amounts/balance").BalancePosition["window"]
+    requests?: number
+    tokens?: number
+    cost?: import("~/services/amounts/balance").Amount
+    costCoverage?: import("~/services/amounts/usage").FinancialConsumptionFact["coverage"]
+  }[]
+  referenceTodayConsumption?: { quota: number; coverage: AccountMetricCoverage }
+  incomeProjection?: import("~/services/accounts/metrics/consumptionProjection").ConsumptionProjection
+  consumptionProjection?: import("~/services/accounts/metrics/consumptionProjection").ConsumptionProjection
+  balancePortfolio?: ReturnType<
+    typeof import("~/services/accounts/metrics/balanceProjection").getDisplayBalancePortfolio
+  >
   total_quota: number
   today_total_consumption: number
   today_total_requests: number
@@ -457,17 +509,12 @@ export const SORT_ORDERS = ["asc", "desc"] as const
 export type SortOrder = (typeof SORT_ORDERS)[number]
 
 // 货币类型
-export { CURRENCY_TYPES } from "~/constants/money"
-
-export type CurrencyDisplay = (typeof CURRENCY_DISPLAY_TYPES)[number]
+export { CURRENCY_TYPES, CURRENCY_DISPLAY_TYPES } from "~/constants/money"
 export type CurrencyType = (typeof CURRENCY_TYPES)[number]
+/** Original units or an explicitly selected monetary display currency. */
+export type CurrencyDisplay = (typeof CURRENCY_DISPLAY_TYPES)[number]
 
 export type CurrencyAmount = { USD: number; CNY: number }
-
-export type CurrencyMetricTotal = {
-  amount: CurrencyAmount
-  coverage: AccountMetricCoverage
-}
 
 export type CurrencyAmountMap = { [id: string]: CurrencyAmount }
 
@@ -475,6 +522,17 @@ export type TokenUsage = { upload: number; download: number }
 
 // 展示用的站点数据 (兼容当前 UI)
 export interface DisplaySiteData {
+  referenceConsumption?: import("~/services/accounts/metrics/consumptionProjection").ReferenceCashflow
+  referenceIncome?: import("~/services/accounts/metrics/consumptionProjection").ReferenceCashflow
+  reportedIncome?: import("~/services/amounts/income").FinancialIncomeFact[]
+  incomeProjection?: import("~/services/accounts/metrics/consumptionProjection").ConsumptionProjection
+  /** Native settled observations retain their interval and scope through presentation. */
+  settledConsumption?: import("~/services/amounts/usage").FinancialConsumptionFact[]
+  consumptionProjection?: import("~/services/accounts/metrics/consumptionProjection").ConsumptionProjection
+  /** Canonical reported facts and the independent optional manual selection. */
+  balanceSnapshot?: import("~/services/amounts/balance").BalanceSnapshot
+  allowances?: import("~/services/accounts/allowances").AccountAllowanceSnapshot
+  manualBalanceSnapshot?: import("~/services/amounts/balance").BalanceSnapshot
   /** Configured recharge conversion, independent of the current balance. */
   exchangeRate?: number
   id: string
@@ -486,15 +544,18 @@ export interface DisplaySiteData {
   name: string
   baseName?: string
   username: string
-  balance: CurrencyAmount
+  /** Read-only legacy fixture/input; current account projections expose balanceSnapshot. */
+  balance?: CurrencyAmount
   balanceUnavailable?: boolean
   nativeBalance?: AccountNativeBalance
   todayConsumption: CurrencyAmount
   todayIncome: CurrencyAmount
+  /** @deprecated Unverified legacy display input; new projections always emit null. */
   estimatedTodayIncome?: CurrencyAmount | null
   todayTokens: TokenUsage
   todayStatsAvailability: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
+  usageObservations?: AccountUsageSummary[]
   subscription?: AccountSubscriptionSummary
   recentUsageRecords?: AccountUsageRecord[]
   health: HealthStatus

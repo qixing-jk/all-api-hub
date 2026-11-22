@@ -1,3 +1,7 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
+import { CURRENCIES } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -6,6 +10,19 @@ import type {
   TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  OBSERVATION_STATUSES,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import type {
   AccessTokenInfo,
   UserInfo,
@@ -61,9 +78,12 @@ const logger = createLogger("ApiService.Sub2API")
 type Sub2ApiCurrentUser = {
   userId: number
   username: string
-  balanceUsd: number
-  quota: number
+  balanceUsd: unknown
+  financial: Pick<AccountData, "balance" | "balanceRefreshParts">
 }
+
+type Sub2ApiTodayObservation = TodayUsageDataWithAvailability &
+  Pick<AccountData, "usage">
 
 const createZeroTodayUsage = (
   reason: AccountTodayMetricReason,
@@ -92,9 +112,9 @@ const createSub2ApiIncomeAvailability = () =>
 const createAccountData = (
   currentUser: Sub2ApiCurrentUser,
   checkIn: CheckInConfig,
-  todayUsage: TodayUsageDataWithAvailability,
+  todayUsage: Sub2ApiTodayObservation,
 ): AccountData => ({
-  quota: currentUser.quota,
+  ...currentUser.financial,
   ...todayUsage,
   today_income: 0,
   todayStatsAvailability: {
@@ -129,7 +149,7 @@ const createHealthyHealthStatus = () => ({
 const createRefreshSuccessResult = (
   currentUser: Sub2ApiCurrentUser,
   checkIn: CheckInConfig,
-  todayUsage: TodayUsageDataWithAvailability,
+  todayUsage: Sub2ApiTodayObservation,
   authUpdate?: RefreshAccountResult["authUpdate"],
 ): RefreshAccountResult => ({
   success: true,
@@ -146,10 +166,10 @@ const fetchCurrentUserAndTodayUsage = async (
   request: ApiServiceAccountRequest,
 ): Promise<{
   currentUser: Sub2ApiCurrentUser
-  todayUsage: TodayUsageDataWithAvailability
+  todayUsage: Sub2ApiTodayObservation
 }> => {
   const currentUser = await fetchCurrentUserWithRequest(request)
-  let todayUsage = createZeroTodayUsage(
+  let todayUsage: Sub2ApiTodayObservation = createZeroTodayUsage(
     ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
   )
 
@@ -174,12 +194,37 @@ const fetchCurrentUserWithRequest = async (
 ): Promise<Sub2ApiCurrentUser> => {
   const jwtRequest = normalizeJwtRequest(request)
   const { identity } = await fetchSub2ApiAuthIdentity(jwtRequest)
+  const observedAt = Date.now()
+  const scope = accountBalanceScope(request, {
+    authority: new URL(resolveDeploymentApiOrigin(request.baseUrl)).origin,
+  })
 
   return {
     userId: identity.userId,
     username: identity.username,
     balanceUsd: identity.balanceUsd,
-    quota: identity.quota,
+    financial: accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "balance",
+          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+          scope,
+          observedAt,
+          value: identity.balanceUsd,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          nature: BALANCE_NATURES.Prepaid,
+          source: {
+            adapter: SITE_TYPES.SUB2API,
+            operation: `${SUB2API_AUTH_ME_ENDPOINT}:balance`,
+            contractVersion: "usd/v1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      observedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
   }
 }
 
@@ -290,7 +335,7 @@ const createSub2ApiUsageStatsEndpoint = (): string =>
  */
 const fetchTodayUsageWithRequest = async (
   request: ApiServiceAccountRequest,
-): Promise<TodayUsageDataWithAvailability> => {
+): Promise<Sub2ApiTodayObservation> => {
   if (request.includeTodayCashflow === false) {
     return createZeroTodayUsage(ACCOUNT_TODAY_METRIC_REASONS.NotCollected)
   }
@@ -306,13 +351,67 @@ const fetchTodayUsageWithRequest = async (
   })
   const data = parseSub2ApiEnvelope<Sub2ApiUsageStatsData>(body, endpoint)
 
-  return parseSub2ApiTodayUsage(data, endpoint)
+  const usage = parseSub2ApiTodayUsage(data, endpoint)
+  const observedAt = Date.now()
+  const source = {
+    adapter: SITE_TYPES.SUB2API,
+    operation: `${SUB2API_USAGE_STATS_ENDPOINT}:total_actual_cost`,
+    contractVersion: "usd/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  }
+  const amount = observeAmount(data.total_actual_cost, source, observedAt)
+  const unqualified = (
+    metric: (typeof usage.todayStatsAvailability)["consumption"],
+  ) =>
+    metric.status === ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+      ? metric
+      : ({
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        } as const)
+  return {
+    ...usage,
+    usage: {
+      scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+      ...(usage.todayStatsAvailability.requests.status ===
+      ACCOUNT_TODAY_METRIC_STATUSES.Complete
+        ? { totalRequests: usage.today_requests_count }
+        : {}),
+      ...(usage.todayStatsAvailability.tokens.status ===
+      ACCOUNT_TODAY_METRIC_STATUSES.Complete
+        ? {
+            totalTokens:
+              usage.today_prompt_tokens + usage.today_completion_tokens,
+          }
+        : {}),
+      cost: {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        amount,
+        scope: accountBalanceScope(request, {
+          authority: new URL(resolveDeploymentApiOrigin(request.baseUrl))
+            .origin,
+        }),
+      },
+    },
+    // period=today is evaluated in the server's unknown zone, not the caller's local day.
+    todayStatsAvailability: {
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason:
+          amount.status === OBSERVATION_STATUSES.Known
+            ? ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod
+            : ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+      },
+      requests: unqualified(usage.todayStatsAvailability.requests),
+      tokens: unqualified(usage.todayStatsAvailability.tokens),
+    },
+  }
 }
 
 /** Fetch today's Sub2API usage through the authenticated session lifecycle. */
 export async function fetchTodayUsage(
   request: ApiServiceAccountRequest,
-): Promise<TodayUsageDataWithAvailability> {
+): Promise<Sub2ApiTodayObservation> {
   if (request.includeTodayCashflow === false) {
     return createZeroTodayUsage(ACCOUNT_TODAY_METRIC_REASONS.NotCollected)
   }

@@ -187,7 +187,19 @@ describe("LaoZhang protocol dispatch", () => {
     })
     expect(result).toMatchObject({
       success: true,
-      data: { quota: 1500000, today_quota_consumption: 500000 },
+      data: {
+        balance: {
+          positions: [
+            expect.objectContaining({
+              amount: expect.objectContaining({
+                status: "known",
+                value: "3",
+              }),
+            }),
+          ],
+        },
+        today_quota_consumption: 500000,
+      },
     })
     expect(pages).toContain(0)
     expect(pages).toContain(1)

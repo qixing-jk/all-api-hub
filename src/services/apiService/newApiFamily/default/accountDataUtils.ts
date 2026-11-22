@@ -1,4 +1,5 @@
 import type { TodayUsageData } from "~/services/accounts/accountDataModel"
+import { addDecimal, parseDecimal } from "~/services/amounts/decimal"
 
 export interface TodayTimestampRange {
   start: number
@@ -17,8 +18,12 @@ export interface UsageAggregationCoverage {
   completionTokens: MetricAggregationCoverage
 }
 
-export interface AggregatedUsageData
-  extends Omit<TodayUsageData, "today_requests_count"> {
+export interface AggregatedUsageData extends Omit<
+  TodayUsageData,
+  "today_requests_count"
+> {
+  /** Exact native quota retained independently from the legacy numeric projection. */
+  nativeQuotaConsumption?: string
   coverage: UsageAggregationCoverage
 }
 
@@ -47,6 +52,9 @@ const cloneUsageAggregation = (
   aggregation: AggregatedUsageData,
 ): AggregatedUsageData => ({
   today_quota_consumption: aggregation.today_quota_consumption,
+  nativeQuotaConsumption:
+    aggregation.nativeQuotaConsumption ??
+    parseDecimal(aggregation.today_quota_consumption),
   today_prompt_tokens: aggregation.today_prompt_tokens,
   today_completion_tokens: aggregation.today_completion_tokens,
   coverage: {
@@ -126,12 +134,29 @@ export const aggregateUsageData = (
     }
 
     result.coverage.rows.validCount += 1
-    const consumption = {
-      value: result.today_quota_consumption,
-      coverage: result.coverage.consumption,
+    const quota = parseDecimal(item.quota)
+    if (quota === undefined) result.coverage.consumption.invalidCount += 1
+    else {
+      try {
+        const subtotal =
+          result.nativeQuotaConsumption === undefined
+            ? undefined
+            : addDecimal(result.nativeQuotaConsumption, quota)
+        const total =
+          subtotal === undefined
+            ? addFiniteValue(result.today_quota_consumption, Number(quota))
+            : Number(subtotal)
+        if (total === null) {
+          result.coverage.consumption.invalidCount += 1
+        } else {
+          result.nativeQuotaConsumption = subtotal
+          result.today_quota_consumption = total
+          result.coverage.consumption.validCount += 1
+        }
+      } catch {
+        result.coverage.consumption.invalidCount += 1
+      }
     }
-    addMetricValue(consumption, item.quota)
-    result.today_quota_consumption = consumption.value
 
     const promptTokens = {
       value: result.today_prompt_tokens,
@@ -213,6 +238,20 @@ export function extractAmount(
   text: string,
   exchangeRate: number,
 ): { currencySymbol: string; amount: number } | null {
+  const match = matchIncomeLogAmount(text)
+  if (!match) return null
+  const { currencySymbol, rawAmount } = match
+  let amount = parseFloat(rawAmount)
+
+  if (currencySymbol === "¥") {
+    amount = amount / exchangeRate
+  }
+
+  return { currencySymbol, amount }
+}
+
+/** Extract the amount before any display-rate conversion. */
+export function matchIncomeLogAmount(text: string) {
   const regex = /([\p{Sc}])\s*([\d,]+(?:\.\d+)?)/u
   const match = text.match(regex)
 
@@ -221,11 +260,5 @@ export function extractAmount(
   const currencySymbol = match[1]
   const rawAmount = match[2]
   if (currencySymbol === undefined || rawAmount === undefined) return null
-  let amount = parseFloat(rawAmount.replace(/,/g, ""))
-
-  if (currencySymbol === "¥") {
-    amount = amount / exchangeRate
-  }
-
-  return { currencySymbol, amount }
+  return { currencySymbol, rawAmount: rawAmount.replace(/,/g, "") }
 }

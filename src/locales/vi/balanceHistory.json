@@ -101,6 +101,8 @@
       "projects": "Dự án",
       "routes": "Tuyến"
     },
+    "expired": "Đã hết hạn",
+    "reset": "Đã đặt lại",
     "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {

@@ -102,6 +102,8 @@
       "projects": "Projects",
       "routes": "Routes"
     },
+    "expired": "Expired",
+    "reset": "Reset",
     "restrictions": "{{dimension}}: {{value}}"
   },
   "overview": {

@@ -73,12 +73,18 @@ vi.mock("~/services/apiService/newApiFamily/request", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/newApiFamily/default/accountDataUtils", () => ({
-  aggregateIncomeData: mockAggregateIncomeData,
-  aggregateUsageData: mockAggregateUsageData,
-  extractAmount: mockExtractAmount,
-  getTodayTimestampRange: mockGetTodayTimestampRange,
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/default/accountDataUtils",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/default/accountDataUtils")
+    >()),
+    aggregateIncomeData: mockAggregateIncomeData,
+    aggregateUsageData: mockAggregateUsageData,
+    extractAmount: mockExtractAmount,
+    getTodayTimestampRange: mockGetTodayTimestampRange,
+  }),
+)
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: vi.fn(() => ({
@@ -198,10 +204,10 @@ describe("newApiFamily accountData", () => {
     mockExtractAmount.mockReturnValue({ amount: 0 })
   })
 
-  it("fetchAccountQuota falls back to zero when quota is missing", async () => {
+  it("fetchAccountQuota preserves a missing native quota", async () => {
     mockFetchApiData.mockResolvedValueOnce({})
 
-    await expect(fetchAccountQuota(baseRequest)).resolves.toBe(0)
+    await expect(fetchAccountQuota(baseRequest)).resolves.toBeUndefined()
   })
 
   it("fetchTodayUsage short-circuits when cashflow collection is disabled", async () => {
@@ -210,7 +216,7 @@ describe("newApiFamily accountData", () => {
         ...baseRequest,
         includeTodayCashflow: false,
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -229,13 +235,15 @@ describe("newApiFamily accountData", () => {
       quota: 60,
     })
 
-    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+    await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
       today_quota_consumption: 60,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
       todayStatsAvailability: {
-        consumption: complete,
+        consumption: unavailable(
+          ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        ),
         requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
         tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       },
@@ -264,13 +272,15 @@ describe("newApiFamily accountData", () => {
         .mockResolvedValueOnce({ quota })
         .mockResolvedValueOnce({ items: [], total: 0 })
 
-      await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+      await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
         today_quota_consumption: 0,
         today_prompt_tokens: 0,
         today_completion_tokens: 0,
         today_requests_count: 0,
         todayStatsAvailability: {
-          consumption: complete,
+          consumption: unavailable(
+            ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+          ),
           requests: complete,
           tokens: complete,
         },
@@ -307,7 +317,9 @@ describe("newApiFamily accountData", () => {
       today_quota_consumption: 10,
       today_requests_count: 1,
       todayStatsAvailability: {
-        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        consumption: unavailable(
+          ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        ),
         requests: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
         tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
       },
@@ -369,7 +381,9 @@ describe("newApiFamily accountData", () => {
       today_completion_tokens: 8,
       today_requests_count: 2,
       todayStatsAvailability: {
-        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+        consumption: unavailable(
+          ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        ),
         requests: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
         tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
       },
@@ -409,7 +423,9 @@ describe("newApiFamily accountData", () => {
       today_completion_tokens: 3,
       today_requests_count: 2,
       todayStatsAvailability: {
-        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+        consumption: unavailable(
+          ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        ),
         requests: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
         tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
       },
@@ -500,7 +516,9 @@ describe("newApiFamily accountData", () => {
       today_completion_tokens: 3,
       today_requests_count: 1,
       todayStatsAvailability: {
-        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        consumption: unavailable(
+          ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        ),
         requests: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
         tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
       },
@@ -549,7 +567,7 @@ describe("newApiFamily accountData", () => {
         ...baseRequest,
         includeTodayCashflow: false,
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       today_income: 0,
       todayStatsAvailability: {
         income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
@@ -562,10 +580,10 @@ describe("newApiFamily accountData", () => {
       .mockResolvedValueOnce({ items: [], total: 0 })
       .mockRejectedValueOnce(new Error("system logs unavailable"))
 
-    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+    await expect(fetchTodayIncome(baseRequest)).resolves.toMatchObject({
       today_income: 0,
       todayStatsAvailability: {
-        income: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified),
       },
     })
   })
@@ -581,10 +599,10 @@ describe("newApiFamily accountData", () => {
         : { items: null, total: 0 }
     })
 
-    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+    await expect(fetchTodayIncome(baseRequest)).resolves.toMatchObject({
       today_income: 10,
       todayStatsAvailability: {
-        income: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified),
       },
     })
   })
@@ -594,7 +612,7 @@ describe("newApiFamily accountData", () => {
       .mockRejectedValueOnce(new Error("topup logs unavailable"))
       .mockRejectedValueOnce(new Error("system logs unavailable"))
 
-    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+    await expect(fetchTodayIncome(baseRequest)).resolves.toMatchObject({
       today_income: 0,
       todayStatsAvailability: {
         income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.RequestFailed),
@@ -660,7 +678,9 @@ describe("newApiFamily accountData", () => {
       }),
     ).resolves.toMatchObject({
       today_income: 375,
-      todayStatsAvailability: { income: complete },
+      todayStatsAvailability: {
+        income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified),
+      },
     })
 
     expect(mockExtractAmount).toHaveBeenCalledWith("recharge 3 USD", 9)
@@ -692,9 +712,21 @@ describe("newApiFamily accountData", () => {
 
     await expect(
       fetchTodayIncome({ ...baseRequest, exchangeRate: 7 }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       today_income: 400,
-      todayStatsAvailability: { income: complete },
+      reportedIncome: expect.arrayContaining([
+        expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ status: "known", value: "2.5001" }),
+        }),
+        expect.objectContaining({
+          asset: { kind: "currency", code: "CNY" },
+          amount: expect.objectContaining({ status: "known", value: "7" }),
+        }),
+      ]),
+      todayStatsAvailability: {
+        income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified),
+      },
     })
     expect(mockFetchApiData).toHaveBeenCalledTimes(3)
   })
@@ -722,9 +754,11 @@ describe("newApiFamily accountData", () => {
 
       await expect(
         fetchTodayIncome({ ...baseRequest, exchangeRate }),
-      ).resolves.toEqual({
+      ).resolves.toMatchObject({
         today_income: expectedIncome,
-        todayStatsAvailability: { income: complete },
+        todayStatsAvailability: {
+          income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified),
+        },
       })
     },
   )
@@ -843,7 +877,13 @@ describe("newApiFamily accountData", () => {
     })
 
     expect(result).toMatchObject({
-      quota: 321,
+      balance: expect.objectContaining({
+        positions: [
+          expect.objectContaining({
+            amount: expect.objectContaining({ value: "0.000642" }),
+          }),
+        ],
+      }),
       today_income: 0,
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
