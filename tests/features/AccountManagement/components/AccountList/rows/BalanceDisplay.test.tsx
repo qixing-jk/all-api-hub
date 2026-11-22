@@ -1560,6 +1560,35 @@ describe("BalanceDisplay", () => {
     expect(within(readings[1]!).getByText("12", { exact: true })).toBeVisible()
   })
 
+  it("removes legacy subscription units at expiry without a site update", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] })
+    vi.setSystemTime(new Date(2026, 10, 22, 12))
+    onTestFinished(() => vi.useRealTimers())
+    const site = buildDisplaySiteData({
+      allowances: { entries: [], coverage: FINANCIAL_COVERAGE.Complete },
+      subscription: {
+        status: subscriptionStatuses.Active,
+        remainingTokens: 123,
+        remainingCount: 7,
+        expireTime: new Date(Date.now() + 1000).toISOString(),
+      },
+    })
+    await render(<BalanceDisplay site={site} />)
+    expect(
+      screen.getByTitle(/account:stats.subscriptionRemainingTokens/),
+    ).toBeVisible()
+    expect(
+      screen.getByTitle(/account:stats.subscriptionRemainingCount/),
+    ).toBeVisible()
+    await act(async () => vi.advanceTimersByTime(1001))
+    expect(
+      screen.queryByTitle(/account:stats.subscriptionRemainingTokens/),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTitle(/account:stats.subscriptionRemainingCount/),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows a saved active subscription's last-known remaining units", () => {
     render(
       <BalanceDisplay

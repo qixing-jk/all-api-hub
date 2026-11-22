@@ -13,7 +13,10 @@ export function useBalanceAsOf(
   sites: ReadonlyArray<
     Pick<
       DisplaySiteData,
-      "balanceSnapshot" | "manualBalanceSnapshot" | "allowances"
+      | "balanceSnapshot"
+      | "manualBalanceSnapshot"
+      | "allowances"
+      | "subscription"
     >
   >,
 ): number {
@@ -21,6 +24,9 @@ export function useBalanceAsOf(
   const deadlines = useMemo(
     () =>
       sites.flatMap((site) => [
+        ...(site.subscription?.expireTime
+          ? [Date.parse(site.subscription.expireTime)]
+          : []),
         ...[site.balanceSnapshot, site.manualBalanceSnapshot].flatMap(
           (snapshot) =>
             snapshot?.positions.flatMap((position) => [
