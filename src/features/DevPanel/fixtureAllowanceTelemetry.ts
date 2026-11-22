@@ -1,3 +1,4 @@
+import { CURRENCIES } from "~/constants/money"
 /**
  * Synthetic telemetry snapshots for the dev panel's allowance fixtures.
  *
@@ -12,6 +13,16 @@
  */
 
 import { balancePosition, type UsageScope } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_CASH_CLASSIFICATIONS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialTelemetrySnapshot } from "~/types/apiCredentialProfiles"
 
@@ -19,15 +30,22 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-const USD = { kind: "money", currency: "USD", decimalPlaces: 2 } as const
+const USD = {
+  kind: MEASUREMENT_UNIT_KINDS.Money,
+  currency: CURRENCIES.USD,
+  decimalPlaces: 2,
+} as const
 const PROVIDER_QUOTA = {
-  kind: "quota",
+  kind: MEASUREMENT_UNIT_KINDS.Quota,
   code: "provider-quota",
   label: "Provider quota",
 } as const
-const PERCENT = { kind: "percent" } as const
-const REQUESTS = { kind: "count", code: "requests" } as const
-const TOKENS = { kind: "count", code: "tokens" } as const
+const PERCENT = { kind: MEASUREMENT_UNIT_KINDS.Percent } as const
+const REQUESTS = {
+  kind: MEASUREMENT_UNIT_KINDS.Count,
+  code: "requests",
+} as const
+const TOKENS = { kind: MEASUREMENT_UNIT_KINDS.Count, code: "tokens" } as const
 
 /** Builds a healthy snapshot whose values are already normalized facts. */
 function snapshot(
@@ -35,20 +53,8 @@ function snapshot(
   endpoint: string,
   facts: ApiCredentialTelemetrySnapshot["facts"],
   now: number,
-  profileId = "dev-allowance",
 ): ApiCredentialTelemetrySnapshot {
-  const observedAt = now - 3 * MINUTE
-  const scope: UsageScope = {
-    subject: { kind: "credential", profileId },
-    authority: "https://dev-allowance.invalid",
-    projects: { kind: "all" },
-    keys: { kind: "all" },
-    models: { kind: "all" },
-    groups: { kind: "all" },
-  }
-  const { balances, ...nativeFacts } = facts ?? {}
   return {
-    schemaVersion: 2,
     attempts: [
       {
         source: source!,
@@ -61,64 +67,7 @@ function snapshot(
     lastSyncTime: now - 3 * MINUTE,
     lastSuccessTime: now - 3 * MINUTE,
     source,
-    facts: {
-      ...nativeFacts,
-      ...(balances
-        ? {
-            balanceSnapshot: {
-              schemaVersion: 2,
-              subject: scope.subject,
-              capturedAt: observedAt,
-              coverage: "complete",
-              positions: balances.map((balance, index) =>
-                balancePosition({
-                  id: `fixture-wallet:${index}`,
-                  scope,
-                  asset:
-                    balance.unit.kind === "money"
-                      ? { kind: "currency", code: balance.unit.currency }
-                      : { kind: "unknown" },
-                  value: balance.amount,
-                  observedAt,
-                  cashClassification:
-                    balance.semantics === "cash" ? "reported-cash" : "unknown",
-                  source: {
-                    kind: "reported",
-                    adapter: source!,
-                    operation: endpoint,
-                    contractVersion: "dev-fixture/1",
-                  },
-                }),
-              ),
-            },
-          }
-        : {}),
-      ...(facts?.usage?.todayCost
-        ? {
-            usage: {
-              ...facts.usage,
-              todayCost: {
-                ...facts.usage.todayCost,
-                scope,
-                status: "known",
-                observedAt,
-                coverage: "complete",
-                source: {
-                  kind: "reported",
-                  adapter: source!,
-                  operation: endpoint,
-                  contractVersion: "dev-fixture/1",
-                },
-                window: {
-                  start: observedAt - DAY,
-                  end: observedAt,
-                  timeZone: "UTC",
-                },
-              },
-            },
-          }
-        : {}),
-    },
+    facts,
   }
 }
 
@@ -133,7 +82,7 @@ export type DevAllowanceFixtureDefinition = {
    */
   buildSnapshot: (
     now: number,
-    profileId?: string,
+    context?: { profileId: string; baseUrl: string },
   ) => ApiCredentialTelemetrySnapshot | undefined
 }
 
@@ -144,7 +93,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: 5h critical, weekly low",
       notes:
         "Dev fixture: synthetic coding-plan telemetry; this endpoint cannot be reached.",
-      buildSnapshot: (now, profileId) =>
+      buildSnapshot: (now) =>
         snapshot(
           "kimiQuota",
           "/coding/v1/usages",
@@ -185,7 +134,6 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             models: { count: 12, preview: ["claude-sonnet-5", "kimi-k2"] },
           },
           now,
-          profileId,
         ),
     },
     {
@@ -193,7 +141,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: monthly healthy",
       notes:
         "Dev fixture: synthetic coding-plan telemetry; this endpoint cannot be reached.",
-      buildSnapshot: (now, profileId) =>
+      buildSnapshot: (now) =>
         snapshot(
           "glmQuota",
           "/api/monitor/usage/quota/limit",
@@ -217,22 +165,70 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             },
           },
           now,
-          profileId,
         ),
     },
     {
       id: "balance-runway-critical",
       name: "Dev Allowance: balance runway critical",
       notes:
-        "Dev fixture: synthetic wallet telemetry; this endpoint cannot be reached.",
-      buildSnapshot: (now, profileId) =>
-        snapshot(
+        "Dev fixture: synthetic wallet telemetry with complete 24-hour spend; this endpoint cannot be reached.",
+      buildSnapshot: (now, context) => {
+        const observedAt = now - 3 * MINUTE
+        const scope: UsageScope = {
+          subject: {
+            kind: FINANCIAL_SUBJECT_KINDS.Credential,
+            profileId: context?.profileId ?? "balance-runway-critical",
+          },
+          authority: new URL(
+            context?.baseUrl ?? "https://dev-allowance.invalid",
+          ).origin,
+          projects: { kind: SCOPE_SELECTION_KINDS.All },
+          keys: { kind: SCOPE_SELECTION_KINDS.All },
+          models: { kind: SCOPE_SELECTION_KINDS.All },
+          groups: { kind: SCOPE_SELECTION_KINDS.All },
+        }
+        const source = {
+          adapter: "dev-fixture",
+          operation: "wallet-usage",
+          contractVersion: "1",
+          kind: EVIDENCE_KINDS.Reported,
+        } as const
+        return snapshot(
           "newApiTokenUsage",
           "/api/usage/token/",
           {
-            balances: [{ amount: 5.2, unit: USD, semantics: "cash" }],
+            balanceSnapshot: {
+              schemaVersion: 2,
+              subject: scope.subject,
+              capturedAt: observedAt,
+              coverage: FINANCIAL_COVERAGE.Complete,
+              positions: [
+                balancePosition({
+                  id: "wallet",
+                  scope,
+                  asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+                  value: "5.2",
+                  source,
+                  observedAt,
+                  cashClassification: BALANCE_CASH_CLASSIFICATIONS.ReportedCash,
+                }),
+              ],
+            },
             usage: {
-              todayCost: { value: 2.08, unit: USD },
+              todayCost: {
+                value: "2.08",
+                unit: USD,
+                scope,
+                source,
+                observedAt,
+                status: OBSERVATION_STATUSES.Known,
+                coverage: FINANCIAL_COVERAGE.Complete,
+                window: {
+                  start: observedAt - DAY,
+                  end: observedAt,
+                  timeZone: "UTC",
+                },
+              },
               todayRequests: { value: 340, unit: REQUESTS },
               totalUsed: { value: 94.8, unit: USD },
               totalGranted: { value: 100, unit: USD },
@@ -240,15 +236,15 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             models: { count: 34, preview: ["gpt-5", "claude-sonnet-5"] },
           },
           now,
-          profileId,
-        ),
+        )
+      },
     },
     {
       id: "balance-without-spend",
       name: "Dev Allowance: balance without spend",
       notes:
         "Dev fixture: synthetic wallet telemetry with no cost reported, so no runway is estimated.",
-      buildSnapshot: (now, profileId) =>
+      buildSnapshot: (now) =>
         snapshot(
           "deepSeekBalance",
           "/user/balance",
@@ -257,7 +253,6 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             usage: { todayRequests: { value: 12, unit: REQUESTS } },
           },
           now,
-          profileId,
         ),
     },
     {
@@ -265,7 +260,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: percent-only window",
       notes:
         "Dev fixture: synthetic telemetry that reports a percentage without absolute amounts.",
-      buildSnapshot: (now, profileId) =>
+      buildSnapshot: (now) =>
         snapshot(
           "openCodeGoUsage",
           "/v1/usage",
@@ -282,7 +277,6 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             },
           },
           now,
-          profileId,
         ),
     },
     {

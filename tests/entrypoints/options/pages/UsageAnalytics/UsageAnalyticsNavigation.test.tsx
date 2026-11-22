@@ -98,7 +98,7 @@ describe("UsageAnalytics navigation", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
@@ -167,7 +167,7 @@ describe("UsageAnalytics navigation", () => {
         promptTokens: 10,
         completionTokens: 5,
         totalTokens: 15,
-        quotaConsumed: 3,
+        referenceCostUsd: 0.000006,
       }
       vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
         schemaVersion: 2,

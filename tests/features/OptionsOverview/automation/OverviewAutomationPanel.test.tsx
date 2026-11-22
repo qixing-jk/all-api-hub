@@ -12,6 +12,7 @@ import {
   OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS,
   OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS,
   OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
 } from "~/features/OptionsOverview/ids"
 import type {
   OptionsOverviewAutoCheckinPanel,
@@ -26,7 +27,7 @@ const t = ((key: string) => key) as TFunction
 function createAutoCheckinItem(): OptionsOverviewAutomationItem {
   const panel: OptionsOverviewAutoCheckinPanel = {
     status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.partial,
-    severity: "warning",
+    severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
     totalEligible: 5,
     executed: 5,
     successCount: 4,
@@ -82,7 +83,7 @@ function createNotRunAutoCheckinItem(): OptionsOverviewAutomationItem {
   const panel: OptionsOverviewAutoCheckinPanel = {
     ...item.autoCheckinPanel!,
     status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.notRun,
-    severity: "info",
+    severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
     totalEligible: 0,
     executed: 0,
     successCount: 0,

@@ -19,25 +19,25 @@
         "ariaLabel": "Diagrammtyp",
         "histogram": "Histogramm",
         "pie": "Kreisdiagramm"
-      }
+      },
+      "costUnit": "Kosteneinheit"
     },
     "dailyOverview": {
       "axes": {
         "requests": "Anfragen",
-        "tokens": "Token / Kontingent"
+        "tokens": "Token"
       },
       "description": "Multimetrische Trends mit Tooltip und Zoom.",
       "series": {
         "completionTokens": "Abschlusstoken",
         "promptTokens": "Prompt-Tokens",
-        "quota": "Kontingent",
         "requests": "Anfragen",
         "totalTokens": "Gesamtzahl der Token"
       },
       "title": "Tagesübersicht"
     },
     "latencyHistogram": {
-      "description": "Histogramm der Latenz pro Anfrage (`use_time`) für die aktuelle Auswahl.",
+      "description": "Histogramm der Latenz pro Anfrage für die aktuelle Auswahl.",
       "series": {
         "count": "Anzahl"
       },
@@ -57,11 +57,12 @@
       "title": "Latenztrend"
     },
     "modelCostDistribution": {
-      "description": "Topmodelle nach Quotenverbrauch (umgerechnet in USD) im ausgewählten Datumsbereich.",
+      "description": "Abgerechnete Modellkosten nach Einheit.",
       "series": {
-        "usd": "Kosten (USD)"
+        "native": "Abgerechneter Verbrauch"
       },
-      "title": "Modellkostenverteilung"
+      "title": "Verbrauch nach Modell",
+      "unavailable": "Für diese Auswahl gibt es keine abgerechneten Modellkosten."
     },
     "modelDistribution": {
       "description": "Topmodelle nach Gesamtzahl der Token im ausgewählten Datumsbereich.",
@@ -116,7 +117,7 @@
     "sitesHint": "Wählen Sie eine Teilmenge der Websites aus (eine leere Auswahl bedeutet alle).",
     "startDay": "Startdatum",
     "tokens": "API-Tokens",
-    "tokensHint": "Optionaler Token-Filter, abgeleitet aus Nutzungsverlaufsaggregaten (leere Auswahl bedeutet alle innerhalb ausgewählter Konten).",
+    "tokensHint": "Erfasste Anfragen nach API-Schlüssel filtern (keine Auswahl bedeutet alle Schlüssel der ausgewählten Konten).",
     "unknownToken": "Unbekanntes Token"
   },
   "hover": {
@@ -125,13 +126,15 @@
     "owners": "Konten",
     "site": "Website",
     "token": "Token",
-    "type": "Typ",
     "url": "URL"
   },
   "messages": {
     "error": {
       "exportFailed": "Export fehlgeschlagen: {{error}}",
       "exportNoData": "Keine zu exportierenden Daten für die aktuelle Auswahl",
+      "lastLoadedDescription": "Die zuletzt geladene Historie wird angezeigt. Erneutes Laden fehlgeschlagen; zum Aktualisieren erneut versuchen.",
+      "loadDescription": "Gespeicherte Daten wurden nicht ersetzt. Erneut versuchen oder eine kompatible App-Version verwenden.",
+      "loadTitle": "Historie konnte nicht geladen werden",
       "settingsSaveFailed": "Einstellungen konnten nicht gespeichert werden: {{error}}",
       "syncFailed": "Synchronisierung fehlgeschlagen: {{error}}"
     },
@@ -174,10 +177,14 @@
   },
   "summary": {
     "completionTokens": "Abschlusstoken",
-    "cost": "Kosten",
+    "cost": "Erfasste Kosten",
+    "partial": "Einige Kosten fehlen möglicherweise.",
     "promptTokens": "Prompt-Tokens",
+    "referenceCost": "Referenzkosten",
+    "referenceHint": "Erfasste und umgerechnete Kosten können dieselben Anfragen umfassen.",
     "requests": "Anfragen",
-    "totalTokens": "Gesamtzahl der Token"
+    "totalTokens": "Gesamtzahl der Token",
+    "unpriced": "Keine erfassten Kosten"
   },
   "syncTab": {
     "actions": {

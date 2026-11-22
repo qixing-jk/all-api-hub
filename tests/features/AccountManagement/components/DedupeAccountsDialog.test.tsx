@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import { scanDuplicateAccounts } from "~/services/accounts/identity/accountDedupe"
+import { FINANCIAL_COVERAGE } from "~/services/amounts/financialConstants"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -17,6 +18,7 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
+import { buildFinancialPeriodFact } from "~~/tests/test-utils/accountTodayStats"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
@@ -46,6 +48,13 @@ const accounts = [
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_quota_consumption: 123,
+      settledConsumption: [
+        buildFinancialPeriodFact({
+          accountId: "acc-keep",
+          value: "123",
+          coverage: FINANCIAL_COVERAGE.Partial,
+        }),
+      ],
       today_requests_count: 456,
       today_income: 0,
       todayStatsAvailability: {
@@ -506,9 +515,9 @@ describe("DedupeAccountsDialog", () => {
     expect(keepRadio).toBeChecked()
 
     expect(
-      await screen.findByText("ui:dialog.dedupeAccounts.details.accountId"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("acc-keep")).toBeInTheDocument()
+      screen.queryByText("ui:dialog.dedupeAccounts.details.accountId"),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("acc-keep")).not.toBeInTheDocument()
     expect(screen.getByText("keep notes")).toBeInTheDocument()
     expect(screen.getByText("https://checkin.example.com")).toBeInTheDocument()
 

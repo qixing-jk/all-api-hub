@@ -393,13 +393,16 @@
       "title": "No usage recorded yet"
     },
     "noRecentActivity": "No recent usage recorded.",
+    "requests": "Requests",
     "requestShare": "Request share",
     "sevenDayRequests": "7-day requests",
     "sevenDayTokens": "7-day tokens",
+    "siteDay": "Usage by site day",
     "todayCost": "Today cost",
     "todayRequests": "Today requests",
     "todayShare": "Today's share of the latest 7 days",
     "todayTokens": "Today tokens",
+    "tokens": "Tokens",
     "tokenShare": "Token share"
   }
 }

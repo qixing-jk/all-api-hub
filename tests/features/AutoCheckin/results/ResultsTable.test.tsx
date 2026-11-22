@@ -794,7 +794,7 @@ describe("AutoCheckin ResultsTable", () => {
     expect(screen.getByText("+500,000 quota")).toBeVisible()
     expect(screen.getByText("Recorded by an older version")).toBeVisible()
     expect(
-      screen.queryByText("Older record; refresh to confirm"),
+      screen.queryByText(accountLocale.financial.legacy),
     ).not.toBeInTheDocument()
     await user.click(
       screen.getByText(autoCheckinLocale.execution.awards.details),

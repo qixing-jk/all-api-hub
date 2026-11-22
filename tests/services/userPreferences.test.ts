@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
@@ -33,6 +34,53 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 
 describe("userPreferences", () => {
+  it("saves all three currency modes and retains a reference currency in original mode", async () => {
+    await userPreferences.resetDisplaySettings()
+    await userPreferences.updateCurrencyDisplay(CURRENCIES.CNY)
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      currencyDisplay: "CNY",
+      currencyType: "CNY",
+    })
+    await userPreferences.updateCurrencyDisplay(CURRENCY_DISPLAY_MODES.Original)
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      currencyDisplay: "original",
+      currencyType: "CNY",
+    })
+    await userPreferences.updateCurrencyType(CURRENCIES.USD)
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      currencyDisplay: "USD",
+      currencyType: "USD",
+    })
+    await userPreferences.resetDisplaySettings()
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      currencyDisplay: "original",
+      currencyType: "USD",
+    })
+  })
+  it("defaults new preferences to original currencies while preserving saved currency choices", async () => {
+    const storage = new Storage({ area: "local" })
+    await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      currencyDisplay: "original",
+      currencyType: "USD",
+    })
+    for (const currencyType of [CURRENCIES.USD, CURRENCIES.CNY] as const) {
+      for (const preferencesVersion of [30, 31]) {
+        const saved = {
+          ...createDefaultPreferences(),
+          currencyType,
+          preferencesVersion,
+        }
+        delete (saved as Partial<typeof saved> & { currencyDisplay?: unknown })
+          .currencyDisplay
+        await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, saved)
+        expect(await userPreferences.getPreferences()).toMatchObject({
+          currencyType,
+          currencyDisplay: currencyType,
+        })
+      }
+    }
+  })
   it("persists a rule replacement, rejects invalid edits and reenables only the chosen origin", async () => {
     await userPreferences.resetWebAiApiCheck()
     const original = {
@@ -306,7 +354,7 @@ describe("userPreferences", () => {
   it("merges gpt-load connection fields and resets only its own config", async () => {
     await userPreferences.savePreferences({
       gptLoad: { baseUrl: "http://gateway.lan", managementKey: "old" },
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
     })
     expect(
       (
@@ -353,7 +401,7 @@ describe("userPreferences", () => {
   it("merges appearance edits without discarding other choices or settings", async () => {
     await userPreferences.savePreferences({
       appearance: { color: THEME_COLOR.ROSE, radius: THEME_RADIUS.LARGE },
-      currencyType: "CNY",
+      currencyType: CURRENCIES.CNY,
     })
     await userPreferences.savePreferences({
       appearance: { radius: THEME_RADIUS.SMALL },
@@ -710,7 +758,7 @@ describe("userPreferences", () => {
       const setSpy = vi.spyOn(storage, "set")
 
       const result = await userPreferences.savePreferencesWithResult({
-        currencyType: "CNY",
+        currencyType: CURRENCIES.CNY,
       })
 
       expect(result).toEqual({
@@ -816,7 +864,7 @@ describe("userPreferences", () => {
     it("replaces only the prompt subtree when other preference writes land beside it", async () => {
       const structuredOutput = API_VERIFICATION_PROBE_IDS.StructuredOutput
 
-      await userPreferences.savePreferences({ currencyType: "CNY" })
+      await userPreferences.savePreferences({ currencyType: CURRENCIES.CNY })
       await saveProbePromptOverrides({
         [structuredOutput]: "Return JSON.",
       })

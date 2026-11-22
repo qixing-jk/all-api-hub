@@ -16,6 +16,7 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_THEME_MODE } from "~/constants/theme"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -232,7 +233,11 @@ export const UserPreferencesProvider = ({
     preferences,
     isLoading,
     activeTab: preferences?.activeTab || DATA_TYPE_CASHFLOW,
-    currencyType: preferences?.currencyType || "USD",
+    currencyType: preferences?.currencyType || CURRENCIES.USD,
+    currencyDisplay:
+      preferences?.currencyDisplay ??
+      preferences?.currencyType ??
+      CURRENCY_DISPLAY_MODES.Original,
     showTodayCashflow: preferences?.showTodayCashflow ?? true,
     sortField:
       preferences?.sortField === undefined

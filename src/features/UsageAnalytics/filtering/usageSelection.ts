@@ -1,19 +1,33 @@
 import {
+  addToAggregate,
+  addToLatencyAggregate,
   createEmptyUsageHistoryAggregate,
   createEmptyUsageHistoryLatencyAggregate,
+  getOrCreateAggregate,
+  getOrCreateLatencyAggregate,
 } from "~/services/history/usageHistory/core"
-import type {
-  UsageHistoryAggregate,
-  UsageHistoryExport,
-  UsageHistoryLatencyAggregate,
+import {
+  UNKNOWN_USAGE_TOKEN_ID,
+  type UsageHistoryAggregate,
+  type UsageHistoryExport,
+  type UsageHistoryLatencyAggregate,
 } from "~/types/usageHistory"
+
+/** Label the same usage token in filters and latency summaries. */
+export function formatUsageTokenLabel(
+  tokenId: string,
+  tokenName: string | undefined,
+  unknownLabel: string,
+): string {
+  if (tokenId === UNKNOWN_USAGE_TOKEN_ID) return unknownLabel
+  return tokenName ? `${tokenName} (#${tokenId})` : `#${tokenId}`
+}
 
 type UsageAnalyticsTokenSelection = string[]
 
 interface UsageAnalyticsModelTotalsRow {
   modelName: string
   totalTokens: number
-  quotaConsumed: number
 }
 
 interface UsageAnalyticsSlowTotalsRow {
@@ -28,90 +42,18 @@ interface UsageAnalyticsAccountTotalsRow {
   accountLabel: string
   totalTokens: number
   requests: number
-  quotaConsumed: number
-}
-
-/**
- * Merge numeric usage aggregates in-place.
- *
- * This intentionally mirrors the aggregation semantics in `~/services/history/usageHistory/analytics`
- * but is kept local to the UI layer to avoid coupling chart helpers to the export builder.
- */
-function addToAggregate(
-  target: UsageHistoryAggregate,
-  delta: UsageHistoryAggregate,
-) {
-  target.requests += delta.requests
-  target.promptTokens += delta.promptTokens
-  target.completionTokens += delta.completionTokens
-  target.totalTokens += delta.totalTokens
-  target.quotaConsumed += delta.quotaConsumed
-}
-
-/**
- * Return an aggregate bucket for `key`, creating it when missing.
- */
-function getOrCreateAggregate(
-  map: Record<string, UsageHistoryAggregate>,
-  key: string,
-): UsageHistoryAggregate {
-  const existing = map[key]
-  if (existing) return existing
-  const created = createEmptyUsageHistoryAggregate()
-  map[key] = created
-  return created
-}
-
-/**
- * Merge bounded latency aggregates in-place, padding histogram buckets for forward-compatibility.
- *
- * The usage-history schema may grow additional latency buckets over time; UI aggregation should
- * keep working even when it encounters longer bucket arrays from newer data.
- */
-function addToLatencyAggregate(
-  target: UsageHistoryLatencyAggregate,
-  delta: UsageHistoryLatencyAggregate,
-) {
-  target.count += delta.count
-  target.sum += delta.sum
-  target.max = Math.max(target.max, delta.max)
-  target.slowCount += delta.slowCount
-  target.unknownCount += delta.unknownCount
-
-  const maxLength = Math.max(target.buckets.length, delta.buckets.length)
-  if (target.buckets.length < maxLength) {
-    target.buckets = target.buckets.concat(
-      Array.from({ length: maxLength - target.buckets.length }, () => 0),
-    )
-  }
-
-  for (let index = 0; index < maxLength; index += 1) {
-    target.buckets[index] =
-      (target.buckets[index] ?? 0) + (delta.buckets[index] ?? 0)
-  }
-}
-
-/**
- * Return a latency aggregate bucket for `key`, creating it when missing.
- */
-function getOrCreateLatencyAggregate(
-  map: Record<string, UsageHistoryLatencyAggregate>,
-  key: string,
-): UsageHistoryLatencyAggregate {
-  const existing = map[key]
-  if (existing) return existing
-  const created = createEmptyUsageHistoryLatencyAggregate()
-  map[key] = created
-  return created
+  referenceCostUsd?: number
 }
 
 /**
  * Stable Top-N selection with an optional `Other` bucket.
+ * Cost distributions can retain nonpositive tails; count-based callers omit them by default.
  */
 export function topNWithOther<T extends { key: string; value: number }>(
   items: T[],
   n: number,
   otherLabel = "Other",
+  includeNonPositiveOther = false,
 ): Array<T | { key: string; value: number }> {
   const safeN = Math.max(0, Math.trunc(n))
   const sorted = [...items].sort((a, b) => {
@@ -124,7 +66,7 @@ export function topNWithOther<T extends { key: string; value: number }>(
   const rest = sorted.slice(safeN)
   const otherValue = rest.reduce((sum, item) => sum + item.value, 0)
 
-  if (otherValue > 0) {
+  if (otherValue > 0 || (includeNonPositiveOther && rest.length > 0)) {
     return [...top, { key: otherLabel, value: otherValue }]
   }
 
@@ -337,7 +279,6 @@ export function getModelTotalsRows(params: {
   const rows = Object.entries(byModel).map(([modelName, aggregate]) => ({
     modelName,
     totalTokens: aggregate.totalTokens,
-    quotaConsumed: aggregate.quotaConsumed,
   }))
 
   rows.sort((a, b) => {
@@ -351,7 +292,6 @@ export function getModelTotalsRows(params: {
   const rest = rows.slice(safeTopN)
 
   const otherTokens = rest.reduce((sum, row) => sum + row.totalTokens, 0)
-  const otherQuota = rest.reduce((sum, row) => sum + row.quotaConsumed, 0)
 
   if (otherTokens > 0) {
     return [
@@ -359,7 +299,6 @@ export function getModelTotalsRows(params: {
       {
         modelName: otherLabel,
         totalTokens: otherTokens,
-        quotaConsumed: otherQuota,
       },
     ]
   }
@@ -463,15 +402,10 @@ export function getSlowTokenRows(params: {
 
   return topNWithOther(items, topN, otherLabel).map((item) => {
     const tokenId = item.key
-    const tokenName = tokenNamesById[tokenId]
     const label =
       tokenId === otherLabel
         ? otherLabel
-        : tokenId === "unknown"
-          ? unknownLabel
-          : tokenName
-            ? `${tokenName} (#${tokenId})`
-            : `#${tokenId}`
+        : formatUsageTokenLabel(tokenId, tokenNamesById[tokenId], unknownLabel)
 
     return {
       key: tokenId,
@@ -521,7 +455,7 @@ export function getAccountTotalsRows(params: {
       accountLabel: accountLabels[accountId] ?? accountId,
       totalTokens: totals.totalTokens,
       requests: totals.requests,
-      quotaConsumed: totals.quotaConsumed,
+      referenceCostUsd: totals.referenceCostUsd,
     })
   }
 

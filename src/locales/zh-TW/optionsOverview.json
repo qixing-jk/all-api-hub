@@ -384,13 +384,16 @@
       "title": "還沒有用量記錄"
     },
     "noRecentActivity": "暫無近期用量記錄。",
+    "requests": "請求",
     "requestShare": "請求占比",
     "sevenDayRequests": "近 7 日請求",
     "sevenDayTokens": "近 7 日 Token",
+    "siteDay": "按站點統計日的用量",
     "todayCost": "今日消耗",
     "todayRequests": "今日請求",
     "todayShare": "今日在近 7 日中的占比",
     "todayTokens": "今日 Token",
+    "tokens": "Token",
     "tokenShare": "Token 占比"
   }
 }

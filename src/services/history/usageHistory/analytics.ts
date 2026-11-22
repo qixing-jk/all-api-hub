@@ -9,8 +9,12 @@ import { USAGE_HISTORY_EXPORT_SCHEMA_VERSION } from "~/types/usageHistory"
 import { parseDayKey } from "~/utils/core/dayKey"
 
 import {
+  addToAggregate,
+  addToLatencyAggregate,
   createEmptyUsageHistoryAggregate,
   createEmptyUsageHistoryLatencyAggregate,
+  getOrCreateAggregate,
+  getOrCreateLatencyAggregate,
 } from "./core"
 
 /**
@@ -18,78 +22,6 @@ import {
  */
 function isDayKey(value: string): boolean {
   return Boolean(parseDayKey(value))
-}
-
-/**
- * Merge numeric aggregates in-place.
- */
-function addToAggregate(
-  target: UsageHistoryAggregate,
-  delta: UsageHistoryAggregate,
-) {
-  target.requests += delta.requests
-  target.promptTokens += delta.promptTokens
-  target.completionTokens += delta.completionTokens
-  target.totalTokens += delta.totalTokens
-  target.quotaConsumed += delta.quotaConsumed
-}
-
-/**
- * Merge bounded latency aggregates in-place.
- */
-function addToLatencyAggregate(
-  target: UsageHistoryLatencyAggregate,
-  delta: UsageHistoryLatencyAggregate,
-) {
-  target.count += delta.count
-  target.sum += delta.sum
-  target.max = Math.max(target.max, delta.max)
-  target.slowCount += delta.slowCount
-  target.unknownCount += delta.unknownCount
-
-  const maxLength = Math.max(target.buckets.length, delta.buckets.length)
-  if (target.buckets.length < maxLength) {
-    target.buckets = target.buckets.concat(
-      Array.from({ length: maxLength - target.buckets.length }, () => 0),
-    )
-  }
-
-  for (let index = 0; index < maxLength; index += 1) {
-    target.buckets[index] =
-      (target.buckets[index] ?? 0) + (delta.buckets[index] ?? 0)
-  }
-}
-
-/**
- * Return the aggregate bucket for a key, creating it when missing.
- */
-function getOrCreateAggregate(
-  map: Record<string, UsageHistoryAggregate>,
-  key: string,
-): UsageHistoryAggregate {
-  const existing = map[key]
-  if (existing) {
-    return existing
-  }
-  const created = createEmptyUsageHistoryAggregate()
-  map[key] = created
-  return created
-}
-
-/**
- * Return the latency aggregate bucket for a key, creating it when missing.
- */
-function getOrCreateLatencyAggregate(
-  map: Record<string, UsageHistoryLatencyAggregate>,
-  key: string,
-): UsageHistoryLatencyAggregate {
-  const existing = map[key]
-  if (existing) {
-    return existing
-  }
-  const created = createEmptyUsageHistoryLatencyAggregate()
-  map[key] = created
-  return created
 }
 
 /**

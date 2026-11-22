@@ -4,7 +4,10 @@ import { Storage } from "@plasmohq/storage"
 
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import { USAGE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/usageHistory"
+import {
+  USAGE_HISTORY_STORE_SCHEMA_VERSION,
+  USAGE_HISTORY_SYNC_STATES,
+} from "~/types/usageHistory"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("usageHistoryStorage", () => {
@@ -14,11 +17,43 @@ describe("usageHistoryStorage", () => {
     await storage.remove(USAGE_HISTORY_STORAGE_KEYS.STORE)
   })
 
+  it("preserves recorded zero reference cost across migration and reload", async () => {
+    const storage = new Storage({ area: "local" })
+    await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, {
+      schemaVersion: 1,
+      accounts: {
+        account: {
+          daily: {
+            "2026-03-27": { requests: 1, quotaConsumed: 0 },
+            "2026-03-28": { requests: 1 },
+            "2026-03-29": { requests: 1, quotaConsumed: null },
+          },
+          dailyByModel: {
+            test: { "2026-03-27": { requests: 1, quotaConsumed: 0 } },
+          },
+        },
+      },
+    })
+
+    for (const store of [
+      await usageHistoryStorage.getStore(),
+      await usageHistoryStorage.getStore(),
+    ]) {
+      const account = atIndex(store.accounts, "account")
+      expect(account.daily["2026-03-27"]?.referenceCostUsd).toBe(0)
+      expect(account.daily["2026-03-28"]?.referenceCostUsd).toBeUndefined()
+      expect(account.daily["2026-03-29"]?.referenceCostUsd).toBeUndefined()
+      expect(account.dailyByModel.test?.["2026-03-27"]?.referenceCostUsd).toBe(
+        0,
+      )
+    }
+  })
+
   it("sanitizes malformed persisted account data into the current store shape", async () => {
     const storage = new Storage({ area: "local" })
 
     await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, {
-      schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
+      schemaVersion: 2,
       accounts: {
         "": {
           daily: {
@@ -31,7 +66,7 @@ describe("usageHistoryStorage", () => {
             fingerprintsAtLastSeenCreatedAt: ["fp-1", "", "  ", 42],
           },
           status: {
-            state: "error",
+            state: USAGE_HISTORY_SYNC_STATES.Error,
             lastSyncAt: 100,
             lastSuccessAt: "bad",
             lastWarning: 1,
@@ -217,7 +252,7 @@ describe("usageHistoryStorage", () => {
         promptTokens: 4,
         completionTokens: 0,
         totalTokens: 7,
-        quotaConsumed: 8,
+        referenceCostUsd: 0.000016,
       },
     })
     expect(account.hourly).toEqual({
@@ -227,7 +262,7 @@ describe("usageHistoryStorage", () => {
           promptTokens: 2,
           completionTokens: 3,
           totalTokens: 5,
-          quotaConsumed: 4,
+          referenceCostUsd: 0.000008,
         },
       },
     })
@@ -238,7 +273,7 @@ describe("usageHistoryStorage", () => {
           promptTokens: 3,
           completionTokens: 4,
           totalTokens: 7,
-          quotaConsumed: 5,
+          referenceCostUsd: 0.00001,
         },
       },
     })
@@ -252,7 +287,7 @@ describe("usageHistoryStorage", () => {
           promptTokens: 0,
           completionTokens: 1,
           totalTokens: 1,
-          quotaConsumed: 2,
+          referenceCostUsd: 0.000004,
         },
       },
     })
@@ -264,7 +299,7 @@ describe("usageHistoryStorage", () => {
             promptTokens: 1,
             completionTokens: 1,
             totalTokens: 2,
-            quotaConsumed: 3,
+            referenceCostUsd: 0.000006,
           },
         },
       },
@@ -277,7 +312,7 @@ describe("usageHistoryStorage", () => {
             promptTokens: 2,
             completionTokens: 1,
             totalTokens: 3,
-            quotaConsumed: 4,
+            referenceCostUsd: 0.000008,
           },
         },
       },
@@ -339,14 +374,14 @@ describe("usageHistoryStorage", () => {
               promptTokens: 1,
               completionTokens: 1,
               totalTokens: 2,
-              quotaConsumed: 1,
+              referenceCostUsd: 0.000002,
             },
             "2026-03-27": {
               requests: 2,
               promptTokens: 2,
               completionTokens: 2,
               totalTokens: 4,
-              quotaConsumed: 2,
+              referenceCostUsd: 0.000004,
             },
           },
           hourly: {
@@ -356,7 +391,7 @@ describe("usageHistoryStorage", () => {
                 promptTokens: 1,
                 completionTokens: 1,
                 totalTokens: 2,
-                quotaConsumed: 1,
+                referenceCostUsd: 0.000002,
               },
             },
             "2026-03-27": {
@@ -365,7 +400,7 @@ describe("usageHistoryStorage", () => {
                 promptTokens: 2,
                 completionTokens: 2,
                 totalTokens: 4,
-                quotaConsumed: 2,
+                referenceCostUsd: 0.000004,
               },
             },
           },
@@ -380,7 +415,7 @@ describe("usageHistoryStorage", () => {
                 promptTokens: 0,
                 completionTokens: 0,
                 totalTokens: 0,
-                quotaConsumed: 1,
+                referenceCostUsd: 0.000002,
               },
             },
             keep: {
@@ -389,7 +424,7 @@ describe("usageHistoryStorage", () => {
                 promptTokens: 0,
                 completionTokens: 0,
                 totalTokens: 0,
-                quotaConsumed: 1,
+                referenceCostUsd: 0.000002,
               },
             },
           },
@@ -456,7 +491,7 @@ describe("usageHistoryStorage", () => {
           promptTokens: 2,
           completionTokens: 2,
           totalTokens: 4,
-          quotaConsumed: 2,
+          referenceCostUsd: 0.000004,
         },
       })
       expect(accountAfterPrune.hourly).toEqual({
@@ -466,7 +501,7 @@ describe("usageHistoryStorage", () => {
             promptTokens: 2,
             completionTokens: 2,
             totalTokens: 4,
-            quotaConsumed: 2,
+            referenceCostUsd: 0.000004,
           },
         },
       })
@@ -477,7 +512,7 @@ describe("usageHistoryStorage", () => {
             promptTokens: 0,
             completionTokens: 0,
             totalTokens: 0,
-            quotaConsumed: 1,
+            referenceCostUsd: 0.000002,
           },
         },
       })
@@ -509,7 +544,7 @@ describe("usageHistoryStorage", () => {
     },
   )
 
-  it("returns empty stores for invalid payloads and read failures", async () => {
+  it("reports unsupported schemas and read failures instead of presenting empty history", async () => {
     const storage = new Storage({ area: "local" })
 
     await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, {
@@ -519,19 +554,15 @@ describe("usageHistoryStorage", () => {
       },
     })
 
-    await expect(usageHistoryStorage.getStore()).resolves.toEqual({
-      schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
-      accounts: {},
-    })
+    await expect(usageHistoryStorage.getStore()).rejects.toThrow(
+      "Unsupported usage history schema",
+    )
 
     vi.spyOn((usageHistoryStorage as any).storage, "get").mockRejectedValueOnce(
       new Error("read failed"),
     )
 
-    await expect(usageHistoryStorage.getStore()).resolves.toEqual({
-      schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
-      accounts: {},
-    })
+    await expect(usageHistoryStorage.getStore()).rejects.toThrow("read failed")
   })
 
   it("does not update or overwrite usage history when the read fails", async () => {
@@ -566,4 +597,74 @@ describe("usageHistoryStorage", () => {
       false,
     )
   })
+})
+
+it("rejects unknown usage-history schema without overwriting it", async () => {
+  const storage = new Storage({ area: "local" })
+  const payload = {
+    schemaVersion: 99,
+    accounts: { future: { opaque: "keep" } },
+  }
+  await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, payload)
+  await expect(usageHistoryStorage.getStore()).rejects.toThrow(
+    "Unsupported usage history schema",
+  )
+  await expect(usageHistoryStorage.updateStore(() => {})).rejects.toThrow(
+    "Unsupported usage history schema",
+  )
+  expect(await storage.get(USAGE_HISTORY_STORAGE_KEYS.STORE)).toEqual(payload)
+})
+
+describe("usage history financial persistence boundaries", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it.each([null, 0, false, "unrecognized", []])(
+    "rejects existing malformed root %j without overwriting it",
+    async (payload) => {
+      const storage = new Storage({ area: "local" })
+      await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, payload)
+      await expect(usageHistoryStorage.getStore()).rejects.toThrow()
+      const update = vi.fn()
+      await expect(usageHistoryStorage.updateStore(update)).rejects.toThrow()
+      expect(update).not.toHaveBeenCalled()
+      expect(await storage.get(USAGE_HISTORY_STORAGE_KEYS.STORE)).toEqual(
+        payload,
+      )
+    },
+  )
+
+  it.each([null, {}, [{ amount: 0 }]])(
+    "rejects malformed canonical consumption %j instead of dropping it",
+    async (consumption) => {
+      const storage = new Storage({ area: "local" })
+      const payload = {
+        schemaVersion: 2,
+        accounts: {
+          a: { daily: { "2026-01-01": { requests: 1, consumption } } },
+        },
+      }
+      await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, payload)
+      await expect(usageHistoryStorage.getStore()).rejects.toThrow()
+      await expect(usageHistoryStorage.updateStore(() => {})).rejects.toThrow()
+      expect(await storage.get(USAGE_HISTORY_STORAGE_KEYS.STORE)).toEqual(
+        payload,
+      )
+    },
+  )
+
+  it.each([null, [], 42])(
+    "does not replace a malformed accounts container %j with empty data",
+    async (accounts) => {
+      const storage = new Storage({ area: "local" })
+      const payload = { schemaVersion: 2, accounts }
+      await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, payload)
+      await expect(usageHistoryStorage.getStore()).rejects.toThrow()
+      await expect(usageHistoryStorage.updateStore(() => {})).rejects.toThrow()
+      expect(await storage.get(USAGE_HISTORY_STORAGE_KEYS.STORE)).toEqual(
+        payload,
+      )
+    },
+  )
 })

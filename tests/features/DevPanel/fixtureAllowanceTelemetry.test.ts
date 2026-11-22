@@ -61,9 +61,8 @@ describe("dev allowance fixtures", () => {
   it("estimates a runway only where today's spend is reported", () => {
     const runwaySignal = (id: string) => {
       const fixture = DEV_ALLOWANCE_FIXTURES.find((item) => item.id === id)!
-      const signal = getPrimaryAllowanceSignal(
-        fixture.buildSnapshot(NOW)?.facts,
-      )
+      const snapshot = coerceTelemetrySnapshot(fixture.buildSnapshot(NOW))
+      const signal = getPrimaryAllowanceSignal(snapshot?.facts)
       return signal?.kind === "balance" ? signal.runwayDays : undefined
     }
 
@@ -76,7 +75,10 @@ describe("dev allowance fixtures", () => {
       (item) => item.id === "balance-runway-critical",
     )!
     const stored = coerceTelemetrySnapshot(
-      fixture.buildSnapshot(NOW, "persisted-fixture"),
+      fixture.buildSnapshot(NOW, {
+        profileId: "persisted-fixture",
+        baseUrl: "https://dev-allowance.invalid",
+      }),
     )!
     expect(stored.facts?.balanceSnapshot?.subject).toEqual({
       kind: "credential",

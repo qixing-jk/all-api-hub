@@ -19,25 +19,25 @@
         "ariaLabel": "Loại biểu đồ",
         "histogram": "Biểu đồ cột",
         "pie": "Biểu đồ tròn"
-      }
+      },
+      "costUnit": "Đơn vị chi phí"
     },
     "dailyOverview": {
       "axes": {
         "requests": "Số yêu cầu",
-        "tokens": "Tokens / Hạn mức"
+        "tokens": "Token"
       },
       "description": "Xu hướng đa chỉ số, hỗ trợ chú giải và thu phóng.",
       "series": {
         "completionTokens": "Completion Tokens",
         "promptTokens": "Prompt Tokens",
-        "quota": "Hạn mức",
         "requests": "Số yêu cầu",
         "totalTokens": "Tổng Tokens"
       },
       "title": "Tổng quan Hàng ngày"
     },
     "latencyHistogram": {
-      "description": "Biểu đồ cột về độ trễ yêu cầu đơn (use_time) trong mục chọn hiện tại.",
+      "description": "Biểu đồ cột về độ trễ yêu cầu đơn trong mục chọn hiện tại.",
       "series": {
         "count": "Số lượng"
       },
@@ -57,11 +57,12 @@
       "title": "Xu hướng Độ trễ"
     },
     "modelCostDistribution": {
-      "description": "Các mô hình Top theo tiêu hao hạn mức (quy đổi USD) trong phạm vi ngày đã chọn.",
+      "description": "Chi phí mô hình đã quyết toán, nhóm theo đơn vị.",
       "series": {
-        "usd": "Chi phí (USD)"
+        "native": "Mức tiêu thụ đã quyết toán"
       },
-      "title": "Phân bổ Chi phí Mô hình"
+      "title": "Tiêu thụ theo mô hình",
+      "unavailable": "Không có chi phí mô hình đã quyết toán trong phạm vi đã chọn."
     },
     "modelDistribution": {
       "description": "Các mô hình Top theo tổng Tokens trong phạm vi ngày đã chọn.",
@@ -116,7 +117,7 @@
     "sitesHint": "Có thể chọn một phần trang web (không chọn nghĩa là tất cả).",
     "startDay": "Ngày bắt đầu",
     "tokens": "API Token",
-    "tokensHint": "Có thể lọc theo Token của tài khoản (không chọn nghĩa là tất cả trong phạm vi tài khoản).",
+    "tokensHint": "Lọc các yêu cầu đã ghi nhận theo khóa API (không chọn nghĩa là tất cả khóa của các tài khoản đã chọn).",
     "unknownToken": "Token Không xác định"
   },
   "hover": {
@@ -125,13 +126,15 @@
     "owners": "Tài khoản Sở hữu",
     "site": "Trang web",
     "token": "Token",
-    "type": "Loại",
     "url": "URL"
   },
   "messages": {
     "error": {
       "exportFailed": "Xuất thất bại: {{error}}",
       "exportNoData": "Không có dữ liệu để xuất trong mục chọn hiện tại",
+      "lastLoadedDescription": "Đang hiển thị lịch sử tải lần trước. Tải lại thất bại; hãy thử lại để cập nhật.",
+      "loadDescription": "Lịch sử đã lưu không bị thay thế. Hãy thử lại hoặc dùng phiên bản ứng dụng hỗ trợ dữ liệu này.",
+      "loadTitle": "Không thể tải lịch sử",
       "settingsSaveFailed": "Lưu cài đặt thất bại: {{error}}",
       "syncFailed": "Đồng bộ thất bại: {{error}}"
     },
@@ -174,10 +177,14 @@
   },
   "summary": {
     "completionTokens": "Token Đầu ra",
-    "cost": "Chi phí",
+    "cost": "Chi phí đã ghi nhận",
+    "partial": "Có thể thiếu một số khoản phí.",
     "promptTokens": "Token Đầu vào",
+    "referenceCost": "Chi phí tham chiếu",
+    "referenceHint": "Chi phí đã ghi nhận và chi phí tham chiếu có thể bao gồm cùng một số yêu cầu.",
     "requests": "Số yêu cầu",
-    "totalTokens": "Tổng lượng Token"
+    "totalTokens": "Tổng lượng Token",
+    "unpriced": "Chưa có chi phí được ghi nhận"
   },
   "syncTab": {
     "actions": {

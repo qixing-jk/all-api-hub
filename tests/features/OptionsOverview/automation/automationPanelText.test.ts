@@ -11,6 +11,7 @@ import {
 } from "~/features/OptionsOverview/automation/automationPanelText"
 import {
   OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS as ITEM_IDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
   OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS as ROW_IDS,
   OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as STATUS_LABELS,
   OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_VALUE_TYPES as SUMMARY_VALUE_TYPES,
@@ -155,7 +156,7 @@ describe("automation panel text helpers", () => {
           statusLabel: STATUS_LABELS.partial,
           autoCheckinPanel: {
             status: "partial",
-            severity: "warning",
+            severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
             totalEligible: 3,
             executed: 3,
             successCount: 2,

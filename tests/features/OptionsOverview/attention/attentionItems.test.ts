@@ -13,6 +13,7 @@ import { buildAttentionItems } from "~/features/OptionsOverview/attention/attent
 import {
   OPTIONS_OVERVIEW_ATTENTION_CATEGORIES,
   OPTIONS_OVERVIEW_ATTENTION_KINDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
 } from "~/features/OptionsOverview/ids"
 import {
   AuthTypeEnum,
@@ -101,7 +102,7 @@ describe("overview attention items", () => {
         id: "account:error-a:error",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-        severity: "error",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Error,
         titleOptions: { name: "Relay error-a" },
         descriptionOptions: { reason: "token expired" },
         target: {
@@ -113,7 +114,7 @@ describe("overview attention items", () => {
         id: "account:error-b:error",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-        severity: "error",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Error,
         titleOptions: { name: "Relay error-b" },
         descriptionOptions: { reason: "sync failed" },
         target: {
@@ -125,7 +126,7 @@ describe("overview attention items", () => {
         id: "account:warning-account:warning",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-        severity: "warning",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
         titleOptions: { name: "Relay warning-account" },
         descriptionOptions: { reason: undefined },
         target: {
@@ -148,7 +149,7 @@ describe("overview attention items", () => {
         id: "setup:add-account",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-        severity: "info",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
         target: {
           menuItemId: MENU_ITEM_IDS.ACCOUNT,
           params: undefined,
@@ -158,7 +159,7 @@ describe("overview attention items", () => {
         id: "setup:add-profile",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.credentials,
-        severity: "info",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
         target: {
           menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
         },
@@ -202,7 +203,7 @@ describe("overview attention items", () => {
       id: "checkin:unknown-account:site-type-unknown",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { name: "Unknown Relay" },
       target: {
         menuItemId: MENU_ITEM_IDS.ACCOUNT,
@@ -231,7 +232,7 @@ describe("overview attention items", () => {
       id: "checkin:new-api-account:method-unresolved",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { name: "New API Relay" },
       target: {
         menuItemId: MENU_ITEM_IDS.ACCOUNT,
@@ -326,7 +327,7 @@ describe("overview attention items", () => {
       id: `checkin:${account.id}:site-type-mismatch`,
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { name: account.name },
       descriptionOptions: {
         storedType: SITE_TYPES.NEW_API,
@@ -384,7 +385,7 @@ describe("overview attention items", () => {
       id: "auto-checkin:needs-attention",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "error",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Error,
       titleOptions: { total: 2 },
       target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
     })
@@ -402,7 +403,7 @@ describe("overview attention items", () => {
       id: "usage:pending-refresh",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.data,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       titleOptions: { total: 2 },
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT, params: undefined },
     })
@@ -445,7 +446,7 @@ describe("overview attention items", () => {
       id: "auto-checkin:globally-disabled",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       descriptionOptions: { total: 2 },
       target: {
         menuItemId: MENU_ITEM_IDS.BASIC,
@@ -489,7 +490,7 @@ describe("overview attention items", () => {
       id: "announcements:unread",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       titleOptions: { total: 3 },
       target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
     })
@@ -549,7 +550,7 @@ describe("overview attention items", () => {
       id: "auto-checkin:relogin-required",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { total: 1 },
       target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
     })
@@ -557,7 +558,7 @@ describe("overview attention items", () => {
       id: "auto-checkin:account-data-missing",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { total: 2 },
       target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
     })
@@ -565,7 +566,7 @@ describe("overview attention items", () => {
       id: "auto-checkin:permission-denied",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { total: 1 },
       target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
     })
@@ -592,7 +593,7 @@ describe("overview attention items", () => {
       id: "accounts:all-disabled",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       titleOptions: { total: 2 },
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT, params: undefined },
     })
@@ -629,7 +630,7 @@ describe("overview attention items", () => {
       id: "account:permission-account:temp-window",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { name: "Permission Account" },
       descriptionOptions: { reason: "Permission required" },
       target: {
@@ -645,7 +646,7 @@ describe("overview attention items", () => {
       id: "account:disabled-window-account:temp-window",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { name: "Disabled Window Account" },
       descriptionOptions: { reason: "Temporary window disabled" },
       target: {

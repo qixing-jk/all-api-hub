@@ -402,13 +402,16 @@
       "title": "Aún no hay uso registrado"
     },
     "noRecentActivity": "No hay uso reciente registrado.",
+    "requests": "Solicitudes",
     "requestShare": "Proporción de solicitudes",
     "sevenDayRequests": "Solicitudes de 7 días",
     "sevenDayTokens": "Tokens de 7 días",
+    "siteDay": "Uso según el día del sitio",
     "todayCost": "Costo de hoy",
     "todayRequests": "Solicitudes de hoy",
     "todayShare": "Proporción de hoy en los últimos 7 días",
     "todayTokens": "Tokens de hoy",
+    "tokens": "Tokens",
     "tokenShare": "Proporción de tokens"
   }
 }

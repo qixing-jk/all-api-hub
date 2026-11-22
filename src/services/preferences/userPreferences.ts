@@ -1,5 +1,6 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { getManagedSiteConfigRegistration } from "~/services/managedSites/configuration/configRegistration"
+import { getCurrencyDisplayUpdates } from "~/services/preferences/currencyDisplay"
 import {
   createDefaultSortingPriorityConfig,
   DEFAULT_SORTING_PRIORITY_CONFIG,
@@ -139,7 +140,14 @@ class UserPreferencesService extends PreferencesStore {
   async updateCurrencyType(
     currencyType: CurrencyType,
   ): Promise<PreferenceWriteResult> {
-    return this.savePreferences({ currencyType })
+    return this.updateCurrencyDisplay(currencyType)
+  }
+
+  /** Select a display mode without changing the reference currency in original mode. */
+  async updateCurrencyDisplay(
+    currencyDisplay: import("~/types").CurrencyDisplay,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferences(getCurrencyDisplayUpdates(currencyDisplay))
   }
 
   /**
@@ -264,6 +272,7 @@ class UserPreferencesService extends PreferencesStore {
     return this.savePreferences({
       activeTab: DEFAULT_PREFERENCES.activeTab,
       currencyType: DEFAULT_PREFERENCES.currencyType,
+      currencyDisplay: DEFAULT_PREFERENCES.currencyDisplay,
       showTodayCashflow: DEFAULT_PREFERENCES.showTodayCashflow,
     })
   }

@@ -126,7 +126,7 @@ export function shareSiteDayLines(
         ? ` · ${formatAssetAmount(usage.cost, locale)}`
         : ""
     return [
-      `${t("account:financial.siteDay")}: ${values}${native}${usage.lastKnown ? ` · ${t("account:financial.lastKnown")}` : ""}${usage.reportedDay ? ` · ${usage.reportedDay}` : usage.observedAt !== undefined ? ` · ${new Date(usage.observedAt).toLocaleString(locale)}` : ""}`,
+      `${t("optionsOverview:usage.siteDay")}: ${values}${native}${usage.lastKnown ? ` · ${t("account:financial.lastKnown")}` : ""}${usage.reportedDay ? ` · ${usage.reportedDay}` : usage.observedAt !== undefined ? ` · ${new Date(usage.observedAt).toLocaleString(locale)}` : ""}`,
       ...formatBalanceWindow(usage.window, t, locale),
     ]
   })

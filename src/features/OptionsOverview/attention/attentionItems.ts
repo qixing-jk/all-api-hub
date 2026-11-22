@@ -18,6 +18,7 @@ import { isAutoCheckinSkipReasonActionable } from "~/features/AutoCheckin/result
 import {
   OPTIONS_OVERVIEW_ATTENTION_CATEGORIES,
   OPTIONS_OVERVIEW_ATTENTION_KINDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
 } from "~/features/OptionsOverview/ids"
 import {
   buildAccountNavigationTarget,
@@ -70,12 +71,12 @@ const CHECKIN_SKIP_TODO_GROUPS = [
 }[]
 
 const SEVERITY_ORDER: Record<
-  Exclude<OptionsOverviewSeverity, "success">,
+  Exclude<OptionsOverviewSeverity, typeof OPTIONS_OVERVIEW_SEVERITIES.Success>,
   number
 > = {
-  error: 0,
-  warning: 1,
-  info: 2,
+  [OPTIONS_OVERVIEW_SEVERITIES.Error]: 0,
+  [OPTIONS_OVERVIEW_SEVERITIES.Warning]: 1,
+  [OPTIONS_OVERVIEW_SEVERITIES.Info]: 2,
 }
 
 /**
@@ -107,7 +108,7 @@ export function buildAttentionItems(input: {
           id: `account:${account.id}:temp-window`,
           kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
           category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-          severity: "warning",
+          severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
           titleOptions: { name: account.name },
           descriptionOptions: { reason: account.health.reason },
           target: buildTempWindowSettingsTarget({
@@ -149,7 +150,7 @@ export function buildAttentionItems(input: {
       id: `checkin:${account.id}:site-type-mismatch`,
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       titleOptions: { name: account.name },
       descriptionOptions: {
         storedType: mismatch.storedSiteType,
@@ -187,7 +188,7 @@ export function buildAttentionItems(input: {
           id: `checkin:${account.id}:site-type-unknown`,
           kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown,
           category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-          severity: "warning",
+          severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
           titleOptions: { name: account.name },
           target: buildAccountNavigationTarget(account.id),
         })
@@ -208,7 +209,7 @@ export function buildAttentionItems(input: {
         id: `checkin:${account.id}:method-unresolved`,
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-        severity: "warning",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
         titleOptions: { name: account.name },
         target: buildAccountNavigationTarget(account.id),
       })
@@ -233,7 +234,7 @@ export function buildAttentionItems(input: {
         id: group.id,
         kind: group.kind,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-        severity: "warning",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
         titleOptions: { total },
         target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
       })
@@ -249,7 +250,7 @@ export function buildAttentionItems(input: {
         id: "auto-checkin:globally-disabled",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-        severity: "warning",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
         descriptionOptions: { total: pausedAccountCount },
         target: buildBasicSettingsAnchorTarget(SETTINGS_ANCHORS.AUTO_CHECKIN),
       })
@@ -264,7 +265,7 @@ export function buildAttentionItems(input: {
       id: "usage:pending-refresh",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.data,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       titleOptions: { total: input.usageRefreshPendingCount },
       target: buildAccountNavigationTarget(),
     })
@@ -276,7 +277,7 @@ export function buildAttentionItems(input: {
       id: "announcements:unread",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       titleOptions: { total: unreadAnnouncementCount },
       target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
     })
@@ -290,7 +291,7 @@ export function buildAttentionItems(input: {
         id: "setup:add-account",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-        severity: "info",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
         target: buildAccountNavigationTarget(),
       })
     } else if (input.enabledAccountCount === 0) {
@@ -298,7 +299,7 @@ export function buildAttentionItems(input: {
         id: "accounts:all-disabled",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled,
         category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
-        severity: "info",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
         titleOptions: { total: totalAccountCount },
         target: buildAccountNavigationTarget(),
       })
@@ -310,7 +311,7 @@ export function buildAttentionItems(input: {
       id: "setup:add-profile",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.credentials,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       target: { menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES },
     })
   }

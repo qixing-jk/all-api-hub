@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import {
   buildDailyOverviewOption,
   buildHeatmapOption,
@@ -9,6 +8,8 @@ import {
   buildLatencyHistogramOption,
   buildLatencyTrendOption,
   buildPieOption,
+  REFERENCE_COST_KEY,
+  settledCostTotals,
 } from "~/features/UsageAnalytics/charts/echartsOptions"
 import {
   resolveLatencyAggregateForSelection,
@@ -16,16 +17,28 @@ import {
   topNWithOther,
 } from "~/features/UsageAnalytics/filtering/usageSelection"
 import type { useUsageAnalyticsFilters } from "~/features/UsageAnalytics/filtering/useUsageAnalyticsFilters"
+import {
+  USAGE_ANALYTICS_BREAKDOWN_CHART_KEYS,
+  USAGE_ANALYTICS_CHART_TYPES,
+} from "~/features/UsageAnalytics/types"
 import type {
   UsageAnalyticsBreakdownChartKey,
   UsageAnalyticsChartDisplayType,
 } from "~/features/UsageAnalytics/types"
-import type { CurrencyType, SiteAccount } from "~/types"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import { parseDayKey } from "~/utils/core/dayKey"
+import { getAssetDisplayValue, getAssetLabel } from "~/utils/core/money"
+
+/** Fields read from ECharts interaction callbacks. */
+type UsageChartEvent = {
+  batch?: UsageChartEvent[]
+  startValue?: unknown
+  endValue?: unknown
+  selected?: unknown
+  name?: unknown
+}
 
 interface UsageAnalyticsChartsInput {
-  enabledAccounts: SiteAccount[]
-  currencyType: CurrencyType
   filters: Pick<
     ReturnType<typeof useUsageAnalyticsFilters>,
     | "exportPreview"
@@ -41,10 +54,16 @@ interface UsageAnalyticsChartsInput {
   >
 }
 
+/** A cost distribution has shares only when its finite, nonnegative values include a charge. */
+function hasCostShares(values: number[]): boolean {
+  return (
+    values.some((value) => value > 0) &&
+    values.every((value) => Number.isFinite(value) && value >= 0)
+  )
+}
+
 /** Owns chart projections and the click, legend, and date-zoom interactions. */
 export function useUsageAnalyticsCharts({
-  enabledAccounts,
-  currencyType,
   filters,
 }: UsageAnalyticsChartsInput) {
   const { t } = useTranslation("usageAnalytics")
@@ -69,11 +88,16 @@ export function useUsageAnalyticsCharts({
   const [breakdownChartTypeByKey, setBreakdownChartTypeByKey] = useState<
     Record<UsageAnalyticsBreakdownChartKey, UsageAnalyticsChartDisplayType>
   >({
-    slowModels: "pie",
-    slowTokens: "pie",
-    accountComparison: "pie",
-    modelDistribution: "pie",
-    modelCostDistribution: "pie",
+    [USAGE_ANALYTICS_BREAKDOWN_CHART_KEYS.SlowModels]:
+      USAGE_ANALYTICS_CHART_TYPES.Pie,
+    [USAGE_ANALYTICS_BREAKDOWN_CHART_KEYS.SlowTokens]:
+      USAGE_ANALYTICS_CHART_TYPES.Pie,
+    [USAGE_ANALYTICS_BREAKDOWN_CHART_KEYS.AccountComparison]:
+      USAGE_ANALYTICS_CHART_TYPES.Pie,
+    [USAGE_ANALYTICS_BREAKDOWN_CHART_KEYS.ModelDistribution]:
+      USAGE_ANALYTICS_CHART_TYPES.Pie,
+    [USAGE_ANALYTICS_BREAKDOWN_CHART_KEYS.ModelCostDistribution]:
+      USAGE_ANALYTICS_CHART_TYPES.Pie,
   })
 
   /**
@@ -133,7 +157,6 @@ export function useUsageAnalyticsCharts({
         totals.promptTokens += aggregate.promptTokens
         totals.completionTokens += aggregate.completionTokens
         totals.totalTokens += aggregate.totalTokens
-        totals.quotaConsumed += aggregate.quotaConsumed
         return totals
       },
       {
@@ -141,36 +164,38 @@ export function useUsageAnalyticsCharts({
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
-        quotaConsumed: 0,
       },
     )
   }, [fusedDailyForTokens])
 
-  const selectionCost = useMemo(() => {
-    const conversionFactor = QUOTA_PER_USD
-    const totalQuotaConsumed = accountTotalsFullRows.reduce(
-      (sum, row) => sum + row.quotaConsumed,
-      0,
-    )
-
-    const usd = totalQuotaConsumed / conversionFactor
-
-    if (currencyType === "USD") {
-      return usd
-    }
-
-    const exchangeRateByAccountId = new Map(
-      enabledAccounts.map(
-        (account) => [account.id, account.exchange_rate] as const,
+  const recordedCosts = useMemo(
+    () =>
+      settledCostTotals(
+        Object.values(fusedDailyForTokens).flatMap(
+          (day) => day.consumption ?? [],
+        ),
       ),
-    )
+    [fusedDailyForTokens],
+  )
 
-    return accountTotalsFullRows.reduce((sum, row) => {
-      const exchangeRate =
-        exchangeRateByAccountId.get(row.accountId) ?? DEFAULT_USD_TO_CNY_RATE
-      return sum + (row.quotaConsumed / conversionFactor) * exchangeRate
-    }, 0)
-  }, [accountTotalsFullRows, currencyType, enabledAccounts])
+  const [dailyCostKey, setDailyCostKey] = useState<string>()
+  const dailyCostChoices = recordedCosts.map(({ key, amount }) => ({
+    key,
+    label: getAssetLabel(amount.asset),
+  }))
+  const referenceCostLabel = `${t("summary.referenceCost")} (USD)`
+  if (
+    Object.values(fusedDailyForTokens).some(
+      ({ referenceCostUsd }) => referenceCostUsd !== undefined,
+    )
+  )
+    dailyCostChoices.push({
+      key: REFERENCE_COST_KEY,
+      label: referenceCostLabel,
+    })
+  const selectedDailyCost =
+    dailyCostChoices.find(({ key }) => key === dailyCostKey) ??
+    dailyCostChoices[0]
 
   const selectedLatencyAggregate = useMemo(() => {
     if (!exportPreview) {
@@ -194,7 +219,8 @@ export function useUsageAnalyticsCharts({
         "charts.dailyOverview.series.completionTokens",
       ),
       totalTokensSeriesLabel: t("charts.dailyOverview.series.totalTokens"),
-      quotaSeriesLabel: t("charts.dailyOverview.series.quota"),
+      recordedCostSeriesLabel: t("summary.cost"),
+      referenceCostSeriesLabel: `${t("summary.referenceCost")} (USD)`,
     }
   }, [t])
 
@@ -203,6 +229,7 @@ export function useUsageAnalyticsCharts({
       dayKeys: dayKeysInRange,
       daily: fusedDailyForTokens,
       ...dailyLegendLabels,
+      selectedCostKey: selectedDailyCost?.key,
       legendSelected: dailyLegendSelected,
     })
   }, [
@@ -210,6 +237,7 @@ export function useUsageAnalyticsCharts({
     dailyLegendSelected,
     dayKeysInRange,
     fusedDailyForTokens,
+    selectedDailyCost?.key,
   ])
 
   const modelDistributionOption = useMemo(() => {
@@ -217,30 +245,119 @@ export function useUsageAnalyticsCharts({
     const values = modelTotalsRows.map((row) => row.totalTokens)
     const valueLabel = t("charts.modelDistribution.series.tokens")
 
-    return breakdownChartTypeByKey.modelDistribution === "pie"
+    return breakdownChartTypeByKey.modelDistribution ===
+      USAGE_ANALYTICS_CHART_TYPES.Pie
       ? buildPieOption({ categories, values, valueLabel })
       : buildHorizontalBarOption({ categories, values, valueLabel })
   }, [breakdownChartTypeByKey.modelDistribution, modelTotalsRows, t])
 
-  const modelCostDistributionOption = useMemo(() => {
-    const conversionFactor = QUOTA_PER_USD
-    const categories = modelTotalsRows.map((row) => row.modelName)
-    const values = modelTotalsRows.map(
-      (row) => row.quotaConsumed / conversionFactor,
-    )
-    const valueLabel = t("charts.modelCostDistribution.series.usd")
+  const modelCostCharts = useMemo(() => {
+    const groups = new Map<
+      string,
+      { label: string; categories: string[]; values: number[] }
+    >()
+    for (const [model, days] of Object.entries(fusedDailyByModelForTokens)) {
+      const charges = settledCostTotals(
+        Object.values(days).flatMap((day) => day.consumption ?? []),
+      )
+      for (const { key, amount } of charges) {
+        const group = groups.get(key) ?? {
+          label:
+            amount.asset.kind === ASSET_KINDS.Quota
+              ? amount.asset.displayLabel
+              : getAssetLabel(amount.asset),
+          categories: [],
+          values: [],
+        }
+        group.categories.push(model)
+        group.values.push(Number(getAssetDisplayValue(amount)))
+        groups.set(key, group)
+      }
+    }
+    return [...groups]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, group]) => {
+        const { label, categories, values } = group
+        const top = topNWithOther(
+          categories.map((key, index) => ({ key, value: values[index]! })),
+          12,
+          t("charts.other"),
+          true,
+        )
+        const options = {
+          categories: top.map(({ key }) => key),
+          values: top.map(({ value }) => value),
+          valueLabel: `${t("charts.modelCostDistribution.series.native")} · ${label}`,
+        }
+        const hasShares = hasCostShares(values)
+        const pie =
+          breakdownChartTypeByKey.modelCostDistribution ===
+            USAGE_ANALYTICS_CHART_TYPES.Pie && hasShares
+        return {
+          key,
+          label,
+          hasShares,
+          option: pie
+            ? buildPieOption(options)
+            : buildHorizontalBarOption({
+                ...options,
+                showValueLabels: !hasShares,
+              }),
+        }
+      })
+  }, [
+    breakdownChartTypeByKey.modelCostDistribution,
+    fusedDailyByModelForTokens,
+    t,
+  ])
 
-    return breakdownChartTypeByKey.modelCostDistribution === "pie"
-      ? buildPieOption({ categories, values, valueLabel })
-      : buildHorizontalBarOption({ categories, values, valueLabel })
-  }, [breakdownChartTypeByKey.modelCostDistribution, modelTotalsRows, t])
+  const referenceModelCostChart = useMemo(() => {
+    const rows = Object.entries(fusedDailyByModelForTokens).flatMap(
+      ([key, days]) => {
+        const costs = Object.values(days).flatMap(({ referenceCostUsd }) =>
+          referenceCostUsd === undefined ? [] : [referenceCostUsd],
+        )
+        return costs.length
+          ? [{ key, value: costs.reduce((total, cost) => total + cost, 0) }]
+          : []
+      },
+    )
+    if (!rows.length) return
+    const top = topNWithOther(rows, 12, t("charts.other"), true)
+    const options = {
+      categories: top.map(({ key }) => key),
+      values: top.map(({ value }) => value),
+      valueLabel: `${t("summary.referenceCost")} (USD)`,
+    }
+    const hasShares = hasCostShares(rows.map(({ value }) => value))
+    return {
+      key: REFERENCE_COST_KEY,
+      label: referenceCostLabel,
+      hasShares,
+      option:
+        hasShares &&
+        breakdownChartTypeByKey.modelCostDistribution ===
+          USAGE_ANALYTICS_CHART_TYPES.Pie
+          ? buildPieOption(options)
+          : buildHorizontalBarOption({
+              ...options,
+              showValueLabels: !hasShares,
+            }),
+    }
+  }, [
+    breakdownChartTypeByKey.modelCostDistribution,
+    fusedDailyByModelForTokens,
+    referenceCostLabel,
+    t,
+  ])
 
   const accountComparisonOption = useMemo(() => {
     const categories = accountTotalsRows.map((row) => row.key)
     const values = accountTotalsRows.map((row) => row.value)
     const valueLabel = t("charts.accountComparison.series.tokens")
 
-    return breakdownChartTypeByKey.accountComparison === "pie"
+    return breakdownChartTypeByKey.accountComparison ===
+      USAGE_ANALYTICS_CHART_TYPES.Pie
       ? buildPieOption({ categories, values, valueLabel })
       : buildHorizontalBarOption({ categories, values, valueLabel })
   }, [accountTotalsRows, breakdownChartTypeByKey.accountComparison, t])
@@ -359,7 +476,8 @@ export function useUsageAnalyticsCharts({
     const values = slowModelRows.map((row) => row.slowCount)
     const valueLabel = t("charts.slowModels.series.slowCount")
 
-    return breakdownChartTypeByKey.slowModels === "pie"
+    return breakdownChartTypeByKey.slowModels ===
+      USAGE_ANALYTICS_CHART_TYPES.Pie
       ? buildPieOption({ categories, values, valueLabel })
       : buildHorizontalBarOption({ categories, values, valueLabel })
   }, [breakdownChartTypeByKey.slowModels, slowModelRows, t])
@@ -369,7 +487,8 @@ export function useUsageAnalyticsCharts({
     const values = slowTokenRows.map((row) => row.slowCount)
     const valueLabel = t("charts.slowTokens.series.slowCount")
 
-    return breakdownChartTypeByKey.slowTokens === "pie"
+    return breakdownChartTypeByKey.slowTokens ===
+      USAGE_ANALYTICS_CHART_TYPES.Pie
       ? buildPieOption({ categories, values, valueLabel })
       : buildHorizontalBarOption({ categories, values, valueLabel })
   }, [breakdownChartTypeByKey.slowTokens, slowTokenRows, t])
@@ -392,9 +511,10 @@ export function useUsageAnalyticsCharts({
     (event: unknown) => {
       // ECharts dataZoom events may carry category indices or axis values depending
       // on configuration; normalize to `YYYY-MM-DD` day keys and update the filter.
-      const payload = Array.isArray((event as any)?.batch)
-        ? (event as any).batch[0]
-        : (event as any)
+      const chartEvent = event as UsageChartEvent | undefined
+      const payload = Array.isArray(chartEvent?.batch)
+        ? chartEvent.batch[0]
+        : chartEvent
 
       const startValue = payload?.startValue
       const endValue = payload?.endValue
@@ -440,7 +560,7 @@ export function useUsageAnalyticsCharts({
   )
 
   const handleDailyLegendSelectChanged = useCallback((event: unknown) => {
-    const selected = (event as any)?.selected
+    const selected = (event as UsageChartEvent | undefined)?.selected
     if (selected && typeof selected === "object") {
       setDailyLegendSelected(selected as Record<string, boolean>)
     }
@@ -455,10 +575,9 @@ export function useUsageAnalyticsCharts({
 
   const handleModelDistributionClick = useCallback((event: unknown) => {
     // Click-to-focus a model name for related charts (e.g., heatmap + latency histogram).
+    const chartEvent = event as UsageChartEvent | undefined
     const modelName =
-      typeof (event as any)?.name === "string"
-        ? String((event as any).name)
-        : null
+      typeof chartEvent?.name === "string" ? String(chartEvent.name) : null
     if (!modelName) return
 
     setFocusModelName((current) => (current === modelName ? null : modelName))
@@ -474,10 +593,15 @@ export function useUsageAnalyticsCharts({
     focusModelName,
     setBreakdownChartType,
     selectionTotals,
-    selectionCost,
+    accountTotalsFullRows,
+    recordedCosts,
+    dailyCostChoices,
+    selectedDailyCost,
+    setDailyCostKey,
     dailyOverviewOption,
     modelDistributionOption,
-    modelCostDistributionOption,
+    modelCostCharts,
+    referenceModelCostChart,
     accountComparisonOption,
     heatmapOption,
     usageTimeHeatmapOption,

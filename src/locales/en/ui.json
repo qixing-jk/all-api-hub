@@ -294,7 +294,6 @@
         "healthReason": "Reason",
         "lastSync": "Last Sync",
         "notes": "Notes",
-        "quota": "Quota",
         "siteType": "Site Type",
         "todayConsumption": "Today's Consumption",
         "todayRequests": "Today's Requests",

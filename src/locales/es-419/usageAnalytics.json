@@ -19,25 +19,25 @@
         "ariaLabel": "Tipo de gráfica",
         "histogram": "Histograma",
         "pie": "Circular"
-      }
+      },
+      "costUnit": "Unidad de costo"
     },
     "dailyOverview": {
       "axes": {
         "requests": "Solicitudes",
-        "tokens": "Tokens / Cuota"
+        "tokens": "Tokens"
       },
       "description": "Tendencias con varias métricas, tooltip y zoom.",
       "series": {
         "completionTokens": "Tokens de salida",
         "promptTokens": "Tokens de entrada",
-        "quota": "Cuota",
         "requests": "Solicitudes",
         "totalTokens": "Tokens totales"
       },
       "title": "Resumen diario"
     },
     "latencyHistogram": {
-      "description": "Histograma de latencia por solicitud (`use_time`) para la selección actual.",
+      "description": "Histograma de latencia por solicitud para la selección actual.",
       "series": {
         "count": "Conteo"
       },
@@ -57,11 +57,12 @@
       "title": "Tendencia de latencia"
     },
     "modelCostDistribution": {
-      "description": "Modelos principales por consumo de cuota (convertido a USD) en el rango de fechas seleccionado.",
+      "description": "Costos liquidados por modelo, agrupados por unidad.",
       "series": {
-        "usd": "Costo (USD)"
+        "native": "Consumo liquidado"
       },
-      "title": "Distribución de costo por modelo"
+      "title": "Consumo por modelo",
+      "unavailable": "No hay costos de modelos liquidados en esta selección."
     },
     "modelDistribution": {
       "description": "Modelos principales por tokens totales en el rango de fechas seleccionado.",
@@ -116,7 +117,7 @@
     "sitesHint": "Elige un subconjunto de sitios (una selección vacía significa todos).",
     "startDay": "Fecha inicial",
     "tokens": "API tokens",
-    "tokensHint": "Filtro opcional de tokens derivado de agregados del historial de uso (una selección vacía significa todos dentro de las cuentas seleccionadas).",
+    "tokensHint": "Filtra las solicitudes registradas por clave API (sin selección se incluyen todas las claves de las cuentas seleccionadas).",
     "unknownToken": "Token desconocido"
   },
   "hover": {
@@ -125,13 +126,15 @@
     "owners": "Cuentas",
     "site": "Sitio",
     "token": "Token",
-    "type": "Tipo",
     "url": "URL"
   },
   "messages": {
     "error": {
       "exportFailed": "Error al exportar: {{error}}",
       "exportNoData": "No hay datos para exportar con la selección actual",
+      "lastLoadedDescription": "Se muestra el último historial cargado. La recarga falló; reintenta para actualizarlo.",
+      "loadDescription": "No se reemplazó el historial guardado. Reintenta o usa una versión compatible de la aplicación.",
+      "loadTitle": "No se pudo cargar el historial",
       "settingsSaveFailed": "No se pudieron guardar los ajustes: {{error}}",
       "syncFailed": "Error de sincronización: {{error}}"
     },
@@ -174,10 +177,14 @@
   },
   "summary": {
     "completionTokens": "Tokens de salida",
-    "cost": "Costo",
+    "cost": "Costos registrados",
+    "partial": "Es posible que falten algunos cargos.",
     "promptTokens": "Tokens de entrada",
+    "referenceCost": "Costos de referencia",
+    "referenceHint": "Los costos registrados y de referencia pueden incluir las mismas solicitudes.",
     "requests": "Solicitudes",
-    "totalTokens": "Tokens totales"
+    "totalTokens": "Tokens totales",
+    "unpriced": "Sin costos registrados"
   },
   "syncTab": {
     "actions": {

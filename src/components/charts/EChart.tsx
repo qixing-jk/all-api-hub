@@ -2,12 +2,15 @@ import type { CSSProperties } from "react"
 import { useEffect, useMemo, useRef } from "react"
 
 import { THEME_ATTRIBUTES } from "~/constants/theme"
+import { useMediaQuery } from "~/hooks/useMediaQuery"
 
 import { applyChartColors, readChartColors } from "./chartColors"
 import { applyChartTypography, readChartTextIncrement } from "./chartTypography"
 import { echarts, type EChartsOption, type SetOptionOpts } from "./echarts"
 
-export type EChartRenderer = "canvas" | "svg"
+export const ECHART_RENDERERS = { Canvas: "canvas", Svg: "svg" } as const
+export type EChartRenderer =
+  (typeof ECHART_RENDERERS)[keyof typeof ECHART_RENDERERS]
 
 export type EChartEventHandlers = Record<string, (params: unknown) => void>
 
@@ -34,13 +37,20 @@ export function EChart(props: EChartProps) {
     option,
     className,
     style,
-    renderer = "canvas",
+    renderer = ECHART_RENDERERS.Canvas,
     setOptionOpts,
     onEvents,
   } = props
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const instanceRef = useRef<ReturnType<typeof echarts.init> | null>(null)
+  const shouldReduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
+  const lastRenderRef = useRef<{
+    option: EChartsOption
+    renderer: EChartRenderer
+    setOptionOpts: SetOptionOpts
+    reducedMotion: boolean
+  } | null>(null)
 
   const resolvedStyle = useMemo<CSSProperties>(() => {
     return {
@@ -89,7 +99,15 @@ export function EChart(props: EChartProps) {
     const updateColors = (themeChanged = false) => {
       instance.setOption(
         applyChartTypography(
-          applyChartColors(option, readChartColors(container)),
+          applyChartColors(
+            {
+              ...option,
+              animation: shouldReduceMotion
+                ? false
+                : (option.animation ?? true),
+            },
+            readChartColors(container),
+          ),
           readChartTextIncrement(container),
           getComputedStyle(container).fontFamily,
         ),
@@ -100,7 +118,31 @@ export function EChart(props: EChartProps) {
         },
       )
     }
-    updateColors()
+    const previous = lastRenderRef.current
+    if (
+      previous?.option === option &&
+      previous.renderer === renderer &&
+      previous.setOptionOpts === resolvedSetOptionOpts &&
+      previous.reducedMotion !== shouldReduceMotion
+    ) {
+      // A preference change must not replay caller data, legend selection or zoom.
+      instance.setOption(
+        { animation: shouldReduceMotion ? false : (option.animation ?? true) },
+        {
+          lazyUpdate: resolvedSetOptionOpts.lazyUpdate,
+          silent: resolvedSetOptionOpts.silent,
+          notMerge: false,
+        },
+      )
+    } else {
+      updateColors()
+    }
+    lastRenderRef.current = {
+      option,
+      renderer,
+      setOptionOpts: resolvedSetOptionOpts,
+      reducedMotion: shouldReduceMotion,
+    }
     let frame: number | undefined
     const observer = new MutationObserver(() => {
       if (frame !== undefined) cancelAnimationFrame(frame)
@@ -122,7 +164,7 @@ export function EChart(props: EChartProps) {
       observer.disconnect()
       if (frame !== undefined) cancelAnimationFrame(frame)
     }
-  }, [option, resolvedSetOptionOpts, renderer])
+  }, [option, resolvedSetOptionOpts, renderer, shouldReduceMotion])
 
   useEffect(() => {
     const container = containerRef.current

@@ -22,11 +22,6 @@
     "retry": "再試行",
     "save": "保存"
   },
-  "currency": {
-    "clickToSwitch": "{{currency}} に切り替える",
-    "cny": "CNY",
-    "usd": "USD"
-  },
   "datePicker": {
     "in1Year": "+1 年",
     "in30Days": "+30 日",

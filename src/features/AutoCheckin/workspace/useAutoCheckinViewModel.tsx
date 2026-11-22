@@ -13,6 +13,7 @@ import {
   sendAutoCheckinMessage,
   type AutoCheckinBasicResponse,
 } from "~/services/checkin/autoCheckin/messaging"
+import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -132,7 +133,11 @@ export function useAutoCheckinViewModel(props: {
   routeParams?: Record<string, string>
 }) {
   const { t } = useTranslation(["autoCheckin", "messages", "account", "common"])
-  const { preferences: userPrefs, currencyType } = useUserPreferencesContext()
+  const {
+    preferences: userPrefs,
+    currencyType,
+    currencyDisplay = currencyType,
+  } = useUserPreferencesContext()
   const autoCheckinPreferences =
     userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
   const autoCheckinEnabled = autoCheckinPreferences.globalEnabled !== false
@@ -486,7 +491,7 @@ export function useAutoCheckinViewModel(props: {
 
   return {
     autoCheckinPreferences,
-    currencyType,
+    currencyType: getDisplayCurrency(currencyDisplay, currencyType),
     exchangeRateByAccountId,
     autoCheckinEnabled,
     status,

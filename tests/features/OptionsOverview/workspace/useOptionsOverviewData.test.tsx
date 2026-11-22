@@ -142,7 +142,7 @@ const accountStats = buildAccountStats({
 })
 
 const usageStore = {
-  schemaVersion: 1 as const,
+  schemaVersion: 3 as const,
   accounts: {},
 }
 

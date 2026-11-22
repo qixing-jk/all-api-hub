@@ -57,11 +57,12 @@ export default function UsageAnalyticsFiltersCard({
         {/*site filter*/}
         <div>
           <Label className="text-sm font-medium">{t("filters.sites")}</Label>
-          <div className="text-muted-foreground text-xs">
+          <div className="text-xs text-muted-foreground">
             {t("filters.sitesHint")}
           </div>
         </div>
         <TagFilter
+          className="[&_[data-tag-filter-chip]]:max-w-full"
           options={siteOptions}
           value={selectedSiteIds}
           onChange={onSiteChange}
@@ -74,11 +75,12 @@ export default function UsageAnalyticsFiltersCard({
         {/*account filter*/}
         <div>
           <Label className="text-sm font-medium">{t("filters.accounts")}</Label>
-          <div className="text-muted-foreground text-xs">
+          <div className="text-xs text-muted-foreground">
             {t("filters.accountsHint")}
           </div>
         </div>
         <TagFilter
+          className="[&_[data-tag-filter-chip]]:max-w-full"
           options={accountOptions}
           value={selectedAccountIds}
           onChange={onAccountChange}
@@ -91,11 +93,12 @@ export default function UsageAnalyticsFiltersCard({
         {/*API token filter*/}
         <div>
           <Label className="text-sm font-medium">{t("filters.tokens")}</Label>
-          <div className="text-muted-foreground text-xs">
+          <div className="text-xs text-muted-foreground">
             {t("filters.tokensHint")}
           </div>
         </div>
         <TagFilter
+          className="[&_[data-tag-filter-chip]]:max-w-full"
           options={tokenOptions}
           value={selectedTokenIds}
           onChange={onTokenChange}
@@ -106,7 +109,7 @@ export default function UsageAnalyticsFiltersCard({
         />
 
         {/*Date range filter*/}
-        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-density-3 md:grid-cols-2">
           <div className="space-y-density-2">
             <Label className="text-sm font-medium">
               {t("filters.startDay")}

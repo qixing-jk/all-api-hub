@@ -242,14 +242,14 @@ describe("usageHistory core", () => {
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     accountStore.daily["2026-01-02"] = {
       requests: 2,
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
-      quotaConsumed: 2,
+      referenceCostUsd: 0.000004,
     }
     accountStore.hourly["2026-01-01"] = {
       "12": { ...accountStore.daily["2026-01-01"] },
@@ -335,7 +335,7 @@ describe("usageHistory core", () => {
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     const latencyAggregate = {
       count: 1,
@@ -444,12 +444,12 @@ describe("usageHistory core", () => {
     expect(accountStore.daily[dayKey]).toMatchObject({
       requests: 2,
       totalTokens: 17,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     })
     expect(atIndex(accountStore.hourly, dayKey)["12"]).toMatchObject({
       requests: 2,
       totalTokens: 17,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     })
 
     expect(accountStore.tokenNamesById["1"]).toBe("Token A")

@@ -1,6 +1,14 @@
+import {
+  ACCOUNT_SITE_ADAPTER_FAMILIES,
+  type SiteType,
+} from "~/constants/siteType"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import { EVIDENCE_KINDS } from "~/services/amounts/financialConstants"
+import { recordedLogCharge } from "~/services/amounts/usage"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -75,12 +83,13 @@ async function fetchConsumeLogPage(params: {
   page: number
   startTimestamp: number
   endTimestamp: number
-  siteType?: import("~/constants/siteType").SiteType
+  siteType?: SiteType
 }): Promise<LogResponseData> {
   const { request, page, startTimestamp, endTimestamp } = params
-  const nativeHistory = params.siteType
-    ? getSiteTypeCapabilities(params.siteType).account?.usageHistory
+  const capabilities = params.siteType
+    ? getSiteTypeCapabilities(params.siteType)
     : undefined
+  const nativeHistory = capabilities?.account?.usageHistory
   if (nativeHistory)
     return nativeHistory.fetchPage(request, {
       page,
@@ -100,9 +109,44 @@ async function fetchConsumeLogPage(params: {
     group: "",
   })
 
-  return await newApiFamilyRequests.data<LogResponseData>(request, {
+  const data = await newApiFamilyRequests.data<LogResponseData>(request, {
     endpoint: `/api/log/self?${searchParams.toString()}`,
   })
+  if (!Array.isArray(data.items)) return data
+
+  const siteType =
+    capabilities?.family === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+      ? params.siteType
+      : null
+  const scope = accountBalanceScope(request)
+  return {
+    ...data,
+    items: data.items.map((item) => {
+      if (item.type !== LogType.Consume || !Number.isFinite(item.created_at))
+        return item
+      const charge = newApiFinancialAmount(
+        item.quota,
+        request.baseUrl,
+        siteType,
+      )
+      return {
+        ...item,
+        consumption: recordedLogCharge(
+          charge.asset,
+          charge.value,
+          scope,
+          {
+            adapter: params.siteType ?? "usage-history",
+            operation: "/api/log/self:quota",
+            contractVersion: charge.contractVersion,
+            kind: EVIDENCE_KINDS.Reported,
+            amountInputs: charge.amountInputs,
+          },
+          item.created_at * 1000,
+        ),
+      }
+    }),
+  }
 }
 
 /**

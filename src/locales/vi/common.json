@@ -22,11 +22,6 @@
     "retry": "Thử lại",
     "save": "Lưu"
   },
-  "currency": {
-    "clickToSwitch": "Nhấn để chuyển sang {{currency}}",
-    "cny": "Nhân dân tệ",
-    "usd": "Đô la Mỹ"
-  },
   "datePicker": {
     "in1Year": "+1 năm",
     "in30Days": "+30 ngày",

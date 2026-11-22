@@ -371,7 +371,11 @@ describe("AutoCheckin quick run", () => {
     vi.spyOn(
       userPreferencesContext,
       "useUserPreferencesContext",
-    ).mockImplementation(() => ({ ...usePreferences(), currencyType: "CNY" }))
+    ).mockImplementation(() => ({
+      ...usePreferences(),
+      currencyType: "CNY",
+      currencyDisplay: "CNY",
+    }))
     const savedAccount = buildSiteAccount({ id: "alpha", exchange_rate: 6.5 })
     vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([savedAccount])
     sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {

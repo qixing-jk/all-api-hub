@@ -214,7 +214,15 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.general",
         "settings:display.title",
       ],
-      keywords: ["currency", "usd", "cny", "money"],
+      keywords: [
+        "currency",
+        "usd",
+        "cny",
+        "money",
+        "original currency",
+        "原始币种",
+        "原币",
+      ],
     },
   ),
   buildControlDefinition(

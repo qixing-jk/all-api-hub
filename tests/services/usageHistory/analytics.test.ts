@@ -17,14 +17,13 @@ describe("usageHistory analytics", () => {
       promptTokens: 10,
       completionTokens: 20,
       totalTokens: 30,
-      quotaConsumed: 5,
+      referenceCostUsd: 0.00001,
     }
     a1.daily["2026-01-02"] = {
       requests: 100,
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
-      quotaConsumed: 0,
     }
     a1.dailyByModel["gpt-4"] = {
       "2026-01-01": { ...atIndex(a1.daily, "2026-01-01") },
@@ -37,7 +36,7 @@ describe("usageHistory analytics", () => {
       promptTokens: 1,
       completionTokens: 1,
       totalTokens: 2,
-      quotaConsumed: 7,
+      referenceCostUsd: 0.000014,
     }
     a2.dailyByModel["gpt-4"] = {
       "2026-01-01": { ...atIndex(a2.daily, "2026-01-01") },
@@ -68,7 +67,7 @@ describe("usageHistory analytics", () => {
     expect(exportData.fused.daily["2026-01-01"]).toMatchObject({
       requests: 3,
       totalTokens: 32,
-      quotaConsumed: 12,
+      referenceCostUsd: 0.000024,
     })
     expect(exportData.fused.daily["2026-01-02"]).toBeUndefined()
 
@@ -121,7 +120,7 @@ describe("usageHistory analytics", () => {
         promptTokens: 1,
         completionTokens: 1,
         totalTokens: 2,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       },
     }
     a1.latencyDaily[dayKey] = {
@@ -143,7 +142,7 @@ describe("usageHistory analytics", () => {
         promptTokens: 0,
         completionTokens: 3,
         totalTokens: 3,
-        quotaConsumed: 2,
+        referenceCostUsd: 0.000004,
       },
     }
     a2.latencyDaily[dayKey] = {
@@ -169,7 +168,7 @@ describe("usageHistory analytics", () => {
     expect(exportData.fused.byToken["1"]).toMatchObject({
       requests: 3,
       totalTokens: 5,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     })
 
     expect(exportData.fused.latencyDaily[dayKey]).toMatchObject({
@@ -190,7 +189,7 @@ describe("usageHistory analytics", () => {
       promptTokens: 1,
       completionTokens: 0,
       totalTokens: 1,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
 
     const store: UsageHistoryStore = {
@@ -212,7 +211,7 @@ describe("usageHistory analytics", () => {
     expect(exportData.fused.daily["2026-01-01"]).toMatchObject({
       requests: 1,
       totalTokens: 1,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     })
   })
 
@@ -224,7 +223,6 @@ describe("usageHistory analytics", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
-        quotaConsumed: 0,
       },
     }
     a1.hourly["2026-01-02"] = {
@@ -233,7 +231,6 @@ describe("usageHistory analytics", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
-        quotaConsumed: 0,
       },
     }
 

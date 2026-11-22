@@ -19,25 +19,25 @@
         "ariaLabel": "圖表型別",
         "histogram": "直方圖",
         "pie": "餅圖"
-      }
+      },
+      "costUnit": "費用單位"
     },
     "dailyOverview": {
       "axes": {
         "requests": "請求數",
-        "tokens": "Tokens / 額度"
+        "tokens": "Token"
       },
       "description": "多指標趨勢，支援提示與縮放。",
       "series": {
         "completionTokens": "Completion Tokens",
         "promptTokens": "Prompt Tokens",
-        "quota": "額度",
         "requests": "請求數",
         "totalTokens": "總 Tokens"
       },
       "title": "每日總覽"
     },
     "latencyHistogram": {
-      "description": "當前選擇下單次請求延遲（use_time）的直方圖。",
+      "description": "目前選擇範圍內單次請求耗時的分布。",
       "series": {
         "count": "數量"
       },
@@ -57,11 +57,12 @@
       "title": "延遲趨勢"
     },
     "modelCostDistribution": {
-      "description": "按所選日期範圍內額度消耗（折算 USD）統計的 Top 模型。",
+      "description": "依單位查看各模型的已結算費用。",
       "series": {
-        "usd": "花費（USD）"
+        "native": "已結算消耗"
       },
-      "title": "模型花費分佈"
+      "title": "模型消耗分佈",
+      "unavailable": "目前篩選範圍內沒有已結算的模型費用。"
     },
     "modelDistribution": {
       "description": "按所選日期範圍內總 Tokens 統計的 Top 模型。",
@@ -116,7 +117,7 @@
     "sitesHint": "可選擇部分站點（不選擇表示全部）。",
     "startDay": "開始日期",
     "tokens": "API Token",
-    "tokensHint": "可按帳號 Token 過濾（不選擇表示帳號範圍內全部）。",
+    "tokensHint": "按 API 金鑰篩選已記錄的請求（不選擇表示所選帳號的全部金鑰）。",
     "unknownToken": "未知 Token"
   },
   "hover": {
@@ -125,13 +126,15 @@
     "owners": "所屬帳號",
     "site": "站點",
     "token": "Token",
-    "type": "型別",
     "url": "URL"
   },
   "messages": {
     "error": {
       "exportFailed": "匯出失敗：{{error}}",
       "exportNoData": "當前選擇下沒有可匯出的資料",
+      "lastLoadedDescription": "正在顯示上次讀取的歷史。重新讀取失敗，可重試更新。",
+      "loadDescription": "已儲存的歷史未被取代。請重試，或使用支援此資料的應用程式版本。",
+      "loadTitle": "無法讀取歷史記錄",
       "settingsSaveFailed": "儲存設定失敗：{{error}}",
       "syncFailed": "同步失敗：{{error}}"
     },
@@ -174,10 +177,14 @@
   },
   "summary": {
     "completionTokens": "輸出 Token",
-    "cost": "花費",
+    "cost": "已記錄費用",
+    "partial": "部分費用可能尚未記錄。",
     "promptTokens": "輸入 Token",
+    "referenceCost": "參考費用",
+    "referenceHint": "已記錄費用與參考費用可能涵蓋同一批請求。",
     "requests": "請求數",
-    "totalTokens": "Token 總量"
+    "totalTokens": "Token 總量",
+    "unpriced": "暫無費用記錄"
   },
   "syncTab": {
     "actions": {

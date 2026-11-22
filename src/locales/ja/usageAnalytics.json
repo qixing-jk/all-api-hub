@@ -19,25 +19,25 @@
         "ariaLabel": "グラフ種別",
         "histogram": "ヒストグラム",
         "pie": "円グラフ"
-      }
+      },
+      "costUnit": "費用の単位"
     },
     "dailyOverview": {
       "axes": {
         "requests": "リクエスト数",
-        "tokens": "トークン / クォータ"
+        "tokens": "トークン"
       },
       "description": "ツールチップとズーム対応の複数指標トレンドです。",
       "series": {
         "completionTokens": "出力トークン",
         "promptTokens": "入力トークン",
-        "quota": "クォータ",
         "requests": "リクエスト数",
         "totalTokens": "総トークン数"
       },
       "title": "日次概要"
     },
     "latencyHistogram": {
-      "description": "現在の選択範囲におけるリクエストごとの遅延（`use_time`）ヒストグラムです。",
+      "description": "現在の選択範囲におけるリクエストごとの所要時間の分布です。",
       "series": {
         "count": "件数"
       },
@@ -57,11 +57,12 @@
       "title": "遅延トレンド"
     },
     "modelCostDistribution": {
-      "description": "選択した期間内で、クォータ消費量（USD 換算）が多い上位モデルです。",
+      "description": "確定したモデル料金を単位別に表示します。",
       "series": {
-        "usd": "コスト (USD)"
+        "native": "確定済み消費"
       },
-      "title": "モデルコスト分布"
+      "title": "モデル別消費",
+      "unavailable": "選択範囲に確定したモデル料金はありません。"
     },
     "modelDistribution": {
       "description": "選択した期間内で、総トークン数が多い上位モデルです。",
@@ -116,7 +117,7 @@
     "sitesHint": "サイトの一部を選択します（未選択は全サイトを意味します）。",
     "startDay": "開始日",
     "tokens": "API トークン",
-    "tokensHint": "利用履歴集計から導出された任意のトークンフィルターです（未選択は、選択中アカウント内の全トークンを意味します）。",
+    "tokensHint": "記録済みのリクエストを API キーで絞り込みます（未選択の場合は選択中アカウントの全キー）。",
     "unknownToken": "不明なトークン"
   },
   "hover": {
@@ -125,13 +126,15 @@
     "owners": "アカウント",
     "site": "サイト",
     "token": "トークン",
-    "type": "種別",
     "url": "URL"
   },
   "messages": {
     "error": {
       "exportFailed": "エクスポートに失敗しました: {{error}}",
       "exportNoData": "現在の選択範囲にエクスポート可能なデータがありません",
+      "lastLoadedDescription": "前回読み込んだ履歴を表示しています。再読み込みに失敗しました。更新するには再試行してください。",
+      "loadDescription": "保存済みの履歴は置き換えていません。再試行するか、このデータに対応するアプリを使用してください。",
+      "loadTitle": "履歴を読み込めませんでした",
       "settingsSaveFailed": "設定の保存に失敗しました: {{error}}",
       "syncFailed": "同期に失敗しました: {{error}}"
     },
@@ -174,10 +177,14 @@
   },
   "summary": {
     "completionTokens": "出力トークン",
-    "cost": "コスト",
+    "cost": "記録済みの費用",
+    "partial": "一部の費用が記録されていない場合があります。",
     "promptTokens": "入力トークン",
+    "referenceCost": "参考費用",
+    "referenceHint": "記録済みの費用と参考費用には、同じリクエストが含まれる場合があります。",
     "requests": "リクエスト数",
-    "totalTokens": "総トークン数"
+    "totalTokens": "総トークン数",
+    "unpriced": "費用の記録なし"
   },
   "syncTab": {
     "actions": {

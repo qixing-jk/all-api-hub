@@ -167,6 +167,17 @@ describe("dev allowance fixtures", () => {
     // The unmonitored state is the point of one fixture, so it seeds no snapshot.
     const snapshotsWritten = updateTelemetrySnapshot.mock.calls.length
     expect(snapshotsWritten).toBe(DEV_ALLOWANCE_FIXTURES.length - 1)
+    const [profileId, runwaySnapshot] = updateTelemetrySnapshot.mock.calls.find(
+      ([, snapshot]) => snapshot.facts?.balanceSnapshot,
+    )!
+    expect(runwaySnapshot.facts.balanceSnapshot.subject).toEqual({
+      kind: "credential",
+      profileId,
+    })
+    const scope = runwaySnapshot.facts.balanceSnapshot.positions[0].scope
+    expect(scope.subject.profileId).toBe(profileId)
+    expect(scope.authority).toBe(new URL(inputs[0].baseUrl).origin)
+    expect(runwaySnapshot.facts.usage.todayCost.scope).toEqual(scope)
 
     listProfiles.mockResolvedValue(
       inputs.map((input) => ({ ...input, id: `fixture-${input.apiKey}` })),

@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { buildUsageSnapshot } from "~/features/OptionsOverview/usage/usageSnapshot"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import type { AccountStats } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
@@ -28,13 +39,74 @@ const aggregate = (
   promptTokens: 0,
   completionTokens: totalTokens,
   totalTokens,
-  quotaConsumed: 0,
 })
 
 describe("overview usage snapshot", () => {
+  it.each([
+    ["1.23456789", /CNY\s*1.23456789/],
+    ["0", /CNY\s*0$/],
+  ] as const)(
+    "preserves native currency amount %s and interval instead of displaying raw quota",
+    (value, expected) => {
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      const window = {
+        start: start.getTime(),
+        end: start.getTime() + 1000,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }
+      const scope = {
+        subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: "one" },
+        authority: "https://wallet.example",
+        models: { kind: SCOPE_SELECTION_KINDS.All },
+        groups: { kind: SCOPE_SELECTION_KINDS.All },
+        keys: { kind: SCOPE_SELECTION_KINDS.All },
+        projects: { kind: SCOPE_SELECTION_KINDS.All },
+      } as const
+      const source = {
+        adapter: "fixture",
+        operation: "usage",
+        contractVersion: "1",
+        kind: EVIDENCE_KINDS.Reported,
+      } as const
+      const consumptionProjection = getDisplayConsumptionProjection([
+        {
+          id: "one",
+          settledConsumption: [
+            {
+              scope,
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+              amount: {
+                status: OBSERVATION_STATUSES.Known,
+                value,
+                observedAt: Date.now(),
+                source,
+              },
+              window,
+              settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+              coverage: FINANCIAL_COVERAGE.Complete,
+            },
+          ],
+        },
+      ])
+      const result = buildUsageSnapshot(
+        {
+          ...emptyStats,
+          today_total_consumption: 617283945,
+          consumptionProjection,
+        },
+        { schemaVersion: 3, accounts: {} },
+      )
+      expect(result.todayCostText).toMatch(expected)
+      expect(result.todayCostGroups).toMatchObject([
+        { amount: { value, asset: { kind: "currency", code: "CNY" } }, window },
+      ])
+      expect(result.todayCostCoverage.status).toBe("complete")
+    },
+  )
   it("combines today's account stats with the latest seven usage-history day buckets", () => {
     const usageStore: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: {
         primary: {
           ...createEmptyUsageHistoryAccountStore(),
@@ -72,10 +144,10 @@ describe("overview usage snapshot", () => {
     ).toEqual({
       todayRequests: 12,
       todayTokens: 1000,
-      todayCostText: "1,234",
+      todayCostText: "-",
       todayRequestsCoverage: emptyStats.todayStatsCoverage.requests,
       todayTokensCoverage: emptyStats.todayStatsCoverage.tokens,
-      todayCostCoverage: emptyStats.todayStatsCoverage.consumption,
+      todayCostCoverage: unavailableCoverage,
       sevenDayRequests: 35,
       sevenDayTokens: 350,
       hasTodayUsageData: true,
@@ -85,19 +157,19 @@ describe("overview usage snapshot", () => {
     })
   })
 
-  it("distinguishes measured complete zeroes from unavailable today metrics", () => {
+  it("does not turn missing native amounts into complete zeroes", () => {
     expect(
       buildUsageSnapshot(emptyStats, {
-        schemaVersion: 1,
+        schemaVersion: 3,
         accounts: {},
       }),
     ).toEqual({
       todayRequests: 0,
       todayTokens: 0,
-      todayCostText: "0",
+      todayCostText: "-",
       todayRequestsCoverage: emptyStats.todayStatsCoverage.requests,
       todayTokensCoverage: emptyStats.todayStatsCoverage.tokens,
-      todayCostCoverage: emptyStats.todayStatsCoverage.consumption,
+      todayCostCoverage: unavailableCoverage,
       sevenDayRequests: 0,
       sevenDayTokens: 0,
       hasTodayUsageData: true,
@@ -113,7 +185,7 @@ describe("overview usage snapshot", () => {
           today_total_consumption: Number.NaN,
         },
         {
-          schemaVersion: 1,
+          schemaVersion: 3,
           accounts: {},
         },
       ).todayCostText,
@@ -134,7 +206,7 @@ describe("overview usage snapshot", () => {
       },
     })
     const snapshot = buildUsageSnapshot(unavailableStats, {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: {
         primary: {
           ...createEmptyUsageHistoryAccountStore(),
@@ -148,7 +220,7 @@ describe("overview usage snapshot", () => {
     expect(snapshot).toMatchObject({
       todayRequests: 888,
       todayTokens: 1443,
-      todayCostText: "999",
+      todayCostText: "-",
       todayRequestsCoverage: unavailableCoverage,
       sevenDayRequests: 1,
       sevenDayTokens: 25,
@@ -170,7 +242,7 @@ describe("overview usage snapshot", () => {
 
     expect(
       buildUsageSnapshot(unavailableStats, {
-        schemaVersion: 1,
+        schemaVersion: 3,
         accounts: {},
       }),
     ).toMatchObject({
@@ -201,16 +273,21 @@ describe("overview usage snapshot", () => {
           tokens: partialCoverage,
         },
       }),
-      { schemaVersion: 1, accounts: {} },
+      { schemaVersion: 3, accounts: {} },
     )
 
     expect(snapshot).toMatchObject({
       todayRequests: 5,
       todayTokens: 30,
-      todayCostText: "50",
+      todayCostText: "-",
       todayRequestsCoverage: partialCoverage,
       todayTokensCoverage: partialCoverage,
-      todayCostCoverage: partialCoverage,
+      todayCostCoverage: {
+        ...partialCoverage,
+        status: "unavailable",
+        completeCount: 0,
+        partialCount: 0,
+      },
       hasTodayUsageData: true,
     })
   })

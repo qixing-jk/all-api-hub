@@ -302,7 +302,6 @@
         "healthReason": "Motivo",
         "lastSync": "Última sincronización",
         "notes": "Notas",
-        "quota": "Cuota",
         "siteType": "Tipo de sitio",
         "todayConsumption": "Consumo de hoy",
         "todayRequests": "Solicitudes de hoy",

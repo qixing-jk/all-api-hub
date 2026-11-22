@@ -6,7 +6,6 @@ import { type Storage } from "@plasmohq/storage"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
-import { fingerprintLogItem } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
@@ -166,7 +165,12 @@ describe("usageHistory sync (MSW)", () => {
     const store = await usageHistoryStorage.getAccountStore(accountId)
     expect(store.daily["2026-10-20"]).toMatchObject({
       requests: 2,
-      quotaConsumed: 700000,
+      consumption: [
+        expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ value: "1.4" }),
+        }),
+      ],
       totalTokens: 30,
     })
     expect(store.dailyByModel["gpt-4o"]?.["2026-10-20"]).toMatchObject({
@@ -207,7 +211,7 @@ describe("usageHistory sync (MSW)", () => {
     await usageHistoryStorage.updateAccountStore(accountId, (store) => {
       store.daily["2026-01-01"] = {
         requests: 1,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
         promptTokens: 1,
         completionTokens: 1,
         totalTokens: 2,
@@ -406,7 +410,7 @@ describe("usageHistory sync (MSW)", () => {
     await usageHistoryStorage.updateAccountStore(accountId, (store) => {
       store.daily[oldDay] = {
         requests: 1,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
         promptTokens: 1,
         completionTokens: 1,
         totalTokens: 2,
@@ -567,10 +571,8 @@ describe("usageHistory sync (MSW)", () => {
       ingestedCount: 1,
     })
     const advancedStore = await usageHistoryStorage.getAccountStore(accountId)
-    expect(advancedStore.cursor).toEqual({
-      lastSeenCreatedAt: createdAt + 1,
-      fingerprintsAtLastSeenCreatedAt: [fingerprintLogItem(nextItem)],
-    })
+    expect(advancedStore.cursor.lastSeenCreatedAt).toBe(createdAt + 1)
+    expect(advancedStore.cursor.fingerprintsAtLastSeenCreatedAt).toHaveLength(1)
     expect(
       Object.values(advancedStore.daily).reduce(
         (total, day) => total + day.requests,
@@ -769,7 +771,14 @@ describe("usageHistory sync (MSW)", () => {
     )
 
     const dayKey = getDayKeyFromUnixSeconds(newestCreatedAt, "UTC")
-    expect(atIndex(accountStoreAfterFirst.daily, dayKey)).toBeDefined()
+    expect(atIndex(accountStoreAfterFirst.daily, dayKey)).toMatchObject({
+      consumption: [
+        expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ value: "0.000202" }),
+        }),
+      ],
+    })
     expect(
       atIndex(accountStoreAfterFirst.dailyByToken, "1")[dayKey],
     ).toBeDefined()

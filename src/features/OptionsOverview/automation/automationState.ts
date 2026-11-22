@@ -1,4 +1,7 @@
-import { OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as STATUS_LABELS } from "~/features/OptionsOverview/ids"
+import {
+  OPTIONS_OVERVIEW_SEVERITIES,
+  OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as STATUS_LABELS,
+} from "~/features/OptionsOverview/ids"
 import type {
   OptionsOverviewAutomationItem,
   OptionsOverviewAutomationStatusLabel,
@@ -6,17 +9,17 @@ import type {
 } from "~/features/OptionsOverview/types"
 
 const severityByStatus = {
-  [STATUS_LABELS.ready]: "success",
-  [STATUS_LABELS.success]: "success",
-  [STATUS_LABELS.partial]: "warning",
-  [STATUS_LABELS.failed]: "error",
-  [STATUS_LABELS.skipped]: "info",
-  [STATUS_LABELS.notRun]: "info",
-  [STATUS_LABELS.running]: "info",
-  [STATUS_LABELS.unknown]: "info",
-  [STATUS_LABELS.unsupported]: "info",
-  [STATUS_LABELS.limited]: "warning",
-  [STATUS_LABELS.disabled]: "info",
+  [STATUS_LABELS.ready]: OPTIONS_OVERVIEW_SEVERITIES.Success,
+  [STATUS_LABELS.success]: OPTIONS_OVERVIEW_SEVERITIES.Success,
+  [STATUS_LABELS.partial]: OPTIONS_OVERVIEW_SEVERITIES.Warning,
+  [STATUS_LABELS.failed]: OPTIONS_OVERVIEW_SEVERITIES.Error,
+  [STATUS_LABELS.skipped]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [STATUS_LABELS.notRun]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [STATUS_LABELS.running]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [STATUS_LABELS.unknown]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [STATUS_LABELS.unsupported]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [STATUS_LABELS.limited]: OPTIONS_OVERVIEW_SEVERITIES.Warning,
+  [STATUS_LABELS.disabled]: OPTIONS_OVERVIEW_SEVERITIES.Info,
 } as const satisfies Record<
   OptionsOverviewAutomationStatusLabel,
   OptionsOverviewSeverity

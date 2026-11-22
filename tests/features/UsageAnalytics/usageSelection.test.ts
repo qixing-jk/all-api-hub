@@ -15,7 +15,7 @@ import {
 
 const emptyExport = () =>
   computeUsageHistoryExport({
-    store: { schemaVersion: 1, accounts: {} },
+    store: { schemaVersion: 3, accounts: {} },
     selection: { accountIds: [], startDay: "2026-01-01", endDay: "2026-01-01" },
   })
 
@@ -24,7 +24,7 @@ it("aggregates models only from selected tokens and tolerates missing token data
   const aggregate = {
     ...createEmptyUsageHistoryAggregate(),
     totalTokens: 5,
-    quotaConsumed: 2,
+    referenceCostUsd: 0.000004,
   }
   exportData.fused.byTokenByModel = {
     a: { model: aggregate },
@@ -37,7 +37,7 @@ it("aggregates models only from selected tokens and tolerates missing token data
       tokenIds: ["a", "missing", "b"],
       topN: 10,
     }),
-  ).toEqual([{ modelName: "model", totalTokens: 10, quotaConsumed: 4 }])
+  ).toEqual([{ modelName: "model", totalTokens: 10 }])
 })
 
 it("merges selected-token latency while preserving extended histogram buckets", () => {

@@ -384,13 +384,16 @@
       "title": "利用記録はまだありません"
     },
     "noRecentActivity": "最近の利用記録はありません。",
+    "requests": "リクエスト",
     "requestShare": "リクエスト比率",
     "sevenDayRequests": "7日間のリクエスト",
     "sevenDayTokens": "7日間のトークン",
+    "siteDay": "サイト基準日の使用量",
     "todayCost": "今日の消費",
     "todayRequests": "今日のリクエスト",
     "todayShare": "直近7日間に占める今日の割合",
     "todayTokens": "今日のトークン",
+    "tokens": "Token",
     "tokenShare": "トークン比率"
   }
 }

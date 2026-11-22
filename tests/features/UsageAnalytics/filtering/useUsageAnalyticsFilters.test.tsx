@@ -22,12 +22,34 @@ describe("useUsageAnalyticsFilters", () => {
       ReturnType<typeof createEmptyUsageHistoryAccountStore>
     >,
   ): UsageHistoryStore => ({
-    schemaVersion: 1,
+    schemaVersion: 3,
     accounts,
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it("keeps recognizable account details in filter hints without internal site type identifiers", async () => {
+    const account = buildSiteAccount({
+      id: "friendly-hint",
+      site_name: "Production team",
+      site_url: "https://production.example.com",
+      site_type: SITE_TYPES.NEW_API,
+    })
+    const { result } = renderHook(() =>
+      useUsageAnalyticsFilters({
+        enabledAccounts: [account],
+        store: null,
+        disabledAccountIdSet: new Set<string>(),
+        isLoading: false,
+      }),
+    )
+    await waitFor(() => expect(result.current.siteOptions).toHaveLength(1))
+    const title = result.current.siteOptions[0]!.title
+    expect(title).toContain("Production team")
+    expect(title).toContain("https://production.example.com")
+    expect(title).not.toContain("new-api")
   })
 
   it("preserves restored site selections until account loading finishes", async () => {
@@ -106,7 +128,7 @@ describe("useUsageAnalyticsFilters", () => {
       promptTokens: 2,
       completionTokens: 3,
       totalTokens: 5,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     storeA.dailyByToken["1"] = {
       "2026-01-01": { ...atIndex(storeA.daily, "2026-01-01") },
@@ -119,7 +141,7 @@ describe("useUsageAnalyticsFilters", () => {
       promptTokens: 1,
       completionTokens: 1,
       totalTokens: 2,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     storeB.dailyByToken["2"] = {
       "2026-01-01": { ...atIndex(storeB.daily, "2026-01-01") },
@@ -167,7 +189,7 @@ describe("useUsageAnalyticsFilters", () => {
       promptTokens: 2,
       completionTokens: 3,
       totalTokens: 5,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
 
     const { result } = renderHook(() =>
@@ -216,7 +238,7 @@ describe("useUsageAnalyticsFilters", () => {
         promptTokens: 2,
         completionTokens: 3,
         totalTokens: 5,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       }
     }
     accountStore.dailyByToken["fresh-token"] = {
@@ -281,7 +303,7 @@ describe("useUsageAnalyticsFilters", () => {
       promptTokens: 1,
       completionTokens: 1,
       totalTokens: 2,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
 
     vi.spyOn(usageAnalytics, "computeUsageHistoryExport").mockImplementation(
@@ -328,7 +350,7 @@ describe("useUsageAnalyticsFilters", () => {
       promptTokens: 6,
       completionTokens: 9,
       totalTokens: 15,
-      quotaConsumed: 2,
+      referenceCostUsd: 0.000004,
     }
     accountStore.dailyByToken.unknown = {
       "2026-01-01": { ...atIndex(accountStore.daily, "2026-01-01") },
@@ -379,8 +401,8 @@ describe("useUsageAnalyticsFilters", () => {
     expect(result.current.siteOptions[0]?.title).not.toContain(
       "usageAnalytics:hover.url",
     )
-    expect(result.current.siteOptions[0]?.title).toContain(
-      `usageAnalytics:hover.type: ${SITE_TYPES.UNKNOWN}`,
+    expect(result.current.siteOptions[0]?.title).not.toContain(
+      "usageAnalytics:hover.type",
     )
     expect(result.current.accountOptions[0]?.title).toContain(
       "usageAnalytics:hover.notes: Needs review",

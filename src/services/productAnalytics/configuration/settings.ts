@@ -145,6 +145,7 @@ export function buildAggregateSettingsSnapshotEvent(
     open_changelog_on_update_enabled: app.open_changelog_on_update_enabled,
     active_tab: display.active_tab,
     currency_type: display.currency_type,
+    currency_display: display.currency_display,
     show_today_cashflow_enabled: display.show_today_cashflow_enabled,
     sort_field: display.sort_field,
     sort_order: display.sort_order,

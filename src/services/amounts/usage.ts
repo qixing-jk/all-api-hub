@@ -1,17 +1,25 @@
 import { z } from "zod"
 
-import { assetSchema, type Asset } from "~/services/amounts/assets"
+import {
+  assetIdentity,
+  assetSchema,
+  type Asset,
+} from "~/services/amounts/assets"
 import {
   observationWindowSchema,
   observeAmount,
   observedAmountSchema,
+  usageScopeKey,
   usageScopeSchema,
   type EvidenceRef,
   type UsageScope,
 } from "~/services/amounts/balance"
+import { addDecimal } from "~/services/amounts/decimal"
 import {
+  EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
   FINANCIAL_SETTLEMENT_STATUSES,
+  OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
 import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
 
@@ -89,4 +97,83 @@ export function isCumulativeConsumption(
       (operation === "/api/log/self/stat:quota" ||
         operation.endsWith(":consumption")))
   )
+}
+
+/**
+ * Summarize observed log charges without claiming complete billing coverage.
+ * Matching streams retain their enclosing interval and native scope; unknown
+ * amounts remain separate observations instead of becoming numeric zero.
+ */
+export function mergeRecordedConsumption(
+  existing: FinancialConsumptionFact[],
+  incoming: FinancialConsumptionFact[],
+): FinancialConsumptionFact[] {
+  const grouped = new Map<string, FinancialConsumptionFact>()
+  const unknown: FinancialConsumptionFact[] = []
+  for (const fact of [...existing, ...incoming]) {
+    if (
+      fact.amount.status !== OBSERVATION_STATUSES.Known ||
+      fact.amount.source.kind === EVIDENCE_KINDS.Manual ||
+      fact.amount.source.kind === EVIDENCE_KINDS.Legacy
+    ) {
+      unknown.push(fact)
+      continue
+    }
+    const source = fact.amount.source
+    const key = JSON.stringify([
+      assetIdentity(fact.asset),
+      usageScopeKey(fact.scope),
+      source.adapter,
+      source.operation,
+      source.contractVersion,
+      fact.settlement,
+      fact.window.timeZone,
+    ])
+    const prior = grouped.get(key)
+    let value = fact.amount.value
+    if (prior?.amount.status === OBSERVATION_STATUSES.Known) {
+      try {
+        value = addDecimal(prior.amount.value, value)
+      } catch {
+        unknown.push({
+          ...fact,
+          amount: {
+            status: OBSERVATION_STATUSES.Unavailable,
+            source,
+            reason: "amount-out-of-range",
+          },
+        })
+        grouped.delete(key)
+        continue
+      }
+    }
+    grouped.set(key, {
+      ...fact,
+      coverage: FINANCIAL_COVERAGE.Partial,
+      window: {
+        ...fact.window,
+        start: Math.min(
+          prior?.window.start ?? fact.window.start,
+          fact.window.start,
+        ),
+        end: Math.max(prior?.window.end ?? fact.window.end, fact.window.end),
+      },
+      amount: {
+        status: OBSERVATION_STATUSES.Known,
+        value,
+        source: {
+          ...source,
+          kind: EVIDENCE_KINDS.Derived,
+          inputs: [source.operation],
+        },
+        observedAt: Math.max(
+          prior?.amount.status === OBSERVATION_STATUSES.Known
+            ? prior.amount.observedAt
+            : fact.amount.observedAt,
+          fact.amount.observedAt,
+        ),
+      },
+    })
+  }
+  return [...grouped.values(), ...unknown]
 }

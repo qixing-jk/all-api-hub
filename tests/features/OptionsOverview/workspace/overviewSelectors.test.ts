@@ -7,7 +7,10 @@ import {
   WEBDAV_AUTO_SYNC_TARGET_IDS,
   WEBDAV_TARGET_IDS,
 } from "~/features/ImportExport/searchTargets"
-import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "~/features/OptionsOverview/ids"
+import {
+  OPTIONS_OVERVIEW_ATTENTION_KINDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
+} from "~/features/OptionsOverview/ids"
 import { buildOptionsOverviewViewModel } from "~/features/OptionsOverview/workspace/overviewSelectors"
 import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
@@ -71,7 +74,7 @@ const basePreferences: UserPreferences = {
 }
 
 const emptyUsageStore: UsageHistoryStore = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   accounts: {},
 }
 
@@ -180,7 +183,7 @@ const profile: ApiCredentialProfile = {
 }
 
 const usageStoreWithTodayAndSevenDays: UsageHistoryStore = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   accounts: {
     "healthy-account": {
       ...createEmptyUsageHistoryAccountStore(),
@@ -190,21 +193,21 @@ const usageStoreWithTodayAndSevenDays: UsageHistoryStore = {
           promptTokens: 10,
           completionTokens: 20,
           totalTokens: 30,
-          quotaConsumed: 100,
+          referenceCostUsd: 0.0002,
         },
         "2026-05-27": {
           requests: 2,
           promptTokens: 20,
           completionTokens: 30,
           totalTokens: 50,
-          quotaConsumed: 200,
+          referenceCostUsd: 0.0004,
         },
         "2026-06-01": {
           requests: 3,
           promptTokens: 30,
           completionTokens: 40,
           totalTokens: 70,
-          quotaConsumed: 300,
+          referenceCostUsd: 0.0006,
         },
       },
     },
@@ -401,7 +404,7 @@ describe("Options overview selectors", () => {
 
     expect(view.autoCheckinPanel).toMatchObject({
       status: "partial",
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       totalEligible: 5,
       executed: 4,
       successCount: 3,
@@ -1310,7 +1313,7 @@ describe("Options overview selectors", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: "auto-checkin:globally-disabled",
-          severity: "warning",
+          severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
           descriptionOptions: { total: 1 },
           target: {
             menuItemId: MENU_ITEM_IDS.BASIC,
@@ -1321,7 +1324,7 @@ describe("Options overview selectors", () => {
         }),
         expect.objectContaining({
           id: "announcements:unread",
-          severity: "info",
+          severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
           titleOptions: { total: 1 },
           target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
         }),
@@ -1358,7 +1361,7 @@ describe("Options overview selectors", () => {
       expect.objectContaining({
         id: "auto-checkin:account-data-missing",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing,
-        severity: "warning",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
         titleOptions: { total: 1 },
         target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
       }),

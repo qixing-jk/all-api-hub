@@ -61,6 +61,7 @@ import {
   type ProductAnalyticsEventName,
 } from "~/services/productAnalytics/contracts"
 import {
+  CURRENCY_DISPLAY_TYPES,
   CURRENCY_TYPES,
   DASHBOARD_TAB_TYPES,
   SORT_FIELDS,
@@ -102,6 +103,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
     PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
   ),
   currency_type: CURRENCY_TYPES,
+  currency_display: CURRENCY_DISPLAY_TYPES,
   auto_provision_key_on_account_add_mode: Object.values(
     ACCOUNT_KEY_AUTO_PROVISION_MODES,
   ),
@@ -220,6 +222,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "balance_history_end_of_day_capture_enabled",
   "balance_history_retention_days",
   "currency_type",
+  "currency_display",
   "estimated_today_income_enabled",
   "managed_site_type",
   "managed_site_batch_import_source",

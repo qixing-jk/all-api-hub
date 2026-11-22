@@ -5,6 +5,7 @@ import type { Page } from "@playwright/test"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { registerBalanceDefaultDisplayTests } from "~~/e2e/scenarios/balanceDefaultDisplay"
 import {
   forceExtensionLanguage,
   seedUserPreferences,
@@ -40,6 +41,8 @@ import {
   throwScenarioError,
 } from "~~/e2e/utils/scenarioErrors"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+
+registerBalanceDefaultDisplayTests("NEW_API")
 
 registerRealSiteAccountDetectionTests({
   label: "New API",

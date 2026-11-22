@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { OverviewAttentionList } from "~/features/OptionsOverview/attention/OverviewAttentionList"
-import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "~/features/OptionsOverview/ids"
+import {
+  OPTIONS_OVERVIEW_ATTENTION_KINDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
+} from "~/features/OptionsOverview/ids"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import type { OptionsOverviewAttentionItem } from "~/features/OptionsOverview/types"
 import { render, screen, within } from "~~/tests/test-utils/render"
@@ -18,7 +21,7 @@ describe("OverviewAttentionList", () => {
       id: "account:1:error",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
       category: "accounts",
-      severity: "error",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Error,
       titleOptions: { name: "Relay" },
       descriptionOptions: { reason: "Token expired" },
       target,
@@ -59,7 +62,7 @@ describe("OverviewAttentionList", () => {
         id: "error-1",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
         category: "accounts",
-        severity: "error",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Error,
         titleOptions: { name: "Broken Relay" },
         target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
       },
@@ -67,7 +70,7 @@ describe("OverviewAttentionList", () => {
         id,
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
         category: "automation" as const,
-        severity: "warning" as const,
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
         titleOptions: { name: `Warning Relay ${index + 1}` },
         target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
       })),
@@ -75,7 +78,7 @@ describe("OverviewAttentionList", () => {
         id: "warning-3",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
         category: "accounts",
-        severity: "warning",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
         titleOptions: { name: "Warning Relay 3" },
         target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
       },
@@ -83,7 +86,7 @@ describe("OverviewAttentionList", () => {
         id: "info-1",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile,
         category: "credentials",
-        severity: "info",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
         target: { menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES },
       },
     ]

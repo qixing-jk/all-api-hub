@@ -3,7 +3,7 @@ import type { BrowserContext } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import {
@@ -26,8 +26,10 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageJsonValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const USAGE_HISTORY_SYNC_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=accountUsage&anchor=usage-history-sync#${MENU_ITEM_IDS.BASIC}`
@@ -108,6 +110,66 @@ test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
+})
+
+test("keeps account controls available when history cannot be read and recovers on retry", async ({
+  context,
+  extensionId,
+  extensionDir,
+  page,
+}) => {
+  const worker = await getServiceWorker(context)
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "usage-sync-recovery",
+      site_name: "Usage Sync Recovery",
+      site_url: "https://usage-sync-recovery.example.com",
+    }),
+  ])
+  await setPlasmoStorageValue(
+    worker,
+    USAGE_HISTORY_STORAGE_KEYS.STORE,
+    { schemaVersion: 999 },
+    { lock: STORAGE_LOCKS.USAGE_HISTORY },
+  )
+  await page.goto(USAGE_HISTORY_SYNC_URL(extensionId))
+  await waitForExtensionRoot(page)
+  const historyError = page
+    .getByRole("alert")
+    .filter({ hasText: "History could not be loaded" })
+  await expect(historyError).toBeVisible()
+  const account = page.getByRole("row", { name: /Usage Sync Recovery/ })
+  await expect(account.getByRole("button")).toBeEnabled()
+  const status = account.getByText("Unknown", { exact: true })
+  await expect(status).toBeVisible()
+  const viewport = page.viewportSize()!
+  await page.setViewportSize({ width: 390, height: 900 })
+  const statusFit = await status.evaluate((badge) => {
+    const label = document.createRange()
+    label.selectNodeContents(badge)
+    return {
+      lines: label.getClientRects().length,
+      clearOfActions:
+        label.getBoundingClientRect().right <=
+        badge.closest("tr")!.lastElementChild!.getBoundingClientRect().left,
+    }
+  })
+  expect(statusFit).toEqual({ lines: 1, clearOfActions: true })
+  await page.setViewportSize(viewport)
+  await captureVisualViews({
+    page,
+    extensionDir,
+    id: "usage-sync-history-recovery",
+    ready: account,
+  })
+  await seedUsageHistoryStore(worker, {
+    "usage-sync-recovery": createUsageHistoryAccountStore({
+      status: { state: "success", lastSyncAt: Date.now() },
+    }),
+  })
+  await historyError.getByRole("button", { name: "Retry" }).click()
+  await expect(historyError).toBeHidden()
+  await expect(account.getByText("Success", { exact: true })).toBeVisible()
 })
 
 test("updates usage-history sync settings and syncs only the selected account", async ({
@@ -256,6 +318,10 @@ test("updates usage-history sync settings and syncs only the selected account", 
     .getByTestId(BASIC_SETTINGS_TEST_IDS.usageHistorySyncSelectedButton)
     .click()
 
+  const nativeCharge = expect.objectContaining({
+    asset: { kind: "currency", code: "USD" },
+    amount: expect.objectContaining({ value: "0.001308" }),
+  })
   await expect
     .poll(async () => {
       const store = await getPlasmoStorageJsonValue<UsageHistoryStore>(
@@ -276,14 +342,14 @@ test("updates usage-history sync settings and syncs only the selected account", 
             promptTokens: 123,
             completionTokens: 456,
             totalTokens: 579,
-            quotaConsumed: 654,
+            consumption: [nativeCharge],
           }),
         }),
         dailyByToken: expect.objectContaining({
           "501": expect.objectContaining({
             [usageDayKey]: expect.objectContaining({
               requests: 1,
-              quotaConsumed: 654,
+              consumption: [nativeCharge],
             }),
           }),
         }),
@@ -302,4 +368,19 @@ test("updates usage-history sync settings and syncs only the selected account", 
   )
   expect(selectedLogRequestTypes).toContain(String(LogType.Consume))
   expect(unselectedLogRequestTypes).toHaveLength(0)
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.USAGE_ANALYTICS}`,
+  )
+  const modelCosts = page.locator('[data-slot="card"]').filter({
+    has: page.getByText("Model consumption", { exact: true }),
+  })
+  await expect(modelCosts.locator("canvas")).toBeVisible()
+  await expect(page.getByText("Reference costs", { exact: true })).toHaveCount(
+    0,
+  )
+  await modelCosts.screenshot({
+    path: testInfo.outputPath("synced-model-cost.png"),
+    animations: "disabled",
+  })
 })

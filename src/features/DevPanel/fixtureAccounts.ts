@@ -8,8 +8,13 @@ import {
 } from "~/constants/checkIn"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountSiteType } from "~/constants/siteType"
+import {
+  DEV_FINANCIAL_FIXTURE_KINDS,
+  DEV_SITE_FINANCIAL_STATES,
+} from "~/features/DevPanel/fixtureScenarioKinds"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { createUnavailableTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import {
   DEV_CHECK_IN_FIXTURE_ORIGIN,
   DEV_CHECK_IN_FIXTURE_SITE_TYPE,
@@ -24,6 +29,9 @@ import {
   type SiteAccount,
 } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+
+import { buildDevFinancialScenarios } from "./fixtureFinancialScenarios"
+import { buildDevSiteFinancialScenarios } from "./fixtureSiteBalances"
 
 const logger = createLogger("DevFixtureAccounts")
 
@@ -136,13 +144,15 @@ class DevFixtureAccountRegistry {
     }
   }
 
-  async write(ids: string[]): Promise<string[]> {
-    const unique = Array.from(new Set(ids))
+  async remove(ids: string[]): Promise<void> {
+    const removed = new Set(ids)
     await withExtensionStorageWriteLock(
       STORAGE_LOCKS.DEV_FIXTURE_ACCOUNTS,
-      () => this.storage.set(STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS, unique),
+      async () => {
+        const remaining = (await this.read()).filter((id) => !removed.has(id))
+        await this.storage.set(STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS, remaining)
+      },
     )
-    return unique
   }
 
   async add(ids: string[]): Promise<string[]> {
@@ -280,22 +290,86 @@ export async function addDevCheckInFixtureAccounts(): Promise<number> {
   return addedIds.length
 }
 
+/** Adds balance/allowance examples to the real saved-account list. */
+export async function addDevFinancialFixtureAccounts(
+  kind: (typeof DEV_FINANCIAL_FIXTURE_KINDS)[keyof typeof DEV_FINANCIAL_FIXTURE_KINDS] = DEV_FINANCIAL_FIXTURE_KINDS.Common,
+): Promise<number> {
+  await fixtureAccountRegistry.read()
+  const now = Date.now()
+  const addedIds: string[] = []
+  try {
+    const scenarios =
+      kind === DEV_FINANCIAL_FIXTURE_KINDS.SiteStates
+        ? (
+            [
+              DEV_SITE_FINANCIAL_STATES.Zero,
+              DEV_SITE_FINANCIAL_STATES.Missing,
+              DEV_SITE_FINANCIAL_STATES.Stale,
+              DEV_SITE_FINANCIAL_STATES.Requests,
+            ] as const
+          ).flatMap((state) => buildDevSiteFinancialScenarios(now, state))
+        : kind === DEV_FINANCIAL_FIXTURE_KINDS.SiteTypes
+          ? buildDevSiteFinancialScenarios(now)
+          : buildDevFinancialScenarios(now).map((scenario) => ({
+              ...scenario,
+              siteType: undefined,
+            }))
+    for (const [index, scenario] of scenarios.entries()) {
+      const data = buildFixtureAccountData(index, now)
+      data.site_name = `Dev Balance: ${scenario.label}`
+      data.site_url = scenario.baseUrl
+      if (scenario.siteType !== undefined) data.site_type = scenario.siteType
+      data.notes = `${DEV_FIXTURE_NOTES_LABEL}: ${scenario.label}`
+      data.disabled = false
+      data.excludeFromTotalBalance = false
+      data.excludeFromTodayIncome = false
+      data.health = { status: SiteHealthStatus.Healthy }
+      data.last_sync_time = scenario.observedAt
+      data.account_info = {
+        id: `dev-balance-user-${index + 1}`,
+        username: `dev_balance_${index + 1}`,
+        access_token: `dev-balance-token-${index + 1}`,
+        // Required legacy placeholders are explicitly unavailable, never cashflow facts.
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_requests_count: 0,
+        today_quota_consumption: 0,
+        today_income: 0,
+        todayStatsAvailability:
+          createUnavailableTodayStatsAvailability("not_collected"),
+        balance: scenario.balance,
+        allowances: scenario.allowances,
+      }
+      addedIds.push(await accountMutations.addAccount(data))
+    }
+  } finally {
+    if (addedIds.length) await fixtureAccountRegistry.add(addedIds)
+  }
+  return addedIds.length
+}
+
 /** Deletes every registered fixture account, leaving real accounts untouched. */
 export async function clearDevFixtureAccounts(): Promise<number> {
-  const fixtureAccounts = await readLiveFixtureAccounts()
+  const [registeredIds, accounts] = await Promise.all([
+    fixtureAccountRegistry.read(),
+    accountQueries.getAllAccountsOrThrow(),
+  ])
+  const registered = new Set(registeredIds)
+  const fixtureAccounts = accounts.filter((account) =>
+    registered.has(account.id),
+  )
   const fixtureIds = fixtureAccounts.map((account) => account.id)
+  const liveIds = new Set(fixtureIds)
+  const staleIds = registeredIds.filter((id) => !liveIds.has(id))
 
   if (fixtureIds.length === 0) {
     // Drop stale ids (fixtures deleted elsewhere) so the count cannot drift.
-    await fixtureAccountRegistry.write([])
+    await fixtureAccountRegistry.remove(staleIds)
     return 0
   }
 
-  const { deletedCount } = await accountMutations.deleteAccounts(fixtureIds)
-  const deletedIdSet = new Set(fixtureIds)
-  const remaining = (await fixtureAccountRegistry.read()).filter(
-    (id) => !deletedIdSet.has(id),
-  )
-  await fixtureAccountRegistry.write(remaining)
+  const { deletedCount, deletedIds } =
+    await accountMutations.deleteAccounts(fixtureIds)
+  await fixtureAccountRegistry.remove([...staleIds, ...deletedIds])
   return deletedCount
 }

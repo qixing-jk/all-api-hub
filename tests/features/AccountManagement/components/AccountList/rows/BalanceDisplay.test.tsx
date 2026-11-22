@@ -366,7 +366,7 @@ describe("BalanceDisplay", () => {
     render(<BalanceDisplay site={site} />)
     const reading = within(
       screen.getByRole("group", {
-        name: testI18n.t("account:financial.siteDay"),
+        name: testI18n.t("optionsOverview:usage.siteDay"),
       }),
     )
     expect(reading.getByText(/USD\s*3.50/)).toBeVisible()
@@ -1535,7 +1535,7 @@ describe("BalanceDisplay", () => {
       />,
     )
     const readings = screen.getAllByRole("group", {
-      name: "account:financial.siteDay",
+      name: "optionsOverview:usage.siteDay",
     })
     expect(readings).toHaveLength(2)
     expect(within(readings[1]!).getByText("12", { exact: true })).toBeVisible()
@@ -1624,7 +1624,7 @@ describe("BalanceDisplay", () => {
         })}
       />,
     )
-    const usage = screen.getByLabelText("account:financial.siteDay")
+    const usage = screen.getByLabelText("optionsOverview:usage.siteDay")
     expect(usage).toHaveTextContent("USD 3")
     expect(screen.getByText("123", { exact: true })).toBeVisible()
     expect(usage).toHaveTextContent("4")
@@ -1668,7 +1668,7 @@ describe("BalanceDisplay", () => {
       })
       render(<BalanceDisplay site={site} />)
       const row = screen.getByRole("group", {
-        name: "account:financial.siteDay",
+        name: "optionsOverview:usage.siteDay",
       })
       expect(row).toHaveTextContent("account:financial.lastKnown")
       expect(

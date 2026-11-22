@@ -13,6 +13,7 @@ import { type TempWindowFallbackPreferences } from "~/services/preferences/tempW
 import { type userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ActiveSortField,
+  CurrencyDisplay,
   CurrencyType,
   DashboardTabType,
   SortOrder,
@@ -61,7 +62,7 @@ export interface UserPreferencesContextType {
   isLoading: boolean
   activeTab: DashboardTabType
   currencyType: CurrencyType
-  currencyDisplay?: import("~/types").CurrencyDisplay
+  currencyDisplay: CurrencyDisplay
   showTodayCashflow: boolean
   sortingPriorityConfig: SortingPriorityConfig
   sortField: ActiveSortField
@@ -117,6 +118,9 @@ export interface UserPreferencesContextType {
   updateActiveTab: (activeTab: DashboardTabType) => PreferenceWritePromise
   updateDefaultTab: (activeTab: DashboardTabType) => PreferenceWritePromise
   updateCurrencyType: (currencyType: CurrencyType) => PreferenceWritePromise
+  updateCurrencyDisplay: (
+    currencyDisplay: CurrencyDisplay,
+  ) => PreferenceWritePromise
   updateShowTodayCashflow: (enabled: boolean) => PreferenceWritePromise
   updateSortConfig: (
     sortField: ActiveSortField,

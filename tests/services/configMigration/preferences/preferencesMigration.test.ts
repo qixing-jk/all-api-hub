@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { TEMP_CONTEXT_PREFERENCE_MODES } from "~/constants/tempContextMode"
 import {
@@ -47,7 +48,7 @@ it("loads v29 imports that omit the legacy website patterns array", () => {
   delete prefs.webAiApiCheck!.autoDetect.siteAccess
   prefs.webAiApiCheck!.autoDetect.urlWhitelist = {} as { patterns: string[] }
   const migrated = migratePreferences(prefs)
-  expect(migrated.preferencesVersion).toBe(30)
+  expect(migrated.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
   expect(migrated.webAiApiCheck!.autoDetect.siteAccess?.mode).toBe("all")
   expect(migrated.webAiApiCheck!.autoDetect.urlWhitelist.patterns).toEqual([
     "^https?://",
@@ -121,7 +122,7 @@ function createV0Preferences(
       DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode,
     // Legacy stored value before the v7->v8 cashflow tab rename migration.
     activeTab: DATA_TYPE_CONSUMPTION as any,
-    currencyType: "USD" as const,
+    currencyType: CURRENCIES.USD,
     sortField: "balance" as const,
     sortOrder: "desc" as const,
     accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
@@ -164,7 +165,7 @@ function createV0Preferences(
 
 describe("preferencesMigration", () => {
   it("tracks the current preferences schema version", () => {
-    expect(CURRENT_PREFERENCES_VERSION).toBe(30)
+    expect(CURRENT_PREFERENCES_VERSION).toBe(31)
   })
 
   describe("getPreferencesVersion", () => {
@@ -750,7 +751,7 @@ describe("preferencesMigration", () => {
       const prefs = createV0Preferences({
         themeMode: "dark" as const,
         activeTab: "balance" as const,
-        currencyType: "CNY" as const,
+        currencyType: CURRENCIES.CNY,
         sortField: "name" as const,
         sortOrder: "asc" as const,
         showHealthStatus: false,
@@ -810,7 +811,7 @@ describe("preferencesMigration", () => {
           DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode,
         // Legacy stored value before the v7->v8 cashflow tab rename migration.
         activeTab: DATA_TYPE_CONSUMPTION as any,
-        currencyType: "USD",
+        currencyType: CURRENCIES.USD,
         sortField: "balance",
         sortOrder: "desc",
         accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,

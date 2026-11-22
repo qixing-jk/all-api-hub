@@ -22,11 +22,6 @@
     "retry": "重试",
     "save": "保存"
   },
-  "currency": {
-    "clickToSwitch": "点击切换到{{currency}}",
-    "cny": "人民币",
-    "usd": "美元"
-  },
   "datePicker": {
     "in1Year": "+1 年",
     "in30Days": "+30 天",

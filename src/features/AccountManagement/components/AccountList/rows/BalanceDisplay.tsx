@@ -652,11 +652,11 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 <div
                   key={index}
                   role="group"
-                  aria-label={t("account:financial.siteDay")}
+                  aria-label={t("optionsOverview:usage.siteDay")}
                   className="col-start-1 flex flex-wrap justify-end gap-x-1.5 text-3xs text-muted-foreground sm:text-xs"
                 >
                   <span>
-                    {siteDay.reportedDay ?? t("account:financial.siteDay")}
+                    {siteDay.reportedDay ?? t("optionsOverview:usage.siteDay")}
                   </span>
                   {siteDayReading?.lastKnown && (
                     <span>{t("financial.lastKnown")}</span>

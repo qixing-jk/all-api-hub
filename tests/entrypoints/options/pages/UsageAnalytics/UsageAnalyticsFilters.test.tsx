@@ -66,7 +66,7 @@ describe("UsageAnalytics filters", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
     a1.dailyByToken["1"] = {
       "2026-01-01": { ...a1.daily["2026-01-01"] },
@@ -79,7 +79,7 @@ describe("UsageAnalytics filters", () => {
       promptTokens: 1,
       completionTokens: 1,
       totalTokens: 2,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     a2.dailyByToken["2"] = {
       "2026-01-01": { ...a2.daily["2026-01-01"] },
@@ -160,7 +160,7 @@ describe("UsageAnalytics filters", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
     a1.dailyByToken["1"] = {
       "2026-01-01": { ...a1.daily["2026-01-01"] },
@@ -173,7 +173,7 @@ describe("UsageAnalytics filters", () => {
       promptTokens: 1,
       completionTokens: 1,
       totalTokens: 2,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     a2.dailyByToken["2"] = {
       "2026-01-01": { ...a2.daily["2026-01-01"] },
@@ -239,7 +239,7 @@ describe("UsageAnalytics filters", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
     a1.dailyByToken["1"] = {
       "2026-01-01": { ...a1.daily["2026-01-01"] },
@@ -252,7 +252,7 @@ describe("UsageAnalytics filters", () => {
       promptTokens: 4,
       completionTokens: 2,
       totalTokens: 6,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     a2.dailyByToken["2"] = {
       "2026-01-01": { ...a2.daily["2026-01-01"] },
@@ -273,8 +273,8 @@ describe("UsageAnalytics filters", () => {
     const hasExactBobLabel = (_content: string, element: Element | null) =>
       Boolean(
         element?.tagName === "SPAN" &&
-          element.getAttribute("title")?.includes("site   a · bob") &&
-          element.textContent === "site   a · bob",
+        element.getAttribute("title")?.includes("site   a · bob") &&
+        element.textContent === "site   a · bob",
       )
 
     expect(

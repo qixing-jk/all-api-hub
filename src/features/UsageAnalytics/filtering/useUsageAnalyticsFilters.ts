@@ -12,12 +12,43 @@ import {
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import type { SiteAccount } from "~/types"
 import type {
-  UsageHistoryAccountStore,
   UsageHistoryExport,
   UsageHistoryExportSelection,
   UsageHistoryStore,
 } from "~/types/usageHistory"
 import { parseDayKey, subtractDaysFromDayKey } from "~/utils/core/dayKey"
+
+import { formatUsageTokenLabel } from "./usageSelection"
+
+type AccountFilterOption = {
+  value: string
+  label: string
+  baseName: string
+  username: string
+}
+
+/** Both account filters retain the same global name ordering and public option shape. */
+function sortAccountOptions<T extends AccountFilterOption>(options: T[]) {
+  options.sort((a, b) =>
+    compareAccountDisplayNames(
+      {
+        id: a.value,
+        name: a.label,
+        baseName: a.baseName,
+        username: a.username,
+      },
+      {
+        id: b.value,
+        name: b.label,
+        baseName: b.baseName,
+        username: b.username,
+      },
+    ),
+  )
+  return options.map(
+    ({ baseName: _baseName, username: _username, ...rest }) => rest,
+  )
+}
 
 export const useUsageAnalyticsFilters = (params: {
   enabledAccounts: SiteAccount[]
@@ -52,13 +83,12 @@ export const useUsageAnalyticsFilters = (params: {
     }
 
     for (const [accountId, accountStore] of Object.entries(store.accounts)) {
-      const resolved = accountStore as UsageHistoryAccountStore
       const tokenIds = new Set<string>()
 
       for (const [tokenId, perTokenDaily] of Object.entries(
-        resolved.dailyByToken ?? {},
+        accountStore.dailyByToken ?? {},
       )) {
-        if (hasUsageInRange(perTokenDaily as Record<string, unknown>)) {
+        if (hasUsageInRange(perTokenDaily)) {
           tokenIds.add(tokenId)
         }
       }
@@ -87,7 +117,6 @@ export const useUsageAnalyticsFilters = (params: {
           `${t("hover.account")}: ${label}`,
           `${t("hover.site")}: ${account.site_name}`,
           account.site_url ? `${t("hover.url")}: ${account.site_url}` : "",
-          account.site_type ? `${t("hover.type")}: ${account.site_type}` : "",
         ]
           .filter(Boolean)
           .join("\n"),
@@ -106,25 +135,7 @@ export const useUsageAnalyticsFilters = (params: {
       username: account.account_info?.username ?? "",
     }))
 
-    options.sort((a, b) =>
-      compareAccountDisplayNames(
-        {
-          id: a.value,
-          name: a.label,
-          baseName: a.baseName,
-          username: a.username,
-        },
-        {
-          id: b.value,
-          name: b.label,
-          baseName: b.baseName,
-          username: b.username,
-        },
-      ),
-    )
-    return options.map(
-      ({ baseName: _baseName, username: _username, ...rest }) => rest,
-    )
+    return sortAccountOptions(options)
   }, [accountLabelById, enabledAccounts, siteTitleById])
 
   // Filtered accounts for the selected sites.
@@ -153,34 +164,16 @@ export const useUsageAnalyticsFilters = (params: {
         .join("\n"),
     }))
 
-    options.sort((a, b) =>
-      compareAccountDisplayNames(
-        {
-          id: a.value,
-          name: a.label,
-          baseName: a.baseName,
-          username: a.username,
-        },
-        {
-          id: b.value,
-          name: b.label,
-          baseName: b.baseName,
-          username: b.username,
-        },
-      ),
-    )
-    return options.map(
-      ({ baseName: _baseName, username: _username, ...rest }) => rest,
-    )
+    return sortAccountOptions(options)
   }, [accountLabelById, accountsForSelectedSites, t, tokenCountByAccountId])
 
   const accountLabels = useMemo(() => {
-    return Object.fromEntries(
+    return Object.fromEntries<string>(
       enabledAccounts.map((account) => [
         account.id,
         accountLabelById.get(account.id) ?? account.id,
       ]),
-    ) as Record<string, string>
+    )
   }, [accountLabelById, enabledAccounts])
 
   useEffect(() => {
@@ -338,13 +331,11 @@ export const useUsageAnalyticsFilters = (params: {
     }
 
     const options = Array.from(tokenIds).map((tokenId) => {
-      const tokenName = tokenNamesById[tokenId]
-      const label =
-        tokenId === "unknown"
-          ? t("filters.unknownToken")
-          : tokenName
-            ? `${tokenName} (#${tokenId})`
-            : `#${tokenId}`
+      const label = formatUsageTokenLabel(
+        tokenId,
+        tokenNamesById[tokenId],
+        t("filters.unknownToken"),
+      )
 
       const owners = (tokenOwnersById.get(tokenId) ?? []).slice().sort()
       return {

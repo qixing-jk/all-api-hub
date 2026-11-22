@@ -9,9 +9,14 @@ import {
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
 import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+} from "~/services/accounts/balanceSnapshot"
+import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
 } from "~/services/accounts/editing/accountDefaults"
+import { balancePosition } from "~/services/amounts/balance"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -33,6 +38,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { buildFinancialPeriodFact } from "~~/tests/test-utils/accountTodayStats"
 
 const ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY =
@@ -990,16 +996,24 @@ test("shows the empty duplicate-cleanup state when no duplicate accounts are fou
 test("cleans duplicate accounts after preview confirmation and prunes stale references", async ({
   context,
   extensionId,
+  extensionDir,
   page,
-}, testInfo) => {
-  const consumption = buildFinancialPeriodFact({
-    accountId: "dup-keep",
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const nativeConsumption = buildFinancialPeriodFact({
+    accountId: "dup-delete",
     value: "0.123456789123456789",
     coverage: "partial",
   })
-  await page.clock.setFixedTime(consumption.window.start + 12 * 60 * 60_000)
-  await page.emulateMedia({ reducedMotion: "reduce" })
-  const serviceWorker = await getServiceWorker(context)
+  nativeConsumption.scope.authority = "https://duplicate.example.com"
+  await page.clock.setFixedTime(
+    nativeConsumption.window.start + 12 * 60 * 60_000,
+  )
+  const now = Date.now()
+  const duplicateScope = accountBalanceScope({
+    baseUrl: "https://duplicate.example.com/panel",
+    accountId: "dup-keep",
+  })
   await seedStoredAccountConfig(serviceWorker, {
     accounts: [
       createStoredAccount({
@@ -1012,15 +1026,29 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
           id: "55",
           username: "keep-user",
           access_token: "keep-token",
-          settledConsumption: [
-            {
-              ...consumption,
-              scope: {
-                ...consumption.scope,
-                authority: "https://duplicate.example.com",
-              },
-            },
-          ],
+          today_quota_consumption: 1_625_000,
+          today_income: undefined,
+          balance: accountBalanceSnapshot(
+            duplicateScope,
+            [
+              balancePosition({
+                id: "expiring-credit",
+                scope: duplicateScope,
+                asset: { kind: "currency", code: "USD" },
+                value: "80",
+                observedAt: now - 2000,
+                validity: { kind: "expires", at: now - 1000 },
+                source: {
+                  adapter: "fixture",
+                  operation: "wallet",
+                  contractVersion: "1",
+                  kind: "reported",
+                },
+              }),
+            ],
+            now,
+            "complete",
+          ),
         },
       }),
       createStoredAccount({
@@ -1033,6 +1061,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
           id: "55",
           username: "delete-user",
           access_token: "delete-token",
+          settledConsumption: [nativeConsumption],
         },
       }),
       createStoredAccount({
@@ -1066,23 +1095,91 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
     .locator("fieldset")
     .filter({ hasText: "https://duplicate.example.com" })
   await expect(duplicateGroup).toHaveCount(1)
-  await duplicateGroup
-    .getByRole("button", { name: "More info" })
-    .first()
-    .click()
-  await expect(
-    duplicateGroup.getByText("Today's Consumption", { exact: true }),
-  ).toBeVisible()
-  const consumptionDetail = duplicateGroup
-    .getByRole("definition")
-    .filter({ hasText: "0.123456789123456789" })
-  await expect(consumptionDetail).toHaveText(/USD\s+0\.123456789123456789/)
-  await consumptionDetail.scrollIntoViewIfNeeded()
-  await dialog.screenshot({
-    path: testInfo.outputPath("duplicate-account-consumption.png"),
-    animations: "disabled",
+  await captureVisualViews({
+    page,
+    ready: duplicateGroup,
+    captureTarget: dialog,
+    id: "dedupe-financial-cards",
+    extensionDir,
+    views: [
+      { id: "light", width: 1280, height: 900, theme: "light" },
+      { id: "dark", width: 390, height: 900, theme: "dark" },
+    ],
   })
-  await expect(consumptionDetail).toContainText("Partial daily statistic")
+  const detailsToggle = dialog.locator(
+    'button[aria-controls="dedupe-account-details-dup-keep"]',
+  )
+  await detailsToggle.click()
+  const accountDetails = dialog.locator("#dedupe-account-details-dup-keep")
+  await expect(accountDetails).toContainText("Balance")
+  await expect(accountDetails).toContainText("3.25")
+  await expect(accountDetails).toContainText("Expired")
+  await expect(accountDetails).toContainText("Older record; refresh to confirm")
+  await expect(
+    accountDetails.getByText("dup-keep", { exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    accountDetails.getByText("access_token", { exact: true }),
+  ).toHaveCount(0)
+  await captureVisualViews({
+    page,
+    ready: accountDetails,
+    captureTarget: accountDetails,
+    id: "dedupe-financial-details",
+    extensionDir,
+    views: [
+      { id: "light", width: 1280, height: 900, theme: "light" },
+      { id: "dark", width: 390, height: 900, theme: "dark" },
+    ],
+  })
+  const referenceAmount = accountDetails.getByText(/USD\s*3\.25/).last()
+  await referenceAmount.scrollIntoViewIfNeeded()
+  await captureVisualViews({
+    page,
+    ready: referenceAmount,
+    captureTarget: referenceAmount.locator("..").locator(".."),
+    id: "dedupe-financial-reference-lower",
+    extensionDir,
+    views: [
+      { id: "light", width: 1280, height: 900, theme: "light" },
+      { id: "dark", width: 390, height: 900, theme: "dark" },
+    ],
+  })
+  await detailsToggle.click()
+
+  const nativeToggle = dialog.locator(
+    'button[aria-controls="dedupe-account-details-dup-delete"]',
+  )
+  await nativeToggle.click()
+  const nativeDetails = dialog.locator("#dedupe-account-details-dup-delete")
+  await expect(nativeDetails).toContainText(/USD\s*0\.123456789123456789/)
+  await expect(nativeDetails).toContainText("Partial daily statistic")
+  await nativeToggle.click()
+
+  await page.evaluate(() => {
+    localStorage.setItem("aah_dev_features_unlocked", "true")
+    window.dispatchEvent(new CustomEvent("aah_dev_features_changed"))
+  })
+  await detailsToggle.click()
+  const technical = accountDetails
+    .locator("details")
+    .filter({ hasText: "Account ID" })
+  await expect(technical.getByText("dup-keep", { exact: true })).toBeHidden()
+  await technical.locator("summary").click()
+  await expect(technical.getByText("dup-keep", { exact: true })).toBeVisible()
+  await captureVisualViews({
+    page,
+    extensionDir,
+    ready: technical,
+    captureTarget: technical,
+    id: "dedupe-technical-expanded",
+  })
+  await technical.locator("summary").click()
+  await detailsToggle.click()
+  await page.evaluate(() => {
+    localStorage.removeItem("aah_dev_features_unlocked")
+    window.dispatchEvent(new CustomEvent("aah_dev_features_changed"))
+  })
 
   const radios = duplicateGroup.getByRole("radio")
   await expect(radios).toHaveCount(2)

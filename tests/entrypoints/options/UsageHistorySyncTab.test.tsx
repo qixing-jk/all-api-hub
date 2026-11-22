@@ -8,7 +8,10 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { DEFAULT_USAGE_HISTORY_PREFERENCES } from "~/types/usageHistory"
+import {
+  DEFAULT_USAGE_HISTORY_PREFERENCES,
+  USAGE_HISTORY_SYNC_STATES,
+} from "~/types/usageHistory"
 import { hasAlarmsAPI } from "~/utils/browser/alarms"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
@@ -86,8 +89,8 @@ describe("UsageHistorySyncTab", () => {
     ({
       schemaVersion: 2,
       accounts: {
-        a1: { status: { state: "never" } },
-        a2: { status: { state: "never" } },
+        a1: { status: { state: USAGE_HISTORY_SYNC_STATES.Never } },
+        a2: { status: { state: USAGE_HISTORY_SYNC_STATES.Never } },
       },
       ...overrides,
     }) as any
@@ -118,6 +121,29 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(hasAlarmsAPI).mockReturnValue(true)
     mockedSendUsageHistoryMessage.mockResolvedValue({ success: true } as any)
     vi.mocked(toast.loading).mockReturnValue("sync-toast")
+  })
+
+  it("keeps account sync controls and can retry when saved history fails to load", async () => {
+    vi.mocked(usageHistoryStorage.getStore).mockRejectedValueOnce(
+      new Error("unreadable"),
+    )
+    const user = userEvent.setup()
+    renderSubject()
+
+    const row = await screen.findByRole("row", { name: /Account 1/ })
+    expect(within(row).getByRole("button")).toBeEnabled()
+    expect(
+      screen.getByText("usageAnalytics:messages.error.loadTitle"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByText("usageAnalytics:messages.error.loadTitle"),
+      ).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole("row", { name: /Account 1/ })).toBeVisible()
   })
 
   it("confirms a shorter retention reset and restores canonical settings", async () => {
@@ -454,8 +480,8 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
       accounts: {
-        a1: { status: { state: "never" } },
-        a2: { status: { state: "never" } },
+        a1: { status: { state: USAGE_HISTORY_SYNC_STATES.Never } },
+        a2: { status: { state: USAGE_HISTORY_SYNC_STATES.Never } },
       },
     } as any)
 
@@ -691,8 +717,13 @@ describe("UsageHistorySyncTab", () => {
     deferredStore.resolve(
       createStore({
         accounts: {
-          a1: { status: { state: "success", lastSyncAt: 1_700_000_000_000 } },
-          a2: { status: { state: "never" } },
+          a1: {
+            status: {
+              state: USAGE_HISTORY_SYNC_STATES.Success,
+              lastSyncAt: 1_700_000_000_000,
+            },
+          },
+          a2: { status: { state: USAGE_HISTORY_SYNC_STATES.Never } },
         },
       }),
     )
@@ -813,8 +844,8 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
       accounts: {
-        a1: { status: { state: "never" } },
-        a2: { status: { state: "never" } },
+        a1: { status: { state: USAGE_HISTORY_SYNC_STATES.Never } },
+        a2: { status: { state: USAGE_HISTORY_SYNC_STATES.Never } },
       },
     } as any)
 
