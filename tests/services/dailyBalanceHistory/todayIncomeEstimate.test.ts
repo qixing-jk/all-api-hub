@@ -468,6 +468,10 @@ describe("today net inflow", () => {
   it("requires consumption timezone to match the selected day timezone", () => {
     expect(estimate(store(), "Asia/Shanghai").status).not.toBe("available")
   })
+  it("rejects different reporting time zones even when midnight currently has the same offset", () => {
+    expect(estimate(store(), "Africa/Abidjan").status).toBe("interval_mismatch")
+  })
+
   it("keeps malformed report dates and time zones unavailable", () => {
     expect(estimate(store(), "not-a-time-zone").status).toBe("invalid_estimate")
     expect(

@@ -140,7 +140,12 @@ export function DedupeAccountCard({
   const consumptionValue = nativeConsumption
     ? nativeConsumption.groups.length
       ? nativeConsumption.groups
-          .map(({ amount }) => formatAssetAmount(amount, i18n.language))
+          .map(({ amount, coverage }) => {
+            const formatted = formatAssetAmount(amount, i18n.language)
+            return coverage.status === ACCOUNT_TODAY_METRIC_STATUSES.Partial
+              ? `${formatted} · ${t("account:todayMetricAvailability.partial")}`
+              : formatted
+          })
           .join(" / ")
       : renderUnavailableTodayMetric(false)
     : resolveTodayMetricValue(

@@ -105,9 +105,10 @@ describe("DedupeAccountCard today statistics", () => {
     },
   )
 
-  it.each([false, true])(
-    "renders complete today values (native charge: %s)",
-    async (native) => {
+  it.each(["legacy", "complete", "partial"] as const)(
+    "renders today's tokens, requests and %s consumption",
+    async (coverage) => {
+      const native = coverage !== "legacy"
       const id = "dedupe-account"
       const account = buildSiteAccount({
         id,
@@ -119,6 +120,7 @@ describe("DedupeAccountCard today statistics", () => {
                 buildFinancialPeriodFact({
                   accountId: id,
                   value: "0.123456789123456789",
+                  coverage: coverage === "partial" ? "partial" : "complete",
                 }),
               ]
             : undefined,
@@ -160,6 +162,15 @@ describe("DedupeAccountCard today statistics", () => {
       expect(consumptionLabel.nextElementSibling).toHaveTextContent(
         native ? "0.123456789123456789" : "987654321",
       )
+      if (coverage === "partial") {
+        expect(consumptionLabel.nextElementSibling).toHaveTextContent(
+          "account:todayMetricAvailability.partial",
+        )
+      } else {
+        expect(consumptionLabel.nextElementSibling).not.toHaveTextContent(
+          "account:todayMetricAvailability.partial",
+        )
+      }
       expect(screen.getByText("876543210")).toBeInTheDocument()
       const tokensDetail = screen.getByText(
         "ui:dialog.dedupeAccounts.details.todayTokens",

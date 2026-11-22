@@ -290,47 +290,43 @@ export function useAccountSnapshot({
             reloadGeneration
         }
 
-        // Each single-account query reads the complete storage envelope. Read
-        // batches once to avoid repeating that work for every updated account.
-        const fullLoadBeforeQuery = appliedFullLoadRef.current
-        const accountsBeforeQuery = accountsRef.current
-        const [singleId] = uniqueIds
-        const storedAccounts =
-          uniqueIds.length === 1 && singleId !== undefined
-            ? [await accountQueries.getAccountById(singleId)]
-            : await accountQueries.getAllAccounts()
-        const storedById = new Map(
-          storedAccounts
-            .filter((account): account is SiteAccount => account !== null)
-            .map((account) => [account.id, account]),
-        )
-        const reloadedAccounts = uniqueIds.map((accountId) => {
-          const account = storedById.get(accountId)
-          if (!account) {
-            throw new Error(`Account not found: ${accountId}`)
-          }
-          return account
-        })
-        const fullLoadAdvanced =
-          appliedFullLoadRef.current !== fullLoadBeforeQuery
-        const activeReloadedAccounts = reloadedAccounts.filter(({ id }) => {
+        const isCurrentReload = (id: string) =>
+          targetedReloadGenerationByAccountIdRef.current[id] ===
+          reloadGeneration
+        let activeReloadedAccounts: SiteAccount[]
+        while (true) {
+          const fullLoadBeforeQuery = appliedFullLoadRef.current
+          const accountsBeforeQuery = accountsRef.current
+          const [singleId] = uniqueIds
+          // Each single-account query reads the complete envelope. Read a batch once.
+          const storedAccounts =
+            uniqueIds.length === 1 && singleId !== undefined
+              ? [await accountQueries.getAccountById(singleId)]
+              : await accountQueries.getAllAccounts()
+          const activeIds = uniqueIds.filter(isCurrentReload)
+          if (activeIds.length === 0) return
           if (
-            targetedReloadGenerationByAccountIdRef.current[id] !==
-            reloadGeneration
-          )
-            return false
-          if (
-            fullLoadAdvanced &&
-            (accountsBeforeQuery.some((account) => account.id === id) ||
-              accountsRef.current.some((account) => account.id === id))
+            appliedFullLoadRef.current !== fullLoadBeforeQuery &&
+            activeIds.some(
+              (id) =>
+                accountsBeforeQuery.some((account) => account.id === id) ||
+                accountsRef.current.some((account) => account.id === id),
+            )
           ) {
-            delete targetedReloadGenerationByAccountIdRef.current[id]
-            return false
+            // A full load can finish later with data read earlier. Re-read before applying either result.
+            continue
           }
-          return true
-        })
-        if (activeReloadedAccounts.length === 0) {
-          return
+          const storedById = new Map(
+            storedAccounts
+              .filter((account): account is SiteAccount => account !== null)
+              .map((account) => [account.id, account]),
+          )
+          activeReloadedAccounts = activeIds.map((id) => {
+            const account = storedById.get(id)
+            if (!account) throw new Error(`Account not found: ${id}`)
+            return account
+          })
+          break
         }
 
         const reloadedById = Object.fromEntries(
@@ -356,9 +352,7 @@ export function useAccountSnapshot({
         )
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
         const latestActiveReloadedAccounts = activeReloadedAccounts.filter(
-          (account) =>
-            targetedReloadGenerationByAccountIdRef.current[account.id] ===
-            reloadGeneration,
+          ({ id }) => isCurrentReload(id),
         )
         const latestAccounts = accountsRef.current
         const latestKnownIds = new Set(

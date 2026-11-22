@@ -3779,18 +3779,43 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     expect(mockGetAllAccounts).toHaveBeenCalledTimes(3)
   })
 
-  it.each(["account", "history"])(
-    "keeps the newer full load while a targeted update is reading %s",
-    async (pendingRead) => {
+  it.each([
+    ["account", "existing"],
+    ["history", "existing"],
+    ["account", "added-by-full-load"],
+    ["account", "removed-by-full-load"],
+    ["account", "new-target"],
+    ["account", "newer-target"],
+  ])(
+    "reconciles the %s read with the full load for %s",
+    async (pendingRead, scenario) => {
       mockUserPreferencesContext.current = {
         ...mockUserPreferencesContext.current,
         preferences: {
           balanceHistory: { estimatedTodayIncome: { enabled: true } },
         },
       }
-      const initial = { id: "a", name: "initial", disabled: false }
-      const targeted = { ...initial, name: "targeted" }
-      const latest = { ...initial, name: "latest" }
+      const target = { id: "a", name: "targeted", disabled: false }
+      const knownInitially =
+        scenario === "existing" ||
+        scenario === "removed-by-full-load" ||
+        scenario === "newer-target"
+      const initial = {
+        ...target,
+        id: knownInitially ? "a" : "b",
+        name: "initial",
+      }
+      const latest = { ...target, name: "latest" }
+      const nextAccounts =
+        scenario === "removed-by-full-load"
+          ? []
+          : [scenario === "new-target" ? initial : latest]
+      const expected =
+        scenario === "new-target"
+          ? [...nextAccounts, target]
+          : scenario === "newer-target"
+            ? [target]
+            : nextAccounts
       mockResetExpiredCheckIns.mockResolvedValue(undefined)
       mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
       mockGetAllAccounts.mockResolvedValue([initial])
@@ -3804,13 +3829,19 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
         referenceSnapshotsByAccountId: {},
       }
       mockGetDailyBalanceHistoryStore.mockResolvedValue(store)
-      mockGetAccountById.mockResolvedValue(targeted)
+      mockGetAccountById.mockResolvedValue(
+        scenario === "removed-by-full-load"
+          ? null
+          : scenario === "newer-target"
+            ? target
+            : latest,
+      )
       const getContext = await renderAccountDataProvider()
       await waitFor(() =>
         expect(getContext().displayData[0]?.name).toBe("initial"),
       )
 
-      const pendingAccount = createDeferred<typeof targeted>()
+      const pendingAccount = createDeferred<typeof target>()
       const pendingHistory = createDeferred<typeof store>()
       if (pendingRead === "account") {
         mockGetAccountById.mockReturnValueOnce(pendingAccount.promise)
@@ -3832,17 +3863,25 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
           expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2),
         )
       }
-      mockGetAllAccounts.mockResolvedValue([latest])
+      mockGetAllAccounts.mockResolvedValue(nextAccounts)
       await act(async () => getContext().loadAccountData())
-      expect(getContext().displayData[0]?.name).toBe("latest")
+      expect(
+        getContext().displayData.map(({ id, name }) => ({ id, name })),
+      ).toEqual(nextAccounts.map(({ id, name }) => ({ id, name })))
 
       await act(async () => {
-        pendingAccount.resolve(targeted)
+        pendingAccount.resolve(target)
         pendingHistory.resolve(store)
         await pendingReload
       })
-      expect(getContext().displayData[0]?.name).toBe("latest")
-      expect(getContext().accounts[0]).toMatchObject({ name: "latest" })
+      const displayIdentity = ({ id, name }: { id: string; name: string }) => ({
+        id,
+        name,
+      })
+      expect(getContext().displayData.map(displayIdentity)).toEqual(
+        expected.map(displayIdentity),
+      )
+      expect(getContext().accounts).toMatchObject(expected)
     },
   )
 

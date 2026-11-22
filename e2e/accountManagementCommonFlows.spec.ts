@@ -33,6 +33,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { buildFinancialPeriodFact } from "~~/tests/test-utils/accountTodayStats"
 
 const ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY =
   "__aah_account_quick_checkin_e2e_state__"
@@ -990,7 +991,14 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
+  const consumption = buildFinancialPeriodFact({
+    accountId: "dup-keep",
+    value: "0.123456789123456789",
+    coverage: "partial",
+  })
+  await page.clock.setFixedTime(consumption.window.start + 12 * 60 * 60_000)
+  await page.emulateMedia({ reducedMotion: "reduce" })
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccountConfig(serviceWorker, {
     accounts: [
@@ -1004,6 +1012,15 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
           id: "55",
           username: "keep-user",
           access_token: "keep-token",
+          settledConsumption: [
+            {
+              ...consumption,
+              scope: {
+                ...consumption.scope,
+                authority: "https://duplicate.example.com",
+              },
+            },
+          ],
         },
       }),
       createStoredAccount({
@@ -1049,6 +1066,23 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
     .locator("fieldset")
     .filter({ hasText: "https://duplicate.example.com" })
   await expect(duplicateGroup).toHaveCount(1)
+  await duplicateGroup
+    .getByRole("button", { name: "More info" })
+    .first()
+    .click()
+  await expect(
+    duplicateGroup.getByText("Today's Consumption", { exact: true }),
+  ).toBeVisible()
+  const consumptionDetail = duplicateGroup
+    .getByRole("definition")
+    .filter({ hasText: "0.123456789123456789" })
+  await expect(consumptionDetail).toHaveText(/USD\s+0\.123456789123456789/)
+  await consumptionDetail.scrollIntoViewIfNeeded()
+  await dialog.screenshot({
+    path: testInfo.outputPath("duplicate-account-consumption.png"),
+    animations: "disabled",
+  })
+  await expect(consumptionDetail).toContainText("Partial daily statistic")
 
   const radios = duplicateGroup.getByRole("radio")
   await expect(radios).toHaveCount(2)
