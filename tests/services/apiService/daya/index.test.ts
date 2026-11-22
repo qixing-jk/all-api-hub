@@ -5,11 +5,24 @@ import "~/services/checkin/autoCheckin/providers"
 
 import { http, HttpResponse } from "msw"
 import type { HttpHandler } from "msw"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
+import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRefreshUpdate"
 import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { fetchAccountData } from "~/services/apiService/daya"
 import type { DayaKey } from "~/services/apiService/daya/keys"
@@ -26,11 +39,12 @@ import {
   fetchDayaCheckInOverview,
   performDayaCheckIn,
 } from "~/services/apiService/daya/rewards"
-import { AuthTypeEnum } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import type { CheckInConfig } from "~/types/checkIn"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const origin = "https://api.dayaai.com"
 const identity = {
@@ -94,6 +108,144 @@ async function mockIdentity(extra: HttpHandler[] = []) {
 
 describe("Daya API account data", () => {
   let transport: ReturnType<typeof session>
+  it("rejects negative charges while keeping independent counters and the verified wallet identity", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+    await mockIdentity([
+      http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
+        HttpResponse.json(envelope({ today_cost: "-3", today_requests: 4 })),
+      ),
+    ])
+    const data = await fetchAccountData(accountRequest())
+    expect(data.settledConsumption?.[0]?.amount.status).toBe("unavailable")
+    expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
+    expect(data.today_requests_count).toBe(4)
+    expect(data.balance?.positions[0]?.scope.walletId).toBe("615")
+    expect(data.settledConsumption?.[0]?.scope.walletId).toBe("615")
+  })
+  it("keeps refreshed daily costs available after storage readback and display conversion", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-18T16:01:00Z"))
+    await mockIdentity([
+      http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
+        HttpResponse.json(envelope({ today_cost: "1.75", today_requests: 4 })),
+      ),
+    ])
+    const id = await accountMutations.addAccount(
+      buildSiteAccount({
+        site_type: SITE_TYPES.DAYA,
+        site_url: origin,
+        authType: AuthTypeEnum.Cookie,
+        account_info: {
+          ...buildSiteAccount().account_info,
+          id: "615",
+          username: identity.username,
+          access_token: "",
+        },
+        checkIn: accountRequest().checkIn,
+      }),
+    )
+    onTestFinished(async () => {
+      await accountMutations.deleteAccount(id)
+    })
+    const stored = (await accountQueries.getAccountById(id))!
+    const generation = (await accountMutations.beginBalanceRefresh(id, stored))!
+    const data = await fetchAccountData({ ...accountRequest(), accountId: id })
+    const update = buildAccountRefreshUpdate(
+      stored,
+      {
+        success: true,
+        data,
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
+      },
+      false,
+    )
+    expect(
+      await accountMutations.updateAccountFromRefresh(
+        id,
+        update,
+        undefined,
+        stored,
+        data,
+        generation,
+      ),
+    ).not.toBeNull()
+    const saved = (await accountQueries.getAccountById(id))!
+    const display = accountPresentation.convertToDisplayData(saved)
+    expect(saved.account_info.settledConsumption?.[0]).toMatchObject({
+      scope: { subject: { accountId: id }, keys: { kind: "all" } },
+      amount: { status: "known", value: "1.75" },
+      cumulative: true,
+    })
+    expect(display.todayConsumption.USD).toBe(1.75)
+    expect(display.todayStatsAvailability.consumption.status).toBe("partial")
+    expect(display.todayStatsAvailability.tokens.status).toBe("unavailable")
+  })
+  it("includes collected provider-day costs in financial reporting independently from missing token counts", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-18T16:01:00Z"))
+    await mockIdentity([
+      http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
+        HttpResponse.json(envelope({ today_cost: "1.75", today_requests: 4 })),
+      ),
+    ])
+    const data = await fetchAccountData({
+      ...accountRequest(),
+      accountId: "daya-account",
+    })
+    expect(
+      getDisplayConsumptionProjection([
+        { id: "daya-account", settledConsumption: data.settledConsumption },
+      ]).groups,
+    ).toEqual([
+      expect.objectContaining({
+        amount: { asset: { kind: "currency", code: "USD" }, value: "1.75" },
+      }),
+    ])
+    expect(data.settledConsumption?.[0]).toMatchObject({
+      cumulative: true,
+      coverage: "complete",
+      scope: {
+        projects: { kind: "all" },
+        keys: { kind: "all" },
+        models: { kind: "all" },
+        groups: { kind: "all" },
+      },
+      window: {
+        start: Date.parse("2026-11-19T00:00:00+08:00"),
+        end: Date.parse("2026-11-19T00:01:00+08:00"),
+        timeZone: "Asia/Shanghai",
+      },
+    })
+    expect(data.todayStatsAvailability?.tokens.status).toBe("unavailable")
+    expect(data.today_requests_count).toBe(4)
+    expect(data.balance?.positions[0]?.scope.keys).toEqual({ kind: "unknown" })
+  })
+  it("preserves a missing provider-day cost without presenting a complete zero expense", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+    await mockIdentity([
+      http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
+        HttpResponse.json(envelope({ today_cost: null, today_requests: 4 })),
+      ),
+    ])
+    const data = await fetchAccountData(accountRequest())
+    expect(data.settledConsumption?.[0]?.amount.status).toBe("unavailable")
+    expect(
+      getDisplayConsumptionProjection([
+        { id: "daya", settledConsumption: data.settledConsumption },
+      ]).groups,
+    ).toEqual([])
+    expect(data.todayStatsAvailability?.consumption).toMatchObject({
+      status: "unavailable",
+      reason: "invalid_payload",
+    })
+    expect(data.today_requests_count).toBe(4)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({ value: "3.5" })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
   it("fetches account data without querying or changing check-in status", async () => {
     const readStatus = vi.fn(() =>
       HttpResponse.json(envelope({ daily_check_in: { claimable: false } })),
@@ -233,7 +385,10 @@ describe("Daya API account data", () => {
         },
       },
     )
-    expect(data.quota).toBe(3.5 * QUOTA_PER_USD)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "3.5",
+    })
     expect(
       data.checkIn?.methodKnowledge.methods["daya:daily-checkin"]?.status,
     ).toMatchObject({
@@ -306,7 +461,17 @@ describe("Daya API account data", () => {
       }),
     ])
     const data = await fetchAccountData(accountRequest())
-    expect(data.quota).toBe(3.5 * QUOTA_PER_USD)
+    expect(data).not.toHaveProperty("quota")
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "3.5" },
+      cashClassification: "unknown",
+    })
+    expect(data.usage?.cost).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "0.25" },
+      window: { timeZone: "Asia/Shanghai" },
+    })
     expect(data.today_quota_consumption).toBe(0.25 * QUOTA_PER_USD)
     expect(data.today_requests_count).toBe(4)
     expect(data.today_prompt_tokens).toBe(130)
@@ -319,6 +484,32 @@ describe("Daya API account data", () => {
     })
   })
 
+  it("preserves exact USD strings independently from missing dashboard counters", async () => {
+    server.use(
+      http.get(`${origin}/api/v1/auth/me`, () =>
+        HttpResponse.json(
+          envelope({ ...identity, balance: "-0.000000000000000017" }),
+        ),
+      ),
+      http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
+        HttpResponse.json(
+          envelope({ today_cost: "0.000000000000000013", today_requests: 4 }),
+        ),
+      ),
+    )
+    const data = await fetchAccountData(accountRequest())
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "-0.000000000000000017",
+    })
+    expect(data.usage?.cost?.amount).toMatchObject({
+      status: "known",
+      value: "0.000000000000000013",
+    })
+    expect(data.todayStatsAvailability?.tokens.status).toBe("unavailable")
+    expect(data.todayStatsAvailability?.requests.status).toBe("complete")
+  })
+
   it("keeps today statistics unavailable when the dashboard route fails", async () => {
     await mockIdentity([
       http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
@@ -326,7 +517,10 @@ describe("Daya API account data", () => {
       ),
     ])
     const data = await fetchAccountData(accountRequest())
-    expect(data.quota).toBe(3.5 * QUOTA_PER_USD)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "3.5",
+    })
     expect(data.todayStatsAvailability?.consumption).toMatchObject({
       status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
     })
@@ -744,7 +938,7 @@ describe("Daya API daily check-in", () => {
             binding_tasks: [],
             daily_check_in: {
               code: "daily_check_in",
-              display_currency: "USD",
+              display_currency: CURRENCIES.USD,
               display_amount: 0.5,
               status: "claimable",
               claimable: true,
@@ -773,7 +967,7 @@ describe("Daya API daily check-in", () => {
           site_timezone: "Asia/Shanghai",
           daily_check_in: {
             code: "daily_check_in",
-            display_currency: "USD",
+            display_currency: CURRENCIES.USD,
             display_amount: 0.5,
             claimable: true,
           },
@@ -786,7 +980,7 @@ describe("Daya API daily check-in", () => {
           site_timezone: "Asia/Shanghai",
           daily_check_in: {
             code: "daily_check_in",
-            display_currency: "USD",
+            display_currency: CURRENCIES.USD,
             display_amount: 0.5,
             status: "claimed",
             claimable: false,
@@ -799,7 +993,9 @@ describe("Daya API daily check-in", () => {
       claimable,
       http.post(`${origin}/api/v1/rewards/check-in`, () => {
         posted += 1
-        return HttpResponse.json(envelope({ amount: 0.5, currency: "USD" }))
+        return HttpResponse.json(
+          envelope({ amount: 0.5, currency: CURRENCIES.USD }),
+        )
       }),
     ])
     server.use(
@@ -843,7 +1039,7 @@ describe("Daya API daily check-in", () => {
             ],
             daily_check_in: {
               code: "daily_check_in",
-              display_currency: "USD",
+              display_currency: CURRENCIES.USD,
               display_amount: 0.5,
               claimable: false,
             },

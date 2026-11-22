@@ -17,6 +17,7 @@ import { verifyAccountModelCatalog } from "~~/e2e/scenarios/modelListCatalog"
 import {
   E2E_NEW_API_RC22_AUTH,
   forceExtensionLanguage,
+  getStoredAccountUsdObservation,
   installExtensionPageGuards,
   seedUserPreferences,
   stubLlmMetadataIndex,
@@ -661,9 +662,10 @@ for (const scenario of [
     await bridge.bringToFront()
     const row = await expectAccountListItemVisible(bridge, saved.id)
     expect(
-      (await waitForSavedAccount({ serviceWorker, siteType, baseUrl }))
-        .account_info.quota,
-    ).not.toBe(refreshedQuota)
+      getStoredAccountUsdObservation(
+        await waitForSavedAccount({ serviceWorker, siteType, baseUrl }),
+      ),
+    ).not.toEqual(expect.objectContaining({ status: "known", value: "0.005" }))
     await context.route(`${baseUrl}/api/user/self`, async (route) => {
       if (
         route.request().headers()["authorization"] !== `Bearer ${manualToken}`
@@ -689,12 +691,12 @@ for (const scenario of [
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem)
       .click()
     await expect
-      .poll(
-        async () =>
-          (await waitForSavedAccount({ serviceWorker, siteType, baseUrl }))
-            .account_info.quota,
+      .poll(async () =>
+        getStoredAccountUsdObservation(
+          await waitForSavedAccount({ serviceWorker, siteType, baseUrl }),
+        ),
       )
-      .toBe(refreshedQuota)
+      .toMatchObject({ status: "known", value: "0.005" })
 
     await verifyAccountModelCatalog({
       page: bridge,

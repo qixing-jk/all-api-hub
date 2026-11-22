@@ -142,7 +142,7 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
         ref={setScrollParent}
         data-testid={POPUP_TEST_IDS.scrollContainer}
         className={cn(
-          "bg-background flex w-full flex-col overflow-y-auto",
+          "flex w-full flex-col overflow-y-auto bg-background",
           // Desktop action popups scroll inside their bounded document. Other
           // surfaces fill the viewport and retain document scrolling.
           isDesktopPopup ? "h-full" : "min-h-dvh",
@@ -154,49 +154,30 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
         />
         <PopupInterruptionHintBanner surfaceClassName="rounded-none border-x-0 shadow-none" />
 
-        <section
-          className={cn(
-            "border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 shrink-0 border-b bg-linear-to-br px-3 sm:px-4",
-            statsSection
-              ? "space-y-density-2 py-density-3 sm:py-density-4"
-              : "py-density-2 sm:py-density-2.5",
+        <section className="sm:py-density-2.5 shrink-0 border-b border-border bg-linear-to-br from-theme-50/50 to-theme-50/30 px-3 py-density-2 sm:px-4 dark:from-theme-900/20 dark:to-theme-900/10">
+          <ProductAnalyticsScope
+            entrypoint={entrypoint}
+            surfaceId={viewTabsSurface}
+          >
+            <PopupViewSwitchTabs
+              value={activeView}
+              onChange={(nextView) => {
+                setActiveView(nextView)
+                viewConfig[nextView].preload?.()
+              }}
+              accountsLabel={t("bookmark:switch.accounts")}
+              bookmarksLabel={t("bookmark:switch.bookmarks")}
+              apiCredentialProfilesLabel={t(
+                "apiCredentialProfiles:popup.tabLabel",
+              )}
+              getAnalyticsAction={mapPopupViewToAnalyticsAction}
+            />
+          </ProductAnalyticsScope>
+          {statsSection && (
+            <div className="sm:mt-density-2.5 mt-density-2 space-y-density-2">
+              {statsSection}
+            </div>
           )}
-        >
-          <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
-            <ProductAnalyticsScope
-              entrypoint={entrypoint}
-              surfaceId={viewTabsSurface}
-            >
-              <PopupViewSwitchTabs
-                value={activeView}
-                fullWidth={!activeViewConfig.headerAction}
-                onChange={(nextView) => {
-                  setActiveView(nextView)
-                  viewConfig[nextView].preload?.()
-                }}
-                accountsLabel={t("bookmark:switch.accounts")}
-                bookmarksLabel={t("bookmark:switch.bookmarks")}
-                apiCredentialProfilesLabel={t(
-                  "apiCredentialProfiles:popup.tabLabel",
-                )}
-                getAnalyticsAction={mapPopupViewToAnalyticsAction}
-              />
-            </ProductAnalyticsScope>
-            {activeViewConfig.headerAction ? (
-              <ProductAnalyticsScope
-                entrypoint={entrypoint}
-                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots}
-                surfaceId={
-                  inSidePanel
-                    ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelHeader
-                    : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader
-                }
-              >
-                {activeViewConfig.headerAction}
-              </ProductAnalyticsScope>
-            ) : null}
-          </div>
-          {statsSection}
         </section>
 
         <div className="flex-1" data-testid={getPopupViewTestId(activeView)}>

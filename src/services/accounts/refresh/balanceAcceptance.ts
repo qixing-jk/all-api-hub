@@ -1,6 +1,7 @@
 import { assetIdentity } from "~/services/amounts/assets"
 import {
   balancePositionKey,
+  balanceSnapshotParts,
   balanceSnapshotSchema,
   financialCollectionKey,
   staleObservation,
@@ -10,6 +11,7 @@ import {
   type BalanceSnapshot,
 } from "~/services/amounts/balance"
 import {
+  EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
   FINANCIAL_ENUMERATION,
   FINANCIAL_OBSERVATION_REASONS,
@@ -18,9 +20,18 @@ import {
 
 export const BALANCE_IDENTITY_CHANGED_REASON =
   FINANCIAL_OBSERVATION_REASONS.IdentityChanged
+export const LEGACY_BALANCE_SUPERSEDED_REASON =
+  FINANCIAL_OBSERVATION_REASONS.LegacySuperseded
+
+/** Snapshot-only adapters do not prove omitted collection members were removed. */
+export function snapshotRefreshParts(
+  snapshot: BalanceSnapshot,
+): BalanceRefreshPart[] {
+  return balanceSnapshotParts(snapshot, FINANCIAL_ENUMERATION.Partial)
+}
 
 /** Failure preserves the original observation time and value, never a new zero. */
-function staleBalancePosition(
+export function staleBalancePosition(
   position: BalancePosition,
   reason: string,
 ): BalancePosition {
@@ -75,7 +86,16 @@ export function acceptBalanceRefresh(
                 usageScopeKey(p.scope) === usageScopeKey(position.scope),
             )
             // A failed reading cannot reassign the last amount's timing or financial meaning.
+            const refreshedLegacyReading =
+              position.amount.status === OBSERVATION_STATUSES.Stale &&
+              position.amount.source.kind === EVIDENCE_KINDS.Legacy &&
+              position.amount.reason ===
+                FINANCIAL_OBSERVATION_REASONS.LegacySemantics &&
+              (!prior ||
+                !("observedAt" in prior.amount) ||
+                position.amount.observedAt >= prior.amount.observedAt)
             return position.amount.status !== OBSERVATION_STATUSES.Known &&
+              !refreshedLegacyReading &&
               prior &&
               (prior.amount.status === OBSERVATION_STATUSES.Known ||
                 (prior.amount.status === OBSERVATION_STATUSES.Stale &&

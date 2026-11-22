@@ -1,18 +1,21 @@
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime.js"
 
-import { CURRENCY_SYMBOLS } from "~/constants/money"
+import { CURRENCIES, CURRENCY_SYMBOLS } from "~/constants/money"
 import {
-  collectAccountMetricContributors,
   isAccountTodayMetricAvailable,
   isAccountTodayMetricLegacyUnclassified,
 } from "~/services/accounts/metrics/accountTodayStats"
-import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
+import { getDisplayBalancePortfolio } from "~/services/accounts/metrics/balanceProjection"
+import {
+  getDisplayConsumptionProjection,
+  getDisplayIncomeProjection,
+} from "~/services/accounts/metrics/consumptionProjection"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import type {
   AccountMetricCoverage,
   AccountTodayMetricAvailability,
   AccountTodayMetricStatus,
-  CurrencyMetricTotal,
   CurrencyType,
   DisplaySiteData,
 } from "~/types"
@@ -199,12 +202,8 @@ export const formatFullTime = (date: Date | undefined): string => {
  */
 export const calculateTotalConsumption = (
   sites: DisplaySiteData[],
-): CurrencyMetricTotal =>
-  collectCurrencyMetric(
-    sites.filter((site) => !site.disabled),
-    "consumption",
-    (site) => site.todayConsumption,
-  )
+  asOf = Date.now(),
+) => getDisplayConsumptionProjection(sites, asOf)
 
 /**
  * 计算总余额
@@ -214,24 +213,21 @@ export const calculateTotalConsumption = (
  * - enabled but explicitly excluded accounts ({@link DisplaySiteData.excludeFromTotalBalance})
  */
 export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
-  const enabledSites = displayData.filter(
-    (site) =>
-      !site.disabled &&
-      site.excludeFromTotalBalance !== true &&
-      supportsMonetaryBalance(site.nativeBalance, site.balanceUnavailable),
-  )
+  const portfolio = getDisplayBalancePortfolio(displayData)
+  const currencyValue = (code: string) =>
+    Number(
+      portfolio.amounts.find(
+        (amount) =>
+          amount.asset.kind === ASSET_KINDS.Currency &&
+          amount.asset.code === code,
+      )?.value ?? 0,
+    )
   return {
-    USD: enabledSites.reduce((sum, site) => sum + site.balance.USD, 0),
-    CNY: enabledSites.reduce((sum, site) => sum + site.balance.CNY, 0),
+    USD: currencyValue(CURRENCIES.USD),
+    CNY: currencyValue(CURRENCIES.CNY),
+    portfolio,
   }
 }
-
-/**
- * Convenience wrapper to derive aggregate balances from a subset of sites.
- * Delegates to {@link calculateTotalBalance} for the actual sum logic.
- */
-export const calculateTotalBalanceForSites = (sites: DisplaySiteData[]) =>
-  calculateTotalBalance(sites)
 
 /**
  * Sum per-site income metrics into global USD/CNY totals.
@@ -242,40 +238,8 @@ export const calculateTotalBalanceForSites = (sites: DisplaySiteData[]) =>
  */
 export const calculateTotalIncomeForSites = (
   sites: DisplaySiteData[],
-): CurrencyMetricTotal => {
-  const enabledSites = sites.filter(
-    (site) => !site.disabled && site.excludeFromTodayIncome !== true,
-  )
-  return collectCurrencyMetric(
-    enabledSites,
-    "income",
-    (site) => site.todayIncome,
-  )
-}
-
-const collectCurrencyMetric = (
-  sites: DisplaySiteData[],
-  metric: "consumption" | "income",
-  getAmount: (site: DisplaySiteData) => { USD: number; CNY: number },
-): CurrencyMetricTotal => {
-  const getAvailability = (site: DisplaySiteData) =>
-    site.todayStatsAvailability[metric]
-  const usd = collectAccountMetricContributors(
-    sites,
-    (site) => getAmount(site).USD,
-    getAvailability,
-  )
-  const cny = collectAccountMetricContributors(
-    sites,
-    (site) => getAmount(site).CNY,
-    getAvailability,
-  )
-
-  return {
-    amount: { USD: usd.value, CNY: cny.value },
-    coverage: usd.coverage,
-  }
-}
+  asOf = Date.now(),
+) => getDisplayIncomeProjection(sites, asOf)
 
 /**
  * 获取货币符号
@@ -290,7 +254,7 @@ export const getCurrencySymbol = (currencyType: CurrencyType): string => {
 export const getOppositeCurrency = (
   currencyType: CurrencyType,
 ): CurrencyType => {
-  return currencyType === "USD" ? "CNY" : "USD"
+  return currencyType === CURRENCIES.USD ? CURRENCIES.CNY : CURRENCIES.USD
 }
 
 /**

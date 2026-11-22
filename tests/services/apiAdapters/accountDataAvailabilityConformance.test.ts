@@ -31,6 +31,8 @@ const complete = { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete } as const
 const unavailable = (
   reason: (typeof ACCOUNT_TODAY_METRIC_REASONS)[keyof typeof ACCOUNT_TODAY_METRIC_REASONS],
 ) => ({ status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable, reason }) as const
+const nativeOnly = unavailable(ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified)
+const providerDay = unavailable(ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod)
 const partial = (
   reason: (typeof ACCOUNT_TODAY_METRIC_REASONS)[keyof typeof ACCOUNT_TODAY_METRIC_REASONS],
 ) => ({ status: ACCOUNT_TODAY_METRIC_STATUSES.Partial, reason }) as const
@@ -67,10 +69,24 @@ const expectClassifiedAvailability = (data: AccountData) => {
     normalizeAccountTodayStatsAvailability(data.todayStatsAvailability),
   )
 
-  for (const availability of Object.values(data.todayStatsAvailability!)) {
-    expect(availability.reason).not.toBe(
-      ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
-    )
+  for (const [metric, availability] of Object.entries(
+    data.todayStatsAvailability!,
+  )) {
+    if (
+      availability.reason === ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified
+    ) {
+      const facts =
+        metric === "consumption" ? data.settledConsumption : data.reportedIncome
+      expect(["consumption", "income"]).toContain(metric)
+      expect(facts?.length).toBeGreaterThan(0)
+      expect(facts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            amount: expect.objectContaining({ status: "known" }),
+          }),
+        ]),
+      )
+    }
     expect(Object.values(ACCOUNT_TODAY_METRIC_STATUSES)).toContain(
       availability.status,
     )
@@ -280,9 +296,9 @@ const producerFixturesByFamily = {
     baseUrl: "https://pmcat.top",
     authType: AuthTypeEnum.AccessToken,
     expectedAvailability: {
-      consumption: complete,
-      requests: complete,
-      tokens: complete,
+      consumption: providerDay,
+      requests: providerDay,
+      tokens: providerDay,
       income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
     },
     handlers: [
@@ -460,10 +476,10 @@ const producerFixturesByFamily = {
     baseUrl: "https://new-api-family.example.invalid",
     authType: AuthTypeEnum.AccessToken,
     expectedAvailability: {
-      consumption: complete,
+      consumption: nativeOnly,
       requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
-      income: complete,
+      income: nativeOnly,
     },
     handlers: [
       http.get("https://new-api-family.example.invalid/api/user/self", () =>
@@ -508,9 +524,9 @@ const producerFixturesByFamily = {
     baseUrl: "https://sub2api.example.invalid",
     authType: AuthTypeEnum.AccessToken,
     expectedAvailability: {
-      consumption: complete,
-      requests: complete,
-      tokens: complete,
+      consumption: providerDay,
+      requests: providerDay,
+      tokens: providerDay,
       income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
     },
     handlers: [
@@ -1230,10 +1246,15 @@ describe("AccountData availability producer conformance", () => {
     expect(data.today_completion_tokens).toBe(4)
     expect(data.today_requests_count).toBe(2)
     expect(data.todayStatsAvailability).toEqual({
-      consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+      consumption: nativeOnly,
       requests: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
       tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
-      income: complete,
+      income: nativeOnly,
+    })
+    expect(data.settledConsumption?.[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "0.00002" },
+      coverage: "partial",
     })
     expectClassifiedAvailability(data)
   })
@@ -1253,7 +1274,7 @@ describe("AccountData availability producer conformance", () => {
                     items: [
                       { quota: 0, content: "$50" },
                       { quota: 5, content: "$20" },
-                      { quota: "5", content: "$20" },
+                      { quota: "invalid", content: "invalid" },
                       { content: "$2" },
                     ],
                     total: 4,
@@ -1270,10 +1291,14 @@ describe("AccountData availability producer conformance", () => {
     )
 
     expect(data.today_income).toBe(QUOTA_PER_USD * 52 + 5)
-    expect(data.todayStatsAvailability?.income).toEqual(
-      partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
-    )
-    expect(Number.isFinite(data.today_income)).toBe(true)
+    expect(data.todayStatsAvailability?.income).toEqual(nativeOnly)
+    expect(data.reportedIncome).toEqual([
+      expect.objectContaining({
+        asset: { kind: "currency", code: "USD" },
+        amount: expect.objectContaining({ status: "known", value: "52.00001" }),
+        coverage: "partial",
+      }),
+    ])
   })
 
   it("marks income unavailable when every covered row is invalid", async () => {
@@ -1283,7 +1308,7 @@ describe("AccountData availability producer conformance", () => {
           success: true,
           message: "",
           data: {
-            items: [{ quota: "5", content: "$20" }],
+            items: [{ quota: "invalid", content: "invalid" }],
             total: 1,
           },
         }),
@@ -1296,6 +1321,7 @@ describe("AccountData availability producer conformance", () => {
     )
 
     expect(data.today_income).toBe(0)
+    expect(data.reportedIncome).toBeUndefined()
     expect(data.todayStatsAvailability?.income).toEqual(
       unavailable(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
     )

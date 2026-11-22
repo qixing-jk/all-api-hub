@@ -21,6 +21,7 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/editor/BookmarkDialogStateContext"
 import { UI_HANDOFF_RECEIVE_RESULTS } from "~/hooks/useUiHandoffReceiver"
+import { BALANCE_PURPOSES } from "~/services/accounts/metrics/balanceProjection"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -66,7 +67,6 @@ interface PopupViewConfig {
   showRefresh: boolean
   showActionBar?: boolean
   showAccountActions?: boolean
-  headerAction?: ReactNode
   statsSection?: ReactNode
   primaryActionLabel: string
   onPrimaryAction: () => void
@@ -220,11 +220,13 @@ export function usePopupViewRegistry({
       showRefresh: showAccountOverview,
       showActionBar: showAccountOverview,
       showAccountActions: showAccountOverview,
-      headerAction: showAccountOverview ? (
-        <ShareOverviewSnapshotButton />
-      ) : null,
       statsSection: showAccountOverview ? (
-        <BalanceSection onFilterCurrentSiteAccounts={requestAccountSearch} />
+        <BalanceSection
+          onFilterCurrentSiteAccounts={requestAccountSearch}
+          shareAction={
+            <ShareOverviewSnapshotButton purpose={BALANCE_PURPOSES.Available} />
+          }
+        />
       ) : null,
       primaryActionLabel: t("account:addAccount"),
       onPrimaryAction: handleAddAccountClick,

@@ -1,3 +1,13 @@
+import type {
+  AccountAllowanceRefreshPart,
+  AccountAllowanceSnapshot,
+} from "~/services/accounts/allowances"
+import type {
+  BalanceRefreshPart,
+  BalanceSnapshot,
+} from "~/services/amounts/balance"
+import type { FinancialIncomeFact } from "~/services/amounts/income"
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   type AccountIdentity,
@@ -39,11 +49,19 @@ export type TodayIncomeDataWithAvailability = TodayIncomeData & {
 }
 
 export interface AccountData extends TodayStatsData {
-  quota: number
+  reportedIncome?: FinancialIncomeFact[]
+  allowances?: AccountAllowanceSnapshot
+  allowanceRefreshParts?: AccountAllowanceRefreshPart[]
+  settledConsumption?: FinancialConsumptionFact[]
+  balance?: BalanceSnapshot
+  balanceRefreshParts?: BalanceRefreshPart[]
+  /** Accepted only from legacy fixtures/imports; current adapters emit balance. */
+  quota?: number
   balanceUnavailable?: boolean
   nativeBalance?: AccountNativeBalance
   todayStatsAvailability?: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
+  usageObservations?: AccountUsageSummary[]
   subscription?: AccountSubscriptionSummary
   recentUsageRecords?: AccountUsageRecord[]
   checkIn: CheckInConfig

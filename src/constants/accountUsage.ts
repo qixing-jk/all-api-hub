@@ -7,3 +7,12 @@ export const ACCOUNT_USAGE_SCOPES = {
   Lifetime: "lifetime",
   Unknown: "unknown",
 } as const
+
+/** Financial field names shared by saved-account references and their display. */
+export const ACCOUNT_CASHFLOW_METRICS = {
+  Consumption: "consumption",
+  Income: "income",
+} as const
+
+export type AccountCashflowMetric =
+  (typeof ACCOUNT_CASHFLOW_METRICS)[keyof typeof ACCOUNT_CASHFLOW_METRICS]

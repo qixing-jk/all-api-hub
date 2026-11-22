@@ -8,7 +8,6 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import type {
   AccountStats,
   CurrencyAmount,
-  CurrencyAmountMap,
   DisplaySiteData,
   SiteAccount,
 } from "~/types"
@@ -50,7 +49,6 @@ interface UseAccountDataResult {
 
   // 动画相关状态
   prevTotalConsumption: CurrencyAmount
-  prevBalances: CurrencyAmountMap
 
   // 操作函数
   loadAccountData: () => Promise<void>
@@ -80,13 +78,7 @@ export const useAccountData = (): UseAccountDataResult => {
     USD: 0,
     CNY: 0,
   })
-  const [prevBalances, setPrevBalances] = useState<{
-    [id: string]: CurrencyAmount
-  }>({})
-  const animationSnapshotRef = useRef<{
-    consumption: CurrencyAmount
-    balances: CurrencyAmountMap
-  }>({ consumption: { USD: 0, CNY: 0 }, balances: {} })
+  const animationSnapshotRef = useRef<CurrencyAmount>({ USD: 0, CNY: 0 })
 
   const enabledAccounts = useMemo(
     () => accounts.filter((account) => account.disabled !== true),
@@ -110,14 +102,9 @@ export const useAccountData = (): UseAccountDataResult => {
         displayAccounts: displaySiteData,
       } = await accountReadModels.getAccountOverviewSnapshot()
 
-      setPrevTotalConsumption(animationSnapshotRef.current.consumption)
-      setPrevBalances(animationSnapshotRef.current.balances)
-      animationSnapshotRef.current = {
-        consumption: calculateTotalConsumption(displaySiteData).amount,
-        balances: Object.fromEntries(
-          displaySiteData.map((site) => [site.id, { ...site.balance }]),
-        ),
-      }
+      setPrevTotalConsumption(animationSnapshotRef.current)
+      animationSnapshotRef.current =
+        calculateTotalConsumption(displaySiteData).amount
 
       // 更新状态
       setAccounts(allAccounts)
@@ -211,7 +198,6 @@ export const useAccountData = (): UseAccountDataResult => {
 
     // 动画相关状态
     prevTotalConsumption,
-    prevBalances,
 
     // 操作函数
     loadAccountData,

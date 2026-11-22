@@ -63,4 +63,16 @@ describe("createNewApiRedemption", () => {
     expect(mockRedeemCode).toHaveBeenCalledOnce()
     expect(mockRedeemCode).toHaveBeenCalledWith(request, "example-code")
   })
+
+  it("preserves successful redemption when its reported precision exceeds the supported bound", async () => {
+    mockRedeemCode.mockResolvedValueOnce(`0.${"0".repeat(253)}1`)
+    const result = await createNewApiRedemption().redeem({
+      request,
+      code: "precise-code",
+    })
+    expect(result.awards).toMatchObject([
+      { amount: { status: "unavailable" }, fulfillment: "credited" },
+    ])
+    expect(mockRedeemCode).toHaveBeenCalledOnce()
+  })
 })

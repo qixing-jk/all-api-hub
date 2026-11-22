@@ -52,7 +52,7 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
   },
 }))
 vi.mock("~/services/history/dailyBalanceHistory/capture", () => ({
-  maybeCaptureDailyBalanceSnapshot: vi.fn(),
+  maybeCaptureAccountReferenceBalance: vi.fn(),
 }))
 
 describe("stored Sub2API account login recovery", () => {
@@ -116,7 +116,6 @@ describe("stored Sub2API account login recovery", () => {
         identity: {
           userId: "17",
           username: "member",
-          quota: 1250000,
           balanceUsd: 2.5,
         },
       }
@@ -132,7 +131,20 @@ describe("stored Sub2API account login recovery", () => {
     expect(deps.login).toHaveBeenCalledTimes(1)
     expect(result?.account?.health.status).toBe(SiteHealthStatus.Healthy)
     expect(await accountQueries.getAccountById("saved")).toMatchObject({
-      account_info: { access_token: "login-access", quota: 1250000 },
+      account_info: {
+        access_token: "login-access",
+        balance: {
+          positions: [
+            expect.objectContaining({
+              asset: { kind: "currency", code: "USD" },
+              amount: expect.objectContaining({
+                status: "known",
+                value: "2.5",
+              }),
+            }),
+          ],
+        },
+      },
       sub2apiAuth: {
         refreshToken: "login-refresh",
         tokenExpiresAt: 2000000000000,

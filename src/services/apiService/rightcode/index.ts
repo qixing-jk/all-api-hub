@@ -1,9 +1,24 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+  accountReportingScope,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import type {
   AccessTokenInfo,
   UserInfo,
@@ -404,7 +419,31 @@ export async function fetchAccountData(
       } satisfies NonNullable<AccountData["subscription"]>)
     : undefined
 
+  const scope = accountBalanceScope(request)
+  const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
+  const observedAt = Date.now()
+  const source = {
+    adapter: SITE_TYPES.RIGHT_CODE,
+    contractVersion: "usd/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  } as const
   return {
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "balance",
+          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+          scope,
+          observedAt,
+          asset,
+          value: userInfo.balance,
+          source: { ...source, operation: `${RIGHTCODE_ENDPOINTS.me}:balance` },
+        }),
+      ],
+      observedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
     quota: amountToQuota(toFiniteNumber(userInfo.balance)),
     today_quota_consumption:
       shouldCollectToday && todayCost !== undefined
@@ -425,6 +464,30 @@ export async function fetchAccountData(
       totalTokens: toFiniteNumber(overall.total_tokens),
       totalCost: toFiniteNumber(overall.total_cost),
     },
+    ...(todayStats
+      ? {
+          usageObservations: [
+            {
+              scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+              reportedDay: today,
+              totalRequests: todayRequests,
+              totalTokens: todayTokens,
+              cost: {
+                asset,
+                amount: observeAmount(
+                  todayStats.total_cost,
+                  {
+                    ...source,
+                    operation: `${RIGHTCODE_ENDPOINTS.usageStats}:total_cost`,
+                  },
+                  observedAt,
+                ),
+                scope: accountReportingScope(request),
+              },
+            },
+          ],
+        }
+      : {}),
     subscription,
     checkIn: request.checkIn,
   }

@@ -1,14 +1,26 @@
 import type { AccountLoginProvider } from "~/constants/accountLogin"
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
-import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile/identity"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
+import { readAccountRefreshResult } from "~/services/accounts/refresh/accountRefreshResult"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  OBSERVATION_STATUSES,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import type {
   AccessTokenInfo,
   UserInfo,
@@ -18,11 +30,12 @@ import {
   fetchTodayIncome,
   fetchTodayUsage,
 } from "~/services/apiService/newApiFamily/default/accountData"
-import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
+import { collectAccountData } from "~/services/apiService/newApiFamily/default/accountDataCollection"
+import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
+import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -43,42 +56,71 @@ interface RixApiSelfPayload {
   balance?: unknown
 }
 
-/** Reads a finite, non-negative number from a numeric field or numeric string. */
-const readNonNegativeAmount = (value: unknown): number | undefined => {
-  const amount =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim()
-        ? Number.parseFloat(value)
-        : Number.NaN
-
-  return Number.isFinite(amount) && amount >= 0 ? amount : undefined
-}
-
-/**
- * Resolve a Rix API account balance into the quota units the account snapshot
- * uses everywhere else.
- *
- * The USD balance is converted at the shared scale so the existing quota
- * presentation, history and manual-balance override keep working unchanged. A
- * deployment that still reports an integer `quota` keeps its own value, so the
- * older Rix generation is unaffected.
- */
-export async function fetchAccountQuota(
-  request: ApiServiceRequest,
-): Promise<number> {
+/** Select the reported dialect at the field boundary; never turn the USD string into product quota. */
+export async function fetchAccountBalance(request: ApiServiceRequest) {
   const userData = await newApiFamilyRequests.data<RixApiSelfPayload>(request, {
     endpoint: "/api/user/self",
   })
 
-  if (typeof userData?.quota === "number" && Number.isFinite(userData.quota)) {
-    return userData.quota
-  }
-
-  const balance = readNonNegativeAmount(userData?.balance)
-  if (balance === undefined) return 0
-
-  return Math.round(balance * QUOTA_PER_USD)
+  const scope = accountBalanceScope(request)
+  const observedAt = Date.now()
+  const isQuota = Object.hasOwn(userData ?? {}, "quota")
+  const field = isQuota ? "quota" : "balance"
+  const quotaAmount = newApiFinancialAmount(
+    userData?.quota,
+    request.baseUrl,
+    SITE_TYPES.RIX_API,
+  )
+  const observation = accountBalanceObservation(
+    scope,
+    [
+      balancePosition({
+        id: field,
+        collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+        scope,
+        observedAt,
+        value: isQuota ? quotaAmount.value : userData?.[field],
+        asset: isQuota
+          ? quotaAmount.asset
+          : // This dialect declares USD even when the amount field is unavailable.
+            { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        source: {
+          adapter: SITE_TYPES.RIX_API,
+          operation: `/api/user/self:${field}`,
+          contractVersion: isQuota
+            ? quotaAmount.contractVersion
+            : "usd-balance/v1",
+          kind: EVIDENCE_KINDS.Reported,
+          ...(isQuota ? { amountInputs: quotaAmount.amountInputs } : {}),
+        },
+      }),
+    ],
+    observedAt,
+    FINANCIAL_ENUMERATION.Complete,
+  )
+  const current = observation.balance.positions[0]!
+  // Both DTO dialects report the same wallet. Retire alternate representations
+  // only after a usable reading, including the preceding raw-quota contract.
+  if (current.amount.status === OBSERVATION_STATUSES.Known)
+    for (const [alternateField, contractVersion] of [
+      ["quota", NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd],
+      ["quota", NEW_API_FINANCIAL_CONTRACT_VERSIONS.NativeQuota],
+      ["balance", "usd-balance/v1"],
+    ] as const) {
+      const operation = `/api/user/self:${alternateField}`
+      if (
+        operation === current.amount.source.operation &&
+        contractVersion === current.amount.source.contractVersion
+      )
+        continue
+      observation.balanceRefreshParts.push({
+        collectionKey: current.collectionKey,
+        source: { ...current.amount.source, operation, contractVersion },
+        enumeration: FINANCIAL_ENUMERATION.Complete,
+        positions: [],
+      })
+    }
+  return observation
 }
 
 /**
@@ -257,32 +299,40 @@ export async function getOrCreateAccessToken(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const timestampRange = getTodayTimestampRange()
-
-  const quotaPromise = fetchAccountQuota(request)
-  const todayUsagePromise = fetchTodayUsage(request, undefined, timestampRange)
-  const todayIncomePromise = fetchTodayIncome(
-    request,
-    undefined,
-    timestampRange,
-  )
-
-  const [quota, todayUsage, todayIncome] = await Promise.all([
-    quotaPromise,
-    todayUsagePromise,
-    todayIncomePromise,
-  ])
-
-  return {
-    quota,
-    ...todayUsage,
-    ...todayIncome,
-    todayStatsAvailability: {
-      ...todayUsage.todayStatsAvailability,
-      ...todayIncome.todayStatsAvailability,
-    },
-    checkIn: request.checkIn,
+  const data = await collectAccountData(request, {
+    balance: () => fetchAccountBalance(request),
+    usage: (range) => fetchTodayUsage(request, undefined, range),
+    income: (range) => fetchTodayIncome(request, undefined, range),
+  })
+  const wallet = data.balance?.positions[0]
+  if (
+    wallet?.amount.status === OBSERVATION_STATUSES.Known &&
+    wallet?.asset.kind === ASSET_KINDS.Currency &&
+    wallet.asset.code === CURRENCIES.USD &&
+    wallet.amount.source.operation === "/api/user/self:balance" &&
+    wallet.amount.source.contractVersion === "usd-balance/v1"
+  ) {
+    // This dialect reports its wallet directly in USD while logs retain the
+    // standard quota scale. Both normalize to that wallet's USD denomination.
+    data.settledConsumption = data.settledConsumption?.map((fact) =>
+      fact.asset.kind === ASSET_KINDS.Currency &&
+      fact.asset.code === CURRENCIES.USD &&
+      fact.amount.source.contractVersion ===
+        NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd
+        ? {
+            ...fact,
+            amount: {
+              ...fact.amount,
+              source: {
+                ...fact.amount.source,
+                contractVersion: wallet.amount.source.contractVersion,
+              },
+            },
+          }
+        : fact,
+    )
   }
+  return data
 }
 
 /**
@@ -291,21 +341,8 @@ export async function fetchAccountData(
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<RefreshAccountResult> {
-  try {
-    const data = await fetchAccountData(request)
-    return {
-      success: true,
-      data,
-      healthStatus: {
-        status: SiteHealthStatus.Healthy,
-        message: t("account:healthStatus.normal"),
-      },
-    }
-  } catch (error) {
-    logger.error("刷新账号数据失败", error)
-    return {
-      success: false,
-      healthStatus: determineHealthStatus(error),
-    }
-  }
+  return readAccountRefreshResult(
+    () => fetchAccountData(request),
+    (error) => logger.error("刷新账号数据失败", error),
+  )
 }

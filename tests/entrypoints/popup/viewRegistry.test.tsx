@@ -83,17 +83,24 @@ vi.mock(
 vi.mock("~/entrypoints/popup/components/BalanceSection", () => ({
   default: ({
     onFilterCurrentSiteAccounts,
+    shareAction,
   }: {
     onFilterCurrentSiteAccounts?: (query: string) => void
+    shareAction?: React.ReactNode
   }) => (
-    <button onClick={() => onFilterCurrentSiteAccounts?.("example.com")}>
-      BalanceSection
-    </button>
+    <>
+      <button onClick={() => onFilterCurrentSiteAccounts?.("example.com")}>
+        BalanceSection
+      </button>
+      {shareAction}
+    </>
   ),
 }))
 
 vi.mock("~/entrypoints/popup/components/ShareOverviewSnapshotButton", () => ({
-  default: () => <button>ShareOverviewSnapshotButton</button>,
+  default: ({ purpose = "prepaid" }: { purpose?: string }) => (
+    <button aria-description={purpose}>ShareOverviewSnapshotButton</button>
+  ),
 }))
 
 vi.mock("~/features/SiteBookmarks/list/BookmarksList", () => ({
@@ -156,7 +163,6 @@ function RegistryProbe({
   return (
     <div>
       <div>{registry.accounts.primaryActionLabel}</div>
-      <div>{registry.accounts.headerAction}</div>
       <div>{registry.accounts.statsSection}</div>
       <div>{registry.accounts.content}</div>
 
@@ -201,6 +207,18 @@ function DeferredApiMountProbe() {
 }
 
 describe("usePopupViewRegistry", () => {
+  it("shares spendable balances without requiring a financial-purpose selection", async () => {
+    render(<RegistryProbe />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(
+      await screen.findByRole("button", {
+        name: "ShareOverviewSnapshotButton",
+      }),
+    ).toHaveAccessibleDescription("available")
+  })
+
   afterEach(() => vi.restoreAllMocks())
   beforeEach(async () => {
     await browser.storage.session.clear()

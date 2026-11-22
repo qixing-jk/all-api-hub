@@ -20,7 +20,6 @@ import {
   LegacyChannelConfigMigrationDeferredError,
 } from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { tagStorage } from "~/services/tags/tagStorage"
 import { downloadBlob } from "~/utils/browser/download"
 import { formatUtcDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
@@ -86,15 +85,13 @@ export const handleExportAll = async (
 
     // 获取账号数据、用户偏好设置以及通道配置
     const [
-      accountData,
-      tagStore,
+      { accounts: accountData, tagStore },
       preferencesData,
       featureGuidance,
       channelConfigs,
       apiCredentialProfiles,
     ] = await Promise.all([
-      accountDataTransfer.exportData(),
-      tagStorage.exportTagStore(),
+      accountDataTransfer.exportDataWithTags(),
       userPreferences.exportPreferencesForBackup(),
       featureGuidanceState.getState(),
       channelConfigStorage.exportConfigs(),
@@ -139,10 +136,8 @@ export const handleExportAccounts = async (
   try {
     setIsExporting(true)
 
-    const [accountData, tagStore] = await Promise.all([
-      accountDataTransfer.exportData(),
-      tagStorage.exportTagStore(),
-    ])
+    const { accounts: accountData, tagStore } =
+      await accountDataTransfer.exportDataWithTags()
     const exportData: BackupAccountsPartialV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),

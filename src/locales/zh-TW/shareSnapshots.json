@@ -5,7 +5,10 @@
   },
   "financial": {
     "complete": "涵蓋完整",
-    "partial": "部分涵蓋"
+    "detailsInCaption": "更多詳情請見完整配文",
+    "partial": "部分涵蓋",
+    "unavailable": "無法取得",
+    "unknown": "涵蓋範圍未知"
   },
   "labels": {
     "accounts": "帳號數",

@@ -1,6 +1,7 @@
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
   canonicalizeLegacyAccountConfigs,
+  readBackupAccountConfig,
   readChannelConfigSnapshot,
 } from "~/services/importExport/backupCodec"
 import {
@@ -59,18 +60,14 @@ export async function importV1Backup(
     accountsRequested &&
     shouldImportSection(plan, IMPORT_SECTION_KEYS.Accounts)
   ) {
+    const accountConfig = readBackupAccountConfig(data)
     const rawTagStore = (data as any).tagStore ?? (data.data as any)?.tagStore
-    if (rawTagStore) {
-      await tagStorage.importTagStore(rawTagStore)
-    }
 
-    const accountsData =
-      (data.accounts as any)?.accounts ??
-      (data.data as any)?.accounts ??
-      data.accounts
+    const accountsData = accountConfig?.accounts
 
     if (accountsData) {
       await accountDataTransfer.importData({
+        tagStore: rawTagStore,
         accounts: canonicalizeLegacyAccountConfigs(
           accountsData,
         ) as SiteAccount[],

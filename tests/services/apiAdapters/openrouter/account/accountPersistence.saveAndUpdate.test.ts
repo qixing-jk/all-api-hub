@@ -2024,7 +2024,17 @@ describe("accountPersistence save and update", () => {
       account_info: {
         id: "42",
         username: "cookie-user",
-        quota: 321,
+        balance: expect.objectContaining({
+          positions: expect.arrayContaining([
+            expect.objectContaining({
+              amount: expect.objectContaining({
+                source: expect.objectContaining({
+                  amountInputs: { quota: "321" },
+                }),
+              }),
+            }),
+          ]),
+        }),
         todayStatsAvailability: {
           income: {
             status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
@@ -2204,7 +2214,7 @@ describe("accountPersistence save and update", () => {
         id: "7",
         username: "",
         access_token: "access-123",
-        quota: 0,
+        balance: { coverage: "unknown", positions: [] },
         todayStatsAvailability: {
           consumption: {
             status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
@@ -2251,7 +2261,7 @@ describe("accountPersistence save and update", () => {
         id: "1",
         username: "tester",
         access_token: "token",
-        quota: 0,
+        balance: { coverage: "unknown", positions: [] },
       },
     })
   })
@@ -2325,7 +2335,17 @@ describe("accountPersistence save and update", () => {
         id: "1",
         username: "tester",
         access_token: "token",
-        quota: 42,
+        balance: expect.objectContaining({
+          positions: expect.arrayContaining([
+            expect.objectContaining({
+              amount: expect.objectContaining({
+                source: expect.objectContaining({
+                  amountInputs: { quota: "42" },
+                }),
+              }),
+            }),
+          ]),
+        }),
         todayStatsAvailability: {
           income: {
             status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
@@ -2374,7 +2394,7 @@ describe("accountPersistence save and update", () => {
         id: "1",
         username: "user",
         access_token: "",
-        quota: 0,
+        balance: { coverage: "unknown", positions: [] },
         todayStatsAvailability: {
           consumption: {
             status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
@@ -2512,11 +2532,22 @@ describe("accountPersistence save and update", () => {
       excludeFromTotalBalance: true,
       tagIds: ["alpha", "beta"],
       cookieAuth: { sessionCookie: "session=abc123" },
+      manualBalanceUsd: "2.5",
       account_info: {
         id: "1",
         username: "user",
         access_token: "",
-        quota: 1250000,
+        balance: expect.objectContaining({
+          positions: expect.arrayContaining([
+            expect.objectContaining({
+              amount: expect.objectContaining({
+                status: "stale",
+                reason: "account-identity-changed",
+                value: "0.000084",
+              }),
+            }),
+          ]),
+        }),
       },
     })
   })
@@ -2640,7 +2671,7 @@ describe("accountPersistence save and update", () => {
           id: "1",
           username: "tester",
           access_token: "token",
-          quota: 0,
+          balance: { coverage: "unknown", positions: [] },
         },
       })
     } finally {

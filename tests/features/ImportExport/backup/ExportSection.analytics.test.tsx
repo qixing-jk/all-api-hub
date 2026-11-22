@@ -46,7 +46,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 
 vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
   accountDataTransfer: {
-    exportData: vi.fn(),
+    exportDataWithTags: vi.fn(),
   },
 }))
 
@@ -85,7 +85,9 @@ describe("ExportSection analytics", () => {
       complete: completeProductAnalyticsActionMock,
     })
     ;(
-      accountDataTransfer.exportData as unknown as ReturnType<typeof vi.fn>
+      accountDataTransfer.exportDataWithTags as unknown as ReturnType<
+        typeof vi.fn
+      >
     ).mockRejectedValue(new Error("export failed"))
     ;(
       userPreferences.exportPreferencesForBackup as unknown as ReturnType<

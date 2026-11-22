@@ -324,11 +324,19 @@ test("NanoGPT saves management-only credentials, reopens both inputs and adds an
   await expect
     .poll(
       async () =>
-        (await readStoredAccounts(worker))[0]?.account_info.balanceUnavailable,
+        (
+          await readStoredAccounts(worker)
+        )[0]?.account_info.balance?.positions.find(
+          (position) => position.id === "usd_balance",
+        )?.amount.status,
     )
-    .toBe(true)
+    .toBe("unavailable")
   let saved = (await readStoredAccounts(worker))[0]!
-  expect(saved.account_info.balanceUnavailable).toBe(true)
+  expect(
+    saved.account_info.balance?.positions.find(
+      (position) => position.id === "usd_balance",
+    )?.amount.status,
+  ).toBe("unavailable")
   expect(saved.account_info.id).toMatch(/^nanogpt-management:/)
   const row = page.getByTestId(getAccountManagementListItemTestId(saved.id))
   await row.hover()
@@ -361,16 +369,26 @@ test("NanoGPT saves management-only credentials, reopens both inputs and adds an
   await expect
     .poll(
       async () =>
-        (await readStoredAccounts(worker))[0]?.account_info.balanceUnavailable,
+        (
+          await readStoredAccounts(worker)
+        )[0]?.account_info.balance?.positions.find(
+          (position) => position.id === "usd_balance",
+        )?.amount.status,
     )
-    .not.toBe(true)
+    .toBe("known")
   const [refreshed] = await refreshAccountRowsAndReadStorage({
     page,
     serviceWorker: worker,
     accountIds: [saved.id],
-    expectedQuotas: [1_000_000],
+    expectedBalances: [
+      { asset: { kind: "currency", code: "USD" }, value: "2" },
+    ],
   })
-  expect(refreshed!.account_info.balanceUnavailable).not.toBe(true)
+  expect(
+    refreshed!.account_info.balance?.positions.find(
+      (position) => position.id === "usd_balance",
+    )?.amount.status,
+  ).toBe("known")
   await row.hover()
   await row.getByTestId(accountIds.rowEditButton).click()
   await expect(

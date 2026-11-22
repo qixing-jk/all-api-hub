@@ -12,6 +12,7 @@ import {
   clickWebdavAction,
   createStalePreferenceWriteResult,
   loggerMocks,
+  mockAccountStorage,
   mockDownloadBackup,
   mockIsWebdavFileNotFoundError,
   mockMergeWebdavBackupPayloadBySelection,
@@ -33,6 +34,26 @@ await vi.hoisted(
 
 describe("WebDAVSettings Backup", () => {
   setupWebdavSettingsTestHarness()
+  it("uploads selected preferences even when the account collection cannot be read", async () => {
+    render(<WebDAVSettings />)
+    await screen.findByDisplayValue("alice")
+    clearWebdavSyncDataSelection()
+    fireEvent.click(
+      document.getElementById(
+        WEBDAV_TARGET_IDS.syncDataPreferences,
+      ) as HTMLInputElement,
+    )
+    mockAccountStorage.exportData.mockRejectedValue(
+      new Error("account-read-failed"),
+    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.uploadBackup)
+    await waitFor(() => expect(mockUploadBackup).toHaveBeenCalled())
+    expect(mockAccountStorage.exportData).not.toHaveBeenCalled()
+    expect(toast.success).toHaveBeenCalledWith(
+      "importExport:webdav.uploadSuccess",
+    )
+  })
+
   it("localizes unsupported remote backup versions during WebDAV upload", async () => {
     mockMergeWebdavBackupPayloadBySelection.mockImplementationOnce(() => {
       throw new ImportExportError("VERSION_NOT_SUPPORTED")

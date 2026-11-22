@@ -12,7 +12,7 @@ export type PmApiIdentity = {
   /** Console display name; falls back to the username when unset. */
   displayName: string
   /** Stored balance in the console's New API quota unit. */
-  quota: number
+  quota: unknown
   usedQuota: number
   requestCount: number
   checkedInToday: boolean
@@ -41,8 +41,6 @@ export function parsePmApiIdentity(body: unknown): PmApiIdentity {
     !user.username.trim() ||
     (user.display_name !== undefined &&
       typeof user.display_name !== "string") ||
-    (user.quota !== undefined &&
-      (typeof user.quota !== "number" || !Number.isFinite(user.quota))) ||
     (user.used_quota !== undefined &&
       (typeof user.used_quota !== "number" ||
         !Number.isFinite(user.used_quota)))
@@ -55,7 +53,7 @@ export function parsePmApiIdentity(body: unknown): PmApiIdentity {
       typeof user.display_name === "string" && user.display_name.trim()
         ? user.display_name.trim()
         : user.username.trim(),
-    quota: typeof user.quota === "number" ? user.quota : 0,
+    quota: user.quota,
     usedQuota: typeof user.used_quota === "number" ? user.used_quota : 0,
     requestCount:
       typeof user.request_count === "number" ? user.request_count : 0,

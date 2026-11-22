@@ -46,6 +46,14 @@ const today = {
 }
 
 describe("Cubence account protocol", () => {
+  it("does not publish complete daily consumption at the exact provider midnight", async () => {
+    vi.setSystemTime(new Date("2026-10-08T16:00:00Z"))
+    const data = await fetchAccountData(accountRequest)
+    expect(data.settledConsumption).toBeUndefined()
+    expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
+    expect(data.todayStatsAvailability?.requests.status).toBe("complete")
+    expect(data.balance?.positions[0]?.scope.walletId).toBe("7")
+  })
   beforeEach(() => {
     installCookieTransport()
   })

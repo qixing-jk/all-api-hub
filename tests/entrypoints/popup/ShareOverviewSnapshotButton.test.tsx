@@ -5,6 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import ShareOverviewSnapshotButton from "~/entrypoints/popup/components/ShareOverviewSnapshotButton"
 import {
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -12,12 +16,17 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type { DisplaySiteData } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { buildDisplaySiteData as buildBaseDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  buildPeriodConsumption,
+  buildPeriodIncome,
+} from "~~/tests/test-utils/financialPeriod"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const {
@@ -125,6 +134,35 @@ function renderWithAnalyticsScope() {
   )
 }
 
+/** Existing explicit currency examples represent independently reported facts. */
+function buildDisplaySiteData(overrides: Partial<DisplaySiteData> = {}) {
+  const site = buildBaseDisplaySiteData(overrides)
+  const consumption = site.todayStatsAvailability.consumption.status
+  const income = site.todayStatsAvailability.income.status
+  if (
+    overrides.todayConsumption &&
+    consumption !== FINANCIAL_ENUMERATION.Unavailable
+  )
+    site.settledConsumption = (["USD", "CNY"] as const).map((code) =>
+      buildPeriodConsumption(
+        site.id,
+        String(overrides.todayConsumption![code]),
+        code,
+        consumption,
+      ),
+    )
+  if (overrides.todayIncome && income !== FINANCIAL_ENUMERATION.Unavailable)
+    site.reportedIncome = (["USD", "CNY"] as const).map((code) =>
+      buildPeriodIncome(
+        site.id,
+        String(overrides.todayIncome![code]),
+        code,
+        income,
+      ),
+    )
+  return site
+}
+
 describe("ShareOverviewSnapshotButton", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -134,6 +172,8 @@ describe("ShareOverviewSnapshotButton", () => {
         kind: "overview",
         backgroundSeed: 1,
         ...input,
+        consumptionSummary: input.consumption,
+        incomeSummary: input.income,
       }
       if (
         input.includeTodayCashflow &&
@@ -177,6 +217,28 @@ describe("ShareOverviewSnapshotButton", () => {
       accounts: [enabled],
       displayData: [enabled],
     })
+  })
+
+  it("exports the original display selection instead of its remembered reference currency", async () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: "CNY",
+      currencyDisplay: "original",
+      showTodayCashflow: false,
+    })
+    const user = userEvent.setup()
+    renderWithAnalyticsScope()
+    await user.click(
+      screen.getByRole("button", {
+        name: "shareSnapshots:actions.shareOverviewSnapshot",
+      }),
+    )
+    expect(exportShareSnapshotWithToastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          currencyDisplay: "original",
+        }),
+      }),
+    )
   })
 
   it("disables the action when there are no enabled accounts to share", () => {
@@ -247,18 +309,24 @@ describe("ShareOverviewSnapshotButton", () => {
 
     expect(buildOverviewShareSnapshotPayloadMock).toHaveBeenCalledWith({
       currencyType: "USD",
+      currencyDisplay: "USD",
       enabledAccountCount: 2,
-      totalBalance: 10,
+      purpose: "available",
+      portfolio: expect.objectContaining({ amounts: [], coverage: "partial" }),
       includeTodayCashflow: true,
-      todayIncome: 2,
-      todayOutcome: 4,
+      income: expect.objectContaining({ amount: { USD: 2, CNY: 14 } }),
+      consumption: expect.objectContaining({ amount: { USD: 4, CNY: 28 } }),
       asOf: 250,
     })
     expect(exportShareSnapshotWithToastMock).toHaveBeenCalledWith({
       payload: expect.objectContaining({
         kind: "overview",
         enabledAccountCount: 2,
-        totalBalance: 10,
+        purpose: "available",
+        portfolio: expect.objectContaining({
+          amounts: [],
+          coverage: "partial",
+        }),
       }),
     })
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
@@ -316,11 +384,13 @@ describe("ShareOverviewSnapshotButton", () => {
 
     expect(buildOverviewShareSnapshotPayloadMock).toHaveBeenCalledWith({
       currencyType: "CNY",
+      currencyDisplay: "CNY",
       enabledAccountCount: 2,
-      totalBalance: 84,
+      purpose: "available",
+      portfolio: expect.objectContaining({ amounts: [], coverage: "partial" }),
       includeTodayCashflow: false,
-      todayIncome: undefined,
-      todayOutcome: undefined,
+      income: undefined,
+      consumption: undefined,
       asOf: undefined,
     })
   })
@@ -345,7 +415,7 @@ describe("ShareOverviewSnapshotButton", () => {
       }),
     },
   ])(
-    "falls back to balance-only sharing and reports no usage data when $label",
+    "shares qualified native observations independently when $label",
     async ({ availability }) => {
       const user = userEvent.setup()
       const complete = buildDisplaySiteData({
@@ -375,9 +445,28 @@ describe("ShareOverviewSnapshotButton", () => {
 
       expect(buildOverviewShareSnapshotPayloadMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          includeTodayCashflow: false,
-          todayIncome: undefined,
-          todayOutcome: undefined,
+          includeTodayCashflow: true,
+          consumption: expect.objectContaining({
+            groups: expect.arrayContaining([
+              expect.objectContaining({
+                amount: {
+                  asset: { kind: "currency", code: "USD" },
+                  value: "4",
+                },
+              }),
+            ]),
+          }),
+          income: expect.objectContaining({
+            groups: expect.arrayContaining([
+              expect.objectContaining({
+                amount: {
+                  asset: { kind: "currency", code: "USD" },
+                  value:
+                    availability.income.status === "unavailable" ? "2" : "6",
+                },
+              }),
+            ]),
+          }),
         }),
       )
       expect(trackerCompleteMock).toHaveBeenCalledWith(
@@ -385,7 +474,7 @@ describe("ShareOverviewSnapshotButton", () => {
         {
           insights: {
             itemCount: 2,
-            usageDataPresent: false,
+            usageDataPresent: true,
           },
         },
       )
@@ -398,7 +487,11 @@ describe("ShareOverviewSnapshotButton", () => {
       kind: "overview",
       currencyType: "USD",
       enabledAccountCount: 1,
-      totalBalance: 10,
+      purpose: "prepaid",
+      portfolio: expect.objectContaining({
+        amounts: [],
+        coverage: FINANCIAL_COVERAGE.Partial,
+      }),
       todayIncome: 2,
       todayOutcome: 1,
       asOf: 100,
@@ -429,7 +522,11 @@ describe("ShareOverviewSnapshotButton", () => {
       kind: "overview",
       currencyType: "USD",
       enabledAccountCount: 1,
-      totalBalance: 10,
+      purpose: "prepaid",
+      portfolio: expect.objectContaining({
+        amounts: [],
+        coverage: FINANCIAL_COVERAGE.Partial,
+      }),
       todayIncome: Number.MAX_VALUE,
       todayOutcome: -Number.MAX_VALUE,
       todayNet: Number.POSITIVE_INFINITY,

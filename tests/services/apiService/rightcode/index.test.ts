@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { acceptUsageObservations } from "~/services/accounts/refresh/usageAcceptance"
 import {
   createRightCodeKey,
   deleteRightCodeKey,
@@ -33,6 +34,7 @@ import {
   SiteHealthStatus,
 } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 vi.mock("~/services/apiService/rightcode/transport", () => ({
   fetchRightCodeData: vi.fn(),
@@ -315,6 +317,140 @@ describe("rightcode apiService index", () => {
   })
 
   describe("fetchAccountData", () => {
+    it("keeps the requested day when an in-flight daily response crosses midnight", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      const started = createDeferred<void>()
+      const response = createDeferred<{
+        total_cost: string
+        total_requests: number
+        total_tokens: number
+      }>()
+      let query: unknown
+      vi.setSystemTime(new Date(2026, 10, 18, 23, 59, 59))
+      const bodies = {
+        [RIGHTCODE_ENDPOINTS.me]: {
+          id: 42,
+          username: "test",
+          user_token: "fixture",
+          balance: "8",
+        },
+        [RIGHTCODE_ENDPOINTS.usageStatsOverall]: {
+          total_requests: 2,
+          total_tokens: 10,
+          total_cost: "1.50",
+        },
+        [RIGHTCODE_ENDPOINTS.subscriptions]: { subscriptions: [] },
+        [RIGHTCODE_ENDPOINTS.subscriptionSummary]: {},
+      }
+      vi.mocked(fetchRightCodeData).mockImplementation(
+        async (_request, endpoint, options) => {
+          if (endpoint === RIGHTCODE_ENDPOINTS.usageStats) {
+            query = options?.query
+            started.resolve()
+            return (await response.promise) as never
+          }
+          return bodies[endpoint as keyof typeof bodies] as never
+        },
+      )
+      try {
+        const pending = fetchAccountData(accountRequest)
+        await started.promise
+        vi.setSystemTime(new Date(2026, 10, 19, 0, 0, 1))
+        response.resolve({
+          total_cost: "1.50",
+          total_requests: 2,
+          total_tokens: 10,
+        })
+        const data = await pending
+        expect(query).toEqual({
+          start_date: "2026-11-18",
+          end_date: "2026-11-18",
+        })
+        expect(
+          data.usageObservations?.some(
+            (usage) => usage.reportedDay === "2026-11-18",
+          ),
+        ).toBe(true)
+        expect(
+          data.usageObservations?.some(
+            (usage) => usage.reportedDay === "2026-11-19",
+          ),
+        ).toBe(false)
+      } finally {
+        response.resolve({
+          total_cost: "1.50",
+          total_requests: 2,
+          total_tokens: 10,
+        })
+        vi.useRealTimers()
+      }
+    })
+
+    it("keeps daily cost with the adapter's requested date across midnight", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      try {
+        vi.setSystemTime(new Date(2026, 10, 18, 12))
+        let report: unknown = {
+          total_cost: "1.50",
+          total_requests: 2,
+          total_tokens: 10,
+        }
+        vi.mocked(fetchRightCodeData).mockImplementation(
+          async (_req, endpoint) => {
+            if (endpoint === RIGHTCODE_ENDPOINTS.me)
+              return {
+                id: 42,
+                username: "test",
+                user_token: "fixture",
+                balance: "8",
+              } as never
+            if (endpoint === RIGHTCODE_ENDPOINTS.usageStatsOverall)
+              return {
+                total_requests: 2,
+                total_tokens: 10,
+                total_cost: "1.50",
+              } as never
+            if (endpoint === RIGHTCODE_ENDPOINTS.usageStats)
+              return report as never
+            if (endpoint === RIGHTCODE_ENDPOINTS.subscriptions)
+              return { subscriptions: [] } as never
+            if (endpoint === RIGHTCODE_ENDPOINTS.subscriptionSummary)
+              return {} as never
+            throw new Error("unexpected endpoint")
+          },
+        )
+        const first = await fetchAccountData(accountRequest)
+        vi.setSystemTime(new Date(2026, 10, 19, 12))
+        report = { total_requests: 4, total_tokens: 20 }
+        const second = await fetchAccountData(accountRequest)
+        const accepted = acceptUsageObservations(
+          first.usageObservations,
+          second.usageObservations,
+        )!
+        expect(
+          accepted.find((usage) => usage.reportedDay === "2026-11-19")?.cost
+            ?.amount,
+        ).toMatchObject({ status: "unavailable" })
+        expect(
+          accepted.find((usage) => usage.reportedDay === "2026-11-18")?.cost
+            ?.amount,
+        ).toMatchObject({ value: "1.5", status: "stale" })
+        report = { total_cost: "2.50", total_requests: 5, total_tokens: 30 }
+        const fresh = await fetchAccountData(accountRequest)
+        report = { total_requests: 6, total_tokens: 35 }
+        const missing = await fetchAccountData(accountRequest)
+        const retained = acceptUsageObservations(
+          fresh.usageObservations,
+          missing.usageObservations,
+        )!
+        expect(
+          retained.find((usage) => usage.reportedDay === "2026-11-19")?.cost
+            ?.amount,
+        ).toMatchObject({ value: "2.5", status: "stale" })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
     it("gathers wallet balance, lifetime usage, today metrics, and subscriptions", async () => {
       vi.mocked(fetchRightCodeData).mockImplementation(
         async (_req, endpoint) => {

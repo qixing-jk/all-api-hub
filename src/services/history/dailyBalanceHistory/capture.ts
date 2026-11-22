@@ -1,9 +1,26 @@
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  BALANCE_PURPOSES,
+  getDisplayBalancePositions,
+  projectBalance,
+} from "~/services/accounts/metrics/balanceProjection"
+import {
+  getDisplayConsumptionProjection,
+  getDisplayIncomeProjection,
+} from "~/services/accounts/metrics/consumptionProjection"
 import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
+import { balancePositionKey, usageScopeKey } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_ROLES,
+} from "~/services/amounts/financialConstants"
 import type {
   AccountNativeBalance,
   AccountTodayStatsAvailability,
+  SiteAccount,
 } from "~/types"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import type {
   BalanceHistoryPreferences,
   DailyBalanceHistoryCaptureSource,
@@ -87,4 +104,90 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
     )
     return false
   }
+}
+
+/** Keep the existing history series populated from fresh, compatible USD observations. */
+export async function maybeCaptureAccountReferenceBalance({
+  config,
+  account,
+  source,
+  asOf = Date.now(),
+}: {
+  config?: BalanceHistoryPreferences
+  account: SiteAccount
+  source: DailyBalanceHistoryCaptureSource
+  asOf?: number
+}): Promise<boolean> {
+  if (!(config ?? DEFAULT_BALANCE_HISTORY_PREFERENCES).enabled) return false
+  const info = account.account_info
+  if (!info.balance) return false
+  // Unreadable independent wallets still identify separate balances.
+  const wallets = new Set(
+    getDisplayBalancePositions(info.balance)
+      .filter((position) => position.role !== BALANCE_ROLES.Allowance)
+      .map((position) =>
+        position.scope.walletId ||
+        position.scope.organizationId ||
+        position.scope.workspaceId
+          ? usageScopeKey({
+              ...position.scope,
+              routes: position.scope.routes ?? { kind: "all" },
+            })
+          : balancePositionKey(position),
+      ),
+  )
+  if (wallets.size !== 1) return false
+  const { amounts, conflicts, positions } = projectBalance(
+    info.balance,
+    BALANCE_PURPOSES.Available,
+    asOf,
+  )
+  const [balance] = amounts
+  if (
+    positions.length !== 1 ||
+    amounts.length !== 1 ||
+    conflicts.length ||
+    balance?.asset.kind !== ASSET_KINDS.Currency ||
+    balance.asset.code !== CURRENCIES.USD
+  )
+    return false
+  const quota = Number(balance.value) * QUOTA_PER_USD
+  if (!Number.isFinite(quota)) return false
+  const display = {
+    id: account.id,
+    exchangeRate: account.exchange_rate,
+    disabled: account.disabled,
+    excludeFromTodayIncome: false,
+    settledConsumption: info.settledConsumption,
+    reportedIncome: info.reportedIncome,
+    todayStatsAvailability: info.todayStatsAvailability,
+  }
+  const spending = getDisplayConsumptionProjection([display], asOf)
+  const income = getDisplayIncomeProjection([display], asOf)
+  const consumptionQuota = spending.amount.USD * QUOTA_PER_USD
+  const incomeQuota = income.amount.USD * QUOTA_PER_USD
+  const consumption = Number.isFinite(consumptionQuota)
+    ? spending.coverageByCurrency.USD.status
+    : ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+  const received = Number.isFinite(incomeQuota)
+    ? income.coverageByCurrency.USD.status
+    : ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+  const unavailable = {
+    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+  } as const
+  return maybeCaptureDailyBalanceSnapshot({
+    config,
+    accountId: account.id,
+    quota,
+    today_income: incomeQuota,
+    today_quota_consumption: consumptionQuota,
+    todayStatsAvailability: {
+      consumption: { status: consumption },
+      income: { status: received },
+      requests: unavailable,
+      tokens: unavailable,
+    },
+    capturedAtMs: asOf,
+    source,
+  })
 }

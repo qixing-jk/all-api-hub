@@ -26,14 +26,14 @@ import {
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
 import { cn } from "~/lib/utils"
-import { formatMoneyFixed } from "~/utils/core/money"
+import { ACCOUNT_SORT_GROUPS } from "~/services/preferences/utils/sortingPriority"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
+import { AccountListFilteredSummary } from "./AccountListFilteredSummary"
 import { AccountListHeader } from "./AccountListHeader"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
-import { FilteredTodayMetric } from "./FilteredTodayMetric"
 import { useAccountListViewModel } from "./useAccountListViewModel"
 import { VirtualizedAccountList } from "./VirtualizedAccountList"
 
@@ -121,9 +121,9 @@ export default function AccountList({
         "after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-muted after:content-[''] dark:after:bg-foreground/[0.06]",
       item.startsNewGroup &&
         "border-t-4 border-border-subtle dark:border-border-subtle/45",
-      item.group === "pinned" &&
+      item.group === ACCOUNT_SORT_GROUPS.Pinned &&
         "bg-surface-subtle hover:bg-muted/80 dark:bg-secondary/45 dark:hover:bg-secondary/55",
-      item.group === "disabled" &&
+      item.group === ACCOUNT_SORT_GROUPS.Disabled &&
         "bg-surface-subtle/50 opacity-40 hover:opacity-80 focus-within:opacity-80 dark:bg-overlay/10",
       model.bulk.isBulkMode &&
         model.bulk.selectedIdSet.has(result.account.id) &&
@@ -179,14 +179,14 @@ export default function AccountList({
   return (
     <Card
       padding="none"
-      className="border-border/80 [container-type:inline-size] flex flex-col overflow-hidden rounded-lg border shadow-none"
+      className="[container-type:inline-size] flex flex-col overflow-hidden rounded-lg border border-border/80 shadow-none"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
     >
       <CardContent padding={"none"} spacing={"none"}>
         {/* Search + Filters */}
-        <div className="dark:border-border dark:bg-background bg-card py-density-3 sm:py-density-4 px-3 sm:px-4">
-          <div className="gap-y-density-3 flex flex-col gap-x-3">
-            <div className="gap-y-density-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 [@container(min-width:40rem)]:grid-cols-1 [@container(min-width:68rem)]:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
+        <div className="bg-card px-3 py-density-3 sm:px-4 sm:py-density-4 dark:border-border dark:bg-background">
+          <div className="flex flex-col gap-x-3 gap-y-density-3">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-density-2 [@container(min-width:40rem)]:grid-cols-1 [@container(min-width:68rem)]:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
               <div className="min-w-0">
                 <AccountSearchInput
                   disabled={model.reordering.isReorderMode}
@@ -200,7 +200,7 @@ export default function AccountList({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-y-density-1-5 min-h-(--density-control-lg) shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
+                className="min-h-(--density-control-lg) shrink-0 gap-x-1.5 gap-y-density-1-5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
                 aria-expanded={model.filters.filtersOpen}
                 aria-controls={model.filters.filterPanelId}
                 onClick={model.filters.togglePanel}
@@ -208,7 +208,7 @@ export default function AccountList({
                 <SlidersHorizontal aria-hidden="true" className="size-3.5" />
                 {t("account:filter.toggle")}
                 {model.filters.activeStatusFilterCount > 0 && (
-                  <span className="bg-primary-soft text-primary-soft-foreground rounded px-1">
+                  <span className="rounded bg-primary-soft px-1 text-primary-soft-foreground">
                     {model.filters.activeStatusFilterCount}
                   </span>
                 )}
@@ -262,42 +262,16 @@ export default function AccountList({
                 allLabel={t("account:filter.tagsAllLabel")}
               />
             )}
-            {model.totals.showFilteredSummary && (
-              <div className="text-muted-foreground dark:text-secondary-foreground gap-y-density-3 flex flex-wrap items-center gap-x-3 text-xs">
-                <span>
-                  {t("account:filter.summary", {
-                    count: model.display.filteredSiteCount,
-                  })}
-                </span>
-                <div className="gap-y-density-3 flex flex-wrap gap-x-3">
-                  <span>
-                    {t("account:filteredTotals.balance")}: USD{" "}
-                    {formatMoneyFixed(model.totals.filteredBalance.USD)} / CNY{" "}
-                    {formatMoneyFixed(model.totals.filteredBalance.CNY)}
-                  </span>
-                  {model.display.showTodayCashflow && (
-                    <>
-                      <span>
-                        {t("account:filteredTotals.consumption")}:{" "}
-                        <FilteredTodayMetric
-                          total={model.totals.filteredConsumption}
-                          t={t}
-                        />
-                      </span>
-                      <span>
-                        {t("account:filteredTotals.income")}:{" "}
-                        <FilteredTodayMetric
-                          total={model.totals.filteredIncome}
-                          t={t}
-                        />
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
+        {model.totals.showFilteredSummary && (
+          <AccountListFilteredSummary
+            sites={model.totals.filteredSites}
+            consumption={model.totals.filteredConsumption}
+            income={model.totals.filteredIncome}
+            showTodayCashflow={model.display.showTodayCashflow}
+          />
+        )}
 
         <AccountListHeader
           displayedResultCount={model.display.displayedResultCount}
@@ -312,6 +286,7 @@ export default function AccountList({
           onReorderModeExit={model.reordering.handleReorderModeExit}
           onSort={model.reordering.handleListSort}
           reorderDisabledReason={model.reordering.resolvedReorderDisabledReason}
+          showResultCount={!model.totals.showFilteredSummary}
           showTodayCashflow={model.display.showTodayCashflow}
           sortField={model.display.sortField}
           sortOrder={model.display.sortOrder}
@@ -340,12 +315,12 @@ export default function AccountList({
 
         {model.reordering.showGroupReorderHint ? (
           <div
-            className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-1-5 flex items-center gap-x-2 border-b px-3 text-xs leading-5"
+            className="flex items-center gap-x-2 gap-y-density-2 border-b border-primary-soft-border bg-primary-soft px-3 py-density-1-5 text-xs leading-5 text-primary-soft-foreground"
             role="note"
           >
             <Info
               aria-hidden="true"
-              className="text-theme-600 dark:text-theme-400 size-3.5 shrink-0"
+              className="size-3.5 shrink-0 text-theme-600 dark:text-theme-400"
             />
             <span>{t("account:list.reorderGroupHint")}</span>
           </div>
@@ -429,17 +404,17 @@ export default function AccountList({
         size="md"
         details={
           <div className="space-y-density-3 text-sm">
-            <div className="text-foreground font-medium">
+            <div className="font-medium text-foreground">
               {t("account:bulk.deletePreviewTitle")}
             </div>
-            <div className="text-muted-foreground dark:text-secondary-foreground space-y-density-1">
+            <div className="space-y-density-1 text-muted-foreground dark:text-secondary-foreground">
               {model.bulk.bulkDeletePreviewAccounts.map((account) => (
                 <div key={account.id}>{account.name}</div>
               ))}
             </div>
             {model.bulk.selectedAccountIds.length >
             model.bulk.bulkDeletePreviewAccounts.length ? (
-              <div className="text-muted-foreground text-xs">
+              <div className="text-xs text-muted-foreground">
                 {t("account:bulk.deletePreviewRemainder", {
                   count:
                     model.bulk.selectedAccountIds.length -
@@ -448,7 +423,7 @@ export default function AccountList({
               </div>
             ) : null}
             {model.bulk.hiddenSelectedCount > 0 ? (
-              <div className="text-warning-text text-xs">
+              <div className="text-xs text-warning-text">
                 {t("account:bulk.deleteHiddenSelectedHint", {
                   count: model.bulk.hiddenSelectedCount,
                 })}

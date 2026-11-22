@@ -202,7 +202,6 @@ test("bounds tag shortcuts across sizes and keeps hidden selections accessible",
   await expectPermissionOnboardingHidden(page)
   const list = page.getByTestId(ids.accountListView)
   const tags = list.locator('[data-slot="compact-tag-filter"]')
-  const header = page.getByTestId(ids.accountListHeader)
   for (const width of [1536, 1280, 960, 480, 320]) {
     await page.setViewportSize({ width, height: 960 })
     await expect(tags).toBeVisible()
@@ -245,7 +244,7 @@ test("bounds tag shortcuts across sizes and keeps hidden selections accessible",
   await panel.getByRole("checkbox").check()
   await panel.getByRole("button", { name: "Close", exact: true }).click()
   await expect(tags.getByRole("button", { name: "Selected 1" })).toBeVisible()
-  await expect(header).toContainText("1")
+  await expect(list.getByText("Toolbar account", { exact: true })).toBeVisible()
   await tags.getByRole("button", { name: "Selected 1" }).click()
   await expect(panel.getByRole("textbox", { name: "Search tags" })).toHaveValue(
     "",

@@ -247,6 +247,7 @@
     "lifetime": "Toàn thời gian",
     "limit": "Giới hạn",
     "nativeQuota": "Hạn mức gốc",
+    "partial": "Một phần",
     "period": {
       "5h": "5 giờ",
       "day": "Hằng ngày",

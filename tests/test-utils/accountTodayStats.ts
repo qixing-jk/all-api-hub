@@ -1,3 +1,16 @@
+import type { Asset } from "~/services/amounts/assets"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  FINANCIAL_SUBJECT_KINDS,
+  INCOME_CLASSIFICATIONS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import type { FinancialIncomeFact } from "~/services/amounts/income"
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
 import type {
   AccountStats,
   AccountTodayStatsAvailability,
@@ -7,6 +20,67 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
+
+/** Explicit same-period native fixture; no legacy currency conversion is inferred. */
+export function buildFinancialPeriodFact({
+  accountId,
+  value,
+  asset = { kind: ASSET_KINDS.Currency, code: "USD" },
+  coverage = FINANCIAL_COVERAGE.Complete,
+}: {
+  accountId: string
+  value: string
+  asset?: Asset
+  coverage?: FinancialConsumptionFact["coverage"]
+}): FinancialConsumptionFact {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const end = start.getTime() + 1
+  return {
+    asset,
+    amount: {
+      status: OBSERVATION_STATUSES.Known,
+      value,
+      observedAt: end,
+      source: {
+        adapter: "fixture",
+        operation: "usage",
+        contractVersion: "1",
+        kind: EVIDENCE_KINDS.Reported,
+      },
+    },
+    scope: {
+      subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId },
+      authority: `https://${accountId}.example`,
+      walletId: accountId,
+      projects: { kind: SCOPE_SELECTION_KINDS.All },
+      keys: { kind: SCOPE_SELECTION_KINDS.All },
+      models: { kind: SCOPE_SELECTION_KINDS.All },
+      groups: { kind: SCOPE_SELECTION_KINDS.All },
+    },
+    window: {
+      start: start.getTime(),
+      end,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+    coverage,
+    settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+  }
+}
+
+export function buildFinancialIncomeFact(
+  options: Parameters<typeof buildFinancialPeriodFact>[0],
+): FinancialIncomeFact {
+  const { settlement: _settlement, ...fact } = buildFinancialPeriodFact(options)
+  return {
+    ...fact,
+    classification: INCOME_CLASSIFICATIONS.Grant,
+    amount: {
+      ...fact.amount,
+      source: { ...fact.amount.source, operation: "income" },
+    },
+  }
+}
 
 export function buildCompleteTodayStatsAvailability(
   overrides: Partial<AccountTodayStatsAvailability> = {},

@@ -1,5 +1,4 @@
 import { BACKUP_VERSION } from "~/constants/importExport"
-import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import {
   featureGuidanceState,
@@ -10,7 +9,6 @@ import { channelConfigStorage } from "~/services/managedSites/configuration/chan
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { tagStorage } from "~/services/tags/tagStorage"
 import { parseWebdavBackupJson } from "~/services/webdav/backup/webdavBackupValidation"
 import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/backup/webdavEntryProjection"
 import {
@@ -20,7 +18,10 @@ import {
   uploadCloudSyncBackup,
   type CloudSyncRemote,
 } from "~/services/webdav/cloudSyncService"
-import { mergeWebdavBackupPayloadBySelection } from "~/services/webdav/sync/webdavSelectiveSync"
+import {
+  mergeWebdavBackupPayloadBySelection,
+  readSelectedAccountBackupState,
+} from "~/services/webdav/sync/webdavSelectiveSync"
 import { applyWebdavSyncResult } from "~/services/webdav/sync/webdavSyncApply"
 import { buildWebdavSyncPlan } from "~/services/webdav/sync/webdavSyncPlan"
 import { isWebdavFileNotFoundError } from "~/services/webdav/webdavService"
@@ -57,15 +58,13 @@ async function collectLocalSyncSnapshot() {
   await ensureLegacyChannelConfigMigrationReady()
 
   const [
-    localAccountsConfig,
-    localTagStore,
+    { accounts: localAccountsConfig, tagStore: localTagStore },
     localPreferences,
     localFeatureGuidance,
     localChannelConfigs,
     localApiCredentialProfiles,
   ] = await Promise.all([
-    accountDataTransfer.exportData(),
-    tagStorage.exportTagStore(),
+    readSelectedAccountBackupState(syncDataSelection),
     userPreferences.exportPreferencesForBackup(),
     featureGuidanceState.getStateStrict(),
     channelConfigStorage.exportConfigs(),

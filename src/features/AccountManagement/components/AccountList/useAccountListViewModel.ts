@@ -31,6 +31,7 @@ import {
   useAccountListReordering,
 } from "~/features/AccountManagement/components/AccountList/ordering/useAccountListReordering"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useBalanceAsOf } from "~/features/AccountManagement/data/useBalanceAsOf"
 import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
 import { getAccountSortGroup } from "~/services/preferences/utils/sortingPriority"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
@@ -42,7 +43,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
 import {
-  calculateTotalBalanceForSites,
   calculateTotalConsumption,
   calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
@@ -315,18 +315,14 @@ export function useAccountListViewModel({
     onEnterBulkMode: resetReorderMode,
   })
 
-  const filteredBalance = useMemo(
-    () => calculateTotalBalanceForSites(filteredSites),
-    [filteredSites],
-  )
-
+  const asOf = useBalanceAsOf(filteredSites)
   const filteredConsumption = useMemo(
-    () => calculateTotalConsumption(filteredSites),
-    [filteredSites],
+    () => calculateTotalConsumption(filteredSites, asOf),
+    [filteredSites, asOf],
   )
   const filteredIncome = useMemo(
-    () => calculateTotalIncomeForSites(filteredSites),
-    [filteredSites],
+    () => calculateTotalIncomeForSites(filteredSites, asOf),
+    [filteredSites, asOf],
   )
 
   const hasAccounts = displayData.length > 0
@@ -434,8 +430,8 @@ export function useAccountListViewModel({
       onCheckInChange,
     },
     totals: {
+      filteredSites,
       showFilteredSummary,
-      filteredBalance,
       filteredConsumption,
       filteredIncome,
     },

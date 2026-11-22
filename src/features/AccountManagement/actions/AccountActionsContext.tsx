@@ -144,6 +144,12 @@ export const AccountActionsProvider = ({
               await toast.promise(
                 refreshPromise().then(async (result) => {
                   if (!result.refreshed) {
+                    if (!result.skippedReason)
+                      throw new Error(
+                        t("messages:toast.error.refreshAccount", {
+                          accountName: account.name,
+                        }),
+                      )
                     analyticsCompleted = true
                     tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
                       diagnostics: buildAccountRefreshDiagnostics({

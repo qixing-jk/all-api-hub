@@ -1,7 +1,6 @@
 import type { BrowserContext, Route } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
-import { QUOTA_PER_USD } from "~/constants/money"
 import {
   OPENROUTER_MANAGEMENT_KEY_TRANSPORT_MARGIN_MS,
   OPENROUTER_MANAGEMENT_KEY_TRANSPORT_TIMEOUT_MS,
@@ -76,7 +75,6 @@ const GRSAI_ACCOUNT_ID = "6aba891720c8e541cff9d0e3"
 const GRSAI_ACCOUNT_EMAIL = "grsai-e2e@example.invalid"
 const GRSAI_SESSION_TOKEN = "grsai-e2e-session-token"
 /** Balances and consumption are credits; the console sells 66,600 per dollar. */
-const GRSAI_CREDITS_PER_USD = 66_600
 const GRSAI_CREDITS = 5000
 const GRSAI_TODAY_CREDITS = 1332
 /** Balance the console reports after the account was saved. */
@@ -1459,16 +1457,33 @@ test("adds a RightCode account from its logged-in console without a one-time key
     serviceWorker,
     siteType: SITE_TYPES.RIGHT_CODE,
     baseUrl: RIGHTCODE_SITE_URL,
-    predicate: (account) => account.account_info.quota > 0,
+    predicate: (account) =>
+      account.account_info.balance?.positions.some(
+        (position) => position.amount.status === "known",
+      ) === true,
   })
   expect(savedAccount.account_info.username).toBe(RIGHTCODE_ACCOUNT_USERNAME)
   expect(savedAccount.account_info.id).toBe(String(RIGHTCODE_ACCOUNT_ID))
   expect(savedAccount.account_info.access_token).toBe(RIGHTCODE_ACCOUNT_TOKEN)
   // Saving reads the account through the same producer the refresh button uses:
-  // the stubbed wallet balance and today cost, converted into quota points.
-  expect(savedAccount.account_info.quota).toBe(12.5 * QUOTA_PER_USD)
-  expect(savedAccount.account_info.today_quota_consumption).toBe(
-    0.4 * QUOTA_PER_USD,
+  // the stubbed wallet and usage retain their reported USD amounts.
+  expect(savedAccount.account_info.balance?.positions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        asset: { kind: "currency", code: "USD" },
+        amount: expect.objectContaining({ status: "known", value: "12.5" }),
+      }),
+    ]),
+  )
+  expect(savedAccount.account_info.usageObservations).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        cost: expect.objectContaining({
+          asset: { kind: "currency", code: "USD" },
+          amount: expect.objectContaining({ value: "0.4" }),
+        }),
+      }),
+    ]),
   )
   expect(savedAccount.account_info.today_requests_count).toBe(4)
   // RightCode runs no check-in flow, so no method may be learned or selected.
@@ -1525,19 +1540,38 @@ test("adds a Grsai account from its logged-in console session", async ({
     serviceWorker,
     siteType: SITE_TYPES.GRSAI,
     baseUrl: GRSAI_SITE_URL,
-    predicate: (account) => account.account_info.quota > 0,
+    predicate: (account) =>
+      account.account_info.balance?.positions.some(
+        (position) => position.amount.status === "known",
+      ) === true,
   })
   expect(savedAccount.account_info.username).toBe(GRSAI_ACCOUNT_EMAIL)
   expect(savedAccount.account_info.id).toBe(GRSAI_ACCOUNT_ID)
   expect(savedAccount.account_info.access_token).toBe(GRSAI_SESSION_TOKEN)
   // Saving reads the account through the same producer the refresh button uses:
-  // the stubbed credit balance and today consumption, normalized into quota
-  // points at the console's own base credit rate.
-  expect(savedAccount.account_info.quota).toBe(
-    Math.round((GRSAI_CREDITS / GRSAI_CREDITS_PER_USD) * QUOTA_PER_USD),
+  // the stubbed balance and consumption remain in native credits.
+  expect(savedAccount.account_info.balance?.positions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        asset: expect.objectContaining({ kind: "quota", label: "Credits" }),
+        amount: expect.objectContaining({
+          status: "known",
+          value: String(GRSAI_CREDITS),
+        }),
+      }),
+    ]),
   )
-  expect(savedAccount.account_info.today_quota_consumption).toBe(
-    Math.round((GRSAI_TODAY_CREDITS / GRSAI_CREDITS_PER_USD) * QUOTA_PER_USD),
+  expect(savedAccount.account_info.usageObservations).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        cost: expect.objectContaining({
+          asset: expect.objectContaining({ kind: "quota" }),
+          amount: expect.objectContaining({
+            value: String(GRSAI_TODAY_CREDITS),
+          }),
+        }),
+      }),
+    ]),
   )
   // The console runs no check-in flow, so no method may be learned or selected.
   expect(Object.keys(savedAccount.checkIn.methodKnowledge.methods)).toEqual([])
@@ -1551,10 +1585,11 @@ test("adds a Grsai account from its logged-in console session", async ({
     page,
     serviceWorker,
     accountIds: [savedAccount.id],
-    expectedQuotas: [
-      Math.round(
-        (GRSAI_REFRESHED_CREDITS / GRSAI_CREDITS_PER_USD) * QUOTA_PER_USD,
-      ),
+    expectedBalances: [
+      {
+        asset: { kind: "quota", label: "Credits" },
+        value: String(GRSAI_REFRESHED_CREDITS),
+      },
     ],
   })
 

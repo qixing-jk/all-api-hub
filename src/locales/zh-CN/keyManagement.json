@@ -247,6 +247,7 @@
     "lifetime": "累计",
     "limit": "上限",
     "nativeQuota": "原生额度",
+    "partial": "部分结果",
     "period": {
       "5h": "5 小时",
       "day": "每日",

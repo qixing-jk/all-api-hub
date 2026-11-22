@@ -8,6 +8,7 @@ import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
   forceExtensionLanguage,
+  getStoredAccountUsdObservation,
   installExtensionPageGuards,
   seedStoredAccounts,
   seedUserPreferences,
@@ -238,10 +239,11 @@ test("detects a redemption code on a real page, redeems it for the matched accou
   await expect
     .poll(async () => {
       const accounts = await readStoredAccounts(serviceWorker)
-      return accounts.find((account) => account.id === "redeem-account")
-        ?.account_info.quota
+      return getStoredAccountUsdObservation(
+        accounts.find((account) => account.id === "redeem-account"),
+      )
     })
-    .toBe(1_500_000)
+    .toMatchObject({ status: "known", value: "3" })
 
   const popupPage = await context.newPage()
   installExtensionPageGuards(popupPage)
@@ -256,7 +258,7 @@ test("detects a redemption code on a real page, redeems it for the matched accou
     popupPage.getByRole("button", { name: "Redeem Hub" }),
   ).toBeVisible()
   await expect(
-    popupPage.getByRole("button", { name: "Click to switch to CNY" }),
+    popupPage.getByRole("region", { name: "Financial totals" }),
   ).toContainText("$3.00")
 })
 
@@ -366,11 +368,13 @@ test("forwards selected redemption text from the background context-menu path to
   await expect
     .poll(async () => {
       const accounts = await readStoredAccounts(serviceWorker)
-      return accounts.find(
-        (account) => account.id === "context-menu-redeem-account",
-      )?.account_info.quota
+      return getStoredAccountUsdObservation(
+        accounts.find(
+          (account) => account.id === "context-menu-redeem-account",
+        ),
+      )
     })
-    .toBe(2_250_000)
+    .toMatchObject({ status: "known", value: "4.5" })
 })
 
 test("opens Redemption Assist settings from the content prompt", async ({

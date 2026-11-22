@@ -102,6 +102,24 @@ export function formatBudgetAmount(
   )
 }
 
+/** Freshness belongs to the displayed amount or nonnumeric state, independently of usage. */
+export function getBudgetAmountStatus(
+  budget: BudgetConstraint,
+  metric: (typeof BUDGET_AMOUNT_FIELDS)[keyof typeof BUDGET_AMOUNT_FIELDS],
+) {
+  if (
+    (metric === BUDGET_AMOUNT_FIELDS.Limit ||
+      metric === BUDGET_AMOUNT_FIELDS.Remaining) &&
+    (budget.limitState === BUDGET_LIMIT_STATES.Unlimited ||
+      budget.limitState === BUDGET_LIMIT_STATES.Unconfigured ||
+      (budget.limitState === BUDGET_LIMIT_STATES.Inherited &&
+        budget[metric].status !== OBSERVATION_STATUSES.Known &&
+        budget[metric].status !== OBSERVATION_STATUSES.Stale))
+  )
+    return budget.stateObservation.status
+  return budget[metric].status
+}
+
 /** Labels remain statically extractable when the same observation appears in several metrics. */
 export function getBudgetMetricLabel(
   metric: (typeof BUDGET_AMOUNT_FIELDS)[
@@ -181,6 +199,19 @@ function getBudgetPeriodLabel(
     case BUDGET_PERIODS.Year:
       return t("keyManagement:financial.period.year")
   }
+}
+
+/** A plan name and period identify independent allowances on every account surface. */
+export function formatAllowanceLabel(
+  entry: { label?: string; constraint: Pick<BudgetConstraint, "window"> },
+  t: TFunction,
+): string {
+  return [
+    entry.label?.trim() || t("account:financial.allowance"),
+    getBudgetPeriodLabel(entry.constraint.window, t),
+  ]
+    .filter(Boolean)
+    .join(" · ")
 }
 
 /** Displays known budget windows and state without inferring missing reset rules. */

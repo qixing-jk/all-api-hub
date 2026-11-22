@@ -325,6 +325,7 @@ const siteTypeImportOwners = [
   "src/services/productAnalytics/settingsSnapshots/managedSite.ts", // Projection owns explicit managed-site configuration facts.
   "src/services/siteAnnouncements/devFixtures.ts", // Development fixtures for named providers.
   "src/features/DevPanel/keyProvisioningPreview.ts", // Development-only native provider editor fixtures.
+  "src/features/DevPanel/fixtureSiteBalances.ts", // Development-only default balance samples for named providers.
   "src/components/icons/ManagedSiteIcon.tsx", // Provider branding.
   "src/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
   "src/features/AccountManagement/components/AccountDialog/form/AccountForm.tsx", // OpenRouter management-key onboarding UI.

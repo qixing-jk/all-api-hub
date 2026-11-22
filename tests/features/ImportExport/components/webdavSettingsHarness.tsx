@@ -89,7 +89,7 @@ const {
     exportPreferences: vi.fn(),
     exportPreferencesForBackup: vi.fn(),
   },
-  mockAccountStorage: { exportData: vi.fn() },
+  mockAccountStorage: { exportData: vi.fn(), exportDataWithTags: vi.fn() },
   mockTagStorage: { exportTagStore: vi.fn() },
   mockChannelConfigStorage: { exportConfigs: vi.fn() },
   mockApiCredentialProfilesStorage: { exportConfig: vi.fn() },
@@ -171,10 +171,16 @@ vi.mock("~/services/webdav/backup/webdavBackupEncryption", () => ({
     mockTryParseEncryptedWebdavBackupEnvelope,
 }))
 
-vi.mock("~/services/webdav/sync/webdavSelectiveSync", () => ({
-  buildWebdavImportPayloadBySelection: mockBuildWebdavImportPayloadBySelection,
-  mergeWebdavBackupPayloadBySelection: mockMergeWebdavBackupPayloadBySelection,
-}))
+vi.mock(
+  import("~/services/webdav/sync/webdavSelectiveSync"),
+  async (importOriginal) => ({
+    ...(await importOriginal()),
+    buildWebdavImportPayloadBySelection:
+      mockBuildWebdavImportPayloadBySelection,
+    mergeWebdavBackupPayloadBySelection:
+      mockMergeWebdavBackupPayloadBySelection,
+  }),
+)
 
 vi.mock("~/services/webdav/webdavService", () => ({
   downloadBackup: mockDownloadBackup,
@@ -396,6 +402,10 @@ export function setupWebdavSettingsTestHarness() {
     )
     mockAccountStorage.exportData.mockResolvedValue([{ id: "acc-1" }])
     mockTagStorage.exportTagStore.mockResolvedValue({ tags: [] })
+    mockAccountStorage.exportDataWithTags.mockImplementation(async () => ({
+      accounts: await mockAccountStorage.exportData(),
+      tagStore: await mockTagStorage.exportTagStore(),
+    }))
     mockChannelConfigStorage.exportConfigs.mockResolvedValue([{ id: 1 }])
     mockApiCredentialProfilesStorage.exportConfig.mockResolvedValue([{ id: 2 }])
     mockDownloadBackup.mockResolvedValue('{"version":2,"accounts":[]}')

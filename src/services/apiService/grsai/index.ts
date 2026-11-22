@@ -1,14 +1,32 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+  accountReportingScope,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import type {
   AccessTokenInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { GRSAI_ENDPOINTS } from "~/services/apiService/grsai/constants"
+import {
+  GRSAI_CREDIT_ASSET,
+  GRSAI_ENDPOINTS,
+} from "~/services/apiService/grsai/constants"
 import {
   creditsToQuota,
   isGrsaiApiKey,
@@ -283,11 +301,13 @@ export async function fetchAccountData(
     )
   }
 
-  const credits =
-    toOptionalFiniteNumber(userInfo.credits) ??
-    toOptionalFiniteNumber(dashboard.credits) ??
-    0
-  const todayCredits = toOptionalFiniteNumber(dashboard.todayConsumed)
+  const nativeCredits = (value: unknown) => {
+    const parsed = parseDecimal(value)
+    return parsed?.startsWith("-") ? undefined : parsed
+  }
+  const userCredits = nativeCredits(userInfo.credits)
+  const credits = userCredits ?? nativeCredits(dashboard.credits)
+  const todayCredits = nativeCredits(dashboard.todayConsumed)
 
   const todayStatsAvailability: AccountTodayStatsAvailability = {
     consumption: shouldCollectToday
@@ -300,17 +320,70 @@ export async function fetchAccountData(
     income: UNSUPPORTED_METRIC,
   }
 
+  const scope = accountBalanceScope(request, { walletId: userInfo.id })
+  const asset = { kind: ASSET_KINDS.Quota, ...GRSAI_CREDIT_ASSET } as const
+  const observedAt = Date.now()
+  const source = {
+    adapter: SITE_TYPES.GRSAI,
+    contractVersion: "credits/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  } as const
+  const balanceEndpoint =
+    userCredits === undefined
+      ? GRSAI_ENDPOINTS.dashboard
+      : GRSAI_ENDPOINTS.userInfo
   return {
-    quota: creditsToQuota(credits),
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "credits",
+          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+          scope,
+          observedAt,
+          asset,
+          value: credits,
+          source: {
+            ...source,
+            operation: "wallet:credits",
+            inputs: [`${balanceEndpoint}:credits`],
+          },
+        }),
+      ],
+      observedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
+    quota: creditsToQuota(Number(credits ?? 0)),
     today_quota_consumption:
       shouldCollectToday && todayCredits !== undefined
-        ? creditsToQuota(todayCredits)
+        ? creditsToQuota(Number(todayCredits))
         : 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
     today_requests_count: 0,
     today_income: 0,
     todayStatsAvailability,
+    ...(shouldCollectToday && todayCredits !== undefined
+      ? {
+          usageObservations: [
+            {
+              scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+              cost: {
+                asset,
+                amount: observeAmount(
+                  todayCredits,
+                  {
+                    ...source,
+                    operation: `${GRSAI_ENDPOINTS.dashboard}:todayConsumed`,
+                  },
+                  observedAt,
+                ),
+                scope: accountReportingScope(request),
+              },
+            },
+          ],
+        }
+      : {}),
     checkIn: request.checkIn,
   }
 }

@@ -11,6 +11,8 @@ import {
   RefreshCw,
   RotateCcw,
   Tag,
+  TrendingDown,
+  TrendingUp,
   UserRound,
   UsersRound,
   Wallet,
@@ -22,6 +24,9 @@ export const AccountUserIcon = UserRound
 export const AccountTagIcon = Tag
 export const AccountKeyIcon = KeyRound
 export const AccountBalanceIcon = Wallet
+export const AccountConsumptionIcon = TrendingDown
+export const AccountIncomeIcon = TrendingUp
+export const AccountBalanceChangeIcon = ArrowLeftRight
 export const ApiCredentialLibraryIcon = Library
 export const ApiCredentialLibraryAddIcon = BookPlus
 

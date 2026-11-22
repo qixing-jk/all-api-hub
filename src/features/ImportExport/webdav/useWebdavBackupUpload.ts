@@ -12,7 +12,6 @@ import {
 } from "~/features/ImportExport/webdav/webDavAnalytics"
 import { getPersistWebdavConfigErrorMessage } from "~/features/ImportExport/webdav/webdavPreferenceFeedback"
 import toast from "~/lib/notify"
-import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { type BackupFullV2 } from "~/services/importExport/backupContracts"
@@ -30,7 +29,6 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
 } from "~/services/productAnalytics/contracts"
 import { buildWebDavSyncDiagnostics } from "~/services/productAnalytics/facts/webDavSync"
-import { tagStorage } from "~/services/tags/tagStorage"
 import { parseWebdavBackupJson } from "~/services/webdav/backup/webdavBackupValidation"
 import {
   createCloudSyncBackup,
@@ -38,7 +36,10 @@ import {
   uploadCloudSyncBackup,
 } from "~/services/webdav/cloudSyncService"
 import { isGithubGistWritableMissingError } from "~/services/webdav/githubGistService"
-import { mergeWebdavBackupPayloadBySelection } from "~/services/webdav/sync/webdavSelectiveSync"
+import {
+  mergeWebdavBackupPayloadBySelection,
+  readSelectedAccountBackupState,
+} from "~/services/webdav/sync/webdavSelectiveSync"
 import {
   downloadBackup,
   isWebdavFileNotFoundError,
@@ -147,15 +148,13 @@ export function useWebdavBackupUpload(config: WebdavConfigState) {
           : syncDataSelection
       await ensureLegacyChannelConfigMigrationReady({ bypassBackoff: true })
       const [
-        accountData,
-        tagStore,
+        { accounts: accountData, tagStore },
         preferencesData,
         featureGuidance,
         channelConfigs,
         apiCredentialProfiles,
       ] = await Promise.all([
-        accountDataTransfer.exportData(),
-        tagStorage.exportTagStore(),
+        readSelectedAccountBackupState(selectionForUpload),
         userPreferences.exportPreferencesForBackup(),
         featureGuidanceState.getState(),
         channelConfigStorage.exportConfigs(),
@@ -244,7 +243,7 @@ export function useWebdavBackupUpload(config: WebdavConfigState) {
             gistId:
               "gistId" in remote && typeof remote.gistId === "string"
                 ? remote.gistId
-                : previousConfig.githubGist?.gistId ?? "",
+                : (previousConfig.githubGist?.gistId ?? ""),
             gistUrl: remote.htmlUrl ?? "",
           },
         }))

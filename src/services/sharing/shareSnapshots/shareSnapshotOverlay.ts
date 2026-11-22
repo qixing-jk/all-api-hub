@@ -1,12 +1,45 @@
-import type { ShareSnapshotPayload } from "~/services/sharing/shareSnapshots/types"
+import { CURRENCIES } from "~/constants/money"
+import {
+  displayCashflowAmount,
+  selectDisplayCashflowGroups,
+} from "~/services/accounts/metrics/consumptionProjection"
+import {
+  ASSET_KINDS,
+  BALANCE_RELATIONS,
+  FINANCIAL_COVERAGE,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
+import {
+  formatOverviewShareBalance,
+  getShareBalanceDisplayAmounts,
+  shareBalanceTitle,
+} from "~/services/sharing/shareSnapshots/balanceSummary"
+import { SHARE_SNAPSHOT_KINDS } from "~/services/sharing/shareSnapshots/constants"
+import { siteDayUsageValues } from "~/services/sharing/shareSnapshots/consumptionSummary"
+import {
+  SHARE_BALANCE_PURPOSES,
+  type ShareSnapshotPayload,
+} from "~/services/sharing/shareSnapshots/types"
 import {
   clamp,
   clampByte,
-  formatCurrencyAmount,
   formatSignedCurrencyAmount,
+  getShareDisplayCurrency,
   relativeLuminanceFromRgb,
   type Rgb,
 } from "~/services/sharing/shareSnapshots/utils"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import {
+  getBalanceFundingLabel,
+  getBalanceRoleLabel,
+} from "~/utils/core/balancePresentation"
+import {
+  convertCurrencyAmount,
+  formatAssetAmount,
+  formatBalanceAmount,
+  getAssetLabel,
+} from "~/utils/core/money"
+import { t } from "~/utils/i18n/core"
 
 export type ShareSnapshotOverlayLabels = {
   overview: string
@@ -37,7 +70,7 @@ const rgbaFromRgb = (rgb: Rgb, alpha: number): string =>
 const SHARE_SNAPSHOT_TEXT_LUMINANCE_SWITCH = 0.55
 
 // Keep the watermark visually secondary to the header label.
-const SHARE_SNAPSHOT_WATERMARK_FONT_SCALE = 0.82
+const SHARE_SNAPSHOT_WATERMARK_FONT_SCALE = 0.55
 
 const pickContrastingTextTone = (
   backgroundLuminance: number,
@@ -245,7 +278,7 @@ export const drawShareSnapshotOverlay = (
   const asOfDate = new Date(safeAsOf)
 
   // Header (watermark text only)
-  const headerFontSize = Math.round(width * 0.06)
+  const headerFontSize = Math.round(width * 0.045)
   const headerFont = `600 ${headerFontSize}px ${fontStack}`
   const watermarkFontSize = Math.max(
     8,
@@ -258,7 +291,9 @@ export const drawShareSnapshotOverlay = (
   const watermarkTextWidth = ctx.measureText(watermarkText).width
 
   const headerLeftText =
-    payload.kind === "overview" ? labels.overview : payload.siteName
+    payload.kind === SHARE_SNAPSHOT_KINDS.Overview
+      ? labels.overview
+      : payload.siteName
   const headerLeftMaxWidth = Math.max(
     0,
     contentW - watermarkTextWidth - watermarkGap,
@@ -284,10 +319,13 @@ export const drawShareSnapshotOverlay = (
   ctx.textBaseline = "top"
 
   // Hero label
-  const heroLabelText =
-    payload.kind === "overview" ? labels.totalBalance : labels.balance
+  const heroLabelText = payload.balanceSummary
+    ? shareBalanceTitle(payload.balanceSummary)
+    : payload.kind === SHARE_SNAPSHOT_KINDS.Overview
+      ? labels.totalBalance
+      : labels.balance
   const heroLabelFontSize = Math.round(width * 0.038)
-  const heroLabelY = padding + headerFontSize + Math.round(height * 0.09)
+  const heroLabelY = padding + headerFontSize + Math.round(height * 0.065)
   ctx.textAlign = "left"
   ctx.font = `600 ${heroLabelFontSize}px ${fontStack}`
   ctx.fillStyle = textColors.label
@@ -297,26 +335,197 @@ export const drawShareSnapshotOverlay = (
     heroLabelY,
   )
 
-  // Hero value
-  const currencyValue =
-    payload.kind === "overview" ? payload.totalBalance : payload.balance
-  const primaryValue = formatCurrencyAmount(currencyValue, payload.currencyType)
+  const summary = payload.balanceSummary
+  const formatBalance = (amount: Parameters<typeof formatBalanceAmount>[0]) =>
+    formatBalanceAmount(
+      amount,
+      locale,
+      getShareDisplayCurrency(payload),
+      payload.exchangeRate,
+    )
+  const entries =
+    summary?.purpose === SHARE_BALANCE_PURPOSES.Account
+      ? summary.entries
+          .map((entry) => ({
+            value: entry.unlimited
+              ? t("keyManagement:dialog.unlimitedQuota")
+              : entry.amount
+                ? formatBalance(entry.amount)
+                : [
+                    getAssetLabel(entry.asset),
+                    t("shareSnapshots:financial.unavailable"),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+            label: [
+              entry.relation === BALANCE_RELATIONS.Component
+                ? getBalanceFundingLabel(entry.funding, t)
+                : undefined,
+              entry.status === OBSERVATION_STATUSES.Stale
+                ? t("account:financial.lastKnown")
+                : "",
+              getBalanceRoleLabel(entry, t),
+              entry.allowanceRules?.[0],
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          }))
+          .concat(
+            summary.referenceAmount
+              ? [
+                  {
+                    value: formatBalance(summary.referenceAmount),
+                    label: t("account:financial.lastKnown"),
+                  },
+                ]
+              : [],
+          )
+      : [
+          ...getShareBalanceDisplayAmounts(
+            summary,
+            getShareDisplayCurrency(payload),
+          ).map((amount) => ({
+            value: formatOverviewShareBalance(
+              amount,
+              summary,
+              locale,
+              getShareDisplayCurrency(payload),
+            ),
+            label: "",
+          })),
+          ...(summary?.referenceAmount
+            ? [
+                {
+                  value: formatBalance(summary.referenceAmount),
+                  label: t("account:financial.lastKnown"),
+                },
+              ]
+            : []),
+        ]
+  const visibleEntries = entries.slice(0, 3)
+  let showCaptionHint =
+    entries.length > visibleEntries.length ||
+    summary?.purpose === SHARE_BALANCE_PURPOSES.Account ||
+    Boolean(
+      summary?.duplicateCount ||
+      summary?.conflictCount ||
+      summary?.potentialDuplicateCount ||
+      summary?.manualCount ||
+      summary?.lastKnownCount,
+    )
+  const heroY = heroLabelY + heroLabelFontSize + Math.round(height * 0.023)
+  const detailFontSize = Math.round(width * 0.024)
+  let heroSectionBottomY = heroY
+  const amountFontSize = width * (visibleEntries.length === 1 ? 0.15 : 0.065)
 
-  const heroMaxFontSize = Math.round(width * 0.18)
-  const heroMinFontSize = Math.round(width * 0.12)
-  const heroFontSize = getFittedFontSize({
-    ctx,
-    text: primaryValue,
-    maxWidth: contentW,
-    fontFamily: fontStack,
-    fontWeight: 700,
-    maxFontSize: heroMaxFontSize,
-    minFontSize: heroMinFontSize,
-  })
-  const heroY = heroLabelY + heroLabelFontSize + Math.round(height * 0.04)
-  ctx.font = `700 ${heroFontSize}px ${fontStack}`
-  ctx.fillStyle = textColors.primary
-  ctx.fillText(primaryValue, contentX, heroY)
+  const colGap = Math.round(width * 0.065)
+  const blockW = (contentW - colGap) / 2
+  const balanceColumnWidth = visibleEntries.length > 1 ? blockW : contentW
+  const balanceLabelHeight = detailFontSize + Math.round(height * 0.005)
+  const drawBalanceLabel = (
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+  ) => {
+    ctx.font = `600 ${detailFontSize}px ${fontStack}`
+    ctx.fillStyle = textColors.secondary
+    ctx.fillText(truncateTextToWidth(ctx, text, maxWidth), x, y)
+  }
+  const drawBalanceNote = (text: string) => {
+    drawBalanceLabel(text, contentX, heroSectionBottomY, contentW)
+    heroSectionBottomY += balanceLabelHeight
+  }
+
+  // A shared heading describes matching balances without repeating their role.
+  const sharedLabel = visibleEntries.find(
+    ({ label }, index) =>
+      label &&
+      visibleEntries.some(
+        (entry, other) => other > index && entry.label === label,
+      ),
+  )?.label
+  const balanceGroups = sharedLabel
+    ? [
+        {
+          heading: sharedLabel,
+          entries: visibleEntries.filter(({ label }) => label === sharedLabel),
+        },
+        {
+          heading: "",
+          entries: visibleEntries.filter(({ label }) => label !== sharedLabel),
+        },
+      ]
+    : [{ heading: "", entries: visibleEntries }]
+
+  for (const { heading, entries } of balanceGroups) {
+    if (heading) drawBalanceNote(heading)
+    for (let index = 0; index < entries.length; index += 2) {
+      const row = entries.slice(index, index + 2)
+      const showItemLabels = !heading && row.some(({ label }) => label)
+      const valueY =
+        heroSectionBottomY + (showItemLabels ? balanceLabelHeight : 0)
+      const fontSize = Math.max(
+        detailFontSize,
+        Math.min(
+          ...row.map(({ value }) =>
+            getFittedFontSize({
+              ctx,
+              text: value,
+              maxWidth: balanceColumnWidth,
+              fontFamily: fontStack,
+              fontWeight: 700,
+              maxFontSize: amountFontSize,
+              minFontSize: detailFontSize,
+            }),
+          ),
+        ),
+      )
+
+      row.forEach(({ value, label }, column) => {
+        const x = contentX + column * (blockW + colGap)
+        if (showItemLabels && label) {
+          drawBalanceLabel(label, x, heroSectionBottomY, balanceColumnWidth)
+        }
+        ctx.font = `700 ${fontSize}px ${fontStack}`
+        ctx.fillStyle = textColors.primary
+        const fittedValue = truncateTextToWidth(ctx, value, balanceColumnWidth)
+        ctx.fillText(fittedValue, x, valueY)
+        showCaptionHint ||= fittedValue !== value
+      })
+      heroSectionBottomY = valueY + fontSize + Math.round(height * 0.015)
+    }
+  }
+
+  if (!visibleEntries.length) {
+    drawBalanceNote(
+      t(
+        summary
+          ? "shareSnapshots:financial.unavailable"
+          : "account:financial.legacy",
+      ),
+    )
+  }
+  if (summary && summary.coverage !== FINANCIAL_COVERAGE.Complete) {
+    heroSectionBottomY += Math.round(height * 0.01)
+    const coverage =
+      summary.coverage === FINANCIAL_COVERAGE.Partial
+        ? t("shareSnapshots:financial.partial")
+        : t("shareSnapshots:financial.unknown")
+    const included =
+      summary.eligibleCount === undefined
+        ? ""
+        : t("account:financial.coverage", {
+            included: summary.includedCount,
+            eligible: summary.eligibleCount,
+          })
+    drawBalanceNote([coverage, included].filter(Boolean).join(" · "))
+  }
+  if (
+    summary?.purpose !== SHARE_BALANCE_PURPOSES.Account &&
+    summary?.lastKnownCount
+  )
+    drawBalanceNote(t("account:financial.lastKnown"))
 
   const todayIncome =
     typeof payload.todayIncome === "number" ? payload.todayIncome : undefined
@@ -325,26 +534,30 @@ export const drawShareSnapshotOverlay = (
   const todayNet =
     typeof payload.todayNet === "number" ? payload.todayNet : undefined
 
-  let heroSectionBottomY = heroY + heroFontSize
-  if (
-    typeof todayIncome === "number" &&
-    typeof todayOutcome === "number" &&
-    typeof todayNet === "number"
-  ) {
-    const netText = `${labels.today} · ${labels.net} ${formatSignedCurrencyAmount(
-      todayNet,
-      payload.currencyType,
-    )}`
+  const netValue = payload.todayNetAmount
+    ? formatAssetAmount(payload.todayNetAmount, locale)
+    : !payload.incomeSummary &&
+        !payload.consumptionSummary &&
+        typeof todayIncome === "number" &&
+        typeof todayOutcome === "number" &&
+        typeof todayNet === "number"
+      ? formatSignedCurrencyAmount(
+          todayNet,
+          getShareDisplayCurrency(payload) ?? payload.currencyType,
+        )
+      : undefined
+  if (netValue !== undefined) {
+    const netText = `${labels.today} · ${labels.net} ${netValue}`
     const netFontSize = Math.round(width * 0.032)
     ctx.font = `600 ${netFontSize}px ${fontStack}`
     ctx.fillStyle = textColors.secondary
     ctx.fillText(
       truncateTextToWidth(ctx, netText, contentW),
       contentX,
-      heroY + heroFontSize + Math.round(height * 0.02),
+      heroSectionBottomY + Math.round(height * 0.02),
     )
     heroSectionBottomY =
-      heroY + heroFontSize + Math.round(height * 0.02) + netFontSize
+      heroSectionBottomY + Math.round(height * 0.02) + netFontSize
   }
 
   const toLocaleDate = (date: Date) => {
@@ -369,26 +582,39 @@ export const drawShareSnapshotOverlay = (
 
   const blocksTopY = Math.max(
     Math.round(height * 0.62),
-    Math.round(heroSectionBottomY + height * 0.075),
+    Math.round(heroSectionBottomY + height * 0.02),
   )
-  const colGap = Math.round(width * 0.065)
-  const rowGap = Math.round(height * 0.17)
-  const blockW = (contentW - colGap) / 2
+  const rowGap = Math.round(height * 0.145)
 
-  const blockLabelFont = Math.round(width * 0.032)
-  const blockValueFont = Math.round(width * 0.05)
-  const lineGap = Math.round(height * 0.02)
+  const blockLabelFont = Math.round(width * 0.026)
+  const blockValueFont = Math.round(width * 0.037)
+  const lineGap = Math.round(height * 0.012)
+  const firstSiteDay = payload.siteDayUsage?.[0]
+  const siteDayLabel = [
+    firstSiteDay?.costCoverage === FINANCIAL_COVERAGE.Partial
+      ? t("account:todayMetricAvailability.partial")
+      : undefined,
+    firstSiteDay?.lastKnown ? t("account:financial.lastKnown") : undefined,
+    t("account:financial.siteDay"),
+    firstSiteDay?.reportedDay,
+  ]
+    .filter(Boolean)
+    .join(" · ")
 
   const drawInfoBlock = ({
     x,
     y,
     label,
     value,
+    summary,
+    readings,
   }: {
     x: number
     y: number
     label: string
     value: string
+    summary?: ShareSnapshotPayload["consumptionSummary"]
+    readings?: string[]
   }) => {
     ctx.textAlign = "left"
     ctx.textBaseline = "top"
@@ -397,10 +623,146 @@ export const drawShareSnapshotOverlay = (
     ctx.fillStyle = textColors.secondary
     ctx.fillText(truncateTextToWidth(ctx, label, blockW), x, y)
 
+    if (
+      readings?.length &&
+      !summary?.groups.length &&
+      !summary?.retained?.length &&
+      !summary?.references?.length
+    ) {
+      ctx.font = `600 ${Math.round(width * 0.029)}px ${fontStack}`
+      ctx.fillStyle = textColors.primary
+      readings
+        .slice(0, 2)
+        .forEach((reading, index) =>
+          ctx.fillText(
+            truncateTextToWidth(ctx, reading, blockW),
+            x,
+            y + blockLabelFont + lineGap + index * height * 0.045,
+          ),
+        )
+      return
+    }
+
+    if (
+      summary &&
+      (summary.groups.length ||
+        summary.references?.length ||
+        summary.retained?.length)
+    ) {
+      // Each tile owns its native observations, independently of the balance hero cap.
+      // Keep the asset and uncertainty above the value so truncating digits cannot erase them.
+      const observations = [
+        ...selectDisplayCashflowGroups(
+          summary,
+          getShareDisplayCurrency(payload),
+        ).map((group) => ({
+          displayed: displayCashflowAmount(
+            group,
+            getShareDisplayCurrency(payload),
+          ),
+          qualifier:
+            group.coverage.status === ACCOUNT_TODAY_METRIC_STATUSES.Complete
+              ? ""
+              : t(
+                  group.coverage.status ===
+                    ACCOUNT_TODAY_METRIC_STATUSES.Partial
+                    ? "account:todayMetricAvailability.partial"
+                    : "account:financial.coverageUnknown",
+                ),
+        })),
+        ...(summary.retained ?? []).map((fact) => ({
+          displayed: convertCurrencyAmount(
+            fact.amount,
+            getShareDisplayCurrency(payload),
+            payload.exchangeRate,
+          ),
+          qualifier: t("account:financial.lastKnown"),
+        })),
+        ...(summary.references ?? []).map((reference) => ({
+          displayed: {
+            asset: {
+              kind: ASSET_KINDS.Currency,
+              code: getShareDisplayCurrency(payload) ?? CURRENCIES.USD,
+            } as const,
+            value: String(
+              reference.amount[
+                getShareDisplayCurrency(payload) ?? CURRENCIES.USD
+              ],
+            ),
+          },
+          qualifier: [
+            t("account:financial.legacy"),
+            reference.lastKnown ? t("account:financial.lastKnown") : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        })),
+      ]
+      observations
+        .slice(0, readings?.length ? 1 : 2)
+        .forEach(({ displayed, qualifier }, index) => {
+          const asset = displayed.asset
+          const assetLabel =
+            asset.kind === ASSET_KINDS.Currency
+              ? asset.code
+              : asset.kind === ASSET_KINDS.Crypto
+                ? asset.id
+                : asset.displayLabel
+          const groupY = y + blockLabelFont + lineGap + index * height * 0.06
+          ctx.font = `600 ${Math.round(width * 0.02)}px ${fontStack}`
+          ctx.fillStyle = textColors.secondary
+          ctx.fillText(
+            truncateTextToWidth(
+              ctx,
+              [qualifier, assetLabel].filter(Boolean).join(" · "),
+              blockW,
+            ),
+            x,
+            groupY,
+          )
+          const amount = formatAssetAmount(displayed, locale)
+          const fitted = getFittedFontSize({
+            ctx,
+            text: amount,
+            maxWidth: blockW,
+            fontFamily: fontStack,
+            fontWeight: 600,
+            maxFontSize: width * 0.032,
+            minFontSize: width * 0.025,
+          })
+          if (observations.length > (readings?.length ? 1 : 2))
+            showCaptionHint = true
+          ctx.font = `600 ${Math.max(width * 0.023, fitted)}px ${fontStack}`
+          ctx.fillStyle = textColors.primary
+          ctx.fillText(
+            truncateTextToWidth(ctx, amount, blockW),
+            x,
+            groupY + height * 0.023,
+          )
+        })
+      if (readings?.length) {
+        const groupY = y + blockLabelFont + lineGap + height * 0.06
+        ctx.font = `600 ${Math.round(width * 0.02)}px ${fontStack}`
+        ctx.fillStyle = textColors.secondary
+        ctx.fillText(truncateTextToWidth(ctx, siteDayLabel, blockW), x, groupY)
+        ctx.font = `600 ${Math.round(width * 0.029)}px ${fontStack}`
+        ctx.fillStyle = textColors.primary
+        ctx.fillText(
+          truncateTextToWidth(ctx, readings[0]!, blockW),
+          x,
+          groupY + height * 0.023,
+        )
+      }
+      return
+    }
     ctx.font = `600 ${blockValueFont}px ${fontStack}`
     ctx.fillStyle = textColors.primary
     ctx.fillText(
-      truncateTextToWidth(ctx, value, blockW),
+      truncateTextToWidth(
+        ctx,
+        summary ? t("account:financial.unavailable") : value,
+        blockW,
+      ),
       x,
       y + blockLabelFont + lineGap,
     )
@@ -409,9 +771,12 @@ export const drawShareSnapshotOverlay = (
   drawInfoBlock({
     x: contentX,
     y: blocksTopY,
-    label: payload.kind === "overview" ? labels.accounts : labels.site,
+    label:
+      payload.kind === SHARE_SNAPSHOT_KINDS.Overview
+        ? labels.accounts
+        : labels.site,
     value:
-      payload.kind === "overview"
+      payload.kind === SHARE_SNAPSHOT_KINDS.Overview
         ? String(payload.enabledAccountCount)
         : payload.siteName,
   })
@@ -425,6 +790,7 @@ export const drawShareSnapshotOverlay = (
     x: contentX,
     y: blocksTopY + rowGap,
     label: labels.income,
+    summary: payload.incomeSummary,
     value:
       typeof todayIncome === "number"
         ? formatSignedCurrencyAmount(todayIncome, payload.currencyType)
@@ -433,12 +799,44 @@ export const drawShareSnapshotOverlay = (
   drawInfoBlock({
     x: contentX + blockW + colGap,
     y: blocksTopY + rowGap,
-    label: labels.outcome,
+    label:
+      !payload.consumptionSummary?.groups.length &&
+      !payload.consumptionSummary?.references?.length &&
+      !payload.consumptionSummary?.retained?.length &&
+      payload.siteDayUsage?.length
+        ? siteDayLabel
+        : labels.outcome,
+    readings: firstSiteDay
+      ? siteDayUsageValues(firstSiteDay, locale)
+      : undefined,
+    summary: payload.consumptionSummary,
     value:
       typeof todayOutcome === "number"
         ? formatSignedCurrencyAmount(-todayOutcome, payload.currencyType)
         : "—",
   })
 
+  if (
+    showCaptionHint ||
+    payload.incomeSummary?.retained?.length ||
+    payload.incomeSummary?.groups.length ||
+    payload.consumptionSummary?.groups.length ||
+    payload.incomeSummary?.references?.length ||
+    payload.consumptionSummary?.references?.length ||
+    payload.siteDayUsage?.length
+  ) {
+    // The caption carries the full financial observations and their context.
+    ctx.font = `600 ${Math.round(width * 0.02)}px ${fontStack}`
+    ctx.fillStyle = textColors.secondary
+    ctx.fillText(
+      truncateTextToWidth(
+        ctx,
+        t("shareSnapshots:financial.detailsInCaption"),
+        contentW,
+      ),
+      contentX,
+      height - Math.round(height * 0.045),
+    )
+  }
   ctx.restore()
 }

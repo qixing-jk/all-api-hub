@@ -29,10 +29,11 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
   usageHistoryScheduler: { runAfterRefreshSync: vi.fn() },
 }))
 vi.mock("~/services/history/dailyBalanceHistory/capture", () => ({
-  maybeCaptureDailyBalanceSnapshot: vi.fn().mockResolvedValue(undefined),
+  maybeCaptureAccountReferenceBalance: vi.fn().mockResolvedValue(undefined),
 }))
 vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
   accountMutations: {
+    beginBalanceRefresh: vi.fn().mockResolvedValue(1),
     updateAccountFromRefresh: vi.fn(),
     updateAccount: vi.fn().mockResolvedValue(true),
   },

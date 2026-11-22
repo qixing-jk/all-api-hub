@@ -2,12 +2,32 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
-import { QUOTA_PER_USD } from "~/constants/money"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/checkInStatus"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+  getAccountBalanceSnapshots,
+} from "~/services/accounts/balanceSnapshot"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
+import { getDisplayBalancePortfolio } from "~/services/accounts/metrics/balanceProjection"
+import { migrateAccountFinancialInfo } from "~/services/accounts/migrations/accountFinancialMigration"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  BALANCE_VALIDITY_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import { dayaCapabilities } from "~/services/apiAdapters/daya"
 import { pmApiCapabilities } from "~/services/apiAdapters/pmapi"
 import { refreshAccountData as refreshNewApiAccountData } from "~/services/apiService/newApiFamily/default/accountRefresh"
@@ -49,6 +69,8 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import {
   buildCompleteTodayStatsAvailability,
+  buildFinancialIncomeFact,
+  buildFinancialPeriodFact,
   buildTodayStatsAvailabilityReplacementCases,
 } from "~~/tests/test-utils/accountTodayStats"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -181,9 +203,9 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
   const numericId = overrides.id?.replace(/\D/g, "") || "1"
   const updatedAt = overrides.updated_at ?? Date.now()
 
-  return {
+  const account: SiteAccount = {
     id: overrides.id || "account-1",
-    configVersion: overrides.configVersion ?? 8,
+    configVersion: overrides.configVersion ?? 9,
     disabled: overrides.disabled === true,
     excludeFromTotalBalance: overrides.excludeFromTotalBalance === true,
     excludeFromTodayIncome: overrides.excludeFromTodayIncome === true,
@@ -208,6 +230,10 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
         overrides.account_info?.todayStatsAvailability ??
         buildCompleteTodayStatsAvailability(),
       balanceUnavailable: overrides.account_info?.balanceUnavailable,
+      balance: overrides.account_info?.balance,
+      allowances: overrides.account_info?.allowances,
+      nativeBalance: overrides.account_info?.nativeBalance,
+      legacyFinancial: overrides.account_info?.legacyFinancial,
       usage: overrides.account_info?.usage,
       subscription: overrides.account_info?.subscription,
       recentUsageRecords: overrides.account_info?.recentUsageRecords,
@@ -228,6 +254,17 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     authType: overrides.authType ?? AuthTypeEnum.AccessToken,
     checkIn: overrides.checkIn || createCanonicalCheckIn(),
   }
+  // Ordinary storage scenarios start migrated; explicit versions exercise read migration.
+  return overrides.configVersion === undefined
+    ? {
+        ...account,
+        account_info: migrateAccountFinancialInfo(account.account_info, {
+          accountId: account.id,
+          siteUrl: account.site_url,
+          capturedAt: account.last_sync_time,
+        }),
+      }
+    : account
 }
 
 const createBookmark = (
@@ -248,6 +285,598 @@ const availabilityReplacementCases =
   buildTodayStatsAvailabilityReplacementCases()
 
 describe("accountStorage core behaviors", () => {
+  it("retains last known values when a failed field returns an equivalent reordered scope", async () => {
+    const account = createAccount()
+    const scope = accountBalanceScope({
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: { authType: account.authType },
+    })
+    const source = {
+      adapter: "fixture",
+      operation: "wallet",
+      contractVersion: "1",
+      kind: EVIDENCE_KINDS.Reported,
+    } as const
+    const previous = balancePosition({
+      id: "balance",
+      scope: {
+        ...scope,
+        projects: { kind: SCOPE_SELECTION_KINDS.Restricted, ids: ["a", "b"] },
+      },
+      value: "20",
+      observedAt: 100,
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      source,
+    })
+    account.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [previous],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    seedStorage([account])
+    const invalid = balancePosition({
+      id: "balance",
+      scope: {
+        ...scope,
+        projects: { kind: SCOPE_SELECTION_KINDS.Restricted, ids: ["b", "a"] },
+      },
+      value: undefined,
+      observedAt: 200,
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      source,
+    })
+    const result = await accountMutations.updateAccountFromRefresh(
+      account.id,
+      {},
+      undefined,
+      account,
+      {
+        quota: 0,
+        balanceRefreshParts: [
+          {
+            collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+            source,
+            enumeration: FINANCIAL_ENUMERATION.Complete,
+            positions: [invalid],
+          },
+        ],
+      },
+    )
+    expect(result?.account_info.balance?.positions[0]?.amount).toMatchObject({
+      status: "stale",
+      value: "20",
+      observedAt: 100,
+    })
+  })
+  it("preserves omitted wallets sharing a field name in a partial collection", async () => {
+    const account = createAccount()
+    const scope = accountBalanceScope({
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: { authType: account.authType },
+    })
+    const source = {
+      adapter: "fixture",
+      operation: "wallets",
+      contractVersion: "1",
+      kind: EVIDENCE_KINDS.Reported,
+    } as const
+    const position = (walletId: string, value: string) =>
+      balancePosition({
+        id: "available",
+        scope: { ...scope, walletId },
+        value,
+        observedAt: 100,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        source,
+      })
+    account.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [position("A", "20"), position("B", "30")],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    seedStorage([account])
+    const generation = await accountMutations.beginBalanceRefresh(
+      account.id,
+      account,
+    )
+    const result = await accountMutations.updateAccountFromRefresh(
+      account.id,
+      {},
+      undefined,
+      account,
+      {
+        quota: 0,
+        balanceRefreshParts: [
+          {
+            collectionKey: "wallets",
+            source,
+            enumeration: FINANCIAL_ENUMERATION.Partial,
+            positions: [position("B", "40")],
+          },
+        ],
+      },
+      generation!,
+    )
+    expect(
+      result?.account_info.balance?.positions.map((p) => [
+        p.scope.walletId,
+        p.amount.status,
+        "value" in p.amount ? p.amount.value : undefined,
+      ]),
+    ).toEqual([
+      ["B", "known", "40"],
+      ["A", "stale", "20"],
+    ])
+  })
+  it.each(["organization", "token"] as const)(
+    "guards Kimi financial refresh by organization without rejecting a %s change",
+    async (change) => {
+      const account = createAccount({
+        site_type: SITE_TYPES.KIMI_GLOBAL,
+        site_url: "https://platform.kimi.ai",
+        kimiOpenPlatformAuth: {
+          organizationId: "org-a",
+          refreshToken: "refresh-a",
+        },
+      })
+      const makeBalance = (value: string) => {
+        const scope = {
+          ...accountBalanceScope(
+            {
+              baseUrl: account.site_url,
+              accountId: account.id,
+              auth: { authType: account.authType },
+            },
+            { organizationId: "org-a" },
+          ),
+          models: { kind: SCOPE_SELECTION_KINDS.All } as const,
+          groups: { kind: SCOPE_SELECTION_KINDS.All } as const,
+          projects: { kind: SCOPE_SELECTION_KINDS.All } as const,
+          keys: { kind: SCOPE_SELECTION_KINDS.All } as const,
+        }
+        return accountBalanceSnapshot(
+          scope,
+          [
+            balancePosition({
+              id: "wallet",
+              scope,
+              value,
+              observedAt: 100,
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              nature: BALANCE_NATURES.Prepaid,
+              validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+              source: {
+                adapter: "kimi",
+                operation: "console",
+                contractVersion: "1",
+                kind: EVIDENCE_KINDS.Reported,
+              },
+            }),
+          ],
+          100,
+          FINANCIAL_COVERAGE.Complete,
+        )
+      }
+      account.account_info.balance = makeBalance("20")
+      seedStorage([account])
+      const generation = await accountMutations.beginBalanceRefresh(
+        account.id,
+        account,
+      )
+      await accountStorage.updateAccount(
+        account.id,
+        {
+          notes: "edited during refresh",
+          manualBalanceUsd: "7",
+          account_info: { access_token: "rotated-access" },
+          kimiOpenPlatformAuth: {
+            organizationId: change === "organization" ? "org-b" : "org-a",
+            refreshToken: "rotated-refresh",
+          },
+        },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+      )
+      const saved = await accountMutations.updateAccountFromRefresh(
+        account.id,
+        {
+          account_info: {
+            balance: makeBalance("30"),
+            access_token: "stale-token",
+          },
+          kimiOpenPlatformAuth: {
+            organizationId: "org-a",
+            refreshToken: "stale-refresh",
+          },
+        },
+        undefined,
+        account,
+        undefined,
+        generation!,
+      )
+      if (change === "organization") expect(saved).toBeNull()
+      else
+        expect(saved?.account_info.balance?.positions[0]?.amount).toMatchObject(
+          { status: "known", value: "30" },
+        )
+      const latest = await accountStorage.getAccountById(account.id)
+      expect(latest?.notes).toBe("edited during refresh")
+      expect(latest?.manualBalanceUsd).toBe("7")
+      if (change === "organization")
+        expect(
+          latest?.account_info.balance?.positions[0]?.amount,
+        ).toMatchObject({ status: "stale", value: "20", observedAt: 100 })
+      expect(latest?.account_info.access_token).toBe("rotated-access")
+      expect(latest?.kimiOpenPlatformAuth).toMatchObject({
+        organizationId: change === "organization" ? "org-b" : "org-a",
+        refreshToken: "rotated-refresh",
+      })
+    },
+  )
+  it("keeps a replaced source as last known without treating it as a new current observation", async () => {
+    const account = createAccount()
+    const scope = accountBalanceScope({
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: { authType: account.authType },
+    })
+    const make = (operation: string, value: string) =>
+      accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "available",
+            scope,
+            value,
+            observedAt: 100,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            source: {
+              adapter: "fixture",
+              operation,
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      )
+    account.account_info.balance = make("console", "8")
+    seedStorage([account])
+    const generation = await accountMutations.beginBalanceRefresh(
+      account.id,
+      account,
+    )
+    const saved = await accountMutations.updateAccountFromRefresh(
+      account.id,
+      { account_info: { balance: make("inference", "10") } },
+      undefined,
+      account,
+      undefined,
+      generation!,
+    )
+    expect(
+      saved?.account_info.balance?.positions.map((p) => [
+        p.amount.source.operation,
+        p.amount.status,
+      ]),
+    ).toEqual([
+      ["console", "stale"],
+      ["inference", "known"],
+    ])
+  })
+  it("binds fetched financial facts to the new local account without replacing their upstream scope", async () => {
+    const account = createAccount()
+    const scope = accountBalanceScope(
+      { baseUrl: account.site_url, auth: { authType: account.authType } },
+      { organizationId: "org" },
+    )
+    account.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          scope,
+          value: "20",
+          observedAt: 100,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          source: {
+            adapter: "fixture",
+            operation: "wallet",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    const id = await accountMutations.addAccount(account)
+    const saved = await accountStorage.getAccountById(id)
+    expect(saved?.account_info.balance?.subject).toEqual({
+      kind: "account",
+      accountId: id,
+    })
+    expect(saved?.account_info.balance?.positions[0]?.scope).toMatchObject({
+      subject: { kind: "account", accountId: id },
+      organizationId: "org",
+    })
+  })
+  it("preserves the previous value and observation time when a fresh snapshot field is unreadable", async () => {
+    const account = createAccount()
+    const scope = accountBalanceScope({
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: { authType: account.authType },
+    })
+    const make = (value: unknown) =>
+      accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "wallet",
+            scope,
+            value,
+            observedAt: 100,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            source: {
+              adapter: "fixture",
+              operation: "wallet",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      )
+    account.account_info.balance = make("20")
+    seedStorage([account])
+    const generation = await accountMutations.beginBalanceRefresh(
+      account.id,
+      account,
+    )
+    const saved = await accountMutations.updateAccountFromRefresh(
+      account.id,
+      { account_info: { balance: make(undefined) } },
+      undefined,
+      account,
+      undefined,
+      generation!,
+    )
+    expect(saved?.account_info.balance?.positions[0]?.amount).toMatchObject({
+      status: "stale",
+      value: "20",
+      observedAt: 100,
+    })
+  })
+  it("keeps failed collections stale and only removes members after a complete empty enumeration", async () => {
+    const account = createAccount()
+    seedStorage([account])
+    const scope = accountBalanceScope({
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: { authType: account.authType },
+    })
+    const position = (id: string, value: string) =>
+      balancePosition({
+        id,
+        collectionKey: id,
+        scope,
+        value,
+        observedAt: 100,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        source: {
+          adapter: "fixture",
+          operation: id,
+          contractVersion: "1",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+      })
+    const wallet = position("wallet", "20"),
+      plan = position("plan", "5")
+    const initial = accountBalanceSnapshot(
+      scope,
+      [wallet, plan],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    await accountMutations.updateAccountFromRefresh(
+      account.id,
+      { account_info: { balance: initial } },
+      undefined,
+      account,
+    )
+    const generation = await accountMutations.beginBalanceRefresh(
+      account.id,
+      account,
+    )
+    const result = await accountMutations.updateAccountFromRefresh(
+      account.id,
+      {},
+      undefined,
+      account,
+      {
+        quota: 0,
+        balanceRefreshParts: [
+          {
+            collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+            source: wallet.amount.source,
+            enumeration: FINANCIAL_ENUMERATION.Complete,
+            positions: [position("wallet", "30")],
+          },
+          {
+            collectionKey: "plan",
+            source: plan.amount.source,
+            enumeration: FINANCIAL_ENUMERATION.Unavailable,
+            positions: [],
+          },
+        ],
+      },
+      generation!,
+    )
+    expect(
+      result?.account_info.balance?.positions.map((p) => [
+        p.id,
+        p.amount.status,
+        "value" in p.amount ? p.amount.value : undefined,
+      ]),
+    ).toEqual([
+      ["wallet", "known", "30"],
+      ["plan", "stale", "5"],
+    ])
+    const next = await accountMutations.beginBalanceRefresh(account.id, account)
+    const ended = await accountMutations.updateAccountFromRefresh(
+      account.id,
+      {},
+      undefined,
+      account,
+      {
+        quota: 0,
+        balanceRefreshParts: [
+          {
+            collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+            source: wallet.amount.source,
+            enumeration: FINANCIAL_ENUMERATION.Unavailable,
+            positions: [],
+          },
+          {
+            collectionKey: "plan",
+            source: plan.amount.source,
+            enumeration: FINANCIAL_ENUMERATION.Complete,
+            positions: [],
+          },
+        ],
+      },
+      next!,
+    )
+    expect(
+      ended?.account_info.balance?.positions.map((p) => [
+        p.id,
+        p.amount.status,
+      ]),
+    ).toEqual([["wallet", "stale"]])
+  })
+  it("registers financial refresh order before network work and rejects a late thrown request", async () => {
+    const account = createAccount()
+    seedStorage([account])
+    const first = createDeferred<never>()
+    mockRefreshAccountData.mockImplementationOnce(() => first.promise)
+    const older = accountStorage.refreshAccount(account.id, true)
+    await vi.waitFor(() =>
+      expect(mockRefreshAccountData).toHaveBeenCalledTimes(1),
+    )
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      healthStatus: { status: SiteHealthStatus.Healthy, message: "newest" },
+      data: { quota: 20, checkIn: account.checkIn },
+    })
+    await accountStorage.refreshAccount(account.id, true)
+    first.reject(new Error("late-old-failure"))
+    await older
+    const saved = await accountStorage.getAccountById(account.id)
+    expect(saved?.health.reason).toBe("newest")
+    expect(saved?.balanceRefreshGeneration).toBe(2)
+  })
+  it("accepts only the latest financial request and preserves the accepted balance after a newer failure", async () => {
+    const account = createAccount()
+    seedStorage([account])
+    const scope = accountBalanceScope({
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: { authType: account.authType },
+    })
+    const snapshot = (value: string) =>
+      accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "wallet",
+            scope,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            value,
+            observedAt: 100,
+            source: {
+              adapter: "fixture",
+              operation: "wallet",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        100,
+        FINANCIAL_COVERAGE.Complete,
+      )
+    const first = await accountMutations.beginBalanceRefresh(
+      account.id,
+      account,
+    )
+    const second = await accountMutations.beginBalanceRefresh(
+      account.id,
+      account,
+    )
+    expect(second).toBeGreaterThan(first!)
+    const accepted = await accountMutations.updateAccountFromRefresh(
+      account.id,
+      { account_info: { balance: snapshot("20") } },
+      undefined,
+      account,
+      undefined,
+      second!,
+    )
+    expect(
+      accepted?.account_info.balance?.positions.find(
+        ({ id, amount }) =>
+          id === "wallet" && amount.source.kind === EVIDENCE_KINDS.Reported,
+      )?.amount,
+    ).toMatchObject({
+      status: "known",
+      value: "20",
+    })
+    expect(
+      await accountMutations.updateAccountFromRefresh(
+        account.id,
+        { account_info: { balance: snapshot("10") } },
+        undefined,
+        account,
+        undefined,
+        first!,
+      ),
+    ).toBeNull()
+    const third = await accountMutations.beginBalanceRefresh(
+      account.id,
+      account,
+    )
+    await accountMutations.updateAccountFromRefresh(
+      account.id,
+      { health: { status: SiteHealthStatus.Error } },
+      undefined,
+      account,
+      undefined,
+      third!,
+    )
+    expect(
+      (
+        await accountStorage.getAccountById(account.id)
+      )?.account_info.balance?.positions.find(
+        ({ id, amount }) =>
+          id === "wallet" && amount.source.kind === EVIDENCE_KINDS.Reported,
+      )?.amount,
+    ).toMatchObject({ status: "stale", value: "20", observedAt: 100 })
+    expect(
+      await accountMutations.updateAccountFromRefresh(
+        account.id,
+        { account_info: { balance: snapshot("10") } },
+        undefined,
+        account,
+        undefined,
+        first!,
+      ),
+    ).toBeNull()
+  })
   it("preserves newly configured credentials when saving an old check-in draft", async () => {
     const login = {
       methodId: ACCOUNT_LOGIN_METHODS.Password,
@@ -938,7 +1567,7 @@ describe("accountStorage core behaviors", () => {
       expect(
         persistedConfig.accounts.find((account) => account.id === "legacy")
           ?.configVersion,
-      ).toBe(8)
+      ).toBe(9)
     } finally {
       storageHooks.afterGet = async () => {}
     }
@@ -962,7 +1591,7 @@ describe("accountStorage core behaviors", () => {
       ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     ) as AccountStorageConfig
     const persistedAccount = persistedConfig.accounts[0] as any
-    expect(persistedAccount.configVersion).toBe(8)
+    expect(persistedAccount.configVersion).toBe(9)
     expect(persistedAccount.checkIn).toMatchObject({
       automaticExecutionEnabled: false,
       selection: { mode: "automatic" as const },
@@ -974,10 +1603,10 @@ describe("accountStorage core behaviors", () => {
 
   it("convertToDisplayData should normalize currency values", () => {
     const empty = createAccount({ exchange_rate: 6.5 })
-    empty.account_info.quota = 0
+    setReportedUsd(empty, "0")
     expect(accountStorage.convertToDisplayData(empty)).toMatchObject({
       exchangeRate: 6.5,
-      balance: { USD: 0, CNY: 0 },
+      balanceSnapshot: empty.account_info.balance,
     })
     const account = createAccount({
       created_at: 1_700_000_000_000,
@@ -994,6 +1623,7 @@ describe("accountStorage core behaviors", () => {
         today_income: 250_000,
       },
     })
+    setReportedUsd(account, "3", { consumption: "1", income: "0.5" })
     Object.assign(account, {
       can_check_in: true,
       supports_check_in: true,
@@ -1001,8 +1631,11 @@ describe("accountStorage core behaviors", () => {
 
     const display = accountStorage.convertToDisplayData(account)
 
-    expect(display.balance.USD).toBeCloseTo(3)
-    expect(display.balance.CNY).toBeCloseTo(21)
+    expect(display.balanceSnapshot?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "3",
+    })
+    expect(display.exchangeRate).toBe(7)
     expect(display.todayConsumption.USD).toBeCloseTo(1)
     expect(display.todayIncome.USD).toBeCloseTo(0.5)
     expect(display.todayTokens.upload).toBe(600)
@@ -1037,10 +1670,52 @@ describe("accountStorage core behaviors", () => {
       permanent: 34000,
       daily: 2000,
     }
+    delete account.account_info.balance
     const display = accountStorage.convertToDisplayData(account)
-    expect(display.nativeBalance).toEqual(account.account_info.nativeBalance)
-    expect(display.excludeFromTotalBalance).toBe(true)
+    expect(display.balanceSnapshot?.positions[0]?.amount).toMatchObject({
+      status: "stale",
+      value: "36000",
+    })
+    expect(display.balanceSnapshot?.positions[0]?.asset).toMatchObject({
+      kind: "quota",
+      label: "credits",
+    })
+    expect(display.excludeFromTotalBalance).toBe(false)
+    expect(display.balanceSnapshot?.positions[0]?.amount.source.kind).toBe(
+      "legacy",
+    )
     expect(account.excludeFromTotalBalance).toBe(false)
+    const cash = createAccount({ id: "cash", site_type: SITE_TYPES.NEW_API })
+    const scope = accountBalanceScope({
+      baseUrl: cash.site_url,
+      accountId: cash.id,
+    })
+    cash.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          scope,
+          asset: { kind: "currency", code: "USD" },
+          value: "5",
+          observedAt: Date.now(),
+          source: {
+            adapter: "new-api",
+            operation: "wallet",
+            contractVersion: "1",
+            kind: "reported",
+          },
+        }),
+      ],
+      Date.now(),
+      "complete",
+    )
+    expect(
+      getDisplayBalancePortfolio([
+        display,
+        accountStorage.convertToDisplayData(cash),
+      ]).amounts,
+    ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "5" }])
   })
 
   it("projects missing availability through generic and AIHubMix legacy policies", () => {
@@ -1142,7 +1817,7 @@ describe("accountStorage core behaviors", () => {
     expect(display.recentUsageRecords).toEqual(recentUsageRecords)
   })
 
-  it("convertToDisplayData should convert SharedChat amount-backed quota units to display currency", () => {
+  it("convertToDisplayData retains the old SharedChat display denomination as stale without inferring a current balance", () => {
     const account = createAccount({
       site_type: SITE_TYPES.SHAREDCHAT,
       exchange_rate: 7,
@@ -1157,7 +1832,7 @@ describe("accountStorage core behaviors", () => {
         today_requests_count: 10,
         today_income: 0,
         usage: {
-          scope: "rolling_window",
+          scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
           totalRequests: 10,
           totalTokens: 12_345,
           totalCost: 1.23,
@@ -1171,12 +1846,59 @@ describe("accountStorage core behaviors", () => {
 
     const display = accountStorage.convertToDisplayData(account)
 
-    expect(display.balance.USD).toBeCloseTo(88)
-    expect(display.balance.CNY).toBeCloseTo(616)
-    expect(display.todayConsumption.USD).toBeCloseTo(1.23)
-    expect(display.todayConsumption.CNY).toBeCloseTo(8.61)
+    expect(display.balanceSnapshot?.positions[0]?.amount).toMatchObject({
+      status: "stale",
+      value: "88",
+      source: { kind: "legacy" },
+    })
+    expect(display.balanceSnapshot?.positions[0]?.asset).toMatchObject({
+      kind: "currency",
+      code: "USD",
+    })
+    expect(display.exchangeRate).toBe(7)
+    expect(display.todayConsumption).toEqual({ USD: 1.23, CNY: 8.61 })
+    expect(display.referenceConsumption?.amount.USD).toBe(1.23)
+    expect(display.consumptionProjection?.groups).toEqual([])
+    expect(display.todayStatsAvailability.consumption.status).toBe(
+      "unavailable",
+    )
     expect(display.usage?.totalCost).toBe(1.23)
     expect(display.subscription?.remainingAmount).toBe(88)
+  })
+
+  it("keeps a missing release income empty through the real storage read model while preserving saved consumption", async () => {
+    const account = createAccount({
+      configVersion: 9,
+      site_type: SITE_TYPES.NEW_API,
+    })
+    account.account_info.today_quota_consumption = 1_625_000
+    Reflect.deleteProperty(account.account_info, "today_income")
+    seedStorage([account])
+    const snapshot = await accountStorage.getAccountManagementSnapshot()
+    expect(snapshot.displayAccounts).toHaveLength(1)
+    expect(snapshot.displayAccounts[0]?.referenceConsumption?.amount.USD).toBe(
+      3.25,
+    )
+    expect(snapshot.displayAccounts[0]?.referenceIncome).toBeUndefined()
+    expect(
+      snapshot.displayAccounts[0]?.incomeProjection?.references,
+    ).toBeUndefined()
+  })
+
+  it("does not manufacture cashflow zero references when a release stored no financial fields", async () => {
+    const account = createAccount({
+      configVersion: 9,
+      site_type: SITE_TYPES.NEW_API,
+    })
+    for (const field of ["quota", "today_quota_consumption", "today_income"])
+      Reflect.deleteProperty(account.account_info, field)
+    seedStorage([account])
+    const snapshot = await accountStorage.getAccountManagementSnapshot()
+    expect(snapshot.displayAccounts).toHaveLength(1)
+    const [displayed] = snapshot.displayAccounts
+    expect(displayed?.id).toBe(account.id)
+    expect(displayed!.referenceConsumption).toBeUndefined()
+    expect(displayed!.referenceIncome).toBeUndefined()
   })
 
   it("convertToDisplayData should preserve cookie auth session cookies", () => {
@@ -1982,7 +2704,7 @@ describe("accountStorage core behaviors", () => {
                 ...(newerToday
                   ? {
                       status: {
-                        outcome: "known" as const,
+                        outcome: OBSERVATION_STATUSES.Known,
                         today: newerToday,
                         evidence: {
                           source: "probe" as const,
@@ -2724,6 +3446,68 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  /** Statistics fixtures declare authoritative wallets independently of old quota. */
+  function setReportedUsd(
+    account: SiteAccount,
+    value: string,
+    flows?: {
+      consumption: string
+      income: string
+      consumptionCoverage?: "complete" | "partial"
+    },
+  ) {
+    if (flows) {
+      account.account_info.settledConsumption = [
+        buildFinancialPeriodFact({
+          accountId: account.id,
+          value: flows.consumption,
+          coverage: flows.consumptionCoverage,
+        }),
+      ]
+      account.account_info.reportedIncome = [
+        buildFinancialIncomeFact({
+          accountId: account.id,
+          value: flows.income,
+        }),
+      ]
+    }
+    const scope = {
+      ...accountBalanceScope({
+        baseUrl: account.site_url,
+        accountId: account.id,
+        auth: { authType: account.authType },
+      }),
+      walletId: account.id,
+      models: { kind: SCOPE_SELECTION_KINDS.All } as const,
+      groups: { kind: SCOPE_SELECTION_KINDS.All } as const,
+      keys: { kind: SCOPE_SELECTION_KINDS.All } as const,
+      projects: { kind: SCOPE_SELECTION_KINDS.All } as const,
+    }
+    account.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          scope,
+          value,
+          observedAt: 100,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          nature: BALANCE_NATURES.Prepaid,
+          validity: { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+          source: {
+            adapter: "fixture",
+            operation: "wallet",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    return account.account_info.balance
+  }
+
   it("getAccountStats should aggregate numeric fields across accounts", async () => {
     const accountA = createAccount({
       id: "stats-a",
@@ -2755,12 +3539,25 @@ describe("accountStorage core behaviors", () => {
       },
     })
 
+    setReportedUsd(accountA, "2", { consumption: "0.1", income: "0.02" })
+    setReportedUsd(accountB, "5", { consumption: "0.15", income: "0.01" })
     seedStorage([accountA, accountB])
 
     const stats = await accountStorage.getAccountStats()
 
-    expect(stats).toEqual({
+    expect(stats).toMatchObject({
       total_quota: 3_500_000,
+      balancePortfolio: {
+        conflicts: [],
+        conflictCount: 0,
+        amounts: [{ asset: { kind: "currency", code: "USD" }, value: "7" }],
+        includedCount: 2,
+        eligibleCount: 2,
+        duplicateCount: 0,
+        potentialDuplicateCount: 0,
+        manualCount: 0,
+        coverage: "complete",
+      },
       today_total_consumption: 125_000,
       today_total_requests: 12,
       today_total_prompt_tokens: 400,
@@ -2831,12 +3628,25 @@ describe("accountStorage core behaviors", () => {
       },
     })
 
+    setReportedUsd(disabledAccount, "2", { consumption: "0.1", income: "0.02" })
+    setReportedUsd(enabledAccount, "5", { consumption: "0.15", income: "0.01" })
     seedStorage([disabledAccount, enabledAccount])
 
     const stats = await accountStorage.getAccountStats()
 
-    expect(stats).toEqual({
+    expect(stats).toMatchObject({
       total_quota: 2_500_000,
+      balancePortfolio: {
+        conflicts: [],
+        conflictCount: 0,
+        amounts: [{ asset: { kind: "currency", code: "USD" }, value: "5" }],
+        includedCount: 1,
+        eligibleCount: 1,
+        duplicateCount: 0,
+        potentialDuplicateCount: 0,
+        manualCount: 0,
+        coverage: "complete",
+      },
       today_total_consumption: 75_000,
       today_total_requests: 7,
       today_total_prompt_tokens: 300,
@@ -2882,21 +3692,44 @@ describe("accountStorage core behaviors", () => {
         ...createAccount().account_info,
         quota: 9_000_000,
         balanceUnavailable: true,
+        balance: undefined,
+        legacyFinancial: undefined,
       },
     })
     seedStorage([missing])
     const account = await accountStorage.getAccountById("missing-cash")
-    expect(account?.account_info.balanceUnavailable).toBe(true)
+    expect(account?.account_info.legacyFinancial?.balanceUnavailable).toBe(true)
     expect((await accountStorage.getAccountStats()).total_quota).toBe(0)
     expect(
-      accountStorage.convertToDisplayData(missing).balanceUnavailable,
-    ).toBe(true)
+      accountStorage.convertToDisplayData(missing).balanceSnapshot?.positions[0]
+        ?.amount.status,
+    ).toBe("unavailable")
     await accountStorage.updateAccount(
       "missing-cash",
       {
         account_info: {
           ...missing.account_info,
           quota: 1_000_000,
+          balanceUnavailable: false,
+        },
+      },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    const legacyStats = await accountStorage.getAccountStats()
+    expect(legacyStats.total_quota).toBe(0)
+    expect(legacyStats.balancePortfolio).toMatchObject({
+      amounts: [],
+      includedCount: 0,
+      eligibleCount: 1,
+      coverage: "partial",
+    })
+    const balance = setReportedUsd(missing, "2")
+    await accountStorage.updateAccount(
+      "missing-cash",
+      {
+        account_info: {
+          ...missing.account_info,
+          balance,
           balanceUnavailable: false,
         },
       },
@@ -2924,6 +3757,8 @@ describe("accountStorage core behaviors", () => {
       },
     })
 
+    setReportedUsd(includedAccount, "2", { consumption: "0.05", income: "1" })
+    setReportedUsd(excludedAccount, "4", { consumption: "0.15", income: "1" })
     seedStorage([includedAccount, excludedAccount])
 
     const stats = await accountStorage.getAccountStats()
@@ -3065,6 +3900,16 @@ describe("accountStorage core behaviors", () => {
       },
     })
 
+    setReportedUsd(complete, "-0.0002", {
+      consumption: "0.00002",
+      income: "0.000008",
+    })
+    setReportedUsd(partial, "0.0001", {
+      consumption: "0.00004",
+      income: "0.000012",
+      consumptionCoverage: "partial",
+    })
+    setReportedUsd(unavailable, "0.00005")
     seedStorage([complete, partial, unavailable])
 
     const stats = await accountStorage.getAccountStats()
@@ -3081,8 +3926,12 @@ describe("accountStorage core behaviors", () => {
   })
 
   it("excludes disabled and opted-out accounts from income eligibility", async () => {
+    const included = createAccount({ id: "income-included" })
+    included.account_info.reportedIncome = [
+      buildFinancialIncomeFact({ accountId: included.id, value: "1" }),
+    ]
     seedStorage([
-      createAccount({ id: "income-included" }),
+      included,
       createAccount({ id: "income-disabled", disabled: true }),
       createAccount({
         id: "income-excluded",
@@ -4026,7 +4875,7 @@ describe("accountStorage core behaviors", () => {
     expect(updatedAccount).not.toHaveProperty("tempWindowRequestSource")
   })
 
-  it("continues a refresh with detected metadata when persistence fails", async () => {
+  it("does not start a financial request when detected identity cannot be persisted", async () => {
     const account = createAccount({
       id: "detected-metadata-write-failure",
       site_url: "https://detect.example.invalid/path",
@@ -4041,13 +4890,8 @@ describe("accountStorage core behaviors", () => {
     try {
       const result = await accountStorage.refreshAccount(account.id, true)
 
-      expect(result).toMatchObject({ refreshed: true })
-      expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(
-        SITE_TYPES.NEW_API,
-      )
-      expect(mockRefreshAccountData).toHaveBeenCalledWith(
-        expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
-      )
+      expect(result).toMatchObject({ refreshed: false })
+      expect(mockRefreshAccountData).not.toHaveBeenCalled()
     } finally {
       updateAccountSpy.mockRestore()
     }
@@ -4118,8 +4962,13 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
+    let rejectedCommit = false
     storageHooks.beforeSet = async (key) => {
-      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+      if (
+        key === ACCOUNT_STORAGE_KEYS.ACCOUNTS &&
+        mockRefreshAccountData.mock.calls.length > 0
+      ) {
+        rejectedCommit = true
         throw new Error("storage write failed")
       }
     }
@@ -4134,12 +4983,9 @@ describe("accountStorage core behaviors", () => {
         },
       )
 
-      expect(result).toEqual(
-        expect.objectContaining({
-          refreshed: true,
-          reEnabled: false,
-        }),
-      )
+      expect(mockRefreshAccountData).toHaveBeenCalledOnce()
+      expect(rejectedCommit).toBe(true)
+      expect(result).toMatchObject({ refreshed: false, reEnabled: false })
       expect(
         (await accountStorage.getAccountById("disabled-persist-fail"))
           ?.disabled,
@@ -4174,6 +5020,7 @@ describe("accountStorage core behaviors", () => {
       expect(result).toEqual(
         expect.objectContaining({
           refreshed: false,
+          skippedReason: "interval_not_elapsed",
           account: expect.objectContaining({ id: "too-soon" }),
         }),
       )
@@ -4948,7 +5795,13 @@ describe("accountStorage core behaviors", () => {
             accountStorage.convertToDisplayData(updated!),
           ),
         ).toBe(!readFails)
-        expect(updated?.account_info.quota).toBe(3.5 * QUOTA_PER_USD)
+        expect(
+          updated?.account_info.balance?.positions[0]?.amount,
+        ).toMatchObject({ status: "known", value: "3.5" })
+        expect(updated?.account_info.balance?.positions[0]?.asset).toEqual({
+          kind: "currency",
+          code: "USD",
+        })
         expect(overview).toHaveBeenCalledOnce()
         expect(claim).not.toHaveBeenCalled()
         expect(updated?.checkIn.automaticExecutionEnabled).toBe(false)
@@ -4971,7 +5824,11 @@ describe("accountStorage core behaviors", () => {
           site_type: SITE_TYPES.PMAPI,
           authType: AuthTypeEnum.AccessToken,
           account_info: {
-            ...createAccount().account_info,
+            ...createAccount({
+              id: "pmapi-common-refresh",
+              site_url: "https://pmcat.top",
+              site_type: SITE_TYPES.PMAPI,
+            }).account_info,
             id: "10171",
             access_token: "pm-console-token",
           },
@@ -5056,8 +5913,14 @@ describe("accountStorage core behaviors", () => {
             accountStorage.convertToDisplayData(updated!),
           ),
         ).toBe(!readFails)
-        // PM-API keeps the console's own New API quota unit untouched.
-        expect(updated?.account_info.quota).toBe(1_250_000)
+        // The adapter records the documented USD amount, independently of check-in status.
+        expect(
+          updated?.account_info.balance?.positions[0]?.amount,
+        ).toMatchObject({ status: "known", value: "2.5" })
+        expect(updated?.account_info.balance?.positions[0]?.asset).toEqual({
+          kind: "currency",
+          code: "USD",
+        })
         expect(claim).not.toHaveBeenCalled()
         expect(updated?.checkIn.automaticExecutionEnabled).toBe(false)
       } finally {
@@ -5264,9 +6127,11 @@ describe("accountStorage core behaviors", () => {
           { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
         ),
       ).toBe(true)
+      const balance = setReportedUsd(createAccount(), "0.000246")
+      const inputBalance = structuredClone(balance)
       deferred.resolve({
         success: true,
-        data: { quota: 123 },
+        data: { balance },
         healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
         authUpdate: {
           accessToken: "obsolete-token",
@@ -5277,7 +6142,17 @@ describe("accountStorage core behaviors", () => {
       const updated = await accountStorage.getAccountById(account.id)
       expect(updated?.account_info.access_token).toBe("newer-token")
       expect(updated?.account_info.username).toBe("edited-name")
-      expect(updated?.account_info.quota).toBe(123)
+      expect(updated?.account_info.balance).toMatchObject({
+        ...balance,
+        coverage: FINANCIAL_COVERAGE.Partial,
+        positions: expect.arrayContaining(balance.positions),
+      })
+      expect(
+        updated?.account_info.balance?.positions.filter(
+          ({ amount }) => amount.source.kind !== EVIDENCE_KINDS.Legacy,
+        ),
+      ).toEqual(balance.positions)
+      expect(balance).toEqual(inputBalance)
     },
   )
 
@@ -5604,7 +6479,6 @@ describe("accountStorage core behaviors", () => {
       mockRefreshAccountData.mockResolvedValueOnce({
         success: true,
         data: {
-          quota: 100,
           today_prompt_tokens: 10,
           today_completion_tokens: 20,
           today_quota_consumption: 30,
@@ -5964,129 +6838,6 @@ describe("accountStorage core behaviors", () => {
     expect(clearedAccount?.health?.code).toBeUndefined()
   })
 
-  it.each([
-    { initial: undefined, latest: "0", providerQuota: 123, unavailable: true },
-    { initial: undefined, latest: "2", providerQuota: 123, unavailable: false },
-    { initial: "2", latest: "3", providerQuota: 123, unavailable: true },
-    { initial: "2", latest: "", providerQuota: 123, unavailable: false },
-    { initial: "0", latest: "", providerQuota: 0, unavailable: true },
-    { initial: undefined, latest: "0", providerQuota: 123, unavailable: false },
-    { initial: "2", latest: "3", providerQuota: 123, unavailable: false },
-    { initial: "0", latest: "", providerQuota: 123, unavailable: false },
-  ])(
-    "uses the manual balance saved during an in-flight refresh ($initial -> $latest, unavailable=$unavailable)",
-    async ({ initial, latest, providerQuota, unavailable }) => {
-      vi.useFakeTimers({ toFake: ["Date"] })
-      vi.setSystemTime(new Date("2026-09-04T12:00:00Z"))
-      try {
-        const account = createAccount({ manualBalanceUsd: initial })
-        account.account_info.quota =
-          initial === undefined ? 400 : Number(initial) * QUOTA_PER_USD
-        seedStorage([account])
-        storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
-          ...DEFAULT_PREFERENCES,
-          balanceHistory: {
-            ...DEFAULT_PREFERENCES.balanceHistory,
-            enabled: true,
-          },
-        })
-        const deferred = createDeferred<any>()
-        mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
-        const pending = accountStorage.refreshAccount(account.id, true)
-        await vi.waitFor(() =>
-          expect(mockRefreshAccountData).toHaveBeenCalled(),
-        )
-        expect(
-          await accountStorage.updateAccount(
-            account.id,
-            {
-              manualBalanceUsd: latest,
-              ...(latest
-                ? {
-                    account_info: {
-                      quota: Number(latest) * QUOTA_PER_USD,
-                      balanceUnavailable: false,
-                    },
-                  }
-                : {}),
-            },
-            { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
-          ),
-        ).toBe(true)
-        deferred.resolve({
-          success: true,
-          data: {
-            quota: providerQuota,
-            balanceUnavailable: unavailable,
-            today_requests_count: 7,
-          },
-          healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
-        })
-        expect((await pending)?.refreshed).toBe(true)
-        const updated = await accountStorage.getAccountById(account.id)
-        expect(updated?.manualBalanceUsd).toBe(latest)
-        expect(updated?.account_info.quota).toBe(
-          latest ? Number(latest) * QUOTA_PER_USD : providerQuota,
-        )
-        expect(updated?.account_info.balanceUnavailable === true).toBe(
-          latest ? false : unavailable,
-        )
-        expect(updated?.account_info.today_requests_count).toBe(7)
-        const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-        const history = storageData.get(
-          STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
-        )
-        const snapshot = history?.snapshotsByAccountId?.[account.id]?.[dayKey]
-        if (updated?.account_info.balanceUnavailable === true)
-          expect(snapshot).toBeUndefined()
-        else expect(snapshot?.quota).toBe(updated?.account_info.quota)
-      } finally {
-        vi.useRealTimers()
-      }
-    },
-  )
-
-  it("captures the canonical monetary balance when a legacy native projection is removed", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] })
-    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"))
-    try {
-      const account = createAccount({ site_type: SITE_TYPES.REQUESTY })
-      seedStorage([account])
-      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
-        ...DEFAULT_PREFERENCES,
-        balanceHistory: {
-          ...DEFAULT_PREFERENCES.balanceHistory,
-          enabled: true,
-        },
-      })
-      mockRefreshAccountData.mockResolvedValueOnce({
-        success: true,
-        data: {
-          quota: 123,
-          nativeBalance: {
-            unit: "USD",
-            total: 2,
-            permanent: 2,
-            daily: 0,
-            components: [],
-          },
-        },
-        healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
-      })
-      await accountStorage.refreshAccount(account.id, true)
-      const saved = await accountStorage.getAccountById(account.id)
-      expect(saved?.account_info.quota).toBe(123)
-      expect(saved?.account_info.nativeBalance).toBeUndefined()
-      const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-      const history = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
-      expect(history?.snapshotsByAccountId?.[account.id]?.[dayKey]?.quota).toBe(
-        123,
-      )
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
   it.each(["storage failure", "changed identity"])(
     "does not capture a balance snapshot for an uncommitted refresh (%s)",
     async (reason) => {
@@ -6129,90 +6880,25 @@ describe("accountStorage core behaviors", () => {
     },
   )
 
-  it("refreshAccount should preserve manual balance quota when set", async () => {
+  it("refreshAccount preserves the independently selected manual balance", async () => {
     const manualBalanceUsd = "1.23"
-    const manualQuota = Math.round(
-      Number.parseFloat(manualBalanceUsd) * QUOTA_PER_USD,
-    )
     const account = createAccount({
       id: "manual-quota",
       manualBalanceUsd,
     })
-    account.account_info.quota = manualQuota
     seedStorage([account])
 
     await accountStorage.refreshAccount("manual-quota", true)
 
     const updatedAccount = await accountStorage.getAccountById("manual-quota")
     expect(updatedAccount?.manualBalanceUsd).toBe(manualBalanceUsd)
-    expect(updatedAccount?.account_info.quota).toBe(manualQuota)
-  })
-
-  it("refreshAccount captures daily balance snapshots when enabled", async () => {
-    vi.useFakeTimers()
-    const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
-    vi.setSystemTime(fixedNow)
-
-    try {
-      const account = createAccount({ id: "balance-history" })
-      seedStorage([account])
-
-      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
-        ...DEFAULT_PREFERENCES,
-        showTodayCashflow: true,
-        balanceHistory: {
-          enabled: true,
-          endOfDayCapture: { enabled: false },
-          retentionDays: 365,
-        },
-      })
-
-      mockRefreshAccountData.mockResolvedValueOnce({
-        success: true,
-        data: {
-          quota: 123,
-          today_prompt_tokens: 0,
-          today_completion_tokens: 0,
-          today_quota_consumption: 7,
-          today_requests_count: 0,
-          today_income: 5,
-          todayStatsAvailability: buildCompleteTodayStatsAvailability({
-            income: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-            },
-          }),
-          checkIn: createCanonicalCheckIn(),
-        },
-        healthStatus: {
-          status: SiteHealthStatus.Healthy,
-          message: "",
-          code: undefined,
-        },
-      })
-
-      await accountStorage.refreshAccount("balance-history", true)
-
-      const nowUnixSeconds = Math.floor(Date.now() / 1000)
-      const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
-      const stored = storageData.get(
-        STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
-      ) as any
-
-      expect(
-        stored?.snapshotsByAccountId?.["balance-history"]?.[dayKey],
-      ).toEqual(
-        expect.objectContaining({
-          quota: 123,
-          today_income: null,
-          today_quota_consumption: 7,
-          source: "refresh",
-          capturedAt: fixedNow.getTime(),
-        }),
-      )
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(
+      getAccountBalanceSnapshots(updatedAccount!).manual?.positions[0]?.amount,
+    ).toMatchObject({
+      status: "known",
+      value: manualBalanceUsd,
+      source: { kind: "manual" },
+    })
   })
 
   it("refreshAccount succeeds when daily balance snapshot persistence fails", async () => {
@@ -6227,7 +6913,7 @@ describe("accountStorage core behaviors", () => {
       },
     })
     const captureSpy = vi
-      .spyOn(dailyBalanceCapture, "maybeCaptureDailyBalanceSnapshot")
+      .spyOn(dailyBalanceCapture, "maybeCaptureAccountReferenceBalance")
       .mockRejectedValueOnce(new Error("history write failed"))
 
     try {
@@ -6240,120 +6926,6 @@ describe("accountStorage core behaviors", () => {
     } finally {
       captureSpy.mockRestore()
     }
-  })
-
-  it("refreshAccount captures quota but leaves cashflow null when showTodayCashflow is disabled", async () => {
-    vi.useFakeTimers()
-    const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
-    vi.setSystemTime(fixedNow)
-
-    try {
-      const account = createAccount({ id: "balance-history-no-cashflow" })
-      seedStorage([account])
-
-      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
-        ...DEFAULT_PREFERENCES,
-        showTodayCashflow: false,
-        balanceHistory: {
-          enabled: true,
-          endOfDayCapture: { enabled: false },
-          retentionDays: 365,
-        },
-      })
-
-      mockRefreshAccountData.mockResolvedValueOnce({
-        success: true,
-        data: {
-          quota: 456,
-          today_prompt_tokens: 0,
-          today_completion_tokens: 0,
-          today_quota_consumption: 0,
-          today_requests_count: 0,
-          today_income: 0,
-          todayStatsAvailability: buildCompleteTodayStatsAvailability({
-            consumption: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
-            },
-            income: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
-            },
-          }),
-          checkIn: createCanonicalCheckIn(),
-        },
-        healthStatus: {
-          status: SiteHealthStatus.Healthy,
-          message: "",
-          code: undefined,
-        },
-      })
-
-      await accountStorage.refreshAccount("balance-history-no-cashflow", true)
-
-      const nowUnixSeconds = Math.floor(Date.now() / 1000)
-      const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
-      const stored = storageData.get(
-        STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
-      ) as any
-
-      expect(
-        stored?.snapshotsByAccountId?.["balance-history-no-cashflow"]?.[dayKey],
-      ).toEqual(
-        expect.objectContaining({
-          quota: 456,
-          today_income: null,
-          today_quota_consumption: null,
-          source: "refresh",
-          capturedAt: fixedNow.getTime(),
-        }),
-      )
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it("refreshAccount skips snapshot capture when refresh fails", async () => {
-    const account = createAccount({
-      id: "balance-history-failed",
-      account_info: {
-        ...createAccount().account_info,
-        todayStatsAvailability: buildCompleteTodayStatsAvailability({
-          consumption: {
-            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-            reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
-          },
-        }),
-      },
-    })
-    seedStorage([account])
-
-    storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
-      ...DEFAULT_PREFERENCES,
-      balanceHistory: {
-        enabled: true,
-        endOfDayCapture: { enabled: false },
-        retentionDays: 365,
-      },
-    })
-
-    mockRefreshAccountData.mockResolvedValueOnce({
-      success: false,
-      healthStatus: {
-        status: SiteHealthStatus.Error,
-        message: "fail",
-        code: undefined,
-      },
-    })
-
-    await accountStorage.refreshAccount("balance-history-failed", true)
-
-    const stored = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
-    expect(stored).toBeUndefined()
-    expect(
-      (await accountStorage.getAccountById("balance-history-failed"))
-        ?.account_info.todayStatsAvailability,
-    ).toEqual(account.account_info.todayStatsAvailability)
   })
 
   it("refreshAccount marks the account health as unknown when refresh throws", async () => {
@@ -6392,7 +6964,7 @@ describe("accountStorage core behaviors", () => {
     seedStorage([account])
     mockRefreshAccountData.mockRejectedValueOnce(new Error("network down"))
     const updateAccountSpy = vi
-      .spyOn(accountStorage, "updateAccount")
+      .spyOn(accountStorage, "updateAccountFromRefresh")
       .mockRejectedValueOnce(new Error("health write failed"))
 
     try {
@@ -6404,7 +6976,10 @@ describe("accountStorage core behaviors", () => {
         expect.objectContaining({
           health: expect.objectContaining({ status: SiteHealthStatus.Unknown }),
         }),
-        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+        undefined,
+        expect.objectContaining({ id: account.id }),
+        undefined,
+        1,
       )
     } finally {
       updateAccountSpy.mockRestore()
@@ -7054,7 +7629,7 @@ describe("accountStorage bookmarks", () => {
       }
     })
 
-    it("exportData falls back to a safe default config when storage reads fail", async () => {
+    it("exportData rejects when storage reads fail rather than exporting an empty backup", async () => {
       seedStorage([createAccount({ id: "existing-1" })])
 
       let getCalls = 0
@@ -7067,12 +7642,9 @@ describe("accountStorage bookmarks", () => {
         }
       }
 
-      const exported = await accountStorage.exportData()
-
-      expect(exported.accounts).toEqual([])
-      expect(exported.bookmarks).toEqual([])
-      expect(exported.pinnedAccountIds).toEqual([])
-      expect(exported.orderedAccountIds).toEqual([])
+      await expect(accountStorage.exportData()).rejects.toThrow(
+        "storage get failed",
+      )
     })
 
     it("importData migrates legacy accounts before persisting them", async () => {
@@ -7099,7 +7671,7 @@ describe("accountStorage bookmarks", () => {
       ) as AccountStorageConfig
       expect(persisted.accounts[0]).toMatchObject({
         id: legacyAccount.id,
-        configVersion: 8,
+        configVersion: 9,
         checkIn: expect.objectContaining({
           automaticExecutionEnabled: true,
           selection: expect.objectContaining({ mode: "automatic" }),

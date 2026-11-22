@@ -1,4 +1,8 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
+  getAccountSiteProductProfile,
+} from "~/services/accounts/accountSiteProfile"
 import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile/identity"
 import type { AccountIdentity, SiteAccount } from "~/types"
 
@@ -75,7 +79,11 @@ export const hasSameAccountRequestIdentity = (
   account.site_type === snapshot.site_type &&
   account.site_url === snapshot.site_url &&
   normalizeAccountIdentity(account.account_info.id) ===
-    normalizeAccountIdentity(snapshot.account_info.id)
+    normalizeAccountIdentity(snapshot.account_info.id) &&
+  (getAccountSiteProductProfile(account.site_type).authSession.kind !==
+    ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.KimiRefreshToken ||
+    account.kimiOpenPlatformAuth?.organizationId ===
+      snapshot.kimiOpenPlatformAuth?.organizationId)
 
 /** Credential changes invalidate completed check-in discovery after a form save. */
 export const hasSameCheckInRequestCredentials = (

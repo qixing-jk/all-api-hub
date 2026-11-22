@@ -30,7 +30,13 @@ test("shows the account workspace for a zero balance and keeps search misses dis
   ])
   await page.goto(`chrome-extension://${extensionId}/popup.html`)
   await waitForExtensionRoot(page)
-  await expect(page.getByText("Total Balance", { exact: true })).toBeVisible()
+  const totals = page.getByRole("region", {
+    name: "Financial totals",
+    exact: true,
+  })
+  await expect(totals.getByText("Balance", { exact: true })).toBeVisible()
+  await expect(totals).toContainText("Last known value")
+  await expect(totals).toContainText("$0.00")
   await expect(
     page.getByRole("button", { name: "Refresh", exact: true }),
   ).toBeVisible()
@@ -100,7 +106,9 @@ test("guides the first account without empty statistics or account shortcuts", a
   await expect(
     page.getByRole("button", { name: "Quick check-in" }),
   ).toHaveCount(0)
-  await expect(page.getByText("Total Balance", { exact: true })).toHaveCount(0)
+  await expect(
+    page.getByRole("region", { name: "Financial totals", exact: true }),
+  ).toHaveCount(0)
   await expect(
     page.getByRole("button", { name: "Share overview snapshot", exact: true }),
   ).toHaveCount(0)

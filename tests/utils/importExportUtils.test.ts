@@ -56,6 +56,7 @@ vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
   accountDataTransfer: {
     importData: vi.fn(),
     exportData: vi.fn(),
+    exportDataWithTags: vi.fn(),
   },
 }))
 
@@ -134,6 +135,7 @@ vi.mock("~/lib/notify", () => ({
 
 const mockAccountStorageImportData =
   accountDataTransfer.importData as unknown as ReturnType<typeof vi.fn>
+const mockPreparedAccountImport = vi.fn()
 const mockAccountStorageExportData =
   accountDataTransfer.exportData as unknown as ReturnType<typeof vi.fn>
 
@@ -215,7 +217,7 @@ describe("parseBackupSummary", () => {
     const payload: RawBackupData = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
-      accounts: {},
+      accounts: { accounts: [] },
       preferences: {},
       channelConfigs: { schemaVersion: 1, configs: {} },
     }
@@ -292,6 +294,17 @@ describe("parseBackupSummary", () => {
 describe("importFromBackupObject", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAccountStorageImportData.mockImplementation(async (input) => {
+      const prepared =
+        typeof input === "function"
+          ? input(
+              await accountDataTransfer.exportData(),
+              await tagStorage.exportTagStore(),
+            )
+          : { data: input, result: undefined }
+      mockPreparedAccountImport(prepared.data)
+      return { migratedCount: 0, result: prepared.result }
+    })
     mockUserPreferencesImport.mockResolvedValue(preferenceWriteSuccess())
     mockEnsureLegacyMigration.mockResolvedValue({
       migratedAccountCount: 0,
@@ -386,13 +399,15 @@ describe("importFromBackupObject", () => {
 
     const result = await importFromBackupObject(backup as BackupV2)
 
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith({
       accounts: [{ id: "a1" }, { id: "a2" }],
       bookmarks: [{ id: "b1" }],
       pinnedAccountIds: ["a2", "b1"],
       orderedAccountIds: ["b1", "a1", "a2"],
+      deletedEntryRecords: undefined,
+      tagStore: backup.tagStore,
     })
-    expect(mockTagStoreImport).toHaveBeenCalled()
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockEnsureLegacyMigration).toHaveBeenCalled()
     expect(mockUserPreferencesImport).toHaveBeenCalledWith({
       themeMode: "dark",
@@ -433,7 +448,7 @@ describe("importFromBackupObject", () => {
   })
 
   it.each(["1.0", "2.0", "3.0"])(
-    "imports V6 accounts from a V%s envelope as canonical V8",
+    "imports V6 accounts from a V%s envelope as canonical V9",
     async (version) => {
       await importFromBackupObject({
         version,
@@ -458,7 +473,7 @@ describe("importFromBackupObject", () => {
         .accounts[0] as any
       expect(imported).toMatchObject({
         id: `legacy-${version}`,
-        configVersion: 8,
+        configVersion: 9,
         checkIn: {
           automaticExecutionEnabled: false,
           selection: { methodId: "new-api:daily-checkin" },
@@ -616,7 +631,7 @@ describe("importFromBackupObject", () => {
       mode: "merge",
     })
 
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith({
       accounts: [
         expect.objectContaining({ id: "local-account" }),
         expect.objectContaining({ id: "remote-account" }),
@@ -633,11 +648,9 @@ describe("importFromBackupObject", () => {
         "remote-bookmark",
       ],
       deletedEntryRecords: {},
+      tagStore: { version: 1, tagsById: {} },
     })
-    expect(mockTagStoreImport).toHaveBeenCalledWith({
-      version: 1,
-      tagsById: {},
-    })
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockUserPreferencesImport).not.toHaveBeenCalled()
     expect(mockChannelConfigMerge).toHaveBeenCalledWith(remoteChannelConfigs)
     expect(mockApiCredentialProfilesMergeConfig).toHaveBeenCalledWith(
@@ -759,7 +772,7 @@ describe("importFromBackupObject", () => {
       },
     })
 
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith(
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith(
       expect.objectContaining({
         accounts: [
           expect.objectContaining({ id: "local-account" }),
@@ -860,12 +873,17 @@ describe("importFromBackupObject", () => {
         remoteTaggables: backup.apiCredentialProfiles?.profiles,
       }),
     )
-    expect(mockTagStoreImport).toHaveBeenCalledWith({
-      version: 2,
-      tagsById: {
-        local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
-      },
-    })
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tagStore: {
+          version: 2,
+          tagsById: {
+            local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
+          },
+        },
+      }),
+    )
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockApiCredentialProfilesMergeConfig).toHaveBeenCalledWith({
       ...backup.apiCredentialProfiles,
       profiles: [
@@ -1545,12 +1563,12 @@ describe("importFromBackupObject", () => {
         },
       },
     )
-    expect(mockAccountStorageImportData).toHaveBeenCalledWith(
+    expect(mockPreparedAccountImport).toHaveBeenCalledWith(
       expect.objectContaining({ accounts: [local, newerMatching, incoming] }),
     )
   })
 
-  it("imports the legacy tag store before accounts", async () => {
+  it("imports legacy tags together with accounts", async () => {
     const tagStore = { version: 1, tagsById: {} }
     await importFromBackupObject({
       version: "1.0",
@@ -1558,13 +1576,11 @@ describe("importFromBackupObject", () => {
       accounts: [{ id: "legacy-tagged" }],
       tagStore,
     })
-    expect(mockTagStoreImport).toHaveBeenCalledWith(tagStore)
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
     expect(mockAccountStorageImportData).toHaveBeenCalledWith({
       accounts: [{ id: "legacy-tagged" }],
+      tagStore,
     })
-    expect(mockTagStoreImport.mock.invocationCallOrder[0]).toBeLessThan(
-      mockAccountStorageImportData.mock.invocationCallOrder[0]!,
-    )
   })
 
   it("preserves WebDAV configuration when importing legacy preferences", async () => {
@@ -1688,7 +1704,7 @@ describe("importFromBackupObject", () => {
 })
 
 describe("normalizeBackupForMerge", () => {
-  it("upgrades V6/V7 accounts for WebDAV arbitration without rewriting V8 accounts", () => {
+  it("upgrades V6/V7 accounts for WebDAV arbitration without rewriting V9 accounts", () => {
     const currentCheckIn = {
       automaticExecutionEnabled: true,
       methodKnowledge: {
@@ -1708,7 +1724,7 @@ describe("normalizeBackupForMerge", () => {
     }
     const currentAccount = {
       id: "current-account",
-      configVersion: 8,
+      configVersion: 9,
       checkIn: currentCheckIn,
     }
 
@@ -1751,7 +1767,7 @@ describe("normalizeBackupForMerge", () => {
 
     expect(result.accounts[0]).toMatchObject({
       id: "legacy-account",
-      configVersion: 8,
+      configVersion: 9,
       checkIn: {
         automaticExecutionEnabled: false,
         selection: {
@@ -1774,7 +1790,7 @@ describe("normalizeBackupForMerge", () => {
     expect(result.accounts[1]).toBe(currentAccount)
     expect(result.accounts[1].checkIn).toBe(currentCheckIn)
     expect(result.accounts[2]).toMatchObject({
-      configVersion: 8,
+      configVersion: 9,
       user_updated_at: 15,
       login: {
         methodId: ACCOUNT_LOGIN_METHODS.Password,
@@ -2016,6 +2032,25 @@ describe("normalizeBackupForMerge", () => {
       tagsById: { t1: { id: "t1", name: "Tag" } },
     })
   })
+
+  it("merges accounts from a validated nested V1 account envelope", () => {
+    const account = { id: "legacy-nested" }
+    const bookmark = { id: "legacy-bookmark" }
+    const result = normalizeBackupForMerge(
+      {
+        version: "1.0",
+        timestamp: 654,
+        data: {
+          accounts: { schemaVersion: 1, accounts: [account] },
+          bookmarks: [bookmark],
+        },
+      },
+      null,
+    )
+
+    expect(result.accounts).toEqual([account])
+    expect(result.bookmarks).toEqual([bookmark])
+  })
 })
 
 // Export handlers rely on DOM APIs and toast; we mainly assert that they
@@ -2033,6 +2068,12 @@ describe("export handlers", () => {
     vi.clearAllMocks()
 
     // Mock URL helpers
+    vi.mocked(accountDataTransfer.exportDataWithTags).mockImplementation(
+      async () => ({
+        accounts: await accountDataTransfer.exportData(),
+        tagStore: await tagStorage.exportTagStore(),
+      }),
+    )
     URL.createObjectURL = vi.fn(() => "blob:mock-url") as any
     URL.revokeObjectURL = vi.fn() as any
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SAVE_FEEDBACK_LEVELS } from "~/services/accounts/accountPersistence/constants"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import {
   isValidAccount,
@@ -25,6 +26,7 @@ const {
   mockUpdateAccountWithCheckInDraft,
   mockUpdateAccountCheckInDraft,
   mockGetAllAccountsOrThrow,
+  mockBeginBalanceRefresh,
   mockValidateManagementKey,
 } = vi.hoisted(() => ({
   mockFetchAccountData: vi.fn(),
@@ -34,6 +36,7 @@ const {
   mockUpdateAccountWithCheckInDraft: vi.fn(),
   mockUpdateAccountCheckInDraft: vi.fn(),
   mockGetAllAccountsOrThrow: vi.fn(),
+  mockBeginBalanceRefresh: vi.fn(),
   mockValidateManagementKey: vi.fn(),
 }))
 
@@ -50,6 +53,7 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
 }))
 vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
   accountMutations: {
+    beginBalanceRefresh: mockBeginBalanceRefresh,
     updateAccount: mockUpdateAccount,
     updateAccountWithCheckInDraft: mockUpdateAccountWithCheckInDraft,
     updateAccountCheckInDraft: mockUpdateAccountCheckInDraft,
@@ -67,6 +71,19 @@ describe("account persistence and form validation", () => {
     mockUpdateAccountCheckInDraft.mockReset()
     mockUpdateAccountCheckInDraft.mockResolvedValue(true)
     mockGetAllAccountsOrThrow.mockReset()
+    mockGetAllAccountsOrThrow.mockResolvedValue([
+      {
+        id: "account-1",
+        site_url: "https://api.example.com",
+        site_type: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        tagIds: ["old-tag"],
+        account_info: { id: "1", username: "user", access_token: "token" },
+        checkIn: buildCheckInConfig(),
+      },
+    ])
+    mockBeginBalanceRefresh.mockReset()
+    mockBeginBalanceRefresh.mockResolvedValue(1)
     mockValidateManagementKey.mockReset()
     mockValidateManagementKey.mockResolvedValue({})
     mockgetSiteTypeCapabilities.mockImplementation((siteType) => ({
@@ -151,17 +168,19 @@ describe("account persistence and form validation", () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.feedbackLevel).toBe("success")
+      expect(result.feedbackLevel).toBe(ACCOUNT_SAVE_FEEDBACK_LEVELS.Success)
+      expect(mockFetchAccountData).toHaveBeenCalledTimes(1)
       expect(mockUpdateAccountWithCheckInDraft).toHaveBeenCalledWith(
         "account-1",
         expect.objectContaining({
           tagIds: [],
         }),
         checkInDisabled,
-        {
+        expect.objectContaining({
           refreshed: checkInDisabled,
           userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-        },
+          balanceRefresh: expect.objectContaining({ generation: 1 }),
+        }),
       )
       expect(mockUpdateAccount).not.toHaveBeenCalled()
       expect(mockUpdateAccountCheckInDraft).not.toHaveBeenCalled()
@@ -196,8 +215,12 @@ describe("account persistence and form validation", () => {
           tagIds: [],
         }),
         checkInDisabled,
-        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        expect.objectContaining({
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+          balanceRefresh: expect.objectContaining({ generation: 1 }),
+        }),
       )
+      expect(mockFetchAccountData).toHaveBeenCalledTimes(1)
     })
 
     it("returns a stable failure when the refreshed update cannot be persisted", async () => {
@@ -232,6 +255,8 @@ describe("account persistence and form validation", () => {
         success: false,
         message: "messages:errors.validation.updateAccountFailed",
       })
+      expect(mockFetchAccountData).toHaveBeenCalledTimes(1)
+      expect(mockUpdateAccountWithCheckInDraft).toHaveBeenCalledTimes(1)
     })
 
     it("returns the same stable failure when the config-only fallback update cannot be persisted", async () => {
@@ -287,6 +312,7 @@ describe("account persistence and form validation", () => {
       })
 
       expect(result.success).toBe(true)
+      expect(result.feedbackLevel).toBe(ACCOUNT_SAVE_FEEDBACK_LEVELS.Success)
       const { getSiteTypeCapabilities } =
         await import("~/services/apiAdapters/registry")
       expect(vi.mocked(getSiteTypeCapabilities)).toHaveBeenCalledWith(
@@ -298,10 +324,11 @@ describe("account persistence and form validation", () => {
           site_type: SITE_TYPES.UNKNOWN,
         }),
         checkInDisabled,
-        {
+        expect.objectContaining({
           refreshed: checkInDisabled,
           userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-        },
+          balanceRefresh: expect.objectContaining({ generation: 1 }),
+        }),
       )
     })
   })

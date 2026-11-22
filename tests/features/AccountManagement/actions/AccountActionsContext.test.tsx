@@ -491,7 +491,10 @@ describe("AccountActionsContext", () => {
     expect(toastConfig.success("resolved-message")).toBe("resolved-message")
 
     await act(async () => {
-      resolveRefresh?.({ refreshed: false })
+      resolveRefresh?.({
+        refreshed: false,
+        skippedReason: "interval_not_elapsed",
+      } as never)
       await refreshResult
     })
 
@@ -529,6 +532,20 @@ describe("AccountActionsContext", () => {
         },
       },
     )
+  })
+
+  it("reports an account save failure as a refresh error", async () => {
+    const { getContext } = await renderContext()
+    mockRefreshAccount.mockResolvedValueOnce({ refreshed: false })
+    mockToast.promise.mockImplementationOnce((promise) => promise)
+    await act(async () => {
+      await getContext().handleRefreshAccount(
+        createAccount({ id: "failed-save", name: "Failed save" }),
+        false,
+      )
+    })
+    await expect(mockToast.promise.mock.calls[0]?.[0]).rejects.toThrow()
+    expect(mockLoggerError).toHaveBeenCalled()
   })
 
   it("blocks duplicate row refreshes while grant creation is pending", async () => {

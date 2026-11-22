@@ -1,10 +1,46 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
 import { AllowanceDetailsPopover } from "~/features/AccountManagement/components/AccountList/rows/AllowanceDetailsPopover"
+import { render } from "~~/tests/test-utils/render"
 
 describe("AllowanceDetailsPopover", () => {
+  it("returns focus to its trigger when Escape closes the panel from inside", async () => {
+    const user = userEvent.setup()
+    render(
+      <AllowanceDetailsPopover label="Allowance details">
+        <button>Inside details</button>
+      </AllowanceDetailsPopover>,
+    )
+    const trigger = await screen.findByRole("button", {
+      name: "Allowance details",
+    })
+    await user.click(trigger)
+    await user.click(screen.getByRole("button", { name: "Inside details" }))
+    await user.keyboard("{Escape}")
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+  it("closes a pinned detail panel with its close button and returns focus to the amount details trigger", async () => {
+    const user = userEvent.setup()
+    render(
+      <AllowanceDetailsPopover label="Allowance details">
+        <p>Daily plan: $8 remaining</p>
+      </AllowanceDetailsPopover>,
+    )
+    const trigger = await screen.findByRole("button", {
+      name: "Allowance details",
+    })
+    await user.click(trigger)
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+  })
+
   it("ignores touch previews and dismisses a pinned panel on outside interaction", async () => {
     const user = userEvent.setup()
     render(
@@ -15,7 +51,9 @@ describe("AllowanceDetailsPopover", () => {
         <button>Next account</button>
       </>,
     )
-    const trigger = screen.getByRole("button", { name: "Allowance details" })
+    const trigger = await screen.findByRole("button", {
+      name: "Allowance details",
+    })
     fireEvent.pointerEnter(trigger, { pointerType: "touch" })
     fireEvent.pointerLeave(trigger, { pointerType: "touch" })
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
@@ -37,7 +75,9 @@ describe("AllowanceDetailsPopover", () => {
         <button>Next account</button>
       </>,
     )
-    const trigger = screen.getByRole("button", { name: "Allowance details" })
+    const trigger = await screen.findByRole("button", {
+      name: "Allowance details",
+    })
     expect(trigger).not.toHaveAccessibleDescription()
     await user.tab()
     expect(trigger).toHaveFocus()

@@ -26,17 +26,22 @@ export function AccountActionSubmenu({
       onOpenChange={(open) => {
         if (!open || !triggerRef.current) return
         const bounds = triggerRef.current.getBoundingClientRect()
-        const available = Math.max(
-          bounds.left,
-          window.innerWidth - bounds.right,
-        )
+        const leftSpace = bounds.left
+        const rightSpace = window.innerWidth - bounds.right
+        const menuWidth =
+          12 * parseFloat(getComputedStyle(document.documentElement).fontSize)
         // Overlap the parent only when neither side has room for readable labels.
-        setSideOffset(Math.min(0, available - 192 - 8))
+        // Radix can flip either way, so the overlap must fit the narrower side.
+        setSideOffset(
+          Math.max(leftSpace, rightSpace) >= menuWidth + 8
+            ? 0
+            : Math.min(leftSpace, rightSpace) - menuWidth - 8,
+        )
       }}
     >
       <DropdownMenuSubTrigger
         ref={triggerRef}
-        className="gap-y-density-2 py-density-2 gap-x-2 px-3"
+        className="gap-x-2 gap-y-density-2 px-3 py-density-2"
       >
         <Icon className="h-4 w-4" />
         {label}
