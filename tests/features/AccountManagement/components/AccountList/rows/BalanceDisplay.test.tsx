@@ -1563,9 +1563,11 @@ describe("BalanceDisplay", () => {
   it("removes legacy subscription units at expiry without a site update", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] })
     vi.setSystemTime(new Date(2026, 10, 22, 12))
-    onTestFinished(() => vi.useRealTimers())
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
     const site = buildDisplaySiteData({
-      allowances: { entries: [], coverage: FINANCIAL_COVERAGE.Complete },
+      allowances: undefined,
       subscription: {
         status: subscriptionStatuses.Active,
         remainingTokens: 123,
